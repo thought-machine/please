@@ -314,8 +314,8 @@ func (coverage *TestCoverage) OrderedFiles() []string {
 }
 
 // NewTestCoverage constructs and returns a new TestCoverage instance.
-func NewTestCoverage() TestCoverage {
-	return TestCoverage{
+func NewTestCoverage() *TestCoverage {
+	return &TestCoverage{
 		Tests: map[BuildLabel]map[string][]LineCoverage{},
 		Files: map[string][]LineCoverage{},
 	}

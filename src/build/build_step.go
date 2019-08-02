@@ -23,6 +23,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/remote"
 	"github.com/thought-machine/please/src/worker"
 )
 
@@ -36,11 +37,11 @@ var httpClient http.Client
 var httpClientOnce sync.Once
 
 // Build implements the core logic for building a single target.
-func Build(tid int, state *core.BuildState, label core.BuildLabel) {
+func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
 	target := state.Graph.TargetOrDie(label)
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
-	if err := buildTarget(tid, state, target); err != nil {
+	if err := buildTarget(tid, state, target, remote); err != nil {
 		if err == errStop {
 			target.SetState(core.Stopped)
 			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Build stopped")
@@ -66,7 +67,10 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel) {
 }
 
 // Builds a single target
-func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget) (err error) {
+func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
+	if runRemotely {
+		return remote.Get(state).Build(state, target)
+	}
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
