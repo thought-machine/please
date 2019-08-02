@@ -15,6 +15,7 @@ import (
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/remote"
 	"github.com/thought-machine/please/src/utils"
 	"github.com/thought-machine/please/src/worker"
 )
@@ -30,13 +31,19 @@ const dummyCoverage = "<?xml version=\"1.0\" ?><coverage></coverage>"
 const xattrName = "user.plz_test"
 
 // Test runs the tests for a single target.
-func Test(tid int, state *core.BuildState, label core.BuildLabel) {
+func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
 	state.LogBuildResult(tid, label, core.TargetTesting, "Testing...")
 	target := state.Graph.TargetOrDie(label)
-	test(tid, state.ForTarget(target), label, target)
+	test(tid, state.ForTarget(target), label, target, remote)
 }
 
-func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget) {
+func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool) {
+	if runRemotely {
+		if err := remote.Get(state).Test(state, target); err != nil {
+			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to test remotely")
+		}
+		return
+	}
 	hash, err := build.RuntimeHash(state, target)
 	if err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to calculate target hash")
@@ -76,7 +83,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			state.Cache.Clean(target)
 			return nil
 		} else {
-			logTestSuccess(state, tid, label, &results, &coverage)
+			logTestSuccess(state, tid, label, &results, coverage)
 		}
 		return &results
 	}
@@ -179,8 +186,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		return
 	}
 
-	var coverage core.TestCoverage
-
 	// Always run the test this number of times
 	for runs := 1; runs <= state.NumTestRuns; runs++ {
 		status := "Testing"
@@ -223,42 +228,45 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		target.Results.Collapse(flakeResults)
 	}
 	metadata.EndTime = time.Now()
-	coverage = parseCoverageFile(target, coverageFile)
-
+	coverage := parseCoverageFile(target, coverageFile)
 	if target.Results.TestCases.AllSucceeded() {
-		// Success, clean things up
-		if moveAndCacheOutputFiles(&target.Results, &coverage) {
-			logTestSuccess(state, tid, label, &target.Results, &coverage)
-		}
+		// Success, store in cache
+		moveAndCacheOutputFiles(&target.Results, coverage)
+	}
+	logTargetResults(tid, state, target, coverage)
+}
+
+func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget, coverage *core.TestCoverage) {
+	if target.Results.TestCases.AllSucceeded() {
 		// Clean up the test directory.
 		if state.CleanWorkdirs {
 			if err := os.RemoveAll(target.TestDir()); err != nil {
 				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
 			}
 		}
-	} else {
-		var resultErr error
-		var resultMsg string
-		if target.Results.Failures() > 0 {
-			resultMsg = "Tests failed"
-			for _, testCase := range target.Results.TestCases {
-				if len(testCase.Failures()) > 0 {
-					resultErr = fmt.Errorf(testCase.Failures()[0].Failure.Message)
-				}
-			}
-		} else if target.Results.Errors() > 0 {
-			resultMsg = "Tests errored"
-			for _, testCase := range target.Results.TestCases {
-				if len(testCase.Errors()) > 0 {
-					resultErr = fmt.Errorf(testCase.Errors()[0].Error.Message)
-				}
-			}
-		} else {
-			resultErr = fmt.Errorf("unknown error")
-			resultMsg = "Something went wrong"
-		}
-		state.LogTestResult(tid, label, core.TargetTestFailed, &target.Results, &coverage, resultErr, resultMsg)
+		return
 	}
+	var resultErr error
+	var resultMsg string
+	if target.Results.Failures() > 0 {
+		resultMsg = "Tests failed"
+		for _, testCase := range target.Results.TestCases {
+			if len(testCase.Failures()) > 0 {
+				resultErr = fmt.Errorf(testCase.Failures()[0].Failure.Message)
+			}
+		}
+	} else if target.Results.Errors() > 0 {
+		resultMsg = "Tests errored"
+		for _, testCase := range target.Results.TestCases {
+			if len(testCase.Errors()) > 0 {
+				resultErr = fmt.Errorf(testCase.Errors()[0].Error.Message)
+			}
+		}
+	} else {
+		resultErr = fmt.Errorf("unknown error")
+		resultMsg = "Something went wrong"
+	}
+	state.LogTestResult(tid, target.Label, core.TargetTestFailed, &target.Results, coverage, resultErr, resultMsg)
 }
 
 func logTestSuccess(state *core.BuildState, tid int, label core.BuildLabel, results *core.TestSuite, coverage *core.TestCoverage) {
@@ -517,7 +525,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 }
 
 // Parses the coverage output for a single target.
-func parseCoverageFile(target *core.BuildTarget, coverageFile string) core.TestCoverage {
+func parseCoverageFile(target *core.BuildTarget, coverageFile string) *core.TestCoverage {
 	coverage, err := parseTestCoverage(target, coverageFile)
 	if err != nil {
 		log.Errorf("Failed to parse coverage file for %s: %s", target.Label, err)

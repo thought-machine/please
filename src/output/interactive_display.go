@@ -17,8 +17,16 @@ import (
 // (note that most terminals do for compatibility; some report as xterm-color, hence HasPrefix)
 var terminalClaimsToBeXterm = strings.HasPrefix(os.Getenv("TERM"), "xterm")
 
-func display(state *core.BuildState, buildingTargets *[]buildingTarget, stop <-chan struct{}, done chan<- struct{}) {
-	backend := cli.NewLogBackend(len(*buildingTargets))
+type displayer struct {
+	state                                   *core.BuildState
+	targets                                 []buildingTarget
+	numWorkers, numRemote, maxRows, maxCols int
+	stats                                   bool
+	lines, lastLines                        int // mutable - records how many rows we've printed this time
+}
+
+func display(state *core.BuildState, buildingTargets []buildingTarget, stop <-chan struct{}, done chan<- struct{}) {
+	backend := cli.NewLogBackend(len(buildingTargets))
 	go func() {
 		sig := make(chan os.Signal, 10)
 		signal.Notify(sig, syscall.SIGWINCH)
@@ -30,99 +38,141 @@ func display(state *core.BuildState, buildingTargets *[]buildingTarget, stop <-c
 	recalcWindowSize(backend)
 	backend.SetActive()
 
-	printLines(state, *buildingTargets, backend.MaxInteractiveRows, backend.Cols)
-	outputLines := len(backend.Output)
-	ticker := time.NewTicker(50 * time.Millisecond)
-loop:
-	for {
-		select {
-		case <-stop:
-			break loop
-		case <-ticker.C:
-			moveToFirstLine(*buildingTargets, outputLines, backend.MaxInteractiveRows, state.Config.Display.SystemStats)
-			printLines(state, *buildingTargets, backend.MaxInteractiveRows, backend.Cols)
-			for _, line := range backend.Output {
-				printf("${ERASE_AFTER}%s\n", line)
-			}
-			outputLines = len(backend.Output)
-			setWindowTitle(state, true)
-		}
+	d := &displayer{
+		state:      state,
+		targets:    buildingTargets,
+		numWorkers: state.Config.Please.NumThreads,
+		numRemote:  state.Config.Remote.NumExecutors,
+		maxRows:    backend.MaxInteractiveRows,
+		maxCols:    backend.Cols,
+		stats:      state.Config.Display.SystemStats,
 	}
-	ticker.Stop()
+
+	d.printLines()
+	d.run(stop, backend)
 	setWindowTitle(state, false)
 	// Clear it all out.
-	moveToFirstLine(*buildingTargets, outputLines, backend.MaxInteractiveRows, state.Config.Display.SystemStats)
+	d.moveToFirstLine()
 	printf("${CLEAR_END}")
 	backend.Deactivate()
 	done <- struct{}{}
 }
 
-// moveToFirstLine resets back to the first line. Not as easy as you might think.
-func moveToFirstLine(buildingTargets []buildingTarget, outputLines, maxInteractiveRows int, showingStats bool) {
-	if maxInteractiveRows > len(buildingTargets) {
-		maxInteractiveRows = len(buildingTargets)
+func (d *displayer) run(stop <-chan struct{}, backend *cli.LogBackend) {
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+			d.moveToFirstLine()
+			d.printLines()
+			for _, line := range backend.Output {
+				printf("${ERASE_AFTER}%s\n", line)
+				d.lines++
+			}
+			// Clean out any lines that were visible last time but are not now.
+			if d.lines < d.lastLines {
+				for i := d.lines; i < d.lastLines; i++ {
+					printf("${ERASE_AFTER}\n")
+				}
+				printf("\x1b[%dA", d.lastLines-d.lines) // Move back up again
+			}
+			setWindowTitle(d.state, true)
+		}
 	}
-	if showingStats {
-		maxInteractiveRows++
-	}
-	printf("\x1b[%dA", maxInteractiveRows+1+outputLines)
 }
 
-func printLines(state *core.BuildState, buildingTargets []buildingTarget, maxLines, cols int) {
+// moveToFirstLine resets back to the first line.
+func (d *displayer) moveToFirstLine() {
+	printf("\x1b[%dA", d.lines)
+	d.lastLines = d.lines
+	d.lines = 0
+}
+
+func (d *displayer) printLines() {
 	now := time.Now()
-	printf("Building [%d/%d, %3.1fs]:\n", state.NumDone(), state.NumActive(), time.Since(state.StartTime).Seconds())
-	if state.Config.Display.SystemStats {
-		printStat("CPU use", state.Stats.CPU.Used, state.Stats.CPU.Count)
-		printStat("I/O", state.Stats.CPU.IOWait, state.Stats.CPU.Count)
-		printStat("Mem use", state.Stats.Memory.UsedPercent, 1)
-		if state.Stats.NumWorkerProcesses > 0 {
-			printf("  ${BOLD_WHITE}Worker processes: %d${RESET}", state.Stats.NumWorkerProcesses)
+	printf("Building [%d/%d, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), time.Since(d.state.StartTime).Seconds())
+	d.lines++
+	if d.stats {
+		printStat("CPU use", d.state.Stats.CPU.Used, d.state.Stats.CPU.Count)
+		printStat("I/O", d.state.Stats.CPU.IOWait, d.state.Stats.CPU.Count)
+		printStat("Mem use", d.state.Stats.Memory.UsedPercent, 1)
+		if d.state.Stats.NumWorkerProcesses > 0 {
+			printf("  ${BOLD_WHITE}Worker processes: %d${RESET}", d.state.Stats.NumWorkerProcesses)
 		}
 		printf("${ERASE_AFTER}\n")
+		d.lines++
 	}
-	for i := 0; i < len(buildingTargets) && i < maxLines; i++ {
-		buildingTargets[i].Lock()
-		// Take a local copy of the structure, which isn't *that* big, so we don't need to retain the lock
-		// while we do potentially blocking things like printing.
-		target := buildingTargets[i].buildingTargetData
-		buildingTargets[i].Unlock()
-		label := target.Label.Parent()
-		duration := now.Sub(target.Started).Seconds()
-		if target.Active && target.Target != nil && target.Target.ShowProgress && target.Target.Progress > 0.0 {
-			if target.Target.Progress > 1.0 && target.Target.Progress < 100.0 && target.Target.Progress != target.LastProgress {
-				proportionDone := target.Target.Progress / 100.0
-				perPercent := float32(duration) / proportionDone
-				buildingTargets[i].Eta = time.Duration(perPercent * (1.0 - proportionDone) * float32(time.Second)).Truncate(time.Second)
-				buildingTargets[i].LastProgress = target.Target.Progress
-			}
-			if target.Eta > 0 {
-				lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%%%, est %s remaining)${ERASE_AFTER}\n",
-					duration, target.Colour, label, target.Description, target.Target.Progress, target.Eta)
-			} else {
-				lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%%% complete)${ERASE_AFTER}\n",
-					duration, target.Colour, label, target.Description, target.Target.Progress)
-			}
-		} else if target.Active {
-			lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${ERASE_AFTER}\n",
-				duration, target.Colour, label, target.Description)
-		} else if time.Since(target.Finished).Seconds() < 0.5 {
-			// Only display finished targets for half a second after they're done.
-			duration := target.Finished.Sub(target.Started).Seconds()
-			if target.Failed {
-				lprintf(cols, "${BOLD_RED}=> [%4.1fs] ${RESET}%s%s ${BOLD_RED}Failed${ERASE_AFTER}\n",
-					duration, target.Colour, label)
-			} else if target.Cached {
-				lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_GREY}%s${ERASE_AFTER}\n",
-					duration, target.Colour, label, target.Description)
-			} else {
-				lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${WHITE}%s${ERASE_AFTER}\n",
-					duration, target.Colour, label, target.Description)
-			}
-		} else {
-			printf("${BOLD_GREY}=|${ERASE_AFTER}\n")
+	for i := 0; i < d.numWorkers && i < d.maxRows; i++ {
+		d.printRow(i, now, false)
+		d.lines++
+	}
+	if d.numRemote > 0 {
+		printf("Remote processes [%d/%d active]:   \n", d.numRemoteActive(), d.numRemote)
+		d.lines++
+		for i := 0; i < d.numRemote && i < d.maxRows; i++ {
+			d.printRow(d.numWorkers+i, now, true)
+			d.lines++
 		}
 	}
 	printf("${RESET}")
+}
+
+func (d *displayer) numRemoteActive() int {
+	count := 0
+	for i := 0; i < d.numRemote; i++ {
+		if d.targets[d.numWorkers+i].Active {
+			count++
+		}
+	}
+	return count
+}
+
+func (d *displayer) printRow(i int, now time.Time, remote bool) {
+	d.targets[i].Lock()
+	// Take a local copy of the structure, which isn't *that* big, so we don't need to retain the lock
+	// while we do potentially blocking things like printing.
+	target := d.targets[i].buildingTargetData
+	d.targets[i].Unlock()
+	label := target.Label.Parent()
+	duration := now.Sub(target.Started).Seconds()
+	if target.Active && target.Target != nil && target.Target.ShowProgress && target.Target.Progress > 0.0 {
+		if target.Target.Progress > 1.0 && target.Target.Progress < 100.0 && target.Target.Progress != target.LastProgress {
+			proportionDone := target.Target.Progress / 100.0
+			perPercent := float32(duration) / proportionDone
+			d.targets[i].Eta = time.Duration(perPercent * (1.0 - proportionDone) * float32(time.Second)).Truncate(time.Second)
+			d.targets[i].LastProgress = target.Target.Progress
+		}
+		if target.Eta > 0 {
+			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%%%, est %s remaining)${ERASE_AFTER}\n",
+				duration, target.Colour, label, target.Description, target.Target.Progress, target.Eta)
+		} else {
+			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%%% complete)${ERASE_AFTER}\n",
+				duration, target.Colour, label, target.Description, target.Target.Progress)
+		}
+	} else if target.Active {
+		d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${ERASE_AFTER}\n",
+			duration, target.Colour, label, target.Description)
+	} else if time.Since(target.Finished).Seconds() < 0.5 {
+		// Only display finished targets for half a second after they're done.
+		duration := target.Finished.Sub(target.Started).Seconds()
+		if target.Failed {
+			d.printf("${BOLD_RED}=> [%4.1fs] ${RESET}%s%s ${BOLD_RED}Failed${ERASE_AFTER}\n",
+				duration, target.Colour, label)
+		} else if target.Cached {
+			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_GREY}%s${ERASE_AFTER}\n",
+				duration, target.Colour, label, target.Description)
+		} else {
+			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${WHITE}%s${ERASE_AFTER}\n",
+				duration, target.Colour, label, target.Description)
+		}
+	} else if !remote {
+		printf("${BOLD_GREY}=|${ERASE_AFTER}\n")
+	} else {
+		d.lines-- // Didn't print it
+	}
 }
 
 // printStat prints a single statistic with appropriate colours.
@@ -147,8 +197,8 @@ func recalcWindowSize(backend *cli.LogBackend) {
 
 // Limited-length printf that respects current window width.
 // Output is truncated at the middle to fit within 'cols'.
-func lprintf(cols int, format string, args ...interface{}) {
-	printf(lprintfPrepare(cols, format, args...))
+func (d *displayer) printf(format string, args ...interface{}) {
+	printf(lprintfPrepare(d.maxCols, format, args...))
 }
 
 func lprintfPrepare(cols int, format string, args ...interface{}) string {

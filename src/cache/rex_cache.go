@@ -1,5 +1,3 @@
-// +build !bootstrap
-
 // Cache based on the Google remote execution API.
 // This will likely supersede the RPC cache at some point in the future.
 

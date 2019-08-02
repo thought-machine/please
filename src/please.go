@@ -804,7 +804,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		output.MonitorState(state, config.Please.NumThreads, !pretty, detailedTests, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, !pretty, detailedTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
 

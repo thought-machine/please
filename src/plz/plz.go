@@ -42,12 +42,18 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 
 	// Start up all the build workers
 	var wg sync.WaitGroup
-	wg.Add(config.Please.NumThreads)
+	wg.Add(config.Please.NumThreads + config.Remote.NumExecutors)
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go func(tid int) {
-			doTasks(tid, state, parses, builds, tests, arch)
+			doTasks(tid, state, parses, builds, tests, arch, false)
 			wg.Done()
 		}(i)
+	}
+	for i := 0; i < config.Remote.NumExecutors; i++ {
+		go func(tid int) {
+			doTasks(tid, state, nil, builds, tests, arch, true)
+			wg.Done()
+		}(config.Please.NumThreads + i)
 	}
 	// Wait until they've all exited, which they'll do once they have no tasks left.
 	wg.Wait()
@@ -56,7 +62,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}
 }
 
-func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, builds, tests <-chan core.BuildLabel, arch cli.Arch) {
+func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, builds, tests <-chan core.BuildLabel, arch cli.Arch, remote bool) {
 	for parses != nil || builds != nil || tests != nil {
 		select {
 		case p, ok := <-parses:
@@ -73,14 +79,14 @@ func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, buil
 				builds = nil
 				break
 			}
-			build.Build(tid, state, l)
+			build.Build(tid, state, l, remote)
 			state.TaskDone(true)
 		case l, ok := <-tests:
 			if !ok {
 				tests = nil
 				break
 			}
-			test.Test(tid, state, l)
+			test.Test(tid, state, l, remote)
 			state.TaskDone(true)
 		}
 	}

@@ -148,6 +148,10 @@ func (e *Executor) removeProcess(cmd *exec.Cmd) {
 // killProcess implements the two-step killing of processes with a SIGTERM and a SIGKILL if
 // that's unsuccessful. It returns true if the process exited within the timeout.
 func killProcess(cmd *exec.Cmd, sig syscall.Signal, timeout time.Duration) bool {
+	if cmd.Process == nil {
+		log.Debug("Not terminating process, it seems to have not started yet")
+		return false
+	}
 	// This is a bit of a fiddle. We want to wait for the process to exit but only for just so
 	// long (we do not want to get hung up if it ignores our SIGTERM).
 	log.Debug("Sending signal %s to -%d", sig, cmd.Process.Pid)

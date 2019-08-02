@@ -355,3 +355,13 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 	})
 	return d, children, err
 }
+
+// Build executes a remote build of the given target.
+func (c *Client) Build(state *core.BuildState, target *core.BuildTarget) error {
+	return fmt.Errorf("Remote builds not implemented")
+}
+
+// Test executes a remote test of the given target.
+func (c *Client) Test(state *core.BuildState, target *core.BuildTarget) error {
+	return fmt.Errorf("Remote builds not implemented")
+}
