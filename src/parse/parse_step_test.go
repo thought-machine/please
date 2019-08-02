@@ -10,13 +10,12 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-var empty = []string{}
 var tid int = 1
 
 func TestAddDepSimple(t *testing.T) {
 	// Simple case with only one package parsed and one target added
 	state := makeState(true, false)
-	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false, empty, empty)
+	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
 	assertPendingParses(t, state, "//package2:target1", "//package2:target1")
 	assertPendingBuilds(t, state) // None until package2 parses
 	assert.Equal(t, 5, state.NumActive())
@@ -25,9 +24,9 @@ func TestAddDepSimple(t *testing.T) {
 func TestAddDepMultiple(t *testing.T) {
 	// Similar to above but doing all targets in that package
 	state := makeState(true, false)
-	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false, empty, empty)
-	activateTarget(tid, state, nil, buildLabel("//package1:target2"), core.OriginalTarget, false, empty, empty)
-	activateTarget(tid, state, nil, buildLabel("//package1:target3"), core.OriginalTarget, false, empty, empty)
+	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	activateTarget(tid, state, nil, buildLabel("//package1:target2"), core.OriginalTarget, false)
+	activateTarget(tid, state, nil, buildLabel("//package1:target3"), core.OriginalTarget, false)
 	// We get an additional dep on target2, but not another on package2:target1 because target2
 	// is already activated since package1:target1 depends on it
 	assertPendingParses(t, state, "//package2:target1", "//package2:target1", "//package2:target2")
@@ -38,7 +37,7 @@ func TestAddDepMultiple(t *testing.T) {
 func TestAddDepMultiplePackages(t *testing.T) {
 	// This time we already have package2 parsed
 	state := makeState(true, true)
-	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false, empty, empty)
+	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
 	assertPendingBuilds(t, state, "//package2:target2") // This is the only candidate target
 	assertPendingParses(t, state)                       // None, we have both packages already
 	assert.Equal(t, 6, state.NumActive())
@@ -48,7 +47,7 @@ func TestAddDepNoBuild(t *testing.T) {
 	// Tag state as not needing build. We shouldn't get any pending builds at this point.
 	state := makeState(true, true)
 	state.NeedBuild = false
-	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false, empty, empty)
+	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
 	assertPendingParses(t, state)         // None, we have both packages already
 	assertPendingBuilds(t, state)         // Nothing because we don't need to build.
 	assert.Equal(t, 1, state.NumActive()) // Parses only
@@ -59,7 +58,7 @@ func TestAddParseDep(t *testing.T) {
 	// should still get queued for build though. Recall that we indicate this with :all...
 	state := makeState(true, true)
 	state.NeedBuild = false
-	activateTarget(tid, state, nil, buildLabel("//package2:target2"), buildLabel("//package3:all"), false, empty, empty)
+	activateTarget(tid, state, nil, buildLabel("//package2:target2"), buildLabel("//package3:all"), false)
 	assertPendingBuilds(t, state, "//package2:target2") // Queued because it's needed for parse
 	assertPendingParses(t, state)                       // None, we have both packages already
 	assert.Equal(t, 2, state.NumActive())
@@ -68,7 +67,7 @@ func TestAddParseDep(t *testing.T) {
 func TestAddDepRescan(t *testing.T) {
 	// Simulate a post-build function and rescan.
 	state := makeState(true, true)
-	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false, empty, empty)
+	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
 	assertPendingBuilds(t, state, "//package2:target2") // This is the only candidate target
 	assertPendingParses(t, state)                       // None, we have both packages already
 	assert.Equal(t, 6, state.NumActive())
@@ -99,12 +98,12 @@ func TestAddParseDepDeferred(t *testing.T) {
 	state := makeState(true, true)
 	state.NeedBuild = false
 	assert.Equal(t, 1, state.NumActive())
-	activateTarget(tid, state, nil, buildLabel("//package2:target2"), core.OriginalTarget, false, empty, empty)
+	activateTarget(tid, state, nil, buildLabel("//package2:target2"), core.OriginalTarget, false)
 	assertPendingParses(t, state)
 	assertPendingBuilds(t, state) // Not yet.
 
 	// Now the undefer kicks off...
-	activateTarget(tid, state, nil, buildLabel("//package2:target2"), buildLabel("//package1:all"), false, empty, empty)
+	activateTarget(tid, state, nil, buildLabel("//package2:target2"), buildLabel("//package1:all"), false)
 	assertPendingBuilds(t, state, "//package2:target2") // This time!
 	assertPendingParses(t, state)
 	assert.Equal(t, 2, state.NumActive())
@@ -154,43 +153,41 @@ func addDeps(graph *core.BuildGraph, pkg *core.Package) {
 }
 
 func assertPendingParses(t *testing.T, state *core.BuildState, targets ...string) {
-	state.Stop(1)
-	pending := []core.BuildLabel{}
-	for {
-		label, _, typ := state.NextTask()
-		if typ == core.Stop {
-			break
-		} else if typ != core.Parse && typ != core.SubincludeParse {
-			t.Errorf("Unexpected non-parse task")
-		} else {
-			pending = append(pending, label)
-		}
-	}
-	expected := []core.BuildLabel{}
-	for _, target := range targets {
-		expected = append(expected, core.ParseBuildLabel(target, ""))
-	}
-	assert.Equal(t, expected, pending)
+	parses, _ := getAllPending(state)
+	assert.EqualValues(t, targets, parses)
 }
 
 func assertPendingBuilds(t *testing.T, state *core.BuildState, targets ...string) {
-	state.Stop(1)
-	pending := []core.BuildLabel{}
-	for {
-		label, _, typ := state.NextTask()
-		if typ == core.Stop {
-			break
-		} else if typ != core.Build && typ != core.SubincludeBuild {
-			t.Errorf("Unexpected non-build task")
-		} else {
-			pending = append(pending, label)
+	_, builds := getAllPending(state)
+	assert.EqualValues(t, targets, builds)
+}
+
+func getAllPending(state *core.BuildState) ([]string, []string) {
+	parses, builds, tests := state.TaskQueues()
+	state.Stop()
+	var pendingParses, pendingBuilds []string
+	for parses != nil || builds != nil || tests != nil {
+		select {
+		case p, ok := <-parses:
+			if !ok {
+				parses = nil
+				break
+			}
+			pendingParses = append(pendingParses, p.Label.String())
+		case l, ok := <-builds:
+			if !ok {
+				builds = nil
+				break
+			}
+			pendingBuilds = append(pendingBuilds, l.String())
+		case _, ok := <-tests:
+			if !ok {
+				tests = nil
+				break
+			}
 		}
 	}
-	expected := []core.BuildLabel{}
-	for _, target := range targets {
-		expected = append(expected, core.ParseBuildLabel(target, ""))
-	}
-	assert.Equal(t, expected, pending)
+	return pendingParses, pendingBuilds
 }
 
 func buildLabel(bl string) core.BuildLabel {

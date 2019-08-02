@@ -93,14 +93,14 @@ func TestExpandOriginalTargetsOrdering(t *testing.T) {
 }
 
 func TestComparePendingTasks(t *testing.T) {
-	p := func(taskType TaskType) pendingTask { return pendingTask{Type: taskType} }
+	p := func(taskType taskType) pendingTask { return pendingTask{Type: taskType} }
 	// NB. "Higher priority" means the task comes first, does not refer to numeric values.
-	assertHigherPriority := func(a, b TaskType) {
+	assertHigherPriority := func(a, b taskType) {
 		// relationship should be commutative
 		assert.True(t, p(a).Compare(p(b)) < 0)
 		assert.True(t, p(b).Compare(p(a)) > 0)
 	}
-	assertEqualPriority := func(a, b TaskType) {
+	assertEqualPriority := func(a, b taskType) {
 		assert.True(t, p(a).Compare(p(b)) == 0)
 		assert.True(t, p(b).Compare(p(a)) == 0)
 	}

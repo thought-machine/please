@@ -33,6 +33,7 @@ func ConnectClient(state *core.BuildState, url string, retries int, delay time.D
 // connectClient connects a gRPC client to the given URL.
 // It is split out of the above for testing purposes.
 func connectClient(state *core.BuildState, url string, retries int, delay time.Duration) {
+	state.TaskQueues() // This is important to start consuming events in the background
 	var err error
 	for i := 0; i <= retries; i++ {
 		if err = connectSingleTry(state, url); err == nil {
@@ -138,7 +139,7 @@ func streamResources(state *core.BuildState, client pb.PlzEventsClient) {
 
 // runOutput is just a wrapper around output.MonitorState for convenience in testing.
 func runOutput(state *core.BuildState) bool {
-	output.MonitorState(state, state.Config.Please.NumThreads, false, false, "")
+	output.MonitorState(state, state.Config.Please.NumThreads, true, false, "")
 	output.PrintDisconnectionMessage(state.Success, remoteClosed, remoteDisconnected)
 	return state.Success
 }
