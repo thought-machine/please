@@ -54,10 +54,10 @@ type buildingTargetData struct {
 
 // MonitorState monitors the build while it's running (essentially until state.TestCases is closed)
 // and prints output while it's happening.
-func MonitorState(state *core.BuildState, numThreads int, plainOutput, detailedTests bool, traceFile string) {
+func MonitorState(state *core.BuildState, plainOutput, detailedTests bool, traceFile string) {
 	initPrintf(state.Config)
 	failedTargetMap := map[core.BuildLabel]error{}
-	buildingTargets := make([]buildingTarget, numThreads)
+	buildingTargets := make([]buildingTarget, state.Config.Please.NumThreads+state.Config.Remote.NumExecutors)
 
 	if len(state.Config.Please.Motd) != 0 {
 		r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
@@ -67,9 +67,9 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, detailedT
 	displayDone := make(chan struct{})
 	stop := make(chan struct{})
 	if plainOutput {
-		go logProgress(state, &buildingTargets, stop, displayDone)
+		go logProgress(state, buildingTargets, stop, displayDone)
 	} else {
-		go display(state, &buildingTargets, stop, displayDone)
+		go display(state, buildingTargets, stop, displayDone)
 	}
 	failedTargets := []core.BuildLabel{}
 	failedNonTests := []core.BuildLabel{}
@@ -379,15 +379,15 @@ func maybeToString(duration *time.Duration) string {
 }
 
 // logProgress continually logs progress messages every 10s explaining where we're up to.
-func logProgress(state *core.BuildState, buildingTargets *[]buildingTarget, stop <-chan struct{}, done chan<- struct{}) {
+func logProgress(state *core.BuildState, buildingTargets []buildingTarget, stop <-chan struct{}, done chan<- struct{}) {
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 	for {
 		select {
 		case <-t.C:
 			busy := 0
-			for i := 0; i < len(*buildingTargets); i++ {
-				if (*buildingTargets)[i].Active {
+			for i := 0; i < len(buildingTargets); i++ {
+				if buildingTargets[i].Active {
 					busy++
 				}
 			}

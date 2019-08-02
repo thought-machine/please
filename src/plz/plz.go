@@ -3,6 +3,7 @@ package plz
 import (
 	"strings"
 	"sync"
+	"time"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -42,12 +43,18 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 
 	// Start up all the build workers
 	var wg sync.WaitGroup
-	wg.Add(config.Please.NumThreads)
+	wg.Add(config.Please.NumThreads + config.Remote.NumExecutors)
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go func(tid int) {
 			doTasks(tid, state, parses, builds, tests, arch)
 			wg.Done()
 		}(i)
+	}
+	for i := 0; i < config.Remote.NumExecutors; i++ {
+		go func(tid int) {
+			doTasks(tid, state, nil, builds, tests, arch)
+			wg.Done()
+		}(config.Please.NumThreads + i)
 	}
 	// Wait until they've all exited, which they'll do once they have no tasks left.
 	wg.Wait()
@@ -58,6 +65,9 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 
 func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, builds, tests <-chan core.BuildLabel, arch cli.Arch) {
 	for parses != nil || builds != nil || tests != nil {
+		if parses == nil {
+			time.Sleep(3 * time.Second)
+		}
 		select {
 		case p, ok := <-parses:
 			if !ok {
