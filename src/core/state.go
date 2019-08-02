@@ -155,8 +155,6 @@ type BuildState struct {
 	DebugTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
 	XattrsSupported bool
-	// Number of running workers
-	numWorkers int
 	// Experimental directories
 	experimentalLabels []BuildLabel
 	// Various items for tracking progress.
@@ -446,7 +444,7 @@ func (state *BuildState) LogResult(result *BuildResult) {
 // Results returns a channel on which the caller can listen for results.
 func (state *BuildState) Results() <-chan *BuildResult {
 	if state.results == nil {
-		state.results = make(chan *BuildResult, 100*state.numWorkers)
+		state.results = make(chan *BuildResult, 1000)
 	}
 	return state.results
 }
@@ -455,7 +453,7 @@ func (state *BuildState) Results() <-chan *BuildResult {
 // the last set of results per thread.
 func (state *BuildState) RemoteResults() (<-chan *BuildResult, []*BuildResult) {
 	if state.remoteResults == nil {
-		state.remoteResults = make(chan *BuildResult, 100*state.numWorkers)
+		state.remoteResults = make(chan *BuildResult, 1000)
 	}
 	return state.remoteResults, state.lastResults
 }
@@ -756,7 +754,6 @@ func NewBuildState(config *Configuration) *BuildState {
 		XattrsSupported: config.Build.Xattrs,
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
 		OriginalArch:    cli.HostArch(),
-		numWorkers:      config.Please.NumThreads,
 		Stats:           &SystemStats{},
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
