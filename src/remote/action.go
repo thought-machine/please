@@ -269,6 +269,16 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 	return metadata, nil
 }
 
+// digestForFilename returns the digest for an output of the given name.
+func (c *Client) digestForFilename(ar *pb.ActionResult, name string) *pb.Digest {
+	for _, file := range ar.OutputFiles {
+		if file.Path == name {
+			return file.Digest
+		}
+	}
+	return nil
+}
+
 // translateOS converts the OS name of a subrepo into a Bazel-style OS name.
 func translateOS(subrepo *core.Subrepo) string {
 	if subrepo == nil {

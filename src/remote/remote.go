@@ -331,24 +331,42 @@ func (c *Client) Build(tid int, target *core.BuildTarget, stamp []byte) (*core.B
 	if err != nil {
 		return nil, err
 	}
-	return c.execute(tid, target, digest, target.BuildTimeout, target.PostBuildFunction != nil)
+	metadata, _, err := c.execute(tid, target, digest, target.BuildTimeout, target.PostBuildFunction != nil)
+	return metadata, err
 }
 
 // Test executes a remote test of the given target.
-// TODO(peterebden): Return test results and coverage info too.
-func (c *Client) Test(tid int, target *core.BuildTarget) (*core.BuildMetadata, error) {
+// It returns the results (and coverage if appropriate) as bytes to be parsed elsewhere.
+func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMetadata, results, coverage []byte, err error) {
 	if err := c.CheckInitialised(); err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	digest, err := c.uploadAction(target, nil, true)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
-	return c.execute(tid, target, digest, target.TestTimeout, false)
+	metadata, ar, execErr := c.execute(tid, target, digest, target.TestTimeout, false)
+	// Error handling here is a bit fiddly due to prioritisation; the execution error
+	// is more relevant, but we want to still try to get results if we can, and it's an
+	// error if we can't get those results on success.
+	if !target.NoTestOutput && ar != nil {
+		results, err = c.readAllByteStream(c.digestForFilename(ar, core.TestResultsFile))
+		if execErr == nil && err != nil {
+			return metadata, nil, nil, err
+		}
+	}
+	if target.NeedCoverage(c.state) && ar != nil {
+		coverage, err = c.readAllByteStream(c.digestForFilename(ar, core.CoverageFile))
+		if execErr == nil && err != nil {
+			return metadata, results, nil, err
+		}
+	}
+	return metadata, results, coverage, execErr
 }
 
 // execute submits an action to the remote executor and monitors its progress.
-func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, error) {
+// The returned ActionResult may be nil on failure.
+func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	stream, err := c.execClient.Execute(ctx, &pb.ExecuteRequest{
@@ -356,7 +374,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 		ActionDigest: digest,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for {
 		resp, err := stream.Recv()
@@ -364,7 +382,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 			// We shouldn't get an EOF here because there's in-channel signalling via Done.
 			// TODO(peterebden): On other errors we should be able to reconnect and use
 			//                   WaitExecution to rejoin the stream.
-			return nil, err
+			return nil, nil, err
 		}
 		metadata := &pb.ExecuteOperationMetadata{}
 		if err := ptypes.UnmarshalAny(resp.Metadata, metadata); err != nil {
@@ -379,12 +397,12 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 			case *longrunning.Operation_Error:
 				// We shouldn't really get here - the rex API requires servers to always
 				// use the response field instead of error.
-				return nil, convertError(result.Error)
+				return nil, nil, convertError(result.Error)
 			case *longrunning.Operation_Response:
 				response := &pb.ExecuteResponse{}
 				if err := ptypes.UnmarshalAny(result.Response, response); err != nil {
 					log.Error("Failed to deserialise execution response: %s", err)
-					return nil, err
+					return nil, nil, err
 				}
 				if response.CachedResult {
 					c.state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
@@ -394,15 +412,15 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 				}
 				respErr := convertError(response.Status)
 				if resp.Result == nil { // This is optional on failure.
-					return nil, respErr
+					return nil, nil, respErr
 				}
 				metadata, err := c.buildMetadata(response.Result, needStdout || respErr != nil, respErr != nil)
 				// The original error is higher priority than us trying to retrieve the
 				// output of the thing that failed.
 				if respErr != nil {
-					return metadata, respErr
+					return metadata, response.Result, respErr
 				}
-				return metadata, err
+				return metadata, response.Result, err
 			}
 		}
 	}
@@ -410,7 +428,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 
 // updateProgress updates the progress of a target based on its metadata.
 func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.ExecuteOperationMetadata) {
-	if target.State() > core.Built {
+	if target.State() >= core.Built {
 		switch metadata.Stage {
 		case pb.ExecutionStage_CACHE_CHECK:
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache")
