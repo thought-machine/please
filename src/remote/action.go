@@ -100,6 +100,50 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) *pb.Command {
 	}
 }
 
+// digestDir calculates the digest for a directory.
+// It returns Directory protos for the directory and all its (recursive) children.
+func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory, []*pb.Directory, error) {
+	entries, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, nil, err
+	}
+	d := &pb.Directory{}
+	err = c.uploadBlobs(func(ch chan<- *blob) error {
+		for _, entry := range entries {
+			name := entry.Name()
+			fullname := path.Join(dir, name)
+			if mode := entry.Mode(); mode&os.ModeDir != 0 {
+				dir, descendants, err := c.digestDir(fullname, children)
+				if err != nil {
+					return err
+				}
+				d.Directories = append(d.Directories, &pb.DirectoryNode{
+					Name:   name,
+					Digest: digestMessage(dir),
+				})
+				children = append(children, descendants...)
+				continue
+			} else if mode&os.ModeSymlink != 0 {
+				target, err := os.Readlink(fullname)
+				if err != nil {
+					return err
+				}
+				d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
+					Name:   name,
+					Target: target,
+				})
+				continue
+			}
+			ch <- &blob{
+				File:   fullname,
+				Digest: &pb.Digest{SizeBytes: entry.Size()},
+			}
+		}
+		return nil
+	})
+	return d, children, err
+}
+
 // buildInputRoot constructs the directory that is the input root and optionally uploads it.
 func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (*pb.Directory, error) {
 	// This is pretty awkward; we need to recursively build this whole set of directories
