@@ -315,20 +315,20 @@ func (c *Client) retrieveByteStream(b *blob) error {
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 	return fs.WriteFile(r, b.File, b.Mode)
 }
 
 // readByteStream returns a reader for a bytestream for the given digest.
-func (c *Client) readByteStream(digest *pb.Digest) (io.Reader, error) {
+func (c *Client) readByteStream(digest *pb.Digest) (io.ReadCloser, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
-	defer cancel()
 	stream, err := c.bsClient.Read(ctx, &bs.ReadRequest{
 		ResourceName: c.byteStreamDownloadName(digest),
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &byteStreamReader{stream: stream}, nil
+	return &byteStreamReader{stream: stream, cancel: cancel}, nil
 }
 
 // readAllByteStream returns a bytestream read in its entirety.
@@ -337,6 +337,7 @@ func (c *Client) readAllByteStream(digest *pb.Digest) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer r.Close()
 	return ioutil.ReadAll(r)
 }
 
@@ -355,6 +356,7 @@ func (c *Client) checkBatchReadBlobs() bool {
 // io.Reader which we can then pass to other things which are ignorant of its true nature.
 type byteStreamReader struct {
 	stream bs.ByteStream_ReadClient
+	cancel func()
 	buf    []byte
 }
 
@@ -374,4 +376,10 @@ func (r *byteStreamReader) Read(into []byte) (int, error) {
 	copy(into, r.buf[:l])
 	r.buf = r.buf[l:]
 	return l, nil
+}
+
+// Close implements the Closer part of io.ReadCloser
+func (r *byteStreamReader) Close() error {
+	r.cancel()
+	return nil
 }
