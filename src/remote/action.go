@@ -2,6 +2,7 @@ package remote
 
 import (
 	"encoding/hex"
+	"io/ioutil"
 	"os"
 	"path"
 	"runtime"

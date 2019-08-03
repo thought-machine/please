@@ -9,7 +9,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"sync"
@@ -49,6 +48,7 @@ type Client struct {
 	actionCacheClient pb.ActionCacheClient
 	storageClient     pb.ContentAddressableStorageClient
 	bsClient          bs.ByteStreamClient
+	execClient        pb.ExecutionClient
 	initOnce          sync.Once
 	state             *core.BuildState
 	err               error // for initialisation
@@ -139,6 +139,16 @@ func (c *Client) init() {
 		c.bashPath = bash
 		c.canBatchBlobReads = c.checkBatchReadBlobs()
 		log.Debug("Remote execution client initialised for storage")
+		// Now check if it can do remote execution
+		if caps := resp.ExecutionCapabilities; caps != nil && c.state.Config.Remote.NumExecutors > 0 {
+			if err := c.chooseDigest([]pb.DigestFunction_Value{caps.DigestFunction}); err != nil {
+				return err
+			} else if !caps.ExecEnabled {
+				return fmt.Errorf("Remote execution not enabled for this server")
+			}
+			c.execClient = pb.NewExecutionClient(conn)
+			log.Debug("Remote execution client initialised for execution")
+		}
 		return err
 	}()
 	if c.err != nil {
@@ -269,10 +279,15 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	isTest := target.State() > core.Built
+	_, metadata, err := c.retrieve(target, key, target.State() > core.Built)
+	return metadata, err
+}
+
+// retrieve implements internal retrieval of build artifacts.
+func (c *Client) retrieve(target *core.BuildTarget, key []byte, isTest bool) (*pb.Digest, *core.BuildMetadata, error) {
 	inputRoot, err := c.buildInputRoot(target, false, isTest)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	digest := digestMessage(&pb.Action{
 		CommandDigest:   digestMessage(c.buildCommand(target, key, isTest)),
@@ -287,7 +302,7 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 		InlineStdout: target.PostBuildFunction != nil, // We only care in this case.
 	})
 	if err != nil {
-		return nil, err
+		return digest, nil, err
 	}
 	metadata := &core.BuildMetadata{
 		StartTime: toTime(resp.ExecutionMetadata.ExecutionStartTimestamp),
@@ -295,7 +310,7 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 		Stdout:    resp.StdoutRaw, // TODO(peterebden): Fall back to the digest when needed.
 	}
 	mode := target.OutMode()
-	return metadata, c.downloadBlobs(func(ch chan<- *blob) error {
+	return digest, metadata, c.downloadBlobs(func(ch chan<- *blob) error {
 		for _, file := range resp.OutputFiles {
 			addPerms := extraPerms(file)
 			if file.Contents != nil {
@@ -313,11 +328,24 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 }
 
 // Build executes a remote build of the given target.
-func (c *Client) Build(state *core.BuildState, target *core.BuildTarget) error {
-	return fmt.Errorf("Remote builds not implemented")
+func (c *Client) Build(state *core.BuildState, target *core.BuildTarget, key []byte) (*core.BuildMetadata, error) {
+	if err := c.CheckInitialised(); err != nil {
+		return nil, err
+	}
+	digest, metadata, err := c.retrieve(target, key, false)
+	if digest == nil || metadata != nil {
+		return metadata, err
+	}
+	// if we get here the cache retrieval was not successful, but we are ready to
+	// submit the action to the remote executor.
+
+	return nil, fmt.Errorf("Remote builds not implemented")
 }
 
 // Test executes a remote test of the given target.
 func (c *Client) Test(state *core.BuildState, target *core.BuildTarget) error {
+	if err := c.CheckInitialised(); err != nil {
+		return err
+	}
 	return fmt.Errorf("Remote builds not implemented")
 }
