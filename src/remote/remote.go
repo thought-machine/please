@@ -336,7 +336,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget, stamp []byte) (*core.B
 
 // Test executes a remote test of the given target.
 // TODO(peterebden): Return test results and coverage info too.
-func (c *Client) Test(tid int, state *core.BuildState, target *core.BuildTarget) (*core.BuildMetadata, error) {
+func (c *Client) Test(tid int, target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
@@ -390,7 +390,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 					c.state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
 				}
 				for k, v := range response.ServerLogs {
-					log.Debug("Server log available: %s: %s", k, v.Digest.Hash)
+					log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
 				}
 				respErr := convertError(response.Status)
 				if resp.Result == nil { // This is optional on failure.

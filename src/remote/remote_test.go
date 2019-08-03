@@ -13,8 +13,12 @@ import (
 
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 	"github.com/stretchr/testify/assert"
 	bs "google.golang.org/genproto/googleapis/bytestream"
+	"google.golang.org/genproto/googleapis/longrunning"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -81,10 +85,26 @@ func TestStoreAndRetrieve(t *testing.T) {
 	assert.Equal(t, metadata, retrievedMetadata)
 }
 
+func TestExecuteBuild(t *testing.T) {
+	c := newClient()
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target2"})
+	target.AddSource(core.FileLabel{File: "src1.txt", Package: "package"})
+	target.AddSource(core.FileLabel{File: "src2.txt", Package: "package"})
+	target.AddOutput("out2.txt")
+	target.BuildTimeout = time.Minute
+	// We need to set this to force stdout to be retrieved (it is otherwise unnecessary
+	// on success).
+	target.PostBuildFunction = testFunction{}
+	target.Command = "echo hello && echo test > $OUT"
+	metadata, err := c.Build(0, target, []byte("stampystampystamp"))
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("hello\n"), metadata.Stdout)
+}
+
 func newClient() *Client {
 	config := core.DefaultConfiguration()
 	config.Build.Path = []string{"/usr/local/bin", "/usr/bin", "/bin"}
-	// Can't use NewDefaultBuildState since we need to modify the config first.
+	config.Remote.NumExecutors = 1
 	state := core.NewBuildState(config)
 	state.Config.Remote.URL = "127.0.0.1:9987"
 	return New(state)
@@ -107,6 +127,12 @@ func (s *testServer) GetCapabilities(ctx context.Context, req *pb.GetCapabilitie
 				UpdateEnabled: true,
 			},
 			MaxBatchTotalSizeBytes: 2048,
+		},
+		ExecutionCapabilities: &pb.ExecutionCapabilities{
+			// TODO(peterebden): this should probably be SHA256 to mimic what we will
+			//                   likely find in the wild.
+			DigestFunction: pb.DigestFunction_SHA1,
+			ExecEnabled:    true,
 		},
 		LowApiVersion:  &s.LowApiVersion,
 		HighApiVersion: &s.HighApiVersion,
@@ -279,6 +305,83 @@ func (s *testServer) QueryWriteStatus(ctx context.Context, req *bs.QueryWriteSta
 	return nil, status.Errorf(codes.NotFound, "resource %s not found", req.ResourceName)
 }
 
+func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteServer) error {
+	mm := func(msg proto.Message) *any.Any {
+		a, _ := ptypes.MarshalAny(msg)
+		return a
+	}
+	srv.Send(&longrunning.Operation{
+		Name: "geoff",
+		Metadata: mm(&pb.ExecuteOperationMetadata{
+			Stage: pb.ExecutionStage_CACHE_CHECK,
+		}),
+	})
+	queued := toTimestamp(time.Now())
+	srv.Send(&longrunning.Operation{
+		Name: "geoff",
+		Metadata: mm(&pb.ExecuteOperationMetadata{
+			Stage: pb.ExecutionStage_QUEUED,
+		}),
+	})
+	start := toTimestamp(time.Now())
+	srv.Send(&longrunning.Operation{
+		Name: "geoff",
+		Metadata: mm(&pb.ExecuteOperationMetadata{
+			Stage: pb.ExecutionStage_EXECUTING,
+		}),
+	})
+	completed := toTimestamp(time.Now())
+	// Keep stdout as a blob to force the client to download it.
+	s.blobs["5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"] = []byte("hello\n")
+	srv.Send(&longrunning.Operation{
+		Name: "geoff",
+		Metadata: mm(&pb.ExecuteOperationMetadata{
+			Stage: pb.ExecutionStage_COMPLETED,
+		}),
+		Done: true,
+		Result: &longrunning.Operation_Response{
+			Response: mm(&pb.ExecuteResponse{
+				Result: &pb.ActionResult{
+					OutputFiles: []*pb.OutputFile{{
+						Path: "out2.txt",
+						Digest: &pb.Digest{
+							Hash:      "5fb3d47e893061ea6627334a8582c37398cfdc68fe7fa59c16912e4a3ab7a5d6",
+							SizeBytes: 19,
+						},
+					}},
+					ExitCode: 0,
+					StdoutDigest: &pb.Digest{
+						Hash:      "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03",
+						SizeBytes: 6,
+					},
+					ExecutionMetadata: &pb.ExecutedActionMetadata{
+						Worker:                      "kev",
+						QueuedTimestamp:             queued,
+						ExecutionStartTimestamp:     start,
+						ExecutionCompletedTimestamp: completed,
+					},
+				},
+				Status: &rpcstatus.Status{
+					Code: int32(codes.OK),
+				},
+				ServerLogs: map[string]*pb.LogFile{
+					"test": {
+						Digest: &pb.Digest{
+							Hash:      "e70c151d26f755cea2162b627151416f4407ebc8502cea8e68f0d95a3950ea16",
+							SizeBytes: 42,
+						},
+					},
+				},
+			}),
+		},
+	})
+	return nil
+}
+
+func (s *testServer) WaitExecution(*pb.WaitExecutionRequest, pb.Execution_WaitExecutionServer) error {
+	return fmt.Errorf("not implemented")
+}
+
 var server = &testServer{}
 
 // A testFunction is something we can assign to a target's PostBuildFunction; it will
@@ -299,6 +402,7 @@ func TestMain(m *testing.M) {
 	pb.RegisterActionCacheServer(s, server)
 	pb.RegisterContentAddressableStorageServer(s, server)
 	bs.RegisterByteStreamServer(s, server)
+	pb.RegisterExecutionServer(s, server)
 	go s.Serve(lis)
 	if err := os.Chdir("src/remote/test_data"); err != nil {
 		log.Fatalf("Failed to chdir: %s", err)
