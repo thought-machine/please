@@ -19,6 +19,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	bs "google.golang.org/genproto/googleapis/bytestream"
+	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"gopkg.in/op/go-logging.v1"
@@ -279,15 +280,11 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	_, metadata, err := c.retrieve(target, key, target.State() > core.Built)
-	return metadata, err
-}
-
-// retrieve implements internal retrieval of build artifacts.
-func (c *Client) retrieve(target *core.BuildTarget, key []byte, isTest bool) (*pb.Digest, *core.BuildMetadata, error) {
+	isTest := target.State() > core.Built
+	needStdout := target.PostBuildFunction != nil && !isTest // We only care in this case.
 	inputRoot, err := c.buildInputRoot(target, false, isTest)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	digest := digestMessage(&pb.Action{
 		CommandDigest:   digestMessage(c.buildCommand(target, key, isTest)),
@@ -299,18 +296,13 @@ func (c *Client) retrieve(target *core.BuildTarget, key []byte, isTest bool) (*p
 	resp, err := c.actionCacheClient.GetActionResult(ctx, &pb.GetActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,
-		InlineStdout: target.PostBuildFunction != nil, // We only care in this case.
+		InlineStdout: needStdout,
 	})
 	if err != nil {
-		return digest, nil, err
-	}
-	metadata := &core.BuildMetadata{
-		StartTime: toTime(resp.ExecutionMetadata.ExecutionStartTimestamp),
-		EndTime:   toTime(resp.ExecutionMetadata.ExecutionCompletedTimestamp),
-		Stdout:    resp.StdoutRaw, // TODO(peterebden): Fall back to the digest when needed.
+		return nil, err
 	}
 	mode := target.OutMode()
-	return digest, metadata, c.downloadBlobs(func(ch chan<- *blob) error {
+	if err := c.downloadBlobs(func(ch chan<- *blob) error {
 		for _, file := range resp.OutputFiles {
 			addPerms := extraPerms(file)
 			if file.Contents != nil {
@@ -324,28 +316,121 @@ func (c *Client) retrieve(target *core.BuildTarget, key []byte, isTest bool) (*p
 		}
 		close(ch)
 		return nil
-	})
+	}); err != nil {
+		return nil, err
+	}
+	return c.buildMetadata(resp, needStdout, false)
 }
 
 // Build executes a remote build of the given target.
-func (c *Client) Build(state *core.BuildState, target *core.BuildTarget, key []byte) (*core.BuildMetadata, error) {
+func (c *Client) Build(tid int, target *core.BuildTarget, stamp []byte) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	digest, metadata, err := c.retrieve(target, key, false)
-	if digest == nil || metadata != nil {
-		return metadata, err
+	digest, err := c.uploadAction(target, stamp, false)
+	if err != nil {
+		return nil, err
 	}
-	// if we get here the cache retrieval was not successful, but we are ready to
-	// submit the action to the remote executor.
-
-	return nil, fmt.Errorf("Remote builds not implemented")
+	return c.execute(tid, target, digest, target.BuildTimeout, target.PostBuildFunction != nil)
 }
 
 // Test executes a remote test of the given target.
-func (c *Client) Test(state *core.BuildState, target *core.BuildTarget) error {
+// TODO(peterebden): Return test results and coverage info too.
+func (c *Client) Test(tid int, state *core.BuildState, target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
-		return err
+		return nil, err
 	}
-	return fmt.Errorf("Remote builds not implemented")
+	digest, err := c.uploadAction(target, nil, true)
+	if err != nil {
+		return nil, err
+	}
+	return c.execute(tid, target, digest, target.TestTimeout, false)
+}
+
+// execute submits an action to the remote executor and monitors its progress.
+func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	stream, err := c.execClient.Execute(ctx, &pb.ExecuteRequest{
+		InstanceName: c.instance,
+		ActionDigest: digest,
+	})
+	if err != nil {
+		return nil, err
+	}
+	for {
+		resp, err := stream.Recv()
+		if err != nil {
+			// We shouldn't get an EOF here because there's in-channel signalling via Done.
+			// TODO(peterebden): On other errors we should be able to reconnect and use
+			//                   WaitExecution to rejoin the stream.
+			return nil, err
+		}
+		metadata := &pb.ExecuteOperationMetadata{}
+		if err := ptypes.UnmarshalAny(resp.Metadata, metadata); err != nil {
+			log.Warning("Failed to deserialise execution metadata: %s", err)
+		} else {
+			c.updateProgress(tid, target, metadata)
+			// TODO(peterebden): At this point we could stream stdout / stderr if the
+			//                   user has set --show_all_output.
+		}
+		if resp.Done {
+			switch result := resp.Result.(type) {
+			case *longrunning.Operation_Error:
+				// We shouldn't really get here - the rex API requires servers to always
+				// use the response field instead of error.
+				return nil, convertError(result.Error)
+			case *longrunning.Operation_Response:
+				response := &pb.ExecuteResponse{}
+				if err := ptypes.UnmarshalAny(result.Response, response); err != nil {
+					log.Error("Failed to deserialise execution response: %s", err)
+					return nil, err
+				}
+				if response.CachedResult {
+					c.state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
+				}
+				for k, v := range response.ServerLogs {
+					log.Debug("Server log available: %s: %s", k, v.Digest.Hash)
+				}
+				respErr := convertError(response.Status)
+				if resp.Result == nil { // This is optional on failure.
+					return nil, respErr
+				}
+				metadata, err := c.buildMetadata(response.Result, needStdout || respErr != nil, respErr != nil)
+				// The original error is higher priority than us trying to retrieve the
+				// output of the thing that failed.
+				if respErr != nil {
+					return metadata, respErr
+				}
+				return metadata, err
+			}
+		}
+	}
+}
+
+// updateProgress updates the progress of a target based on its metadata.
+func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.ExecuteOperationMetadata) {
+	if target.State() > core.Built {
+		switch metadata.Stage {
+		case pb.ExecutionStage_CACHE_CHECK:
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache")
+		case pb.ExecutionStage_QUEUED:
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Queued")
+		case pb.ExecutionStage_EXECUTING:
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Building")
+		case pb.ExecutionStage_COMPLETED:
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
+		}
+	} else {
+		switch metadata.Stage {
+		case pb.ExecutionStage_CACHE_CHECK:
+			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Checking cache")
+		case pb.ExecutionStage_QUEUED:
+			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Queued")
+		case pb.ExecutionStage_EXECUTING:
+			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing")
+		case pb.ExecutionStage_COMPLETED:
+			c.state.LogBuildResult(tid, target.Label, core.TargetTested, "Tested")
+		}
+	}
 }

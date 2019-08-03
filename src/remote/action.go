@@ -244,6 +244,31 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 	return root, err
 }
 
+// buildMetadata converts an ActionResult into one of our BuildMetadata protos.
+func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool) (*core.BuildMetadata, error) {
+	metadata := &core.BuildMetadata{
+		StartTime: toTime(ar.ExecutionMetadata.ExecutionStartTimestamp),
+		EndTime:   toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp),
+		Stdout:    ar.StdoutRaw,
+		Stderr:    ar.StderrRaw,
+	}
+	if needStdout && len(metadata.Stdout) == 0 {
+		b, err := c.readAllByteStream(ar.StdoutDigest)
+		if err != nil {
+			return metadata, err
+		}
+		metadata.Stdout = b
+	}
+	if needStderr && len(metadata.Stderr) == 0 {
+		b, err := c.readAllByteStream(ar.StderrDigest)
+		if err != nil {
+			return metadata, err
+		}
+		metadata.Stderr = b
+	}
+	return metadata, nil
+}
+
 // translateOS converts the OS name of a subrepo into a Bazel-style OS name.
 func translateOS(subrepo *core.Subrepo) string {
 	if subrepo == nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -109,4 +110,12 @@ func hasChild(dir *pb.Directory, child string) bool {
 func exhaustChannel(ch <-chan *blob) {
 	for range ch {
 	}
+}
+
+// convertError converts a single google.rpc.Status message into a Go error
+func convertError(err *rpcstatus.Status) error {
+	if err.Code == int32(codes.OK) {
+		return nil
+	}
+	return fmt.Errorf("%s", err.Message)
 }
