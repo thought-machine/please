@@ -2,6 +2,7 @@ package remote
 
 import (
 	"encoding/hex"
+	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
@@ -98,6 +99,50 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) *pb.Command {
 		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, "")),
 		OutputFiles:          outs,
 	}
+}
+
+// digestDir calculates the digest for a directory.
+// It returns Directory protos for the directory and all its (recursive) children.
+func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory, []*pb.Directory, error) {
+	entries, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, nil, err
+	}
+	d := &pb.Directory{}
+	err = c.uploadBlobs(func(ch chan<- *blob) error {
+		for _, entry := range entries {
+			name := entry.Name()
+			fullname := path.Join(dir, name)
+			if mode := entry.Mode(); mode&os.ModeDir != 0 {
+				dir, descendants, err := c.digestDir(fullname, children)
+				if err != nil {
+					return err
+				}
+				d.Directories = append(d.Directories, &pb.DirectoryNode{
+					Name:   name,
+					Digest: digestMessage(dir),
+				})
+				children = append(children, descendants...)
+				continue
+			} else if mode&os.ModeSymlink != 0 {
+				target, err := os.Readlink(fullname)
+				if err != nil {
+					return err
+				}
+				d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
+					Name:   name,
+					Target: target,
+				})
+				continue
+			}
+			ch <- &blob{
+				File:   fullname,
+				Digest: &pb.Digest{SizeBytes: entry.Size()},
+			}
+		}
+		return nil
+	})
+	return d, children, err
 }
 
 // buildInputRoot constructs the directory that is the input root and optionally uploads it.
@@ -197,6 +242,41 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 		return nil
 	})
 	return root, err
+}
+
+// buildMetadata converts an ActionResult into one of our BuildMetadata protos.
+func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool) (*core.BuildMetadata, error) {
+	metadata := &core.BuildMetadata{
+		StartTime: toTime(ar.ExecutionMetadata.ExecutionStartTimestamp),
+		EndTime:   toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp),
+		Stdout:    ar.StdoutRaw,
+		Stderr:    ar.StderrRaw,
+	}
+	if needStdout && len(metadata.Stdout) == 0 {
+		b, err := c.readAllByteStream(ar.StdoutDigest)
+		if err != nil {
+			return metadata, err
+		}
+		metadata.Stdout = b
+	}
+	if needStderr && len(metadata.Stderr) == 0 {
+		b, err := c.readAllByteStream(ar.StderrDigest)
+		if err != nil {
+			return metadata, err
+		}
+		metadata.Stderr = b
+	}
+	return metadata, nil
+}
+
+// digestForFilename returns the digest for an output of the given name.
+func (c *Client) digestForFilename(ar *pb.ActionResult, name string) *pb.Digest {
+	for _, file := range ar.OutputFiles {
+		if file.Path == name {
+			return file.Digest
+		}
+	}
+	return nil
 }
 
 // translateOS converts the OS name of a subrepo into a Bazel-style OS name.

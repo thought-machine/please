@@ -9,7 +9,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"sync"
@@ -20,6 +19,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	bs "google.golang.org/genproto/googleapis/bytestream"
+	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"gopkg.in/op/go-logging.v1"
@@ -49,6 +49,7 @@ type Client struct {
 	actionCacheClient pb.ActionCacheClient
 	storageClient     pb.ContentAddressableStorageClient
 	bsClient          bs.ByteStreamClient
+	execClient        pb.ExecutionClient
 	initOnce          sync.Once
 	state             *core.BuildState
 	err               error // for initialisation
@@ -139,6 +140,16 @@ func (c *Client) init() {
 		c.bashPath = bash
 		c.canBatchBlobReads = c.checkBatchReadBlobs()
 		log.Debug("Remote execution client initialised for storage")
+		// Now check if it can do remote execution
+		if caps := resp.ExecutionCapabilities; caps != nil && c.state.Config.Remote.NumExecutors > 0 {
+			if err := c.chooseDigest([]pb.DigestFunction_Value{caps.DigestFunction}); err != nil {
+				return err
+			} else if !caps.ExecEnabled {
+				return fmt.Errorf("Remote execution not enabled for this server")
+			}
+			c.execClient = pb.NewExecutionClient(conn)
+			log.Debug("Remote execution client initialised for execution")
+		}
 		return err
 	}()
 	if c.err != nil {
@@ -270,6 +281,7 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 		return nil, err
 	}
 	isTest := target.State() > core.Built
+	needStdout := target.PostBuildFunction != nil && !isTest // We only care in this case.
 	inputRoot, err := c.buildInputRoot(target, false, isTest)
 	if err != nil {
 		return nil, err
@@ -284,18 +296,13 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 	resp, err := c.actionCacheClient.GetActionResult(ctx, &pb.GetActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,
-		InlineStdout: target.PostBuildFunction != nil, // We only care in this case.
+		InlineStdout: needStdout,
 	})
 	if err != nil {
 		return nil, err
 	}
-	metadata := &core.BuildMetadata{
-		StartTime: toTime(resp.ExecutionMetadata.ExecutionStartTimestamp),
-		EndTime:   toTime(resp.ExecutionMetadata.ExecutionCompletedTimestamp),
-		Stdout:    resp.StdoutRaw, // TODO(peterebden): Fall back to the digest when needed.
-	}
 	mode := target.OutMode()
-	return metadata, c.downloadBlobs(func(ch chan<- *blob) error {
+	if err := c.downloadBlobs(func(ch chan<- *blob) error {
 		for _, file := range resp.OutputFiles {
 			addPerms := extraPerms(file)
 			if file.Contents != nil {
@@ -309,59 +316,139 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 		}
 		close(ch)
 		return nil
-	})
-}
-
-// digestDir calculates the digest for a directory.
-// It returns Directory protos for the directory and all its (recursive) children.
-func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory, []*pb.Directory, error) {
-	entries, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, nil, err
+	}); err != nil {
+		return nil, err
 	}
-	d := &pb.Directory{}
-	err = c.uploadBlobs(func(ch chan<- *blob) error {
-		for _, entry := range entries {
-			name := entry.Name()
-			fullname := path.Join(dir, name)
-			if mode := entry.Mode(); mode&os.ModeDir != 0 {
-				dir, descendants, err := c.digestDir(fullname, children)
-				if err != nil {
-					return err
-				}
-				d.Directories = append(d.Directories, &pb.DirectoryNode{
-					Name:   name,
-					Digest: digestMessage(dir),
-				})
-				children = append(children, descendants...)
-				continue
-			} else if mode&os.ModeSymlink != 0 {
-				target, err := os.Readlink(fullname)
-				if err != nil {
-					return err
-				}
-				d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
-					Name:   name,
-					Target: target,
-				})
-				continue
-			}
-			ch <- &blob{
-				File:   fullname,
-				Digest: &pb.Digest{SizeBytes: entry.Size()},
-			}
-		}
-		return nil
-	})
-	return d, children, err
+	return c.buildMetadata(resp, needStdout, false)
 }
 
 // Build executes a remote build of the given target.
-func (c *Client) Build(state *core.BuildState, target *core.BuildTarget) error {
-	return fmt.Errorf("Remote builds not implemented")
+func (c *Client) Build(tid int, target *core.BuildTarget, stamp []byte) (*core.BuildMetadata, error) {
+	if err := c.CheckInitialised(); err != nil {
+		return nil, err
+	}
+	digest, err := c.uploadAction(target, stamp, false)
+	if err != nil {
+		return nil, err
+	}
+	metadata, _, err := c.execute(tid, target, digest, target.BuildTimeout, target.PostBuildFunction != nil)
+	return metadata, err
 }
 
 // Test executes a remote test of the given target.
-func (c *Client) Test(state *core.BuildState, target *core.BuildTarget) error {
-	return fmt.Errorf("Remote builds not implemented")
+// It returns the results (and coverage if appropriate) as bytes to be parsed elsewhere.
+func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMetadata, results, coverage []byte, err error) {
+	if err := c.CheckInitialised(); err != nil {
+		return nil, nil, nil, err
+	}
+	digest, err := c.uploadAction(target, nil, true)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	metadata, ar, execErr := c.execute(tid, target, digest, target.TestTimeout, false)
+	// Error handling here is a bit fiddly due to prioritisation; the execution error
+	// is more relevant, but we want to still try to get results if we can, and it's an
+	// error if we can't get those results on success.
+	if !target.NoTestOutput && ar != nil {
+		results, err = c.readAllByteStream(c.digestForFilename(ar, core.TestResultsFile))
+		if execErr == nil && err != nil {
+			return metadata, nil, nil, err
+		}
+	}
+	if target.NeedCoverage(c.state) && ar != nil {
+		coverage, err = c.readAllByteStream(c.digestForFilename(ar, core.CoverageFile))
+		if execErr == nil && err != nil {
+			return metadata, results, nil, err
+		}
+	}
+	return metadata, results, coverage, execErr
+}
+
+// execute submits an action to the remote executor and monitors its progress.
+// The returned ActionResult may be nil on failure.
+func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	stream, err := c.execClient.Execute(ctx, &pb.ExecuteRequest{
+		InstanceName: c.instance,
+		ActionDigest: digest,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	for {
+		resp, err := stream.Recv()
+		if err != nil {
+			// We shouldn't get an EOF here because there's in-channel signalling via Done.
+			// TODO(peterebden): On other errors we should be able to reconnect and use
+			//                   WaitExecution to rejoin the stream.
+			return nil, nil, err
+		}
+		metadata := &pb.ExecuteOperationMetadata{}
+		if err := ptypes.UnmarshalAny(resp.Metadata, metadata); err != nil {
+			log.Warning("Failed to deserialise execution metadata: %s", err)
+		} else {
+			c.updateProgress(tid, target, metadata)
+			// TODO(peterebden): At this point we could stream stdout / stderr if the
+			//                   user has set --show_all_output.
+		}
+		if resp.Done {
+			switch result := resp.Result.(type) {
+			case *longrunning.Operation_Error:
+				// We shouldn't really get here - the rex API requires servers to always
+				// use the response field instead of error.
+				return nil, nil, convertError(result.Error)
+			case *longrunning.Operation_Response:
+				response := &pb.ExecuteResponse{}
+				if err := ptypes.UnmarshalAny(result.Response, response); err != nil {
+					log.Error("Failed to deserialise execution response: %s", err)
+					return nil, nil, err
+				}
+				if response.CachedResult {
+					c.state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
+				}
+				for k, v := range response.ServerLogs {
+					log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
+				}
+				respErr := convertError(response.Status)
+				if resp.Result == nil { // This is optional on failure.
+					return nil, nil, respErr
+				}
+				metadata, err := c.buildMetadata(response.Result, needStdout || respErr != nil, respErr != nil)
+				// The original error is higher priority than us trying to retrieve the
+				// output of the thing that failed.
+				if respErr != nil {
+					return metadata, response.Result, respErr
+				}
+				return metadata, response.Result, err
+			}
+		}
+	}
+}
+
+// updateProgress updates the progress of a target based on its metadata.
+func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.ExecuteOperationMetadata) {
+	if target.State() >= core.Built {
+		switch metadata.Stage {
+		case pb.ExecutionStage_CACHE_CHECK:
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache")
+		case pb.ExecutionStage_QUEUED:
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Queued")
+		case pb.ExecutionStage_EXECUTING:
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Building")
+		case pb.ExecutionStage_COMPLETED:
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
+		}
+	} else {
+		switch metadata.Stage {
+		case pb.ExecutionStage_CACHE_CHECK:
+			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Checking cache")
+		case pb.ExecutionStage_QUEUED:
+			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Queued")
+		case pb.ExecutionStage_EXECUTING:
+			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing")
+		case pb.ExecutionStage_COMPLETED:
+			c.state.LogBuildResult(tid, target.Label, core.TargetTested, "Tested")
+		}
+	}
 }

@@ -38,12 +38,6 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
 }
 
 func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool) {
-	if runRemotely {
-		if err := remote.Get(state).Test(state, target); err != nil {
-			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to test remotely")
-		}
-		return
-	}
 	hash, err := build.RuntimeHash(state, target)
 	if err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to calculate target hash")
@@ -72,7 +66,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	cachedTestResults := func() *core.TestSuite {
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, cachedCoverageFile)
-		results, err := parseTestResults(cachedOutputFile)
+		results, err := parseTestResults(cachedOutputFile, nil)
 		results.Package = strings.Replace(target.Label.PackageName, "/", ".", -1)
 		results.Name = target.Label.Name
 		results.Cached = true
@@ -185,6 +179,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		target.Results.TestCases = append(target.Results.TestCases, testCase)
 		return
 	}
+	coverage := &core.TestCoverage{}
 
 	// Always run the test this number of times
 	for runs := 1; runs <= state.NumTestRuns; runs++ {
@@ -209,7 +204,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			}
 			state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("%s...", flakeStatus))
 
-			testSuite := doTest(tid, state, target, outputFile)
+			testSuite, cov := doTest(tid, state, target, outputFile, runRemotely)
 
 			flakeResults.TimedOut = flakeResults.TimedOut || testSuite.TimedOut
 			flakeResults.Properties = testSuite.Properties
@@ -217,6 +212,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			// Each set of executions is treated as a group
 			// So if a test flakes three times, three executions will be part of one test case.
 			flakeResults.Add(testSuite.TestCases...)
+			coverage.Aggregate(cov)
 
 			// If execution succeeded, we can break out of the flake loop
 			if testSuite.TestCases.AllSucceeded() {
@@ -228,7 +224,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		target.Results.Collapse(flakeResults)
 	}
 	metadata.EndTime = time.Now()
-	coverage := parseCoverageFile(target, coverageFile)
 	if target.Results.TestCases.AllSucceeded() {
 		// Success, store in cache
 		moveAndCacheOutputFiles(&target.Results, coverage)
@@ -322,21 +317,36 @@ func runTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	return stderr, err
 }
 
-func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFile string) core.TestSuite {
+func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFile string, runRemotely bool) (core.TestSuite, *core.TestCoverage) {
 	startTime := time.Now()
-	stdout, runError := prepareAndRunTest(tid, state, target)
+	metadata, resultsData, coverage, err := doTestResults(tid, state, target, outputFile, runRemotely)
 	duration := time.Since(startTime)
-
-	parsedSuite := parseTestOutput(stdout, "", runError, duration, target, outputFile)
-
+	parsedSuite := parseTestOutput(metadata.Stdout, string(metadata.Stderr), err, duration, target, outputFile, resultsData)
 	return core.TestSuite{
 		Package:    strings.Replace(target.Label.PackageName, "/", ".", -1),
 		Name:       target.Label.Name,
 		Duration:   duration,
-		TimedOut:   runError == context.DeadlineExceeded,
+		TimedOut:   err == context.DeadlineExceeded,
 		Properties: parsedSuite.Properties,
 		TestCases:  parsedSuite.TestCases,
+	}, coverage
+}
+
+func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, outputFile string, runRemotely bool) (*core.BuildMetadata, []byte, *core.TestCoverage, error) {
+	if runRemotely {
+		metadata, results, coverage, err := remote.Get(state).Test(tid, target)
+		cov, err2 := parseTestCoverage(target, coverage)
+		if err == nil && err2 != nil {
+			log.Error("Error parsing coverage data: %s", err2)
+		}
+		if metadata == nil {
+			metadata = &core.BuildMetadata{}
+		}
+		return metadata, results, cov, err
 	}
+	stdout, err := prepareAndRunTest(tid, state, target)
+	coverage := parseCoverageFile(target, path.Join(target.TestDir(), core.CoverageFile))
+	return &core.BuildMetadata{Stdout: stdout}, nil, coverage, err
 }
 
 // prepareAndRunTest sets up a test directory and runs the test.
@@ -348,7 +358,7 @@ func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget
 	return runTest(state, target)
 }
 
-func parseTestOutput(stdout []byte, stderr string, runError error, duration time.Duration, target *core.BuildTarget, outputFile string) core.TestSuite {
+func parseTestOutput(stdout []byte, stderr string, runError error, duration time.Duration, target *core.BuildTarget, outputFile string, resultsData []byte) core.TestSuite {
 	// This is all pretty involved; there are lots of different possibilities of what could happen.
 	// The contract is that the test must return zero on success or non-zero on failure (Unix FTW).
 	// If it's successful, it must produce a parseable file named "test.results" in its temp folder.
@@ -362,7 +372,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 	// No output and execution error - SYNTHETIC ERROR - Failed to Run
 	// Output and no execution error - PARSE OUTPUT - Ignore noTestOutput
 	// Output and execution error - PARSE OUTPUT + SYNTHETIC ERROR - Incomplete Run
-	if !core.PathExists(outputFile) {
+	if !core.PathExists(outputFile) && len(resultsData) == 0 {
 		if runError == nil && target.NoTestOutput {
 			return core.TestSuite{
 				TestCases: []core.TestCase{
@@ -440,7 +450,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 		}
 	}
 
-	results, parseError := parseTestResults(outputFile)
+	results, parseError := parseTestResults(outputFile, resultsData)
 	if parseError != nil {
 		if runError != nil {
 			return core.TestSuite{
@@ -526,7 +536,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 
 // Parses the coverage output for a single target.
 func parseCoverageFile(target *core.BuildTarget, coverageFile string) *core.TestCoverage {
-	coverage, err := parseTestCoverage(target, coverageFile)
+	coverage, err := parseTestCoverageFile(target, coverageFile)
 	if err != nil {
 		log.Errorf("Failed to parse coverage file for %s: %s", target.Label, err)
 	}

@@ -3,8 +3,8 @@ package test
 import (
 	"testing"
 
+	"github.com/peterebden/tools/cover"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/tools/cover"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -23,7 +23,7 @@ const (
 
 // Test that tests aren't required to produce coverage, ie. it's not an error if the file doesn't exist.
 func TestCoverageNotRequired(t *testing.T) {
-	coverage, err := parseTestCoverage(target, "src/test/test_data/blah.xml")
+	coverage, err := parseTestCoverageFile(target, "src/test/test_data/blah.xml")
 	if err != nil {
 		t.Errorf("Incorrectly produced error attempting to read missing coverage file: %s", err)
 	}
@@ -34,7 +34,7 @@ func TestCoverageNotRequired(t *testing.T) {
 
 // Test that the target is recorded in the file list.
 func TestTargetIsRecorded(t *testing.T) {
-	coverage, err := parseTestCoverage(target, pythonCoverageFile)
+	coverage, err := parseTestCoverageFile(target, pythonCoverageFile)
 	if err != nil {
 		t.Errorf("Failed to read coverage file %s", pythonCoverageFile)
 	}
@@ -45,7 +45,7 @@ func TestTargetIsRecorded(t *testing.T) {
 
 // Test the sample Python test output file.
 func TestPythonResults(t *testing.T) {
-	coverage, err := parseTestCoverage(target, pythonCoverageFile)
+	coverage, err := parseTestCoverageFile(target, pythonCoverageFile)
 	if err != nil {
 		t.Errorf("Failed to read coverage file %s", pythonCoverageFile)
 	}
@@ -68,7 +68,7 @@ func TestPythonResults(t *testing.T) {
 
 // Test the sample Go test output file.
 func TestGoResults(t *testing.T) {
-	coverage, err := parseTestCoverage(target, goCoverageFile)
+	coverage, err := parseTestCoverageFile(target, goCoverageFile)
 	if err != nil {
 		t.Errorf("Failed to read coverage file %s", goCoverageFile)
 	}
@@ -94,7 +94,7 @@ func TestGoResults(t *testing.T) {
 
 // Test another sample Go file which has been observed to be wrong.
 func TestGoResults2(t *testing.T) {
-	coverage, err := parseTestCoverage(target, goCoverageFile2)
+	coverage, err := parseTestCoverageFile(target, goCoverageFile2)
 	if err != nil {
 		t.Errorf("Failed to read coverage file %s", goCoverageFile2)
 	}
@@ -122,7 +122,7 @@ func TestGoResults2(t *testing.T) {
 }
 
 func TestGoResults3(t *testing.T) {
-	coverage, err := parseTestCoverage(target, goCoverageFile3)
+	coverage, err := parseTestCoverageFile(target, goCoverageFile3)
 	if err != nil {
 		t.Errorf("Failed to read coverage file %s", goCoverageFile3)
 	}
@@ -165,7 +165,7 @@ func assertLine(t *testing.T, lines []core.LineCoverage, i int, expected core.Li
 
 func TestGcovParsing(t *testing.T) {
 	target := &core.BuildTarget{Label: core.BuildLabel{PackageName: "test", Name: "gcov_test"}}
-	coverage, err := parseTestCoverage(target, gcovCoverageFile)
+	coverage, err := parseTestCoverageFile(target, gcovCoverageFile)
 	assert.NoError(t, err)
 	assert.Contains(t, coverage.Files, "test/cc_rules/deps_test.cc")
 	lines := coverage.Files["test/cc_rules/deps_test.cc"]
@@ -185,7 +185,7 @@ func TestGcovParsing(t *testing.T) {
 
 func TestIstanbulCoverage(t *testing.T) {
 	target := &core.BuildTarget{Label: core.BuildLabel{PackageName: "common/js/components/ActionButton", Name: "test"}}
-	coverage, err := parseTestCoverage(target, istanbulCoverageFile)
+	coverage, err := parseTestCoverageFile(target, istanbulCoverageFile)
 	assert.NoError(t, err)
 	assert.Contains(t, coverage.Files, "common/js/components/ActionButton/ActionButton.js")
 	assert.Contains(t, coverage.Files, "common/js/components/LoadingSpinner/LoadingSpinner.js")
@@ -203,7 +203,7 @@ func TestIstanbulCoverage(t *testing.T) {
 
 func TestIstanbulCoverage2(t *testing.T) {
 	target := &core.BuildTarget{Label: core.BuildLabel{PackageName: "common/js/components/Table", Name: "test"}}
-	coverage, err := parseTestCoverage(target, istanbulCoverageFile2)
+	coverage, err := parseTestCoverageFile(target, istanbulCoverageFile2)
 	assert.NoError(t, err)
 	assert.Contains(t, coverage.Files, "common/js/components/Table/Table.js")
 	lines := coverage.Files["common/js/components/Table/Table.js"]

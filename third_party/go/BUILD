@@ -69,6 +69,15 @@ go_get(
 )
 
 go_get(
+    name = "tools",
+    get = "golang.org/x/tools",
+    install = [
+        "cover",
+    ],
+    revision = "2ae76fd1560b622911f444c1e66b70a857e1de67",
+)
+
+go_get(
     name = "text",
     get = "golang.org/x/text/...",
     revision = "4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1",
@@ -78,12 +87,9 @@ go_get(
 )
 
 go_get(
-    name = "tools",
-    get = "golang.org/x/tools",
-    install = [
-        "cover",
-    ],
-    revision = "2ae76fd1560b622911f444c1e66b70a857e1de67",
+    name = "cover",
+    get = "github.com/peterebden/tools/cover",
+    revision = "b2a0db951d2a49fe30dfd9a5f4aad49df75fc12f",
 )
 
 go_get(

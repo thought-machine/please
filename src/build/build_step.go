@@ -68,9 +68,6 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 
 // Builds a single target
 func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
-	if runRemotely {
-		return remote.Get(state).Build(state, target)
-	}
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -198,7 +195,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		return false
 	}
 	cacheKey := mustShortTargetHash(state, target)
-	if state.Cache != nil {
+	if state.Cache != nil && !runRemotely {
 		// Note that ordering here is quite sensitive since the post-build function can modify
 		// what we would retrieve from the cache.
 		if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
@@ -216,18 +213,27 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return nil
 		}
 	}
-	if err := target.CheckSecrets(); err != nil {
-		return err
-	}
-	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Preparing...")
-	if err := prepareSources(state.Graph, target); err != nil {
-		return fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
-	}
+	var out []byte
+	if runRemotely {
+		m, err := remote.Get(state).Build(tid, target, cacheKey)
+		if err != nil {
+			return err
+		}
+		out = m.Stdout
+	} else {
+		if err := target.CheckSecrets(); err != nil {
+			return err
+		}
+		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Preparing...")
+		if err := prepareSources(state.Graph, target); err != nil {
+			return fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
+		}
 
-	state.LogBuildResult(tid, target.Label, core.TargetBuilding, target.BuildingDescription)
-	out, err := buildMaybeRemotely(state, target, cacheKey)
-	if err != nil {
-		return err
+		state.LogBuildResult(tid, target.Label, core.TargetBuilding, target.BuildingDescription)
+		out, err = buildMaybeRemotely(state, target, cacheKey)
+		if err != nil {
+			return err
+		}
 	}
 	if target.PostBuildFunction != nil {
 		out = bytes.TrimSpace(out)
@@ -239,6 +245,12 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	}
 	metadata.EndTime = time.Now()
 	checkLicences(state, target)
+
+	if runRemotely {
+		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
+		return nil
+	}
+
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
 	outs, outputsChanged, err := moveOutputs(state, target)
 	if err != nil {

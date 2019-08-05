@@ -162,7 +162,7 @@ func (c *Client) sendBlobs(reqs []*pb.BatchUpdateBlobsRequest_Request) error {
 	//                   shouldn't just take the first one. This will do for now though.
 	for _, r := range resp.Responses {
 		if r.Status.Code != int32(codes.OK) {
-			return fmt.Errorf("%s", r.Status.Message)
+			return convertError(r.Status)
 		}
 	}
 	return nil
@@ -311,15 +311,35 @@ func (c *Client) downloadBlobs(f func(ch chan<- *blob) error) error {
 
 // retrieveByteStream receives a file back from the server as a byte stream.
 func (c *Client) retrieveByteStream(b *blob) error {
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
-	defer cancel()
-	stream, err := c.bsClient.Read(ctx, &bs.ReadRequest{
-		ResourceName: c.byteStreamDownloadName(b.Digest),
-	})
+	r, err := c.readByteStream(b.Digest)
 	if err != nil {
 		return err
 	}
-	return fs.WriteFile(&byteStreamReader{stream: stream}, b.File, b.Mode)
+	defer r.Close()
+	return fs.WriteFile(r, b.File, b.Mode)
+}
+
+// readByteStream returns a reader for a bytestream for the given digest.
+func (c *Client) readByteStream(digest *pb.Digest) (io.ReadCloser, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	stream, err := c.bsClient.Read(ctx, &bs.ReadRequest{
+		ResourceName: c.byteStreamDownloadName(digest),
+	})
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	return &byteStreamReader{stream: stream, cancel: cancel}, nil
+}
+
+// readAllByteStream returns a bytestream read in its entirety.
+func (c *Client) readAllByteStream(digest *pb.Digest) ([]byte, error) {
+	r, err := c.readByteStream(digest)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return ioutil.ReadAll(r)
 }
 
 // checkBatchReadBlobs sends a fake request to verify if BatchReadBlobs is supported
@@ -337,6 +357,7 @@ func (c *Client) checkBatchReadBlobs() bool {
 // io.Reader which we can then pass to other things which are ignorant of its true nature.
 type byteStreamReader struct {
 	stream bs.ByteStream_ReadClient
+	cancel func()
 	buf    []byte
 }
 
@@ -356,4 +377,10 @@ func (r *byteStreamReader) Read(into []byte) (int, error) {
 	copy(into, r.buf[:l])
 	r.buf = r.buf[l:]
 	return l, nil
+}
+
+// Close implements the Closer part of io.ReadCloser
+func (r *byteStreamReader) Close() error {
+	r.cancel()
+	return nil
 }
