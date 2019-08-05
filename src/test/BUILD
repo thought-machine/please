@@ -15,8 +15,8 @@ go_library(
         "//src/remote",
         "//src/utils",
         "//src/worker",
-        "//third_party/go:logging",
         "//third_party/go:cover",
+        "//third_party/go:logging",
     ],
 )
 

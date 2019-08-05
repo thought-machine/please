@@ -326,6 +326,7 @@ func (c *Client) readByteStream(digest *pb.Digest) (io.ReadCloser, error) {
 		ResourceName: c.byteStreamDownloadName(digest),
 	})
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 	return &byteStreamReader{stream: stream, cancel: cancel}, nil
