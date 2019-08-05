@@ -17,18 +17,23 @@ import (
 )
 
 // Parses test coverage for a single target from its output file.
-func parseTestCoverage(target *core.BuildTarget, outputFile string) (*core.TestCoverage, error) {
-	coverage := core.NewTestCoverage()
+func parseTestCoverageFile(target *core.BuildTarget, outputFile string) (*core.TestCoverage, error) {
 	data, err := ioutil.ReadFile(outputFile)
 	if err != nil && os.IsNotExist(err) {
-		return coverage, nil // Tests aren't required to produce coverage files.
+		return core.NewTestCoverage(), nil // Tests aren't required to produce coverage files.
 	} else if err != nil {
-		return coverage, err
-	} else if len(data) == 0 {
+		return core.NewTestCoverage(), err
+	}
+	return parseTestCoverage(target, data)
+}
+
+// parseTestCoverage parses coverage from loaded data.
+func parseTestCoverage(target *core.BuildTarget, data []byte) (*core.TestCoverage, error) {
+	coverage := core.NewTestCoverage()
+	if len(data) == 0 {
 		return coverage, fmt.Errorf("Empty coverage output")
 	} else if looksLikeGoCoverageResults(data) {
-		// TODO(pebers): this is a little wasteful, we've already read the file once and we must do it again.
-		return coverage, parseGoCoverageResults(target, coverage, outputFile)
+		return coverage, parseGoCoverageResults(target, coverage, data)
 	} else if looksLikeGcovCoverageResults(data) {
 		return coverage, parseGcovCoverageResults(target, coverage, data)
 	} else if looksLikeIstanbulCoverageResults(data) {

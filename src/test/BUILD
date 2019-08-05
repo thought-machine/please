@@ -16,7 +16,7 @@ go_library(
         "//src/utils",
         "//src/worker",
         "//third_party/go:logging",
-        "//third_party/go:tools",
+        "//third_party/go:cover",
     ],
 )
 
