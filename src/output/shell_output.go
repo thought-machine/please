@@ -185,7 +185,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		if result.Status != core.TargetTestFailed {
 			// Reset colour so the entire compiler error output doesn't appear red.
 			log.Errorf("%s failed:${RESET}\n%s", result.Label, shortError(result.Err))
-			state.KillAll()
+			state.Stop()
 		} else if !plainOutput { // plain output will have already logged this
 			log.Errorf("%s failed: %s", result.Label, shortError(result.Err))
 		}
