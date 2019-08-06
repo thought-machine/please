@@ -49,6 +49,11 @@ func (hasher *PathHasher) Size() int {
 	return hasher.new().Size()
 }
 
+// NewHash returns a new hash.Hash instance from this hasher.
+func (hasher *PathHasher) NewHash() hash.Hash {
+	return hasher.new()
+}
+
 // DisableXattrs turns off xattr support, which bypasses using them to record file hashes.
 func (hasher *PathHasher) DisableXattrs() {
 	hasher.useXattrs = false
