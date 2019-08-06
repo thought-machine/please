@@ -46,7 +46,7 @@ func TestBadAPIVersion(t *testing.T) {
 func TestUnsupportedDigest(t *testing.T) {
 	defer server.Reset()
 	server.DigestFunction = []pb.DigestFunction_Value{
-		pb.DigestFunction_SHA256,
+		pb.DigestFunction_MD5,
 		pb.DigestFunction_SHA384,
 		pb.DigestFunction_SHA512,
 	}
@@ -151,6 +151,7 @@ func newClient() *Client {
 func newClientInstance(name string) *Client {
 	config := core.DefaultConfiguration()
 	config.Build.Path = []string{"/usr/local/bin", "/usr/bin", "/bin"}
+	config.Build.HashFunction = "sha256"
 	config.Remote.NumExecutors = 1
 	config.Remote.Instance = name
 	state := core.NewBuildState(config)
@@ -177,9 +178,7 @@ func (s *testServer) GetCapabilities(ctx context.Context, req *pb.GetCapabilitie
 			MaxBatchTotalSizeBytes: 2048,
 		},
 		ExecutionCapabilities: &pb.ExecutionCapabilities{
-			// TODO(peterebden): this should probably be SHA256 to mimic what we will
-			//                   likely find in the wild.
-			DigestFunction: pb.DigestFunction_SHA1,
+			DigestFunction: pb.DigestFunction_SHA256,
 			ExecEnabled:    true,
 		},
 		LowApiVersion:  &s.LowApiVersion,

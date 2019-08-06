@@ -101,8 +101,8 @@ type BuildState struct {
 	}
 	// Tracks file hashes during the build.
 	PathHasher *fs.PathHasher
-	// Backup hasher that's used for sha256 hashes
-	SHA256Hasher *fs.PathHasher
+	// Hashers of all supported functions
+	hashers map[string]*fs.PathHasher
 	// Cache to store / retrieve old build results.
 	Cache Cache
 	// Targets that we were originally requested to build
@@ -360,6 +360,15 @@ func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 		}
 	}
 	state.AddPendingParse(label, OriginalTarget, false)
+}
+
+// Hasher returns a PathHasher for the given function (e.g. "SHA1").
+func (state *BuildState) Hasher(name string) *fs.PathHasher {
+	hasher, present := state.hashers[name]
+	if !present {
+		log.Fatalf("Unknown hash type %s", name)
+	}
+	return hasher
 }
 
 // LogBuildResult logs the result of a target either building or parsing.
@@ -739,11 +748,14 @@ func NewBuildState(config *Configuration) *BuildState {
 	// Deliberately ignore the error here so we don't require the sandbox tool until it's needed.
 	sandboxTool, _ := LookBuildPath(config.Build.PleaseSandboxTool, config)
 	state := &BuildState{
-		Graph:           NewGraph(),
-		pendingTasks:    queue.NewPriorityQueue(10000, true), // big hint, why not
-		lastResults:     make([]*BuildResult, config.Please.NumThreads),
-		PathHasher:      fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, ""),
-		SHA256Hasher:    fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "_sha256"),
+		Graph:        NewGraph(),
+		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
+		lastResults:  make([]*BuildResult, config.Please.NumThreads),
+		hashers: map[string]*fs.PathHasher{
+			// For compatibility reasons the sha1 hasher has no suffix.
+			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, ""),
+			"sha256": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "_sha256"),
+		},
 		ProcessExecutor: process.New(sandboxTool),
 		StartTime:       startTime,
 		Config:          config,
@@ -763,6 +775,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			pendingPackages: map[packageKey]chan struct{}{},
 		},
 	}
+	state.PathHasher = state.Hasher(config.Build.HashFunction)
 	state.progress.allStates = []*BuildState{state}
 	state.Hashes.Config = config.Hash()
 	for _, exp := range config.Parse.ExperimentalDir {

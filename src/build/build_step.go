@@ -501,7 +501,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 
 // OutputHash calculates the usual hash of a target's outputs.
 func OutputHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	return outputHash(target, target.FullOutputs(), state.PathHasher, sha1.New)
+	return outputHash(target, target.FullOutputs(), state.PathHasher, state.PathHasher.NewHash)
 }
 
 // outputHash is a more general form of OutputHash that allows different hashing strategies.
@@ -532,21 +532,29 @@ func outputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHashe
 	return h.Sum(nil), nil
 }
 
+func mustOutputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash) []byte {
+	h, _ := outputHash(target, outputs, hasher, combine)
+	return h
+}
+
 // Verify the hash of output files for a rule match the ones set on it.
 func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []byte) error {
+	// TODO(peterebden): can we genericise all of this to lean on the hashers we're getting
+	//                   from the state rather than so much hardcoding?
 	const sha1Len = 2 * sha1.Size // x2 because of hex-encoding
 	const sha256Len = 2 * sha256.Size
 	if len(target.Hashes) == 0 {
 		return nil // nothing to check
 	}
 	outputs := target.FullOutputs()
-	hashStr := hex.EncodeToString(hash)
-	if checkRuleHashesOfType(target, outputs, state.PathHasher, sha1.New, sha1Len, hashStr) ||
-		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.PathHasher, nil, sha1Len, "")) ||
-		(len(outputs) != 1 && checkRuleHashesOfType(target, outputs, state.SHA256Hasher, sha256.New, sha256Len, "")) ||
-		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.SHA256Hasher, nil, sha256Len, "")) {
+	if checkRuleHashesOfType(target, outputs, state.Hasher("sha1"), sha1.New, sha1Len) ||
+		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.Hasher("sha1"), nil, sha1Len)) ||
+		(len(outputs) != 1 && checkRuleHashesOfType(target, outputs, state.Hasher("sha256"), sha256.New, sha256Len)) ||
+		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.Hasher("sha256"), nil, sha256Len)) {
 		return nil
-	} else if len(target.Hashes) == 1 {
+	}
+	hashStr := hex.EncodeToString(hash)
+	if len(target.Hashes) == 1 {
 		return fmt.Errorf("Bad output hash for rule %s: was %s but expected %s",
 			target.Label, hashStr, target.Hashes[0])
 	}
@@ -559,18 +567,15 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 // where a target has a single output so as not to double-hash it.
 // It is a bit fiddly, but is organised this way to avoid calculating hashes of
 // unused types unnecessarily since that could get quite expensive.
-func checkRuleHashesOfType(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash, size int, hash string) bool {
+func checkRuleHashesOfType(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash, size int) bool {
 	for _, h := range target.Hashes {
 		// Hashes can have an arbitrary label prefix. Strip it off if present.
 		if index := strings.LastIndexByte(h, ':'); index != -1 {
 			h = strings.TrimSpace(h[index+1:])
 		}
 		if len(h) == size { // Check if the hash is of the right algorithm
-			if hash == "" {
-				bhash, _ := outputHash(target, outputs, hasher, combine)
-				hash = hex.EncodeToString(bhash)
-			}
-			if hash == h {
+			bhash, _ := outputHash(target, outputs, hasher, combine)
+			if hex.EncodeToString(bhash) == h {
 				return true
 			}
 		}

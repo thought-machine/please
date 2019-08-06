@@ -481,5 +481,6 @@ func (cache *dirCache) shouldClean(name string, isDir bool) bool {
 	// 28 == length of 20-byte sha1 hash, encoded to base64, which always gets a trailing =
 	// as padding so we can check that to be "sure".
 	// Also 29 in case we appended an extra = (which we do for temporary files that are still being written to)
-	return (len(name) == 28 || len(name) == 29) && name[27] == '='
+	// Similarly for sha256 which is length 44.
+	return ((len(name) == 28 || len(name) == 29) && name[27] == '=') || ((len(name) == 44 || len(name) == 45) && name[43] == '=')
 }
