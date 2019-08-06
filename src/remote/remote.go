@@ -165,7 +165,7 @@ func (c *Client) chooseDigest(fns []pb.DigestFunction_Value) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("No acceptable hash function available; server supports %s but we require %s. Hint: you may need to set the hash function appropriately in the [build] section of your config.", fns, systemFn)
+	return fmt.Errorf("No acceptable hash function available; server supports %s but we require %s. Hint: you may need to set the hash function appropriately in the [build] section of your config", fns, systemFn)
 }
 
 // digestEnum returns a proto enum for the digest function of given name (as we name them in config)

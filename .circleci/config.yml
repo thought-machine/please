@@ -50,7 +50,7 @@ jobs:
      docker:
        - image: thoughtmachine/please_ubuntu_alt:20190627
      environment:
-       PLZ_ARGS: "-p --profile ci -o build.hashfunction:sha256"
+       PLZ_ARGS: "-p --profile ci"
        PLZ_COVER: "cover"
      steps:
        - checkout
