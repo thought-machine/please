@@ -110,6 +110,7 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 	}
 	d := &pb.Directory{}
 	err = c.uploadBlobs(func(ch chan<- *blob) error {
+		defer close(ch)
 		for _, entry := range entries {
 			name := entry.Name()
 			fullname := path.Join(dir, name)
