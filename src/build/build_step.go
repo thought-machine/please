@@ -534,6 +534,8 @@ func outputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHashe
 
 // Verify the hash of output files for a rule match the ones set on it.
 func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []byte) error {
+	// TODO(peterebden): can we genericise all of this to lean on the hashers we're getting
+	//                   from the state rather than so much hardcoding?
 	const sha1Len = 2 * sha1.Size // x2 because of hex-encoding
 	const sha256Len = 2 * sha256.Size
 	if len(target.Hashes) == 0 {
@@ -541,10 +543,10 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 	}
 	outputs := target.FullOutputs()
 	hashStr := hex.EncodeToString(hash)
-	if checkRuleHashesOfType(target, outputs, state.PathHasher, sha1.New, sha1Len, hashStr) ||
-		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.PathHasher, nil, sha1Len, "")) ||
-		(len(outputs) != 1 && checkRuleHashesOfType(target, outputs, state.SHA256Hasher, sha256.New, sha256Len, "")) ||
-		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.SHA256Hasher, nil, sha256Len, "")) {
+	if checkRuleHashesOfType(target, outputs, state.Hasher("sha1"), sha1.New, sha1Len, hashStr) ||
+		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.Hasher("sha1"), nil, sha1Len, "")) ||
+		(len(outputs) != 1 && checkRuleHashesOfType(target, outputs, state.Hasher("sha256"), sha256.New, sha256Len, "")) ||
+		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.Hasher("sha256"), nil, sha256Len, "")) {
 		return nil
 	} else if len(target.Hashes) == 1 {
 		return fmt.Errorf("Bad output hash for rule %s: was %s but expected %s",

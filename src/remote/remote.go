@@ -159,17 +159,25 @@ func (c *Client) init() {
 
 // chooseDigest selects a digest function that we will use.w
 func (c *Client) chooseDigest(fns []pb.DigestFunction_Value) error {
+	systemFn := c.digestEnum(c.state.Config.Build.HashFunction)
 	for _, fn := range fns {
-		// Right now the only choice we can make generally is SHA1.
-		// In future we might let ourselves be guided by this and choose something else
-		// that matches the server (but that implies that all targets have to be hashed
-		// with it, hence we'd have to synchronously initialise against the server, and
-		// it's unclear whether this will be an issue in practice anyway).
-		if fn == pb.DigestFunction_SHA1 {
+		if fn == systemFn {
 			return nil
 		}
 	}
-	return fmt.Errorf("No acceptable hash function available; server supports %s but we require SHA1", fns)
+	return fmt.Errorf("No acceptable hash function available; server supports %s but we require %s. Hint: you may need to set the hash function appropriately in the [build] section of your config.", fns, systemFn)
+}
+
+// digestEnum returns a proto enum for the digest function of given name (as we name them in config)
+func (c *Client) digestEnum(name string) pb.DigestFunction_Value {
+	switch c.state.Config.Build.HashFunction {
+	case "sha256":
+		return pb.DigestFunction_SHA256
+	case "sha1":
+		return pb.DigestFunction_SHA1
+	default:
+		return pb.DigestFunction_UNKNOWN // Shouldn't get here
+	}
 }
 
 // Store stores a set of artifacts for a single build target.

@@ -44,6 +44,11 @@ func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, hashSuffi
 	}
 }
 
+// Size returns the size of the hash this hasher will return, in bytes.
+func (hasher *PathHasher) Size() int {
+	return hasher.new().Size()
+}
+
 // DisableXattrs turns off xattr support, which bypasses using them to record file hashes.
 func (hasher *PathHasher) DisableXattrs() {
 	hasher.useXattrs = false
