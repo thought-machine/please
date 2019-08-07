@@ -14,11 +14,10 @@ def initialise_coverage():
     _original_xml_file = coverage_control.XmlReporter.xml_file
     # Fix up paths in coverage output which are absolute; we want paths relative to
     # the repository root. Also skip empty __init__.py files.
-    pex_path = pex_paths()[0]
 
     def _xml_file(self, fr, analysis):
-        if pex_path in fr.filename:
-            fr.filename = fr.filename[len(pex_path) + 1:]  # +1 to remove the remaining /
+        if PEX_PATH in fr.filename:
+            fr.filename = fr.filename[len(PEX_PATH) + 1:]  # +1 to remove the remaining /
         if fr.filename == '__main__.py':
             return  # Don't calculate coverage for the synthetic entrypoint.
         if not (fr.filename.endswith('__init__.py') and len(analysis.statements) <= 1):

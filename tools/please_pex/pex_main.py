@@ -60,13 +60,13 @@ PEX_STAMP = '__PEX_STAMP__'
 # Workaround for https://bugs.python.org/issue15795
 class ZipFileWithPermissions(ZipFile):
     """ Custom ZipFile class handling file permissions. """
-    
+
     def _extract_member(self, member, targetpath, pwd):
         if not isinstance(member, ZipInfo):
             member = self.getinfo(member)
 
         targetpath = super()._extract_member(member, targetpath, pwd)
-        
+
         attr = member.external_attr >> 16
         if attr != 0:
             os.chmod(targetpath, attr)
@@ -164,6 +164,7 @@ def pex_basepath(temp=False):
     else:
         return os.path.expanduser('~/.cache/pex')
 
+
 def pex_uniquedir():
     return 'pex-%s' % PEX_STAMP
 
@@ -174,6 +175,7 @@ def pex_paths():
     basepath, uniquedir = pex_basepath(no_cache), pex_uniquedir()
     pex_path = os.path.join(basepath, uniquedir)
     return pex_path, basepath, uniquedir, no_cache
+
 
 def explode_zip():
     """Extracts the current pex to a temp directory where we can import everything from.

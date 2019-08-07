@@ -239,6 +239,7 @@ func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget,
 				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
 			}
 		}
+		logTestSuccess(state, tid, target.Label, &target.Results, coverage)
 		return
 	}
 	var resultErr error
