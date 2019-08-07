@@ -244,6 +244,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	hashOptionalBool(h, target.IsFilegroup)
 	hashOptionalBool(h, target.IsHashFilegroup)
 	hashOptionalBool(h, target.IsRemoteFile)
+	hashOptionalBool(h, target.Local)
 	for _, require := range target.Requires {
 		h.Write([]byte(require))
 	}

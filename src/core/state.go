@@ -234,18 +234,27 @@ func (state *BuildState) AddPendingTest(label BuildLabel) {
 
 // TaskQueues returns a set of channels to listen on for tasks of various types.
 // This should only be called once per state (otherwise you will not get a full set of tasks).
-func (state *BuildState) TaskQueues() (parses <-chan LabelPair, builds, tests <-chan BuildLabel) {
+func (state *BuildState) TaskQueues() (parses <-chan LabelPair, builds, tests, remoteBuilds, remoteTests <-chan BuildLabel) {
 	p := make(chan LabelPair, 100)
 	b := make(chan BuildLabel, 100)
 	t := make(chan BuildLabel, 100)
-	go state.feedQueues(p, b, t)
-	return p, b, t
+	rb := make(chan BuildLabel, 100)
+	rt := make(chan BuildLabel, 100)
+	go state.feedQueues(p, b, t, rb, rt)
+	return p, b, t, rb, rt
 }
 
 // feedQueues feeds the build queues created in TaskQueues.
 // We retain the internal priority queue since it is unbounded size which is pretty important
 // for us not to deadlock.
-func (state *BuildState) feedQueues(parses chan<- LabelPair, builds, tests chan<- BuildLabel) {
+func (state *BuildState) feedQueues(parses chan<- LabelPair, builds, tests, remoteBuilds, remoteTests chan<- BuildLabel) {
+	anyRemote := state.Config.Remote.NumExecutors > 0
+	queue := func(label BuildLabel, local, remote chan<- BuildLabel) chan<- BuildLabel {
+		if anyRemote && !state.Graph.Target(label).Local {
+			return remote
+		}
+		return local
+	}
 	for {
 		t, _ := state.pendingTasks.Get(1)
 		task := t[0].(pendingTask)
@@ -254,6 +263,8 @@ func (state *BuildState) feedQueues(parses chan<- LabelPair, builds, tests chan<
 			close(parses)
 			close(builds)
 			close(tests)
+			close(remoteBuilds)
+			close(remoteTests)
 			if state.results != nil {
 				close(state.results)
 			}
@@ -265,10 +276,10 @@ func (state *BuildState) feedQueues(parses chan<- LabelPair, builds, tests chan<
 			parses <- LabelPair{Label: task.Label, Dependent: task.Dependent, ForSubinclude: task.Type == SubincludeParse}
 		case Build, SubincludeBuild:
 			atomic.AddInt64(&state.progress.numRunning, 1)
-			builds <- task.Label
+			queue(task.Label, builds, remoteBuilds) <- task.Label
 		case Test:
 			atomic.AddInt64(&state.progress.numRunning, 1)
-			tests <- task.Label
+			queue(task.Label, tests, remoteTests) <- task.Label
 		}
 	}
 }

@@ -6,7 +6,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
             hashes:list=None, timeout:int=0, binary:bool=False, sandbox:bool=None,
             needs_transitive_deps:bool=False, output_is_complete:bool=True, test_only:bool&testonly=False,
             secrets:list|dict=None, requires:list=None, provides:dict=None, pre_build:function=None,
-            post_build:function=None, tools:list|dict=None, pass_env:list=None):
+            post_build:function=None, tools:list|dict=None, pass_env:list=None, local:bool=False):
     """A general build rule which allows the user to specify a command.
 
     Args:
@@ -91,6 +91,8 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
                   to dynamically create new rules based on the output of another.
       pass_env: List of environment variables to be passed from outside. Any changes to them will
                 be recorded in this target's hash and will hence force it to rebuild.
+      local: Forces the rule to be built locally; when remote execution is enabled it will not
+             be sent remotely but executed on the local machine.
     """
     if out and outs:
         raise TypeError('Can\'t specify both "out" and "outs".')
@@ -117,6 +119,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         provides = provides,
         test_only = test_only,
         pass_env = pass_env,
+        local = local,
     )
 
 
@@ -124,7 +127,7 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
             deps:list=None, tools:list|dict=None, data:list=None, visibility:list=None, timeout:int=0,
             needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False,
             test_outputs:list=None, output_is_complete:bool=True, requires:list=None,
-            sandbox:bool=None, size:str=None):
+            sandbox:bool=None, size:str=None, local:bool=False):
     """A rule which creates a test with an arbitrary command.
 
     The command must return zero on success and nonzero on failure. Test results are written
@@ -163,6 +166,8 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
                       including networking, process, IPC, etc. Only has an effect on Linux.
                       If this is on by default then tests can opt out by setting this to False.
       size (str): Test size (enormous, large, medium or small).
+      local: Forces the rule to be built locally; when remote execution is enabled it will not
+             be sent remotely but executed on the local machine.
     """
     return build_rule(
         name = name,
@@ -187,6 +192,7 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
         no_test_output = no_test_output,
         test_outputs = test_outputs,
         flaky = flaky,
+        local = local,
     )
 
 

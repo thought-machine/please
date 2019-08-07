@@ -163,7 +163,7 @@ func assertPendingBuilds(t *testing.T, state *core.BuildState, targets ...string
 }
 
 func getAllPending(state *core.BuildState) ([]string, []string) {
-	parses, builds, tests := state.TaskQueues()
+	parses, builds, tests, _, _ := state.TaskQueues()
 	state.Stop()
 	var pendingParses, pendingBuilds []string
 	for parses != nil || builds != nil || tests != nil {

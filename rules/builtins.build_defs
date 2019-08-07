@@ -12,7 +12,7 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', srcs:list|dict=N
                test_timeout:int|str=0, pre_build:function=None, post_build:function=None, requires:list=None, provides:dict=None,
                licences:list=CONFIG.DEFAULT_LICENCES, test_outputs:list=None, system_srcs:list=None, stamp:bool=False,
                tag:str='', optional_outs:list=None, progress:bool=False, size:str=None, _urls:list=None,
-               internal_deps:list=None, pass_env:list=None):
+               internal_deps:list=None, pass_env:list=None, local:bool=False):
     pass
 
 

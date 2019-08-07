@@ -38,7 +38,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, preTargets, targets, arch)
 
-	parses, builds, tests := state.TaskQueues()
+	parses, builds, tests, remoteBuilds, remoteTests := state.TaskQueues()
 
 	// Start up all the build workers
 	var wg sync.WaitGroup
@@ -51,7 +51,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}
 	for i := 0; i < config.Remote.NumExecutors; i++ {
 		go func(tid int) {
-			doTasks(tid, state, nil, builds, tests, arch, true)
+			doTasks(tid, state, nil, remoteBuilds, remoteTests, arch, true)
 			wg.Done()
 		}(config.Please.NumThreads + i)
 	}

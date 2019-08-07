@@ -30,6 +30,7 @@ var KnownFields = map[string]bool{
 	"TestCommand":                 true,
 	"TestCommands":                true,
 	"NeedsTransitiveDependencies": true,
+	"Local":                       true,
 	"OptionalOutputs":             true,
 	"OutputIsComplete":            true,
 	"Requires":                    true,
@@ -52,7 +53,6 @@ var KnownFields = map[string]bool{
 
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
-	"Containerise":      true,
 	"TestSandbox":       true,
 	"ContainerSettings": true,
 

@@ -109,6 +109,8 @@ type BuildTarget struct {
 	// If true, the rule is given an env var at build time that contains the hash of its
 	// transitive dependencies, which can be used to identify the output in a predictable way.
 	Stamp bool
+	// If true, the target must be run locally (i.e. is not compatible with remote execution).
+	Local bool
 	// Marks the target as a filegroup.
 	IsFilegroup bool `print:"false"`
 	// Marks the target as a hash_filegroup.
