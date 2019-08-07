@@ -15,7 +15,7 @@ var opts = struct {
 	Verbosity          cli.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
 	Out                string        `short:"o" long:"out" env:"OUT" description:"Output file"`
 	EntryPoint         string        `short:"e" long:"entry_point" env:"SRC" description:"Entry point to pex file"`
-	ModuleDir          string        `short:"m" long:"module_dir" description:"Python module dir to implicitly load modules from"`
+	ModuleDirs         []string      `short:"m" long:"module_dir" description:"Python module dirs to implicitly load modules from"`
 	TestSrcs           []string      `long:"test_srcs" env:"SRCS" env-delim:" " description:"Test source files"`
 	Test               bool          `short:"t" long:"test" description:"True if we're to build a test"`
 	Interpreter        string        `short:"i" long:"interpreter" env:"TOOLS_INTERPRETER" description:"Python interpreter to use"`
@@ -48,7 +48,7 @@ func main() {
 	if opts.Test {
 		w.SetTest(opts.TestSrcs, opts.TestRunner, opts.AddTestRunnerDeps)
 	}
-	if err := w.Write(opts.Out, opts.ModuleDir); err != nil {
+	if err := w.Write(opts.Out, opts.ModuleDirs); err != nil {
 		log.Fatalf("%s", err)
 	}
 }

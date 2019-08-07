@@ -92,7 +92,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
     )
 
 
-def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
+def python_binary(name:str, main:str, imports:list=[], srcs:list=[], resources:list=[], out:str=None, deps:list=[],
                   visibility:list=None, test_only:bool=False, zip_safe:bool=None,
                   site:bool=False, strip:bool=False,
                   interpreter:str=None, shebang:str='', labels:list&features&tags=[]):
@@ -126,9 +126,11 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
                      determine something appropriate for the given interpreter.
       labels (list): Labels to apply to this rule.
     """
+    module_dirs = [CONFIG.PYTHON_MODULE_DIR] + imports
+    module_params = ' '.join([f'-m "{module_dir}"' for module_dir in module_dirs])
     shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe --interpreter_options="%s" --stamp="$STAMP"' % (
-        shebang, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_INTERPRETER_OPTIONS)
+    cmd = '$TOOLS_PEX -s "%s" %s --zip_safe --interpreter_options="%s" --stamp="$STAMP"' % (
+        shebang, module_params, CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
     pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
@@ -193,7 +195,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     )
 
 
-def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=[], worker:str='',
+def python_test(name:str, srcs:list, imports:list=[], data:list=[], resources:list=[], deps:list=[], worker:str='',
                 labels:list&features&tags=None, size:str=None, flags:str='', visibility:list=None,
                 sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
                 test_outputs:list=None, zip_safe:bool=None, interpreter:str=None, site:bool=False):
@@ -232,8 +234,10 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
                    started with the -S flag to avoid importing site.
     """
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$STAMP"' % (
-        interpreter, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_TEST_RUNNER,
+    module_dirs = [CONFIG.PYTHON_MODULE_DIR] + imports
+    module_params = ' '.join([f'-m "{module_dir}"' for module_dir in module_dirs])
+    cmd = '$TOOLS_PEX -t -s "%s" %s -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$STAMP"' % (
+        interpreter, module_params, CONFIG.PYTHON_TEST_RUNNER,
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'

@@ -52,7 +52,8 @@ PEX_PATH = PEX
 sys.path = [PEX_PATH] + sys.path
 
 # These will get templated in by the build rules.
-MODULE_DIR = '__MODULE_DIR__'
+MODULE_DIRS = sorted(['__MODULE_DIRS__'])
+MODULE_DIRS.reverse()
 ENTRY_POINT = '__ENTRY_POINT__'
 ZIP_SAFE = __ZIP_SAFE__
 PEX_STAMP = '__PEX_STAMP__'
@@ -94,8 +95,9 @@ class SoImport(object):
                         path = path[len('.bootstrap/'):]
                     importpath = path.replace('/', '.')
                     self.modules.setdefault(importpath, name)
-                    if path.startswith(MODULE_DIR):
-                        self.modules.setdefault(importpath[len(MODULE_DIR)+1:], name)
+                    for module_dir in MODULE_DIRS:
+                        if path.startswith(module_dir):
+                            self.modules.setdefault(importpath[len(module_dir)+1:], name)
             if self.modules:
                 self.zf = zf
 
@@ -138,19 +140,30 @@ class ModuleDirImport(object):
     and packages importing as their expected top-level names internally.
     """
 
-    def __init__(self, module_dir=MODULE_DIR):
-        self.prefix = module_dir.replace('/', '.') + '.'
+    def __init__(self, module_dirs=None):
+        if module_dirs is None:
+            module_dirs = MODULE_DIRS
+
+        self.prefixes = [
+            module_dir.replace('/', '.') + '.'
+            for module_dir in MODULE_DIRS
+        ]
 
     def find_module(self, fullname, path=None):
         """Attempt to locate module. Returns self if found, None if not."""
-        if fullname.startswith(self.prefix):
-            return self
+        for prefix in self.prefixes:
+            if fullname.startswith(prefix):
+                return self
 
     def load_module(self, fullname):
         """Actually load a module that we said we'd handle in find_module."""
-        module = import_module(fullname[len(self.prefix):])
-        sys.modules[fullname] = module
-        return module
+        for prefix in self.prefixes:
+            if not fullname.startswith(prefix):
+                continue
+
+            module = import_module(fullname[len(prefix):])
+            sys.modules[fullname] = module
+            return module
 
     def get_code(self, fullname):
         module = self.load_module(fullname)

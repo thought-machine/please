@@ -1,17 +1,18 @@
-def add_module_dir_to_sys_path(dirname):
+def add_module_dirs_to_sys_path(dirnames):
     """Adds the given dirname to sys.path if it's nonempty."""
-    if dirname:
-        sys.path = sys.path[:1] + [os.path.join(sys.path[0], dirname)] + sys.path[1:]
-        sys.meta_path.insert(0, ModuleDirImport(dirname))
+    for dirname in dirnames:
+        if dirname:
+            sys.path = sys.path[:1] + [os.path.join(sys.path[0], dirname)] + sys.path[1:]
+            sys.meta_path.insert(0, ModuleDirImport(dirname))
 
 
 def run():
     if not ZIP_SAFE:
         with explode_zip()():
-            add_module_dir_to_sys_path(MODULE_DIR)
+            add_module_dirs_to_sys_path(MODULE_DIRS)
             return interact(main)
     else:
-        add_module_dir_to_sys_path(MODULE_DIR)
+        add_module_dirs_to_sys_path(MODULE_DIRS)
         sys.meta_path.append(SoImport())
         return interact(main)
 

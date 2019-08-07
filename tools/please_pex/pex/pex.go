@@ -109,7 +109,7 @@ func (pw *Writer) SetTest(srcs []string, testRunner string, addTestRunnerDeps bo
 }
 
 // Write writes the pex to the given output file.
-func (pw *Writer) Write(out, moduleDir string) error {
+func (pw *Writer) Write(out string, moduleDirs []string) error {
 	f := zip.NewFile(out, true)
 	defer f.Close()
 
@@ -127,11 +127,15 @@ func (pw *Writer) Write(out, moduleDir string) error {
 		if err := f.AddZipFile(os.Args[0]); err != nil {
 			return err
 		}
-	}
+    }
+    moduleDirsImports := make([]string, len(moduleDirs))
+    for i, moduleDir := range moduleDirs {
+        moduleDirsImports[i] = strings.Replace(moduleDir, ".", "/", -1)
+    }
 
 	// Always write pex_main.py, with some templating.
 	b := MustAsset("pex_main.py")
-	b = bytes.Replace(b, []byte("__MODULE_DIR__"), []byte(strings.Replace(moduleDir, ".", "/", -1)), 1)
+	b = bytes.Replace(b, []byte("__MODULE_DIRS__"), []byte(strings.Join(moduleDirsImports, "','")), 1)
 	b = bytes.Replace(b, []byte("__ENTRY_POINT__"), []byte(pw.realEntryPoint), 1)
 	b = bytes.Replace(b, []byte("__ZIP_SAFE__"), []byte(pythonBool(pw.zipSafe)), 1)
 	b = bytes.Replace(b, []byte("__PEX_STAMP__"), []byte(pw.pexStamp), 1)
