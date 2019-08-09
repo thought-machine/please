@@ -84,6 +84,8 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
                     section.
       visibility: Deprecated, has no effect.
     """
+    if isinstance(hashes, str):
+        hashes = [hashes]
     remote_rule = remote_file(
         name = name,
         _tag = 'download',
