@@ -28,7 +28,6 @@ import (
 	"github.com/thought-machine/please/src/help"
 	"github.com/thought-machine/please/src/ide/intellij"
 	"github.com/thought-machine/please/src/output"
-	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
@@ -326,7 +325,7 @@ var opts struct {
 		} `command:"whatoutputs" description:"Prints out target(s) responsible for outputting provided file(s)"`
 		Rules struct {
 			Args struct {
-				Targets []core.BuildLabel `position-arg-name:"targets" description:"Additional targets to load rules from"`
+				Targets []core.BuildLabel `hidden:"true" description:"deprecated, has no effect"`
 			} `positional-args:"true"`
 		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 		Changes struct {
@@ -618,11 +617,8 @@ var buildFunctions = map[string]func() bool{
 		})
 	},
 	"rules": func() bool {
-		success, state := Please(opts.Query.Rules.Args.Targets, config, len(opts.Query.Rules.Args.Targets) > 0, false)
-		if success {
-			parse.PrintRuleArgs(state, state.ExpandOriginalTargets())
-		}
-		return success
+		help.PrintRuleArgs()
+		return true
 	},
 	"changed": func() bool {
 		success, state := runBuild(core.WholeGraph, false, false, false)

@@ -16,7 +16,6 @@ go_binary(
         "//src/help",
         "//src/ide/intellij",
         "//src/output",
-        "//src/parse",
         "//src/plz",
         "//src/query",
         "//src/run",

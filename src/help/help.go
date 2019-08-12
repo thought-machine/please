@@ -6,9 +6,7 @@ package help
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -17,8 +15,6 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
-	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/utils"
 )
@@ -68,11 +64,8 @@ func help(topic string) string {
 		}
 	}
 	// Check built-in build rules.
-	m := parse.AllBuiltinFunctions(core.NewDefaultBuildState(), nil)
+	m := AllBuiltinFunctions(newState())
 	if f, present := m[topic]; present {
-		return helpFromBuildRule(f)
-	}
-	if f, present := localFunctions()[topic]; present {
 		return helpFromBuildRule(f)
 	}
 	return ""
@@ -131,16 +124,9 @@ func allTopics(prefix string) []string {
 			}
 		}
 	}
-	for t := range parse.AllBuiltinFunctions(core.NewDefaultBuildState(), nil) {
+	for t := range AllBuiltinFunctions(newState()) {
 		if strings.HasPrefix(t, prefix) {
 			topics = append(topics, t)
-		}
-	}
-	if len(topics) == 0 {
-		for t := range localFunctions() {
-			if strings.HasPrefix(t, prefix) {
-				topics = append(topics, t)
-			}
 		}
 	}
 	sort.Strings(topics)
@@ -163,35 +149,6 @@ func printMessage(msg string) {
 	}
 	// Replace % to %% when not followed by anything so it doesn't become a replacement.
 	cli.Fprintf(os.Stdout, strings.Replace(msg, "% ", "%% ", -1)+"\n")
-}
-
-// localFunctions returns all locally defined build functions that we might additionally try to load.
-func localFunctions() map[string]*asp.FuncDef {
-	m := map[string]*asp.FuncDef{}
-	// If we're in a repo, we might be able to read some stuff from there.
-	if core.FindRepoRoot() {
-		if config, err := core.ReadDefaultConfigFiles(nil); err == nil {
-			for _, dir := range config.Parse.BuildDefsDir {
-				p := asp.NewParser(core.NewDefaultBuildState())
-				if files, err := ioutil.ReadDir(dir); err == nil {
-					for _, file := range files {
-						if !file.IsDir() {
-							if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
-								for _, stmt := range stmts {
-									if stmt.FuncDef != nil {
-										m[stmt.FuncDef.Name] = stmt.FuncDef
-										// Small hack used below; this identifies that it isn't a builtin.
-										stmt.FuncDef.EoDef.Offset = 0
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	return m
 }
 
 const docstringTemplate = `${BLUE}{{ .Name }}${RESET} is

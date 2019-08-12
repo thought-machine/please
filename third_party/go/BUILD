@@ -486,3 +486,9 @@ go_get(
     get = "github.com/google/uuid",
     revision = "v1.1.1",
 )
+
+go_get(
+    name = "lsp",
+    get = "github.com/sourcegraph/go-lsp",
+    revision = "0c7d621186c1c8684f3d97868f6970b326609cc7",
+)

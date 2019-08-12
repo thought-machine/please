@@ -6,7 +6,6 @@ go_binary(
         "//src/cli",
         "//third_party/go:jsonrpc2",
         "//third_party/go:logging",
-        "//tools/build_langserver/langserver",
         "//tools/build_langserver/lsp",
     ],
 )

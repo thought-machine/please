@@ -1,4 +1,0 @@
-if len("hello"):
-    blah = "hi"
-
-foo = blah

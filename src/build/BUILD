@@ -54,7 +54,6 @@ go_test(
     external = True,
     deps = [
         ":build",
-        "//src/cli",
         "//src/core",
         "//src/output",
         "//src/plz",

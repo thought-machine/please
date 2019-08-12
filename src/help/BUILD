@@ -16,13 +16,15 @@ go_library(
     srcs = [
         "completion.go",
         "help.go",
+        "rules.go",
         ":data",
     ],
     visibility = ["PUBLIC"],
     deps = [
+        "//rules",
+        "//rules/bazel",
         "//src/cli",
         "//src/core",
-        "//src/parse",
         "//src/parse/asp",
         "//src/utils",
         "//third_party/go:go-flags",
@@ -44,4 +46,13 @@ genrule(
     outs = ["config.json"],
     cmd = "$TOOL > $OUTS",
     tools = ["//src/help/config:config_help"],
+)
+
+go_test(
+    name = "rules_test",
+    srcs = ["rules_test.go"],
+    deps = [
+        ":help",
+        "//third_party/go:testify",
+    ],
 )

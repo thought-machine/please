@@ -1,0 +1,147 @@
+// +build !bootstrap
+
+package help
+
+import (
+	"encoding/json"
+	"io/ioutil"
+	"os"
+	"path"
+	"regexp"
+	"sort"
+	"strings"
+
+	"github.com/thought-machine/please/rules"
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse/asp"
+)
+
+// PrintRuleArgs prints the arguments of all builtin rules
+func PrintRuleArgs() {
+	env := getRuleArgs(newState())
+	b, err := json.MarshalIndent(env, "", "  ")
+	if err != nil {
+		log.Fatalf("Failed JSON encoding: %s", err)
+	}
+	os.Stdout.Write(b)
+}
+
+func newState() *core.BuildState {
+	// If we're in a repo, we might be able to read some stuff from there.
+	if core.FindRepoRoot() {
+		if config, err := core.ReadDefaultConfigFiles(nil); err == nil {
+			return core.NewBuildState(config)
+		}
+	}
+	return core.NewDefaultBuildState()
+}
+
+// AllBuiltinFunctions returns all the builtin functions, including any defined
+// by the config (e.g. PreloadBuildDefs or BuildDefsDir)
+func AllBuiltinFunctions(state *core.BuildState) map[string]*asp.FuncDef {
+	p := asp.NewParser(state)
+	m := map[string]*asp.FuncDef{}
+	dir, _ := rules.AssetDir("")
+	sort.Strings(dir)
+	for _, filename := range dir {
+		if !strings.HasSuffix(filename, ".gob") && filename != "builtins.build_defs" {
+			if stmts, err := p.ParseData(rules.MustAsset(filename), filename); err == nil {
+				addAllFunctions(m, stmts, true)
+			}
+		}
+	}
+	for _, preload := range state.Config.Parse.PreloadBuildDefs {
+		if stmts, err := p.ParseFileOnly(preload); err != nil {
+			addAllFunctions(m, stmts, false)
+		}
+	}
+	for _, dir := range state.Config.Parse.BuildDefsDir {
+		if files, err := ioutil.ReadDir(dir); err == nil {
+			for _, file := range files {
+				if !file.IsDir() {
+					if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
+						addAllFunctions(m, stmts, false)
+					}
+				}
+			}
+		}
+	}
+	return m
+}
+
+// addAllFunctions adds all the functions from a set of statements to the given map.
+func addAllFunctions(m map[string]*asp.FuncDef, stmts []*asp.Statement, builtin bool) {
+	for _, stmt := range stmts {
+		if f := stmt.FuncDef; f != nil && !f.IsPrivate && f.Docstring != "" {
+			f.Docstring = strings.TrimSpace(strings.Trim(f.Docstring, `"`))
+			m[f.Name] = f
+			if !builtin {
+				stmt.FuncDef.EoDef.Offset = 0 // We use this to identify it later.
+			}
+		}
+	}
+}
+
+// getRuleArgs retrieves the arguments of builtin rules. It's split from PrintRuleArgs for testing.
+func getRuleArgs(state *core.BuildState) environment {
+	argsRegex := regexp.MustCompile("\n +Args: *\n")
+	env := environment{Functions: map[string]function{}}
+	for name, f := range AllBuiltinFunctions(state) {
+		r := function{Docstring: f.Docstring}
+		if strings.HasSuffix(f.EoDef.Filename, "_rules.build_defs") {
+			r.Language = strings.TrimSuffix(f.EoDef.Filename, "_rules.build_defs")
+		}
+		if indices := argsRegex.FindStringIndex(r.Docstring); indices != nil {
+			r.Comment = strings.TrimSpace(r.Docstring[:indices[0]])
+		}
+		r.Args = make([]functionArg, len(f.Arguments))
+		for i, a := range f.Arguments {
+			r.Args[i] = functionArg{
+				Name:     a.Name,
+				Types:    a.Type,
+				Required: a.Value == nil,
+			}
+			regex := regexp.MustCompile(a.Name + `(?: \(.*\))?: ((?s:.*))`)
+			if match := regex.FindStringSubmatch(r.Docstring); match != nil {
+				r.Args[i].Comment = filterMatch(match[1])
+			}
+		}
+		env.Functions[name] = r
+	}
+	return env
+}
+
+type environment struct {
+	Functions map[string]function `json:"functions"`
+}
+
+// A function describes a function within the global environment
+type function struct {
+	Args      []functionArg `json:"args"`
+	Comment   string        `json:"comment,omitempty"`
+	Docstring string        `json:"docstring,omitempty"`
+	Language  string        `json:"language,omitempty"`
+}
+
+// A functionArg represents a single argument to a function.
+type functionArg struct {
+	Comment    string   `json:"comment,omitempty"`
+	Deprecated bool     `json:"deprecated,omitempty"`
+	Name       string   `json:"name"`
+	Required   bool     `json:"required,omitempty"`
+	Types      []string `json:"types"`
+}
+
+// filterMatch filters a regex match to the part we want.
+// It's pretty much impossible to handle this as just a regex so we do it here instead.
+func filterMatch(match string) string {
+	lines := strings.Split(match, "\n")
+	regex := regexp.MustCompile(`^ *[a-z_]+(?: \([^)]+\))?:`)
+	for i, line := range lines {
+		if regex.MatchString(line) {
+			return strings.Join(lines[:i], " ")
+		}
+		lines[i] = strings.TrimSpace(line)
+	}
+	return strings.TrimSpace(match)
+}

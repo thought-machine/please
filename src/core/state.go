@@ -636,26 +636,26 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 }
 
 // QueueTarget adds a single target to the build queue.
-func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceBuild bool) {
+func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceBuild bool) error {
 	target := state.Graph.Target(label)
 	if target == nil {
 		// If the package isn't loaded yet, we need to queue a parse for it.
 		if state.Graph.PackageByLabel(label) == nil {
 			state.AddPendingParse(label, dependent, forceBuild)
-			return
+			return nil
 		}
 		// Package is loaded but target doesn't exist in it. Check again to avoid nasty races.
 		target = state.Graph.Target(label)
 		if target == nil {
-			log.Fatalf("Target %s (referenced by %s) doesn't exist\n", label, dependent)
+			return fmt.Errorf("Target %s (referenced by %s) doesn't exist", label, dependent)
 		}
 	}
 	if target.State() >= Active && !rescan && !forceBuild {
-		return // Target is already tagged to be built and likely on the queue.
+		return nil // Target is already tagged to be built and likely on the queue.
 	}
 	// Only do this bit if we actually need to build the target
 	if !target.SyncUpdateState(Inactive, Semiactive) && !rescan && !forceBuild {
-		return
+		return nil
 	}
 	if state.NeedBuild || forceBuild {
 		if target.SyncUpdateState(Semiactive, Active) {
@@ -672,7 +672,7 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 			state.AddPendingBuild(label, dependent.IsAllTargets())
 		}
 		if !rescan {
-			return
+			return nil
 		}
 	}
 	for _, dep := range target.DeclaredDependencies() {
@@ -680,13 +680,18 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 		if len(target.Requires) > 0 {
 			if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
 				for _, provided := range depTarget.ProvideFor(target) {
-					state.QueueTarget(provided, label, false, forceBuild)
+					if err := state.QueueTarget(provided, label, false, forceBuild); err != nil {
+						return err
+					}
 				}
 				continue
 			}
 		}
-		state.QueueTarget(dep, label, false, forceBuild)
+		if err := state.QueueTarget(dep, label, false, forceBuild); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // ForTarget returns the state associated with a given target.

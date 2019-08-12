@@ -1,0 +1,3 @@
+[parse]
+buildfilename = test.build
+builddefsdir = build_defs

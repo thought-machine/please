@@ -7,6 +7,7 @@ go_library(
     name = "bazel",
     srcs = [":builtin_data"],
     visibility = [
+        "//src/help/...",
         "//src/parse/...",
     ],
 )

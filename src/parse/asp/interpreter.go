@@ -66,7 +66,7 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 	if err != nil {
 		return err
 	}
-	i.optimiseExpressions(reflect.ValueOf(statements))
+	i.optimiseExpressions(statements)
 	return i.interpretStatements(s, i.parser.optimise(statements))
 }
 
@@ -123,7 +123,7 @@ func (i *interpreter) Subinclude(path string, pkg *core.Package) pyDict {
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
 	s.Set("CONFIG", s.config)
-	i.optimiseExpressions(reflect.ValueOf(stmts))
+	i.optimiseExpressions(stmts)
 	s.interpretStatements(stmts)
 	locals := s.Freeze()
 	if s.config.overlay == nil {
@@ -160,25 +160,24 @@ func (i *interpreter) pkgConfig(pkg *core.Package) *pyConfig {
 
 // optimiseExpressions implements a peephole optimiser for expressions by precalculating constants
 // and identifying simple local variable lookups.
-func (i *interpreter) optimiseExpressions(v reflect.Value) {
-	callback := func(astStruct interface{}) interface{} {
-		if expr, ok := astStruct.(*Expression); ok && expr != nil {
-			if constant := i.scope.Constant(expr); constant != nil {
-				expr.Optimised = &OptimisedExpression{Constant: constant} // Extract constant expression
+func (i *interpreter) optimiseExpressions(stmts []*Statement) {
+	WalkAST(stmts, func(expr *Expression) bool {
+		if constant := i.scope.Constant(expr); constant != nil {
+			expr.Optimised = &OptimisedExpression{Constant: constant} // Extract constant expression
+			expr.Val = nil
+			return false
+		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && expr.Val.Slice == nil {
+			if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
+				expr.Optimised = &OptimisedExpression{Local: expr.Val.Ident.Name}
+				return false
+			} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil && len(expr.Val.Ident.Action[0].Property.Action) == 0 {
+				expr.Optimised = &OptimisedExpression{Config: expr.Val.Ident.Action[0].Property.Name}
 				expr.Val = nil
-			} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && expr.Val.Slice == nil {
-				if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
-					expr.Optimised = &OptimisedExpression{Local: expr.Val.Ident.Name}
-				} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil && len(expr.Val.Ident.Action[0].Property.Action) == 0 {
-					expr.Optimised = &OptimisedExpression{Config: expr.Val.Ident.Action[0].Property.Name}
-					expr.Val = nil
-				}
+				return false
 			}
 		}
-		return nil
-	}
-
-	WalkAST(v, callback)
+		return true
+	})
 }
 
 // A scope contains all the information about a lexical scope.

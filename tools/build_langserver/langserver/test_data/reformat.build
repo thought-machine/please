@@ -1,1 +1,0 @@
-python_library(name = "test", srcs = ["utils_test.go"])

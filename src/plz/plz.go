@@ -62,6 +62,12 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}
 }
 
+// RunHost is a convenience function that uses the host architecture, the given state's
+// configuration and no pre targets. It is otherwise identical to Run.
+func RunHost(targets []core.BuildLabel, state *core.BuildState) {
+	Run(targets, nil, state, state.Config, cli.Arch{})
+}
+
 func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, builds, tests <-chan core.BuildLabel, arch cli.Arch, remote bool) {
 	for parses != nil || builds != nil || tests != nil {
 		select {

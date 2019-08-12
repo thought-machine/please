@@ -59,99 +59,66 @@ func FindArgument(statement *Statement, args ...string) *CallArgument {
 	return nil
 }
 
-// StatementOrExpressionFromAst recursively finds asp.IdentStatement and asp.Expression in the ast
-// and returns a valid statement pointer if within range
-func StatementOrExpressionFromAst(stmts []*Statement, position Position) (statement *Statement, expression *Expression) {
-	callback := func(astStruct interface{}) interface{} {
-		if expr, ok := astStruct.(Expression); ok {
-			if withInRange(expr.Pos, expr.EndPos, position) {
-				return expr
-			}
-		} else if stmt, ok := astStruct.(Statement); ok {
-			if withInRange(stmt.Pos, stmt.EndPos, position) {
-				// get function call, assignment, and property access
-				if stmt.Ident != nil {
-					return stmt
-				}
-			}
+// ExpressionsAtPos is a wrapper around WalkAST to find all relevant expressions to
+// a given position.
+func ExpressionsAtPos(ast []*Statement, pos Position) []*Expression {
+	exprs := []*Expression{}
+	WalkAST(ast, func(expr *Expression) bool {
+		if withinRange(pos, expr.Pos, expr.EndPos) {
+			exprs = append(exprs, expr)
+			return true
 		}
-
-		return nil
-	}
-
-	item := WalkAST(stmts, callback)
-	if item != nil {
-		if expr, ok := item.(Expression); ok {
-			return nil, &expr
-		} else if stmt, ok := item.(Statement); ok {
-			return &stmt, nil
-		}
-	}
-
-	return nil, nil
+		return false
+	})
+	return exprs
 }
 
 // WalkAST is a generic function that walks through the ast recursively,
-// astStruct can be anything inside of the AST, such as asp.Statement, asp.Expression
-// it accepts a callback for any operations
-func WalkAST(astStruct interface{}, callback func(astStruct interface{}) interface{}) interface{} {
-	if astStruct == nil {
-		return nil
+// It accepts a function to look for a particular grammar object; it will be called on
+// each instance of that type, and returns a bool - for example
+// WalkAST(ast, func(expr *Expression) bool { ... })
+// If the callback returns true, the node will be further visited; if false it (and
+// all children) will be skipped.
+func WalkAST(ast []*Statement, callback interface{}) {
+	cb := reflect.ValueOf(callback)
+	typ := cb.Type().In(0)
+	for _, node := range ast {
+		walkAST(reflect.ValueOf(node), typ, cb)
 	}
+}
 
-	item := callback(astStruct)
-	if item != nil {
-		return item
-	}
-
-	v, ok := astStruct.(reflect.Value)
-	if !ok {
-		v = reflect.ValueOf(astStruct)
+func walkAST(v reflect.Value, nodeType reflect.Type, callback reflect.Value) {
+	call := func(v reflect.Value) bool {
+		if v.Type() == nodeType {
+			vs := callback.Call([]reflect.Value{v})
+			return vs[0].Bool()
+		}
+		return true
 	}
 
 	if v.Kind() == reflect.Ptr && !v.IsNil() {
-		return WalkAST(v.Elem().Interface(), callback)
+		walkAST(v.Elem(), nodeType, callback)
 	} else if v.Kind() == reflect.Slice {
 		for i := 0; i < v.Len(); i++ {
-			item = WalkAST(v.Index(i).Interface(), callback)
-			if item != nil {
-				return item
-			}
+			walkAST(v.Index(i), nodeType, callback)
 		}
 	} else if v.Kind() == reflect.Struct {
-		for i := 0; i < v.NumField(); i++ {
-			item = WalkAST(v.Field(i).Interface(), callback)
-			if item != nil {
-				return item
+		if call(v.Addr()) {
+			for i := 0; i < v.NumField(); i++ {
+				walkAST(v.Field(i), nodeType, callback)
 			}
 		}
 	}
-	return nil
-
 }
 
-// withInRange checks if the input position is within the range of the Expression
-func withInRange(exprPos Position, exprEndPos Position, pos Position) bool {
-	withInLineRange := pos.Line >= exprPos.Line &&
-		pos.Line <= exprEndPos.Line
-
-	withInColRange := pos.Column >= exprPos.Column &&
-		pos.Column <= exprEndPos.Column
-
-	onTheSameLine := pos.Line == exprEndPos.Line &&
-		pos.Line == exprPos.Line
-
-	if !withInLineRange || (onTheSameLine && !withInColRange) {
+// withinRange checks if the input position is within the range of the Expression
+func withinRange(needle, start, end Position) bool {
+	if needle.Line < start.Line || needle.Line > end.Line {
+		return false
+	} else if needle.Line == start.Line && needle.Column < start.Column {
+		return false
+	} else if needle.Line == end.Line && needle.Column > end.Column {
 		return false
 	}
-
-	if pos.Line == exprPos.Line {
-		return pos.Column >= exprPos.Column
-	}
-
-	if pos.Line == exprEndPos.Line {
-		return pos.Column <= exprEndPos.Column
-	}
-
 	return true
 }

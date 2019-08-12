@@ -8,7 +8,6 @@ import (
 	"encoding/gob"
 	"io"
 	"os"
-	"reflect"
 	"strings"
 
 	"gopkg.in/op/go-logging.v1"
@@ -110,7 +109,7 @@ func (p *Parser) ParseToFile(input, output string) error {
 		return err
 	}
 	stmts = p.optimise(stmts)
-	p.interpreter.optimiseExpressions(reflect.ValueOf(stmts))
+	p.interpreter.optimiseExpressions(stmts)
 	for _, stmt := range stmts {
 		if stmt.FuncDef != nil {
 			stmt.FuncDef.KeywordsOnly = !whitelistedKwargs(stmt.FuncDef.Name, input)

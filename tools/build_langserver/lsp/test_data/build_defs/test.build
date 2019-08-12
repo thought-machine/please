@@ -1,0 +1,6 @@
+for filename in glob(["*.build_defs"]):
+    filegroup(
+        name = filename[:-11],
+        srcs = [filename],
+        visibility = ["PUBLIC"],
+    )

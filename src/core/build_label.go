@@ -54,6 +54,20 @@ func (label BuildLabel) String() string {
 	return s + ":" + label.Name
 }
 
+// ShortString returns a string representation of this build label, abbreviated if
+// possible, and relative to the given label.
+func (label BuildLabel) ShortString(context BuildLabel) string {
+	if label.Subrepo != context.Subrepo {
+		return label.String()
+	} else if label.PackageName == context.PackageName {
+		return ":" + label.Name
+	} else if label.Name == path.Base(label.PackageName) {
+		return "//" + label.PackageName
+	}
+	label.Subrepo = ""
+	return label.String()
+}
+
 // NewBuildLabel constructs a new build label from the given components. Panics on failure.
 func NewBuildLabel(pkgName, name string) BuildLabel {
 	label, err := TryNewBuildLabel(pkgName, name)

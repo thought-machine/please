@@ -147,7 +147,9 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 					// Must always do this for coverage because we need to calculate sources of
 					// non-test targets later on.
 					if !state.NeedTests || target.IsTest || state.NeedCoverage {
-						state.QueueTarget(target.Label, dependent, false, dependent.IsAllTargets())
+						if err := state.QueueTarget(target.Label, dependent, false, dependent.IsAllTargets()); err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -155,7 +157,9 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 	} else {
 		for _, l := range state.Graph.DependentTargets(dependent, label) {
 			// We use :all to indicate a dependency needed for parse.
-			state.QueueTarget(l, dependent, false, forSubinclude || dependent.IsAllTargets())
+			if err := state.QueueTarget(l, dependent, false, forSubinclude || dependent.IsAllTargets()); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -229,7 +233,7 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 	return "", pkgName
 }
 
-func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) {
+func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) error {
 	// Run over all the changed targets in this package and ensure that any newly added dependencies enter the build queue.
 	for target := range changed {
 		if !state.Graph.AllDependenciesResolved(target) {
@@ -238,9 +242,12 @@ func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) 
 			}
 		}
 		if s := target.State(); s < core.Built && s > core.Inactive {
-			state.QueueTarget(target.Label, core.OriginalTarget, true, false)
+			if err := state.QueueTarget(target.Label, core.OriginalTarget, true, false); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 // This is the builtin subrepo for pleasings.

@@ -3,7 +3,6 @@ go_library(
     srcs = [
         "init.go",
         "parse_step.go",
-        "rules.go",
         "suggest.go",
     ],
     visibility = ["PUBLIC"],
@@ -33,15 +32,6 @@ go_test(
 go_test(
     name = "suggest_test",
     srcs = ["suggest_test.go"],
-    deps = [
-        ":parse",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "rules_test",
-    srcs = ["rules_test.go"],
     deps = [
         ":parse",
         "//third_party/go:testify",

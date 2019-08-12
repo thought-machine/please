@@ -16,8 +16,5 @@ go_bindata(
 go_library(
     name = "rules",
     srcs = [":builtin_data"],
-    visibility = [
-        "//src/parse/...",
-        "//tools/build_langserver/...",
-    ],
+    visibility = ["PUBLIC"],
 )

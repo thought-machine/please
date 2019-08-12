@@ -4,9 +4,28 @@ go_library(
         ["*.go"],
         exclude = ["*_test.go"],
     ),
-    visibility = ["PUBLIC"],
     deps = [
-        "//third_party/go:jsonrpc2",
+        "//src/parse/asp",
+        "//src/core",
+        "//src/help",
+        "//src/plz",
+        "//third_party/go:buildtools",
+        "//third_party/go:lsp",
         "//third_party/go:logging",
+        "//third_party/go:jsonrpc2",
     ],
+    visibility = ["//tools/build_langserver/..."],
+)
+
+go_test(
+    name = "lsp_test",
+    srcs = ["lsp_test.go"],
+    deps = [
+        ":lsp",
+        "//src/cli",
+        "//third_party/go:lsp",
+        "//third_party/go:jsonrpc2",
+        "//third_party/go:testify",
+    ],
+    data = ["test_data"],
 )

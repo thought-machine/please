@@ -4,14 +4,13 @@
 package asp
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/rules"
+	"github.com/thought-machine/please/src/core"
 )
 
 func parseFileToStatements(filename string) (*scope, []*Statement, error) {
@@ -25,7 +24,7 @@ func parseFileToStatements(filename string) (*scope, []*Statement, error) {
 		panic(err)
 	}
 	statements = parser.optimise(statements)
-	parser.interpreter.optimiseExpressions(reflect.ValueOf(statements))
+	parser.interpreter.optimiseExpressions(statements)
 	s, err := parser.interpreter.interpretAll(pkg, statements)
 	return s, statements, err
 }
