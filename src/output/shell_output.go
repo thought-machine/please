@@ -52,9 +52,8 @@ type buildingTargetData struct {
 	Eta          time.Duration
 }
 
-// MonitorState monitors the build while it's running (essentially until state.TestCases is closed)
-// and prints output while it's happening.
-func MonitorState(state *core.BuildState, plainOutput, detailedTests bool, traceFile string) {
+// MonitorState monitors the build while it's running and prints output.
+func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTestResults bool, traceFile string) {
 	initPrintf(state.Config)
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, state.Config.Please.NumThreads+state.Config.Remote.NumExecutors)
@@ -84,7 +83,7 @@ func MonitorState(state *core.BuildState, plainOutput, detailedTests bool, trace
 				displayDone <- struct{}{}
 			}()
 		}
-		processResult(state, result, buildingTargets, plainOutput, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "")
+		processResult(state, result, buildingTargets, plainOutput, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "", streamTestResults)
 	}
 	stop <- struct{}{}
 	<-displayDone
@@ -164,7 +163,7 @@ func yesNo(b bool) string {
 }
 
 func processResult(state *core.BuildState, result *core.BuildResult, buildingTargets []buildingTarget, plainOutput bool,
-	failedTargets, failedNonTests *[]core.BuildLabel, failedTargetMap map[core.BuildLabel]error, shouldTrace bool) {
+	failedTargets, failedNonTests *[]core.BuildLabel, failedTargetMap map[core.BuildLabel]error, shouldTrace, streamTestResults bool) {
 	label := result.Label
 	active := result.Status.IsActive()
 	failed := result.Status.IsFailure()
@@ -203,6 +202,10 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 				showExecutionOutput(testExecution)
 			}
 		}
+	}
+	if result.Status == core.TargetTested || result.Status == core.TargetTestFailed {
+		os.Stdout.Write(test.SerialiseResultsToXML(target, false))
+		os.Stdout.Write([]byte{'\n'})
 	}
 }
 
