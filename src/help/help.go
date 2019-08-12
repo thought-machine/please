@@ -12,14 +12,10 @@ import (
 	"strings"
 	"text/template"
 
-	"gopkg.in/op/go-logging.v1"
-
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/utils"
 )
-
-var log = logging.MustGetLogger("help")
 
 const topicsHelpMessage = `
 The following help topics are available:

@@ -1,5 +1,3 @@
-// +build !bootstrap
-
 package help
 
 import (
@@ -11,10 +9,14 @@ import (
 	"sort"
 	"strings"
 
+	"gopkg.in/op/go-logging.v1"
+
 	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
 )
+
+var log = logging.MustGetLogger("help")
 
 // PrintRuleArgs prints the arguments of all builtin rules
 func PrintRuleArgs() {

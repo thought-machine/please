@@ -14,6 +14,3 @@ func Topics(prefix string) {}
 
 // A Topic is an alias for a string, which does not provide completion during bootstrap.
 type Topic string
-
-// PrintRuleArgs prints the arguments of all builtin rules
-func PrintRuleArgs() {}

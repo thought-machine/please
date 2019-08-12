@@ -35,6 +35,11 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
 	state.LogBuildResult(tid, label, core.TargetTesting, "Testing...")
 	target := state.Graph.TargetOrDie(label)
 	test(tid, state.ForTarget(target), label, target, remote)
+	if state.Config.Test.Upload != "" {
+		if err := uploadResults(target, state.Config.Test.Upload.String()); err != nil {
+			log.Error("%s", err)
+		}
+	}
 }
 
 func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool) {

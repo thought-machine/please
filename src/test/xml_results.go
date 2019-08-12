@@ -63,8 +63,8 @@ func parseJUnitXMLTestResults(data []byte) (core.TestSuites, error) {
 				testSuite.Duration += xmlTest.Duration()
 				results.TestSuites = append(results.TestSuites, testSuite)
 			case "testsuite": // Just a single test suite (this is the usual output from junit, for example)
-				xmlTestSuite := jUnitXMLTestSuite{}
-				decoder.DecodeElement(&xmlTestSuite, &tok)
+				xmlTestSuite := &jUnitXMLTestSuite{}
+				decoder.DecodeElement(xmlTestSuite, &tok)
 				results.TestSuites = append(results.TestSuites, toCoreTestSuite(xmlTestSuite))
 			case "testsuites": // We might have a collection of existing test suites, if we're parsing our own output.
 				xmlTestSuites := jUnitXMLTestSuites{}
@@ -80,7 +80,7 @@ func parseJUnitXMLTestResults(data []byte) (core.TestSuites, error) {
 	}
 }
 
-func toCoreTestSuite(xmlTestSuite jUnitXMLTestSuite) core.TestSuite {
+func toCoreTestSuite(xmlTestSuite *jUnitXMLTestSuite) core.TestSuite {
 	testSuite := core.TestSuite{
 		Package:    xmlTestSuite.Package,
 		Name:       xmlTestSuite.Name,
@@ -268,7 +268,7 @@ type jUnitXMLTestSuites struct {
 	Tests    uint   `xml:"tests,attr,omitempty"`
 	timed    `xml:"time,attr,omitempty"`
 
-	TestSuites []jUnitXMLTestSuite `xml:"testsuite,omitempty"`
+	TestSuites []*jUnitXMLTestSuite `xml:"testsuite,omitempty"`
 
 	XMLName xml.Name `xml:"testsuites"`
 }
@@ -417,9 +417,18 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 	}
 }
 
-// UploadResults uploads test results to a remote server.
-func UploadResults(graph *core.BuildGraph, url string) error {
-	if resp, err := http.Post(url, "application/xml", bytes.NewReader(mustSerialiseResults(graph))); err != nil {
+// uploadResults uploads test results to a remote server.
+func uploadResults(target *core.BuildTarget, url string) error {
+	suite := toXMLTestSuite(&target.Results)
+	suites := &jUnitXMLTestSuites{
+		TestSuites: []*jUnitXMLTestSuite{suite},
+	}
+	suites.Time = suite.Time
+	b, err := xml.MarshalIndent(suites, "", "    ")
+	if err != nil {
+		return err
+	}
+	if resp, err := http.Post(url, "application/xml", bytes.NewReader(b)); err != nil {
 		return fmt.Errorf("Failed to upload test results: %s", err)
 	} else if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("Error from remote server on uploading test results: %s", resp.Status)
@@ -433,43 +442,22 @@ func mustSerialiseResults(graph *core.BuildGraph) []byte {
 	xmlTestResults.XMLName.Local = "testsuites"
 
 	// Collapse any testsuite with the same name
-	xmlSuites := make(map[string]jUnitXMLTestSuite)
+	xmlSuites := make(map[string]*jUnitXMLTestSuite)
 	for _, target := range graph.AllTargets() {
 		if target.IsTest {
-			testSuite := target.Results
+			testSuite := &target.Results
 			if len(testSuite.TestCases) > 0 {
-				var xmlTestSuite jUnitXMLTestSuite
-				if _, ok := xmlSuites[testSuite.JavaStyleName()]; ok {
-					xmlTestSuite = xmlSuites[testSuite.Name]
-					xmlTestSuite.Tests += testSuite.Tests()
-					xmlTestSuite.Errors += testSuite.Errors()
-					xmlTestSuite.Failures += testSuite.Failures()
-					xmlTestSuite.Skipped += testSuite.Skips()
-					xmlTestSuite.timed.Time += testSuite.Duration.Seconds()
+				xmlTestSuite := toXMLTestSuite(testSuite)
+				name := testSuite.JavaStyleName()
+				if suite, present := xmlSuites[name]; present {
+					suite.Tests += xmlTestSuite.Tests
+					suite.Errors += xmlTestSuite.Errors
+					suite.Failures += xmlTestSuite.Failures
+					suite.Skipped += xmlTestSuite.Skipped
+					suite.timed.Time += xmlTestSuite.timed.Time
+					suite.TestCases = append(suite.TestCases, xmlTestSuite.TestCases...)
 				} else {
-					xmlTestSuite = jUnitXMLTestSuite{
-						Name:       testSuite.Name,
-						Package:    testSuite.Package,
-						Timestamp:  testSuite.Timestamp,
-						Tests:      testSuite.Tests(),
-						Errors:     testSuite.Errors(),
-						Failures:   testSuite.Failures(),
-						Skipped:    testSuite.Skips(),
-						timed:      timed{testSuite.Duration.Seconds()},
-						Properties: toXMLProperties(testSuite.Properties, testSuite.Cached),
-					}
-				}
-				for _, testCase := range testSuite.TestCases {
-					xmlTest := toXMLTestCase(testCase)
-					if xmlTest.ClassName == "" {
-						xmlTest.ClassName = testSuite.JavaStyleName()
-					}
-					xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
-				}
-				xmlSuites[testSuite.JavaStyleName()] = xmlTestSuite
-				for _, testCase := range testSuite.TestCases {
-					xmlTest := toXMLTestCase(testCase)
-					xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
+					xmlSuites[name] = xmlTestSuite
 				}
 			}
 			xmlTestResults.Time += testSuite.Duration.Seconds()
@@ -500,6 +488,28 @@ func toXMLProperties(props map[string]string, cached bool) jUnitXMLProperties {
 		})
 	}
 	return out
+}
+
+func toXMLTestSuite(testSuite *core.TestSuite) *jUnitXMLTestSuite {
+	xmlTestSuite := &jUnitXMLTestSuite{
+		Name:       testSuite.Name,
+		Package:    testSuite.Package,
+		Timestamp:  testSuite.Timestamp,
+		Tests:      testSuite.Tests(),
+		Errors:     testSuite.Errors(),
+		Failures:   testSuite.Failures(),
+		Skipped:    testSuite.Skips(),
+		timed:      timed{testSuite.Duration.Seconds()},
+		Properties: toXMLProperties(testSuite.Properties, testSuite.Cached),
+	}
+	for _, testCase := range testSuite.TestCases {
+		xmlTest := toXMLTestCase(testCase)
+		if xmlTest.ClassName == "" {
+			xmlTest.ClassName = testSuite.JavaStyleName()
+		}
+		xmlTestSuite.TestCases = append(xmlTestSuite.TestCases, xmlTest)
+	}
+	return xmlTestSuite
 }
 
 func toXMLTestCase(result core.TestCase) jUnitXMLTest {
