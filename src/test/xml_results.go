@@ -417,17 +417,24 @@ func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
 	}
 }
 
-// uploadResults uploads test results to a remote server.
-func uploadResults(target *core.BuildTarget, url string) error {
+// SerialiseResultsToXML serialises some test results to the "standard" XML format.
+func SerialiseResultsToXML(target *core.BuildTarget, indent bool) []byte {
+	s := ""
+	if indent {
+		s = "    "
+	}
 	suite := toXMLTestSuite(&target.Results)
 	suites := &jUnitXMLTestSuites{
 		TestSuites: []*jUnitXMLTestSuite{suite},
 	}
 	suites.Time = suite.Time
-	b, err := xml.MarshalIndent(suites, "", "    ")
-	if err != nil {
-		return err
-	}
+	b, _ := xml.MarshalIndent(suites, "", s)
+	return b
+}
+
+// uploadResults uploads test results to a remote server.
+func uploadResults(target *core.BuildTarget, url string) error {
+	b := SerialiseResultsToXML(target, true)
 	if resp, err := http.Post(url, "application/xml", bytes.NewReader(b)); err != nil {
 		return fmt.Errorf("Failed to upload test results: %s", err)
 	} else if resp.StatusCode < 200 || resp.StatusCode >= 300 {

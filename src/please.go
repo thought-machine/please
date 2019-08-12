@@ -118,6 +118,7 @@ var opts struct {
 		Failed          bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
 		Detailed        bool         `long:"detailed" description:"Prints more detailed output after tests."`
 		Shell           bool         `long:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
+		StreamResults   bool         `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -143,6 +144,7 @@ var opts struct {
 		Failed              bool          `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
 		Detailed            bool          `long:"detailed" description:"Prints more detailed output after tests."`
 		Shell               bool          `long:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
+		StreamResults       bool          `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
@@ -787,7 +789,8 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
 		(len(targets) == 1 && !targets[0].IsAllTargets() &&
 			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
-	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild
+	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
+	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
 	state.Cache = newCache(state)
 
 	// Run the display
@@ -795,7 +798,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		output.MonitorState(state, !pretty, detailedTests, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
 
