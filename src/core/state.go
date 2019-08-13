@@ -445,6 +445,14 @@ func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildRe
 
 // LogResult logs a build result directly to the state's queue.
 func (state *BuildState) LogResult(result *BuildResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			// This is basically always "send on closed channel" which can happen because this
+			// channel gets closed while there might still be some other workers doing stuff.
+			// At that point we don't care much because the build has already failed.
+			log.Info("%s", r)
+		}
+	}()
 	if state.results != nil {
 		state.results <- result
 	}
