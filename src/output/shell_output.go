@@ -66,6 +66,7 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel() // not really necessary but keeps linter happy
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
