@@ -60,6 +60,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	if state.Cache != nil {
 		state.Cache.Shutdown()
 	}
+	state.CloseResults()
 }
 
 // RunHost is a convenience function that uses the host architecture, the given state's

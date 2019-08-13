@@ -11,6 +11,7 @@
 package follow
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -104,6 +105,7 @@ func TestWithOutput(t *testing.T) {
 	addr, shutdown := initialiseServer(serverState, 0)
 	clientState := core.NewDefaultBuildState()
 	connectClient(clientState, addr, retries, delay)
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		serverState.LogBuildResult(0, l1, core.PackageParsed, fmt.Sprintf("Parsed %s", l1))
 		serverState.LogBuildResult(0, l1, core.TargetBuilding, fmt.Sprintf("Building %s", l1))
@@ -114,8 +116,9 @@ func TestWithOutput(t *testing.T) {
 		serverState.LogBuildResult(2, l2, core.TargetBuilt, fmt.Sprintf("Built %s", l2))
 		log.Info("Shutting down server")
 		shutdown()
+		cancel()
 	}()
-	assert.True(t, runOutput(clientState))
+	assert.True(t, runOutput(ctx, clientState))
 }
 
 func TestResources(t *testing.T) {

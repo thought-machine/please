@@ -2,6 +2,7 @@ package output
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -25,7 +26,7 @@ type displayer struct {
 	lines, lastLines                        int // mutable - records how many rows we've printed this time
 }
 
-func display(state *core.BuildState, buildingTargets []buildingTarget, stop <-chan struct{}, done chan<- struct{}) {
+func display(ctx context.Context, state *core.BuildState, buildingTargets []buildingTarget) {
 	backend := cli.NewLogBackend(len(buildingTargets))
 	go func() {
 		sig := make(chan os.Signal, 10)
@@ -49,21 +50,21 @@ func display(state *core.BuildState, buildingTargets []buildingTarget, stop <-ch
 	}
 
 	d.printLines()
-	d.run(stop, backend)
+	d.run(ctx, backend)
 	setWindowTitle(state, false)
 	// Clear it all out.
 	d.moveToFirstLine()
 	printf("${CLEAR_END}")
 	backend.Deactivate()
-	done <- struct{}{}
 }
 
-func (d *displayer) run(stop <-chan struct{}, backend *cli.LogBackend) {
+func (d *displayer) run(ctx context.Context, backend *cli.LogBackend) {
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
+	done := ctx.Done()
 	for {
 		select {
-		case <-stop:
+		case <-done:
 			return
 		case <-ticker.C:
 			d.moveToFirstLine()

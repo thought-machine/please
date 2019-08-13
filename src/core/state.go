@@ -265,12 +265,6 @@ func (state *BuildState) feedQueues(parses chan<- LabelPair, builds, tests, remo
 			close(tests)
 			close(remoteBuilds)
 			close(remoteTests)
-			if state.results != nil {
-				close(state.results)
-			}
-			if state.remoteResults != nil {
-				close(state.remoteResults)
-			}
 			return
 		case Parse, SubincludeParse:
 			parses <- LabelPair{Label: task.Label, Dependent: task.Dependent, ForSubinclude: task.Type == SubincludeParse}
@@ -298,7 +292,6 @@ func (state *BuildState) TaskDone(wasBuildOrTest bool) {
 	}
 	if atomic.AddInt64(&state.progress.numPending, -1) <= 0 {
 		state.Stop()
-		state.KillAll()
 	}
 }
 
@@ -307,9 +300,20 @@ func (state *BuildState) Stop() {
 	state.pendingTasks.Put(pendingTask{Type: Stop})
 }
 
-// KillAll kills all the workers.
+// KillAll kills all the workers & closes the result channels.
 func (state *BuildState) KillAll() {
 	state.pendingTasks.Put(pendingTask{Type: Kill})
+	state.CloseResults()
+}
+
+// CloseResults closes the result channels.
+func (state *BuildState) CloseResults() {
+	if state.results != nil {
+		close(state.results)
+	}
+	if state.remoteResults != nil {
+		close(state.remoteResults)
+	}
 }
 
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
@@ -441,14 +445,6 @@ func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildRe
 
 // LogResult logs a build result directly to the state's queue.
 func (state *BuildState) LogResult(result *BuildResult) {
-	defer func() {
-		if r := recover(); r != nil {
-			// This is basically always "send on closed channel" which can happen because this
-			// channel gets closed while there might still be some other workers doing stuff.
-			// At that point we don't care much because the build has already failed.
-			log.Info("%s", r)
-		}
-	}()
 	if state.results != nil {
 		state.results <- result
 	}

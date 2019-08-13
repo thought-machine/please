@@ -4,6 +4,7 @@ package output
 
 import (
 	"bufio"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"math/rand"
@@ -53,7 +54,8 @@ type buildingTargetData struct {
 }
 
 // MonitorState monitors the build while it's running and prints output.
-func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTestResults bool, traceFile string) {
+// The caller must cancel the given context once they want this function to stop displaying things.
+func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, detailedTests, streamTestResults bool, traceFile string) {
 	initPrintf(state.Config)
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, state.Config.Please.NumThreads+state.Config.Remote.NumExecutors)
@@ -63,30 +65,27 @@ func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTest
 		printf("%s\n", state.Config.Please.Motd[r.Intn(len(state.Config.Please.Motd))])
 	}
 
-	displayDone := make(chan struct{})
-	stop := make(chan struct{})
-	if plainOutput {
-		go logProgress(state, buildingTargets, stop, displayDone)
-	} else {
-		go display(state, buildingTargets, stop, displayDone)
-	}
+	ctx, cancel := context.WithCancel(ctx)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		if plainOutput {
+			logProgress(ctx, state, buildingTargets)
+		} else {
+			display(ctx, state, buildingTargets)
+		}
+		wg.Done()
+	}()
 	failedTargets := []core.BuildLabel{}
 	failedNonTests := []core.BuildLabel{}
 	for result := range state.Results() {
 		if state.DebugTests && result.Status == core.TargetTesting {
-			stop <- struct{}{}
-			<-displayDone
-			// Ensure that this works again later and we don't deadlock
-			// TODO(peterebden): this does not seem like a gloriously elegant synchronisation mechanism...
-			go func() {
-				<-stop
-				displayDone <- struct{}{}
-			}()
+			cancel() // signals the interactive display goroutines to stop
 		}
 		processResult(state, result, buildingTargets, plainOutput, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "", streamTestResults)
 	}
-	stop <- struct{}{}
-	<-displayDone
+	<-ctx.Done()
+	wg.Wait()
 	if traceFile != "" {
 		writeTrace(traceFile)
 	}
@@ -382,7 +381,8 @@ func maybeToString(duration *time.Duration) string {
 }
 
 // logProgress continually logs progress messages every 10s explaining where we're up to.
-func logProgress(state *core.BuildState, buildingTargets []buildingTarget, stop <-chan struct{}, done chan<- struct{}) {
+func logProgress(ctx context.Context, state *core.BuildState, buildingTargets []buildingTarget) {
+	done := ctx.Done()
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 	for {
@@ -395,8 +395,7 @@ func logProgress(state *core.BuildState, buildingTargets []buildingTarget, stop 
 				}
 			}
 			log.Notice("Build running for %s, %d / %d tasks done, %s busy", time.Since(state.StartTime).Round(time.Second), state.NumDone(), state.NumActive(), pluralise(busy, "worker", "workers"))
-		case <-stop:
-			done <- struct{}{}
+		case <-done:
 			return
 		}
 	}

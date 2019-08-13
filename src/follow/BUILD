@@ -13,7 +13,6 @@ go_library(
         "//src/output",
         "//third_party/go:grpc",
         "//third_party/go:logging",
-        "//third_party/go:net",
         "//third_party/go:psutil",
     ],
 )
