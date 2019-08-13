@@ -138,7 +138,7 @@ type ValueExpression struct {
 	Tuple    *List
 	Lambda   *Lambda
 	Ident    *IdentExpr
-	Slice    *Slice
+	Slices   []*Slice
 	Property *IdentExpr
 	Call     *Call
 }

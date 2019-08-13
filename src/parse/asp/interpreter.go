@@ -166,7 +166,7 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 			expr.Optimised = &OptimisedExpression{Constant: constant} // Extract constant expression
 			expr.Val = nil
 			return false
-		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && expr.Val.Slice == nil {
+		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && len(expr.Val.Slices) == 0 {
 			if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
 				expr.Optimised = &OptimisedExpression{Local: expr.Val.Ident.Name}
 				return false
@@ -441,13 +441,13 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 
 func (s *scope) interpretValueExpression(expr *ValueExpression) pyObject {
 	obj := s.interpretValueExpressionPart(expr)
-	if expr.Slice != nil {
-		if expr.Slice.Colon == "" {
+	for _, sl := range expr.Slices {
+		if sl.Colon == "" {
 			// Indexing, much simpler...
-			s.Assert(expr.Slice.End == nil, "Invalid syntax")
-			obj = obj.Operator(Index, s.interpretExpression(expr.Slice.Start))
+			s.Assert(sl.End == nil, "Invalid syntax")
+			obj = obj.Operator(Index, s.interpretExpression(sl.Start))
 		} else {
-			obj = s.interpretSlice(obj, expr.Slice)
+			obj = s.interpretSlice(obj, sl)
 		}
 	}
 	if expr.Property != nil {
@@ -704,7 +704,7 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	// but it's rare that people would write something of that nature in this language.
 	if expr.Optimised != nil && expr.Optimised.Constant != nil {
 		return expr.Optimised.Constant
-	} else if expr.Val == nil || expr.Val.Slice != nil || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.If != nil {
+	} else if expr.Val == nil || len(expr.Val.Slices) != 0 || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.If != nil {
 		return nil
 	} else if expr.Val.Bool != "" || expr.Val.String != "" || expr.Val.Int != nil {
 		return s.interpretValueExpression(expr.Val)
