@@ -183,7 +183,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		// Don't stop here after test failure, aggregate them for later.
 		if result.Status != core.TargetTestFailed {
 			// Reset colour so the entire compiler error output doesn't appear red.
-			log.Errorf("%s failed:${RESET}\n%s", result.Label, shortError(result.Err))
+			log.Errorf("%s failed:\x1b[0m\n%s", result.Label, shortError(result.Err))
 			state.Stop()
 		} else if !plainOutput { // plain output will have already logged this
 			log.Errorf("%s failed: %s", result.Label, shortError(result.Err))
