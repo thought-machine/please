@@ -176,6 +176,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
         bazel_compat = bazel_compat,
     )
 
+
 def arch(name:str, os:str, arch:str):
     """ Defines an architecture subrepo.
 
@@ -195,4 +196,19 @@ def arch(name:str, os:str, arch:str):
         name = name,
         path = "",
         arch = arch_str,
+    )
+
+
+def local_repository(name:str, path:str):
+    """Defines a subrepo within the local repo.
+
+    This is mostly useful for Bazel compatibility.
+
+    Args:
+      name: Name of the rule
+      path: Path within the repo to the new root
+    """
+    subrepo(
+        name = name,
+        path = path,
     )
