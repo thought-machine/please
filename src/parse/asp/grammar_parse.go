@@ -461,8 +461,8 @@ func (p *parser) parseValueExpression() *ValueExpression {
 	}
 
 	tok = p.l.Peek()
-	if tok.Type == '[' {
-		ve.Slice = p.parseSlice()
+	for tok.Type == '[' {
+		ve.Slices = append(ve.Slices, p.parseSlice())
 		tok = p.l.Peek()
 	}
 	if p.optional('.') {
