@@ -131,7 +131,6 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         shebang, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
-    pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
     assert main not in srcs, "main file should not be included in srcs"
 
@@ -153,7 +152,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         outs=[f'.{name}_main.pex.zip'],  # just call it .zip so everything has the same extension
         cmd=cmd,
         requires=['py', 'pex'],
-        pre_build=pre_build,
+        pre_build=_handle_zip_safe,
         deps=deps,
         needs_transitive_deps=True,  # Needed so we can find anything with zip_safe=False on it.
         output_is_complete=True,
@@ -237,7 +236,6 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
-    pre_build, cmd = _handle_zip_safe(cmd, zip_safe)
 
     # If the config specifies a PYTHON_TEST_RUNNER_BOOTSTRAP target, then this ought to contain
     # the test-runner library (e.g. pytest), and its transitive dependencies. In this case, we just
@@ -261,7 +259,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         test_only=True,
         needs_transitive_deps=True,  # needed for zip-safe detection
         building_description="Creating pex info...",
-        pre_build=pre_build,
+        pre_build=_handle_zip_safe,
         deps=deps,
         tools={
             'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
@@ -564,16 +562,14 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         provides = {'py': wheel_rule},
     )
 
-
-def _handle_zip_safe(cmd, zip_safe):
-    """Handles the zip safe flag. Returns a tuple of (pre-build function, new command)."""
-    if zip_safe is None:
-        return lambda name: (set_command(name, cmd.replace(' --zip_safe', ''))
-                             if has_label(name, 'py:zip-unsafe') else None), cmd
-    elif zip_safe:
-        return None, cmd
-    else:
-        return None, cmd.replace(' --zip_safe', '')
+def _handle_zip_safe(name):
+    """Handles the zip safe flag.
+    
+    This works as a pre-build function and hence can only use the builtin
+    methods to manipulate the rule.
+    """
+    if has_label(name, 'py:zip-unsafe'):
+        set_command(name, get_command(name).replace(' --zip_safe', ''))
 
 
 def _add_licences(name, output):
