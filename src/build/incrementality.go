@@ -25,6 +25,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/remote"
 )
 
 const hashLength = sha1.Size
@@ -451,6 +452,9 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 		} else {
 			fmt.Printf("    Tool: %s: %s\n", tool, b64(state.PathHasher.MustHash(tool.FullPaths(state.Graph)[0])))
 		}
+	}
+	if state.Config.Remote.URL != "" {
+		remote.Get(state).PrintHashes(target, mustShortTargetHash(state, target), false)
 	}
 }
 

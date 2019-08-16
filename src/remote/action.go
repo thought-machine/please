@@ -18,10 +18,6 @@ import (
 
 // uploadAction uploads a build action for a target and returns its digest.
 func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, isTest bool) (*pb.Digest, error) {
-	timeout := target.BuildTimeout
-	if isTest {
-		timeout = target.TestTimeout
-	}
 	var digest *pb.Digest
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
@@ -33,12 +29,11 @@ func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, isTest boo
 		ch <- &blob{Data: inputRootMsg, Digest: inputRootDigest}
 		commandDigest, commandMsg := digestMessageContents(c.buildCommand(target, stamp, isTest))
 		ch <- &blob{Data: commandMsg, Digest: commandDigest}
-		action := &pb.Action{
+		actionDigest, actionMsg := digestMessageContents(&pb.Action{
 			CommandDigest:   commandDigest,
 			InputRootDigest: inputRootDigest,
-			Timeout:         ptypes.DurationProto(timeout),
-		}
-		actionDigest, actionMsg := digestMessageContents(action)
+			Timeout:         ptypes.DurationProto(timeout(target, isTest)),
+		})
 		ch <- &blob{Data: actionMsg, Digest: actionDigest}
 		digest = actionDigest
 		return nil

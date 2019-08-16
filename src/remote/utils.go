@@ -15,6 +15,8 @@ import (
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 // digestMessage calculates the digest of a proto message as described in the
@@ -118,4 +120,12 @@ func convertError(err *rpcstatus.Status) error {
 		return nil
 	}
 	return fmt.Errorf("%s", err.Message)
+}
+
+// timeout returns either a build or test timeout from a target.
+func timeout(target *core.BuildTarget, test bool) time.Duration {
+	if test {
+		return target.TestTimeout
+	}
+	return target.BuildTimeout
 }

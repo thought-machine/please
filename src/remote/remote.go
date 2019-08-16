@@ -460,3 +460,21 @@ func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.
 		}
 	}
 }
+
+// PrintHashes prints the action hashes for a target.
+func (c *Client) PrintHashes(target *core.BuildTarget, stamp []byte, isTest bool) {
+	inputRoot, err := c.buildInputRoot(target, false, isTest)
+	if err != nil {
+		log.Fatalf("Unable to calculate input hash: %s", err)
+	}
+	inputRootDigest := digestMessage(inputRoot)
+	fmt.Printf("  Input: %7d bytes: %s\n", inputRootDigest.SizeBytes, inputRootDigest.Hash)
+	commandDigest := digestMessage(c.buildCommand(target, stamp, isTest))
+	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
+	actionDigest := digestMessage(&pb.Action{
+		CommandDigest:   commandDigest,
+		InputRootDigest: inputRootDigest,
+		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
+	})
+	fmt.Printf(" Action: %7d bytes: %s\n", actionDigest.SizeBytes, actionDigest.Hash)
+}
