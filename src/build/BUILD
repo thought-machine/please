@@ -9,7 +9,6 @@ go_library(
         "//src/cache",
         "//src/core",
         "//src/fs",
-        "//src/remote",
         "//src/worker",
         "//third_party/go:go-multierror",
         "//third_party/go:logging",

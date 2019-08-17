@@ -67,6 +67,20 @@ type Parser interface {
 	RunPostBuildFunction(threadID int, state *BuildState, target *BuildTarget, output string) error
 }
 
+// A RemoteClient is the interface to a remote execution service.
+type RemoteClient interface {
+	// Retrieve fetches remote results from the service.
+	Retrieve(target *BuildTarget, key []byte) (*BuildMetadata, error)
+	// Store stores outputs of a target with the service.
+	Store(target *BuildTarget, key []byte, metadata *BuildMetadata, files []string) error
+	// Build invokes a build of the target remotely
+	Build(tid int, target *BuildTarget, stamp []byte) (*BuildMetadata, error)
+	// Test invokes a test run of the target remotely.
+	Test(tid int, target *BuildTarget) (metadata *BuildMetadata, results, coverage []byte, err error)
+	// PrintHashes shows the hashes of a target.
+	PrintHashes(target *BuildTarget, stamp []byte, isTest bool)
+}
+
 // A BuildState tracks the current state of the build & related data.
 // As well as tracking the build graph and config, it also tracks the set of current
 // tasks and maintains a queue of them, along with various related counters which are
@@ -105,6 +119,8 @@ type BuildState struct {
 	hashers map[string]*fs.PathHasher
 	// Cache to store / retrieve old build results.
 	Cache Cache
+	// Client to remote execution service, if configured.
+	RemoteClient RemoteClient
 	// Targets that we were originally requested to build
 	OriginalTargets []BuildLabel
 	// Arguments to tests.

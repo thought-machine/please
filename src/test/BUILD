@@ -12,7 +12,6 @@ go_library(
         "//src/cli",
         "//src/core",
         "//src/fs",
-        "//src/remote",
         "//src/utils",
         "//src/worker",
         "//third_party/go:cover",

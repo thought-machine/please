@@ -23,7 +23,6 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/remote"
 	"github.com/thought-machine/please/src/worker"
 )
 
@@ -215,7 +214,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	}
 	var out []byte
 	if runRemotely {
-		m, err := remote.Get(state).Build(tid, target, cacheKey)
+		m, err := state.RemoteClient.Build(tid, target, cacheKey)
 		if err != nil {
 			return err
 		}

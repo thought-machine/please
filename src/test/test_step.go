@@ -15,7 +15,6 @@ import (
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/remote"
 	"github.com/thought-machine/please/src/utils"
 	"github.com/thought-machine/please/src/worker"
 )
@@ -340,7 +339,7 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFil
 
 func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, outputFile string, runRemotely bool) (*core.BuildMetadata, []byte, *core.TestCoverage, error) {
 	if runRemotely {
-		metadata, results, coverage, err := remote.Get(state).Test(tid, target)
+		metadata, results, coverage, err := state.RemoteClient.Test(tid, target)
 		cov, err2 := parseTestCoverage(target, coverage)
 		if err == nil && err2 != nil {
 			log.Error("Error parsing coverage data: %s", err2)

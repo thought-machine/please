@@ -11,11 +11,11 @@ import (
 )
 
 type rexCache struct {
-	client *remote.Client
+	client core.RemoteClient
 }
 
-func newRemoteCache(state *core.BuildState) *rexCache {
-	return &rexCache{client: remote.Get(state)}
+func newRemoteCache(client core.RemoteClient) *rexCache {
+	return &rexCache{client: client}
 }
 
 func (rc *rexCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
