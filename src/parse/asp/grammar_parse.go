@@ -670,7 +670,7 @@ func (p *parser) parseFString() *FString {
 	tok.Pos.Column++ // track position in case of error
 	for idx := p.findBrace(s); idx != -1; idx = p.findBrace(s) {
 		v := &f.Vars[p.newElement(&f.Vars)]
-		v.Prefix = s[:idx]
+		v.Prefix = strings.Replace(strings.Replace(s[:idx], "{{", "{", -1), "}}", "}", -1)
 		s = s[idx+1:]
 		tok.Pos.Column += idx + 1
 		idx = strings.IndexByte(s, '}')
@@ -683,7 +683,7 @@ func (p *parser) parseFString() *FString {
 		s = s[idx+1:]
 		tok.Pos.Column += idx + 1
 	}
-	f.Suffix = s
+	f.Suffix = strings.Replace(strings.Replace(s, "{{", "{", -1), "}}", "}", -1)
 
 	return f
 }
