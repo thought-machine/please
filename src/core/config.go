@@ -390,10 +390,10 @@ type Configuration struct {
 		Upload          cli.URL      `help:"URL to upload test results to (in XML format)"`
 	}
 	Remote struct {
-		URL          cli.URL `help:"URL for the remote server. If this is set but no executors are configured then it can still act as a remote cache."`
-		NumExecutors int     `help:"Maximum number of remote executors to use simultaneously."`
-		Instance     string  `help:"Remote instance name to request; depending on the server this may be required."`
-		Name         string  `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
+		URL          string `help:"URL for the remote server. If this is set but no executors are configured then it can still act as a remote cache."`
+		NumExecutors int    `help:"Maximum number of remote executors to use simultaneously."`
+		Instance     string `help:"Remote instance name to request; depending on the server this may be required."`
+		Name         string `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
