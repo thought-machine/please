@@ -84,7 +84,7 @@ func (c *Client) init() {
 		// TODO(peterebden): We may need to add the ability to have multiple URLs which we
 		//                   would then query for capabilities to discover which is which.
 		// TODO(peterebden): Add support for TLS.
-		conn, err := grpc.Dial(c.state.Config.Remote.URL.String(),
+		conn, err := grpc.Dial(c.state.Config.Remote.URL,
 			grpc.WithTimeout(dialTimeout),
 			grpc.WithInsecure(),
 			grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(grpc_retry.WithMax(maxRetries))))
