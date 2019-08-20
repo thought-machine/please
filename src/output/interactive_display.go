@@ -199,11 +199,10 @@ func recalcWindowSize(backend *cli.LogBackend) {
 // Limited-length printf that respects current window width.
 // Output is truncated at the middle to fit within 'cols'.
 func (d *displayer) printf(format string, args ...interface{}) {
-	printf(lprintfPrepare(d.maxCols, format, args...))
+	fmt.Fprint(os.Stderr, lprintfPrepare(d.maxCols, os.Expand(fmt.Sprintf(format, args...), replace)))
 }
 
-func lprintfPrepare(cols int, format string, args ...interface{}) string {
-	s := fmt.Sprintf(format, args...)
+func lprintfPrepare(cols int, s string) string {
 	if len(s) < cols {
 		return s // it's short enough, nice and simple
 	}
