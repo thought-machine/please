@@ -283,7 +283,7 @@ func TestLen(t *testing.T) {
 func TestFStringDollars(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/fstrings.build")
 	assert.NoError(t, err)
-	assert.EqualValues(t, "mickey donald ${goofy} {{sora}}", s.Lookup("z"))
+	assert.EqualValues(t, "mickey donald ${goofy} {sora}", s.Lookup("z"))
 }
 
 func TestDoubleIndex(t *testing.T) {
