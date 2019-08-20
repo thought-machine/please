@@ -72,11 +72,10 @@ func TestUpload(t *testing.T) {
 
 	err := uploadResults(target, s.URL+"/results")
 	assert.NoError(t, err)
-	log.Warning("here %s", results["/results"])
 	assert.Equal(t, []byte(expected), results["/results"])
 }
 
-const expected = `<testsuites time="1">
+const expected = `<testsuites name="//src/core:lock_test" time="1">
     <testsuite name="lock_test" tests="2" package="src.core" time="1">
         <properties></properties>
         <testcase name="TestAcquireRepoLock" classname="src.core.lock_test" time="0.5"></testcase>

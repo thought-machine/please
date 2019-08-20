@@ -425,6 +425,7 @@ func SerialiseResultsToXML(target *core.BuildTarget, indent bool) []byte {
 	}
 	suite := toXMLTestSuite(&target.Results)
 	suites := &jUnitXMLTestSuites{
+		Name:       target.Label.String(),
 		TestSuites: []*jUnitXMLTestSuite{suite},
 	}
 	suites.Time = suite.Time

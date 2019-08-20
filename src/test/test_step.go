@@ -36,7 +36,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
 	test(tid, state.ForTarget(target), label, target, remote)
 	if state.Config.Test.Upload != "" {
 		if err := uploadResults(target, state.Config.Test.Upload.String()); err != nil {
-			log.Error("%s", err)
+			log.Warning("%s", err)
 		}
 	}
 }
