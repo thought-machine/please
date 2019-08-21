@@ -396,21 +396,13 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
             test_only = True,
             deps = deps,
         )
-    main_rule = build_rule(
-        name='_%s#main' % name,
-        srcs=srcs,
-        outs=[name + '_main.go'],
-        deps=deps,
-        cmd={
-            'dbg': f'$TOOLS -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
-            'opt': f'$TOOLS -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
-            'cover': f'$TOOLS -d . -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS ',
-        },
-        needs_transitive_deps=True,  # Need all .a files to template coverage variables
-        requires=['go', 'go_src'],
-        test_only=True,
-        tools = [CONFIG.GO_TEST_TOOL],
-        post_build=lambda name, output: _replace_test_package(name, output, static, definitions=definitions, cgo=cgo),
+    main_rule = go_test_main(
+        name = name,
+        _tag = 'main',
+        srcs = srcs,
+        deps = deps,
+        _post_build = lambda name, output: _replace_test_package(name, output, static, definitions=definitions, cgo=cgo),
+        test_only = True,
     )
     deps += [lib_rule]
     lib_rule = go_library(
@@ -449,6 +441,38 @@ def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', vi
         building_description="Compiling...",
         needs_transitive_deps=True,
         output_is_complete=True,
+    )
+
+
+def go_test_main(name:str, srcs:list, test_only:bool=False,
+                 deps:list=[], visibility:list=None, _post_build:function=None, _tag=None):
+    """Outputs the main file for a Go test.
+
+    This essentially does the test discovery and templates out the entry point from it.
+
+    Args:
+      name: Name of the rule
+      srcs: Source .go files that define the tests.
+      test_only: If True, can only be consumed by tests (or other test_only rules).
+      deps: Any additional dependencies
+      visibility: Visibility of the rule.
+    """
+    return build_rule(
+        name = name,
+        tag = _tag,
+        srcs = srcs,
+        outs = [name + '_main.go'],
+        deps = deps,
+        cmd = {
+            'dbg': f'$TOOLS -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
+            'opt': f'$TOOLS -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
+            'cover': f'$TOOLS -d . -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS ',
+        },
+        needs_transitive_deps = True,  # Need all dependencies to template coverage variables
+        requires = ['go', 'go_src'],
+        test_only = True,
+        tools = [CONFIG.GO_TEST_TOOL],
+        post_build = _post_build,
     )
 
 
