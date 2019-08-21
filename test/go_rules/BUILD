@@ -51,3 +51,29 @@ go_test(
     name = "example_test",
     srcs = ["example_test.go"],
 )
+
+go_library(
+    name = "test_main_lib",
+    srcs = ["main_test.go"],
+    out = "whatever.a",
+    test_only = True,
+)
+
+go_test_main(
+    name = "test_main",
+    srcs = ["main_test.go"],
+    test_only = True,
+)
+
+go_binary(
+    name = "test_main_bin",
+    srcs = [":test_main"],
+    test_only = True,
+    deps = [":test_main_lib"],
+)
+
+gentest(
+    name = "test_main_test",
+    data = [":test_main_bin"],
+    test_cmd = "$DATA | tee $RESULTS_FILE",
+)
