@@ -15,15 +15,26 @@ import (
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
-func Print(graph *core.BuildGraph, labels []core.BuildLabel, fields []string) {
-	for _, label := range labels {
+func Print(graph *core.BuildGraph, targets []core.BuildLabel, fields, labels []string) {
+	for _, target := range targets {
+		t := graph.TargetOrDie(target)
+		if len(labels) > 0 {
+			for _, prefix := range labels {
+				for _, label := range t.Labels {
+					if strings.HasPrefix(label, prefix) {
+						fmt.Printf("%s\n", strings.TrimPrefix(label, prefix))
+					}
+				}
+			}
+			continue
+		}
 		if len(fields) == 0 {
-			fmt.Fprintf(os.Stdout, "# %s:\n", label)
+			fmt.Fprintf(os.Stdout, "# %s:\n", target)
 		}
 		if len(fields) > 0 {
-			newPrinter(os.Stdout, graph.TargetOrDie(label), 0).PrintFields(fields)
+			newPrinter(os.Stdout, t, 0).PrintFields(fields)
 		} else {
-			newPrinter(os.Stdout, graph.TargetOrDie(label), 0).PrintTarget()
+			newPrinter(os.Stdout, t, 0).PrintTarget()
 		}
 	}
 }

@@ -444,3 +444,21 @@ sh_test(
     data = [":pass_env"],
     labels = ["manual"],  # Unclear what a good env var to pass is that works locally & on CI.
 )
+
+genrule(
+    name = "print_rule",
+    labels = [
+        "a:hello",
+        "a:greetings",
+        "b:goodbye",
+        "hello",
+        "manual",
+    ],
+    cmd = "true",
+)
+
+plz_e2e_test(
+    name = "query_print_test",
+    cmd = "plz query print -l a: //test:print_rule",
+    expected_output = "query_print_test.txt",
+)

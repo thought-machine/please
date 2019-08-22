@@ -288,6 +288,7 @@ var opts struct {
 		} `command:"alltargets" description:"Lists all targets in the graph"`
 		Print struct {
 			Fields []string `short:"f" long:"field" description:"Individual fields to print of the target"`
+			Labels []string `short:"l" long:"label" description:"Prints all labels with the given prefix (with the prefix stripped off). Overrides --field."`
 			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to print" required:"true"`
 			} `positional-args:"true" required:"true"`
@@ -555,7 +556,7 @@ var buildFunctions = map[string]func() bool{
 	},
 	"print": func() bool {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.Print(state.Graph, state.ExpandOriginalTargets(), opts.Query.Print.Fields)
+			query.Print(state.Graph, state.ExpandOriginalTargets(), opts.Query.Print.Fields, opts.Query.Print.Labels)
 		})
 	},
 	"affectedtargets": func() bool {
