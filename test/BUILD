@@ -447,6 +447,7 @@ sh_test(
 
 genrule(
     name = "print_rule",
+    cmd = "true",
     labels = [
         "a:hello",
         "a:greetings",
@@ -454,7 +455,6 @@ genrule(
         "hello",
         "manual",
     ],
-    cmd = "true",
 )
 
 plz_e2e_test(
