@@ -113,6 +113,7 @@ func (p *Parser) ParseToFile(input, output string) error {
 	for _, stmt := range stmts {
 		if stmt.FuncDef != nil {
 			stmt.FuncDef.KeywordsOnly = !whitelistedKwargs(stmt.FuncDef.Name, input)
+			stmt.FuncDef.IsBuiltin = true
 		}
 	}
 	f, err := os.Create(output)

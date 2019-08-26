@@ -32,7 +32,7 @@ type Handler struct {
 	mutex    sync.Mutex // guards docs
 	state    *core.BuildState
 	parser   *asp.Parser
-	builtins map[string]*asp.FuncDef
+	builtins map[string]*asp.Statement
 	pkgs     *pkg
 	root     string
 }
@@ -56,16 +56,19 @@ func NewHandler() *Handler {
 		pkgs: &pkg{},
 	}
 	h.methods = map[string]method{
-		"initialize":              h.method(h.initialize),
-		"initialized":             h.method(h.initialized),
-		"shutdown":                h.method(h.shutdown),
-		"exit":                    h.method(h.exit),
-		"textDocument/didOpen":    h.method(h.didOpen),
-		"textDocument/didChange":  h.method(h.didChange),
-		"textDocument/didSave":    h.method(h.didSave),
-		"textDocument/didClose":   h.method(h.didClose),
-		"textDocument/formatting": h.method(h.formatting),
-		"textDocument/completion": h.method(h.completion),
+		"initialize":                  h.method(h.initialize),
+		"initialized":                 h.method(h.initialized),
+		"shutdown":                    h.method(h.shutdown),
+		"exit":                        h.method(h.exit),
+		"textDocument/didOpen":        h.method(h.didOpen),
+		"textDocument/didChange":      h.method(h.didChange),
+		"textDocument/didSave":        h.method(h.didSave),
+		"textDocument/didClose":       h.method(h.didClose),
+		"textDocument/formatting":     h.method(h.formatting),
+		"textDocument/completion":     h.method(h.completion),
+		"textDocument/documentSymbol": h.method(h.symbols),
+		"textDocument/definition":     h.method(h.definition),
+		"textDocument/declaration":    h.method(h.definition),
 	}
 	return h
 }
@@ -163,6 +166,8 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 				},
 			},
 			DocumentFormattingProvider: true,
+			DocumentSymbolProvider:     true,
+			DefinitionProvider:         true,
 			CompletionProvider: &lsp.CompletionOptions{
 				TriggerCharacters: []string{"/", ":"},
 			},

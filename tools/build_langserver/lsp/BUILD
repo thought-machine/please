@@ -10,6 +10,7 @@ go_library(
         "//src/help",
         "//src/parse/asp",
         "//src/plz",
+        "//rules",
         "//third_party/go:buildtools",
         "//third_party/go:jsonrpc2",
         "//third_party/go:logging",
@@ -19,7 +20,7 @@ go_library(
 
 go_test(
     name = "lsp_test",
-    srcs = ["lsp_test.go"],
+    srcs = glob(["*_test.go"]),
     data = ["test_data"],
     deps = [
         ":lsp",

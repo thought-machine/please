@@ -59,20 +59,6 @@ func FindArgument(statement *Statement, args ...string) *CallArgument {
 	return nil
 }
 
-// ExpressionsAtPos is a wrapper around WalkAST to find all relevant expressions to
-// a given position.
-func ExpressionsAtPos(ast []*Statement, pos Position) []*Expression {
-	exprs := []*Expression{}
-	WalkAST(ast, func(expr *Expression) bool {
-		if withinRange(pos, expr.Pos, expr.EndPos) {
-			exprs = append(exprs, expr)
-			return true
-		}
-		return false
-	})
-	return exprs
-}
-
 // WalkAST is a generic function that walks through the ast recursively,
 // It accepts a function to look for a particular grammar object; it will be called on
 // each instance of that type, and returns a bool - for example
@@ -111,8 +97,8 @@ func walkAST(v reflect.Value, nodeType reflect.Type, callback reflect.Value) {
 	}
 }
 
-// withinRange checks if the input position is within the range of the Expression
-func withinRange(needle, start, end Position) bool {
+// WithinRange returns true if the input position is within the range of the given positions.
+func WithinRange(needle, start, end Position) bool {
 	if needle.Line < start.Line || needle.Line > end.Line {
 		return false
 	} else if needle.Line == start.Line && needle.Column < start.Column {

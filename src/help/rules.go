@@ -39,10 +39,11 @@ func newState() *core.BuildState {
 }
 
 // AllBuiltinFunctions returns all the builtin functions, including any defined
-// by the config (e.g. PreloadBuildDefs or BuildDefsDir)
-func AllBuiltinFunctions(state *core.BuildState) map[string]*asp.FuncDef {
+// by the config (e.g. PreloadBuildDefs or BuildDefsDir).
+// You are guaranteed that every statement in the returned map is a FuncDef.
+func AllBuiltinFunctions(state *core.BuildState) map[string]*asp.Statement {
 	p := asp.NewParser(state)
-	m := map[string]*asp.FuncDef{}
+	m := map[string]*asp.Statement{}
 	dir, _ := rules.AssetDir("")
 	sort.Strings(dir)
 	for _, filename := range dir {
@@ -72,14 +73,12 @@ func AllBuiltinFunctions(state *core.BuildState) map[string]*asp.FuncDef {
 }
 
 // addAllFunctions adds all the functions from a set of statements to the given map.
-func addAllFunctions(m map[string]*asp.FuncDef, stmts []*asp.Statement, builtin bool) {
+func addAllFunctions(m map[string]*asp.Statement, stmts []*asp.Statement, builtin bool) {
 	for _, stmt := range stmts {
 		if f := stmt.FuncDef; f != nil && !f.IsPrivate && f.Docstring != "" {
 			f.Docstring = strings.TrimSpace(strings.Trim(f.Docstring, `"`))
-			m[f.Name] = f
-			if !builtin {
-				stmt.FuncDef.EoDef.Offset = 0 // We use this to identify it later.
-			}
+			f.IsBuiltin = builtin
+			m[f.Name] = stmt
 		}
 	}
 }
@@ -88,7 +87,8 @@ func addAllFunctions(m map[string]*asp.FuncDef, stmts []*asp.Statement, builtin 
 func getRuleArgs(state *core.BuildState) environment {
 	argsRegex := regexp.MustCompile("\n +Args: *\n")
 	env := environment{Functions: map[string]function{}}
-	for name, f := range AllBuiltinFunctions(state) {
+	for name, stmt := range AllBuiltinFunctions(state) {
+		f := stmt.FuncDef
 		r := function{Docstring: f.Docstring}
 		if strings.HasSuffix(f.EoDef.Filename, "_rules.build_defs") {
 			r.Language = strings.TrimSuffix(f.EoDef.Filename, "_rules.build_defs")

@@ -26,7 +26,7 @@ func TestInitialize(t *testing.T) {
 	result := &lsp.InitializeResult{}
 	err := h.Request("initialize", &lsp.InitializeParams{
 		Capabilities: lsp.ClientCapabilities{},
-		RootURI:      lsp.DocumentURI("file://tools/build_langserver/lsp/test_data"),
+		RootURI:      lsp.DocumentURI("file://" + path.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data")),
 	}, result)
 	assert.NoError(t, err)
 	assert.True(t, result.Capabilities.TextDocumentSync.Options.OpenClose)
@@ -450,7 +450,7 @@ func TestCompletionFunction(t *testing.T) {
 				Kind:             lsp.CIKFunction,
 				InsertTextFormat: lsp.ITFPlainText,
 				TextEdit:         textEdit("rary", 1, 6),
-				Documentation:    h.builtins["go_library"].Docstring,
+				Documentation:    h.builtins["go_library"].FuncDef.Docstring,
 			},
 		},
 	}, completions)
@@ -491,7 +491,7 @@ func TestCompletionPartialFunction(t *testing.T) {
 				Kind:             lsp.CIKFunction,
 				InsertTextFormat: lsp.ITFPlainText,
 				TextEdit:         textEdit("rary", 1, 6),
-				Documentation:    h.builtins["go_library"].Docstring,
+				Documentation:    h.builtins["go_library"].FuncDef.Docstring,
 			},
 		},
 	}, completions)
@@ -640,6 +640,6 @@ func (h *Handler) WaitForPackage(pkg string) {
 func (h *Handler) WaitForPackageTree() {
 	// This is a bit yucky but there isn't any other way of syncing up to it.
 	for h.pkgs.Subpackages == nil {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 	}
 }

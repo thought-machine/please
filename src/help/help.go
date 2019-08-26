@@ -62,7 +62,7 @@ func help(topic string) string {
 	// Check built-in build rules.
 	m := AllBuiltinFunctions(newState())
 	if f, present := m[topic]; present {
-		return helpFromBuildRule(f)
+		return helpFromBuildRule(f.FuncDef)
 	}
 	return ""
 }
@@ -148,7 +148,7 @@ func printMessage(msg string) {
 }
 
 const docstringTemplate = `${BLUE}{{ .Name }}${RESET} is
-{{- if .EoDef.Offset }} a built-in build rule in Please.
+{{- if .IsBuiltin }} a built-in build rule in Please.
 {{- else }} an add-on build rule for Please defined in ${YELLOW}{{ .EoDef.Filename }}${RESET}.
 {{- end }} Instructions for use & its arguments:
 

@@ -77,6 +77,21 @@ func (h *Handler) parse(d *doc, content string) {
 	d.Diagnostics <- stmts
 }
 
+// parseIfNeeded parses the document if it hasn't been done yet.
+func (h *Handler) parseIfNeeded(d *doc) []*asp.Statement {
+	d.Mutex.Lock()
+	ast := d.AST[:]
+	d.Mutex.Unlock()
+	if len(ast) != 0 {
+		return ast
+	}
+	stmts, _ := h.parser.ParseData([]byte(d.Text()), d.Filename)
+	d.Mutex.Lock()
+	defer d.Mutex.Unlock()
+	d.AST = stmts
+	return stmts
+}
+
 // doc returns a document of the given URI, or panics if one doesn't exist.
 func (h *Handler) doc(uri lsp.DocumentURI) *doc {
 	filename := fromURI(uri)

@@ -62,6 +62,8 @@ type FuncDef struct {
 	KeywordsOnly bool
 	// Indicates whether the function is private, i.e. name starts with an underscore.
 	IsPrivate bool
+	// True if the function is builtin to Please.
+	IsBuiltin bool
 }
 
 // A ForStatement implements the 'for' statement.
