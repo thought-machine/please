@@ -968,12 +968,17 @@ func initBuild(args []string) string {
 		opts.Query.Completions.Cmd = command
 		opts.Query.Completions.Args.Fragments = []string{opts.Complete}
 		command = "completions"
-	} else if command == "help" || command == "follow" || command == "init" || command == "config" {
+	} else if command == "help" || command == "follow" || command == "init" || command == "config" || command == "tool" {
 		// These commands don't use a config file, allowing them to be run outside a repo.
 		if flagsErr != nil { // This error otherwise doesn't get checked until later.
 			cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args)
 		}
 		config = core.DefaultConfiguration()
+		if command == "tool" {
+			if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
+				config = cfg
+			}
+		}
 		if !buildFunctions[command]() {
 			os.Exit(1)
 		}
