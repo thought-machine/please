@@ -192,6 +192,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			buildLinks(state, target)
 			return true // got from cache
 		}
+		log.Debug("Nothing retrieved from remote cache for %s", target.Label)
 		return false
 	}
 	cacheKey := mustShortTargetHash(state, target)
