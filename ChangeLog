@@ -1,3 +1,10 @@
+Version 14.1.1
+--------------
+
+    * Fixed width calculation in interactive terminal display
+    * Fixed a long-standing bug in --failing_tests_ok flag so it only applies to tests.
+
+
 Version 14.1.0
 --------------
 
