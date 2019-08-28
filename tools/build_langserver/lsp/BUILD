@@ -6,11 +6,11 @@ go_library(
     ),
     visibility = ["//tools/build_langserver/..."],
     deps = [
+        "//rules",
         "//src/core",
         "//src/help",
         "//src/parse/asp",
         "//src/plz",
-        "//rules",
         "//third_party/go:buildtools",
         "//third_party/go:jsonrpc2",
         "//third_party/go:logging",
