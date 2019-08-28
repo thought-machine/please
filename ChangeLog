@@ -1,3 +1,15 @@
+Version 14.1.0
+--------------
+
+    * Added a separate `go_test_main` rule to template the main file for a go test in
+      a way that can be consumed separately from an actual test.
+    * Exit codes are now a bit more granular.
+    * `plz query print` now accepts a `-l` / `--label` flag to print specific labels for a target.
+    * `plz tool` works outside a repo
+    * Fixed a rare segfault when using both RPC and remote execution caches
+    * Various langserver fixes
+
+
 Version 14.0.0
 --------------
 
