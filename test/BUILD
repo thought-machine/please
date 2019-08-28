@@ -465,8 +465,8 @@ plz_e2e_test(
 
 gentest(
     name = "failing_test",
-    test_cmd = "false",
     labels = ["manual"],
+    test_cmd = "false",
 )
 
 plz_e2e_test(
