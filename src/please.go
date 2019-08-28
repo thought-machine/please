@@ -393,7 +393,7 @@ var buildFunctions = map[string]func() int{
 	"test": func() int {
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args, opts.Test.Failed, opts.Test.TestResultsFile)
 		success, state := doTest(targets, opts.Test.SurefireDir, opts.Test.TestResultsFile)
-		return toExitCode(success || opts.Test.FailingTestsOk, state)
+		return toExitCode(success, state)
 	},
 	"cover": func() int {
 		opts.Cover.active = true
@@ -427,7 +427,7 @@ var buildFunctions = map[string]func() int{
 		if opts.Cover.Incremental {
 			output.PrintIncrementalCoverage(stats)
 		}
-		return toExitCode(success || opts.Cover.FailingTestsOk, state)
+		return toExitCode(success, state)
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false, false); success {
@@ -1022,6 +1022,9 @@ func toExitCode(success bool, state *core.BuildState) int {
 	} else if state.BuildFailed {
 		return 2
 	} else if state.TestFailed {
+		if opts.Test.FailingTestsOk || opts.Cover.FailingTestsOk {
+			return 0
+		}
 		return 7
 	}
 	return 1

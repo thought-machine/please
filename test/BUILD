@@ -462,3 +462,14 @@ plz_e2e_test(
     cmd = "plz query print -l a: //test:print_rule",
     expected_output = "query_print_test.txt",
 )
+
+gentest(
+    name = "failing_test",
+    test_cmd = "false",
+    labels = ["manual"],
+)
+
+plz_e2e_test(
+    name = "failing_tests_ok_test",
+    cmd = "plz test //test:failing_test --failing_tests_ok",
+)
