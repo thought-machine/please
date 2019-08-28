@@ -74,6 +74,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			} else {
 				err = fmt.Errorf("%s", r)
 			}
+			log.Debug(errors.Wrap(r, 2).ErrorStack())
 		}
 	}()
 
