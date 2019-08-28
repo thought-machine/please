@@ -137,6 +137,10 @@ type BuildState struct {
 	Coverage TestCoverage
 	// True if the build has been successful so far (i.e. nothing has failed yet).
 	Success bool
+	// True if >= 1 target has failed to build
+	BuildFailed bool
+	// True if >= 1 target has failed test cases
+	TestFailed bool
 	// True if tests should calculate coverage metrics
 	NeedCoverage bool
 	// True if we intend to build targets. False if we're just parsing
@@ -478,6 +482,11 @@ func (state *BuildState) LogResult(result *BuildResult) {
 	}
 	if result.Status.IsFailure() {
 		state.Success = false
+		if result.Status == TargetBuildFailed {
+			state.BuildFailed = true
+		} else if result.Status == TargetTestFailed {
+			state.TestFailed = true
+		}
 	}
 }
 
