@@ -418,6 +418,10 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 				if resp.Result == nil { // This is optional on failure.
 					return nil, nil, respErr
 				}
+				if response.Result == nil { // This seems to happen when things go wrong on the build server end.
+					log.Debug("Bad result from build server: %+v", response)
+					return nil, nil, fmt.Errorf("Build server did not return valid result")
+				}
 				if response.Result.ExitCode > 0 {
 					return nil, nil, fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
 				}
