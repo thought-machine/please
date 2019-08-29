@@ -189,12 +189,23 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 					}
 				}
 				// Now handle the file itself
-				h, err := c.state.PathHasher.Hash(name, false, true)
+				info, err := os.Lstat(name)
 				if err != nil {
 					return err
 				}
 				d := dirs[dir]
-				info, err := os.Stat(name)
+				if info.Mode()&os.ModeSymlink != 0 {
+					link, err := os.Readlink(dest)
+					if err != nil {
+						return err
+					}
+					d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
+						Name:   path.Base(dest),
+						Target: link,
+					})
+					return nil
+				}
+				h, err := c.state.PathHasher.Hash(name, false, true)
 				if err != nil {
 					return err
 				}
