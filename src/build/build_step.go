@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -74,7 +75,8 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			} else {
 				err = fmt.Errorf("%s", r)
 			}
-			log.Debug(errors.Wrap(r, 2).ErrorStack())
+			log.Debug("Build failed: %s", err)
+			log.Debug(string(debug.Stack()))
 		}
 	}()
 
