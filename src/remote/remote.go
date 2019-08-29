@@ -422,6 +422,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 					log.Debug("Bad result from build server: %+v", response)
 					return nil, nil, fmt.Errorf("Build server did not return valid result")
 				}
+				// TODO(henryaj): are there cases where a non-zero exit code isn't a failed build?
 				if response.Result.ExitCode > 0 {
 					return nil, nil, fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
 				}
