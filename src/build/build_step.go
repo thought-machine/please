@@ -343,7 +343,7 @@ func prepareDirectory(directory string, remove bool) error {
 
 // Symlinks the source files of this rule into its temp directory.
 func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
-	for source := range core.IterSources(graph, target) {
+	for source := range core.IterSources(graph, target, false) {
 		if err := core.PrepareSourcePair(source); err != nil {
 			return err
 		}

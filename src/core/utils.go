@@ -125,7 +125,8 @@ type SourcePair struct{ Src, Tmp string }
 // IterSources returns all the sources for a function, allowing for sources that are other rules
 // and rules that require transitive dependencies.
 // Yielded values are pairs of the original source location and its temporary location for this rule.
-func IterSources(graph *BuildGraph, target *BuildTarget) <-chan SourcePair {
+// If includeTools is true it yields the target's tools as well.
+func IterSources(graph *BuildGraph, target *BuildTarget, includeTools bool) <-chan SourcePair {
 	ch := make(chan SourcePair)
 	done := map[BuildLabel]bool{}
 	donePaths := map[string]bool{}
@@ -135,6 +136,9 @@ func IterSources(graph *BuildGraph, target *BuildTarget) <-chan SourcePair {
 		sources := dependency.AllSources()
 		if target == dependency {
 			// This is the current build rule, so link its sources.
+			if includeTools {
+				sources = append(sources, target.AllTools()...)
+			}
 			for _, source := range sources {
 				for _, providedSource := range recursivelyProvideSource(graph, target, source) {
 					fullPaths := providedSource.FullPaths(graph)
