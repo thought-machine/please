@@ -125,7 +125,7 @@ func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget
 	t := JSONTarget{
 		Sources: target.AllSourcePaths(state.Graph),
 	}
-	for in := range core.IterSources(state.Graph, target) {
+	for in := range core.IterSources(state.Graph, target, false) {
 		t.Inputs = append(t.Inputs, in.Src)
 	}
 	for _, out := range target.Outputs() {

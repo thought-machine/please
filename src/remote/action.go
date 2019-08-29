@@ -154,7 +154,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 	if isTest {
 		sources = core.IterRuntimeFiles(c.state.Graph, target, false)
 	} else {
-		sources = core.IterSources(c.state.Graph, target)
+		sources = core.IterSources(c.state.Graph, target, true)
 		strip = len(target.TmpDir()) + 1 // Amount we have to strip off the start of the temp paths
 	}
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
@@ -184,7 +184,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 						parent.Directories = append(parent.Directories, &pb.DirectoryNode{Name: path.Base(child)})
 					}
 					child = d
-					if d == "." {
+					if d == "." || d == "/" {
 						break
 					}
 				}

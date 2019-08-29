@@ -142,7 +142,7 @@ func mustSourceHash(state *core.BuildState, target *core.BuildTarget) []byte {
 // Calculate the hash of all sources of this rule
 func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
-	for source := range core.IterSources(state.Graph, target) {
+	for source := range core.IterSources(state.Graph, target, false) {
 		result, err := state.PathHasher.Hash(source.Src, false, true)
 		if err != nil {
 			return nil, err
@@ -442,7 +442,7 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 	fmt.Printf("  Source: %s\n", b64(mustSourceHash(state, target)))
 	// Note that the logic here mimics sourceHash, but I don't want to pollute that with
 	// optional printing nonsense since it's on our hot path.
-	for source := range core.IterSources(state.Graph, target) {
+	for source := range core.IterSources(state.Graph, target, false) {
 		fmt.Printf("  Source: %s: %s\n", source.Src, b64(state.PathHasher.MustHash(source.Src)))
 	}
 	for _, tool := range target.AllTools() {
