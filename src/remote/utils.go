@@ -92,6 +92,14 @@ func extraPerms(file *pb.OutputFile) os.FileMode {
 	return 0
 }
 
+// extraFilePerms returns any additional permission bits we should apply for this file.
+func extraFilePerms(file *pb.FileNode) os.FileMode {
+	if file.IsExecutable {
+		return 0111
+	}
+	return 0
+}
+
 // IsNotFound returns true if a given error is a "not found" error (which may be treated
 // differently, for example if trying to retrieve artifacts that may not be there).
 func IsNotFound(err error) bool {

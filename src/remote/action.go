@@ -121,9 +121,14 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 				if err != nil {
 					return err
 				}
+				digest, contents := digestMessageContents(dir)
+				ch <- &blob{
+					Digest: digest,
+					Data:   contents,
+				}
 				d.Directories = append(d.Directories, &pb.DirectoryNode{
 					Name:   name,
-					Digest: digestMessage(dir),
+					Digest: digest,
 				})
 				children = append(children, descendants...)
 				continue
@@ -138,9 +143,22 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 				})
 				continue
 			}
+			h, err := c.state.PathHasher.Hash(fullname, false, true)
+			if err != nil {
+				return err
+			}
+			digest := &pb.Digest{
+				Hash:      hex.EncodeToString(h),
+				SizeBytes: entry.Size(),
+			}
+			d.Files = append(d.Files, &pb.FileNode{
+				Name:         name,
+				Digest:       digest,
+				IsExecutable: (entry.Mode() & 0111) != 0,
+			})
 			ch <- &blob{
 				File:   fullname,
-				Digest: &pb.Digest{SizeBytes: entry.Size()},
+				Digest: digest,
 			}
 		}
 		return nil
@@ -288,6 +306,33 @@ func (c *Client) digestForFilename(ar *pb.ActionResult, name string) *pb.Digest 
 	for _, file := range ar.OutputFiles {
 		if file.Path == name {
 			return file.Digest
+		}
+	}
+	return nil
+}
+
+// downloadDirectory downloads & writes out a single Directory proto.
+func (c *Client) downloadDirectory(root string, dir *pb.Directory) error {
+	for _, file := range dir.Files {
+		if err := c.retrieveByteStream(&blob{
+			Digest: file.Digest,
+			File:   path.Join(root, file.Name),
+			Mode:   0644 | extraFilePerms(file),
+		}); err != nil {
+			return err
+		}
+	}
+	for _, dir := range dir.Directories {
+		d := &pb.Directory{}
+		if err := c.readByteStreamToProto(dir.Digest, d); err != nil {
+			return err
+		} else if err := c.downloadDirectory(path.Join(root, dir.Name), d); err != nil {
+			return err
+		}
+	}
+	for _, sym := range dir.Symlinks {
+		if err := os.Symlink(sym.Target, path.Join(root, sym.Name)); err != nil {
+			return err
 		}
 	}
 	return nil

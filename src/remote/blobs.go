@@ -10,6 +10,7 @@ import (
 	"os"
 
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	bs "google.golang.org/genproto/googleapis/bytestream"
@@ -340,6 +341,15 @@ func (c *Client) readAllByteStream(digest *pb.Digest) ([]byte, error) {
 	}
 	defer r.Close()
 	return ioutil.ReadAll(r)
+}
+
+// readByteStreamToProto reads an entire bytestream and deserialises it into a message.
+func (c *Client) readByteStreamToProto(digest *pb.Digest, msg proto.Message) error {
+	b, err := c.readAllByteStream(digest)
+	if err != nil {
+		return err
+	}
+	return proto.Unmarshal(b, msg)
 }
 
 // checkBatchReadBlobs sends a fake request to verify if BatchReadBlobs is supported

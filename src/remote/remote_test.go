@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"path"
 	"regexp"
 	"testing"
 	"time"
@@ -84,6 +85,56 @@ func TestStoreAndRetrieve(t *testing.T) {
 	assert.Equal(t, contents, cachedContents)
 	assert.Equal(t, metadata, retrievedMetadata)
 }
+
+func TestStoreAndRetrieveDir(t *testing.T) {
+	c := newClient()
+	c.CheckInitialised()
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package2", Name: "target2"})
+	target.IsBinary = true
+	target.IsTest = true
+	target.SetState(core.Built)
+	target.AddLabel(core.TestResultsDirLabel)
+	key, _ := hex.DecodeString("eb1ece425ca4f24d59d7db7393abae07284baa749acdbe1b5e8c8fd732f278ba")
+	err := c.Store(target, key, &core.BuildMetadata{
+		Stdout: []byte("test stdout"),
+		Test:   true,
+	}, []string{
+		path.Base(target.TestResultsFile()),
+		"1.xml",
+	})
+	assert.NoError(t, err)
+
+	// Move old results out of the way
+	resultsDir := "plz-out/bin/package2/.test_results_target2"
+	err = os.RemoveAll(resultsDir)
+	assert.NoError(t, err)
+	err = os.Remove("plz-out/bin/package2/1.xml")
+	assert.NoError(t, err)
+
+	// Now retrieve them again
+	_, err = c.Retrieve(target, key)
+	assert.NoError(t, err)
+	b, err := ioutil.ReadFile(path.Join(resultsDir, "1.xml"))
+	assert.NoError(t, err)
+	assert.Equal(t, string(b), xmlResults)
+	b, err = ioutil.ReadFile(path.Join(resultsDir, "results/2.xml"))
+	assert.NoError(t, err)
+	assert.Equal(t, string(b), xmlResults)
+	link, err := os.Readlink("plz-out/bin/package2/1.xml")
+	assert.NoError(t, err)
+	assert.Equal(t, ".test_results_target2/1.xml", link)
+	link, err = os.Readlink(path.Join(resultsDir, "2.xml"))
+	assert.NoError(t, err)
+	assert.Equal(t, "results/2.xml", link)
+}
+
+const xmlResults = `<?xml version="1.0" encoding="UTF-8"?>
+<testsuite errors="0" failures="0" name="src.build.python.pex_test.PexTest-20150416153858" tests="1" time="0.000">
+<properties/>
+<testcase classname="src.build.python.pex_test.PexTest" name="testSuccess" time="0.000"/>           <testcase classname="src.build.python.pex_test.PexTest" name="testSuccess" time="0.000">
+        </testcase>
+</testsuite>
+`
 
 func TestExecuteBuild(t *testing.T) {
 	c := newClient()
