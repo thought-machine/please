@@ -23,8 +23,12 @@ def run_tests(args):
                 pass
             args += ['-k', filtered_tests.strip()]
 
-    args += ['--junitxml', 'test.results'] + TEST_NAMES
+    # It's easier if all python_test rules output into a directory.
+    results_file = os.getenv('RESULTS_FILE', 'test.results')
+    os.mkdir(results_file)
+    args += ['--junitxml', os.path.join(results_file, 'results.xml')] + TEST_NAMES
 
     if os.environ.get('DEBUG'):
         args.append('--pdb')
+
     return main(args)

@@ -193,7 +193,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
 
 
 def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=[], worker:str='',
-                labels:list&features&tags=None, size:str=None, flags:str='', visibility:list=None,
+                labels:list&features&tags=[], size:str=None, flags:str='', visibility:list=None,
                 sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
                 test_outputs:list=None, zip_safe:bool=None, interpreter:str=None, site:bool=False):
     """Generates a Python test target.
@@ -296,7 +296,7 @@ def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=
         #      is faster for unittest as well (because we don't need to rebuild the pex if they change).
         data=data + srcs,
         outs=[f'{name}.pex'],
-        labels=labels,
+        labels=labels + ['test_results_dir'],
         cmd='$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
         test_cmd=test_cmd,
         needs_transitive_deps=True,
@@ -564,7 +564,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
 
 def _handle_zip_safe(name):
     """Handles the zip safe flag.
-    
+
     This works as a pre-build function and hence can only use the builtin
     methods to manipulate the rule.
     """

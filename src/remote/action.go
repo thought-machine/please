@@ -75,9 +75,15 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest boo
 
 // buildTestCommand builds a command for a target when testing.
 func (c *Client) buildTestCommand(target *core.BuildTarget) *pb.Command {
-	outs := []string{core.TestResultsFile}
+	files := make([]string, 0, 2)
+	dirs := []string{}
 	if target.NeedCoverage(c.state) {
-		outs = append(outs, core.CoverageFile)
+		files = append(files, core.CoverageFile)
+	}
+	if target.HasLabel(core.TestResultsDirLabel) {
+		dirs = []string{core.TestResultsFile}
+	} else {
+		files = append(files, core.TestResultsFile)
 	}
 	return &pb.Command{
 		Platform: &pb.Platform{
@@ -92,7 +98,8 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) *pb.Command {
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", target.GetTestCommand(c.state),
 		},
 		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, "")),
-		OutputFiles:          outs,
+		OutputFiles:          files,
+		OutputDirectories:    dirs,
 	}
 }
 
