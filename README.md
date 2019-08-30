@@ -43,20 +43,25 @@ Building Please
 ===============
 
 To build Please yourself, run `./bootstrap.sh` in the repo root.
-This will set up the minimal environment needed to build Please,
-build it once manually and then rebuild it again using itself.
+This will bootstrap a minimal version of Please using Go and then
+rebuild it using itself.
 You'll need to have Go 1.11+ installed to build Please although once
 built it can target any version from 1.8+ onwards.
 
-Optional dependencies for various tests include Python, Java, unittest++
-(`sudo apt-get install libunittest++-dev`), clang, gold and docker - none
-of those are required to build components so their tests will be excluded
-if they aren't available.
+Optional dependencies for various tests include Python, Java, clang,
+gold and docker - none of those are required to build components so
+their tests will be excluded if they aren't available.
 
 If you'd rather not worry about installing the dependencies, we provide
 a prebuilt Docker image based on Ubuntu which is capable of building
 the whole thing for you:
 [`docker run -it thoughtmachine/please_ubuntu`](https://hub.docker.com/r/thoughtmachine/please_ubuntu)
+
+You can install a locally built copy of Please using `plz install`, or
+if it's the first time, by running `./install.sh` after it's built.
+This will overwrite whatever you currently have in `~/.please` with
+your local version, although you can get back to a released version
+again by running `plz update --force`.
 
 
 Documentation
