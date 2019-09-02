@@ -424,7 +424,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 				}
 				// TODO(henryaj): if messages are only emitted on error, we should upgrade this to a warning
 				if response.Message != "" {
-					log.Debug("Message from build server:\n     %s",response.Message)
+					log.Debug("Message from build server:\n     %s", response.Message)
 				}
 				// TODO(henryaj): are there cases where a non-zero exit code isn't a failed build?
 				if response.Result.ExitCode > 0 {
