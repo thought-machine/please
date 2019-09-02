@@ -195,6 +195,11 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 				if len(name) > len(source.Src) {
 					dest = path.Join(prefix, name[len(source.Src)+1:])
 				}
+				if strings.HasPrefix(dest, core.GenDir) {
+					dest = strings.TrimLeft(strings.TrimPrefix(dest, core.GenDir), "/")
+				} else if strings.HasPrefix(dest, core.BinDir) {
+					dest = strings.TrimLeft(strings.TrimPrefix(dest, core.BinDir), "/")
+				}
 				// Ensure all parent directories exist
 				child := ""
 				dir := path.Dir(dest)

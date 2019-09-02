@@ -190,8 +190,8 @@ func (c *Client) Store(target *core.BuildTarget, key []byte, metadata *core.Buil
 	outDir := target.OutDir()
 	if err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
-		for _, file := range files {
-			file = path.Join(outDir, file)
+		for _, filename := range files {
+			file := path.Join(outDir, filename)
 			info, err := os.Lstat(file)
 			if err != nil {
 				return err
@@ -210,7 +210,7 @@ func (c *Client) Store(target *core.BuildTarget, key []byte, metadata *core.Buil
 					Data:   contents,
 				}
 				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
-					Path:       file,
+					Path:       filename,
 					TreeDigest: digest,
 				})
 				continue
@@ -224,7 +224,7 @@ func (c *Client) Store(target *core.BuildTarget, key []byte, metadata *core.Buil
 				//                   need to care since symlinks don't know the type of thing
 				//                   they point to?
 				ar.OutputFileSymlinks = append(ar.OutputFileSymlinks, &pb.OutputSymlink{
-					Path:   file,
+					Path:   filename,
 					Target: target,
 				})
 				continue
@@ -243,7 +243,7 @@ func (c *Client) Store(target *core.BuildTarget, key []byte, metadata *core.Buil
 				Digest: digest,
 			}
 			ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-				Path:   file,
+				Path:   filename,
 				Digest: digest,
 			})
 			if len(metadata.Stdout) > 0 {
@@ -307,30 +307,33 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 		return nil, err
 	}
 	mode := target.OutMode()
+	outDir := target.OutDir()
 	if err := c.downloadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
 		for _, file := range resp.OutputFiles {
+			filePath := path.Join(outDir, file.Path)
 			addPerms := extraPerms(file)
 			if file.Contents != nil {
 				// Inlining must have been requested. Can write it directly.
-				if err := fs.EnsureDir(file.Path); err != nil {
+				if err := fs.EnsureDir(filePath); err != nil {
 					return err
-				} else if err := fs.WriteFile(bytes.NewReader(file.Contents), file.Path, mode|addPerms); err != nil {
+				} else if err := fs.WriteFile(bytes.NewReader(file.Contents), filePath, mode|addPerms); err != nil {
 					return err
 				}
 			} else {
-				ch <- &blob{Digest: file.Digest, File: file.Path, Mode: mode | addPerms}
+				ch <- &blob{Digest: file.Digest, File: filePath, Mode: mode | addPerms}
 			}
 		}
 		for _, dir := range resp.OutputDirectories {
+			dirPath := path.Join(outDir, dir.Path)
 			tree := &pb.Tree{}
 			if err := c.readByteStreamToProto(dir.TreeDigest, tree); err != nil {
 				return err
-			} else if err := c.downloadDirectory(dir.Path, tree.Root); err != nil {
+			} else if err := c.downloadDirectory(dirPath, tree.Root); err != nil {
 				return err
 			}
 			for _, child := range tree.Children {
-				if err := c.downloadDirectory(dir.Path, child); err != nil {
+				if err := c.downloadDirectory(dirPath, child); err != nil {
 					return err
 				}
 			}
@@ -338,7 +341,7 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 		// For unexplained reasons the protocol treats symlinks differently based on what
 		// they point to. We obviously create them in the same way though.
 		for _, link := range append(resp.OutputFileSymlinks, resp.OutputDirectorySymlinks...) {
-			if err := os.Symlink(link.Target, link.Path); err != nil {
+			if err := os.Symlink(link.Target, path.Join(outDir, link.Path)); err != nil {
 				return err
 			}
 		}
