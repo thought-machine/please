@@ -147,10 +147,10 @@ func (d *displayer) printRow(i int, now time.Time, remote bool) {
 			d.targets[i].LastProgress = target.Target.Progress
 		}
 		if target.Eta > 0 {
-			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%%%, est %s remaining)${ERASE_AFTER}\n",
+			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, est %s remaining)${ERASE_AFTER}\n",
 				duration, target.Colour, label, target.Description, target.Target.Progress, target.Eta)
 		} else {
-			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%%% complete)${ERASE_AFTER}\n",
+			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%% complete)${ERASE_AFTER}\n",
 				duration, target.Colour, label, target.Description, target.Target.Progress)
 		}
 	} else if target.Active {
