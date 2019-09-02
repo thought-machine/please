@@ -26,6 +26,7 @@ func (rc *rexCache) Store(target *core.BuildTarget, key []byte, metadata *core.B
 }
 
 func (rc *rexCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+	log.Debug("Retrieving %s from remote cache...", target.Label)
 	metadata, err := rc.client.Retrieve(target, key)
 	if err != nil {
 		if remote.IsNotFound(err) {

@@ -197,10 +197,14 @@ func (c *Client) Store(target *core.BuildTarget, key []byte, metadata *core.Buil
 				if err != nil {
 					return err
 				}
-				digest := digestMessage(&pb.Tree{
+				digest, contents := digestMessageContents(&pb.Tree{
 					Root:     root,
 					Children: children,
 				})
+				ch <- &blob{
+					Digest: digest,
+					Data:   contents,
+				}
 				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
 					Path:       file,
 					TreeDigest: digest,
@@ -277,7 +281,7 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	isTest := target.State() > core.Built
+	isTest := target.State() >= core.Built
 	needStdout := target.PostBuildFunction != nil && !isTest // We only care in this case.
 	inputRoot, err := c.buildInputRoot(target, false, isTest)
 	if err != nil {
@@ -300,18 +304,40 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 	}
 	mode := target.OutMode()
 	if err := c.downloadBlobs(func(ch chan<- *blob) error {
+		defer close(ch)
 		for _, file := range resp.OutputFiles {
 			addPerms := extraPerms(file)
 			if file.Contents != nil {
 				// Inlining must have been requested. Can write it directly.
 				if err := fs.EnsureDir(file.Path); err != nil {
 					return err
+				} else if err := fs.WriteFile(bytes.NewReader(file.Contents), file.Path, mode|addPerms); err != nil {
+					return err
 				}
-				return fs.WriteFile(bytes.NewReader(file.Contents), file.Path, mode|addPerms)
+			} else {
+				ch <- &blob{Digest: file.Digest, File: file.Path, Mode: mode | addPerms}
 			}
-			ch <- &blob{Digest: file.Digest, File: file.Path, Mode: mode | addPerms}
 		}
-		close(ch)
+		for _, dir := range resp.OutputDirectories {
+			tree := &pb.Tree{}
+			if err := c.readByteStreamToProto(dir.TreeDigest, tree); err != nil {
+				return err
+			} else if err := c.downloadDirectory(dir.Path, tree.Root); err != nil {
+				return err
+			}
+			for _, child := range tree.Children {
+				if err := c.downloadDirectory(dir.Path, child); err != nil {
+					return err
+				}
+			}
+		}
+		// For unexplained reasons the protocol treats symlinks differently based on what
+		// they point to. We obviously create them in the same way though.
+		for _, link := range append(resp.OutputFileSymlinks, resp.OutputDirectorySymlinks...) {
+			if err := os.Symlink(link.Target, link.Path); err != nil {
+				return err
+			}
+		}
 		return nil
 	}); err != nil {
 		return nil, err

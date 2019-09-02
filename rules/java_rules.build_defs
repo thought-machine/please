@@ -311,7 +311,7 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
         deps=deps,
         visibility=visibility,
         test_sandbox=sandbox,
-        labels=labels,
+        labels=labels + ['test_results_dir'],
         test_timeout=timeout,
         size = size,
         flaky=flaky,
