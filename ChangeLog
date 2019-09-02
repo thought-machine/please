@@ -1,3 +1,9 @@
+Version 14.1.2
+--------------
+
+    * Lots of small fixes to remote execution code. It remains experimental.
+
+
 Version 14.1.1
 --------------
 
