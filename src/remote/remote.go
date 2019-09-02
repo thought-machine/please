@@ -294,7 +294,7 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 	digest := digestMessage(&pb.Action{
 		CommandDigest:   digestMessage(c.buildCommand(target, key, isTest)),
 		InputRootDigest: digestMessage(inputRoot),
-		Timeout:         ptypes.DurationProto(target.BuildTimeout),
+		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
 	defer cancel()
