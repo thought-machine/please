@@ -312,6 +312,9 @@ func (c *Client) downloadBlobs(f func(ch chan<- *blob) error) error {
 
 // retrieveByteStream receives a file back from the server as a byte stream.
 func (c *Client) retrieveByteStream(b *blob) error {
+	if b.Digest == nil {
+		return fmt.Errorf("can't retrieve byte stream from nil digest")
+	}
 	r, err := c.readByteStream(b.Digest)
 	if err != nil {
 		return err

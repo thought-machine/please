@@ -1,4 +1,4 @@
-// Diretory-based cache.
+// Directory-based cache.
 
 package cache
 

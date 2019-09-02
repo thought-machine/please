@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -74,6 +75,8 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			} else {
 				err = fmt.Errorf("%s", r)
 			}
+			log.Debug("Build failed: %s", err)
+			log.Debug(string(debug.Stack()))
 		}
 	}()
 
@@ -191,6 +194,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			buildLinks(state, target)
 			return true // got from cache
 		}
+		log.Debug("Nothing retrieved from remote cache for %s", target.Label)
 		return false
 	}
 	cacheKey := mustShortTargetHash(state, target)

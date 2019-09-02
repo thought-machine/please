@@ -130,14 +130,18 @@ func (c *Client) init() {
 		c.canBatchBlobReads = c.checkBatchReadBlobs()
 		log.Debug("Remote execution client initialised for storage")
 		// Now check if it can do remote execution
-		if caps := resp.ExecutionCapabilities; caps != nil && c.state.Config.Remote.NumExecutors > 0 {
-			if err := c.chooseDigest([]pb.DigestFunction_Value{caps.DigestFunction}); err != nil {
-				return err
-			} else if !caps.ExecEnabled {
-				return fmt.Errorf("Remote execution not enabled for this server")
+		if c.state.Config.Remote.NumExecutors > 0 {
+			if caps := resp.ExecutionCapabilities; caps != nil {
+				if err := c.chooseDigest([]pb.DigestFunction_Value{caps.DigestFunction}); err != nil {
+					return err
+				} else if !caps.ExecEnabled {
+					return fmt.Errorf("Remote execution not enabled for this server")
+				}
+				c.execClient = pb.NewExecutionClient(conn)
+				log.Debug("Remote execution client initialised for execution")
+			} else {
+				log.Fatalf("Remote execution is configured but the build server doesn't support it")
 			}
-			c.execClient = pb.NewExecutionClient(conn)
-			log.Debug("Remote execution client initialised for execution")
 		}
 		return err
 	}()
@@ -433,9 +437,24 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 				for k, v := range response.ServerLogs {
 					log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
 				}
-				respErr := convertError(response.Status)
+				var respErr error
+				if response.Status != nil {
+					respErr = convertError(response.Status)
+				}
 				if resp.Result == nil { // This is optional on failure.
 					return nil, nil, respErr
+				}
+				if response.Result == nil { // This seems to happen when things go wrong on the build server end.
+					log.Debug("Bad result from build server: %+v", response)
+					return nil, nil, fmt.Errorf("Build server did not return valid result")
+				}
+				// TODO(henryaj): if messages are only emitted on error, we should upgrade this to a warning
+				if response.Message != "" {
+					log.Debug("Message from build server:\n     %s", response.Message)
+				}
+				// TODO(henryaj): are there cases where a non-zero exit code isn't a failed build?
+				if response.Result.ExitCode > 0 {
+					return nil, nil, fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
 				}
 				metadata, err := c.buildMetadata(response.Result, needStdout || respErr != nil, respErr != nil)
 				// The original error is higher priority than us trying to retrieve the
