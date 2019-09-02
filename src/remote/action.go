@@ -322,6 +322,9 @@ func (c *Client) digestForFilename(ar *pb.ActionResult, name string) *pb.Digest 
 
 // downloadDirectory downloads & writes out a single Directory proto.
 func (c *Client) downloadDirectory(root string, dir *pb.Directory) error {
+	if err := os.MkdirAll(root, core.DirPermissions); err != nil {
+		return err
+	}
 	for _, file := range dir.Files {
 		if err := c.retrieveByteStream(&blob{
 			Digest: file.Digest,
