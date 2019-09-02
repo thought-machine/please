@@ -501,14 +501,21 @@ func (c *Client) PrintHashes(target *core.BuildTarget, stamp []byte, isTest bool
 	if err != nil {
 		log.Fatalf("Unable to calculate input hash: %s", err)
 	}
+	fmt.Printf("Remote execution hashes:\n")
 	inputRootDigest := digestMessage(inputRoot)
 	fmt.Printf("  Input: %7d bytes: %s\n", inputRootDigest.SizeBytes, inputRootDigest.Hash)
 	commandDigest := digestMessage(c.buildCommand(target, stamp, isTest))
 	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
+	if c.state.Config.Remote.DisplayURL != "" {
+		fmt.Printf("    URL: %s/command/%s/%s/%d/\n", c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, commandDigest.Hash, commandDigest.SizeBytes)
+	}
 	actionDigest := digestMessage(&pb.Action{
 		CommandDigest:   commandDigest,
 		InputRootDigest: inputRootDigest,
 		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
 	})
 	fmt.Printf(" Action: %7d bytes: %s\n", actionDigest.SizeBytes, actionDigest.Hash)
+	if c.state.Config.Remote.DisplayURL != "" {
+		fmt.Printf("    URL: %s/action/%s/%s/%d/\n", c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, actionDigest.Hash, actionDigest.SizeBytes)
+	}
 }
