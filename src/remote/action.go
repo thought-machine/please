@@ -195,6 +195,11 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 				if len(name) > len(source.Src) {
 					dest = path.Join(prefix, name[len(source.Src)+1:])
 				}
+				if strings.HasPrefix(dest, core.GenDir) {
+					dest = strings.TrimLeft(strings.TrimPrefix(dest, core.GenDir), "/")
+				} else if strings.HasPrefix(dest, core.BinDir) {
+					dest = strings.TrimLeft(strings.TrimPrefix(dest, core.BinDir), "/")
+				}
 				// Ensure all parent directories exist
 				child := ""
 				dir := path.Dir(dest)
@@ -317,6 +322,9 @@ func (c *Client) digestForFilename(ar *pb.ActionResult, name string) *pb.Digest 
 
 // downloadDirectory downloads & writes out a single Directory proto.
 func (c *Client) downloadDirectory(root string, dir *pb.Directory) error {
+	if err := os.MkdirAll(root, core.DirPermissions); err != nil {
+		return err
+	}
 	for _, file := range dir.Files {
 		if err := c.retrieveByteStream(&blob{
 			Digest: file.Digest,
