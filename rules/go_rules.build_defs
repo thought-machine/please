@@ -574,6 +574,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
     all_installs = []
     outs = extra_outs
     provides = None
+    srcs = []
     for getone, revision, tag in zip(get, revision, tags):
         get_rule, getroot = _go_get_download(
             name = name,
@@ -587,7 +588,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             strip = strip,
         )
         outs += [getroot]
-        deps += [get_rule]
+        srcs += [get_rule]
         provides = {'go': ':' + name, 'go_src': get_rule}
         if install:
             all_installs += [i if i.startswith(getroot) else (getroot + '/' + i) for i in install]
@@ -616,6 +617,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         name = name,
         outs = outs,
         deps = deps,
+        srcs = srcs,
         exported_deps = exported_deps,
         tools = {
             'go': [CONFIG.GO_TOOL],
@@ -625,7 +627,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         building_description = 'Compiling...',
         cmd = ' && '.join(cmd),
         binary = binary,
-        requires = ['go'],
+        requires = ['go', 'go_src'],
         test_only = test_only,
         labels = ['link:plz-out/go'],
         sandbox = False,
