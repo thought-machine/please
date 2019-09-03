@@ -565,6 +565,20 @@
 	documenting things that the team aren't allowed to use.</li>
     </ul>
 
+    <h3>[Buildconfig]</h3>
+
+    <p>This section lets you define arbitrary key-value pairs that can be consumed by custom
+      build rules. For example:</p>
+
+    <pre><code>
+    [buildconfig]
+    rust-toolchain = //third_party/rust:toolchain
+    </code></pre>
+
+    <p>The above can then be read in a .build_def or BUILD file as <code>CONFIG.RUST_TOOLCHAIN</code>,
+      i.e. they are upper-cased and hyphens are converted to underscores.</p>
+
+
     <h3>[Alias]</h3>
 
     <p>This section lets you define new commands to run at the command line. For example:</p>
