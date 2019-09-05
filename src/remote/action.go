@@ -226,7 +226,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 				}
 				d := dirs[dir]
 				if info.Mode()&os.ModeSymlink != 0 {
-					link, err := os.Readlink(dest)
+					link, err := os.Readlink(name)
 					if err != nil {
 						return err
 					}
