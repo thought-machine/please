@@ -18,11 +18,11 @@ import (
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
-func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, isTest bool) (*pb.Digest, error) {
+func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, uploadInputRoot, isTest bool) (*pb.Digest, error) {
 	var digest *pb.Digest
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
-		inputRoot, err := c.buildInputRoot(target, true, isTest)
+		inputRoot, err := c.buildInputRoot(target, uploadInputRoot, isTest)
 		if err != nil {
 			return err
 		}

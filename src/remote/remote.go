@@ -264,7 +264,7 @@ func (c *Client) Store(target *core.BuildTarget, key []byte, metadata *core.Buil
 		return err
 	}
 	// OK, now the blobs are uploaded, we also need to upload the Action itself.
-	digest, err := c.uploadAction(target, key, metadata.Test)
+	digest, err := c.uploadAction(target, key, false, metadata.Test)
 	if err != nil {
 		return err
 	}
@@ -357,7 +357,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget, stamp []byte) (*core.B
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	digest, err := c.uploadAction(target, stamp, false)
+	digest, err := c.uploadAction(target, stamp, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +371,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	if err := c.CheckInitialised(); err != nil {
 		return nil, nil, nil, err
 	}
-	digest, err := c.uploadAction(target, nil, true)
+	digest, err := c.uploadAction(target, nil, true, true)
 	if err != nil {
 		return nil, nil, nil, err
 	}

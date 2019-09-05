@@ -43,3 +43,5 @@ require (
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
+
+go 1.13
