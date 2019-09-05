@@ -64,7 +64,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest boo
 		// remote one (which is probably OK on the same OS, but not between say Linux and
 		// FreeBSD where bash is not idiomatically in the same place).
 		Arguments: []string{
-			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", target.GetCommand(c.state),
+			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", c.getCommand(target),
 		},
 		EnvironmentVariables: buildEnv(core.StampedBuildEnvironment(c.state, target, stamp)),
 		OutputFiles:          target.Outputs(),
@@ -102,6 +102,20 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) *pb.Command {
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 	}
+}
+
+// getCommand returns the appropriate command to use for a target.
+func (c *Client) getCommand(target *core.BuildTarget) string {
+	if target.IsRemoteFile {
+		// This is not a real command, but we need to encode the URLs into the action somehow
+		// to force it to be distinct from other remote_file rules.
+		srcs := make([]string, len(target.Sources))
+		for i, s := range target.Sources {
+			srcs[i] = s.String()
+		}
+		return "plz_fetch " + strings.Join(srcs, " ")
+	}
+	return target.GetCommand(c.state)
 }
 
 // digestDir calculates the digest for a directory.
