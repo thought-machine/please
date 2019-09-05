@@ -50,7 +50,9 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.TestOnly = test || isTruthy(15)
 	target.ShowProgress = isTruthy(36)
 	target.IsRemoteFile = isTruthy(38)
-	target.Local = isTruthy(41)
+	// TODO(peterebden): temporarily forcing remote files to be built locally, but we should
+	//                   have a better solution for this.
+	target.Local = isTruthy(41) || target.IsRemoteFile
 
 	var size *core.Size
 	if args[37] != None {
