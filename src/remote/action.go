@@ -285,7 +285,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 // buildMetadata converts an ActionResult into one of our BuildMetadata protos.
 func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool) (*core.BuildMetadata, error) {
 	if ar.ExecutionMetadata == nil {
-		return nil, fmt.Errorf("Build server returned no metadata for target - remote build failed or did not run")
+		return nil, fmt.Errorf("Build server returned no execution metadata for target; remote build failed or did not run")
 	}
 	metadata := &core.BuildMetadata{
 		StartTime: toTime(ar.ExecutionMetadata.ExecutionStartTimestamp),
