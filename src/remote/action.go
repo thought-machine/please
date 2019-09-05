@@ -294,6 +294,9 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		Stderr:    ar.StderrRaw,
 	}
 	if needStdout && len(metadata.Stdout) == 0 {
+		if ar.StdoutDigest == nil {
+			return nil, fmt.Errorf("No stdout present in build server response")
+		}
 		b, err := c.readAllByteStream(ar.StdoutDigest)
 		if err != nil {
 			return metadata, err
@@ -301,6 +304,9 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		metadata.Stdout = b
 	}
 	if needStderr && len(metadata.Stderr) == 0 {
+		if ar.StderrDigest == nil {
+			return nil, fmt.Errorf("No stderr present in build server response")
+		}
 		b, err := c.readAllByteStream(ar.StderrDigest)
 		if err != nil {
 			return metadata, err
