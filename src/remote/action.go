@@ -299,7 +299,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 // buildMetadata converts an ActionResult into one of our BuildMetadata protos.
 func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool) (*core.BuildMetadata, error) {
 	if ar.ExecutionMetadata == nil {
-		return nil, fmt.Errorf("Build server returned no metadata for target - remote build failed or did not run")
+		return nil, fmt.Errorf("Build server returned no execution metadata for target; remote build failed or did not run")
 	}
 	metadata := &core.BuildMetadata{
 		StartTime: toTime(ar.ExecutionMetadata.ExecutionStartTimestamp),
@@ -308,6 +308,9 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		Stderr:    ar.StderrRaw,
 	}
 	if needStdout && len(metadata.Stdout) == 0 {
+		if ar.StdoutDigest == nil {
+			return nil, fmt.Errorf("No stdout present in build server response")
+		}
 		b, err := c.readAllByteStream(ar.StdoutDigest)
 		if err != nil {
 			return metadata, err
@@ -315,6 +318,9 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		metadata.Stdout = b
 	}
 	if needStderr && len(metadata.Stderr) == 0 {
+		if ar.StderrDigest == nil {
+			return nil, fmt.Errorf("No stderr present in build server response")
+		}
 		b, err := c.readAllByteStream(ar.StderrDigest)
 		if err != nil {
 			return metadata, err
