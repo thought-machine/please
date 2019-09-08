@@ -341,8 +341,10 @@ func TestToolPath(t *testing.T) {
 	target.AddOutput("file1.go")
 	target.AddOutput("file2.go")
 	wd, _ := os.Getwd()
+	RepoRoot = wd
 	root := wd + "/plz-out/gen/src/core"
-	assert.Equal(t, fmt.Sprintf("%s/file1.go %s/file2.go", root, root), target.toolPath())
+	assert.Equal(t, fmt.Sprintf("%s/file1.go %s/file2.go", root, root), target.toolPath(true))
+	assert.Equal(t, "plz-out/gen/src/core/file1.go plz-out/gen/src/core/file2.go", target.toolPath(false))
 }
 
 func TestDependencies(t *testing.T) {

@@ -300,7 +300,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	if target.IsRemoteFile {
 		return nil, fetchRemoteFile(state, target)
 	}
-	env := core.StampedBuildEnvironment(state, target, inputHash)
+	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()))
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
 	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, command, target.Sandbox)
 	if err != nil {
@@ -636,7 +636,7 @@ type linkFunc func(string, string) error
 
 func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix string, f linkFunc) {
 	if labels := target.PrefixedLabels(prefix); len(labels) > 0 {
-		env := core.BuildEnvironment(state, target)
+		env := core.BuildEnvironment(state, target, path.Join(core.RepoRoot, target.TmpDir()))
 		for _, dest := range labels {
 			destDir := path.Join(core.RepoRoot, os.Expand(dest, env.ReplaceEnvironment))
 			srcDir := path.Join(core.RepoRoot, target.OutDir())
@@ -686,7 +686,7 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 }
 
 func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url string) error {
-	env := core.BuildEnvironment(state, target)
+	env := core.BuildEnvironment(state, target, path.Join(core.RepoRoot, target.TmpDir()))
 	url = os.Expand(url, env.ReplaceEnvironment)
 	tmpPath := path.Join(target.TmpDir(), target.Outputs()[0])
 	f, err := os.Create(tmpPath)

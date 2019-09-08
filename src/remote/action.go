@@ -47,6 +47,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest boo
 	if isTest {
 		return c.buildTestCommand(target)
 	}
+	files, dirs := outputs(target)
 	return &pb.Command{
 		Platform: &pb.Platform{
 			Properties: []*pb.Platform_Property{
@@ -66,11 +67,9 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest boo
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", c.getCommand(target),
 		},
-		EnvironmentVariables: buildEnv(core.StampedBuildEnvironment(c.state, target, stamp)),
-		OutputFiles:          target.Outputs(),
-		// TODO(peterebden): We will need to deal with OutputDirectories somehow.
-		//                   Unfortunately it's unclear how to do that without introducing
-		//                   a requirement on our rules that they specify them explicitly :(
+		EnvironmentVariables: buildEnv(core.StampedBuildEnvironment(c.state, target, stamp, "")),
+		OutputFiles:          files,
+		OutputDirectories:    dirs,
 	}
 }
 
