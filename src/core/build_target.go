@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -1069,11 +1068,14 @@ func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 }
 
 // toolPath returns a path to this target when used as a tool.
-func (target *BuildTarget) toolPath() string {
+func (target *BuildTarget) toolPath(abs bool) string {
 	outputs := target.Outputs()
 	ret := make([]string, len(outputs))
 	for i, o := range outputs {
-		ret[i], _ = filepath.Abs(path.Join(target.OutDir(), o))
+		ret[i] = path.Join(target.OutDir(), o)
+		if abs {
+			ret[i] = path.Join(RepoRoot, ret[i])
+		}
 	}
 	return strings.Join(ret, " ")
 }

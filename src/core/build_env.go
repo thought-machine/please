@@ -58,11 +58,11 @@ func buildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 // BuildEnvironment creates the shell env vars to be passed into the exec.Command calls made by plz.
 // Note that we lie about the location of HOME in order to keep some tools happy.
 // We read this as being slightly more POSIX-compliant than not having it set at all...
-func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
+func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) BuildEnv {
 	env := buildEnvironment(state, target)
 	sources := target.AllSourcePaths(state.Graph)
-	tmpDir := path.Join(RepoRoot, target.TmpDir())
 	outEnv := target.GetTmpOutputAll(target.Outputs())
+	abs := tmpDir != ""
 
 	env = append(env,
 		"TMP_DIR="+tmpDir,
@@ -70,13 +70,13 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 		"SRCS="+strings.Join(sources, " "),
 		"OUTS="+strings.Join(outEnv, " "),
 		"HOME="+tmpDir,
-		"TOOLS="+strings.Join(toolPaths(state, target.Tools), " "),
+		"TOOLS="+strings.Join(toolPaths(state, target.Tools, abs), " "),
 		// Set a consistent hash seed for Python. Important for build determinism.
 		"PYTHONHASHSEED=42",
 	)
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
-		env = append(env, "OUT="+path.Join(RepoRoot, target.TmpDir(), outEnv[0]))
+		env = append(env, "OUT="+path.Join(tmpDir, outEnv[0]))
 	}
 	// The SRC variable is only available on rules that have a single source file.
 	if len(sources) == 1 {
@@ -84,7 +84,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	}
 	// Similarly, TOOL is only available on rules with a single tool.
 	if len(target.Tools) == 1 {
-		env = append(env, "TOOL="+toolPath(state, target.Tools[0]))
+		env = append(env, "TOOL="+toolPath(state, target.Tools[0], abs))
 	}
 	// Named source groups if the target declared any.
 	for name, srcs := range target.NamedSources {
@@ -98,7 +98,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	}
 	// Named tools as well.
 	for name, tools := range target.namedTools {
-		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools), " "))
+		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
 	}
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
@@ -167,8 +167,8 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 
 // StampedBuildEnvironment returns the shell env vars to be passed into exec.Command.
 // Optionally includes a stamp if the target is marked as such.
-func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte) BuildEnv {
-	env := BuildEnvironment(state, target)
+func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte, tmpDir string) BuildEnv {
+	env := BuildEnvironment(state, target, tmpDir)
 	if target.Stamp {
 		stampEnvOnce.Do(initStampEnv)
 		env = append(env, stampEnv...)
@@ -186,18 +186,18 @@ func initStampEnv() {
 	stampEnv = BuildEnv{"SCM_REVISION=" + scm.NewFallback(RepoRoot).CurrentRevIdentifier()}
 }
 
-func toolPath(state *BuildState, tool BuildInput) string {
+func toolPath(state *BuildState, tool BuildInput, abs bool) string {
 	label := tool.Label()
 	if label != nil {
-		return state.Graph.TargetOrDie(*label).toolPath()
+		return state.Graph.TargetOrDie(*label).toolPath(abs)
 	}
 	return tool.Paths(state.Graph)[0]
 }
 
-func toolPaths(state *BuildState, tools []BuildInput) []string {
+func toolPaths(state *BuildState, tools []BuildInput, abs bool) []string {
 	ret := make([]string, len(tools))
 	for i, tool := range tools {
-		ret[i] = toolPath(state, tool)
+		ret[i] = toolPath(state, tool, abs)
 	}
 	return ret
 }
