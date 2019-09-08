@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -136,4 +137,21 @@ func timeout(target *core.BuildTarget, test bool) time.Duration {
 		return target.TestTimeout
 	}
 	return target.BuildTimeout
+}
+
+// outputs returns the outputs of a target, split arbitrarily and inaccurately
+// into files and directories.
+// After some discussion we are hoping that servers are permissive about this if
+// we get it wrong; we prefer to make an effort though as a minor nicety.
+func outputs(target *core.BuildTarget) (files, dirs []string) {
+	outs := target.Outputs()
+	files = make([]string, 0, len(outs))
+	for _, out := range outs {
+		if !strings.ContainsRune(out, '.') && !strings.HasSuffix(out, "file") {
+			dirs = append(dirs, out)
+		} else {
+			files = append(files, out)
+		}
+	}
+	return files, dirs
 }
