@@ -214,6 +214,7 @@ func TestNoAbsolutePaths(t *testing.T) {
 	cmd := c.buildCommand(target, []byte("hello"), false)
 	for _, env := range cmd.EnvironmentVariables {
 		assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
+		assert.NotContains(t, env.Value, core.OutDir, "Env var %s contains %s: %s", env.Name, core.OutDir, env.Value)
 	}
 }
 
@@ -228,6 +229,7 @@ func TestNoAbsolutePaths2(t *testing.T) {
 	cmd := c.buildCommand(target, []byte("hello"), false)
 	for _, env := range cmd.EnvironmentVariables {
 		assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
+		assert.NotContains(t, env.Value, core.OutDir, "Env var %s contains %s: %s", env.Name, core.OutDir, env.Value)
 	}
 }
 
