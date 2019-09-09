@@ -2,7 +2,6 @@ package remote
 
 import (
 	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -300,6 +299,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 }
 
 // buildMetadata converts an ActionResult into one of our BuildMetadata protos.
+// N.B. this always returns a non-nil metadata object for the first response.
 func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool) (*core.BuildMetadata, error) {
 	metadata := &core.BuildMetadata{
 		Stdout: ar.StdoutRaw,
@@ -309,20 +309,14 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		metadata.StartTime = toTime(ar.ExecutionMetadata.ExecutionStartTimestamp)
 		metadata.EndTime = toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp)
 	}
-	if needStdout && len(metadata.Stdout) == 0 {
-		if ar.StdoutDigest == nil {
-			return nil, fmt.Errorf("No stdout present in build server response")
-		}
+	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
 		b, err := c.readAllByteStream(ar.StdoutDigest)
 		if err != nil {
 			return metadata, err
 		}
 		metadata.Stdout = b
 	}
-	if needStderr && len(metadata.Stderr) == 0 {
-		if ar.StderrDigest == nil {
-			return nil, fmt.Errorf("No stderr present in build server response")
-		}
+	if needStderr && len(metadata.Stderr) == 0 && ar.StderrDigest != nil {
 		b, err := c.readAllByteStream(ar.StderrDigest)
 		if err != nil {
 			return metadata, err

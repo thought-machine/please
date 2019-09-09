@@ -455,14 +455,24 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 					// Informational messages can be emitted on successful actions.
 					log.Debug("Message from build server:\n     %s", response.Message)
 				}
-				if response.Result.ExitCode != 0 {
-					return nil, nil, fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
-				}
-				metadata, err := c.buildMetadata(response.Result, needStdout || respErr != nil, respErr != nil)
+				failed := respErr != nil || response.Result.ExitCode != 0
+				metadata, err := c.buildMetadata(response.Result, needStdout || failed, failed)
 				// The original error is higher priority than us trying to retrieve the
 				// output of the thing that failed.
 				if respErr != nil {
 					return metadata, response.Result, respErr
+				} else if response.Result.ExitCode != 0 {
+					err := fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
+					if response.Message != "" {
+						err = fmt.Errorf("%s\n    %s", err, response.Message)
+					}
+					if len(metadata.Stdout) != 0 {
+						err = fmt.Errorf("%s\nStdout:\n%s", err, metadata.Stdout)
+					}
+					if len(metadata.Stderr) != 0 {
+						err = fmt.Errorf("%s\nStderr:\n%s", err, metadata.Stderr)
+					}
+					return nil, nil, err
 				}
 				return metadata, response.Result, err
 			}
