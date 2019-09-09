@@ -1072,9 +1072,10 @@ func (target *BuildTarget) toolPath(abs bool) string {
 	outputs := target.Outputs()
 	ret := make([]string, len(outputs))
 	for i, o := range outputs {
-		ret[i] = path.Join(target.OutDir(), o)
 		if abs {
-			ret[i] = path.Join(RepoRoot, ret[i])
+			ret[i] = path.Join(RepoRoot, target.OutDir(), o)
+		} else {
+			ret[i] = path.Join(target.Label.PackageName, o)
 		}
 	}
 	return strings.Join(ret, " ")
