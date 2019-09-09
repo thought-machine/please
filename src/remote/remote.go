@@ -451,12 +451,11 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 					log.Debug("Bad result from build server: %+v", response)
 					return nil, nil, fmt.Errorf("Build server did not return valid result")
 				}
-				// TODO(henryaj): if messages are only emitted on error, we should upgrade this to a warning
 				if response.Message != "" {
+					// Informational messages can be emitted on successful actions.
 					log.Debug("Message from build server:\n     %s", response.Message)
 				}
-				// TODO(henryaj): are there cases where a non-zero exit code isn't a failed build?
-				if response.Result.ExitCode > 0 {
+				if response.Result.ExitCode != 0 {
 					return nil, nil, fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
 				}
 				metadata, err := c.buildMetadata(response.Result, needStdout || respErr != nil, respErr != nil)
@@ -473,6 +472,9 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 
 // updateProgress updates the progress of a target based on its metadata.
 func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.ExecuteOperationMetadata) {
+	if c.state.Config.Remote.DisplayURL != "" {
+		log.Debug("Remote progress for %s: %s (action: %s/action/%s/%s/%d)", target.Label, metadata.Stage, c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, metadata.ActionDigest.Hash, metadata.ActionDigest.SizeBytes)
+	}
 	if target.State() >= core.Built {
 		switch metadata.Stage {
 		case pb.ExecutionStage_CACHE_CHECK:

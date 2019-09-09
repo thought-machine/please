@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -147,7 +148,7 @@ func outputs(target *core.BuildTarget) (files, dirs []string) {
 	outs := target.Outputs()
 	files = make([]string, 0, len(outs))
 	for _, out := range outs {
-		if !strings.ContainsRune(out, '.') && !strings.HasSuffix(out, "file") {
+		if !strings.ContainsRune(path.Base(out), '.') && !strings.HasSuffix(out, "file") {
 			dirs = append(dirs, out)
 		} else {
 			files = append(files, out)

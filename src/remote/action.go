@@ -47,6 +47,9 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest boo
 	if isTest {
 		return c.buildTestCommand(target)
 	}
+	// We can't predict what variables like this should be so we sneakily bung something on
+	// the front of the command. It'd be nicer if there were a better way though...
+	const commandPrefix = "export TMP_DIR=\"`pwd`\" && "
 	files, dirs := outputs(target)
 	return &pb.Command{
 		Platform: &pb.Platform{
@@ -65,9 +68,9 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest boo
 		// remote one (which is probably OK on the same OS, but not between say Linux and
 		// FreeBSD where bash is not idiomatically in the same place).
 		Arguments: []string{
-			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", c.getCommand(target),
+			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + c.getCommand(target),
 		},
-		EnvironmentVariables: buildEnv(core.StampedBuildEnvironment(c.state, target, stamp, "")),
+		EnvironmentVariables: buildEnv(core.StampedBuildEnvironment(c.state, target, stamp, ".")),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 	}
@@ -85,6 +88,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) *pb.Command {
 	} else {
 		files = append(files, core.TestResultsFile)
 	}
+	const commandPrefix = "export TMP_DIR=\"`pwd`\" TEST_DIR=\"`pwd`\" && "
 	return &pb.Command{
 		Platform: &pb.Platform{
 			Properties: []*pb.Platform_Property{
@@ -95,7 +99,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) *pb.Command {
 			},
 		},
 		Arguments: []string{
-			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", target.GetTestCommand(c.state),
+			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + target.GetTestCommand(c.state),
 		},
 		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, "")),
 		OutputFiles:          files,
@@ -297,14 +301,13 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 
 // buildMetadata converts an ActionResult into one of our BuildMetadata protos.
 func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool) (*core.BuildMetadata, error) {
-	if ar.ExecutionMetadata == nil {
-		return nil, fmt.Errorf("Build server returned no execution metadata for target; remote build failed or did not run")
-	}
 	metadata := &core.BuildMetadata{
-		StartTime: toTime(ar.ExecutionMetadata.ExecutionStartTimestamp),
-		EndTime:   toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp),
-		Stdout:    ar.StdoutRaw,
-		Stderr:    ar.StderrRaw,
+		Stdout: ar.StdoutRaw,
+		Stderr: ar.StderrRaw,
+	}
+	if ar.ExecutionMetadata != nil {
+		metadata.StartTime = toTime(ar.ExecutionMetadata.ExecutionStartTimestamp)
+		metadata.EndTime = toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp)
 	}
 	if needStdout && len(metadata.Stdout) == 0 {
 		if ar.StdoutDigest == nil {

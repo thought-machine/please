@@ -62,7 +62,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	env := buildEnvironment(state, target)
 	sources := target.AllSourcePaths(state.Graph)
 	outEnv := target.GetTmpOutputAll(target.Outputs())
-	abs := tmpDir != ""
+	abs := path.IsAbs(tmpDir)
 
 	env = append(env,
 		"TMP_DIR="+tmpDir,
@@ -187,11 +187,12 @@ func initStampEnv() {
 }
 
 func toolPath(state *BuildState, tool BuildInput, abs bool) string {
-	label := tool.Label()
-	if label != nil {
+	if label := tool.Label(); label != nil {
 		return state.Graph.TargetOrDie(*label).toolPath(abs)
+	} else if abs {
+		return tool.Paths(state.Graph)[0]
 	}
-	return tool.Paths(state.Graph)[0]
+	return tool.LocalPaths(state.Graph)[0]
 }
 
 func toolPaths(state *BuildState, tools []BuildInput, abs bool) []string {

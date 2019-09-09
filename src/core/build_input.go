@@ -174,7 +174,7 @@ func (label SystemPathLabel) FullPaths(graph *BuildGraph) []string {
 
 // LocalPaths returns paths within the local package
 func (label SystemPathLabel) LocalPaths(graph *BuildGraph) []string {
-	return label.FullPaths(graph)
+	return []string{label.Name}
 }
 
 // Label returns the build rule associated with this input. For a SystemPathLabel it's always nil.

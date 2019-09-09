@@ -45,11 +45,6 @@ if [ "$GOOS" != "linux" ] ; then
     warn "cc_module tests disabled due to not being on Linux"
     EXCLUDES="${EXCLUDES} --exclude=cc_module"
 fi
-# TODO(peterebden): Once Go 1.13 is out we will need to update (or remove) this.
-if [ ! "`go version | grep 1.12`" ]; then
-    warn "Go version != 1.12 detected, excluding assembly tests"
-    EXCLUDES="${EXCLUDES} --exclude=asm --exclude=//test/go_rules/asm_binary/... --exclude=//test/go_rules/asm/..."
-fi
 if ! hash python2 2>/dev/null ; then
     warn "python2 not found, excluding python2 tests"
     EXCLUDES="${EXCLUDES} --exclude=py2"

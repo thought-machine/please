@@ -217,6 +217,20 @@ func TestNoAbsolutePaths(t *testing.T) {
 	}
 }
 
+func TestNoAbsolutePaths2(t *testing.T) {
+	c := newClientInstance("test")
+	tool := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "tool"})
+	tool.AddOutput("bin")
+	c.state.Graph.AddTarget(tool)
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target5"})
+	target.AddOutput("remote_test")
+	target.AddTool(core.SystemPathLabel{Path: []string{os.Getenv("TMP_DIR")}, Name: "remote_test"})
+	cmd := c.buildCommand(target, []byte("hello"), false)
+	for _, env := range cmd.EnvironmentVariables {
+		assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
+	}
+}
+
 func newClient() *Client {
 	return newClientInstance("")
 }
