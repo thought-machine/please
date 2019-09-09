@@ -451,12 +451,11 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 					log.Debug("Bad result from build server: %+v", response)
 					return nil, nil, fmt.Errorf("Build server did not return valid result")
 				}
-				// TODO(henryaj): if messages are only emitted on error, we should upgrade this to a warning
 				if response.Message != "" {
+					// Informational messages can be emitted on successful actions.
 					log.Debug("Message from build server:\n     %s", response.Message)
 				}
-				// TODO(henryaj): are there cases where a non-zero exit code isn't a failed build?
-				if response.Result.ExitCode > 0 {
+				if response.Result.ExitCode != 0 {
 					return nil, nil, fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
 				}
 				metadata, err := c.buildMetadata(response.Result, needStdout || respErr != nil, respErr != nil)
