@@ -67,7 +67,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest boo
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", c.getCommand(target),
 		},
-		EnvironmentVariables: buildEnv(core.StampedBuildEnvironment(c.state, target, stamp, "")),
+		EnvironmentVariables: buildEnv(core.StampedBuildEnvironment(c.state, target, stamp, ".")),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 	}
