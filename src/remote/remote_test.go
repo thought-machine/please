@@ -10,6 +10,7 @@ import (
 	"path"
 	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -211,6 +212,20 @@ func TestNoAbsolutePaths(t *testing.T) {
 	target.AddOutput("remote_test")
 	target.AddSource(core.FileLabel{Package: "package", File: "file"})
 	target.AddTool(tool.Label)
+	cmd := c.buildCommand(target, []byte("hello"), false)
+	for _, env := range cmd.EnvironmentVariables {
+		assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
+	}
+}
+
+func TestNoAbsolutePaths2(t *testing.T) {
+	c := newClientInstance("test")
+	tool := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "tool"})
+	tool.AddOutput("bin")
+	c.state.Graph.AddTarget(tool)
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target5"})
+	target.AddOutput("remote_test")
+	target.AddTool(core.SystemPathLabel{Path: strings.Split(os.Getenv("PATH"), ":"), Name: "jarcat"})
 	cmd := c.buildCommand(target, []byte("hello"), false)
 	for _, env := range cmd.EnvironmentVariables {
 		assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
