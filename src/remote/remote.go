@@ -483,7 +483,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 // updateProgress updates the progress of a target based on its metadata.
 func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.ExecuteOperationMetadata) {
 	if c.state.Config.Remote.DisplayURL != "" {
-		log.Debug("Remote progress for %s: %s (action: %s/action/%s/%s/%d)", target.Label, metadata.Stage, c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, metadata.ActionDigest.Hash, metadata.ActionDigest.SizeBytes)
+		log.Debug("Remote progress for %s: %s (action: %s/action/%s/%s/%d/)", target.Label, metadata.Stage, c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, metadata.ActionDigest.Hash, metadata.ActionDigest.SizeBytes)
 	}
 	if target.State() >= core.Built {
 		switch metadata.Stage {

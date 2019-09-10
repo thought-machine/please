@@ -218,17 +218,18 @@ type BuildTargetState int32
 
 // The available states for a target.
 const (
-	Inactive   BuildTargetState = iota // Target isn't used in current build
-	Semiactive                         // Target would be active if we needed a build
-	Active                             // Target is going to be used in current build
-	Pending                            // Target is ready to be built but not yet started.
-	Building                           // Target is currently being built
-	Stopped                            // We stopped building the target because we'd gone as far as needed.
-	Built                              // Target has been successfully built
-	Cached                             // Target has been retrieved from the cache
-	Unchanged                          // Target has been built but hasn't changed since last build
-	Reused                             // Outputs of previous build have been reused.
-	Failed                             // Target failed for some reason
+	Inactive      BuildTargetState = iota // Target isn't used in current build
+	Semiactive                            // Target would be active if we needed a build
+	Active                                // Target is going to be used in current build
+	Pending                               // Target is ready to be built but not yet started.
+	Building                              // Target is currently being built
+	Stopped                               // We stopped building the target because we'd gone as far as needed.
+	Built                                 // Target has been successfully built
+	Cached                                // Target has been retrieved from the cache
+	Unchanged                             // Target has been built but hasn't changed since last build
+	Reused                                // Outputs of previous build have been reused.
+	BuiltRemotely                         // Target has been built but outputs are not necessarily local.
+	Failed                                // Target failed for some reason
 )
 
 // String implements the fmt.Stringer interface.
