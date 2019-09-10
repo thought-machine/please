@@ -63,46 +63,56 @@ var hashReplacement = regexp.MustCompile(`\$\(hash ([^\)]+)\)`)
 var workerReplacement = regexp.MustCompile(`^(.*)\$\(worker ([^\)]+)\) *([^&]*)(?: *&& *(.*))?$`)
 
 // ReplaceSequences replaces escape sequences in the given string.
-func ReplaceSequences(state *BuildState, target *BuildTarget, command string) string {
+func ReplaceSequences(state *BuildState, target *BuildTarget, command string) (string, error) {
 	return replaceSequencesInternal(state, target, command, false)
 }
 
 // ReplaceTestSequences replaces escape sequences in the given string when running a test.
-func ReplaceTestSequences(state *BuildState, target *BuildTarget, command string) string {
+func ReplaceTestSequences(state *BuildState, target *BuildTarget, command string) (string, error) {
 	if command == "" {
 		// An empty test command implies running the test binary.
 		return replaceSequencesInternal(state, target, fmt.Sprintf("$(exe :%s)", target.Label.Name), true)
 	} else if strings.HasPrefix(command, "$(worker") {
-		_, _, command = workerAndArgs(state, target, command)
-		return command
+		_, _, cmd, err := workerAndArgs(state, target, command)
+		return cmd, err
 	}
 	return replaceSequencesInternal(state, target, command, true)
 }
 
 // TestWorkerCommand returns the worker & its arguments (if any) for a test, and the command to run for the test itself.
-func TestWorkerCommand(state *BuildState, target *BuildTarget) (string, string, string) {
+func TestWorkerCommand(state *BuildState, target *BuildTarget) (string, string, string, error) {
 	return workerAndArgs(state, target, target.GetTestCommand(state))
 }
 
 // WorkerCommandAndArgs returns the worker & its command (if any) and subsequent local command for the rule.
-func WorkerCommandAndArgs(state *BuildState, target *BuildTarget) (string, string, string) {
+func WorkerCommandAndArgs(state *BuildState, target *BuildTarget) (string, string, string, error) {
 	return workerAndArgs(state, target, target.GetCommand(state))
 }
 
-func workerAndArgs(state *BuildState, target *BuildTarget, command string) (string, string, string) {
+func workerAndArgs(state *BuildState, target *BuildTarget, command string) (string, string, string, error) {
 	match := workerReplacement.FindStringSubmatch(command)
 	if match == nil {
-		return "", "", ReplaceSequences(state, target, command)
+		cmd, err := ReplaceSequences(state, target, command)
+		return "", "", cmd, err
 	} else if match[1] != "" {
 		panic("$(worker) replacements cannot have any commands preceding them.")
 	}
-	return replaceWorkerSequence(state, target, ExpandHomePath(match[2]), true, false, false, true, false, false),
-		replaceSequencesInternal(state, target, strings.TrimSpace(match[3]), false),
-		replaceSequencesInternal(state, target, match[4], false)
+	cmd1, err := replaceSequencesInternal(state, target, strings.TrimSpace(match[3]), false)
+	if err != nil {
+		return "", "", "", err
+	}
+	cmd2, err := replaceSequencesInternal(state, target, match[4], false)
+	return replaceWorkerSequence(state, target, ExpandHomePath(match[2]), true, false, false, true, false, false), cmd1, cmd2, err
 }
 
-func replaceSequencesInternal(state *BuildState, target *BuildTarget, command string, test bool) string {
-	cmd := locationReplacement.ReplaceAllStringFunc(command, func(in string) string {
+func replaceSequencesInternal(state *BuildState, target *BuildTarget, command string, test bool) (cmd string, err error) {
+	// TODO(peterebden): should probably just get rid of all the panics and thread errors around properly.
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%s", r)
+		}
+	}()
+	cmd = locationReplacement.ReplaceAllStringFunc(command, func(in string) string {
 		return replaceSequence(state, target, in[11:len(in)-1], false, false, false, false, false, test)
 	})
 	cmd = locationsReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
@@ -139,7 +149,7 @@ func replaceSequencesInternal(state *BuildState, target *BuildTarget, command st
 	}
 	// We would ideally check for this when doing matches above, but not easy in
 	// Go since its regular expressions are actually regular and principled.
-	return strings.Replace(cmd, "\\$", "$", -1)
+	return strings.Replace(cmd, "\\$", "$", -1), nil
 }
 
 // replaceSequence replaces a single escape sequence in a command.

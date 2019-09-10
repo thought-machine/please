@@ -291,8 +291,12 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 	if err != nil {
 		return nil, err
 	}
+	cmd, err := c.buildCommand(target, key, isTest)
+	if err != nil {
+		return nil, err
+	}
 	digest := digestMessage(&pb.Action{
-		CommandDigest:   digestMessage(c.buildCommand(target, key, isTest)),
+		CommandDigest:   digestMessage(cmd),
 		InputRootDigest: digestMessage(inputRoot),
 		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
 	})
@@ -519,7 +523,8 @@ func (c *Client) PrintHashes(target *core.BuildTarget, stamp []byte, isTest bool
 	fmt.Printf("Remote execution hashes:\n")
 	inputRootDigest := digestMessage(inputRoot)
 	fmt.Printf("  Input: %7d bytes: %s\n", inputRootDigest.SizeBytes, inputRootDigest.Hash)
-	commandDigest := digestMessage(c.buildCommand(target, stamp, isTest))
+	cmd, _ := c.buildCommand(target, stamp, isTest)
+	commandDigest := digestMessage(cmd)
 	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {
 		fmt.Printf("    URL: %s/command/%s/%s/%d/\n", c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, commandDigest.Hash, commandDigest.SizeBytes)
