@@ -360,8 +360,9 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
             repo_flag = '-f ' + repo
 
     target = outs[0] if install_subdirectory else '.'
-
-    cmd = '$TOOLS_PIP install --isolated --no-user --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
+    
+    # TODO: This is a total mess on pip's side with --user flag. https://github.com/pypa/pip/issues/1668
+    cmd = 'PIP_CONFIG_FILE=/dev/null $TOOLS_PIP install --isolated --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
     if CONFIG.HOSTOS == 'darwin':
         # Fix for Homebrew which fails with a superficially similar issue.
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
