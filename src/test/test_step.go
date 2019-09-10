@@ -304,19 +304,22 @@ func prepareTestDir(graph *core.BuildGraph, target *core.BuildTarget) error {
 }
 
 // testCommandAndEnv returns the test command & environment for a target.
-func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget) (string, []string) {
-	replacedCmd := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
+func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget) (string, []string, error) {
+	replacedCmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
 	env := core.TestEnvironment(state, target, path.Join(core.RepoRoot, target.TestDir()))
 	if len(state.TestArgs) > 0 {
 		args := strings.Join(state.TestArgs, " ")
 		replacedCmd += " " + args
 		env = append(env, "TESTS="+args)
 	}
-	return replacedCmd, env
+	return replacedCmd, env, err
 }
 
 func runTest(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	replacedCmd, env := testCommandAndEnv(state, target)
+	replacedCmd, env, err := testCommandAndEnv(state, target)
+	if err != nil {
+		return nil, err
+	}
 	log.Debug("Running test %s\nENVIRONMENT:\n%s\n%s", target.Label, strings.Join(env, "\n"), replacedCmd)
 	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, target.TestDir(), env, target.TestTimeout, state.ShowAllOutput, replacedCmd, target.TestSandbox, state.DebugTests)
 	return stderr, err
@@ -582,8 +585,10 @@ func moveOutputFile(state *core.BuildState, target *core.BuildTarget, hash []byt
 
 // startTestWorkerIfNeeded starts a worker server if the test needs one.
 func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) (string, error) {
-	workerCmd, _, testCmd := core.TestWorkerCommand(state, target)
-	if workerCmd == "" {
+	workerCmd, _, testCmd, err := core.TestWorkerCommand(state, target)
+	if err != nil {
+		return "", err
+	} else if workerCmd == "" {
 		return "", nil
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Starting test worker...")

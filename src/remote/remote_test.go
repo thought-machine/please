@@ -95,6 +95,7 @@ func TestStoreAndRetrieveDir(t *testing.T) {
 	target.IsTest = true
 	target.SetState(core.Built)
 	target.AddLabel(core.TestResultsDirLabel)
+	target.AddOutput("target2")
 	key, _ := hex.DecodeString("eb1ece425ca4f24d59d7db7393abae07284baa749acdbe1b5e8c8fd732f278ba")
 	err := c.Store(target, key, &core.BuildMetadata{
 		Stdout: []byte("test stdout"),

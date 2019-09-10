@@ -85,7 +85,7 @@ func TestReplacementsForTest(t *testing.T) {
 	target1.IsTest = true
 
 	expected := "./target1.py path/to/target2.py"
-	cmd := ReplaceTestSequences(state, target1, target1.Command)
+	cmd, _ := ReplaceTestSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }
 
@@ -94,14 +94,14 @@ func TestDataReplacementForTest(t *testing.T) {
 	target.Data = append(target.Data, FileLabel{File: "test_data.txt", Package: "path/to"})
 
 	expected := "cat path/to/test_data.txt"
-	cmd := ReplaceTestSequences(state, target, target.Command)
+	cmd, _ := ReplaceTestSequences(state, target, target.Command)
 	assert.Equal(t, expected, cmd)
 }
 
 func TestAmpersandReplacement(t *testing.T) {
 	target := makeTarget("//path/to:target1", "cat $(location b&b.txt)", nil)
 	expected := "cat \"path/to/b&b.txt\""
-	cmd := ReplaceSequences(state, target, target.Command)
+	cmd, _ := ReplaceSequences(state, target, target.Command)
 	assert.Equal(t, expected, cmd)
 }
 
@@ -112,7 +112,7 @@ func TestToolReplacement(t *testing.T) {
 
 	wd, _ := os.Getwd()
 	expected := quote(path.Join(wd, "plz-out/gen/path/to/target2.py"))
-	cmd := ReplaceSequences(state, target1, target1.Command)
+	cmd, _ := ReplaceSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }
 
@@ -122,7 +122,7 @@ func TestDirReplacement(t *testing.T) {
 	target1 := makeTarget("//path/to:target1", "$(dir //path/to:target2)", target2)
 
 	expected := "path/to"
-	cmd := ReplaceSequences(state, target1, target1.Command)
+	cmd, _ := ReplaceSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }
 
@@ -134,7 +134,7 @@ func TestToolDirReplacement(t *testing.T) {
 
 	wd, _ := os.Getwd()
 	expected := quote(path.Join(wd, "plz-out/gen/path/to"))
-	cmd := ReplaceSequences(state, target1, target1.Command)
+	cmd, _ := ReplaceSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }
 
@@ -171,7 +171,8 @@ func TestWorkerReplacement(t *testing.T) {
 	tool.IsBinary = true
 	target := makeTarget("//path/to:target", "$(worker //path/to:target2) --some_arg", tool)
 	target.Tools = append(target.Tools, tool.Label)
-	worker, remoteArgs, localCmd := WorkerCommandAndArgs(state, target)
+	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
+	assert.NoError(t, err)
 	assert.Equal(t, wd+"/plz-out/bin/path/to/target2.py", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "", localCmd)
@@ -180,7 +181,8 @@ func TestWorkerReplacement(t *testing.T) {
 func TestSystemWorkerReplacement(t *testing.T) {
 	target := makeTarget("//path/to:target", "$(worker /usr/bin/javac) --some_arg", nil)
 	target.Tools = append(target.Tools, SystemFileLabel{Path: "/usr/bin/javac"})
-	worker, remoteArgs, localCmd := WorkerCommandAndArgs(state, target)
+	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
+	assert.NoError(t, err)
 	assert.Equal(t, "/usr/bin/javac", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "", localCmd)
@@ -191,7 +193,8 @@ func TestLocalCommandWorker(t *testing.T) {
 	tool.IsBinary = true
 	target := makeTarget("//path/to:target", "$(worker //path/to:target2) --some_arg && find . | xargs rm && echo hello", tool)
 	target.Tools = append(target.Tools, tool.Label)
-	worker, remoteArgs, localCmd := WorkerCommandAndArgs(state, target)
+	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
+	assert.NoError(t, err)
 	assert.Equal(t, wd+"/plz-out/bin/path/to/target2.py", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "find . | xargs rm && echo hello", localCmd)
@@ -207,7 +210,8 @@ func TestWorkerCommandAndArgsMustComeFirst(t *testing.T) {
 
 func TestWorkerReplacementWithNoWorker(t *testing.T) {
 	target := makeTarget("//path/to:target", "echo hello", nil)
-	worker, remoteArgs, localCmd := WorkerCommandAndArgs(state, target)
+	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
+	assert.NoError(t, err)
 	assert.Equal(t, "", worker)
 	assert.Equal(t, "", remoteArgs)
 	assert.Equal(t, "echo hello", localCmd)
@@ -215,7 +219,8 @@ func TestWorkerReplacementWithNoWorker(t *testing.T) {
 
 func TestWorkerReplacementNotTarget(t *testing.T) {
 	target := makeTarget("//path/to:target", "$(worker javac_worker) --some_arg && find . | xargs rm && echo hello", nil)
-	worker, remoteArgs, localCmd := WorkerCommandAndArgs(state, target)
+	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
+	assert.NoError(t, err)
 	assert.Equal(t, "javac_worker", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "find . | xargs rm && echo hello", localCmd)
@@ -245,7 +250,8 @@ func makeTarget(name string, command string, dep *BuildTarget) *BuildTarget {
 }
 
 func replaceSequences(state *BuildState, target *BuildTarget) string {
-	return ReplaceSequences(state, target, target.GetCommand(state))
+	cmd, _ := ReplaceSequences(state, target, target.GetCommand(state))
+	return cmd
 }
 
 type testHasher struct{}

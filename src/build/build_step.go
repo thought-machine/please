@@ -746,8 +746,10 @@ func (r *progressReader) Read(b []byte) (int, error) {
 // buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
 // or locally if not.
 func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) ([]byte, error) {
-	workerCmd, workerArgs, localCmd := core.WorkerCommandAndArgs(state, target)
-	if workerCmd == "" {
+	workerCmd, workerArgs, localCmd, err := core.WorkerCommandAndArgs(state, target)
+	if err != nil {
+		return nil, err
+	} else if workerCmd == "" {
 		return runBuildCommand(state, target, localCmd, inputHash)
 	}
 	// The scheme here is pretty minimal; remote workers currently have quite a bit less info than
