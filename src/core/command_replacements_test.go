@@ -1,23 +1,25 @@
 // Tests the command replacement functionality.
 
-package build
+package core
 
 import (
+	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/thought-machine/please/src/core"
 )
 
 var wd string
-var state *core.BuildState
+var state *BuildState
+
+const testHash = "gB4sUwsLkB1ODYKUxYrKGlpdYUI"
 
 func init() {
-	state = core.NewDefaultBuildState()
+	state = NewDefaultBuildState()
+	state.TargetHasher = &testHasher{}
 	wd, _ = os.Getwd()
 }
 
@@ -89,7 +91,7 @@ func TestReplacementsForTest(t *testing.T) {
 
 func TestDataReplacementForTest(t *testing.T) {
 	target := makeTarget("//path/to:target1", "cat $(location test_data.txt)", nil)
-	target.Data = append(target.Data, core.FileLabel{File: "test_data.txt", Package: "path/to"})
+	target.Data = append(target.Data, FileLabel{File: "test_data.txt", Package: "path/to"})
 
 	expected := "cat path/to/test_data.txt"
 	cmd := ReplaceTestSequences(state, target, target.Command)
@@ -141,7 +143,7 @@ func TestBazelCompatReplacements(t *testing.T) {
 	target := makeTarget("//path/to:target", "cp $< $@", nil)
 	assert.Equal(t, "cp $< $@", replaceSequences(state, target))
 	// In Bazel compat mode we do though.
-	state := core.NewDefaultBuildState()
+	state := NewDefaultBuildState()
 	state.Config.Bazel.Compatibility = true
 	assert.Equal(t, "cp $SRCS $OUTS", replaceSequences(state, target))
 	// @D is the output dir, for us it's the tmp dir.
@@ -161,9 +163,7 @@ func TestHashReplacement(t *testing.T) {
 
 	target2 := makeTarget("//path/to:target2", "cp $< $@", nil)
 	target := makeTarget("//path/to:target", "echo $(hash //path/to:target2)", target2)
-	// Note that this hash is determined arbitrarily, it doesn't matter for this test
-	// precisely what its value is.
-	assert.Equal(t, "echo gB4sUwsLkB1ODYKUxYrKGlpdYUI", replaceSequences(state, target))
+	assert.Equal(t, "echo "+testHash, replaceSequences(state, target))
 }
 
 func TestWorkerReplacement(t *testing.T) {
@@ -171,7 +171,7 @@ func TestWorkerReplacement(t *testing.T) {
 	tool.IsBinary = true
 	target := makeTarget("//path/to:target", "$(worker //path/to:target2) --some_arg", tool)
 	target.Tools = append(target.Tools, tool.Label)
-	worker, remoteArgs, localCmd := workerCommandAndArgs(state, target)
+	worker, remoteArgs, localCmd := WorkerCommandAndArgs(state, target)
 	assert.Equal(t, wd+"/plz-out/bin/path/to/target2.py", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "", localCmd)
@@ -179,8 +179,8 @@ func TestWorkerReplacement(t *testing.T) {
 
 func TestSystemWorkerReplacement(t *testing.T) {
 	target := makeTarget("//path/to:target", "$(worker /usr/bin/javac) --some_arg", nil)
-	target.Tools = append(target.Tools, core.SystemFileLabel{Path: "/usr/bin/javac"})
-	worker, remoteArgs, localCmd := workerCommandAndArgs(state, target)
+	target.Tools = append(target.Tools, SystemFileLabel{Path: "/usr/bin/javac"})
+	worker, remoteArgs, localCmd := WorkerCommandAndArgs(state, target)
 	assert.Equal(t, "/usr/bin/javac", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "", localCmd)
@@ -191,7 +191,7 @@ func TestLocalCommandWorker(t *testing.T) {
 	tool.IsBinary = true
 	target := makeTarget("//path/to:target", "$(worker //path/to:target2) --some_arg && find . | xargs rm && echo hello", tool)
 	target.Tools = append(target.Tools, tool.Label)
-	worker, remoteArgs, localCmd := workerCommandAndArgs(state, target)
+	worker, remoteArgs, localCmd := WorkerCommandAndArgs(state, target)
 	assert.Equal(t, wd+"/plz-out/bin/path/to/target2.py", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "find . | xargs rm && echo hello", localCmd)
@@ -202,12 +202,12 @@ func TestWorkerCommandAndArgsMustComeFirst(t *testing.T) {
 	tool.IsBinary = true
 	target := makeTarget("//path/to:target", "something something $(worker javac)", tool)
 	target.Tools = append(target.Tools, tool.Label)
-	assert.Panics(t, func() { workerCommandAndArgs(state, target) })
+	assert.Panics(t, func() { WorkerCommandAndArgs(state, target) })
 }
 
 func TestWorkerReplacementWithNoWorker(t *testing.T) {
 	target := makeTarget("//path/to:target", "echo hello", nil)
-	worker, remoteArgs, localCmd := workerCommandAndArgs(state, target)
+	worker, remoteArgs, localCmd := WorkerCommandAndArgs(state, target)
 	assert.Equal(t, "", worker)
 	assert.Equal(t, "", remoteArgs)
 	assert.Equal(t, "echo hello", localCmd)
@@ -215,7 +215,7 @@ func TestWorkerReplacementWithNoWorker(t *testing.T) {
 
 func TestWorkerReplacementNotTarget(t *testing.T) {
 	target := makeTarget("//path/to:target", "$(worker javac_worker) --some_arg && find . | xargs rm && echo hello", nil)
-	worker, remoteArgs, localCmd := workerCommandAndArgs(state, target)
+	worker, remoteArgs, localCmd := WorkerCommandAndArgs(state, target)
 	assert.Equal(t, "javac_worker", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "find . | xargs rm && echo hello", localCmd)
@@ -229,14 +229,14 @@ func TestCrossCompileReplacement(t *testing.T) {
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
-func makeTarget(name string, command string, dep *core.BuildTarget) *core.BuildTarget {
-	target := core.NewBuildTarget(core.ParseBuildLabel(name, ""))
+func makeTarget(name string, command string, dep *BuildTarget) *BuildTarget {
+	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Command = command
 	target.AddOutput(target.Label.Name + ".py")
 	if dep != nil {
 		target.AddDependency(dep.Label)
 		// This is a bit awkward but I don't want to add a public interface just for a test.
-		graph := core.NewGraph()
+		graph := NewGraph()
 		graph.AddTarget(target)
 		graph.AddTarget(dep)
 		graph.AddDependency(target.Label, dep.Label)
@@ -244,6 +244,12 @@ func makeTarget(name string, command string, dep *core.BuildTarget) *core.BuildT
 	return target
 }
 
-func replaceSequences(state *core.BuildState, target *core.BuildTarget) string {
+func replaceSequences(state *BuildState, target *BuildTarget) string {
 	return ReplaceSequences(state, target, target.GetCommand(state))
+}
+
+type testHasher struct{}
+
+func (h *testHasher) OutputHash(target *BuildTarget) ([]byte, error) {
+	return base64.RawStdEncoding.DecodeString(testHash)
 }

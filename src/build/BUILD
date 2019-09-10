@@ -18,15 +18,6 @@ go_library(
 )
 
 go_test(
-    name = "command_replacements_test",
-    srcs = ["command_replacements_test.go"],
-    deps = [
-        ":build",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
     name = "incrementality_test",
     srcs = ["incrementality_test.go"],
     deps = [

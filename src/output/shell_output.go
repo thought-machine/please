@@ -17,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/test"
@@ -459,7 +458,7 @@ func printBuildResults(state *core.BuildState, duration time.Duration) {
 func printHashes(state *core.BuildState, duration time.Duration) {
 	fmt.Printf("Hashes calculated, total time %s:\n", duration)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
-		hash, err := build.OutputHash(state, state.Graph.TargetOrDie(label))
+		hash, err := state.TargetHasher.OutputHash(state.Graph.TargetOrDie(label))
 		if err != nil {
 			fmt.Printf("  %s: cannot calculate: %s\n", label, err)
 		} else {
@@ -481,7 +480,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 			dir = path.Join(core.RepoRoot, target.TestDir())
 			env = core.TestEnvironment(state, target, dir)
 		}
-		cmd = build.ReplaceSequences(state, target, cmd)
+		cmd = core.ReplaceSequences(state, target, cmd)
 		fmt.Printf("  %s: %s\n", label, dir)
 		fmt.Printf("    Command: %s\n", cmd)
 		if !state.PrepareShell {

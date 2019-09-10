@@ -305,7 +305,7 @@ func prepareTestDir(graph *core.BuildGraph, target *core.BuildTarget) error {
 
 // testCommandAndEnv returns the test command & environment for a target.
 func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget) (string, []string) {
-	replacedCmd := build.ReplaceTestSequences(state, target, target.GetTestCommand(state))
+	replacedCmd := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
 	env := core.TestEnvironment(state, target, path.Join(core.RepoRoot, target.TestDir()))
 	if len(state.TestArgs) > 0 {
 		args := strings.Join(state.TestArgs, " ")
@@ -582,7 +582,7 @@ func moveOutputFile(state *core.BuildState, target *core.BuildTarget, hash []byt
 
 // startTestWorkerIfNeeded starts a worker server if the test needs one.
 func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) (string, error) {
-	workerCmd, _, testCmd := build.TestWorkerCommand(state, target)
+	workerCmd, _, testCmd := core.TestWorkerCommand(state, target)
 	if workerCmd == "" {
 		return "", nil
 	}

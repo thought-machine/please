@@ -164,7 +164,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
 	}
 
-	oldOutputHash, outputHashErr := OutputHash(state, target)
+	oldOutputHash, outputHashErr := state.TargetHasher.OutputHash(target)
 	retrieveArtifacts := func() bool {
 		// If there aren't any outputs, we don't have to do anything right now.
 		// Checks later will handle the case of something with a post-build function that
@@ -472,7 +472,7 @@ func checkForStaleOutput(filename string, err error) bool {
 
 // calculateAndCheckRuleHash checks the output hash for a rule.
 func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	hash, err := OutputHash(state, target)
+	hash, err := state.TargetHasher.OutputHash(target)
 	if err != nil {
 		return nil, err
 	}
@@ -509,9 +509,14 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	return hash, nil
 }
 
-// OutputHash calculates the usual hash of a target's outputs.
-func OutputHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	return outputHash(target, target.FullOutputs(), state.PathHasher, state.PathHasher.NewHash)
+// A TargetHasher is an implementation of the interface in core.
+type TargetHasher struct {
+	State *core.BuildState
+}
+
+// OutputHash calculates the standard output hash of a build target.
+func (h *TargetHasher) OutputHash(target *core.BuildTarget) ([]byte, error) {
+	return outputHash(target, target.FullOutputs(), h.State.PathHasher, h.State.PathHasher.NewHash)
 }
 
 // outputHash is a more general form of OutputHash that allows different hashing strategies.
@@ -741,7 +746,7 @@ func (r *progressReader) Read(b []byte) (int, error) {
 // buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
 // or locally if not.
 func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) ([]byte, error) {
-	workerCmd, workerArgs, localCmd := workerCommandAndArgs(state, target)
+	workerCmd, workerArgs, localCmd := core.WorkerCommandAndArgs(state, target)
 	if workerCmd == "" {
 		return runBuildCommand(state, target, localCmd, inputHash)
 	}

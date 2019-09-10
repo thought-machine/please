@@ -6,7 +6,6 @@ go_library(
     ],
     visibility = ["PUBLIC"],
     deps = [
-        "//src/build",
         "//src/core",
         "//src/output",
         "//third_party/go:errgroup",

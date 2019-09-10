@@ -156,3 +156,12 @@ go_test(
         "//third_party/go:testify",
     ],
 )
+
+go_test(
+    name = "command_replacements_test",
+    srcs = ["command_replacements_test.go"],
+    deps = [
+        ":core",
+        "//third_party/go:testify",
+    ],
+)

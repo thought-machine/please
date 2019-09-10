@@ -42,7 +42,7 @@
 // In general it's a good idea to use these where possible in genrules rather than
 // hardcoding specific paths.
 
-package build
+package core
 
 import (
 	"encoding/base64"
@@ -51,8 +51,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/thought-machine/please/src/core"
 )
 
 var locationReplacement = regexp.MustCompile(`\$\(location ([^\)]+)\)`)
@@ -65,12 +63,12 @@ var hashReplacement = regexp.MustCompile(`\$\(hash ([^\)]+)\)`)
 var workerReplacement = regexp.MustCompile(`^(.*)\$\(worker ([^\)]+)\) *([^&]*)(?: *&& *(.*))?$`)
 
 // ReplaceSequences replaces escape sequences in the given string.
-func ReplaceSequences(state *core.BuildState, target *core.BuildTarget, command string) string {
+func ReplaceSequences(state *BuildState, target *BuildTarget, command string) string {
 	return replaceSequencesInternal(state, target, command, false)
 }
 
 // ReplaceTestSequences replaces escape sequences in the given string when running a test.
-func ReplaceTestSequences(state *core.BuildState, target *core.BuildTarget, command string) string {
+func ReplaceTestSequences(state *BuildState, target *BuildTarget, command string) string {
 	if command == "" {
 		// An empty test command implies running the test binary.
 		return replaceSequencesInternal(state, target, fmt.Sprintf("$(exe :%s)", target.Label.Name), true)
@@ -82,28 +80,28 @@ func ReplaceTestSequences(state *core.BuildState, target *core.BuildTarget, comm
 }
 
 // TestWorkerCommand returns the worker & its arguments (if any) for a test, and the command to run for the test itself.
-func TestWorkerCommand(state *core.BuildState, target *core.BuildTarget) (string, string, string) {
+func TestWorkerCommand(state *BuildState, target *BuildTarget) (string, string, string) {
 	return workerAndArgs(state, target, target.GetTestCommand(state))
 }
 
-// workerCommandAndArgs returns the worker & its command (if any) and subsequent local command for the rule.
-func workerCommandAndArgs(state *core.BuildState, target *core.BuildTarget) (string, string, string) {
+// WorkerCommandAndArgs returns the worker & its command (if any) and subsequent local command for the rule.
+func WorkerCommandAndArgs(state *BuildState, target *BuildTarget) (string, string, string) {
 	return workerAndArgs(state, target, target.GetCommand(state))
 }
 
-func workerAndArgs(state *core.BuildState, target *core.BuildTarget, command string) (string, string, string) {
+func workerAndArgs(state *BuildState, target *BuildTarget, command string) (string, string, string) {
 	match := workerReplacement.FindStringSubmatch(command)
 	if match == nil {
 		return "", "", ReplaceSequences(state, target, command)
 	} else if match[1] != "" {
 		panic("$(worker) replacements cannot have any commands preceding them.")
 	}
-	return replaceWorkerSequence(state, target, core.ExpandHomePath(match[2]), true, false, false, true, false, false),
+	return replaceWorkerSequence(state, target, ExpandHomePath(match[2]), true, false, false, true, false, false),
 		replaceSequencesInternal(state, target, strings.TrimSpace(match[3]), false),
 		replaceSequencesInternal(state, target, match[4], false)
 }
 
-func replaceSequencesInternal(state *core.BuildState, target *core.BuildTarget, command string, test bool) string {
+func replaceSequencesInternal(state *BuildState, target *BuildTarget, command string, test bool) string {
 	cmd := locationReplacement.ReplaceAllStringFunc(command, func(in string) string {
 		return replaceSequence(state, target, in[11:len(in)-1], false, false, false, false, false, test)
 	})
@@ -145,9 +143,9 @@ func replaceSequencesInternal(state *core.BuildState, target *core.BuildTarget, 
 }
 
 // replaceSequence replaces a single escape sequence in a command.
-func replaceSequence(state *core.BuildState, target *core.BuildTarget, in string, runnable, multiple, dir, outPrefix, hash, test bool) string {
-	if core.LooksLikeABuildLabel(in) {
-		label := core.ParseBuildLabel(in, target.Label.PackageName)
+func replaceSequence(state *BuildState, target *BuildTarget, in string, runnable, multiple, dir, outPrefix, hash, test bool) string {
+	if LooksLikeABuildLabel(in) {
+		label := ParseBuildLabel(in, target.Label.PackageName)
 		return replaceSequenceLabel(state, target, label, in, runnable, multiple, dir, outPrefix, hash, test, true)
 	}
 	for _, src := range sourcesOrTools(target, runnable) {
@@ -168,22 +166,22 @@ func replaceSequence(state *core.BuildState, target *core.BuildTarget, in string
 
 // replaceWorkerSequence is like replaceSequence but for worker commands, which do not
 // prefix the target's directory if it's not a build label.
-func replaceWorkerSequence(state *core.BuildState, target *core.BuildTarget, in string, runnable, multiple, dir, outPrefix, hash, test bool) string {
-	if !core.LooksLikeABuildLabel(in) {
+func replaceWorkerSequence(state *BuildState, target *BuildTarget, in string, runnable, multiple, dir, outPrefix, hash, test bool) string {
+	if !LooksLikeABuildLabel(in) {
 		return in
 	}
 	return replaceSequence(state, target, in, runnable, multiple, dir, outPrefix, hash, test)
 }
 
 // sourcesOrTools returns either the tools of a target if runnable is true, otherwise its sources.
-func sourcesOrTools(target *core.BuildTarget, runnable bool) []core.BuildInput {
+func sourcesOrTools(target *BuildTarget, runnable bool) []BuildInput {
 	if runnable {
 		return target.Tools
 	}
 	return target.AllSources()
 }
 
-func replaceSequenceLabel(state *core.BuildState, target *core.BuildTarget, label core.BuildLabel, in string, runnable, multiple, dir, outPrefix, hash, test, allOutputs bool) string {
+func replaceSequenceLabel(state *BuildState, target *BuildTarget, label BuildLabel, in string, runnable, multiple, dir, outPrefix, hash, test, allOutputs bool) string {
 	// Check this label is a dependency of the target, otherwise it's not allowed.
 	if label == target.Label { // targets can always use themselves.
 		return checkAndReplaceSequence(state, target, target, in, runnable, multiple, dir, outPrefix, hash, test, allOutputs, false)
@@ -197,7 +195,7 @@ func replaceSequenceLabel(state *core.BuildState, target *core.BuildTarget, labe
 	return checkAndReplaceSequence(state, target, deps[0], in, runnable, multiple, dir, outPrefix, hash, test, allOutputs, target.IsTool(label))
 }
 
-func checkAndReplaceSequence(state *core.BuildState, target, dep *core.BuildTarget, in string, runnable, multiple, dir, outPrefix, hash, test, allOutputs, tool bool) string {
+func checkAndReplaceSequence(state *BuildState, target, dep *BuildTarget, in string, runnable, multiple, dir, outPrefix, hash, test, allOutputs, tool bool) string {
 	if allOutputs && !multiple && len(dep.Outputs()) > 1 {
 		// Label must have only one output.
 		panic(fmt.Sprintf("Rule %s can't use %s; %s has multiple outputs.", target.Label, in, dep.Label))
@@ -207,7 +205,7 @@ func checkAndReplaceSequence(state *core.BuildState, target, dep *core.BuildTarg
 		panic(fmt.Sprintf("Rule %s is tagged as binary but produces no output.", dep.Label))
 	}
 	if hash {
-		h, err := OutputHash(state, dep)
+		h, err := state.TargetHasher.OutputHash(dep)
 		if err != nil {
 			panic(err)
 		}
@@ -237,7 +235,7 @@ func checkAndReplaceSequence(state *core.BuildState, target, dep *core.BuildTarg
 	return strings.TrimRight(output, " ")
 }
 
-func fileDestination(target, dep *core.BuildTarget, out string, dir, outPrefix, test bool) string {
+func fileDestination(target, dep *BuildTarget, out string, dir, outPrefix, test bool) string {
 	if outPrefix {
 		return handleDir(dep.OutDir(), out, dir)
 	}

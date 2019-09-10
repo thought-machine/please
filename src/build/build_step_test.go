@@ -251,7 +251,7 @@ func TestOutputHash(t *testing.T) {
 	state, target := newState("//package3:target1")
 	target.AddOutput("file1")
 	target.Hashes = []string{"6c6d66a0852b49cdeeb0e183b4f10b0309c5dd4a"}
-	b, err := OutputHash(state, target)
+	b, err := state.TargetHasher.OutputHash(target)
 	assert.NoError(t, err)
 	assert.Equal(t, "6c6d66a0852b49cdeeb0e183b4f10b0309c5dd4a", hex.EncodeToString(b))
 }
@@ -262,7 +262,7 @@ func TestCheckRuleHashes(t *testing.T) {
 	target.Hashes = []string{"6c6d66a0852b49cdeeb0e183b4f10b0309c5dd4a"}
 
 	// This is the normal sha1-with-combine hash calculation
-	b, _ := OutputHash(state, target)
+	b, _ := state.TargetHasher.OutputHash(target)
 	err := checkRuleHashes(state, target, b)
 	assert.NoError(t, err)
 
@@ -290,6 +290,7 @@ func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	target.BuildTimeout = 100 * time.Second
 	state.Graph.AddTarget(target)
 	state.Parser = &fakeParser{}
+	state.TargetHasher = &TargetHasher{State: state}
 	return state, target
 }
 
