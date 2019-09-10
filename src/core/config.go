@@ -262,13 +262,7 @@ func DefaultConfiguration() *Configuration {
 	config.Python.TestRunnerBootstrap = ""
 	config.Python.UsePyPI = true
 	config.Python.InterpreterOptions = ""
-	// Annoyingly pip on OSX doesn't seem to work with this flag (you get the dreaded
-	// "must supply either home or prefix/exec-prefix" error). Goodness knows why *adding* this
-	// flag - which otherwise seems exactly what we want - provokes that error, but the logic
-	// of pip is rather a mystery to me.
-	if runtime.GOOS != "darwin" {
-		config.Python.PipFlags = "--isolated"
-	}
+	config.Python.PipFlags = ""
 	config.Java.DefaultTestPackage = ""
 	config.Java.SourceLevel = "8"
 	config.Java.TargetLevel = "8"
