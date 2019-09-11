@@ -291,8 +291,12 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 	if err != nil {
 		return nil, err
 	}
+	cmd, err := c.buildCommand(target, key, isTest)
+	if err != nil {
+		return nil, err
+	}
 	digest := digestMessage(&pb.Action{
-		CommandDigest:   digestMessage(c.buildCommand(target, key, isTest)),
+		CommandDigest:   digestMessage(cmd),
 		InputRootDigest: digestMessage(inputRoot),
 		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
 	})
@@ -455,14 +459,24 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 					// Informational messages can be emitted on successful actions.
 					log.Debug("Message from build server:\n     %s", response.Message)
 				}
-				if response.Result.ExitCode != 0 {
-					return nil, nil, fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
-				}
-				metadata, err := c.buildMetadata(response.Result, needStdout || respErr != nil, respErr != nil)
+				failed := respErr != nil || response.Result.ExitCode != 0
+				metadata, err := c.buildMetadata(response.Result, needStdout || failed, failed)
 				// The original error is higher priority than us trying to retrieve the
 				// output of the thing that failed.
 				if respErr != nil {
 					return metadata, response.Result, respErr
+				} else if response.Result.ExitCode != 0 {
+					err := fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
+					if response.Message != "" {
+						err = fmt.Errorf("%s\n    %s", err, response.Message)
+					}
+					if len(metadata.Stdout) != 0 {
+						err = fmt.Errorf("%s\nStdout:\n%s", err, metadata.Stdout)
+					}
+					if len(metadata.Stderr) != 0 {
+						err = fmt.Errorf("%s\nStderr:\n%s", err, metadata.Stderr)
+					}
+					return nil, nil, err
 				}
 				return metadata, response.Result, err
 			}
@@ -473,7 +487,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 // updateProgress updates the progress of a target based on its metadata.
 func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.ExecuteOperationMetadata) {
 	if c.state.Config.Remote.DisplayURL != "" {
-		log.Debug("Remote progress for %s: %s (action: %s/action/%s/%s/%d)", target.Label, metadata.Stage, c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, metadata.ActionDigest.Hash, metadata.ActionDigest.SizeBytes)
+		log.Debug("Remote progress for %s: %s (action: %s/action/%s/%s/%d/)", target.Label, metadata.Stage, c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, metadata.ActionDigest.Hash, metadata.ActionDigest.SizeBytes)
 	}
 	if target.State() >= core.Built {
 		switch metadata.Stage {
@@ -509,7 +523,8 @@ func (c *Client) PrintHashes(target *core.BuildTarget, stamp []byte, isTest bool
 	fmt.Printf("Remote execution hashes:\n")
 	inputRootDigest := digestMessage(inputRoot)
 	fmt.Printf("  Input: %7d bytes: %s\n", inputRootDigest.SizeBytes, inputRootDigest.Hash)
-	commandDigest := digestMessage(c.buildCommand(target, stamp, isTest))
+	cmd, _ := c.buildCommand(target, stamp, isTest)
+	commandDigest := digestMessage(cmd)
 	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {
 		fmt.Printf("    URL: %s/command/%s/%s/%d/\n", c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, commandDigest.Hash, commandDigest.SizeBytes)

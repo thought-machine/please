@@ -81,6 +81,12 @@ type RemoteClient interface {
 	PrintHashes(target *BuildTarget, stamp []byte, isTest bool)
 }
 
+// A TargetHasher is a thing that knows how to create hashes for targets.
+type TargetHasher interface {
+	// OutputHash calculates the output hash for a given build target.
+	OutputHash(target *BuildTarget) ([]byte, error)
+}
+
 // A BuildState tracks the current state of the build & related data.
 // As well as tracking the build graph and config, it also tracks the set of current
 // tasks and maintains a queue of them, along with various related counters which are
@@ -121,6 +127,8 @@ type BuildState struct {
 	Cache Cache
 	// Client to remote execution service, if configured.
 	RemoteClient RemoteClient
+	// Hasher for targets
+	TargetHasher TargetHasher
 	// Targets that we were originally requested to build
 	OriginalTargets []BuildLabel
 	// Arguments to tests.

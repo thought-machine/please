@@ -2,7 +2,6 @@ package remote
 
 import (
 	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -28,7 +27,11 @@ func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, uploadInpu
 		}
 		inputRootDigest, inputRootMsg := digestMessageContents(inputRoot)
 		ch <- &blob{Data: inputRootMsg, Digest: inputRootDigest}
-		commandDigest, commandMsg := digestMessageContents(c.buildCommand(target, stamp, isTest))
+		cmd, err := c.buildCommand(target, stamp, isTest)
+		if err != nil {
+			return err
+		}
+		commandDigest, commandMsg := digestMessageContents(cmd)
 		ch <- &blob{Data: commandMsg, Digest: commandDigest}
 		actionDigest, actionMsg := digestMessageContents(&pb.Action{
 			CommandDigest:   commandDigest,
@@ -43,7 +46,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, uploadInpu
 }
 
 // buildCommand builds the command for a single target.
-func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest bool) *pb.Command {
+func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest bool) (*pb.Command, error) {
 	if isTest {
 		return c.buildTestCommand(target)
 	}
@@ -51,6 +54,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest boo
 	// the front of the command. It'd be nicer if there were a better way though...
 	const commandPrefix = "export TMP_DIR=\"`pwd`\" && "
 	files, dirs := outputs(target)
+	cmd, err := core.ReplaceSequences(c.state, target, c.getCommand(target))
 	return &pb.Command{
 		Platform: &pb.Platform{
 			Properties: []*pb.Platform_Property{
@@ -68,16 +72,16 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest boo
 		// remote one (which is probably OK on the same OS, but not between say Linux and
 		// FreeBSD where bash is not idiomatically in the same place).
 		Arguments: []string{
-			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + c.getCommand(target),
+			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
 		},
 		EnvironmentVariables: buildEnv(core.StampedBuildEnvironment(c.state, target, stamp, ".")),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
-	}
+	}, err
 }
 
 // buildTestCommand builds a command for a target when testing.
-func (c *Client) buildTestCommand(target *core.BuildTarget) *pb.Command {
+func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error) {
 	files := make([]string, 0, 2)
 	dirs := []string{}
 	if target.NeedCoverage(c.state) {
@@ -89,6 +93,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) *pb.Command {
 		files = append(files, core.TestResultsFile)
 	}
 	const commandPrefix = "export TMP_DIR=\"`pwd`\" TEST_DIR=\"`pwd`\" && "
+	cmd, err := core.ReplaceTestSequences(c.state, target, target.GetTestCommand(c.state))
 	return &pb.Command{
 		Platform: &pb.Platform{
 			Properties: []*pb.Platform_Property{
@@ -99,12 +104,12 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) *pb.Command {
 			},
 		},
 		Arguments: []string{
-			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + target.GetTestCommand(c.state),
+			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
 		},
 		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, "")),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
-	}
+	}, err
 }
 
 // getCommand returns the appropriate command to use for a target.
@@ -300,6 +305,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 }
 
 // buildMetadata converts an ActionResult into one of our BuildMetadata protos.
+// N.B. this always returns a non-nil metadata object for the first response.
 func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool) (*core.BuildMetadata, error) {
 	metadata := &core.BuildMetadata{
 		Stdout: ar.StdoutRaw,
@@ -309,20 +315,14 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		metadata.StartTime = toTime(ar.ExecutionMetadata.ExecutionStartTimestamp)
 		metadata.EndTime = toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp)
 	}
-	if needStdout && len(metadata.Stdout) == 0 {
-		if ar.StdoutDigest == nil {
-			return nil, fmt.Errorf("No stdout present in build server response")
-		}
+	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
 		b, err := c.readAllByteStream(ar.StdoutDigest)
 		if err != nil {
 			return metadata, err
 		}
 		metadata.Stdout = b
 	}
-	if needStderr && len(metadata.Stderr) == 0 {
-		if ar.StderrDigest == nil {
-			return nil, fmt.Errorf("No stderr present in build server response")
-		}
+	if needStderr && len(metadata.Stderr) == 0 && ar.StderrDigest != nil {
 		b, err := c.readAllByteStream(ar.StderrDigest)
 		if err != nil {
 			return metadata, err

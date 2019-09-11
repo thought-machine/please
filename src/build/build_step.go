@@ -164,7 +164,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
 	}
 
-	oldOutputHash, outputHashErr := OutputHash(state, target)
+	oldOutputHash, outputHashErr := state.TargetHasher.OutputHash(target)
 	retrieveArtifacts := func() bool {
 		// If there aren't any outputs, we don't have to do anything right now.
 		// Checks later will handle the case of something with a post-build function that
@@ -250,6 +250,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	checkLicences(state, target)
 
 	if runRemotely {
+		if state.IsOriginalTarget(target.Label) {
+			state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
+			if _, err := state.RemoteClient.Retrieve(target, cacheKey); err != nil {
+				return fmt.Errorf("Failed to retrieve outputs for %s: %s", target.Label, err)
+			}
+		}
+		target.SetState(core.BuiltRemotely)
 		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
 		return nil
 	}
@@ -465,7 +472,7 @@ func checkForStaleOutput(filename string, err error) bool {
 
 // calculateAndCheckRuleHash checks the output hash for a rule.
 func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	hash, err := OutputHash(state, target)
+	hash, err := state.TargetHasher.OutputHash(target)
 	if err != nil {
 		return nil, err
 	}
@@ -502,9 +509,14 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	return hash, nil
 }
 
-// OutputHash calculates the usual hash of a target's outputs.
-func OutputHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	return outputHash(target, target.FullOutputs(), state.PathHasher, state.PathHasher.NewHash)
+// A TargetHasher is an implementation of the interface in core.
+type TargetHasher struct {
+	State *core.BuildState
+}
+
+// OutputHash calculates the standard output hash of a build target.
+func (h *TargetHasher) OutputHash(target *core.BuildTarget) ([]byte, error) {
+	return outputHash(target, target.FullOutputs(), h.State.PathHasher, h.State.PathHasher.NewHash)
 }
 
 // outputHash is a more general form of OutputHash that allows different hashing strategies.
@@ -734,8 +746,10 @@ func (r *progressReader) Read(b []byte) (int, error) {
 // buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
 // or locally if not.
 func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) ([]byte, error) {
-	workerCmd, workerArgs, localCmd := workerCommandAndArgs(state, target)
-	if workerCmd == "" {
+	workerCmd, workerArgs, localCmd, err := core.WorkerCommandAndArgs(state, target)
+	if err != nil {
+		return nil, err
+	} else if workerCmd == "" {
 		return runBuildCommand(state, target, localCmd, inputHash)
 	}
 	// The scheme here is pretty minimal; remote workers currently have quite a bit less info than

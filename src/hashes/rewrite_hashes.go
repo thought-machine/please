@@ -12,7 +12,6 @@ import (
 
 	"gopkg.in/op/go-logging.v1"
 
-	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
 )
@@ -30,7 +29,7 @@ func RewriteHashes(state *core.BuildState, labels []core.BuildLabel) {
 			if len(target.Hashes) == 0 {
 				continue
 			}
-			h, err := build.OutputHash(state, target)
+			h, err := state.TargetHasher.OutputHash(target)
 			if err != nil {
 				log.Fatalf("%s\n", err)
 			}

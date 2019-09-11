@@ -3,7 +3,6 @@ go_library(
     srcs = ["rewrite_hashes.go"],
     visibility = ["PUBLIC"],
     deps = [
-        "//src/build",
         "//src/core",
         "//src/parse/asp",
         "//third_party/go:logging",
