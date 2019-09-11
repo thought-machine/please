@@ -70,15 +70,15 @@ type Parser interface {
 // A RemoteClient is the interface to a remote execution service.
 type RemoteClient interface {
 	// Retrieve fetches remote results from the service.
-	Retrieve(target *BuildTarget, key []byte) (*BuildMetadata, error)
+	Retrieve(target *BuildTarget) (*BuildMetadata, error)
 	// Store stores outputs of a target with the service.
-	Store(target *BuildTarget, key []byte, metadata *BuildMetadata, files []string) error
+	Store(target *BuildTarget, metadata *BuildMetadata, files []string) error
 	// Build invokes a build of the target remotely
-	Build(tid int, target *BuildTarget, stamp []byte) (*BuildMetadata, error)
+	Build(tid int, target *BuildTarget) (*BuildMetadata, error)
 	// Test invokes a test run of the target remotely.
 	Test(tid int, target *BuildTarget) (metadata *BuildMetadata, results, coverage []byte, err error)
 	// PrintHashes shows the hashes of a target.
-	PrintHashes(target *BuildTarget, stamp []byte, isTest bool)
+	PrintHashes(target *BuildTarget, isTest bool)
 }
 
 // A TargetHasher is a thing that knows how to create hashes for targets.

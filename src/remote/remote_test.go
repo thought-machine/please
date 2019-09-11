@@ -2,7 +2,6 @@ package remote
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -64,14 +63,12 @@ func TestStoreAndRetrieve(t *testing.T) {
 	target.AddSource(core.FileLabel{File: "src2.txt", Package: "package"})
 	target.AddOutput("out1.txt")
 	target.PostBuildFunction = testFunction{}
-	// The hash is arbitrary as far as this package is concerned.
-	key, _ := hex.DecodeString("2dd283abb148ebabcd894b306e3d86d0390c82a7")
 	metadata := &core.BuildMetadata{
 		Stdout:    []byte("test stdout"),
 		StartTime: time.Now().UTC(),
 		EndTime:   time.Now().UTC(),
 	}
-	err := c.Store(target, key, metadata, []string{"out1.txt"})
+	err := c.Store(target, metadata, []string{"out1.txt"})
 	assert.NoError(t, err)
 	// Remove the old file, but remember its contents so we can compare later.
 	contents, err := ioutil.ReadFile("plz-out/gen/package/out1.txt")
@@ -79,7 +76,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 	err = os.Remove("plz-out/gen/package/out1.txt")
 	assert.NoError(t, err)
 	// Now retrieve back the output of this thing.
-	retrievedMetadata, err := c.Retrieve(target, key)
+	retrievedMetadata, err := c.Retrieve(target)
 	assert.NoError(t, err)
 	cachedContents, err := ioutil.ReadFile("plz-out/gen/package/out1.txt")
 	assert.NoError(t, err)
@@ -96,8 +93,7 @@ func TestStoreAndRetrieveDir(t *testing.T) {
 	target.SetState(core.Built)
 	target.AddLabel(core.TestResultsDirLabel)
 	target.AddOutput("target2")
-	key, _ := hex.DecodeString("eb1ece425ca4f24d59d7db7393abae07284baa749acdbe1b5e8c8fd732f278ba")
-	err := c.Store(target, key, &core.BuildMetadata{
+	err := c.Store(target, &core.BuildMetadata{
 		Stdout: []byte("test stdout"),
 		Test:   true,
 	}, []string{
@@ -114,7 +110,7 @@ func TestStoreAndRetrieveDir(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Now retrieve them again
-	_, err = c.Retrieve(target, key)
+	_, err = c.Retrieve(target)
 	assert.NoError(t, err)
 	b, err := ioutil.ReadFile(path.Join(resultsDir, "1.xml"))
 	assert.NoError(t, err)
@@ -155,7 +151,7 @@ func TestExecuteBuild(t *testing.T) {
 	// on success).
 	target.PostBuildFunction = testFunction{}
 	target.Command = "echo hello && echo test > $OUT"
-	metadata, err := c.Build(0, target, []byte("stampystampystamp"))
+	metadata, err := c.Build(0, target)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hello\n"), metadata.Stdout)
 }
@@ -212,7 +208,7 @@ func TestNoAbsolutePaths(t *testing.T) {
 	target.AddOutput("remote_test")
 	target.AddSource(core.FileLabel{Package: "package", File: "file"})
 	target.AddTool(tool.Label)
-	cmd, _ := c.buildCommand(target, []byte("hello"), false)
+	cmd, _ := c.buildCommand(target, &pb.Directory{}, false)
 	for _, env := range cmd.EnvironmentVariables {
 		assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
 		assert.NotContains(t, env.Value, core.OutDir, "Env var %s contains %s: %s", env.Name, core.OutDir, env.Value)
@@ -227,7 +223,7 @@ func TestNoAbsolutePaths2(t *testing.T) {
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target5"})
 	target.AddOutput("remote_test")
 	target.AddTool(core.SystemPathLabel{Path: []string{os.Getenv("TMP_DIR")}, Name: "remote_test"})
-	cmd, _ := c.buildCommand(target, []byte("hello"), false)
+	cmd, _ := c.buildCommand(target, &pb.Directory{}, false)
 	for _, env := range cmd.EnvironmentVariables {
 		assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
 		assert.NotContains(t, env.Value, core.OutDir, "Env var %s contains %s: %s", env.Name, core.OutDir, env.Value)

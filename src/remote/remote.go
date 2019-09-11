@@ -174,7 +174,7 @@ func (c *Client) digestEnum(name string) pb.DigestFunction_Value {
 }
 
 // Store stores a set of artifacts for a single build target.
-func (c *Client) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) error {
+func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, files []string) error {
 	if err := c.CheckInitialised(); err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func (c *Client) Store(target *core.BuildTarget, key []byte, metadata *core.Buil
 		return err
 	}
 	// OK, now the blobs are uploaded, we also need to upload the Action itself.
-	digest, err := c.uploadAction(target, key, false, metadata.Test)
+	digest, err := c.uploadAction(target, false, metadata.Test)
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func (c *Client) Store(target *core.BuildTarget, key []byte, metadata *core.Buil
 
 // Retrieve fetches back a set of artifacts for a single build target.
 // Its outputs are written out to their final locations.
-func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMetadata, error) {
+func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
@@ -291,7 +291,7 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 	if err != nil {
 		return nil, err
 	}
-	cmd, err := c.buildCommand(target, key, isTest)
+	cmd, err := c.buildCommand(target, inputRoot, isTest)
 	if err != nil {
 		return nil, err
 	}
@@ -357,11 +357,11 @@ func (c *Client) Retrieve(target *core.BuildTarget, key []byte) (*core.BuildMeta
 }
 
 // Build executes a remote build of the given target.
-func (c *Client) Build(tid int, target *core.BuildTarget, stamp []byte) (*core.BuildMetadata, error) {
+func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	digest, err := c.uploadAction(target, stamp, true, false)
+	digest, err := c.uploadAction(target, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +375,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	if err := c.CheckInitialised(); err != nil {
 		return nil, nil, nil, err
 	}
-	digest, err := c.uploadAction(target, nil, true, true)
+	digest, err := c.uploadAction(target, true, true)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -515,7 +515,7 @@ func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.
 }
 
 // PrintHashes prints the action hashes for a target.
-func (c *Client) PrintHashes(target *core.BuildTarget, stamp []byte, isTest bool) {
+func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 	inputRoot, err := c.buildInputRoot(target, false, isTest)
 	if err != nil {
 		log.Fatalf("Unable to calculate input hash: %s", err)
@@ -523,7 +523,7 @@ func (c *Client) PrintHashes(target *core.BuildTarget, stamp []byte, isTest bool
 	fmt.Printf("Remote execution hashes:\n")
 	inputRootDigest := digestMessage(inputRoot)
 	fmt.Printf("  Input: %7d bytes: %s\n", inputRootDigest.SizeBytes, inputRootDigest.Hash)
-	cmd, _ := c.buildCommand(target, stamp, isTest)
+	cmd, _ := c.buildCommand(target, inputRoot, isTest)
 	commandDigest := digestMessage(cmd)
 	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {

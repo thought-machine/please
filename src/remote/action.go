@@ -17,7 +17,7 @@ import (
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
-func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, uploadInputRoot, isTest bool) (*pb.Digest, error) {
+func (c *Client) uploadAction(target *core.BuildTarget, uploadInputRoot, isTest bool) (*pb.Digest, error) {
 	var digest *pb.Digest
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
@@ -27,7 +27,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, uploadInpu
 		}
 		inputRootDigest, inputRootMsg := digestMessageContents(inputRoot)
 		ch <- &blob{Data: inputRootMsg, Digest: inputRootDigest}
-		cmd, err := c.buildCommand(target, stamp, isTest)
+		cmd, err := c.buildCommand(target, inputRoot, isTest)
 		if err != nil {
 			return err
 		}
@@ -46,7 +46,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, uploadInpu
 }
 
 // buildCommand builds the command for a single target.
-func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest bool) (*pb.Command, error) {
+func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest bool) (*pb.Command, error) {
 	if isTest {
 		return c.buildTestCommand(target)
 	}
@@ -74,10 +74,22 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest boo
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
 		},
-		EnvironmentVariables: buildEnv(core.StampedBuildEnvironment(c.state, target, stamp, ".")),
+		EnvironmentVariables: buildEnv(c.stampedBuildEnvironment(target, inputRoot)),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 	}, err
+}
+
+// stampedBuildEnvironment returns a build environment, optionally with a stamp if the
+// target requires one.
+func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb.Directory) []string {
+	if !target.Stamp {
+		return core.BuildEnvironment(c.state, target, ".")
+	}
+	// We generate the stamp ourselves from the input root.
+	// TODO(peterebden): it should include the target properties too...
+	stamp := c.state.PathHasher.NewHash().Sum(mustMarshal(inputRoot))
+	return core.StampedBuildEnvironment(c.state, target, stamp, ".")
 }
 
 // buildTestCommand builds a command for a target when testing.

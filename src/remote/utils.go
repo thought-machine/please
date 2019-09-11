@@ -30,17 +30,23 @@ func digestMessage(msg proto.Message) *pb.Digest {
 
 // digestMessageContents is like DigestMessage but returns the serialised contents as well.
 func digestMessageContents(msg proto.Message) (*pb.Digest, []byte) {
+	b := mustMarshal(msg)
+	sum := sha1.Sum(b)
+	return &pb.Digest{
+		Hash:      hex.EncodeToString(sum[:]),
+		SizeBytes: int64(len(b)),
+	}, b
+}
+
+// mustMarshal encodes a message to a binary string.
+func mustMarshal(msg proto.Message) []byte {
 	b, err := proto.Marshal(msg)
 	if err != nil {
 		// Not really sure if there is a valid possibility to bring us here (given that
 		// the messages in question have no required fields) so assume it won't happen :)
 		log.Fatalf("Failed to marshal message: %s", err)
 	}
-	sum := sha1.Sum(b)
-	return &pb.Digest{
-		Hash:      hex.EncodeToString(sum[:]),
-		SizeBytes: int64(len(b)),
-	}, b
+	return b
 }
 
 // lessThan returns true if the given semver instance is less than another one.

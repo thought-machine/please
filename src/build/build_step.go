@@ -197,33 +197,33 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		log.Debug("Nothing retrieved from remote cache for %s", target.Label)
 		return false
 	}
-	cacheKey := mustShortTargetHash(state, target)
-	if state.Cache != nil && !runRemotely {
-		// Note that ordering here is quite sensitive since the post-build function can modify
-		// what we would retrieve from the cache.
-		if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
-			log.Debug("Checking for post-build output for %s in cache...", target.Label)
-			if metadata := state.Cache.Retrieve(target, cacheKey, nil); metadata != nil {
-				storePostBuildOutput(target, metadata.Stdout)
-				postBuildOutput = string(metadata.Stdout)
-				if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
-					return err
-				} else if retrieveArtifacts() {
-					return writeRuleHash(state, target)
-				}
-			}
-		} else if retrieveArtifacts() {
-			return nil
-		}
-	}
-	var out []byte
+	var cacheKey, out []byte
 	if runRemotely {
-		m, err := state.RemoteClient.Build(tid, target, cacheKey)
+		m, err := state.RemoteClient.Build(tid, target)
 		if err != nil {
 			return err
 		}
 		out = m.Stdout
 	} else {
+		cacheKey = mustShortTargetHash(state, target)
+		if state.Cache != nil && !runRemotely {
+			// Note that ordering here is quite sensitive since the post-build function can modify
+			// what we would retrieve from the cache.
+			if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
+				log.Debug("Checking for post-build output for %s in cache...", target.Label)
+				if metadata := state.Cache.Retrieve(target, cacheKey, nil); metadata != nil {
+					storePostBuildOutput(target, metadata.Stdout)
+					postBuildOutput = string(metadata.Stdout)
+					if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
+						return err
+					} else if retrieveArtifacts() {
+						return writeRuleHash(state, target)
+					}
+				}
+			} else if retrieveArtifacts() {
+				return nil
+			}
+		}
 		if err := target.CheckSecrets(); err != nil {
 			return err
 		}
@@ -252,7 +252,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	if runRemotely {
 		if state.IsOriginalTarget(target.Label) {
 			state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
-			if _, err := state.RemoteClient.Retrieve(target, cacheKey); err != nil {
+			if _, err := state.RemoteClient.Retrieve(target); err != nil {
 				return fmt.Errorf("Failed to retrieve outputs for %s: %s", target.Label, err)
 			}
 		}

@@ -453,7 +453,7 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 		}
 	}
 	if state.RemoteClient != nil {
-		state.RemoteClient.PrintHashes(target, mustShortTargetHash(state, target), false)
+		state.RemoteClient.PrintHashes(target, false)
 	}
 }
 
