@@ -236,23 +236,17 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool)
 	done := map[string]bool{}
 	ch := make(chan SourcePair)
 
-	makeOut := func(out string) string {
-		if absoluteOuts {
-			return path.Join(RepoRoot, target.TestDir(), out)
-		}
-		return out
-	}
-
 	pushOut := func(src, out string) {
-		out = makeOut(out)
+		if absoluteOuts {
+			out = path.Join(RepoRoot, target.TestDir(), out)
+		}
 		if !done[out] {
 			ch <- SourcePair{src, out}
 			done[out] = true
 		}
 	}
 
-	var inner func(*BuildTarget)
-	inner = func(target *BuildTarget) {
+	go func() {
 		outDir := target.OutDir()
 		for _, out := range target.Outputs() {
 			pushOut(path.Join(outDir, out), out)
@@ -262,18 +256,8 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool)
 			for i, dataPath := range data.Paths(graph) {
 				pushOut(fullPaths[i], dataPath)
 			}
-			if label := data.Label(); label != nil {
-				for _, dep := range graph.TargetOrDie(*label).ExportedDependencies() {
-					inner(graph.TargetOrDie(dep))
-				}
-			}
 		}
-		for _, dep := range target.ExportedDependencies() {
-			inner(graph.TargetOrDie(dep))
-		}
-	}
-	go func() {
-		inner(target)
+
 		close(ch)
 	}()
 	return ch
