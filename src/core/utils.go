@@ -128,54 +128,32 @@ type SourcePair struct{ Src, Tmp string }
 // If includeTools is true it yields the target's tools as well.
 func IterSources(graph *BuildGraph, target *BuildTarget, includeTools bool) <-chan SourcePair {
 	ch := make(chan SourcePair)
-	done := map[BuildLabel]bool{}
-	donePaths := map[string]bool{}
+	done := map[string]bool{}
 	tmpDir := target.TmpDir()
+	go func() {
+		for input := range IterInputs(graph, target, includeTools) {
+			fullPaths := input.FullPaths(graph)
+			for i, sourcePath := range input.Paths(graph) {
+				if tmpPath := path.Join(tmpDir, sourcePath); !done[tmpPath] {
+					ch <- SourcePair{fullPaths[i], tmpPath}
+					done[tmpPath] = true
+				}
+			}
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+// IterInputs iterates all the inputs for a target.
+func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools bool) <-chan BuildInput {
+	ch := make(chan BuildInput)
+	done := map[BuildLabel]bool{}
 	var inner func(dependency *BuildTarget)
 	inner = func(dependency *BuildTarget) {
-		sources := dependency.AllSources()
-		if target == dependency {
-			// This is the current build rule, so link its sources.
-			if includeTools {
-				sources = append(sources, target.AllTools()...)
-			}
-			for _, source := range sources {
-				for _, providedSource := range recursivelyProvideSource(graph, target, source) {
-					fullPaths := providedSource.FullPaths(graph)
-					for i, sourcePath := range providedSource.Paths(graph) {
-						tmpPath := path.Join(tmpDir, sourcePath)
-						ch <- SourcePair{fullPaths[i], tmpPath}
-						donePaths[tmpPath] = true
-					}
-				}
-			}
-		} else {
-			// This is a dependency of the rule, so link its outputs.
-			outDir := dependency.OutDir()
-			for _, dep := range dependency.Outputs() {
-				depPath := path.Join(outDir, dep)
-				pkgName := dependency.Label.PackageName
-				tmpPath := path.Join(tmpDir, pkgName, dep)
-				if !donePaths[tmpPath] {
-					ch <- SourcePair{depPath, tmpPath}
-					donePaths[tmpPath] = true
-				}
-			}
-			// Mark any label-type outputs as done.
-			for _, out := range dependency.DeclaredOutputs() {
-				if LooksLikeABuildLabel(out) {
-					label := ParseBuildLabel(out, target.Label.PackageName)
-					done[label] = true
-				}
-			}
+		if dependency != target {
+			ch <- dependency.Label
 		}
-		// All the sources of this rule now count as done.
-		for _, source := range sources {
-			if label := source.Label(); label != nil && dependency.IsSourceOnlyDep(*label) {
-				done[*label] = true
-			}
-		}
-
 		done[dependency.Label] = true
 		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
 			for _, dep := range dependency.BuildDependencies() {
@@ -196,6 +174,19 @@ func IterSources(graph *BuildGraph, target *BuildTarget, includeTools bool) <-ch
 		}
 	}
 	go func() {
+		// Yield the sources of the current target
+		srcs := target.AllSources()
+		if includeTools {
+			srcs = append(srcs, target.AllTools()...)
+		}
+		for _, source := range srcs {
+			for _, src := range recursivelyProvideSource(graph, target, source) {
+				ch <- src
+				if label := src.Label(); label != nil && target.IsSourceOnlyDep(*label) {
+					done[*label] = true
+				}
+			}
+		}
 		inner(target)
 		close(ch)
 	}()
