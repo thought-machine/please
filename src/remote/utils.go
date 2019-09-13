@@ -1,7 +1,6 @@
 package remote
 
 import (
-	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -23,15 +22,15 @@ import (
 
 // digestMessage calculates the digest of a proto message as described in the
 // Digest message's comments.
-func digestMessage(msg proto.Message) *pb.Digest {
-	digest, _ := digestMessageContents(msg)
+func (c *Client) digestMessage(msg proto.Message) *pb.Digest {
+	digest, _ := c.digestMessageContents(msg)
 	return digest
 }
 
 // digestMessageContents is like DigestMessage but returns the serialised contents as well.
-func digestMessageContents(msg proto.Message) (*pb.Digest, []byte) {
+func (c *Client) digestMessageContents(msg proto.Message) (*pb.Digest, []byte) {
 	b := mustMarshal(msg)
-	sum := sha1.Sum(b)
+	sum := c.state.PathHasher.NewHash().Sum(b)
 	return &pb.Digest{
 		Hash:      hex.EncodeToString(sum[:]),
 		SizeBytes: int64(len(b)),

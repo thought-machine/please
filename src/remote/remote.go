@@ -201,7 +201,7 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 				if err != nil {
 					return err
 				}
-				digest, contents := digestMessageContents(&pb.Tree{
+				digest, contents := c.digestMessageContents(&pb.Tree{
 					Root:     root,
 					Children: children,
 				})
@@ -295,9 +295,9 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 	if err != nil {
 		return nil, err
 	}
-	digest := digestMessage(&pb.Action{
-		CommandDigest:   digestMessage(cmd),
-		InputRootDigest: digestMessage(inputRoot),
+	digest := c.digestMessage(&pb.Action{
+		CommandDigest:   c.digestMessage(cmd),
+		InputRootDigest: c.digestMessage(inputRoot),
 		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
@@ -521,15 +521,15 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 		log.Fatalf("Unable to calculate input hash: %s", err)
 	}
 	fmt.Printf("Remote execution hashes:\n")
-	inputRootDigest := digestMessage(inputRoot)
+	inputRootDigest := c.digestMessage(inputRoot)
 	fmt.Printf("  Input: %7d bytes: %s\n", inputRootDigest.SizeBytes, inputRootDigest.Hash)
 	cmd, _ := c.buildCommand(target, inputRoot, isTest)
-	commandDigest := digestMessage(cmd)
+	commandDigest := c.digestMessage(cmd)
 	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {
 		fmt.Printf("    URL: %s/command/%s/%s/%d/\n", c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, commandDigest.Hash, commandDigest.SizeBytes)
 	}
-	actionDigest := digestMessage(&pb.Action{
+	actionDigest := c.digestMessage(&pb.Action{
 		CommandDigest:   commandDigest,
 		InputRootDigest: inputRootDigest,
 		Timeout:         ptypes.DurationProto(timeout(target, isTest)),

@@ -25,15 +25,15 @@ func (c *Client) uploadAction(target *core.BuildTarget, uploadInputRoot, isTest 
 		if err != nil {
 			return err
 		}
-		inputRootDigest, inputRootMsg := digestMessageContents(inputRoot)
+		inputRootDigest, inputRootMsg := c.digestMessageContents(inputRoot)
 		ch <- &blob{Data: inputRootMsg, Digest: inputRootDigest}
 		cmd, err := c.buildCommand(target, inputRoot, isTest)
 		if err != nil {
 			return err
 		}
-		commandDigest, commandMsg := digestMessageContents(cmd)
+		commandDigest, commandMsg := c.digestMessageContents(cmd)
 		ch <- &blob{Data: commandMsg, Digest: commandDigest}
-		actionDigest, actionMsg := digestMessageContents(&pb.Action{
+		actionDigest, actionMsg := c.digestMessageContents(&pb.Action{
 			CommandDigest:   commandDigest,
 			InputRootDigest: inputRootDigest,
 			Timeout:         ptypes.DurationProto(timeout(target, isTest)),
@@ -156,7 +156,7 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 				if err != nil {
 					return err
 				}
-				digest, contents := digestMessageContents(dir)
+				digest, contents := c.digestMessageContents(dir)
 				ch <- &blob{
 					Digest: digest,
 					Data:   contents,
@@ -301,7 +301,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 			for _, d := range dir.Directories {
 				d.Digest = dfs(path.Join(name, d.Name))
 			}
-			digest, contents := digestMessageContents(dir)
+			digest, contents := c.digestMessageContents(dir)
 			if upload {
 				ch <- &blob{
 					Digest: digest,
