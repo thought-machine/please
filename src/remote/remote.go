@@ -55,6 +55,12 @@ type Client struct {
 	err               error // for initialisation
 	instance          string
 
+	// Stored output directories from previously executed targets.
+	// This isn't just a cache - it is needed for cases where we don't actually
+	// have the files physically on disk.
+	outputs     map[core.BuildLabel]*pb.Directory
+	outputMutex sync.RWMutex
+
 	// Server-sent cache properties
 	maxBlobBatchSize  int64
 	cacheWritable     bool
@@ -67,7 +73,11 @@ type Client struct {
 // New returns a new Client instance.
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
-	c := &Client{state: state, instance: state.Config.Remote.Instance}
+	c := &Client{
+		state:    state,
+		instance: state.Config.Remote.Instance,
+		outputs:  map[core.BuildLabel]*pb.Directory{},
+	}
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
 	return c
 }
@@ -365,8 +375,11 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if err != nil {
 		return nil, err
 	}
-	metadata, _, err := c.execute(tid, target, digest, target.BuildTimeout, target.PostBuildFunction != nil)
-	return metadata, err
+	metadata, ar, err := c.execute(tid, target, digest, target.BuildTimeout, target.PostBuildFunction != nil)
+	if err != nil {
+		return metadata, err
+	}
+	return metadata, c.setOutputs(target.Label, ar)
 }
 
 // Test executes a remote test of the given target.

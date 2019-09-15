@@ -20,6 +20,56 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+// targetOutputs returns the outputs for a previously executed target.
+// If it has not been executed this returns nil.
+func (c *Client) targetOutputs(label core.BuildLabel) *pb.Directory {
+	c.outputMutex.RLock()
+	defer c.outputMutex.RUnlock()
+	return c.outputs[label]
+}
+
+// setOutputs sets the outputs for a previously executed target.
+func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
+	o := &pb.Directory{
+		Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
+		Directories: make([]*pb.DirectoryNode, len(ar.OutputDirectories)),
+		Symlinks:    make([]*pb.SymlinkNode, len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks)),
+	}
+	for i, f := range ar.OutputFiles {
+		o.Files[i] = &pb.FileNode{
+			Name:         f.Path,
+			Digest:       f.Digest,
+			IsExecutable: f.IsExecutable,
+		}
+	}
+	for i, d := range ar.OutputDirectories {
+		// Awkwardly these are encoded as Trees rather than as anything directly useful.
+		// We need a DirectoryNode to feed in as an input later on, but the OutputDirectory
+		// we get back is quite a different structure at the top level.
+		// TODO(peterebden): Test this for real, this is theoretically OK but will only
+		//                   actually work if the remote end has uploaded the relevant
+		//                   blobs. If it has not we will probably have to do that here?
+		tree := &pb.Tree{}
+		if err := c.readByteStreamToProto(d.TreeDigest, tree); err != nil {
+			return err
+		}
+		o.Directories[i] = &pb.DirectoryNode{
+			Name:   d.Path,
+			Digest: c.digestMessage(tree.Root),
+		}
+	}
+	for i, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) {
+		o.Symlinks[i] = &pb.SymlinkNode{
+			Name:   s.Path,
+			Target: s.Target,
+		}
+	}
+	c.outputMutex.Lock()
+	defer c.outputMutex.Unlock()
+	c.outputs[label] = o
+	return nil
+}
+
 // digestMessage calculates the digest of a proto message as described in the
 // Digest message's comments.
 func (c *Client) digestMessage(msg proto.Message) *pb.Digest {
