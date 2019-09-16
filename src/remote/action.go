@@ -211,6 +211,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 	dirs := map[string]*pb.Directory{}
 	root := &pb.Directory{}
 	dirs["."] = root // Ensure the root is in there
+	dirs[""] = root  // Some things might try to name it this way
 
 	var ensureDirExists func(string, string) *pb.Directory
 	ensureDirExists = func(dir, child string) *pb.Directory {
