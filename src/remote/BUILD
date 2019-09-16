@@ -24,8 +24,8 @@ go_library(
 go_test(
     name = "remote_test",
     srcs = [
-        "remote_test.go",
         "impl_test.go",
+        "remote_test.go",
     ],
     data = ["test_data"],
     deps = [
