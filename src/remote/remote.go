@@ -256,7 +256,7 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 				Digest: digest,
 			})
 			if len(metadata.Stdout) > 0 {
-				h := c.state.PathHasher.NewHash().Sum(metadata.Stdout)
+				h := c.sum(metadata.Stdout)
 				digest := &pb.Digest{
 					SizeBytes: int64(len(metadata.Stdout)),
 					Hash:      hex.EncodeToString(h[:]),

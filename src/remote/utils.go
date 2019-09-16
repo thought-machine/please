@@ -20,6 +20,13 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+// sum calculates a checksum for a byte slice.
+func (c *Client) sum(b []byte) []byte {
+	h := c.state.PathHasher.NewHash()
+	h.Write(b)
+	return h.Sum(nil)
+}
+
 // targetOutputs returns the outputs for a previously executed target.
 // If it has not been executed this returns nil.
 func (c *Client) targetOutputs(label core.BuildLabel) *pb.Directory {
@@ -80,7 +87,7 @@ func (c *Client) digestMessage(msg proto.Message) *pb.Digest {
 // digestMessageContents is like DigestMessage but returns the serialised contents as well.
 func (c *Client) digestMessageContents(msg proto.Message) (*pb.Digest, []byte) {
 	b := mustMarshal(msg)
-	sum := c.state.PathHasher.NewHash().Sum(b)
+	sum := c.sum(b)
 	return &pb.Digest{
 		Hash:      hex.EncodeToString(sum[:]),
 		SizeBytes: int64(len(b)),

@@ -88,7 +88,7 @@ func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb
 	}
 	// We generate the stamp ourselves from the input root.
 	// TODO(peterebden): it should include the target properties too...
-	stamp := c.state.PathHasher.NewHash().Sum(mustMarshal(inputRoot))
+	stamp := c.sum(mustMarshal(inputRoot))
 	return core.StampedBuildEnvironment(c.state, target, stamp, ".")
 }
 
