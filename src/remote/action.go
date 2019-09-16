@@ -303,7 +303,9 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 		dfs = func(name string) *pb.Digest {
 			dir := dirs[name]
 			for _, d := range dir.Directories {
-				d.Digest = dfs(path.Join(name, d.Name))
+				if d.Digest != nil { // Happens when we are reusing an output from an earlier remote build
+					d.Digest = dfs(path.Join(name, d.Name))
+				}
 			}
 			digest, contents := c.digestMessageContents(dir)
 			if upload {
