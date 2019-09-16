@@ -2,10 +2,7 @@ go_library(
     name = "remote",
     srcs = glob(
         ["*.go"],
-        exclude = [
-            "*_test.go",
-            "test_impl.go",
-        ],
+        exclude = ["*_test.go"],
     ),
     visibility = ["PUBLIC"],
     deps = [
@@ -28,7 +25,7 @@ go_test(
     name = "remote_test",
     srcs = [
         "remote_test.go",
-        "test_impl.go",
+        "impl_test.go",
     ],
     data = ["test_data"],
     deps = [
@@ -39,5 +36,6 @@ go_test(
         "//third_party/go:protobuf",
         "//third_party/go:remote-apis",
         "//third_party/go:rpcstatus",
-        "//third_party/go:testify",    ],
+        "//third_party/go:testify",
+    ],
 )
