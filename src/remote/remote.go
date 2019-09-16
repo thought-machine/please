@@ -6,7 +6,6 @@ package remote
 import (
 	"bytes"
 	"context"
-	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -257,7 +256,7 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 				Digest: digest,
 			})
 			if len(metadata.Stdout) > 0 {
-				h := sha1.Sum(metadata.Stdout)
+				h := c.state.PathHasher.NewHash().Sum(metadata.Stdout)
 				digest := &pb.Digest{
 					SizeBytes: int64(len(metadata.Stdout)),
 					Hash:      hex.EncodeToString(h[:]),

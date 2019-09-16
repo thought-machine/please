@@ -2,6 +2,8 @@ package remote
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"os"
@@ -79,17 +81,20 @@ func (s *testServer) Reset() {
 }
 
 func (s *testServer) GetActionResult(ctx context.Context, req *pb.GetActionResultRequest) (*pb.ActionResult, error) {
+	s.checkDigest(req.ActionDigest)
 	ar, present := s.actionResults[req.ActionDigest.Hash]
 	if !present {
 		return nil, status.Errorf(codes.NotFound, "action result not found")
 	}
 	if req.InlineStdout && ar.StdoutDigest != nil {
+		s.checkDigest(ar.StdoutDigest)
 		ar.StdoutRaw = s.blobs[ar.StdoutDigest.Hash]
 	}
 	return ar, nil
 }
 
 func (s *testServer) UpdateActionResult(ctx context.Context, req *pb.UpdateActionResultRequest) (*pb.ActionResult, error) {
+	s.checkDigest(req.ActionDigest)
 	s.actionResults[req.ActionDigest.Hash] = req.ActionResult
 	return req.ActionResult, nil
 }
@@ -97,6 +102,7 @@ func (s *testServer) UpdateActionResult(ctx context.Context, req *pb.UpdateActio
 func (s *testServer) FindMissingBlobs(ctx context.Context, req *pb.FindMissingBlobsRequest) (*pb.FindMissingBlobsResponse, error) {
 	resp := &pb.FindMissingBlobsResponse{}
 	for _, d := range req.BlobDigests {
+		s.checkDigest(d)
 		if _, present := s.blobs[d.Hash]; !present {
 			resp.MissingBlobDigests = append(resp.MissingBlobDigests, d)
 		}
@@ -109,6 +115,7 @@ func (s *testServer) BatchUpdateBlobs(ctx context.Context, req *pb.BatchUpdateBl
 		Responses: make([]*pb.BatchUpdateBlobsResponse_Response, len(req.Requests)),
 	}
 	for i, r := range req.Requests {
+		s.checkDigest(r.Digest)
 		resp.Responses[i] = &pb.BatchUpdateBlobsResponse_Response{
 			Status: &rpcstatus.Status{},
 		}
@@ -127,6 +134,7 @@ func (s *testServer) BatchReadBlobs(ctx context.Context, req *pb.BatchReadBlobsR
 		Responses: make([]*pb.BatchReadBlobsResponse_Response, len(req.Digests)),
 	}
 	for i, d := range req.Digests {
+		s.checkDigest(d)
 		resp.Responses[i] = &pb.BatchReadBlobsResponse_Response{
 			Status: &rpcstatus.Status{},
 			Digest: d,
@@ -357,6 +365,36 @@ func (s *testServer) WaitExecution(*pb.WaitExecutionRequest, pb.Execution_WaitEx
 	return fmt.Errorf("not implemented")
 }
 
+// checkDigest checks a digest is structurally valid and panics if not.
+func (s *testServer) checkDigest(digest *pb.Digest) {
+	const length = sha256.Size * 2 // times 2 for the hex encoding
+	if len(digest.Hash) != length {
+		panic(fmt.Errorf("Incorrect digest length; was %d, should be %d", len(digest.Hash), length))
+	} else if _, err := hex.DecodeString(digest.Hash); err != nil {
+		panic(fmt.Errorf("Invalid hex encoding for digest: %s", err))
+	}
+}
+
+func (s *testServer) RecoverUnaryPanics(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("Panic in handler for %s: %s", info.FullMethod, r)
+			err = status.Errorf(codes.Unknown, "handler failed: %s", r)
+		}
+	}()
+	return handler(ctx, req)
+}
+
+func (s *testServer) RecoverStreamPanics(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("Panic in handler for %s: %s", info.FullMethod, r)
+			err = status.Errorf(codes.Unknown, "handler failed: %s", r)
+		}
+	}()
+	return handler(srv, ss)
+}
+
 var server = &testServer{}
 
 // A testFunction is something we can assign to a target's PostBuildFunction; it will
@@ -372,7 +410,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("Failed to listen on %s: %v", lis.Addr(), err)
 	}
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.UnaryInterceptor(server.RecoverUnaryPanics), grpc.StreamInterceptor(server.RecoverStreamPanics))
 	pb.RegisterCapabilitiesServer(s, server)
 	pb.RegisterActionCacheServer(s, server)
 	pb.RegisterContentAddressableStorageServer(s, server)
