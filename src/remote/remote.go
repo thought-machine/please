@@ -276,8 +276,10 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 	digest, err := c.uploadAction(target, false, metadata.Test)
 	if err != nil {
 		return err
-	} else if err := c.setOutputs(target.Label, ar); err != nil {
-		return err
+	} else if !metadata.Test {
+		if err := c.setOutputs(target.Label, ar); err != nil {
+			return err
+		}
 	}
 	// Now we can use that to upload the result itself.
 	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
