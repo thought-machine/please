@@ -23,7 +23,10 @@ go_library(
 
 go_test(
     name = "remote_test",
-    srcs = ["remote_test.go"],
+    srcs = [
+        "impl_test.go",
+        "remote_test.go",
+    ],
     data = ["test_data"],
     deps = [
         ":remote",

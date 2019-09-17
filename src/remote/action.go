@@ -17,7 +17,7 @@ import (
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
-func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, uploadInputRoot, isTest bool) (*pb.Digest, error) {
+func (c *Client) uploadAction(target *core.BuildTarget, uploadInputRoot, isTest bool) (*pb.Digest, error) {
 	var digest *pb.Digest
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
@@ -25,15 +25,15 @@ func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, uploadInpu
 		if err != nil {
 			return err
 		}
-		inputRootDigest, inputRootMsg := digestMessageContents(inputRoot)
+		inputRootDigest, inputRootMsg := c.digestMessageContents(inputRoot)
 		ch <- &blob{Data: inputRootMsg, Digest: inputRootDigest}
-		cmd, err := c.buildCommand(target, stamp, isTest)
+		cmd, err := c.buildCommand(target, inputRoot, isTest)
 		if err != nil {
 			return err
 		}
-		commandDigest, commandMsg := digestMessageContents(cmd)
+		commandDigest, commandMsg := c.digestMessageContents(cmd)
 		ch <- &blob{Data: commandMsg, Digest: commandDigest}
-		actionDigest, actionMsg := digestMessageContents(&pb.Action{
+		actionDigest, actionMsg := c.digestMessageContents(&pb.Action{
 			CommandDigest:   commandDigest,
 			InputRootDigest: inputRootDigest,
 			Timeout:         ptypes.DurationProto(timeout(target, isTest)),
@@ -46,7 +46,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, stamp []byte, uploadInpu
 }
 
 // buildCommand builds the command for a single target.
-func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest bool) (*pb.Command, error) {
+func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest bool) (*pb.Command, error) {
 	if isTest {
 		return c.buildTestCommand(target)
 	}
@@ -74,10 +74,22 @@ func (c *Client) buildCommand(target *core.BuildTarget, stamp []byte, isTest boo
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
 		},
-		EnvironmentVariables: buildEnv(core.StampedBuildEnvironment(c.state, target, stamp, ".")),
+		EnvironmentVariables: buildEnv(c.stampedBuildEnvironment(target, inputRoot)),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 	}, err
+}
+
+// stampedBuildEnvironment returns a build environment, optionally with a stamp if the
+// target requires one.
+func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb.Directory) []string {
+	if !target.Stamp {
+		return core.BuildEnvironment(c.state, target, ".")
+	}
+	// We generate the stamp ourselves from the input root.
+	// TODO(peterebden): it should include the target properties too...
+	stamp := c.sum(mustMarshal(inputRoot))
+	return core.StampedBuildEnvironment(c.state, target, stamp, ".")
 }
 
 // buildTestCommand builds a command for a target when testing.
@@ -144,7 +156,7 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 				if err != nil {
 					return err
 				}
-				digest, contents := digestMessageContents(dir)
+				digest, contents := c.digestMessageContents(dir)
 				ch <- &blob{
 					Digest: digest,
 					Data:   contents,
@@ -194,92 +206,96 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 	// This is pretty awkward; we need to recursively build this whole set of directories
 	// which does not match up to how we represent it (which is a series of files, with
 	// no corresponding directories, that are not usefully ordered for this purpose).
+	// We also need to handle the case of existing targets where we already know the
+	// directory structure but may not have the files physically on disk.
 	dirs := map[string]*pb.Directory{}
-	strip := 0
 	root := &pb.Directory{}
 	dirs["."] = root // Ensure the root is in there
-	var sources <-chan core.SourcePair
-	if isTest {
-		sources = core.IterRuntimeFiles(c.state.Graph, target, false)
-	} else {
-		sources = core.IterSources(c.state.Graph, target, true)
-		strip = len(target.TmpDir()) + 1 // Amount we have to strip off the start of the temp paths
+	dirs[""] = root  // Some things might try to name it this way
+
+	var ensureDirExists func(string, string) *pb.Directory
+	ensureDirExists = func(dir, child string) *pb.Directory {
+		if dir == "." || dir == "/" {
+			return root
+		}
+		dir = strings.TrimSuffix(dir, "/")
+		d, present := dirs[dir]
+		if !present {
+			d = &pb.Directory{}
+			dirs[dir] = d
+			dir, base := path.Split(dir)
+			ensureDirExists(dir, base)
+		}
+		// TODO(peterebden): The linear scan in hasChild is a bit suboptimal, we should
+		//                   really use the dirs map to determine this.
+		if child != "" && !hasChild(d, child) {
+			d.Directories = append(d.Directories, &pb.DirectoryNode{Name: child})
+		}
+		return d
 	}
+
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
-		for source := range sources {
-			prefix := source.Tmp[strip:]
-			if err := fs.Walk(source.Src, func(name string, isDir bool) error {
-				if isDir {
-					return nil // nothing to do
+		for input := range c.iterInputs(target, isTest) {
+			if l := input.Label(); l != nil {
+				if o := c.targetOutputs(*l); o != nil {
+					d := ensureDirExists(target.Label.PackageName, "")
+					d.Files = append(d.Files, o.Files...)
+					d.Directories = append(d.Directories, o.Directories...)
+					d.Symlinks = append(d.Symlinks, o.Symlinks...)
+					continue
 				}
-				dest := name
-				if len(name) > len(source.Src) {
-					dest = path.Join(prefix, name[len(source.Src)+1:])
-				}
-				if strings.HasPrefix(dest, core.GenDir) {
-					dest = strings.TrimLeft(strings.TrimPrefix(dest, core.GenDir), "/")
-				} else if strings.HasPrefix(dest, core.BinDir) {
-					dest = strings.TrimLeft(strings.TrimPrefix(dest, core.BinDir), "/")
-				}
-				// Ensure all parent directories exist
-				child := ""
-				dir := path.Dir(dest)
-				for d := dir; ; d = path.Dir(d) {
-					parent, present := dirs[d]
-					if !present {
-						parent = &pb.Directory{}
-						dirs[d] = parent
+				// If we get here we haven't built the target before. That is at least
+				// potentially OK - assume it has been built locally.
+			}
+			fullPaths := input.FullPaths(c.state.Graph)
+			for i, out := range input.Paths(c.state.Graph) {
+				in := fullPaths[i]
+				if err := fs.Walk(in, func(name string, isDir bool) error {
+					if isDir {
+						return nil // nothing to do
 					}
-					// TODO(peterebden): The linear scan in hasChild is a bit suboptimal, we should
-					//                   really use the dirs map to determine this.
-					if c := path.Base(child); child != "" && !hasChild(parent, c) {
-						parent.Directories = append(parent.Directories, &pb.DirectoryNode{Name: path.Base(child)})
-					}
-					child = d
-					if d == "." || d == "/" {
-						break
-					}
-				}
-				// Now handle the file itself
-				info, err := os.Lstat(name)
-				if err != nil {
-					return err
-				}
-				d := dirs[dir]
-				if info.Mode()&os.ModeSymlink != 0 {
-					link, err := os.Readlink(name)
+					dest := path.Join(out, name[len(in):])
+					d := ensureDirExists(path.Dir(dest), "")
+					// Now handle the file itself
+					info, err := os.Lstat(name)
 					if err != nil {
 						return err
 					}
-					d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
-						Name:   path.Base(dest),
-						Target: link,
+					if info.Mode()&os.ModeSymlink != 0 {
+						link, err := os.Readlink(name)
+						if err != nil {
+							return err
+						}
+						d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
+							Name:   path.Base(dest),
+							Target: link,
+						})
+						return nil
+					}
+					h, err := c.state.PathHasher.Hash(name, false, true)
+					if err != nil {
+						return err
+					}
+					digest := &pb.Digest{
+						Hash:      hex.EncodeToString(h),
+						SizeBytes: info.Size(),
+					}
+					d.Files = append(d.Files, &pb.FileNode{
+						Name:         path.Base(dest),
+						Digest:       digest,
+						IsExecutable: target.IsBinary,
 					})
+					if upload {
+						ch <- &blob{
+							File:   name,
+							Digest: digest,
+						}
+					}
 					return nil
-				}
-				h, err := c.state.PathHasher.Hash(name, false, true)
-				if err != nil {
+				}); err != nil {
 					return err
 				}
-				digest := &pb.Digest{
-					Hash:      hex.EncodeToString(h),
-					SizeBytes: info.Size(),
-				}
-				d.Files = append(d.Files, &pb.FileNode{
-					Name:         path.Base(dest),
-					Digest:       digest,
-					IsExecutable: target.IsBinary,
-				})
-				if upload {
-					ch <- &blob{
-						File:   name,
-						Digest: digest,
-					}
-				}
-				return nil
-			}); err != nil {
-				return err
 			}
 		}
 		// Now the protos are complete we need to calculate all the digests...
@@ -287,9 +303,11 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 		dfs = func(name string) *pb.Digest {
 			dir := dirs[name]
 			for _, d := range dir.Directories {
-				d.Digest = dfs(path.Join(name, d.Name))
+				if d.Digest == nil { // It's not nil if we're reusing outputs from an earlier call.
+					d.Digest = dfs(path.Join(name, d.Name))
+				}
 			}
-			digest, contents := digestMessageContents(dir)
+			digest, contents := c.digestMessageContents(dir)
 			if upload {
 				ch <- &blob{
 					Digest: digest,
@@ -302,6 +320,22 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 		return nil
 	})
 	return root, err
+}
+
+// iterInputs yields all the input files needed for a target.
+func (c *Client) iterInputs(target *core.BuildTarget, isTest bool) <-chan core.BuildInput {
+	if !isTest {
+		return core.IterInputs(c.state.Graph, target, true)
+	}
+	ch := make(chan core.BuildInput)
+	go func() {
+		ch <- target.Label
+		for _, datum := range target.Data {
+			ch <- datum
+		}
+		close(ch)
+	}()
+	return ch
 }
 
 // buildMetadata converts an ActionResult into one of our BuildMetadata protos.
