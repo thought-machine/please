@@ -28,7 +28,7 @@ func newSyncCache(state *core.BuildState, remoteOnly bool) core.Cache {
 		mplex.caches = append(mplex.caches, newDirCache(state.Config))
 	}
 	if state.RemoteClient != nil {
-		mplex.caches = append(mplex.caches, newRemoteCache(state.RemoteClient))
+		mplex.caches = append(mplex.caches, newRemoteCache(state))
 	}
 	if state.Config.Cache.RPCURL != "" {
 		cache, err := newRPCCache(state.Config)

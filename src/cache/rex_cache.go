@@ -11,17 +11,20 @@ import (
 )
 
 type rexCache struct {
-	client core.RemoteClient
+	client   core.RemoteClient
+	readonly bool
 }
 
-func newRemoteCache(client core.RemoteClient) *rexCache {
-	return &rexCache{client: client}
+func newRemoteCache(state *core.BuildState) *rexCache {
+	return &rexCache{client: state.RemoteClient, readonly: state.Config.Remote.ReadOnly}
 }
 
 func (rc *rexCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
-	log.Debug("Storing %s in remote cache...", target.Label)
-	if err := rc.client.Store(target, metadata, files); err != nil {
-		log.Warning("Error storing artifacts in remote cache: %s", err)
+	if !rc.readonly {
+		log.Debug("Storing %s in remote cache...", target.Label)
+		if err := rc.client.Store(target, metadata, files); err != nil {
+			log.Warning("Error storing artifacts in remote cache: %s", err)
+		}
 	}
 }
 
