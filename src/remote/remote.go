@@ -419,7 +419,21 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+	// First see if this execution is cached
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if ar, err := c.actionCacheClient.GetActionResult(ctx, &pb.GetActionResultRequest{
+		InstanceName: c.instance,
+		ActionDigest: digest,
+		InlineStdout: needStdout,
+	}); err == nil {
+		// This action already exists and has been cached.
+		if metadata, err := c.buildMetadata(ar, needStdout, false); err == nil {
+			log.Debug("Got remotely cached results for %s", target)
+			return metadata, ar, nil
+		}
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	stream, err := c.execClient.Execute(ctx, &pb.ExecuteRequest{
 		InstanceName: c.instance,
