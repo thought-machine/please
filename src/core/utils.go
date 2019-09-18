@@ -154,6 +154,12 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools bool) <-cha
 		if dependency != target {
 			ch <- dependency.Label
 		}
+		// All the sources of this target now count as done
+		for _, src := range dependency.AllSources() {
+			if label := src.Label(); label != nil && dependency.IsSourceOnlyDep(*label) {
+				done[*label] = true
+			}
+		}
 		done[dependency.Label] = true
 		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
 			for _, dep := range dependency.BuildDependencies() {
@@ -182,9 +188,6 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools bool) <-cha
 		for _, source := range srcs {
 			for _, src := range recursivelyProvideSource(graph, target, source) {
 				ch <- src
-				if label := src.Label(); label != nil && target.IsSourceOnlyDep(*label) {
-					done[*label] = true
-				}
 			}
 		}
 		inner(target)
