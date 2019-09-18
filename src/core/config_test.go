@@ -7,12 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jessevdk/go-flags"
+	flags "github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/thought-machine/please/src/cli"
 	"reflect"
 	"strings"
+
+	"github.com/thought-machine/please/src/cli"
 )
 
 func TestPlzConfigWorking(t *testing.T) {
@@ -231,6 +232,32 @@ func TestPassEnv(t *testing.T) {
 		"XOS=" + xos(),
 	}
 	assert.Equal(t, expected, config.GetBuildEnv())
+}
+
+func TestBuildPathWithPathEnvAndRemote(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/remote_execution.plzconfig"}, nil)
+	assert.NoError(t, err)
+	path := strings.Split(os.Getenv("PATH"), ":")
+	var expected []string
+	for _, v := range path {
+		if strings.HasPrefix(v, "~") || strings.HasPrefix(v, "/home") || v == "" {
+			continue
+		}
+		expected = append(expected, v)
+	}
+	expected = append([]string{os.Getenv("TMP_DIR")}, expected...)
+	expected = append([]string{config.Remote.HomeDir}, expected...)
+	expectedPath := strings.Join(expected, ":")
+	expectedBuildEnv := []string{
+		"ARCH=" + runtime.GOARCH,
+		"GOARCH=" + runtime.GOARCH,
+		"GOOS=" + runtime.GOOS,
+		"OS=" + runtime.GOOS,
+		"PATH=" + expectedPath,
+		"XARCH=x86_64",
+		"XOS=" + xos(),
+	}
+	assert.Equal(t, expectedBuildEnv, config.GetBuildEnv())
 }
 
 func TestBuildPathWithPathEnv(t *testing.T) {

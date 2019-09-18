@@ -1,0 +1,6 @@
+[Remote]
+URL = remote-build-machine
+instance = instance-1
+numExecutors = 1
+name = runner-1
+homedir = /home/agent/.please

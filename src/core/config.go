@@ -390,6 +390,7 @@ type Configuration struct {
 		Name         string `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
 		DisplayURL   string `help:"A URL to browse the remote server with (e.g. using buildbarn-browser). Only used when printing hashes."`
 		ReadOnly     bool   `help:"If true, prevents this client from writing to the remote storage. Is overridden if being used for execution."`
+		HomeDir      string `help:"The Please home directory on the build machine."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
@@ -570,18 +571,43 @@ func (config *Configuration) getBuildEnv(includePath bool) []string {
 		if v, isSet := os.LookupEnv(k); isSet {
 			if k == "PATH" {
 				// plz's install location always needs to be on the path.
-				v = ExpandHomePath(config.Please.Location) + ":" + v
+				if config.Remote.URL != "" {
+					paths := strings.Split(v, ":")
+					var res []string
+					for _, p := range paths {
+						if !strings.HasPrefix(p, "/home") && !strings.HasPrefix(p, "~") {
+							res = append(res, p)
+						}
+					}
+					v = config.Remote.HomeDir + ":" + strings.Join(paths, ":")
+				} else {
+					v = ExpandHomePath(config.Please.Location) + ":" + v
+				}
+
 				includePath = false // skip this in a bit
 			}
 			env = append(env, k+"="+v)
 		}
 	}
+
 	if includePath {
 		// Use a restricted PATH; it'd be easier for the user if we pass it through
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env = append(env, "PATH="+ExpandHomePath(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")))
+		if config.Remote.URL != "" {
+			var res []string
+			for _, p := range config.Build.Path {
+				if !strings.HasPrefix(p, "/home") && !strings.HasPrefix(p, "~") {
+					res = append(res, p)
+				}
+			}
+			path := append([]string{config.Remote.HomeDir, config.Please.Location}, res...)
+			env = append(env, "PATH="+strings.Join(path, ":"))
+			// env = append(env, "PATH="+strings.Join(append([]string{config.Remote.HomeDir}, res...), ":"))
+		} else {
+			env = append(env, "PATH="+ExpandHomePath(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")))
+		}
 	}
 
 	sort.Strings(env)
