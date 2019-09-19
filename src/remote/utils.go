@@ -194,6 +194,15 @@ func convertError(err *rpcstatus.Status) error {
 	return fmt.Errorf("%s", err.Message)
 }
 
+// wrap wraps a grpc error in an additional description, but retains its code.
+func wrap(err error, msg string, args ...interface{}) error {
+	s, ok := status.FromError(err)
+	if !ok {
+		return fmt.Errorf(fmt.Sprintf(msg, args...) + ": " + err.Error())
+	}
+	return status.Errorf(s.Code(), fmt.Sprintf(msg, args...)+": "+s.Message())
+}
+
 // timeout returns either a build or test timeout from a target.
 func timeout(target *core.BuildTarget, test bool) time.Duration {
 	if test {

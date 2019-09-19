@@ -387,15 +387,16 @@ func (c *Client) downloadDirectory(root string, dir *pb.Directory) error {
 			File:   path.Join(root, file.Name),
 			Mode:   0644 | extraFilePerms(file),
 		}); err != nil {
-			return err
+			return wrap(err, "Downloading %s", path.Join(root, file.Name))
 		}
 	}
 	for _, dir := range dir.Directories {
 		d := &pb.Directory{}
+		name := path.Join(root, dir.Name)
 		if err := c.readByteStreamToProto(dir.Digest, d); err != nil {
-			return err
-		} else if err := c.downloadDirectory(path.Join(root, dir.Name), d); err != nil {
-			return err
+			return wrap(err, "Downloading directory metadata for %s", name)
+		} else if err := c.downloadDirectory(name, d); err != nil {
+			return wrap(err, "Downloading directory %s", name)
 		}
 	}
 	for _, sym := range dir.Symlinks {
