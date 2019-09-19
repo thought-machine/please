@@ -1,3 +1,10 @@
+Version 14.1.4
+--------------
+
+    * Fix issues with flags for recent pip versions
+    * More fixes for remote execution / caching.
+
+
 Version 14.1.3
 --------------
 
