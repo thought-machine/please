@@ -333,7 +333,7 @@ func (c *Client) readByteStream(digest *pb.Digest) (io.ReadCloser, error) {
 		cancel()
 		return nil, err
 	}
-	return &byteStreamReader{stream: stream, cancel: cancel}, nil
+	return &byteStreamReader{stream: stream, cancel: cancel, digest: digest}, nil
 }
 
 // readAllByteStream returns a bytestream read in its entirety.
@@ -372,6 +372,7 @@ type byteStreamReader struct {
 	stream bs.ByteStream_ReadClient
 	cancel func()
 	buf    []byte
+	digest *pb.Digest
 }
 
 // Read implements the io.Reader interface
@@ -383,6 +384,7 @@ func (r *byteStreamReader) Read(into []byte) (int, error) {
 			copy(into, r.buf)
 			return len(r.buf), err
 		} else if err != nil {
+			log.Debug("Error downloading blob for %s/%d: %s", r.digest.Hash, r.digest.SizeBytes, err)
 			return 0, err
 		}
 		r.buf = append(r.buf, resp.Data...)

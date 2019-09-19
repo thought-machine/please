@@ -369,7 +369,7 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 		}
 		return nil
 	}); err != nil {
-		return nil, err
+		return nil, c.wrapActionErr(err, digest)
 	}
 	return c.buildMetadata(resp, needStdout, false)
 }
@@ -387,7 +387,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if err != nil {
 		return metadata, err
 	}
-	return metadata, c.setOutputs(target.Label, ar)
+	return metadata, c.wrapActionErr(c.setOutputs(target.Label, ar), digest)
 }
 
 // Test executes a remote test of the given target.
