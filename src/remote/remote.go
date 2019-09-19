@@ -90,6 +90,9 @@ func (c *Client) CheckInitialised() error {
 // init is passed to the sync.Once to do the actual initialisation.
 func (c *Client) init() {
 	c.err = func() error {
+		// Create a copy of the state where we can modify the config
+		c.state = c.state.ForConfig()
+		c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
 		// TODO(peterebden): We may need to add the ability to have multiple URLs which we
 		//                   would then query for capabilities to discover which is which.
 		// TODO(peterebden): Add support for TLS.

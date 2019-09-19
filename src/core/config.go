@@ -22,6 +22,7 @@ import (
 	"github.com/peterebden/gcfg"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // OsArch is the os/arch pair, like linux_amd64 etc.
@@ -171,6 +172,8 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		}
 	}
 
+	config.HomeDir = os.Getenv("HOME")
+
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"python.testrunner":  config.Python.TestRunner,
@@ -249,6 +252,7 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.RPCMaxMsgSize.UnmarshalFlag("200MiB")
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Display.SystemStats = true
+	config.Remote.HomeDir = "~"
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
 	config.Go.BuildIDTool = "go_buildid_replacer"
@@ -390,6 +394,7 @@ type Configuration struct {
 		Name         string `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
 		DisplayURL   string `help:"A URL to browse the remote server with (e.g. using buildbarn-browser). Only used when printing hashes."`
 		ReadOnly     bool   `help:"If true, prevents this client from writing to the remote storage. Is overridden if being used for execution."`
+		HomeDir      string `help:"The home directory on the build machine."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
@@ -484,6 +489,8 @@ type Configuration struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`
 
+	// HomeDir is not a config setting but is used to construct the path.
+	HomeDir string
 	// buildEnvStored is a cached form of BuildEnv.
 	buildEnvStored *storedBuildEnv
 }
@@ -564,13 +571,12 @@ func (config *Configuration) getBuildEnv(includePath bool) []string {
 		pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
 		env = append(env, pair)
 	}
-
 	// from the user's environment based on the PassEnv config keyword
 	for _, k := range config.Build.PassEnv {
 		if v, isSet := os.LookupEnv(k); isSet {
 			if k == "PATH" {
 				// plz's install location always needs to be on the path.
-				v = ExpandHomePath(config.Please.Location) + ":" + v
+				v = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir) + ":" + v
 				includePath = false // skip this in a bit
 			}
 			env = append(env, k+"="+v)
@@ -581,7 +587,7 @@ func (config *Configuration) getBuildEnv(includePath bool) []string {
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env = append(env, "PATH="+ExpandHomePath(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")))
+		env = append(env, "PATH="+fs.ExpandHomePathTo(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":"), config.HomeDir))
 	}
 
 	sort.Strings(env)
