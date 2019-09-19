@@ -58,7 +58,7 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 		//                   blobs. If it has not we will probably have to do that here?
 		tree := &pb.Tree{}
 		if err := c.readByteStreamToProto(d.TreeDigest, tree); err != nil {
-			return err
+			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 		o.Directories[i] = &pb.DirectoryNode{
 			Name:   d.Path,
@@ -92,6 +92,14 @@ func (c *Client) digestMessageContents(msg proto.Message) (*pb.Digest, []byte) {
 		Hash:      hex.EncodeToString(sum[:]),
 		SizeBytes: int64(len(b)),
 	}, b
+}
+
+// wrapActionErr wraps an error with information about the action related to it.
+func (c *Client) wrapActionErr(err error, actionDigest *pb.Digest) error {
+	if err == nil || c.state.Config.Remote.DisplayURL == "" {
+		return err
+	}
+	return wrap(err, "Action URL: %s/action/%s/%s/%d/\n", c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, actionDigest.Hash, actionDigest.SizeBytes)
 }
 
 // mustMarshal encodes a message to a binary string.
