@@ -351,7 +351,8 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 			tree := &pb.Tree{}
 			if err := c.readByteStreamToProto(dir.TreeDigest, tree); err != nil {
 				return err
-			} else if err := c.downloadDirectory(dirPath, tree.Root); err != nil {
+			}
+			if err := c.downloadDirectory(dirPath, tree.Root); err != nil {
 				return err
 			}
 			for _, child := range tree.Children {
@@ -487,6 +488,9 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 					return nil, nil, respErr
 				}
 				if response.Result == nil { // This seems to happen when things go wrong on the build server end.
+					if response.Status != nil {
+						return nil, nil, fmt.Errorf("Build server returned invalid result: %s", convertError(response.Status))
+					}
 					log.Debug("Bad result from build server: %+v", response)
 					return nil, nil, fmt.Errorf("Build server did not return valid result")
 				}

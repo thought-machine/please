@@ -53,12 +53,16 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 		// Awkwardly these are encoded as Trees rather than as anything directly useful.
 		// We need a DirectoryNode to feed in as an input later on, but the OutputDirectory
 		// we get back is quite a different structure at the top level.
-		// TODO(peterebden): Test this for real, this is theoretically OK but will only
-		//                   actually work if the remote end has uploaded the relevant
-		//                   blobs. If it has not we will probably have to do that here?
+		// TODO(peterebden): This is pretty crappy since we need to upload an extra blob here
+		//                   that we've just made up. Surely there is a better way we could
+		//                   be doing this?
 		tree := &pb.Tree{}
 		if err := c.readByteStreamToProto(d.TreeDigest, tree); err != nil {
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
+		}
+		digest, data := c.digestMessageContents(tree.Root)
+		if err := c.sendBlobs([]*pb.BatchUpdateBlobsRequest_Request{{Digest: digest, Data: data}}); err != nil {
+			return err
 		}
 		o.Directories[i] = &pb.DirectoryNode{
 			Name:   d.Path,
@@ -199,7 +203,11 @@ func convertError(err *rpcstatus.Status) error {
 	if err.Code == int32(codes.OK) {
 		return nil
 	}
-	return fmt.Errorf("%s", err.Message)
+	msg := fmt.Errorf("%s", err.Message)
+	for _, detail := range err.Details {
+		msg = fmt.Errorf("%s %s", msg, detail.Value)
+	}
+	return msg
 }
 
 // wrap wraps a grpc error in an additional description, but retains its code.
