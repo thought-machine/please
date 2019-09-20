@@ -4,9 +4,12 @@
 package cache
 
 import (
+	"bytes"
 	"encoding/hex"
+	"path"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/remote"
 )
 
@@ -38,6 +41,10 @@ func (rc *rexCache) Retrieve(target *core.BuildTarget, key []byte, files []strin
 			log.Warning("Error retrieving artifacts for %s from remote cache: %s", target.Label, err)
 		}
 		return nil
+	}
+	if needsPostBuildFile(target) {
+		// Need to explicitly write this guy
+		fs.WriteFile(bytes.NewReader(metadata.Stdout), path.Join(target.OutDir(), target.PostBuildOutputFileName()), 0644)
 	}
 	return metadata
 }
