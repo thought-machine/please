@@ -7,7 +7,7 @@ nearly any aspect of your build process.
 
 See http://please.build for more information.
 
-Currently Linux (tested on Ubuntu), OSX and FreeBSD are actively supported.
+Currently Linux (tested on Ubuntu), macOS and FreeBSD are actively supported.
 
 
 Getting Started
