@@ -13,7 +13,6 @@ go_library(
         "//src/process",
         "//third_party/go:logging",
         "//third_party/go:openpgp",
-        "//third_party/go:prompter",
         "//third_party/go:semver",
         "//third_party/go:xz",
     ],

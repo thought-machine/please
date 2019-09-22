@@ -189,16 +189,6 @@ go_get(
 )
 
 go_get(
-    name = "prompter",
-    get = "github.com/Songmu/prompter",
-    revision = "f49666b0047d12850875d771340e1d862d9e7a0c",
-    deps = [
-        ":go-isatty",
-        ":terminal",
-    ],
-)
-
-go_get(
     name = "levenshtein",
     get = "github.com/texttheater/golang-levenshtein/levenshtein",
     revision = "14026fface0cb806188c85e792a93d625dc37d0f",

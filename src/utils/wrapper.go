@@ -10,8 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Songmu/prompter"
-
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/scm"
@@ -38,7 +37,7 @@ func InitConfig(dir string, bazelCompatibility bool) {
 	if dir == "." {
 		if core.FindRepoRoot() {
 			config := path.Join(core.RepoRoot, core.ConfigFileName)
-			if !prompter.YN(fmt.Sprintf("You already seem to be in a plz repo (found %s). Continue?", config), false) {
+			if !cli.PromptYN(fmt.Sprintf("You already seem to be in a plz repo (found %s). Continue?", config), false) {
 				os.Exit(1)
 			}
 		}

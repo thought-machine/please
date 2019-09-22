@@ -3,12 +3,12 @@ go_library(
     srcs = ["gc.go"],
     visibility = ["PUBLIC"],
     deps = [
+        "//src/cli",
         "//src/core",
         "//src/fs",
         "//src/parse/asp",
         "//src/scm",
         "//third_party/go:logging",
-        "//third_party/go:prompter",
     ],
 )
 

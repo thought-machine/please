@@ -9,7 +9,6 @@ import (
 	"path"
 	"sort"
 
-	"github.com/Songmu/prompter"
 	"github.com/coreos/go-semver/semver"
 
 	"github.com/thought-machine/please/src/cli"
@@ -33,7 +32,7 @@ func clean(config *core.Configuration, manualUpdate bool) {
 	} else if config.Please.Autoclean {
 		log.Notice("Auto-cleaning old versions...")
 	} else if cli.StdErrIsATerminal && manualUpdate { // Only prompt on `plz update`, otherwise it is annoying
-		if !prompter.YN(fmt.Sprintf("Found %d old versions, will delete %d of them. OK?", len(versions), numToClean), true) {
+		if !cli.PromptYN(fmt.Sprintf("Found %d old versions, will delete %d of them. OK?", len(versions), numToClean), true) {
 			return
 		}
 	} else {
