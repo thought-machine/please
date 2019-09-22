@@ -309,6 +309,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 			panic(AddStackFrame(stmt.Pos, r))
 		}
 	}()
+	var ret pyObject
 	for _, stmt = range statements {
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
@@ -328,7 +329,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 			}
 			return pyList(s.evaluateExpressions(stmt.Return.Values))
 		} else if stmt.Ident != nil {
-			s.interpretIdentStatement(stmt.Ident)
+			ret = s.interpretIdentStatement(stmt.Ident)
 		} else if stmt.Assert != nil {
 			s.Assert(s.interpretExpression(stmt.Assert.Expr).IsTruthy(), stmt.Assert.Message)
 		} else if stmt.Raise != nil {
@@ -344,7 +345,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 			s.Error("Unknown statement") // Shouldn't happen, amirite?
 		}
 	}
-	return nil
+	return ret
 }
 
 func (s *scope) interpretIf(stmt *IfStatement) pyObject {
@@ -552,7 +553,7 @@ func (s *scope) interpretIdent(obj pyObject, expr *IdentExpr) pyObject {
 	return obj
 }
 
-func (s *scope) interpretIdentStatement(stmt *IdentStatement) {
+func (s *scope) interpretIdentStatement(stmt *IdentStatement) pyObject {
 	if stmt.Index != nil {
 		// Need to special-case these, because types are immutable so we can't return a modifiable reference to them.
 		obj := s.Lookup(stmt.Name)
@@ -572,17 +573,22 @@ func (s *scope) interpretIdentStatement(stmt *IdentStatement) {
 		for i, name := range stmt.Unpack.Names {
 			s.Set(name, l[i+1])
 		}
-	} else if stmt.Action.Property != nil {
-		s.interpretIdent(s.Lookup(stmt.Name).Property(stmt.Action.Property.Name), stmt.Action.Property)
-	} else if stmt.Action.Call != nil {
-		s.callObject(stmt.Name, s.Lookup(stmt.Name), stmt.Action.Call)
-	} else if stmt.Action.Assign != nil {
-		s.Set(stmt.Name, s.interpretExpression(stmt.Action.Assign))
-	} else if stmt.Action.AugAssign != nil {
-		// The only augmented assignment operation we support is +=, and it's implemented
-		// exactly as x += y -> x = x + y since that matches the semantics of Go types.
-		s.Set(stmt.Name, s.Lookup(stmt.Name).Operator(Add, s.interpretExpression(stmt.Action.AugAssign)))
+	} else if stmt.Action != nil {
+		if stmt.Action.Property != nil {
+			s.interpretIdent(s.Lookup(stmt.Name).Property(stmt.Action.Property.Name), stmt.Action.Property)
+		} else if stmt.Action.Call != nil {
+			s.callObject(stmt.Name, s.Lookup(stmt.Name), stmt.Action.Call)
+		} else if stmt.Action.Assign != nil {
+			s.Set(stmt.Name, s.interpretExpression(stmt.Action.Assign))
+		} else if stmt.Action.AugAssign != nil {
+			// The only augmented assignment operation we support is +=, and it's implemented
+			// exactly as x += y -> x = x + y since that matches the semantics of Go types.
+			s.Set(stmt.Name, s.Lookup(stmt.Name).Operator(Add, s.interpretExpression(stmt.Action.AugAssign)))
+		}
+	} else {
+		return s.Lookup(stmt.Name)
 	}
+	return nil
 }
 
 func (s *scope) interpretList(expr *List) pyList {

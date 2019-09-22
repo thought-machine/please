@@ -813,9 +813,6 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 			Label: "plz",
 			Validate: func(input string) error {
 				_, err := s.interpreter.parser.ParseData([]byte(input), "<stdin>")
-				if err != nil && isSingleIdent(input) != "" {
-					return nil
-				}
 				return err
 			},
 		}
@@ -826,11 +823,7 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 				log.Error("%s", err)
 			}
 		} else if stmts, err := s.interpreter.parser.ParseData([]byte(input), "<stdin>"); err != nil {
-			if val := isSingleIdent(input); val != "" {
-				showSingleIdent(s, val)
-			} else {
-				log.Error("Syntax error: %s", err)
-			}
+			log.Error("Syntax error: %s", err)
 		} else if ret, err := s.interpreter.interpretStatements(s, stmts); err != nil {
 			log.Error("%s", err)
 		} else if ret != nil && ret != None {
@@ -841,29 +834,4 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 	}
 	fmt.Printf("Debugger exited, continuing...\n")
 	return None
-}
-
-// showSingleIdent is a special case for a bare variable name, which is not normally
-// permitted but allowed as a nicely for the debugger.
-func showSingleIdent(s *scope, val string) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error("%s", r)
-		}
-	}()
-	locality := func(name string) string {
-		if s.LocalLookup(name) == nil {
-			return "nonlocal"
-		}
-		return "local"
-	}
-	o := s.Lookup(val)
-	fmt.Printf("%s: %s variable of type %s: %s\n", val, locality(val), o.Type(), o)
-}
-
-func isSingleIdent(input string) string {
-	if toks := newLexer(strings.NewReader(input)).All(); len(toks) == 2 && toks[0].Type == Ident && toks[1].Type == EOL {
-		return toks[0].Value
-	}
-	return ""
 }

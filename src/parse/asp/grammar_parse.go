@@ -481,6 +481,9 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 	}
 	_, reserved := keywords[i.Name]
 	p.assert(!reserved, tok, "Cannot operate on keyword or constant %s", i.Name)
+	if tok := p.l.Peek(); tok.Type == EOL {
+		return i
+	}
 	tok = p.l.Next()
 	switch tok.Type {
 	case ',':

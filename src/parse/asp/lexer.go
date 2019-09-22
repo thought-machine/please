@@ -154,15 +154,6 @@ func (l *lex) AssignFollows() bool {
 	return l.b[l.i] == '=' && l.b[l.i+1] != '='
 }
 
-// All returns all tokens from the lexer.
-func (l *lex) All() []Token {
-	ret := []Token{}
-	for tok := l.Next(); tok.Type != EOF; tok = l.Next() {
-		ret = append(ret, tok)
-	}
-	return ret
-}
-
 func (l *lex) stripSpaces() {
 	for l.b[l.i] == ' ' {
 		l.i++
