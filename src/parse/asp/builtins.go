@@ -808,6 +808,19 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 	s.interpreter.breakpointMutex.Lock()
 	defer s.interpreter.breakpointMutex.Unlock()
 	fmt.Printf("breakpoint() encountered in %s, entering interactive debugger...\n", s.contextPkg.Filename)
+	// This is a small hack to get the return value back from an ident statement, which
+	// is normally not available since we don't have implicit returns.
+	interpretStatements := func(stmts []*Statement) (ret pyObject, err error) {
+		if len(stmts) == 1 && stmts[0].Ident != nil {
+			defer func() {
+				if r := recover(); r != nil {
+					err = fmt.Errorf("%s", r)
+				}
+			}()
+			return s.interpretIdentStatement(stmts[0].Ident), nil
+		}
+		return s.interpreter.interpretStatements(s, stmts)
+	}
 	for {
 		prompt := promptui.Prompt{
 			Label: "plz",
@@ -824,7 +837,7 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 			}
 		} else if stmts, err := s.interpreter.parser.ParseData([]byte(input), "<stdin>"); err != nil {
 			log.Error("Syntax error: %s", err)
-		} else if ret, err := s.interpreter.interpretStatements(s, stmts); err != nil {
+		} else if ret, err := interpretStatements(stmts); err != nil {
 			log.Error("%s", err)
 		} else if ret != nil && ret != None {
 			fmt.Printf("%s\n", ret)
