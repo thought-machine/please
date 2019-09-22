@@ -492,3 +492,45 @@ go_get(
     get = "github.com/sourcegraph/go-lsp",
     revision = "0c7d621186c1c8684f3d97868f6970b326609cc7",
 )
+
+go_get(
+    name = "promptui",
+    get = "github.com/manifoldco/promptui/...",
+    revision = "v0.3.2",
+    deps = [
+        ":ansiterm",
+        ":readline",
+    ],
+)
+
+go_get(
+    name = "readline",
+    get = "github.com/chzyer/readline",
+    revision = "2972be24d48e78746da79ba8e24e8b488c9880de",
+)
+
+go_get(
+    name = "ansiterm",
+    get = "github.com/juju/ansiterm/...",
+    revision = "720a0952cc2ac777afc295d9861263e2a4cf96a1",
+    deps = [
+        ":colorable",
+        ":go-isatty",
+        ":vtclean",
+    ],
+)
+
+go_get(
+    name = "vtclean",
+    get = "github.com/lunixbochs/vtclean",
+    revision = "v1.0.0",
+)
+
+go_get(
+    name = "colorable",
+    get = "github.com/mattn/go-colorable",
+    revision = "v0.1.2",
+    deps = [
+        ":go-isatty",
+    ],
+)

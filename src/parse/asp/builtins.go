@@ -3,11 +3,14 @@ package asp
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"path"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/manifoldco/promptui"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -806,11 +809,20 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 	defer s.interpreter.breakpointMutex.Unlock()
 	fmt.Printf("breakpoint() encountered in %s, entering interactive debugger...\n", s.contextPkg.Filename)
 	for {
-		fmt.Printf("plz> ")
-		var in string
-		fmt.Scanln(&in)
-		stmts, err := s.interpreter.parser.ParseData([]byte(in), "<stdin>")
-		if err != nil {
+		prompt := promptui.Prompt{
+			Label: "plz",
+			Validate: func(input string) error {
+				_, err := s.interpreter.parser.ParseData([]byte(input), "<stdin>")
+				return err
+			},
+		}
+		if input, err := prompt.Run(); err != nil {
+			if err == io.EOF {
+				break
+			} else if err.Error() != "^C" {
+				log.Error("%s", err)
+			}
+		} else if stmts, err := s.interpreter.parser.ParseData([]byte(input), "<stdin>"); err != nil {
 			log.Error("Syntax error: %s", err)
 		} else if ret, err := s.interpreter.interpretStatements(s, stmts); err != nil {
 			log.Error("%s", err)
@@ -820,4 +832,6 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 			fmt.Printf("\n")
 		}
 	}
+	fmt.Printf("Debugger exited, continuing...\n")
+	return None
 }

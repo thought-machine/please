@@ -13,6 +13,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//third_party/go:logging",
+        "//third_party/go:promptui",
     ],
 )
 
