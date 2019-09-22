@@ -309,7 +309,6 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 			panic(AddStackFrame(stmt.Pos, r))
 		}
 	}()
-	var ret pyObject
 	for _, stmt = range statements {
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
@@ -329,7 +328,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 			}
 			return pyList(s.evaluateExpressions(stmt.Return.Values))
 		} else if stmt.Ident != nil {
-			ret = s.interpretIdentStatement(stmt.Ident)
+			s.interpretIdentStatement(stmt.Ident)
 		} else if stmt.Assert != nil {
 			s.Assert(s.interpretExpression(stmt.Assert.Expr).IsTruthy(), stmt.Assert.Message)
 		} else if stmt.Raise != nil {
@@ -345,7 +344,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 			s.Error("Unknown statement") // Shouldn't happen, amirite?
 		}
 	}
-	return ret
+	return nil
 }
 
 func (s *scope) interpretIf(stmt *IfStatement) pyObject {

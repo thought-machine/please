@@ -20,7 +20,7 @@ require (
 	github.com/karrick/godirwalk v1.7.8
 	github.com/kevinburke/go-bindata v3.13.0+incompatible // indirect
 	github.com/kisielk/gotool v1.0.0 // indirect
-	github.com/mattn/go-isatty v0.0.4 // indirect
+	github.com/manifoldco/promptui v0.3.2
 	github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518
 	github.com/peterebden/gcfg v1.3.0
 	github.com/peterebden/go-cli-init v1.0.0
