@@ -575,9 +575,9 @@ func (s *scope) interpretIdentStatement(stmt *IdentStatement) pyObject {
 		}
 	} else if stmt.Action != nil {
 		if stmt.Action.Property != nil {
-			s.interpretIdent(s.Lookup(stmt.Name).Property(stmt.Action.Property.Name), stmt.Action.Property)
+			return s.interpretIdent(s.Lookup(stmt.Name).Property(stmt.Action.Property.Name), stmt.Action.Property)
 		} else if stmt.Action.Call != nil {
-			s.callObject(stmt.Name, s.Lookup(stmt.Name), stmt.Action.Call)
+			return s.callObject(stmt.Name, s.Lookup(stmt.Name), stmt.Action.Call)
 		} else if stmt.Action.Assign != nil {
 			s.Set(stmt.Name, s.interpretExpression(stmt.Action.Assign))
 		} else if stmt.Action.AugAssign != nil {

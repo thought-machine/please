@@ -1,4 +1,4 @@
-x = go_binary(
+go_binary(
     name = "build_langserver",
     srcs = ["langserver_main.go"],
     visibility = ["PUBLIC"],
@@ -9,5 +9,3 @@ x = go_binary(
         "//tools/build_langserver/lsp",
     ],
 )
-
-breakpoint()
