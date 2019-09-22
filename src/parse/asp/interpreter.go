@@ -11,12 +11,13 @@ import (
 
 // An interpreter holds the package-independent state about our parsing process.
 type interpreter struct {
-	scope       *scope
-	parser      *Parser
-	subincludes map[string]pyDict
-	config      map[*core.Configuration]*pyConfig
-	mutex       sync.RWMutex
-	configMutex sync.RWMutex
+	scope           *scope
+	parser          *Parser
+	subincludes     map[string]pyDict
+	config          map[*core.Configuration]*pyConfig
+	mutex           sync.RWMutex
+	configMutex     sync.RWMutex
+	breakpointMutex sync.Mutex
 }
 
 // newInterpreter creates and returns a new interpreter instance.
@@ -52,7 +53,8 @@ func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements 
 	}
 	defer i.scope.SetAll(s.Freeze(), true)
 	if statements != nil {
-		return i.interpretStatements(s, statements)
+		_, err := i.interpretStatements(s, statements)
+		return err
 	} else if len(contents) != 0 {
 		stmts, err := i.parser.ParseData(contents, filename)
 		return i.loadBuiltinStatements(s, stmts, err)
@@ -67,7 +69,8 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 		return err
 	}
 	i.optimiseExpressions(statements)
-	return i.interpretStatements(s, i.parser.optimise(statements))
+	_, err = i.interpretStatements(s, i.parser.optimise(statements))
+	return err
 }
 
 // interpretAll runs a series of statements in the context of the given package.
@@ -79,7 +82,7 @@ func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (
 	// mutating operations like .setdefault() otherwise.
 	s.config = i.pkgConfig(pkg).Copy()
 	s.Set("CONFIG", s.config)
-	err = i.interpretStatements(s, statements)
+	_, err = i.interpretStatements(s, statements)
 	if err == nil {
 		s.Callback = true // From here on, if anything else uses this scope, it's in a post-build callback.
 	}
@@ -87,7 +90,7 @@ func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (
 }
 
 // interpretStatements runs a series of statements in the context of the given scope.
-func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (err error) {
+func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (ret pyObject, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -97,8 +100,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (er
 			}
 		}
 	}()
-	s.interpretStatements(statements)
-	return nil // Would have panicked if there was an error
+	return s.interpretStatements(statements), nil // Would have panicked if there was an error
 }
 
 // Subinclude returns the global values corresponding to subincluding the given file.

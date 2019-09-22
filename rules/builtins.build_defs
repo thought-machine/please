@@ -243,3 +243,8 @@ def licenses(licences):
 def json(value) -> str:
     """Returns a JSON-formatted representation of a plz value"""
     pass
+
+
+def breakpoint():
+    """Breaks into an interactive debugging session."""
+    pass

@@ -50,6 +50,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "get_command", getCommand)
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
+	setNativeCode(s, "breakpoint", breakpoint)
 	stringMethods = map[string]*pyFunc{
 		"join":       setNativeCode(s, "join", strJoin),
 		"split":      setNativeCode(s, "split", strSplit),
@@ -796,4 +797,27 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	log.Debug("Registering subrepo %s in package %s", sr.Name, s.pkg.Label())
 	s.state.Graph.MaybeAddSubrepo(sr)
 	return pyString("///" + sr.Name)
+}
+
+// breakpoint implements an interactive debugger for the breakpoint() builtin
+func breakpoint(s *scope, args []pyObject) pyObject {
+	// Take this mutex to ensure only one debugger runs at a time
+	s.interpreter.breakpointMutex.Lock()
+	defer s.interpreter.breakpointMutex.Unlock()
+	fmt.Printf("breakpoint() encountered in %s, entering interactive debugger...\n", s.contextPkg.Filename)
+	for {
+		fmt.Printf("plz> ")
+		var in string
+		fmt.Scanln(&in)
+		stmts, err := s.interpreter.parser.ParseData([]byte(in), "<stdin>")
+		if err != nil {
+			log.Error("Syntax error: %s", err)
+		} else if ret, err := s.interpreter.interpretStatements(s, stmts); err != nil {
+			log.Error("%s", err)
+		} else if ret != nil && ret != None {
+			fmt.Printf("%s\n", ret)
+		} else {
+			fmt.Printf("\n")
+		}
+	}
 }
