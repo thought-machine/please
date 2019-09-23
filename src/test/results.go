@@ -77,7 +77,7 @@ func LoadPreviousFailures(filename string) ([]core.BuildLabel, []string) {
 	labels := []core.BuildLabel{}
 	args := []string{}
 	for _, suite := range junit.TestSuites {
-		if suite.Failures > 0 {
+		if suite.Failures > 0 || suite.Errors > 0 {
 			labels = append(labels, core.ParseBuildLabel(suite.Name, "")) // These always have complete labels
 			for _, c := range suite.TestCases {
 				if c.Failure != nil || c.Error != nil {

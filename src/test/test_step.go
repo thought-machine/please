@@ -157,7 +157,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	// Fresh set of results for this target.
 	target.Results = core.TestSuite{
 		Package:   strings.Replace(target.Label.PackageName, "/", ".", -1),
-		Name:      target.Label.Name,
+		Name:      target.Label.String(),
 		Timestamp: time.Now().Format(time.RFC3339),
 	}
 
@@ -332,7 +332,7 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFil
 	parsedSuite := parseTestOutput(metadata.Stdout, string(metadata.Stderr), err, duration, target, outputFile, resultsData)
 	return core.TestSuite{
 		Package:    strings.Replace(target.Label.PackageName, "/", ".", -1),
-		Name:       target.Label.Name,
+		Name:       target.Label.String(),
 		Duration:   duration,
 		TimedOut:   err == context.DeadlineExceeded,
 		Properties: parsedSuite.Properties,
@@ -386,7 +386,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 				TestCases: []core.TestCase{
 					{
 						// Need a name so that multiple runs get collated correctly.
-						Name: target.Results.Name,
+						Name: target.Label.String(),
 						Executions: []core.TestExecution{
 							{
 								Duration: &duration,
@@ -401,7 +401,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 			return core.TestSuite{
 				TestCases: []core.TestCase{
 					{
-						Name: target.Results.Name,
+						Name: target.Label.String(),
 						Executions: []core.TestExecution{
 							{
 								Duration: &duration,
@@ -420,7 +420,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 			return core.TestSuite{
 				TestCases: []core.TestCase{
 					{
-						Name: target.Results.Name,
+						Name: target.Label.String(),
 						Executions: []core.TestExecution{
 							{
 								Duration: &duration,
@@ -440,7 +440,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 		return core.TestSuite{
 			TestCases: []core.TestCase{
 				{
-					Name: target.Results.Name,
+					Name: target.Label.String(),
 					Executions: []core.TestExecution{
 						{
 							Duration: &duration,
@@ -464,7 +464,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 			return core.TestSuite{
 				TestCases: []core.TestCase{
 					{
-						Name: target.Results.Name,
+						Name: target.Label.String(),
 						Executions: []core.TestExecution{
 							{
 								Duration: &duration,
@@ -507,7 +507,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 		// Add a failure result to the test so it shows up in the final aggregation.
 		results.TestCases = append(results.TestCases, core.TestCase{
 			// We don't know the type of test we ran :(
-			Name: target.Results.Name,
+			Name: target.Label.String(),
 			Executions: []core.TestExecution{
 				{
 					Duration: &duration,
@@ -524,7 +524,7 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 	} else if runError == nil && results.Failures() != 0 {
 		results.TestCases = append(results.TestCases, core.TestCase{
 			// We don't know the type of test we ran :(
-			Name: target.Results.Name,
+			Name: target.Label.String(),
 			Executions: []core.TestExecution{
 				{
 					Duration: &duration,
