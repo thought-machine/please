@@ -75,6 +75,10 @@
           - returns the basename of a file</li>
 	    <li><code><span class="fn-name">dirname</span><span class="fn-p">(</span><span class="fn-arg">path</span><span class="fn-p">)</span></code>
           - returns the directory name of a file.</li>
+	    <li><code><span class="fn-name">breakpoint</span><span class="fn-p">()</span></code>
+          - breaks into an interactive debugger allowing inspection of the current scope.
+          It would be a good idea to run Please with the <code>-p</code> / <code>--plain_output</code>
+          flag if intending to use this.</li>
       </ul>
     </p>
 
@@ -136,13 +140,21 @@
       may or may not be displayed depending on the <code>-v</code> flag; by default only
       <code>warning</code> and above are visible.
       <ul>
-	    <li><code><span class="fn-name">log.debug</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code></li>
-	    <li><code><span class="fn-name">log.info</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code></li>
-	    <li><code><span class="fn-name">log.notice</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code></li>
-	    <li><code><span class="fn-name">log.warning</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code></li>
-	    <li><code><span class="fn-name">log.error</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code></li>
+	    <li><code><span class="fn-name">log.debug</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
+        - the lowest level of messages, output at this level is very verbose.</li>
+	    <li><code><span class="fn-name">log.info</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
+        - Informational messages, typically this is the highest level per-target information is logged at.</li>
+	    <li><code><span class="fn-name">log.notice</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
+        - Messages of general interest during the build; it is rare for this to be appropriate from a BUILD file.</li>
+	    <li><code><span class="fn-name">log.warning</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
+        - A warning message that something seems wrong, but it may be recoverable.</li>
+	    <li><code><span class="fn-name">log.error</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
+          - A message indicating that something has gone wrong and it will not be recoverable.
+          This is usually followed shortly by some kind of failure.</li>
 	    <li><code><span class="fn-name">log.fatal</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-          - this will cause the process to exit immediately and unsuccessfully.</li>
+          - Indicates that something has gone catastrophically wrong, and causes the process to exit immediately and unsuccessfully.
+          Usually you are better off using <code>assert</code> or <code>raise</code> to
+          indicate failure, since plz can handle those and annotate with additional output.</li>
       </ul>
     </p>
 

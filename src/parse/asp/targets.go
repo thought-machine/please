@@ -419,7 +419,8 @@ func (f *preBuildFunction) Call(target *core.BuildTarget) error {
 	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label))
 	s.Callback = true
 	s.Set(f.f.args[0], pyString(target.Label.Name))
-	return annotateCallbackError(s, target, s.interpreter.interpretStatements(s, f.f.code))
+	_, err := s.interpreter.interpretStatements(s, f.f.code)
+	return annotateCallbackError(s, target, err)
 }
 
 func (f *preBuildFunction) String() string {
@@ -437,7 +438,8 @@ func (f *postBuildFunction) Call(target *core.BuildTarget, output string) error 
 	s.Callback = true
 	s.Set(f.f.args[0], pyString(target.Label.Name))
 	s.Set(f.f.args[1], fromStringList(strings.Split(strings.TrimSpace(output), "\n")))
-	return annotateCallbackError(s, target, s.interpreter.interpretStatements(s, f.f.code))
+	_, err := s.interpreter.interpretStatements(s, f.f.code)
+	return annotateCallbackError(s, target, err)
 }
 
 func (f *postBuildFunction) String() string {

@@ -11,12 +11,13 @@ import (
 
 // An interpreter holds the package-independent state about our parsing process.
 type interpreter struct {
-	scope       *scope
-	parser      *Parser
-	subincludes map[string]pyDict
-	config      map[*core.Configuration]*pyConfig
-	mutex       sync.RWMutex
-	configMutex sync.RWMutex
+	scope           *scope
+	parser          *Parser
+	subincludes     map[string]pyDict
+	config          map[*core.Configuration]*pyConfig
+	mutex           sync.RWMutex
+	configMutex     sync.RWMutex
+	breakpointMutex sync.Mutex
 }
 
 // newInterpreter creates and returns a new interpreter instance.
@@ -52,7 +53,8 @@ func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements 
 	}
 	defer i.scope.SetAll(s.Freeze(), true)
 	if statements != nil {
-		return i.interpretStatements(s, statements)
+		_, err := i.interpretStatements(s, statements)
+		return err
 	} else if len(contents) != 0 {
 		stmts, err := i.parser.ParseData(contents, filename)
 		return i.loadBuiltinStatements(s, stmts, err)
@@ -67,7 +69,8 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 		return err
 	}
 	i.optimiseExpressions(statements)
-	return i.interpretStatements(s, i.parser.optimise(statements))
+	_, err = i.interpretStatements(s, i.parser.optimise(statements))
+	return err
 }
 
 // interpretAll runs a series of statements in the context of the given package.
@@ -79,7 +82,7 @@ func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (
 	// mutating operations like .setdefault() otherwise.
 	s.config = i.pkgConfig(pkg).Copy()
 	s.Set("CONFIG", s.config)
-	err = i.interpretStatements(s, statements)
+	_, err = i.interpretStatements(s, statements)
 	if err == nil {
 		s.Callback = true // From here on, if anything else uses this scope, it's in a post-build callback.
 	}
@@ -87,7 +90,7 @@ func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (
 }
 
 // interpretStatements runs a series of statements in the context of the given scope.
-func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (err error) {
+func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (ret pyObject, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -97,8 +100,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (er
 			}
 		}
 	}()
-	s.interpretStatements(statements)
-	return nil // Would have panicked if there was an error
+	return s.interpretStatements(statements), nil // Would have panicked if there was an error
 }
 
 // Subinclude returns the global values corresponding to subincluding the given file.
@@ -550,7 +552,7 @@ func (s *scope) interpretIdent(obj pyObject, expr *IdentExpr) pyObject {
 	return obj
 }
 
-func (s *scope) interpretIdentStatement(stmt *IdentStatement) {
+func (s *scope) interpretIdentStatement(stmt *IdentStatement) pyObject {
 	if stmt.Index != nil {
 		// Need to special-case these, because types are immutable so we can't return a modifiable reference to them.
 		obj := s.Lookup(stmt.Name)
@@ -570,17 +572,22 @@ func (s *scope) interpretIdentStatement(stmt *IdentStatement) {
 		for i, name := range stmt.Unpack.Names {
 			s.Set(name, l[i+1])
 		}
-	} else if stmt.Action.Property != nil {
-		s.interpretIdent(s.Lookup(stmt.Name).Property(stmt.Action.Property.Name), stmt.Action.Property)
-	} else if stmt.Action.Call != nil {
-		s.callObject(stmt.Name, s.Lookup(stmt.Name), stmt.Action.Call)
-	} else if stmt.Action.Assign != nil {
-		s.Set(stmt.Name, s.interpretExpression(stmt.Action.Assign))
-	} else if stmt.Action.AugAssign != nil {
-		// The only augmented assignment operation we support is +=, and it's implemented
-		// exactly as x += y -> x = x + y since that matches the semantics of Go types.
-		s.Set(stmt.Name, s.Lookup(stmt.Name).Operator(Add, s.interpretExpression(stmt.Action.AugAssign)))
+	} else if stmt.Action != nil {
+		if stmt.Action.Property != nil {
+			return s.interpretIdent(s.Lookup(stmt.Name).Property(stmt.Action.Property.Name), stmt.Action.Property)
+		} else if stmt.Action.Call != nil {
+			return s.callObject(stmt.Name, s.Lookup(stmt.Name), stmt.Action.Call)
+		} else if stmt.Action.Assign != nil {
+			s.Set(stmt.Name, s.interpretExpression(stmt.Action.Assign))
+		} else if stmt.Action.AugAssign != nil {
+			// The only augmented assignment operation we support is +=, and it's implemented
+			// exactly as x += y -> x = x + y since that matches the semantics of Go types.
+			s.Set(stmt.Name, s.Lookup(stmt.Name).Operator(Add, s.interpretExpression(stmt.Action.AugAssign)))
+		}
+	} else {
+		return s.Lookup(stmt.Name)
 	}
+	return nil
 }
 
 func (s *scope) interpretList(expr *List) pyList {

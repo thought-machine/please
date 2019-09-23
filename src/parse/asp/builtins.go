@@ -3,11 +3,14 @@ package asp
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"path"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/manifoldco/promptui"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -50,6 +53,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "get_command", getCommand)
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
+	setNativeCode(s, "breakpoint", breakpoint)
 	stringMethods = map[string]*pyFunc{
 		"join":       setNativeCode(s, "join", strJoin),
 		"split":      setNativeCode(s, "split", strSplit),
@@ -796,4 +800,51 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	log.Debug("Registering subrepo %s in package %s", sr.Name, s.pkg.Label())
 	s.state.Graph.MaybeAddSubrepo(sr)
 	return pyString("///" + sr.Name)
+}
+
+// breakpoint implements an interactive debugger for the breakpoint() builtin
+func breakpoint(s *scope, args []pyObject) pyObject {
+	// Take this mutex to ensure only one debugger runs at a time
+	s.interpreter.breakpointMutex.Lock()
+	defer s.interpreter.breakpointMutex.Unlock()
+	fmt.Printf("breakpoint() encountered in %s, entering interactive debugger...\n", s.contextPkg.Filename)
+	// This is a small hack to get the return value back from an ident statement, which
+	// is normally not available since we don't have implicit returns.
+	interpretStatements := func(stmts []*Statement) (ret pyObject, err error) {
+		if len(stmts) == 1 && stmts[0].Ident != nil {
+			defer func() {
+				if r := recover(); r != nil {
+					err = fmt.Errorf("%s", r)
+				}
+			}()
+			return s.interpretIdentStatement(stmts[0].Ident), nil
+		}
+		return s.interpreter.interpretStatements(s, stmts)
+	}
+	for {
+		prompt := promptui.Prompt{
+			Label: "plz",
+			Validate: func(input string) error {
+				_, err := s.interpreter.parser.ParseData([]byte(input), "<stdin>")
+				return err
+			},
+		}
+		if input, err := prompt.Run(); err != nil {
+			if err == io.EOF {
+				break
+			} else if err.Error() != "^C" {
+				log.Error("%s", err)
+			}
+		} else if stmts, err := s.interpreter.parser.ParseData([]byte(input), "<stdin>"); err != nil {
+			log.Error("Syntax error: %s", err)
+		} else if ret, err := interpretStatements(stmts); err != nil {
+			log.Error("%s", err)
+		} else if ret != nil && ret != None {
+			fmt.Printf("%s\n", ret)
+		} else {
+			fmt.Printf("\n")
+		}
+	}
+	fmt.Printf("Debugger exited, continuing...\n")
+	return None
 }

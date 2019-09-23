@@ -15,9 +15,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Songmu/prompter"
 	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/scm"
@@ -44,7 +44,7 @@ func GarbageCollect(state *core.BuildState, filter, targets, keepTargets []core.
 		}
 		if dryRun {
 			return
-		} else if !noPrompt && !prompter.YN("Remove these targets / files?", false) {
+		} else if !noPrompt && !cli.PromptYN("Remove these targets / files?", false) {
 			os.Exit(1)
 		}
 		if !srcsOnly {
