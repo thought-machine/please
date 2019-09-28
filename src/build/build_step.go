@@ -102,7 +102,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	var postBuildOutput string
 	if state.PrepareOnly && state.IsOriginalTarget(target.Label) {
 		if target.IsFilegroup {
-			return fmt.Errorf("Filegroup targets don't have temporary directories")
+			return fmt.Errorf("Can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
 		}
 		if err := prepareDirectories(target); err != nil {
 			return err
@@ -110,6 +110,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		if err := prepareSources(state.Graph, target); err != nil {
 			return err
 		}
+		// This is important to catch errors here where we will recover the panic, rather
+		// than later when we shell into the temp dir.
+		mustShortTargetHash(state, target)
 		return errStop
 	}
 	if target.IsHashFilegroup {
