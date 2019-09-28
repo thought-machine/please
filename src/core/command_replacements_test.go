@@ -122,7 +122,7 @@ func TestToolReplacementSubrepo(t *testing.T) {
 	target1.Tools = append(target1.Tools, target2.Label)
 
 	wd, _ := os.Getwd()
-	expected := quote(path.Join(wd, "plz-out/gen/path/to/target2.py"))
+	expected := quote(path.Join(wd, "plz-out/gen/subrepo/path/to/target2.py"))
 	cmd, _ := ReplaceSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }

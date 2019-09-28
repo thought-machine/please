@@ -118,7 +118,7 @@ func (pkg *Package) HasSubinclude(label BuildLabel) bool {
 
 // SubrepoArchName returns a subrepo name, modified for the architecture of this package if it's not the host.
 func (pkg *Package) SubrepoArchName(subrepo string) string {
-	if subrepo != "" && pkg.Subrepo != nil && pkg.Subrepo.IsCrossCompile {
+	if subrepo != "" && pkg.Subrepo != nil && pkg.Subrepo.IsCrossCompile && pkg.SubrepoName != subrepo {
 		return subrepo + "_" + pkg.SubrepoName
 	}
 	return subrepo

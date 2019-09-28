@@ -35,7 +35,7 @@ func (h *Handler) diagnostics(d *doc, ast []*asp.Statement) []lsp.Diagnostic {
 	asp.WalkAST(ast, func(expr *asp.Expression) bool {
 		if expr.Val != nil && expr.Val.String != "" {
 			if s := stringLiteral(expr.Val.String); core.LooksLikeABuildLabel(s) {
-				if l, err := core.TryParseBuildLabel(s, pkgLabel.PackageName); err == nil {
+				if l, err := core.TryParseBuildLabel(s, pkgLabel.PackageName, pkgLabel.Subrepo); err == nil {
 					if l.IsAllTargets() || l.IsAllSubpackages() {
 						// Can't emit any useful info for these.
 						// TODO(peterebden): If we know what argument we were in we could emit info

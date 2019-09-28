@@ -120,8 +120,8 @@ func TestSubrepoLabel(t *testing.T) {
 func TestParseBuildLabelParts(t *testing.T) {
 	target1 := "///unittest_cpp//:unittest_cpp"
 	targetNewSyntax := "@unittest_cpp"
-	pkg, name, subrepo := parseBuildLabelParts(target1, "/", nil)
-	pkg2, name2, subrepo2 := parseBuildLabelParts(targetNewSyntax, "/", nil)
+	pkg, name, subrepo := parseBuildLabelParts(target1, "/", "")
+	pkg2, name2, subrepo2 := parseBuildLabelParts(targetNewSyntax, "/", "")
 	assert.Equal(t, pkg, "")
 	assert.Equal(t, pkg2, "")
 	assert.Equal(t, name, "unittest_cpp")
