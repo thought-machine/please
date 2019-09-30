@@ -6,7 +6,7 @@ statement = ( "pass" | "continue" | func_def | for | if | return |
           raise | assert | ident_statement | literal ) EOL;
 return = "return" [ expression { "," expression } ];
 raise = "raise" expression;
-assert = "assert" expression [ "," String ];
+assert = "assert" expression [ "," expression ];
 for = "for" Ident { "," Ident } "in" expression ":" EOL { statement };
 if = "if" expression ":" EOL { statement }
      [ "elif" expression ":" EOL { statement } ]

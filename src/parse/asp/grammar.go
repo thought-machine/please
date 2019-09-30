@@ -35,7 +35,7 @@ type Statement struct {
 	Raise   *Expression
 	Assert  *struct {
 		Expr    *Expression
-		Message string
+		Message *Expression
 	}
 	Ident    *IdentStatement
 	Literal  *Expression
