@@ -2,3 +2,5 @@ assert isinstance(name, str), "Argument name to cc_library must be a str"
 
 def test_assert():
     assert 1 == 1
+
+assert True, "True is %s" % True

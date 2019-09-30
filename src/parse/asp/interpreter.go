@@ -330,7 +330,9 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		} else if stmt.Ident != nil {
 			s.interpretIdentStatement(stmt.Ident)
 		} else if stmt.Assert != nil {
-			s.Assert(s.interpretExpression(stmt.Assert.Expr).IsTruthy(), stmt.Assert.Message)
+			if !s.interpretExpression(stmt.Assert.Expr).IsTruthy() {
+				s.Assert(false, s.interpretExpression(stmt.Assert.Message).String())
+			}
 		} else if stmt.Raise != nil {
 			s.Error(s.interpretExpression(stmt.Raise).String())
 		} else if stmt.Literal != nil {
