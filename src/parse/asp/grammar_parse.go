@@ -173,9 +173,8 @@ func (p *parser) parseStatement() *Statement {
 		p.l.Next()
 		s.Assert.Expr = p.parseExpression()
 		if p.optional(',') {
-			tok := p.next(String)
-			s.Assert.Message = tok.Value
-			p.endPos = tok.EndPos()
+			s.Assert.Message = p.parseExpression()
+			p.endPos = s.Assert.Message.EndPos
 		}
 		p.next(EOL)
 	default:

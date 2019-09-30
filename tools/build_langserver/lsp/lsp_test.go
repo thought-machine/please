@@ -632,6 +632,8 @@ func (h *Handler) WaitForPackage(pkg string) {
 	for result := range h.state.Results() {
 		if result.Status == core.PackageParsed && result.Label.PackageName == pkg {
 			return
+		} else if h.state.Graph.Package(pkg, "") != nil {
+			return
 		}
 	}
 }

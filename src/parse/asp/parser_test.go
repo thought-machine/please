@@ -430,7 +430,7 @@ func TestMultipleActions(t *testing.T) {
 func TestAssert(t *testing.T) {
 	statements, err := newParser().parse("src/parse/asp/test_data/assert.build")
 	assert.NoError(t, err)
-	assert.Equal(t, 2, len(statements))
+	assert.Equal(t, 3, len(statements))
 
 	// Test for Endpos
 	assert.Equal(t, 1, statements[0].EndPos.Line)
