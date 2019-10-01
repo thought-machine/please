@@ -29,7 +29,7 @@ func (h *Handler) completeLabel(doc *doc, partial string, line, col int) (*lsp.C
 		list := &lsp.CompletionList{}
 		pkgName := path.Base(doc.Filename)
 		pkgLabel := core.BuildLabel{PackageName: pkgName, Name: "all"}
-		label, err := core.TryParseBuildLabel(labelName, pkgName)
+		label, err := core.TryParseBuildLabel(labelName, pkgName, pkgLabel.Subrepo)
 		if err != nil {
 			return nil, err
 		}

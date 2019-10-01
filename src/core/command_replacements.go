@@ -155,7 +155,10 @@ func replaceSequencesInternal(state *BuildState, target *BuildTarget, command st
 // replaceSequence replaces a single escape sequence in a command.
 func replaceSequence(state *BuildState, target *BuildTarget, in string, runnable, multiple, dir, outPrefix, hash, test bool) string {
 	if LooksLikeABuildLabel(in) {
-		label := ParseBuildLabel(in, target.Label.PackageName)
+		label, err := TryParseBuildLabel(in, target.Label.PackageName, target.Label.Subrepo)
+		if err != nil {
+			panic(err)
+		}
 		return replaceSequenceLabel(state, target, label, in, runnable, multiple, dir, outPrefix, hash, test, true)
 	}
 	for _, src := range sourcesOrTools(target, runnable) {
