@@ -1,7 +1,7 @@
 cc_shared_object(
     name = "answer",
-    out = "libanswer.so",
     srcs = ["lib.cc"],
+    out = "libanswer.so",
     hdrs = ["lib.h"],
 )
 
@@ -14,10 +14,10 @@ cc_binary(
 
 gentest(
     name = "so_deps_test",
-    test_cmd = "$DATA",
-    no_test_output = True,
     data = [
-        ":bin",
         ":answer",
+        ":bin",
     ],
+    no_test_output = True,
+    test_cmd = "$DATA",
 )
