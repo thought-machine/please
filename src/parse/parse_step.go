@@ -91,7 +91,7 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label); handled && err == nil {
 		return state.Graph.Subrepo(label.Subrepo), nil
 	}
-	return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
+	return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.
