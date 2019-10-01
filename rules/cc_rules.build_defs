@@ -103,7 +103,6 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         compiler_flags += ['-fmodules-ts' if CONFIG.CC_MODULES_CLANG else '-fmodules']
     # TODO(pebers): handle includes and defines in _library_cmds as well.
     pre_build = _library_transitive_labels(_c, compiler_flags, pkg_config_libs, pkg_config_cflags) if (deps or includes or defines or _interfaces) else None
-    pkg = package_name()
 
     if _interfaces:
         # Generate the module interface file
@@ -118,7 +117,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             building_description = 'Compiling...',
             requires = requires,
             test_only = test_only,
-            labels = labels + [f'cc:mod:{pkg}/{name}.pcm'],
+            labels = labels + [f'cc:mod:{pkg_name}/{name}.pcm'],
             tools = tools,
             needs_transitive_deps = True,
         )
@@ -170,7 +169,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             },
         )
         if alwayslink:
-            labels += [f'cc:al:{pkg}/{name}.a']
+            labels += [f'cc:al:{pkg_name}/{name}.a']
 
         # Filegroup to pick that up with extra deps. This is a little annoying but means that
         # things depending on this get the combined rule and not the individual ones, but do get
@@ -205,7 +204,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             needs_transitive_deps=True,
         )
         if alwayslink:
-            labels += [f'cc:al:{pkg}/{name}.a']
+            labels += [f'cc:al:{pkg_name}/{name}.a']
         # Need another rule to cover require / provide stuff. This is getting a bit complicated...
         lib_rule = filegroup(
             name = name,
@@ -398,6 +397,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
             'cc_hdrs': f':_{name}#lib_hdrs',
             'cc': ':' + name,
         }
+    pkg_name = package_name()
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, shared=True)
     return build_rule(
         name=name,
@@ -414,6 +414,10 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
         tools=tools,
         test_only=test_only,
         requires=['cc', 'cc_hdrs'],
+        labels = [
+            f'cc:so:-L{pkg_name}',
+            f'cc:so:-l{name}',
+        ],
         pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, shared=True) if deps else None,
     )
 
@@ -743,6 +747,8 @@ def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
         labels = get_labels(name, 'cc:')
         linker_prefix = '' if CONFIG.LINK_WITH_LD_TOOL else '-Wl,'
         flags = [linker_prefix + l[3:] for l in labels if l.startswith('ld:')]
+        if not shared:
+            flags += [linker_prefix + l[3:] for l in labels if l.startswith('so:')]
 
         flags += ['`pkg-config --libs %s`' % l[3:] for l in labels if l.startswith('pc:')]
 

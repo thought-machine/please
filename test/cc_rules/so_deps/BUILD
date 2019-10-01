@@ -1,5 +1,6 @@
 cc_shared_object(
-    name = "lib",
+    name = "answer",
+    out = "libanswer.so",
     srcs = ["lib.cc"],
     hdrs = ["lib.h"],
 )
@@ -7,7 +8,7 @@ cc_shared_object(
 cc_binary(
     name = "bin",
     srcs = ["main.cc"],
-    deps = [":lib"],
+    deps = [":answer"],
 )
 
 gentest(
@@ -16,6 +17,6 @@ gentest(
     no_test_output = True,
     data = [
         ":bin",
-        ":lib",
+        ":answer",
     ],
 )
