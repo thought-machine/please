@@ -161,6 +161,19 @@
 
     </ul>
 
+    <h3><a name="buildenv">[BuildEnv]</a></h3>
+
+    <p>A set of extra environment variables to define for build rules. For example:
+
+    <pre><code>
+    [buildenv]
+    secret-passphrase = 12345
+    </code></pre>
+
+    This would become SECRET_PASSPHRASE for any rules. These can be useful for passing
+    secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.
+    </p>
+
     <h3><a name="remote">[Remote]</a></h3>
 
     <p class="experimental">This whole section is still experimental; some settings may not
