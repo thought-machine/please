@@ -162,7 +162,7 @@ def pex_basepath(temp=False):
         import tempfile
         return tempfile.mkdtemp(dir=os.environ.get('TEMP_DIR'), prefix='pex_')
     else:
-        return os.path.expanduser('~/.cache/pex')
+        return os.environ.get('PEX_CACHE_DIR',os.path.expanduser('~/.cache/pex'))
 
 
 def pex_uniquedir():
