@@ -8,6 +8,7 @@ cc_shared_object(
 cc_binary(
     name = "bin",
     srcs = ["main.cc"],
+    ldflags = ["-rpath='$ORIGIN'"],
     deps = [":answer"],
 )
 
