@@ -433,7 +433,11 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 	}); err == nil {
 		// This action already exists and has been cached.
 		if metadata, err := c.buildMetadata(ar, needStdout, false); err == nil {
-			log.Debug("Got remotely cached results for %s", target)
+			if c.state.Config.Remote.DisplayURL != "" {
+				log.Debug("Got remotely cached results for %s (action: %s/action/%s/%s/%d/)", target.Label, c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, digest.Hash, digest.SizeBytes)
+			} else {
+				log.Debug("Got remotely cached results for %s", target)
+			}
 			return metadata, ar, nil
 		}
 	}
