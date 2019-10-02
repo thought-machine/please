@@ -2,6 +2,7 @@ package remote
 
 import (
 	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -17,7 +18,8 @@ import (
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
-func (c *Client) uploadAction(target *core.BuildTarget, uploadInputRoot, isTest bool) (*pb.Digest, error) {
+func (c *Client) uploadAction(target *core.BuildTarget, uploadInputRoot, isTest bool) (*pb.Command, *pb.Digest, error) {
+	var command *pb.Command
 	var digest *pb.Digest
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
@@ -27,22 +29,22 @@ func (c *Client) uploadAction(target *core.BuildTarget, uploadInputRoot, isTest 
 		}
 		inputRootDigest, inputRootMsg := c.digestMessageContents(inputRoot)
 		ch <- &blob{Data: inputRootMsg, Digest: inputRootDigest}
-		cmd, err := c.buildCommand(target, inputRoot, isTest)
+		command, err = c.buildCommand(target, inputRoot, isTest)
 		if err != nil {
 			return err
 		}
-		commandDigest, commandMsg := c.digestMessageContents(cmd)
+		commandDigest, commandMsg := c.digestMessageContents(command)
 		ch <- &blob{Data: commandMsg, Digest: commandDigest}
 		actionDigest, actionMsg := c.digestMessageContents(&pb.Action{
 			CommandDigest:   commandDigest,
 			InputRootDigest: inputRootDigest,
 			Timeout:         ptypes.DurationProto(timeout(target, isTest)),
 		})
-		ch <- &blob{Data: actionMsg, Digest: actionDigest}
 		digest = actionDigest
+		ch <- &blob{Data: actionMsg, Digest: actionDigest}
 		return nil
 	})
-	return digest, err
+	return command, digest, err
 }
 
 // buildCommand builds the command for a single target.
@@ -402,6 +404,36 @@ func (c *Client) downloadDirectory(root string, dir *pb.Directory) error {
 	for _, sym := range dir.Symlinks {
 		if err := os.Symlink(sym.Target, path.Join(root, sym.Name)); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// verifyActionResult verifies that all the requested outputs actually exist in a returned
+// ActionResult. Servers do not necessarily verify this but we need to make sure they are
+// complete for future requests.
+func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest, ar *pb.ActionResult) error {
+	outs := make(map[string]bool, len(ar.OutputFiles)+len(ar.OutputDirectories)+len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks))
+	for _, f := range ar.OutputFiles {
+		outs[f.Path] = true
+	}
+	for _, f := range ar.OutputDirectories {
+		outs[f.Path] = true
+	}
+	for _, f := range ar.OutputFileSymlinks {
+		outs[f.Path] = true
+	}
+	for _, f := range ar.OutputDirectorySymlinks {
+		outs[f.Path] = true
+	}
+	for _, out := range command.OutputFiles {
+		if !outs[out] {
+			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
+		}
+	}
+	for _, out := range command.OutputDirectories {
+		if !outs[out] {
+			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
 		}
 	}
 	return nil
