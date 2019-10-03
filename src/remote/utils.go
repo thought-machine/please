@@ -106,6 +106,19 @@ func (c *Client) wrapActionErr(err error, actionDigest *pb.Digest) error {
 	return wrap(err, "Action URL: %s/action/%s/%s/%d/\n", c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, actionDigest.Hash, actionDigest.SizeBytes)
 }
 
+// actionURL returns a URL to the browser for a remote action, if the display URL is configured.
+// If prefix is true then it is surrounded by "(action: %s)".
+func (c *Client) actionURL(digest *pb.Digest, prefix bool) string {
+	if c.state.Config.Remote.DisplayURL == "" {
+		return ""
+	}
+	s := fmt.Sprintf("%s/action/%s/%s/%d/", c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, digest.Hash, digest.SizeBytes)
+	if prefix {
+		s = " (action: " + s + ")"
+	}
+	return s
+}
+
 // mustMarshal encodes a message to a binary string.
 func mustMarshal(msg proto.Message) []byte {
 	b, err := proto.Marshal(msg)

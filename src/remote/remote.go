@@ -276,7 +276,7 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 		return err
 	}
 	// OK, now the blobs are uploaded, we also need to upload the Action itself.
-	digest, err := c.uploadAction(target, false, metadata.Test)
+	_, digest, err := c.uploadAction(target, false, metadata.Test)
 	if err != nil {
 		return err
 	} else if !metadata.Test {
@@ -380,11 +380,11 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	digest, err := c.uploadAction(target, true, false)
+	command, digest, err := c.uploadAction(target, true, false)
 	if err != nil {
 		return nil, err
 	}
-	metadata, ar, err := c.execute(tid, target, digest, target.BuildTimeout, target.PostBuildFunction != nil)
+	metadata, ar, err := c.execute(tid, target, command, digest, target.BuildTimeout, target.PostBuildFunction != nil)
 	if err != nil {
 		return metadata, err
 	}
@@ -397,11 +397,11 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	if err := c.CheckInitialised(); err != nil {
 		return nil, nil, nil, err
 	}
-	digest, err := c.uploadAction(target, true, true)
+	command, digest, err := c.uploadAction(target, true, true)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	metadata, ar, execErr := c.execute(tid, target, digest, target.TestTimeout, false)
+	metadata, ar, execErr := c.execute(tid, target, command, digest, target.TestTimeout, false)
 	// Error handling here is a bit fiddly due to prioritisation; the execution error
 	// is more relevant, but we want to still try to get results if we can, and it's an
 	// error if we can't get those results on success.
@@ -422,7 +422,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
-func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	// First see if this execution is cached
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -433,8 +433,8 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 	}); err == nil {
 		// This action already exists and has been cached.
 		if metadata, err := c.buildMetadata(ar, needStdout, false); err == nil {
-			log.Debug("Got remotely cached results for %s", target)
-			return metadata, ar, nil
+			log.Debug("Got remotely cached results for %s %s", target.Label, c.actionURL(digest, true))
+			return metadata, ar, c.verifyActionResult(target, command, digest, ar)
 		}
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), timeout)
@@ -516,8 +516,10 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 						err = fmt.Errorf("%s\nStderr:\n%s", err, metadata.Stderr)
 					}
 					return nil, nil, err
+				} else if err != nil {
+					return nil, nil, err
 				}
-				return metadata, response.Result, err
+				return metadata, response.Result, c.verifyActionResult(target, command, digest, response.Result)
 			}
 		}
 	}
@@ -526,7 +528,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, digest *pb.Digest, t
 // updateProgress updates the progress of a target based on its metadata.
 func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.ExecuteOperationMetadata) {
 	if c.state.Config.Remote.DisplayURL != "" {
-		log.Debug("Remote progress for %s: %s (action: %s/action/%s/%s/%d/)", target.Label, metadata.Stage, c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, metadata.ActionDigest.Hash, metadata.ActionDigest.SizeBytes)
+		log.Debug("Remote progress for %s: %s%s", target.Label, metadata.Stage, c.actionURL(metadata.ActionDigest, true))
 	}
 	if target.State() >= core.Built {
 		switch metadata.Stage {
@@ -566,7 +568,7 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 	commandDigest := c.digestMessage(cmd)
 	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {
-		fmt.Printf("    URL: %s/command/%s/%s/%d/\n", c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, commandDigest.Hash, commandDigest.SizeBytes)
+		fmt.Printf("    URL: %s\n", c.actionURL(commandDigest, false))
 	}
 	actionDigest := c.digestMessage(&pb.Action{
 		CommandDigest:   commandDigest,
@@ -575,6 +577,6 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 	})
 	fmt.Printf(" Action: %7d bytes: %s\n", actionDigest.SizeBytes, actionDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {
-		fmt.Printf("    URL: %s/action/%s/%s/%d/\n", c.state.Config.Remote.DisplayURL, c.state.Config.Remote.Instance, actionDigest.Hash, actionDigest.SizeBytes)
+		fmt.Printf("    URL: %s\n", c.actionURL(actionDigest, false))
 	}
 }
