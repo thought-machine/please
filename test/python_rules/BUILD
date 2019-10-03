@@ -167,6 +167,16 @@ python_test(
 )
 
 python_test(
+    name = "importlib_metadata_test",
+    srcs = ["importlib_metadata_test.py"],
+    labels = [
+        "py3",
+        "pip",
+    ],
+    deps = ["//third_party/python:importlib_metadata"],
+)
+
+python_test(
     name = "worker_test",
     srcs = ["worker_test.py"],
     worker = "//test/workers:worker",
