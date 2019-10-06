@@ -189,16 +189,18 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	for runs := 1; runs <= state.NumTestRuns; runs++ {
 		status := "Testing"
 		var runStatus string
+		var numFlakes int
 		if state.NumTestRuns > 1 {
 			runStatus = status + fmt.Sprintf(" (run %d of %d)", runs, state.NumTestRuns)
+			numFlakes = 1 // only run the test NumTestRuns times if this is greater than 1
 		} else {
 			runStatus = status
+			// Run tests at least once, but possibly more if it's flaky.
+			// Flakiness will be `3` if `flaky` is `True` in the build_def.
+			numFlakes = utils.Max(target.Flakiness, 1)
 		}
 		// New group of test cases for each group of flaky runs
 		flakeResults := core.TestSuite{}
-		// Run tests at least once, but possibly more if it's flaky.
-		// Flakiness will be `3` if `flaky` is `True` in the build_def.
-		numFlakes := utils.Max(target.Flakiness, 1)
 		for flakes := 1; flakes <= numFlakes; flakes++ {
 			var flakeStatus string
 			if numFlakes > 1 {
