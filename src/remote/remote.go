@@ -258,18 +258,18 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 				Path:   filename,
 				Digest: digest,
 			})
-			if len(metadata.Stdout) > 0 {
-				h := c.sum(metadata.Stdout)
-				digest := &pb.Digest{
-					SizeBytes: int64(len(metadata.Stdout)),
-					Hash:      hex.EncodeToString(h[:]),
-				}
-				ch <- &blob{
-					Data:   metadata.Stdout,
-					Digest: digest,
-				}
-				ar.StdoutDigest = digest
+		}
+		if len(metadata.Stdout) > 0 {
+			h := c.sum(metadata.Stdout)
+			digest := &pb.Digest{
+				SizeBytes: int64(len(metadata.Stdout)),
+				Hash:      hex.EncodeToString(h[:]),
 			}
+			ch <- &blob{
+				Data:   metadata.Stdout,
+				Digest: digest,
+			}
+			ar.StdoutDigest = digest
 		}
 		return nil
 	}); err != nil {
