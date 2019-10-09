@@ -1,3 +1,10 @@
+Version 14.1.6
+--------------
+
+    * Fixed label replacements for tools in subrepos
+    * Fixed uploading stdout to remote CAS
+
+
 Version 14.1.5
 --------------
 
