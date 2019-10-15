@@ -1,4 +1,4 @@
-package proto_rules
+package flags
 
 import "testing"
 
