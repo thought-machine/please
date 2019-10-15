@@ -330,6 +330,11 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 	}
 	mode := target.OutMode()
 	outDir := target.OutDir()
+	for _, out := range target.Outputs() {
+		if err := os.RemoveAll(path.Join(outDir, out)); err != nil {
+			return nil, fmt.Errorf("Failed to remove output: %s", err)
+		}
+	}
 	if err := c.downloadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
 		for _, file := range resp.OutputFiles {
