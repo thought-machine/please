@@ -45,8 +45,8 @@ python_test(
 grpc_library(
     name = "flags_proto",
     srcs = ["flags.proto"],
-    protoc_flags = ["--include_source_info"],
     languages = ["go"],
+    protoc_flags = ["--include_source_info"],
 )
 
 go_test(
