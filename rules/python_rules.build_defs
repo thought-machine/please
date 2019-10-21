@@ -368,7 +368,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
         # but that prevents downloading binary wheels. This is more fiddly but seems to work.
         # Unfortunately it does *not* work similarly on the Debian problem :(
-        cmd = 'echo "[install]\nprefix=" > .pydistutils.cfg; ' + cmd
+        cmd = 'echo "[install]\nprefix=" > setup.cfg; ' + cmd
     if CONFIG.OS == 'linux':
         # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
         # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
