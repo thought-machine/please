@@ -360,7 +360,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
             repo_flag = '-f ' + repo
 
     target = outs[0] if install_subdirectory else '.'
-    
+
     # TODO: This is a total mess on pip's side with --user flag. https://github.com/pypa/pip/issues/1668
     cmd = 'PIP_CONFIG_FILE=/dev/null $TOOLS_PIP install --isolated --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
     if CONFIG.HOSTOS == 'darwin':
@@ -400,7 +400,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
 
     # TODO(peterebden): --prefix preserves the old behaviour here, but I'm not sure how intuitive that is; leaving it
     #                   out puts everything at the top level of the pex, which is more normal for Python really.
-    cmd += ' && $TOOLS_JARCAT z -d --prefix $PKG_DIR -i ' + ' -i '.join(outs)
+    cmd += ' && $TOOLS_JARCAT z -d --prefix $PKG_DIR -i ' + ' -i '.join(outs) + ' -i *.*-info'
 
     wheel_rule = build_rule(
         name = name,
@@ -426,7 +426,8 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         name = name,
         srcs = [wheel_rule],
         outs = outs,
-        cmd = '$TOOL x $SRCS -s $PKG_DIR',
+        post_build = _add_dist_info,
+        cmd = '$TOOL x $SRCS -s $PKG_DIR; find . -maxdepth 1 -regex \'.*\.\(dist\|egg\)-info\'',
         tools = [CONFIG.JARCAT_TOOL],
         labels = ['py', 'pip:' + package_name],
         provides = {'py': wheel_rule},
@@ -588,6 +589,12 @@ def _add_licences(name, output):
             found = True
     if not found:
         log.warning('No licence found for %s, should add licences = [...] to the rule', name.lstrip('_').split('#')[0])
+
+def _add_dist_info(name, output):
+    """Add dist-info (or egg-info) folder if present."""
+    for line in output:
+        if line.endswith("-info"):
+            add_out(name, line)
 
 if CONFIG.BAZEL_COMPATIBILITY:
     py_library = python_library
