@@ -92,7 +92,8 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	} else {
 		setDefault(&config.Parse.BuildFileName, "BUILD", "BUILD.plz")
 	}
-	setBuildPath(&config.Build.Path, config.Build.PassEnv)
+	setBuildPath(&config.Build.Path, config.Build.PassEnv, config.Build.PassUnsafeEnv)
+	setDefault(&config.Build.PassUnsafeEnv)
 	setDefault(&config.Build.PassEnv)
 	setDefault(&config.Cover.FileExtension, ".go", ".py", ".java", ".js", ".cc", ".h", ".c")
 	setDefault(&config.Cover.ExcludeExtension, ".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc")
@@ -189,8 +190,13 @@ func setDefault(conf *[]string, def ...string) {
 }
 
 // setDefault checks if "PATH" is in passEnv, if it is set config.build.Path to use the environment variable.
-func setBuildPath(conf *[]string, passEnv []string) {
+func setBuildPath(conf *[]string, passEnv []string, passUnsafeEnv []string) {
 	pathVal := []string{"/usr/local/bin", "/usr/bin", "/bin"}
+	for _, i := range passUnsafeEnv {
+		if i == "PATH" {
+			pathVal = strings.Split(os.Getenv("PATH"), ":")
+		}
+	}
 	for _, i := range passEnv {
 		if i == "PATH" {
 			pathVal = strings.Split(os.Getenv("PATH"), ":")
@@ -357,6 +363,7 @@ type Configuration struct {
 		PleaseSandboxTool string       `help:"The location of the please_sandbox tool to use."`
 		Nonce             string       `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
 		PassEnv           []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
+		PassUnsafeEnv     []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
 		HTTPProxy         cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
 		HashFunction      string       `help:"The hash function to use internally for build actions." options:"sha1,sha256"`
 	}
@@ -570,6 +577,17 @@ func (config *Configuration) getBuildEnv(includePath bool) []string {
 	for k, v := range config.BuildEnv {
 		pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
 		env = append(env, pair)
+	}
+	// from the user's environment based on the PassUnsafeEnv config keyword
+	for _, k := range config.Build.PassUnsafeEnv {
+		if v, isSet := os.LookupEnv(k); isSet {
+			if k == "PATH" {
+				// plz's install location always needs to be on the path.
+				v = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir) + ":" + v
+				includePath = false // skip this in a bit
+			}
+			env = append(env, k+"="+v)
+		}
 	}
 	// from the user's environment based on the PassEnv config keyword
 	for _, k := range config.Build.PassEnv {

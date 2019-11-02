@@ -1,0 +1,4 @@
+[Build]
+PassUnsafeEnv = FOO
+PassUnsafeEnv = BAR
+PassUnsafeEnv = PATH
