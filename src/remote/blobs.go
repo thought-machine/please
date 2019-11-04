@@ -59,7 +59,7 @@ func (c *Client) uploadBlobs(f func(ch chan<- *blob) error) error {
 			req.BlobDigests[i] = b.Digest
 			m[b.Digest.Hash] = b
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 		defer cancel()
 		resp, err := c.storageClient.FindMissingBlobs(ctx, req)
 		if err != nil {
@@ -149,7 +149,7 @@ func (c *Client) reallyUploadBlobs(ch <-chan *blob) error {
 
 // sendBlobs dispatches a set of blobs to the remote CAS server.
 func (c *Client) sendBlobs(reqs []*pb.BatchUpdateBlobsRequest_Request) error {
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	resp, err := c.storageClient.BatchUpdateBlobs(ctx, &pb.BatchUpdateBlobsRequest{
 		InstanceName: c.instance,
@@ -171,7 +171,7 @@ func (c *Client) sendBlobs(reqs []*pb.BatchUpdateBlobsRequest_Request) error {
 
 // receiveBlobs retrieves a set of blobs from the remote CAS server.
 func (c *Client) receiveBlobs(digests []*pb.Digest, filenames map[string]string, modes map[string]os.FileMode) error {
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	resp, err := c.storageClient.BatchReadBlobs(ctx, &pb.BatchReadBlobsRequest{
 		InstanceName: c.instance,
@@ -216,7 +216,7 @@ func (c *Client) storeByteStream(b *blob) error {
 
 func (c *Client) reallyStoreByteStream(b *blob, r io.ReadSeeker) error {
 	name := c.byteStreamUploadName(b.Digest)
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	stream, err := c.bsClient.Write(ctx)
 	if err != nil {
@@ -325,7 +325,7 @@ func (c *Client) retrieveByteStream(b *blob) error {
 
 // readByteStream returns a reader for a bytestream for the given digest.
 func (c *Client) readByteStream(digest *pb.Digest) (io.ReadCloser, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	stream, err := c.bsClient.Read(ctx, &bs.ReadRequest{
 		ResourceName: c.byteStreamDownloadName(digest),
 	})

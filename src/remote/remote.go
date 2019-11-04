@@ -32,9 +32,6 @@ var log = logging.MustGetLogger("remote")
 // Timeout to initially contact the server.
 const dialTimeout = 5 * time.Second
 
-// Timeout for actual requests
-const reqTimeout = 2 * time.Minute
-
 // Maximum number of times we retry a request.
 const maxRetries = 3
 
@@ -51,6 +48,7 @@ type Client struct {
 	execClient        pb.ExecutionClient
 	initOnce          sync.Once
 	state             *core.BuildState
+	reqTimeout        time.Duration
 	err               error // for initialisation
 	instance          string
 
@@ -73,9 +71,10 @@ type Client struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:    state,
-		instance: state.Config.Remote.Instance,
-		outputs:  map[core.BuildLabel]*pb.Directory{},
+		state:      state,
+		instance:   state.Config.Remote.Instance,
+		reqTimeout: time.Duration(state.Config.Remote.Timeout),
+		outputs:    map[core.BuildLabel]*pb.Directory{},
 	}
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
 	return c
@@ -285,7 +284,7 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 		}
 	}
 	// Now we can use that to upload the result itself.
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	_, err = c.actionCacheClient.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
 		InstanceName: c.instance,
@@ -316,7 +315,7 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 		InputRootDigest: c.digestMessage(inputRoot),
 		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
 	})
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	resp, err := c.actionCacheClient.GetActionResult(ctx, &pb.GetActionResultRequest{
 		InstanceName: c.instance,
