@@ -309,6 +309,7 @@ func DefaultConfiguration() *Configuration {
 	config.Proto.PythonGrpcDep = "//third_party/python:grpc"
 	config.Proto.JavaGrpcDep = "//third_party/java:grpc-all"
 	config.Proto.GoGrpcDep = "//third_party/go:grpc"
+	config.Remote.Timeout = cli.Duration(2 * time.Minute)
 	config.Bazel.Compatibility = usingBazelWorkspace
 	return &config
 }

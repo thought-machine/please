@@ -334,7 +334,7 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 			return nil, fmt.Errorf("Failed to remove output: %s", err)
 		}
 	}
-	if err := c.downloadBlobs(func(ch chan<- *blob) error {
+	if err := c.downloadBlobs(ctx, func(ch chan<- *blob) error {
 		defer close(ch)
 		for _, file := range resp.OutputFiles {
 			filePath := path.Join(outDir, file.Path)
