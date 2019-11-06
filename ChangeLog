@@ -1,3 +1,11 @@
+Version 14.1.8
+--------------
+
+    * Fix for an issue where protoc_flags passed to grpc_library were passed
+      twice to the actual protoc invocation
+    * Changed .pydistutils.cfg to setup.cfg in pip_library (#762)
+
+
 Version 14.1.7
 --------------
 
