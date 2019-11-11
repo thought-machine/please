@@ -295,16 +295,20 @@ func (c *Client) downloadBlobs(ctx context.Context, f func(ch chan<- *blob) erro
 				if err := c.retrieveByteStream(b); err != nil {
 					return err
 				}
+				continue
 			} else if b.Digest.SizeBytes+totalSize > c.maxBlobBatchSize {
 				// We have exceeded the total but this blob on its own is OK.
-				// Send what we have so far then deal with this one.
+				// Receive what we have so far then deal with this one.
 				if err := c.receiveBlobs(digests, filenames, modes); err != nil {
 					return err
 				}
-				digests = []*pb.Digest{b.Digest}
-				totalSize = b.Digest.SizeBytes
+				digests = []*pb.Digest{}
+				totalSize = 0
 			}
+			digests = append(digests, b.Digest)
+			totalSize += b.Digest.SizeBytes
 		}
+		// If there are any digests left over, download them now
 		if len(digests) > 0 {
 			if err := c.receiveBlobs(digests, filenames, modes); err != nil {
 				return err
