@@ -1,3 +1,10 @@
+Version 14.1.9
+--------------
+
+    * Make remote timeout configurable (#770)
+    * Fix faulty download blob logic for servers that support batching reads.
+
+
 Version 14.1.8
 --------------
 
