@@ -59,7 +59,7 @@ func (c *Client) uploadBlobs(f func(ch chan<- *blob) error) error {
 			req.BlobDigests[i] = b.Digest
 			m[b.Digest.Hash] = b
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 		defer cancel()
 		resp, err := c.storageClient.FindMissingBlobs(ctx, req)
 		if err != nil {
@@ -149,7 +149,7 @@ func (c *Client) reallyUploadBlobs(ch <-chan *blob) error {
 
 // sendBlobs dispatches a set of blobs to the remote CAS server.
 func (c *Client) sendBlobs(reqs []*pb.BatchUpdateBlobsRequest_Request) error {
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	resp, err := c.storageClient.BatchUpdateBlobs(ctx, &pb.BatchUpdateBlobsRequest{
 		InstanceName: c.instance,
@@ -171,7 +171,7 @@ func (c *Client) sendBlobs(reqs []*pb.BatchUpdateBlobsRequest_Request) error {
 
 // receiveBlobs retrieves a set of blobs from the remote CAS server.
 func (c *Client) receiveBlobs(digests []*pb.Digest, filenames map[string]string, modes map[string]os.FileMode) error {
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	resp, err := c.storageClient.BatchReadBlobs(ctx, &pb.BatchReadBlobsRequest{
 		InstanceName: c.instance,
@@ -216,7 +216,7 @@ func (c *Client) storeByteStream(b *blob) error {
 
 func (c *Client) reallyStoreByteStream(b *blob, r io.ReadSeeker) error {
 	name := c.byteStreamUploadName(b.Digest)
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	stream, err := c.bsClient.Write(ctx)
 	if err != nil {
@@ -274,40 +274,56 @@ func (c *Client) byteStreamDownloadName(digest *pb.Digest) string {
 // Data is not required.
 // The given function is a callback that receives a channel to send these blobs on; it
 // should close it when finished.
-func (c *Client) downloadBlobs(f func(ch chan<- *blob) error) error {
+func (c *Client) downloadBlobs(ctx context.Context, f func(ch chan<- *blob) error) error {
 	ch := make(chan *blob, 10)
+	done := make(chan struct{})
 	var g errgroup.Group
-	g.Go(func() error { return f(ch) })
+	go func() error {
+		defer close(done)
+		g.Go(func() error { return f(ch) })
 
-	digests := []*pb.Digest{}
-	filenames := map[string]string{}  // map of hash -> output filename
-	modes := map[string]os.FileMode{} // map of hash -> file mode
-	var totalSize int64
-	for b := range ch {
-		filenames[b.Digest.Hash] = b.File
-		modes[b.Digest.Hash] = b.Mode
-		if b.Digest.SizeBytes > c.maxBlobBatchSize || !c.canBatchBlobReads {
-			// This blob individually exceeds the size, have to use this
-			// ByteStream malarkey instead.
-			if err := c.retrieveByteStream(b); err != nil {
-				return err
+		digests := []*pb.Digest{}
+		filenames := map[string]string{}  // map of hash -> output filename
+		modes := map[string]os.FileMode{} // map of hash -> file mode
+		var totalSize int64
+		for b := range ch {
+			filenames[b.Digest.Hash] = b.File
+			modes[b.Digest.Hash] = b.Mode
+			if b.Digest.SizeBytes > c.maxBlobBatchSize || !c.canBatchBlobReads {
+				// This blob individually exceeds the size, have to use this
+				// ByteStream malarkey instead.
+				if err := c.retrieveByteStream(b); err != nil {
+					return err
+				}
+				continue
+			} else if b.Digest.SizeBytes+totalSize > c.maxBlobBatchSize {
+				// We have exceeded the total but this blob on its own is OK.
+				// Receive what we have so far then deal with this one.
+				if err := c.receiveBlobs(digests, filenames, modes); err != nil {
+					return err
+				}
+				digests = []*pb.Digest{}
+				totalSize = 0
 			}
-		} else if b.Digest.SizeBytes+totalSize > c.maxBlobBatchSize {
-			// We have exceeded the total but this blob on its own is OK.
-			// Send what we have so far then deal with this one.
+			digests = append(digests, b.Digest)
+			totalSize += b.Digest.SizeBytes
+		}
+		// If there are any digests left over, download them now
+		if len(digests) > 0 {
 			if err := c.receiveBlobs(digests, filenames, modes); err != nil {
 				return err
 			}
-			digests = []*pb.Digest{b.Digest}
-			totalSize = b.Digest.SizeBytes
 		}
+		return nil
+	}()
+
+	select {
+	case <-done:
+		return g.Wait()
+	case <-ctx.Done():
+		return fmt.Errorf("timed out retrieving artifact from remote cache")
 	}
-	if len(digests) > 0 {
-		if err := c.receiveBlobs(digests, filenames, modes); err != nil {
-			return err
-		}
-	}
-	return g.Wait()
+
 }
 
 // retrieveByteStream receives a file back from the server as a byte stream.
@@ -325,7 +341,7 @@ func (c *Client) retrieveByteStream(b *blob) error {
 
 // readByteStream returns a reader for a bytestream for the given digest.
 func (c *Client) readByteStream(digest *pb.Digest) (io.ReadCloser, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	stream, err := c.bsClient.Read(ctx, &bs.ReadRequest{
 		ResourceName: c.byteStreamDownloadName(digest),
 	})
