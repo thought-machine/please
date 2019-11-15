@@ -14,6 +14,41 @@ if PY_VERSION >= 3:
 else:
     import imp
 
+if PY_VERSION >= 3.2:
+    from os import makedirs
+else:
+    # backported from cpython 3.8
+    def makedirs(name, mode=0o777, exist_ok=False):
+        """makedirs(name [, mode=0o777][, exist_ok=False])
+        Super-mkdir; create a leaf directory and all intermediate ones.  Works like
+        mkdir, except that any intermediate path segment (not just the rightmost)
+        will be created if it does not exist. If the target directory already
+        exists, raise an OSError if exist_ok is False. Otherwise no exception is
+        raised.  This is recursive.
+        """
+        head, tail = os.path.split(name)
+        if not tail:
+            head, tail = os.path.split(head)
+        if head and tail and not os.path.exists(head):
+            try:
+                makedirs(head, exist_ok=exist_ok)
+            except FileExistsError:
+                # Defeats race condition when another thread created the path
+                pass
+            cdir = curdir
+            if isinstance(tail, bytes):
+                cdir = bytes(curdir, "ASCII")
+            if tail == cdir:  # xxx/newdir/. exists if xxx/newdir exists
+                return
+        try:
+            os.mkdir(name, mode)
+        except OSError:
+            # Cannot rely on checking for EEXIST, since the operating system
+            # could give priority to other errors like EACCES or EROFS
+            if not exist_ok or not os.path.isdir(name):
+                raise
+
+
 try:
     from site import getsitepackages
 except:
@@ -65,7 +100,9 @@ class ZipFileWithPermissions(ZipFile):
         if not isinstance(member, ZipInfo):
             member = self.getinfo(member)
 
-        targetpath = super()._extract_member(member, targetpath, pwd)
+        targetpath = super(ZipFileWithPermissions, self)._extract_member(
+            member, targetpath, pwd
+        )
 
         attr = member.external_attr >> 16
         if attr != 0:
@@ -202,13 +239,13 @@ def explode_zip():
         global PEX_PATH
 
         PEX_PATH, basepath, uniquedir, no_cache = pex_paths()
-        os.makedirs(basepath, exist_ok=True)
+        makedirs(basepath, exist_ok=True)
         with pex_lockfile(basepath, uniquedir) as lockfile:
             if len(lockfile.read()) == 0:
                 import compileall, zipfile
 
-                os.makedirs(PEX_PATH, exist_ok=True)
-                with ZipFileWithPermissions(PEX, 'r') as zf:
+                makedirs(PEX_PATH, exist_ok=True)
+                with ZipFileWithPermissions(PEX, "r") as zf:
                     zf.extractall(PEX_PATH)
 
                 if not no_cache:  # Don't bother optimizing; we're deleting this when we're done.
