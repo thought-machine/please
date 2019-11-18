@@ -241,7 +241,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 		for input := range c.iterInputs(target, isTest) {
 			if l := input.Label(); l != nil {
 				if o := c.targetOutputs(*l); o != nil {
-					d := ensureDirExists(target.Label.PackageName, "")
+					d := ensureDirExists(l.PackageName, "")
 					d.Files = append(d.Files, o.Files...)
 					d.Directories = append(d.Directories, o.Directories...)
 					d.Symlinks = append(d.Symlinks, o.Symlinks...)
