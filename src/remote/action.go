@@ -239,7 +239,8 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
 		for input := range c.iterInputs(target, isTest) {
-			if l := input.Label(); l != nil {
+			l := input.Label()
+			if l != nil {
 				if o := c.targetOutputs(*l); o != nil {
 					d := ensureDirExists(l.PackageName, "")
 					d.Files = append(d.Files, o.Files...)
@@ -250,6 +251,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 				// If we get here we haven't built the target before. That is at least
 				// potentially OK - assume it has been built locally.
 			}
+			executable := l != nil && c.state.Graph.TargetOrDie(*l).IsBinary
 			fullPaths := input.FullPaths(c.state.Graph)
 			for i, out := range input.Paths(c.state.Graph) {
 				in := fullPaths[i]
@@ -286,7 +288,7 @@ func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (
 					d.Files = append(d.Files, &pb.FileNode{
 						Name:         path.Base(dest),
 						Digest:       digest,
-						IsExecutable: target.IsBinary,
+						IsExecutable: executable,
 					})
 					if upload {
 						ch <- &blob{
