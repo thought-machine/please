@@ -254,8 +254,9 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 				Digest: digest,
 			}
 			ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-				Path:   filename,
-				Digest: digest,
+				Path:         filename,
+				Digest:       digest,
+				IsExecutable: target.IsBinary,
 			})
 		}
 		if len(metadata.Stdout) > 0 {
