@@ -222,20 +222,24 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest,
 	b := newDirBuilder(c)
 	for input := range c.iterInputs(target, isTest) {
 		if l := input.Label(); l != nil {
-			o := c.targetOutputs(*l)
-			if o == nil {
-				// Classic "we shouldn't get here" stuff
-				return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", target)
+			if o := c.targetOutputs(*l); o == nil {
+				if c.remoteExecution {
+					// Classic "we shouldn't get here" stuff
+					return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", target)
+				}
+			} else {
+				pkgName := l.PackageName
+				if useTargetPackage {
+					pkgName = target.Label.PackageName
+				}
+				d := b.Dir(pkgName)
+				d.Files = append(d.Files, o.Files...)
+				d.Directories = append(d.Directories, o.Directories...)
+				d.Symlinks = append(d.Symlinks, o.Symlinks...)
+				continue
 			}
-			pkgName := l.PackageName
-			if useTargetPackage {
-				pkgName = target.Label.PackageName
-			}
-			d := b.Dir(pkgName)
-			d.Files = append(d.Files, o.Files...)
-			d.Directories = append(d.Directories, o.Directories...)
-			d.Symlinks = append(d.Symlinks, o.Symlinks...)
-		} else if err := c.uploadInput(b, ch, input); err != nil {
+		}
+		if err := c.uploadInput(b, ch, input); err != nil {
 			return nil, err
 		}
 	}

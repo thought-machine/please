@@ -63,6 +63,9 @@ type Client struct {
 	cacheWritable     bool
 	canBatchBlobReads bool // This isn't supported by all servers.
 
+	// True if we are doing proper remote execution (false if we are caching only)
+	remoteExecution bool
+
 	// Cache this for later
 	bashPath string
 }
@@ -149,6 +152,7 @@ func (c *Client) init() {
 					return fmt.Errorf("Remote execution not enabled for this server")
 				}
 				c.execClient = pb.NewExecutionClient(conn)
+				c.remoteExecution = true
 				log.Debug("Remote execution client initialised for execution")
 			} else {
 				log.Fatalf("Remote execution is configured but the build server doesn't support it")
