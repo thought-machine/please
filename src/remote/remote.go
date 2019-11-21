@@ -309,6 +309,15 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
+	outDir := target.OutDir()
+	for _, out := range target.Outputs() {
+		if err := os.RemoveAll(path.Join(outDir, out)); err != nil {
+			return nil, fmt.Errorf("Failed to remove output: %s", err)
+		}
+	}
+	if target.IsFilegroup {
+		return &core.BuildMetadata{}, c.downloadDirectory(outDir, c.targetOutputs(target.Label))
+	}
 	isTest := target.State() >= core.Built
 	needStdout := target.PostBuildFunction != nil && !isTest // We only care in this case.
 	inputRoot, err := c.buildInputRoot(target, false, isTest)
@@ -337,12 +346,6 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 		return nil, err
 	}
 	mode := target.OutMode()
-	outDir := target.OutDir()
-	for _, out := range target.Outputs() {
-		if err := os.RemoveAll(path.Join(outDir, out)); err != nil {
-			return nil, fmt.Errorf("Failed to remove output: %s", err)
-		}
-	}
 	if err := c.downloadBlobs(ctx, func(ch chan<- *blob) error {
 		defer close(ch)
 		for _, file := range resp.OutputFiles {
