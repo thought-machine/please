@@ -385,6 +385,10 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
+	if target.IsFilegroup {
+		// Filegroups get special-cased since they are just a movement of files.
+		return &core.BuildMetadata{}, c.setFilegroupOutputs(target)
+	}
 	command, digest, err := c.uploadAction(target, true, false)
 	if err != nil {
 		return nil, err
