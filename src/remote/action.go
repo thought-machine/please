@@ -120,13 +120,12 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 // getCommand returns the appropriate command to use for a target.
 func (c *Client) getCommand(target *core.BuildTarget) string {
 	if target.IsRemoteFile {
-		// This is not a real command, but we need to encode the URLs into the action somehow
-		// to force it to be distinct from other remote_file rules.
+		// TODO(peterebden): we should handle this using the Remote Fetch API once that's available.
 		srcs := make([]string, len(target.Sources))
 		for i, s := range target.Sources {
 			srcs[i] = s.String()
 		}
-		return "plz_fetch " + strings.Join(srcs, " ")
+		return "curl -fsSLo $OUT " + strings.Join(srcs, " ")
 	}
 	return target.GetCommand(c.state)
 }
