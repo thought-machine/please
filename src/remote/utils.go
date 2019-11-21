@@ -342,3 +342,19 @@ func (b *dirBuilder) dfs(name string, ch chan<- *blob) *pb.Digest {
 	}
 	return digest
 }
+
+// convertPlatform converts the platform entries from the config into a Platform proto.
+func convertPlatform(config *core.Configuration) *pb.Platform {
+	platform := &pb.Platform{}
+	for _, p := range config.Remote.Platform {
+		if parts := strings.SplitN(p, "=", 2); len(parts) == 2 {
+			platform.Properties = append(platform.Properties, &pb.Platform_Property{
+				Name:  parts[0],
+				Value: parts[1],
+			})
+		} else {
+			log.Warning("Invalid config setting in remote.platform %s; will ignore", p)
+		}
+	}
+	return platform
+}

@@ -58,16 +58,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	files, dirs := outputs(target)
 	cmd, err := core.ReplaceSequences(c.state, target, c.getCommand(target))
 	return &pb.Command{
-		Platform: &pb.Platform{
-			Properties: []*pb.Platform_Property{
-				{
-					Name:  "OSFamily",
-					Value: translateOS(target.Subrepo),
-				},
-				// We don't really keep information around about ISA. Can look at adding
-				// that later if it becomes relevant & interesting.
-			},
-		},
+		Platform: c.platform,
 		// We have to run everything through bash since our commands are arbitrary.
 		// Unfortunately we can't just say "bash", we need an absolute path which is
 		// a bit weird since it assumes that our absolute path is the same as the

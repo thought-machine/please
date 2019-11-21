@@ -65,6 +65,9 @@ type Client struct {
 
 	// True if we are doing proper remote execution (false if we are caching only)
 	remoteExecution bool
+	// Platform properties that we will request from the remote.
+	// TODO(peterebden): this will need some modification for cross-compiling support.
+	platform *pb.Platform
 
 	// Cache this for later
 	bashPath string
@@ -153,6 +156,7 @@ func (c *Client) init() {
 				}
 				c.execClient = pb.NewExecutionClient(conn)
 				c.remoteExecution = true
+				c.platform = convertPlatform(c.state.Config)
 				log.Debug("Remote execution client initialised for execution")
 			} else {
 				log.Fatalf("Remote execution is configured but the build server doesn't support it")
