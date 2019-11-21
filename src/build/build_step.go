@@ -248,7 +248,17 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 		metadata.Stdout = out
 		storePostBuildOutput(target, out)
+
+		if runRemotely && needsBuilding(state, target, true) {
+			// postBuildFunction has changed the target - must rebuild it
+			m, err := state.RemoteClient.Build(tid, target)
+			if err != nil {
+				return err
+			}
+			out = m.Stdout
+		}
 	}
+
 	metadata.EndTime = time.Now()
 	checkLicences(state, target)
 
