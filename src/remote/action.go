@@ -216,7 +216,7 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest,
 			if o := c.targetOutputs(*l); o == nil {
 				if c.remoteExecution {
 					// Classic "we shouldn't get here" stuff
-					return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", target)
+					return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", *l)
 				}
 			} else {
 				pkgName := l.PackageName
