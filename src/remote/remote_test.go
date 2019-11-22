@@ -153,6 +153,7 @@ func (f postBuildFunction) Call(target *core.BuildTarget, output string) error {
 func (f postBuildFunction) String() string { return "" }
 
 func TestExecutePostBuildFunction(t *testing.T) {
+	t.Skip("Post-build function currently triggered at a higher level")
 	c := newClient()
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target5"})
 	target.BuildTimeout = time.Minute
