@@ -125,7 +125,11 @@ func (c *Client) getCommand(target *core.BuildTarget) string {
 		for i, s := range target.Sources {
 			urls[i] = "curl -fsSLo $OUT " + s.String()
 		}
-		return strings.Join(urls, " || ")
+		cmd := strings.Join(urls, " || ")
+		if target.IsBinary {
+			return "(" + cmd + ") && chmod +x $OUT"
+		}
+		return cmd
 	}
 	return target.GetCommand(c.state)
 }
