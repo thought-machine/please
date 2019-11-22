@@ -145,6 +145,29 @@ func TestExecuteBuild(t *testing.T) {
 	assert.Equal(t, []byte("hello\n"), metadata.Stdout)
 }
 
+type postBuildFunction func(*core.BuildTarget, string) error
+
+func (f postBuildFunction) Call(target *core.BuildTarget, output string) error {
+	return f(target, output)
+}
+func (f postBuildFunction) String() string { return "" }
+
+func TestExecutePostBuildFunction(t *testing.T) {
+	t.Skip("Post-build function currently triggered at a higher level")
+	c := newClient()
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target5"})
+	target.BuildTimeout = time.Minute
+	target.Command = "echo 'wibble wibble wibble' | tee file7"
+	target.PostBuildFunction = postBuildFunction(func(target *core.BuildTarget, output string) error {
+		target.AddOutput("somefile")
+		assert.Equal(t, "wibble wibble wibble", output)
+		return nil
+	})
+	_, err := c.Build(0, target)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"somefile"}, target.Outputs())
+}
+
 func TestExecuteTest(t *testing.T) {
 	c := newClientInstance("test")
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target3"})
