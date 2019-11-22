@@ -81,6 +81,18 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 	return nil
 }
 
+// setFilegroupOutputs sets the outputs for a filegroup from its inputs.
+func (c *Client) setFilegroupOutputs(target *core.BuildTarget) error {
+	return c.uploadBlobs(func(ch chan<- *blob) error {
+		defer close(ch)
+		dir, err := c.uploadInputs(ch, target, false, true)
+		c.outputMutex.Lock()
+		defer c.outputMutex.Unlock()
+		c.outputs[target.Label] = dir
+		return err
+	})
+}
+
 // digestMessage calculates the digest of a proto message as described in the
 // Digest message's comments.
 func (c *Client) digestMessage(msg proto.Message) *pb.Digest {
@@ -255,4 +267,105 @@ func outputs(target *core.BuildTarget) (files, dirs []string) {
 		}
 	}
 	return files, dirs
+}
+
+// A dirBuilder is for helping build up a tree of Directory protos.
+//
+// This is pretty awkward; we need to recursively build a whole set of directories
+// which does not match up to how we represent it (which is a series of files, with
+// no corresponding directories, that are not usefully ordered for this purpose).
+// We also need to handle the case of existing targets where we already know the
+// directory structure but may not have the files physically on disk.
+type dirBuilder struct {
+	c    *Client
+	root *pb.Directory
+	dirs map[string]*pb.Directory
+}
+
+func newDirBuilder(c *Client) *dirBuilder {
+	root := &pb.Directory{}
+	return &dirBuilder{
+		dirs: map[string]*pb.Directory{
+			".": root, // Ensure the root is in there
+			"":  root, // Some things might try to name it this way
+		},
+		root: root,
+		c:    c,
+	}
+}
+
+// Dir ensures the given directory exists, and constructs any necessary parents.
+func (b *dirBuilder) Dir(name string) *pb.Directory {
+	return b.dir(name, "")
+}
+
+func (b *dirBuilder) dir(dir, child string) *pb.Directory {
+	if dir == "." || dir == "/" {
+		return b.root
+	}
+	dir = strings.TrimSuffix(dir, "/")
+	d, present := b.dirs[dir]
+	if !present {
+		d = &pb.Directory{}
+		b.dirs[dir] = d
+		dir, base := path.Split(dir)
+		b.dir(dir, base)
+	}
+	// TODO(peterebden): The linear scan in hasChild is a bit suboptimal, we should
+	//                   really use the dirs map to determine this.
+	if child != "" && !hasChild(d, child) {
+		d.Directories = append(d.Directories, &pb.DirectoryNode{Name: child})
+	}
+	return d
+}
+
+// Root returns the root directory, calculates the digests of all others and uploads them
+// if the given channel is not nil.
+func (b *dirBuilder) Root(ch chan<- *blob) *pb.Directory {
+	b.dfs(".", ch)
+	return b.root
+}
+
+func (b *dirBuilder) dfs(name string, ch chan<- *blob) *pb.Digest {
+	dir := b.dirs[name]
+	for _, d := range dir.Directories {
+		if d.Digest == nil { // It's not nil if we're reusing outputs from an earlier call.
+			d.Digest = b.dfs(path.Join(name, d.Name), ch)
+		}
+	}
+	digest, contents := b.c.digestMessageContents(dir)
+	if ch != nil {
+		ch <- &blob{
+			Digest: digest,
+			Data:   contents,
+		}
+	}
+	return digest
+}
+
+// convertPlatform converts the platform entries from the config into a Platform proto.
+func convertPlatform(config *core.Configuration) *pb.Platform {
+	platform := &pb.Platform{}
+	for _, p := range config.Remote.Platform {
+		if parts := strings.SplitN(p, "=", 2); len(parts) == 2 {
+			platform.Properties = append(platform.Properties, &pb.Platform_Property{
+				Name:  parts[0],
+				Value: parts[1],
+			})
+		} else {
+			log.Warning("Invalid config setting in remote.platform %s; will ignore", p)
+		}
+	}
+	return platform
+}
+
+// removeOutputs removes all outputs for a target.
+func removeOutputs(target *core.BuildTarget) error {
+	outDir := target.OutDir()
+	for _, out := range target.Outputs() {
+		if err := os.RemoveAll(path.Join(outDir, out)); err != nil {
+			return fmt.Errorf("Failed to remove output for %s: %s", target, err)
+		}
+	}
+	return nil
 }

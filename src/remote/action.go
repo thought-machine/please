@@ -58,16 +58,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	files, dirs := outputs(target)
 	cmd, err := core.ReplaceSequences(c.state, target, c.getCommand(target))
 	return &pb.Command{
-		Platform: &pb.Platform{
-			Properties: []*pb.Platform_Property{
-				{
-					Name:  "OSFamily",
-					Value: translateOS(target.Subrepo),
-				},
-				// We don't really keep information around about ISA. Can look at adding
-				// that later if it becomes relevant & interesting.
-			},
-		},
+		Platform: c.platform,
 		// We have to run everything through bash since our commands are arbitrary.
 		// Unfortunately we can't just say "bash", we need an absolute path which is
 		// a bit weird since it assumes that our absolute path is the same as the
@@ -129,13 +120,12 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 // getCommand returns the appropriate command to use for a target.
 func (c *Client) getCommand(target *core.BuildTarget) string {
 	if target.IsRemoteFile {
-		// This is not a real command, but we need to encode the URLs into the action somehow
-		// to force it to be distinct from other remote_file rules.
+		// TODO(peterebden): we should handle this using the Remote Fetch API once that's available.
 		srcs := make([]string, len(target.Sources))
 		for i, s := range target.Sources {
 			srcs[i] = s.String()
 		}
-		return "plz_fetch " + strings.Join(srcs, " ")
+		return "curl -fsSLo $OUT " + strings.Join(srcs, " ")
 	}
 	return target.GetCommand(c.state)
 }
@@ -204,126 +194,104 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 }
 
 // buildInputRoot constructs the directory that is the input root and optionally uploads it.
-func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (*pb.Directory, error) {
-	// This is pretty awkward; we need to recursively build this whole set of directories
-	// which does not match up to how we represent it (which is a series of files, with
-	// no corresponding directories, that are not usefully ordered for this purpose).
-	// We also need to handle the case of existing targets where we already know the
-	// directory structure but may not have the files physically on disk.
-	dirs := map[string]*pb.Directory{}
-	root := &pb.Directory{}
-	dirs["."] = root // Ensure the root is in there
-	dirs[""] = root  // Some things might try to name it this way
-
-	var ensureDirExists func(string, string) *pb.Directory
-	ensureDirExists = func(dir, child string) *pb.Directory {
-		if dir == "." || dir == "/" {
-			return root
-		}
-		dir = strings.TrimSuffix(dir, "/")
-		d, present := dirs[dir]
-		if !present {
-			d = &pb.Directory{}
-			dirs[dir] = d
-			dir, base := path.Split(dir)
-			ensureDirExists(dir, base)
-		}
-		// TODO(peterebden): The linear scan in hasChild is a bit suboptimal, we should
-		//                   really use the dirs map to determine this.
-		if child != "" && !hasChild(d, child) {
-			d.Directories = append(d.Directories, &pb.DirectoryNode{Name: child})
-		}
-		return d
-	}
-
-	err := c.uploadBlobs(func(ch chan<- *blob) error {
+func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (root *pb.Directory, err error) {
+	c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
-		for input := range c.iterInputs(target, isTest) {
-			l := input.Label()
-			if l != nil {
-				if o := c.targetOutputs(*l); o != nil {
-					d := ensureDirExists(l.PackageName, "")
-					d.Files = append(d.Files, o.Files...)
-					d.Directories = append(d.Directories, o.Directories...)
-					d.Symlinks = append(d.Symlinks, o.Symlinks...)
-					continue
-				}
-				// If we get here we haven't built the target before. That is at least
-				// potentially OK - assume it has been built locally.
-			}
-			executable := l != nil && c.state.Graph.TargetOrDie(*l).IsBinary
-			fullPaths := input.FullPaths(c.state.Graph)
-			for i, out := range input.Paths(c.state.Graph) {
-				in := fullPaths[i]
-				if err := fs.Walk(in, func(name string, isDir bool) error {
-					if isDir {
-						return nil // nothing to do
-					}
-					dest := path.Join(out, name[len(in):])
-					d := ensureDirExists(path.Dir(dest), "")
-					// Now handle the file itself
-					info, err := os.Lstat(name)
-					if err != nil {
-						return err
-					}
-					if info.Mode()&os.ModeSymlink != 0 {
-						link, err := os.Readlink(name)
-						if err != nil {
-							return err
-						}
-						d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
-							Name:   path.Base(dest),
-							Target: link,
-						})
-						return nil
-					}
-					h, err := c.state.PathHasher.Hash(name, false, true)
-					if err != nil {
-						return err
-					}
-					digest := &pb.Digest{
-						Hash:      hex.EncodeToString(h),
-						SizeBytes: info.Size(),
-					}
-					d.Files = append(d.Files, &pb.FileNode{
-						Name:         path.Base(dest),
-						Digest:       digest,
-						IsExecutable: executable,
-					})
-					if upload {
-						ch <- &blob{
-							File:   name,
-							Digest: digest,
-						}
-					}
-					return nil
-				}); err != nil {
-					return err
-				}
-			}
+		if upload {
+			root, err = c.uploadInputs(ch, target, isTest, false)
+		} else {
+			root, err = c.uploadInputs(nil, target, isTest, false)
 		}
-		// Now the protos are complete we need to calculate all the digests...
-		var dfs func(string) *pb.Digest
-		dfs = func(name string) *pb.Digest {
-			dir := dirs[name]
-			for _, d := range dir.Directories {
-				if d.Digest == nil { // It's not nil if we're reusing outputs from an earlier call.
-					d.Digest = dfs(path.Join(name, d.Name))
-				}
-			}
-			digest, contents := c.digestMessageContents(dir)
-			if upload {
-				ch <- &blob{
-					Digest: digest,
-					Data:   contents,
-				}
-			}
-			return digest
-		}
-		dfs(".")
 		return nil
 	})
-	return root, err
+	return
+}
+
+// uploadInputs finds and uploads a set of inputs from a target.
+func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest, useTargetPackage bool) (*pb.Directory, error) {
+	b := newDirBuilder(c)
+	for input := range c.iterInputs(target, isTest) {
+		if l := input.Label(); l != nil {
+			if o := c.targetOutputs(*l); o == nil {
+				if c.remoteExecution {
+					// Classic "we shouldn't get here" stuff
+					return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", *l)
+				}
+			} else {
+				pkgName := l.PackageName
+				if useTargetPackage {
+					pkgName = target.Label.PackageName
+				}
+				d := b.Dir(pkgName)
+				d.Files = append(d.Files, o.Files...)
+				d.Directories = append(d.Directories, o.Directories...)
+				d.Symlinks = append(d.Symlinks, o.Symlinks...)
+				continue
+			}
+		}
+		if err := c.uploadInput(b, ch, input); err != nil {
+			return nil, err
+		}
+	}
+	if useTargetPackage {
+		b.Root(ch)
+		return b.Dir(target.Label.PackageName), nil
+	}
+	return b.Root(ch), nil
+}
+
+// uploadInput finds and uploads a single input.
+func (c *Client) uploadInput(b *dirBuilder, ch chan<- *blob, input core.BuildInput) error {
+	fullPaths := input.FullPaths(c.state.Graph)
+	for i, out := range input.Paths(c.state.Graph) {
+		in := fullPaths[i]
+		if err := fs.Walk(in, func(name string, isDir bool) error {
+			if isDir {
+				return nil // nothing to do
+			}
+			dest := path.Join(out, name[len(in):])
+			d := b.Dir(path.Dir(dest))
+			// Now handle the file itself
+			info, err := os.Lstat(name)
+			if err != nil {
+				return err
+			}
+			if info.Mode()&os.ModeSymlink != 0 {
+				link, err := os.Readlink(name)
+				if err != nil {
+					return err
+				}
+				d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
+					Name:   path.Base(dest),
+					Target: link,
+				})
+				return nil
+			}
+			h, err := c.state.PathHasher.Hash(name, false, true)
+			if err != nil {
+				return err
+			}
+			digest := &pb.Digest{
+				Hash:      hex.EncodeToString(h),
+				SizeBytes: info.Size(),
+			}
+			d.Files = append(d.Files, &pb.FileNode{
+				Name:         path.Base(dest),
+				Digest:       digest,
+				IsExecutable: info.Mode()&0100 != 0,
+			})
+			if ch != nil {
+				ch <- &blob{
+					File:   name,
+					Digest: digest,
+				}
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // iterInputs yields all the input files needed for a target.
