@@ -121,11 +121,11 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 func (c *Client) getCommand(target *core.BuildTarget) string {
 	if target.IsRemoteFile {
 		// TODO(peterebden): we should handle this using the Remote Fetch API once that's available.
-		srcs := make([]string, len(target.Sources))
+		urls := make([]string, len(target.Sources))
 		for i, s := range target.Sources {
-			srcs[i] = s.String()
+			urls[i] = "curl -fsSLo $OUT " + s.String()
 		}
-		return "curl -fsSLo $OUT " + strings.Join(srcs, " ")
+		return strings.Join(urls, " || ")
 	}
 	return target.GetCommand(c.state)
 }
