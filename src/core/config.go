@@ -397,6 +397,7 @@ type Configuration struct {
 		Timeout      cli.Duration `help:"Timeout for connections made to the remote server."`
 		ReadOnly     bool         `help:"If true, prevents this client from writing to the remote storage. Is overridden if being used for execution."`
 		HomeDir      string       `help:"The home directory on the build machine."`
+		Platform     []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {

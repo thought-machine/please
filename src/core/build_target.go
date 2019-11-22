@@ -115,6 +115,9 @@ type BuildTarget struct {
 	Stamp bool
 	// If true, the target must be run locally (i.e. is not compatible with remote execution).
 	Local bool
+	// If true, the target is needed for a subinclude and therefore we will have to make sure its
+	// outputs are available locally when built.
+	NeededForSubinclude bool
 	// Marks the target as a filegroup.
 	IsFilegroup bool `print:"false"`
 	// Marks the target as a hash_filegroup.

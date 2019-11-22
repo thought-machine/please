@@ -63,6 +63,12 @@ type Client struct {
 	cacheWritable     bool
 	canBatchBlobReads bool // This isn't supported by all servers.
 
+	// True if we are doing proper remote execution (false if we are caching only)
+	remoteExecution bool
+	// Platform properties that we will request from the remote.
+	// TODO(peterebden): this will need some modification for cross-compiling support.
+	platform *pb.Platform
+
 	// Cache this for later
 	bashPath string
 }
@@ -149,6 +155,8 @@ func (c *Client) init() {
 					return fmt.Errorf("Remote execution not enabled for this server")
 				}
 				c.execClient = pb.NewExecutionClient(conn)
+				c.remoteExecution = true
+				c.platform = convertPlatform(c.state.Config)
 				log.Debug("Remote execution client initialised for execution")
 			} else {
 				log.Fatalf("Remote execution is configured but the build server doesn't support it")
@@ -301,6 +309,13 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
+	outDir := target.OutDir()
+	if target.IsFilegroup {
+		if err := removeOutputs(target); err != nil {
+			return nil, err
+		}
+		return &core.BuildMetadata{}, c.downloadDirectory(outDir, c.targetOutputs(target.Label))
+	}
 	isTest := target.State() >= core.Built
 	needStdout := target.PostBuildFunction != nil && !isTest // We only care in this case.
 	inputRoot, err := c.buildInputRoot(target, false, isTest)
@@ -329,11 +344,8 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 		return nil, err
 	}
 	mode := target.OutMode()
-	outDir := target.OutDir()
-	for _, out := range target.Outputs() {
-		if err := os.RemoveAll(path.Join(outDir, out)); err != nil {
-			return nil, fmt.Errorf("Failed to remove output: %s", err)
-		}
+	if err := removeOutputs(target); err != nil {
+		return nil, err
 	}
 	if err := c.downloadBlobs(ctx, func(ch chan<- *blob) error {
 		defer close(ch)
@@ -384,6 +396,10 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
+	}
+	if target.IsFilegroup {
+		// Filegroups get special-cased since they are just a movement of files.
+		return &core.BuildMetadata{}, c.setFilegroupOutputs(target)
 	}
 	command, digest, err := c.uploadAction(target, true, false)
 	if err != nil {
