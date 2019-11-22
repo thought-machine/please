@@ -358,3 +358,14 @@ func convertPlatform(config *core.Configuration) *pb.Platform {
 	}
 	return platform
 }
+
+// removeOutputs removes all outputs for a target.
+func removeOutputs(target *core.BuildTarget) error {
+	outDir := target.OutDir()
+	for _, out := range target.Outputs() {
+		if err := os.RemoveAll(path.Join(outDir, out)); err != nil {
+			return fmt.Errorf("Failed to remove output for %s: %s", target, err)
+		}
+	}
+	return nil
+}

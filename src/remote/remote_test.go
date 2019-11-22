@@ -80,7 +80,9 @@ func TestStoreAndRetrieveDir(t *testing.T) {
 	target.AddLabel(core.TestResultsDirLabel)
 	target.AddOutput("target2")
 	c.state.Graph.AddTarget(target)
-	err := c.Store(target, &core.BuildMetadata{
+	err := c.Store(target, &core.BuildMetadata{}, target.Outputs())
+	assert.NoError(t, err)
+	err = c.Store(target, &core.BuildMetadata{
 		Stdout: []byte("test stdout"),
 		Test:   true,
 	}, []string{
@@ -152,6 +154,8 @@ func TestExecuteTest(t *testing.T) {
 	target.IsTest = true
 	target.IsBinary = true
 	target.SetState(core.Building)
+	err := c.Store(target, &core.BuildMetadata{}, target.Outputs())
+	assert.NoError(t, err)
 	c.state.Graph.AddTarget(target)
 	_, results, coverage, err := c.Test(0, target)
 	assert.NoError(t, err)
@@ -168,6 +172,8 @@ func TestExecuteTestWithCoverage(t *testing.T) {
 	target.TestCommand = "$TEST"
 	target.IsTest = true
 	target.IsBinary = true
+	err := c.Store(target, &core.BuildMetadata{}, target.Outputs())
+	assert.NoError(t, err)
 	target.SetState(core.Built)
 	c.state.Graph.AddTarget(target)
 	_, results, coverage, err := c.Test(0, target)
