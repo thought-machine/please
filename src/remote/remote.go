@@ -551,7 +551,7 @@ func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.
 	if c.state.Config.Remote.DisplayURL != "" {
 		log.Debug("Remote progress for %s: %s%s", target.Label, metadata.Stage, c.actionURL(metadata.ActionDigest, true))
 	}
-	if target.State() >= core.Built {
+	if target.State() <= core.Built {
 		switch metadata.Stage {
 		case pb.ExecutionStage_CACHE_CHECK:
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache")
