@@ -1115,6 +1115,7 @@ func (target *BuildTarget) insert(sl []string, s string) []string {
 	if s == "" {
 		panic("Cannot add an empty string as an output of a target")
 	}
+	s = strings.TrimPrefix(s, "./")
 	for i, x := range sl {
 		if s == x {
 			// Already present.
