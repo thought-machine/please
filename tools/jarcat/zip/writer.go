@@ -333,6 +333,7 @@ func (f *File) AddInitPyFiles() error {
 	}
 	sort.Strings(s)
 	for _, p := range s {
+		n := filepath.Base(p)
 		for d := filepath.Dir(p); d != "."; d = filepath.Dir(d) {
 			if filepath.Base(d) == "__pycache__" {
 				break // Don't need to add an __init__.py here.
@@ -340,6 +341,9 @@ func (f *File) AddInitPyFiles() error {
 			initPyPath := path.Join(d, "__init__.py")
 			// Don't write one at the root, it's not necessary.
 			if _, present := f.files[initPyPath]; present || initPyPath == "__init__.py" {
+				if n == "__init__.py" && d == filepath.Dir(p) {
+					continue
+				}
 				break
 			} else if _, present := f.files[initPyPath+"c"]; present {
 				// If we already have a pyc / pyo we don't need the __init__.py as well.

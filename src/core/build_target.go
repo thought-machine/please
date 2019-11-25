@@ -786,12 +786,15 @@ func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
 // ProvideFor returns the build label that we'd provide for the given target.
 func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
 	ret := []BuildLabel{}
-	if target.Provides != nil {
-		// Never do this if the other target has a data dependency on us.
+	if target.Provides != nil && len(other.Requires) != 0 {
+		// Never do this if the other target has a data or tool dependency on us.
 		for _, data := range other.Data {
 			if label := data.Label(); label != nil && *label == target.Label {
 				return []BuildLabel{target.Label}
 			}
+		}
+		if other.IsTool(target.Label) {
+			return []BuildLabel{target.Label}
 		}
 		for _, require := range other.Requires {
 			if label, present := target.Provides[require]; present {
