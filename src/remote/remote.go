@@ -104,7 +104,8 @@ func (c *Client) init() {
 		conn, err := grpc.Dial(c.state.Config.Remote.URL,
 			grpc.WithTimeout(dialTimeout),
 			grpc.WithInsecure(),
-			grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(grpc_retry.WithMax(maxRetries))))
+			grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(grpc_retry.WithMax(maxRetries))),
+			grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor(grpc_retry.WithMax(maxRetries))))
 		if err != nil {
 			return err
 		}
