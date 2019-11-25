@@ -41,14 +41,13 @@ var apiVersion = semver.SemVer{Major: 2}
 //
 // It provides a higher-level interface over the specific RPCs available.
 type Client struct {
-	client        *client.Client
-	storageClient pb.ContentAddressableStorageClient
-	bsClient      bs.ByteStreamClient
-	initOnce      sync.Once
-	state         *core.BuildState
-	reqTimeout    time.Duration
-	err           error // for initialisation
-	instance      string
+	client     *client.Client
+	bsClient   bs.ByteStreamClient
+	initOnce   sync.Once
+	state      *core.BuildState
+	reqTimeout time.Duration
+	err        error // for initialisation
+	instance   string
 
 	// Stored output directories from previously executed targets.
 	// This isn't just a cache - it is needed for cases where we don't actually
@@ -135,7 +134,6 @@ func (c *Client) init() {
 			// bit to allow a bit of serialisation overhead etc.
 			c.maxBlobBatchSize = 4000000
 		}
-		c.storageClient = pb.NewContentAddressableStorageClient(client.CASConnection)
 		c.bsClient = bs.NewByteStreamClient(client.CASConnection)
 		// Look this up just once now.
 		bash, err := core.LookBuildPath("bash", c.state.Config)
