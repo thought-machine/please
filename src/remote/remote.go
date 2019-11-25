@@ -17,7 +17,6 @@ import (
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/ptypes"
-	bs "google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/genproto/googleapis/longrunning"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"gopkg.in/op/go-logging.v1"
@@ -42,7 +41,6 @@ var apiVersion = semver.SemVer{Major: 2}
 // It provides a higher-level interface over the specific RPCs available.
 type Client struct {
 	client     *client.Client
-	bsClient   bs.ByteStreamClient
 	initOnce   sync.Once
 	state      *core.BuildState
 	reqTimeout time.Duration
@@ -134,7 +132,6 @@ func (c *Client) init() {
 			// bit to allow a bit of serialisation overhead etc.
 			c.maxBlobBatchSize = 4000000
 		}
-		c.bsClient = bs.NewByteStreamClient(client.CASConnection)
 		// Look this up just once now.
 		bash, err := core.LookBuildPath("bash", c.state.Config)
 		c.bashPath = bash

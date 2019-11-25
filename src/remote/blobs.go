@@ -218,7 +218,7 @@ func (c *Client) reallyStoreByteStream(b *blob, r io.ReadSeeker) error {
 	name := c.byteStreamUploadName(b.Digest)
 	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
-	stream, err := c.bsClient.Write(ctx)
+	stream, err := c.client.Write(ctx)
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func (c *Client) retrieveByteStream(b *blob) error {
 // readByteStream returns a reader for a bytestream for the given digest.
 func (c *Client) readByteStream(digest *pb.Digest) (io.ReadCloser, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	stream, err := c.bsClient.Read(ctx, &bs.ReadRequest{
+	stream, err := c.client.Read(ctx, &bs.ReadRequest{
 		ResourceName: c.byteStreamDownloadName(digest),
 	})
 	if err != nil {
