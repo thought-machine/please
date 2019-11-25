@@ -13,13 +13,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/client"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	bs "google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/genproto/googleapis/longrunning"
-	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"gopkg.in/op/go-logging.v1"
 
@@ -42,6 +41,7 @@ var apiVersion = semver.SemVer{Major: 2}
 //
 // It provides a higher-level interface over the specific RPCs available.
 type Client struct {
+	client            *client.Client
 	actionCacheClient pb.ActionCacheClient
 	storageClient     pb.ContentAddressableStorageClient
 	bsClient          bs.ByteStreamClient
@@ -98,13 +98,12 @@ func (c *Client) init() {
 		// Create a copy of the state where we can modify the config
 		c.state = c.state.ForConfig()
 		c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
-		// TODO(peterebden): We may need to add the ability to have multiple URLs which we
-		//                   would then query for capabilities to discover which is which.
 		// TODO(peterebden): Add support for TLS.
-		conn, err := grpc.Dial(c.state.Config.Remote.URL,
-			grpc.WithTimeout(dialTimeout),
-			grpc.WithInsecure(),
-			grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(grpc_retry.WithMax(maxRetries))))
+		client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
+			Service:    c.state.Config.Remote.URL,
+			CASService: c.state.Config.Remote.CASURL,
+			NoSecurity: true,
+		}, client.UseBatchOps(true), client.RetryTransient())
 		if err != nil {
 			return err
 		}
@@ -112,7 +111,7 @@ func (c *Client) init() {
 		// execution, caching or both.
 		ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 		defer cancel()
-		resp, err := pb.NewCapabilitiesClient(conn).GetCapabilities(ctx, &pb.GetCapabilitiesRequest{
+		resp, err := c.client.GetCapabilities(ctx, &pb.GetCapabilitiesRequest{
 			InstanceName: c.instance,
 		})
 		if err != nil {
@@ -138,9 +137,9 @@ func (c *Client) init() {
 			// bit to allow a bit of serialisation overhead etc.
 			c.maxBlobBatchSize = 4000000
 		}
-		c.actionCacheClient = pb.NewActionCacheClient(conn)
-		c.storageClient = pb.NewContentAddressableStorageClient(conn)
-		c.bsClient = bs.NewByteStreamClient(conn)
+		c.actionCacheClient = pb.NewActionCacheClient(client.CASConnection)
+		c.storageClient = pb.NewContentAddressableStorageClient(client.CASConnection)
+		c.bsClient = bs.NewByteStreamClient(client.CASConnection)
 		// Look this up just once now.
 		bash, err := core.LookBuildPath("bash", c.state.Config)
 		c.bashPath = bash
@@ -154,7 +153,7 @@ func (c *Client) init() {
 				} else if !caps.ExecEnabled {
 					return fmt.Errorf("Remote execution not enabled for this server")
 				}
-				c.execClient = pb.NewExecutionClient(conn)
+				c.execClient = pb.NewExecutionClient(client.Connection)
 				c.remoteExecution = true
 				c.platform = convertPlatform(c.state.Config)
 				log.Debug("Remote execution client initialised for execution")
