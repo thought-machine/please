@@ -106,6 +106,7 @@ go_get(
         "connectivity",
         "credentials",
         "credentials/internal",
+        "credentials/oauth",
         "encoding",
         "encoding/gzip",
         "encoding/proto",
@@ -128,6 +129,7 @@ go_get(
     repo = "github.com/grpc/grpc-go",
     revision = "v1.22.0",
     deps = [
+        ":oauth2",
         ":protobuf",
         ":rpcstatus",
         ":unix",
