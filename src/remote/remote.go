@@ -45,7 +45,6 @@ type Client struct {
 	actionCacheClient pb.ActionCacheClient
 	storageClient     pb.ContentAddressableStorageClient
 	bsClient          bs.ByteStreamClient
-	execClient        pb.ExecutionClient
 	initOnce          sync.Once
 	state             *core.BuildState
 	reqTimeout        time.Duration
@@ -153,7 +152,6 @@ func (c *Client) init() {
 				} else if !caps.ExecEnabled {
 					return fmt.Errorf("Remote execution not enabled for this server")
 				}
-				c.execClient = pb.NewExecutionClient(client.Connection)
 				c.remoteExecution = true
 				c.platform = convertPlatform(c.state.Config)
 				log.Debug("Remote execution client initialised for execution")
@@ -459,7 +457,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	stream, err := c.execClient.Execute(ctx, &pb.ExecuteRequest{
+	stream, err := c.client.Execute(ctx, &pb.ExecuteRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,
 	})
