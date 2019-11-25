@@ -453,10 +453,10 @@ go_get(
         ":grpc",
         ":longrunning",
         ":oauth2",
+        ":pborman_uuid",
         ":protobuf",
         ":remote-apis",
         ":rpcstatus",
-        ":pborman_uuid",
     ],
 )
 
@@ -489,11 +489,11 @@ go_get(
         "jwt",
     ],
     revision = "d668ce993890a79bda886613ee587a69dd5da7a6",
+    visibility = ["//third_party/go/..."],
     deps = [
         ":cloud-metadata",
         "//third_party/go:net",
     ],
-    visibility = ["//third_party/go/..."],
 )
 
 # TODO(peterebden): Splitting up this & the other bits of genproto is a bit of
