@@ -102,6 +102,7 @@ func (c *Client) init() {
 		if err != nil {
 			return err
 		}
+		c.client = client
 		// Query the server for its capabilities. This tells us whether it is capable of
 		// execution, caching or both.
 		ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
