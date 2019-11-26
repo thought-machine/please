@@ -250,9 +250,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		metadata.Stdout = out
 		storePostBuildOutput(target, out)
 
-		if runRemotely && outputsChanged(target.Outputs(), outs) {
-			log.Info("Rebuilding %s after post-build function", target)
+		if runRemotely && len(outs) != len(target.Outputs()) {
 			// postBuildFunction has changed the target - must rebuild it
+			log.Info("Rebuilding %s after post-build function", target)
 			m, err := state.RemoteClient.Build(tid, target)
 			if err != nil {
 				return err
@@ -794,17 +794,4 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 		return append([]byte(out+"\n"), out2...), err
 	}
 	return []byte(out), nil
-}
-
-// outputsChanged returns true if the two slices don't match.
-func outputsChanged(a, b []string) bool {
-	if len(a) != len(b) {
-		return true
-	}
-	for i, x := range a {
-		if x != b[i] {
-			return true
-		}
-	}
-	return false
 }
