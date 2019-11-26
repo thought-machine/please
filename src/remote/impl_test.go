@@ -27,7 +27,7 @@ import (
 )
 
 func newClient() *Client {
-	return newClientInstance("")
+	return newClientInstance("wibble")
 }
 
 func newClientInstance(name string) *Client {
