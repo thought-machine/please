@@ -61,7 +61,7 @@ func (c *Client) uploadBlobs(f func(ch chan<- *blob) error) error {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 		defer cancel()
-		resp, err := c.storageClient.FindMissingBlobs(ctx, req)
+		resp, err := c.client.FindMissingBlobs(ctx, req)
 		if err != nil {
 			log.Warning("Error filtering blobs for remote execution: %s", err)
 			// Continue and send all of these, it is not necessarily fatal (although it
@@ -151,7 +151,7 @@ func (c *Client) reallyUploadBlobs(ch <-chan *blob) error {
 func (c *Client) sendBlobs(reqs []*pb.BatchUpdateBlobsRequest_Request) error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
-	resp, err := c.storageClient.BatchUpdateBlobs(ctx, &pb.BatchUpdateBlobsRequest{
+	resp, err := c.client.BatchUpdateBlobs(ctx, &pb.BatchUpdateBlobsRequest{
 		InstanceName: c.instance,
 		Requests:     reqs,
 	})
@@ -173,7 +173,7 @@ func (c *Client) sendBlobs(reqs []*pb.BatchUpdateBlobsRequest_Request) error {
 func (c *Client) receiveBlobs(digests []*pb.Digest, filenames map[string]string, modes map[string]os.FileMode) error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
-	resp, err := c.storageClient.BatchReadBlobs(ctx, &pb.BatchReadBlobsRequest{
+	resp, err := c.client.BatchReadBlobs(ctx, &pb.BatchReadBlobsRequest{
 		InstanceName: c.instance,
 		Digests:      digests,
 	})
@@ -218,7 +218,7 @@ func (c *Client) reallyStoreByteStream(b *blob, r io.ReadSeeker) error {
 	name := c.byteStreamUploadName(b.Digest)
 	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
-	stream, err := c.bsClient.Write(ctx)
+	stream, err := c.client.Write(ctx)
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func (c *Client) retrieveByteStream(b *blob) error {
 // readByteStream returns a reader for a bytestream for the given digest.
 func (c *Client) readByteStream(digest *pb.Digest) (io.ReadCloser, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	stream, err := c.bsClient.Read(ctx, &bs.ReadRequest{
+	stream, err := c.client.Read(ctx, &bs.ReadRequest{
 		ResourceName: c.byteStreamDownloadName(digest),
 	})
 	if err != nil {
@@ -376,7 +376,7 @@ func (c *Client) readByteStreamToProto(digest *pb.Digest, msg proto.Message) err
 func (c *Client) checkBatchReadBlobs() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 	defer cancel()
-	_, err := c.storageClient.BatchReadBlobs(ctx, &pb.BatchReadBlobsRequest{
+	_, err := c.client.BatchReadBlobs(ctx, &pb.BatchReadBlobsRequest{
 		InstanceName: c.instance,
 	})
 	return status.Code(err) != codes.Unimplemented
