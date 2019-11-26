@@ -1,3 +1,11 @@
+Version 14.1.10
+---------------
+
+    * python2 compatibility fix in please_pex
+    * Various remote execution fixes
+    * protoc_binary now provides well-known types as a dependency
+
+
 Version 14.1.9
 --------------
 
