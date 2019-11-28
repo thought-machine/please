@@ -469,8 +469,8 @@ go_get(
 go_get(
     name = "glog",
     get = "github.com/golang/glog",
-    revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
     patch = "glog_disable.patch",
+    revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
 )
 
 go_get(
