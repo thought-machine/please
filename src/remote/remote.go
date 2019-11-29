@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bazelbuild/remote-apis-sdks/go/client"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/ptypes"
