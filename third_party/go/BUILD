@@ -429,7 +429,7 @@ go_get(
 go_get(
     name = "remote-apis",
     get = "github.com/bazelbuild/remote-apis/build/...",
-    revision = "e7282cf0f0e16e7ba84209be5417279e6815bee7",
+    revision = "b5123b1bb2853393c7b9aa43236db924d7e32d61",
     deps = [
         ":annotations",
         ":grpc",
@@ -442,7 +442,7 @@ go_get(
 go_get(
     name = "remote-apis-sdks",
     get = "github.com/bazelbuild/remote-apis-sdks/go/...",
-    revision = "9f0428c343a9ade6557e40e5d805239e7cd35cf7",
+    revision = "a21ff57ff57ce7e1dc04ed96f786ade301c793a5",
     deps = [
         ":annotations",
         ":bytestream",

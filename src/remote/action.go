@@ -55,6 +55,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	// We can't predict what variables like this should be so we sneakily bung something on
 	// the front of the command. It'd be nicer if there were a better way though...
 	const commandPrefix = "export TMP_DIR=\"`pwd`\" && "
+	// TODO(peterebden): Remove this nonsense once API v2.1 is released.
 	files, dirs := outputs(target)
 	cmd, err := core.ReplaceSequences(c.state, target, c.getCommand(target))
 	return &pb.Command{
@@ -70,6 +71,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		EnvironmentVariables: buildEnv(c.stampedBuildEnvironment(target, inputRoot)),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
+		OutputPaths:          append(files, dirs...),
 	}, err
 }
 
@@ -87,6 +89,7 @@ func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb
 
 // buildTestCommand builds a command for a target when testing.
 func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error) {
+	// TODO(peterebden): Remove all this nonsense once API v2.1 is released.
 	files := make([]string, 0, 2)
 	dirs := []string{}
 	if target.NeedCoverage(c.state) {
@@ -114,6 +117,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, "")),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
+		OutputPaths:          append(files, dirs...),
 	}, err
 }
 
