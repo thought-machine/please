@@ -246,8 +246,7 @@ func (graph *BuildGraph) AllDependenciesResolved(target *BuildTarget) bool {
 // point, but some of the dependencies may not yet exist.
 func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 	for _, label := range toTarget.ProvideFor(fromTarget) {
-		target, present := graph.targets[label]
-		if present {
+		if target, present := graph.targets[label]; present {
 			fromTarget.resolveDependency(toTarget.Label, target)
 			graph.revDeps[label] = append(graph.revDeps[label], fromTarget)
 		} else {

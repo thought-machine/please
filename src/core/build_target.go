@@ -115,6 +115,9 @@ type BuildTarget struct {
 	Stamp bool
 	// If true, the target must be run locally (i.e. is not compatible with remote execution).
 	Local bool
+	// If true, the target is needed for a subinclude and therefore we will have to make sure its
+	// outputs are available locally when built.
+	NeededForSubinclude bool
 	// Marks the target as a filegroup.
 	IsFilegroup bool `print:"false"`
 	// Marks the target as a hash_filegroup.
@@ -785,12 +788,15 @@ func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
 // ProvideFor returns the build label that we'd provide for the given target.
 func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
 	ret := []BuildLabel{}
-	if target.Provides != nil {
-		// Never do this if the other target has a data dependency on us.
+	if target.Provides != nil && len(other.Requires) != 0 {
+		// Never do this if the other target has a data or tool dependency on us.
 		for _, data := range other.Data {
 			if label := data.Label(); label != nil && *label == target.Label {
 				return []BuildLabel{target.Label}
 			}
+		}
+		if other.IsTool(target.Label) {
+			return []BuildLabel{target.Label}
 		}
 		for _, require := range other.Requires {
 			if label, present := target.Provides[require]; present {
@@ -1114,6 +1120,7 @@ func (target *BuildTarget) insert(sl []string, s string) []string {
 	if s == "" {
 		panic("Cannot add an empty string as an output of a target")
 	}
+	s = strings.TrimPrefix(s, "./")
 	for i, x := range sl {
 		if s == x {
 			// Already present.

@@ -430,6 +430,19 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
         hashes = hashes,
         deps = deps,
     )
+    # The well-known types are included in the same zipfile.
+    wkt = build_rule(
+        name = name,
+        tag = 'wkt',
+        srcs = [download_rule],
+        outs = ['google'],
+        tools = [CONFIG.JARCAT_TOOL],
+        cmd = '$TOOL x $SRCS --strip_prefix include',
+        labels = [
+            'protoc:-I$TMP_DIR/' + package_name(),
+            'protoc:-I$TMP_DIR',
+        ],
+    )
     return genrule(
         name = name,
         srcs = [download_rule],
@@ -438,4 +451,5 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
         binary = True,
         cmd = '$TOOL x $SRCS bin/protoc',
         visibility = visibility,
+        provides = {'proto': wkt},
     )

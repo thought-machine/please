@@ -1,3 +1,26 @@
+Version 14.1.10
+---------------
+
+    * python2 compatibility fix in please_pex
+    * Various remote execution fixes
+    * protoc_binary now provides well-known types as a dependency
+
+
+Version 14.1.9
+--------------
+
+    * Make remote timeout configurable (#770)
+    * Fix faulty download blob logic for servers that support batching reads.
+
+
+Version 14.1.8
+--------------
+
+    * Fix for an issue where protoc_flags passed to grpc_library were passed
+      twice to the actual protoc invocation
+    * Changed .pydistutils.cfg to setup.cfg in pip_library (#762)
+
+
 Version 14.1.7
 --------------
 

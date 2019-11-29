@@ -106,6 +106,7 @@ go_get(
         "connectivity",
         "credentials",
         "credentials/internal",
+        "credentials/oauth",
         "encoding",
         "encoding/gzip",
         "encoding/proto",
@@ -128,6 +129,7 @@ go_get(
     repo = "github.com/grpc/grpc-go",
     revision = "v1.22.0",
     deps = [
+        ":oauth2",
         ":protobuf",
         ":rpcstatus",
         ":unix",
@@ -427,13 +429,71 @@ go_get(
 go_get(
     name = "remote-apis",
     get = "github.com/bazelbuild/remote-apis/build/...",
-    revision = "e7282cf0f0e16e7ba84209be5417279e6815bee7",
+    revision = "b5123b1bb2853393c7b9aa43236db924d7e32d61",
     deps = [
         ":annotations",
         ":grpc",
         ":longrunning",
         ":protobuf",
         ":rpcstatus",
+    ],
+)
+
+go_get(
+    name = "remote-apis-sdks",
+    get = "github.com/bazelbuild/remote-apis-sdks/go/...",
+    revision = "a21ff57ff57ce7e1dc04ed96f786ade301c793a5",
+    deps = [
+        ":annotations",
+        ":bytestream",
+        ":cmp",
+        ":errgroup",
+        ":errors",
+        ":glog",
+        ":grpc",
+        ":longrunning",
+        ":oauth2",
+        ":pborman_uuid",
+        ":protobuf",
+        ":remote-apis",
+        ":rpcstatus",
+    ],
+)
+
+go_get(
+    name = "cmp",
+    get = "github.com/google/go-cmp/cmp",
+    revision = "b1c9c4891a6525d98001fea424c8926c6d77bb56",
+)
+
+go_get(
+    name = "glog",
+    get = "github.com/golang/glog",
+    patch = "glog_disable.patch",
+    revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
+)
+
+go_get(
+    name = "cloud-metadata",
+    get = "cloud.google.com/go/compute/metadata",
+    revision = "v0.40.0",
+)
+
+go_get(
+    name = "oauth2",
+    get = "golang.org/x/oauth2",
+    install = [
+        "",
+        "google",
+        "internal",
+        "jws",
+        "jwt",
+    ],
+    revision = "d668ce993890a79bda886613ee587a69dd5da7a6",
+    visibility = ["//third_party/go/..."],
+    deps = [
+        ":cloud-metadata",
+        "//third_party/go:net",
     ],
 )
 
@@ -475,6 +535,13 @@ go_get(
     name = "uuid",
     get = "github.com/google/uuid",
     revision = "v1.1.1",
+)
+
+go_get(
+    name = "pborman_uuid",
+    get = "github.com/pborman/uuid",
+    revision = "v1.2.0",
+    deps = [":uuid"],
 )
 
 go_get(

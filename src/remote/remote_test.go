@@ -80,7 +80,9 @@ func TestStoreAndRetrieveDir(t *testing.T) {
 	target.AddLabel(core.TestResultsDirLabel)
 	target.AddOutput("target2")
 	c.state.Graph.AddTarget(target)
-	err := c.Store(target, &core.BuildMetadata{
+	err := c.Store(target, &core.BuildMetadata{}, target.Outputs())
+	assert.NoError(t, err)
+	err = c.Store(target, &core.BuildMetadata{
 		Stdout: []byte("test stdout"),
 		Test:   true,
 	}, []string{
@@ -143,6 +145,29 @@ func TestExecuteBuild(t *testing.T) {
 	assert.Equal(t, []byte("hello\n"), metadata.Stdout)
 }
 
+type postBuildFunction func(*core.BuildTarget, string) error
+
+func (f postBuildFunction) Call(target *core.BuildTarget, output string) error {
+	return f(target, output)
+}
+func (f postBuildFunction) String() string { return "" }
+
+func TestExecutePostBuildFunction(t *testing.T) {
+	t.Skip("Post-build function currently triggered at a higher level")
+	c := newClient()
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target5"})
+	target.BuildTimeout = time.Minute
+	target.Command = "echo 'wibble wibble wibble' | tee file7"
+	target.PostBuildFunction = postBuildFunction(func(target *core.BuildTarget, output string) error {
+		target.AddOutput("somefile")
+		assert.Equal(t, "wibble wibble wibble", output)
+		return nil
+	})
+	_, err := c.Build(0, target)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"somefile"}, target.Outputs())
+}
+
 func TestExecuteTest(t *testing.T) {
 	c := newClientInstance("test")
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target3"})
@@ -152,6 +177,8 @@ func TestExecuteTest(t *testing.T) {
 	target.IsTest = true
 	target.IsBinary = true
 	target.SetState(core.Building)
+	err := c.Store(target, &core.BuildMetadata{}, target.Outputs())
+	assert.NoError(t, err)
 	c.state.Graph.AddTarget(target)
 	_, results, coverage, err := c.Test(0, target)
 	assert.NoError(t, err)
@@ -168,6 +195,8 @@ func TestExecuteTestWithCoverage(t *testing.T) {
 	target.TestCommand = "$TEST"
 	target.IsTest = true
 	target.IsBinary = true
+	err := c.Store(target, &core.BuildMetadata{}, target.Outputs())
+	assert.NoError(t, err)
 	target.SetState(core.Built)
 	c.state.Graph.AddTarget(target)
 	_, results, coverage, err := c.Test(0, target)

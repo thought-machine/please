@@ -315,6 +315,7 @@ func DefaultConfiguration() *Configuration {
 	config.Proto.PythonGrpcDep = "//third_party/python:grpc"
 	config.Proto.JavaGrpcDep = "//third_party/java:grpc-all"
 	config.Proto.GoGrpcDep = "//third_party/go:grpc"
+	config.Remote.Timeout = cli.Duration(2 * time.Minute)
 	config.Bazel.Compatibility = usingBazelWorkspace
 	return &config
 }
@@ -395,13 +396,16 @@ type Configuration struct {
 		Upload          cli.URL      `help:"URL to upload test results to (in XML format)"`
 	}
 	Remote struct {
-		URL          string `help:"URL for the remote server. If this is set but no executors are configured then it can still act as a remote cache."`
-		NumExecutors int    `help:"Maximum number of remote executors to use simultaneously."`
-		Instance     string `help:"Remote instance name to request; depending on the server this may be required."`
-		Name         string `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
-		DisplayURL   string `help:"A URL to browse the remote server with (e.g. using buildbarn-browser). Only used when printing hashes."`
-		ReadOnly     bool   `help:"If true, prevents this client from writing to the remote storage. Is overridden if being used for execution."`
-		HomeDir      string `help:"The home directory on the build machine."`
+		URL          string       `help:"URL for the remote server. If this is set but no executors are configured then it can still act as a remote cache."`
+		CASURL       string       `help:"URL for the CAS service, if it is different to the main one."`
+		NumExecutors int          `help:"Maximum number of remote executors to use simultaneously."`
+		Instance     string       `help:"Remote instance name to request; depending on the server this may be required."`
+		Name         string       `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
+		DisplayURL   string       `help:"A URL to browse the remote server with (e.g. using buildbarn-browser). Only used when printing hashes."`
+		Timeout      cli.Duration `help:"Timeout for connections made to the remote server."`
+		ReadOnly     bool         `help:"If true, prevents this client from writing to the remote storage. Is overridden if being used for execution."`
+		HomeDir      string       `help:"The home directory on the build machine."`
+		Platform     []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {

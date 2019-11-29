@@ -13,13 +13,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
-	bs "google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/genproto/googleapis/longrunning"
-	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"gopkg.in/op/go-logging.v1"
 
@@ -32,9 +30,6 @@ var log = logging.MustGetLogger("remote")
 // Timeout to initially contact the server.
 const dialTimeout = 5 * time.Second
 
-// Timeout for actual requests
-const reqTimeout = 2 * time.Minute
-
 // Maximum number of times we retry a request.
 const maxRetries = 3
 
@@ -45,14 +40,12 @@ var apiVersion = semver.SemVer{Major: 2}
 //
 // It provides a higher-level interface over the specific RPCs available.
 type Client struct {
-	actionCacheClient pb.ActionCacheClient
-	storageClient     pb.ContentAddressableStorageClient
-	bsClient          bs.ByteStreamClient
-	execClient        pb.ExecutionClient
-	initOnce          sync.Once
-	state             *core.BuildState
-	err               error // for initialisation
-	instance          string
+	client     *client.Client
+	initOnce   sync.Once
+	state      *core.BuildState
+	reqTimeout time.Duration
+	err        error // for initialisation
+	instance   string
 
 	// Stored output directories from previously executed targets.
 	// This isn't just a cache - it is needed for cases where we don't actually
@@ -65,6 +58,12 @@ type Client struct {
 	cacheWritable     bool
 	canBatchBlobReads bool // This isn't supported by all servers.
 
+	// True if we are doing proper remote execution (false if we are caching only)
+	remoteExecution bool
+	// Platform properties that we will request from the remote.
+	// TODO(peterebden): this will need some modification for cross-compiling support.
+	platform *pb.Platform
+
 	// Cache this for later
 	bashPath string
 }
@@ -73,9 +72,10 @@ type Client struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:    state,
-		instance: state.Config.Remote.Instance,
-		outputs:  map[core.BuildLabel]*pb.Directory{},
+		state:      state,
+		instance:   state.Config.Remote.Instance,
+		reqTimeout: time.Duration(state.Config.Remote.Timeout),
+		outputs:    map[core.BuildLabel]*pb.Directory{},
 	}
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
 	return c
@@ -93,21 +93,21 @@ func (c *Client) init() {
 		// Create a copy of the state where we can modify the config
 		c.state = c.state.ForConfig()
 		c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
-		// TODO(peterebden): We may need to add the ability to have multiple URLs which we
-		//                   would then query for capabilities to discover which is which.
 		// TODO(peterebden): Add support for TLS.
-		conn, err := grpc.Dial(c.state.Config.Remote.URL,
-			grpc.WithTimeout(dialTimeout),
-			grpc.WithInsecure(),
-			grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(grpc_retry.WithMax(maxRetries))))
+		client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
+			Service:    c.state.Config.Remote.URL,
+			CASService: c.state.Config.Remote.CASURL,
+			NoSecurity: true,
+		}, client.UseBatchOps(true), client.RetryTransient())
 		if err != nil {
 			return err
 		}
+		c.client = client
 		// Query the server for its capabilities. This tells us whether it is capable of
 		// execution, caching or both.
 		ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 		defer cancel()
-		resp, err := pb.NewCapabilitiesClient(conn).GetCapabilities(ctx, &pb.GetCapabilitiesRequest{
+		resp, err := c.client.GetCapabilities(ctx, &pb.GetCapabilitiesRequest{
 			InstanceName: c.instance,
 		})
 		if err != nil {
@@ -133,9 +133,6 @@ func (c *Client) init() {
 			// bit to allow a bit of serialisation overhead etc.
 			c.maxBlobBatchSize = 4000000
 		}
-		c.actionCacheClient = pb.NewActionCacheClient(conn)
-		c.storageClient = pb.NewContentAddressableStorageClient(conn)
-		c.bsClient = bs.NewByteStreamClient(conn)
 		// Look this up just once now.
 		bash, err := core.LookBuildPath("bash", c.state.Config)
 		c.bashPath = bash
@@ -149,7 +146,8 @@ func (c *Client) init() {
 				} else if !caps.ExecEnabled {
 					return fmt.Errorf("Remote execution not enabled for this server")
 				}
-				c.execClient = pb.NewExecutionClient(conn)
+				c.remoteExecution = true
+				c.platform = convertPlatform(c.state.Config)
 				log.Debug("Remote execution client initialised for execution")
 			} else {
 				log.Fatalf("Remote execution is configured but the build server doesn't support it")
@@ -255,8 +253,9 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 				Digest: digest,
 			}
 			ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-				Path:   filename,
-				Digest: digest,
+				Path:         filename,
+				Digest:       digest,
+				IsExecutable: target.IsBinary,
 			})
 		}
 		if len(metadata.Stdout) > 0 {
@@ -285,9 +284,9 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 		}
 	}
 	// Now we can use that to upload the result itself.
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
-	_, err = c.actionCacheClient.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
+	_, err = c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,
 		ActionResult: ar,
@@ -300,6 +299,13 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
+	}
+	outDir := target.OutDir()
+	if target.IsFilegroup {
+		if err := removeOutputs(target); err != nil {
+			return nil, err
+		}
+		return &core.BuildMetadata{}, c.downloadDirectory(outDir, c.targetOutputs(target.Label))
 	}
 	isTest := target.State() >= core.Built
 	needStdout := target.PostBuildFunction != nil && !isTest // We only care in this case.
@@ -316,9 +322,9 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 		InputRootDigest: c.digestMessage(inputRoot),
 		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
 	})
-	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
-	resp, err := c.actionCacheClient.GetActionResult(ctx, &pb.GetActionResultRequest{
+	resp, err := c.client.GetActionResult(ctx, &pb.GetActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,
 		InlineStdout: needStdout,
@@ -329,13 +335,10 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 		return nil, err
 	}
 	mode := target.OutMode()
-	outDir := target.OutDir()
-	for _, out := range target.Outputs() {
-		if err := os.RemoveAll(path.Join(outDir, out)); err != nil {
-			return nil, fmt.Errorf("Failed to remove output: %s", err)
-		}
+	if err := removeOutputs(target); err != nil {
+		return nil, err
 	}
-	if err := c.downloadBlobs(func(ch chan<- *blob) error {
+	if err := c.downloadBlobs(ctx, func(ch chan<- *blob) error {
 		defer close(ch)
 		for _, file := range resp.OutputFiles {
 			filePath := path.Join(outDir, file.Path)
@@ -385,6 +388,10 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
+	if target.IsFilegroup {
+		// Filegroups get special-cased since they are just a movement of files.
+		return &core.BuildMetadata{}, c.setFilegroupOutputs(target)
+	}
 	command, digest, err := c.uploadAction(target, true, false)
 	if err != nil {
 		return nil, err
@@ -431,7 +438,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	// First see if this execution is cached
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	if ar, err := c.actionCacheClient.GetActionResult(ctx, &pb.GetActionResultRequest{
+	if ar, err := c.client.GetActionResult(ctx, &pb.GetActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,
 		InlineStdout: needStdout,
@@ -444,7 +451,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	stream, err := c.execClient.Execute(ctx, &pb.ExecuteRequest{
+	stream, err := c.client.Execute(ctx, &pb.ExecuteRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,
 	})
@@ -535,7 +542,7 @@ func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.
 	if c.state.Config.Remote.DisplayURL != "" {
 		log.Debug("Remote progress for %s: %s%s", target.Label, metadata.Stage, c.actionURL(metadata.ActionDigest, true))
 	}
-	if target.State() >= core.Built {
+	if target.State() <= core.Built {
 		switch metadata.Stage {
 		case pb.ExecutionStage_CACHE_CHECK:
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache")
