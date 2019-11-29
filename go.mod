@@ -5,7 +5,7 @@ require (
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/bazelbuild/buildtools v0.0.0-20190228125936-4bcdbd1064fc
 	github.com/bazelbuild/remote-apis v0.0.0-20191119143007-b5123b1bb285
-	github.com/bazelbuild/remote-apis-sdks v0.0.0-20191125202410-a21ff57ff57c // indirect
+	github.com/bazelbuild/remote-apis-sdks v0.0.0-20191125202410-a21ff57ff57c
 	github.com/coreos/go-semver v0.2.0
 	github.com/djherbis/atime v1.0.0
 	github.com/dustin/go-humanize v1.0.0
