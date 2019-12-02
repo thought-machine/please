@@ -1,0 +1,24 @@
+diff --git a/go/pkg/client/client.go b/go/pkg/client/client.go
+index ab8e92c..1a33a80 100644
+--- a/pkg/client/client.go
++++ b/pkg/client/client.go
+@@ -522,5 +522,19 @@ func (c *Client) GetCapabilities(ctx context.Context, req *repb.GetCapabilitiesR
+ 	if err != nil {
+ 		return nil, err
+ 	}
++	// If the CAS server is different to the execution server, we need to get its capabilities separately.
++	if c.CASConnection != c.Connection {
++		var res2 *repb.ServerCapabilities
++		err = c.Retrier.Do(ctx, func() (e error) {
++			return c.CallWithTimeout(ctx, func(ctx context.Context) (e error) {
++				res2, e = regrpc.NewCapabilitiesClient(c.CASConnection).GetCapabilities(ctx, req, opts...)
++				return e
++			})
++		})
++		if err != nil {
++			return nil, err
++		}
++		res.CacheCapabilities = res2.CacheCapabilities
++	}
+ 	return res, nil
+ }
