@@ -2,7 +2,12 @@ diff --git a/go/pkg/client/client.go b/go/pkg/client/client.go
 index ab8e92c..1a33a80 100644
 --- a/pkg/client/client.go
 +++ b/pkg/client/client.go
-@@ -522,5 +522,19 @@ func (c *Client) GetCapabilities(ctx context.Context, req *repb.GetCapabilitiesR
+@@ -517,10 +517,24 @@ func (c *Client) GetCapabilities(ctx context.Context, req *repb.GetCapabilitiesR
+ 		return c.CallWithTimeout(ctx, func(ctx context.Context) (e error) {
+ 			res, e = c.capabilities.GetCapabilities(ctx, req, opts...)
+ 			return e
+ 		})
+ 	})
  	if err != nil {
  		return nil, err
  	}
@@ -22,3 +27,9 @@ index ab8e92c..1a33a80 100644
 +	}
  	return res, nil
  }
+
+ // GetOperation wraps the underlying call with specific client options.
+ func (c *Client) GetOperation(ctx context.Context, req *oppb.GetOperationRequest) (res *oppb.Operation, err error) {
+ 	opts := c.RPCOpts()
+ 	err = c.Retrier.Do(ctx, func() (e error) {
+ 		return c.CallWithTimeout(ctx, func(ctx context.Context) (e error) {
