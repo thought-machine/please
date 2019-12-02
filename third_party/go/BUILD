@@ -442,8 +442,8 @@ go_get(
 go_get(
     name = "remote-apis-sdks",
     get = "github.com/bazelbuild/remote-apis-sdks/go/...",
-    patch = "remote_sdk_mux_caps.patch",
-    revision = "a21ff57ff57ce7e1dc04ed96f786ade301c793a5",
+    repo = "github.com/peterebden/remote-apis-sdks",
+    revision = "de86b298638b7ac24b09ac6bedfdee0c6384b5f6",
     deps = [
         ":annotations",
         ":bytestream",
