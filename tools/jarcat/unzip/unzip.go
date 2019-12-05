@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ulikunitz/xz"
+
 	"github.com/thought-machine/please/third_party/go/zip"
 )
 
@@ -60,7 +62,12 @@ func (e *extractor) Extract() error {
 		}
 		return r.Close()
 	}
-	// Reset back to the start of the file and try bzip2
+	// Reset back to the start of the file and try xz
+	f.Seek(0, os.SEEK_SET)
+	if r, err := xz.NewReader(f); err == nil {
+		return e.extractTar(r)
+	}
+	// Reset again and try bzip2
 	f.Seek(0, os.SEEK_SET)
 	if err := e.extractTar(bzip2.NewReader(f)); err == nil || !isStructuralError(err) {
 		return err
