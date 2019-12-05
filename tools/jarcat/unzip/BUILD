@@ -2,7 +2,10 @@ go_library(
     name = "unzip",
     srcs = ["unzip.go"],
     visibility = ["//tools/jarcat:all"],
-    deps = ["//third_party/go/zip"],
+    deps = [
+        "//third_party/go:xz",
+        "//third_party/go/zip",
+    ],
 )
 
 go_test(
