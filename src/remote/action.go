@@ -123,6 +123,9 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 
 // getCommand returns the appropriate command to use for a target.
 func (c *Client) getCommand(target *core.BuildTarget) string {
+	if target.TestOnly {
+		return "true"
+	}
 	if target.IsRemoteFile {
 		// TODO(peterebden): we should handle this using the Remote Fetch API once that's available.
 		urls := make([]string, len(target.Sources))
