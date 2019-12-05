@@ -160,9 +160,9 @@ def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, out:str="", shell:s
     """
     cmd = ' && '.join(cmd) if isinstance(cmd, list) else cmd
     if isinstance(cmd, str):
-        cmds = f'cat > $OUT << EOF\n#!{shell}\n{cmd}\nEOF'
+        cmds = f'{{ cat > $OUT << EOF\n#!{shell}\n{cmd}\nEOF\n}}'
     elif isinstance(cmd, dict):
-        cmds = {k: f'cat > $OUT << EOF\n#!{shell}\n{v}\nEOF' for k, v in cmd.items()}
+        cmds = {k: f'{{ cat > $OUT << EOF\n#!{shell}\n{v}\nEOF\n}}' for k, v in cmd.items()}
     return build_rule(
         name = name,
         outs = [out or name + '.sh'],
