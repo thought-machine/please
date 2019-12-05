@@ -140,7 +140,7 @@ func (c *Client) getCommand(target *core.BuildTarget) string {
 	}
 	cmd := target.GetCommand(c.state)
 	if target.IsBinary {
-		return "(" + cmd + ") && chmod +x $OUT"
+		return "( " + cmd + " ) && chmod +x $OUTS"
 	}
 	return cmd
 }
