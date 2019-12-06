@@ -1,3 +1,11 @@
+Version 14.1.11
+---------------
+
+    * Fixed some overly aggressive logging from remote API libraries
+    * Multiplex capabilities when there's a different execution / CAS server
+    * jarcat now extracts xzipped tarballs correctly.
+
+
 Version 14.1.10
 ---------------
 
