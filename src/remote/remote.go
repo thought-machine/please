@@ -359,14 +359,8 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 			tree := &pb.Tree{}
 			if err := c.readByteStreamToProto(dir.TreeDigest, tree); err != nil {
 				return err
-			}
-			if err := c.downloadDirectory(dirPath, tree.Root); err != nil {
+			} else if err := c.downloadDirectory(dirPath, tree.Root); err != nil {
 				return err
-			}
-			for _, child := range tree.Children {
-				if err := c.downloadDirectory(dirPath, child); err != nil {
-					return err
-				}
 			}
 		}
 		// For unexplained reasons the protocol treats symlinks differently based on what
