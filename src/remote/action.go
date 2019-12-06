@@ -135,7 +135,14 @@ func (c *Client) getCommand(target *core.BuildTarget) string {
 		}
 		return cmd
 	}
-	return target.GetCommand(c.state)
+	cmd := target.GetCommand(c.state)
+	if cmd == "" {
+		cmd = "true"
+	}
+	if target.IsBinary && len(target.Outputs()) > 0 {
+		return "( " + cmd + " ) && chmod +x $OUTS"
+	}
+	return cmd
 }
 
 // digestDir calculates the digest for a directory.
