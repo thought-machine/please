@@ -23,6 +23,11 @@ import (
 // chunkSize is the size of a chunk that we send when using the ByteStream APIs.
 const chunkSize = 128 * 1024
 
+// maxNumBlobs is the maximum number of blobs we request in a batch.
+// This is arbitrary but designed to help servers that otherwise get overwhelmed trying to handle
+// hundreds at a time.
+const maxNumBlobs = 100
+
 // A blob represents something to be uploaded to the remote server.
 // It contains the digest of each plus its content or a filename to read it from.
 // If the filename is present then the digest's hash may not be populated.
@@ -289,7 +294,7 @@ func (c *Client) downloadBlobs(ctx context.Context, f func(ch chan<- *blob) erro
 		for b := range ch {
 			filenames[b.Digest.Hash] = b.File
 			modes[b.Digest.Hash] = b.Mode
-			if b.Digest.SizeBytes > c.maxBlobBatchSize || !c.canBatchBlobReads {
+			if b.Digest.SizeBytes > c.maxBlobBatchSize || !c.canBatchBlobReads || len(digests) == maxNumBlobs {
 				// This blob individually exceeds the size, have to use this
 				// ByteStream malarkey instead.
 				if err := c.retrieveByteStream(b); err != nil {
