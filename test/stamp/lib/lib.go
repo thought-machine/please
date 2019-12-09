@@ -4,6 +4,6 @@ package lib
 // N.B. Must be a variable not a constant - constants aren't linker symbols and
 //      hence can't be replaced in the same way.
 var (
-	GitRevision = "12345"
-	GitDescribe = "12345"
+	GitRevision = "12345-revision"
+	GitDescribe = "12345-describe"
 )

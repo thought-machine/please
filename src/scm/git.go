@@ -20,10 +20,10 @@ type git struct {
 }
 
 // DescribeIdentifier returns the string that is a "human-readable" identifier of the given revision.
-func (g *git) DescribeIdentifier(sha string) string {
-	out, err := exec.Command("git", "describe", "--always", sha).CombinedOutput()
+func (g *git) DescribeIdentifier(revision string) string {
+	out, err := exec.Command("git", "describe", "--always", revision).CombinedOutput()
 	if err != nil {
-		log.Fatalf("Failed to read %s: %s", sha, err)
+		log.Fatalf("Failed to read %s: %s", revision, err)
 	}
 	return strings.TrimSpace(string(out))
 }

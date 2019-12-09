@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 
-git_revision=$(git rev-parse HEAD)
-git_describe=$(git describe --always)
+unexpected="12345-revision
+12345-describe"
 
-expected="${git_revision}
-${git_describe}"
-
-if [ "`$DATA`" != "${expected}" ]; then
-    echo "`${DATA}` is not equal to ${expected}"
+if [ "`$DATA`" == "${unexpected}" ]; then
     echo "Stamped variable has not been replaced correctly."
     exit 1
 fi
