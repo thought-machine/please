@@ -54,7 +54,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 	// We can't predict what variables like this should be so we sneakily bung something on
 	// the front of the command. It'd be nicer if there were a better way though...
-	const commandPrefix = "export TMP_DIR=\"`pwd`\" && "
+	const commandPrefix = "export TMP_DIR=\"`pwd`\" && export OUT=\"$TMP_DIR/$OUT\" && "
 	// TODO(peterebden): Remove this nonsense once API v2.1 is released.
 	files, dirs := outputs(target)
 	cmd, err := core.ReplaceSequences(c.state, target, c.getCommand(target))
