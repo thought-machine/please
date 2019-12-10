@@ -54,9 +54,12 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 	// We can't predict what variables like this should be so we sneakily bung something on
 	// the front of the command. It'd be nicer if there were a better way though...
-	const commandPrefix = "export TMP_DIR=\"`pwd`\" && "
+	var commandPrefix = "export TMP_DIR=\"`pwd`\" && "
 	// TODO(peterebden): Remove this nonsense once API v2.1 is released.
 	files, dirs := outputs(target)
+	if len(target.Outputs()) == 1 { // $OUT is relative when running remotely; make it absolute
+		commandPrefix += `export OUT="$TMP_DIR/$OUT" && `
+	}
 	cmd, err := core.ReplaceSequences(c.state, target, c.getCommand(target))
 	return &pb.Command{
 		Platform: c.platform,
