@@ -58,7 +58,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	// TODO(peterebden): Remove this nonsense once API v2.1 is released.
 	files, dirs := outputs(target)
 	if len(target.Outputs()) == 1 { // $OUT is relative when running remotely; make it absolute
-		commandPrefix += "export OUT=\"$TMP_DIR/$OUT\" && "
+		commandPrefix += `export OUT="$TMP_DIR/$OUT" && `
 	}
 	cmd, err := core.ReplaceSequences(c.state, target, c.getCommand(target))
 	return &pb.Command{
