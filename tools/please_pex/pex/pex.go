@@ -124,7 +124,11 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	// Note that if the target contains its own test-runner, then we don't need to add anything.
 	if len(pw.testIncludes) > 0 {
 		f.Include = pw.testIncludes
-		if err := f.AddZipFile(os.Args[0]); err != nil {
+		pexPath, err := os.Executable() // get abspath to currently-running executable
+		if err != nil {
+			return err
+		}
+		if err := f.AddZipFile(pexPath); err != nil {
 			return err
 		}
 	}
