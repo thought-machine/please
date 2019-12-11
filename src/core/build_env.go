@@ -183,7 +183,12 @@ var stampEnv BuildEnv
 var stampEnvOnce sync.Once
 
 func initStampEnv() {
-	stampEnv = BuildEnv{"SCM_REVISION=" + scm.NewFallback(RepoRoot).CurrentRevIdentifier()}
+	repoScm := scm.NewFallback(RepoRoot)
+	revision := repoScm.CurrentRevIdentifier()
+	stampEnv = BuildEnv{
+		"SCM_REVISION=" + revision,
+		"SCM_DESCRIBE=" + repoScm.DescribeIdentifier(revision),
+	}
 }
 
 func toolPath(state *BuildState, tool BuildInput, abs bool) string {

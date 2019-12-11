@@ -14,6 +14,8 @@ var log = logging.MustGetLogger("scm")
 
 // An SCM represents an SCM implementation that we can ask for various things.
 type SCM interface {
+	// DescribeIdentifier returns the string that is a "human-readable" identifier of the given revision.
+	DescribeIdentifier(revision string) string
 	// CurrentRevIdentifier returns the string that specifies what the current revision is.
 	CurrentRevIdentifier() string
 	// ChangesIn returns a list of modified files in the given diffSpec.

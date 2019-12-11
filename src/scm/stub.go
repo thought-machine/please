@@ -4,6 +4,10 @@ import "fmt"
 
 type stub struct{}
 
+func (s *stub) DescribeIdentifier(sha string) string {
+	return "<unknown>"
+}
+
 func (s *stub) CurrentRevIdentifier() string {
 	return "<unknown>"
 }

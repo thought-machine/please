@@ -10,4 +10,5 @@ import (
 
 func main() {
 	fmt.Println(lib.GitRevision)
+	fmt.Println(lib.GitDescribe)
 }
