@@ -331,7 +331,11 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 			s.interpretIdentStatement(stmt.Ident)
 		} else if stmt.Assert != nil {
 			if !s.interpretExpression(stmt.Assert.Expr).IsTruthy() {
-				s.Assert(false, s.interpretExpression(stmt.Assert.Message).String())
+				if stmt.Assert.Message == nil {
+					s.Error("assertion failed")
+				} else {
+					s.Error(s.interpretExpression(stmt.Assert.Message).String())
+				}
 			}
 		} else if stmt.Raise != nil {
 			s.Error(s.interpretExpression(stmt.Raise).String())
