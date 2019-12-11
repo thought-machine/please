@@ -66,3 +66,32 @@ func AddAll(map1 map[string]string, map2 map[string]string) map[string]string {
 	}
 	return map1
 }
+
+// ReadingStdin returns true if any of the given build labels are reading from stdin.
+func ReadingStdin(labels []core.BuildLabel) bool {
+	for _, l := range labels {
+		if l == core.BuildLabelStdin {
+			return true
+		}
+	}
+	return false
+}
+
+// ReadStdinLabels reads any of the given labels from stdin, if any of them indicate it
+// (i.e. if ReadingStdin(labels) is true, otherwise it just returns them.
+func ReadStdinLabels(labels []core.BuildLabel) []core.BuildLabel {
+	if !ReadingStdin(labels) {
+		return labels
+	}
+	ret := []core.BuildLabel{}
+	for _, l := range labels {
+		if l == core.BuildLabelStdin {
+			for s := range cli.ReadStdin() {
+				ret = append(ret, core.ParseBuildLabels([]string{s})...)
+			}
+		} else {
+			ret = append(ret, l)
+		}
+	}
+	return ret
+}

@@ -20,7 +20,7 @@ func getRevDepTransitiveLabels(state *core.BuildState, labels []core.BuildLabel,
 	if level == 0 {
 		return nil
 	}
-	for _, l := range GetRevDepsLabels(state, labels) {
+	for _, l := range getRevDepsLabels(state, labels) {
 		if _, present := done[l]; !present {
 			done[l] = struct{}{}
 			getRevDepTransitiveLabels(state, []core.BuildLabel{l}, done, level-1)
@@ -36,8 +36,8 @@ func getRevDepTransitiveLabels(state *core.BuildState, labels []core.BuildLabel,
 	return ret
 }
 
-// GetRevDepsLabels returns a slice of build labels that are the reverse dependencies of the build labels being passed in
-func GetRevDepsLabels(state *core.BuildState, labels []core.BuildLabel) core.BuildLabels {
+// getRevDepsLabels returns a slice of build labels that are the reverse dependencies of the build labels being passed in
+func getRevDepsLabels(state *core.BuildState, labels []core.BuildLabel) core.BuildLabels {
 	uniqueTargets := map[*core.BuildTarget]struct{}{}
 
 	graph := state.Graph

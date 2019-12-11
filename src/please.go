@@ -540,7 +540,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"revdeps": func() int {
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.ReverseDeps(state, state.ExpandLabels(opts.Query.ReverseDeps.Args.Targets), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
+			query.ReverseDeps(state, state.ExpandLabels(utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
 		})
 	},
 	"somepath": func() int {
@@ -858,7 +858,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 	if !isQuery {
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
 	}
-	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !readingStdin(targets) {
+	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !utils.ReadingStdin(targets) {
 		if len(targets) == 0 {
 			// Assume they want us to read from stdin since nothing else was given.
 			targets = []core.BuildLabel{core.BuildLabelStdin}
@@ -870,16 +870,6 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 		targets = core.InitialPackage()
 	}
 	return Please(targets, config, shouldBuild, shouldTest)
-}
-
-// readingStdin returns true if any of the given build labels are reading from stdin.
-func readingStdin(labels []core.BuildLabel) bool {
-	for _, l := range labels {
-		if l == core.BuildLabelStdin {
-			return true
-		}
-	}
-	return false
 }
 
 // readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
