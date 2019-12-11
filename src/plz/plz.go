@@ -130,15 +130,8 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 }
 
 func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addToList bool, arch cli.Arch) {
-	for _, target := range targets {
-		if target == core.BuildLabelStdin {
-			for label := range cli.ReadStdin() {
-
-				findOriginalTask(state, core.ParseBuildLabels([]string{label})[0], addToList, arch)
-			}
-		} else {
-			findOriginalTask(state, target, addToList, arch)
-		}
+	for _, target := range utils.ReadStdinLabels(targets) {
+		findOriginalTask(state, target, addToList, arch)
 	}
 }
 
