@@ -93,11 +93,11 @@ func (c *Client) init() {
 		// Create a copy of the state where we can modify the config
 		c.state = c.state.ForConfig()
 		c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
-		// TODO(peterebden): Add support for TLS.
 		client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
-			Service:    c.state.Config.Remote.URL,
-			CASService: c.state.Config.Remote.CASURL,
-			NoSecurity: true,
+			Service:            c.state.Config.Remote.URL,
+			CASService:         c.state.Config.Remote.CASURL,
+			NoSecurity:         !c.state.Config.Remote.Secure,
+			TransportCredsOnly: c.state.Config.Remote.Secure,
 		}, client.UseBatchOps(true), client.RetryTransient())
 		if err != nil {
 			return err

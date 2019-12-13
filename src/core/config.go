@@ -253,6 +253,7 @@ func DefaultConfiguration() *Configuration {
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Display.SystemStats = true
 	config.Remote.HomeDir = "~"
+	config.Remote.Secure = true
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
 	config.Go.BuildIDTool = "go_buildid_replacer"
@@ -397,6 +398,7 @@ type Configuration struct {
 		DisplayURL   string       `help:"A URL to browse the remote server with (e.g. using buildbarn-browser). Only used when printing hashes."`
 		Timeout      cli.Duration `help:"Timeout for connections made to the remote server."`
 		ReadOnly     bool         `help:"If true, prevents this client from writing to the remote storage. Is overridden if being used for execution."`
+		Secure       bool         `help:"Whether to use TLS for communication or not."`
 		HomeDir      string       `help:"The home directory on the build machine."`
 		Platform     []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
