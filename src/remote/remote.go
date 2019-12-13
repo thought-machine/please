@@ -305,7 +305,10 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 		if err := removeOutputs(target); err != nil {
 			return nil, err
 		}
-		return &core.BuildMetadata{}, c.downloadDirectory(outDir, c.targetOutputs(target.Label))
+		// TODO(peterebden): We should be able to measure progress here too, but we don't have all
+		//                   the recursive directory protos handy. Work out how GetTree is meant to
+		//                   be used and see if we can use that somehow.
+		return &core.BuildMetadata{}, c.downloadDirectory(context.TODO(), outDir, c.targetOutputs(target.Label))
 	}
 	isTest := target.State() >= core.Built
 	needStdout := target.PostBuildFunction != nil && !isTest // We only care in this case.
@@ -338,6 +341,22 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 	if err := removeOutputs(target); err != nil {
 		return nil, err
 	}
+	trees := make([]*pb.Tree, len(resp.OutputDirectories))
+	for i, dir := range resp.OutputDirectories {
+		trees[i] = &pb.Tree{}
+		if err := c.readByteStreamToProto(context.Background(), dir.TreeDigest, trees[i]); err != nil {
+			return nil, err
+		}
+	}
+
+	// Turn on progress display for measuring download speed
+	target.ShowProgress = true
+	bytesRead := 0
+	totalBytes := totalSize(trees, resp.OutputFiles)
+	ctx = context.WithValue(ctx, targetKey, target)
+	ctx = context.WithValue(ctx, bytesKey, &bytesRead)
+	ctx = context.WithValue(ctx, totalBytesKey, &totalBytes)
+
 	if err := c.downloadBlobs(ctx, func(ch chan<- *blob) error {
 		defer close(ch)
 		for _, file := range resp.OutputFiles {
@@ -354,12 +373,8 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 				ch <- &blob{Digest: file.Digest, File: filePath, Mode: mode | addPerms}
 			}
 		}
-		for _, dir := range resp.OutputDirectories {
-			dirPath := path.Join(outDir, dir.Path)
-			tree := &pb.Tree{}
-			if err := c.readByteStreamToProto(dir.TreeDigest, tree); err != nil {
-				return err
-			} else if err := c.downloadDirectory(dirPath, tree.Root); err != nil {
+		for i, dir := range resp.OutputDirectories {
+			if err := c.downloadDirectory(ctx, path.Join(outDir, dir.Path), trees[i].Root); err != nil {
 				return err
 			}
 		}
@@ -412,13 +427,13 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	// is more relevant, but we want to still try to get results if we can, and it's an
 	// error if we can't get those results on success.
 	if !target.NoTestOutput && ar != nil {
-		results, err = c.readAllByteStream(c.digestForFilename(ar, core.TestResultsFile))
+		results, err = c.readAllByteStream(context.Background(), c.digestForFilename(ar, core.TestResultsFile))
 		if execErr == nil && err != nil {
 			return metadata, nil, nil, err
 		}
 	}
 	if target.NeedCoverage(c.state) && ar != nil {
-		coverage, err = c.readAllByteStream(c.digestForFilename(ar, core.CoverageFile))
+		coverage, err = c.readAllByteStream(context.Background(), c.digestForFilename(ar, core.CoverageFile))
 		if execErr == nil && err != nil {
 			return metadata, results, nil, err
 		}
