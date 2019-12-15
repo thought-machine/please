@@ -18,6 +18,7 @@ import (
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/genproto/googleapis/longrunning"
+	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"gopkg.in/op/go-logging.v1"
 
@@ -66,6 +67,9 @@ type Client struct {
 
 	// Cache this for later
 	bashPath string
+
+	// Stats used to report RPC data rates
+	byteRateIn, byteRateOut int
 }
 
 // New returns a new Client instance.
@@ -98,6 +102,7 @@ func (c *Client) init() {
 			CASService:         c.state.Config.Remote.CASURL,
 			NoSecurity:         !c.state.Config.Remote.Secure,
 			TransportCredsOnly: c.state.Config.Remote.Secure,
+			DialOpts:           []grpc.DialOption{grpc.WithStatsHandler(newStatsHandler(c))},
 		}, client.UseBatchOps(true), client.RetryTransient())
 		if err != nil {
 			return err
@@ -585,4 +590,8 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 	if c.state.Config.Remote.DisplayURL != "" {
 		fmt.Printf("    URL: %s\n", c.actionURL(actionDigest, false))
 	}
+}
+
+func (c *Client) DataRate() (int, int) {
+	return c.byteRateIn, c.byteRateOut
 }
