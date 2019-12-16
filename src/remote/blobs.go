@@ -43,8 +43,8 @@ type contextKey string
 
 var (
 	bytesKey      contextKey = "bytes"
-	totalBytesKey            = "total_bytes"
-	targetKey                = "target"
+	totalBytesKey contextKey = "total_bytes"
+	targetKey     contextKey = "target"
 )
 
 // uploadBlobs uploads a series of blobs to the remote.
