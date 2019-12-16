@@ -30,7 +30,7 @@ type statsHandler struct {
 }
 
 func newStatsHandler(c *Client) *statsHandler {
-	h := statsHandler{client: c}
+	h := &statsHandler{client: c}
 	go h.update()
 	return h
 }
@@ -40,15 +40,15 @@ func (h *statsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) conte
 }
 
 func (h *statsHandler) HandleRPC(ctx context.Context, s stats.RPCStats) {
-	switch s.(type) {
+	switch p := s.(type) {
 	case *stats.InPayload:
 		h.inmtx.Lock()
 		defer h.inmtx.Unlock()
-		h.in = append(h.in, stat{Time: s.RecvTime, Val: s.Length})
+		h.in = append(h.in, stat{Time: p.RecvTime, Val: p.Length})
 	case *stats.OutPayload:
 		h.outmtx.Lock()
 		defer h.outmtx.Unlock()
-		h.out = append(h.out, stat{Time: s.SentTime, Val: s.Length})
+		h.out = append(h.out, stat{Time: p.SentTime, Val: p.Length})
 	}
 }
 
@@ -61,24 +61,23 @@ func (h *statsHandler) HandleConn(ctx context.Context, s stats.ConnStats) {
 
 // update runs continually, updating the aggregated stats on the Client instance.
 func (h *statsHandler) update() {
-	for range time.NewTicker(updateFrequency) {
+	for range time.NewTicker(updateFrequency).C {
 		h.client.byteRateIn = h.updateStat(&h.in, &h.inmtx)
 		h.client.byteRateOut = h.updateStat(&h.out, &h.outmtx)
 	}
 }
 
-func (h *statsHandler) updateStat(stats *[]stat, mtx *sync.Mutex) float32 {
+func (h *statsHandler) updateStat(stats *[]stat, mtx *sync.Mutex) int {
 	mtx.Lock()
 	defer mtx.Unlock()
 	s := *stats
 	idx := h.survivingStats(s, time.Now().Add(windowDuration))
-	if idx == 0 {
-		return // Nothing's changed
+	if idx != 0 {
+		// Shuffle them all back by this much. We *could* just slice here but that has rather nasty
+		// allocation behaviour (in that we would be continually reallocating the underlying buffer)
+		copy(s, s[idx:])
+		*stats = s[:idx]
 	}
-	// Shuffle them all back by this much. We *could* just slice here but that has rather nasty
-	// allocation behaviour (in that we would be continually reallocating the underlying buffer)
-	copy(s, s[idx:])
-	*stats = s[:idx]
 	// Now recalculate the observed value
 	total := 0
 	for _, stat := range *stats {
