@@ -18,7 +18,6 @@ import (
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/genproto/googleapis/longrunning"
-	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"gopkg.in/op/go-logging.v1"
 
@@ -97,13 +96,7 @@ func (c *Client) init() {
 		// Create a copy of the state where we can modify the config
 		c.state = c.state.ForConfig()
 		c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
-		client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
-			Service:            c.state.Config.Remote.URL,
-			CASService:         c.state.Config.Remote.CASURL,
-			NoSecurity:         !c.state.Config.Remote.Secure,
-			TransportCredsOnly: c.state.Config.Remote.Secure,
-			DialOpts:           []grpc.DialOption{grpc.WithStatsHandler(newStatsHandler(c))},
-		}, client.UseBatchOps(true), client.RetryTransient())
+		client, err := client.NewClient(context.Background(), c.instance, c.dialParams(), client.UseBatchOps(true), client.RetryTransient())
 		if err != nil {
 			return err
 		}
