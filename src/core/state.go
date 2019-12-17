@@ -79,6 +79,8 @@ type RemoteClient interface {
 	Test(tid int, target *BuildTarget) (metadata *BuildMetadata, results, coverage []byte, err error)
 	// PrintHashes shows the hashes of a target.
 	PrintHashes(target *BuildTarget, isTest bool)
+	// DataRate returns an estimate of the current in/out RPC data rates in bytes per second.
+	DataRate() (int, int)
 }
 
 // A TargetHasher is a thing that knows how to create hashes for targets.

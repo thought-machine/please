@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dustin/go-humanize"
+
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 )
@@ -102,6 +104,10 @@ func (d *displayer) printLines() {
 		printStat("Mem use", d.state.Stats.Memory.UsedPercent, 1)
 		if d.state.Stats.NumWorkerProcesses > 0 {
 			printf("  ${BOLD_WHITE}Worker processes: %d${RESET}", d.state.Stats.NumWorkerProcesses)
+		}
+		if d.state.RemoteClient != nil {
+			in, out := d.state.RemoteClient.DataRate()
+			printf("  ${BOLD_WHITE}RPC data in: %s/s out: %s/s${RESET}", humanize.Bytes(uint64(in)), humanize.Bytes(uint64(out)))
 		}
 		printf("${ERASE_AFTER}\n")
 		d.lines++
