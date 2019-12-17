@@ -585,6 +585,7 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 	}
 }
 
+// DataRate returns an estimate of the current in/out RPC data rates in bytes per second.
 func (c *Client) DataRate() (int, int) {
 	return c.byteRateIn, c.byteRateOut
 }
