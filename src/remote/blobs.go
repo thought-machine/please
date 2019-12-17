@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
 
@@ -37,6 +38,14 @@ type blob struct {
 	File   string
 	Mode   os.FileMode // Only used when receiving blobs, to determine what the output file mode should be
 }
+
+type contextKey string
+
+var (
+	bytesKey      contextKey = "bytes"
+	totalBytesKey contextKey = "total_bytes"
+	targetKey     contextKey = "target"
+)
 
 // uploadBlobs uploads a series of blobs to the remote.
 // It handles all the logic around the various upload methods etc.
@@ -175,8 +184,8 @@ func (c *Client) sendBlobs(reqs []*pb.BatchUpdateBlobsRequest_Request) error {
 }
 
 // receiveBlobs retrieves a set of blobs from the remote CAS server.
-func (c *Client) receiveBlobs(digests []*pb.Digest, filenames map[string]string, modes map[string]os.FileMode) error {
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+func (c *Client) receiveBlobs(ctx context.Context, digests []*pb.Digest, filenames map[string]string, modes map[string]os.FileMode) error {
+	ctx, cancel := context.WithTimeout(ctx, c.reqTimeout)
 	defer cancel()
 	resp, err := c.client.BatchReadBlobs(ctx, &pb.BatchReadBlobsRequest{
 		InstanceName: c.instance,
@@ -297,16 +306,17 @@ func (c *Client) downloadBlobs(ctx context.Context, f func(ch chan<- *blob) erro
 			if b.Digest.SizeBytes > c.maxBlobBatchSize || !c.canBatchBlobReads || len(digests) == maxNumBlobs {
 				// This blob individually exceeds the size, have to use this
 				// ByteStream malarkey instead.
-				if err := c.retrieveByteStream(b); err != nil {
+				if err := c.retrieveByteStream(ctx, b); err != nil {
 					return err
 				}
 				continue
 			} else if b.Digest.SizeBytes+totalSize > c.maxBlobBatchSize {
 				// We have exceeded the total but this blob on its own is OK.
 				// Receive what we have so far then deal with this one.
-				if err := c.receiveBlobs(digests, filenames, modes); err != nil {
+				if err := c.receiveBlobs(ctx, digests, filenames, modes); err != nil {
 					return err
 				}
+				updateProgress(ctx, int(totalSize))
 				digests = []*pb.Digest{}
 				totalSize = 0
 			}
@@ -315,9 +325,10 @@ func (c *Client) downloadBlobs(ctx context.Context, f func(ch chan<- *blob) erro
 		}
 		// If there are any digests left over, download them now
 		if len(digests) > 0 {
-			if err := c.receiveBlobs(digests, filenames, modes); err != nil {
+			if err := c.receiveBlobs(ctx, digests, filenames, modes); err != nil {
 				return err
 			}
+			updateProgress(ctx, int(totalSize))
 		}
 		return nil
 	}()
@@ -332,11 +343,11 @@ func (c *Client) downloadBlobs(ctx context.Context, f func(ch chan<- *blob) erro
 }
 
 // retrieveByteStream receives a file back from the server as a byte stream.
-func (c *Client) retrieveByteStream(b *blob) error {
+func (c *Client) retrieveByteStream(ctx context.Context, b *blob) error {
 	if b.Digest == nil {
 		return fmt.Errorf("can't retrieve byte stream from nil digest")
 	}
-	r, err := c.readByteStream(b.Digest)
+	r, err := c.readByteStream(ctx, b.Digest)
 	if err != nil {
 		return err
 	}
@@ -345,8 +356,8 @@ func (c *Client) retrieveByteStream(b *blob) error {
 }
 
 // readByteStream returns a reader for a bytestream for the given digest.
-func (c *Client) readByteStream(digest *pb.Digest) (io.ReadCloser, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+func (c *Client) readByteStream(ctx context.Context, digest *pb.Digest) (io.ReadCloser, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.reqTimeout)
 	stream, err := c.client.Read(ctx, &bs.ReadRequest{
 		ResourceName: c.byteStreamDownloadName(digest),
 	})
@@ -354,12 +365,12 @@ func (c *Client) readByteStream(digest *pb.Digest) (io.ReadCloser, error) {
 		cancel()
 		return nil, err
 	}
-	return &byteStreamReader{stream: stream, cancel: cancel, digest: digest}, nil
+	return &byteStreamReader{ctx: ctx, stream: stream, cancel: cancel, digest: digest}, nil
 }
 
 // readAllByteStream returns a bytestream read in its entirety.
-func (c *Client) readAllByteStream(digest *pb.Digest) ([]byte, error) {
-	r, err := c.readByteStream(digest)
+func (c *Client) readAllByteStream(ctx context.Context, digest *pb.Digest) ([]byte, error) {
+	r, err := c.readByteStream(ctx, digest)
 	if err != nil {
 		return nil, err
 	}
@@ -368,8 +379,8 @@ func (c *Client) readAllByteStream(digest *pb.Digest) ([]byte, error) {
 }
 
 // readByteStreamToProto reads an entire bytestream and deserialises it into a message.
-func (c *Client) readByteStreamToProto(digest *pb.Digest, msg proto.Message) error {
-	b, err := c.readAllByteStream(digest)
+func (c *Client) readByteStreamToProto(ctx context.Context, digest *pb.Digest, msg proto.Message) error {
+	b, err := c.readAllByteStream(ctx, digest)
 	if err != nil {
 		return err
 	}
@@ -390,6 +401,7 @@ func (c *Client) checkBatchReadBlobs() bool {
 // A byteStreamReader abstracts over the bytestream gRPC API to turn it into an
 // io.Reader which we can then pass to other things which are ignorant of its true nature.
 type byteStreamReader struct {
+	ctx    context.Context
 	stream bs.ByteStream_ReadClient
 	cancel func()
 	buf    []byte
@@ -403,6 +415,7 @@ func (r *byteStreamReader) Read(into []byte) (int, error) {
 		resp, err := r.stream.Recv()
 		if err == io.EOF {
 			copy(into, r.buf)
+			updateProgress(r.ctx, len(r.buf))
 			return len(r.buf), err
 		} else if err != nil {
 			log.Debug("Error downloading blob for %s/%d: %s", r.digest.Hash, r.digest.SizeBytes, err)
@@ -412,6 +425,7 @@ func (r *byteStreamReader) Read(into []byte) (int, error) {
 	}
 	copy(into, r.buf[:l])
 	r.buf = r.buf[l:]
+	updateProgress(r.ctx, l)
 	return l, nil
 }
 
@@ -419,4 +433,14 @@ func (r *byteStreamReader) Read(into []byte) (int, error) {
 func (r *byteStreamReader) Close() error {
 	r.cancel()
 	return nil
+}
+
+// updateProgress updates the progress on a target.
+func updateProgress(ctx context.Context, increment int) {
+	if target := ctx.Value(targetKey); target != nil {
+		total := ctx.Value(totalBytesKey).(*int)
+		current := ctx.Value(bytesKey).(*int)
+		*current += increment
+		target.(*core.BuildTarget).Progress = 100.0 * float32(*current) / float32(*total)
+	}
 }
