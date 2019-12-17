@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -57,7 +58,7 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 		//                   that we've just made up. Surely there is a better way we could
 		//                   be doing this?
 		tree := &pb.Tree{}
-		if err := c.readByteStreamToProto(d.TreeDigest, tree); err != nil {
+		if err := c.readByteStreamToProto(context.Background(), d.TreeDigest, tree); err != nil {
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 		digest, data := c.digestMessageContents(tree.Root)
@@ -368,4 +369,30 @@ func removeOutputs(target *core.BuildTarget) error {
 		}
 	}
 	return nil
+}
+
+// totalSize returns the total size of a set of downloads from an ActionResult.
+func totalSize(dirs []*pb.Tree, files []*pb.OutputFile) int {
+	var size int64
+	for _, file := range files {
+		size += file.Digest.SizeBytes
+	}
+	for _, dir := range dirs {
+		size += dirSize(dir.Root)
+		for _, child := range dir.Children {
+			size += dirSize(child)
+		}
+	}
+	return int(size)
+}
+
+// dirSize returns the immediate size of a directory (but not recursively)
+func dirSize(dir *pb.Directory) (size int64) {
+	for _, file := range dir.Files {
+		size += file.Digest.SizeBytes
+	}
+	for _, dir := range dir.Directories {
+		size += dir.Digest.SizeBytes
+	}
+	return size
 }

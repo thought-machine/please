@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -340,14 +341,14 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		metadata.EndTime = toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp)
 	}
 	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
-		b, err := c.readAllByteStream(ar.StdoutDigest)
+		b, err := c.readAllByteStream(context.Background(), ar.StdoutDigest)
 		if err != nil {
 			return metadata, err
 		}
 		metadata.Stdout = b
 	}
 	if needStderr && len(metadata.Stderr) == 0 && ar.StderrDigest != nil {
-		b, err := c.readAllByteStream(ar.StderrDigest)
+		b, err := c.readAllByteStream(context.Background(), ar.StderrDigest)
 		if err != nil {
 			return metadata, err
 		}
@@ -367,12 +368,12 @@ func (c *Client) digestForFilename(ar *pb.ActionResult, name string) *pb.Digest 
 }
 
 // downloadDirectory downloads & writes out a single Directory proto.
-func (c *Client) downloadDirectory(root string, dir *pb.Directory) error {
+func (c *Client) downloadDirectory(ctx context.Context, root string, dir *pb.Directory) error {
 	if err := os.MkdirAll(root, core.DirPermissions); err != nil {
 		return err
 	}
 	for _, file := range dir.Files {
-		if err := c.retrieveByteStream(&blob{
+		if err := c.retrieveByteStream(ctx, &blob{
 			Digest: file.Digest,
 			File:   path.Join(root, file.Name),
 			Mode:   0644 | extraFilePerms(file),
@@ -383,9 +384,9 @@ func (c *Client) downloadDirectory(root string, dir *pb.Directory) error {
 	for _, dir := range dir.Directories {
 		d := &pb.Directory{}
 		name := path.Join(root, dir.Name)
-		if err := c.readByteStreamToProto(dir.Digest, d); err != nil {
+		if err := c.readByteStreamToProto(ctx, dir.Digest, d); err != nil {
 			return wrap(err, "Downloading directory metadata for %s", name)
-		} else if err := c.downloadDirectory(name, d); err != nil {
+		} else if err := c.downloadDirectory(ctx, name, d); err != nil {
 			return wrap(err, "Downloading directory %s", name)
 		}
 	}
