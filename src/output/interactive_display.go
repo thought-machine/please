@@ -112,11 +112,12 @@ func (d *displayer) printLines() {
 		printf("${ERASE_AFTER}\n")
 		d.lines++
 	}
+	anyRemote := d.numRemote > 0
 	for i := 0; i < d.numWorkers && i < d.maxRows; i++ {
-		d.printRow(i, now, false)
+		d.printRow(i, now, anyRemote)
 		d.lines++
 	}
-	if d.numRemote > 0 {
+	if anyRemote {
 		printf("Remote processes [%d/%d active]:   \n", d.numRemoteActive(), d.numRemote)
 		d.lines++
 		for i := 0; i < d.numRemote && i < d.maxRows; i++ {
