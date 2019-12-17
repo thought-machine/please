@@ -66,6 +66,9 @@ type Client struct {
 
 	// Cache this for later
 	bashPath string
+
+	// Stats used to report RPC data rates
+	byteRateIn, byteRateOut int
 }
 
 // New returns a new Client instance.
@@ -93,12 +96,7 @@ func (c *Client) init() {
 		// Create a copy of the state where we can modify the config
 		c.state = c.state.ForConfig()
 		c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
-		client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
-			Service:            c.state.Config.Remote.URL,
-			CASService:         c.state.Config.Remote.CASURL,
-			NoSecurity:         !c.state.Config.Remote.Secure,
-			TransportCredsOnly: c.state.Config.Remote.Secure,
-		}, client.UseBatchOps(true), client.RetryTransient())
+		client, err := client.NewClient(context.Background(), c.instance, c.dialParams(), client.UseBatchOps(true), client.RetryTransient())
 		if err != nil {
 			return err
 		}
@@ -600,4 +598,9 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 	if c.state.Config.Remote.DisplayURL != "" {
 		fmt.Printf("    URL: %s\n", c.actionURL(actionDigest, false))
 	}
+}
+
+// DataRate returns an estimate of the current in/out RPC data rates in bytes per second.
+func (c *Client) DataRate() (int, int) {
+	return c.byteRateIn, c.byteRateOut
 }
