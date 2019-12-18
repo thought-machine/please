@@ -443,6 +443,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	// First see if this execution is cached
+	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking remote...")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	if ar, err := c.client.GetActionResult(ctx, &pb.GetActionResultRequest{
@@ -465,6 +466,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	if err != nil {
 		return nil, nil, err
 	}
+	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Waiting...")
 	for {
 		resp, err := stream.Recv()
 		if err != nil {
@@ -552,22 +554,22 @@ func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.
 	if target.State() <= core.Built {
 		switch metadata.Stage {
 		case pb.ExecutionStage_CACHE_CHECK:
-			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache")
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 		case pb.ExecutionStage_QUEUED:
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Queued")
 		case pb.ExecutionStage_EXECUTING:
-			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Building")
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Building...")
 		case pb.ExecutionStage_COMPLETED:
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
 		}
 	} else {
 		switch metadata.Stage {
 		case pb.ExecutionStage_CACHE_CHECK:
-			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Checking cache")
+			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Checking cache...")
 		case pb.ExecutionStage_QUEUED:
 			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Queued")
 		case pb.ExecutionStage_EXECUTING:
-			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing")
+			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
 		case pb.ExecutionStage_COMPLETED:
 			c.state.LogBuildResult(tid, target.Label, core.TargetTested, "Tested")
 		}
