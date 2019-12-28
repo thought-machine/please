@@ -21,6 +21,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+// Support Linux versions < 4.0ish that don't have MS_LAZYTIME
+#ifndef MS_LAZYTIME
+#define MS_LAZYTIME	(1<<25)
+#endif
+
 // lo_up brings up the loopback interface in the new network namespace.
 // By default the namespace is created with lo but it is down.
 // Note that this can't be done with system() because it loses the
