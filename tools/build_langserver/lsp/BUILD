@@ -29,4 +29,6 @@ go_test(
         "//third_party/go:lsp",
         "//third_party/go:testify",
     ],
+    flaky = CONFIG.OS == 'freebsd',
 )
+
