@@ -22,6 +22,7 @@ go_test(
     name = "lsp_test",
     srcs = glob(["*_test.go"]),
     data = ["test_data"],
+    flaky = CONFIG.OS == "freebsd",
     deps = [
         ":lsp",
         "//src/cli",
@@ -29,6 +30,4 @@ go_test(
         "//third_party/go:lsp",
         "//third_party/go:testify",
     ],
-    flaky = CONFIG.OS == 'freebsd',
 )
-
