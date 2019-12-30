@@ -292,6 +292,8 @@ func (arch *Arch) XArch() string {
 		return "x86_64"
 	} else if arch.Arch == "x86" {
 		return "x86_32"
+	} else if arch.Arch == "arm64" {
+		return "aarch_64"
 	}
 	return arch.Arch
 }
