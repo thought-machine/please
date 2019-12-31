@@ -52,7 +52,7 @@ def import_tests():
             yield import_module(pkg_name)
         except ImportError:
             with open(filename, 'r') as f:
-                if PY_VERSION < 3:
+                if PY_VERSION.major < 3:
                     mod = imp.load_module(pkg_name, f, filename, ('.py', 'r', imp.PY_SOURCE))
                 else:
                     mod = machinery.SourceFileLoader(pkg_name, filename).load_module()
