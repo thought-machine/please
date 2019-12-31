@@ -5,14 +5,6 @@ package(
     python_wheel_repo = "https://get.please.build/third_party/python/py3",
 )
 
-REPOS = [
-    "https://get.please.build/third_party/python/py27",
-    "https://get.please.build/third_party/python/py34",
-    "https://get.please.build/third_party/python/py35",
-    "https://get.please.build/third_party/python/py36",
-    "https://get.please.build/third_party/python/py37",
-]
-
 python_wheel(
     name = "xmlrunner",
     package_name = "unittest_xml_reporting",
@@ -60,11 +52,24 @@ python_wheel(
     deps = [":six"],
 )
 
-python_multiversion_wheel(
-    name = "coverage",
-    repos = REPOS,
-    version = "4.3.4",
-)
+if CONFIG.ARCH == "amd64":
+    python_multiversion_wheel(
+        name = "coverage",
+        repos = [
+            "https://get.please.build/third_party/python/py27",
+            "https://get.please.build/third_party/python/py34",
+            "https://get.please.build/third_party/python/py35",
+            "https://get.please.build/third_party/python/py36",
+            "https://get.please.build/third_party/python/py37",
+        ],
+        version = "4.3.4",
+    )
+else:
+    python_wheel(
+        name = "coverage",
+        hashes = ["sha1: 519e737035a8cc3349b66973e8a9c69f1ba1102a"],
+        version = "4.3.4",
+    )
 
 python_wheel(
     name = "attrs",
