@@ -5,6 +5,7 @@ package cache
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -30,7 +31,7 @@ var mtime = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 // nobody is the usual uid / gid of the 'nobody' user.
 const nobody = 65534
 
-func (cache *httpCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (cache *httpCache) Store(ctx context.Context, target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
 	if cache.writable {
 		r, w := io.Pipe()
 		go cache.write(w, target, key, metadata, files)
@@ -110,7 +111,7 @@ func (cache *httpCache) storeFile(tw *tar.Writer, name string) error {
 	return err
 }
 
-func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+func (cache *httpCache) Retrieve(ctx context.Context, target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
 	m, err := cache.retrieve(target, key)
 	if err != nil {
 		log.Warning("%s: Failed to retrieve files from HTTP cache: %s", target.Label, err)
@@ -175,11 +176,11 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (*core.Bu
 	}
 }
 
-func (cache *httpCache) Clean(target *core.BuildTarget) {
+func (cache *httpCache) Clean(ctx context.Context, target *core.BuildTarget) {
 	// Not possible; this implementation can only clean for a hash.
 }
 
-func (cache *httpCache) CleanAll() {
+func (cache *httpCache) CleanAll(ctx context.Context) {
 	// Also not possible.
 }
 

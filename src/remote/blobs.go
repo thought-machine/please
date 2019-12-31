@@ -51,13 +51,13 @@ var (
 // It handles all the logic around the various upload methods etc.
 // The given function is a callback that receives a channel to send these blobs on; it
 // should close it when finished.
-func (c *Client) uploadBlobs(f func(ch chan<- *blob) error) error {
+func (c *Client) uploadBlobs(ctx context.Context, f func(ch chan<- *blob) error) error {
 	const buffer = 10 // Buffer it a bit but don't get too far ahead.
 	chIn := make(chan *blob, buffer)
 	chOut := make(chan *blob, buffer)
 	var g errgroup.Group
 	g.Go(func() error { return f(chIn) })
-	g.Go(func() error { return c.reallyUploadBlobs(chOut) })
+	g.Go(func() error { return c.reallyUploadBlobs(ctx, chOut) })
 
 	// This function filters a set of blobs through FindMissingBlobs to find out which
 	// ones we actually need to upload. The assumption is that most of the time the
@@ -73,7 +73,7 @@ func (c *Client) uploadBlobs(f func(ch chan<- *blob) error) error {
 			req.BlobDigests[i] = b.Digest
 			m[b.Digest.Hash] = b
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+		ctx, cancel := context.WithTimeout(ctx, c.reqTimeout)
 		defer cancel()
 		resp, err := c.client.FindMissingBlobs(ctx, req)
 		if err != nil {
@@ -117,7 +117,7 @@ func (c *Client) uploadBlobs(f func(ch chan<- *blob) error) error {
 
 // reallyUploadBlobs actually does the upload of the individual blobs, after they have
 // been filtered through FindMissingBlobs.
-func (c *Client) reallyUploadBlobs(ch <-chan *blob) error {
+func (c *Client) reallyUploadBlobs(ctx context.Context, ch <-chan *blob) error {
 	// Important that if we exit this function with an error we still exhaust the channel,
 	// otherwise we can hang other goroutines that are trying to write to it.
 	defer exhaustChannel(ch)
@@ -127,14 +127,14 @@ func (c *Client) reallyUploadBlobs(ch <-chan *blob) error {
 		if b.Digest.SizeBytes > c.maxBlobBatchSize {
 			// This blob individually exceeds the size, have to use this
 			// ByteStream malarkey instead.
-			if err := c.storeByteStream(b); err != nil {
+			if err := c.storeByteStream(ctx, b); err != nil {
 				return err
 			}
 			continue
 		} else if b.Digest.SizeBytes+totalSize > c.maxBlobBatchSize {
 			// We have exceeded the total but this blob on its own is OK.
 			// Send what we have so far then deal with this one.
-			if err := c.sendBlobs(reqs); err != nil {
+			if err := c.sendBlobs(ctx, reqs); err != nil {
 				return err
 			}
 			reqs = []*pb.BatchUpdateBlobsRequest_Request{}
@@ -156,14 +156,14 @@ func (c *Client) reallyUploadBlobs(ch <-chan *blob) error {
 		totalSize += b.Digest.SizeBytes
 	}
 	if len(reqs) > 0 {
-		return c.sendBlobs(reqs)
+		return c.sendBlobs(ctx, reqs)
 	}
 	return nil
 }
 
 // sendBlobs dispatches a set of blobs to the remote CAS server.
-func (c *Client) sendBlobs(reqs []*pb.BatchUpdateBlobsRequest_Request) error {
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+func (c *Client) sendBlobs(ctx context.Context, reqs []*pb.BatchUpdateBlobsRequest_Request) error {
+	ctx, cancel := context.WithTimeout(ctx, c.reqTimeout)
 	defer cancel()
 	resp, err := c.client.BatchUpdateBlobs(ctx, &pb.BatchUpdateBlobsRequest{
 		InstanceName: c.instance,
@@ -212,12 +212,12 @@ func (c *Client) receiveBlobs(ctx context.Context, digests []*pb.Digest, filenam
 
 // storeByteStream sends a single file as a bytestream. This is required when
 // it's over the size limit for BatchUpdateBlobs.
-func (c *Client) storeByteStream(b *blob) error {
+func (c *Client) storeByteStream(ctx context.Context, b *blob) error {
 	// It's probably rare but we might have the contents in memory already at this point.
 	// (this shouldn't be a file but could be a serialised proto for example; that's
 	// hopefully not common but we do need to handle it here).
 	if b.Data != nil {
-		return c.reallyStoreByteStream(b, bytes.NewReader(b.Data))
+		return c.reallyStoreByteStream(ctx, b, bytes.NewReader(b.Data))
 	}
 	// Otherwise we need to read the file now.
 	f, err := os.Open(b.File)
@@ -225,12 +225,12 @@ func (c *Client) storeByteStream(b *blob) error {
 		return err
 	}
 	defer f.Close()
-	return c.reallyStoreByteStream(b, f)
+	return c.reallyStoreByteStream(ctx, b, f)
 }
 
-func (c *Client) reallyStoreByteStream(b *blob, r io.ReadSeeker) error {
+func (c *Client) reallyStoreByteStream(ctx context.Context, b *blob, r io.ReadSeeker) error {
 	name := c.byteStreamUploadName(b.Digest)
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+	ctx, cancel := context.WithTimeout(ctx, c.reqTimeout)
 	defer cancel()
 	stream, err := c.client.Write(ctx)
 	if err != nil {
@@ -389,8 +389,8 @@ func (c *Client) readByteStreamToProto(ctx context.Context, digest *pb.Digest, m
 
 // checkBatchReadBlobs sends a fake request to verify if BatchReadBlobs is supported
 // (it is not on some servers, e.g. buildbarn).
-func (c *Client) checkBatchReadBlobs() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
+func (c *Client) checkBatchReadBlobs(ctx context.Context) bool {
+	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
 	_, err := c.client.BatchReadBlobs(ctx, &pb.BatchReadBlobsRequest{
 		InstanceName: c.instance,

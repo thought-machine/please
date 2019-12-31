@@ -1,6 +1,7 @@
 package plz
 
 import (
+	"context"
 	"strings"
 	"sync"
 
@@ -23,7 +24,7 @@ var log = logging.MustGetLogger("plz")
 // afterwards to find success / failure.
 // To get detailed results as it runs, use state.Results. You should call that *before*
 // starting this (otherwise a sufficiently fast build may bypass you completely).
-func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *core.Configuration, arch cli.Arch) {
+func Run(ctx context.Context, targets, preTargets []core.BuildLabel, state *core.BuildState, config *core.Configuration, arch cli.Arch) {
 	parse.InitParser(state)
 	build.Init(state)
 
@@ -45,13 +46,13 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	wg.Add(config.Please.NumThreads + config.Remote.NumExecutors)
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go func(tid int) {
-			doTasks(tid, state, parses, builds, tests, arch, false)
+			doTasks(ctx, tid, state, parses, builds, tests, arch, false)
 			wg.Done()
 		}(i)
 	}
 	for i := 0; i < config.Remote.NumExecutors; i++ {
 		go func(tid int) {
-			doTasks(tid, state, nil, remoteBuilds, remoteTests, arch, true)
+			doTasks(ctx, tid, state, nil, remoteBuilds, remoteTests, arch, true)
 			wg.Done()
 		}(config.Please.NumThreads + i)
 	}
@@ -65,11 +66,11 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 
 // RunHost is a convenience function that uses the host architecture, the given state's
 // configuration and no pre targets. It is otherwise identical to Run.
-func RunHost(targets []core.BuildLabel, state *core.BuildState) {
-	Run(targets, nil, state, state.Config, cli.Arch{})
+func RunHost(ctx context.Context, targets []core.BuildLabel, state *core.BuildState) {
+	Run(ctx, targets, nil, state, state.Config, cli.Arch{})
 }
 
-func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, builds, tests <-chan core.BuildLabel, arch cli.Arch, remote bool) {
+func doTasks(ctx context.Context, tid int, state *core.BuildState, parses <-chan core.LabelPair, builds, tests <-chan core.BuildLabel, arch cli.Arch, remote bool) {
 	for parses != nil || builds != nil || tests != nil {
 		select {
 		case p, ok := <-parses:
@@ -86,14 +87,14 @@ func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, buil
 				builds = nil
 				break
 			}
-			build.Build(tid, state, l, remote)
+			build.Build(ctx, tid, state, l, remote)
 			state.TaskDone(true)
 		case l, ok := <-tests:
 			if !ok {
 				tests = nil
 				break
 			}
-			test.Test(tid, state, l, remote)
+			test.Test(ctx, tid, state, l, remote)
 			state.TaskDone(true)
 		}
 	}

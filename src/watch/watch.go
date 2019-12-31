@@ -24,12 +24,12 @@ var log = logging.MustGetLogger("watch")
 const debounceInterval = 100 * time.Millisecond
 
 // A CallbackFunc is supplied to Watch in order to trigger a build.
-type CallbackFunc func(*core.BuildState, []core.BuildLabel)
+type CallbackFunc func(context.Context, *core.BuildState, []core.BuildLabel) (bool, *core.BuildState)
 
 // Watch starts watching the sources of the given labels for changes and triggers
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
-func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFunc) {
+func Watch(ctx context.Context, state *core.BuildState, labels core.BuildLabels, callback CallbackFunc) {
 	// This hasn't been set before, do it now.
 	state.NeedTests = anyTests(state, labels)
 	watcher, err := fsnotify.NewWatcher()
@@ -170,7 +170,8 @@ func build(ctx context.Context, state *core.BuildState, labels []core.BuildLabel
 	ns.DebugTests = state.DebugTests
 	ns.ShowAllOutput = state.ShowAllOutput
 	ns.StartTime = time.Now()
-	callback(ns, labels)
+
+	callback(ctx, ns, labels)
 	if state.NeedRun {
 		// Don't wait for this, its lifetime will be controlled by the context.
 		go run.Parallel(ctx, state, labels, nil, state.Config.Please.NumThreads, false, false)

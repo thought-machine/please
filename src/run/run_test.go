@@ -18,9 +18,9 @@ func init() {
 
 func TestSequential(t *testing.T) {
 	state, labels1, labels2 := makeState()
-	code := Sequential(state, labels1, nil, true, false)
+	code := Sequential(context.Background(), state, labels1, nil, true, false)
 	assert.Equal(t, 0, code)
-	code = Sequential(state, labels2, nil, false, false)
+	code = Sequential(context.Background(), state, labels2, nil, false, false)
 	assert.Equal(t, 1, code)
 }
 

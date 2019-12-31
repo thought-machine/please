@@ -23,8 +23,8 @@ import (
 var log = logging.MustGetLogger("run")
 
 // Run implements the running part of 'plz run'.
-func Run(state *core.BuildState, label core.BuildLabel, args []string, env bool) {
-	run(context.Background(), state, label, args, false, false, env)
+func Run(ctx context.Context, state *core.BuildState, label core.BuildLabel, args []string, env bool) {
+	run(ctx, state, label, args, false, false, env)
 }
 
 // Parallel runs a series of targets in parallel.
@@ -61,10 +61,10 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLa
 // Sequential runs a series of targets sequentially.
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
-func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string, quiet, env bool) int {
+func Sequential(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, args []string, quiet, env bool) int {
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		if err := run(context.Background(), state, label, args, true, quiet, env); err != nil {
+		if err := run(ctx, state, label, args, true, quiet, env); err != nil {
 			log.Error("%s", err)
 			return err.code
 		}

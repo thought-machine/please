@@ -14,6 +14,7 @@ package build
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
@@ -429,7 +430,7 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, erro
 
 // PrintHashes prints the various hashes for a target to stdout.
 // It's used by plz hash --detailed to show a breakdown of the input hashes of a target.
-func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
+func PrintHashes(ctx context.Context, state *core.BuildState, target *core.BuildTarget) {
 	fmt.Printf("%s:\n", target.Label)
 	fmt.Printf("  Config: %s\n", b64(state.Hashes.Config))
 	fmt.Printf("    Rule: %s (pre-build)\n", b64(RuleHash(state, target, false, false)))
@@ -448,7 +449,7 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 		}
 	}
 	if state.RemoteClient != nil {
-		state.RemoteClient.PrintHashes(target, false)
+		state.RemoteClient.PrintHashes(ctx, target, false)
 	}
 }
 

@@ -6,6 +6,7 @@ package cache
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -18,7 +19,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -63,7 +63,7 @@ type cacheNode struct {
 	hashEnd   uint32
 }
 
-func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (cache *rpcCache) Store(ctx context.Context, target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
 	if cache.isConnected() && cache.Writeable {
 		log.Debug("Storing %s in RPC cache...", target.Label)
 		artifacts := []*pb.Artifact{}
@@ -85,7 +85,7 @@ func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, metadata *cor
 			log.Info("Artifacts for %s exceed maximum message size of %s bytes", target.Label, cache.maxMsgSize)
 			return
 		}
-		cache.sendArtifacts(target, key, artifacts)
+		cache.sendArtifacts(ctx, target, key, artifacts)
 	}
 }
 
@@ -126,7 +126,7 @@ func (cache *rpcCache) loadArtifacts(target *core.BuildTarget, file string) ([]*
 	return artifacts, totalSize, err
 }
 
-func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artifacts []*pb.Artifact) {
+func (cache *rpcCache) sendArtifacts(ctx context.Context, target *core.BuildTarget, key []byte, artifacts []*pb.Artifact) {
 	req := pb.StoreRequest{
 		Artifacts: artifacts,
 		Hash:      key,
@@ -134,7 +134,7 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 		Arch:      runtime.GOARCH,
 		Hostname:  cache.hostname,
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
+	ctx, cancel := context.WithTimeout(ctx, cache.timeout)
 	defer cancel()
 	cache.runRPC(key, func(cache *rpcCache) (bool, []*pb.Artifact) {
 		_, err := cache.client.Store(ctx, &req, cache.compressor)
@@ -146,7 +146,7 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 	})
 }
 
-func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+func (cache *rpcCache) Retrieve(ctx context.Context, target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
 	if !cache.isConnected() {
 		return nil
 	}
@@ -164,7 +164,7 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte, files []st
 	if len(req.Artifacts) == 0 {
 		return nil
 	}
-	if !cache.retrieveArtifacts(target, &req, true, files) {
+	if !cache.retrieveArtifacts(ctx, target, &req, true, files) {
 		return nil
 	} else if needsPostBuildFile(target) {
 		return loadPostBuildFile(target)
@@ -172,8 +172,8 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte, files []st
 	return &core.BuildMetadata{}
 }
 
-func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.RetrieveRequest, remove bool, files []string) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
+func (cache *rpcCache) retrieveArtifacts(ctx context.Context, target *core.BuildTarget, req *pb.RetrieveRequest, remove bool, files []string) bool {
+	ctx, cancel := context.WithTimeout(ctx, cache.timeout)
 	defer cancel()
 	success, artifacts := cache.runRPC(req.Hash, func(cache *rpcCache) (bool, []*pb.Artifact) {
 		response, err := cache.client.Retrieve(ctx, req, cache.compressor)
@@ -232,13 +232,13 @@ func (cache *rpcCache) writeFile(target *core.BuildTarget, file string, body []b
 	return true
 }
 
-func (cache *rpcCache) Clean(target *core.BuildTarget) {
+func (cache *rpcCache) Clean(ctx context.Context, target *core.BuildTarget) {
 	if cache.isConnected() && cache.Writeable {
 		req := pb.DeleteRequest{Os: runtime.GOOS, Arch: runtime.GOARCH}
 		artifact := pb.Artifact{Package: target.Label.PackageName, Target: target.Label.Name}
 		req.Artifacts = []*pb.Artifact{&artifact}
 		cache.runRPC(zeroKey, func(cache *rpcCache) (bool, []*pb.Artifact) {
-			response, err := cache.client.Delete(context.Background(), &req, cache.compressor)
+			response, err := cache.client.Delete(ctx, &req, cache.compressor)
 			if err != nil || !response.Success {
 				log.Errorf("Failed to remove %s from RPC cache", target.Label)
 				return false, nil
@@ -248,7 +248,7 @@ func (cache *rpcCache) Clean(target *core.BuildTarget) {
 	}
 }
 
-func (cache *rpcCache) CleanAll() {
+func (cache *rpcCache) CleanAll(ctx context.Context) {
 	if !cache.isConnected() {
 		log.Error("RPC cache is not connected, cannot clean")
 	} else if !cache.Writeable {
@@ -257,7 +257,7 @@ func (cache *rpcCache) CleanAll() {
 		log.Debug("Cleaning entire RPC cache")
 		req := pb.DeleteRequest{Everything: true}
 		cache.runRPC(zeroKey, func(cache *rpcCache) (bool, []*pb.Artifact) {
-			if response, err := cache.client.Delete(context.Background(), &req, cache.compressor); err != nil || !response.Success {
+			if response, err := cache.client.Delete(ctx, &req, cache.compressor); err != nil || !response.Success {
 				log.Errorf("Failed to clean RPC cache: %s", err)
 				return false, nil
 			}
@@ -268,7 +268,7 @@ func (cache *rpcCache) CleanAll() {
 
 func (cache *rpcCache) Shutdown() {}
 
-func (cache *rpcCache) connect(url string, config *core.Configuration, isSubnode bool) {
+func (cache *rpcCache) connect(ctx context.Context, url string, config *core.Configuration, isSubnode bool) {
 	log.Info("Connecting to RPC cache at %s", url)
 	opts := []grpc.DialOption{
 		grpc.WithTimeout(cache.timeout),
@@ -296,7 +296,7 @@ func (cache *rpcCache) connect(url string, config *core.Configuration, isSubnode
 	}
 	// Message the server to get its cluster topology.
 	client := pb.NewRpcCacheClient(connection)
-	ctx, cancel := context.WithTimeout(context.Background(), cache.timeout)
+	ctx, cancel := context.WithTimeout(ctx, cache.timeout)
 	defer cancel()
 	resp, err := client.ListNodes(ctx, &pb.ListRequest{})
 	// For compatibility with older servers, handle an error code of Unimplemented and treat
@@ -317,7 +317,7 @@ func (cache *rpcCache) connect(url string, config *core.Configuration, isSubnode
 	// If we get here, we are connected and the cache is clustered.
 	cache.nodes = make([]cacheNode, len(resp.Nodes))
 	for i, n := range resp.Nodes {
-		subCache, _ := newRPCCacheInternal(n.Address, config, true)
+		subCache, _ := newRPCCacheInternal(ctx, n.Address, config, true)
 		cache.nodes[i] = cacheNode{
 			cache:     subCache,
 			hashStart: n.HashBegin,
@@ -385,11 +385,11 @@ func (cache *rpcCache) error() {
 	}
 }
 
-func newRPCCache(config *core.Configuration) (*rpcCache, error) {
-	return newRPCCacheInternal(config.Cache.RPCURL.String(), config, false)
+func newRPCCache(ctx context.Context, config *core.Configuration) (*rpcCache, error) {
+	return newRPCCacheInternal(ctx, config.Cache.RPCURL.String(), config, false)
 }
 
-func newRPCCacheInternal(url string, config *core.Configuration, isSubnode bool) (*rpcCache, error) {
+func newRPCCacheInternal(ctx context.Context, url string, config *core.Configuration, isSubnode bool) (*rpcCache, error) {
 	cache := &rpcCache{
 		Writeable:  config.Cache.RPCWriteable,
 		Connecting: true,
@@ -398,7 +398,7 @@ func newRPCCacheInternal(url string, config *core.Configuration, isSubnode bool)
 		maxMsgSize: int(config.Cache.RPCMaxMsgSize),
 		compressor: grpc.UseCompressor("gzip"),
 	}
-	go cache.connect(url, config, isSubnode)
+	go cache.connect(ctx, url, config, isSubnode)
 	return cache, nil
 }
 

@@ -3,6 +3,7 @@
 package clean
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -16,9 +17,9 @@ import (
 var log = logging.MustGetLogger("clean")
 
 // Clean cleans the entire output directory and optionally the cache as well.
-func Clean(config *core.Configuration, cache core.Cache, background bool) {
+func Clean(ctx context.Context, config *core.Configuration, cache core.Cache, background bool) {
 	if cache != nil {
-		cache.CleanAll()
+		cache.CleanAll(ctx)
 	}
 	if background {
 		if err := core.AsyncDeleteDir(core.OutDir); err != nil {
@@ -32,7 +33,7 @@ func Clean(config *core.Configuration, cache core.Cache, background bool) {
 }
 
 // Targets cleans a given set of build targets.
-func Targets(state *core.BuildState, labels []core.BuildLabel, cleanCache bool) {
+func Targets(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, cleanCache bool) {
 	for _, label := range labels {
 		// Clean any and all sub-targets of this target.
 		// This is not super efficient; we potentially repeat this walk multiple times if
@@ -40,13 +41,13 @@ func Targets(state *core.BuildState, labels []core.BuildLabel, cleanCache bool) 
 		// unless we have lots of targets to clean and their packages are very large.
 		for _, target := range state.Graph.PackageOrDie(label).AllChildren(state.Graph.TargetOrDie(label)) {
 			if state.ShouldInclude(target) {
-				cleanTarget(state, target, cleanCache)
+				cleanTarget(ctx, state, target, cleanCache)
 			}
 		}
 	}
 }
 
-func cleanTarget(state *core.BuildState, target *core.BuildTarget, cleanCache bool) {
+func cleanTarget(ctx context.Context, state *core.BuildState, target *core.BuildTarget, cleanCache bool) {
 	if err := build.RemoveOutputs(target); err != nil {
 		log.Fatalf("Failed to remove output: %s", err)
 	}
@@ -56,7 +57,7 @@ func cleanTarget(state *core.BuildState, target *core.BuildTarget, cleanCache bo
 		}
 	}
 	if cleanCache && state.Cache != nil {
-		state.Cache.Clean(target)
+		state.Cache.Clean(ctx, target)
 	}
 }
 

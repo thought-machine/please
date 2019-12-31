@@ -37,7 +37,7 @@ func (c *Client) targetOutputs(label core.BuildLabel) *pb.Directory {
 }
 
 // setOutputs sets the outputs for a previously executed target.
-func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
+func (c *Client) setOutputs(ctx context.Context, label core.BuildLabel, ar *pb.ActionResult) error {
 	o := &pb.Directory{
 		Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
 		Directories: make([]*pb.DirectoryNode, len(ar.OutputDirectories)),
@@ -58,11 +58,11 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 		//                   that we've just made up. Surely there is a better way we could
 		//                   be doing this?
 		tree := &pb.Tree{}
-		if err := c.readByteStreamToProto(context.Background(), d.TreeDigest, tree); err != nil {
+		if err := c.readByteStreamToProto(ctx, d.TreeDigest, tree); err != nil {
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 		digest, data := c.digestMessageContents(tree.Root)
-		if err := c.sendBlobs([]*pb.BatchUpdateBlobsRequest_Request{{Digest: digest, Data: data}}); err != nil {
+		if err := c.sendBlobs(ctx, []*pb.BatchUpdateBlobsRequest_Request{{Digest: digest, Data: data}}); err != nil {
 			return err
 		}
 		o.Directories[i] = &pb.DirectoryNode{
@@ -83,8 +83,8 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 }
 
 // setFilegroupOutputs sets the outputs for a filegroup from its inputs.
-func (c *Client) setFilegroupOutputs(target *core.BuildTarget) error {
-	return c.uploadBlobs(func(ch chan<- *blob) error {
+func (c *Client) setFilegroupOutputs(ctx context.Context, target *core.BuildTarget) error {
+	return c.uploadBlobs(ctx, func(ch chan<- *blob) error {
 		defer close(ch)
 		dir, err := c.uploadInputs(ch, target, false, true)
 		c.outputMutex.Lock()

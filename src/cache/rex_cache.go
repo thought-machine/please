@@ -5,6 +5,7 @@ package cache
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"path"
 
@@ -22,18 +23,18 @@ func newRemoteCache(state *core.BuildState) *rexCache {
 	return &rexCache{client: state.RemoteClient, readonly: state.Config.Remote.ReadOnly}
 }
 
-func (rc *rexCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (rc *rexCache) Store(ctx context.Context, target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
 	if !rc.readonly {
 		log.Debug("Storing %s in remote cache...", target.Label)
-		if err := rc.client.Store(target, metadata, files); err != nil {
+		if err := rc.client.Store(ctx, target, metadata, files); err != nil {
 			log.Warning("Error storing artifacts in remote cache: %s", err)
 		}
 	}
 }
 
-func (rc *rexCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+func (rc *rexCache) Retrieve(ctx context.Context, target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
 	log.Debug("Retrieving %s from remote cache...", target.Label)
-	metadata, err := rc.client.Retrieve(target)
+	metadata, err := rc.client.Retrieve(ctx, target)
 	if err != nil {
 		if remote.IsNotFound(err) {
 			log.Debug("Artifacts for %s [key %s] don't exist in remote cache", target.Label, hex.EncodeToString(key))
@@ -49,11 +50,11 @@ func (rc *rexCache) Retrieve(target *core.BuildTarget, key []byte, files []strin
 	return metadata
 }
 
-func (rc *rexCache) Clean(target *core.BuildTarget) {
+func (rc *rexCache) Clean(ctx context.Context, target *core.BuildTarget) {
 	// There is no API for this, so we just don't do it.
 }
 
-func (rc *rexCache) CleanAll() {
+func (rc *rexCache) CleanAll(ctx context.Context) {
 	// Similarly here.
 }
 

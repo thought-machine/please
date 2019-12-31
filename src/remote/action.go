@@ -21,12 +21,12 @@ import (
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
-func (c *Client) uploadAction(target *core.BuildTarget, uploadInputRoot, isTest bool) (*pb.Command, *pb.Digest, error) {
+func (c *Client) uploadAction(ctx context.Context, target *core.BuildTarget, uploadInputRoot, isTest bool) (*pb.Command, *pb.Digest, error) {
 	var command *pb.Command
 	var digest *pb.Digest
-	err := c.uploadBlobs(func(ch chan<- *blob) error {
+	err := c.uploadBlobs(ctx, func(ch chan<- *blob) error {
 		defer close(ch)
-		inputRoot, err := c.buildInputRoot(target, uploadInputRoot, isTest)
+		inputRoot, err := c.buildInputRoot(ctx, target, uploadInputRoot, isTest)
 		if err != nil {
 			return err
 		}
@@ -153,19 +153,19 @@ func (c *Client) getCommand(target *core.BuildTarget) string {
 
 // digestDir calculates the digest for a directory.
 // It returns Directory protos for the directory and all its (recursive) children.
-func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory, []*pb.Directory, error) {
+func (c *Client) digestDir(ctx context.Context, dir string, children []*pb.Directory) (*pb.Directory, []*pb.Directory, error) {
 	entries, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, nil, err
 	}
 	d := &pb.Directory{}
-	err = c.uploadBlobs(func(ch chan<- *blob) error {
+	err = c.uploadBlobs(ctx, func(ch chan<- *blob) error {
 		defer close(ch)
 		for _, entry := range entries {
 			name := entry.Name()
 			fullname := path.Join(dir, name)
 			if mode := entry.Mode(); mode&os.ModeDir != 0 {
-				dir, descendants, err := c.digestDir(fullname, children)
+				dir, descendants, err := c.digestDir(ctx, fullname, children)
 				if err != nil {
 					return err
 				}
@@ -215,11 +215,11 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 }
 
 // buildInputRoot constructs the directory that is the input root and optionally uploads it.
-func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (root *pb.Directory, err error) {
+func (c *Client) buildInputRoot(ctx context.Context, target *core.BuildTarget, upload, isTest bool) (root *pb.Directory, err error) {
 	if !upload {
 		return c.uploadInputs(nil, target, isTest, false)
 	}
-	c.uploadBlobs(func(ch chan<- *blob) error {
+	c.uploadBlobs(ctx, func(ch chan<- *blob) error {
 		defer close(ch)
 		root, err = c.uploadInputs(ch, target, isTest, false)
 		return nil
@@ -345,7 +345,7 @@ func (c *Client) iterInputs(target *core.BuildTarget, isTest bool) <-chan core.B
 
 // buildMetadata converts an ActionResult into one of our BuildMetadata protos.
 // N.B. this always returns a non-nil metadata object for the first response.
-func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool) (*core.BuildMetadata, error) {
+func (c *Client) buildMetadata(ctx context.Context, ar *pb.ActionResult, needStdout, needStderr bool) (*core.BuildMetadata, error) {
 	metadata := &core.BuildMetadata{
 		Stdout: ar.StdoutRaw,
 		Stderr: ar.StderrRaw,
@@ -357,14 +357,14 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		metadata.InputFetchEndTime = toTime(ar.ExecutionMetadata.InputFetchCompletedTimestamp)
 	}
 	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
-		b, err := c.readAllByteStream(context.Background(), ar.StdoutDigest)
+		b, err := c.readAllByteStream(ctx, ar.StdoutDigest)
 		if err != nil {
 			return metadata, err
 		}
 		metadata.Stdout = b
 	}
 	if needStderr && len(metadata.Stderr) == 0 && ar.StderrDigest != nil {
-		b, err := c.readAllByteStream(context.Background(), ar.StderrDigest)
+		b, err := c.readAllByteStream(ctx, ar.StderrDigest)
 		if err != nil {
 			return metadata, err
 		}

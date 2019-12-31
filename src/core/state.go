@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
@@ -70,15 +71,15 @@ type Parser interface {
 // A RemoteClient is the interface to a remote execution service.
 type RemoteClient interface {
 	// Retrieve fetches remote results from the service.
-	Retrieve(target *BuildTarget) (*BuildMetadata, error)
+	Retrieve(ctx context.Context, target *BuildTarget) (*BuildMetadata, error)
 	// Store stores outputs of a target with the service.
-	Store(target *BuildTarget, metadata *BuildMetadata, files []string) error
+	Store(ctx context.Context, target *BuildTarget, metadata *BuildMetadata, files []string) error
 	// Build invokes a build of the target remotely
-	Build(tid int, target *BuildTarget) (*BuildMetadata, error)
+	Build(ctx context.Context, tid int, target *BuildTarget) (*BuildMetadata, error)
 	// Test invokes a test run of the target remotely.
-	Test(tid int, target *BuildTarget) (metadata *BuildMetadata, results, coverage []byte, err error)
+	Test(ctx context.Context, tid int, target *BuildTarget) (metadata *BuildMetadata, results, coverage []byte, err error)
 	// PrintHashes shows the hashes of a target.
-	PrintHashes(target *BuildTarget, isTest bool)
+	PrintHashes(ctx context.Context, target *BuildTarget, isTest bool)
 	// DataRate returns an estimate of the current in/out RPC data rates in bytes per second.
 	DataRate() (int, int)
 }

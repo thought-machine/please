@@ -6,6 +6,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"context"
 	"encoding/base64"
 	"io"
 	"os"
@@ -32,7 +33,7 @@ type dirCache struct {
 	mutex    sync.Mutex
 }
 
-func (cache *dirCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (cache *dirCache) Store(ctx context.Context, target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
 	cacheDir := cache.getPath(target, key, "")
 	tmpDir := cache.getFullPath(target, key, "", "=")
 	cache.markDir(cacheDir, 0)
@@ -180,7 +181,7 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 	return size
 }
 
-func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) *core.BuildMetadata {
+func (cache *dirCache) Retrieve(ctx context.Context, target *core.BuildTarget, key []byte, outs []string) *core.BuildMetadata {
 	if needsPostBuildFile(target) {
 		outs = append(outs, target.PostBuildOutputFileName())
 	}
@@ -300,14 +301,14 @@ func (cache *dirCache) ensureRetrieveReady(target *core.BuildTarget, out string)
 	return fullOut, nil
 }
 
-func (cache *dirCache) Clean(target *core.BuildTarget) {
+func (cache *dirCache) Clean(ctx context.Context, target *core.BuildTarget) {
 	// Remove for all possible keys, so can't get getPath here
 	if err := os.RemoveAll(path.Join(cache.Dir, target.Label.PackageName, target.Label.Name)); err != nil {
 		log.Warning("Failed to remove artifacts for %s from dir cache: %s", target.Label, err)
 	}
 }
 
-func (cache *dirCache) CleanAll() {
+func (cache *dirCache) CleanAll(ctx context.Context) {
 	if err := core.AsyncDeleteDir(cache.Dir); err != nil {
 		log.Error("Failed to clean cache: %s", err)
 	}

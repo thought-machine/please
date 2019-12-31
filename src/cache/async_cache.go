@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"sync"
 
 	"github.com/thought-machine/please/src/core"
@@ -33,12 +34,12 @@ func newAsyncCache(realCache core.Cache, config *core.Configuration) core.Cache 
 	}
 	c.wg.Add(config.Cache.Workers)
 	for i := 0; i < config.Cache.Workers; i++ {
-		go c.run()
+		go c.run(context.Background())
 	}
 	return c
 }
 
-func (c *asyncCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (c *asyncCache) Store(ctx context.Context, target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
 	c.requests <- cacheRequest{
 		target:   target,
 		metadata: metadata,
@@ -47,16 +48,16 @@ func (c *asyncCache) Store(target *core.BuildTarget, key []byte, metadata *core.
 	}
 }
 
-func (c *asyncCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
-	return c.realCache.Retrieve(target, key, files)
+func (c *asyncCache) Retrieve(ctx context.Context, target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+	return c.realCache.Retrieve(ctx, target, key, files)
 }
 
-func (c *asyncCache) Clean(target *core.BuildTarget) {
-	c.realCache.Clean(target)
+func (c *asyncCache) Clean(ctx context.Context, target *core.BuildTarget) {
+	c.realCache.Clean(ctx, target)
 }
 
-func (c *asyncCache) CleanAll() {
-	c.realCache.CleanAll()
+func (c *asyncCache) CleanAll(ctx context.Context) {
+	c.realCache.CleanAll(ctx)
 }
 
 func (c *asyncCache) Shutdown() {
@@ -67,9 +68,9 @@ func (c *asyncCache) Shutdown() {
 }
 
 // run implements the actual async logic.
-func (c *asyncCache) run() {
+func (c *asyncCache) run(ctx context.Context) {
 	for r := range c.requests {
-		c.realCache.Store(r.target, r.key, r.metadata, r.files)
+		c.realCache.Store(ctx, r.target, r.key, r.metadata, r.files)
 	}
 	c.wg.Done()
 }

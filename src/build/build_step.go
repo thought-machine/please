@@ -3,6 +3,7 @@ package build
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
@@ -37,11 +38,11 @@ var httpClient http.Client
 var httpClientOnce sync.Once
 
 // Build implements the core logic for building a single target.
-func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
+func Build(ctx context.Context, tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
 	target := state.Graph.TargetOrDie(label)
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
-	if err := buildTarget(tid, state, target, remote); err != nil {
+	if err := buildTarget(ctx, tid, state, target, remote); err != nil {
 		if err == errStop {
 			target.SetState(core.Stopped)
 			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Build stopped")
@@ -67,7 +68,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 }
 
 // Builds a single target
-func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
+func buildTarget(ctx context.Context, tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -120,7 +121,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	}
 	var cacheKey, out []byte
 	if runRemotely {
-		m, err := state.RemoteClient.Build(tid, target)
+		m, err := state.RemoteClient.Build(ctx, tid, target)
 		if err != nil {
 			return err
 		}
@@ -187,7 +188,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			}
 			state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 
-			if state.Cache.Retrieve(target, mustShortTargetHash(state, target), target.Outputs()) != nil {
+			if state.Cache.Retrieve(ctx, target, mustShortTargetHash(state, target), target.Outputs()) != nil {
 				log.Debug("Retrieved artifacts for %s from cache", target.Label)
 				checkLicences(state, target)
 				newOutputHash, err := calculateAndCheckRuleHash(state, target)
@@ -214,7 +215,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			// what we would retrieve from the cache.
 			if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
 				log.Debug("Checking for post-build output for %s in cache...", target.Label)
-				if metadata := state.Cache.Retrieve(target, cacheKey, nil); metadata != nil {
+				if metadata := state.Cache.Retrieve(ctx, target, cacheKey, nil); metadata != nil {
 					storePostBuildOutput(target, metadata.Stdout)
 					postBuildOutput = string(metadata.Stdout)
 					if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
@@ -236,7 +237,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, target.BuildingDescription)
-		out, err = buildMaybeRemotely(state, target, cacheKey)
+		out, err = buildMaybeRemotely(ctx, state, target, cacheKey)
 		if err != nil {
 			return err
 		}
@@ -253,7 +254,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		if runRemotely && len(outs) != len(target.Outputs()) {
 			// postBuildFunction has changed the target - must rebuild it
 			log.Info("Rebuilding %s after post-build function", target)
-			m, err := state.RemoteClient.Build(tid, target)
+			m, err := state.RemoteClient.Build(ctx, tid, target)
 			if err != nil {
 				return err
 			}
@@ -267,7 +268,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	if runRemotely {
 		if state.IsOriginalTarget(target.Label) || target.NeededForSubinclude {
 			state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
-			if _, err := state.RemoteClient.Retrieve(target); err != nil {
+			if _, err := state.RemoteClient.Retrieve(ctx, target); err != nil {
 				return fmt.Errorf("Failed to retrieve outputs for %s: %s", target.Label, err)
 			}
 		}
@@ -297,10 +298,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			if !bytes.Equal(newCacheKey, cacheKey) {
 				// NB. Important this is stored with the earlier hash - if we calculate the hash
 				//     now, it might be different, and we could of course never retrieve it again.
-				state.Cache.Store(target, cacheKey, metadata, nil)
+				state.Cache.Store(ctx, target, cacheKey, metadata, nil)
 			}
 		}
-		state.Cache.Store(target, newCacheKey, metadata, outs)
+		state.Cache.Store(ctx, target, newCacheKey, metadata, outs)
 	}
 	// Clean up the temporary directory once it's done.
 	if state.CleanWorkdirs {
@@ -318,13 +319,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 
 // runBuildCommand runs the actual command to build a target.
 // On success it returns the stdout of the target, otherwise an error.
-func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command string, inputHash []byte) ([]byte, error) {
+func runBuildCommand(ctx context.Context, state *core.BuildState, target *core.BuildTarget, command string, inputHash []byte) ([]byte, error) {
 	if target.IsRemoteFile {
 		return nil, fetchRemoteFile(state, target)
 	}
 	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()))
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
-	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, command, target.Sandbox)
+	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(ctx, target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, command, target.Sandbox)
 	if err != nil {
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
@@ -765,12 +766,12 @@ func (r *progressReader) Read(b []byte) (int, error) {
 
 // buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
 // or locally if not.
-func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) ([]byte, error) {
+func buildMaybeRemotely(ctx context.Context, state *core.BuildState, target *core.BuildTarget, inputHash []byte) ([]byte, error) {
 	workerCmd, workerArgs, localCmd, err := core.WorkerCommandAndArgs(state, target)
 	if err != nil {
 		return nil, err
 	} else if workerCmd == "" {
-		return runBuildCommand(state, target, localCmd, inputHash)
+		return runBuildCommand(ctx, state, target, localCmd, inputHash)
 	}
 	// The scheme here is pretty minimal; remote workers currently have quite a bit less info than
 	// local ones get. Over time we'll probably evolve it to add more information.
@@ -779,7 +780,7 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 		return nil, err
 	}
 	log.Debug("Sending remote build request for %s to %s; opts %s", target.Label, workerCmd, workerArgs)
-	resp, err := worker.BuildRemotely(state, target, workerCmd, &worker.Request{
+	resp, err := worker.BuildRemotely(ctx, state, target, workerCmd, &worker.Request{
 		Rule:    target.Label.String(),
 		Labels:  target.Labels,
 		TempDir: path.Join(core.RepoRoot, target.TmpDir()),
@@ -795,7 +796,7 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 	}
 	// Okay, now we might need to do something locally too...
 	if localCmd != "" {
-		out2, err := runBuildCommand(state, target, localCmd, inputHash)
+		out2, err := runBuildCommand(ctx, state, target, localCmd, inputHash)
 		return append([]byte(out+"\n"), out2...), err
 	}
 	return []byte(out), nil

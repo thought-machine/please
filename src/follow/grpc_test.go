@@ -63,7 +63,7 @@ func TestClientToServerCommunication(t *testing.T) {
 
 	clientState := core.NewDefaultBuildState()
 	results := clientState.Results()
-	connectClient(clientState, addr, retries, delay)
+	connectClient(context.Background(), clientState, addr, retries, delay)
 	// The client state should have synced up with the server's number of threads
 	assert.Equal(t, 5, clientState.Config.Please.NumThreads)
 
@@ -104,7 +104,7 @@ func TestWithOutput(t *testing.T) {
 	serverState := core.NewDefaultBuildState()
 	addr, shutdown := initialiseServer(serverState, 0)
 	clientState := core.NewDefaultBuildState()
-	connectClient(clientState, addr, retries, delay)
+	connectClient(context.Background(), clientState, addr, retries, delay)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		serverState.LogBuildResult(0, l1, core.PackageParsed, fmt.Sprintf("Parsed %s", l1))
@@ -127,7 +127,7 @@ func TestResources(t *testing.T) {
 	addr, shutdown := initialiseServer(serverState, 0)
 	defer shutdown()
 	clientState := core.NewDefaultBuildState()
-	connectClient(clientState, addr, retries, delay)
+	connectClient(context.Background(), clientState, addr, retries, delay)
 	// Fortunately this is a lot less fiddly than the others, because we always
 	// receive updates eventually. On the downside it's hard to know when it'll
 	// be done since we can't observe the actual goroutines that are doing it.

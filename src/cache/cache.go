@@ -5,6 +5,7 @@ package cache
 import (
 	"sync"
 
+	"golang.org/x/net/context"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
@@ -13,8 +14,8 @@ import (
 var log = logging.MustGetLogger("cache")
 
 // NewCache is the factory function for creating a cache setup from the given config.
-func NewCache(state *core.BuildState) core.Cache {
-	c := newSyncCache(state, false)
+func NewCache(ctx context.Context, state *core.BuildState) core.Cache {
+	c := newSyncCache(ctx, state, false)
 	if state.Config.Cache.Workers > 0 {
 		return newAsyncCache(c, state.Config)
 	}
@@ -22,7 +23,7 @@ func NewCache(state *core.BuildState) core.Cache {
 }
 
 // newSyncCache creates a new cache, possibly multiplexing many underneath.
-func newSyncCache(state *core.BuildState, remoteOnly bool) core.Cache {
+func newSyncCache(ctx context.Context, state *core.BuildState, remoteOnly bool) core.Cache {
 	mplex := &cacheMultiplexer{}
 	if state.Config.Cache.Dir != "" && !remoteOnly {
 		mplex.caches = append(mplex.caches, newDirCache(state.Config))
@@ -31,7 +32,7 @@ func newSyncCache(state *core.BuildState, remoteOnly bool) core.Cache {
 		mplex.caches = append(mplex.caches, newRemoteCache(state))
 	}
 	if state.Config.Cache.RPCURL != "" {
-		cache, err := newRPCCache(state.Config)
+		cache, err := newRPCCache(ctx, state.Config)
 		if err == nil {
 			mplex.caches = append(mplex.caches, cache)
 		} else {
@@ -55,8 +56,8 @@ type cacheMultiplexer struct {
 	caches []core.Cache
 }
 
-func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
-	mplex.storeUntil(target, key, metadata, files, len(mplex.caches))
+func (mplex cacheMultiplexer) Store(ctx context.Context, target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+	mplex.storeUntil(ctx, target, key, metadata, files, len(mplex.caches))
 }
 
 // storeUntil stores artifacts into higher priority caches than the given one.
@@ -64,7 +65,7 @@ func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte, metada
 // downloading from the RPC cache.
 // This is a little inefficient since we could write the file to plz-out then copy it to the dir cache,
 // but it's hard to fix that without breaking the cache abstraction.
-func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string, stopAt int) {
+func (mplex cacheMultiplexer) storeUntil(ctx context.Context, target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string, stopAt int) {
 	// Attempt to store on all caches simultaneously.
 	var wg sync.WaitGroup
 	for i, cache := range mplex.caches {
@@ -73,35 +74,35 @@ func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, m
 		}
 		wg.Add(1)
 		go func(cache core.Cache) {
-			cache.Store(target, key, metadata, files)
+			cache.Store(ctx, target, key, metadata, files)
 			wg.Done()
 		}(cache)
 	}
 	wg.Wait()
 }
 
-func (mplex cacheMultiplexer) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+func (mplex cacheMultiplexer) Retrieve(ctx context.Context, target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
 	// Retrieve from caches sequentially; if we did them simultaneously we could
 	// easily write the same file from two goroutines at once.
 	for i, cache := range mplex.caches {
-		if metadata := cache.Retrieve(target, key, files); metadata != nil {
+		if metadata := cache.Retrieve(ctx, target, key, files); metadata != nil {
 			// Store this into other caches
-			mplex.storeUntil(target, key, metadata, files, i)
+			mplex.storeUntil(ctx, target, key, metadata, files, i)
 			return metadata
 		}
 	}
 	return nil
 }
 
-func (mplex cacheMultiplexer) Clean(target *core.BuildTarget) {
+func (mplex cacheMultiplexer) Clean(ctx context.Context, target *core.BuildTarget) {
 	for _, cache := range mplex.caches {
-		cache.Clean(target)
+		cache.Clean(ctx, target)
 	}
 }
 
-func (mplex cacheMultiplexer) CleanAll() {
+func (mplex cacheMultiplexer) CleanAll(ctx context.Context) {
 	for _, cache := range mplex.caches {
-		cache.CleanAll()
+		cache.CleanAll(ctx)
 	}
 }
 

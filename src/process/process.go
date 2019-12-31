@@ -54,10 +54,10 @@ type Target interface {
 // If the command times out the returned error will be a context.DeadlineExceeded error.
 // If showOutput is true then output will be printed to stderr as well as returned.
 // It returns the stdout only, combined stdout and stderr and any error that occurred.
-func (e *Executor) ExecWithTimeout(target Target, dir string, env []string, timeout time.Duration, showOutput, attachStdin, attachStdout bool, argv []string) ([]byte, []byte, error) {
+func (e *Executor) ExecWithTimeout(ctx context.Context, target Target, dir string, env []string, timeout time.Duration, showOutput, attachStdin, attachStdout bool, argv []string) ([]byte, []byte, error) {
 	// We deliberately don't attach this context to the command, so we have better
 	// control over how the process gets terminated.
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := e.ExecCommand(argv[0], argv[1:]...)
 	defer e.removeProcess(cmd)
@@ -116,12 +116,12 @@ func runCommand(cmd *exec.Cmd, ch chan error) {
 // ExecWithTimeoutShell runs an external command within a Bash shell.
 // Other arguments are as ExecWithTimeout.
 // Note that the command is deliberately a single string.
-func (e *Executor) ExecWithTimeoutShell(target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, sandbox bool) ([]byte, []byte, error) {
-	return e.ExecWithTimeoutShellStdStreams(target, dir, env, timeout, showOutput, cmd, sandbox, false)
+func (e *Executor) ExecWithTimeoutShell(ctx context.Context, target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, sandbox bool) ([]byte, []byte, error) {
+	return e.ExecWithTimeoutShellStdStreams(ctx, target, dir, env, timeout, showOutput, cmd, sandbox, false)
 }
 
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
-func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool) ([]byte, []byte, error) {
+func (e *Executor) ExecWithTimeoutShellStdStreams(ctx context.Context, target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool) ([]byte, []byte, error) {
 	c := append([]string{"bash", "--noprofile", "--norc", "-u", "-o", "pipefail", "-c"}, cmd)
 	if sandbox {
 		if e.sandboxCommand == "" {
@@ -129,7 +129,7 @@ func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env
 		}
 		c = append([]string{e.sandboxCommand}, c...)
 	}
-	return e.ExecWithTimeout(target, dir, env, timeout, showOutput, attachStdStreams, attachStdStreams, c)
+	return e.ExecWithTimeout(ctx, target, dir, env, timeout, showOutput, attachStdStreams, attachStdStreams, c)
 }
 
 // KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL

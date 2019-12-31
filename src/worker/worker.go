@@ -33,11 +33,11 @@ var workerMap = map[string]*workerServer{}
 var workerMutex sync.Mutex
 
 // BuildRemotely runs a single build request and returns its response.
-func BuildRemotely(state *core.BuildState, target *core.BuildTarget, worker string, req *Request) (*Response, error) {
-	return buildRemotely(state, target, worker, "building (using "+worker+")", req)
+func BuildRemotely(ctx context.Context, state *core.BuildState, target *core.BuildTarget, worker string, req *Request) (*Response, error) {
+	return buildRemotely(ctx, state, target, worker, "building (using "+worker+")", req)
 }
 
-func buildRemotely(state *core.BuildState, target *core.BuildTarget, worker, msg string, req *Request) (*Response, error) {
+func buildRemotely(ctx context.Context, state *core.BuildState, target *core.BuildTarget, worker, msg string, req *Request) (*Response, error) {
 	w, err := getOrStartWorker(state, worker)
 	if err != nil {
 		return nil, err
@@ -48,13 +48,13 @@ func buildRemotely(state *core.BuildState, target *core.BuildTarget, worker, msg
 	w.responseMutex.Unlock()
 
 	if target != nil {
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		go state.ProcessExecutor.LogProgress(ctx, target)
 	}
 
 	// Time out this request appropriately
-	ctx, cancel := context.WithTimeout(context.Background(), target.BuildTimeout)
+	ctx, cancel := context.WithTimeout(ctx, target.BuildTimeout)
 	defer cancel()
 	w.requests <- req
 	select {
@@ -85,8 +85,8 @@ func ProvideParse(state *core.BuildState, worker string, dir string) (string, er
 }
 
 // EnsureWorkerStarted ensures that a worker server is started and has responded saying it's ready.
-func EnsureWorkerStarted(state *core.BuildState, worker, test string, target *core.BuildTarget) (*Response, error) {
-	resp, err := buildRemotely(state, target, worker, "waiting for "+worker+" to start", &Request{
+func EnsureWorkerStarted(ctx context.Context, state *core.BuildState, worker, test string, target *core.BuildTarget) (*Response, error) {
+	resp, err := buildRemotely(ctx, state, target, worker, "waiting for "+worker+" to start", &Request{
 		Rule:    target.Label.String(),
 		Test:    true,
 		Options: []string{test},

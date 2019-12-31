@@ -24,10 +24,10 @@ var remoteClosed, remoteDisconnected bool
 // It returns once the client has received that the remote build finished,
 // returning true if that build was successful.
 // It dies on any errors.
-func ConnectClient(state *core.BuildState, url string, retries int, delay time.Duration) bool {
-	connectClient(state, url, retries, delay)
+func ConnectClient(ctx context.Context, state *core.BuildState, url string, retries int, delay time.Duration) bool {
+	connectClient(ctx, state, url, retries, delay)
 	// Context must be terminated once all results are consumed.
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		for range state.Results() {
 		}
@@ -39,11 +39,11 @@ func ConnectClient(state *core.BuildState, url string, retries int, delay time.D
 
 // connectClient connects a gRPC client to the given URL.
 // It is split out of the above for testing purposes.
-func connectClient(state *core.BuildState, url string, retries int, delay time.Duration) {
+func connectClient(ctx context.Context, state *core.BuildState, url string, retries int, delay time.Duration) {
 	state.TaskQueues() // This is important to start consuming events in the background
 	var err error
 	for i := 0; i <= retries; i++ {
-		if err = connectSingleTry(state, url); err == nil {
+		if err = connectSingleTry(ctx, state, url); err == nil {
 			return
 		} else if retries > 0 && i < retries {
 			log.Warning("Failed to connect to remote server, will retry in %s: %s", delay, err)
@@ -54,7 +54,7 @@ func connectClient(state *core.BuildState, url string, retries int, delay time.D
 }
 
 // connectSingleTry performs one try at connecting the gRPC client.
-func connectSingleTry(state *core.BuildState, url string) error {
+func connectSingleTry(ctx context.Context, state *core.BuildState, url string) error {
 	// TODO(peterebden): TLS
 	conn, err := grpc.Dial(url, grpc.WithInsecure())
 	if err != nil {
@@ -62,7 +62,7 @@ func connectSingleTry(state *core.BuildState, url string) error {
 	}
 	client := pb.NewPlzEventsClient(conn)
 	// Get the deets of what the server is doing.
-	resp, err := client.ServerConfig(context.Background(), &pb.ServerConfigRequest{})
+	resp, err := client.ServerConfig(ctx, &pb.ServerConfigRequest{})
 	if err != nil {
 		if s, ok := status.FromError(err); ok && s.Code() == codes.Unavailable {
 			// Slightly nicer version for an obvious failure which gets a bit technical by default
@@ -86,7 +86,7 @@ func connectSingleTry(state *core.BuildState, url string) error {
 	}
 
 	// Now start streaming events into it
-	stream, err := client.BuildEvents(context.Background(), &pb.BuildEventRequest{})
+	stream, err := client.BuildEvents(ctx, &pb.BuildEventRequest{})
 	if err != nil {
 		return fmt.Errorf("Error receiving build events: %s", err)
 	}
@@ -108,7 +108,7 @@ func connectSingleTry(state *core.BuildState, url string) error {
 	}()
 	log.Info("Established connection to remote server for build events")
 	// Stream back resource usage as well
-	go streamResources(state, client)
+	go streamResources(ctx, state, client)
 	return nil
 }
 
@@ -126,8 +126,8 @@ func streamEvent(state *core.BuildState, event *pb.BuildEventResponse) {
 
 // streamResources receives system resource usage information from the server and copies
 // them into the build state.
-func streamResources(state *core.BuildState, client pb.PlzEventsClient) {
-	stream, err := client.ResourceUsage(context.Background(), &pb.ResourceUsageRequest{})
+func streamResources(ctx context.Context, state *core.BuildState, client pb.PlzEventsClient) {
+	stream, err := client.ResourceUsage(ctx, &pb.ResourceUsageRequest{})
 	if err != nil {
 		log.Error("Error receiving resource usage: %s", err)
 		return
