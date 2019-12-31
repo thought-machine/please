@@ -214,13 +214,12 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 
 // buildInputRoot constructs the directory that is the input root and optionally uploads it.
 func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (root *pb.Directory, err error) {
+	if !upload {
+		return c.uploadInputs(nil, target, isTest, false)
+	}
 	c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
-		if upload {
-			root, err = c.uploadInputs(ch, target, isTest, false)
-		} else {
-			root, err = c.uploadInputs(nil, target, isTest, false)
-		}
+		root, err = c.uploadInputs(ch, target, isTest, false)
 		return nil
 	})
 	return
@@ -251,6 +250,19 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest,
 		if err := c.uploadInput(b, ch, input); err != nil {
 			return nil, err
 		}
+	}
+	if isTest && target.Stamp && ch != nil {
+		stamp := core.StampFile(target)
+		digest := c.digestBlob(stamp)
+		ch <- &blob{
+			Digest: digest,
+			Data:   stamp,
+		}
+		d := b.Dir(".")
+		d.Files = append(d.Files, &pb.FileNode{
+			Name:   target.StampFileName(),
+			Digest: digest,
+		})
 	}
 	if useTargetPackage {
 		b.Root(ch)
