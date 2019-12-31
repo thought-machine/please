@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -14,7 +15,7 @@ import (
 func TestStore(t *testing.T) {
 	mCache, aCache := makeCaches()
 	target := makeTarget("//pkg1:test_store")
-	aCache.Store(target, nil, &core.BuildMetadata{}, target.Outputs())
+	aCache.Store(context.Background(), target, nil, &core.BuildMetadata{}, target.Outputs())
 	aCache.Shutdown()
 	assert.False(t, mCache.inFlight[target])
 	assert.True(t, mCache.completed[target])
@@ -23,7 +24,7 @@ func TestStore(t *testing.T) {
 func TestRetrieve(t *testing.T) {
 	mCache, aCache := makeCaches()
 	target := makeTarget("//pkg1:test_retrieve")
-	aCache.Retrieve(target, nil, target.Outputs())
+	aCache.Retrieve(context.Background(), target, nil, target.Outputs())
 	aCache.Shutdown()
 	assert.False(t, mCache.inFlight[target])
 	assert.True(t, mCache.completed[target])
@@ -32,7 +33,7 @@ func TestRetrieve(t *testing.T) {
 func TestClean(t *testing.T) {
 	mCache, aCache := makeCaches()
 	target := makeTarget("//pkg1:test_clean")
-	aCache.Clean(target)
+	aCache.Clean(context.Background(), target)
 	aCache.Shutdown()
 	assert.False(t, mCache.inFlight[target])
 	assert.True(t, mCache.completed[target])
@@ -51,7 +52,7 @@ func TestSimulateBuild(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			target := makeTarget(fmt.Sprintf("//test_pkg:target%03d", i))
-			aCache.Store(target, nil, &core.BuildMetadata{}, []string{fmt.Sprintf("file%03d", i), fmt.Sprintf("file%03d_2", i)})
+			aCache.Store(context.Background(), target, nil, &core.BuildMetadata{}, []string{fmt.Sprintf("file%03d", i), fmt.Sprintf("file%03d_2", i)})
 			wg.Done()
 		}(i)
 	}
@@ -75,7 +76,7 @@ type mockCache struct {
 	stored    map[*core.BuildTarget][]string
 }
 
-func (c *mockCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (c *mockCache) Store(ctx context.Context, target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
 	c.Lock()
 	if c.inFlight[target] {
 		panic("Concurrent store on " + target.Label.String())
@@ -91,18 +92,18 @@ func (c *mockCache) Store(target *core.BuildTarget, key []byte, metadata *core.B
 	c.Unlock()
 }
 
-func (c *mockCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+func (c *mockCache) Retrieve(ctx context.Context, target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
 	c.Lock()
 	c.completed[target] = true
 	c.Unlock()
 	return nil
 }
 
-func (c *mockCache) Clean(target *core.BuildTarget) {
-	c.Retrieve(target, nil, nil)
+func (c *mockCache) Clean(ctx context.Context, target *core.BuildTarget) {
+	c.Retrieve(ctx, target, nil, nil)
 }
 
-func (c *mockCache) CleanAll() {}
+func (c *mockCache) CleanAll(ctx context.Context) {}
 
 func (*mockCache) Shutdown() {}
 

@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -35,13 +36,13 @@ func TestStoreAndRetrieve(t *testing.T) {
 	cache := newHTTPCache(config)
 
 	key := []byte("test_key")
-	cache.Store(target, key, &core.BuildMetadata{}, target.Outputs())
+	cache.Store(context.Background(), target, key, &core.BuildMetadata{}, target.Outputs())
 
 	b, err := ioutil.ReadFile("plz-out/gen/pkg/name/testfile2")
 	assert.NoError(t, err)
 
 	// Remove the file before we retrieve
-	metadata := cache.Retrieve(target, key, nil)
+	metadata := cache.Retrieve(context.Background(), target, key, nil)
 	assert.NotNil(t, metadata)
 
 	b2, err := ioutil.ReadFile("plz-out/gen/pkg/name/testfile2")

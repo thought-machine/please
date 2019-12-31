@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path"
@@ -16,7 +17,7 @@ import (
 
 func TestInit(t *testing.T) {
 	c := newClient()
-	assert.NoError(t, c.CheckInitialised())
+	assert.NoError(t, c.CheckInitialised(context.Background()))
 }
 
 func TestBadAPIVersion(t *testing.T) {
@@ -26,8 +27,8 @@ func TestBadAPIVersion(t *testing.T) {
 	server.HighApiVersion.Major = 1
 	server.LowApiVersion.Major = 1
 	c := newClient()
-	assert.Error(t, c.CheckInitialised())
-	assert.Contains(t, c.CheckInitialised().Error(), "1.0.0 - 1.1.0")
+	assert.Error(t, c.CheckInitialised(context.Background()))
+	assert.Contains(t, c.CheckInitialised(context.Background()).Error(), "1.0.0 - 1.1.0")
 }
 
 func TestUnsupportedDigest(t *testing.T) {
@@ -38,12 +39,12 @@ func TestUnsupportedDigest(t *testing.T) {
 		pb.DigestFunction_SHA512,
 	}
 	c := newClient()
-	assert.Error(t, c.CheckInitialised())
+	assert.Error(t, c.CheckInitialised(context.Background()))
 }
 
 func TestStoreAndRetrieve(t *testing.T) {
 	c := newClient()
-	c.CheckInitialised()
+	c.CheckInitialised(context.Background())
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target1"})
 	target.AddSource(core.FileLabel{File: "src1.txt", Package: "package"})
 	target.AddSource(core.FileLabel{File: "src2.txt", Package: "package"})
@@ -57,7 +58,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 		InputFetchStartTime: now,
 		InputFetchEndTime:   now,
 	}
-	err := c.Store(target, metadata, []string{"out1.txt"})
+	err := c.Store(context.Background(), target, metadata, []string{"out1.txt"})
 	assert.NoError(t, err)
 	// Remove the old file, but remember its contents so we can compare later.
 	contents, err := ioutil.ReadFile("plz-out/gen/package/out1.txt")
@@ -65,7 +66,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 	err = os.Remove("plz-out/gen/package/out1.txt")
 	assert.NoError(t, err)
 	// Now retrieve back the output of this thing.
-	retrievedMetadata, err := c.Retrieve(target)
+	retrievedMetadata, err := c.Retrieve(context.Background(), target)
 	assert.NoError(t, err)
 	cachedContents, err := ioutil.ReadFile("plz-out/gen/package/out1.txt")
 	assert.NoError(t, err)
@@ -75,7 +76,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 
 func TestStoreAndRetrieveDir(t *testing.T) {
 	c := newClient()
-	c.CheckInitialised()
+	c.CheckInitialised(context.Background())
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package2", Name: "target2"})
 	target.IsBinary = true
 	target.IsTest = true
@@ -83,9 +84,9 @@ func TestStoreAndRetrieveDir(t *testing.T) {
 	target.AddLabel(core.TestResultsDirLabel)
 	target.AddOutput("target2")
 	c.state.Graph.AddTarget(target)
-	err := c.Store(target, &core.BuildMetadata{}, target.Outputs())
+	err := c.Store(context.Background(), target, &core.BuildMetadata{}, target.Outputs())
 	assert.NoError(t, err)
-	err = c.Store(target, &core.BuildMetadata{
+	err = c.Store(context.Background(), target, &core.BuildMetadata{
 		Stdout: []byte("test stdout"),
 		Test:   true,
 	}, []string{
@@ -102,7 +103,7 @@ func TestStoreAndRetrieveDir(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Now retrieve them again
-	_, err = c.Retrieve(target)
+	_, err = c.Retrieve(context.Background(), target)
 	assert.NoError(t, err)
 	b, err := ioutil.ReadFile(path.Join(resultsDir, "1.xml"))
 	assert.NoError(t, err)
@@ -143,7 +144,7 @@ func TestExecuteBuild(t *testing.T) {
 	// on success).
 	target.PostBuildFunction = testFunction{}
 	target.Command = "echo hello && echo test > $OUT"
-	metadata, err := c.Build(0, target)
+	metadata, err := c.Build(context.Background(), 0, target)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hello\n"), metadata.Stdout)
 }
@@ -166,7 +167,7 @@ func TestExecutePostBuildFunction(t *testing.T) {
 		assert.Equal(t, "wibble wibble wibble", output)
 		return nil
 	})
-	_, err := c.Build(0, target)
+	_, err := c.Build(context.Background(), 0, target)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"somefile"}, target.Outputs())
 }
@@ -180,10 +181,10 @@ func TestExecuteTest(t *testing.T) {
 	target.IsTest = true
 	target.IsBinary = true
 	target.SetState(core.Building)
-	err := c.Store(target, &core.BuildMetadata{}, target.Outputs())
+	err := c.Store(context.Background(), target, &core.BuildMetadata{}, target.Outputs())
 	assert.NoError(t, err)
 	c.state.Graph.AddTarget(target)
-	_, results, coverage, err := c.Test(0, target)
+	_, results, coverage, err := c.Test(context.Background(), 0, target)
 	assert.NoError(t, err)
 	assert.Equal(t, testResults, results)
 	assert.Equal(t, 0, len(coverage)) // Wasn't requested
@@ -198,11 +199,11 @@ func TestExecuteTestWithCoverage(t *testing.T) {
 	target.TestCommand = "$TEST"
 	target.IsTest = true
 	target.IsBinary = true
-	err := c.Store(target, &core.BuildMetadata{}, target.Outputs())
+	err := c.Store(context.Background(), target, &core.BuildMetadata{}, target.Outputs())
 	assert.NoError(t, err)
 	target.SetState(core.Built)
 	c.state.Graph.AddTarget(target)
-	_, results, coverage, err := c.Test(0, target)
+	_, results, coverage, err := c.Test(context.Background(), 0, target)
 	assert.NoError(t, err)
 	assert.Equal(t, testResults, results)
 	assert.Equal(t, coverageData, coverage)

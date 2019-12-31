@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -9,33 +10,33 @@ import (
 )
 
 func TestExecWithTimeout(t *testing.T) {
-	out, _, err := New("").ExecWithTimeout(nil, "", nil, 10*time.Second, false, false, false, []string{"true"})
+	out, _, err := New("").ExecWithTimeout(context.Background(), nil, "", nil, 10*time.Second, false, false, false, []string{"true"})
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(out))
 }
 
 func TestExecWithTimeoutFailure(t *testing.T) {
-	out, _, err := New("").ExecWithTimeout(nil, "", nil, 10*time.Second, false, false, false, []string{"false"})
+	out, _, err := New("").ExecWithTimeout(context.Background(),nil, "", nil, 10*time.Second, false, false, false, []string{"false"})
 	assert.Error(t, err)
 	assert.Equal(t, 0, len(out))
 }
 
 func TestExecWithTimeoutDeadline(t *testing.T) {
-	out, _, err := New("").ExecWithTimeout(nil, "", nil, 1*time.Nanosecond, false, false, false, []string{"sleep", "10"})
+	out, _, err := New("").ExecWithTimeout(context.Background(),nil, "", nil, 1*time.Nanosecond, false, false, false, []string{"sleep", "10"})
 	assert.Error(t, err)
 	assert.True(t, strings.HasPrefix(err.Error(), "Timeout exceeded"))
 	assert.Equal(t, 0, len(out))
 }
 
 func TestExecWithTimeoutOutput(t *testing.T) {
-	out, stderr, err := New("").ExecWithTimeoutShell(nil, "", nil, 10*time.Second, false, "echo hello", false)
+	out, stderr, err := New("").ExecWithTimeoutShell(context.Background(), nil, "", nil, 10*time.Second, false, "echo hello", false)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello\n", string(out))
 	assert.Equal(t, "hello\n", string(stderr))
 }
 
 func TestExecWithTimeoutStderr(t *testing.T) {
-	out, stderr, err := New("").ExecWithTimeoutShell(nil, "", nil, 10*time.Second, false, "echo hello 1>&2", false)
+	out, stderr, err := New("").ExecWithTimeoutShell(context.Background(), nil, "", nil, 10*time.Second, false, "echo hello 1>&2", false)
 	assert.NoError(t, err)
 	assert.Equal(t, "", string(out))
 	assert.Equal(t, "hello\n", string(stderr))

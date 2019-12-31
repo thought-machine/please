@@ -4,6 +4,7 @@
 package build_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"testing"
@@ -48,7 +49,7 @@ func TestBuildLotsOfTargets(t *testing.T) {
 		}
 	}()
 
-	plz.RunHost(nil, state)
+	plz.RunHost(context.Background(), nil, state)
 }
 
 func addTarget(state *core.BuildState, i int) *core.BuildTarget {

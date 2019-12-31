@@ -40,7 +40,7 @@ func newClientInstance(name string) *Client {
 	config.Remote.Secure = false
 	state := core.NewBuildState(config)
 	state.Config.Remote.URL = "127.0.0.1:9987"
-	return New(state)
+	return New(context.Background(), state)
 }
 
 // A testServer implements the server interface for the various servers we test against.
