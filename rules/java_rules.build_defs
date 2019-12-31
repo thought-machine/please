@@ -256,7 +256,8 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
     )
 
 
-def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:list=None, worker:str='',
+def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
+              data:list=None, deps:list=None, worker:str='',
               labels:list&features&tags=[], visibility:list=None, flags:str='',
               sandbox:bool=None, timeout:int=0, flaky:bool|int=0, test_outputs:list=None, size:str=None,
               test_package:str=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args:str=''):
@@ -266,6 +267,9 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
       name (str): Name of the rule.
       srcs (list): Java files containing the tests.
       resources (list): Resources to include in the .jar file
+      resources_root (str): Root directory to treat resources relative to; ie. if we are in
+                            //project/main/resources and resources_root is project/main then
+                            the resources in the .jar will be in the subdirectory 'resources'.
       data (list): Runtime data files for this rule.
       deps (list): Dependencies of this rule.
       worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
@@ -280,12 +284,11 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
       test_package (str): Java package to scan for test classes to run.
       jvm_args (str): Arguments to pass to the JVM in the run script.
     """
-    # It's a bit sucky doing this in two separate steps, but it is
-    # at least easy and reuses the existing code.
     lib_rule = java_library(
         name=f'_{name}#lib',
         srcs=srcs,
         resources=resources,
+        resources_root=resources_root,
         deps=deps,
         test_only=True,
         labels=labels + ["rule:java_test"],
