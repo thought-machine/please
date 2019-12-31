@@ -165,3 +165,12 @@ go_test(
         "//third_party/go:testify",
     ],
 )
+
+go_test(
+    name = "stamp_test",
+    srcs = ["stamp_test.go"],
+    deps = [
+        ":core",
+        "//third_party/go:testify",
+    ],
+)

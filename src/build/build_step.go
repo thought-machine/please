@@ -374,6 +374,11 @@ func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
 			return err
 		}
 	}
+	if target.Stamp {
+		if err := fs.WriteFile(bytes.NewReader(core.StampFile(graph, target)), path.Join(target.TempDir(), target.StampFileName()), 0644); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

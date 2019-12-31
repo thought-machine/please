@@ -1170,6 +1170,11 @@ func (target *BuildTarget) PostBuildOutputFileName() string {
 	return ".build_output_" + target.Label.Name
 }
 
+// StampFileName returns the stamp filename for this target.
+func (target *BuildTarget) StampFileName() string {
+	return ".stamp_" + target.Label.Name
+}
+
 // NeedCoverage returns true if this target should output coverage during a test
 // for a particular invocation.
 func (target *BuildTarget) NeedCoverage(state *BuildState) bool {
