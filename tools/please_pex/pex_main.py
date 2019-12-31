@@ -7,14 +7,14 @@ import os
 import runpy
 import sys
 
-PY_VERSION = int(sys.version[0])
+PY_VERSION = sys.version_info
 
-if PY_VERSION >= 3:
+if PY_VERSION.major >= 3:
     from importlib import machinery
 else:
     import imp
 
-if PY_VERSION >= 3.2:
+if PY_VERSION >= (3, 2):
     from os import makedirs
 else:
     # backported from cpython 3.8
@@ -114,7 +114,7 @@ class SoImport(object):
 
     def __init__(self):
 
-        if PY_VERSION < 3:
+        if PY_VERSION.major < 3:
             self.suffixes = {x[0]: x for x in imp.get_suffixes() if x[2] == imp.C_EXTENSION}
         else:
             self.suffixes = machinery.EXTENSION_SUFFIXES  # list, as importlib will not be using the file description
@@ -150,7 +150,7 @@ class SoImport(object):
         with tempfile.NamedTemporaryFile(suffix=ext, prefix=os.path.basename(prefix)) as f:
             f.write(self.zf.read(filename))
             f.flush()
-            if PY_VERSION < 3:
+            if PY_VERSION.major < 3:
                 suffix = self.suffixes[ext]
                 mod = imp.load_module(fullname, None, f.name, suffix)
             else:
