@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//src/core",
         "//src/output",
+        "//src/process",
         "//third_party/go:errgroup",
         "//third_party/go:logging",
     ],
