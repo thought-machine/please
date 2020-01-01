@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"regexp"
@@ -33,23 +32,14 @@ var StripAnsi = regexp.MustCompile("\x1b[^m]+m")
 var logLevel = logging.WARNING
 
 var fileLogLevel = logging.WARNING
-var fileBackend *logging.LogBackend
+var fileBackend logging.Backend
 
 // A Verbosity is used as a flag to define logging verbosity.
 type Verbosity = cli.Verbosity
 
-type logFileWriter struct {
-	file io.Writer
-}
-
-func (writer logFileWriter) Write(p []byte) (n int, err error) {
-	return writer.file.Write(StripAnsi.ReplaceAllLiteral(p, []byte{}))
-}
-
 // InitLogging initialises logging backends.
 func InitLogging(verbosity Verbosity) {
 	logLevel = logging.Level(verbosity)
-	logging.SetFormatter(logFormatter())
 	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
 }
 
@@ -59,23 +49,25 @@ func InitFileLogging(logFile string, logFileLevel Verbosity) {
 	if err := os.MkdirAll(path.Dir(logFile), os.ModeDir|0775); err != nil {
 		log.Fatalf("Error creating log file directory: %s", err)
 	}
-	if file, err := os.Create(logFile); err != nil {
+	file, err := os.Create(logFile)
+	if err != nil {
 		log.Fatalf("Error opening log file: %s", err)
-	} else {
-		fileBackend = logging.NewLogBackend(logFileWriter{file: file}, "", 0)
-		setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
 	}
+	fileBackend = logging.NewLogBackend(file, "", 0)
+	fileBackend = logging.NewBackendFormatter(fileBackend, logFormatter(false))
+	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
 }
 
-func logFormatter() logging.Formatter {
+func logFormatter(coloured bool) logging.Formatter {
 	formatStr := "%{time:15:04:05.000} %{level:7s}: %{message}"
-	if StdErrIsATerminal {
+	if coloured {
 		formatStr = "%{color}" + formatStr + "%{color:reset}"
 	}
 	return logging.MustStringFormatter(formatStr)
 }
 
 func setLogBackend(backend logging.Backend) {
+	backend = logging.NewBackendFormatter(backend, logFormatter(StdErrIsATerminal))
 	backendLeveled := logging.AddModuleLevel(backend)
 	backendLeveled.SetLevel(logLevel, "")
 	if fileBackend == nil {
@@ -135,7 +127,7 @@ func NewLogBackend(interactiveRows int) *LogBackend {
 		InteractiveRows: interactiveRows,
 		MaxRecords:      10,
 		LogMessages:     list.New(),
-		Formatter:       logFormatter(),
+		Formatter:       logFormatter(StdErrIsATerminal),
 	}
 }
 
