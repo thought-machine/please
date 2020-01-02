@@ -172,6 +172,7 @@ func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byt
 	if target.Stamp {
 		stampEnvOnce.Do(initStampEnv)
 		env = append(env, stampEnv...)
+		env = append(env, "STAMP_FILE="+target.StampFileName())
 		return append(env, "STAMP="+base64.RawURLEncoding.EncodeToString(stamp))
 	}
 	return env

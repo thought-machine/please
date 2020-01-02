@@ -440,6 +440,13 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	return ret
 }
 
+// MarshalText implements the encoding.TextMarshaler interface, which makes BuildLabels
+// usable as map keys in JSON.
+// This implementation never returns an error.
+func (label BuildLabel) MarshalText() ([]byte, error) {
+	return []byte(label.String()), nil
+}
+
 // A packageKey is a cut-down version of BuildLabel that only contains the package part.
 // It's used to key maps and so forth that don't care about the target name.
 type packageKey struct {

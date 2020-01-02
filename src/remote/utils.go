@@ -104,11 +104,16 @@ func (c *Client) digestMessage(msg proto.Message) *pb.Digest {
 // digestMessageContents is like DigestMessage but returns the serialised contents as well.
 func (c *Client) digestMessageContents(msg proto.Message) (*pb.Digest, []byte) {
 	b := mustMarshal(msg)
+	return c.digestBlob(b), b
+}
+
+// digestBlob digests a byteslice and returns the proto for it.
+func (c *Client) digestBlob(b []byte) *pb.Digest {
 	sum := c.sum(b)
 	return &pb.Digest{
 		Hash:      hex.EncodeToString(sum[:]),
 		SizeBytes: int64(len(b)),
-	}, b
+	}
 }
 
 // wrapActionErr wraps an error with information about the action related to it.
