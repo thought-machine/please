@@ -741,6 +741,7 @@ func newCache(ctx context.Context, state *core.BuildState) core.Cache {
 	return cache.NewCache(ctx, state)
 }
 
+// NewBuildState creates a new Build State based on the configuration and flags.
 func NewBuildState(config *core.Configuration, shouldBuild, shouldTest bool) *core.BuildState {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
