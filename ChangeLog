@@ -1,3 +1,13 @@
+Version 14.2.0
+--------------
+
+    * Targets with stamp=True now get a file containing metadata about their dependencies (#805)
+    * plz run now does a better job of terminating subprocesses when killed (#808)
+    * Various fixes towards bootstrapping on ARM (#796)
+    * Support for TLS with remote execution
+    * Remote execution displays progress and RPC bytes in/out
+
+
 Version 14.1.12
 ---------------
 
