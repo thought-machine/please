@@ -53,7 +53,7 @@ type Target interface {
 // If the command times out the returned error will be a context.DeadlineExceeded error.
 // If showOutput is true then output will be printed to stderr as well as returned.
 // It returns the stdout only, combined stdout and stderr and any error that occurred.
-func (e *Executor) ExecWithTimeout(target Target, dir string, env []string, timeout time.Duration, showOutput, attachStdStreams bool, argv []string) ([]byte, []byte, error) {
+func (e *Executor) ExecWithTimeout(target Target, dir string, env []string, timeout time.Duration, showOutput, attachStdin, attachStdout bool, argv []string) ([]byte, []byte, error) {
 	// We deliberately don't attach this context to the command, so we have better
 	// control over how the process gets terminated.
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -78,8 +78,10 @@ func (e *Executor) ExecWithTimeout(target Target, dir string, env []string, time
 		cmd.Stdout = newProgressWriter(target, progress, cmd.Stdout)
 		cmd.Stderr = newProgressWriter(target, progress, cmd.Stderr)
 	}
-	if attachStdStreams {
+	if attachStdin {
 		cmd.Stdin = os.Stdin
+	}
+	if attachStdout {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
@@ -126,7 +128,7 @@ func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env
 		}
 		c = append([]string{e.sandboxCommand}, c...)
 	}
-	return e.ExecWithTimeout(target, dir, env, timeout, showOutput, attachStdStreams, c)
+	return e.ExecWithTimeout(target, dir, env, timeout, showOutput, attachStdStreams, attachStdStreams, c)
 }
 
 // KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL
@@ -262,5 +264,5 @@ func ExecCommand(args ...string) ([]byte, error) {
 	e := New("")
 	cmd := e.ExecCommand(args[0], args[1:]...)
 	defer e.removeProcess(cmd)
-	return cmd.Output()
+	return cmd.CombinedOutput()
 }
