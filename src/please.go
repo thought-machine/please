@@ -679,7 +679,7 @@ var buildFunctions = map[string]func(context.Context) int{
 		return toExitCode(success, state)
 	},
 	"filter": func(ctx context.Context) int {
-		return runQuery(ctx,false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
+		return runQuery(ctx, false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
 			query.Filter(state, state.ExpandOriginalLabels())
 		})
 	},
