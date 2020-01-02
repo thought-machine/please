@@ -5,6 +5,7 @@
 package follow
 
 import (
+	"context"
 	"time"
 
 	"github.com/thought-machine/please/src/core"
@@ -16,7 +17,7 @@ func InitialiseServer(state *core.BuildState, port int) func() {
 }
 
 // ConnectClient is a stub that always returns false immediately.
-func ConnectClient(state *core.BuildState, url string, retries int, delay time.Duration) bool {
+func ConnectClient(ctx context.Context, state *core.BuildState, url string, retries int, delay time.Duration) bool {
 	return false
 }
 
