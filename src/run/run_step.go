@@ -110,7 +110,7 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 	// Note that we don't connect stdin. It doesn't make sense for multiple processes.
 	// The process executor doesn't actually support not having a timeout, but the max is ~290 years so nobody
 	// should know the difference.
-	_, output, err := process.New("").ExecWithTimeout(target, "", env, time.Duration(math.MaxInt64), false, false, !quiet, args)
+	_, output, err := process.New("").ExecWithTimeout(ctx, target, "", env, time.Duration(math.MaxInt64), false, false, !quiet, args)
 	return toExitError(err, args, output)
 }
 
