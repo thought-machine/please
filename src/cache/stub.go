@@ -6,11 +6,12 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/thought-machine/please/src/core"
 )
 
-func newRPCCache(config *core.Configuration) (*httpCache, error) {
+func newRPCCache(ctx context.Context, config *core.Configuration) (*httpCache, error) {
 	return nil, fmt.Errorf("Config specifies RPC cache but it is not compiled")
 }
