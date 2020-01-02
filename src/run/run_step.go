@@ -2,20 +2,22 @@
 package run
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/output"
+	"github.com/thought-machine/please/src/process"
 )
 
 var log = logging.MustGetLogger("run")
@@ -106,34 +108,10 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 	}
 	// Run as a normal subcommand.
 	// Note that we don't connect stdin. It doesn't make sense for multiple processes.
-	cmd := exec.CommandContext(ctx, splitCmd[0], args[1:]...) // args here don't include argv[0]
-	cmd.Env = env
-
-	var combinedOutput bytes.Buffer // Dump the command output here, for quiet mode.
-	if quiet {
-		cmd.Stdout, cmd.Stderr = &combinedOutput, &combinedOutput
-	} else {
-		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-	}
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	if err := cmd.Start(); err != nil {
-		if err == context.Canceled {
-			log.Notice("Context canceled before command could be started")
-			return toExitError(err, cmd, nil)
-		}
-		must(err, args)
-	}
-
-	if pgid, err := syscall.Getpgid(cmd.Process.Pid); err == nil && pgid > 0 {
-		go func() {
-			for range ctx.Done() {
-			}
-			syscall.Kill(-pgid, syscall.SIGKILL)
-		}()
-	}
-
-	err := cmd.Wait()
-	return toExitError(err, cmd, combinedOutput.Bytes())
+	// The process executor doesn't actually support not having a timeout, but the max is ~290 years so nobody
+	// should know the difference.
+	_, output, err := process.New("").ExecWithTimeout(target, "", env, time.Duration(math.MaxInt64), false, false, !quiet, splitCmd)
+	return toExitError(err, splitCmd, output)
 }
 
 // environ returns an appropriate environment for a command.
@@ -175,7 +153,7 @@ func must(err error, cmd []string) {
 }
 
 // toExitError attempts to extract the exit code from an error.
-func toExitError(err error, cmd *exec.Cmd, out []byte) *exitError {
+func toExitError(err error, cmd []string, out []byte) *exitError {
 	exitCode := 1
 	if err == nil {
 		return nil
@@ -187,7 +165,7 @@ func toExitError(err error, cmd *exec.Cmd, out []byte) *exitError {
 		}
 	}
 	return &exitError{
-		msg:  fmt.Sprintf("Error running command %s: %s\n%s", strings.Join(cmd.Args, " "), err, string(out)),
+		msg:  fmt.Sprintf("Error running command %s: %s\n%s", strings.Join(cmd, " "), err, string(out)),
 		code: exitCode,
 	}
 }
