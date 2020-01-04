@@ -10,7 +10,9 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/ptypes"
 
@@ -413,7 +415,7 @@ func (c *Client) downloadDirectory(ctx context.Context, root string, dir *pb.Dir
 // verifyActionResult verifies that all the requested outputs actually exist in a returned
 // ActionResult. Servers do not necessarily verify this but we need to make sure they are
 // complete for future requests.
-func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest, ar *pb.ActionResult) error {
+func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest, ar *pb.ActionResult, verifyOutputs bool) error {
 	outs := make(map[string]bool, len(ar.OutputFiles)+len(ar.OutputDirectories)+len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks))
 	for _, f := range ar.OutputFiles {
 		outs[f.Path] = true
@@ -437,6 +439,30 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
 		}
 	}
+	if !verifyOutputs {
+		return nil
+	}
+	start := time.Now()
+	// Do more in-depth validation that blobs exist remotely.
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+	defer cancel()
+	outputs, err := c.client.FlattenActionOutputs(ctx, ar)
+	if err != nil {
+		return fmt.Errorf("Failed to verify action result: %s", err)
+	}
+	// At this point it's verified all the directories, but not the files themselves.
+	digests := make([]digest.Digest, 0, len(outputs))
+	for _, output := range outputs {
+		digests = append(digests, output.Digest)
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), c.reqTimeout)
+	defer cancel()
+	if missing, err := c.client.MissingBlobs(ctx, digests); err != nil {
+		return fmt.Errorf("Failed to verify action result outputs: %s", err)
+	} else if len(missing) != 0 {
+		return fmt.Errorf("Action result missing %d blobs", len(missing))
+	}
+	log.Debug("Verified action result for %s in %s", target, time.Since(start))
 	return nil
 }
 
