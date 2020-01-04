@@ -454,14 +454,19 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 		// This action already exists and has been cached.
 		if metadata, err := c.buildMetadata(ar, needStdout, false); err == nil {
 			log.Debug("Got remotely cached results for %s %s", target.Label, c.actionURL(digest, true))
-			return metadata, ar, c.verifyActionResult(target, command, digest, ar)
+			err := c.verifyActionResult(target, command, digest, ar, c.state.Config.Remote.VerifyOutputs)
+			if err == nil {
+				return metadata, ar, nil
+			}
+			log.Debug("Remotely cached results for %s were missing some outputs, forcing a rebuild: %s", target.Label, err)
 		}
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	stream, err := c.client.Execute(ctx, &pb.ExecuteRequest{
-		InstanceName: c.instance,
-		ActionDigest: digest,
+		InstanceName:    c.instance,
+		ActionDigest:    digest,
+		SkipCacheLookup: true, // We've already done it above.
 	})
 	if err != nil {
 		return nil, nil, err
@@ -540,7 +545,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 				} else if err != nil {
 					return nil, nil, err
 				}
-				return metadata, response.Result, c.verifyActionResult(target, command, digest, response.Result)
+				return metadata, response.Result, c.verifyActionResult(target, command, digest, response.Result, false)
 			}
 		}
 	}
