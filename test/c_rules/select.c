@@ -11,6 +11,8 @@ int input_timeout(int fd, unsigned int seconds) {
   struct timeval timeout;
   FD_ZERO(&set);
   FD_SET(fd, &set);
+  timeout.tv_sec = seconds;
+  timeout.tv_usec = 0;
   return select(FD_SETSIZE, &set, NULL, NULL, &timeout);
 }
 
