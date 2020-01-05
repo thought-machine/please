@@ -8,12 +8,13 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 
 	"gopkg.in/op/go-logging.v1"
+
+	"github.com/thought-machine/please/src/cli"
 )
 
 var log = logging.MustGetLogger("progress")
@@ -32,7 +33,7 @@ func New(sandboxCommand string) *Executor {
 		sandboxCommand: sandboxCommand,
 		processes:      map[*exec.Cmd]struct{}{},
 	}
-	go o.handleSignals()
+	cli.AtExit(o.killAll) // Kill any subprocess if we are ourselves killed
 	return o
 }
 
@@ -222,19 +223,6 @@ func progressMessage(progress *float32) string {
 		return fmt.Sprintf("(%0.1f%% done)", *progress)
 	}
 	return ""
-}
-
-// handleSignals registers to handle SIGHUP, SIGINT, SIGQUIT, SIGABRT, and SIGTERM.
-func (e *Executor) handleSignals() {
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGABRT, syscall.SIGTERM)
-	sig := <-ch
-	log.Notice("Received %s, shutting down all subprocesses...", sig)
-	e.killAll()
-	if s, ok := sig.(syscall.Signal); ok {
-		os.Exit(128 + int(s))
-	}
-	os.Exit(1)
 }
 
 // killAll kills all subprocesses of this executor.

@@ -6,16 +6,14 @@ package watch
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/signal"
 	"path"
-	"syscall"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/streamrail/concurrent-map"
 	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/run"
@@ -42,17 +40,11 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 	files := cmap.New()
 	go startWatching(watcher, state, labels, files)
 
-	sigchan := make(chan os.Signal, 1)
-	signal.Notify(sigchan, os.Interrupt)
 	parentCtx, cancelParent := context.WithCancel(context.Background())
-	go func() {
-		for range sigchan {
-			cancelParent()
-			signal.Stop(sigchan)
-			close(sigchan)
-			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-		}
-	}()
+	cli.AtExit(func() {
+		cancelParent()
+		time.Sleep(5 * time.Millisecond) // Brief pause to give the cancel() call time to progress before the process dies
+	})
 
 	ctx, cancel := context.WithCancel(parentCtx)
 

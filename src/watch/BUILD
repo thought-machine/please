@@ -3,6 +3,7 @@ go_library(
     srcs = ["watch.go"],
     visibility = ["PUBLIC"],
     deps = [
+        "//src/cli",
         "//src/core",
         "//src/fs",
         "//src/run",

@@ -19,7 +19,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/signal"
 	"path"
 	"runtime"
 	"strconv"
@@ -165,7 +164,9 @@ func downloadPlease(config *core.Configuration, verify bool) {
 			log.Fatalf("Failed to download Please: %s", r)
 		}
 	}()
-	go handleSignals(newDir)
+	cli.AtExit(func() {
+		cleanDir(newDir)
+	})
 	mustClose := func(closer io.Closer) {
 		if err := closer.Close(); err != nil {
 			panic(err)
@@ -277,16 +278,6 @@ func cleanDir(newDir string) {
 	if err := os.RemoveAll(newDir); err != nil {
 		log.Errorf("Failed to clean %s: %s", newDir, err)
 	}
-}
-
-// handleSignals traps SIGINT and SIGKILL (if possible) and on receiving one cleans the given directory.
-func handleSignals(newDir string) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, os.Kill)
-	s := <-c
-	log.Notice("Got signal %s", s)
-	cleanDir(newDir)
-	log.Fatalf("Got signal %s", s)
 }
 
 // findLatestVersion attempts to find the latest available version of plz.
