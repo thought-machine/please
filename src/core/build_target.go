@@ -45,6 +45,9 @@ const CoverageFile = "test.coverage"
 // execution API requires that we specify which is which.
 const TestResultsDirLabel = "test_results_dir"
 
+// tempOutputSuffix is the suffix we attach to temporary outputs to avoid name clashes.
+const tempOutputSuffix = ".out"
+
 // A BuildTarget is a representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 type BuildTarget struct {
@@ -510,11 +513,11 @@ func (target *BuildTarget) NamedOutputs(name string) []string {
 // filename(plz-out/tmp/) if output has the same name as the package, this avoids the name conflict issue
 func (target *BuildTarget) GetTmpOutput(parseOutput string) string {
 	if parseOutput == target.Label.PackageName {
-		return parseOutput + ".out"
+		return parseOutput + tempOutputSuffix
 	} else if target.Label.PackageName == "" && target.HasSource(parseOutput) {
 		// This also fixes the case where source and output are the same, which can happen
 		// when we're in the root directory.
-		return parseOutput + ".out"
+		return parseOutput + tempOutputSuffix
 	}
 	return parseOutput
 }
@@ -527,6 +530,19 @@ func (target *BuildTarget) GetTmpOutputAll(parseOutputs []string) []string {
 		tmpOutputs[i] = target.GetTmpOutput(out)
 	}
 	return tmpOutputs
+}
+
+// GetRealOutput returns the real output name for a filename that might have been a temporary output
+// (i.e as returned by GetTmpOutput).
+func (target *BuildTarget) GetRealOutput(output string) string {
+	if strings.HasSuffix(output, tempOutputSuffix) {
+		real := strings.TrimSuffix(output, tempOutputSuffix)
+		// Check this isn't a file that just happens to be named the same way
+		if target.GetTmpOutput(real) == output {
+			return real
+		}
+	}
+	return output
 }
 
 // SourcePaths returns the source paths for a given set of sources.
