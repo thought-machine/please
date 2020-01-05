@@ -358,7 +358,7 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 	if err := c.downloadBlobs(ctx, func(ch chan<- *blob) error {
 		defer close(ch)
 		for _, file := range resp.OutputFiles {
-			filePath := path.Join(outDir, file.Path)
+			filePath := path.Join(outDir, target.GetRealOutput(file.Path))
 			addPerms := extraPerms(file)
 			if file.Contents != nil {
 				// Inlining must have been requested. Can write it directly.
