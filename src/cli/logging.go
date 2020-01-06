@@ -56,6 +56,11 @@ func InitFileLogging(logFile string, logFileLevel Verbosity) {
 	fileBackend = logging.NewLogBackend(file, "", 0)
 	fileBackend = logging.NewBackendFormatter(fileBackend, logFormatter(false))
 	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
+	AtExit(func() {
+		fileBackend = nil
+		setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
+		file.Close()
+	})
 }
 
 func logFormatter(coloured bool) logging.Formatter {

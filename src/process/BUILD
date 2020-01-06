@@ -5,7 +5,10 @@ go_library(
         exclude = ["*_test.go"],
     ),
     visibility = ["PUBLIC"],
-    deps = ["//third_party/go:logging"],
+    deps = [
+        "//src/cli",
+        "//third_party/go:logging",
+    ],
 )
 
 go_test(
