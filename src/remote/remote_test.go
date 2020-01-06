@@ -49,10 +49,13 @@ func TestStoreAndRetrieve(t *testing.T) {
 	target.AddSource(core.FileLabel{File: "src2.txt", Package: "package"})
 	target.AddOutput("out1.txt")
 	target.PostBuildFunction = testFunction{}
+	now := time.Now().UTC()
 	metadata := &core.BuildMetadata{
-		Stdout:    []byte("test stdout"),
-		StartTime: time.Now().UTC(),
-		EndTime:   time.Now().UTC(),
+		Stdout:              []byte("test stdout"),
+		StartTime:           now,
+		EndTime:             now,
+		InputFetchStartTime: now,
+		InputFetchEndTime:   now,
 	}
 	err := c.Store(target, metadata, []string{"out1.txt"})
 	assert.NoError(t, err)

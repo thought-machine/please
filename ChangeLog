@@ -1,3 +1,9 @@
+Version 14.2.1
+--------------
+
+    * Fixed args sometimes not being honoured in `plz run`.
+
+
 Version 14.2.0
 --------------
 
