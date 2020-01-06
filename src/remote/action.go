@@ -353,6 +353,8 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 	if ar.ExecutionMetadata != nil {
 		metadata.StartTime = toTime(ar.ExecutionMetadata.ExecutionStartTimestamp)
 		metadata.EndTime = toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp)
+		metadata.InputFetchStartTime = toTime(ar.ExecutionMetadata.InputFetchStartTimestamp)
+		metadata.InputFetchEndTime = toTime(ar.ExecutionMetadata.InputFetchCompletedTimestamp)
 	}
 	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
 		b, err := c.readAllByteStream(context.Background(), ar.StdoutDigest)

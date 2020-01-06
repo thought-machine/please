@@ -189,10 +189,12 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 	ar := &pb.ActionResult{
 		// We never cache any failed actions so ExitCode is implicitly 0.
 		ExecutionMetadata: &pb.ExecutedActionMetadata{
-			Worker:                      c.state.Config.Remote.Name,
-			OutputUploadStartTimestamp:  toTimestamp(time.Now()),
-			ExecutionStartTimestamp:     toTimestamp(metadata.StartTime),
-			ExecutionCompletedTimestamp: toTimestamp(metadata.EndTime),
+			Worker:                       c.state.Config.Remote.Name,
+			OutputUploadStartTimestamp:   toTimestamp(time.Now()),
+			ExecutionStartTimestamp:      toTimestamp(metadata.StartTime),
+			ExecutionCompletedTimestamp:  toTimestamp(metadata.EndTime),
+			InputFetchStartTimestamp:     toTimestamp(metadata.InputFetchStartTime),
+			InputFetchCompletedTimestamp: toTimestamp(metadata.InputFetchEndTime),
 		},
 	}
 	outDir := target.OutDir()
@@ -545,6 +547,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 				} else if err != nil {
 					return nil, nil, err
 				}
+				log.Debug("Completed remote build action for %s; input fetch %s, build time %s", target, metadata.InputFetchEndTime.Sub(metadata.InputFetchStartTime), metadata.EndTime.Sub(metadata.StartTime))
 				return metadata, response.Result, c.verifyActionResult(target, command, digest, response.Result, false)
 			}
 		}

@@ -184,6 +184,10 @@ type BuildTarget struct {
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
 // generally persist it indefinitely.
 type BuildMetadata struct {
+	// Time the build started fetching inputs
+	InputFetchStartTime time.Time
+	// Time the build finished fetching them
+	InputFetchEndTime time.Time
 	// Time the build began
 	StartTime time.Time
 	// Time it ended
