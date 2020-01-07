@@ -509,8 +509,11 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 					log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
 				}
 				var respErr error
-				if response.Status != nil {
+				if response.Status != nil && respErr != nil {
 					respErr = convertError(response.Status)
+					if url := c.actionURL(digest, false); url != "" {
+						respErr = fmt.Errorf("%s\nAction URL: %s", respErr, url)
+					}
 				}
 				if resp.Result == nil { // This is optional on failure.
 					return nil, nil, respErr
@@ -531,6 +534,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 				// The original error is higher priority than us trying to retrieve the
 				// output of the thing that failed.
 				if respErr != nil {
+					log.Warning("here %s", respErr)
 					return metadata, response.Result, respErr
 				} else if response.Result.ExitCode != 0 {
 					err := fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
@@ -542,6 +546,9 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 					}
 					if len(metadata.Stderr) != 0 {
 						err = fmt.Errorf("%s\nStderr:\n%s", err, metadata.Stderr)
+					}
+					if url := c.actionURL(digest, true); url != "" {
+						err = fmt.Errorf("%s\n%s", err, url)
 					}
 					return nil, nil, err
 				} else if err != nil {
