@@ -24,3 +24,11 @@ filegroup(
     binary = True,
     deps = ["//package:installed_files"],
 )
+
+# This is used as part of bootstrap, and is used from here to avoid subtle issues with remote execution.
+filegroup(
+    name = "jarcat_unzip",
+    srcs = ["//tools/jarcat:jarcat_unzip"],
+    binary = True,
+    visibility = ["//third_party/go:all"],
+)

@@ -509,10 +509,12 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 					log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
 				}
 				var respErr error
-				if response.Status != nil && respErr != nil {
+				if response.Status != nil {
 					respErr = convertError(response.Status)
-					if url := c.actionURL(digest, false); url != "" {
-						respErr = fmt.Errorf("%s\nAction URL: %s", respErr, url)
+					if respErr != nil {
+						if url := c.actionURL(digest, false); url != "" {
+							respErr = fmt.Errorf("%s\nAction URL: %s", respErr, url)
+						}
 					}
 				}
 				if resp.Result == nil { // This is optional on failure.
