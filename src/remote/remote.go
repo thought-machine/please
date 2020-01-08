@@ -427,15 +427,19 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	// is more relevant, but we want to still try to get results if we can, and it's an
 	// error if we can't get those results on success.
 	if !target.NoTestOutput && ar != nil {
-		results, err = c.readAllByteStream(context.Background(), c.digestForFilename(ar, core.TestResultsFile))
-		if execErr == nil && err != nil {
-			return metadata, nil, nil, err
+		if digest := c.digestForFilename(ar, core.TestResultsFile); digest != nil {
+			results, err = c.readAllByteStream(context.Background(), digest)
+			if execErr == nil && err != nil {
+				return metadata, nil, nil, err
+			}
 		}
 	}
 	if target.NeedCoverage(c.state) && ar != nil {
-		coverage, err = c.readAllByteStream(context.Background(), c.digestForFilename(ar, core.CoverageFile))
-		if execErr == nil && err != nil {
-			return metadata, results, nil, err
+		if digest := c.digestForFilename(ar, core.CoverageFile); digest != nil {
+			coverage, err = c.readAllByteStream(context.Background(), digest)
+			if execErr == nil && err != nil {
+				return metadata, results, nil, err
+			}
 		}
 	}
 	return metadata, results, coverage, execErr
@@ -536,7 +540,6 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 				// The original error is higher priority than us trying to retrieve the
 				// output of the thing that failed.
 				if respErr != nil {
-					log.Warning("here %s", respErr)
 					return metadata, response.Result, respErr
 				} else if response.Result.ExitCode != 0 {
 					err := fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
