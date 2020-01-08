@@ -120,7 +120,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
 		},
-		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, "")),
+		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, ".")),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
