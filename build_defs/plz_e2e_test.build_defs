@@ -51,4 +51,5 @@ def plz_e2e_test(name:str, cmd:str, pre_cmd:str=None, expected_output:str=None,
         labels = ['e2e'] + (labels or []),
         no_test_output = True,
         sandbox = False,
+        local = True,
     )

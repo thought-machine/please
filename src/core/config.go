@@ -47,13 +47,15 @@ const MachineConfigFileName = "/etc/please/plzconfig"
 const UserConfigFileName = "~/.config/please/plzconfig"
 
 func readConfigFile(config *Configuration, filename string) error {
-	log.Debug("Reading config from %s...", filename)
+	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
 	} else if gcfg.FatalOnly(err) != nil {
 		return err
 	} else if err != nil {
 		log.Warning("Error in config file: %s", err)
+	} else {
+		log.Debug("Read config from %s", filename)
 	}
 	return nil
 }

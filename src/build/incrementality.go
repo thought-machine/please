@@ -410,18 +410,13 @@ func mustShortTargetHash(state *core.BuildState, target *core.BuildTarget) []byt
 	return core.CollapseHash(mustTargetHash(state, target))
 }
 
-// RuntimeHash returns the target hash, source hash, config hash & runtime file hash,
+// RuntimeHash returns the target hash, config hash & runtime file hash,
 // all rolled into one. Essentially this is one hash needed to determine if the runtime
 // state is consistent.
 func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	hash := append(RuleHash(state, target, true, false), RuleHash(state, target, true, true)...)
 	hash = append(hash, state.Hashes.Config...)
-	sh, err := sourceHash(state, target)
-	if err != nil {
-		return nil, err
-	}
 	h := sha1.New()
-	h.Write(sh)
 	for source := range core.IterRuntimeFiles(state.Graph, target, true) {
 		result, err := state.PathHasher.Hash(source.Src, false, true)
 		if err != nil {

@@ -1,7 +1,7 @@
 package(default_visibility = ["PUBLIC"])
 
 # This is needed to break a circular dependency.
-package(jarcat_tool = "//tools/jarcat:jarcat_unzip")
+package(jarcat_tool = "//:jarcat_unzip")
 
 go_get(
     name = "logging",

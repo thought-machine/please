@@ -120,7 +120,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
 		},
-		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, "")),
+		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, ".")),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
@@ -373,7 +373,7 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 	return metadata, nil
 }
 
-// digestForFilename returns the digest for an output of the given name.
+// digestForFilename returns the digest for an output of the given name, or nil if it doesn't exist.
 func (c *Client) digestForFilename(ar *pb.ActionResult, name string) *pb.Digest {
 	for _, file := range ar.OutputFiles {
 		if file.Path == name {

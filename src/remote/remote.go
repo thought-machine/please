@@ -427,15 +427,19 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	// is more relevant, but we want to still try to get results if we can, and it's an
 	// error if we can't get those results on success.
 	if !target.NoTestOutput && ar != nil {
-		results, err = c.readAllByteStream(context.Background(), c.digestForFilename(ar, core.TestResultsFile))
-		if execErr == nil && err != nil {
-			return metadata, nil, nil, err
+		if digest := c.digestForFilename(ar, core.TestResultsFile); digest != nil {
+			results, err = c.readAllByteStream(context.Background(), digest)
+			if execErr == nil && err != nil {
+				return metadata, nil, nil, err
+			}
 		}
 	}
 	if target.NeedCoverage(c.state) && ar != nil {
-		coverage, err = c.readAllByteStream(context.Background(), c.digestForFilename(ar, core.CoverageFile))
-		if execErr == nil && err != nil {
-			return metadata, results, nil, err
+		if digest := c.digestForFilename(ar, core.CoverageFile); digest != nil {
+			coverage, err = c.readAllByteStream(context.Background(), digest)
+			if execErr == nil && err != nil {
+				return metadata, results, nil, err
+			}
 		}
 	}
 	return metadata, results, coverage, execErr
@@ -511,6 +515,11 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 				var respErr error
 				if response.Status != nil {
 					respErr = convertError(response.Status)
+					if respErr != nil {
+						if url := c.actionURL(digest, false); url != "" {
+							respErr = fmt.Errorf("%s\nAction URL: %s", respErr, url)
+						}
+					}
 				}
 				if resp.Result == nil { // This is optional on failure.
 					return nil, nil, respErr
@@ -542,6 +551,9 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 					}
 					if len(metadata.Stderr) != 0 {
 						err = fmt.Errorf("%s\nStderr:\n%s", err, metadata.Stderr)
+					}
+					if url := c.actionURL(digest, true); url != "" {
+						err = fmt.Errorf("%s\n%s", err, url)
 					}
 					return nil, nil, err
 				} else if err != nil {
