@@ -267,7 +267,7 @@ func outputs(target *core.BuildTarget) (files, dirs []string) {
 	files = make([]string, 0, len(outs))
 	for _, out := range outs {
 		out = target.GetTmpOutput(out)
-		if !strings.ContainsRune(path.Base(out), '.') && !strings.HasSuffix(out, "file") {
+		if !strings.ContainsRune(path.Base(out), '.') && !strings.HasSuffix(out, "file") && !target.IsBinary {
 			dirs = append(dirs, out)
 		} else {
 			files = append(files, out)
