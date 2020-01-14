@@ -68,7 +68,7 @@ type Client struct {
 	bashPath string
 
 	// Stats used to report RPC data rates
-	byteRateIn, byteRateOut int
+	byteRateIn, byteRateOut, totalBytesIn, totalBytesOut int
 }
 
 // New returns a new Client instance.
@@ -611,6 +611,6 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 }
 
 // DataRate returns an estimate of the current in/out RPC data rates in bytes per second.
-func (c *Client) DataRate() (int, int) {
-	return c.byteRateIn, c.byteRateOut
+func (c *Client) DataRate() (int, int, int, int) {
+	return c.byteRateIn, c.byteRateOut, c.totalBytesIn, c.totalBytesOut
 }

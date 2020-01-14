@@ -60,6 +60,10 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	if state.Cache != nil {
 		state.Cache.Shutdown()
 	}
+	if state.RemoteClient != nil {
+		_, _, in, out := state.RemoteClient.DataRate()
+		log.Info("Total remote RPC data in: %d out: %d", in, out)
+	}
 	state.CloseResults()
 }
 

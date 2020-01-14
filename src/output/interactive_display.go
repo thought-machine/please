@@ -106,7 +106,7 @@ func (d *displayer) printLines() {
 			printf("  ${BOLD_WHITE}Worker processes: %d${RESET}", d.state.Stats.NumWorkerProcesses)
 		}
 		if d.state.RemoteClient != nil {
-			in, out := d.state.RemoteClient.DataRate()
+			in, out, _, _ := d.state.RemoteClient.DataRate()
 			printf("  ${BOLD_WHITE}RPC data in: %6s/s out: %6s/s${RESET}", humanize.Bytes(uint64(in)), humanize.Bytes(uint64(out)))
 		}
 		printf("${ERASE_AFTER}\n")
