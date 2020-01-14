@@ -231,3 +231,29 @@ pip_library(
     zip_safe = False,
     deps = [":numpy"],
 )
+
+pip_library(
+    name = "importlib_metadata",
+    package_name = "importlib-metadata",
+    licences = ["Apache License, Version 2.0"],
+    test_only = True,
+    version = "0.23",
+    deps = [
+        ":more_itertools",
+        ":zipp",
+    ],
+)
+
+pip_library(
+    name = "zipp",
+    outs = ["zipp.py"],
+    test_only = True,
+    version = "0.6.0",
+)
+
+pip_library(
+    name = "more_itertools",
+    package_name = "more-itertools",
+    test_only = True,
+    version = "7.2.0",
+)
