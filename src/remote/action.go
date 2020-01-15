@@ -21,12 +21,12 @@ import (
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
-func (c *Client) uploadAction(target *core.BuildTarget, uploadInputRoot, isTest bool) (*pb.Command, *pb.Digest, error) {
+func (c *Client) uploadAction(target *core.BuildTarget, isTest bool) (*pb.Command, *pb.Digest, error) {
 	var command *pb.Command
 	var digest *pb.Digest
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
-		inputRoot, err := c.buildInputRoot(target, uploadInputRoot, isTest)
+		inputRoot, err := c.uploadInputs(ch, target, isTest, false)
 		if err != nil {
 			return err
 		}
@@ -48,6 +48,26 @@ func (c *Client) uploadAction(target *core.BuildTarget, uploadInputRoot, isTest 
 		return nil
 	})
 	return command, digest, err
+}
+
+// buildAction creates a build action for a target and returns the command and the action digest digest. No uploading is done.
+func (c *Client) buildAction(target *core.BuildTarget, isTest bool) (*pb.Command, *pb.Digest, error) {
+	inputRoot, err := c.uploadInputs(nil, target, isTest, false)
+	if err != nil {
+		return nil, nil, err
+	}
+	inputRootDigest := c.digestMessage(inputRoot)
+	command, err := c.buildCommand(target, inputRoot, isTest)
+	if err != nil {
+		return nil, nil, err
+	}
+	commandDigest := c.digestMessage(command)
+	actionDigest := c.digestMessage(&pb.Action{
+		CommandDigest:   commandDigest,
+		InputRootDigest: inputRootDigest,
+		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
+	})
+	return command, actionDigest, nil
 }
 
 // buildCommand builds the command for a single target.
@@ -212,19 +232,6 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 		return nil
 	})
 	return d, children, err
-}
-
-// buildInputRoot constructs the directory that is the input root and optionally uploads it.
-func (c *Client) buildInputRoot(target *core.BuildTarget, upload, isTest bool) (root *pb.Directory, err error) {
-	if !upload {
-		return c.uploadInputs(nil, target, isTest, false)
-	}
-	c.uploadBlobs(func(ch chan<- *blob) error {
-		defer close(ch)
-		root, err = c.uploadInputs(ch, target, isTest, false)
-		return nil
-	})
-	return
 }
 
 // uploadInputs finds and uploads a set of inputs from a target.
