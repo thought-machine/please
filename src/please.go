@@ -153,6 +153,7 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
+		Debug    bool `long:"debug" description:"Prepare and run the executable for debugging."`
 		Env      bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
 		Parallel struct {
 			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
@@ -430,8 +431,11 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"run": func() int {
+		if opts.Run.Debug {
+			opts.BuildFlags.Config = "dbg"
+		}
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false, false); success {
-			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Env)
+			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Env, opts.Run.Debug)
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},

@@ -46,12 +46,12 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
         else:
             javac_flags = CONFIG.JAVAC_TEST_FLAGS if test_only else CONFIG.JAVAC_FLAGS
 
-        javac_flags = '-encoding utf8 ' + javac_flags
+        javac_flags = '-encoding utf8 %s ' + javac_flags
 
         if CONFIG.JAVA_RELEASE_LEVEL:
             javac_flags = f'--release {CONFIG.JAVA_RELEASE_LEVEL} ' + javac_flags
         else:
-            javac_flags = f'-encoding utf8 -source {CONFIG.JAVA_SOURCE_LEVEL} -target {CONFIG.JAVA_TARGET_LEVEL} -g ' + javac_flags
+            javac_flags = f'-encoding utf8 -source {CONFIG.JAVA_SOURCE_LEVEL} -target {CONFIG.JAVA_TARGET_LEVEL} ' + javac_flags
 
         if not CONFIG.JAVAC_TOOL:
             mflag = '--modular' if modular else ''
@@ -80,7 +80,10 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
             exported_deps=exported_deps,
             outs=[name + '.jar'],
             visibility=visibility,
-            cmd=cmd,
+            cmd={
+                'dbg': cmd % '-g',
+                'opt': cmd % '',
+            },
             building_description="Compiling...",
             requires=['java'],
             labels = labels + ['rule:java_test_library' if test_only else 'rule:java_library'] + src_dir_label,
