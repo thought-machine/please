@@ -439,7 +439,12 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
-	// First see if this execution is cached
+	// First see if this execution is cached locally
+	if metadata, ar := c.retrieveLocalResults(target, digest); metadata != nil {
+		log.Debug("Got locally cached results for %s %s", target.Label, c.actionURL(digest, true))
+		return metadata, ar, nil
+	}
+	// Now see if it is cached on the remote server
 	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking remote...")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -453,6 +458,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 			log.Debug("Got remotely cached results for %s %s", target.Label, c.actionURL(digest, true))
 			err := c.verifyActionResult(target, command, digest, ar, c.state.Config.Remote.VerifyOutputs)
 			if err == nil {
+				c.locallyCacheResults(target, digest, metadata, ar)
 				return metadata, ar, nil
 			}
 			log.Debug("Remotely cached results for %s were missing some outputs, forcing a rebuild: %s", target.Label, err)
@@ -556,7 +562,11 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 					return nil, nil, err
 				}
 				log.Debug("Completed remote build action for %s; input fetch %s, build time %s", target, metadata.InputFetchEndTime.Sub(metadata.InputFetchStartTime), metadata.EndTime.Sub(metadata.StartTime))
-				return metadata, response.Result, c.verifyActionResult(target, command, digest, response.Result, false)
+				if err := c.verifyActionResult(target, command, digest, response.Result, false); err != nil {
+					return metadata, response.Result, err
+				}
+				c.locallyCacheResults(target, digest, metadata, response.Result)
+				return metadata, response.Result, nil
 			}
 		}
 	}

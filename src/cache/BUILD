@@ -13,7 +13,6 @@ go_library(
         "//src/cli",
         "//src/core",
         "//src/fs",
-        "//src/remote",
         "//third_party/go:atime",
         "//third_party/go:grpc",
         "//third_party/go:humanize",

@@ -8,6 +8,7 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -22,6 +23,8 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
+
+const remoteActionFilename = ".plz_remote_action"
 
 type dirCache struct {
 	Dir      string
@@ -44,6 +47,14 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, metadata *cor
 		files = append(files, target.PostBuildOutputFileName())
 	}
 	cache.storeFiles(target, key, "", cacheDir, tmpDir, files, true)
+	if len(metadata.RemoteAction) > 0 {
+		filename := path.Join(tmpDir, remoteActionFilename)
+		if err := cache.ensureStoreReady(filename); err == nil {
+			if err := ioutil.WriteFile(filename, metadata.RemoteAction, 0644); err != nil {
+				log.Warning("Failed to store remote action in local cache: %s", err)
+			}
+		}
+	}
 	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
 	}
@@ -187,10 +198,16 @@ func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []str
 	if !cache.retrieveFiles(target, key, "", outs) {
 		return nil
 	}
+	metadata := &core.BuildMetadata{}
 	if needsPostBuildFile(target) {
-		return loadPostBuildFile(target)
+		metadata = loadPostBuildFile(target)
 	}
-	return &core.BuildMetadata{}
+	if len(outs) == 0 && metadata != nil { // Only need to retrieve this in one particular case
+		if data, err := ioutil.ReadFile(path.Join(cache.getPath(target, key, ""), remoteActionFilename)); err == nil {
+			metadata.RemoteAction = data
+		}
+	}
+	return metadata
 }
 
 // retrieveFiles retrieves the given set of files from the cache.
@@ -211,6 +228,9 @@ func (cache *dirCache) retrieveFiles2(target *core.BuildTarget, cacheDir string,
 		return false, nil
 	}
 	cache.markDir(cacheDir, 0)
+	if len(outs) == 0 {
+		return true, nil
+	}
 	if cache.Compress {
 		log.Debug("Retrieving %s: %s from compressed cache", target.Label, cacheDir)
 		return true, cache.retrieveCompressed(target, cacheDir)

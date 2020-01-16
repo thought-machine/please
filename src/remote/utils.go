@@ -137,6 +137,34 @@ func (c *Client) actionURL(digest *pb.Digest, prefix bool) string {
 	return s
 }
 
+// locallyCacheResults stores the actionresult for an action in the local (usually dir) cache.
+func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest, metadata *core.BuildMetadata, ar *pb.ActionResult) {
+	if c.state.Cache == nil {
+		return
+	}
+	data, _ := proto.Marshal(ar)
+	metadata.RemoteAction = data
+	key, _ := hex.DecodeString(digest.Hash)
+	c.state.Cache.Store(target, key, metadata, nil)
+}
+
+// retrieveLocalResults retrieves locally cached results for a target if possible.
+// Note that this does not handle any file data, only the actionresult metadata.
+func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult) {
+	if c.state.Cache != nil {
+		key, _ := hex.DecodeString(digest.Hash)
+		if metadata := c.state.Cache.Retrieve(target, key, nil); metadata != nil && len(metadata.RemoteAction) > 0 {
+			ar := &pb.ActionResult{}
+			if err := proto.Unmarshal(metadata.RemoteAction, ar); err == nil {
+				if err := c.setOutputs(target.Label, ar); err == nil {
+					return metadata, ar
+				}
+			}
+		}
+	}
+	return nil, nil
+}
+
 // mustMarshal encodes a message to a binary string.
 func mustMarshal(msg proto.Message) []byte {
 	b, err := proto.Marshal(msg)
