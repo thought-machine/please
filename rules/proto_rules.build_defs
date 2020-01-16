@@ -131,7 +131,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
         test_only = test_only,
     )
     # This is the final rule that directs dependencies to the appropriate language.
-    filegroup(
+    return filegroup(
         name = name,
         deps = provides.values(),
         provides = provides,
@@ -159,7 +159,7 @@ def grpc_library(name:str, srcs:list, deps:list=None, visibility:list=None, lang
                       proto files have import statements that are not relative to the repo root.
       protoc_flags (list): Additional flags to pass to protoc.
     """
-    proto_library(
+    return proto_library(
         name = name,
         srcs = srcs,
         deps = deps,
