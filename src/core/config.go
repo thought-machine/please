@@ -254,6 +254,7 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.RPCMaxMsgSize.UnmarshalFlag("200MiB")
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Display.SystemStats = true
+	config.Remote.NumExecutors = 20 // kind of arbitrary
 	config.Remote.HomeDir = "~"
 	config.Remote.Secure = true
 	config.Remote.VerifyOutputs = true
@@ -393,7 +394,7 @@ type Configuration struct {
 		Upload          cli.URL      `help:"URL to upload test results to (in XML format)"`
 	}
 	Remote struct {
-		URL           string       `help:"URL for the remote server. If this is set but no executors are configured then it can still act as a remote cache."`
+		URL           string       `help:"URL for the remote server."`
 		CASURL        string       `help:"URL for the CAS service, if it is different to the main one."`
 		NumExecutors  int          `help:"Maximum number of remote executors to use simultaneously."`
 		Instance      string       `help:"Remote instance name to request; depending on the server this may be required."`
@@ -777,4 +778,12 @@ func (config *Configuration) IsABuildFile(name string) bool {
 		}
 	}
 	return false
+}
+
+// NumRemoteExecutors returns the number of actual remote executors we'll have
+func (config *Configuration) NumRemoteExecutors() int {
+	if config.Remote.URL == "" {
+		return 0
+	}
+	return config.Remote.NumExecutors
 }

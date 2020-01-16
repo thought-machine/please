@@ -42,14 +42,14 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 
 	// Start up all the build workers
 	var wg sync.WaitGroup
-	wg.Add(config.Please.NumThreads + config.Remote.NumExecutors)
+	wg.Add(config.Please.NumThreads + config.NumRemoteExecutors())
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go func(tid int) {
 			doTasks(tid, state, parses, builds, tests, arch, false)
 			wg.Done()
 		}(i)
 	}
-	for i := 0; i < config.Remote.NumExecutors; i++ {
+	for i := 0; i < config.NumRemoteExecutors(); i++ {
 		go func(tid int) {
 			doTasks(tid, state, nil, remoteBuilds, remoteTests, arch, true)
 			wg.Done()

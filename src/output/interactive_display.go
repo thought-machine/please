@@ -45,7 +45,7 @@ func display(ctx context.Context, state *core.BuildState, buildingTargets []buil
 		state:      state,
 		targets:    buildingTargets,
 		numWorkers: state.Config.Please.NumThreads,
-		numRemote:  state.Config.Remote.NumExecutors,
+		numRemote:  state.Config.NumRemoteExecutors(),
 		maxRows:    backend.MaxInteractiveRows,
 		maxCols:    backend.Cols,
 		stats:      state.Config.Display.SystemStats,

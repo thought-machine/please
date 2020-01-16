@@ -137,21 +137,18 @@ func (c *Client) init() {
 		c.canBatchBlobReads = c.checkBatchReadBlobs()
 		log.Debug("Remote execution client initialised for storage")
 		// Now check if it can do remote execution
-		if c.state.Config.Remote.NumExecutors > 0 {
-			if caps := resp.ExecutionCapabilities; caps != nil {
-				if err := c.chooseDigest([]pb.DigestFunction_Value{caps.DigestFunction}); err != nil {
-					return err
-				} else if !caps.ExecEnabled {
-					return fmt.Errorf("Remote execution not enabled for this server")
-				}
-				c.remoteExecution = true
-				c.platform = convertPlatform(c.state.Config)
-				log.Debug("Remote execution client initialised for execution")
-			} else {
-				log.Fatalf("Remote execution is configured but the build server doesn't support it")
-			}
+		if resp.ExecutionCapabilities == nil {
+			log.Fatalf("Remote execution is configured but the build server doesn't support it")
 		}
-		return err
+		if err := c.chooseDigest([]pb.DigestFunction_Value{resp.ExecutionCapabilities.DigestFunction}); err != nil {
+			return err
+		} else if !resp.ExecutionCapabilities.ExecEnabled {
+			return fmt.Errorf("Remote execution not enabled for this server")
+		}
+		c.remoteExecution = true
+		c.platform = convertPlatform(c.state.Config)
+		log.Debug("Remote execution client initialised for execution")
+		return nil
 	}()
 	if c.err != nil {
 		log.Error("Error setting up remote execution client: %s", c.err)

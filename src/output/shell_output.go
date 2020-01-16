@@ -57,7 +57,7 @@ type buildingTargetData struct {
 func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, detailedTests, streamTestResults bool, traceFile string) {
 	initPrintf(state.Config)
 	failedTargetMap := map[core.BuildLabel]error{}
-	buildingTargets := make([]buildingTarget, state.Config.Please.NumThreads+state.Config.Remote.NumExecutors)
+	buildingTargets := make([]buildingTarget, state.Config.Please.NumThreads+state.Config.NumRemoteExecutors())
 
 	if len(state.Config.Please.Motd) != 0 {
 		r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
