@@ -399,6 +399,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 		if err != nil {
 			return nil, true, err
 		}
+		// TODO(agenticarus): Remove this once we're happy we're never outputting empty files by accident.
 		tmpStat, tmpErr := os.Stat(tmpOutput)
 		realStat, realErr := os.Stat(realOutput)
 		if tmpErr == nil && realErr == nil {
