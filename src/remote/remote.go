@@ -6,7 +6,6 @@ package remote
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path"
@@ -176,119 +175,6 @@ func (c *Client) digestEnum(name string) pb.DigestFunction_Value {
 	default:
 		return pb.DigestFunction_UNKNOWN // Shouldn't get here
 	}
-}
-
-// Store stores a set of artifacts for a single build target.
-func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, files []string) error {
-	if err := c.CheckInitialised(); err != nil {
-		return err
-	}
-	ar := &pb.ActionResult{
-		// We never cache any failed actions so ExitCode is implicitly 0.
-		ExecutionMetadata: &pb.ExecutedActionMetadata{
-			Worker:                       c.state.Config.Remote.Name,
-			OutputUploadStartTimestamp:   toTimestamp(time.Now()),
-			ExecutionStartTimestamp:      toTimestamp(metadata.StartTime),
-			ExecutionCompletedTimestamp:  toTimestamp(metadata.EndTime),
-			InputFetchStartTimestamp:     toTimestamp(metadata.InputFetchStartTime),
-			InputFetchCompletedTimestamp: toTimestamp(metadata.InputFetchEndTime),
-		},
-	}
-	outDir := target.OutDir()
-	if err := c.uploadBlobs(func(ch chan<- *blob) error {
-		defer close(ch)
-		for _, filename := range files {
-			file := path.Join(outDir, filename)
-			info, err := os.Lstat(file)
-			if err != nil {
-				return err
-			} else if mode := info.Mode(); mode&os.ModeDir != 0 {
-				// It's a directory, needs special treatment
-				root, children, err := c.digestDir(file, nil)
-				if err != nil {
-					return err
-				}
-				digest, contents := c.digestMessageContents(&pb.Tree{
-					Root:     root,
-					Children: children,
-				})
-				ch <- &blob{
-					Digest: digest,
-					Data:   contents,
-				}
-				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
-					Path:       filename,
-					TreeDigest: digest,
-				})
-				continue
-			} else if mode&os.ModeSymlink != 0 {
-				target, err := os.Readlink(file)
-				if err != nil {
-					return err
-				}
-				// TODO(peterebden): Work out if we need to give a shit about
-				//                   OutputDirectorySymlinks or not. Seems like we shouldn't
-				//                   need to care since symlinks don't know the type of thing
-				//                   they point to?
-				ar.OutputFileSymlinks = append(ar.OutputFileSymlinks, &pb.OutputSymlink{
-					Path:   filename,
-					Target: target,
-				})
-				continue
-			}
-			// It's a real file, bung it onto the channel.
-			h, err := c.state.PathHasher.Hash(file, false, true)
-			if err != nil {
-				return err
-			}
-			digest := &pb.Digest{
-				SizeBytes: info.Size(),
-				Hash:      hex.EncodeToString(h),
-			}
-			ch <- &blob{
-				File:   file,
-				Digest: digest,
-			}
-			ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-				Path:         filename,
-				Digest:       digest,
-				IsExecutable: target.IsBinary,
-			})
-		}
-		if len(metadata.Stdout) > 0 {
-			h := c.sum(metadata.Stdout)
-			digest := &pb.Digest{
-				SizeBytes: int64(len(metadata.Stdout)),
-				Hash:      hex.EncodeToString(h[:]),
-			}
-			ch <- &blob{
-				Data:   metadata.Stdout,
-				Digest: digest,
-			}
-			ar.StdoutDigest = digest
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-	// OK, now the blobs are uploaded, we also need to upload the Action itself.
-	_, digest, err := c.uploadAction(target, metadata.Test)
-	if err != nil {
-		return err
-	} else if !metadata.Test {
-		if err := c.setOutputs(target.Label, ar); err != nil {
-			return err
-		}
-	}
-	// Now we can use that to upload the result itself.
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	_, err = c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
-		InstanceName: c.instance,
-		ActionDigest: digest,
-		ActionResult: ar,
-	})
-	return err
 }
 
 // Retrieve fetches back a set of artifacts for a single build target.

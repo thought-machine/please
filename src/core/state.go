@@ -71,8 +71,6 @@ type Parser interface {
 type RemoteClient interface {
 	// Retrieve fetches remote results from the service.
 	Retrieve(target *BuildTarget) (*BuildMetadata, error)
-	// Store stores outputs of a target with the service.
-	Store(target *BuildTarget, metadata *BuildMetadata, files []string) error
 	// Build invokes a build of the target remotely
 	Build(tid int, target *BuildTarget) (*BuildMetadata, error)
 	// Test invokes a test run of the target remotely.
