@@ -68,7 +68,7 @@ type Client struct {
 	bashPath string
 
 	// Stats used to report RPC data rates
-	byteRateIn, byteRateOut int
+	byteRateIn, byteRateOut, totalBytesIn, totalBytesOut int
 }
 
 // New returns a new Client instance.
@@ -275,7 +275,7 @@ func (c *Client) Store(target *core.BuildTarget, metadata *core.BuildMetadata, f
 		return err
 	}
 	// OK, now the blobs are uploaded, we also need to upload the Action itself.
-	_, digest, err := c.uploadAction(target, false, metadata.Test)
+	_, digest, err := c.uploadAction(target, metadata.Test)
 	if err != nil {
 		return err
 	} else if !metadata.Test {
@@ -312,19 +312,10 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 	}
 	isTest := target.State() >= core.Built
 	needStdout := target.PostBuildFunction != nil && !isTest // We only care in this case.
-	inputRoot, err := c.buildInputRoot(target, false, isTest)
+	_, digest, err := c.buildAction(target, isTest)
 	if err != nil {
 		return nil, err
 	}
-	cmd, err := c.buildCommand(target, inputRoot, isTest)
-	if err != nil {
-		return nil, err
-	}
-	digest := c.digestMessage(&pb.Action{
-		CommandDigest:   c.digestMessage(cmd),
-		InputRootDigest: c.digestMessage(inputRoot),
-		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
-	})
 	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	resp, err := c.client.GetActionResult(ctx, &pb.GetActionResultRequest{
@@ -401,11 +392,11 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 		// Filegroups get special-cased since they are just a movement of files.
 		return &core.BuildMetadata{}, c.setFilegroupOutputs(target)
 	}
-	command, digest, err := c.uploadAction(target, true, false)
+	command, digest, err := c.buildAction(target, false)
 	if err != nil {
 		return nil, err
 	}
-	metadata, ar, err := c.execute(tid, target, command, digest, target.BuildTimeout, target.PostBuildFunction != nil)
+	metadata, ar, err := c.execute(tid, target, command, digest, target.BuildTimeout, false, target.PostBuildFunction != nil)
 	if err != nil {
 		return metadata, err
 	}
@@ -418,11 +409,11 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	if err := c.CheckInitialised(); err != nil {
 		return nil, nil, nil, err
 	}
-	command, digest, err := c.uploadAction(target, true, true)
+	command, digest, err := c.buildAction(target, true)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	metadata, ar, execErr := c.execute(tid, target, command, digest, target.TestTimeout, false)
+	metadata, ar, execErr := c.execute(tid, target, command, digest, target.TestTimeout, true, false)
 	// Error handling here is a bit fiddly due to prioritisation; the execution error
 	// is more relevant, but we want to still try to get results if we can, and it's an
 	// error if we can't get those results on success.
@@ -447,7 +438,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
-func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	// First see if this execution is cached
 	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking remote...")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -466,6 +457,11 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 			}
 			log.Debug("Remotely cached results for %s were missing some outputs, forcing a rebuild: %s", target.Label, err)
 		}
+	}
+	// We didn't actually upload the inputs before, so we must do so now.
+	command, digest, err := c.uploadAction(target, isTest)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -598,7 +594,7 @@ func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.
 
 // PrintHashes prints the action hashes for a target.
 func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
-	inputRoot, err := c.buildInputRoot(target, false, isTest)
+	inputRoot, err := c.uploadInputs(nil, target, isTest, false)
 	if err != nil {
 		log.Fatalf("Unable to calculate input hash: %s", err)
 	}
@@ -623,6 +619,6 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 }
 
 // DataRate returns an estimate of the current in/out RPC data rates in bytes per second.
-func (c *Client) DataRate() (int, int) {
-	return c.byteRateIn, c.byteRateOut
+func (c *Client) DataRate() (int, int, int, int) {
+	return c.byteRateIn, c.byteRateOut, c.totalBytesIn, c.totalBytesOut
 }

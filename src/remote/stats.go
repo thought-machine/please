@@ -24,9 +24,10 @@ type stat struct {
 // A statsHandler is an implementation of a grpc stats.Handler that calculates an estimate of
 // instantaneous performance.
 type statsHandler struct {
-	client        *Client
-	in, out       []stat
-	inmtx, outmtx sync.Mutex
+	client            *Client
+	in, out           []stat
+	inmtx, outmtx     sync.Mutex
+	totalIn, totalOut int
 }
 
 func newStatsHandler(c *Client) *statsHandler {
@@ -45,10 +46,12 @@ func (h *statsHandler) HandleRPC(ctx context.Context, s stats.RPCStats) {
 		h.inmtx.Lock()
 		defer h.inmtx.Unlock()
 		h.in = append(h.in, stat{Time: p.RecvTime, Val: p.Length})
+		h.totalIn += p.Length
 	case *stats.OutPayload:
 		h.outmtx.Lock()
 		defer h.outmtx.Unlock()
 		h.out = append(h.out, stat{Time: p.SentTime, Val: p.Length})
+		h.totalOut += p.Length
 	}
 }
 
@@ -64,6 +67,8 @@ func (h *statsHandler) update() {
 	for range time.NewTicker(updateFrequency).C {
 		h.client.byteRateIn = h.updateStat(&h.in, &h.inmtx)
 		h.client.byteRateOut = h.updateStat(&h.out, &h.outmtx)
+		h.client.totalBytesIn = h.totalIn
+		h.client.totalBytesOut = h.totalOut
 	}
 }
 
