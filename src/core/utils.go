@@ -378,7 +378,7 @@ func LookPath(filename string, paths []string) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("%s not found in PATH %s", filename, strings.Join(paths, ":"))
+	return "", fmt.Errorf("%s not found in path %s", filename, strings.Join(paths, ":"))
 }
 
 // LookBuildPath is like LookPath but takes the config's build path into account.
