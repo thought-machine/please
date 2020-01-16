@@ -136,7 +136,7 @@ def new_local_repository(name:str, path:str):
     # Bit of a hack; subrepo() doesn't generate a rule, but the subrepo code internally
     # expects there to be one by this name. Maybe we should use something like system_library
     # to pull it in as a dependency, but that seems pretty heavyweight.
-    subrepo(
+    return subrepo(
         name = name,
         path = path,
         dep = filegroup(
@@ -192,7 +192,7 @@ def arch(name:str, os:str, arch:str):
     arch_str = f'{os}_{arch}'
     assert arch_str.count('_') == 1, "Character '_' disallowed in OS/Arch names"
 
-    subrepo(
+    return subrepo(
         name = name,
         path = "",
         arch = arch_str,
@@ -208,7 +208,7 @@ def local_repository(name:str, path:str):
       name: Name of the rule
       path: Path within the repo to the new root
     """
-    subrepo(
+    return subrepo(
         name = name,
         path = path,
     )

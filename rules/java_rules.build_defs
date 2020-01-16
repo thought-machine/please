@@ -238,7 +238,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
         # This is essentially a hack to get past some Java things (notably Jersey) failing
         # in subtle ways when the jar has a preamble (srsly...).
         cmd, tools = _jarcat_cmd(main_class, manifest=manifest)
-    build_rule(
+    return build_rule(
         name=name,
         deps=deps,
         data=data,
@@ -302,7 +302,7 @@ def java_test(name:str, srcs:list, resources:list=None, data:list=None, deps:lis
         test_cmd = f'$(worker {worker}) && {test_cmd} '
         deps += [worker]
 
-    build_rule(
+    return build_rule(
         name=name,
         cmd=cmd,
         test_cmd=test_cmd,
@@ -483,7 +483,7 @@ if CONFIG.BAZEL_COMPATIBILITY:
         This doesn't really have the same semantics and ignores a bunch of arguments but it
         isn't easy for us to behave the same way that they do.
         """
-        package(
+        return package(
             javac_tool = javac,
             java_source_level = source_version,
             java_target_level = target_version,
@@ -491,7 +491,7 @@ if CONFIG.BAZEL_COMPATIBILITY:
 
     def java_import(name, jars, deps=None, exports=None, test_only=False, visibility=None):
         """Mimics java_import, as far as I can tell we don't need to do much here."""
-        filegroup(
+        return filegroup(
             name = name,
             srcs = jars,
             deps = deps,
