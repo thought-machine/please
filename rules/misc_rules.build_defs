@@ -206,7 +206,7 @@ def export_file(name:str, src:str, visibility:list=None, binary:bool=False, test
       binary (bool): True to mark the rule outputs as binary
       test_only (bool): If true the exported file can only be used by test targets.
     """
-    filegroup(
+    return filegroup(
         name = name,
         srcs = [src],
         visibility = visibility,
@@ -309,7 +309,7 @@ def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
       visibility (list): Visibility declaration of the rule.
       test_only (bool): If true the rule is only visible to test targets.
     """
-    build_rule(
+    return build_rule(
         name = name,
         system_srcs = srcs,
         outs = [basename(src) for src in srcs],
@@ -509,7 +509,7 @@ def exports_files(srcs, name='exported_files', visibility=['PUBLIC'], licenses=N
     impossible to extend Please to support that but right now we're not bothering.
     """
     assert CONFIG.BAZEL_COMPATIBILITY, "exports_files is only available in Bazel compat mode"
-    filegroup(
+    return filegroup(
         name = name,
         srcs = srcs,
         visibility = visibility,
