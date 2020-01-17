@@ -18,12 +18,14 @@ sh_test(
 
 sh_cmd(
     name = "sh_cmd",
-    cmd = ["TEST_VAR=\"$@\"",
-           "[ \"$TEST_VAR\" = \"test_value\" ] || (echo \"Expected a value expansion not to happen\" >&2 && exit 11)",]
+    cmd = [
+        "TEST_VAR=\"$@\"",
+        "[ \"$TEST_VAR\" = \"test_value\" ] || (echo \"Expected a value expansion not to happen\" >&2 && exit 11)",
+    ],
 )
 
 sh_test(
     name = "sh_cmd_test",
     src = ":sh_cmd",
-    flags = "test_value"
+    flags = "test_value",
 )
