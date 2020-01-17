@@ -199,6 +199,10 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 	if err != nil {
 		return nil, err
 	}
+	// Check if the outputs already exist and are up to date, in which case we don't need to download.
+	if !c.state.ForceRebuild && c.outputsExist(target, digest) {
+		return &core.BuildMetadata{}, nil
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	resp, err := c.client.GetActionResult(ctx, &pb.GetActionResultRequest{
@@ -263,6 +267,7 @@ func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error)
 	}); err != nil {
 		return nil, c.wrapActionErr(err, digest)
 	}
+	c.recordAttrs(target, digest)
 	return c.buildMetadata(resp, needStdout, false)
 }
 

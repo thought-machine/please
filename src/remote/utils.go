@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -19,7 +20,11 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
+
+// xattrName is the name we use to record attributes on files.
+const xattrName = "user.plz_hash_remote"
 
 // sum calculates a checksum for a byte slice.
 func (c *Client) sum(b []byte) []byte {
@@ -163,6 +168,25 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		}
 	}
 	return nil, nil
+}
+
+// outputsExist returns true if the outputs for this target exist and are up to date.
+func (c *Client) outputsExist(target *core.BuildTarget, digest *pb.Digest) bool {
+	hash, _ := hex.DecodeString(digest.Hash)
+	for _, out := range target.FullOutputs() {
+		if !bytes.Equal(hash, fs.ReadAttr(out, xattrName, c.state.XattrsSupported)) {
+			return false
+		}
+	}
+	return true
+}
+
+// recordAttrs sets the xattrs on output files which we will use in outputsExist in future runs.
+func (c *Client) recordAttrs(target *core.BuildTarget, digest *pb.Digest) {
+	hash, _ := hex.DecodeString(digest.Hash)
+	for _, out := range target.FullOutputs() {
+		fs.RecordAttr(out, hash, xattrName, c.state.XattrsSupported)
+	}
 }
 
 // mustMarshal encodes a message to a binary string.
