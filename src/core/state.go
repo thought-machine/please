@@ -71,8 +71,6 @@ type Parser interface {
 type RemoteClient interface {
 	// Retrieve fetches remote results from the service.
 	Retrieve(target *BuildTarget) (*BuildMetadata, error)
-	// Store stores outputs of a target with the service.
-	Store(target *BuildTarget, metadata *BuildMetadata, files []string) error
 	// Build invokes a build of the target remotely
 	Build(tid int, target *BuildTarget) (*BuildMetadata, error)
 	// Test invokes a test run of the target remotely.
@@ -278,7 +276,7 @@ func (state *BuildState) TaskQueues() (parses <-chan LabelPair, builds, tests, r
 // We retain the internal priority queue since it is unbounded size which is pretty important
 // for us not to deadlock.
 func (state *BuildState) feedQueues(parses chan<- LabelPair, builds, tests, remoteBuilds, remoteTests chan<- BuildLabel) {
-	anyRemote := state.Config.Remote.NumExecutors > 0
+	anyRemote := state.Config.NumRemoteExecutors() > 0
 	queue := func(label BuildLabel, local, remote chan<- BuildLabel) chan<- BuildLabel {
 		if anyRemote && !state.Graph.Target(label).Local {
 			return remote

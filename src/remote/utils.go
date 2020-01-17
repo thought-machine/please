@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -19,7 +20,11 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
+
+// xattrName is the name we use to record attributes on files.
+const xattrName = "user.plz_hash_remote"
 
 // sum calculates a checksum for a byte slice.
 func (c *Client) sum(b []byte) []byte {
@@ -135,6 +140,53 @@ func (c *Client) actionURL(digest *pb.Digest, prefix bool) string {
 		s = " (action: " + s + ")"
 	}
 	return s
+}
+
+// locallyCacheResults stores the actionresult for an action in the local (usually dir) cache.
+func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest, metadata *core.BuildMetadata, ar *pb.ActionResult) {
+	if c.state.Cache == nil {
+		return
+	}
+	data, _ := proto.Marshal(ar)
+	metadata.RemoteAction = data
+	key, _ := hex.DecodeString(digest.Hash)
+	c.state.Cache.Store(target, key, metadata, nil)
+}
+
+// retrieveLocalResults retrieves locally cached results for a target if possible.
+// Note that this does not handle any file data, only the actionresult metadata.
+func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult) {
+	if c.state.Cache != nil {
+		key, _ := hex.DecodeString(digest.Hash)
+		if metadata := c.state.Cache.Retrieve(target, key, nil); metadata != nil && len(metadata.RemoteAction) > 0 {
+			ar := &pb.ActionResult{}
+			if err := proto.Unmarshal(metadata.RemoteAction, ar); err == nil {
+				if err := c.setOutputs(target.Label, ar); err == nil {
+					return metadata, ar
+				}
+			}
+		}
+	}
+	return nil, nil
+}
+
+// outputsExist returns true if the outputs for this target exist and are up to date.
+func (c *Client) outputsExist(target *core.BuildTarget, digest *pb.Digest) bool {
+	hash, _ := hex.DecodeString(digest.Hash)
+	for _, out := range target.FullOutputs() {
+		if !bytes.Equal(hash, fs.ReadAttr(out, xattrName, c.state.XattrsSupported)) {
+			return false
+		}
+	}
+	return true
+}
+
+// recordAttrs sets the xattrs on output files which we will use in outputsExist in future runs.
+func (c *Client) recordAttrs(target *core.BuildTarget, digest *pb.Digest) {
+	hash, _ := hex.DecodeString(digest.Hash)
+	for _, out := range target.FullOutputs() {
+		fs.RecordAttr(out, hash, xattrName, c.state.XattrsSupported)
+	}
 }
 
 // mustMarshal encodes a message to a binary string.

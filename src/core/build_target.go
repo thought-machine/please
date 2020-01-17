@@ -194,6 +194,8 @@ type BuildMetadata struct {
 	EndTime time.Time
 	// Standard output & error
 	Stdout, Stderr []byte
+	// Serialised build action metadata.
+	RemoteAction []byte
 	// True if this represents a test run.
 	Test bool
 }

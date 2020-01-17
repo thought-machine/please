@@ -292,7 +292,7 @@ func (c *Client) downloadBlobs(ctx context.Context, f func(ch chan<- *blob) erro
 	ch := make(chan *blob, 10)
 	done := make(chan struct{})
 	var g errgroup.Group
-	go func() error {
+	g.Go(func() error {
 		defer close(done)
 		g.Go(func() error { return f(ch) })
 
@@ -331,7 +331,7 @@ func (c *Client) downloadBlobs(ctx context.Context, f func(ch chan<- *blob) erro
 			updateProgress(ctx, int(totalSize))
 		}
 		return nil
-	}()
+	})
 
 	select {
 	case <-done:
