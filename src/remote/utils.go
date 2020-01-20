@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/proto"
@@ -63,7 +64,7 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 		//                   that we've just made up. Surely there is a better way we could
 		//                   be doing this?
 		tree := &pb.Tree{}
-		if err := c.readByteStreamToProto(context.Background(), d.TreeDigest, tree); err != nil {
+		if err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 		digest, data := c.digestMessageContents(tree.Root)
