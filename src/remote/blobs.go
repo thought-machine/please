@@ -58,6 +58,10 @@ func (c *Client) uploadBlobs(f func(ch chan<- *blob) error) error {
 	var g errgroup.Group
 	g.Go(func() error { return f(chIn) })
 	g.Go(func() error { return c.reallyUploadBlobs(chOut) })
+	// We use this to deduplicate outgoing blobs; there are cases of repos with hundreds of
+	// copies of the same file, and there's no point checking over and over.
+	// We don't do it at a more global level but this is *probably* sufficient for now.
+	seen := map[string]struct{}{}
 
 	// This function filters a set of blobs through FindMissingBlobs to find out which
 	// ones we actually need to upload. The assumption is that most of the time the
@@ -66,12 +70,15 @@ func (c *Client) uploadBlobs(f func(ch chan<- *blob) error) error {
 	filter := func(blobs []*blob) {
 		req := &pb.FindMissingBlobsRequest{
 			InstanceName: c.instance,
-			BlobDigests:  make([]*pb.Digest, len(blobs)),
+			BlobDigests:  make([]*pb.Digest, 0, len(blobs)),
 		}
 		m := make(map[string]*blob, len(blobs))
-		for i, b := range blobs {
-			req.BlobDigests[i] = b.Digest
-			m[b.Digest.Hash] = b
+		for _, b := range blobs {
+			if _, present := seen[b.Digest.Hash]; !present {
+				seen[b.Digest.Hash] = struct{}{}
+				req.BlobDigests = append(req.BlobDigests, b.Digest)
+				m[b.Digest.Hash] = b
+			}
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 		defer cancel()
