@@ -69,7 +69,7 @@ def sh_binary(name:str, main:str|list&srcs, deps:list=None, visibility:list=None
             # Inject a final exit so it doesn't try to execute the zipfile contents.
             f'echo "{_SH_BINARY_TMPL_SUFFIX}" >> _tmp.txt',
             # Compress the dependent files and dump out into the bash script.
-            'find . -type f | grep -v $SRCS | sort | grep -v "_tmp.txt" | $TOOL z -d -i - -o $OUT --preamble_file _tmp.txt --strip_prefix ./',
+            '$TOOL z --include_other --suffix='' -n -i . -e $OUTS -e _tmp.txt -o $OUT --preamble_file _tmp.txt --strip_prefix ./',
         ])
     else:
         cmds = 'cp $SRCS $OUT'
