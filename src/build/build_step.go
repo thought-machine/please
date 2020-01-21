@@ -102,7 +102,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	var postBuildOutput string
 	if state.PrepareOnly && state.IsOriginalTarget(target.Label) {
 		if target.IsFilegroup {
-			return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
+			return fmt.Errorf("Can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
 		}
 		if err := prepareDirectories(target); err != nil {
 			return err
@@ -279,7 +279,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
 	outs, outputsChanged, err := moveOutputs(state, target)
 	if err != nil {
-		return fmt.Errorf("error moving outputs for target %s: %s", target.Label, err)
+		return fmt.Errorf("Error moving outputs for target %s: %s", target.Label, err)
 	}
 	if _, err = calculateAndCheckRuleHash(state, target); err != nil {
 		return err
@@ -393,17 +393,11 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 		tmpOutput := path.Join(tmpDir, target.GetTmpOutput(output))
 		realOutput := path.Join(outDir, output)
 		if !core.PathExists(tmpOutput) {
-			return nil, true, fmt.Errorf("rule %s failed to create output %s", target.Label, tmpOutput)
+			return nil, true, fmt.Errorf("Rule %s failed to create output %s", target.Label, tmpOutput)
 		}
 		outputChanged, err := moveOutput(state, target, tmpOutput, realOutput)
 		if err != nil {
 			return nil, true, err
-		}
-		// TODO(agenticarus): Remove this once we're happy we're never outputting empty files by accident.
-		tmpStat, tmpErr := os.Stat(tmpOutput)
-		realStat, realErr := os.Stat(realOutput)
-		if tmpErr == nil && realErr == nil {
-			log.Debug("Output: %s <tmp:%d bytes> <real:%d bytes> <changed:%t>", output, tmpStat.Size(), realStat.Size(), outputChanged)
 		}
 		changed = changed || outputChanged
 	}
@@ -455,12 +449,10 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 	// If the output file is in plz-out/tmp we can just move it to save time, otherwise we need
 	// to copy so we don't move files from other directories.
 	if strings.HasPrefix(tmpOutput, target.TmpDir()) {
-		log.Debug("Renaming %s -> %s", tmpOutput, realOutput)
 		if err := os.Rename(tmpOutput, realOutput); err != nil {
 			return true, err
 		}
 	} else {
-		log.Debug("Recursively copying %s -> %s", tmpOutput, realOutput)
 		if err := fs.RecursiveCopy(tmpOutput, realOutput, target.OutMode()); err != nil {
 			return true, err
 		}
