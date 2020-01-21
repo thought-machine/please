@@ -248,6 +248,10 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest,
 				pkgName := l.PackageName
 				if useTargetPackage {
 					pkgName = target.Label.PackageName
+				} else if isTest && *l == target.Label {
+					// At test time the target itself is put at the root rather than in the normal dir.
+					// This is just How Things Are, so mimic it here.
+					pkgName = "."
 				}
 				d := b.Dir(pkgName)
 				d.Files = append(d.Files, o.Files...)
