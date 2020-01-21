@@ -5,7 +5,7 @@ require (
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/bazelbuild/buildtools v0.0.0-20190228125936-4bcdbd1064fc
 	github.com/bazelbuild/remote-apis v0.0.0-20191119143007-b5123b1bb285
-	github.com/bazelbuild/remote-apis-sdks v0.0.0-20191125202410-a21ff57ff57c
+	github.com/bazelbuild/remote-apis-sdks v0.0.0-20200117155253-d02017f96d3b
 	github.com/coreos/go-semver v0.2.0
 	github.com/djherbis/atime v1.0.0
 	github.com/dustin/go-humanize v1.0.0
@@ -39,7 +39,7 @@ require (
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/tools v0.0.0-20191010171213-8abd42400456
 	google.golang.org/genproto v0.0.0-20191028173616-919d9bdd9fe6
-	google.golang.org/grpc v1.24.0
+	google.golang.org/grpc v1.26.0
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )

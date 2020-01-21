@@ -104,9 +104,7 @@ func (c *Client) init() {
 		// execution, caching or both.
 		ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 		defer cancel()
-		resp, err := c.client.GetCapabilities(ctx, &pb.GetCapabilitiesRequest{
-			InstanceName: c.instance,
-		})
+		resp, err := c.client.GetCapabilities(ctx)
 		if err != nil {
 			return err
 		}

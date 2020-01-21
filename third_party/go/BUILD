@@ -98,15 +98,16 @@ go_get(
     get = "google.golang.org/grpc",
     install = [
         "",
+        "attributes",
+        "backoff",
         "balancer",
         "balancer/base",
+        "balancer/grpclb/...",
         "balancer/roundrobin",
         "binarylog/...",
         "codes",
         "connectivity",
-        "credentials",
-        "credentials/internal",
-        "credentials/oauth",
+        "credentials/...",
         "encoding",
         "encoding/gzip",
         "encoding/proto",
@@ -127,10 +128,12 @@ go_get(
         "tap",
     ],
     repo = "github.com/grpc/grpc-go",
-    revision = "v1.22.0",
+    revision = "v1.26.0",
     deps = [
+        ":cmp",
         ":oauth2",
         ":protobuf",
+        ":rpccode",
         ":rpcstatus",
         ":unix",
     ],
@@ -140,6 +143,13 @@ go_get(
 go_get(
     name = "rpcstatus",
     get = "google.golang.org/genproto/googleapis/rpc/status",
+    revision = "2b5a72b8730b0b16380010cfe5286c42108d88e7",
+    deps = [":protobuf"],
+)
+
+go_get(
+    name = "rpccode",
+    get = "google.golang.org/genproto/googleapis/rpc/code",
     revision = "2b5a72b8730b0b16380010cfe5286c42108d88e7",
     deps = [":protobuf"],
 )
@@ -442,8 +452,7 @@ go_get(
 go_get(
     name = "remote-apis-sdks",
     get = "github.com/bazelbuild/remote-apis-sdks/go/...",
-    repo = "github.com/peterebden/remote-apis-sdks",
-    revision = "20174459d463931f5f373d2ad1fe0b80a18b6f47",
+    revision = "75902a697aeb3eb9c1df860b7ed9de05005b48c1",
     deps = [
         ":annotations",
         ":bytestream",
