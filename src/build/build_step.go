@@ -399,12 +399,6 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 		if err != nil {
 			return nil, true, err
 		}
-		// TODO(agenticarus): Remove this once we're happy we're never outputting empty files by accident.
-		tmpStat, tmpErr := os.Stat(tmpOutput)
-		realStat, realErr := os.Stat(realOutput)
-		if tmpErr == nil && realErr == nil {
-			log.Debug("Output: %s <tmp:%d bytes> <real:%d bytes> <changed:%t>", output, tmpStat.Size(), realStat.Size(), outputChanged)
-		}
 		changed = changed || outputChanged
 	}
 	if changed {
@@ -455,12 +449,10 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 	// If the output file is in plz-out/tmp we can just move it to save time, otherwise we need
 	// to copy so we don't move files from other directories.
 	if strings.HasPrefix(tmpOutput, target.TmpDir()) {
-		log.Debug("Renaming %s -> %s", tmpOutput, realOutput)
 		if err := os.Rename(tmpOutput, realOutput); err != nil {
 			return true, err
 		}
 	} else {
-		log.Debug("Recursively copying %s -> %s", tmpOutput, realOutput)
 		if err := fs.RecursiveCopy(tmpOutput, realOutput, target.OutMode()); err != nil {
 			return true, err
 		}
