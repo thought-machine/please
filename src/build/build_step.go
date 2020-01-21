@@ -102,7 +102,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	var postBuildOutput string
 	if state.PrepareOnly && state.IsOriginalTarget(target.Label) {
 		if target.IsFilegroup {
-			return fmt.Errorf("Can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
+			return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
 		}
 		if err := prepareDirectories(target); err != nil {
 			return err
@@ -279,7 +279,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
 	outs, outputsChanged, err := moveOutputs(state, target)
 	if err != nil {
-		return fmt.Errorf("Error moving outputs for target %s: %s", target.Label, err)
+		return fmt.Errorf("error moving outputs for target %s: %s", target.Label, err)
 	}
 	if _, err = calculateAndCheckRuleHash(state, target); err != nil {
 		return err
@@ -393,7 +393,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 		tmpOutput := path.Join(tmpDir, target.GetTmpOutput(output))
 		realOutput := path.Join(outDir, output)
 		if !core.PathExists(tmpOutput) {
-			return nil, true, fmt.Errorf("Rule %s failed to create output %s", target.Label, tmpOutput)
+			return nil, true, fmt.Errorf("rule %s failed to create output %s", target.Label, tmpOutput)
 		}
 		outputChanged, err := moveOutput(state, target, tmpOutput, realOutput)
 		if err != nil {
