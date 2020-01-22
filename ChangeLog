@@ -1,3 +1,7 @@
+Version 14.2.2
+--------------
+    * Modified `sh_binary` rule to exclude its own output from zip.
+
 Version 14.2.1
 --------------
 
