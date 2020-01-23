@@ -9,12 +9,14 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io/ioutil"
 	"os"
 
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/tools/jarcat/ar"
 	"github.com/thought-machine/please/tools/jarcat/tar"
 	"github.com/thought-machine/please/tools/jarcat/unzip"
@@ -181,8 +183,11 @@ func main() {
 		opts.Zip.ExcludeInternalPrefix = javaExcludePrefixes
 	}
 
-	f := zip.NewFile(opts.Zip.Out, opts.Zip.Strict)
-	defer f.Close()
+	tempFile, err := ioutil.TempFile("", "jarcat-")
+	must(err)
+	filename := tempFile.Name()
+
+	f := zip.NewFile(filename, opts.Zip.Strict)
 	f.RenameDirs = opts.Zip.RenameDirs
 	f.Include = opts.Zip.IncludeInternalPrefix
 	f.Exclude = opts.Zip.ExcludeInternalPrefix
@@ -218,5 +223,20 @@ func main() {
 	}
 	for _, filename := range opts.Zip.In.Get() {
 		must(f.AddFiles(filename))
+	}
+
+	f.Close()
+
+	err = os.Rename(filename, opts.Zip.Out)
+	if err != nil {
+		// Fall back to copy
+		err = fs.CopyFile(filename, opts.Zip.Out, 0644)
+		if err != nil {
+			panic(fmt.Sprintf("unable to copy the file we just wrote (%s): %s", filename, err))
+		}
+		err = os.Remove(filename)
+		if err != nil {
+			panic(fmt.Sprintf("unable to remove the temp file (%s): %s", filename, err))
+		}
 	}
 }

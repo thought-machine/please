@@ -4,6 +4,7 @@ go_binary(
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
+        "//src/fs",
         "//third_party/go:logging",
         "//tools/jarcat/ar",
         "//tools/jarcat/tar",

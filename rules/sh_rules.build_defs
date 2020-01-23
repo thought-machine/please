@@ -61,15 +61,15 @@ def sh_binary(name:str, main:str|list&srcs, deps:list=None, visibility:list=None
     if deps:
         cmds = ' && '.join([
             # Use the same shebang as the original script
-            'head -1 $SRCS > _tmp.txt',
+            'head -1 $SRCS > $TMPDIR/_tmp.txt',
             # Inject bash code to untar the compressed files.
-            f'echo "{_SH_BINARY_TMPL_PREFIX}" >> _tmp.txt',
+            f'echo "{_SH_BINARY_TMPL_PREFIX}" >> $TMPDIR/_tmp.txt',
             # Inject the user defined script.
-            'cat $SRCS >> _tmp.txt',
+            'cat $SRCS >> $TMPDIR/_tmp.txt',
             # Inject a final exit so it doesn't try to execute the zipfile contents.
-            f'echo "{_SH_BINARY_TMPL_SUFFIX}" >> _tmp.txt',
+            f'echo "{_SH_BINARY_TMPL_SUFFIX}" >> $TMPDIR/_tmp.txt',
             # Compress the dependent files and dump out into the bash script.
-            '$TOOL z --include_other --suffix='' -n -i . -e $OUTS -e _tmp.txt -o $OUT --preamble_file _tmp.txt --strip_prefix ./',
+            '$TOOL z -d -n -i . -o $OUT --preamble_file $TMPDIR/_tmp.txt --strip_prefix ./',
         ])
     else:
         cmds = 'cp $SRCS $OUT'
