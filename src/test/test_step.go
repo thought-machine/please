@@ -344,7 +344,7 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFil
 func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, outputFile string, runRemotely bool) (*core.BuildMetadata, []byte, *core.TestCoverage, error) {
 	if runRemotely {
 		metadata, results, coverage, err := state.RemoteClient.Test(tid, target)
-		cov, err2 := parseTestCoverage(target, coverage)
+		cov, err2 := parseRemoteCoverage(state, target, coverage)
 		if err == nil && err2 != nil {
 			log.Error("Error parsing coverage data: %s", err2)
 		}
@@ -356,6 +356,13 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ou
 	stdout, err := prepareAndRunTest(tid, state, target)
 	coverage := parseCoverageFile(target, path.Join(target.TestDir(), core.CoverageFile))
 	return &core.BuildMetadata{Stdout: stdout}, nil, coverage, err
+}
+
+func parseRemoteCoverage(state *core.BuildState, target *core.BuildTarget, coverage []byte) (*core.TestCoverage, error) {
+	if !state.NeedCoverage {
+		return core.NewTestCoverage(), nil
+	}
+	return parseTestCoverage(target, coverage)
 }
 
 // prepareAndRunTest sets up a test directory and runs the test.
