@@ -16,6 +16,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/tools/jarcat/ar"
 	"github.com/thought-machine/please/tools/jarcat/tar"
 	"github.com/thought-machine/please/tools/jarcat/unzip"
@@ -229,13 +230,9 @@ func main() {
 	err = os.Rename(filename, opts.Zip.Out)
 	if err != nil {
 		// Fall back to copy
-		contents, err := ioutil.ReadFile(filename)
+		err = fs.CopyFile(filename, opts.Zip.Out, 0644)
 		if err != nil {
-			panic(fmt.Sprintf("unable to read the file we just wrote (%s): %s", filename, err))
-		}
-		err = ioutil.WriteFile(opts.Zip.Out, contents, 0644)
-		if err != nil {
-			panic(fmt.Sprintf("unable to write the file to the output location (%s): %s", opts.Zip.Out, err))
+			panic(fmt.Sprintf("unable to copy the file we just wrote (%s): %s", filename, err))
 		}
 		err = os.Remove(filename)
 		if err != nil {
