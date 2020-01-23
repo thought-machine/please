@@ -175,6 +175,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	}
 
 	config.HomeDir = os.Getenv("HOME")
+	config.PleaseLocation = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir)
 
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
@@ -502,6 +503,8 @@ type Configuration struct {
 
 	// HomeDir is not a config setting but is used to construct the path.
 	HomeDir string
+	// Similarly this is a fully expanded form of Please.Location
+	PleaseLocation string
 	// buildEnvStored is a cached form of BuildEnv.
 	buildEnvStored *storedBuildEnv
 }
