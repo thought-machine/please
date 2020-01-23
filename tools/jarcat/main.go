@@ -9,6 +9,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -181,8 +182,11 @@ func main() {
 		opts.Zip.ExcludeInternalPrefix = javaExcludePrefixes
 	}
 
-	f := zip.NewFile(opts.Zip.Out, opts.Zip.Strict)
-	defer f.Close()
+	tempFile, err := ioutil.TempFile("", "jarcat-")
+	must(err)
+	filename := tempFile.Name()
+
+	f := zip.NewFile(filename, opts.Zip.Strict)
 	f.RenameDirs = opts.Zip.RenameDirs
 	f.Include = opts.Zip.IncludeInternalPrefix
 	f.Exclude = opts.Zip.ExcludeInternalPrefix
@@ -218,5 +222,24 @@ func main() {
 	}
 	for _, filename := range opts.Zip.In.Get() {
 		must(f.AddFiles(filename))
+	}
+
+	f.Close()
+
+	err = os.Rename(filename, opts.Zip.Out)
+	if err != nil {
+		// Fall back to copy
+		contents, err := ioutil.ReadFile(filename)
+		if err != nil {
+			panic(fmt.Sprintf("unable to read the file we just wrote (%s): %s", filename, err))
+		}
+		err = ioutil.WriteFile(opts.Zip.Out, contents, 0644)
+		if err != nil {
+			panic(fmt.Sprintf("unable to write the file to the output location (%s): %s", opts.Zip.Out, err))
+		}
+		err = os.Remove(filename)
+		if err != nil {
+			panic(fmt.Sprintf("unable to remove the temp file (%s): %s", filename, err))
+		}
 	}
 }
