@@ -121,10 +121,12 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 	if target.NeedCoverage(c.state) {
 		files = append(files, core.CoverageFile)
 	}
-	if target.HasLabel(core.TestResultsDirLabel) {
-		dirs = []string{core.TestResultsFile}
-	} else {
-		files = append(files, core.TestResultsFile)
+	if !target.NoTestOutput {
+		if target.HasLabel(core.TestResultsDirLabel) {
+			dirs = []string{core.TestResultsFile}
+		} else {
+			files = append(files, core.TestResultsFile)
+		}
 	}
 	const commandPrefix = "export TMP_DIR=\"`pwd`\" TEST_DIR=\"`pwd`\" && "
 	cmd, err := core.ReplaceTestSequences(c.state, target, target.GetTestCommand(c.state))
