@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -415,8 +416,10 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 				if response.Status != nil {
 					respErr = convertError(response.Status)
 					if respErr != nil {
-						if url := c.actionURL(digest, false); url != "" {
-							respErr = fmt.Errorf("%s\nAction URL: %s", respErr, url)
+						if !strings.Contains(respErr.Error(), c.state.Config.Remote.DisplayURL) {
+							if url := c.actionURL(digest, false); url != "" {
+								respErr = fmt.Errorf("%s\nAction URL: %s", respErr, url)
+							}
 						}
 					}
 				}
@@ -451,8 +454,13 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 					if len(metadata.Stderr) != 0 {
 						err = fmt.Errorf("%s\nStderr:\n%s", err, metadata.Stderr)
 					}
-					if url := c.actionURL(digest, true); url != "" {
-						err = fmt.Errorf("%s\n%s", err, url)
+					// Add a link to the action URL, but only if the server didn't do it (they
+					// might add one to the failed action if they're using the Buildbarn extension
+					// for it, which we can't replicate here).
+					if !strings.Contains(response.Message, c.state.Config.Remote.DisplayURL) {
+						if url := c.actionURL(digest, true); url != "" {
+							err = fmt.Errorf("%s\n%s", err, url)
+						}
 					}
 					return nil, nil, err
 				} else if err != nil {
