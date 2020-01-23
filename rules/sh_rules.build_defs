@@ -148,7 +148,9 @@ def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, out:str="", shell:s
 
     Args:
       name (str): Name of the rule.
-      cmd (str | dict): Command to write into the output script file.
+      cmd (str | dict): Command to write into the output script file. The commands are subject to
+                        shell expansion during build time, so if that is to be avoided the variables
+                        have to be escaped with \\\\\\$, i.e. \\\\\\${@}. 
       srcs (list | dict): Source files. Can be consumed by the generated command (but are not
                           written into the output in any other way).
       out (str): Name of the output file to create. Defaults to name + .sh.
@@ -160,9 +162,9 @@ def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, out:str="", shell:s
     """
     cmd = ' && '.join(cmd) if isinstance(cmd, list) else cmd
     if isinstance(cmd, str):
-        cmds = f'{{ cat > $OUT << "EOF"\n#!{shell}\n{cmd}\nEOF\n}}'
+        cmds = f'{{ cat > $OUT << EOF\n#!{shell}\n{cmd}\nEOF\n}}'
     elif isinstance(cmd, dict):
-        cmds = {k: f'{{ cat > $OUT << "EOF"\n#!{shell}\n{v}\nEOF\n}}' for k, v in cmd.items()}
+        cmds = {k: f'{{ cat > $OUT << EOF\n#!{shell}\n{v}\nEOF\n}}' for k, v in cmd.items()}
     return build_rule(
         name = name,
         outs = [out or name + '.sh'],

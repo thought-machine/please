@@ -19,8 +19,10 @@ sh_test(
 sh_cmd(
     name = "sh_cmd",
     cmd = [
-        "TEST_VAR=\"$@\"",
-        "[ \"$TEST_VAR\" = \"test_value\" ] || (echo \"Expected a value expansion not to happen\" >&2 && exit 11)",
+        "BUILD_TIME_EXPANSION_VAR=\"$OUT\"",
+        "NO_EXPANSION_VAR=\"\\\$@\"",
+        "[ \"\\\$BUILD_TIME_EXPANSION_VAR\" != \"\" ] || (echo \"Expected a build time var to be expanded.\" >&2 && exit 11)",
+        "[ \"\\\$NO_EXPANSION_VAR\" = \"test_value\" ] || (echo \"Expected a expansion not to happen\" >&2 && exit 11)",
     ],
 )
 
