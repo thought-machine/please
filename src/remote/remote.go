@@ -303,7 +303,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 
 // Test executes a remote test of the given target.
 // It returns the results (and coverage if appropriate) as bytes to be parsed elsewhere.
-func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMetadata, results, coverage []byte, err error) {
+func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMetadata, results [][]byte, coverage []byte, err error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, nil, nil, err
 	}
@@ -316,11 +316,9 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	// is more relevant, but we want to still try to get results if we can, and it's an
 	// error if we can't get those results on success.
 	if !target.NoTestOutput && ar != nil {
-		if digest := c.digestForFilename(ar, core.TestResultsFile); digest != nil {
-			results, err = c.readAllByteStream(context.Background(), digest)
-			if execErr == nil && err != nil {
-				return metadata, nil, nil, err
-			}
+		results, err = c.downloadAllPrefixedFiles(ar, core.TestResultsFile)
+		if execErr == nil && err != nil {
+			return metadata, nil, nil, err
 		}
 	}
 	if target.NeedCoverage(c.state) && ar != nil {

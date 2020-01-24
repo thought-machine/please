@@ -12,11 +12,19 @@ import (
 	"github.com/thought-machine/please/src/fs"
 )
 
-func parseTestResults(outputFile string, data []byte) (core.TestSuite, error) {
+func parseTestResults(outputFile string, data [][]byte) (core.TestSuite, error) {
 	if len(data) == 0 {
 		return parseTestResultsDir(outputFile)
 	}
-	return parseTestResultData(data)
+	suite := core.TestSuite{}
+	for _, datum := range data {
+		newSuite, err := parseTestResultData(datum)
+		if err != nil {
+			return suite, err
+		}
+		suite.Collapse(newSuite)
+	}
+	return suite, nil
 }
 
 func parseTestResultsFile(outputFile string) (core.TestSuite, error) {

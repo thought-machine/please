@@ -341,7 +341,7 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFil
 	}, coverage
 }
 
-func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, outputFile string, runRemotely bool) (*core.BuildMetadata, []byte, *core.TestCoverage, error) {
+func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, outputFile string, runRemotely bool) (*core.BuildMetadata, [][]byte, *core.TestCoverage, error) {
 	if runRemotely {
 		metadata, results, coverage, err := state.RemoteClient.Test(tid, target)
 		cov, err2 := parseRemoteCoverage(state, target, coverage)
@@ -374,7 +374,7 @@ func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget
 	return runTest(state, target)
 }
 
-func parseTestOutput(stdout []byte, stderr string, runError error, duration time.Duration, target *core.BuildTarget, outputFile string, resultsData []byte) core.TestSuite {
+func parseTestOutput(stdout []byte, stderr string, runError error, duration time.Duration, target *core.BuildTarget, outputFile string, resultsData [][]byte) core.TestSuite {
 	// This is all pretty involved; there are lots of different possibilities of what could happen.
 	// The contract is that the test must return zero on success or non-zero on failure (Unix FTW).
 	// If it's successful, it must produce a parseable file named "test.results" in its temp folder.
