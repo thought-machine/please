@@ -164,6 +164,8 @@ type BuildState struct {
 	PrepareOnly bool
 	// True if we're going to run a shell after builds are prepared.
 	PrepareShell bool
+	// True if we will download outputs during remote execution.
+	DownloadOutputs bool
 	// True if we only need to parse the initial package (i.e. don't search downwards
 	// through deps) - for example when doing `plz query print`.
 	ParsePackageOnly bool
