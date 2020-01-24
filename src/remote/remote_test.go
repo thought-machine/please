@@ -210,11 +210,11 @@ func TestExecuteTestWithCoverage(t *testing.T) {
 	assert.Equal(t, coverageData, coverage)
 }
 
-var testResults = []byte(`<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+var testResults = [][]byte{[]byte(`<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <testcase name="//src/remote:remote_test">
   <test name="testResults" success="true" time="172" type="SUCCESS"/>
 </testcase>
-`)
+`)}
 
 var coverageData = []byte(`mode: set
 src/core/build_target.go:134.54,143.2 7 0

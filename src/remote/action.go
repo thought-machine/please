@@ -396,6 +396,30 @@ func (c *Client) digestForFilename(ar *pb.ActionResult, name string) *pb.Digest 
 	return nil
 }
 
+// downloadAllFiles returns the contents of all files in the given action result
+func (c *Client) downloadAllPrefixedFiles(ar *pb.ActionResult, prefix string) ([][]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+	defer cancel()
+	outs, err := c.client.FlattenActionOutputs(ctx, ar)
+	if err != nil {
+		return nil, err
+	}
+	digests := []digest.Digest{}
+	for name, out := range outs {
+		if strings.HasPrefix(name, prefix) {
+			digests = append(digests, out.Digest)
+		}
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), c.reqTimeout)
+	defer cancel()
+	blobs, err := c.client.BatchDownloadBlobs(ctx, digests)
+	ret := make([][]byte, 0, len(blobs))
+	for _, blob := range blobs {
+		ret = append(ret, blob)
+	}
+	return ret, err
+}
+
 // downloadDirectory downloads & writes out a single Directory proto.
 func (c *Client) downloadDirectory(ctx context.Context, root string, dir *pb.Directory) error {
 	if err := os.MkdirAll(root, core.DirPermissions); err != nil {
