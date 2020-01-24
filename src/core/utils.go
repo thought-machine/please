@@ -131,7 +131,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget, includeTools bool) <-ch
 	done := map[string]bool{}
 	tmpDir := target.TmpDir()
 	go func() {
-		for input := range IterInputs(graph, target, includeTools) {
+		for input := range IterInputs(graph, target, includeTools, false) {
 			fullPaths := input.FullPaths(graph)
 			for i, sourcePath := range input.Paths(graph) {
 				if tmpPath := path.Join(tmpDir, sourcePath); !done[tmpPath] {
@@ -146,7 +146,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget, includeTools bool) <-ch
 }
 
 // IterInputs iterates all the inputs for a target.
-func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools bool) <-chan BuildInput {
+func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnly bool) <-chan BuildInput {
 	ch := make(chan BuildInput)
 	done := map[BuildLabel]bool{}
 	var inner func(dependency *BuildTarget)
@@ -190,7 +190,9 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools bool) <-cha
 				ch <- src
 			}
 		}
-		inner(target)
+		if !sourcesOnly {
+			inner(target)
+		}
 		close(ch)
 	}()
 	return ch
