@@ -492,7 +492,7 @@ func checkForStaleOutput(filename string, err error) bool {
 
 // calculateAndCheckRuleHash checks the output hash for a rule.
 func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	hash, err := state.TargetHasher.OutputHash(target)
+	hash, err := state.TargetHasher.RefreshOutputHash(target)
 	if err != nil {
 		return nil, err
 	}
@@ -529,14 +529,47 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	return hash, nil
 }
 
-// A TargetHasher is an implementation of the interface in core.
-type TargetHasher struct {
-	State *core.BuildState
+// A targetHasher is an implementation of the interface in core.
+type targetHasher struct {
+	State  *core.BuildState
+	hashes map[*core.BuildTarget][]byte
+	mutex  sync.RWMutex
+}
+
+// NewTargetHasher returns a new TargetHasher
+func NewTargetHasher(state *core.BuildState) core.TargetHasher {
+	return &targetHasher{
+		State:  state,
+		hashes: map[*core.BuildTarget][]byte{},
+	}
 }
 
 // OutputHash calculates the standard output hash of a build target.
-func (h *TargetHasher) OutputHash(target *core.BuildTarget) ([]byte, error) {
-	return outputHash(target, target.FullOutputs(), h.State.PathHasher, h.State.PathHasher.NewHash)
+func (h *targetHasher) OutputHash(target *core.BuildTarget) ([]byte, error) {
+	h.mutex.RLock()
+	hash, present := h.hashes[target]
+	h.mutex.RUnlock()
+	if present {
+		return hash, nil
+	}
+	return h.RefreshOutputHash(target)
+}
+
+// RefreshOutputHash recalculates the standard output hash of a build target.
+func (h *targetHasher) RefreshOutputHash(target *core.BuildTarget) ([]byte, error) {
+	hash, err := outputHash(target, target.FullOutputs(), h.State.PathHasher, h.State.PathHasher.NewHash)
+	if err != nil {
+		return hash, err
+	}
+	h.SetHash(target, hash)
+	return hash, nil
+}
+
+// SetHash sets a hash for a build target.
+func (h *targetHasher) SetHash(target *core.BuildTarget, hash []byte) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	h.hashes[target] = hash
 }
 
 // outputHash is a more general form of OutputHash that allows different hashing strategies.
