@@ -274,7 +274,7 @@ func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteSer
 
 	// We use this to conveniently identify whether the request was a test or not.
 	if req.InstanceName == "test" {
-		s.blobs["a4226cbd3e94a835ffcb5832ddd07eafe29e99494105b01d0df236bd8e9a15c3"] = testResults
+		s.blobs["a4226cbd3e94a835ffcb5832ddd07eafe29e99494105b01d0df236bd8e9a15c3"] = testResults[0]
 		s.blobs["a7f899acaabeaeecea132f782a5ebdddccd76fa1041f3e6d4a6e0d58638ffa0a"] = coverageData
 		srv.Send(&longrunning.Operation{
 			Name: "geoff",
