@@ -6,6 +6,7 @@ package remote
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path"
@@ -298,6 +299,8 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if err != nil {
 		return metadata, err
 	}
+	hash, _ := hex.DecodeString(c.digestMessage(ar).Hash)
+	c.state.TargetHasher.SetHash(target, hash)
 	return metadata, c.wrapActionErr(c.setOutputs(target.Label, ar), digest)
 }
 
