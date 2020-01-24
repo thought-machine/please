@@ -42,13 +42,12 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
 }
 
 func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool) {
-	hash, err := build.RuntimeHash(state, target)
+	hash, err := runtimeHash(state, target, runRemotely)
 	if err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to calculate target hash")
 		return
 	}
-	// Check the cached output files if the target wasn't rebuilt.
-	hash = core.CollapseHash(hash)
+
 	cachedOutputFile := target.TestResultsFile()
 	cachedCoverageFile := target.CoverageFile()
 	outputFile := path.Join(target.TestDir(), core.TestResultsFile)
@@ -147,7 +146,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	}
 
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
-	if state.NumTestRuns == 1 && !needToRun() {
+	if state.NumTestRuns == 1 && !runRemotely && !needToRun() {
 		if cachedResults := cachedTestResults(); cachedResults != nil {
 			target.Results = *cachedResults
 			return
@@ -230,7 +229,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		target.Results.Collapse(flakeResults)
 	}
 	metadata.EndTime = time.Now()
-	if target.Results.TestCases.AllSucceeded() {
+	if target.Results.TestCases.AllSucceeded() && !runRemotely {
 		// Success, store in cache
 		moveAndCacheOutputFiles(&target.Results, coverage)
 	}
@@ -345,7 +344,7 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, outputFil
 func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, outputFile string, runRemotely bool) (*core.BuildMetadata, []byte, *core.TestCoverage, error) {
 	if runRemotely {
 		metadata, results, coverage, err := state.RemoteClient.Test(tid, target)
-		cov, err2 := parseTestCoverage(target, coverage)
+		cov, err2 := parseRemoteCoverage(state, target, coverage)
 		if err == nil && err2 != nil {
 			log.Error("Error parsing coverage data: %s", err2)
 		}
@@ -357,6 +356,13 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ou
 	stdout, err := prepareAndRunTest(tid, state, target)
 	coverage := parseCoverageFile(target, path.Join(target.TestDir(), core.CoverageFile))
 	return &core.BuildMetadata{Stdout: stdout}, nil, coverage, err
+}
+
+func parseRemoteCoverage(state *core.BuildState, target *core.BuildTarget, coverage []byte) (*core.TestCoverage, error) {
+	if !state.NeedCoverage {
+		return core.NewTestCoverage(), nil
+	}
+	return parseTestCoverage(target, coverage)
 }
 
 // prepareAndRunTest sets up a test directory and runs the test.
@@ -608,4 +614,16 @@ func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.Build
 // verifyHash verifies that the hash on a test file matches the one for the current test.
 func verifyHash(state *core.BuildState, filename string, hash []byte) bool {
 	return bytes.Equal(hash, fs.ReadAttr(filename, xattrName, state.XattrsSupported))
+}
+
+// runtimeHash returns the runtime hash of a target, or an empty slice if running remotely.
+func runtimeHash(state *core.BuildState, target *core.BuildTarget, runRemotely bool) ([]byte, error) {
+	if runRemotely {
+		return nil, nil
+	}
+	hash, err := build.RuntimeHash(state, target)
+	if err == nil {
+		hash = core.CollapseHash(hash)
+	}
+	return hash, err
 }

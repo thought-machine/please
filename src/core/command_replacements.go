@@ -216,6 +216,8 @@ func checkAndReplaceSequence(state *BuildState, target, dep *BuildTarget, in str
 		panic(fmt.Sprintf("Rule %s can't $(exe %s), it's not executable", target.Label, dep.Label))
 	} else if runnable && len(dep.Outputs()) == 0 {
 		panic(fmt.Sprintf("Rule %s is tagged as binary but produces no output.", dep.Label))
+	} else if test && tool {
+		panic(fmt.Sprintf("Rule %s uses %s in its test command, but tools are not accessible at test time", target, dep))
 	}
 	if hash {
 		h, err := state.TargetHasher.OutputHash(dep)
