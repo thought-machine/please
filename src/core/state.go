@@ -85,8 +85,6 @@ type RemoteClient interface {
 type TargetHasher interface {
 	// OutputHash calculates the output hash for a given build target.
 	OutputHash(target *BuildTarget) ([]byte, error)
-	// RefreshOutputHash is like OutputHash but always forces recomputation.
-	RefreshOutputHash(target *BuildTarget) ([]byte, error)
 	// SetHash sets the output hash for a given build target.
 	SetHash(target *BuildTarget, hash []byte)
 }

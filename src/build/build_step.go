@@ -175,7 +175,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
 		}
 
-		oldOutputHash, outputHashErr := state.TargetHasher.OutputHash(target)
+		// N.B. Important we do not go through state.TargetHasher here since it memoises and
+		//      this calculation might be incorrect.
+		oldOutputHash, outputHashErr := defaultOutputHash(state, target)
 		retrieveArtifacts := func() bool {
 			// If there aren't any outputs, we don't have to do anything right now.
 			// Checks later will handle the case of something with a post-build function that
@@ -492,7 +494,7 @@ func checkForStaleOutput(filename string, err error) bool {
 
 // calculateAndCheckRuleHash checks the output hash for a rule.
 func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	hash, err := state.TargetHasher.RefreshOutputHash(target)
+	hash, err := state.TargetHasher.OutputHash(target)
 	if err != nil {
 		return nil, err
 	}
@@ -552,12 +554,7 @@ func (h *targetHasher) OutputHash(target *core.BuildTarget) ([]byte, error) {
 	if present {
 		return hash, nil
 	}
-	return h.RefreshOutputHash(target)
-}
-
-// RefreshOutputHash recalculates the standard output hash of a build target.
-func (h *targetHasher) RefreshOutputHash(target *core.BuildTarget) ([]byte, error) {
-	hash, err := outputHash(target, target.FullOutputs(), h.State.PathHasher, h.State.PathHasher.NewHash)
+	hash, err := defaultOutputHash(h.State, target)
 	if err != nil {
 		return hash, err
 	}
@@ -570,6 +567,11 @@ func (h *targetHasher) SetHash(target *core.BuildTarget, hash []byte) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 	h.hashes[target] = hash
+}
+
+// defaultOutputHash returns the output hash for a target using the default strategy.
+func defaultOutputHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
+	return outputHash(target, target.FullOutputs(), state.PathHasher, state.PathHasher.NewHash)
 }
 
 // outputHash is a more general form of OutputHash that allows different hashing strategies.
