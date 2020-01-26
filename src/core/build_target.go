@@ -350,6 +350,15 @@ func (target *BuildTarget) allSourcePaths(graph *BuildGraph, full buildPathsFunc
 	return ret
 }
 
+// AllURLs returns all the URLs for this target. This should only be called if the target is a remote file.
+func (target *BuildTarget) AllURLs() []string {
+	ret := make([]string, len(target.Sources))
+	for i, s := range target.Sources {
+		ret[i] = string(s.(URLLabel))
+	}
+	return ret
+}
+
 // DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).
 func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 	ret := make(BuildLabels, len(target.dependencies))

@@ -490,6 +490,17 @@ func TestAllLocalSources(t *testing.T) {
 	assert.Equal(t, []string{"src/core/target1.go"}, target.AllLocalSources())
 }
 
+func TestAllURLs(t *testing.T) {
+	target := makeTarget("//src/core:remote1", "")
+	target.IsRemoteFile = true
+	target.AddSource(URLLabel("https://github.com/thought-machine/please"))
+	target.AddSource(URLLabel("https://github.com/thought-machine/pleasings"))
+	assert.Equal(t, []string{
+		"https://github.com/thought-machine/please",
+		"https://github.com/thought-machine/pleasings",
+	}, target.AllURLs())
+}
+
 func TestCheckSecrets(t *testing.T) {
 	target := makeTarget("//src/core:target1", "")
 	assert.NoError(t, target.CheckSecrets())

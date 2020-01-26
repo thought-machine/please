@@ -23,6 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"gopkg.in/op/go-logging.v1"
 
@@ -179,7 +180,16 @@ func (c *Client) initExec() error {
 
 // initFetch initialises the remote fetch server.
 func (c *Client) initFetch() error {
-	conn, err := grpc.Dial(c.state.Config.Remote.AssetURL, grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()))
+	tlsOption := func() grpc.DialOption {
+		if c.state.Config.Remote.Secure {
+			return grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, ""))
+		}
+		return grpc.WithInsecure()
+	}
+	conn, err := grpc.Dial(c.state.Config.Remote.AssetURL,
+		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()),
+		tlsOption(),
+	)
 	if err != nil {
 		return fmt.Errorf("Failed to connect to the remote fetch server: %s", err)
 	}
@@ -392,6 +402,10 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
+	// Remote actions get special treatment at this point.
+	if target.IsRemoteFile {
+		return c.fetchRemoteFile(tid, target, digest)
+	}
 	ctx, cancel = context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	stream, err := c.client.Execute(ctx, &pb.ExecuteRequest{
@@ -561,4 +575,48 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 // DataRate returns an estimate of the current in/out RPC data rates in bytes per second.
 func (c *Client) DataRate() (int, int, int, int) {
 	return c.byteRateIn, c.byteRateOut, c.totalBytesIn, c.totalBytesOut
+}
+
+// fetchRemoteFile sends a request to fetch a file using the remote asset API.
+func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
+	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading...")
+	urls := target.AllURLs()
+	sri := subresourceIntegrity(target.Hashes)
+	if sri == "" {
+		return nil, nil, fmt.Errorf("remote_file rules must have at least one hash specified for remote execution")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+	defer cancel()
+	resp, err := c.fetchClient.FetchBlob(ctx, &fpb.FetchBlobRequest{
+		InstanceName: c.instance,
+		Timeout:      ptypes.DurationProto(target.BuildTimeout),
+		Uris:         urls,
+		Qualifiers: []*fpb.Qualifier{{
+			Name:  "checksum.sri",
+			Value: sri,
+		}},
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to download file: %s", err)
+	}
+	c.state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Downloaded.")
+	// If we get here, the blob exists in the CAS. Create an ActionResult corresponding to it.
+	outs := target.Outputs()
+	ar := &pb.ActionResult{
+		OutputFiles: []*pb.OutputFile{{
+			Path:         outs[0],
+			Digest:       resp.BlobDigest,
+			IsExecutable: target.IsBinary,
+		}},
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), c.reqTimeout)
+	defer cancel()
+	if _, err := c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
+		InstanceName: c.instance,
+		ActionDigest: actionDigest,
+		ActionResult: ar,
+	}); err != nil {
+		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
+	}
+	return &core.BuildMetadata{}, ar, nil
 }

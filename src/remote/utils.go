@@ -455,3 +455,12 @@ func dirSize(dir *pb.Directory) (size int64) {
 	}
 	return size
 }
+
+// subresourceIntegrity returns a string corresponding to a target's hashes in the Subresource Integrity format.
+func subresourceIntegrity(hashes []string) string {
+	ret := make([]string, len(hashes))
+	for i, h := range hashes {
+		ret[i] = strings.Replace(h, ":", "-", -1)
+	}
+	return strings.Join(ret, " ")
+}
