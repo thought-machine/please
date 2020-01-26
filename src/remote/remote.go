@@ -15,9 +15,12 @@ import (
 	"time"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
+	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
@@ -42,12 +45,13 @@ var apiVersion = semver.SemVer{Major: 2}
 //
 // It provides a higher-level interface over the specific RPCs available.
 type Client struct {
-	client     *client.Client
-	initOnce   sync.Once
-	state      *core.BuildState
-	reqTimeout time.Duration
-	err        error // for initialisation
-	instance   string
+	client      *client.Client
+	fetchClient fpb.FetchClient
+	initOnce    sync.Once
+	state       *core.BuildState
+	reqTimeout  time.Duration
+	err         error // for initialisation
+	instance    string
 
 	// Stored output directories from previously executed targets.
 	// This isn't just a cache - it is needed for cases where we don't actually
@@ -71,6 +75,7 @@ type Client struct {
 
 	// Stats used to report RPC data rates
 	byteRateIn, byteRateOut, totalBytesIn, totalBytesOut int
+	stats                                                *statsHandler
 }
 
 // New returns a new Client instance.
@@ -82,6 +87,7 @@ func New(state *core.BuildState) *Client {
 		reqTimeout: time.Duration(state.Config.Remote.Timeout),
 		outputs:    map[core.BuildLabel]*pb.Directory{},
 	}
+	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
 	return c
 }
@@ -94,75 +100,91 @@ func (c *Client) CheckInitialised() error {
 
 // init is passed to the sync.Once to do the actual initialisation.
 func (c *Client) init() {
-	c.err = func() error {
-		// Create a copy of the state where we can modify the config
-		c.state = c.state.ForConfig()
-		c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
-		client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
-			Service:            c.state.Config.Remote.URL,
-			CASService:         c.state.Config.Remote.CASURL,
-			NoSecurity:         !c.state.Config.Remote.Secure,
-			TransportCredsOnly: c.state.Config.Remote.Secure,
-			DialOpts: []grpc.DialOption{
-				grpc.WithStatsHandler(newStatsHandler(c)),
-				// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
-				grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400)),
-			},
-		}, client.UseBatchOps(true), client.RetryTransient())
-		if err != nil {
-			return err
-		}
-		c.client = client
-		// Query the server for its capabilities. This tells us whether it is capable of
-		// execution, caching or both.
-		ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-		defer cancel()
-		resp, err := c.client.GetCapabilities(ctx)
-		if err != nil {
-			return err
-		}
-		if lessThan(&apiVersion, resp.LowApiVersion) || lessThan(resp.HighApiVersion, &apiVersion) {
-			return fmt.Errorf("Unsupported API version; we require %s but server only supports %s - %s", printVer(&apiVersion), printVer(resp.LowApiVersion), printVer(resp.HighApiVersion))
-		}
-		caps := resp.CacheCapabilities
-		if caps == nil {
-			return fmt.Errorf("Cache capabilities not supported by server (we do not support execution-only servers)")
-		}
-		if err := c.chooseDigest(caps.DigestFunction); err != nil {
-			return err
-		}
-		if caps.ActionCacheUpdateCapabilities != nil {
-			c.cacheWritable = caps.ActionCacheUpdateCapabilities.UpdateEnabled
-		}
-		c.maxBlobBatchSize = caps.MaxBatchTotalSizeBytes
-		if c.maxBlobBatchSize == 0 {
-			// No limit was set by the server, assume we are implicitly limited to 4MB (that's
-			// gRPC's limit which most implementations do not seem to override). Round it down a
-			// bit to allow a bit of serialisation overhead etc.
-			c.maxBlobBatchSize = 4000000
-		}
-		// Look this up just once now.
-		bash, err := core.LookBuildPath("bash", c.state.Config)
-		c.bashPath = bash
-		c.canBatchBlobReads = c.checkBatchReadBlobs()
-		log.Debug("Remote execution client initialised for storage")
-		// Now check if it can do remote execution
-		if resp.ExecutionCapabilities == nil {
-			log.Fatalf("Remote execution is configured but the build server doesn't support it")
-		}
-		if err := c.chooseDigest([]pb.DigestFunction_Value{resp.ExecutionCapabilities.DigestFunction}); err != nil {
-			return err
-		} else if !resp.ExecutionCapabilities.ExecEnabled {
-			return fmt.Errorf("Remote execution not enabled for this server")
-		}
-		c.remoteExecution = true
-		c.platform = convertPlatform(c.state.Config)
-		log.Debug("Remote execution client initialised for execution")
-		return nil
-	}()
+	var g errgroup.Group
+	g.Go(c.initExec)
+	g.Go(c.initFetch)
+	c.err = g.Wait()
 	if c.err != nil {
 		log.Error("Error setting up remote execution client: %s", c.err)
 	}
+}
+
+// initExec initialiases the remote execution client.
+func (c *Client) initExec() error {
+	// Create a copy of the state where we can modify the config
+	c.state = c.state.ForConfig()
+	c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
+	client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
+		Service:            c.state.Config.Remote.URL,
+		CASService:         c.state.Config.Remote.CASURL,
+		NoSecurity:         !c.state.Config.Remote.Secure,
+		TransportCredsOnly: c.state.Config.Remote.Secure,
+		DialOpts: []grpc.DialOption{
+			grpc.WithStatsHandler(c.stats),
+			// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
+			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400)),
+		},
+	}, client.UseBatchOps(true), client.RetryTransient())
+	if err != nil {
+		return err
+	}
+	c.client = client
+	// Query the server for its capabilities. This tells us whether it is capable of
+	// execution, caching or both.
+	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
+	defer cancel()
+	resp, err := c.client.GetCapabilities(ctx)
+	if err != nil {
+		return err
+	}
+	if lessThan(&apiVersion, resp.LowApiVersion) || lessThan(resp.HighApiVersion, &apiVersion) {
+		return fmt.Errorf("Unsupported API version; we require %s but server only supports %s - %s", printVer(&apiVersion), printVer(resp.LowApiVersion), printVer(resp.HighApiVersion))
+	}
+	caps := resp.CacheCapabilities
+	if caps == nil {
+		return fmt.Errorf("Cache capabilities not supported by server (we do not support execution-only servers)")
+	}
+	if err := c.chooseDigest(caps.DigestFunction); err != nil {
+		return err
+	}
+	if caps.ActionCacheUpdateCapabilities != nil {
+		c.cacheWritable = caps.ActionCacheUpdateCapabilities.UpdateEnabled
+	}
+	c.maxBlobBatchSize = caps.MaxBatchTotalSizeBytes
+	if c.maxBlobBatchSize == 0 {
+		// No limit was set by the server, assume we are implicitly limited to 4MB (that's
+		// gRPC's limit which most implementations do not seem to override). Round it down a
+		// bit to allow a bit of serialisation overhead etc.
+		c.maxBlobBatchSize = 4000000
+	}
+	// Look this up just once now.
+	bash, err := core.LookBuildPath("bash", c.state.Config)
+	c.bashPath = bash
+	c.canBatchBlobReads = c.checkBatchReadBlobs()
+	log.Debug("Remote execution client initialised for storage")
+	// Now check if it can do remote execution
+	if resp.ExecutionCapabilities == nil {
+		return fmt.Errorf("Remote execution is configured but the build server doesn't support it")
+	}
+	if err := c.chooseDigest([]pb.DigestFunction_Value{resp.ExecutionCapabilities.DigestFunction}); err != nil {
+		return err
+	} else if !resp.ExecutionCapabilities.ExecEnabled {
+		return fmt.Errorf("Remote execution not enabled for this server")
+	}
+	c.remoteExecution = true
+	c.platform = convertPlatform(c.state.Config)
+	log.Debug("Remote execution client initialised for execution")
+	return nil
+}
+
+// initFetch initialises the remote fetch server.
+func (c *Client) initFetch() error {
+	conn, err := grpc.Dial(c.state.Config.Remote.AssetURL, grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()))
+	if err != nil {
+		return fmt.Errorf("Failed to connect to the remote fetch server: %s", err)
+	}
+	c.fetchClient = fpb.NewFetchClient(conn)
+	return nil
 }
 
 // chooseDigest selects a digest function that we will use.w
