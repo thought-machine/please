@@ -173,6 +173,18 @@ func TestExecutePostBuildFunction(t *testing.T) {
 	assert.Equal(t, []string{"somefile"}, target.Outputs())
 }
 
+func TestExecuteFetch(t *testing.T) {
+	c := newClient()
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "remote1"})
+	target.IsRemoteFile = true
+	target.AddSource(core.URLLabel("https://get.please.build/linux_amd64/14.2.0/please_14.2.0.tar.gz"))
+	target.AddOutput("please_14.2.0.tar.gz")
+	target.Hashes = []string{"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"}
+	target.BuildTimeout = time.Minute
+	_, err := c.Build(0, target)
+	assert.NoError(t, err)
+}
+
 func TestExecuteTest(t *testing.T) {
 	c := newClientInstance("test")
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target3"})

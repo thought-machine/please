@@ -37,6 +37,7 @@ go_test(
         "//third_party/go:protobuf",
         "//third_party/go:remote-apis",
         "//third_party/go:rpcstatus",
+        "//third_party/go:sri",
         "//third_party/go:testify",
     ],
 )

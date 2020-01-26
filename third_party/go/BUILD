@@ -602,3 +602,10 @@ go_get(
         ":go-isatty",
     ],
 )
+
+go_get(
+    name = "sri",
+    get = "github.com/peterebden/go-sri",
+    revision = "v1.0.0",
+    test_only = True,
+)
