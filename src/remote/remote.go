@@ -180,6 +180,9 @@ func (c *Client) initExec() error {
 
 // initFetch initialises the remote fetch server.
 func (c *Client) initFetch() error {
+	if c.state.Config.Remote.AssetURL == "" {
+		return fmt.Errorf("You must specify remote.asseturl in configuration to use remote execution")
+	}
 	tlsOption := func() grpc.DialOption {
 		if c.state.Config.Remote.Secure {
 			return grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, ""))
