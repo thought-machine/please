@@ -94,7 +94,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
 		},
-		EnvironmentVariables: buildEnv(c.stampedBuildEnvironment(target, inputRoot)),
+		EnvironmentVariables: buildEnv(c.stampedBuildEnvironment(target, inputRoot), target.Sandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
@@ -142,7 +142,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
 		},
-		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, ".")),
+		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, "."), target.TestSandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
@@ -524,8 +524,11 @@ func reallyTranslateOS(os string) string {
 }
 
 // buildEnv translates the set of environment variables for this target to a proto.
-func buildEnv(env []string) []*pb.Command_EnvironmentVariable {
+func buildEnv(env []string, sandbox bool) []*pb.Command_EnvironmentVariable {
 	sort.Strings(env) // Proto says it must be sorted (not just consistently ordered :( )
+	if sandbox {
+		env = append(env, "SANDBOX=true")
+	}
 	vars := make([]*pb.Command_EnvironmentVariable, len(env))
 	for i, e := range env {
 		idx := strings.IndexByte(e, '=')
