@@ -266,12 +266,14 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest,
 			return nil, err
 		}
 	}
-	if isTest && target.Stamp && ch != nil {
+	if !isTest && target.Stamp {
 		stamp := core.StampFile(target)
 		digest := c.digestBlob(stamp)
-		ch <- &blob{
-			Digest: digest,
-			Data:   stamp,
+		if ch != nil {
+			ch <- &blob{
+				Digest: digest,
+				Data:   stamp,
+			}
 		}
 		d := b.Dir(".")
 		d.Files = append(d.Files, &pb.FileNode{
