@@ -581,21 +581,20 @@ func (c *Client) DataRate() (int, int, int, int) {
 func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
 	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading...")
 	urls := target.AllURLs()
-	sri := subresourceIntegrity(target.Hashes)
-	if sri == "" {
-		return nil, nil, fmt.Errorf("remote_file rules must have at least one hash specified for remote execution")
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	resp, err := c.fetchClient.FetchBlob(ctx, &fpb.FetchBlobRequest{
+	req := &fpb.FetchBlobRequest{
 		InstanceName: c.instance,
 		Timeout:      ptypes.DurationProto(target.BuildTimeout),
 		Uris:         urls,
-		Qualifiers: []*fpb.Qualifier{{
+	}
+	if sri := subresourceIntegrity(target.Hashes); sri != "" {
+		req.Qualifiers = []*fpb.Qualifier{{
 			Name:  "checksum.sri",
 			Value: sri,
-		}},
-	})
+		}}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+	defer cancel()
+	resp, err := c.fetchClient.FetchBlob(ctx, req)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to download file: %s", err)
 	}

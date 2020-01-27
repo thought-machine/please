@@ -743,7 +743,7 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 	httpClient.Timeout = time.Duration(state.Config.Build.Timeout) // Can't set this when we init the client because config isn't loaded then.
 	var err error
 	for _, src := range target.Sources {
-		if e := fetchOneRemoteFile(state, target, src.STring()); e != nil {
+		if e := fetchOneRemoteFile(state, target, src.String()); e != nil {
 			err = multierror.Append(err, e)
 		} else {
 			return nil
