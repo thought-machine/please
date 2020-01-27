@@ -1,6 +1,14 @@
+Version 14.3.0
+--------------
+
+    * The `data` argument to various test rules can now be named (as `srcs` and `tools` etc).
+    * Remote execution now requires the new Remote Asset API for `remote_file` rules.
+
+
 Version 14.2.2
 --------------
     * Modified `sh_binary` rule to exclude its own output from zip.
+
 
 Version 14.2.1
 --------------
