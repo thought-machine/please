@@ -439,7 +439,7 @@ go_get(
 go_get(
     name = "remote-apis",
     get = "github.com/bazelbuild/remote-apis/build/...",
-    revision = "b5123b1bb2853393c7b9aa43236db924d7e32d61",
+    revision = "2846a67ac8feb5001e9f704b66f5acc1e90f1ade",
     deps = [
         ":annotations",
         ":grpc",
@@ -600,4 +600,11 @@ go_get(
     deps = [
         ":go-isatty",
     ],
+)
+
+go_get(
+    name = "sri",
+    get = "github.com/peterebden/go-sri",
+    revision = "v1.0.0",
+    test_only = True,
 )

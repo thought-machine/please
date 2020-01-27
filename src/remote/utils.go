@@ -3,6 +3,9 @@ package remote
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -454,4 +457,30 @@ func dirSize(dir *pb.Directory) (size int64) {
 		size += dir.Digest.SizeBytes
 	}
 	return size
+}
+
+// subresourceIntegrity returns a string corresponding to a target's hashes in the Subresource Integrity format.
+func subresourceIntegrity(hashes []string) string {
+	ret := make([]string, len(hashes))
+	for i, h := range hashes {
+		ret[i] = reencodeSRI(h)
+	}
+	return strings.Join(ret, " ")
+}
+
+// reencodeSRI re-encodes a hash from the hex format we use to base64-encoded.
+func reencodeSRI(h string) string {
+	if idx := strings.LastIndexByte(h, ':'); idx != -1 {
+		h = h[idx+1:]
+	}
+	// TODO(peterebden): we should validate at parse time that these are sensible.
+	b, _ := hex.DecodeString(h)
+	h = base64.StdEncoding.EncodeToString(b)
+	if len(b) == sha256.Size {
+		return "sha256-" + h
+	} else if len(b) == sha1.Size {
+		return "sha1-" + h
+	}
+	log.Warning("Hash string of unknown type: %s", h)
+	return h
 }

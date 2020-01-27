@@ -152,14 +152,10 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 // getCommand returns the appropriate command to use for a target.
 func (c *Client) getCommand(target *core.BuildTarget) string {
 	if target.IsRemoteFile {
-		// TODO(peterebden): we should handle this using the Remote Fetch API once that's available.
-		urls := make([]string, len(target.Sources))
-		for i, s := range target.Sources {
-			urls[i] = "curl -fsSLo $OUT " + s.String()
-		}
-		cmd := strings.Join(urls, " || ")
+		// This isn't a real command, but it suits us to construct a pseudo-version of one.
+		cmd := "fetch " + strings.Join(target.AllURLs(c.state.Config), " ") + " & verify " + strings.Join(target.Hashes, " ")
 		if target.IsBinary {
-			return "(" + cmd + ") && chmod +x $OUT"
+			return cmd + " binary"
 		}
 		return cmd
 	}
@@ -238,6 +234,9 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 
 // uploadInputs finds and uploads a set of inputs from a target.
 func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest, isFilegroup bool) (*pb.Directory, error) {
+	if target.IsRemoteFile {
+		return &pb.Directory{}, nil
+	}
 	b := newDirBuilder(c)
 	for input := range c.iterInputs(target, isTest, isFilegroup) {
 		if l := input.Label(); l != nil {

@@ -11,11 +11,13 @@ import (
 	"testing"
 	"time"
 
+	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	"github.com/peterebden/go-sri"
 	bs "google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/genproto/googleapis/longrunning"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
@@ -40,6 +42,7 @@ func newClientInstance(name string) *Client {
 	config.Remote.Secure = false
 	state := core.NewBuildState(config)
 	state.Config.Remote.URL = "127.0.0.1:9987"
+	state.Config.Remote.AssetURL = state.Config.Remote.URL
 	return New(state)
 }
 
@@ -397,6 +400,33 @@ func (s *testServer) RecoverStreamPanics(srv interface{}, ss grpc.ServerStream, 
 	return handler(srv, ss)
 }
 
+func (s *testServer) FetchBlob(ctx context.Context, req *fpb.FetchBlobRequest) (*fpb.FetchBlobResponse, error) {
+	// This is a little overly specific but wevs
+	if len(req.Qualifiers) != 1 {
+		return nil, fmt.Errorf("Expected exactly one qualifier, got %s", req.Qualifiers)
+	} else if req.Qualifiers[0].Name != "checksum.sri" {
+		return nil, fmt.Errorf("Missing checksum.sri qualifier")
+	}
+	sri, err := sri.NewChecker(req.Qualifiers[0].Value)
+	if err != nil {
+		return nil, err
+	}
+	sri.Write([]byte("abc"))
+	if err := sri.Check(); err != nil {
+		return nil, err
+	}
+	return &fpb.FetchBlobResponse{
+		BlobDigest: &pb.Digest{
+			Hash:      "edeaaff3f1774ad2888673770c6d64097e391bc362d7d6fb34982ddf0efd18cb",
+			SizeBytes: 3,
+		},
+	}, nil
+}
+
+func (s *testServer) FetchDirectory(ctx context.Context, req *fpb.FetchDirectoryRequest) (*fpb.FetchDirectoryResponse, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 var server = &testServer{}
 
 // A testFunction is something we can assign to a target's PostBuildFunction; it will
@@ -418,6 +448,7 @@ func TestMain(m *testing.M) {
 	pb.RegisterContentAddressableStorageServer(s, server)
 	bs.RegisterByteStreamServer(s, server)
 	pb.RegisterExecutionServer(s, server)
+	fpb.RegisterFetchServer(s, server)
 	go s.Serve(lis)
 	if err := os.Chdir("src/remote/test_data"); err != nil {
 		log.Fatalf("Failed to chdir: %s", err)

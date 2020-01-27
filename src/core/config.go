@@ -397,6 +397,7 @@ type Configuration struct {
 	Remote struct {
 		URL           string       `help:"URL for the remote server."`
 		CASURL        string       `help:"URL for the CAS service, if it is different to the main one."`
+		AssetURL      string       `help:"URL for the remote asset server."`
 		NumExecutors  int          `help:"Maximum number of remote executors to use simultaneously."`
 		Instance      string       `help:"Remote instance name to request; depending on the server this may be required."`
 		Name          string       `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
