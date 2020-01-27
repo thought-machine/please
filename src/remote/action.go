@@ -241,10 +241,8 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest,
 	for input := range c.iterInputs(target, isTest, isFilegroup) {
 		if l := input.Label(); l != nil {
 			if o := c.targetOutputs(*l); o == nil {
-				if c.remoteExecution {
-					// Classic "we shouldn't get here" stuff
-					return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", *l)
-				}
+				// Classic "we shouldn't get here" stuff
+				return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", *l)
 			} else {
 				pkgName := l.PackageName
 				if isFilegroup {

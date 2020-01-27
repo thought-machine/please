@@ -65,8 +65,6 @@ type Client struct {
 	cacheWritable     bool
 	canBatchBlobReads bool // This isn't supported by all servers.
 
-	// True if we are doing proper remote execution (false if we are caching only)
-	remoteExecution bool
 	// Platform properties that we will request from the remote.
 	// TODO(peterebden): this will need some modification for cross-compiling support.
 	platform *pb.Platform
@@ -172,7 +170,6 @@ func (c *Client) initExec() error {
 	} else if !resp.ExecutionCapabilities.ExecEnabled {
 		return fmt.Errorf("Remote execution not enabled for this server")
 	}
-	c.remoteExecution = true
 	c.platform = convertPlatform(c.state.Config)
 	log.Debug("Remote execution client initialised for execution")
 	return nil
