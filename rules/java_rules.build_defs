@@ -173,7 +173,7 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
       modules (list): Modules to be included in the runtime image.
       out (str): Name of the folder that contains the runtime image and the binary contained by it. Defaults to 'name'.
       deps (list): Dependencies of this rule.
-      data (list): Runtime data files for this rule.
+      data (list): Deprecated, has no effect.
       visibility (list): Visibility declaration of this rule.
       jlink_args (str): Arguments to pass to the JVM in the run script.
     """
@@ -191,7 +191,6 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
     return build_rule(
         name=name,
         deps=deps,
-        data=data,
         outs=[out],
         cmd=cmd,
         needs_transitive_deps=True,
@@ -215,7 +214,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
       out (str): Name of output .jar file. Defaults to name + .jar.
       srcs (list): Source files to compile.
       deps (list): Dependencies of this rule.
-      data (list): Runtime data files for this rule.
+      data (list): Deprecated, has no effect.
       visibility (list): Visibility declaration of this rule.
       jvm_args (str): Arguments to pass to the JVM in the run script.
       self_executable (bool): True to make the jar self executable.
@@ -241,7 +240,6 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
     return build_rule(
         name=name,
         deps=deps,
-        data=data,
         outs=[out or name + '.jar'],
         srcs=[manifest],
         cmd=cmd,
@@ -257,7 +255,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
 
 
 def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
-              data:list=None, deps:list=None, worker:str='',
+              data:list|dict=None, deps:list=None, worker:str='',
               labels:list&features&tags=[], visibility:list=None, flags:str='',
               sandbox:bool=None, timeout:int=0, flaky:bool|int=0, test_outputs:list=None, size:str=None,
               test_package:str=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args:str=''):

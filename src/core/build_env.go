@@ -153,7 +153,13 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		}
 	}
 	if len(target.Data) > 0 {
-		env = append(env, "DATA="+strings.Join(target.AllData(state.Graph), " "))
+		env = append(env, "DATA="+strings.Join(target.AllDataPaths(state.Graph), " "))
+	}
+	if target.namedData != nil {
+		for name, data := range target.namedData {
+			paths := target.SourcePaths(state.Graph, data)
+			env = append(env, "DATA_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
+		}
 	}
 	// Bit of a hack for gcov which needs access to its .gcno files.
 	if target.HasLabel("cc") {

@@ -124,7 +124,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
 
 
 def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str|dict=None, srcs:list|dict=None, outs:list=None,
-            deps:list=None, tools:list|dict=None, data:list=None, visibility:list=None, timeout:int=0,
+            deps:list=None, tools:list|dict=None, data:list|dict=None, visibility:list=None, timeout:int=0,
             needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False,
             test_outputs:list=None, output_is_complete:bool=True, requires:list=None,
             sandbox:bool=None, size:str=None, local:bool=False):
@@ -150,7 +150,7 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
       tools (list): Tools used to build this rule; similar to srcs but are not copied to the temporary
                     build directory. Should be accessed via $(exe //path/to:tool) or similar.
       secrets (list | dict): Secrets available to this rule while building.
-      data (list): Runtime data files for the test.
+      data (list | dict): Runtime data files for the test.
       visibility (list): Visibility declaration of this rule.
       timeout (int): Length of time in seconds to allow the test to run for before killing it.
       needs_transitive_deps (bool): True if building the rule requires all transitive dependencies to

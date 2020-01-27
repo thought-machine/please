@@ -223,7 +223,7 @@ def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compile
 
 
 def c_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-           pkg_config_libs:list=[], pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[], visibility:list=None, flags:str='',
+           pkg_config_libs:list=[], pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list|dict=[], visibility:list=None, flags:str='',
            labels:list&features&tags=[], flaky:bool|int=0, test_outputs:list=None, size:str=None, timeout:int=0,
            sandbox:bool=None):
     """Defines a C test target.

@@ -349,7 +349,7 @@ func (c *Client) iterInputs(target *core.BuildTarget, isTest, isFilegroup bool) 
 	ch := make(chan core.BuildInput)
 	go func() {
 		ch <- target.Label
-		for _, datum := range target.Data {
+		for _, datum := range target.AllData() {
 			ch <- datum
 		}
 		close(ch)
