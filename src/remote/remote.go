@@ -300,7 +300,9 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 		return metadata, err
 	}
 	hash, _ := hex.DecodeString(c.digestMessage(ar).Hash)
-	c.state.TargetHasher.SetHash(target, hash)
+	if c.state.TargetHasher != nil {
+		c.state.TargetHasher.SetHash(target, hash)
+	}
 	return metadata, c.wrapActionErr(c.setOutputs(target.Label, ar), digest)
 }
 
