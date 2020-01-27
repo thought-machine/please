@@ -183,7 +183,7 @@ func main() {
 		opts.Zip.ExcludeInternalPrefix = javaExcludePrefixes
 	}
 
-	tempFile, err := ioutil.TempFile("", "jarcat-")
+	tempFile, err := ioutil.TempFile(".", "jarcat-")
 	must(err)
 	filename := tempFile.Name()
 

@@ -1,3 +1,9 @@
+Version 14.3.1
+--------------
+
+    * Fix jarcat when rules are sandboxed
+
+
 Version 14.3.0
 --------------
 
