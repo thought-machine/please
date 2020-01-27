@@ -295,7 +295,7 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
     # As above, would be nicer if we could make the jars self-executing again.
     cmd, tools = _jarcat_cmd('build.please.main.TestMain')
     tools['junit'] = [CONFIG.JUNIT_RUNNER]
-    cmd = 'ln -s $TOOLS_JUNIT . && ' + cmd
+    cmd = 'ln -s `which $TOOLS_JUNIT` . && ' + cmd
     test_cmd = f'java -Dbuild.please.testpackage={test_package} {jvm_args} -jar $(location :{name}) {flags}'
 
     deps = [lib_rule]
