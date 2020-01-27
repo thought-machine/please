@@ -340,7 +340,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
     )
 
 
-def go_test(name:str, srcs:list, data:list=None, deps:list=[], worker:str='', visibility:list=None,
+def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='', visibility:list=None,
             flags:str='', sandbox:bool=None, cgo:bool=False,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=None,
             labels:list&features&tags=None, size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC,

@@ -544,7 +544,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
 
 def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[],
             linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[],
-            pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list=[],
+            pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list|dict=[],
             visibility:list=[], flags:str='', labels:list&features&tags=[], flaky:bool|int=0,
             test_outputs:list=[], size:str=None, timeout:int=0,
             sandbox:bool=None, write_main:bool=False, linkstatic:bool=False, _c=False):

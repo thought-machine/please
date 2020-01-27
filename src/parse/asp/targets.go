@@ -157,7 +157,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	}
 	addMaybeNamed(s, "tools", args[9], t.AddTool, t.AddNamedTool, true, true)
 	addMaybeNamed(s, "system_srcs", args[32], t.AddSource, nil, true, false)
-	addMaybeNamed(s, "data", args[4], t.AddDatum, nil, false, false)
+	addMaybeNamed(s, "data", args[4], t.AddDatum, t.AddNamedDatum, false, false)
 	addMaybeNamedOutput(s, "outs", args[5], t.AddOutput, t.AddNamedOutput, t, false)
 	addMaybeNamedOutput(s, "optional_outs", args[35], t.AddOptionalOutput, nil, t, true)
 	addMaybeNamedOutput(s, "test_outputs", args[31], t.AddTestOutput, nil, t, false)

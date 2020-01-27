@@ -91,7 +91,7 @@ func TestReplacementsForTest(t *testing.T) {
 
 func TestDataReplacementForTest(t *testing.T) {
 	target := makeTarget("//path/to:target1", "cat $(location test_data.txt)", nil)
-	target.Data = append(target.Data, FileLabel{File: "test_data.txt", Package: "path/to"})
+	target.AddDatum(FileLabel{File: "test_data.txt", Package: "path/to"})
 
 	expected := "cat path/to/test_data.txt"
 	cmd, _ := ReplaceTestSequences(state, target, target.Command)

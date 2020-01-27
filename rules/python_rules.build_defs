@@ -192,7 +192,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     )
 
 
-def python_test(name:str, srcs:list, data:list=[], resources:list=[], deps:list=[], worker:str='',
+def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:list=[], worker:str='',
                 labels:list&features&tags=[], size:str=None, flags:str='', visibility:list=None,
                 sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
                 test_outputs:list=None, zip_safe:bool=None, interpreter:str=None, site:bool=False):

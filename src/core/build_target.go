@@ -68,7 +68,9 @@ type BuildTarget struct {
 	// Named source files of this rule; as above but identified by name.
 	NamedSources map[string][]BuildInput `name:"srcs"`
 	// Data files of this rule. Similar to sources but used at runtime, typically by tests.
-	Data []BuildInput
+	Data []BuildInput `name:"data"`
+	// Data files of this rule by name.
+	namedData map[string][]BuildInput `name:"data"`
 	// Output files of this rule. All are paths relative to this package.
 	outputs []string `name:"outs"`
 	// Named output subsets of this rule. All are paths relative to this package but can be
@@ -900,6 +902,19 @@ func (target *BuildTarget) AddDatum(datum BuildInput) {
 	}
 }
 
+// AddNamedDatum adds a data file to the target which is tagged with a particular name.
+func (target *BuildTarget) AddNamedDatum(name string, datum BuildInput) {
+	if target.namedData == nil {
+		target.namedData = map[string][]BuildInput{name: {datum}}
+	} else {
+		target.namedData[name] = append(target.namedData[name], datum)
+	}
+	if label := datum.Label(); label != nil {
+		target.AddDependency(*label)
+		target.dependencyInfo(*label).data = true
+	}
+}
+
 // AddNamedTool adds a new tool to the target.
 func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
 	if target.namedTools == nil {
@@ -1007,7 +1022,7 @@ func (target *BuildTarget) AllLocalSources() []string {
 
 // HasSource returns true if this target has the given file as a source (named or not, or data).
 func (target *BuildTarget) HasSource(source string) bool {
-	for _, src := range append(target.AllSources(), target.Data...) {
+	for _, src := range append(target.AllSources(), target.AllData()...) {
 		if src.String() == source { // Comparison is a bit dodgy tbh
 			return true
 		}
@@ -1019,6 +1034,31 @@ func (target *BuildTarget) HasSource(source string) bool {
 // The input source includes the target's package name.
 func (target *BuildTarget) HasAbsoluteSource(source string) bool {
 	return target.HasSource(strings.TrimPrefix(source, target.Label.PackageName+"/"))
+}
+
+// AllData returns all the data files for this rule.
+func (target *BuildTarget) AllData() []BuildInput {
+	ret := target.Data[:]
+	if target.namedData != nil {
+		keys := make([]string, 0, len(target.namedData))
+		for k := range target.namedData {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			ret = append(ret, target.namedData[k]...)
+		}
+	}
+	return ret
+}
+
+// AllDataPaths returns the paths for all the data of this target.
+func (target *BuildTarget) AllDataPaths(graph *BuildGraph) []string {
+	ret := make([]string, 0, len(target.Data))
+	for _, datum := range target.AllData() {
+		ret = append(ret, target.sourcePaths(graph, datum, BuildInput.Paths)...)
+	}
+	return ret
 }
 
 // AllTools returns all the tools for this rule in some canonical order.
@@ -1047,15 +1087,6 @@ func (target *BuildTarget) ToolNames() []string {
 // NamedTools returns the tools with the given name.
 func (target *BuildTarget) NamedTools(name string) []BuildInput {
 	return target.namedTools[name]
-}
-
-// AllData returns all the data paths for this target.
-func (target *BuildTarget) AllData(graph *BuildGraph) []string {
-	ret := make([]string, 0, len(target.Data))
-	for _, datum := range target.Data {
-		ret = append(ret, datum.Paths(graph)...)
-	}
-	return ret
 }
 
 // AddDependency adds a dependency to this target. It deduplicates against any existing deps.

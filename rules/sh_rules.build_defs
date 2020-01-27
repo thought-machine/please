@@ -88,7 +88,7 @@ def sh_binary(name:str, main:str|list&srcs, deps:list=None, visibility:list=None
     )
 
 
-def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list=None, deps:list=None, worker:str='',
+def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list|dict=None, deps:list=None, worker:str='',
             size:str=None, visibility:list=None, flags:str='', flaky:bool|int=0, test_outputs:list=None, timeout:int=0,
             sandbox:bool=None):
     """Generates a shell test. Note that these aren't packaged in a useful way.
@@ -150,7 +150,7 @@ def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, out:str="", shell:s
       name (str): Name of the rule.
       cmd (str | dict): Command to write into the output script file. The commands are subject to
                         shell expansion during build time, so if that is to be avoided the variables
-                        have to be escaped with \\\\\\$, i.e. \\\\\\${@}. 
+                        have to be escaped with \\\\\\$, i.e. \\\\\\${@}.
       srcs (list | dict): Source files. Can be consumed by the generated command (but are not
                           written into the output in any other way).
       out (str): Name of the output file to create. Defaults to name + .sh.
