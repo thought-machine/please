@@ -270,3 +270,6 @@ type testHasher struct{}
 func (h *testHasher) OutputHash(target *BuildTarget) ([]byte, error) {
 	return base64.RawStdEncoding.DecodeString(testHash)
 }
+
+func (h *testHasher) SetHash(target *BuildTarget, hash []byte) {
+}

@@ -237,9 +237,9 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 }
 
 // uploadInputs finds and uploads a set of inputs from a target.
-func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest, useTargetPackage bool) (*pb.Directory, error) {
+func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest, isFilegroup bool) (*pb.Directory, error) {
 	b := newDirBuilder(c)
-	for input := range c.iterInputs(target, isTest) {
+	for input := range c.iterInputs(target, isTest, isFilegroup) {
 		if l := input.Label(); l != nil {
 			if o := c.targetOutputs(*l); o == nil {
 				if c.remoteExecution {
@@ -248,7 +248,7 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest,
 				}
 			} else {
 				pkgName := l.PackageName
-				if useTargetPackage {
+				if isFilegroup {
 					pkgName = target.Label.PackageName
 				} else if isTest && *l == target.Label {
 					// At test time the target itself is put at the root rather than in the normal dir.
@@ -266,12 +266,14 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest,
 			return nil, err
 		}
 	}
-	if isTest && target.Stamp && ch != nil {
+	if !isTest && target.Stamp {
 		stamp := core.StampFile(target)
 		digest := c.digestBlob(stamp)
-		ch <- &blob{
-			Digest: digest,
-			Data:   stamp,
+		if ch != nil {
+			ch <- &blob{
+				Digest: digest,
+				Data:   stamp,
+			}
 		}
 		d := b.Dir(".")
 		d.Files = append(d.Files, &pb.FileNode{
@@ -279,7 +281,7 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest,
 			Digest: digest,
 		})
 	}
-	if useTargetPackage {
+	if isFilegroup {
 		b.Root(ch)
 		return b.Dir(target.Label.PackageName), nil
 	}
@@ -341,9 +343,9 @@ func (c *Client) uploadInput(b *dirBuilder, ch chan<- *blob, input core.BuildInp
 }
 
 // iterInputs yields all the input files needed for a target.
-func (c *Client) iterInputs(target *core.BuildTarget, isTest bool) <-chan core.BuildInput {
+func (c *Client) iterInputs(target *core.BuildTarget, isTest, isFilegroup bool) <-chan core.BuildInput {
 	if !isTest {
-		return core.IterInputs(c.state.Graph, target, true)
+		return core.IterInputs(c.state.Graph, target, true, isFilegroup)
 	}
 	ch := make(chan core.BuildInput)
 	go func() {
