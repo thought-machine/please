@@ -350,11 +350,14 @@ func (target *BuildTarget) allSourcePaths(graph *BuildGraph, full buildPathsFunc
 	return ret
 }
 
-// AllURLs returns all the URLs for this target. This should only be called if the target is a remote file.
-func (target *BuildTarget) AllURLs() []string {
+// AllURLs returns all the URLs for this target.
+// This should only be called if the target is a remote file.
+// The URLs will have any embedded environment variables expanded according to the given config.
+func (target *BuildTarget) AllURLs(config *Configuration) []string {
+	env := GeneralBuildEnvironment(config)
 	ret := make([]string, len(target.Sources))
 	for i, s := range target.Sources {
-		ret[i] = string(s.(URLLabel))
+		ret[i] = os.Expand(string(s.(URLLabel)), env.ReplaceEnvironment)
 	}
 	return ret
 }

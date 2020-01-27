@@ -583,7 +583,7 @@ func (c *Client) DataRate() (int, int, int, int) {
 // fetchRemoteFile sends a request to fetch a file using the remote asset API.
 func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
 	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading...")
-	urls := target.AllURLs()
+	urls := target.AllURLs(c.state.Config)
 	req := &fpb.FetchBlobRequest{
 		InstanceName: c.instance,
 		Timeout:      ptypes.DurationProto(target.BuildTimeout),

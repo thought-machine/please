@@ -153,7 +153,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 func (c *Client) getCommand(target *core.BuildTarget) string {
 	if target.IsRemoteFile {
 		// This isn't a real command, but it suits us to construct a pseudo-version of one.
-		cmd := "fetch " + strings.Join(target.AllURLs(), " ") + " & verify " + strings.Join(target.Hashes, " ")
+		cmd := "fetch " + strings.Join(target.AllURLs(c.state.Config), " ") + " & verify " + strings.Join(target.Hashes, " ")
 		if target.IsBinary {
 			return cmd + " binary"
 		}
