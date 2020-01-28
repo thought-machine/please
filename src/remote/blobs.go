@@ -14,8 +14,6 @@ import (
 	"golang.org/x/sync/errgroup"
 	bs "google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/grpc/codes"
-
-	"github.com/thought-machine/please/src/core"
 )
 
 // chunkSize is the size of a chunk that we send when using the ByteStream APIs.
@@ -35,14 +33,6 @@ type blob struct {
 	File   string
 	Mode   os.FileMode // Only used when receiving blobs, to determine what the output file mode should be
 }
-
-type contextKey string
-
-var (
-	bytesKey      contextKey = "bytes"
-	totalBytesKey contextKey = "total_bytes"
-	targetKey     contextKey = "target"
-)
 
 // uploadBlobs uploads a series of blobs to the remote.
 // It handles all the logic around the various upload methods etc.
@@ -248,14 +238,4 @@ func (c *Client) byteStreamUploadName(digest *pb.Digest) string {
 		name = c.instance + "/" + name
 	}
 	return name
-}
-
-// updateProgress updates the progress on a target.
-func updateProgress(ctx context.Context, increment int) {
-	if target := ctx.Value(targetKey); target != nil {
-		total := ctx.Value(totalBytesKey).(*int)
-		current := ctx.Value(bytesKey).(*int)
-		*current += increment
-		target.(*core.BuildTarget).Progress = 100.0 * float32(*current) / float32(*total)
-	}
 }

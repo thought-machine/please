@@ -239,16 +239,6 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	// Need to download the target if it was originally requested (and the user didn't pass --nodownload).
 	// Also anything needed for subinclude needs to be local.
 	if (c.state.IsOriginalTarget(target.Label) && c.state.DownloadOutputs && !c.state.NeedTests) || target.NeededForSubinclude {
-
-		/*
-			target.ShowProgress = true
-			bytesRead := 0
-			totalBytes := totalSize(trees, resp.OutputFiles)
-			ctx = context.WithValue(ctx, targetKey, target)
-			ctx = context.WithValue(ctx, bytesKey, &bytesRead)
-			ctx = context.WithValue(ctx, totalBytesKey, &totalBytes)
-		*/
-
 		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
 		if err := removeOutputs(target); err != nil {
 			return nil, err
@@ -332,7 +322,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	// Remote actions & filegroups get special treatment at this point.
 	if target.IsFilegroup {
 		// Filegroups get special-cased since they are just a movement of files.
-		return c.buildFilegroup(target, digest)
+		return c.buildFilegroup(target, command, digest)
 	} else if target.IsRemoteFile {
 		return c.fetchRemoteFile(tid, target, digest)
 	}
@@ -551,33 +541,30 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 }
 
 // buildFilegroup "builds" a single filegroup target.
-func (c *Client) buildFilegroup(target *core.BuildTarget, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
 	b, err := c.uploadInputDir(nil, target, false) // We don't need to actually upload the inputs here, that is already done.
 	if err != nil {
 		return nil, nil, err
 	}
 	ar := &pb.ActionResult{}
-	d := b.Dir(target.Label.PackageName)
 	if err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
-		for _, f := range d.Files {
-			ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-				Path:         f.Name,
-				Digest:       f.Digest,
-				IsExecutable: f.IsExecutable,
-			})
-		}
-		for _, d := range d.Directories {
-			ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
-				Path:       d.Name,
-				TreeDigest: c.digestMessage(b.Tree(ch, path.Join(target.Label.PackageName, d.Name))),
-			})
-		}
-		for _, s := range d.Symlinks {
-			ar.OutputFileSymlinks = append(ar.OutputFileSymlinks, &pb.OutputSymlink{
-				Path:   s.Name,
-				Target: s.Target,
-			})
+		for _, out := range command.OutputPaths {
+			if d, f := b.Node(path.Join(target.Label.PackageName, out)); d != nil {
+				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
+					Path:       out,
+					TreeDigest: c.digestMessage(b.Tree(ch, path.Join(target.Label.PackageName, out))),
+				})
+			} else if f != nil {
+				ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
+					Path:         out,
+					Digest:       f.Digest,
+					IsExecutable: f.IsExecutable,
+				})
+			} else {
+				// Of course, we should not get here (classic developer things...)
+				return fmt.Errorf("Missing output from filegroup: %s", out)
+			}
 		}
 		return nil
 	}); err != nil {

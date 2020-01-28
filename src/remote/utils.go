@@ -377,6 +377,23 @@ func (b *dirBuilder) Root(ch chan<- *blob) *pb.Directory {
 	return b.root
 }
 
+// Node returns either the file or directory corresponding to the given path (or nil for both if not found)
+func (b *dirBuilder) Node(name string) (*pb.DirectoryNode, *pb.FileNode) {
+	dir := b.Dir(path.Dir(name))
+	base := path.Base(name)
+	for _, d := range dir.Directories {
+		if d.Name == base {
+			return d, nil
+		}
+	}
+	for _, f := range dir.Files {
+		if f.Name == base {
+			return nil, f
+		}
+	}
+	return nil, nil
+}
+
 // Tree returns the tree rooted at a given directory name.
 // It does not calculate digests or upload, so call Root beforehand if that is needed.
 func (b *dirBuilder) Tree(ch chan<- *blob, root string) *pb.Tree {
@@ -436,32 +453,6 @@ func removeOutputs(target *core.BuildTarget) error {
 		}
 	}
 	return nil
-}
-
-// totalSize returns the total size of a set of downloads from an ActionResult.
-func totalSize(dirs []*pb.Tree, files []*pb.OutputFile) int {
-	var size int64
-	for _, file := range files {
-		size += file.Digest.SizeBytes
-	}
-	for _, dir := range dirs {
-		size += dirSize(dir.Root)
-		for _, child := range dir.Children {
-			size += dirSize(child)
-		}
-	}
-	return int(size)
-}
-
-// dirSize returns the immediate size of a directory (but not recursively)
-func dirSize(dir *pb.Directory) (size int64) {
-	for _, file := range dir.Files {
-		size += file.Digest.SizeBytes
-	}
-	for _, dir := range dir.Directories {
-		size += dir.Digest.SizeBytes
-	}
-	return size
 }
 
 // subresourceIntegrity returns a string corresponding to a target's hashes in the Subresource Integrity format.
