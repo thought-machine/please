@@ -4,17 +4,16 @@
 package remote
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"path"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
+	sdkdigest "github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
@@ -28,7 +27,6 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/fs"
 )
 
 var log = logging.MustGetLogger("remote")
@@ -61,9 +59,8 @@ type Client struct {
 	outputMutex sync.RWMutex
 
 	// Server-sent cache properties
-	maxBlobBatchSize  int64
-	cacheWritable     bool
-	canBatchBlobReads bool // This isn't supported by all servers.
+	maxBlobBatchSize int64
+	cacheWritable    bool
 
 	// Platform properties that we will request from the remote.
 	// TODO(peterebden): this will need some modification for cross-compiling support.
@@ -159,7 +156,6 @@ func (c *Client) initExec() error {
 	// Look this up just once now.
 	bash, err := core.LookBuildPath("bash", c.state.Config)
 	c.bashPath = bash
-	c.canBatchBlobReads = c.checkBatchReadBlobs()
 	log.Debug("Remote execution client initialised for storage")
 	// Now check if it can do remote execution
 	if resp.ExecutionCapabilities == nil {
@@ -220,108 +216,10 @@ func (c *Client) digestEnum(name string) pb.DigestFunction_Value {
 	}
 }
 
-// Retrieve fetches back a set of artifacts for a single build target.
-// Its outputs are written out to their final locations.
-func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error) {
-	if err := c.CheckInitialised(); err != nil {
-		return nil, err
-	}
-	outDir := target.OutDir()
-	if target.IsFilegroup {
-		if err := removeOutputs(target); err != nil {
-			return nil, err
-		}
-		// TODO(peterebden): We should be able to measure progress here too, but we don't have all
-		//                   the recursive directory protos handy. Work out how GetTree is meant to
-		//                   be used and see if we can use that somehow.
-		return &core.BuildMetadata{}, c.downloadDirectory(context.TODO(), outDir, c.targetOutputs(target.Label))
-	}
-	isTest := target.State() >= core.Built
-	needStdout := target.PostBuildFunction != nil && !isTest // We only care in this case.
-	_, digest, err := c.buildAction(target, isTest)
-	if err != nil {
-		return nil, err
-	}
-	// Check if the outputs already exist and are up to date, in which case we don't need to download.
-	if !c.state.ForceRebuild && c.outputsExist(target, digest) {
-		return &core.BuildMetadata{}, nil
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	resp, err := c.client.GetActionResult(ctx, &pb.GetActionResultRequest{
-		InstanceName: c.instance,
-		ActionDigest: digest,
-		InlineStdout: needStdout,
-	})
-	if err != nil {
-		return nil, err
-	} else if err := c.setOutputs(target.Label, resp); err != nil {
-		return nil, err
-	}
-	mode := target.OutMode()
-	if err := removeOutputs(target); err != nil {
-		return nil, err
-	}
-	trees := make([]*pb.Tree, len(resp.OutputDirectories))
-	for i, dir := range resp.OutputDirectories {
-		trees[i] = &pb.Tree{}
-		if err := c.readByteStreamToProto(context.Background(), dir.TreeDigest, trees[i]); err != nil {
-			return nil, err
-		}
-	}
-
-	// Turn on progress display for measuring download speed
-	target.ShowProgress = true
-	bytesRead := 0
-	totalBytes := totalSize(trees, resp.OutputFiles)
-	ctx = context.WithValue(ctx, targetKey, target)
-	ctx = context.WithValue(ctx, bytesKey, &bytesRead)
-	ctx = context.WithValue(ctx, totalBytesKey, &totalBytes)
-
-	if err := c.downloadBlobs(ctx, func(ch chan<- *blob) error {
-		defer close(ch)
-		for _, file := range resp.OutputFiles {
-			filePath := path.Join(outDir, target.GetRealOutput(file.Path))
-			addPerms := extraPerms(file)
-			if file.Contents != nil {
-				// Inlining must have been requested. Can write it directly.
-				if err := fs.EnsureDir(filePath); err != nil {
-					return err
-				} else if err := fs.WriteFile(bytes.NewReader(file.Contents), filePath, mode|addPerms); err != nil {
-					return err
-				}
-			} else {
-				ch <- &blob{Digest: file.Digest, File: filePath, Mode: mode | addPerms}
-			}
-		}
-		for i, dir := range resp.OutputDirectories {
-			if err := c.downloadDirectory(ctx, path.Join(outDir, dir.Path), trees[i].Root); err != nil {
-				return err
-			}
-		}
-		// For unexplained reasons the protocol treats symlinks differently based on what
-		// they point to. We obviously create them in the same way though.
-		for _, link := range append(resp.OutputFileSymlinks, resp.OutputDirectorySymlinks...) {
-			if err := os.Symlink(link.Target, path.Join(outDir, link.Path)); err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, c.wrapActionErr(err, digest)
-	}
-	c.recordAttrs(target, digest)
-	return c.buildMetadata(resp, needStdout, false)
-}
-
 // Build executes a remote build of the given target.
 func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
-	}
-	if target.IsFilegroup {
-		// Filegroups get special-cased since they are just a movement of files.
-		return &core.BuildMetadata{}, c.setFilegroupOutputs(target)
 	}
 	command, digest, err := c.buildAction(target, false)
 	if err != nil {
@@ -335,7 +233,24 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if c.state.TargetHasher != nil {
 		c.state.TargetHasher.SetHash(target, hash)
 	}
-	return metadata, c.wrapActionErr(c.setOutputs(target.Label, ar), digest)
+	if err := c.setOutputs(target.Label, ar); err != nil {
+		return metadata, c.wrapActionErr(err, digest)
+	}
+	// Need to download the target if it was originally requested (and the user didn't pass --nodownload).
+	// Also anything needed for subinclude needs to be local.
+	if (c.state.IsOriginalTarget(target.Label) && c.state.DownloadOutputs && !c.state.NeedTests) || target.NeededForSubinclude {
+		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
+		if err := removeOutputs(target); err != nil {
+			return nil, err
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+		defer cancel()
+		if err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir()); err != nil {
+			return metadata, c.wrapActionErr(err, digest)
+		}
+		c.recordAttrs(target, digest)
+	}
+	return metadata, nil
 }
 
 // Test executes a remote test of the given target.
@@ -360,7 +275,9 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	}
 	if target.NeedCoverage(c.state) && ar != nil {
 		if digest := c.digestForFilename(ar, core.CoverageFile); digest != nil {
-			coverage, err = c.readAllByteStream(context.Background(), digest)
+			ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+			defer cancel()
+			coverage, err = c.client.ReadBlob(ctx, sdkdigest.NewFromProtoUnvalidated(digest))
 			if execErr == nil && err != nil {
 				return metadata, results, nil, err
 			}
@@ -402,8 +319,11 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
-	// Remote actions get special treatment at this point.
-	if target.IsRemoteFile {
+	// Remote actions & filegroups get special treatment at this point.
+	if target.IsFilegroup {
+		// Filegroups get special-cased since they are just a movement of files.
+		return c.buildFilegroup(target, command, digest)
+	} else if target.IsRemoteFile {
 		return c.fetchRemoteFile(tid, target, digest)
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), timeout)
@@ -548,7 +468,7 @@ func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.
 
 // PrintHashes prints the action hashes for a target.
 func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
-	inputRoot, err := c.uploadInputs(nil, target, isTest, false)
+	inputRoot, err := c.uploadInputs(nil, target, isTest)
 	if err != nil {
 		log.Fatalf("Unable to calculate input hash: %s", err)
 	}
@@ -609,6 +529,48 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 		}},
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), c.reqTimeout)
+	defer cancel()
+	if _, err := c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
+		InstanceName: c.instance,
+		ActionDigest: actionDigest,
+		ActionResult: ar,
+	}); err != nil {
+		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
+	}
+	return &core.BuildMetadata{}, ar, nil
+}
+
+// buildFilegroup "builds" a single filegroup target.
+func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
+	b, err := c.uploadInputDir(nil, target, false) // We don't need to actually upload the inputs here, that is already done.
+	if err != nil {
+		return nil, nil, err
+	}
+	ar := &pb.ActionResult{}
+	if err := c.uploadBlobs(func(ch chan<- *blob) error {
+		defer close(ch)
+		for _, out := range command.OutputPaths {
+			if d, f := b.Node(path.Join(target.Label.PackageName, out)); d != nil {
+				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
+					Path:       out,
+					TreeDigest: c.digestMessage(b.Tree(ch, path.Join(target.Label.PackageName, out))),
+				})
+			} else if f != nil {
+				ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
+					Path:         out,
+					Digest:       f.Digest,
+					IsExecutable: f.IsExecutable,
+				})
+			} else {
+				// Of course, we should not get here (classic developer things...)
+				return fmt.Errorf("Missing output from filegroup: %s", out)
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	if _, err := c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
 		InstanceName: c.instance,

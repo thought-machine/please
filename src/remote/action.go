@@ -26,7 +26,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest bool) (*pb.Comman
 	var digest *pb.Digest
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
-		inputRoot, err := c.uploadInputs(ch, target, isTest, false)
+		inputRoot, err := c.uploadInputs(ch, target, isTest)
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest bool) (*pb.Comman
 
 // buildAction creates a build action for a target and returns the command and the action digest digest. No uploading is done.
 func (c *Client) buildAction(target *core.BuildTarget, isTest bool) (*pb.Command, *pb.Digest, error) {
-	inputRoot, err := c.uploadInputs(nil, target, isTest, false)
+	inputRoot, err := c.uploadInputs(nil, target, isTest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -233,31 +233,59 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 }
 
 // uploadInputs finds and uploads a set of inputs from a target.
-func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest, isFilegroup bool) (*pb.Directory, error) {
+func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
 	if target.IsRemoteFile {
 		return &pb.Directory{}, nil
 	}
+	b, err := c.uploadInputDir(ch, target, isTest)
+	if err != nil {
+		return nil, err
+	}
+	return b.Root(ch), nil
+}
+
+func (c *Client) uploadInputDir(ch chan<- *blob, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
 	b := newDirBuilder(c)
-	for input := range c.iterInputs(target, isTest, isFilegroup) {
+	for input := range c.iterInputs(target, isTest, target.IsFilegroup) {
 		if l := input.Label(); l != nil {
-			if o := c.targetOutputs(*l); o == nil {
+			o := c.targetOutputs(*l)
+			if o == nil {
 				// Classic "we shouldn't get here" stuff
 				return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", *l)
-			} else {
-				pkgName := l.PackageName
-				if isFilegroup {
-					pkgName = target.Label.PackageName
-				} else if isTest && *l == target.Label {
-					// At test time the target itself is put at the root rather than in the normal dir.
-					// This is just How Things Are, so mimic it here.
-					pkgName = "."
-				}
-				d := b.Dir(pkgName)
-				d.Files = append(d.Files, o.Files...)
-				d.Directories = append(d.Directories, o.Directories...)
-				d.Symlinks = append(d.Symlinks, o.Symlinks...)
-				continue
 			}
+			pkgName := l.PackageName
+			if target.IsFilegroup {
+				pkgName = target.Label.PackageName
+			} else if isTest && *l == target.Label {
+				// At test time the target itself is put at the root rather than in the normal dir.
+				// This is just How Things Are, so mimic it here.
+				pkgName = "."
+			}
+			// Recall that (as noted in setOutputs) these can have full paths on them, which
+			// we now need to sort out again to create well-formed Directory protos.
+			for _, f := range o.Files {
+				d := b.Dir(path.Join(pkgName, path.Dir(f.Name)))
+				d.Files = append(d.Files, &pb.FileNode{
+					Name:         path.Base(f.Name),
+					Digest:       f.Digest,
+					IsExecutable: f.IsExecutable,
+				})
+			}
+			for _, d := range o.Directories {
+				dir := b.Dir(path.Join(pkgName, path.Dir(d.Name)))
+				dir.Directories = append(dir.Directories, &pb.DirectoryNode{
+					Name:   path.Base(d.Name),
+					Digest: d.Digest,
+				})
+			}
+			for _, s := range o.Symlinks {
+				d := b.Dir(path.Join(pkgName, path.Dir(s.Name)))
+				d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
+					Name:   path.Base(s.Name),
+					Target: s.Target,
+				})
+			}
+			continue
 		}
 		if err := c.uploadInput(b, ch, input); err != nil {
 			return nil, err
@@ -278,11 +306,7 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest,
 			Digest: digest,
 		})
 	}
-	if isFilegroup {
-		b.Root(ch)
-		return b.Dir(target.Label.PackageName), nil
-	}
-	return b.Root(ch), nil
+	return b, nil
 }
 
 // uploadInput finds and uploads a single input.
@@ -369,14 +393,18 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		metadata.InputFetchEndTime = toTime(ar.ExecutionMetadata.InputFetchCompletedTimestamp)
 	}
 	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
-		b, err := c.readAllByteStream(context.Background(), ar.StdoutDigest)
+		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+		defer cancel()
+		b, err := c.client.ReadBlob(ctx, digest.NewFromProtoUnvalidated(ar.StdoutDigest))
 		if err != nil {
 			return metadata, err
 		}
 		metadata.Stdout = b
 	}
 	if needStderr && len(metadata.Stderr) == 0 && ar.StderrDigest != nil {
-		b, err := c.readAllByteStream(context.Background(), ar.StderrDigest)
+		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+		defer cancel()
+		b, err := c.client.ReadBlob(ctx, digest.NewFromProtoUnvalidated(ar.StderrDigest))
 		if err != nil {
 			return metadata, err
 		}
@@ -417,37 +445,6 @@ func (c *Client) downloadAllPrefixedFiles(ar *pb.ActionResult, prefix string) ([
 		ret = append(ret, blob)
 	}
 	return ret, err
-}
-
-// downloadDirectory downloads & writes out a single Directory proto.
-func (c *Client) downloadDirectory(ctx context.Context, root string, dir *pb.Directory) error {
-	if err := os.MkdirAll(root, core.DirPermissions); err != nil {
-		return err
-	}
-	for _, file := range dir.Files {
-		if err := c.retrieveByteStream(ctx, &blob{
-			Digest: file.Digest,
-			File:   path.Join(root, file.Name),
-			Mode:   0644 | extraFilePerms(file),
-		}); err != nil {
-			return wrap(err, "Downloading %s", path.Join(root, file.Name))
-		}
-	}
-	for _, dir := range dir.Directories {
-		d := &pb.Directory{}
-		name := path.Join(root, dir.Name)
-		if err := c.readByteStreamToProto(ctx, dir.Digest, d); err != nil {
-			return wrap(err, "Downloading directory metadata for %s", name)
-		} else if err := c.downloadDirectory(ctx, name, d); err != nil {
-			return wrap(err, "Downloading directory %s", name)
-		}
-	}
-	for _, sym := range dir.Symlinks {
-		if err := os.Symlink(sym.Target, path.Join(root, sym.Name)); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // verifyActionResult verifies that all the requested outputs actually exist in a returned

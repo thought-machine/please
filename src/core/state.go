@@ -69,9 +69,7 @@ type Parser interface {
 
 // A RemoteClient is the interface to a remote execution service.
 type RemoteClient interface {
-	// Retrieve fetches remote results from the service.
-	Retrieve(target *BuildTarget) (*BuildMetadata, error)
-	// Build invokes a build of the target remotely
+	// Build invokes a build of the target remotely.
 	Build(tid int, target *BuildTarget) (*BuildMetadata, error)
 	// Test invokes a test run of the target remotely.
 	Test(tid int, target *BuildTarget) (metadata *BuildMetadata, results [][]byte, coverage []byte, err error)

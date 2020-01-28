@@ -3,10 +3,8 @@ package remote
 import (
 	"context"
 	"encoding/hex"
-	"io/ioutil"
 	"os"
 	"path"
-	"runtime"
 	"testing"
 	"time"
 
@@ -41,89 +39,6 @@ func TestUnsupportedDigest(t *testing.T) {
 	}
 	c := newClient()
 	assert.Error(t, c.CheckInitialised())
-}
-
-func TestStoreAndRetrieve(t *testing.T) {
-	c := newClient()
-	c.CheckInitialised()
-	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target1"})
-	target.AddSource(core.FileLabel{File: "src1.txt", Package: "package"})
-	target.AddSource(core.FileLabel{File: "src2.txt", Package: "package"})
-	target.AddOutput("out1.txt")
-	target.PostBuildFunction = testFunction{}
-	now := time.Now().UTC()
-	metadata := &core.BuildMetadata{
-		Stdout:              []byte("test stdout"),
-		StartTime:           now,
-		EndTime:             now,
-		InputFetchStartTime: now,
-		InputFetchEndTime:   now,
-	}
-	err := c.Store(target, metadata, []string{"out1.txt"})
-	assert.NoError(t, err)
-	// Remove the old file, but remember its contents so we can compare later.
-	contents, err := ioutil.ReadFile("plz-out/gen/package/out1.txt")
-	assert.NoError(t, err)
-	err = os.Remove("plz-out/gen/package/out1.txt")
-	assert.NoError(t, err)
-	// Now retrieve back the output of this thing.
-	retrievedMetadata, err := c.Retrieve(target)
-	assert.NoError(t, err)
-	cachedContents, err := ioutil.ReadFile("plz-out/gen/package/out1.txt")
-	assert.NoError(t, err)
-	assert.Equal(t, contents, cachedContents)
-	assert.Equal(t, metadata, retrievedMetadata)
-}
-
-func TestStoreAndRetrieveDir(t *testing.T) {
-	c := newClient()
-	c.CheckInitialised()
-	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package2", Name: "target2"})
-	target.IsBinary = true
-	target.IsTest = true
-	target.SetState(core.Built)
-	target.AddLabel(core.TestResultsDirLabel)
-	target.AddOutput("target2")
-	c.state.Graph.AddTarget(target)
-	err := c.Store(target, &core.BuildMetadata{}, target.Outputs())
-	assert.NoError(t, err)
-	err = c.Store(target, &core.BuildMetadata{
-		Stdout: []byte("test stdout"),
-		Test:   true,
-	}, []string{
-		path.Base(target.TestResultsFile()),
-		"1.xml",
-	})
-	assert.NoError(t, err)
-
-	// Move old results out of the way
-	resultsDir := "plz-out/bin/package2/.test_results_target2"
-	err = os.RemoveAll(resultsDir)
-	assert.NoError(t, err)
-	err = os.Remove("plz-out/bin/package2/1.xml")
-	assert.NoError(t, err)
-
-	// Now retrieve them again
-	_, err = c.Retrieve(target)
-	assert.NoError(t, err)
-	b, err := ioutil.ReadFile(path.Join(resultsDir, "1.xml"))
-	assert.NoError(t, err)
-	assert.Equal(t, string(b), xmlResults)
-	b, err = ioutil.ReadFile(path.Join(resultsDir, "results/2.xml"))
-	assert.NoError(t, err)
-	assert.Equal(t, string(b), xmlResults)
-
-	// TODO(peterebden): This does not seem to be working on OSX or FreeBSD; it doesn't seem
-	//                   to be because of this package, but the test files are seemingly not
-	//                   coming out as symlinks correctly.
-	if runtime.GOOS == "linux" {
-		link, err := os.Readlink("plz-out/bin/package2/1.xml")
-		assert.NoError(t, err)
-		assert.Equal(t, ".test_results_target2/1.xml", link)
-		link, err = os.Readlink(path.Join(resultsDir, "2.xml"))
-		assert.NoError(t, err)
-		assert.Equal(t, "results/2.xml", link)
-	}
 }
 
 const xmlResults = `<?xml version="1.0" encoding="UTF-8"?>

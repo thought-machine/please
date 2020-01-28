@@ -10,15 +10,10 @@ import (
 	"os"
 
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
-	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	bs "google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/fs"
 )
 
 // chunkSize is the size of a chunk that we send when using the ByteStream APIs.
@@ -38,14 +33,6 @@ type blob struct {
 	File   string
 	Mode   os.FileMode // Only used when receiving blobs, to determine what the output file mode should be
 }
-
-type contextKey string
-
-var (
-	bytesKey      contextKey = "bytes"
-	totalBytesKey contextKey = "total_bytes"
-	targetKey     contextKey = "target"
-)
 
 // uploadBlobs uploads a series of blobs to the remote.
 // It handles all the logic around the various upload methods etc.
@@ -190,33 +177,6 @@ func (c *Client) sendBlobs(reqs []*pb.BatchUpdateBlobsRequest_Request) error {
 	return nil
 }
 
-// receiveBlobs retrieves a set of blobs from the remote CAS server.
-func (c *Client) receiveBlobs(ctx context.Context, digests []*pb.Digest, filenames map[string]string, modes map[string]os.FileMode) error {
-	ctx, cancel := context.WithTimeout(ctx, c.reqTimeout)
-	defer cancel()
-	resp, err := c.client.BatchReadBlobs(ctx, &pb.BatchReadBlobsRequest{
-		InstanceName: c.instance,
-		Digests:      digests,
-	})
-	if err != nil {
-		return err
-	}
-	// TODO(peterebden): as above, could probably handle this a bit better.
-	for _, r := range resp.Responses {
-		if r.Status.Code != int32(codes.OK) {
-			return fmt.Errorf("%s", r.Status.Message)
-		}
-		filename := filenames[r.Digest.Hash]
-		mode := modes[r.Digest.Hash]
-		if err := fs.EnsureDir(filename); err != nil {
-			return err
-		} else if err := fs.WriteFile(bytes.NewReader(r.Data), filename, mode); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // storeByteStream sends a single file as a bytestream. This is required when
 // it's over the size limit for BatchUpdateBlobs.
 func (c *Client) storeByteStream(b *blob) error {
@@ -278,176 +238,4 @@ func (c *Client) byteStreamUploadName(digest *pb.Digest) string {
 		name = c.instance + "/" + name
 	}
 	return name
-}
-
-// byteStreamDownloadName returns the resource name for a file downloaded from
-// the API as a bytestream. Of course this is different to the one it's uploaded under.
-func (c *Client) byteStreamDownloadName(digest *pb.Digest) string {
-	name := fmt.Sprintf("blobs/%s/%d", digest.Hash, digest.SizeBytes)
-	if c.instance != "" {
-		name = c.instance + "/" + name
-	}
-	return name
-}
-
-// downloadBlobs downloads a series of blobs from the CAS server.
-// Each blob given must have the File and Digest properties completely set, but
-// Data is not required.
-// The given function is a callback that receives a channel to send these blobs on; it
-// should close it when finished.
-func (c *Client) downloadBlobs(ctx context.Context, f func(ch chan<- *blob) error) error {
-	ch := make(chan *blob, 10)
-	done := make(chan struct{})
-	var g errgroup.Group
-	g.Go(func() error {
-		defer close(done)
-		g.Go(func() error { return f(ch) })
-
-		digests := []*pb.Digest{}
-		filenames := map[string]string{}  // map of hash -> output filename
-		modes := map[string]os.FileMode{} // map of hash -> file mode
-		var totalSize int64
-		for b := range ch {
-			filenames[b.Digest.Hash] = b.File
-			modes[b.Digest.Hash] = b.Mode
-			if b.Digest.SizeBytes > c.maxBlobBatchSize || !c.canBatchBlobReads || len(digests) == maxNumBlobs {
-				// This blob individually exceeds the size, have to use this
-				// ByteStream malarkey instead.
-				if err := c.retrieveByteStream(ctx, b); err != nil {
-					return err
-				}
-				continue
-			} else if b.Digest.SizeBytes+totalSize > c.maxBlobBatchSize {
-				// We have exceeded the total but this blob on its own is OK.
-				// Receive what we have so far then deal with this one.
-				if err := c.receiveBlobs(ctx, digests, filenames, modes); err != nil {
-					return err
-				}
-				updateProgress(ctx, int(totalSize))
-				digests = []*pb.Digest{}
-				totalSize = 0
-			}
-			digests = append(digests, b.Digest)
-			totalSize += b.Digest.SizeBytes
-		}
-		// If there are any digests left over, download them now
-		if len(digests) > 0 {
-			if err := c.receiveBlobs(ctx, digests, filenames, modes); err != nil {
-				return err
-			}
-			updateProgress(ctx, int(totalSize))
-		}
-		return nil
-	})
-
-	select {
-	case <-done:
-		return g.Wait()
-	case <-ctx.Done():
-		return fmt.Errorf("timed out retrieving artifact from remote cache")
-	}
-
-}
-
-// retrieveByteStream receives a file back from the server as a byte stream.
-func (c *Client) retrieveByteStream(ctx context.Context, b *blob) error {
-	if b.Digest == nil {
-		return fmt.Errorf("can't retrieve byte stream from nil digest")
-	}
-	r, err := c.readByteStream(ctx, b.Digest)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-	return fs.WriteFile(r, b.File, b.Mode)
-}
-
-// readByteStream returns a reader for a bytestream for the given digest.
-func (c *Client) readByteStream(ctx context.Context, digest *pb.Digest) (io.ReadCloser, error) {
-	ctx, cancel := context.WithTimeout(ctx, c.reqTimeout)
-	stream, err := c.client.Read(ctx, &bs.ReadRequest{
-		ResourceName: c.byteStreamDownloadName(digest),
-	})
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-	return &byteStreamReader{ctx: ctx, stream: stream, cancel: cancel, digest: digest}, nil
-}
-
-// readAllByteStream returns a bytestream read in its entirety.
-func (c *Client) readAllByteStream(ctx context.Context, digest *pb.Digest) ([]byte, error) {
-	r, err := c.readByteStream(ctx, digest)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	return ioutil.ReadAll(r)
-}
-
-// readByteStreamToProto reads an entire bytestream and deserialises it into a message.
-func (c *Client) readByteStreamToProto(ctx context.Context, digest *pb.Digest, msg proto.Message) error {
-	b, err := c.readAllByteStream(ctx, digest)
-	if err != nil {
-		return err
-	}
-	return proto.Unmarshal(b, msg)
-}
-
-// checkBatchReadBlobs sends a fake request to verify if BatchReadBlobs is supported
-// (it is not on some servers, e.g. buildbarn).
-func (c *Client) checkBatchReadBlobs() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	defer cancel()
-	_, err := c.client.BatchReadBlobs(ctx, &pb.BatchReadBlobsRequest{
-		InstanceName: c.instance,
-	})
-	return status.Code(err) != codes.Unimplemented
-}
-
-// A byteStreamReader abstracts over the bytestream gRPC API to turn it into an
-// io.Reader which we can then pass to other things which are ignorant of its true nature.
-type byteStreamReader struct {
-	ctx    context.Context
-	stream bs.ByteStream_ReadClient
-	cancel func()
-	buf    []byte
-	digest *pb.Digest
-}
-
-// Read implements the io.Reader interface
-func (r *byteStreamReader) Read(into []byte) (int, error) {
-	l := len(into)
-	for l > len(r.buf) {
-		resp, err := r.stream.Recv()
-		if err == io.EOF {
-			copy(into, r.buf)
-			updateProgress(r.ctx, len(r.buf))
-			return len(r.buf), err
-		} else if err != nil {
-			log.Debug("Error downloading blob for %s/%d: %s", r.digest.Hash, r.digest.SizeBytes, err)
-			return 0, err
-		}
-		r.buf = append(r.buf, resp.Data...)
-	}
-	copy(into, r.buf[:l])
-	r.buf = r.buf[l:]
-	updateProgress(r.ctx, l)
-	return l, nil
-}
-
-// Close implements the Closer part of io.ReadCloser
-func (r *byteStreamReader) Close() error {
-	r.cancel()
-	return nil
-}
-
-// updateProgress updates the progress on a target.
-func updateProgress(ctx context.Context, increment int) {
-	if target := ctx.Value(targetKey); target != nil {
-		total := ctx.Value(totalBytesKey).(*int)
-		current := ctx.Value(bytesKey).(*int)
-		*current += increment
-		target.(*core.BuildTarget).Progress = 100.0 * float32(*current) / float32(*total)
-	}
 }

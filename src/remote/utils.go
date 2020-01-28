@@ -52,6 +52,11 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 		Directories: make([]*pb.DirectoryNode, len(ar.OutputDirectories)),
 		Symlinks:    make([]*pb.SymlinkNode, len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks)),
 	}
+	// N.B. At this point the various things we stick into this Directory proto can be in
+	//      subdirectories. This is not how a Directory proto is meant to work but it makes things
+	//      a lot easier for us to handle (since it is impossible to merge two DirectoryNode protos
+	//      without downloading their respective Directory protos). Later on we sort this out in
+	//      uploadInputDir.
 	for i, f := range ar.OutputFiles {
 		o.Files[i] = &pb.FileNode{
 			Name:         f.Path,
@@ -60,19 +65,9 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 		}
 	}
 	for i, d := range ar.OutputDirectories {
-		// Awkwardly these are encoded as Trees rather than as anything directly useful.
-		// We need a DirectoryNode to feed in as an input later on, but the OutputDirectory
-		// we get back is quite a different structure at the top level.
-		// TODO(peterebden): This is pretty crappy since we need to upload an extra blob here
-		//                   that we've just made up. Surely there is a better way we could
-		//                   be doing this?
 		tree := &pb.Tree{}
 		if err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
-		}
-		digest, data := c.digestMessageContents(tree.Root)
-		if err := c.sendBlobs([]*pb.BatchUpdateBlobsRequest_Request{{Digest: digest, Data: data}}); err != nil {
-			return err
 		}
 		o.Directories[i] = &pb.DirectoryNode{
 			Name:   d.Path,
@@ -89,18 +84,6 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 	defer c.outputMutex.Unlock()
 	c.outputs[label] = o
 	return nil
-}
-
-// setFilegroupOutputs sets the outputs for a filegroup from its inputs.
-func (c *Client) setFilegroupOutputs(target *core.BuildTarget) error {
-	return c.uploadBlobs(func(ch chan<- *blob) error {
-		defer close(ch)
-		dir, err := c.uploadInputs(ch, target, false, true)
-		c.outputMutex.Lock()
-		defer c.outputMutex.Unlock()
-		c.outputs[target.Label] = dir
-		return err
-	})
 }
 
 // digestMessage calculates the digest of a proto message as described in the
@@ -389,6 +372,40 @@ func (b *dirBuilder) Root(ch chan<- *blob) *pb.Directory {
 	return b.root
 }
 
+// Node returns either the file or directory corresponding to the given path (or nil for both if not found)
+func (b *dirBuilder) Node(name string) (*pb.DirectoryNode, *pb.FileNode) {
+	dir := b.Dir(path.Dir(name))
+	base := path.Base(name)
+	for _, d := range dir.Directories {
+		if d.Name == base {
+			return d, nil
+		}
+	}
+	for _, f := range dir.Files {
+		if f.Name == base {
+			return nil, f
+		}
+	}
+	return nil, nil
+}
+
+// Tree returns the tree rooted at a given directory name.
+// It does not calculate digests or upload, so call Root beforehand if that is needed.
+func (b *dirBuilder) Tree(ch chan<- *blob, root string) *pb.Tree {
+	d := b.dir(root, "")
+	tree := &pb.Tree{Root: d}
+	b.tree(tree, root, d)
+	return tree
+}
+
+func (b *dirBuilder) tree(tree *pb.Tree, root string, dir *pb.Directory) {
+	tree.Children = append(tree.Children, dir)
+	for _, d := range dir.Directories {
+		name := path.Join(root, d.Name)
+		b.tree(tree, name, b.dirs[name])
+	}
+}
+
 func (b *dirBuilder) dfs(name string, ch chan<- *blob) *pb.Digest {
 	dir := b.dirs[name]
 	for _, d := range dir.Directories {
@@ -431,32 +448,6 @@ func removeOutputs(target *core.BuildTarget) error {
 		}
 	}
 	return nil
-}
-
-// totalSize returns the total size of a set of downloads from an ActionResult.
-func totalSize(dirs []*pb.Tree, files []*pb.OutputFile) int {
-	var size int64
-	for _, file := range files {
-		size += file.Digest.SizeBytes
-	}
-	for _, dir := range dirs {
-		size += dirSize(dir.Root)
-		for _, child := range dir.Children {
-			size += dirSize(child)
-		}
-	}
-	return int(size)
-}
-
-// dirSize returns the immediate size of a directory (but not recursively)
-func dirSize(dir *pb.Directory) (size int64) {
-	for _, file := range dir.Files {
-		size += file.Digest.SizeBytes
-	}
-	for _, dir := range dir.Directories {
-		size += dir.Digest.SizeBytes
-	}
-	return size
 }
 
 // subresourceIntegrity returns a string corresponding to a target's hashes in the Subresource Integrity format.

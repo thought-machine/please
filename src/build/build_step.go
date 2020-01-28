@@ -267,12 +267,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	checkLicences(state, target)
 
 	if runRemotely {
-		if (state.IsOriginalTarget(target.Label) && state.DownloadOutputs && !state.NeedTests) || target.NeededForSubinclude {
-			state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
-			if _, err := state.RemoteClient.Retrieve(target); err != nil {
-				return fmt.Errorf("Failed to retrieve outputs for %s: %s", target.Label, err)
-			}
-		}
 		target.SetState(core.BuiltRemotely)
 		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
 		return nil
