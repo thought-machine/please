@@ -52,28 +52,33 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 		Directories: make([]*pb.DirectoryNode, len(ar.OutputDirectories)),
 		Symlinks:    make([]*pb.SymlinkNode, len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks)),
 	}
-	for _, f := range ar.OutputFiles {
-		o.Files = append(o.Files, &pb.FileNode{
+	// N.B. At this point the various things we stick into this Directory proto can be in
+	//      subdirectories. This is not how a Directory proto is meant to work but it makes things
+	//      a lot easier for us to handle (since it is impossible to merge two DirectoryNode protos
+	//      without downloading their respective Directory protos). Later on we sort this out in
+	//      uploadInputDir.
+	for i, f := range ar.OutputFiles {
+		o.Files[i] = &pb.FileNode{
 			Name:         f.Path,
 			Digest:       f.Digest,
 			IsExecutable: f.IsExecutable,
-		})
+		}
 	}
-	for _, d := range ar.OutputDirectories {
+	for i, d := range ar.OutputDirectories {
 		tree := &pb.Tree{}
 		if err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
-		o.Directories = append(o.Directories, &pb.DirectoryNode{
+		o.Directories[i] = &pb.DirectoryNode{
 			Name:   d.Path,
 			Digest: c.digestMessage(tree.Root),
-		})
+		}
 	}
-	for _, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) {
-		o.Symlinks = append(o.Symlinks, &pb.SymlinkNode{
+	for i, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) {
+		o.Symlinks[i] = &pb.SymlinkNode{
 			Name:   s.Path,
 			Target: s.Target,
-		})
+		}
 	}
 	c.outputMutex.Lock()
 	defer c.outputMutex.Unlock()
