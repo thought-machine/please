@@ -248,44 +248,44 @@ func (c *Client) uploadInputDir(ch chan<- *blob, target *core.BuildTarget, isTes
 	b := newDirBuilder(c)
 	for input := range c.iterInputs(target, isTest, target.IsFilegroup) {
 		if l := input.Label(); l != nil {
-			if o := c.targetOutputs(*l); o == nil {
+			o := c.targetOutputs(*l)
+			if o == nil {
 				// Classic "we shouldn't get here" stuff
 				return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", *l)
-			} else {
-				pkgName := l.PackageName
-				if target.IsFilegroup {
-					pkgName = target.Label.PackageName
-				} else if isTest && *l == target.Label {
-					// At test time the target itself is put at the root rather than in the normal dir.
-					// This is just How Things Are, so mimic it here.
-					pkgName = "."
-				}
-				// Recall that (as noted in setOutputs) these can have full paths on them, which
-				// we now need to sort out again to create well-formed Directory protos.
-				for _, f := range o.Files {
-					d := b.Dir(path.Join(pkgName, path.Dir(f.Name)))
-					d.Files = append(d.Files, &pb.FileNode{
-						Name:         path.Base(f.Name),
-						Digest:       f.Digest,
-						IsExecutable: f.IsExecutable,
-					})
-				}
-				for _, d := range o.Directories {
-					dir := b.Dir(path.Join(pkgName, path.Dir(d.Name)))
-					dir.Directories = append(dir.Directories, &pb.DirectoryNode{
-						Name:   path.Base(d.Name),
-						Digest: d.Digest,
-					})
-				}
-				for _, s := range o.Symlinks {
-					d := b.Dir(path.Join(pkgName, path.Dir(s.Name)))
-					d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
-						Name:   path.Base(s.Name),
-						Target: s.Target,
-					})
-				}
-				continue
 			}
+			pkgName := l.PackageName
+			if target.IsFilegroup {
+				pkgName = target.Label.PackageName
+			} else if isTest && *l == target.Label {
+				// At test time the target itself is put at the root rather than in the normal dir.
+				// This is just How Things Are, so mimic it here.
+				pkgName = "."
+			}
+			// Recall that (as noted in setOutputs) these can have full paths on them, which
+			// we now need to sort out again to create well-formed Directory protos.
+			for _, f := range o.Files {
+				d := b.Dir(path.Join(pkgName, path.Dir(f.Name)))
+				d.Files = append(d.Files, &pb.FileNode{
+					Name:         path.Base(f.Name),
+					Digest:       f.Digest,
+					IsExecutable: f.IsExecutable,
+				})
+			}
+			for _, d := range o.Directories {
+				dir := b.Dir(path.Join(pkgName, path.Dir(d.Name)))
+				dir.Directories = append(dir.Directories, &pb.DirectoryNode{
+					Name:   path.Base(d.Name),
+					Digest: d.Digest,
+				})
+			}
+			for _, s := range o.Symlinks {
+				d := b.Dir(path.Join(pkgName, path.Dir(s.Name)))
+				d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
+					Name:   path.Base(s.Name),
+					Target: s.Target,
+				})
+			}
+			continue
 		}
 		if err := c.uploadInput(b, ch, input); err != nil {
 			return nil, err
