@@ -120,10 +120,15 @@ func (d *displayer) printLines() {
 		d.lines++
 	}
 	if anyRemote {
-		printf("Remote processes [%d/%d active]:   \n", d.numRemoteActive(), d.numRemote)
+		active := d.numRemoteActive()
+		printf("Remote processes [%d/%d active]:   \n", active, d.numRemote)
 		d.lines++
 		for i := 0; i < d.numRemote && i < d.maxRows && workers < d.maxWorkers; i++ {
 			workers += d.printRow(d.numWorkers+i, now, true)
+			d.lines++
+		}
+		if workers < active {
+			printf("   [%d more...]\n", active-workers)
 			d.lines++
 		}
 	}
