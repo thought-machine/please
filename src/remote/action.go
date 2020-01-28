@@ -373,14 +373,18 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		metadata.InputFetchEndTime = toTime(ar.ExecutionMetadata.InputFetchCompletedTimestamp)
 	}
 	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
-		b, err := c.readAllByteStream(context.Background(), ar.StdoutDigest)
+		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+		defer cancel()
+		b, err := c.client.ReadBlob(ctx, digest.NewFromProtoUnvalidated(ar.StdoutDigest))
 		if err != nil {
 			return metadata, err
 		}
 		metadata.Stdout = b
 	}
 	if needStderr && len(metadata.Stderr) == 0 && ar.StderrDigest != nil {
-		b, err := c.readAllByteStream(context.Background(), ar.StderrDigest)
+		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+		defer cancel()
+		b, err := c.client.ReadBlob(ctx, digest.NewFromProtoUnvalidated(ar.StderrDigest))
 		if err != nil {
 			return metadata, err
 		}
@@ -421,37 +425,6 @@ func (c *Client) downloadAllPrefixedFiles(ar *pb.ActionResult, prefix string) ([
 		ret = append(ret, blob)
 	}
 	return ret, err
-}
-
-// downloadDirectory downloads & writes out a single Directory proto.
-func (c *Client) downloadDirectory(ctx context.Context, root string, dir *pb.Directory) error {
-	if err := os.MkdirAll(root, core.DirPermissions); err != nil {
-		return err
-	}
-	for _, file := range dir.Files {
-		if err := c.retrieveByteStream(ctx, &blob{
-			Digest: file.Digest,
-			File:   path.Join(root, file.Name),
-			Mode:   0644 | extraFilePerms(file),
-		}); err != nil {
-			return wrap(err, "Downloading %s", path.Join(root, file.Name))
-		}
-	}
-	for _, dir := range dir.Directories {
-		d := &pb.Directory{}
-		name := path.Join(root, dir.Name)
-		if err := c.readByteStreamToProto(ctx, dir.Digest, d); err != nil {
-			return wrap(err, "Downloading directory metadata for %s", name)
-		} else if err := c.downloadDirectory(ctx, name, d); err != nil {
-			return wrap(err, "Downloading directory %s", name)
-		}
-	}
-	for _, sym := range dir.Symlinks {
-		if err := os.Symlink(sym.Target, path.Join(root, sym.Name)); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // verifyActionResult verifies that all the requested outputs actually exist in a returned

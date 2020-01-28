@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
+	sdkdigest "github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
@@ -58,9 +59,8 @@ type Client struct {
 	outputMutex sync.RWMutex
 
 	// Server-sent cache properties
-	maxBlobBatchSize  int64
-	cacheWritable     bool
-	canBatchBlobReads bool // This isn't supported by all servers.
+	maxBlobBatchSize int64
+	cacheWritable    bool
 
 	// Platform properties that we will request from the remote.
 	// TODO(peterebden): this will need some modification for cross-compiling support.
@@ -156,7 +156,6 @@ func (c *Client) initExec() error {
 	// Look this up just once now.
 	bash, err := core.LookBuildPath("bash", c.state.Config)
 	c.bashPath = bash
-	c.canBatchBlobReads = c.checkBatchReadBlobs()
 	log.Debug("Remote execution client initialised for storage")
 	// Now check if it can do remote execution
 	if resp.ExecutionCapabilities == nil {
@@ -251,6 +250,9 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 		*/
 
 		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
+		if err := removeOutputs(target); err != nil {
+			return nil, err
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 		defer cancel()
 		if err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir()); err != nil {
@@ -283,7 +285,9 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	}
 	if target.NeedCoverage(c.state) && ar != nil {
 		if digest := c.digestForFilename(ar, core.CoverageFile); digest != nil {
-			coverage, err = c.readAllByteStream(context.Background(), digest)
+			ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+			defer cancel()
+			coverage, err = c.client.ReadBlob(ctx, sdkdigest.NewFromProtoUnvalidated(digest))
 			if execErr == nil && err != nil {
 				return metadata, results, nil, err
 			}
