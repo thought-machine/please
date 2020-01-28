@@ -551,9 +551,11 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 		defer close(ch)
 		for _, out := range command.OutputPaths {
 			if d, f := b.Node(path.Join(target.Label.PackageName, out)); d != nil {
+				digest, contents := c.digestMessageContents(b.Tree(ch, path.Join(target.Label.PackageName, out)))
+				ch <- &blob{Data: contents, Digest: digest}
 				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
 					Path:       out,
-					TreeDigest: c.digestMessage(b.Tree(ch, path.Join(target.Label.PackageName, out))),
+					TreeDigest: digest,
 				})
 			} else if f != nil {
 				ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
