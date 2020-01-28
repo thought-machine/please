@@ -26,7 +26,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest bool) (*pb.Comman
 	var digest *pb.Digest
 	err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
-		inputRoot, err := c.uploadInputs(ch, target, isTest, false)
+		inputRoot, err := c.uploadInputs(ch, target, isTest)
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest bool) (*pb.Comman
 
 // buildAction creates a build action for a target and returns the command and the action digest digest. No uploading is done.
 func (c *Client) buildAction(target *core.BuildTarget, isTest bool) (*pb.Command, *pb.Digest, error) {
-	inputRoot, err := c.uploadInputs(nil, target, isTest, false)
+	inputRoot, err := c.uploadInputs(nil, target, isTest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -233,19 +233,27 @@ func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory,
 }
 
 // uploadInputs finds and uploads a set of inputs from a target.
-func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest, isFilegroup bool) (*pb.Directory, error) {
+func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
 	if target.IsRemoteFile {
 		return &pb.Directory{}, nil
 	}
+	b, err := c.uploadInputDir(ch, target, isTest)
+	if err != nil {
+		return nil, err
+	}
+	return b.Root(ch), nil
+}
+
+func (c *Client) uploadInputDir(ch chan<- *blob, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
 	b := newDirBuilder(c)
-	for input := range c.iterInputs(target, isTest, isFilegroup) {
+	for input := range c.iterInputs(target, isTest, target.IsFilegroup) {
 		if l := input.Label(); l != nil {
 			if o := c.targetOutputs(*l); o == nil {
 				// Classic "we shouldn't get here" stuff
 				return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", *l)
 			} else {
 				pkgName := l.PackageName
-				if isFilegroup {
+				if target.IsFilegroup {
 					pkgName = target.Label.PackageName
 				} else if isTest && *l == target.Label {
 					// At test time the target itself is put at the root rather than in the normal dir.
@@ -278,11 +286,7 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest,
 			Digest: digest,
 		})
 	}
-	if isFilegroup {
-		b.Root(ch)
-		return b.Dir(target.Label.PackageName), nil
-	}
-	return b.Root(ch), nil
+	return b, nil
 }
 
 // uploadInput finds and uploads a single input.

@@ -91,18 +91,6 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 	return nil
 }
 
-// setFilegroupOutputs sets the outputs for a filegroup from its inputs.
-func (c *Client) setFilegroupOutputs(target *core.BuildTarget) error {
-	return c.uploadBlobs(func(ch chan<- *blob) error {
-		defer close(ch)
-		dir, err := c.uploadInputs(ch, target, false, true)
-		c.outputMutex.Lock()
-		defer c.outputMutex.Unlock()
-		c.outputs[target.Label] = dir
-		return err
-	})
-}
-
 // digestMessage calculates the digest of a proto message as described in the
 // Digest message's comments.
 func (c *Client) digestMessage(msg proto.Message) *pb.Digest {
