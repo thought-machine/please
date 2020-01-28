@@ -4,11 +4,9 @@
 package remote
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"path"
 	"strings"
 	"sync"
@@ -28,7 +26,6 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/fs"
 )
 
 var log = logging.MustGetLogger("remote")
@@ -220,100 +217,6 @@ func (c *Client) digestEnum(name string) pb.DigestFunction_Value {
 	}
 }
 
-// Retrieve fetches back a set of artifacts for a single build target.
-// Its outputs are written out to their final locations.
-func (c *Client) Retrieve(target *core.BuildTarget) (*core.BuildMetadata, error) {
-	if err := c.CheckInitialised(); err != nil {
-		return nil, err
-	}
-	outDir := target.OutDir()
-	if target.IsFilegroup {
-		if err := removeOutputs(target); err != nil {
-			return nil, err
-		}
-		// TODO(peterebden): We should be able to measure progress here too, but we don't have all
-		//                   the recursive directory protos handy. Work out how GetTree is meant to
-		//                   be used and see if we can use that somehow.
-		return &core.BuildMetadata{}, c.downloadDirectory(context.TODO(), outDir, c.targetOutputs(target.Label))
-	}
-	isTest := target.State() >= core.Built
-	needStdout := target.PostBuildFunction != nil && !isTest // We only care in this case.
-	_, digest, err := c.buildAction(target, isTest)
-	if err != nil {
-		return nil, err
-	}
-	// Check if the outputs already exist and are up to date, in which case we don't need to download.
-	if !c.state.ForceRebuild && c.outputsExist(target, digest) {
-		return &core.BuildMetadata{}, nil
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	resp, err := c.client.GetActionResult(ctx, &pb.GetActionResultRequest{
-		InstanceName: c.instance,
-		ActionDigest: digest,
-		InlineStdout: needStdout,
-	})
-	if err != nil {
-		return nil, err
-	} else if err := c.setOutputs(target.Label, resp); err != nil {
-		return nil, err
-	}
-	mode := target.OutMode()
-	if err := removeOutputs(target); err != nil {
-		return nil, err
-	}
-	trees := make([]*pb.Tree, len(resp.OutputDirectories))
-	for i, dir := range resp.OutputDirectories {
-		trees[i] = &pb.Tree{}
-		if err := c.readByteStreamToProto(context.Background(), dir.TreeDigest, trees[i]); err != nil {
-			return nil, err
-		}
-	}
-
-	// Turn on progress display for measuring download speed
-	target.ShowProgress = true
-	bytesRead := 0
-	totalBytes := totalSize(trees, resp.OutputFiles)
-	ctx = context.WithValue(ctx, targetKey, target)
-	ctx = context.WithValue(ctx, bytesKey, &bytesRead)
-	ctx = context.WithValue(ctx, totalBytesKey, &totalBytes)
-
-	if err := c.downloadBlobs(ctx, func(ch chan<- *blob) error {
-		defer close(ch)
-		for _, file := range resp.OutputFiles {
-			filePath := path.Join(outDir, target.GetRealOutput(file.Path))
-			addPerms := extraPerms(file)
-			if file.Contents != nil {
-				// Inlining must have been requested. Can write it directly.
-				if err := fs.EnsureDir(filePath); err != nil {
-					return err
-				} else if err := fs.WriteFile(bytes.NewReader(file.Contents), filePath, mode|addPerms); err != nil {
-					return err
-				}
-			} else {
-				ch <- &blob{Digest: file.Digest, File: filePath, Mode: mode | addPerms}
-			}
-		}
-		for i, dir := range resp.OutputDirectories {
-			if err := c.downloadDirectory(ctx, path.Join(outDir, dir.Path), trees[i].Root); err != nil {
-				return err
-			}
-		}
-		// For unexplained reasons the protocol treats symlinks differently based on what
-		// they point to. We obviously create them in the same way though.
-		for _, link := range append(resp.OutputFileSymlinks, resp.OutputDirectorySymlinks...) {
-			if err := os.Symlink(link.Target, path.Join(outDir, link.Path)); err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, c.wrapActionErr(err, digest)
-	}
-	c.recordAttrs(target, digest)
-	return c.buildMetadata(resp, needStdout, false)
-}
-
 // Build executes a remote build of the given target.
 func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
@@ -331,7 +234,31 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if c.state.TargetHasher != nil {
 		c.state.TargetHasher.SetHash(target, hash)
 	}
-	return metadata, c.wrapActionErr(c.setOutputs(target.Label, ar), digest)
+	if err := c.setOutputs(target.Label, ar); err != nil {
+		return metadata, c.wrapActionErr(err, digest)
+	}
+	// Need to download the target if it was originally requested (and the user didn't pass --nodownload).
+	// Also anything needed for subinclude needs to be local.
+	if (c.state.IsOriginalTarget(target.Label) && c.state.DownloadOutputs && !c.state.NeedTests) || target.NeededForSubinclude {
+
+		/*
+			target.ShowProgress = true
+			bytesRead := 0
+			totalBytes := totalSize(trees, resp.OutputFiles)
+			ctx = context.WithValue(ctx, targetKey, target)
+			ctx = context.WithValue(ctx, bytesKey, &bytesRead)
+			ctx = context.WithValue(ctx, totalBytesKey, &totalBytes)
+		*/
+
+		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
+		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+		defer cancel()
+		if err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir()); err != nil {
+			return metadata, c.wrapActionErr(err, digest)
+		}
+		c.recordAttrs(target, digest)
+	}
+	return metadata, nil
 }
 
 // Test executes a remote test of the given target.
