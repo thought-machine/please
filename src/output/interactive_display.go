@@ -21,15 +21,15 @@ import (
 var terminalClaimsToBeXterm = strings.HasPrefix(os.Getenv("TERM"), "xterm")
 
 type displayer struct {
-	state                                   *core.BuildState
-	targets                                 []buildingTarget
-	numWorkers, numRemote, maxRows, maxCols int
-	stats                                   bool
-	lines, lastLines                        int // mutable - records how many rows we've printed this time
+	state                                               *core.BuildState
+	targets                                             []buildingTarget
+	numWorkers, maxWorkers, numRemote, maxRows, maxCols int
+	stats                                               bool
+	lines, lastLines                                    int // mutable - records how many rows we've printed this time
 }
 
 func display(ctx context.Context, state *core.BuildState, buildingTargets []buildingTarget) {
-	backend := cli.NewLogBackend(len(buildingTargets))
+	backend := cli.NewLogBackend(state.Config.Display.MaxWorkers)
 	go func() {
 		sig := make(chan os.Signal, 10)
 		signal.Notify(sig, syscall.SIGWINCH)
@@ -45,6 +45,7 @@ func display(ctx context.Context, state *core.BuildState, buildingTargets []buil
 		state:      state,
 		targets:    buildingTargets,
 		numWorkers: state.Config.Please.NumThreads,
+		maxWorkers: state.Config.Display.MaxWorkers,
 		numRemote:  state.Config.NumRemoteExecutors(),
 		maxRows:    backend.MaxInteractiveRows,
 		maxCols:    backend.Cols,
@@ -112,16 +113,17 @@ func (d *displayer) printLines() {
 		printf("${ERASE_AFTER}\n")
 		d.lines++
 	}
+	workers := 0
 	anyRemote := d.numRemote > 0
-	for i := 0; i < d.numWorkers && i < d.maxRows; i++ {
-		d.printRow(i, now, anyRemote)
+	for i := 0; i < d.numWorkers && i < d.maxRows && workers < d.maxWorkers; i++ {
+		workers += d.printRow(i, now, anyRemote)
 		d.lines++
 	}
 	if anyRemote {
 		printf("Remote processes [%d/%d active]:   \n", d.numRemoteActive(), d.numRemote)
 		d.lines++
-		for i := 0; i < d.numRemote && i < d.maxRows; i++ {
-			d.printRow(d.numWorkers+i, now, true)
+		for i := 0; i < d.numRemote && i < d.maxRows && workers < d.maxWorkers; i++ {
+			workers += d.printRow(d.numWorkers+i, now, true)
 			d.lines++
 		}
 	}
@@ -138,7 +140,7 @@ func (d *displayer) numRemoteActive() int {
 	return count
 }
 
-func (d *displayer) printRow(i int, now time.Time, remote bool) {
+func (d *displayer) printRow(i int, now time.Time, remote bool) int {
 	d.targets[i].Lock()
 	// Take a local copy of the structure, which isn't *that* big, so we don't need to retain the lock
 	// while we do potentially blocking things like printing.
@@ -180,7 +182,9 @@ func (d *displayer) printRow(i int, now time.Time, remote bool) {
 		printf("${BOLD_GREY}=|${ERASE_AFTER}\n")
 	} else {
 		d.lines-- // Didn't print it
+		return 0
 	}
+	return 1
 }
 
 // printStat prints a single statistic with appropriate colours.
