@@ -47,11 +47,14 @@ func (c *Client) targetOutputs(label core.BuildLabel) *pb.Directory {
 
 // setOutputs sets the outputs for a previously executed target.
 func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
-	b := newDirBuilder(c)
+	o := &pb.Directory{
+		Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
+		Directories: make([]*pb.DirectoryNode, len(ar.OutputDirectories)),
+		Symlinks:    make([]*pb.SymlinkNode, len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks)),
+	}
 	for _, f := range ar.OutputFiles {
-		d := b.Dir(path.Dir(f.Path))
-		d.Files = append(d.Files, &pb.FileNode{
-			Name:         path.Base(f.Path),
+		o.Files = append(o.Files, &pb.FileNode{
+			Name:         f.Path,
 			Digest:       f.Digest,
 			IsExecutable: f.IsExecutable,
 		})
@@ -61,22 +64,20 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 		if err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
-		dir := b.Dir(path.Dir(d.Path))
-		dir.Directories = append(dir.Directories, &pb.DirectoryNode{
-			Name:   path.Base(d.Path),
+		o.Directories = append(o.Directories, &pb.DirectoryNode{
+			Name:   d.Path,
 			Digest: c.digestMessage(tree.Root),
 		})
 	}
 	for _, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) {
-		d := b.Dir(path.Dir(s.Path))
-		d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
-			Name:   path.Base(s.Path),
+		o.Symlinks = append(o.Symlinks, &pb.SymlinkNode{
+			Name:   s.Path,
 			Target: s.Target,
 		})
 	}
 	c.outputMutex.Lock()
 	defer c.outputMutex.Unlock()
-	c.outputs[label] = b.Dir(".")
+	c.outputs[label] = o
 	return nil
 }
 
