@@ -47,47 +47,36 @@ func (c *Client) targetOutputs(label core.BuildLabel) *pb.Directory {
 
 // setOutputs sets the outputs for a previously executed target.
 func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
-	o := &pb.Directory{
-		Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
-		Directories: make([]*pb.DirectoryNode, len(ar.OutputDirectories)),
-		Symlinks:    make([]*pb.SymlinkNode, len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks)),
-	}
-	for i, f := range ar.OutputFiles {
-		o.Files[i] = &pb.FileNode{
-			Name:         f.Path,
+	b := newDirBuilder(c)
+	for _, f := range ar.OutputFiles {
+		d := b.Dir(path.Dir(f.Path))
+		d.Files = append(d.Files, &pb.FileNode{
+			Name:         path.Base(f.Path),
 			Digest:       f.Digest,
 			IsExecutable: f.IsExecutable,
-		}
+		})
 	}
-	for i, d := range ar.OutputDirectories {
-		// Awkwardly these are encoded as Trees rather than as anything directly useful.
-		// We need a DirectoryNode to feed in as an input later on, but the OutputDirectory
-		// we get back is quite a different structure at the top level.
-		// TODO(peterebden): This is pretty crappy since we need to upload an extra blob here
-		//                   that we've just made up. Surely there is a better way we could
-		//                   be doing this?
+	for _, d := range ar.OutputDirectories {
 		tree := &pb.Tree{}
 		if err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
-		digest, data := c.digestMessageContents(tree.Root)
-		if err := c.sendBlobs([]*pb.BatchUpdateBlobsRequest_Request{{Digest: digest, Data: data}}); err != nil {
-			return err
-		}
-		o.Directories[i] = &pb.DirectoryNode{
-			Name:   d.Path,
+		dir := b.Dir(path.Dir(d.Path))
+		dir.Directories = append(dir.Directories, &pb.DirectoryNode{
+			Name:   path.Base(d.Path),
 			Digest: c.digestMessage(tree.Root),
-		}
+		})
 	}
-	for i, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) {
-		o.Symlinks[i] = &pb.SymlinkNode{
-			Name:   s.Path,
+	for _, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) {
+		d := b.Dir(path.Dir(s.Path))
+		d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
+			Name:   path.Base(s.Path),
 			Target: s.Target,
-		}
+		})
 	}
 	c.outputMutex.Lock()
 	defer c.outputMutex.Unlock()
-	c.outputs[label] = o
+	c.outputs[label] = b.Dir(".")
 	return nil
 }
 
