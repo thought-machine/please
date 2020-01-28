@@ -115,9 +115,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		mustShortTargetHash(state, target)
 		return errStop
 	}
-	if target.IsHashFilegroup {
-		updateHashFilegroupPaths(state, target)
-	}
 	var cacheKey, out []byte
 	if runRemotely {
 		m, err := state.RemoteClient.Build(tid, target)
@@ -126,6 +123,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 		out = m.Stdout
 	} else {
+		if target.IsHashFilegroup {
+			updateHashFilegroupPaths(state, target)
+		}
 		// We don't record rule hashes for filegroups since we know the implementation and the check
 		// is just "are these the same file" which we do anyway, and it means we don't have to worry
 		// about two rules outputting the same file.

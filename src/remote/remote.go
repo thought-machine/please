@@ -558,6 +558,9 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 					TreeDigest: digest,
 				})
 			} else if f != nil {
+				if target.IsHashFilegroup {
+					out = updateHashFilename(out, f.Digest)
+				}
 				ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
 					Path:         out,
 					Digest:       f.Digest,

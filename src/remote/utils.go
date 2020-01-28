@@ -475,3 +475,11 @@ func reencodeSRI(h string) string {
 	log.Warning("Hash string of unknown type: %s", h)
 	return h
 }
+
+// updateHashFilename updates an output filename for a hash_filegroup.
+func updateHashFilename(name string, digest *pb.Digest) string {
+	ext := path.Ext(name)
+	before := name[:len(name)-len(ext)]
+	b, _ := hex.DecodeString(digest.Hash)
+	return before + "-" + base64.RawURLEncoding.EncodeToString(b) + ext
+}
