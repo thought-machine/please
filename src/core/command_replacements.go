@@ -50,6 +50,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime/debug"
 	"strings"
 )
 
@@ -110,6 +111,7 @@ func replaceSequencesInternal(state *BuildState, target *BuildTarget, command st
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("%s", r)
+			log.Debug(string(debug.Stack()))
 		}
 	}()
 	cmd = locationReplacement.ReplaceAllStringFunc(command, func(in string) string {

@@ -43,7 +43,7 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, metadata *cor
 		log.Warning("Failed to remove existing cache directory %s: %s", cacheDir, err)
 		return
 	}
-	if target.PostBuildFunction != nil {
+	if target.PostBuildFunction != nil && len(metadata.RemoteAction) == 0 {
 		files = append(files, target.PostBuildOutputFileName())
 	}
 	cache.storeFiles(target, key, "", cacheDir, tmpDir, files, true)
