@@ -128,7 +128,7 @@ func (d *displayer) printLines() {
 			d.lines++
 		}
 		if workers < active {
-			printf("   [%d more...]\n", active-workers)
+			printf("${RESET}   [%d more...]${ERASE_AFTER}\n", active-workers)
 			d.lines++
 		}
 	}
