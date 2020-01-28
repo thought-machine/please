@@ -319,10 +319,6 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	if target.IsFilegroup {
-		// Filegroups get special-cased since they are just a movement of files.
-		return &core.BuildMetadata{}, c.setFilegroupOutputs(target)
-	}
 	command, digest, err := c.buildAction(target, false)
 	if err != nil {
 		return nil, err
@@ -402,8 +398,11 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
-	// Remote actions get special treatment at this point.
-	if target.IsRemoteFile {
+	// Remote actions & filegroups get special treatment at this point.
+	if target.IsFilegroup {
+		// Filegroups get special-cased since they are just a movement of files.
+		return &core.BuildMetadata{}, c.setFilegroupOutputs(target)
+	} else if target.IsRemoteFile {
 		return c.fetchRemoteFile(tid, target, digest)
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), timeout)
@@ -618,4 +617,9 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
 	}
 	return &core.BuildMetadata{}, ar, nil
+}
+
+// buildFilegroup "builds" a single filegroup target.
+func (c *Client) buildFilegroup(target *core.BuildTarget, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
+
 }

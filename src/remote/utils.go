@@ -389,6 +389,23 @@ func (b *dirBuilder) Root(ch chan<- *blob) *pb.Directory {
 	return b.root
 }
 
+// Tree returns the tree rooted at a given directory name.
+// It does not calculate digests or upload, so call Root beforehand if that is needed.
+func (b *dirBuilder) Tree(ch chan<- *blob, root string) *pb.Tree {
+	d := b.dir(root, "")
+	tree := &pb.Tree{Root: d}
+	b.tree(tree, root, d)
+	return tree
+}
+
+func (b *dirBuilder) tree(tree *pb.Tree, root string, dir *pb.Directory) {
+	tree.Children = append(tree.Children, dir)
+	for _, d := range dir.Directories {
+		name := path.Join(root, d.Name)
+		b.tree(tree, name, b.dirs[name])
+	}
+}
+
 func (b *dirBuilder) dfs(name string, ch chan<- *blob) *pb.Digest {
 	dir := b.dirs[name]
 	for _, d := range dir.Directories {
