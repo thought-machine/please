@@ -120,7 +120,7 @@ func (backend *LogBackend) RecalcLines() {
 	if backend.maxLines > 15 {
 		backend.maxLines = 15 // Cap it here so we don't log too much
 	} else if backend.maxLines <= 0 {
-		backend.maxLines = 1 // Set a minimum so we don't have negative indices later.
+		backend.maxLines = 3 // Set a minimum so we don't have negative indices later.
 	}
 	backend.Output = backend.calcOutput()
 	backend.MaxInteractiveRows = backend.Rows - len(backend.Output) - 1
