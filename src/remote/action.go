@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
@@ -12,7 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/tree"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/ptypes"
 
@@ -169,69 +171,6 @@ func (c *Client) getCommand(target *core.BuildTarget) string {
 	return cmd
 }
 
-// digestDir calculates the digest for a directory.
-// It returns Directory protos for the directory and all its (recursive) children.
-func (c *Client) digestDir(dir string, children []*pb.Directory) (*pb.Directory, []*pb.Directory, error) {
-	entries, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, nil, err
-	}
-	d := &pb.Directory{}
-	err = c.uploadBlobs(func(ch chan<- *blob) error {
-		defer close(ch)
-		for _, entry := range entries {
-			name := entry.Name()
-			fullname := path.Join(dir, name)
-			if mode := entry.Mode(); mode&os.ModeDir != 0 {
-				dir, descendants, err := c.digestDir(fullname, children)
-				if err != nil {
-					return err
-				}
-				digest, contents := c.digestMessageContents(dir)
-				ch <- &blob{
-					Digest: digest,
-					Data:   contents,
-				}
-				d.Directories = append(d.Directories, &pb.DirectoryNode{
-					Name:   name,
-					Digest: digest,
-				})
-				children = append(children, descendants...)
-				continue
-			} else if mode&os.ModeSymlink != 0 {
-				target, err := os.Readlink(fullname)
-				if err != nil {
-					return err
-				}
-				d.Symlinks = append(d.Symlinks, &pb.SymlinkNode{
-					Name:   name,
-					Target: target,
-				})
-				continue
-			}
-			h, err := c.state.PathHasher.Hash(fullname, false, true)
-			if err != nil {
-				return err
-			}
-			digest := &pb.Digest{
-				Hash:      hex.EncodeToString(h),
-				SizeBytes: entry.Size(),
-			}
-			d.Files = append(d.Files, &pb.FileNode{
-				Name:         name,
-				Digest:       digest,
-				IsExecutable: (entry.Mode() & 0111) != 0,
-			})
-			ch <- &blob{
-				File:   fullname,
-				Digest: digest,
-			}
-		}
-		return nil
-	})
-	return d, children, err
-}
-
 // uploadInputs finds and uploads a set of inputs from a target.
 func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
 	if target.IsRemoteFile {
@@ -250,8 +189,16 @@ func (c *Client) uploadInputDir(ch chan<- *blob, target *core.BuildTarget, isTes
 		if l := input.Label(); l != nil {
 			o := c.targetOutputs(*l)
 			if o == nil {
-				// Classic "we shouldn't get here" stuff
-				return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", *l)
+				if dep := c.state.Graph.TargetOrDie(*l); dep.Local {
+					// We have built this locally, need to upload its outputs
+					if err := c.uploadLocalTarget(dep); err != nil {
+						return nil, err
+					}
+					o = c.targetOutputs(*l)
+				} else {
+					// Classic "we shouldn't get here" stuff
+					return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", *l)
+				}
 			}
 			pkgName := l.PackageName
 			if target.IsFilegroup {
@@ -499,6 +446,22 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	}
 	log.Debug("Verified action result for %s in %s", target, time.Since(start))
 	return nil
+}
+
+// uploadLocalTarget uploads the outputs of a target that was built locally.
+func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
+	m, ar, err := tree.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), int(c.client.ChunkMaxSize), &filemetadata.NoopFileMetadataCache{})
+	if err != nil {
+		return err
+	}
+	chomks := make([]*chunker.Chunker, 0, len(m))
+	for _, c := range m {
+		chomks = append(chomks, c)
+	}
+	if err := c.client.UploadIfMissing(context.Background(), chomks...); err != nil {
+		return err
+	}
+	return c.setOutputs(target.Label, ar)
 }
 
 // translateOS converts the OS name of a subrepo into a Bazel-style OS name.
