@@ -121,7 +121,7 @@ func (d *displayer) printLines() {
 	}
 	if anyRemote {
 		active := d.numRemoteActive()
-		printf("Remote processes [%3d/%3d active]:   \n", active, d.numRemote)
+		printf("Remote processes [%3d/%3d active]:   ${ERASE_AFTER}\n", active, d.numRemote)
 		d.lines++
 		for i := 0; i < d.numRemote && i < d.maxRows && workers < d.maxWorkers; i++ {
 			workers += d.printRow(d.numWorkers+i, now, true)
