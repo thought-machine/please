@@ -123,7 +123,7 @@ func (d *displayer) printLines() {
 		active := d.numRemoteActive()
 		printf("Remote processes [%3d/%3d active]:   ${ERASE_AFTER}\n", active, d.numRemote)
 		d.lines++
-		for i := 0; i < d.numRemote && i < d.maxRows && workers < d.maxWorkers; i++ {
+		for i := 0; i < d.numRemote && d.lines < d.maxRows && workers < d.maxWorkers; i++ {
 			workers += d.printRow(d.numWorkers+i, now, true)
 			d.lines++
 		}
