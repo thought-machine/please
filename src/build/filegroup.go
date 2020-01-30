@@ -12,6 +12,7 @@ package build
 
 import (
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path"
 	"sync"
@@ -39,6 +40,12 @@ var theFilegroupBuilder *filegroupBuilder
 
 // Build builds a single filegroup file.
 func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.BuildTarget, from, to string) (bool, error) {
+	// Verify that the source actually exists. It is otherwise possible to get through here
+	// without in certain circumstances (basically if another filegroup outputs the same file
+	// from a genrule and has been built already, because we have it in builder.built).
+	if !fs.PathExists(from) {
+		return true, fmt.Errorf("Can't build %s: input %s does not exist", target, from)
+	}
 	builder.mutex.Lock()
 	defer builder.mutex.Unlock()
 	if changed, present := builder.built[to]; present {
