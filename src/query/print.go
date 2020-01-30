@@ -63,6 +63,9 @@ var specialFields = map[string]func(*printer) (string, bool){
 	"tools": func(p *printer) (string, bool) {
 		return p.genericPrint(reflect.ValueOf(p.target.AllTools()))
 	},
+	"data": func(p *printer) (string, bool) {
+		return p.genericPrint(reflect.ValueOf(p.target.AllData()))
+	},
 }
 
 // fieldPrecedence defines a specific ordering for fields.
