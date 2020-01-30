@@ -549,6 +549,7 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 	ar := &pb.ActionResult{}
 	if err := c.uploadBlobs(func(ch chan<- *blob) error {
 		defer close(ch)
+		b.Root(ch)
 		for _, out := range command.OutputPaths {
 			if d, f := b.Node(path.Join(target.Label.PackageName, out)); d != nil {
 				digest, contents := c.digestMessageContents(b.Tree(ch, path.Join(target.Label.PackageName, out)))
