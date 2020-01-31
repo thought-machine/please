@@ -193,6 +193,7 @@ func initStampEnv() {
 	repoScm := scm.NewFallback(RepoRoot)
 	revision := repoScm.CurrentRevIdentifier()
 	stampEnv = BuildEnv{
+		"SCM_COMMIT_DATE=" + repoScm.CurrentRevDate("20060102"),
 		"SCM_REVISION=" + revision,
 		"SCM_DESCRIBE=" + repoScm.DescribeIdentifier(revision),
 	}

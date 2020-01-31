@@ -31,6 +31,8 @@ type SCM interface {
 	ChangedLines() (map[string][]int, error)
 	// Checkout checks out the given revision.
 	Checkout(revision string) error
+	// CurrentRevDate returns the commit date of the current revision, formatted according to the given format string.
+	CurrentRevDate(format string) string
 }
 
 // New returns a new SCM instance for this repo root.

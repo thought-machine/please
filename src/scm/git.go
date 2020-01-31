@@ -9,7 +9,9 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sourcegraph/go-diff/diff"
 )
@@ -160,4 +162,17 @@ func (g *git) Checkout(revision string) error {
 		return fmt.Errorf("git checkout failed: %s\n%s", err, out)
 	}
 	return nil
+}
+
+func (g *git) CurrentRevDate(format string) string {
+	out, err := exec.Command("git", "show", "-s", "--format=%ct").CombinedOutput()
+	if err != nil {
+		return "UNKNOWN"
+	}
+	timestamp, err := strconv.ParseInt(string(out), 10, 64)
+	if err != nil {
+		return string(out)
+	}
+	t := time.Unix(timestamp, 0)
+	return t.Format(format)
 }

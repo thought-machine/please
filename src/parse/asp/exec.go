@@ -282,12 +282,10 @@ func execGitShow(s *scope, args []pyObject) pyObject {
 	case "%T": // tree hash
 	case "%P": // parent hashes
 	case "%an": // author name
-	case "%ad": // author date (format respects --date option)
 	case "%ae": // author email
 	case "%at": // author date, UNIX timestamp
-	case "%cd": // committer date (format respects --date option)
-	case "%ce": // committer email
 	case "%cn": // committer name
+	case "%ce": // committer email
 	case "%ct": // committer date, UNIX timestamp
 	case "%D": // ref names without the " (", ")" wrapping.
 	case "%e": // encoding
@@ -310,7 +308,6 @@ func execGitShow(s *scope, args []pyObject) pyObject {
 		pyString("git"),
 		pyString("show"),
 		pyString("-s"),
-		pyString("--date=short"),
 		pyString(fmt.Sprintf("--format=%s", formatVerb)),
 	}
 

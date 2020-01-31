@@ -35,3 +35,7 @@ func (s *stub) ChangedLines() (map[string][]int, error) {
 func (s *stub) Checkout(revision string) error {
 	return fmt.Errorf("Unknown SCM, can't checkout")
 }
+
+func (s *stub) CurrentRevDate(format string) string {
+	return "<unknown>"
+}
