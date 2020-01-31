@@ -7,9 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/dustin/go-humanize"
@@ -77,26 +75,7 @@ func (b *ByteSize) UnmarshalText(text []byte) error {
 // A Duration is used for flags that represent a time duration; it's just a wrapper
 // around time.Duration that implements the flags.Unmarshaler and
 // encoding.TextUnmarshaler interfaces.
-type Duration time.Duration
-
-// UnmarshalFlag implements the flags.Unmarshaler interface.
-func (d *Duration) UnmarshalFlag(in string) error {
-	d2, err := time.ParseDuration(in)
-	// For backwards compatibility, treat missing units as seconds.
-	if err != nil {
-		if d3, err := strconv.Atoi(in); err == nil {
-			*d = Duration(time.Duration(d3) * time.Second)
-			return nil
-		}
-	}
-	*d = Duration(d2)
-	return flagsError(err)
-}
-
-// UnmarshalText implements the encoding.TextUnmarshaler interface
-func (d *Duration) UnmarshalText(text []byte) error {
-	return d.UnmarshalFlag(string(text))
-}
+type Duration = cli.Duration
 
 // A URL is used for flags or config fields that represent a URL.
 // It's just a string because it's more convenient that way; we haven't needed them as a net.URL so far.
