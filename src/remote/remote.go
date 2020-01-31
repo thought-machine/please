@@ -240,17 +240,37 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	// Also anything needed for subinclude needs to be local.
 	if (c.state.IsOriginalTarget(target.Label) && c.state.DownloadOutputs && !c.state.NeedTests) || target.NeededForSubinclude {
 		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
-		if err := removeOutputs(target); err != nil {
-			return nil, err
+		if err := c.download(target, digest, ar); err != nil {
+			return metadata, err
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-		defer cancel()
-		if err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir()); err != nil {
-			return metadata, c.wrapActionErr(err, digest)
-		}
-		c.recordAttrs(target, digest)
 	}
 	return metadata, nil
+}
+
+// Download downloads outputs for the given target.
+func (c *Client) Download(target *core.BuildTarget) error {
+	command, digest, err := c.buildAction(target, false)
+	if err != nil {
+		return fmt.Errorf("Failed to create action for %s: %s", target, err)
+	}
+	_, ar := c.retrieveResults(target, command, digest, false)
+	if ar == nil {
+		return fmt.Errorf("Failed to retrieve action result for %s", target)
+	}
+	return c.download(target, digest, ar)
+}
+
+func (c *Client) download(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
+	if err := removeOutputs(target); err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+	defer cancel()
+	if err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir()); err != nil {
+		return c.wrapActionErr(err, digest)
+	}
+	c.recordAttrs(target, digest)
+	return nil
 }
 
 // Test executes a remote test of the given target.
@@ -286,17 +306,16 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	return metadata, results, coverage, execErr
 }
 
-// execute submits an action to the remote executor and monitors its progress.
-// The returned ActionResult may be nil on failure.
-func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+// retrieveResults retrieves target results from where it can (either from the local cache or from remote).
+// It returns nil if it cannot be retrieved.
+func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult) {
 	// First see if this execution is cached locally
 	if metadata, ar := c.retrieveLocalResults(target, digest); metadata != nil {
 		log.Debug("Got locally cached results for %s %s", target.Label, c.actionURL(digest, true))
-		return metadata, ar, nil
+		return metadata, ar
 	}
 	// Now see if it is cached on the remote server
-	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking remote...")
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
 	if ar, err := c.client.GetActionResult(ctx, &pb.GetActionResultRequest{
 		InstanceName: c.instance,
@@ -309,10 +328,20 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 			err := c.verifyActionResult(target, command, digest, ar, c.state.Config.Remote.VerifyOutputs)
 			if err == nil {
 				c.locallyCacheResults(target, digest, metadata, ar)
-				return metadata, ar, nil
+				return metadata, ar
 			}
 			log.Debug("Remotely cached results for %s were missing some outputs, forcing a rebuild: %s", target.Label, err)
 		}
+	}
+	return nil, nil
+}
+
+// execute submits an action to the remote executor and monitors its progress.
+// The returned ActionResult may be nil on failure.
+func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking remote...")
+	if metadata, ar := c.retrieveResults(target, command, digest, needStdout); metadata != nil {
+		return metadata, ar, nil
 	}
 	// We didn't actually upload the inputs before, so we must do so now.
 	command, digest, err := c.uploadAction(target, isTest)
@@ -326,7 +355,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	} else if target.IsRemoteFile {
 		return c.fetchRemoteFile(tid, target, digest)
 	}
-	ctx, cancel = context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	stream, err := c.client.Execute(ctx, &pb.ExecuteRequest{
 		InstanceName:    c.instance,

@@ -73,6 +73,8 @@ type RemoteClient interface {
 	Build(tid int, target *BuildTarget) (*BuildMetadata, error)
 	// Test invokes a test run of the target remotely.
 	Test(tid int, target *BuildTarget) (metadata *BuildMetadata, results [][]byte, coverage []byte, err error)
+	// Download downloads the outputs for the given target that has already been built remotely.
+	Download(target *BuildTarget) error
 	// PrintHashes shows the hashes of a target.
 	PrintHashes(target *BuildTarget, isTest bool)
 	// DataRate returns an estimate of the current in/out RPC data rates and totals so far in bytes per second.
