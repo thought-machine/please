@@ -188,7 +188,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 
 		// N.B. Important we do not go through state.TargetHasher here since it memoises and
 		//      this calculation might be incorrect.
-		oldOutputHash, outputHashErr := defaultOutputHash(state, target)
+		oldOutputHash, outputHashErr := outputHash(target, target.FullOutputs(), state.PathHasher, state.PathHasher.NewHash)
 		retrieveArtifacts := func() bool {
 			// If there aren't any outputs, we don't have to do anything right now.
 			// Checks later will handle the case of something with a post-build function that
@@ -560,7 +560,7 @@ func (h *targetHasher) OutputHash(target *core.BuildTarget) ([]byte, error) {
 	if present {
 		return hash, nil
 	}
-	hash, err := defaultOutputHash(h.State, target)
+	hash, err := h.outputHash(target)
 	if err != nil {
 		return hash, err
 	}
@@ -575,9 +575,14 @@ func (h *targetHasher) SetHash(target *core.BuildTarget, hash []byte) {
 	h.hashes[target] = hash
 }
 
-// defaultOutputHash returns the output hash for a target using the default strategy.
-func defaultOutputHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	return outputHash(target, target.FullOutputs(), state.PathHasher, state.PathHasher.NewHash)
+// outputHash calculates the output hash for a target, choosing an appropriate strategy.
+func (h *targetHasher) outputHash(target *core.BuildTarget) ([]byte, error) {
+	outs := target.FullOutputs()
+	// For compatibility, leave this on the default for SHA1 hashing.
+	if len(outs) == 1 && fs.FileExists(outs[0]) && h.State.Config.Build.HashFunction != "sha1" {
+		return outputHash(target, outs, h.State.PathHasher, nil)
+	}
+	return outputHash(target, outs, h.State.PathHasher, h.State.PathHasher.NewHash)
 }
 
 // outputHash is a more general form of OutputHash that allows different hashing strategies.
