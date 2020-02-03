@@ -34,6 +34,8 @@ github.com/bazelbuild/remote-apis v0.0.0-20191104140458-e77c4eb2ca48 h1:bgj+Oufa
 github.com/bazelbuild/remote-apis v0.0.0-20191104140458-e77c4eb2ca48/go.mod h1:9Y+1FnaNUGVV6wKE0Jdh+mguqDUsyd9uUqokalrC7DQ=
 github.com/bazelbuild/remote-apis v0.0.0-20191119143007-b5123b1bb285 h1:OPH+hf+ICw8WEp2CV2ncfdyWPC30Cmw8b5NKun0n5IQ=
 github.com/bazelbuild/remote-apis v0.0.0-20191119143007-b5123b1bb285/go.mod h1:9Y+1FnaNUGVV6wKE0Jdh+mguqDUsyd9uUqokalrC7DQ=
+github.com/bazelbuild/remote-apis v0.0.0-20200127100703-2846a67ac8fe h1:psm84nneek82/tb3AFg3k6lBL8bCAd6g0C1Onv7p6kM=
+github.com/bazelbuild/remote-apis v0.0.0-20200127100703-2846a67ac8fe/go.mod h1:9Y+1FnaNUGVV6wKE0Jdh+mguqDUsyd9uUqokalrC7DQ=
 github.com/bazelbuild/remote-apis-sdks v0.0.0-20191119014045-9f0428c343a9 h1:KU66ZTme1RxNuBPyseaHmSHZKQMM52yrCDhGhMCqOUU=
 github.com/bazelbuild/remote-apis-sdks v0.0.0-20191119014045-9f0428c343a9/go.mod h1:qgVeF5etXayzvt6OKXzeSg9Y0QDXfeH9H4EWKo/MNLM=
 github.com/bazelbuild/remote-apis-sdks v0.0.0-20191125202410-a21ff57ff57c h1:8zx14LG5/YyL54A3R/oIOG5TsilYs7EnVLlVMWXjHOU=
@@ -203,6 +205,8 @@ github.com/peterebden/gcfg v1.3.0 h1:cXPrg3yRF5HTK3tBfIk+AJy10BZKRnBbb34FHklJzn8
 github.com/peterebden/gcfg v1.3.0/go.mod h1:VDdZttqmD3nudN3emvXYhkgOqqyYhWjnPIcEoIxNlTE=
 github.com/peterebden/go-cli-init v1.0.0 h1:HfcOHuyuyvHsaQZApuk44LpRc+EF/MDAI6u5/sthJGg=
 github.com/peterebden/go-cli-init v1.0.0/go.mod h1:u3NE4dP66iHWwbq8eqlXRNZqVMMuqJbkPn3MGKht0ME=
+github.com/peterebden/go-cli-init v1.2.0 h1:rQBiOoBenaD8t2L9Ds+KwFm/Pi1fF6UZ3Cy5Zs2MMdA=
+github.com/peterebden/go-cli-init v1.2.0/go.mod h1:sZ1OlmpWqJHtdqnJ4dc9TDl/nzvrJ/pt3cEvrsSfhm8=
 github.com/peterebden/go-sri v1.0.0 h1:Ew88r4WD4H5K/UgsHxzhm0du8iUSH1uRIp2uscYeqe8=
 github.com/peterebden/go-sri v1.0.0/go.mod h1:KIRxtog35NfDWec5LV/iBqqfOEPcMpePZLc7EPE6goQ=
 github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a h1:R4xz7BkSIQOS5CFmaadk2gwwOzy/u2Jvnimf1NHD2LY=

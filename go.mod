@@ -4,7 +4,7 @@ require (
 	github.com/Songmu/prompter v0.0.0-20181014095714-d227c68538bd
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/bazelbuild/buildtools v0.0.0-20190228125936-4bcdbd1064fc
-	github.com/bazelbuild/remote-apis v0.0.0-20191119143007-b5123b1bb285
+	github.com/bazelbuild/remote-apis v0.0.0-20200127100703-2846a67ac8fe
 	github.com/bazelbuild/remote-apis-sdks v0.0.0-20200117155253-d02017f96d3b
 	github.com/coreos/go-semver v0.2.0
 	github.com/djherbis/atime v1.0.0
@@ -23,7 +23,7 @@ require (
 	github.com/manifoldco/promptui v0.3.2
 	github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518
 	github.com/peterebden/gcfg v1.3.0
-	github.com/peterebden/go-cli-init v1.0.0
+	github.com/peterebden/go-cli-init v1.2.0
 	github.com/peterebden/go-sri v1.0.0
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
 	github.com/pkg/xattr v0.4.0

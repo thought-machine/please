@@ -126,6 +126,17 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		if target.IsHashFilegroup {
 			updateHashFilegroupPaths(state, target)
 		}
+		// Ensure we have downloaded any previous dependencies if that's relevant.
+		if state.Config.NumRemoteExecutors() > 0 {
+			for _, dep := range target.Dependencies() {
+				if dep.State() == core.BuiltRemotely {
+					if err := state.RemoteClient.Download(dep); err != nil {
+						return err
+					}
+				}
+			}
+		}
+
 		// We don't record rule hashes for filegroups since we know the implementation and the check
 		// is just "are these the same file" which we do anyway, and it means we don't have to worry
 		// about two rules outputting the same file.
@@ -532,8 +543,8 @@ type targetHasher struct {
 	mutex  sync.RWMutex
 }
 
-// NewTargetHasher returns a new TargetHasher
-func NewTargetHasher(state *core.BuildState) core.TargetHasher {
+// newTargetHasher returns a new TargetHasher
+func newTargetHasher(state *core.BuildState) core.TargetHasher {
 	return &targetHasher{
 		State:  state,
 		hashes: map[*core.BuildTarget][]byte{},

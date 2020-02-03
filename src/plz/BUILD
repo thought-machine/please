@@ -9,6 +9,7 @@ go_library(
         "//src/follow",
         "//src/fs",
         "//src/parse",
+        "//src/remote",
         "//src/test",
         "//src/utils",
         "//third_party/go:logging",
