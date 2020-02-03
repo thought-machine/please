@@ -58,6 +58,11 @@ type Client struct {
 	outputs     map[core.BuildLabel]*pb.Directory
 	outputMutex sync.RWMutex
 
+	// Used to control downloading targets (we must make sure we don't re-fetch them
+	// while another target is trying to use them).
+	downloads     map[*core.BuildTarget]*pendingDownload
+	downloadMutex sync.Mutex
+
 	// Server-sent cache properties
 	maxBlobBatchSize int64
 	cacheWritable    bool
@@ -74,6 +79,13 @@ type Client struct {
 	stats                                                *statsHandler
 }
 
+// A pendingDownload represents a pending download of a build target. It is used to
+// ensure we only download each target exactly once.
+type pendingDownload struct {
+	ch  chan struct{} // Semaphore to signal completion
+	err error         // Any error if the download failed.
+}
+
 // New returns a new Client instance.
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
@@ -82,6 +94,7 @@ func New(state *core.BuildState) *Client {
 		instance:   state.Config.Remote.Instance,
 		reqTimeout: time.Duration(state.Config.Remote.Timeout),
 		outputs:    map[core.BuildLabel]*pb.Directory{},
+		downloads:  map[*core.BuildTarget]*pendingDownload{},
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
@@ -261,6 +274,18 @@ func (c *Client) Download(target *core.BuildTarget) error {
 }
 
 func (c *Client) download(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
+	p, shouldDownload := c.lockDownload(target)
+	if !shouldDownload {
+		<-p.ch
+		return p.err
+	}
+	err := c.reallyDownload(target, digest, ar)
+	p.err = err
+	close(p.ch)
+	return err
+}
+
+func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
 	if err := removeOutputs(target); err != nil {
 		return err
 	}
@@ -271,6 +296,19 @@ func (c *Client) download(target *core.BuildTarget, digest *pb.Digest, ar *pb.Ac
 	}
 	c.recordAttrs(target, digest)
 	return nil
+}
+
+// lockDownload returns a channel to notify on a download completing.
+// It also returns a boolean indicating whether this caller should perform the download itself.
+func (c *Client) lockDownload(target *core.BuildTarget) (*pendingDownload, bool) {
+	c.downloadMutex.Lock()
+	defer c.downloadMutex.Unlock()
+	p, present := c.downloads[target]
+	if !present {
+		p = &pendingDownload{ch: make(chan struct{})}
+		c.downloads[target] = p
+	}
+	return p, !present
 }
 
 // Test executes a remote test of the given target.
