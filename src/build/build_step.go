@@ -261,8 +261,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return err
 		}
 		metadata.Stdout = out
-		storePostBuildOutput(target, out)
-
+		if !runRemotely {
+			storePostBuildOutput(target, out)
+		}
 		if runRemotely && len(outs) != len(target.Outputs()) {
 			// postBuildFunction has changed the target - must rebuild it
 			log.Info("Rebuilding %s after post-build function", target)
