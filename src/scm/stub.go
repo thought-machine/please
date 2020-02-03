@@ -37,5 +37,5 @@ func (s *stub) Checkout(revision string) error {
 }
 
 func (s *stub) CurrentRevDate(format string) string {
-	return "<unknown>"
+	return "Unknown"
 }

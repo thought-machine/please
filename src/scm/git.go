@@ -167,11 +167,11 @@ func (g *git) Checkout(revision string) error {
 func (g *git) CurrentRevDate(format string) string {
 	out, err := exec.Command("git", "show", "-s", "--format=%ct").CombinedOutput()
 	if err != nil {
-		return "UNKNOWN"
+		return "Unknown"
 	}
-	timestamp, err := strconv.ParseInt(string(out), 10, 64)
+	timestamp, err := strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64)
 	if err != nil {
-		return string(out)
+		return err.Error()
 	}
 	t := time.Unix(timestamp, 0)
 	return t.Format(format)
