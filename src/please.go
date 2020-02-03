@@ -30,7 +30,6 @@ import (
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/src/query"
-	"github.com/thought-machine/please/src/remote"
 	"github.com/thought-machine/please/src/run"
 	"github.com/thought-machine/please/src/scm"
 	"github.com/thought-machine/please/src/test"
@@ -797,9 +796,6 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
-	if state.Config.Remote.URL != "" {
-		state.RemoteClient = remote.New(state)
-	}
 	state.Cache = newCache(state)
 
 	// Run the display

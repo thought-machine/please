@@ -12,6 +12,7 @@ import (
 	"github.com/thought-machine/please/src/follow"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/parse"
+	"github.com/thought-machine/please/src/remote"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/utils"
 )
@@ -26,6 +27,9 @@ var log = logging.MustGetLogger("plz")
 func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *core.Configuration, arch cli.Arch) {
 	parse.InitParser(state)
 	build.Init(state)
+	if state.Config.Remote.URL != "" {
+		state.RemoteClient = remote.New(state)
+	}
 
 	if config.Events.Port != 0 && state.NeedBuild {
 		shutdown := follow.InitialiseServer(state, config.Events.Port)
