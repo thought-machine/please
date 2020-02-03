@@ -32,12 +32,10 @@ func TestBuildLotsOfTargets(t *testing.T) {
 	pkg := core.NewPackage("pkg")
 	state.Graph.AddPackage(pkg)
 
-	go func() {
-		for i := 1; i <= size; i++ {
-			addTarget(state, i)
-		}
-		state.TaskDone(true) // Initial target adding counts as one.
-	}()
+	for i := 1; i <= size; i++ {
+		addTarget(state, i)
+	}
+	state.TaskDone(true) // Initial target adding counts as one.
 
 	results := state.Results()
 	// Consume and discard any results

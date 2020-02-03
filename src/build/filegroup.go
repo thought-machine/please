@@ -26,6 +26,7 @@ func Init(state *core.BuildState) {
 	theFilegroupBuilder = &filegroupBuilder{
 		built: map[string]bool{},
 	}
+	state.TargetHasher = newTargetHasher(state)
 }
 
 // A filegroupBuilder is a singleton that we have that builds all filegroups.

@@ -801,7 +801,6 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		state.RemoteClient = remote.New(state)
 	}
 	state.Cache = newCache(state)
-	state.TargetHasher = build.NewTargetHasher(state)
 
 	// Run the display
 	state.Results() // important this is called now, don't ask...

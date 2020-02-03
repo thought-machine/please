@@ -290,7 +290,7 @@ func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	target.BuildTimeout = 100 * time.Second
 	state.Graph.AddTarget(target)
 	state.Parser = &fakeParser{}
-	state.TargetHasher = NewTargetHasher(state)
+	state.TargetHasher = newTargetHasher(state)
 	return state, target
 }
 

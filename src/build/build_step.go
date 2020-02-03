@@ -543,8 +543,8 @@ type targetHasher struct {
 	mutex  sync.RWMutex
 }
 
-// NewTargetHasher returns a new TargetHasher
-func NewTargetHasher(state *core.BuildState) core.TargetHasher {
+// newTargetHasher returns a new TargetHasher
+func newTargetHasher(state *core.BuildState) core.TargetHasher {
 	return &targetHasher{
 		State:  state,
 		hashes: map[*core.BuildTarget][]byte{},
