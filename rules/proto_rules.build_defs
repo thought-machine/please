@@ -58,8 +58,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
         cmd = 'export RD="%s"; cd $RD; %s ${SRCS//$RD\\//} && cd $TMP_DIR' % (root_dir, cmd.replace('$TMP_DIR', '.'))
     else:
         cmd += ' ${SRCS}'
-    cmds = ['for OUT in $OUTS; do rm -rf `echo $OUT | cut -d "/" -f 1`; done',
-            cmd, '(mv -f ${PKG}/* .; true)']
+    cmds = [cmd, '(mv -f ${PKG}/* .; true)']
 
     # protoc_flags are applied transitively to dependent rules via labels.
     labels += ['protoc:' + flag for flag in protoc_flags]

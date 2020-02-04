@@ -96,7 +96,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
 		},
-		EnvironmentVariables: buildEnv(c.stampedBuildEnvironment(target, inputRoot), target.Sandbox),
+		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(target, inputRoot), target.Sandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
@@ -144,7 +144,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
 		},
-		EnvironmentVariables: buildEnv(core.TestEnvironment(c.state, target, "."), target.TestSandbox),
+		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(c.state, target, "."), target.TestSandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
@@ -482,10 +482,20 @@ func reallyTranslateOS(os string) string {
 }
 
 // buildEnv translates the set of environment variables for this target to a proto.
-func buildEnv(env []string, sandbox bool) []*pb.Command_EnvironmentVariable {
+func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) []*pb.Command_EnvironmentVariable {
 	sort.Strings(env) // Proto says it must be sorted (not just consistently ordered :( )
 	if sandbox {
 		env = append(env, "SANDBOX=true")
+	}
+	// This is an awkward little hack; the protocol says we always create directories for declared
+	// outputs, which (mostly by luck) is the same as plz would normally do. However targets that
+	// have post-build functions that detect their outputs do not get this on the first run since
+	// they don't *have* any at that point, but can then fail on the second because now they do,
+	// which is very hard to debug since it doesn't happen locally where we only run once.
+	// For now resolve with this hack; it is not nice but the whole protocol does not well support
+	// what we want to do here.
+	if target != nil && target.PostBuildFunction != nil && c.targetOutputs(target.Label) != nil {
+		env = append(env, "_CREATE_OUTPUT_DIRS=false")
 	}
 	vars := make([]*pb.Command_EnvironmentVariable, len(env))
 	for i, e := range env {
