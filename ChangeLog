@@ -1,3 +1,9 @@
+Version 14.3.2
+--------------
+
+    * Add an SCM_COMMIT_DATE env var to stamped build targets (in the format
+    YYYMMDD)
+
 Version 14.3.1
 --------------
 
