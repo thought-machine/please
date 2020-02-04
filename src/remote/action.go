@@ -483,7 +483,6 @@ func reallyTranslateOS(os string) string {
 
 // buildEnv translates the set of environment variables for this target to a proto.
 func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) []*pb.Command_EnvironmentVariable {
-	sort.Strings(env) // Proto says it must be sorted (not just consistently ordered :( )
 	if sandbox {
 		env = append(env, "SANDBOX=true")
 	}
@@ -497,6 +496,7 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 	if target != nil && target.PostBuildFunction != nil && c.targetOutputs(target.Label) != nil {
 		env = append(env, "_CREATE_OUTPUT_DIRS=false")
 	}
+	sort.Strings(env) // Proto says it must be sorted (not just consistently ordered :( )
 	vars := make([]*pb.Command_EnvironmentVariable, len(env))
 	for i, e := range env {
 		idx := strings.IndexByte(e, '=')
