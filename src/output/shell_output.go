@@ -481,6 +481,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 			env = core.TestEnvironment(state, target, dir)
 		}
 		cmd, _ = core.ReplaceSequences(state, target, cmd)
+		env = append(env, "CMD="+cmd)
 		fmt.Printf("  %s: %s\n", label, dir)
 		fmt.Printf("    Command: %s\n", cmd)
 		if !state.PrepareShell {
