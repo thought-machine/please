@@ -58,7 +58,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
         cmd = 'export RD="%s"; cd $RD; %s ${SRCS//$RD\\//} && cd $TMP_DIR' % (root_dir, cmd.replace('$TMP_DIR', '.'))
     else:
         cmd += ' ${SRCS}'
-    cmds = [cmd, '(mv -f ${PKG}/* .; true)']
+    cmds = [cmd, '(mv -f ${PKG_DIR}/* .; true)']
 
     # protoc_flags are applied transitively to dependent rules via labels.
     labels += ['protoc:' + flag for flag in protoc_flags]
@@ -347,7 +347,7 @@ def grpc_languages():
                 deps = deps,
                 test_only = test_only,
                 pkg_config_libs = ['grpc++', 'grpc', 'protobuf'],
-                compiler_flags = ['-I$PKG', '-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
+                compiler_flags = ['-I$PKG_DIR', '-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
             ),
             protoc_flags = ['--cpp_out=$TMP_DIR', '--plugin=protoc-gen-grpc-cc=$TOOLS_CC', '--grpc-cc_out=$TMP_DIR'],
             tools = [CONFIG.GRPC_CC_PLUGIN],
