@@ -15,7 +15,7 @@ genrule(
     srcs = ["bootstrap.sh"],
     outs = ["bootstrap.sh"],
     binary = True,
-    cmd = "sed 's/EXCLUDES=\"\"/EXCLUDES=\"%s\"/' $SRC > $OUT" % CONFIG.get("EXCLUDETEST", ""),
+    cmd = "sed 's/EXCLUDES=\"\"/EXCLUDES=\"%s\"/' $SRC > \"$OUT\"" % CONFIG.get("EXCLUDETEST", ""),
 )
 
 filegroup(

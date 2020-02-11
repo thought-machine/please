@@ -12,7 +12,7 @@ cc_embed_binary(
 genrule(
     name = "embedded_file_3_gen",
     outs = ["embedded_file_3.txt"],
-    cmd = "echo \"testing message 3\" > $OUT",
+    cmd = "echo \"testing message 3\" > \"$OUT\"",
 )
 
 cc_embed_binary(

@@ -2,14 +2,14 @@
 genrule(
     name = "test_require_py",
     outs = ["test_require.py"],
-    cmd = "touch $OUT",
+    cmd = 'touch "$OUT"',
     test_only = True,
 )
 
 genrule(
     name = "test_require_go",
     outs = ["test_require.go"],
-    cmd = "touch $OUT",
+    cmd = 'touch "$OUT"',
     test_only = True,
 )
 
@@ -50,7 +50,7 @@ genrule(
 
 genrule(
     name = "_gen_output",
-    cmd = "echo -n \"kittens\" > $OUT",
+    cmd = 'echo -n "kittens" > "$OUT"',
     deps = [
         ":_gen_output_name",
     ],

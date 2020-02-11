@@ -5,13 +5,13 @@ package(default_visibility = ["//test/..."])
 genrule(
     name = "test_require_py",
     outs = ["test_require.py"],
-    cmd = "touch $OUT",
+    cmd = 'touch "$OUT"',
 )
 
 genrule(
     name = "test_require_go",
     outs = ["test_require.go"],
-    cmd = "touch $OUT",
+    cmd = 'touch "$OUT"',
 )
 
 filegroup(
@@ -48,14 +48,14 @@ filegroup(
 genrule(
     name = "provided",
     outs = ["provided.txt"],
-    cmd = "echo \"hello\" > $OUT",
+    cmd = 'echo "hello" > "$OUT"',
 )
 
 gentest(
     name = "require_test",
     srcs = [":provider"],
     outs = ["require_test.txt"],
-    cmd = "cat $SRCS > $OUT",
+    cmd = 'cat $SRCS > "$OUT"',
     no_test_output = True,
     requires = ["wibble"],
     test_cmd = "[ \"`cat $TEST`\" == \"hello\" ]",

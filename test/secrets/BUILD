@@ -3,7 +3,7 @@
 gentest(
     name = "test_root_file",
     outs = ["test_root_file.sh"],
-    cmd = "echo \"#!$SECRETS\nexec true\" > $OUT",
+    cmd = 'echo "#!$SECRETS\nexec true" > "$OUT"',
     no_test_output = True,
     secrets = ["/bin/sh"],
     test_cmd = "$TEST",
@@ -11,7 +11,7 @@ gentest(
 
 tildes_replaced_test = r'''
 echo "[ \"$SECRETS_AD_SECRETS\" = \"/bin/sh $SECRETS_HOME/.bashrc\" ] || \
-(echo "Failed: $SECRETS_HOME $SECRETS_AD_SECRETS"; exit 1)" > $OUT'''
+(echo "Failed: $SECRETS_HOME $SECRETS_AD_SECRETS"; exit 1)" > "$OUT"'''
 
 gentest(
     name = "test_tildes_replaced",

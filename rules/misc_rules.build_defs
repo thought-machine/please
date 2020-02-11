@@ -314,7 +314,7 @@ def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
         system_srcs = srcs,
         outs = [basename(src) for src in srcs],
         deps = deps,
-        cmd = 'cp $SRCS .',
+        cmd = 'cp "$SRCS" .',
         hashes = hashes,
         visibility = visibility,
         test_only = test_only,
@@ -357,9 +357,9 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
             labels = labels,
         )
         if strip_prefix:
-            cmd = '$TOOL x $SRCS -o $OUT -s ' + strip_prefix
+            cmd = '"$TOOL" x $SRCS -o "$OUT" -s ' + strip_prefix
         else:
-            cmd = '$TOOL x $SRCS -o $OUT'
+            cmd = '"$TOOL" x $SRCS -o "$OUT"'
         return build_rule(
             name = name,
             srcs = [remote_rule],
@@ -453,7 +453,7 @@ def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, 
         name = name,
         srcs = [tar_rule],
         outs = [out or (name + '.tar.xz')],
-        cmd = 'xz -zc -T 0 $SRCS > $OUT',
+        cmd = 'xz -zc -T 0 $SRCS > "$OUT"',
         visibility = visibility,
         labels = labels + ['tar'],
         output_is_complete = True,

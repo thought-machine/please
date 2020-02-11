@@ -95,15 +95,15 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         hashes = hashes,
     )
     if strip_prefix:
-        cmd = '$TOOL x $SRCS_REMOTE -o $OUT -s ' + strip_prefix
+        cmd = '$TOOL x $SRCS_REMOTE -o "$OUT" -s ' + strip_prefix
     else:
-        cmd = '$TOOL x $SRCS_REMOTE -o $OUT'
+        cmd = '$TOOL x $SRCS_REMOTE -o "$OUT"'
     if strip_build:
         cmd += ' && find . -name BUILD | xargs rm -f'
     if build_file:
-        cmd += ' && mv $SRCS_BUILD $OUT/' + CONFIG.BUILD_FILE_NAMES[0]
+        cmd += ' && mv $SRCS_BUILD "$OUT/' + CONFIG.BUILD_FILE_NAMES[0] + '"'
     elif build_file_content:
-        cmd += ' && cat > $OUT/%s << EOF\n%s\nEOF' % (CONFIG.BUILD_FILE_NAMES[0], build_file_content)
+        cmd += ' && cat > "$OUT"/%s << EOF\n%s\nEOF' % (CONFIG.BUILD_FILE_NAMES[0], build_file_content)
 
     extract_rule = build_rule(
         name = name,

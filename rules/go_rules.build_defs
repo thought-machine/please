@@ -6,9 +6,9 @@ rules to Go packages.
 
 # This links all the .a files up one level. This is necessary for some Go tools to find them.
 _LINK_PKGS_CMD = ' '.join([
-    'for FN in `find . -name "*.a" | sort`; do ',
-    'DN=${FN%/*}; BN=${FN##*/}; if [ "${DN##*/}" == "${BN%.a}" ]; then ',
-    'ln -s $TMP_DIR/$FN ${DN%/*}; fi; done'
+    'for FN in `find . -name "*.a" | sort`; do',
+    'DN=${FN%/*}; BN=${FN##*/}; if [ "${DN##*/}" == "${BN%.a}" ]; then',
+    'ln -s "$TMP_DIR"/$FN ${DN%/*}; fi; done'
 ])
 
 
@@ -59,7 +59,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             },
             outs = [name + '.abi'],
             building_description = 'Creating ABI...',
-            cmd = 'eval `$TOOL env` && $TOOL tool asm -trimpath $TMP_DIR -I ${GOROOT}/pkg/include -D GOOS_${OS} -D GOARCH_${ARCH} -gensymabis -o $OUT $SRCS_ASM',
+            cmd = 'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS_${OS} -D GOARCH_${ARCH} -gensymabis -o "$OUT" $SRCS_ASM',
             tools=[CONFIG.GO_TOOL],
             test_only = test_only,
         )
@@ -84,7 +84,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             },
             outs = [name + '.o'],
             building_description = 'Assembling...',
-            cmd = 'eval `$TOOL env` && $TOOL tool asm -trimpath $TMP_DIR -I ${GOROOT}/pkg/include -D GOOS_${GOOS} -D GOARCH_${GOARCH} -o $OUT $SRCS_ASM',
+            cmd = 'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS_${GOOS} -D GOARCH_${GOARCH} -o "$OUT" $SRCS_ASM',
             tools=[CONFIG.GO_TOOL],
             test_only = test_only,
         )
@@ -96,7 +96,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             },
             outs=[out],
             tools=[CONFIG.GO_TOOL],
-            cmd = 'cp $SRCS_LIB $OUT && chmod +w $OUT && $TOOL tool pack r $OUT $SRCS_ASM',
+            cmd = 'cp $SRCS_LIB "$OUT" && chmod +w "$OUT" && "$TOOL" tool pack r "$OUT" $SRCS_ASM',
             visibility = visibility,
             building_description = 'Packing...',
             requires = ['go'],
@@ -199,14 +199,14 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
         },
         cmd = ' && '.join([
             (f'OUT_DIR="$TMP_DIR/{subdir}"') if subdir else 'OUT_DIR="$TMP_DIR"',
-            'mkdir -p $OUT_DIR',
+            'mkdir -p "$OUT_DIR"',
             'cd $PKG_DIR/' + subdir,
-            '$TOOL tool cgo -objdir $OUT_DIR -importpath ${PKG_DIR#*src/} *.go',
+            '$TOOL tool cgo -objdir "$OUT_DIR" -importpath ${PKG_DIR#*src/} *.go',
             # Remove the .o file which BSD sed gets upset about in the next command
-            'rm -f $OUT_DIR/_cgo_.o $OUT_DIR/_cgo_main.c',
+            'rm -f "$OUT_DIR"/_cgo_.o "$OUT_DIR"/_cgo_main.c',
             # cgo leaves absolute paths in these files which we must get rid of :(
-            'find $OUT_DIR -type f -maxdepth 1 | xargs sed -i -e "s|$TMP_DIR/||g"',
-            'cd $TMP_DIR',
+            'find "$OUT_DIR" -type f -maxdepth 1 | xargs sed -i -e "s|"$TMP_DIR"/||g"',
+            'cd "$TMP_DIR"',
             f'ls {subdir2}*.c {subdir2}*.go',
         ]),
         tools = [CONFIG.GO_TOOL],
@@ -257,9 +257,9 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
                    linker_flags:list=[], deps=None, provides=None, out=None, labels:list=[]):
     """Defines a rule to merge a cgo object into a Go library."""
     if o_rule:
-        cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOLS_AR x $SRCS_O && $TOOLS_GO tool pack r $OUT *.o'
+        cmd = 'cp $SRCS_A "$OUT" && chmod +w "$OUT" && "$TOOLS_AR" x $SRCS_O && "$TOOLS_GO" tool pack r "$OUT" *.o'
     else:
-        cmd = 'cp $SRCS_A $OUT && chmod +w $OUT && $TOOLS_AR x $PKG_DIR/*#c.a && $TOOLS_GO tool pack r $OUT *.o'
+        cmd = 'cp $SRCS_A "$OUT" && chmod +w "$OUT" && "$TOOLS_AR" x $PKG_DIR/*#c.a && "$TOOLS_GO" tool pack r "$OUT" *.o'
 
     return build_rule(
         name = name,
@@ -466,9 +466,9 @@ def go_test_main(name:str, srcs:list, test_only:bool=False,
         outs = [name + '_main.go'],
         deps = deps,
         cmd = {
-            'dbg': f'$TOOLS -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
-            'opt': f'$TOOLS -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
-            'cover': f'$TOOLS -d . -o $OUT -i "{CONFIG.GO_IMPORT_PATH}" $SRCS ',
+            'dbg': f'"$TOOLS" -o "$OUT" -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
+            'opt': f'"$TOOLS" -o "$OUT" -i "{CONFIG.GO_IMPORT_PATH}" $SRCS',
+            'cover': f'"$TOOLS" -d . -o "$OUT" -i "{CONFIG.GO_IMPORT_PATH}" $SRCS ',
         },
         needs_transitive_deps = True,  # Need all dependencies to template coverage variables
         requires = ['go', 'go_src'],
@@ -598,14 +598,14 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
 
     # Now compile it in a separate step.
     cmd = [
-        'export GOPATH=$(find $TMP_DIR \( -name src -o -name pkg \) -exec dirname {} \; | sort | uniq | tr "\\n" ":") GO111MODULE="off"',
-        '$TOOLS_GO install -toolexec "$TOOLS_BUILDID" -gcflags "-trimpath $TMP_DIR" -asmflags "-trimpath $TMP_DIR" ' + ' '.join(all_installs or install),
+        'export GOPATH="$(find \"$TMP_DIR\" \( -name src -o -name pkg \) -exec dirname {} \; | sort | uniq | tr \'\\n\' \':\')" GO111MODULE="off"',
+        '"$TOOLS_GO" install -toolexec "$TOOLS_BUILDID" -gcflags "-trimpath \\\"$TMP_DIR\\\"" -asmflags "-trimpath \\\"$TMP_DIR\\\"" ' + ' '.join(all_installs or install),
     ]
     if package_name():
         cmd += [
             # The outputs tend to end up in subdirectories (Go seems to match them to the location the source came from)
             'rm -rf bin' if binary else 'rm -rf pkg',
-            'mv $PKG_DIR/bin .' if binary else 'mv $PKG_DIR/pkg .',
+            'mv "$PKG_DIR/bin" .' if binary else 'mv "$PKG_DIR/pkg" .',
         ]
     if binary:
         outs = ['bin/' + name]
@@ -679,7 +679,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
         cmd += ['find . -name .git | xargs rm -rf']
         tools = [CONFIG.GO_TOOL]
     if patch:
-        cmd += [f'patch -s -d {subdir} -p1 < $TMP_DIR/$SRCS_PATCH']
+        cmd += [f'patch -s -d {subdir} -p1 < "$TMP_DIR"/$SRCS_PATCH']
     if strip:
         cmd += [f'rm -rf {subdir}/{s}' for s in strip]
     return build_rule(
@@ -720,7 +720,7 @@ def _go_github_repo_cmd(name, get, repo, revision):
     )
     return [
         'rm -rf src/' + out,
-        '$TOOL x $SRCS_GET',
+        '"$TOOL" x $SRCS_GET',
         f'mv {dest}*/ src/{out}',
     ], [remote_rule], [CONFIG.JARCAT_TOOL]
 
@@ -755,13 +755,13 @@ def _replace_test_package(name, output, static, definitions, cgo):
 
 def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False):
     """Returns the commands to run for building a Go library."""
-    filter_cmd = 'export SRCS="$(${TOOLS_FILTER} ${SRCS})"; ' if filter_srcs else ''
+    filter_cmd = 'export SRCS="$(\"${TOOLS_FILTER}\" ${SRCS})"; ' if filter_srcs else ''
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
-    out_cmd = ' -o $OUTS_O -symabis $SRCS_ABI -asmhdr $OUTS_H' if abi else ' -o $OUT'
+    out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
     _GOPATH = ' '.join(
-        ['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
-    compile_cmd = f'$TOOLS_GO tool compile -trimpath $TMP_DIR {complete_flag}{_GOPATH} $(for i in $(find $TMP_DIR -name pkg -type d); do echo -n " -I $i/{CONFIG.GOOS}_{CONFIG.GOARCH} "; done) -pack {out_cmd}'
+        ['-I "%s" -I "%s/pkg/%s_%s"' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
+    compile_cmd = f'"$TOOLS_GO" tool compile -trimpath "$TMP_DIR" {complete_flag}{_GOPATH} $(for i in $(find "$TMP_DIR" -name pkg -type d); do echo -n " -I \"$i\"/{CONFIG.GOOS}_{CONFIG.GOARCH} "; done) -pack {out_cmd}'
     # Annotates files for coverage.
     cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + _LINK_PKGS_CMD) if all_srcs else _LINK_PKGS_CMD
@@ -779,8 +779,8 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
     """Returns the commands to run for linking a Go binary."""
 
     _GOPATH = ' '.join(
-        ['-I %s -I %s/pkg/%s_%s' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
-    _link_cmd = f'$TOOLS_GO tool link -tmpdir $TMP_DIR -extld $TOOLS_LD %s $(find $TMP_DIR -type d -print | grep  "pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}$" | sed -e "s/^/-L /" | tr "\\n" " ") -o $OUT ' % _GOPATH.replace('-I ', '-L ')
+        ['-I "%s" -I "%s/pkg/%s_%s"' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
+    _link_cmd = f'"$TOOLS_GO" tool link -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" %s $(find "$TMP_DIR" -type d -print | grep "pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}$" | sed -e "s/^/-L /" | tr "\\n" " ") -o "$OUT" ' % _GOPATH.replace('-I ', '-L ')
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
     linkerdefs = []
@@ -825,9 +825,9 @@ def _go_import_path_cmd(import_path):
     elif import_path.startswith('/'):
         raise ConfigError('GO_IMPORT_PATH cannot start with a /')
     elif '/' in import_path:
-        return ' && mkdir -p %s && ln -s $TMP_DIR %s' % (dirname(import_path), import_path)
+        return ' && mkdir -p %s && ln -s "$TMP_DIR" %s' % (dirname(import_path), import_path)
     else:
-        return ' && ln -s $TMP_DIR ' + import_path
+        return ' && ln -s "$TMP_DIR" ' + import_path
 
 
 def _collect_linker_flags(static):

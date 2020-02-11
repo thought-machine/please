@@ -53,7 +53,7 @@ genrule(
         "mv third_party/python .bootstrap",
         # A little cleanup.
         "rm -rf third_party .bootstrap/xmlrunner/extra .bootstrap/coverage/htmlfiles .bootstrap/.*.pex.zip",
-        "$TOOL z -d -i .bootstrap -o $OUTS --preamble_file $(location :pex_main)",
+        '"$TOOL" z -d -i .bootstrap -o "$OUTS" --preamble_file $(location :pex_main)',
     ],
     tools = ["//tools/jarcat"],
     visibility = ["PUBLIC"],

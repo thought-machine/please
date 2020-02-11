@@ -42,7 +42,7 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
             'export ENCODED_FILENAME="${SRCS//[\\/\\.]/_}"',
             f'export BINARY_NAME="{name}"',
             f'export NAMESPACE="{namespace}"',
-            f'echo "{hdr_contents}" > $OUT',
+            f'echo "{hdr_contents}" > "$OUT"',
         ]),
         visibility = visibility,
         building_description = 'Writing header...',
@@ -60,11 +60,11 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
             f'echo "{_CC_DARWIN_ASM_CONTENTS}" > embedded.asm',
             '$TOOLS_ASM -fmacho64 embedded.asm -o ${OUTS/.a/.o}',
             '$TOOLS_JARCAT ar --srcs ${OUTS/.a/.o}',
-            '$TOOLS_AR s $OUTS',
+            '$TOOLS_AR s "$OUTS"',
         ])
         tools['asm'] = [CONFIG.ASM_TOOL]
     else:
-        cmd = '$TOOLS_LD -r --format binary %s -o ${OUTS/.a/.o} $SRC && $TOOLS_JARCAT ar --srcs ${OUTS/.a/.o} && $TOOLS_AR s $OUTS' % CONFIG.DEFAULT_LDFLAGS
+        cmd = '$TOOLS_LD -r --format binary %s -o "${OUTS/.a/.o}" $SRC && $TOOLS_JARCAT ar --srcs "${OUTS/.a/.o}" && $TOOLS_AR s "$OUTS"' % CONFIG.DEFAULT_LDFLAGS
         tools['ld'] = [CONFIG.LD_TOOL]
 
     lib_rule = build_rule(
