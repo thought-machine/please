@@ -244,3 +244,24 @@ func TestIncrementalStats(t *testing.T) {
 	assert.Equal(t, 1, stats.CoveredLines)
 	assert.EqualValues(t, 50.0, stats.Percentage)
 }
+
+func TestGetDirectoryCoverage(t *testing.T) {
+	// Given
+	cov := core.TestCoverage{
+		Files: map[string][]core.LineCoverage{
+			"my/dir1/file_1.go": {core.Uncovered, core.Covered},
+			"my/dir2/file_1.go": {core.NotExecutable, core.Covered},
+			"my/dir2/file_2.go": {core.Uncovered, core.Covered, core.Covered},
+		},
+	}
+
+	// When
+	dirCoverage := getDirectoryCoverage(cov)
+
+	// Then
+	expectedDirCoverage := map[string]float32{
+		"my/dir1": 50.0,
+		"my/dir2": 75.0,
+	}
+	assert.Equal(t, expectedDirCoverage, dirCoverage)
+}

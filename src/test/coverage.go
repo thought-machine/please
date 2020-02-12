@@ -142,6 +142,7 @@ func WriteCoverageToFileOrDie(coverage core.TestCoverage, filename string, incre
 
 	out.Files = convertCoverage(coverage.Files, allowedFiles)
 	out.Stats = getStats(coverage)
+	out.Directories = getDirectoryCoverage(coverage)
 	out.Stats.Incremental = incrementalStats
 	if b, err := json.MarshalIndent(out, "", "    "); err != nil {
 		log.Fatalf("Failed to encode json: %s", err)
@@ -192,6 +193,36 @@ func getStats(coverage core.TestCoverage) stats {
 	return stats
 }
 
+type dirLines struct {
+	covered        int
+	totalCoverable int
+}
+
+func (lines dirLines) getPercentage() float32 {
+	return 100.0 * float32(lines.covered) / float32(lines.totalCoverable)
+}
+
+func getDirectoryCoverage(coverage core.TestCoverage) map[string]float32 {
+	dirCoverage := make(map[string]float32)
+	linesByDir := make(map[string]*dirLines)
+
+	for _, file := range coverage.OrderedFiles() {
+		covered, total := CountCoverage(coverage.Files[file])
+		dirpath := filepath.Dir(file)
+
+		if _, exists := linesByDir[dirpath]; exists {
+			linesByDir[dirpath].covered += covered
+			linesByDir[dirpath].totalCoverable += total
+		} else {
+			linesByDir[dirpath] = &dirLines{covered, total}
+		}
+
+		dirCoverage[dirpath] = linesByDir[dirpath].getPercentage()
+	}
+
+	return dirCoverage
+}
+
 func convertCoverage(in map[string][]core.LineCoverage, allowedFiles []string) map[string]string {
 	ret := map[string]string{}
 	for k, v := range in {
@@ -204,9 +235,10 @@ func convertCoverage(in map[string][]core.LineCoverage, allowedFiles []string) m
 
 // Used to prepare core.TestCoverage objects for JSON marshalling.
 type jsonCoverage struct {
-	Tests map[string]map[string]string `json:"tests"`
-	Files map[string]string            `json:"files"`
-	Stats stats                        `json:"stats"`
+	Tests       map[string]map[string]string `json:"tests"`
+	Files       map[string]string            `json:"files"`
+	Directories map[string]float32           `json:"directories"`
+	Stats       stats                        `json:"stats"`
 }
 
 // stats is a struct describing summarised coverage stats.
