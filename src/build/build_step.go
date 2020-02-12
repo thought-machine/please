@@ -61,7 +61,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 			state.AddPendingBuild(reverseDep.Label, false)
 		}
 	}
-	if target.IsTest && state.NeedTests {
+	if target.IsTest && state.NeedTests && state.IsOriginalTarget(target.Label) && state.ShouldInclude(target) {
 		state.AddPendingTest(target.Label)
 	}
 }
