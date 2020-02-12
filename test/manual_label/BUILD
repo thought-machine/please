@@ -1,12 +1,12 @@
 gentest(
     name = "failing_test",
-    test_cmd = "false",
     labels = ["manual"],
+    test_cmd = "false",
 )
 
 gentest(
     name = "passing_test",
-    test_cmd = "true",
     no_test_output = True,
+    test_cmd = "true",
     deps = [":failing_test"],
 )
