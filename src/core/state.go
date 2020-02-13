@@ -353,6 +353,12 @@ func (state *BuildState) IsOriginalTarget(label BuildLabel) bool {
 	return state.isOriginalTarget(label, false)
 }
 
+// IsExactOriginalTarget returns true if a target is an original target, specified exactly
+// (i.e. not via a :all label).
+func (state *BuildState) IsExactOriginalTarget(label BuildLabel) bool {
+	return state.isOriginalTarget(label, true)
+}
+
 // isOriginalTarget implementsIsOriginalTarget, optionally allowing disabling matching :all labels.
 func (state *BuildState) isOriginalTarget(label BuildLabel, exact bool) bool {
 	for _, original := range state.OriginalTargets {
