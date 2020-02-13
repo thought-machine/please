@@ -780,7 +780,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
 
     _GOPATH = ' '.join(
         ['-I "%s" -I "%s/pkg/%s_%s"' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
-    _link_cmd = f'"$TOOLS_GO" tool link -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" %s $(find "$TMP_DIR" -type d -print | grep "pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}$" | sed -e "s/^/-L \\\"/" | tr "\\n" "\\\" ") -o "$OUT" ' % _GOPATH.replace('-I ', '-L ')
+    _link_cmd = f'"$TOOLS_GO" tool link -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" %s $(find "$TMP_DIR" -type d -print | grep "pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}$" | sed -e "s/^/-L \\\"/" -e "s/$/\\"/g" | tr "\\n" " ") -o "$OUT" ' % _GOPATH.replace('-I ', '-L ')
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
     linkerdefs = []
