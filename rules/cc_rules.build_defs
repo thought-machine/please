@@ -107,7 +107,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
 
     if _interfaces:
         # Generate the module interface file
-        xflags = ['-fmodules-ts --precompile -x c++-module -o $OUT' if CONFIG.CC_MODULES_CLANG else '-fmodules -fmodule-output=$OUT']
+        xflags = ['-fmodules-ts --precompile -x c++-module -o "$OUT"' if CONFIG.CC_MODULES_CLANG else '-fmodules -fmodule-output="$OUT"']
         cmds, tools = _library_cmds(_c, compiler_flags + xflags, pkg_config_libs, pkg_config_cflags, archive=False)
         interface_rule = build_rule(
             name = name,
@@ -159,7 +159,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             tag = 'a',
             srcs = {'srcs': a_rules},
             outs = [name + '.a'],
-            cmd = '$TOOLS_JARCAT ar --combine && $TOOLS_AR s $OUT',
+            cmd = '"$TOOLS_JARCAT" ar --combine && "$TOOLS_AR" s "$OUT"',
             building_description = 'Archiving...',
             test_only = test_only,
             labels = labels,
@@ -340,7 +340,7 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
         name = name,
         deps = deps,
         outs = [f'lib{name}.a'],
-        cmd = '$TOOLS_JARCAT ar --find && $TOOLS_AR s $OUT',
+        cmd = '"$TOOLS_JARCAT" ar --find && "$TOOLS_AR" s "$OUT"',
         needs_transitive_deps = True,
         output_is_complete = True,
         visibility = visibility,
@@ -689,7 +689,7 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, extra_f
     opt_flags = _build_flags(compiler_flags, pkg_config_libs, pkg_config_cflags, c=c)
     cmd_template = '$TOOLS_CC -c -I . ${SRCS_SRCS} %s %s'
     if archive:
-        cmd_template += ' && $TOOLS_JARCAT ar -r && $TOOLS_AR s $OUT'
+        cmd_template += ' && "$TOOLS_JARCAT" ar -r && "$TOOLS_AR" s "$OUT"'
     cmds = {
         'dbg': cmd_template % (dbg_flags, extra_flags),
         'opt': cmd_template % (opt_flags, extra_flags),
@@ -708,11 +708,11 @@ def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False,
     dbg_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=True)
     opt_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=False)
     cmds = {
-        'dbg': f'$TOOL -o $OUT {dbg_flags} {extra_flags}',
-        'opt': f'$TOOL -o $OUT {opt_flags} {extra_flags}',
+        'dbg': f'"$TOOL" -o "$OUT" {dbg_flags} {extra_flags}',
+        'opt': f'"$TOOL" -o "$OUT" {opt_flags} {extra_flags}',
     }
     if CONFIG.CPP_COVERAGE:
-        cmds['cover'] = f'$TOOL -o $OUT {dbg_flags} {extra_flags} {_COVERAGE_FLAGS} -lgcov'
+        cmds['cover'] = f'"$TOOL" -o "$OUT" {dbg_flags} {extra_flags} {_COVERAGE_FLAGS} -lgcov'
     return cmds, [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
                   CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL]
 

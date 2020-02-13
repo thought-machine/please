@@ -385,7 +385,7 @@ genrule(
     name = "symlink_gen",
     srcs = ["symlink_test.txt"],
     outs = ["symlink_test.txt"],
-    cmd = "ln -s $SRCS $OUTS",
+    cmd = 'ln -s $SRCS "$OUTS"',
 )
 
 gentest(
@@ -434,7 +434,7 @@ sh_test(
 genrule(
     name = "pass_env",
     outs = ["pass_env.sh"],
-    cmd = "echo \"export USER='$USER'\" > $OUT",
+    cmd = "echo \"export USER='$USER'\" > \"$OUT\"",
     pass_env = ["USER"],
 )
 

@@ -12,7 +12,7 @@ for src in glob(
         name = src.replace(".", "_"),
         srcs = ["template.html", src],
         outs = [src],
-        cmd = "$TOOL $SRCS > $OUT",
+        cmd = '"$TOOL" $SRCS > "$OUT"',
         tools = [":templater"],
     )
     deps += [templated_rule]
@@ -20,7 +20,7 @@ for src in glob(
 genrule(
     name = "rules",
     outs = ["rules.json"],
-    cmd = "$TOOL query rules > $OUT",
+    cmd = '"$TOOL" query rules > "$OUT"',
     tools = ["//src:please"],
 )
 
@@ -34,9 +34,9 @@ genrule(
     ],
     outs = ["lexicon.html"],
     cmd = [
-        "$TOOLS_LEX > lexicon.html",
-        "$TOOLS_TMPL docs/template.html lexicon.html > tmp.html",
-        "mv tmp.html $OUT",
+        '"$TOOLS_LEX" > lexicon.html',
+        '"$TOOLS_TMPL" docs/template.html lexicon.html > tmp.html',
+        'mv tmp.html "$OUT"',
     ],
     tools = {
         "lex": [":lexicon_templater"],
@@ -54,7 +54,7 @@ genrule(
         "grammar": ["grammar.txt"],
     },
     outs = ["language.html"],
-    cmd = "$TOOLS_TEMPLATE $SRCS_HTML | $TOOLS_GRAMMAR > $OUT",
+    cmd = '"$TOOLS_TEMPLATE" $SRCS_HTML | "$TOOLS_GRAMMAR" > "$OUT"',
     tools = {
         "grammar": [":grammar_templater"],
         "template": [":templater"],

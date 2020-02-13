@@ -4,7 +4,7 @@ genrule(
     name = "gen",
     outs = ["gen.txt"],
     # This being nondeterministic would normally be a bad idea, but here makes the test work better.
-    cmd = "dd if=/dev/urandom of=$OUT bs=10000 count=1",
+    cmd = 'dd if=/dev/urandom of="$OUT" bs=10000 count=1',
     visibility = ["//test/filegroup/many:all"],
 )
 

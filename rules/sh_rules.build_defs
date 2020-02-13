@@ -61,18 +61,18 @@ def sh_binary(name:str, main:str|list&srcs, deps:list=None, visibility:list=None
     if deps:
         cmds = ' && '.join([
             # Use the same shebang as the original script
-            'head -1 $SRCS > $TMPDIR/_tmp.txt',
+            'head -1 "$SRCS" > "$TMPDIR"/_tmp.txt',
             # Inject bash code to untar the compressed files.
-            f'echo "{_SH_BINARY_TMPL_PREFIX}" >> $TMPDIR/_tmp.txt',
+            f'echo "{_SH_BINARY_TMPL_PREFIX}" >> "$TMPDIR"/_tmp.txt',
             # Inject the user defined script.
-            'cat $SRCS >> $TMPDIR/_tmp.txt',
+            'cat $SRCS >> "$TMPDIR"/_tmp.txt',
             # Inject a final exit so it doesn't try to execute the zipfile contents.
-            f'echo "{_SH_BINARY_TMPL_SUFFIX}" >> $TMPDIR/_tmp.txt',
+            f'echo "{_SH_BINARY_TMPL_SUFFIX}" >> "$TMPDIR"/_tmp.txt',
             # Compress the dependent files and dump out into the bash script.
-            '$TOOL z -d -n -i . -o $OUT --preamble_file $TMPDIR/_tmp.txt --strip_prefix ./',
+            '"$TOOL" z -d -n -i . -o "$OUT" --preamble_file "$TMPDIR"/_tmp.txt --strip_prefix ./',
         ])
     else:
-        cmds = 'cp $SRCS $OUT'
+        cmds = 'cp $SRCS "$OUT"'
 
     return build_rule(
         name = name,
@@ -119,7 +119,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list|di
         data=data,
         deps=deps,
         outs=[name + '.sh'],
-        cmd='mv ${SRC} ${OUT}',
+        cmd='mv "${SRC}" "${OUT}"',
         test_cmd=test_cmd,
         visibility=visibility,
         labels=labels,
@@ -162,9 +162,9 @@ def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, out:str="", shell:s
     """
     cmd = ' && '.join(cmd) if isinstance(cmd, list) else cmd
     if isinstance(cmd, str):
-        cmds = f'{{ cat > $OUT << EOF\n#!{shell}\n{cmd}\nEOF\n}}'
+        cmds = f'{{ cat > "$OUT" << EOF\n#!{shell}\n{cmd}\nEOF\n}}'
     elif isinstance(cmd, dict):
-        cmds = {k: f'{{ cat > $OUT << EOF\n#!{shell}\n{v}\nEOF\n}}' for k, v in cmd.items()}
+        cmds = {k: f'{{ cat > "$OUT" << EOF\n#!{shell}\n{v}\nEOF\n}}' for k, v in cmd.items()}
     return build_rule(
         name = name,
         outs = [out or name + '.sh'],

@@ -58,15 +58,15 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=None
             srcflag = '--src_dir' if src_dir else ''
             javac_cmd = f'$(worker {CONFIG.JAVAC_WORKER}) {javac_flags} {mflag} {srcflag}'
         else:
-            find = r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`'
+            find = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
             srcflag = '$SRCS' if srcs else '`find $SRCS -name "*.java"`'
-            javac_cmd = f'mkdir -p _tmp/META-INF && $TOOLS_JAVAC {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
+            javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
 
         cmd = ' && '.join([
             javac_cmd,
             'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g" | sort > _tmp/META-INF/please_sourcemap',
             'cd _tmp',
-            '$TOOLS_JARCAT z -d -o $OUT -i .',
+            '"$TOOLS_JARCAT" z -d -o "$OUT" -i .',
         ])
 
         src_dir_label = []
@@ -184,7 +184,7 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
     if not modules:
         raise Exception('You cannot assemble a java runtime image without specifying any modules.')
     out = out or name
-    depflags = r'`find $TMP_DIR -name "*.jar" | tr \\\\n :`'
+    depflags = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
     modules = ','.join(modules)
     cmd = f"$TOOL --module-path {depflags}:{CONFIG.JAVA_HOME}/jmods --add-modules {modules} --launcher {name}={main_module}/{main_class} --output {out} {jlink_args}"
 

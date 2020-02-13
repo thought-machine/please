@@ -41,7 +41,7 @@ def config_setting(name:str, values:dict, visibility:list=None):
     return build_rule(
         name = name,
         outs = [name],
-        cmd = 'echo true > $OUT' if on else 'echo false > $OUT',
+        cmd = 'echo true > "$OUT"' if on else 'echo false > "$OUT"',
         visibility = visibility,
         labels = ['config:on' if on else 'config:off'],
     )

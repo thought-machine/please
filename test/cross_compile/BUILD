@@ -3,7 +3,7 @@ subinclude("//build_defs:plz_e2e_test")
 genrule(
     name = "record_arch",
     outs = ["arch.txt"],
-    cmd = "echo ${OS}_${ARCH} > $OUT",
+    cmd = 'echo ${OS}_${ARCH} > "$OUT"',
 )
 
 sh_test(
@@ -48,7 +48,7 @@ genrule(
     name = "location",
     srcs = [":record_arch"],
     outs = ["arch_location.txt"],
-    cmd = "echo '$(location :record_arch)' > $OUT",
+    cmd = "echo '$(location :record_arch)' > \"$OUT\"",
 )
 
 sh_test(

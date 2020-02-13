@@ -4,7 +4,7 @@ genrule(
     name = "builtin_rules",
     srcs = build_defs,
     outs = [build_def + ".gob" for build_def in build_defs],
-    cmd = "$TOOL -o $TMP_DIR $SRCS",
+    cmd = '"$TOOL" -o "$TMP_DIR" $SRCS',
     tools = ["//src/parse/asp/main:compiler"],
 )
 

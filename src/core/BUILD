@@ -5,7 +5,7 @@ genrule(
         "version": ["//:version"],
     },
     outs = ["versioned.go"],
-    cmd = "sed \"s/1.0.9999/`cat $SRCS_VERSION`/\" $SRCS_GO > $OUT",
+    cmd = "sed \"s/1.0.9999/`cat $SRCS_VERSION`/\" $SRCS_GO > \"$OUT\"",
 )
 
 go_library(

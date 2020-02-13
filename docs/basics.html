@@ -92,7 +92,7 @@
               srcs = ['docs.txt'],
               outs = [f'docs_{language}.txt'],
               tools = ['//tools:translate_tool'],
-              cmd = f'$TOOL -i $SRC --language {language} > $OUT',
+              cmd = f'$TOOL -i $SRC --language {language} > "$OUT"',
           )
 
           genrule(
@@ -100,7 +100,7 @@
               srcs = [lang_docs],
               outs = [f'docs_{language}.html'],
               tools = ['//tools:html_doc_tool'],
-              cmd = '$TOOL --src $SRC --out $OUT',
+              cmd = '$TOOL --src $SRC --out "$OUT"',
               visibility = ['PUBLIC'],
           )
       </code></pre>

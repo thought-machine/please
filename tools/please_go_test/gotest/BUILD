@@ -32,7 +32,7 @@ genrule(
     name = "test_excluded_archive",
     srcs = ["test_data/core.a"],
     outs = ["test_data/x/core.a"],
-    cmd = "cp $SRC $OUT",
+    cmd = 'cp $SRC "$OUT"',
 )
 
 go_test(

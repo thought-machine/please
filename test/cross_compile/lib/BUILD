@@ -11,7 +11,7 @@ go_binary(
 genrule(
     name = "generated",
     outs = ["gen.txt"],
-    cmd = "$TOOL > $OUT",
+    cmd = '"$TOOL" > "$OUT"',
     tools = [":generator"],
 )
 
