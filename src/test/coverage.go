@@ -142,8 +142,8 @@ func WriteCoverageToFileOrDie(coverage core.TestCoverage, filename string, incre
 
 	out.Files = convertCoverage(coverage.Files, allowedFiles)
 	out.Stats = getStats(coverage)
-	out.Directories = getDirectoryCoverage(coverage)
 	out.Stats.Incremental = incrementalStats
+	out.Stats.CoverageByDirectory = getDirectoryCoverage(coverage)
 	if b, err := json.MarshalIndent(out, "", "    "); err != nil {
 		log.Fatalf("Failed to encode json: %s", err)
 	} else if err := ioutil.WriteFile(filename, b, 0644); err != nil {
@@ -193,28 +193,28 @@ func getStats(coverage core.TestCoverage) stats {
 	return stats
 }
 
-type dirLines struct {
+type lines struct {
 	covered        int
 	totalCoverable int
 }
 
-func (lines dirLines) getPercentage() float32 {
-	return 100.0 * float32(lines.covered) / float32(lines.totalCoverable)
+func (l lines) getPercentage() float32 {
+	return 100.0 * float32(l.covered) / float32(l.totalCoverable)
 }
 
 func getDirectoryCoverage(coverage core.TestCoverage) map[string]float32 {
 	dirCoverage := make(map[string]float32)
-	linesByDir := make(map[string]*dirLines)
+	linesByDir := make(map[string]*lines)
 
-	for _, file := range coverage.OrderedFiles() {
-		covered, total := CountCoverage(coverage.Files[file])
+	for file, coverage := range coverage.Files {
+		covered, total := CountCoverage(coverage)
 		dirpath := filepath.Dir(file)
 
 		if _, exists := linesByDir[dirpath]; exists {
 			linesByDir[dirpath].covered += covered
 			linesByDir[dirpath].totalCoverable += total
 		} else {
-			linesByDir[dirpath] = &dirLines{covered, total}
+			linesByDir[dirpath] = &lines{covered, total}
 		}
 
 		dirCoverage[dirpath] = linesByDir[dirpath].getPercentage()
@@ -235,17 +235,17 @@ func convertCoverage(in map[string][]core.LineCoverage, allowedFiles []string) m
 
 // Used to prepare core.TestCoverage objects for JSON marshalling.
 type jsonCoverage struct {
-	Tests       map[string]map[string]string `json:"tests"`
-	Files       map[string]string            `json:"files"`
-	Directories map[string]float32           `json:"directories"`
-	Stats       stats                        `json:"stats"`
+	Tests map[string]map[string]string `json:"tests"`
+	Files map[string]string            `json:"files"`
+	Stats stats                        `json:"stats"`
 }
 
 // stats is a struct describing summarised coverage stats.
 type stats struct {
-	TotalCoverage  float32            `json:"total_coverage"`
-	CoverageByFile map[string]float32 `json:"coverage_by_file"`
-	Incremental    *IncrementalStats  `json:"incremental,omitempty"`
+	TotalCoverage       float32            `json:"total_coverage"`
+	CoverageByFile      map[string]float32 `json:"coverage_by_file"`
+	CoverageByDirectory map[string]float32 `json:"coverage_by_directory"`
+	Incremental         *IncrementalStats  `json:"incremental,omitempty"`
 }
 
 // IncrementalStats is a struct describing summarised stats for incremental coverage info.
