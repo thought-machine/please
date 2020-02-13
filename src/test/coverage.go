@@ -198,8 +198,8 @@ type lines struct {
 	totalCoverable int
 }
 
-func (l lines) getPercentage() float32 {
-	return 100.0 * float32(l.covered) / float32(l.totalCoverable)
+func (lns lines) getPercentage() float32 {
+	return 100.0 * float32(lns.covered) / float32(lns.totalCoverable)
 }
 
 func getDirectoryCoverage(coverage core.TestCoverage) map[string]float32 {
