@@ -382,6 +382,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 		// "go" as a source is interpreted as a file, as a tool it's interpreted as something on the PATH.
 		return core.SystemPathLabel{Name: src, Path: s.state.Config.Path()}
 	}
+	src = strings.TrimPrefix(src, "./")
 	// Make sure it's not the actual build file.
 	for _, filename := range s.state.Config.Parse.BuildFileName {
 		s.Assert(filename != src, "You can't specify the BUILD file as an input to a rule")

@@ -1,3 +1,11 @@
+Version 14.3.3
+--------------
+
+    * Fixed a bug where `plz query changes` could be thrown off by sources beginning with ./
+      All source files now have that stripped for consistency.
+    * Some corrections for proto_library rules at the root of the repo.
+
+
 Version 14.3.2
 --------------
 
