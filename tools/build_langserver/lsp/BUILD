@@ -22,7 +22,7 @@ go_test(
     name = "lsp_test",
     srcs = glob(["*_test.go"]),
     data = ["test_data"],
-    flaky = CONFIG.OS == "freebsd",
+    labels = ["manual"] if CONFIG.OS == "freebsd" else [],
     deps = [
         ":lsp",
         "//src/cli",
