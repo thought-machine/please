@@ -255,9 +255,11 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	// Need to download the target if it was originally requested (and the user didn't pass --nodownload).
 	// Also anything needed for subinclude needs to be local.
 	if (c.state.IsOriginalTarget(target.Label) && c.state.DownloadOutputs && !c.state.NeedTests) || target.NeededForSubinclude {
-		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
-		if err := c.download(target, digest, ar); err != nil {
-			return metadata, err
+		if !c.outputsExist(target, digest) {
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
+			if err := c.download(target, digest, ar); err != nil {
+				return metadata, err
+			}
 		}
 	}
 	return metadata, nil
