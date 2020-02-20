@@ -17,6 +17,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/peterebden/go-sri"
 	bs "google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/genproto/googleapis/longrunning"
@@ -243,6 +244,14 @@ func (s *testServer) QueryWriteStatus(ctx context.Context, req *bs.QueryWriteSta
 		}, nil
 	}
 	return nil, status.Errorf(codes.NotFound, "resource %s not found", req.ResourceName)
+}
+
+// toTimestamp converts a time.Time into a protobuf timestamp
+func toTimestamp(t time.Time) *timestamp.Timestamp {
+	return &timestamp.Timestamp{
+		Seconds: t.Unix(),
+		Nanos:   int32(t.Nanosecond()),
+	}
 }
 
 func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteServer) error {
