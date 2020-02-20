@@ -383,8 +383,10 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking remote...")
-	if metadata, ar := c.retrieveResults(target, command, digest, needStdout); metadata != nil {
-		return metadata, ar, nil
+	if !(c.state.ForceRebuild && (c.state.IsOriginalTarget(target.Label) || c.state.IsOriginalTarget(target.Label.Parent()))) {
+		if metadata, ar := c.retrieveResults(target, command, digest, needStdout); metadata != nil {
+			return metadata, ar, nil
+		}
 	}
 	// We didn't actually upload the inputs before, so we must do so now.
 	command, digest, err := c.uploadAction(target, isTest)
