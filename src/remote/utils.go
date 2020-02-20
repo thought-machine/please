@@ -216,35 +216,11 @@ func printVer(v *semver.SemVer) string {
 	return msg
 }
 
-// toTimestamp converts a time.Time into a protobuf timestamp
-func toTimestamp(t time.Time) *timestamp.Timestamp {
-	return &timestamp.Timestamp{
-		Seconds: t.Unix(),
-		Nanos:   int32(t.Nanosecond()),
-	}
-}
-
 // toTime converts a protobuf timestamp into a time.Time.
 // It's like the ptypes one but we ignore errors (we don't generally care that much)
 func toTime(ts *timestamp.Timestamp) time.Time {
 	t, _ := ptypes.Timestamp(ts)
 	return t
-}
-
-// extraPerms returns any additional permission bits we should apply for this file.
-func extraPerms(file *pb.OutputFile) os.FileMode {
-	if file.IsExecutable {
-		return 0111
-	}
-	return 0
-}
-
-// extraFilePerms returns any additional permission bits we should apply for this file.
-func extraFilePerms(file *pb.FileNode) os.FileMode {
-	if file.IsExecutable {
-		return 0111
-	}
-	return 0
 }
 
 // IsNotFound returns true if a given error is a "not found" error (which may be treated

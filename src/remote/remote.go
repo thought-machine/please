@@ -36,9 +36,6 @@ var log = logging.MustGetLogger("remote")
 // Timeout to initially contact the server.
 const dialTimeout = 5 * time.Second
 
-// Maximum number of times we retry a request.
-const maxRetries = 3
-
 // The API version we support.
 var apiVersion = semver.SemVer{Major: 2}
 
