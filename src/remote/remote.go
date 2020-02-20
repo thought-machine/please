@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	sdkdigest "github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
@@ -621,16 +622,16 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 		return nil, nil, err
 	}
 	ar := &pb.ActionResult{}
-	if err := c.uploadBlobs(func(ch chan<- *blob) error {
+	if err := c.uploadBlobs(func(ch chan<- *chunker.Chunker) error {
 		defer close(ch)
 		b.Root(ch)
 		for _, out := range command.OutputPaths {
 			if d, f := b.Node(path.Join(target.Label.PackageName, out)); d != nil {
-				digest, contents := c.digestMessageContents(b.Tree(ch, path.Join(target.Label.PackageName, out)))
-				ch <- &blob{Data: contents, Digest: digest}
+				chomk, _ := chunker.NewFromProto(b.Tree(path.Join(target.Label.PackageName, out)), int(c.client.ChunkMaxSize))
+				ch <- chomk
 				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
 					Path:       out,
-					TreeDigest: digest,
+					TreeDigest: chomk.Digest().ToProto(),
 				})
 			} else if f != nil {
 				if target.IsHashFilegroup {

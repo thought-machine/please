@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
@@ -262,12 +263,6 @@ func hasChild(dir *pb.Directory, child string) bool {
 	return false
 }
 
-// exhaustChannel reads and discards all messages on the given channel.
-func exhaustChannel(ch <-chan *blob) {
-	for range ch {
-	}
-}
-
 // convertError converts a single google.rpc.Status message into a Go error
 func convertError(err *rpcstatus.Status) error {
 	if err.Code == int32(codes.OK) {
@@ -367,7 +362,7 @@ func (b *dirBuilder) dir(dir, child string) *pb.Directory {
 
 // Root returns the root directory, calculates the digests of all others and uploads them
 // if the given channel is not nil.
-func (b *dirBuilder) Root(ch chan<- *blob) *pb.Directory {
+func (b *dirBuilder) Root(ch chan<- *chunker.Chunker) *pb.Directory {
 	b.dfs(".", ch)
 	return b.root
 }
@@ -391,7 +386,7 @@ func (b *dirBuilder) Node(name string) (*pb.DirectoryNode, *pb.FileNode) {
 
 // Tree returns the tree rooted at a given directory name.
 // It does not calculate digests or upload, so call Root beforehand if that is needed.
-func (b *dirBuilder) Tree(ch chan<- *blob, root string) *pb.Tree {
+func (b *dirBuilder) Tree(root string) *pb.Tree {
 	d := b.dir(root, "")
 	tree := &pb.Tree{Root: d}
 	b.tree(tree, root, d)
@@ -406,21 +401,18 @@ func (b *dirBuilder) tree(tree *pb.Tree, root string, dir *pb.Directory) {
 	}
 }
 
-func (b *dirBuilder) dfs(name string, ch chan<- *blob) *pb.Digest {
+func (b *dirBuilder) dfs(name string, ch chan<- *chunker.Chunker) *pb.Digest {
 	dir := b.dirs[name]
 	for _, d := range dir.Directories {
 		if d.Digest == nil { // It's not nil if we're reusing outputs from an earlier call.
 			d.Digest = b.dfs(path.Join(name, d.Name), ch)
 		}
 	}
-	digest, contents := b.c.digestMessageContents(dir)
+	chomk, _ := chunker.NewFromProto(dir, int(chunker.DefaultChunkSize))
 	if ch != nil {
-		ch <- &blob{
-			Digest: digest,
-			Data:   contents,
-		}
+		ch <- chomk
 	}
-	return digest
+	return chomk.Digest().ToProto()
 }
 
 // convertPlatform converts the platform entries from the config into a Platform proto.
