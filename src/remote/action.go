@@ -26,27 +26,27 @@ import (
 func (c *Client) uploadAction(target *core.BuildTarget, isTest bool) (*pb.Command, *pb.Digest, error) {
 	var command *pb.Command
 	var digest *pb.Digest
-	err := c.uploadBlobs(func(ch chan<- *blob) error {
+	err := c.uploadBlobs(func(ch chan<- *chunker.Chunker) error {
 		defer close(ch)
 		inputRoot, err := c.uploadInputs(ch, target, isTest)
 		if err != nil {
 			return err
 		}
-		inputRootDigest, inputRootMsg := c.digestMessageContents(inputRoot)
-		ch <- &blob{Data: inputRootMsg, Digest: inputRootDigest}
+		inputRootChunker, _ := chunker.NewFromProto(inputRoot, int(c.client.ChunkMaxSize))
+		ch <- inputRootChunker
 		command, err = c.buildCommand(target, inputRoot, isTest)
 		if err != nil {
 			return err
 		}
-		commandDigest, commandMsg := c.digestMessageContents(command)
-		ch <- &blob{Data: commandMsg, Digest: commandDigest}
-		actionDigest, actionMsg := c.digestMessageContents(&pb.Action{
-			CommandDigest:   commandDigest,
-			InputRootDigest: inputRootDigest,
+		commandChunker, _ := chunker.NewFromProto(command, int(c.client.ChunkMaxSize))
+		ch <- commandChunker
+		actionChunker, _ := chunker.NewFromProto(&pb.Action{
+			CommandDigest:   commandChunker.Digest().ToProto(),
+			InputRootDigest: inputRootChunker.Digest().ToProto(),
 			Timeout:         ptypes.DurationProto(timeout(target, isTest)),
-		})
-		digest = actionDigest
-		ch <- &blob{Data: actionMsg, Digest: actionDigest}
+		}, int(c.client.ChunkMaxSize))
+		ch <- actionChunker
+		digest = actionChunker.Digest().ToProto()
 		return nil
 	})
 	return command, digest, err
@@ -172,7 +172,7 @@ func (c *Client) getCommand(target *core.BuildTarget) string {
 }
 
 // uploadInputs finds and uploads a set of inputs from a target.
-func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
+func (c *Client) uploadInputs(ch chan<- *chunker.Chunker, target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
 	if target.IsRemoteFile {
 		return &pb.Directory{}, nil
 	}
@@ -183,7 +183,7 @@ func (c *Client) uploadInputs(ch chan<- *blob, target *core.BuildTarget, isTest 
 	return b.Root(ch), nil
 }
 
-func (c *Client) uploadInputDir(ch chan<- *blob, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
+func (c *Client) uploadInputDir(ch chan<- *chunker.Chunker, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
 	b := newDirBuilder(c)
 	for input := range c.iterInputs(target, isTest, target.IsFilegroup) {
 		if l := input.Label(); l != nil {
@@ -240,24 +240,21 @@ func (c *Client) uploadInputDir(ch chan<- *blob, target *core.BuildTarget, isTes
 	}
 	if !isTest && target.Stamp {
 		stamp := core.StampFile(target)
-		digest := c.digestBlob(stamp)
+		chomk := chunker.NewFromBlob(stamp, int(c.client.ChunkMaxSize))
 		if ch != nil {
-			ch <- &blob{
-				Digest: digest,
-				Data:   stamp,
-			}
+			ch <- chomk
 		}
 		d := b.Dir(".")
 		d.Files = append(d.Files, &pb.FileNode{
 			Name:   target.StampFileName(),
-			Digest: digest,
+			Digest: chomk.Digest().ToProto(),
 		})
 	}
 	return b, nil
 }
 
 // uploadInput finds and uploads a single input.
-func (c *Client) uploadInput(b *dirBuilder, ch chan<- *blob, input core.BuildInput) error {
+func (c *Client) uploadInput(b *dirBuilder, ch chan<- *chunker.Chunker, input core.BuildInput) error {
 	fullPaths := input.FullPaths(c.state.Graph)
 	for i, out := range input.Paths(c.state.Graph) {
 		in := fullPaths[i]
@@ -287,20 +284,17 @@ func (c *Client) uploadInput(b *dirBuilder, ch chan<- *blob, input core.BuildInp
 			if err != nil {
 				return err
 			}
-			digest := &pb.Digest{
+			dg := &pb.Digest{
 				Hash:      hex.EncodeToString(h),
 				SizeBytes: info.Size(),
 			}
 			d.Files = append(d.Files, &pb.FileNode{
 				Name:         path.Base(dest),
-				Digest:       digest,
+				Digest:       dg,
 				IsExecutable: info.Mode()&0100 != 0,
 			})
 			if ch != nil {
-				ch <- &blob{
-					File:   name,
-					Digest: digest,
-				}
+				ch <- chunker.NewFromFile(name, digest.NewFromProtoUnvalidated(dg), int(c.client.ChunkMaxSize))
 			}
 			return nil
 		}); err != nil {
