@@ -41,6 +41,8 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	}
 	// Check these reverse deps which may have already been added against this target.
 	if revdeps, present := graph.pendingRevDeps.Load(target.Label); present {
+		graph.mutex.RLock()
+		defer graph.mutex.RUnlock()
 		for revdep, originalTarget := range revdeps.(map[BuildLabel]*BuildTarget) {
 			if originalTarget != nil {
 				graph.linkDependencies(graph.Target(revdep), originalTarget)
@@ -234,6 +236,8 @@ func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 
 func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget) {
 	if revdeps, loaded := graph.pendingRevDeps.LoadOrStore(to, map[BuildLabel]*BuildTarget{from: orig}); loaded {
+		graph.mutex.Lock()
+		defer graph.mutex.Unlock()
 		m := revdeps.(map[BuildLabel]*BuildTarget)
 		m[from] = orig
 	}
