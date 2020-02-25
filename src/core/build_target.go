@@ -183,9 +183,9 @@ type BuildTarget struct {
 	// These are in addition to the usual test.results output file.
 	TestOutputs []string `name:"test_outputs"`
 	// List of reverse dependencies of this target
-	reverseDeps []*BuildTarget
+	reverseDeps []*BuildTarget `print:"false"`
 	// Used to arbitrate concurrent access to dependencies
-	mutex sync.Mutex
+	mutex sync.Mutex `print:"false"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -846,6 +846,8 @@ func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
 
 // ProvideFor returns the build label that we'd provide for the given target.
 func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	ret := []BuildLabel{}
 	if target.Provides != nil && len(other.Requires) != 0 {
 		// Never do this if the other target has a data or tool dependency on us.

@@ -23,9 +23,6 @@ type BuildGraph struct {
 	pendingRevDeps sync.Map
 	// Registered subrepos, as a map of their name to their root.
 	subrepos sync.Map
-	// Used to arbitrate access to the graph. We parallelise most build operations
-	// and Go maps aren't natively threadsafe so this is needed.
-	mutex sync.RWMutex
 }
 
 // AddTarget adds a new target to the graph.
@@ -221,8 +218,6 @@ func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget
 func (graph *BuildGraph) DependentTargets(from, to BuildLabel) []BuildLabel {
 	fromTarget := graph.Target(from)
 	if toTarget := graph.Target(to); fromTarget != nil && toTarget != nil {
-		graph.mutex.Lock()
-		defer graph.mutex.Unlock()
 		return toTarget.ProvideFor(fromTarget)
 	}
 	return []BuildLabel{to}
