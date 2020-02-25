@@ -182,6 +182,8 @@ type BuildTarget struct {
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	TestOutputs []string `name:"test_outputs"`
+	// List of reverse dependencies of this target
+	reverseDeps []*BuildTarget
 	// Used to arbitrate concurrent access to dependencies
 	mutex sync.Mutex
 }
@@ -1290,6 +1292,20 @@ func (target *BuildTarget) ProgressDescription() string {
 // SetProgress sets the current progress of this target.
 func (target *BuildTarget) SetProgress(progress float32) {
 	target.Progress = progress
+}
+
+// ReverseDependencies returns the set of revdeps on this target.
+func (target *BuildTarget) ReverseDependencies() []*BuildTarget {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
+	return target.reverseDeps[:]
+}
+
+// AddReverseDependency adds a revdep to the target.
+func (target *BuildTarget) AddReverseDependency(revdep *BuildTarget) {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
+	target.reverseDeps = append(target.reverseDeps, revdep)
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.
