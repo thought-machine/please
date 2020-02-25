@@ -60,7 +60,6 @@ func (e *Executor) ExecWithTimeout(target Target, dir string, env []string, time
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	cmd := e.ExecCommand(argv[0], argv[1:]...)
-	defer e.removeProcess(cmd)
 	cmd.Dir = dir
 	cmd.Env = env
 
@@ -96,9 +95,8 @@ func (e *Executor) ExecWithTimeout(target Target, dir string, env []string, time
 	if err != nil {
 		return nil, nil, err
 	}
-	e.mutex.Lock()
-	e.processes[cmd] = cmd.Process
-	e.mutex.Unlock()
+	e.registerProcess(cmd)
+	defer e.removeProcess(cmd)
 	ch := make(chan error)
 	go runCommand(cmd, ch)
 	select {
@@ -138,12 +136,8 @@ func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env
 // KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL
 // shortly after if it hasn't exited.
 func (e *Executor) KillProcess(cmd *exec.Cmd) {
-}
-
-// termProcess terminates a process with SIGTERM then a SIGKILL a bit after.
-func (e *Executor) termProcess(cmd *exec.Cmd, process *os.Process) {
-	success := killProcess(cmd, process, syscall.SIGTERM, 30*time.Millisecond)
-	if !killProcess(cmd, process, syscall.SIGKILL, time.Second) && !success {
+	success := killProcess(cmd, cmd.Process, syscall.SIGTERM, 30*time.Millisecond)
+	if !killProcess(cmd, cmd.Process, syscall.SIGKILL, time.Second) && !success {
 		log.Error("Failed to kill inferior process")
 	}
 	e.removeProcess(cmd)
@@ -153,6 +147,13 @@ func (e *Executor) removeProcess(cmd *exec.Cmd) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 	delete(e.processes, cmd)
+}
+
+// registerProcess stores the given process in this executor's map.
+func (e *Executor) registerProcess(cmd *exec.Cmd) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	e.processes[cmd] = cmd.Process
 }
 
 // killProcess implements the two-step killing of processes with a SIGTERM and a SIGKILL if

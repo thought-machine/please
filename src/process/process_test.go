@@ -44,6 +44,7 @@ func TestExecWithTimeoutStderr(t *testing.T) {
 func TestKillSubprocesses(t *testing.T) {
 	e := New("")
 	cmd := e.ExecCommand("sleep", "infinity")
+	e.registerProcess(cmd)
 	assert.Equal(t, 1, len(e.processes))
 	err := cmd.Start()
 	assert.NoError(t, err)
