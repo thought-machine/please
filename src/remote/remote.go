@@ -398,6 +398,11 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	} else if target.IsRemoteFile {
 		return c.fetchRemoteFile(tid, target, digest)
 	}
+	if timeout < c.reqTimeout {
+		// This is the timeout for the individual action to execute, but doesn't necessarily
+		// take into account time to fetch inputs etc, so we might need to extend.
+		timeout = c.reqTimeout
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	stream, err := c.client.Execute(ctx, &pb.ExecuteRequest{
@@ -406,7 +411,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 		SkipCacheLookup: true, // We've already done it above.
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, c.wrapActionErr(fmt.Errorf("Failed to execute %s: %s", target, err), digest)
 	}
 	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Waiting...")
 	for {
@@ -415,7 +420,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 			// We shouldn't get an EOF here because there's in-channel signalling via Done.
 			// TODO(peterebden): On other errors we should be able to reconnect and use
 			//                   WaitExecution to rejoin the stream.
-			return nil, nil, err
+			return nil, nil, c.wrapActionErr(fmt.Errorf("Failed to execute %s: %s", target, err), digest)
 		}
 		metadata := &pb.ExecuteOperationMetadata{}
 		if err := ptypes.UnmarshalAny(resp.Metadata, metadata); err != nil {
