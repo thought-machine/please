@@ -77,7 +77,7 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) (hash []byte, 
 func addRevdeps(state *core.BuildState, target *core.BuildTarget, done map[*core.BuildTarget]struct{}) {
 	if _, present := done[target]; !present && state.ShouldInclude(target) {
 		done[target] = struct{}{}
-		for _, revdep := range state.Graph.ReverseDependencies(target) {
+		for _, revdep := range target.ReverseDependencies() {
 			addRevdeps(state, revdep, done)
 		}
 	}

@@ -35,9 +35,9 @@ func TestRevDeps(t *testing.T) {
 	graph.AddTarget(target1)
 	graph.AddTarget(target2)
 	graph.AddTarget(target3)
-	assert.Equal(t, []*BuildTarget{target2}, graph.ReverseDependencies(target1))
-	assert.Equal(t, []*BuildTarget{target3}, graph.ReverseDependencies(target2))
-	assert.Equal(t, 0, len(graph.ReverseDependencies(target3)))
+	assert.Equal(t, []*BuildTarget{target2}, target1.ReverseDependencies())
+	assert.Equal(t, []*BuildTarget{target3}, target2.ReverseDependencies())
+	assert.Equal(t, 0, len(target3.ReverseDependencies()))
 }
 
 func TestAllDepsBuilt(t *testing.T) {

@@ -182,15 +182,8 @@ func (graph *BuildGraph) addDependencyForTarget(fromTarget *BuildTarget, to Buil
 }
 
 // NewGraph constructs and returns a new BuildGraph.
-// Users should not attempt to construct one themselves.
 func NewGraph() *BuildGraph {
 	return &BuildGraph{}
-}
-
-// ReverseDependencies returns the set of revdeps on the given target.
-// TODO(peterebden): Remove this in favour of just calling the one on the target instead.
-func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
-	return target.ReverseDependencies()
 }
 
 // linkDependencies adds the dependency of fromTarget on toTarget and the corresponding

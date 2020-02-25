@@ -69,13 +69,13 @@ func targetsForChangedFiles(graph *core.BuildGraph, files []string, includeDepen
 		for target := range addresses {
 			dependents[target] = struct{}{}
 
-			for _, dep := range graph.ReverseDependencies(target) {
+			for _, dep := range target.ReverseDependencies() {
 				dependents[dep] = struct{}{}
 			}
 		}
 	} else {
 		for target := range addresses {
-			visit(dependents, target, graph.ReverseDependencies)
+			visit(dependents, target)
 		}
 	}
 	keys := make([]*core.BuildTarget, len(dependents))
@@ -89,11 +89,11 @@ func targetsForChangedFiles(graph *core.BuildGraph, files []string, includeDepen
 	return keys
 }
 
-func visit(dependents map[*core.BuildTarget]struct{}, target *core.BuildTarget, f func(*core.BuildTarget) []*core.BuildTarget) {
-	for _, dep := range f(target) {
+func visit(dependents map[*core.BuildTarget]struct{}, target *core.BuildTarget) {
+	for _, dep := range target.ReverseDependencies() {
 		if _, exists := dependents[dep]; !exists {
 			dependents[dep] = struct{}{}
-			visit(dependents, dep, f)
+			visit(dependents, dep)
 		}
 	}
 }
