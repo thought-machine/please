@@ -6,6 +6,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -181,6 +182,8 @@ type BuildTarget struct {
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	TestOutputs []string `name:"test_outputs"`
+	// Used to arbitrate concurrent access to dependencies
+	mutex sync.Mutex
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -588,6 +591,8 @@ func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f b
 
 // AllDepsBuilt returns true if all the dependencies of a target are built.
 func (target *BuildTarget) AllDepsBuilt() bool {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	for _, deps := range target.dependencies {
 		if !deps.resolved {
 			return false
@@ -604,6 +609,8 @@ func (target *BuildTarget) AllDepsBuilt() bool {
 // AllDependenciesResolved returns true once all the dependencies of a target have been
 // parsed and resolved to real targets.
 func (target *BuildTarget) AllDependenciesResolved() bool {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	for _, deps := range target.dependencies {
 		if !deps.resolved {
 			return false
@@ -690,6 +697,8 @@ func (target *BuildTarget) hasResolvedDependency(label BuildLabel) bool {
 
 // resolveDependency resolves a particular dependency on a target.
 func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget) {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	info := target.dependencyInfo(label)
 	if info == nil {
 		target.dependencies = append(target.dependencies, depInfo{declared: label})
