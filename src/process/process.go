@@ -23,7 +23,7 @@ var log = logging.MustGetLogger("progress")
 // It registers as a signal handler to attempt to terminate them all at process exit.
 type Executor struct {
 	sandboxCommand string
-	processes      map[*exec.Cmd]struct{}
+	processes      map[*exec.Cmd]*os.Process
 	mutex          sync.Mutex
 }
 
@@ -31,7 +31,7 @@ type Executor struct {
 func New(sandboxCommand string) *Executor {
 	o := &Executor{
 		sandboxCommand: sandboxCommand,
-		processes:      map[*exec.Cmd]struct{}{},
+		processes:      map[*exec.Cmd]*os.Process{},
 	}
 	cli.AtExit(o.killAll) // Kill any subprocess if we are ourselves killed
 	return o
@@ -96,6 +96,9 @@ func (e *Executor) ExecWithTimeout(target Target, dir string, env []string, time
 	if err != nil {
 		return nil, nil, err
 	}
+	e.mutex.Lock()
+	e.processes[cmd] = cmd.Process
+	e.mutex.Unlock()
 	ch := make(chan error)
 	go runCommand(cmd, ch)
 	select {
@@ -135,8 +138,12 @@ func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env
 // KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL
 // shortly after if it hasn't exited.
 func (e *Executor) KillProcess(cmd *exec.Cmd) {
-	success := killProcess(cmd, syscall.SIGTERM, 30*time.Millisecond)
-	if !killProcess(cmd, syscall.SIGKILL, time.Second) && !success {
+}
+
+// termProcess terminates a process with SIGTERM then a SIGKILL a bit after.
+func (e *Executor) termProcess(cmd *exec.Cmd, process *os.Process) {
+	success := killProcess(cmd, process, syscall.SIGTERM, 30*time.Millisecond)
+	if !killProcess(cmd, process, syscall.SIGKILL, time.Second) && !success {
 		log.Error("Failed to kill inferior process")
 	}
 	e.removeProcess(cmd)
@@ -150,15 +157,15 @@ func (e *Executor) removeProcess(cmd *exec.Cmd) {
 
 // killProcess implements the two-step killing of processes with a SIGTERM and a SIGKILL if
 // that's unsuccessful. It returns true if the process exited within the timeout.
-func killProcess(cmd *exec.Cmd, sig syscall.Signal, timeout time.Duration) bool {
-	if cmd.Process == nil {
+func killProcess(cmd *exec.Cmd, process *os.Process, sig syscall.Signal, timeout time.Duration) bool {
+	if process == nil {
 		log.Debug("Not terminating process, it seems to have not started yet")
 		return false
 	}
 	// This is a bit of a fiddle. We want to wait for the process to exit but only for just so
 	// long (we do not want to get hung up if it ignores our SIGTERM).
-	log.Debug("Sending signal %s to -%d", sig, cmd.Process.Pid)
-	syscall.Kill(-cmd.Process.Pid, sig) // Kill the group - we always set one in ExecCommand.
+	log.Debug("Sending signal %s to -%d", sig, process.Pid)
+	syscall.Kill(-process.Pid, sig) // Kill the group - we always set one in ExecCommand.
 	ch := make(chan error, 1)
 	go runCommand(cmd, ch)
 	select {

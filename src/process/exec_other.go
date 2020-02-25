@@ -15,9 +15,6 @@ func (e *Executor) ExecCommand(command string, args ...string) *exec.Cmd {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	e.processes[cmd] = struct{}{}
 	return cmd
 }
 
