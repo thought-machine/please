@@ -702,11 +702,15 @@ func (target *BuildTarget) AllSecrets() []string {
 
 // HasDependency checks if a target already depends on this label.
 func (target *BuildTarget) HasDependency(label BuildLabel) bool {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	return target.dependencyInfo(label) != nil
 }
 
 // hasResolvedDependency returns true if a particular dependency has been resolved to real targets yet.
 func (target *BuildTarget) hasResolvedDependency(label BuildLabel) bool {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	info := target.dependencyInfo(label)
 	return info != nil && info.resolved
 }
