@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path"
+	"runtime"
 	"runtime/pprof"
 	"strings"
 	"sync"
@@ -87,6 +88,7 @@ var opts struct {
 
 	Profile          string `long:"profile_file" hidden:"true" description:"Write profiling output to this file"`
 	MemProfile       string `long:"mem_profile_file" hidden:"true" description:"Write a memory profile to this file"`
+	MutexProfile     string `long:"mutex_profile_file" hidden:"true" description:"Write a contended mutex profile to this file"`
 	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
@@ -770,7 +772,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.DebugTests = debugTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
-	state.DownloadOutputs = !opts.Build.NoDownload
+	state.DownloadOutputs = !opts.Build.NoDownload && !(len(targets) == 1 && targets[0].IsAllSubpackages())
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if opts.BuildFlags.Arch.OS != "" {
 		state.OriginalArch = opts.BuildFlags.Arch
@@ -1037,6 +1039,17 @@ func execute(command string) int {
 		}
 		defer f.Close()
 		defer pprof.WriteHeapProfile(f)
+	}
+	if opts.MutexProfile != "" {
+		runtime.SetMutexProfileFraction(1)
+		f, err := os.Create(opts.MutexProfile)
+		if err != nil {
+			log.Fatalf("Failed to open mutex profile file: %s", err)
+		}
+		defer f.Close()
+		defer func() {
+			pprof.Lookup("mutex").WriteTo(f, 0)
+		}()
 	}
 	defer worker.StopAll()
 	return buildFunctions[command]()
