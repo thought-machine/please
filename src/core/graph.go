@@ -41,15 +41,15 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	}
 	// Check these reverse deps which may have already been added against this target.
 	if revdeps, present := graph.pendingRevDeps.Load(target.Label); present {
-		graph.mutex.RLock()
-		defer graph.mutex.RUnlock()
-		for revdep, originalTarget := range revdeps.(map[BuildLabel]*BuildTarget) {
-			if originalTarget != nil {
-				graph.linkDependencies(graph.Target(revdep), originalTarget)
+		revdeps.(*sync.Map).Range(func(k, v interface{}) bool {
+			revdep := graph.Target(k.(BuildLabel))
+			if originalTarget, ok := v.(*BuildTarget); ok && originalTarget != nil {
+				graph.linkDependencies(revdep, originalTarget)
 			} else {
-				graph.linkDependencies(graph.Target(revdep), target)
+				graph.linkDependencies(revdep, target)
 			}
-		}
+			return true
+		})
 		graph.pendingRevDeps.Delete(target.Label) // Don't need any more
 	}
 	return target
@@ -166,8 +166,6 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // AddDependency adds a dependency between two build targets.
 // The 'to' target doesn't necessarily have to exist in the graph yet (but 'from' must).
 func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
 	graph.addDependencyForTarget(graph.Target(from), to)
 }
 
@@ -220,12 +218,8 @@ func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 }
 
 func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget) {
-	if revdeps, loaded := graph.pendingRevDeps.LoadOrStore(to, map[BuildLabel]*BuildTarget{from: orig}); loaded {
-		graph.mutex.Lock()
-		defer graph.mutex.Unlock()
-		m := revdeps.(map[BuildLabel]*BuildTarget)
-		m[from] = orig
-	}
+	revdeps, _ := graph.pendingRevDeps.LoadOrStore(to, &sync.Map{})
+	revdeps.(*sync.Map).Store(from, orig)
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.
