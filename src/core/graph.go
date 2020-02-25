@@ -18,7 +18,7 @@ type BuildGraph struct {
 	// Map of all currently known targets by their label.
 	targets sync.Map
 	// Map of all currently known packages.
-	packages map[packageKey]*Package
+	packages sync.Map
 	// Reverse dependencies that are pending on targets actually being added to the graph.
 	pendingRevDeps map[BuildLabel]map[BuildLabel]*BuildTarget
 	// Actual reverse dependencies
@@ -34,10 +34,9 @@ type BuildGraph struct {
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	graph.mutex.Lock()
 	defer graph.mutex.Unlock()
-	if graph.Target(target.Label) != nil {
+	if _, loaded := graph.targets.LoadOrStore(target.Label, target); loaded {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
-	graph.targets.Store(target.Label, target)
 	// Register any of its dependencies now
 	for _, dep := range target.DeclaredDependencies() {
 		graph.addDependencyForTarget(target, dep)
@@ -60,12 +59,9 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 // AddPackage adds a new package to the graph with given name.
 func (graph *BuildGraph) AddPackage(pkg *Package) {
 	key := packageKey{Name: pkg.Name, Subrepo: pkg.SubrepoName}
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
-	if _, present := graph.packages[key]; present {
+	if _, loaded := graph.packages.LoadOrStore(key, pkg); loaded {
 		panic("Attempt to readd existing package: " + key.String())
 	}
-	graph.packages[key] = pkg
 }
 
 // Target retrieves a target from the graph by label
@@ -94,9 +90,11 @@ func (graph *BuildGraph) PackageByLabel(label BuildLabel) *Package {
 
 // Package retrieves a package from the graph by name & subrepo, or nil if it can't be found.
 func (graph *BuildGraph) Package(name, subrepo string) *Package {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	return graph.packages[packageKey{Name: name, Subrepo: subrepo}]
+	p, present := graph.packages.Load(packageKey{Name: name, Subrepo: subrepo})
+	if !present {
+		return nil
+	}
+	return p.(*Package)
 }
 
 // PackageOrDie retrieves a package by label, and dies if it can't be found.
@@ -151,8 +149,6 @@ func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
 
 // AllTargets returns a consistently ordered slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
 	targets := BuildTargets{}
 	graph.targets.Range(func(k, v interface{}) bool {
 		targets = append(targets, v.(*BuildTarget))
@@ -164,12 +160,11 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 
 // PackageMap returns a copy of the graph's internal map of name to package.
 func (graph *BuildGraph) PackageMap() map[string]*Package {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	packages := make(map[string]*Package, len(graph.packages))
-	for k, v := range graph.packages {
-		packages[k.String()] = v
-	}
+	packages := map[string]*Package{}
+	graph.packages.Range(func(k, v interface{}) bool {
+		packages[k.(packageKey).String()] = v.(*Package)
+		return true
+	})
 	return packages
 }
 
@@ -202,7 +197,6 @@ func (graph *BuildGraph) addDependencyForTarget(fromTarget *BuildTarget, to Buil
 // Users should not attempt to construct one themselves.
 func NewGraph() *BuildGraph {
 	return &BuildGraph{
-		packages:       map[packageKey]*Package{},
 		pendingRevDeps: map[BuildLabel]map[BuildLabel]*BuildTarget{},
 		revDeps:        map[BuildLabel][]*BuildTarget{},
 		subrepos:       map[string]*Subrepo{},
