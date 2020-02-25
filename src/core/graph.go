@@ -20,7 +20,7 @@ type BuildGraph struct {
 	// Map of all currently known packages.
 	packages sync.Map
 	// Reverse dependencies that are pending on targets actually being added to the graph.
-	pendingRevDeps map[BuildLabel]map[BuildLabel]*BuildTarget
+	pendingRevDeps sync.Map
 	// Actual reverse dependencies
 	revDeps map[BuildLabel][]*BuildTarget
 	// Registered subrepos, as a map of their name to their root.
@@ -42,16 +42,15 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 		graph.addDependencyForTarget(target, dep)
 	}
 	// Check these reverse deps which may have already been added against this target.
-	revdeps, present := graph.pendingRevDeps[target.Label]
-	if present {
-		for revdep, originalTarget := range revdeps {
+	if revdeps, present := graph.pendingRevDeps.Load(target.Label); present {
+		for revdep, originalTarget := range revdeps.(map[BuildLabel]*BuildTarget) {
 			if originalTarget != nil {
 				graph.linkDependencies(graph.Target(revdep), originalTarget)
 			} else {
 				graph.linkDependencies(graph.Target(revdep), target)
 			}
 		}
-		delete(graph.pendingRevDeps, target.Label) // Don't need any more
+		graph.pendingRevDeps.Delete(target.Label) // Don't need any more
 	}
 	return target
 }
@@ -197,9 +196,8 @@ func (graph *BuildGraph) addDependencyForTarget(fromTarget *BuildTarget, to Buil
 // Users should not attempt to construct one themselves.
 func NewGraph() *BuildGraph {
 	return &BuildGraph{
-		pendingRevDeps: map[BuildLabel]map[BuildLabel]*BuildTarget{},
-		revDeps:        map[BuildLabel][]*BuildTarget{},
-		subrepos:       map[string]*Subrepo{},
+		revDeps:  map[BuildLabel][]*BuildTarget{},
+		subrepos: map[string]*Subrepo{},
 	}
 }
 
@@ -244,10 +242,9 @@ func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 }
 
 func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget) {
-	if deps, present := graph.pendingRevDeps[to]; present {
-		deps[from] = orig
-	} else {
-		graph.pendingRevDeps[to] = map[BuildLabel]*BuildTarget{from: orig}
+	if revdeps, loaded := graph.pendingRevDeps.LoadOrStore(to, map[BuildLabel]*BuildTarget{from: orig}); loaded {
+		m := revdeps.(map[BuildLabel]*BuildTarget)
+		m[from] = orig
 	}
 }
 
