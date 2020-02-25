@@ -586,8 +586,8 @@ func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f b
 	return f(source, graph)
 }
 
-// allDepsBuilt returns true if all the dependencies of a target are built.
-func (target *BuildTarget) allDepsBuilt() bool {
+// AllDepsBuilt returns true if all the dependencies of a target are built.
+func (target *BuildTarget) AllDepsBuilt() bool {
 	for _, deps := range target.dependencies {
 		if !deps.resolved {
 			return false
@@ -601,9 +601,9 @@ func (target *BuildTarget) allDepsBuilt() bool {
 	return true
 }
 
-// allDependenciesResolved returns true once all the dependencies of a target have been
+// AllDependenciesResolved returns true once all the dependencies of a target have been
 // parsed and resolved to real targets.
-func (target *BuildTarget) allDependenciesResolved() bool {
+func (target *BuildTarget) AllDependenciesResolved() bool {
 	for _, deps := range target.dependencies {
 		if !deps.resolved {
 			return false

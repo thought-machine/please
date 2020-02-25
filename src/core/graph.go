@@ -202,17 +202,6 @@ func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget
 	return nil
 }
 
-// AllDepsBuilt returns true if all the dependencies of a target are built.
-func (graph *BuildGraph) AllDepsBuilt(target *BuildTarget) bool {
-	return target.allDepsBuilt()
-}
-
-// AllDependenciesResolved returns true once all the dependencies of a target have been
-// parsed and resolved to real targets.
-func (graph *BuildGraph) AllDependenciesResolved(target *BuildTarget) bool {
-	return target.allDependenciesResolved()
-}
-
 // linkDependencies adds the dependency of fromTarget on toTarget and the corresponding
 // reverse dependency in the other direction.
 // This is complicated somewhat by the require/provide mechanism which is resolved at this
