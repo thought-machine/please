@@ -588,10 +588,10 @@ func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f b
 
 // allDepsBuilt returns true if all the dependencies of a target are built.
 func (target *BuildTarget) allDepsBuilt() bool {
-	if !target.allDependenciesResolved() {
-		return false // Target still has some deps pending parse.
-	}
 	for _, deps := range target.dependencies {
+		if !deps.resolved {
+			return false
+		}
 		for _, dep := range deps.deps {
 			if dep.State() < Built {
 				return false
