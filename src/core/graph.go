@@ -24,7 +24,7 @@ type BuildGraph struct {
 	// Actual reverse dependencies
 	revDeps sync.Map
 	// Registered subrepos, as a map of their name to their root.
-	subrepos map[string]*Subrepo
+	subrepos sync.Map
 	// Used to arbitrate access to the graph. We parallelise most build operations
 	// and Go maps aren't natively threadsafe so this is needed.
 	mutex sync.RWMutex
@@ -32,8 +32,6 @@ type BuildGraph struct {
 
 // AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
 	if _, loaded := graph.targets.LoadOrStore(target.Label, target); loaded {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
@@ -107,34 +105,30 @@ func (graph *BuildGraph) PackageOrDie(label BuildLabel) *Package {
 
 // AddSubrepo adds a new subrepo to the graph. It dies if one is already registered by this name.
 func (graph *BuildGraph) AddSubrepo(subrepo *Subrepo) {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
-	if _, present := graph.subrepos[subrepo.Name]; present {
+	if _, loaded := graph.subrepos.LoadOrStore(subrepo.Name, subrepo); loaded {
 		log.Fatalf("Subrepo %s is already registered", subrepo.Name)
 	}
-	graph.subrepos[subrepo.Name] = subrepo
 }
 
 // MaybeAddSubrepo adds the given subrepo to the graph, or returns the existing one if one is already registered.
 func (graph *BuildGraph) MaybeAddSubrepo(subrepo *Subrepo) *Subrepo {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
-	if s, present := graph.subrepos[subrepo.Name]; present {
+	if sr, present := graph.subrepos.LoadOrStore(subrepo.Name, subrepo); present {
+		s := sr.(*Subrepo)
 		if !reflect.DeepEqual(s, subrepo) {
-			log.Fatalf("Found multiple definitions for subrepo '%s' (%+v s %+v)",
-				s.Name, s, subrepo)
+			log.Fatalf("Found multiple definitions for subrepo '%s' (%+v s %+v)", s.Name, s, subrepo)
 		}
 		return s
 	}
-	graph.subrepos[subrepo.Name] = subrepo
 	return subrepo
 }
 
 // Subrepo returns the subrepo with this name. It returns nil if one isn't registered.
 func (graph *BuildGraph) Subrepo(name string) *Subrepo {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	return graph.subrepos[name]
+	subrepo, present := graph.subrepos.Load(name)
+	if !present {
+		return nil
+	}
+	return subrepo.(*Subrepo)
 }
 
 // SubrepoOrDie returns the subrepo with this name, dying if it doesn't exist.
@@ -195,9 +189,7 @@ func (graph *BuildGraph) addDependencyForTarget(fromTarget *BuildTarget, to Buil
 // NewGraph constructs and returns a new BuildGraph.
 // Users should not attempt to construct one themselves.
 func NewGraph() *BuildGraph {
-	return &BuildGraph{
-		subrepos: map[string]*Subrepo{},
-	}
+	return &BuildGraph{}
 }
 
 // ReverseDependencies returns the set of revdeps on the given target.
