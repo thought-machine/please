@@ -204,16 +204,12 @@ func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget
 
 // AllDepsBuilt returns true if all the dependencies of a target are built.
 func (graph *BuildGraph) AllDepsBuilt(target *BuildTarget) bool {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
 	return target.allDepsBuilt()
 }
 
 // AllDependenciesResolved returns true once all the dependencies of a target have been
 // parsed and resolved to real targets.
 func (graph *BuildGraph) AllDependenciesResolved(target *BuildTarget) bool {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
 	return target.allDependenciesResolved()
 }
 
