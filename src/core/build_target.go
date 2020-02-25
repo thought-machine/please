@@ -371,6 +371,8 @@ func (target *BuildTarget) AllURLs(config *Configuration) []string {
 
 // DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).
 func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	ret := make(BuildLabels, len(target.dependencies))
 	for i, dep := range target.dependencies {
 		ret[i] = dep.declared
@@ -381,6 +383,8 @@ func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 
 // DeclaredDependenciesStrict returns the original declaration of this target's dependencies.
 func (target *BuildTarget) DeclaredDependenciesStrict() []BuildLabel {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, dep := range target.dependencies {
 		if !dep.exported && !dep.source && !target.IsTool(dep.declared) {
@@ -393,6 +397,8 @@ func (target *BuildTarget) DeclaredDependenciesStrict() []BuildLabel {
 
 // Dependencies returns the resolved dependencies of this target.
 func (target *BuildTarget) Dependencies() []*BuildTarget {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
 		for _, dep := range deps.deps {
@@ -405,6 +411,8 @@ func (target *BuildTarget) Dependencies() []*BuildTarget {
 
 // ExternalDependencies returns the non-internal dependencies of this target (i.e. not "_target#tag" ones).
 func (target *BuildTarget) ExternalDependencies() []*BuildTarget {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
 		for _, dep := range deps.deps {
@@ -421,6 +429,8 @@ func (target *BuildTarget) ExternalDependencies() []*BuildTarget {
 
 // BuildDependencies returns the build-time dependencies of this target (i.e. not data and not internal).
 func (target *BuildTarget) BuildDependencies() []*BuildTarget {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
 		if !deps.data && !deps.internal {
@@ -435,6 +445,8 @@ func (target *BuildTarget) BuildDependencies() []*BuildTarget {
 
 // ExportedDependencies returns any exported dependencies of this target.
 func (target *BuildTarget) ExportedDependencies() []BuildLabel {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, info := range target.dependencies {
 		if info.exported {
@@ -446,6 +458,8 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 
 // DependenciesFor returns the dependencies that relate to a given label.
 func (target *BuildTarget) DependenciesFor(label BuildLabel) []*BuildTarget {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 	if info := target.dependencyInfo(label); info != nil {
 		return info.deps
 	} else if target.Label.Subrepo != "" && label.Subrepo == "" {
