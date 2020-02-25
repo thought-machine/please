@@ -22,7 +22,7 @@ type BuildGraph struct {
 	// Reverse dependencies that are pending on targets actually being added to the graph.
 	pendingRevDeps sync.Map
 	// Actual reverse dependencies
-	revDeps map[BuildLabel][]*BuildTarget
+	revDeps sync.Map
 	// Registered subrepos, as a map of their name to their root.
 	subrepos map[string]*Subrepo
 	// Used to arbitrate access to the graph. We parallelise most build operations
@@ -196,19 +196,16 @@ func (graph *BuildGraph) addDependencyForTarget(fromTarget *BuildTarget, to Buil
 // Users should not attempt to construct one themselves.
 func NewGraph() *BuildGraph {
 	return &BuildGraph{
-		revDeps:  map[BuildLabel][]*BuildTarget{},
 		subrepos: map[string]*Subrepo{},
 	}
 }
 
 // ReverseDependencies returns the set of revdeps on the given target.
 func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	if revdeps, present := graph.revDeps[target.Label]; present {
-		return revdeps[:]
+	if revdeps, present := graph.revDeps.Load(target.Label); present {
+		return revdeps.([]*BuildTarget)[:]
 	}
-	return []*BuildTarget{}
+	return nil
 }
 
 // AllDepsBuilt returns true if all the dependencies of a target are built.
@@ -234,7 +231,9 @@ func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 	for _, label := range toTarget.ProvideFor(fromTarget) {
 		if target := graph.Target(label); target != nil {
 			fromTarget.resolveDependency(toTarget.Label, target)
-			graph.revDeps[label] = append(graph.revDeps[label], fromTarget)
+			if revdeps, loaded := graph.revDeps.LoadOrStore(label, []*BuildTarget{fromTarget}); loaded {
+				graph.revDeps.Store(label, append(revdeps.([]*BuildTarget), fromTarget))
+			}
 		} else {
 			graph.addPendingRevDep(fromTarget.Label, label, toTarget)
 		}
