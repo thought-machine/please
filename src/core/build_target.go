@@ -622,6 +622,25 @@ func (target *BuildTarget) AllDepsBuilt() bool {
 	return true
 }
 
+// UnbuiltDeps returns the dependencies of this target that have not yet built.
+func (target *BuildTarget) UnbuiltDeps() []string {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
+	ret := []string{}
+	for _, deps := range target.dependencies {
+		if !deps.resolved {
+			ret = append(ret, deps.declared.String()+" (unresolved) ")
+		} else {
+			for _, dep := range deps.deps {
+				if dep.State() < Built {
+					ret = append(ret, dep.Label.String())
+				}
+			}
+		}
+	}
+	return ret
+}
+
 // AllDependenciesResolved returns true once all the dependencies of a target have been
 // parsed and resolved to real targets.
 func (target *BuildTarget) AllDependenciesResolved() bool {
