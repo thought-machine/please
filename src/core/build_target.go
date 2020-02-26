@@ -736,8 +736,11 @@ func (target *BuildTarget) hasResolvedDependency(label BuildLabel) bool {
 
 // resolveDependency resolves a particular dependency on a target.
 func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget) {
+	// Important we acquire both mutexes here so the resolution & revdeps are done atomically.
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
+	dep.mutex.Lock()
+	defer dep.mutex.Unlock()
 	info := target.dependencyInfo(label)
 	if info == nil {
 		target.dependencies = append(target.dependencies, depInfo{declared: label})
@@ -747,6 +750,7 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 		info.deps = append(info.deps, dep)
 	}
 	info.resolved = true
+	dep.reverseDeps = append(dep.reverseDeps, target)
 }
 
 // dependencyInfo returns the information about a declared dependency, or nil if the target doesn't have it.
@@ -1338,13 +1342,6 @@ func (target *BuildTarget) ReverseDependencies() []*BuildTarget {
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
 	return target.reverseDeps[:]
-}
-
-// AddReverseDependency adds a revdep to the target.
-func (target *BuildTarget) AddReverseDependency(revdep *BuildTarget) {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
-	target.reverseDeps = append(target.reverseDeps, revdep)
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

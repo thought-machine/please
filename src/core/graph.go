@@ -193,7 +193,6 @@ func NewGraph() *BuildGraph {
 func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 	for _, label := range toTarget.ProvideFor(fromTarget) {
 		if target := graph.Target(label); target != nil {
-			target.AddReverseDependency(fromTarget)
 			fromTarget.resolveDependency(toTarget.Label, target)
 		} else {
 			graph.addPendingRevDep(fromTarget.Label, label, toTarget)
