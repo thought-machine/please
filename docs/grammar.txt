@@ -39,4 +39,4 @@ slice = "[" [ expression ] [ ":" expression ] "]";
 lambda = "lambda" [ lambda_arg { "," lambda_arg } ] ":" expression;
 lambda_arg = Ident [ "=" expression ];
 operator = ("+" | "-" | "%" | "<" | ">" | "and" | "or" | "is" |
-            "in" | "not" "in" | "==" | "!=" | ">=" | "<=" );
+            "in" | "not" "in" | "==" | "!=" | ">=" | "<=" | "|");
