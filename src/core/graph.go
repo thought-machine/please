@@ -12,8 +12,6 @@ import (
 
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
-// It also arbitrates access to a lot of things via its builtin mutex which
-// is probably our most overused lock :(
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
 	targets sync.Map
