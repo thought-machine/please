@@ -460,12 +460,16 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 func (target *BuildTarget) DependenciesFor(label BuildLabel) []*BuildTarget {
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
+	return target.dependenciesFor(label)
+}
+
+func (target *BuildTarget) dependenciesFor(label BuildLabel) []*BuildTarget {
 	if info := target.dependencyInfo(label); info != nil {
 		return info.deps
 	} else if target.Label.Subrepo != "" && label.Subrepo == "" {
 		// Can implicitly use the target's subrepo.
 		label.Subrepo = target.Label.Subrepo
-		return target.DependenciesFor(label)
+		return target.dependenciesFor(label)
 	}
 	return nil
 }
@@ -629,7 +633,7 @@ func (target *BuildTarget) UnbuiltDeps() []string {
 	ret := []string{}
 	for _, deps := range target.dependencies {
 		if !deps.resolved {
-			ret = append(ret, deps.declared.String()+" (unresolved) ")
+			ret = append(ret, deps.declared.String()+" (unresolved)")
 		} else {
 			for _, dep := range deps.deps {
 				if dep.State() < Built {
