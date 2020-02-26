@@ -1,0 +1,3 @@
+x = {"goofy": 3, "donald": 5}
+y = {"donald": 2, "mickey": 1}
+z = x | y
