@@ -73,7 +73,7 @@ func handleAffectedTargets(state *core.BuildState, affectedTargets <-chan *core.
 		if !seenTargets[target] {
 			seenTargets[target] = true
 			if transitive {
-				for _, revdep := range target.ReverseDependencies() {
+				for _, revdep := range state.Graph.ReverseDependencies(target) {
 					inner(revdep)
 				}
 			}

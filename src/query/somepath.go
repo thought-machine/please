@@ -51,7 +51,7 @@ func printSomePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget) b
 		fmt.Printf("Found path:\n  %s\n", target1.Label)
 		return true
 	}
-	for _, target := range target2.ReverseDependencies() {
+	for _, target := range graph.ReverseDependencies(target2) {
 		if printSomePath(graph, target1, target) {
 			if target2.Parent(graph) != target {
 				fmt.Printf("  %s\n", target2.Label)

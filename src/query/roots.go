@@ -63,7 +63,7 @@ func uniqueReverseDependencies(graph *core.BuildGraph, target *core.BuildTarget,
 	}
 	targets[target] = struct{}{}
 	// ReverseDependencies are the smaller order collection, so more efficient to iterate.
-	for _, child := range target.ReverseDependencies() {
+	for _, child := range graph.ReverseDependencies(target) {
 		uniqueReverseDependencies(graph, child, targets)
 	}
 }

@@ -56,7 +56,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 	}
 
 	// Add any of the reverse deps that are now fully built to the queue.
-	for _, reverseDep := range target.ReverseDependencies() {
+	for _, reverseDep := range state.Graph.ReverseDependencies(target) {
 		if reverseDep.State() == core.Active && reverseDep.AllDepsBuilt() && reverseDep.SyncUpdateState(core.Active, core.Pending) {
 			state.AddPendingBuild(reverseDep.Label, false)
 		}
