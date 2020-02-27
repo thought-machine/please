@@ -32,19 +32,7 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	for _, dep := range target.DeclaredDependencies() {
 		graph.addDependencyForTarget(target, dep)
 	}
-	// Check these reverse deps which may have already been added against this target.
-	if revdeps, present := graph.pendingRevDeps.Load(target.Label); present {
-		revdeps.(*sync.Map).Range(func(k, v interface{}) bool {
-			revdep := graph.Target(k.(BuildLabel))
-			if originalTarget, ok := v.(*BuildTarget); ok && originalTarget != nil {
-				graph.linkDependencies(revdep, originalTarget)
-			} else {
-				graph.linkDependencies(revdep, target)
-			}
-			return true
-		})
-		graph.pendingRevDeps.Delete(target.Label) // Don't need any more
-	}
+	graph.attachPendingRevDeps(target)
 	return target
 }
 
@@ -186,9 +174,12 @@ func NewGraph() *BuildGraph {
 }
 
 // ReverseDependencies returns the set of revdeps on the given target.
-// TODO(peterebden): Remove this in favour of just calling the one on the target instead.
 func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
-	return target.ReverseDependencies()
+	revdeps := target.reverseDependencies()
+	if graph.attachPendingRevDeps(target) {
+		return target.reverseDependencies() // Need to recalculate after we attached some more.
+	}
+	return revdeps
 }
 
 // linkDependencies adds the dependency of fromTarget on toTarget and the corresponding
@@ -208,6 +199,28 @@ func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget) {
 	revdeps, _ := graph.pendingRevDeps.LoadOrStore(to, &sync.Map{})
 	revdeps.(*sync.Map).Store(from, orig)
+}
+
+// attachPendingRevDeps attaches any lurking revdeps for a target onto the target itself.
+// It returns true if any were attached.
+func (graph *BuildGraph) attachPendingRevDeps(target *BuildTarget) bool {
+	if revdeps, present := graph.pendingRevDeps.Load(target.Label); present {
+		any := false
+		m := revdeps.(*sync.Map)
+		m.Range(func(k, v interface{}) bool {
+			revdep := graph.Target(k.(BuildLabel))
+			if originalTarget, ok := v.(*BuildTarget); ok && originalTarget != nil {
+				graph.linkDependencies(revdep, originalTarget)
+			} else {
+				graph.linkDependencies(revdep, target)
+			}
+			any = true
+			m.Delete(k)
+			return true
+		})
+		return any
+	}
+	return false
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.

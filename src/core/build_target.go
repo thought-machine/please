@@ -1341,8 +1341,8 @@ func (target *BuildTarget) SetProgress(progress float32) {
 	target.Progress = progress
 }
 
-// ReverseDependencies returns the set of revdeps on this target.
-func (target *BuildTarget) ReverseDependencies() []*BuildTarget {
+// reverseDependencies returns the set of revdeps on this target.
+func (target *BuildTarget) reverseDependencies() []*BuildTarget {
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
 	return target.reverseDeps[:]
