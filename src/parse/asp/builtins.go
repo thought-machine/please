@@ -263,6 +263,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		// This is a subinclude in the same package, check the target exists.
 		s.NAssert(s.contextPkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
+	s.NAssert(l.IsAllTargets() || l.IsAllSubpackages(), "Can't pass :all or /... to subinclude()")
 	t := s.state.WaitForBuiltTarget(l, pkgLabel)
 	// This is not quite right, if you subinclude from another subinclude we can basically
 	// lose track of it later on. It's hard to know what better to do at this point though.

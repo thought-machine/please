@@ -291,3 +291,8 @@ func TestDoubleIndex(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, 1, s.Lookup("y"))
 }
+
+func TestSubincludeAll(t *testing.T) {
+	_, err := parseFile("src/parse/asp/test_data/interpreter/subinclude_all.build")
+	assert.Error(t, err)
+}
