@@ -400,6 +400,19 @@ func (d pyDict) Operator(operator Operator, operand pyObject) pyObject {
 			return v
 		}
 		panic("unknown dict key: " + s.String())
+	} else if operator == Union {
+		d2, ok := operand.(pyDict)
+		if !ok {
+			panic("Operator to | must be another dict, not " + operand.Type())
+		}
+		ret := make(pyDict, len(d)+len(d2))
+		for k, v := range d {
+			ret[k] = v
+		}
+		for k, v := range d2 {
+			ret[k] = v
+		}
+		return ret
 	}
 	panic("Unsupported operator on dict")
 }

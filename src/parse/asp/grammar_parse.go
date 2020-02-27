@@ -535,7 +535,6 @@ func (p *parser) parseIdentExpr() *IdentExpr {
 			ie.EndPos = p.endPos
 		}
 	}
-
 	// In case the Ident is a variable name, we assign the endPos to the end of current token.
 	// see test_data/unary_op.build
 	if ie.EndPos.Column == 0 {

@@ -296,3 +296,13 @@ func TestSubincludeAll(t *testing.T) {
 	_, err := parseFile("src/parse/asp/test_data/interpreter/subinclude_all.build")
 	assert.Error(t, err)
 }
+
+func TestDictUnion(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/dict_union.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, pyDict{
+		"mickey": pyInt(1),
+		"donald": pyInt(2),
+		"goofy":  pyInt(3),
+	}, s.Lookup("z"))
+}

@@ -288,7 +288,9 @@ const (
 	// And etc are logical operators - these are implemented type-independently
 	And Operator = '&'
 	// Or implements the or operator
-	Or = '|'
+	Or = '∨'
+	// Union implements the | or binary or operator, which is only used for dict unions.
+	Union = '∪'
 	// Is implements type identity.
 	Is = '≡'
 	// Index is used in the parser, but not when parsing code.
@@ -321,4 +323,5 @@ var operators = map[string]Operator{
 	"!=":     NotEqual,
 	">=":     GreaterThanOrEqual,
 	"<=":     LessThanOrEqual,
+	"|":      Union,
 }
