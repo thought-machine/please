@@ -236,7 +236,7 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) error {
 	// Run over all the changed targets in this package and ensure that any newly added dependencies enter the build queue.
 	for target := range changed {
-		if !state.Graph.AllDependenciesResolved(target) {
+		if !target.AllDependenciesResolved() {
 			for _, dep := range target.DeclaredDependencies() {
 				state.Graph.AddDependency(target.Label, dep)
 			}

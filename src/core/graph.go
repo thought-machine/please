@@ -12,67 +12,45 @@ import (
 
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
-// It also arbitrates access to a lot of things via its builtin mutex which
-// is probably our most overused lock :(
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
-	targets map[BuildLabel]*BuildTarget
+	targets sync.Map
 	// Map of all currently known packages.
-	packages map[packageKey]*Package
+	packages sync.Map
 	// Reverse dependencies that are pending on targets actually being added to the graph.
-	pendingRevDeps map[BuildLabel]map[BuildLabel]*BuildTarget
-	// Actual reverse dependencies
-	revDeps map[BuildLabel][]*BuildTarget
+	pendingRevDeps sync.Map
 	// Registered subrepos, as a map of their name to their root.
-	subrepos map[string]*Subrepo
-	// Used to arbitrate access to the graph. We parallelise most build operations
-	// and Go maps aren't natively threadsafe so this is needed.
-	mutex sync.RWMutex
+	subrepos sync.Map
 }
 
 // AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
-	if _, present := graph.targets[target.Label]; present {
+	if _, loaded := graph.targets.LoadOrStore(target.Label, target); loaded {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
-	graph.targets[target.Label] = target
 	// Register any of its dependencies now
 	for _, dep := range target.DeclaredDependencies() {
 		graph.addDependencyForTarget(target, dep)
 	}
-	// Check these reverse deps which may have already been added against this target.
-	revdeps, present := graph.pendingRevDeps[target.Label]
-	if present {
-		for revdep, originalTarget := range revdeps {
-			if originalTarget != nil {
-				graph.linkDependencies(graph.targets[revdep], originalTarget)
-			} else {
-				graph.linkDependencies(graph.targets[revdep], target)
-			}
-		}
-		delete(graph.pendingRevDeps, target.Label) // Don't need any more
-	}
+	graph.attachPendingRevDeps(target)
 	return target
 }
 
 // AddPackage adds a new package to the graph with given name.
 func (graph *BuildGraph) AddPackage(pkg *Package) {
 	key := packageKey{Name: pkg.Name, Subrepo: pkg.SubrepoName}
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
-	if _, present := graph.packages[key]; present {
+	if _, loaded := graph.packages.LoadOrStore(key, pkg); loaded {
 		panic("Attempt to readd existing package: " + key.String())
 	}
-	graph.packages[key] = pkg
 }
 
 // Target retrieves a target from the graph by label
 func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	return graph.targets[label]
+	t, ok := graph.targets.Load(label)
+	if !ok {
+		return nil
+	}
+	return t.(*BuildTarget)
 }
 
 // TargetOrDie retrieves a target from the graph by label. Dies if the target doesn't exist.
@@ -92,9 +70,11 @@ func (graph *BuildGraph) PackageByLabel(label BuildLabel) *Package {
 
 // Package retrieves a package from the graph by name & subrepo, or nil if it can't be found.
 func (graph *BuildGraph) Package(name, subrepo string) *Package {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	return graph.packages[packageKey{Name: name, Subrepo: subrepo}]
+	p, present := graph.packages.Load(packageKey{Name: name, Subrepo: subrepo})
+	if !present {
+		return nil
+	}
+	return p.(*Package)
 }
 
 // PackageOrDie retrieves a package by label, and dies if it can't be found.
@@ -108,34 +88,30 @@ func (graph *BuildGraph) PackageOrDie(label BuildLabel) *Package {
 
 // AddSubrepo adds a new subrepo to the graph. It dies if one is already registered by this name.
 func (graph *BuildGraph) AddSubrepo(subrepo *Subrepo) {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
-	if _, present := graph.subrepos[subrepo.Name]; present {
+	if _, loaded := graph.subrepos.LoadOrStore(subrepo.Name, subrepo); loaded {
 		log.Fatalf("Subrepo %s is already registered", subrepo.Name)
 	}
-	graph.subrepos[subrepo.Name] = subrepo
 }
 
 // MaybeAddSubrepo adds the given subrepo to the graph, or returns the existing one if one is already registered.
 func (graph *BuildGraph) MaybeAddSubrepo(subrepo *Subrepo) *Subrepo {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
-	if s, present := graph.subrepos[subrepo.Name]; present {
+	if sr, present := graph.subrepos.LoadOrStore(subrepo.Name, subrepo); present {
+		s := sr.(*Subrepo)
 		if !reflect.DeepEqual(s, subrepo) {
-			log.Fatalf("Found multiple definitions for subrepo '%s' (%+v s %+v)",
-				s.Name, s, subrepo)
+			log.Fatalf("Found multiple definitions for subrepo '%s' (%+v s %+v)", s.Name, s, subrepo)
 		}
 		return s
 	}
-	graph.subrepos[subrepo.Name] = subrepo
 	return subrepo
 }
 
 // Subrepo returns the subrepo with this name. It returns nil if one isn't registered.
 func (graph *BuildGraph) Subrepo(name string) *Subrepo {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	return graph.subrepos[name]
+	subrepo, present := graph.subrepos.Load(name)
+	if !present {
+		return nil
+	}
+	return subrepo.(*Subrepo)
 }
 
 // SubrepoOrDie returns the subrepo with this name, dying if it doesn't exist.
@@ -147,42 +123,31 @@ func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
 	return subrepo
 }
 
-// Len returns the number of targets currently in the graph.
-func (graph *BuildGraph) Len() int {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	return len(graph.targets)
-}
-
 // AllTargets returns a consistently ordered slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	targets := make(BuildTargets, 0, len(graph.targets))
-	for _, target := range graph.targets {
-		targets = append(targets, target)
-	}
+	targets := BuildTargets{}
+	graph.targets.Range(func(k, v interface{}) bool {
+		targets = append(targets, v.(*BuildTarget))
+		return true
+	})
 	sort.Sort(targets)
 	return targets
 }
 
 // PackageMap returns a copy of the graph's internal map of name to package.
 func (graph *BuildGraph) PackageMap() map[string]*Package {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	packages := make(map[string]*Package, len(graph.packages))
-	for k, v := range graph.packages {
-		packages[k.String()] = v
-	}
+	packages := map[string]*Package{}
+	graph.packages.Range(func(k, v interface{}) bool {
+		packages[k.(packageKey).String()] = v.(*Package)
+		return true
+	})
 	return packages
 }
 
 // AddDependency adds a dependency between two build targets.
 // The 'to' target doesn't necessarily have to exist in the graph yet (but 'from' must).
 func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
-	graph.mutex.Lock()
-	defer graph.mutex.Unlock()
-	graph.addDependencyForTarget(graph.targets[from], to)
+	graph.addDependencyForTarget(graph.Target(from), to)
 }
 
 // addDependencyForTarget adds a dependency between two build targets.
@@ -193,10 +158,9 @@ func (graph *BuildGraph) addDependencyForTarget(fromTarget *BuildTarget, to Buil
 	if fromTarget.hasResolvedDependency(to) {
 		return
 	}
-	toTarget, present := graph.targets[to]
 	// The dependency may not exist yet if we haven't parsed its package.
 	// In that case we stash it away for later.
-	if !present {
+	if toTarget := graph.Target(to); toTarget == nil {
 		graph.addPendingRevDep(fromTarget.Label, to, nil)
 	} else {
 		graph.linkDependencies(fromTarget, toTarget)
@@ -206,38 +170,16 @@ func (graph *BuildGraph) addDependencyForTarget(fromTarget *BuildTarget, to Buil
 // NewGraph constructs and returns a new BuildGraph.
 // Users should not attempt to construct one themselves.
 func NewGraph() *BuildGraph {
-	return &BuildGraph{
-		targets:        map[BuildLabel]*BuildTarget{},
-		packages:       map[packageKey]*Package{},
-		pendingRevDeps: map[BuildLabel]map[BuildLabel]*BuildTarget{},
-		revDeps:        map[BuildLabel][]*BuildTarget{},
-		subrepos:       map[string]*Subrepo{},
-	}
+	return &BuildGraph{}
 }
 
 // ReverseDependencies returns the set of revdeps on the given target.
 func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	if revdeps, present := graph.revDeps[target.Label]; present {
-		return revdeps[:]
+	revdeps := target.reverseDependencies()
+	if graph.attachPendingRevDeps(target) {
+		return target.reverseDependencies() // Need to recalculate after we attached some more.
 	}
-	return []*BuildTarget{}
-}
-
-// AllDepsBuilt returns true if all the dependencies of a target are built.
-func (graph *BuildGraph) AllDepsBuilt(target *BuildTarget) bool {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	return target.allDepsBuilt()
-}
-
-// AllDependenciesResolved returns true once all the dependencies of a target have been
-// parsed and resolved to real targets.
-func (graph *BuildGraph) AllDependenciesResolved(target *BuildTarget) bool {
-	graph.mutex.RLock()
-	defer graph.mutex.RUnlock()
-	return target.allDependenciesResolved()
+	return revdeps
 }
 
 // linkDependencies adds the dependency of fromTarget on toTarget and the corresponding
@@ -246,9 +188,8 @@ func (graph *BuildGraph) AllDependenciesResolved(target *BuildTarget) bool {
 // point, but some of the dependencies may not yet exist.
 func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 	for _, label := range toTarget.ProvideFor(fromTarget) {
-		if target, present := graph.targets[label]; present {
+		if target := graph.Target(label); target != nil {
 			fromTarget.resolveDependency(toTarget.Label, target)
-			graph.revDeps[label] = append(graph.revDeps[label], fromTarget)
 		} else {
 			graph.addPendingRevDep(fromTarget.Label, label, toTarget)
 		}
@@ -256,11 +197,30 @@ func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
 }
 
 func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget) {
-	if deps, present := graph.pendingRevDeps[to]; present {
-		deps[from] = orig
-	} else {
-		graph.pendingRevDeps[to] = map[BuildLabel]*BuildTarget{from: orig}
+	revdeps, _ := graph.pendingRevDeps.LoadOrStore(to, &sync.Map{})
+	revdeps.(*sync.Map).Store(from, orig)
+}
+
+// attachPendingRevDeps attaches any lurking revdeps for a target onto the target itself.
+// It returns true if any were attached.
+func (graph *BuildGraph) attachPendingRevDeps(target *BuildTarget) bool {
+	if revdeps, present := graph.pendingRevDeps.Load(target.Label); present {
+		any := false
+		m := revdeps.(*sync.Map)
+		m.Range(func(k, v interface{}) bool {
+			revdep := graph.Target(k.(BuildLabel))
+			if originalTarget, ok := v.(*BuildTarget); ok && originalTarget != nil {
+				graph.linkDependencies(revdep, originalTarget)
+			} else {
+				graph.linkDependencies(revdep, target)
+			}
+			any = true
+			m.Delete(k)
+			return true
+		})
+		return any
 	}
+	return false
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.
@@ -268,8 +228,6 @@ func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget
 func (graph *BuildGraph) DependentTargets(from, to BuildLabel) []BuildLabel {
 	fromTarget := graph.Target(from)
 	if toTarget := graph.Target(to); fromTarget != nil && toTarget != nil {
-		graph.mutex.Lock()
-		defer graph.mutex.Unlock()
 		return toTarget.ProvideFor(fromTarget)
 	}
 	return []BuildLabel{to}
