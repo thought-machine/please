@@ -5,9 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -29,17 +27,8 @@ type displayer struct {
 }
 
 func display(ctx context.Context, state *core.BuildState, buildingTargets []buildingTarget) {
-	backend := cli.NewLogBackend(state.Config.Display.MaxWorkers)
-	go func() {
-		sig := make(chan os.Signal, 10)
-		signal.Notify(sig, syscall.SIGWINCH)
-		for {
-			<-sig
-			recalcWindowSize(backend)
-		}
-	}()
-	recalcWindowSize(backend)
-	backend.SetActive()
+	cli.CurrentBackend.SetPassthrough(false, state.Config.Display.MaxWorkers)
+	defer cli.CurrentBackend.SetPassthrough(true, state.Config.Display.MaxWorkers)
 
 	d := &displayer{
 		state:      state,
@@ -47,21 +36,18 @@ func display(ctx context.Context, state *core.BuildState, buildingTargets []buil
 		numWorkers: state.Config.Please.NumThreads,
 		maxWorkers: state.Config.Display.MaxWorkers,
 		numRemote:  state.Config.NumRemoteExecutors(),
-		maxRows:    backend.MaxInteractiveRows,
-		maxCols:    backend.Cols,
 		stats:      state.Config.Display.SystemStats,
 	}
 
 	d.printLines()
-	d.run(ctx, backend)
+	d.run(ctx)
 	setWindowTitle(state, false)
 	// Clear it all out.
 	d.moveToFirstLine()
 	printf("${CLEAR_END}")
-	backend.Deactivate()
 }
 
-func (d *displayer) run(ctx context.Context, backend *cli.LogBackend) {
+func (d *displayer) run(ctx context.Context) {
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 	done := ctx.Done()
@@ -70,9 +56,10 @@ func (d *displayer) run(ctx context.Context, backend *cli.LogBackend) {
 		case <-done:
 			return
 		case <-ticker.C:
+			d.maxRows, d.maxCols = cli.CurrentBackend.MaxDimensions()
 			d.moveToFirstLine()
 			d.printLines()
-			for _, line := range backend.Output {
+			for _, line := range cli.CurrentBackend.Output() {
 				printf("${ERASE_AFTER}%s\n", line)
 				d.lines++
 			}
@@ -201,15 +188,6 @@ func printStat(caption string, stat float64, multiplier int) {
 		colour = "${BOLD_YELLOW}"
 	}
 	printf("  ${BOLD_WHITE}%s:${RESET} %s%5.1f%%${RESET}", caption, colour, stat)
-}
-
-func recalcWindowSize(backend *cli.LogBackend) {
-	rows, cols, _ := cli.WindowSize()
-	backend.Lock()
-	defer backend.Unlock()
-	backend.Rows = rows - 4 // Give a little space at the edge for any off-by-ones
-	backend.Cols = cols
-	backend.RecalcLines()
 }
 
 // Limited-length printf that respects current window width.
