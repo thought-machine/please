@@ -78,14 +78,12 @@ func logFormatter(coloured bool) logging.Formatter {
 
 func setLogBackend(backend logging.Backend) {
 	backend = logging.NewBackendFormatter(backend, logFormatter(StdErrIsATerminal))
-	backendLeveled := logging.AddModuleLevel(backend)
-	backendLeveled.SetLevel(logLevel, "")
 	if fileBackend == nil {
-		logging.SetBackend(newLogBackend(backendLeveled))
+		logging.SetBackend(newLogBackend(backend))
 	} else {
 		fileBackendLeveled := logging.AddModuleLevel(fileBackend)
 		fileBackendLeveled.SetLevel(fileLogLevel, "")
-		logging.SetBackend(newLogBackend(backendLeveled), fileBackendLeveled)
+		logging.SetBackend(newLogBackend(backend), fileBackendLeveled)
 	}
 }
 
@@ -94,8 +92,7 @@ type logBackendFacade struct {
 }
 
 func (backend logBackendFacade) Log(level logging.Level, calldepth int, rec *logging.Record) error {
-	backend.realBackend.Log(level, calldepth+1, rec)
-	return nil
+	return backend.realBackend.Log(level, calldepth+1, rec)
 }
 
 // LogBackend is the backend we use for logging during the interactive console display.
@@ -109,17 +106,18 @@ type LogBackend struct {
 	passthrough                                                           bool
 }
 
-func (backend *LogBackend) Log(level logging.Level, calldepth int, rec *logging.Record) {
+func (backend *LogBackend) Log(level logging.Level, calldepth int, rec *logging.Record) error {
 	backend.mutex.Lock()
 	defer backend.mutex.Unlock()
 	if backend.passthrough || rec.Level <= logging.CRITICAL {
 		backend.origBackend.Log(level, calldepth, rec)
-		return
+		return nil
 	}
 	var b bytes.Buffer
 	backend.Formatter.Format(calldepth, rec, &b)
 	backend.LogMessages.PushBack(strings.TrimSpace(b.String()))
 	backend.RecalcLines()
+	return nil
 }
 
 // RecalcLines recalculates how many lines we have available, typically in response to the window size changing
@@ -138,8 +136,8 @@ func (backend *LogBackend) RecalcLines() {
 }
 
 // newLogBackend constructs a new logging backend.
-func newLogBackend(origBackend logging.Backend) logging.Backend {
-	l := &LogBackend{
+func newLogBackend(origBackend logging.Backend) logging.LeveledBackend {
+	b := &LogBackend{
 		InteractiveRows: 10,
 		MaxRecords:      10,
 		LogMessages:     list.New(),
@@ -147,8 +145,10 @@ func newLogBackend(origBackend logging.Backend) logging.Backend {
 		origBackend:     origBackend,
 		passthrough:     true,
 	}
-	CurrentBackend = l
-	return logBackendFacade{realBackend: l}
+	CurrentBackend = b
+	l := logging.AddModuleLevel(logBackendFacade{realBackend: b})
+	l.SetLevel(logLevel, "")
+	return l
 }
 
 func (backend *LogBackend) calcOutput() []string {

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -9,9 +10,11 @@ import (
 )
 
 func TestLineWrap(t *testing.T) {
-	backend := NewLogBackend(2)
+	newLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
+	backend := CurrentBackend
 	backend.Cols = 80
 	backend.maxLines = 2
+	backend.InteractiveRows = 2
 
 	s := backend.lineWrap(strings.Repeat("a", 40))
 	assert.Equal(t, strings.Repeat("a", 40), strings.Join(s, "\n"))
