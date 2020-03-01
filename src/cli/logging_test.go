@@ -12,9 +12,9 @@ import (
 func TestLineWrap(t *testing.T) {
 	newLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
 	backend := CurrentBackend
-	backend.Cols = 80
+	backend.cols = 80
 	backend.maxLines = 2
-	backend.InteractiveRows = 2
+	backend.interactiveRows = 2
 
 	s := backend.lineWrap(strings.Repeat("a", 40))
 	assert.Equal(t, strings.Repeat("a", 40), strings.Join(s, "\n"))
