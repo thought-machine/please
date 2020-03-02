@@ -157,7 +157,7 @@ ${BOLD_YELLOW}{{ .Name }}${RESET}(
 ):
 
 {{ trim .Docstring }}
-{{ if .EoDef.Offset }}
+{{ if .IsBuiltin }}
 Online help is available at https://please.build/lexicon.html#{{ .Name }}.
 {{- end }}
 `
