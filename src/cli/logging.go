@@ -7,10 +7,12 @@ import (
 	"container/list"
 	"fmt"
 	"os"
+	"os/signal"
 	"path"
 	"regexp"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/peterebden/go-cli-init"
 	"golang.org/x/crypto/ssh/terminal"
@@ -36,6 +38,9 @@ var fileBackend logging.Backend
 
 // A Verbosity is used as a flag to define logging verbosity.
 type Verbosity = cli.Verbosity
+
+// CurrentBackend is the current interactive logging backend.
+var CurrentBackend *LogBackend
 
 // InitLogging initialises logging backends.
 func InitLogging(verbosity Verbosity) {
@@ -73,14 +78,12 @@ func logFormatter(coloured bool) logging.Formatter {
 
 func setLogBackend(backend logging.Backend) {
 	backend = logging.NewBackendFormatter(backend, logFormatter(StdErrIsATerminal))
-	backendLeveled := logging.AddModuleLevel(backend)
-	backendLeveled.SetLevel(logLevel, "")
 	if fileBackend == nil {
-		logging.SetBackend(backendLeveled)
+		logging.SetBackend(newLogBackend(backend))
 	} else {
 		fileBackendLeveled := logging.AddModuleLevel(fileBackend)
 		fileBackendLeveled.SetLevel(fileLogLevel, "")
-		logging.SetBackend(backendLeveled, fileBackendLeveled)
+		logging.SetBackend(newLogBackend(backend), fileBackendLeveled)
 	}
 }
 
@@ -89,56 +92,69 @@ type logBackendFacade struct {
 }
 
 func (backend logBackendFacade) Log(level logging.Level, calldepth int, rec *logging.Record) error {
-	var b bytes.Buffer
-	backend.realBackend.Formatter.Format(calldepth, rec, &b)
-	if rec.Level <= logging.CRITICAL {
-		fmt.Print(b.String()) // Don't capture critical messages, just die immediately.
-		os.Exit(1)
-	}
-	backend.realBackend.Lock()
-	defer backend.realBackend.Unlock()
-	backend.realBackend.LogMessages.PushBack(strings.TrimSpace(b.String()))
-	backend.realBackend.RecalcLines()
-	return nil
+	return backend.realBackend.Log(level, calldepth+1, rec)
 }
 
 // LogBackend is the backend we use for logging during the interactive console display.
 type LogBackend struct {
-	sync.Mutex                                                            // Protects access to LogMessages
-	Rows, Cols, MaxRecords, InteractiveRows, MaxInteractiveRows, maxLines int
-	Output                                                                []string
-	LogMessages                                                           *list.List
-	Formatter                                                             logging.Formatter // TODO(pebers): seems a bit weird that we have to have this here, but it doesn't
-} //               seem to be possible to retrieve the formatter from outside the package?
+	mutex                                                                 sync.Mutex
+	rows, cols, maxRecords, interactiveRows, maxInteractiveRows, maxLines int
+	output                                                                []string
+	logMessages                                                           *list.List
+	formatter                                                             logging.Formatter
+	origBackend                                                           logging.Backend
+	passthrough                                                           bool
+}
+
+// Log implements the logging.Backend interface.
+func (backend *LogBackend) Log(level logging.Level, calldepth int, rec *logging.Record) error {
+	backend.mutex.Lock()
+	defer backend.mutex.Unlock()
+	if backend.passthrough || rec.Level <= logging.CRITICAL {
+		backend.origBackend.Log(level, calldepth, rec)
+		return nil
+	}
+	var b bytes.Buffer
+	backend.formatter.Format(calldepth, rec, &b)
+	backend.logMessages.PushBack(strings.TrimSpace(b.String()))
+	backend.RecalcLines()
+	return nil
+}
 
 // RecalcLines recalculates how many lines we have available, typically in response to the window size changing
 func (backend *LogBackend) RecalcLines() {
-	for backend.LogMessages.Len() >= backend.MaxRecords {
-		backend.LogMessages.Remove(backend.LogMessages.Front())
+	for backend.logMessages.Len() >= backend.maxRecords {
+		backend.logMessages.Remove(backend.logMessages.Front())
 	}
-	backend.maxLines = backend.Rows - backend.InteractiveRows - 1
+	backend.maxLines = backend.rows - backend.interactiveRows - 1
 	if backend.maxLines > 15 {
 		backend.maxLines = 15 // Cap it here so we don't log too much
 	} else if backend.maxLines <= 0 {
 		backend.maxLines = 3 // Set a minimum so we don't have negative indices later.
 	}
-	backend.Output = backend.calcOutput()
-	backend.MaxInteractiveRows = backend.Rows - len(backend.Output) - 1
+	backend.output = backend.calcOutput()
+	backend.maxInteractiveRows = backend.rows - len(backend.output) - 1
 }
 
-// NewLogBackend constructs a new logging backend.
-func NewLogBackend(interactiveRows int) *LogBackend {
-	return &LogBackend{
-		InteractiveRows: interactiveRows,
-		MaxRecords:      10,
-		LogMessages:     list.New(),
-		Formatter:       logFormatter(StdErrIsATerminal),
+// newLogBackend constructs a new logging backend.
+func newLogBackend(origBackend logging.Backend) logging.LeveledBackend {
+	b := &LogBackend{
+		interactiveRows: 10,
+		maxRecords:      10,
+		logMessages:     list.New(),
+		formatter:       logFormatter(StdErrIsATerminal),
+		origBackend:     origBackend,
+		passthrough:     true,
 	}
+	CurrentBackend = b
+	l := logging.AddModuleLevel(logBackendFacade{realBackend: b})
+	l.SetLevel(logLevel, "")
+	return l
 }
 
 func (backend *LogBackend) calcOutput() []string {
 	ret := []string{}
-	for e := backend.LogMessages.Back(); e != nil; e = e.Prev() {
+	for e := backend.logMessages.Back(); e != nil; e = e.Prev() {
 		new := backend.lineWrap(e.Value.(string))
 		if len(ret)+len(new) <= backend.maxLines {
 			ret = append(ret, new...)
@@ -150,14 +166,46 @@ func (backend *LogBackend) calcOutput() []string {
 	return reverse(ret)
 }
 
-// SetActive sets this backend as the currently active log backend.
-func (backend *LogBackend) SetActive() {
-	setLogBackend(logBackendFacade{backend})
+// SetPassthrough sets whether we are "passing through" log messages or not, i.e. whether they go straight to
+// the normal log output or are stored in here.
+func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int) {
+	backend.mutex.Lock()
+	backend.passthrough = passthrough
+	backend.interactiveRows = interactiveRows
+	backend.mutex.Unlock()
+	if passthrough {
+		go func() {
+			sig := make(chan os.Signal, 10)
+			signal.Notify(sig, syscall.SIGWINCH)
+			for range sig {
+				backend.recalcWindowSize()
+			}
+		}()
+	}
+	backend.recalcWindowSize()
 }
 
-// Deactivate removes this backend as the currently active log backend.
-func (backend *LogBackend) Deactivate() {
-	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
+func (backend *LogBackend) recalcWindowSize() {
+	rows, cols, _ := WindowSize()
+	backend.mutex.Lock()
+	defer backend.mutex.Unlock()
+	backend.rows = rows - 4 // Give a little space at the edge for any off-by-ones
+	backend.cols = cols
+	backend.RecalcLines()
+}
+
+// MaxDimensions returns the maximum number of rows / columns available in the display.
+func (backend *LogBackend) MaxDimensions() (rows int, cols int) {
+	backend.mutex.Lock()
+	defer backend.mutex.Unlock()
+	return backend.maxInteractiveRows, backend.cols
+}
+
+// Output returns the current set of preformatted log messages.
+func (backend *LogBackend) Output() []string {
+	backend.mutex.Lock()
+	defer backend.mutex.Unlock()
+	return backend.output[:]
 }
 
 // Wraps a string across multiple lines. Returned slice is reversed.
@@ -166,7 +214,7 @@ func (backend *LogBackend) lineWrap(msg string) []string {
 	wrappedLines := make([]string, 0, len(lines))
 	for _, line := range lines {
 		for i := 0; i < len(line); {
-			split := i + findSplit(line[i:], backend.Cols)
+			split := i + findSplit(line[i:], backend.cols)
 			wrappedLines = append(wrappedLines, line[i:split])
 			i = split
 		}
