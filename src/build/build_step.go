@@ -128,10 +128,12 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 		// Ensure we have downloaded any previous dependencies if that's relevant.
 		if state.Config.NumRemoteExecutors() > 0 {
-			for _, dep := range target.Dependencies() {
-				if dep.State() == core.BuiltRemotely {
-					if err := state.RemoteClient.Download(dep); err != nil {
-						return err
+			for input := range core.IterInputs(state.Graph, target, true, false) {
+				if l := input.Label(); l != nil {
+					if dep := state.Graph.TargetOrDie(*l); dep.State() == core.BuiltRemotely {
+						if err := state.RemoteClient.Download(dep); err != nil {
+							return err
+						}
 					}
 				}
 			}
