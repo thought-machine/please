@@ -106,6 +106,7 @@ type LogBackend struct {
 	passthrough                                                           bool
 }
 
+// Log implements the logging.Backend interface.
 func (backend *LogBackend) Log(level logging.Level, calldepth int, rec *logging.Record) error {
 	backend.mutex.Lock()
 	defer backend.mutex.Unlock()
