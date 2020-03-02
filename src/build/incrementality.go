@@ -430,6 +430,10 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget) ([]byte, erro
 // PrintHashes prints the various hashes for a target to stdout.
 // It's used by plz hash --detailed to show a breakdown of the input hashes of a target.
 func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
+	if state.RemoteClient != nil && !target.Local {
+		state.RemoteClient.PrintHashes(target, false)
+		return
+	}
 	fmt.Printf("%s:\n", target.Label)
 	fmt.Printf("  Config: %s\n", b64(state.Hashes.Config))
 	fmt.Printf("    Rule: %s (pre-build)\n", b64(RuleHash(state, target, false, false)))
@@ -446,9 +450,6 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 		} else {
 			fmt.Printf("    Tool: %s: %s\n", tool, b64(state.PathHasher.MustHash(tool.FullPaths(state.Graph)[0])))
 		}
-	}
-	if state.RemoteClient != nil {
-		state.RemoteClient.PrintHashes(target, false)
 	}
 }
 
