@@ -583,13 +583,13 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 		Timeout:      ptypes.DurationProto(target.BuildTimeout),
 		Uris:         urls,
 	}
-	if sri := subresourceIntegrity(target.Hashes); sri != "" {
+	if sri := subresourceIntegrity(target); sri != "" {
 		req.Qualifiers = []*fpb.Qualifier{{
 			Name:  "checksum.sri",
 			Value: sri,
 		}}
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), target.BuildTimeout)
 	defer cancel()
 	resp, err := c.fetchClient.FetchBlob(ctx, req)
 	if err != nil {

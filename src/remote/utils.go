@@ -419,16 +419,16 @@ func removeOutputs(target *core.BuildTarget) error {
 }
 
 // subresourceIntegrity returns a string corresponding to a target's hashes in the Subresource Integrity format.
-func subresourceIntegrity(hashes []string) string {
-	ret := make([]string, len(hashes))
-	for i, h := range hashes {
-		ret[i] = reencodeSRI(h)
+func subresourceIntegrity(target *core.BuildTarget) string {
+	ret := make([]string, len(target.Hashes))
+	for i, h := range target.Hashes {
+		ret[i] = reencodeSRI(target, h)
 	}
 	return strings.Join(ret, " ")
 }
 
 // reencodeSRI re-encodes a hash from the hex format we use to base64-encoded.
-func reencodeSRI(h string) string {
+func reencodeSRI(target *core.BuildTarget, h string) string {
 	if idx := strings.LastIndexByte(h, ':'); idx != -1 {
 		h = h[idx+1:]
 	}
@@ -440,7 +440,7 @@ func reencodeSRI(h string) string {
 	} else if len(b) == sha1.Size {
 		return "sha1-" + h
 	}
-	log.Warning("Hash string of unknown type: %s", h)
+	log.Warning("Hash string of unknown type on %s: %s", target, h)
 	return h
 }
 
