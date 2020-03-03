@@ -73,6 +73,7 @@ accept = Simplified BSD
 accept = BSD 3-Clause
 accept = 3-Clause BSD License
 accept = New BSD License
+accept = Apache Software License
 accept = Apache 2.0
 accept = Apache License, Version 2.0
 accept = The Apache Software License, Version 2.0

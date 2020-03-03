@@ -44,6 +44,8 @@ genrule(
         "//third_party/python:win_unicode_console",
         "//third_party/python:colorama",
         "//third_party/python:packaging",
+        "//third_party/python:importlib_metadata",
+        "//third_party/python:zipp",
     ],
     outs = ["please_pex"],
     binary = True,
