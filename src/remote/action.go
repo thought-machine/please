@@ -165,9 +165,6 @@ func (c *Client) getCommand(target *core.BuildTarget) string {
 	if cmd == "" {
 		cmd = "true"
 	}
-	if target.IsBinary && len(target.Outputs()) > 0 {
-		return "( " + cmd + " ) && chmod +x $OUTS"
-	}
 	return cmd
 }
 
@@ -415,6 +412,14 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
 		}
 	}
+	// If the rule is marked as binary we need to make sure its output files are also marked
+	// as such. Please does this locally but the remote execution API provides no means of
+	// indicating this to the server :(
+	if target.IsBinary {
+		if err := c.markOutputsAsExecutable(ar, actionDigest); err != nil {
+			return fmt.Errorf("Failed to update action result for %s: %s", target, err)
+		}
+	}
 	if !verifyOutputs {
 		return nil
 	}
@@ -458,6 +463,28 @@ func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
 	return c.setOutputs(target.Label, ar)
 }
 
+// markOutputsAsExecutable updates an ActionResult for a binary rule.
+func (c *Client) markOutputsAsExecutable(ar *pb.ActionResult, actionDigest *pb.Digest) error {
+	modified := false
+	for _, f := range ar.OutputFiles {
+		if !f.IsExecutable {
+			f.IsExecutable = true
+			modified = true
+		}
+	}
+	if !modified {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+	defer cancel()
+	_, err := c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
+		InstanceName: c.instance,
+		ActionDigest: actionDigest,
+		ActionResult: ar,
+	})
+	return err
+}
+
 // translateOS converts the OS name of a subrepo into a Bazel-style OS name.
 func translateOS(subrepo *core.Subrepo) string {
 	if subrepo == nil {
@@ -489,6 +516,9 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 	// what we want to do here.
 	if target != nil && target.PostBuildFunction != nil && c.targetOutputs(target.Label) != nil {
 		env = append(env, "_CREATE_OUTPUT_DIRS=false")
+	}
+	if target.IsBinary {
+		env = append(env, "_BINARY=true")
 	}
 	sort.Strings(env) // Proto says it must be sorted (not just consistently ordered :( )
 	vars := make([]*pb.Command_EnvironmentVariable, len(env))
