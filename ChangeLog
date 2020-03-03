@@ -1,3 +1,12 @@
+Version 14.3.5
+--------------
+
+    * Fix bug where trying to subinclude :all would hang forever (#862)
+    * Better concurrency for parse-only operations on bigger machines
+    * Updated to Go 1.14
+    * More remote execution fixes
+
+
 Version 14.3.4
 --------------
 
