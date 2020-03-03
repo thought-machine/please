@@ -82,6 +82,25 @@ python_wheel(
     name = "pluggy",
     hashes = ["aa20002cb7c9a67a06534eb958ad1d209b0bdb09"],
     version = "0.13.1",
+    deps = [":importlib_metadata"],
+)
+
+python_wheel(
+    name = "importlib_metadata",
+    outs = [
+        "importlib_metadata",
+        "importlib_metadata-1.5.0.dist-info",
+    ],
+    version = "1.5.0",
+    hashes = ["613ee6df7b39cb1e16d034e9d0b59b586446e890"],
+    deps = [":zipp"],
+)
+
+python_wheel(
+    name = "zipp",
+    outs = ["zipp.py"],
+    version = "3.1.0",
+    hashes = ["9715ca014bb6031527514627c128a03c045d45ea"],
 )
 
 python_wheel(
@@ -229,30 +248,4 @@ pip_library(
     version = "1.1.0",
     zip_safe = False,
     deps = [":numpy"],
-)
-
-pip_library(
-    name = "importlib_metadata",
-    package_name = "importlib-metadata",
-    licences = ["Apache License, Version 2.0"],
-    test_only = True,
-    version = "0.23",
-    deps = [
-        ":more_itertools",
-        ":zipp",
-    ],
-)
-
-pip_library(
-    name = "zipp",
-    outs = ["zipp.py"],
-    test_only = True,
-    version = "0.6.0",
-)
-
-pip_library(
-    name = "more_itertools",
-    package_name = "more-itertools",
-    test_only = True,
-    version = "7.2.0",
 )
