@@ -80,8 +80,8 @@ python_wheel(
 
 python_wheel(
     name = "pluggy",
-    hashes = ["aa20002cb7c9a67a06534eb958ad1d209b0bdb09"],
-    version = "0.13.1",
+    hashes = ["sha1: 8413e603d74392f027e8a2e87a589a4f055f2e18"],
+    version = "0.6.0",
 )
 
 python_wheel(
@@ -104,6 +104,12 @@ python_wheel(
 )
 
 python_wheel(
+    name = "packaging",
+    hashes = ["5dac7a1f3703c2eda994feb3148a8f13595200bb"],
+    version = "20.1",
+)
+
+python_wheel(
     name = "pytest",
     outs = [
         "pytest",
@@ -114,6 +120,7 @@ python_wheel(
     deps = [
         ":attrs",
         ":funcsigs",
+        ":packaging",
         ":pkg_resources",
         ":pluggy",
         ":py",

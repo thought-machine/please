@@ -81,6 +81,7 @@ func (pw *Writer) SetTest(srcs []string, testRunner string, addTestRunnerDeps bo
 			".bootstrap/pluggy",
 			".bootstrap/attr",
 			".bootstrap/funcsigs",
+			".bootstrap/packaging",
 			".bootstrap/pkg_resources",
 		)
 		pw.testRunner = "pytest.py"

@@ -43,6 +43,7 @@ genrule(
         "//third_party/python:enum34",
         "//third_party/python:win_unicode_console",
         "//third_party/python:colorama",
+        "//third_party/python:packaging",
     ],
     outs = ["please_pex"],
     binary = True,
