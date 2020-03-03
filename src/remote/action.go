@@ -517,7 +517,7 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 	if target != nil && target.PostBuildFunction != nil && c.targetOutputs(target.Label) != nil {
 		env = append(env, "_CREATE_OUTPUT_DIRS=false")
 	}
-	if target.IsBinary {
+	if target != nil && target.IsBinary {
 		env = append(env, "_BINARY=true")
 	}
 	sort.Strings(env) // Proto says it must be sorted (not just consistently ordered :( )
