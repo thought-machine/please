@@ -16,14 +16,15 @@ import (
 
 // A Writer implements writing a .pex file in various steps.
 type Writer struct {
-	zipSafe        bool
-	noSite         bool
-	shebang        string
-	realEntryPoint string
-	pexStamp       string
-	testSrcs       []string
-	testIncludes   []string
-	testRunner     string
+	zipSafe          bool
+	noSite           bool
+	shebang          string
+	realEntryPoint   string
+	pexStamp         string
+	testSrcs         []string
+	testIncludes     []string
+	testRunner       string
+	customTestRunner string
 }
 
 // NewWriter constructs a new Writer.
@@ -95,12 +96,15 @@ func (pw *Writer) SetTest(srcs []string, testRunner string, addTestRunnerDeps bo
 			".bootstrap/colorama",
 		)
 		pw.testRunner = "behave.py"
-	default:
-		if len(testRunner) > 0 && testRunner != "unittest" {
-			panic("unsupported python testRunner: " + testRunner)
-		}
+	case "unittest":
 		testRunnerDeps = append(testRunnerDeps, ".bootstrap/xmlrunner")
 		pw.testRunner = "unittest.py"
+	default:
+		if !strings.ContainsRune(testRunner, '.') {
+			panic("Custom test runner '" + testRunner + "' is invalid; must contain at least one dot")
+		}
+		pw.testRunner = "custom.py"
+		pw.customTestRunner = testRunner
 	}
 
 	if addTestRunnerDeps {
@@ -146,7 +150,7 @@ func (pw *Writer) Write(out, moduleDir string) error {
 		b2 = bytes.Replace(b2, []byte("__TEST_NAMES__"), []byte(strings.Join(pw.testSrcs, ",")), 1)
 		b = append(b, b2...)
 		// It also needs an appropriate test runner.
-		b = append(b, MustAsset(pw.testRunner)...)
+		b = append(b, bytes.Replace(MustAsset(pw.testRunner), []byte("__TEST_RUNNER__"), []byte(pw.customTestRunner), 1)...)
 	}
 	// We always append the final if __name__ == '__main__' bit.
 	b = append(b, MustAsset("pex_run.py")...)
