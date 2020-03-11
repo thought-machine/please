@@ -631,7 +631,13 @@ func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
 func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarget {
 	if t := state.Graph.Target(l); t != nil {
-		if state := t.State(); state >= Built && state != Failed {
+		if s := t.State(); s >= Built && s != Failed {
+			// Ensure we have downloaded its outputs if needed.
+			// This is a bit fiddly but works around the case where we already built it but
+			// didn't download, and now have found we need to.
+			if state.RemoteClient != nil {
+				state.RemoteClient.Download(t)
+			}
 			return t
 		}
 	}

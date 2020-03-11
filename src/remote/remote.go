@@ -289,6 +289,7 @@ func (c *Client) download(target *core.BuildTarget, digest *pb.Digest, ar *pb.Ac
 }
 
 func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
+	log.Debug("Downloading outputs for %s", target)
 	if err := removeOutputs(target); err != nil {
 		return err
 	}
@@ -298,6 +299,7 @@ func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar 
 		return c.wrapActionErr(err, digest)
 	}
 	c.recordAttrs(target, digest)
+	log.Debug("Downloaded outputs for %s", target)
 	return nil
 }
 
