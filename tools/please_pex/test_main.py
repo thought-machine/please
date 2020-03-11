@@ -15,15 +15,15 @@ def initialise_coverage():
     # Fix up paths in coverage output which are absolute; we want paths relative to
     # the repository root. Also skip empty __init__.py files.
 
-    def _xml_file(self, fr, analysis):
+    def _xml_file(self, fr, analysis, *args, **kvargs):
         if PEX_PATH in fr.filename:
             fr.filename = fr.filename[len(PEX_PATH) + 1:]  # +1 to remove the remaining /
         if fr.filename == '__main__.py':
             return  # Don't calculate coverage for the synthetic entrypoint.
-        if not (fr.filename.endswith('__init__.py') and len(analysis.statements) <= 1):
+        if not (fr.filename.endswith('__init__.py') and len(analysis.statements) < 1):
             analysis.filename = fr.filename
             fr.relname = fr.filename
-            _original_xml_file(self, fr, analysis)
+            _original_xml_file(self, fr, analysis, *args, **kvargs)
     coverage_control.XmlReporter.xml_file = _xml_file
     return coverage
 
@@ -36,7 +36,7 @@ def main():
     if os.getenv('COVERAGE'):
         # It's important that we run coverage while we load the tests otherwise
         # we get no coverage for import statements etc.
-        cov = initialise_coverage().coverage()
+        cov = initialise_coverage().coverage(data_file=None)
         cov.exclude(r'^import\b')
         cov.exclude(r'^from\b')
         cov.start()
