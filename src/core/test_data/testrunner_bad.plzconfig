@@ -1,2 +1,2 @@
-[python]
-testrunner = junit
+[build]
+hashfunction = md5

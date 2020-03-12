@@ -1,2 +1,4 @@
+[build]
+hashfunction = sha256
 [python]
 testrunner = pytest
