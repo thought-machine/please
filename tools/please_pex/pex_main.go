@@ -19,7 +19,7 @@ var opts = struct {
 	TestSrcs           []string      `long:"test_srcs" env:"SRCS" env-delim:" " description:"Test source files"`
 	Test               bool          `short:"t" long:"test" description:"True if we're to build a test"`
 	Interpreter        string        `short:"i" long:"interpreter" env:"TOOLS_INTERPRETER" description:"Python interpreter to use"`
-	TestRunner         string        `short:"r" long:"test_runner" choice:"unittest" choice:"pytest" choice:"behave" default:"unittest" description:"Test runner to use"`
+	TestRunner         string        `short:"r" long:"test_runner" default:"unittest" description:"Test runner to use"`
 	Shebang            string        `short:"s" long:"shebang" description:"Explicitly set shebang to this"`
 	Site               bool          `short:"S" long:"site" description:"Allow the pex to import site at startup"`
 	ZipSafe            bool          `long:"zip_safe" description:"Marks this pex as zip-safe"`

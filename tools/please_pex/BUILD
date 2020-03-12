@@ -2,6 +2,7 @@ filegroup(
     name = "pex_data",
     srcs = [
         "behave.py",
+        "custom.py",
         "pex_main.py",
         "pex_run.py",
         "pytest.py",

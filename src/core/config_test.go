@@ -145,10 +145,10 @@ func TestConfigOverrideURL(t *testing.T) {
 
 func TestConfigOverrideOptions(t *testing.T) {
 	config := DefaultConfiguration()
-	err := config.ApplyOverrides(map[string]string{"python.testrunner": "pytest"})
+	err := config.ApplyOverrides(map[string]string{"build.hashfunction": "sha256"})
 	assert.NoError(t, err)
-	assert.Equal(t, "pytest", config.Python.TestRunner)
-	err = config.ApplyOverrides(map[string]string{"python.testrunner": "junit"})
+	assert.Equal(t, "sha256", config.Build.HashFunction)
+	err = config.ApplyOverrides(map[string]string{"build/hashfunction": "md5"})
 	assert.Error(t, err)
 }
 
