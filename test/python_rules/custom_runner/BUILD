@@ -6,7 +6,10 @@ package(
 python_library(
     name = "runner",
     srcs = ["runner.py"],
-    deps = ["//third_party/python:pytest"],
+    deps = [
+        "//third_party/python:coverage",
+        "//third_party/python:pytest",
+    ],
 )
 
 python_test(
