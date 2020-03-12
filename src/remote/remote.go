@@ -133,6 +133,7 @@ func (c *Client) initExec() error {
 			grpc.WithStatsHandler(c.stats),
 			// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
 			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400)),
+			grpc.WithStreamInterceptor(c.executeInterceptor),
 		},
 	}, client.UseBatchOps(true), client.RetryTransient())
 	if err != nil {
@@ -407,7 +408,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	stream, err := c.client.Execute(ctx, &pb.ExecuteRequest{
+	resp, err := c.client.ExecuteAndWait(ctx, &pb.ExecuteRequest{
 		InstanceName:    c.instance,
 		ActionDigest:    digest,
 		SkipCacheLookup: true, // We've already done it above.
@@ -415,104 +416,102 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	if err != nil {
 		return nil, nil, c.wrapActionErr(fmt.Errorf("Failed to execute %s: %s", target, err), digest)
 	}
-	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Waiting...")
-	for {
-		resp, err := stream.Recv()
-		if err != nil {
-			// We shouldn't get an EOF here because there's in-channel signalling via Done.
-			// TODO(peterebden): On other errors we should be able to reconnect and use
-			//                   WaitExecution to rejoin the stream.
-			return nil, nil, c.wrapActionErr(fmt.Errorf("Failed to execute %s: %s", target, err), digest)
+	metadata := &pb.ExecuteOperationMetadata{}
+	if err := ptypes.UnmarshalAny(resp.Metadata, metadata); err != nil {
+		log.Warning("Failed to deserialise execution metadata: %s", err)
+	} else {
+		c.updateProgress(tid, target, metadata)
+		// TODO(peterebden): At this point we could stream stdout / stderr if the
+		//                   user has set --show_all_output.
+	}
+	switch result := resp.Result.(type) {
+	case *longrunning.Operation_Error:
+		// We shouldn't really get here - the rex API requires servers to always
+		// use the response field instead of error.
+		return nil, nil, convertError(result.Error)
+	case *longrunning.Operation_Response:
+		response := &pb.ExecuteResponse{}
+		if err := ptypes.UnmarshalAny(result.Response, response); err != nil {
+			log.Error("Failed to deserialise execution response: %s", err)
+			return nil, nil, err
 		}
-		metadata := &pb.ExecuteOperationMetadata{}
-		if err := ptypes.UnmarshalAny(resp.Metadata, metadata); err != nil {
-			log.Warning("Failed to deserialise execution metadata: %s", err)
-		} else {
-			c.updateProgress(tid, target, metadata)
-			// TODO(peterebden): At this point we could stream stdout / stderr if the
-			//                   user has set --show_all_output.
+		if response.CachedResult {
+			c.state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
 		}
-		if resp.Done {
-			switch result := resp.Result.(type) {
-			case *longrunning.Operation_Error:
-				// We shouldn't really get here - the rex API requires servers to always
-				// use the response field instead of error.
-				return nil, nil, convertError(result.Error)
-			case *longrunning.Operation_Response:
-				response := &pb.ExecuteResponse{}
-				if err := ptypes.UnmarshalAny(result.Response, response); err != nil {
-					log.Error("Failed to deserialise execution response: %s", err)
-					return nil, nil, err
-				}
-				if response.CachedResult {
-					c.state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
-				}
-				for k, v := range response.ServerLogs {
-					log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
-				}
-				var respErr error
-				if response.Status != nil {
-					respErr = convertError(response.Status)
-					if respErr != nil {
-						if !strings.Contains(respErr.Error(), c.state.Config.Remote.DisplayURL) {
-							if url := c.actionURL(digest, false); url != "" {
-								respErr = fmt.Errorf("%s\nAction URL: %s", respErr, url)
-							}
-						}
+		for k, v := range response.ServerLogs {
+			log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
+		}
+		var respErr error
+		if response.Status != nil {
+			respErr = convertError(response.Status)
+			if respErr != nil {
+				if !strings.Contains(respErr.Error(), c.state.Config.Remote.DisplayURL) {
+					if url := c.actionURL(digest, false); url != "" {
+						respErr = fmt.Errorf("%s\nAction URL: %s", respErr, url)
 					}
 				}
-				if resp.Result == nil { // This is optional on failure.
-					return nil, nil, respErr
-				}
-				if response.Result == nil { // This seems to happen when things go wrong on the build server end.
-					if response.Status != nil {
-						return nil, nil, fmt.Errorf("Build server returned invalid result: %s", convertError(response.Status))
-					}
-					log.Debug("Bad result from build server: %+v", response)
-					return nil, nil, fmt.Errorf("Build server did not return valid result")
-				}
-				if response.Message != "" {
-					// Informational messages can be emitted on successful actions.
-					log.Debug("Message from build server:\n     %s", response.Message)
-				}
-				failed := respErr != nil || response.Result.ExitCode != 0
-				metadata, err := c.buildMetadata(response.Result, needStdout || failed, failed)
-				// The original error is higher priority than us trying to retrieve the
-				// output of the thing that failed.
-				if respErr != nil {
-					return metadata, response.Result, respErr
-				} else if response.Result.ExitCode != 0 {
-					err := fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
-					if response.Message != "" {
-						err = fmt.Errorf("%s\n    %s", err, response.Message)
-					}
-					if len(metadata.Stdout) != 0 {
-						err = fmt.Errorf("%s\nStdout:\n%s", err, metadata.Stdout)
-					}
-					if len(metadata.Stderr) != 0 {
-						err = fmt.Errorf("%s\nStderr:\n%s", err, metadata.Stderr)
-					}
-					// Add a link to the action URL, but only if the server didn't do it (they
-					// might add one to the failed action if they're using the Buildbarn extension
-					// for it, which we can't replicate here).
-					if !strings.Contains(response.Message, c.state.Config.Remote.DisplayURL) {
-						if url := c.actionURL(digest, true); url != "" {
-							err = fmt.Errorf("%s\n%s", err, url)
-						}
-					}
-					return nil, nil, err
-				} else if err != nil {
-					return nil, nil, err
-				}
-				log.Debug("Completed remote build action for %s; input fetch %s, build time %s", target, metadata.InputFetchEndTime.Sub(metadata.InputFetchStartTime), metadata.EndTime.Sub(metadata.StartTime))
-				if err := c.verifyActionResult(target, command, digest, response.Result, false); err != nil {
-					return metadata, response.Result, err
-				}
-				c.locallyCacheResults(target, digest, metadata, response.Result)
-				return metadata, response.Result, nil
 			}
 		}
+		if resp.Result == nil { // This is optional on failure.
+			return nil, nil, respErr
+		}
+		if response.Result == nil { // This seems to happen when things go wrong on the build server end.
+			if response.Status != nil {
+				return nil, nil, fmt.Errorf("Build server returned invalid result: %s", convertError(response.Status))
+			}
+			log.Debug("Bad result from build server: %+v", response)
+			return nil, nil, fmt.Errorf("Build server did not return valid result")
+		}
+		if response.Message != "" {
+			// Informational messages can be emitted on successful actions.
+			log.Debug("Message from build server:\n     %s", response.Message)
+		}
+		failed := respErr != nil || response.Result.ExitCode != 0
+		metadata, err := c.buildMetadata(response.Result, needStdout || failed, failed)
+		// The original error is higher priority than us trying to retrieve the
+		// output of the thing that failed.
+		if respErr != nil {
+			return metadata, response.Result, respErr
+		} else if response.Result.ExitCode != 0 {
+			err := fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
+			if response.Message != "" {
+				err = fmt.Errorf("%s\n    %s", err, response.Message)
+			}
+			if len(metadata.Stdout) != 0 {
+				err = fmt.Errorf("%s\nStdout:\n%s", err, metadata.Stdout)
+			}
+			if len(metadata.Stderr) != 0 {
+				err = fmt.Errorf("%s\nStderr:\n%s", err, metadata.Stderr)
+			}
+			// Add a link to the action URL, but only if the server didn't do it (they
+			// might add one to the failed action if they're using the Buildbarn extension
+			// for it, which we can't replicate here).
+			if !strings.Contains(response.Message, c.state.Config.Remote.DisplayURL) {
+				if url := c.actionURL(digest, true); url != "" {
+					err = fmt.Errorf("%s\n%s", err, url)
+				}
+			}
+			return nil, nil, err
+		} else if err != nil {
+			return nil, nil, err
+		}
+		log.Debug("Completed remote build action for %s; input fetch %s, build time %s", target, metadata.InputFetchEndTime.Sub(metadata.InputFetchStartTime), metadata.EndTime.Sub(metadata.StartTime))
+		if err := c.verifyActionResult(target, command, digest, response.Result, false); err != nil {
+			return metadata, response.Result, err
+		}
+		c.locallyCacheResults(target, digest, metadata, response.Result)
+		return metadata, response.Result, nil
+	default:
+		return nil, nil, fmt.Errorf("Unknown response type: %s", resp) // Shouldn't get here
 	}
+}
+
+// executeInterceptor is a gRPC stream interceptor that we use to show progress on the Execute RPC.
+// We have to do it this way to take advantage of the ExecuteAndWait call on the SDK, which doesn't
+// expose the partial updates.
+func (c *Client) executeInterceptor(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+	log.Warning("here %s", method)
+	return streamer(ctx, desc, cc, method, opts...)
 }
 
 // updateProgress updates the progress of a target based on its metadata.
