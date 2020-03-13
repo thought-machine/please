@@ -59,8 +59,7 @@ type Client struct {
 
 	// Used to control downloading targets (we must make sure we don't re-fetch them
 	// while another target is trying to use them).
-	downloads     map[*core.BuildTarget]*pendingDownload
-	downloadMutex sync.Mutex
+	downloads sync.Map
 
 	// Server-sent cache properties
 	maxBlobBatchSize int64
@@ -81,8 +80,8 @@ type Client struct {
 // A pendingDownload represents a pending download of a build target. It is used to
 // ensure we only download each target exactly once.
 type pendingDownload struct {
-	ch  chan struct{} // Semaphore to signal completion
-	err error         // Any error if the download failed.
+	once sync.Once
+	err  error // Any error if the download failed.
 }
 
 // New returns a new Client instance.
@@ -93,7 +92,6 @@ func New(state *core.BuildState) *Client {
 		instance:   state.Config.Remote.Instance,
 		reqTimeout: time.Duration(state.Config.Remote.Timeout),
 		outputs:    map[core.BuildLabel]*pb.Directory{},
-		downloads:  map[*core.BuildTarget]*pendingDownload{},
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
@@ -256,7 +254,9 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if (c.state.IsOriginalTarget(target.Label) && c.state.DownloadOutputs && !c.state.NeedTests) || target.NeededForSubinclude {
 		if !c.outputsExist(target, digest) {
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
-			if err := c.download(target, digest, ar); err != nil {
+			if err := c.download(target, func() error {
+				return c.reallyDownload(target, digest, ar)
+			}); err != nil {
 				return metadata, err
 			}
 		}
@@ -266,27 +266,28 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 
 // Download downloads outputs for the given target.
 func (c *Client) Download(target *core.BuildTarget) error {
-	command, digest, err := c.buildAction(target, false)
-	if err != nil {
-		return fmt.Errorf("Failed to create action for %s: %s", target, err)
-	}
-	_, ar := c.retrieveResults(target, command, digest, false)
-	if ar == nil {
-		return fmt.Errorf("Failed to retrieve action result for %s", target)
-	}
-	return c.download(target, digest, ar)
+	return c.download(target, func() error {
+		command, digest, err := c.buildAction(target, false)
+		if err != nil {
+			return fmt.Errorf("Failed to create action for %s: %s", target, err)
+		}
+		_, ar := c.retrieveResults(target, command, digest, false)
+		if ar == nil {
+			return fmt.Errorf("Failed to retrieve action result for %s", target)
+		}
+		return c.reallyDownload(target, digest, ar)
+	})
 }
 
-func (c *Client) download(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
-	p, shouldDownload := c.lockDownload(target)
-	if !shouldDownload {
-		<-p.ch
-		return p.err
+func (c *Client) download(target *core.BuildTarget, f func() error) error {
+	v, loaded := c.downloads.LoadOrStore(target, &pendingDownload{})
+	d := v.(*pendingDownload)
+	if !loaded {
+		d.once.Do(func() {
+			d.err = f()
+		})
 	}
-	err := c.reallyDownload(target, digest, ar)
-	p.err = err
-	close(p.ch)
-	return err
+	return d.err
 }
 
 func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
@@ -302,19 +303,6 @@ func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar 
 	c.recordAttrs(target, digest)
 	log.Debug("Downloaded outputs for %s", target)
 	return nil
-}
-
-// lockDownload returns a channel to notify on a download completing.
-// It also returns a boolean indicating whether this caller should perform the download itself.
-func (c *Client) lockDownload(target *core.BuildTarget) (*pendingDownload, bool) {
-	c.downloadMutex.Lock()
-	defer c.downloadMutex.Unlock()
-	p, present := c.downloads[target]
-	if !present {
-		p = &pendingDownload{ch: make(chan struct{})}
-		c.downloads[target] = p
-	}
-	return p, !present
 }
 
 // Test executes a remote test of the given target.
