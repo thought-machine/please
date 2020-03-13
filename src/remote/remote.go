@@ -131,7 +131,6 @@ func (c *Client) initExec() error {
 			grpc.WithStatsHandler(c.stats),
 			// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
 			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400)),
-			grpc.WithStreamInterceptor(c.executeInterceptor),
 		},
 	}, client.UseBatchOps(true), client.RetryTransient())
 	if err != nil {
@@ -398,10 +397,12 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	resp, err := c.client.ExecuteAndWait(ctx, &pb.ExecuteRequest{
+	resp, err := c.client.ExecuteAndWaitProgress(ctx, &pb.ExecuteRequest{
 		InstanceName:    c.instance,
 		ActionDigest:    digest,
 		SkipCacheLookup: true, // We've already done it above.
+	}, func(metadata *pb.ExecuteOperationMetadata) {
+		c.updateProgress(tid, target, metadata)
 	})
 	if err != nil {
 		return nil, nil, c.wrapActionErr(fmt.Errorf("Failed to execute %s: %s", target, err), digest)
@@ -494,14 +495,6 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	default:
 		return nil, nil, fmt.Errorf("Unknown response type: %s", resp) // Shouldn't get here
 	}
-}
-
-// executeInterceptor is a gRPC stream interceptor that we use to show progress on the Execute RPC.
-// We have to do it this way to take advantage of the ExecuteAndWait call on the SDK, which doesn't
-// expose the partial updates.
-func (c *Client) executeInterceptor(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	log.Warning("here %s", method)
-	return streamer(ctx, desc, cc, method, opts...)
 }
 
 // updateProgress updates the progress of a target based on its metadata.
