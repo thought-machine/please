@@ -710,7 +710,7 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 	if !target.SyncUpdateState(Inactive, Semiactive) && !rescan && !forceBuild {
 		return nil
 	}
-	target.NeededForSubinclude = forceBuild
+	target.NeededForSubinclude = target.NeededForSubinclude || forceBuild
 	if state.NeedBuild || forceBuild {
 		if target.SyncUpdateState(Semiactive, Active) {
 			state.AddActiveTarget()
