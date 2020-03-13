@@ -274,6 +274,8 @@ func (c *Client) Download(target *core.BuildTarget) error {
 		_, ar := c.retrieveResults(target, command, digest, false)
 		if ar == nil {
 			return fmt.Errorf("Failed to retrieve action result for %s", target)
+		} else if c.outputsExist(target, digest) {
+			return nil
 		}
 		return c.reallyDownload(target, digest, ar)
 	})

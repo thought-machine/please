@@ -635,9 +635,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 			// Ensure we have downloaded its outputs if needed.
 			// This is a bit fiddly but works around the case where we already built it but
 			// didn't download, and now have found we need to.
-			if state.RemoteClient != nil {
-				state.RemoteClient.Download(t)
-			}
+			state.ensureDownloaded(t)
 			return t
 		}
 	}
@@ -652,7 +650,9 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 		<-ch
 		state.ParsePool.StopWorker()
 		log.Debug("Resuming parse of %s now %s is ready", dependent, l)
-		return state.Graph.Target(l)
+		t := state.Graph.Target(l)
+		state.ensureDownloaded(t)
+		return t
 	}
 	// Nothing's registered this, set it up.
 	state.progress.pendingTargets[l] = make(chan struct{})
@@ -684,6 +684,17 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 			if !fs.IsGlob(out) {
 				pkg.MustRegisterOutput(out, target)
 			}
+		}
+	}
+}
+
+// ensureDownloaded ensures that a target has been downloaded when built remotely.
+// If remote execution is not enabled it has no effect.
+func (state *BuildState) ensureDownloaded(target *BuildTarget) {
+	if state.RemoteClient != nil {
+		if err := state.RemoteClient.Download(target); err != nil {
+			// Panicking is a bit crap but the places we are called from do not return an error.
+			panic(fmt.Sprintf("Failed to download outputs for %s: %s", target, err))
 		}
 	}
 }
