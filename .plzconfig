@@ -79,6 +79,8 @@ accept = Apache License, Version 2.0
 accept = The Apache Software License, Version 2.0
 accept = PSF
 accept = ASL
+accept = MPL-2.0
+accept = LGPL
 accept = Artistic License
 # Not really a licence, but Bazel projects commonly describe things this way.
 accept = notice

@@ -25,7 +25,37 @@ python_wheel(
     hashes = [
         "b05a0f11b8238e26d6fe217e730dd7334fee64de",
     ],
+    deps = [
+        ":certifi",
+        ":chardet",
+        ":idna",
+        ":urllib3",
+    ],
     version = "2.23.0",
+)
+
+python_wheel(
+    name = "certifi",
+    hashes = ["adeac89bf3f6089e98e78b474cf4f5107b659e22"],
+    version = "2019.11.28",
+)
+
+python_wheel(
+    name = "chardet",
+    hashes = ["f98c61fa8032f4122130ba8d99f3e3c9059f0237"],
+    version = "3.0.4",
+)
+
+python_wheel(
+    name = "idna",
+    hashes = ["b5bf6680fefd37d19c3a50bfe104825c5d731ee5"],
+    version = "2.9",
+)
+
+python_wheel(
+    name = "urllib3",
+    hashes = ["d804a9d60dada189e92ae5c48e35da7c06182a5b"],
+    version = "1.25.8",
 )
 
 python_wheel(
