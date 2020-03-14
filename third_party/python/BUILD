@@ -25,13 +25,13 @@ python_wheel(
     hashes = [
         "b05a0f11b8238e26d6fe217e730dd7334fee64de",
     ],
+    version = "2.23.0",
     deps = [
         ":certifi",
         ":chardet",
         ":idna",
         ":urllib3",
     ],
-    version = "2.23.0",
 )
 
 python_wheel(
@@ -121,17 +121,17 @@ python_wheel(
         "importlib_metadata",
         "importlib_metadata-1.5.0.dist-info",
     ],
+    hashes = ["f83974a5581882d6fd23df67e2c2c9628ca75109"],
     patch = "importlib_metadata.patch",
     version = "1.5.0",
-    hashes = ["f83974a5581882d6fd23df67e2c2c9628ca75109"],
     deps = [":zipp"],
 )
 
 python_wheel(
     name = "zipp",
     outs = ["zipp.py"],
-    version = "3.1.0",
     hashes = ["9715ca014bb6031527514627c128a03c045d45ea"],
+    version = "3.1.0",
 )
 
 python_wheel(
@@ -168,8 +168,8 @@ python_wheel(
 python_wheel(
     name = "pytest",
     outs = [
-        "pytest",
         "_pytest",
+        "pytest",
     ],
     hashes = ["975a427a35084c82ff6661fcb7594201cb74a5a8"],
     version = "5.3.5",
