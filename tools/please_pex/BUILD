@@ -35,6 +35,7 @@ genrule(
         "//third_party/python:pluggy",
         "//third_party/python:attrs",
         "//third_party/python:funcsigs",
+        "//third_party/python:more_itertools",
         "//third_party/python:pkg_resources",
         "//third_party/python:behave",
         "//third_party/python:parse",

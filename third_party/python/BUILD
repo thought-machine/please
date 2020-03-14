@@ -91,8 +91,9 @@ python_wheel(
         "importlib_metadata",
         "importlib_metadata-1.5.0.dist-info",
     ],
+    patch = "importlib_metadata.patch",
     version = "1.5.0",
-    hashes = ["613ee6df7b39cb1e16d034e9d0b59b586446e890"],
+    hashes = ["f83974a5581882d6fd23df67e2c2c9628ca75109"],
     deps = [":zipp"],
 )
 
@@ -129,6 +130,12 @@ python_wheel(
 )
 
 python_wheel(
+    name = "more_itertools",
+    hashes = ["a9731580196536ecc037ac342773382c46816451"],
+    version = "8.2.0",
+)
+
+python_wheel(
     name = "pytest",
     outs = [
         "pytest",
@@ -139,6 +146,7 @@ python_wheel(
     deps = [
         ":attrs",
         ":funcsigs",
+        ":more_itertools",
         ":packaging",
         ":pkg_resources",
         ":pluggy",
