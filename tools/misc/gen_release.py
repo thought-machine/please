@@ -12,7 +12,11 @@ import zipfile
 from third_party.python import colorlog, requests
 from third_party.python.absl import app, flags
 
-logging.root.handlers[0].setFormatter(colorlog.ColoredFormatter('%(log_color)s%(levelname)s: %(message)s'))
+handler = colorlog.StreamHandler()
+handler.setFormatter(colorlog.ColoredFormatter('%(log_color)s%(levelname)s: %(message)s'))
+log = colorlog.getLogger(__name__)
+log.addHandler(handler)
+log.propagate = False  # Needed to stop double logging?g
 
 
 flags.DEFINE_string('github_token', os.environ.get('GITHUB_TOKEN'), 'Github API token')
@@ -56,7 +60,7 @@ class ReleaseGen:
     def needs_release(self):
         """Returns true if the current version is not yet released to Github."""
         url = self.releases_url + '/tags/v' + self.version
-        logging.info('Checking %s for release...', url)
+        log.info('Checking %s for release...', url)
         response = self.session.get(url)
         return response.status_code == 404
 
@@ -71,14 +75,14 @@ class ReleaseGen:
             'draft': False,
         }
         if FLAGS.dry_run:
-            logging.info('Would post the following to Github: %s', json.dumps(data, indent=4))
+            log.info('Would post the following to Github: %s', json.dumps(data, indent=4))
             return
-        logging.info('Creating release: %s',  json.dumps(data, indent=4))
+        log.info('Creating release: %s',  json.dumps(data, indent=4))
         response = self.session.post(self.releases_url, json=data)
         response.raise_for_status()
         data = response.json()
         self.upload_url = data['upload_url'].replace('{?name,label}', '?name=')
-        logging.info('Release id %s created', data['id'])
+        log.info('Release id %s created', data['id'])
 
     def upload(self, artifact:str):
         """Uploads the given artifact to the new release."""
@@ -89,9 +93,9 @@ class ReleaseGen:
         content_type = self.known_content_types[ext]
         url = self.upload_url + filename
         if FLAGS.dry_run:
-            logging.info('Would upload %s to %s as %s', filename, url, content_type)
+            log.info('Would upload %s to %s as %s', filename, url, content_type)
             return
-        logging.info('Uploading %s to %s as %s', filename, url, content_type)
+        log.info('Uploading %s to %s as %s', filename, url, content_type)
         with open(artifact, 'rb') as f:
             self.session.headers.update({'Content-Type': content_type})
             response = self.session.post(url, data=f)
@@ -103,7 +107,7 @@ class ReleaseGen:
         # We expect the PLZ_GPG_KEY and GPG_PASSWORD env vars to be set.
         out = artifact + '.asc'
         if FLAGS.dry_run:
-            logging.info('Would sign %s into %s', artifact, out)
+            log.info('Would sign %s into %s', artifact, out)
         else:
             subprocess.check_call([FLAGS.signer, '-o', out, '-i', artifact])
         return out
@@ -135,7 +139,7 @@ class ReleaseGen:
                     line = line[3:]
                 yield line
         if self.is_prerelease:
-            logging.warning("No release notes found, continuing anyway since it's a prerelease")
+            log.warning("No release notes found, continuing anyway since it's a prerelease")
             yield PRERELEASE_MESSAGE.strip()
         else:
             raise Exception("Couldn't find release notes for " + self.version_name)
@@ -180,7 +184,7 @@ class ReleaseGen:
 def main(argv):
     r = ReleaseGen(FLAGS.github_token, dry_run=FLAGS.dry_run)
     if not r.needs_release():
-        logging.info('Current version has already been released, nothing to be done!')
+        log.info('Current version has already been released, nothing to be done!')
         return
     # Check we can sign the artifacts before trying to create a release.
     signatures = [r.sign(artifact) for artifact in argv[1:]]
