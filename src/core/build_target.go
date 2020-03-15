@@ -182,8 +182,6 @@ type BuildTarget struct {
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	TestOutputs []string `name:"test_outputs"`
-	// List of reverse dependencies of this target
-	reverseDeps []*BuildTarget `print:"false"`
 	// Used to arbitrate concurrent access to dependencies
 	mutex sync.Mutex `print:"false"`
 }
@@ -740,11 +738,8 @@ func (target *BuildTarget) hasResolvedDependency(label BuildLabel) bool {
 
 // resolveDependency resolves a particular dependency on a target.
 func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget) {
-	// Important we acquire both mutexes here so the resolution & revdeps are done atomically.
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
-	dep.mutex.Lock()
-	defer dep.mutex.Unlock()
 	info := target.dependencyInfo(label)
 	if info == nil {
 		target.dependencies = append(target.dependencies, depInfo{declared: label})
@@ -754,7 +749,6 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 		info.deps = append(info.deps, dep)
 	}
 	info.resolved = true
-	dep.reverseDeps = append(dep.reverseDeps, target)
 }
 
 // dependencyInfo returns the information about a declared dependency, or nil if the target doesn't have it.
@@ -1339,13 +1333,6 @@ func (target *BuildTarget) ProgressDescription() string {
 // SetProgress sets the current progress of this target.
 func (target *BuildTarget) SetProgress(progress float32) {
 	target.Progress = progress
-}
-
-// reverseDependencies returns the set of revdeps on this target.
-func (target *BuildTarget) reverseDependencies() []*BuildTarget {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
-	return target.reverseDeps[:]
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

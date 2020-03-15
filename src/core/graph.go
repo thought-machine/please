@@ -17,8 +17,8 @@ type BuildGraph struct {
 	targets sync.Map
 	// Map of all currently known packages.
 	packages sync.Map
-	// Reverse dependencies that are pending on targets actually being added to the graph.
-	pendingRevDeps sync.Map
+	// Reverse dependencies for each target.
+	revdeps sync.Map
 	// Registered subrepos, as a map of their name to their root.
 	subrepos sync.Map
 }
@@ -32,7 +32,6 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	for _, dep := range target.DeclaredDependencies() {
 		graph.addDependencyForTarget(target, dep)
 	}
-	graph.attachPendingRevDeps(target)
 	return target
 }
 
@@ -159,27 +158,32 @@ func (graph *BuildGraph) addDependencyForTarget(fromTarget *BuildTarget, to Buil
 		return
 	}
 	// The dependency may not exist yet if we haven't parsed its package.
-	// In that case we stash it away for later.
-	if toTarget := graph.Target(to); toTarget == nil {
-		graph.addPendingRevDep(fromTarget.Label, to, nil)
-	} else {
+	if toTarget := graph.Target(to); toTarget != nil {
 		graph.linkDependencies(fromTarget, toTarget)
+	} else {
+		graph.addRevdep(fromTarget.Label, to)
 	}
 }
 
 // NewGraph constructs and returns a new BuildGraph.
-// Users should not attempt to construct one themselves.
 func NewGraph() *BuildGraph {
 	return &BuildGraph{}
 }
 
 // ReverseDependencies returns the set of revdeps on the given target.
 func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
-	revdeps := target.reverseDependencies()
-	if graph.attachPendingRevDeps(target) {
-		return target.reverseDependencies() // Need to recalculate after we attached some more.
+	m, ok := graph.revdeps.Load(target.Label)
+	if !ok {
+		return nil
 	}
-	return revdeps
+	ret := []*BuildTarget{}
+	m.(*sync.Map).Range(func(k, v interface{}) bool {
+		if t := graph.Target(k.(BuildLabel)); t != nil {
+			if !t.hasResolvedDependency(target.Label) {
+				graph.linkDependencies(t, target)
+			}
+		}
+	})
 }
 
 // linkDependencies adds the dependency of fromTarget on toTarget and the corresponding
@@ -187,40 +191,31 @@ func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget
 // This is complicated somewhat by the require/provide mechanism which is resolved at this
 // point, but some of the dependencies may not yet exist.
 func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
-	for _, label := range toTarget.ProvideFor(fromTarget) {
+	provided := toTarget.ProvideFor(fromTarget)
+	if len(provided) == 1 && provided[0] == toTarget.Label {
+		graph.addRevdep(fromTarget.Label, toTarget.Label)
+		fromTarget.resolveDependency(toTarget.Label, toTarget)
+		return
+	}
+	for _, label := range provided {
+		graph.addRevdep(fromTarget.Label, label)
 		if target := graph.Target(label); target != nil {
 			fromTarget.resolveDependency(toTarget.Label, target)
-		} else {
-			graph.addPendingRevDep(fromTarget.Label, label, toTarget)
 		}
 	}
+	graph.removeRevdep(fromTarget.Label, toTarget.Label)
 }
 
-func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget) {
-	revdeps, _ := graph.pendingRevDeps.LoadOrStore(to, &sync.Map{})
-	revdeps.(*sync.Map).Store(from, orig)
+// addRevdep adds a reverse dependency from one target to another.
+func (graph *BuildGraph) addRevdep(from, to BuildLabel) {
+	m, _ := graph.revdeps.LoadOrStore(to, &sync.Map{})
+	m.(*sync.Map).Store(from, nil)
 }
 
-// attachPendingRevDeps attaches any lurking revdeps for a target onto the target itself.
-// It returns true if any were attached.
-func (graph *BuildGraph) attachPendingRevDeps(target *BuildTarget) bool {
-	if revdeps, present := graph.pendingRevDeps.Load(target.Label); present {
-		any := false
-		m := revdeps.(*sync.Map)
-		m.Range(func(k, v interface{}) bool {
-			revdep := graph.Target(k.(BuildLabel))
-			if originalTarget, ok := v.(*BuildTarget); ok && originalTarget != nil {
-				graph.linkDependencies(revdep, originalTarget)
-			} else {
-				graph.linkDependencies(revdep, target)
-			}
-			any = true
-			m.Delete(k)
-			return true
-		})
-		return any
-	}
-	return false
+// removeRevdep removes a no longer needed revdep.
+func (graph *BuildGraph) removeRevdep(from, to BuildLabel) {
+	m, _ := graph.revdeps.LoadOrStore(to, &sync.Map{})
+	m.(*sync.Map).Delete(from)
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.
