@@ -386,14 +386,8 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         cmd += f' && touch {target}/__init__.py && rm -rf {target}/*.egg-info {target}/*.dist-info'
 
     if patch:
-        patches = [patch] if isinstance(patch, str) else patch
-        if CONFIG.OS == 'freebsd':
-            # --no-backup-if-mismatch is not supported, but we need to get rid of the .orig
-            # files for hashes to match correctly.
-            cmd += ' && ' + ' && '.join([f'patch -p0 < $(location {patch})' for patch in patches])
-            cmd += ' && find . -name "*.orig" | xargs rm'
-        else:
-            cmd += ' && ' + ' && '.join([f'patch -p0 --no-backup-if-mismatch < $(location {patch})' for patch in patches])
+        patches, c = _patch_cmd(patch)
+        cmd += ' && ' + ' && '.join(c)
 
     if post_install_commands:
         cmd = ' && '.join([cmd] + post_install_commands)
@@ -516,8 +510,8 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         cmd += ['find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
                 'xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true']
     if patch:
-        patches = [patch] if isinstance(patch, str) else patch
-        cmd += [f'patch -p0 --no-backup-if-mismatch < $(location {p})' for p in patches]
+        patches, c = _patch_cmd(patch)
+        cmd += c
     if post_install_commands:
         cmd += post_install_commands
 
@@ -530,8 +524,8 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         cmd = ' && '.join(cmd),
         outs = [name + '.pex.zip'],
         srcs = {
-            "SRC": [file_rule],
-            'RES': patches if patch else [],
+            'src': [file_rule],
+            'res': patches if patch else [],
         },
         building_description = 'Repackaging...',
         requires = ['py'],
@@ -563,6 +557,18 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         labels = [label],
         provides = {'py': wheel_rule},
     )
+
+
+def _patch_cmd(patch):
+    """Returns a command for the given patch or patches, with OS-specific tweaks where needed."""
+    patches = [patch] if isinstance(patch, str) else patch
+    if CONFIG.OS == 'freebsd':
+        # --no-backup-if-mismatch is not supported, but we need to get rid of the .orig
+        # files for hashes to match correctly.
+        return patches, [f'patch -p0 < $(location {patch})' for patch in patches] + ['find . -name "*.orig" | xargs rm']
+    else:
+        return patches, [f'patch -p0 --no-backup-if-mismatch < $(location {patch})' for patch in patches]
+
 
 def _handle_zip_safe(name):
     """Handles the zip safe flag.
