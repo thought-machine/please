@@ -82,7 +82,11 @@ func (pw *Writer) SetTest(srcs []string, testRunner string, addTestRunnerDeps bo
 			".bootstrap/pluggy",
 			".bootstrap/attr",
 			".bootstrap/funcsigs",
+			".bootstrap/more_itertools",
+			".bootstrap/packaging",
 			".bootstrap/pkg_resources",
+			".bootstrap/importlib_metadata",
+			".bootstrap/zipp",
 		)
 		pw.testRunner = "pytest.py"
 	case "behave":

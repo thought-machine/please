@@ -7,7 +7,7 @@ class ImportlibMetadataTest(unittest.TestCase):
         # pip
         from importlib_metadata import version
 
-        self.assertEqual(version("importlib_metadata"), "0.23")
+        self.assertEqual(version("importlib_metadata"), "1.5.0")
 
     def test_nonexistant_module(self):
         from importlib_metadata import distribution, PackageNotFoundError

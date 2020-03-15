@@ -1,0 +1,8 @@
+--- importlib_metadata/__init__.py	2020-03-03 22:11:25.660002895 +0000
++++ importlib_metadata/__init__.py.new	2020-03-14 11:57:19.600001299 +0000
+@@ -588,4 +588,4 @@
+     return distribution(distribution_name).requires
+ 
+ 
+-__version__ = version(__name__)
++__version__ = '1.5.0'
