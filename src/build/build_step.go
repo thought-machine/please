@@ -54,16 +54,8 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 		target.SetState(core.Failed)
 		return
 	}
-
 	// Add any of the reverse deps that are now fully built to the queue.
-	for _, reverseDep := range state.Graph.ReverseDependencies(target) {
-		if reverseDep.State() == core.Active && reverseDep.AllDepsBuilt() && reverseDep.SyncUpdateState(core.Active, core.Pending) {
-			state.AddPendingBuild(reverseDep.Label, false)
-		}
-	}
-	if target.IsTest && state.NeedTests && ((state.IsOriginalTarget(target.Label) && state.ShouldInclude(target)) || state.IsExactOriginalTarget(target.Label)) {
-		state.AddPendingTest(target.Label)
-	}
+	state.TriggerTargets(target)
 }
 
 // Builds a single target

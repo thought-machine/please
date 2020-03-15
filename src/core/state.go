@@ -759,6 +759,23 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 	return nil
 }
 
+// TriggerTargets triggers any targets once the given one has completed building successfully.
+func (state *BuildState) TriggerTargets(completed *BuildTarget) {
+	// Grab this mutex to avoid synchronisation issues.
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
+	for _, rd := range state.Graph.ReverseDependencies(completed.Label) {
+		if t := state.Graph.Target(rd); t != nil {
+			if t.State() == Active && t.AllDepsBuilt() && t.SyncUpdateState(Active, Pending) {
+				state.AddPendingBuild(t.Label, false)
+			}
+		}
+	}
+	if completed.IsTest && state.NeedTests && ((state.IsOriginalTarget(completed.Label) && state.ShouldInclude(completed)) || state.IsExactOriginalTarget(completed.Label)) {
+		state.AddPendingTest(completed.Label)
+	}
+}
+
 // ForTarget returns the state associated with a given target.
 // This differs if the target is in a subrepo for a different architecture.
 func (state *BuildState) ForTarget(target *BuildTarget) *BuildState {

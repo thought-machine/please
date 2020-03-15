@@ -43,7 +43,8 @@ func getRevDepsLabels(state *core.BuildState, labels []core.BuildLabel) core.Bui
 	graph := state.Graph
 	for _, label := range labels {
 		for _, child := range graph.PackageOrDie(label).AllChildren(graph.TargetOrDie(label)) {
-			for _, target := range graph.ReverseDependencies(child) {
+			for _, label := range graph.ReverseDependencies(child.Label) {
+				target := graph.TargetOrDie(label)
 				if parent := target.Parent(graph); parent != nil {
 					uniqueTargets[parent] = struct{}{}
 				} else {

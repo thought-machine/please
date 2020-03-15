@@ -17,7 +17,7 @@ type BuildGraph struct {
 	targets sync.Map
 	// Map of all currently known packages.
 	packages sync.Map
-	// Reverse dependencies for each target.
+	// Declared reverse dependencies for each target.
 	revdeps sync.Map
 	// Registered subrepos, as a map of their name to their root.
 	subrepos sync.Map
@@ -30,7 +30,16 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	}
 	// Register any of its dependencies now
 	for _, dep := range target.DeclaredDependencies() {
-		graph.addDependencyForTarget(target, dep)
+		if toTarget := graph.Target(dep); toTarget != nil {
+			graph.addDependencyForTarget(target, toTarget)
+		}
+		graph.addRevdep(target.Label, dep)
+	}
+	// Any reverse dependencies on it might need updating now for require/provide
+	for _, rd := range graph.ReverseDependencies(target.Label) {
+		if fromTarget := graph.Target(rd); fromTarget != nil {
+			graph.addDependencyForTarget(fromTarget, target)
+		}
 	}
 	return target
 }
@@ -146,22 +155,22 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // AddDependency adds a dependency between two build targets.
 // The 'to' target doesn't necessarily have to exist in the graph yet (but 'from' must).
 func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
-	graph.addDependencyForTarget(graph.Target(from), to)
+	graph.addRevdep(from, to)
+	if toTarget := graph.Target(to); toTarget != nil {
+		graph.addDependencyForTarget(graph.TargetOrDie(from), toTarget)
+	}
 }
 
 // addDependencyForTarget adds a dependency between two build targets.
-// The 'to' target doesn't necessarily have to exist in the graph yet.
-// The caller must already hold the lock before calling this.
-func (graph *BuildGraph) addDependencyForTarget(fromTarget *BuildTarget, to BuildLabel) {
+// It is safe to call more than once.
+func (graph *BuildGraph) addDependencyForTarget(fromTarget, toTarget *BuildTarget) {
 	// We might have done this already; do a quick check here first.
-	if fromTarget.hasResolvedDependency(to) {
-		return
-	}
-	// The dependency may not exist yet if we haven't parsed its package.
-	if toTarget := graph.Target(to); toTarget != nil {
-		graph.linkDependencies(fromTarget, toTarget)
-	} else {
-		graph.addRevdep(fromTarget.Label, to)
+	if !fromTarget.hasResolvedDependency(toTarget.Label) {
+		for _, label := range toTarget.ProvideFor(fromTarget) {
+			if target := graph.Target(label); target != nil {
+				fromTarget.resolveDependency(toTarget.Label, target)
+			}
+		}
 	}
 }
 
@@ -170,52 +179,22 @@ func NewGraph() *BuildGraph {
 	return &BuildGraph{}
 }
 
-// ReverseDependencies returns the set of revdeps on the given target.
-func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
-	m, ok := graph.revdeps.Load(target.Label)
-	if !ok {
-		return nil
+// ReverseDependencies returns the declared set of revdeps on the given target.
+func (graph *BuildGraph) ReverseDependencies(label BuildLabel) []BuildLabel {
+	ret := []BuildLabel{}
+	if m, ok := graph.revdeps.Load(label); ok {
+		m.(*sync.Map).Range(func(k, v interface{}) bool {
+			ret = append(ret, k.(BuildLabel))
+			return true
+		})
 	}
-	ret := []*BuildTarget{}
-	m.(*sync.Map).Range(func(k, v interface{}) bool {
-		if t := graph.Target(k.(BuildLabel)); t != nil {
-			if !t.hasResolvedDependency(target.Label) {
-				graph.linkDependencies(t, target)
-			}
-		}
-	})
-}
-
-// linkDependencies adds the dependency of fromTarget on toTarget and the corresponding
-// reverse dependency in the other direction.
-// This is complicated somewhat by the require/provide mechanism which is resolved at this
-// point, but some of the dependencies may not yet exist.
-func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
-	provided := toTarget.ProvideFor(fromTarget)
-	if len(provided) == 1 && provided[0] == toTarget.Label {
-		graph.addRevdep(fromTarget.Label, toTarget.Label)
-		fromTarget.resolveDependency(toTarget.Label, toTarget)
-		return
-	}
-	for _, label := range provided {
-		graph.addRevdep(fromTarget.Label, label)
-		if target := graph.Target(label); target != nil {
-			fromTarget.resolveDependency(toTarget.Label, target)
-		}
-	}
-	graph.removeRevdep(fromTarget.Label, toTarget.Label)
+	return ret
 }
 
 // addRevdep adds a reverse dependency from one target to another.
 func (graph *BuildGraph) addRevdep(from, to BuildLabel) {
 	m, _ := graph.revdeps.LoadOrStore(to, &sync.Map{})
 	m.(*sync.Map).Store(from, nil)
-}
-
-// removeRevdep removes a no longer needed revdep.
-func (graph *BuildGraph) removeRevdep(from, to BuildLabel) {
-	m, _ := graph.revdeps.LoadOrStore(to, &sync.Map{})
-	m.(*sync.Map).Delete(from)
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.
