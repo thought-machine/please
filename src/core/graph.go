@@ -18,7 +18,9 @@ type BuildGraph struct {
 	// Map of all currently known packages.
 	packages sync.Map
 	// Declared reverse dependencies for each target.
-	revdeps sync.Map
+	revdeps revmap
+	// Reverse provide relationships for each target
+	revprovides revmap
 	// Registered subrepos, as a map of their name to their root.
 	subrepos sync.Map
 }
@@ -28,12 +30,16 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	if _, loaded := graph.targets.LoadOrStore(target.Label, target); loaded {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
+	// Register any provided relationships
+	for _, l := range target.Provides {
+		graph.revprovides.Add(target.Label, l)
+	}
 	// Register any of its dependencies now
 	for _, dep := range target.DeclaredDependencies() {
 		if toTarget := graph.Target(dep); toTarget != nil {
 			graph.addDependencyForTarget(target, toTarget)
 		}
-		graph.addRevdep(target.Label, dep)
+		graph.revdeps.Add(target.Label, dep)
 	}
 	// Any reverse dependencies on it might need updating now for require/provide
 	for _, rd := range graph.ReverseDependencies(target.Label) {
@@ -155,7 +161,7 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // AddDependency adds a dependency between two build targets.
 // The 'to' target doesn't necessarily have to exist in the graph yet (but 'from' must).
 func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
-	graph.addRevdep(from, to)
+	graph.revdeps.Add(from, to)
 	if toTarget := graph.Target(to); toTarget != nil {
 		graph.addDependencyForTarget(graph.TargetOrDie(from), toTarget)
 	}
@@ -181,20 +187,11 @@ func NewGraph() *BuildGraph {
 
 // ReverseDependencies returns the declared set of revdeps on the given target.
 func (graph *BuildGraph) ReverseDependencies(label BuildLabel) []BuildLabel {
-	ret := []BuildLabel{}
-	if m, ok := graph.revdeps.Load(label); ok {
-		m.(*sync.Map).Range(func(k, v interface{}) bool {
-			ret = append(ret, k.(BuildLabel))
-			return true
-		})
+	ret := graph.revdeps.Get(label)
+	for _, l := range graph.revprovides.Get(label) {
+		ret = append(ret, graph.revdeps.Get(l)...)
 	}
 	return ret
-}
-
-// addRevdep adds a reverse dependency from one target to another.
-func (graph *BuildGraph) addRevdep(from, to BuildLabel) {
-	m, _ := graph.revdeps.LoadOrStore(to, &sync.Map{})
-	m.(*sync.Map).Store(from, nil)
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.
@@ -205,4 +202,25 @@ func (graph *BuildGraph) DependentTargets(from, to BuildLabel) []BuildLabel {
 		return toTarget.ProvideFor(fromTarget)
 	}
 	return []BuildLabel{to}
+}
+
+// A revmap extends a sync.Map with some specific behaviour we use for reverse dependencies.
+type revmap struct {
+	m sync.Map
+}
+
+func (r *revmap) Add(from, to BuildLabel) {
+	m, _ := r.m.LoadOrStore(to, &sync.Map{})
+	m.(*sync.Map).Store(from, nil)
+}
+
+func (r *revmap) Get(to BuildLabel) []BuildLabel {
+	ret := []BuildLabel{}
+	if m, ok := r.m.Load(to); ok {
+		m.(*sync.Map).Range(func(k, v interface{}) bool {
+			ret = append(ret, k.(BuildLabel))
+			return true
+		})
+	}
+	return ret
 }
