@@ -283,13 +283,11 @@ func (c *Client) Download(target *core.BuildTarget) error {
 }
 
 func (c *Client) download(target *core.BuildTarget, f func() error) error {
-	v, loaded := c.downloads.LoadOrStore(target, &pendingDownload{})
+	v, _ := c.downloads.LoadOrStore(target, &pendingDownload{})
 	d := v.(*pendingDownload)
-	if !loaded {
-		d.once.Do(func() {
-			d.err = f()
-		})
-	}
+	d.once.Do(func() {
+		d.err = f()
+	})
 	return d.err
 }
 
