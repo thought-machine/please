@@ -24,8 +24,10 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
+	"google.golang.org/grpc/status"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
@@ -405,15 +407,14 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 		c.updateProgress(tid, target, metadata)
 	})
 	if err != nil {
+		// Handle timing issues if we try to resume an execution as it fails. If we get a
+		// "not found" we might find that it's already been completed and we can't resume.
+		if status.Code(err) == codes.NotFound {
+			if metadata, ar := c.retrieveResults(target, command, digest, needStdout); metadata != nil {
+				return metadata, ar, nil
+			}
+		}
 		return nil, nil, c.wrapActionErr(fmt.Errorf("Failed to execute %s: %s", target, err), digest)
-	}
-	metadata := &pb.ExecuteOperationMetadata{}
-	if err := ptypes.UnmarshalAny(resp.Metadata, metadata); err != nil {
-		log.Warning("Failed to deserialise execution metadata: %s", err)
-	} else {
-		c.updateProgress(tid, target, metadata)
-		// TODO(peterebden): At this point we could stream stdout / stderr if the
-		//                   user has set --show_all_output.
 	}
 	switch result := resp.Result.(type) {
 	case *longrunning.Operation_Error:
