@@ -631,7 +631,11 @@ func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
 func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarget {
 	if t := state.Graph.Target(l); t != nil {
-		if state := t.State(); state >= Built && state != Failed {
+		if s := t.State(); s >= Built && s != Failed {
+			// Ensure we have downloaded its outputs if needed.
+			// This is a bit fiddly but works around the case where we already built it but
+			// didn't download, and now have found we need to.
+			state.ensureDownloaded(t)
 			return t
 		}
 	}
@@ -646,7 +650,9 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 		<-ch
 		state.ParsePool.StopWorker()
 		log.Debug("Resuming parse of %s now %s is ready", dependent, l)
-		return state.Graph.Target(l)
+		t := state.Graph.Target(l)
+		state.ensureDownloaded(t)
+		return t
 	}
 	// Nothing's registered this, set it up.
 	state.progress.pendingTargets[l] = make(chan struct{})
@@ -682,6 +688,17 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 	}
 }
 
+// ensureDownloaded ensures that a target has been downloaded when built remotely.
+// If remote execution is not enabled it has no effect.
+func (state *BuildState) ensureDownloaded(target *BuildTarget) {
+	if state.RemoteClient != nil {
+		if err := state.RemoteClient.Download(target); err != nil {
+			// Panicking is a bit crap but the places we are called from do not return an error.
+			panic(fmt.Sprintf("Failed to download outputs for %s: %s", target, err))
+		}
+	}
+}
+
 // QueueTarget adds a single target to the build queue.
 func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceBuild bool) error {
 	target := state.Graph.Target(label)
@@ -704,7 +721,7 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 	if !target.SyncUpdateState(Inactive, Semiactive) && !rescan && !forceBuild {
 		return nil
 	}
-	target.NeededForSubinclude = forceBuild
+	target.NeededForSubinclude = target.NeededForSubinclude || forceBuild
 	if state.NeedBuild || forceBuild {
 		if target.SyncUpdateState(Semiactive, Active) {
 			state.AddActiveTarget()

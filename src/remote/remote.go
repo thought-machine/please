@@ -24,8 +24,10 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
+	"google.golang.org/grpc/status"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
@@ -59,8 +61,7 @@ type Client struct {
 
 	// Used to control downloading targets (we must make sure we don't re-fetch them
 	// while another target is trying to use them).
-	downloads     map[*core.BuildTarget]*pendingDownload
-	downloadMutex sync.Mutex
+	downloads sync.Map
 
 	// Server-sent cache properties
 	maxBlobBatchSize int64
@@ -81,8 +82,8 @@ type Client struct {
 // A pendingDownload represents a pending download of a build target. It is used to
 // ensure we only download each target exactly once.
 type pendingDownload struct {
-	ch  chan struct{} // Semaphore to signal completion
-	err error         // Any error if the download failed.
+	once sync.Once
+	err  error // Any error if the download failed.
 }
 
 // New returns a new Client instance.
@@ -93,7 +94,6 @@ func New(state *core.BuildState) *Client {
 		instance:   state.Config.Remote.Instance,
 		reqTimeout: time.Duration(state.Config.Remote.Timeout),
 		outputs:    map[core.BuildLabel]*pb.Directory{},
-		downloads:  map[*core.BuildTarget]*pendingDownload{},
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
@@ -255,7 +255,9 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if (c.state.IsOriginalTarget(target.Label) && c.state.DownloadOutputs && !c.state.NeedTests) || target.NeededForSubinclude {
 		if !c.outputsExist(target, digest) {
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
-			if err := c.download(target, digest, ar); err != nil {
+			if err := c.download(target, func() error {
+				return c.reallyDownload(target, digest, ar)
+			}); err != nil {
 				return metadata, err
 			}
 		}
@@ -265,30 +267,34 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 
 // Download downloads outputs for the given target.
 func (c *Client) Download(target *core.BuildTarget) error {
-	command, digest, err := c.buildAction(target, false)
-	if err != nil {
-		return fmt.Errorf("Failed to create action for %s: %s", target, err)
-	}
-	_, ar := c.retrieveResults(target, command, digest, false)
-	if ar == nil {
-		return fmt.Errorf("Failed to retrieve action result for %s", target)
-	}
-	return c.download(target, digest, ar)
+	return c.download(target, func() error {
+		command, digest, err := c.buildAction(target, false)
+		if err != nil {
+			return fmt.Errorf("Failed to create action for %s: %s", target, err)
+		}
+		_, ar := c.retrieveResults(target, command, digest, false)
+		if ar == nil {
+			return fmt.Errorf("Failed to retrieve action result for %s", target)
+		} else if c.outputsExist(target, digest) {
+			return nil
+		}
+		return c.reallyDownload(target, digest, ar)
+	})
 }
 
-func (c *Client) download(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
-	p, shouldDownload := c.lockDownload(target)
-	if !shouldDownload {
-		<-p.ch
-		return p.err
+func (c *Client) download(target *core.BuildTarget, f func() error) error {
+	v, loaded := c.downloads.LoadOrStore(target, &pendingDownload{})
+	d := v.(*pendingDownload)
+	if !loaded {
+		d.once.Do(func() {
+			d.err = f()
+		})
 	}
-	err := c.reallyDownload(target, digest, ar)
-	p.err = err
-	close(p.ch)
-	return err
+	return d.err
 }
 
 func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
+	log.Debug("Downloading outputs for %s", target)
 	if err := removeOutputs(target); err != nil {
 		return err
 	}
@@ -298,20 +304,8 @@ func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar 
 		return c.wrapActionErr(err, digest)
 	}
 	c.recordAttrs(target, digest)
+	log.Debug("Downloaded outputs for %s", target)
 	return nil
-}
-
-// lockDownload returns a channel to notify on a download completing.
-// It also returns a boolean indicating whether this caller should perform the download itself.
-func (c *Client) lockDownload(target *core.BuildTarget) (*pendingDownload, bool) {
-	c.downloadMutex.Lock()
-	defer c.downloadMutex.Unlock()
-	p, present := c.downloads[target]
-	if !present {
-		p = &pendingDownload{ch: make(chan struct{})}
-		c.downloads[target] = p
-	}
-	return p, !present
 }
 
 // Test executes a remote test of the given target.
@@ -405,111 +399,102 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	stream, err := c.client.Execute(ctx, &pb.ExecuteRequest{
+	resp, err := c.client.ExecuteAndWaitProgress(ctx, &pb.ExecuteRequest{
 		InstanceName:    c.instance,
 		ActionDigest:    digest,
 		SkipCacheLookup: true, // We've already done it above.
+	}, func(metadata *pb.ExecuteOperationMetadata) {
+		c.updateProgress(tid, target, metadata)
 	})
 	if err != nil {
-		return nil, nil, c.wrapActionErr(fmt.Errorf("Failed to execute %s: %s", target, err), digest)
-	}
-	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Waiting...")
-	for {
-		resp, err := stream.Recv()
-		if err != nil {
-			// We shouldn't get an EOF here because there's in-channel signalling via Done.
-			// TODO(peterebden): On other errors we should be able to reconnect and use
-			//                   WaitExecution to rejoin the stream.
-			return nil, nil, c.wrapActionErr(fmt.Errorf("Failed to execute %s: %s", target, err), digest)
-		}
-		metadata := &pb.ExecuteOperationMetadata{}
-		if err := ptypes.UnmarshalAny(resp.Metadata, metadata); err != nil {
-			log.Warning("Failed to deserialise execution metadata: %s", err)
-		} else {
-			c.updateProgress(tid, target, metadata)
-			// TODO(peterebden): At this point we could stream stdout / stderr if the
-			//                   user has set --show_all_output.
-		}
-		if resp.Done {
-			switch result := resp.Result.(type) {
-			case *longrunning.Operation_Error:
-				// We shouldn't really get here - the rex API requires servers to always
-				// use the response field instead of error.
-				return nil, nil, convertError(result.Error)
-			case *longrunning.Operation_Response:
-				response := &pb.ExecuteResponse{}
-				if err := ptypes.UnmarshalAny(result.Response, response); err != nil {
-					log.Error("Failed to deserialise execution response: %s", err)
-					return nil, nil, err
-				}
-				if response.CachedResult {
-					c.state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
-				}
-				for k, v := range response.ServerLogs {
-					log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
-				}
-				var respErr error
-				if response.Status != nil {
-					respErr = convertError(response.Status)
-					if respErr != nil {
-						if !strings.Contains(respErr.Error(), c.state.Config.Remote.DisplayURL) {
-							if url := c.actionURL(digest, false); url != "" {
-								respErr = fmt.Errorf("%s\nAction URL: %s", respErr, url)
-							}
-						}
-					}
-				}
-				if resp.Result == nil { // This is optional on failure.
-					return nil, nil, respErr
-				}
-				if response.Result == nil { // This seems to happen when things go wrong on the build server end.
-					if response.Status != nil {
-						return nil, nil, fmt.Errorf("Build server returned invalid result: %s", convertError(response.Status))
-					}
-					log.Debug("Bad result from build server: %+v", response)
-					return nil, nil, fmt.Errorf("Build server did not return valid result")
-				}
-				if response.Message != "" {
-					// Informational messages can be emitted on successful actions.
-					log.Debug("Message from build server:\n     %s", response.Message)
-				}
-				failed := respErr != nil || response.Result.ExitCode != 0
-				metadata, err := c.buildMetadata(response.Result, needStdout || failed, failed)
-				// The original error is higher priority than us trying to retrieve the
-				// output of the thing that failed.
-				if respErr != nil {
-					return metadata, response.Result, respErr
-				} else if response.Result.ExitCode != 0 {
-					err := fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
-					if response.Message != "" {
-						err = fmt.Errorf("%s\n    %s", err, response.Message)
-					}
-					if len(metadata.Stdout) != 0 {
-						err = fmt.Errorf("%s\nStdout:\n%s", err, metadata.Stdout)
-					}
-					if len(metadata.Stderr) != 0 {
-						err = fmt.Errorf("%s\nStderr:\n%s", err, metadata.Stderr)
-					}
-					// Add a link to the action URL, but only if the server didn't do it (they
-					// might add one to the failed action if they're using the Buildbarn extension
-					// for it, which we can't replicate here).
-					if !strings.Contains(response.Message, c.state.Config.Remote.DisplayURL) {
-						if url := c.actionURL(digest, true); url != "" {
-							err = fmt.Errorf("%s\n%s", err, url)
-						}
-					}
-					return nil, nil, err
-				} else if err != nil {
-					return nil, nil, err
-				}
-				log.Debug("Completed remote build action for %s; input fetch %s, build time %s", target, metadata.InputFetchEndTime.Sub(metadata.InputFetchStartTime), metadata.EndTime.Sub(metadata.StartTime))
-				if err := c.verifyActionResult(target, command, digest, response.Result, false); err != nil {
-					return metadata, response.Result, err
-				}
-				c.locallyCacheResults(target, digest, metadata, response.Result)
-				return metadata, response.Result, nil
+		// Handle timing issues if we try to resume an execution as it fails. If we get a
+		// "not found" we might find that it's already been completed and we can't resume.
+		if status.Code(err) == codes.NotFound {
+			if metadata, ar := c.retrieveResults(target, command, digest, needStdout); metadata != nil {
+				return metadata, ar, nil
 			}
 		}
+		return nil, nil, c.wrapActionErr(fmt.Errorf("Failed to execute %s: %s", target, err), digest)
+	}
+	switch result := resp.Result.(type) {
+	case *longrunning.Operation_Error:
+		// We shouldn't really get here - the rex API requires servers to always
+		// use the response field instead of error.
+		return nil, nil, convertError(result.Error)
+	case *longrunning.Operation_Response:
+		response := &pb.ExecuteResponse{}
+		if err := ptypes.UnmarshalAny(result.Response, response); err != nil {
+			log.Error("Failed to deserialise execution response: %s", err)
+			return nil, nil, err
+		}
+		if response.CachedResult {
+			c.state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
+		}
+		for k, v := range response.ServerLogs {
+			log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
+		}
+		var respErr error
+		if response.Status != nil {
+			respErr = convertError(response.Status)
+			if respErr != nil {
+				if !strings.Contains(respErr.Error(), c.state.Config.Remote.DisplayURL) {
+					if url := c.actionURL(digest, false); url != "" {
+						respErr = fmt.Errorf("%s\nAction URL: %s", respErr, url)
+					}
+				}
+			}
+		}
+		if resp.Result == nil { // This is optional on failure.
+			return nil, nil, respErr
+		}
+		if response.Result == nil { // This seems to happen when things go wrong on the build server end.
+			if response.Status != nil {
+				return nil, nil, fmt.Errorf("Build server returned invalid result: %s", convertError(response.Status))
+			}
+			log.Debug("Bad result from build server: %+v", response)
+			return nil, nil, fmt.Errorf("Build server did not return valid result")
+		}
+		if response.Message != "" {
+			// Informational messages can be emitted on successful actions.
+			log.Debug("Message from build server:\n     %s", response.Message)
+		}
+		failed := respErr != nil || response.Result.ExitCode != 0
+		metadata, err := c.buildMetadata(response.Result, needStdout || failed, failed)
+		// The original error is higher priority than us trying to retrieve the
+		// output of the thing that failed.
+		if respErr != nil {
+			return metadata, response.Result, respErr
+		} else if response.Result.ExitCode != 0 {
+			err := fmt.Errorf("Remotely executed command exited with %d", response.Result.ExitCode)
+			if response.Message != "" {
+				err = fmt.Errorf("%s\n    %s", err, response.Message)
+			}
+			if len(metadata.Stdout) != 0 {
+				err = fmt.Errorf("%s\nStdout:\n%s", err, metadata.Stdout)
+			}
+			if len(metadata.Stderr) != 0 {
+				err = fmt.Errorf("%s\nStderr:\n%s", err, metadata.Stderr)
+			}
+			// Add a link to the action URL, but only if the server didn't do it (they
+			// might add one to the failed action if they're using the Buildbarn extension
+			// for it, which we can't replicate here).
+			if !strings.Contains(response.Message, c.state.Config.Remote.DisplayURL) {
+				if url := c.actionURL(digest, true); url != "" {
+					err = fmt.Errorf("%s\n%s", err, url)
+				}
+			}
+			return nil, nil, err
+		} else if err != nil {
+			return nil, nil, err
+		}
+		log.Debug("Completed remote build action for %s; input fetch %s, build time %s", target, metadata.InputFetchEndTime.Sub(metadata.InputFetchStartTime), metadata.EndTime.Sub(metadata.StartTime))
+		if err := c.verifyActionResult(target, command, digest, response.Result, false); err != nil {
+			return metadata, response.Result, err
+		}
+		c.locallyCacheResults(target, digest, metadata, response.Result)
+		return metadata, response.Result, nil
+	default:
+		return nil, nil, fmt.Errorf("Unknown response type: %s", resp) // Shouldn't get here
 	}
 }
 

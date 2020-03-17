@@ -453,7 +453,7 @@ go_get(
     name = "remote-apis-sdks",
     get = "github.com/bazelbuild/remote-apis-sdks/go/...",
     repo = "github.com/peterebden/remote-apis-sdks",
-    revision = "7d27474f58852792800a8bc930eb81d4d729f023",
+    revision = "16b8c03a1b365b4c36c6544b5d03bda429cee2e2",
     deps = [
         ":annotations",
         ":bytestream",
