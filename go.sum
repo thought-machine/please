@@ -42,6 +42,8 @@ github.com/bazelbuild/remote-apis-sdks v0.0.0-20191125202410-a21ff57ff57c h1:8zx
 github.com/bazelbuild/remote-apis-sdks v0.0.0-20191125202410-a21ff57ff57c/go.mod h1:qgVeF5etXayzvt6OKXzeSg9Y0QDXfeH9H4EWKo/MNLM=
 github.com/bazelbuild/remote-apis-sdks v0.0.0-20200117155253-d02017f96d3b h1:Vy+DZZyPUNv2Ki15vJ+JdJRPg4LzJm52i8//9pfqPEU=
 github.com/bazelbuild/remote-apis-sdks v0.0.0-20200117155253-d02017f96d3b/go.mod h1:sAMybttCdA6S0dbSG/xluhJY6D3qlEkAkgfcyOyRee4=
+github.com/bazelbuild/remote-apis-sdks v0.0.0-20200316225911-4b8acdce5908 h1:P4asBf0pXW2R7bBEnIgoL49a+/jYof/5zqoUkIxROmI=
+github.com/bazelbuild/remote-apis-sdks v0.0.0-20200316225911-4b8acdce5908/go.mod h1:sAMybttCdA6S0dbSG/xluhJY6D3qlEkAkgfcyOyRee4=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 h1:xJ4a3vCFaGF/jqvzLMYoU8P317H5OQ+Via4RmuPwCS0=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
