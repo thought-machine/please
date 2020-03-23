@@ -33,10 +33,6 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	if _, loaded := graph.targets.LoadOrStore(target.Label, target); loaded {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
-	// Register any of its dependencies now
-	for _, dep := range target.DeclaredDependencies() {
-		go graph.registerDependency(target, dep)
-	}
 	// This target is now ready to go
 	ch, _ := graph.resolved.LoadOrStore(target.Label, make(semaphore))
 	close(ch.(semaphore))
