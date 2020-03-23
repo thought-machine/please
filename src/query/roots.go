@@ -57,12 +57,13 @@ func indexOf(labels []core.BuildLabel, label core.BuildLabel) int {
 }
 
 func uniqueReverseDependencies(graph *core.BuildGraph, target *core.BuildTarget, targets map[*core.BuildTarget]struct{}) {
-	if _, present := targets[target]; present {
+	_, ok := targets[target]
+	if ok {
 		return
 	}
 	targets[target] = struct{}{}
 	// ReverseDependencies are the smaller order collection, so more efficient to iterate.
-	for _, child := range graph.ReverseDependencies(target.Label) {
-		uniqueReverseDependencies(graph, graph.TargetOrDie(child), targets)
+	for _, child := range graph.ReverseDependencies(target) {
+		uniqueReverseDependencies(graph, child, targets)
 	}
 }
