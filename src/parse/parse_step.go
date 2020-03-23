@@ -238,7 +238,7 @@ func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) 
 	for target := range changed {
 		if !target.AllDependenciesResolved() {
 			for _, dep := range target.DeclaredDependencies() {
-				state.Graph.AddDependency(target.Label, dep)
+				state.Graph.AddDependency(target, dep)
 			}
 		}
 		if s := target.State(); s < core.Built && s > core.Inactive {
