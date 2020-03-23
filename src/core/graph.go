@@ -208,24 +208,3 @@ func (graph *BuildGraph) DependentTargets(from, to BuildLabel) []BuildLabel {
 	}
 	return []BuildLabel{to}
 }
-
-// A revmap extends a sync.Map with some specific behaviour we use for reverse dependencies.
-type revmap struct {
-	m sync.Map
-}
-
-func (r *revmap) Add(from, to BuildLabel) {
-	m, _ := r.m.LoadOrStore(to, &sync.Map{})
-	m.(*sync.Map).Store(from, nil)
-}
-
-func (r *revmap) Get(to BuildLabel) []BuildLabel {
-	ret := []BuildLabel{}
-	if m, ok := r.m.Load(to); ok {
-		m.(*sync.Map).Range(func(k, v interface{}) bool {
-			ret = append(ret, k.(BuildLabel))
-			return true
-		})
-	}
-	return ret
-}
