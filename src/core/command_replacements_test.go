@@ -255,7 +255,7 @@ func makeTarget(name string, command string, dep *BuildTarget) *BuildTarget {
 		graph := NewGraph()
 		graph.AddTarget(target)
 		graph.AddTarget(dep)
-		graph.AddDependency(target.Label, dep.Label)
+		graph.AddDependency(target, dep.Label)
 	}
 	return target
 }

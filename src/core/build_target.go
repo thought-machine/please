@@ -653,7 +653,7 @@ func (target *BuildTarget) AllDependenciesResolved() bool {
 	defer target.mutex.Unlock()
 	for _, deps := range target.dependencies {
 		if !deps.resolved {
-			return false 
+			return false
 		}
 	}
 	return true
@@ -667,12 +667,16 @@ func (target *BuildTarget) waitForDependencies(state *BuildState, forceBuild boo
 		deps := target.dependencies[:]
 		target.mutex.Unlock()
 		builds := []*BuildTarget{}
-		// Do this in two separate loops so we try to trigger as many deps as possible before waiting for builds.
+		// Do this in several separate loops so we try to trigger as many deps as possible before waiting for builds.
 		for _, dep := range deps {
 			if !dep.resolved {
 				if err := state.QueueTarget(dep.declared, target.Label, false, forceBuild); err != nil {
 					return err
 				}
+			}
+		}
+		for _, dep := range deps {
+			if !dep.resolved {
 				state.Graph.registerDependency(target, dep.declared)
 			}
 		}
