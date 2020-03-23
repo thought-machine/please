@@ -78,7 +78,7 @@ func TestAddDepRescan(t *testing.T) {
 	state.Graph.AddTarget(target4)
 	target1 := state.Graph.TargetOrDie(buildLabel("//package1:target1"))
 	target1.AddDependency(buildLabel("//package1:target4"))
-	state.Graph.AddDependency(buildLabel("//package1:target1"), buildLabel("//package1:target4"))
+	state.Graph.AddDependency(target1, buildLabel("//package1:target4"))
 
 	// Fake test: calling this now should have no effect because rescan is not true.
 	state.QueueTarget(buildLabel("//package1:target1"), core.OriginalTarget, false, false)
@@ -147,7 +147,7 @@ func makeState(withPackage1, withPackage2 bool) *core.BuildState {
 func addDeps(graph *core.BuildGraph, pkg *core.Package) {
 	for _, target := range pkg.AllTargets() {
 		for _, dep := range target.DeclaredDependencies() {
-			graph.AddDependency(target.Label, dep)
+			graph.AddDependency(target, dep)
 		}
 	}
 }

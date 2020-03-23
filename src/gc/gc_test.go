@@ -61,7 +61,7 @@ func createTarget(graph *core.BuildGraph, name string, deps ...string) *core.Bui
 	for _, dep := range deps {
 		label := bl(dep)
 		target.AddDependency(label)
-		graph.AddDependency(target.Label, label)
+		graph.AddDependency(target, label)
 	}
 	return target
 }

@@ -65,7 +65,7 @@ func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 				dep := label(i*10 + j)
 				log.Info("Adding dependency %s -> %s", target.Label, dep)
 				target.AddDependency(dep)
-				state.Graph.AddDependency(target.Label, dep)
+				state.Graph.AddDependency(target, dep)
 			}
 		} else {
 			// These are buildable now
@@ -90,8 +90,9 @@ func postBuild(target *core.BuildTarget, out string) error {
 	newTarget := addTarget(state, target.Flakiness+size)
 
 	// This mimics what interpreter.go does.
-	state.Graph.TargetOrDie(parent).AddDependency(newTarget.Label)
-	state.Graph.AddDependency(parent, newTarget.Label)
+	p := state.Graph.TargetOrDie(parent)
+	p.AddDependency(newTarget.Label)
+	state.Graph.AddDependency(p, newTarget.Label)
 	return nil
 }
 

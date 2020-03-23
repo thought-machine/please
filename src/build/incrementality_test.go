@@ -79,6 +79,7 @@ var KnownFields = map[string]bool{
 	"NeededForSubinclude": true,
 	"reverseDeps":         true,
 	"mutex":               true,
+	"built":               true,
 
 	// Used to save the rule hash rather than actually being hashed itself.
 	"RuleHash": true,
