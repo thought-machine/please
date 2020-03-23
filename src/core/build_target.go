@@ -657,10 +657,15 @@ func (target *BuildTarget) waitForDependencies(state *BuildState, forceBuild boo
 	// Break this into two loops to try to maximise the number of these we can queue before waiting for builds to complete
 	builds := []*BuildTarget{}
 	for dep := target.nextUnresolvedDependency(); dep != nil; dep = target.nextUnresolvedDependency() {
+		if err := state.QueueTarget(dep.declared, target.Label, false, forceBuild); err != nil {
+			return err
+		}
 		state.Graph.registerDependency(target, dep.declared)
 		for _, d := range dep.deps {
-			if err := state.QueueTarget(d.Label, target.Label, false, forceBuild); err != nil {
-				return err
+			if d.Label != dep.declared {
+				if err := state.QueueTarget(d.Label, target.Label, false, forceBuild); err != nil {
+					return err
+				}
 			}
 			builds = append(builds, d)
 		}
