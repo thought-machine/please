@@ -735,11 +735,14 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 	}
 	// Register something to watch this target to wait for its dependencies to become ready
 	if target.SyncUpdateState(Active, Pending) {
+		// This is a bit of a hack to ensure the pending build count is updated synchronously (so we don't think we're done too soon)
+		atomic.AddInt64(&state.progress.numPending, 1)
 		state.progress.errors.Go(func() error {
 			if err := target.waitForDependencies(state, forceBuild); err != nil {
 				return err
 			}
 			state.AddPendingBuild(label, dependent.IsAllTargets())
+			atomic.AddInt64(&state.progress.numPending, -1)
 			return nil
 		})
 	}
