@@ -734,23 +734,24 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 		}
 	}
 	// Register something to watch this target to wait for its dependencies to become ready
-	if target.SyncUpdateState(Active, Pending) {
-		// This is a bit of a hack to ensure the pending build count is updated synchronously (so we don't think we're done too soon)
-		atomic.AddInt64(&state.progress.numPending, 1)
-		state.progress.errors.Go(func() error {
-			if err := target.waitForDependencies(state, forceBuild); err != nil {
-				return err
-			}
+	// This is a bit of a hack to ensure the pending build count is updated synchronously (so we don't think we're done too soon)
+	atomic.AddInt64(&state.progress.numPending, 1)
+	state.progress.errors.Go(func() error {
+		defer atomic.AddInt64(&state.progress.numPending, -1)  // Undo what we did above
+		if err := target.waitForDependencies(state, forceBuild); err != nil {
+			return err
+		}
+		if target.SyncUpdateState(Active, Pending) {
 			state.AddPendingBuild(label, dependent.IsAllTargets())
-			atomic.AddInt64(&state.progress.numPending, -1)
-			return nil
-		})
-	}
+		}
+		return nil
+	})
 	return nil
 }
 
 // TriggerTargets triggers any targets once the given one has completed building successfully.
 func (state *BuildState) TriggerTargets(completed *BuildTarget) {
+	log.Debug("Triggering new build targets now %s is complete", completed)
 	// Trigger this for anything that cares
 	close(completed.built)
 	// Also trigger the test run of this target if needed

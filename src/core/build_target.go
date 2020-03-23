@@ -688,7 +688,7 @@ func (target *BuildTarget) waitForDependencies(state *BuildState, forceBuild boo
 				builds = append(builds, d)
 			}
 		}
-		if len(builds) == 0 {
+		if len(builds) == 0 || (!state.NeedBuild && !forceBuild) {
 			return nil
 		}
 		for _, t := range builds {
