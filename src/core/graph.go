@@ -17,36 +17,29 @@ type BuildGraph struct {
 	targets sync.Map
 	// Map of all currently known packages.
 	packages sync.Map
-	// Declared reverse dependencies for each target.
-	revdeps revmap
-	// Reverse provide relationships for each target
-	revprovides revmap
+	// Map of targets we are waiting to resolve
+	resolved sync.Map
 	// Registered subrepos, as a map of their name to their root.
 	subrepos sync.Map
+	// Reverse dependencies of targets. Note that this is populated lazily on the first call to ReverseDependencies.
+	revdeps map[*BuildTarget][]*BuildTarget
 }
+
+// semaphore is an alias we use that's a little less fiddly.
+type semaphore chan struct{}
 
 // AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	if _, loaded := graph.targets.LoadOrStore(target.Label, target); loaded {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
-	// Register any provided relationships
-	for _, l := range target.Provides {
-		graph.revprovides.Add(target.Label, l)
-	}
 	// Register any of its dependencies now
 	for _, dep := range target.DeclaredDependencies() {
-		if toTarget := graph.Target(dep); toTarget != nil {
-			graph.addDependencyForTarget(target, toTarget)
-		}
-		graph.revdeps.Add(target.Label, dep)
+		go graph.registerDependency(target, dep)
 	}
-	// Any reverse dependencies on it might need updating now for require/provide
-	for _, rd := range graph.ReverseDependencies(target.Label) {
-		if fromTarget := graph.Target(rd); fromTarget != nil {
-			graph.addDependencyForTarget(fromTarget, target)
-		}
-	}
+	// This target is now ready to go
+	ch, _ := graph.resolved.LoadOrStore(target.Label, make(semaphore))
+	close(ch.(semaphore))
 	return target
 }
 
@@ -159,25 +152,30 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 }
 
 // AddDependency adds a dependency between two build targets.
-// The 'to' target doesn't necessarily have to exist in the graph yet (but 'from' must).
-func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
-	graph.revdeps.Add(from, to)
-	if toTarget := graph.Target(to); toTarget != nil {
-		graph.addDependencyForTarget(graph.TargetOrDie(from), toTarget)
+func (graph *BuildGraph) AddDependency(from *BuildTarget, to BuildLabel) {
+	go graph.registerDependency(from, to)
+}
+
+// registerDependency registers a dependency from one target on another. It blocks until the dependee
+// exists so should normally be invoked in a goroutine.
+func (graph *BuildGraph) registerDependency(target *BuildTarget, dep BuildLabel) {
+	t := graph.targetBlocking(dep)
+	if provided := t.ProvideFor(target); len(provided) == 1 && provided[0] == dep {
+		target.resolveDependency(dep, t)
+	} else {
+		targets := make([]*BuildTarget, len(provided))
+		for i, l := range provided {
+			targets[i] = graph.targetBlocking(l)
+		}
+		target.resolveDependency(dep, targets...)
 	}
 }
 
-// addDependencyForTarget adds a dependency between two build targets.
-// It is safe to call more than once.
-func (graph *BuildGraph) addDependencyForTarget(fromTarget, toTarget *BuildTarget) {
-	// We might have done this already; do a quick check here first.
-	if !fromTarget.hasResolvedDependency(toTarget.Label) {
-		for _, label := range toTarget.ProvideFor(fromTarget) {
-			if target := graph.Target(label); target != nil {
-				fromTarget.resolveDependency(toTarget.Label, target)
-			}
-		}
-	}
+// targetBlocking returns the given target. It blocks until it's available in the graph.
+func (graph *BuildGraph) targetBlocking(label BuildLabel) *BuildTarget {
+	ch, _ := graph.resolved.LoadOrStore(label, make(semaphore))
+	<-(ch.(semaphore))
+	return graph.Target(label)
 }
 
 // NewGraph constructs and returns a new BuildGraph.
@@ -185,13 +183,20 @@ func NewGraph() *BuildGraph {
 	return &BuildGraph{}
 }
 
-// ReverseDependencies returns the declared set of revdeps on the given target.
-func (graph *BuildGraph) ReverseDependencies(label BuildLabel) []BuildLabel {
-	ret := graph.revdeps.Get(label)
-	for _, l := range graph.revprovides.Get(label) {
-		ret = append(ret, graph.revdeps.Get(l)...)
+// ReverseDependencies returns the set of revdeps on the given target.
+func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
+	if graph.revdeps == nil {
+		// Populate on first use
+		graph.revdeps = map[*BuildTarget][]*BuildTarget{}
+		graph.targets.Range(func(k, v interface{}) bool {
+			t := v.(*BuildTarget)
+			for _, d := range t.Dependencies() {
+				graph.revdeps[d] = append(graph.revdeps[d], t)
+			}
+			return true
+		})
 	}
-	return ret
+	return graph.revdeps[target]
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.

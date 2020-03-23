@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Workiva/go-datastructures/queue"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
@@ -210,6 +211,8 @@ type stateProgress struct {
 	pendingPackageMutex sync.Mutex
 	// The set of known states
 	allStates []*BuildState
+	// Used to hold errors from some goroutines
+	errors errgroup.Group
 }
 
 // SystemStats stores information about the system.
@@ -730,47 +733,24 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 			}
 		}
 	}
-	// If this target has no deps, add it to the queue now, otherwise handle its deps.
-	// Only add if we need to build targets (not if we're just parsing) but we might need it to parse...
-	if target.State() == Active && target.AllDepsBuilt() {
-		if target.SyncUpdateState(Active, Pending) {
-			state.AddPendingBuild(label, dependent.IsAllTargets())
-		}
-		if !rescan {
-			return nil
-		}
-	}
-	for _, dep := range target.DeclaredDependencies() {
-		// Check the require/provide stuff; we may need to add a different target.
-		if len(target.Requires) > 0 {
-			if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
-				for _, provided := range depTarget.ProvideFor(target) {
-					if err := state.QueueTarget(provided, label, false, forceBuild); err != nil {
-						return err
-					}
-				}
-				continue
+	// Register something to watch this target to wait for its dependencies to become ready
+	if target.SyncUpdateState(Active, Pending) {
+		state.progress.errors.Go(func() error {
+			if err := target.waitForDependencies(state, forceBuild); err != nil {
+				return err
 			}
-		}
-		if err := state.QueueTarget(dep, label, false, forceBuild); err != nil {
-			return err
-		}
+			state.AddPendingBuild(label, dependent.IsAllTargets())
+			return nil
+		})
 	}
 	return nil
 }
 
 // TriggerTargets triggers any targets once the given one has completed building successfully.
 func (state *BuildState) TriggerTargets(completed *BuildTarget) {
-	// Grab this mutex to avoid synchronisation issues.
-	state.progress.mutex.Lock()
-	defer state.progress.mutex.Unlock()
-	for _, rd := range state.Graph.ReverseDependencies(completed.Label) {
-		if t := state.Graph.Target(rd); t != nil {
-			if t.State() == Active && t.AllDepsBuilt() && t.SyncUpdateState(Active, Pending) {
-				state.AddPendingBuild(t.Label, false)
-			}
-		}
-	}
+	// Trigger this for anything that cares
+	close(completed.built)
+	// Also trigger the test run of this target if needed
 	if completed.IsTest && state.NeedTests && ((state.IsOriginalTarget(completed.Label) && state.ShouldInclude(completed)) || state.IsExactOriginalTarget(completed.Label)) {
 		state.AddPendingTest(completed.Label)
 	}

@@ -184,6 +184,8 @@ type BuildTarget struct {
 	TestOutputs []string `name:"test_outputs"`
 	// Used to arbitrate concurrent access to dependencies
 	mutex sync.Mutex `print:"false"`
+	// Used as a semaphore for things waiting on this target to finish building.
+	built semaphore `print:"false"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -283,6 +285,7 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 		Label:               label,
 		state:               int32(Inactive),
 		BuildingDescription: DefaultBuildingDescription,
+		built:               make(semaphore),
 	}
 }
 
@@ -646,14 +649,42 @@ func (target *BuildTarget) UnbuiltDeps() []string {
 // AllDependenciesResolved returns true once all the dependencies of a target have been
 // parsed and resolved to real targets.
 func (target *BuildTarget) AllDependenciesResolved() bool {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
-	for _, deps := range target.dependencies {
-		if !deps.resolved {
-			return false
+	return target.nextUnresolvedDependency() == nil
+}
+
+// waitForDependencies waits for all the dependencies of this target to be available. It triggers builds for them as appropriate.
+func (target *BuildTarget) waitForDependencies(state *BuildState, forceBuild bool) error {
+	// Break this into two loops to try to maximise the number of these we can queue before waiting for builds to complete
+	builds := []*BuildTarget{}
+	for dep := target.nextUnresolvedDependency(); dep != nil; dep = target.nextUnresolvedDependency() {
+		state.Graph.registerDependency(target, dep.declared)
+		for _, d := range dep.deps {
+			if err := state.QueueTarget(d.Label, target.Label, false, forceBuild); err != nil {
+				return err
+			}
+			builds = append(builds, d)
 		}
 	}
-	return true
+	if len(builds) == 0 {
+		return nil
+	}
+	for _, t := range builds {
+		<-t.built
+	}
+	// Need to re-trigger this again in case post-build functions added a new dependency on us.
+	return target.waitForDependencies(state, forceBuild)
+}
+
+// nextUnresolvedDependency returns this target's next dependency that needs to be resolved, or nil if there are none.
+func (target *BuildTarget) nextUnresolvedDependency() *depInfo {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
+	for i, deps := range target.dependencies {
+		if !deps.resolved {
+			return &target.dependencies[i]
+		}
+	}
+	return nil
 }
 
 // CanSee returns true if target can see the given dependency, or false if not.
@@ -737,7 +768,7 @@ func (target *BuildTarget) hasResolvedDependency(label BuildLabel) bool {
 }
 
 // resolveDependency resolves a particular dependency on a target.
-func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget) {
+func (target *BuildTarget) resolveDependency(label BuildLabel, deps ...*BuildTarget) {
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
 	info := target.dependencyInfo(label)
@@ -745,10 +776,21 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 		target.dependencies = append(target.dependencies, depInfo{declared: label})
 		info = &target.dependencies[len(target.dependencies)-1]
 	}
-	if dep != nil {
-		info.deps = append(info.deps, dep)
+	if !info.resolved {
+		// Fast path for when we've never been here before
+		info.deps = deps
+		info.resolved = true
+	} else {
+		m := map[*BuildTarget]bool{}
+		for _, dep := range info.deps {
+			m[dep] = true
+		}
+		for _, dep := range deps {
+			if !m[dep] {
+				info.deps = append(info.deps, dep)
+			}
+		}
 	}
-	info.resolved = true
 }
 
 // dependencyInfo returns the information about a declared dependency, or nil if the target doesn't have it.
