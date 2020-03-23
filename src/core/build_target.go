@@ -649,47 +649,48 @@ func (target *BuildTarget) UnbuiltDeps() []string {
 // AllDependenciesResolved returns true once all the dependencies of a target have been
 // parsed and resolved to real targets.
 func (target *BuildTarget) AllDependenciesResolved() bool {
-	return target.nextUnresolvedDependency() == nil
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
+	for _, deps := range target.dependencies {
+		if !deps.resolved {
+			return false 
+		}
+	}
+	return true
 }
 
 // waitForDependencies waits for all the dependencies of this target to be available. It triggers builds for them as appropriate.
 func (target *BuildTarget) waitForDependencies(state *BuildState, forceBuild bool) error {
-	// Break this into two loops to try to maximise the number of these we can queue before waiting for builds to complete
-	builds := []*BuildTarget{}
-	for dep := target.nextUnresolvedDependency(); dep != nil; dep = target.nextUnresolvedDependency() {
-		if err := state.QueueTarget(dep.declared, target.Label, false, forceBuild); err != nil {
-			return err
+	// Have to repeat this in case post-build functions add more builds to us.
+	for {
+		target.mutex.Lock()
+		deps := target.dependencies[:]
+		target.mutex.Unlock()
+		builds := []*BuildTarget{}
+		// Do this in two separate loops so we try to trigger as many deps as possible before waiting for builds.
+		for _, dep := range deps {
+			if !dep.resolved {
+				if err := state.QueueTarget(dep.declared, target.Label, false, forceBuild); err != nil {
+					return err
+				}
+				state.Graph.registerDependency(target, dep.declared)
+			}
 		}
-		state.Graph.registerDependency(target, dep.declared)
-		for _, d := range dep.deps {
-			if d.Label != dep.declared {
+		for _, d := range target.Dependencies() {
+			if d.State() < Built {
 				if err := state.QueueTarget(d.Label, target.Label, false, forceBuild); err != nil {
 					return err
 				}
+				builds = append(builds, d)
 			}
-			builds = append(builds, d)
+		}
+		if len(builds) == 0 {
+			return nil
+		}
+		for _, t := range builds {
+			<-t.built
 		}
 	}
-	if len(builds) == 0 {
-		return nil
-	}
-	for _, t := range builds {
-		<-t.built
-	}
-	// Need to re-trigger this again in case post-build functions added a new dependency on us.
-	return target.waitForDependencies(state, forceBuild)
-}
-
-// nextUnresolvedDependency returns this target's next dependency that needs to be resolved, or nil if there are none.
-func (target *BuildTarget) nextUnresolvedDependency() *depInfo {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
-	for i, deps := range target.dependencies {
-		if !deps.resolved {
-			return &target.dependencies[i]
-		}
-	}
-	return nil
 }
 
 // CanSee returns true if target can see the given dependency, or false if not.
