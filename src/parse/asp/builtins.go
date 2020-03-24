@@ -660,6 +660,7 @@ func addDep(s *scope, args []pyObject) pyObject {
 	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Note that here we're in a post-build function so we must call this explicitly
 	// (in other callbacks it's handled after the package parses all at once).
+	s.NAssert(s.state.Graph.Target(dep) == nil, "Target %s does not exist to add as a dependency of %s", dep, target)
 	s.state.Graph.AddDependency(target, dep)
 	s.pkg.MarkTargetModified(target)
 	return None

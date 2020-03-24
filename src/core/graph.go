@@ -150,17 +150,10 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 
 // AddDependency adds a dependency between two build targets.
 func (graph *BuildGraph) AddDependency(from *BuildTarget, to BuildLabel) {
-	go graph.registerDependency(from, to)
-}
-
-// AddDependencySync is like AddDependency but blocks until it is resolved.
-// This is provided for testing and is not generally used otherwise.
-func (graph *BuildGraph) AddDependencySync(from *BuildTarget, to BuildLabel) {
 	graph.registerDependency(from, to)
 }
 
-// registerDependency registers a dependency from one target on another. It blocks until the dependee
-// exists so should normally be invoked in a goroutine.
+// registerDependency registers a dependency from one target on another. It blocks until the dependee exists.
 func (graph *BuildGraph) registerDependency(target *BuildTarget, dep BuildLabel) {
 	t := graph.targetBlocking(dep)
 	if provided := t.ProvideFor(target); len(provided) == 1 && provided[0] == dep {

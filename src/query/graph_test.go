@@ -50,8 +50,8 @@ func makeGraph() *core.BuildState {
 	pkg2.AddTarget(makeTarget("//package2:target3", "//package1:target2"))
 	graph.AddPackage(pkg2)
 	graph.AddTarget(pkg2.Target("target3"))
-	graph.AddDependencySync(pkg1.Target("target2"), core.ParseBuildLabel("//package1:target1", ""))
-	graph.AddDependencySync(pkg2.Target("target3"), core.ParseBuildLabel("//package1:target2", ""))
+	graph.AddDependency(pkg1.Target("target2"), core.ParseBuildLabel("//package1:target1", ""))
+	graph.AddDependency(pkg2.Target("target3"), core.ParseBuildLabel("//package1:target2", ""))
 	return state
 }
 

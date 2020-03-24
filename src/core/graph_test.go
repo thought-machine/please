@@ -35,8 +35,8 @@ func TestRevDeps(t *testing.T) {
 	graph.AddTarget(target1)
 	graph.AddTarget(target2)
 	graph.AddTarget(target3)
-	graph.AddDependencySync(target2, target1.Label)
-	graph.AddDependencySync(target3, target2.Label)
+	graph.AddDependency(target2, target1.Label)
+	graph.AddDependency(target3, target2.Label)
 	assert.Equal(t, []*BuildTarget{target2}, graph.ReverseDependencies(target1))
 	assert.Equal(t, []*BuildTarget{target3}, graph.ReverseDependencies(target2))
 	assert.Equal(t, 0, len(graph.ReverseDependencies(target3)))
@@ -48,7 +48,7 @@ func TestAllDepsBuilt(t *testing.T) {
 	target2 := makeTarget("//src/core:target2", target1)
 	graph.AddTarget(target1)
 	graph.AddTarget(target2)
-	graph.AddDependencySync(target2, target1.Label)
+	graph.AddDependency(target2, target1.Label)
 	assert.True(t, target1.AllDepsBuilt(), "Should be true because it has no dependencies")
 	assert.False(t, target2.AllDepsBuilt(), "Should be false because target1 isn't built yet")
 	target1.SyncUpdateState(Inactive, Building)
@@ -65,7 +65,7 @@ func TestAllDepsResolved(t *testing.T) {
 	graph.AddTarget(target2)
 	assert.False(t, target2.AllDependenciesResolved(), "Haven't added a proper dep for target2 yet.")
 	graph.AddTarget(target1)
-	graph.AddDependencySync(target2, target1.Label)
+	graph.AddDependency(target2, target1.Label)
 	assert.True(t, target1.AllDependenciesResolved(), "Has no dependencies so they're all resolved")
 	assert.True(t, target2.AllDependenciesResolved(), "Should be resolved now we've added target1.")
 }
@@ -115,7 +115,7 @@ func TestFindGraphCycle(t *testing.T) {
 	graph.AddTarget(makeTarget2("//third_party/go:target1"))
 	for _, target := range graph.AllTargets() {
 		for _, dep := range target.DeclaredDependencies() {
-			graph.AddDependencySync(target, dep)
+			graph.AddDependency(target, dep)
 		}
 	}
 	cycle := graph.detectCycle(map[BuildLabel]struct{}{}, graph.TargetOrDie(ParseBuildLabel("//src/output:target1", "")), nil)
