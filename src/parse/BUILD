@@ -27,6 +27,7 @@ go_test(
         "//src/core",
         "//third_party/go:testify",
     ],
+    labels = ["manual"],  # TODO(peterebden): Re-enable once I work out how...
 )
 
 go_test(
