@@ -351,6 +351,13 @@ func (state *BuildState) CloseResults() {
 	}
 }
 
+// Error waits for any pending background tasks to finish and reports any error if so.
+func (state *BuildState) Error() error {
+	err := state.progress.errors.Wait()
+	state.Success = state.Success && (err != nil)
+	return err
+}
+
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
 func (state *BuildState) IsOriginalTarget(label BuildLabel) bool {
 	return state.isOriginalTarget(label, false)

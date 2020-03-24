@@ -101,6 +101,9 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 		} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
 			// Do nothing, we will output about this shortly.
 		} else if state.NeedBuild && target != nil && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
+			if err := state.Error(); err != nil {
+				log.Fatalf("%s", err)
+			}
 			// N.B. Currently targets that are added post-build are excluded here, because in some legit cases this
 			//      check can fail incorrectly. It'd be better to verify this more precisely though.
 			cycle := graphCycleMessage(state.Graph, target)

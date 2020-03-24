@@ -69,6 +69,9 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		log.Info("Total remote RPC data in: %d out: %d", in, out)
 	}
 	state.CloseResults()
+	if err := state.Error(); err != nil {
+		log.Error("%s", err)
+	}
 }
 
 // RunHost is a convenience function that uses the host architecture, the given state's
