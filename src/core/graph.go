@@ -5,6 +5,7 @@
 package core
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 	"sync"
@@ -209,4 +210,49 @@ func (graph *BuildGraph) DependentTargets(from, to BuildLabel) []BuildLabel {
 		return toTarget.ProvideFor(fromTarget)
 	}
 	return []BuildLabel{to}
+}
+
+// CheckCycles detects if there are any cycles in the dependencies of the given targets and returns an appropriate error if so.
+func (graph *BuildGraph) CheckCycles(labels []BuildLabel) error {
+	for _, label := range labels {
+		if target := graph.Target(label); target == nil {
+			continue  // SEP.
+		} else if cycle := graph.detectCycle(map[BuildLabel]struct{}{}, target, nil); len(cycle) > 0 {
+			msg := "Dependency cycle found:\n"
+			msg += fmt.Sprintf("    %s\n", cycle[len(cycle)-1].Label)
+			for i := len(cycle) - 2; i >= 0; i-- {
+				msg += fmt.Sprintf(" -> %s\n", cycle[i].Label)
+			}
+			msg += fmt.Sprintf(" -> %s\n", cycle[len(cycle)-1].Label)
+			return fmt.Errorf("%sSorry, but you'll have to refactor your build files to avoid this cycle.", msg)
+		}
+	}
+	return nil
+}
+
+// detectCycle attempts to detect a cycle in the build graph starting at the given target.
+// Returns an empty slice if none is found, otherwise returns a slice of labels describing the cycle.
+func (graph *BuildGraph) detectCycle(done map[BuildLabel]struct{}, target *BuildTarget, deps []*BuildTarget) []*BuildTarget {
+	index := func(haystack []*BuildTarget, needle *BuildTarget) int {
+		for i, straw := range haystack {
+			if straw == needle {
+				return i
+			}
+		}
+		return -1
+	}
+
+	if i := index(deps, target); i != -1 {
+		return deps[i:]
+	} else if _, present := done[target.Label]; present {
+		return nil
+	}
+	done[target.Label] = struct{}{}
+	deps = append(deps, target)
+	for _, dep := range target.Dependencies() {
+		if cycle := graph.detectCycle(done, dep, deps); len(cycle) > 0 {
+			return cycle
+		}
+	}
+	return nil
 }

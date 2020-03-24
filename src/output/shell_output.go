@@ -104,10 +104,7 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 			if err := state.Error(); err != nil {
 				log.Fatalf("%s", err)
 			}
-			// N.B. Currently targets that are added post-build are excluded here, because in some legit cases this
-			//      check can fail incorrectly. It'd be better to verify this more precisely though.
-			cycle := graphCycleMessage(state.Graph, target)
-			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, cycle)
+			log.Fatalf("Target %s hasn't built but we have no pending tasks left.", label)
 		}
 	}
 	if state.NeedBuild && len(failedNonTests) == 0 {
@@ -727,52 +724,6 @@ func colouriseError(err error) error {
 
 // errorMessageRe is a regex to find lines that look like they're specifying a file.
 var errorMessageRe = regexp.MustCompile(`^([^ ]+\.[^: /]+):([0-9]+):(?:([0-9]+):)? *(?:([a-z-_ ]+):)? (.*)$`)
-
-// graphCycleMessage attempts to detect graph cycles and produces a readable message from it.
-func graphCycleMessage(graph *core.BuildGraph, target *core.BuildTarget) string {
-	if cycle := findGraphCycle(graph, target); len(cycle) > 0 {
-		msg := "Dependency cycle found:\n"
-		msg += fmt.Sprintf("    %s\n", cycle[len(cycle)-1].Label)
-		for i := len(cycle) - 2; i >= 0; i-- {
-			msg += fmt.Sprintf(" -> %s\n", cycle[i].Label)
-		}
-		msg += fmt.Sprintf(" -> %s\n", cycle[len(cycle)-1].Label)
-		return msg + fmt.Sprintf("Sorry, but you'll have to refactor your build files to avoid this cycle.")
-	}
-	return unbuiltTargetsMessage(graph)
-}
-
-// Attempts to detect cycles in the build graph. Returns an empty slice if none is found,
-// otherwise returns a slice of labels describing the cycle.
-func findGraphCycle(graph *core.BuildGraph, target *core.BuildTarget) []*core.BuildTarget {
-	index := func(haystack []*core.BuildTarget, needle *core.BuildTarget) int {
-		for i, straw := range haystack {
-			if straw == needle {
-				return i
-			}
-		}
-		return -1
-	}
-
-	done := map[core.BuildLabel]bool{}
-	var detectCycle func(*core.BuildTarget, []*core.BuildTarget) []*core.BuildTarget
-	detectCycle = func(target *core.BuildTarget, deps []*core.BuildTarget) []*core.BuildTarget {
-		if i := index(deps, target); i != -1 {
-			return deps[i:]
-		} else if done[target.Label] {
-			return nil
-		}
-		done[target.Label] = true
-		deps = append(deps, target)
-		for _, dep := range target.Dependencies() {
-			if cycle := detectCycle(dep, deps); len(cycle) > 0 {
-				return cycle
-			}
-		}
-		return nil
-	}
-	return detectCycle(target, nil)
-}
 
 // unbuiltTargetsMessage returns a message for any targets that are supposed to build but haven't yet.
 func unbuiltTargetsMessage(graph *core.BuildGraph) string {

@@ -9,6 +9,7 @@ filegroup(
     provides = {
         "txt": ":txt",
     },
+    deps = [":not_require_filegroup"],
 )
 
 filegroup(

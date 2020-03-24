@@ -213,6 +213,7 @@ type stateProgress struct {
 	allStates []*BuildState
 	// Used to hold errors from some goroutines
 	errors errgroup.Group
+	err error
 }
 
 // SystemStats stores information about the system.
@@ -322,11 +323,15 @@ func (state *BuildState) addPending(label BuildLabel, t taskType) {
 // a task returned from NextTask(), or from a call to ExtraTask().
 func (state *BuildState) TaskDone(wasBuildOrTest bool) {
 	atomic.AddInt64(&state.progress.numDone, 1)
-	if wasBuildOrTest {
-		atomic.AddInt64(&state.progress.numRunning, -1)
-	}
+	stopped := false
 	if atomic.AddInt64(&state.progress.numPending, -1) <= 0 {
 		state.Stop()
+		stopped = true
+	}
+	if wasBuildOrTest && atomic.AddInt64(&state.progress.numRunning, -1) == 0 && !stopped {
+		// At this point we have something pending but nothing running. It is possible we are blocked by a cycle, it is also
+		// possible we are just between the last worker leaving a task and the new one picking it up. Kick something off to check
+		go state.checkCycles()
 	}
 }
 
@@ -353,8 +358,14 @@ func (state *BuildState) CloseResults() {
 
 // Error waits for any pending background tasks to finish and reports any error if so.
 func (state *BuildState) Error() error {
+	if state.progress.err != nil {
+		return state.progress.err
+	}
 	err := state.progress.errors.Wait()
-	state.Success = state.Success && (err != nil)
+	if err != nil {
+		state.Success = false
+		state.progress.err = err
+	}
 	return err
 }
 
@@ -828,6 +839,20 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 func (state *BuildState) DisableXattrs() {
 	state.XattrsSupported = false
 	state.PathHasher.DisableXattrs()
+}
+
+// checkCycles checks the graph for cycles, after a brief pause to try to minimise unnecessary work.
+func (state *BuildState) checkCycles() {
+	for i := 0; i < 5; i++ {
+		time.Sleep(10 * time.Millisecond)
+		if atomic.LoadInt64(&state.progress.numRunning) != 0 {
+			return  // We've started doing something again
+		}
+	}
+	if err := state.Graph.CheckCycles(state.ExpandOriginalTargets()); err != nil {
+		state.progress.err = err
+		state.Stop()
+	}
 }
 
 // NewBuildState constructs and returns a new BuildState.
