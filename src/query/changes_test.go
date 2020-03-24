@@ -36,7 +36,7 @@ func addTarget(state *core.BuildState, label string, dep *core.BuildTarget, sour
 	state.Graph.AddTarget(t)
 	if dep != nil {
 		t.AddDependency(dep.Label)
-		state.Graph.AddDependency(t, dep.Label)
+		state.Graph.AddDependencySync(t, dep.Label)
 	}
 	return t
 }
