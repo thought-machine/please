@@ -101,3 +101,45 @@ func makeTarget(label string, deps ...*BuildTarget) *BuildTarget {
 	}
 	return target
 }
+
+func TestFindGraphCycle(t *testing.T) {
+	graph := NewGraph()
+	graph.AddTarget(makeTarget2("//src/output:target1", "//src/output:target2", "//src/output:target3", "//src/core:target2"))
+	graph.AddTarget(makeTarget2("//src/output:target2", "//src/output:target3", "//src/core:target1"))
+	graph.AddTarget(makeTarget2("//src/output:target3"))
+	graph.AddTarget(makeTarget2("//src/core:target1", "//third_party/go:target2", "//third_party/go:target3", "//src/core:target3"))
+	graph.AddTarget(makeTarget2("//src/core:target2", "//third_party/go:target3", "//src/output:target2"))
+	graph.AddTarget(makeTarget2("//src/core:target3", "//third_party/go:target2", "//src/output:target2"))
+	graph.AddTarget(makeTarget2("//third_party/go:target2", "//third_party/go:target1"))
+	graph.AddTarget(makeTarget2("//third_party/go:target3", "//third_party/go:target1"))
+	graph.AddTarget(makeTarget2("//third_party/go:target1"))
+	for _, target := range graph.AllTargets() {
+		for _, dep := range target.DeclaredDependencies() {
+			graph.AddDependencySync(target, dep)
+		}
+	}
+	cycle := graph.detectCycle(map[BuildLabel]struct{}{}, graph.TargetOrDie(ParseBuildLabel("//src/output:target1", "")), nil)
+	if len(cycle) == 0 {
+		t.Fatalf("Failed to find cycle")
+	} else if len(cycle) != 3 {
+		t.Errorf("Found unexpected cycle of length %d", len(cycle))
+	}
+	assertTarget(t, cycle[0], "//src/output:target2")
+	assertTarget(t, cycle[1], "//src/core:target1")
+	assertTarget(t, cycle[2], "//src/core:target3")
+}
+
+// Factory function for build targets
+func makeTarget2(label string, deps ...string) *BuildTarget {
+	target := NewBuildTarget(ParseBuildLabel(label, ""))
+	for _, dep := range deps {
+		target.AddDependency(ParseBuildLabel(dep, ""))
+	}
+	return target
+}
+
+func assertTarget(t *testing.T, target *BuildTarget, label string) {
+	if target.Label != ParseBuildLabel(label, "") {
+		t.Errorf("Unexpected target in detected cycle; expected %s, was %s", label, target.Label)
+	}
+}

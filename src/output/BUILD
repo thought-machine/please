@@ -30,7 +30,6 @@ go_test(
     srcs = ["shell_output_test.go"],
     deps = [
         ":output",
-        "//src/core",
         "//third_party/go:testify",
     ],
 )
