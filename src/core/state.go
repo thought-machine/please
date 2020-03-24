@@ -574,7 +574,7 @@ func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel) BuildLabel
 	ret := BuildLabels{}
 	addPackage := func(pkg *Package) {
 		for _, target := range pkg.AllTargets() {
-			if target.ShouldInclude(state.Include, state.Exclude) && (!state.NeedTests || target.IsTest) {
+			if state.ShouldInclude(target) && (!state.NeedTests || target.IsTest) {
 				ret = append(ret, target.Label)
 			}
 		}
