@@ -328,7 +328,7 @@ func (state *BuildState) TaskDone(wasBuildOrTest bool) {
 		state.Stop()
 		stopped = true
 	}
-	if wasBuildOrTest && atomic.AddInt64(&state.progress.numRunning, -1) == 0 && !stopped {
+	if wasBuildOrTest && atomic.AddInt64(&state.progress.numRunning, -1) == 0 && !stopped && state.NeedBuild {
 		// At this point we have something pending but nothing running. It is possible we are blocked by a cycle, it is also
 		// possible we are just between the last worker leaving a task and the new one picking it up. Kick something off to check
 		go state.checkCycles()
