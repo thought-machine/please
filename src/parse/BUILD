@@ -22,12 +22,12 @@ go_library(
 go_test(
     name = "parse_step_test",
     srcs = ["parse_step_test.go"],
+    labels = ["manual"],  # TODO(peterebden): Re-enable once I work out how...
     deps = [
         ":parse",
         "//src/core",
         "//third_party/go:testify",
     ],
-    labels = ["manual"],  # TODO(peterebden): Re-enable once I work out how...
 )
 
 go_test(

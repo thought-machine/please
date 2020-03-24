@@ -217,7 +217,7 @@ func (graph *BuildGraph) CheckCycles(labels []BuildLabel) error {
 				msg += fmt.Sprintf(" -> %s\n", cycle[i].Label)
 			}
 			msg += fmt.Sprintf(" -> %s\n", cycle[len(cycle)-1].Label)
-			return fmt.Errorf("%sSorry, but you'll have to refactor your build files to avoid this cycle.", msg)
+			return fmt.Errorf("%sSorry, but you'll have to refactor your build files to avoid this cycle", msg)
 		}
 	}
 	return nil
