@@ -65,6 +65,7 @@ func TestAllDepsResolved(t *testing.T) {
 	graph.AddTarget(target2)
 	assert.False(t, target2.AllDependenciesResolved(), "Haven't added a proper dep for target2 yet.")
 	graph.AddTarget(target1)
+	graph.AddDependencySync(target2, target1.Label)
 	assert.True(t, target1.AllDependenciesResolved(), "Has no dependencies so they're all resolved")
 	assert.True(t, target2.AllDependenciesResolved(), "Should be resolved now we've added target1.")
 }
