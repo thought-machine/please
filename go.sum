@@ -203,6 +203,8 @@ github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtP
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
 github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518 h1:9STHW4sf/R/S5lZO2uUNul6bl3dNLJ2dswWmC1Jf79o=
 github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518/go.mod h1:DXUmO42mqfooJ6lehFb2HmbAhpP/2YJmRTpgkJu9khg=
+github.com/peterebden/errgroup v1.1.0 h1:BRXHpHhR6OzboZhmnR5V3GVhzVS2H3TKlmy1nFV0e/w=
+github.com/peterebden/errgroup v1.1.0/go.mod h1:9kyG0XlK4FW1C90KPdaxaIhEmlufiYfghICKXV5VU7M=
 github.com/peterebden/gcfg v1.3.0 h1:cXPrg3yRF5HTK3tBfIk+AJy10BZKRnBbb34FHklJzn8=
 github.com/peterebden/gcfg v1.3.0/go.mod h1:VDdZttqmD3nudN3emvXYhkgOqqyYhWjnPIcEoIxNlTE=
 github.com/peterebden/go-cli-init v1.0.0 h1:HfcOHuyuyvHsaQZApuk44LpRc+EF/MDAI6u5/sthJGg=
@@ -259,6 +261,7 @@ github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
+github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
 github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpPAyBWyWuQ=
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e h1:T5PdfK/M1xyrHwynxMIVMWLS7f/qHwfslZphxtGnw7s=

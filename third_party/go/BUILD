@@ -608,3 +608,9 @@ go_get(
     revision = "v1.0.0",
     test_only = True,
 )
+
+go_get(
+    name = "eager_errgroup",
+    get = "github.com/peterebden/errgroup",
+    revision = "v1.1.0",
+)

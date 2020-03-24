@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Workiva/go-datastructures/queue"
-	"golang.org/x/sync/errgroup"
+	"github.com/peterebden/errgroup"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
@@ -212,8 +212,7 @@ type stateProgress struct {
 	// The set of known states
 	allStates []*BuildState
 	// Used to hold errors from some goroutines
-	errors errgroup.Group
-	err error
+	errors *errgroup.Group
 }
 
 // SystemStats stores information about the system.
@@ -340,12 +339,6 @@ func (state *BuildState) Stop() {
 	state.pendingTasks.Put(pendingTask{Type: Stop})
 }
 
-// error stops the worker queues with the given (non-nil) error.
-func (state *BuildState) error(err error) {
-	state.progress.err = err
-	state.Stop()
-}
-
 // KillAll kills all the workers & closes the result channels.
 func (state *BuildState) KillAll() {
 	state.pendingTasks.Put(pendingTask{Type: Kill})
@@ -364,14 +357,8 @@ func (state *BuildState) CloseResults() {
 
 // Error waits for any pending background tasks to finish and reports any error if so.
 func (state *BuildState) Error() error {
-	if state.progress.err != nil {
-		return state.progress.err
-	}
 	err := state.progress.errors.Wait()
-	if err != nil {
-		state.Success = false
-		state.progress.err = err
-	}
+	state.Success = state.Success && (err == nil)
 	return err
 }
 
@@ -506,7 +493,8 @@ func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildRe
 		Err:         err,
 		Description: fmt.Sprintf(format, args...),
 	})
-	state.error(err)
+	state.progress.errors.Cancel(err)
+	state.Stop()
 }
 
 // LogResult logs a build result directly to the state's queue.
@@ -765,7 +753,6 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 	state.progress.errors.Go(func() error {
 		defer state.TaskDone(false)
 		if err := target.waitForDependencies(state, forceBuild); err != nil {
-			state.error(err)
 			return err
 		}
 		if target.SyncUpdateState(Active, Pending) {
@@ -778,7 +765,6 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 
 // TriggerTargets triggers any targets once the given one has completed building successfully.
 func (state *BuildState) TriggerTargets(completed *BuildTarget) {
-	log.Debug("Triggering new build targets now %s is complete", completed)
 	// Trigger this for anything that cares
 	close(completed.built)
 	// Also trigger the test run of this target if needed
@@ -859,7 +845,7 @@ func (state *BuildState) checkCycles() {
 		}
 	}
 	if err := state.Graph.CheckCycles(state.ExpandOriginalTargets()); err != nil {
-		state.progress.err = err
+		state.progress.errors.Cancel(err)
 		state.Stop()
 	}
 }
@@ -896,6 +882,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			numPending:      1,
 			pendingTargets:  map[BuildLabel]chan struct{}{},
 			pendingPackages: map[packageKey]chan struct{}{},
+			errors:          errgroup.New(),
 		},
 	}
 	state.PathHasher = state.Hasher(config.Build.HashFunction)
