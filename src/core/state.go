@@ -340,6 +340,12 @@ func (state *BuildState) Stop() {
 	state.pendingTasks.Put(pendingTask{Type: Stop})
 }
 
+// error stops the worker queues with the given (non-nil) error.
+func (state *BuildState) error(err error) {
+	state.progress.err = err
+	state.Stop()
+}
+
 // KillAll kills all the workers & closes the result channels.
 func (state *BuildState) KillAll() {
 	state.pendingTasks.Put(pendingTask{Type: Kill})
@@ -500,6 +506,7 @@ func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildRe
 		Err:         err,
 		Description: fmt.Sprintf(format, args...),
 	})
+	state.error(err)
 }
 
 // LogResult logs a build result directly to the state's queue.
@@ -757,6 +764,7 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 	state.progress.errors.Go(func() error {
 		defer state.TaskDone(false)
 		if err := target.waitForDependencies(state, forceBuild); err != nil {
+			state.error(err)
 			return err
 		}
 		if target.SyncUpdateState(Active, Pending) {
