@@ -65,7 +65,7 @@ func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 				dep := label(i*10 + j)
 				log.Info("Adding dependency %s -> %s", target.Label, dep)
 				target.AddDependency(dep)
-				state.Graph.AddDependency(target, dep)
+				go state.Graph.AddDependency(target, dep)
 			}
 		} else {
 			// These are buildable now
