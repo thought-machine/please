@@ -31,7 +31,7 @@ func Run(state *core.BuildState, label core.BuildLabel, args []string, env bool)
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
 // The given context can be used to control the lifetime of the subprocesses.
-func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, args []string, numTasks int, quiet, env bool) int {
+func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, args []string, numTasks int, quiet, env, detach bool) int {
 	pool := NewGoroutinePool(numTasks)
 	var g errgroup.Group
 	for _, label := range labels {
@@ -48,6 +48,9 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLa
 			wg.Wait()
 			return
 		})
+	}
+	if detach {
+		return 0
 	}
 	if err := g.Wait(); err != nil {
 		if ctx.Err() != context.Canceled { // Don't error if the context killed the process.
