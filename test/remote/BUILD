@@ -28,12 +28,12 @@ sh_cmd(
 
 sh_cmd(
     name = "run_mettle",
-    cmd = "exec $(out_location :mettle) dual -s 127.0.0.1:7777 -q mem://requests -r mem://responses -m 13434 -d plz-out/mettle -v 4 --log_file plz-out/log/mettle.log --browser http://127.0.0.1:7779 --sandbox ~/.please/please_sandbox --num_workers 8",
+    cmd = "exec $(out_location :mettle) dual -s 127.0.0.1:7777 -q mem://requests -r mem://responses -m 13434 -d plz-out/mettle --log_file plz-out/log/mettle.log --browser http://127.0.0.1:7779 --sandbox ~/.please/please_sandbox --num_workers 8",
     srcs = [":mettle"],
 )
 
 sh_cmd(
     name = "run_zeal",
-    cmd = "exec $(out_location :zeal) -s 127.0.0.1:7777 -v 4 --log_file plz-out/log/zeal.log",
+    cmd = "exec $(out_location :zeal) -s 127.0.0.1:7777 --log_file plz-out/log/zeal.log",
     srcs = [":zeal"],
 )
