@@ -2,12 +2,12 @@
 
 set -eu
 
-trap 'kill $(jobs -pr)' SIGINT SIGTERM EXIT
+trap 'killall elan mettle zeal plz' SIGINT SIGTERM EXIT
 
 DIR="${1:-~/.please}"
 
 # Extract the plz installation from earlier step
-mkdir $DIR
+mkdir -p $DIR
 tar -xzf /tmp/workspace/please_*.tar.gz --strip-components=1 -C $DIR
 export PATH="$DIR:$PATH"
 
