@@ -4,10 +4,12 @@ set -eu
 
 trap 'kill $(jobs -pr)' SIGINT SIGTERM EXIT
 
+DIR="${1:-~/.please}"
+
 # Extract the plz installation from earlier step
-mkdir ~/.please
-tar -xzf /tmp/workspace/please_*.tar.gz --strip-components=1 -C ~/.please
-export PATH="${HOME}/.please:$PATH"
+mkdir $DIR
+tar -xzf /tmp/workspace/please_*.tar.gz --strip-components=1 -C $DIR
+export PATH="$DIR:$PATH"
 
 # Start the servers in the background
 plz run parallel //test/remote:run_elan //test/remote:run_zeal //test/remote:run_mettle &
