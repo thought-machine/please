@@ -21,7 +21,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("kitten!"))
 	})
-	go http.ListenAndServe(":31812", nil)
+	go http.ListenAndServe("127.0.0.1:31812", nil)
 
 	// Now loop, reading requests forever.
 	// These are just used to indicate that we're ready to receive a new test.
