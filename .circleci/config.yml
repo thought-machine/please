@@ -121,6 +121,27 @@ jobs:
            key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
 
+   test-rex:
+     working_directory: ~/please
+     docker:
+       - image: thoughtmachine/please_ubuntu:20200226
+     steps:
+       - checkout
+       - attach_workspace:
+           at: /tmp/workspace
+       - restore_cache:
+           key: elan-v1-{{ checksum "third_party/go/BUILD" }}
+       - run:
+           name: Test Remote Execution
+           command: ./.circleci/rex_test.sh
+       - store_test_results:
+           path: plz-out/results
+       - store_artifacts:
+           path: plz-out/log
+       - save_cache:
+           key: elan-v1-{{ checksum "third_party/go/BUILD" }}
+           paths: [ "plz-out/elan" ]
+
    release:
      docker:
        - image: thoughtmachine/please_docs:20190318
@@ -156,11 +177,15 @@ workflows:
           requires:
             - build-linux
             - build-linux-alt
+      - test-rex:
+          requires:
+            - build-linux
       - release:
           requires:
             - build-linux
             - build-linux-alt
             - build-darwin
+            - test-rex
           filters:
             branches:
               only: master
