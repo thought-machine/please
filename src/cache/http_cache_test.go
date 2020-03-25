@@ -15,7 +15,7 @@ import (
 func init() {
 	os.Chdir("src/cache/test_data")
 	// Split up the listen and serve parts to avoid race conditions.
-	lis, err := net.Listen("tcp", ":8989")
+	lis, err := net.Listen("tcp", "127.0.0.1:8989")
 	if err != nil {
 		log.Fatalf("%s", err)
 	}

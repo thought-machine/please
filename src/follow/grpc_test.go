@@ -46,7 +46,7 @@ func TestClientToServerCommunication(t *testing.T) {
 	config := core.DefaultConfiguration()
 	config.Please.NumThreads = 5
 	serverState := core.NewBuildState(config)
-	addr, shutdown := initialiseServer(serverState, 0)
+	addr, shutdown := initialiseServer(serverState, "127.0.0.1", 0)
 
 	// This is a bit awkward. We want to assert that we receive a matching set of
 	// build events, but it's difficult to build strong synchronisation into this
@@ -102,7 +102,7 @@ func TestClientToServerCommunication(t *testing.T) {
 
 func TestWithOutput(t *testing.T) {
 	serverState := core.NewDefaultBuildState()
-	addr, shutdown := initialiseServer(serverState, 0)
+	addr, shutdown := initialiseServer(serverState, "127.0.0.1", 0)
 	clientState := core.NewDefaultBuildState()
 	connectClient(clientState, addr, retries, delay)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -124,7 +124,7 @@ func TestWithOutput(t *testing.T) {
 func TestResources(t *testing.T) {
 	serverState := core.NewDefaultBuildState()
 	go UpdateResources(serverState)
-	addr, shutdown := initialiseServer(serverState, 0)
+	addr, shutdown := initialiseServer(serverState, "127.0.0.1", 0)
 	defer shutdown()
 	clientState := core.NewDefaultBuildState()
 	connectClient(clientState, addr, retries, delay)

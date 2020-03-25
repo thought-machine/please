@@ -447,7 +447,7 @@ func (f testFunction) Call(t *core.BuildTarget, o string) error { return nil }
 
 func TestMain(m *testing.M) {
 	server.Reset()
-	lis, err := net.Listen("tcp", ":9987")
+	lis, err := net.Listen("tcp", "127.0.0.1:9987")
 	if err != nil {
 		log.Fatalf("Failed to listen on %s: %v", lis.Addr(), err)
 	}

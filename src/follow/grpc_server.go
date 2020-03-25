@@ -32,15 +32,15 @@ const buffering = 1000
 // It dies on any errors.
 // The returned function should be called to shut down once the server is no longer required.
 func InitialiseServer(state *core.BuildState, port int) func() {
-	_, f := initialiseServer(state, port)
+	_, f := initialiseServer(state, "", port)
 	return f
 }
 
 // initialiseServer sets up the gRPC server on the given port.
 // It's split out from the above for testing purposes.
-func initialiseServer(state *core.BuildState, port int) (string, func()) {
+func initialiseServer(state *core.BuildState, host string, port int) (string, func()) {
 	// TODO(peterebden): TLS support
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
