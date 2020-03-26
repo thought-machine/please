@@ -24,7 +24,7 @@ var log = logging.MustGetLogger("run")
 
 // Run implements the running part of 'plz run'.
 func Run(state *core.BuildState, label core.BuildLabel, args []string, env bool) {
-	run(context.Background(), state, label, args, false, false, env)
+	run(context.Background(), state, label, args, false, false, env, false)
 }
 
 // Parallel runs a series of targets in parallel.
@@ -40,7 +40,7 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLa
 			var wg sync.WaitGroup
 			wg.Add(1)
 			pool.Submit(func() {
-				if e := run(ctx, state, label, args, true, quiet, env); e != nil {
+				if e := run(ctx, state, label, args, true, quiet, env, detach); e != nil {
 					err = e
 				}
 				wg.Done()
@@ -67,7 +67,7 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLa
 func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string, quiet, env bool) int {
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		if err := run(context.Background(), state, label, args, true, quiet, env); err != nil {
+		if err := run(context.Background(), state, label, args, true, quiet, env, false); err != nil {
 			log.Error("%s", err)
 			return err.code
 		}
@@ -79,7 +79,7 @@ func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string,
 // If fork is true then we fork to run the target and return any error from the subprocesses.
 // If it's false this function never returns (because we either win or die; it's like
 // Game of Thrones except rather less glamorous).
-func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, args []string, fork, quiet, setenv bool) *exitError {
+func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, args []string, fork, quiet, setenv, detach bool) *exitError {
 	target := state.Graph.TargetOrDie(label)
 	if !target.IsBinary {
 		log.Fatalf("Target %s cannot be run; it's not marked as binary", label)
@@ -108,6 +108,10 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 	if !fork {
 		// Plain 'plz run'. One way or another we never return from the following line.
 		must(syscall.Exec(splitCmd[0], args, env), args)
+	} else if detach {
+		// Bypass the whole process management system since we explicitly aim not to manage this subprocess.
+		_, err := syscall.ForkExec(splitCmd[0], args, &syscall.ProcAttr{Env: env})
+		must(err, args)
 	}
 	// Run as a normal subcommand.
 	// Note that we don't connect stdin. It doesn't make sense for multiple processes.
