@@ -22,18 +22,18 @@ remote_file(
 
 sh_cmd(
     name = "run_elan",
-    cmd = "mkdir -p plz-out/elan && exec $(out_location :elan) -s file://\\\\$PWD/plz-out/elan --log_file plz-out/log/elan.log",
+    cmd = "mkdir -p plz-out/elan && exec $(out_location :elan) -s file://\\\\$PWD/plz-out/elan -v warning --log_file plz-out/log/elan.log",
     srcs = [":elan"],
 )
 
 sh_cmd(
     name = "run_mettle",
-    cmd = "exec $(out_location :mettle) dual -s 127.0.0.1:7777 -q mem://requests -r mem://responses -m 13434 -d plz-out/mettle --log_file plz-out/log/mettle.log --browser http://127.0.0.1:7779 --sandbox ~/.please/please_sandbox --num_workers 8",
+    cmd = "exec $(out_location :mettle) dual -s 127.0.0.1:7777 -q mem://requests -r mem://responses -m 13434 -d plz-out/mettle -v warning --log_file plz-out/log/mettle.log --browser http://127.0.0.1:7779 --sandbox ~/.please/please_sandbox --num_workers 8",
     srcs = [":mettle"],
 )
 
 sh_cmd(
     name = "run_zeal",
-    cmd = "exec $(out_location :zeal) -s 127.0.0.1:7777 --log_file plz-out/log/zeal.log",
+    cmd = "exec $(out_location :zeal) -v warning -s 127.0.0.1:7777 --log_file plz-out/log/zeal.log",
     srcs = [":zeal"],
 )
