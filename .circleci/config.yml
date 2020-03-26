@@ -124,7 +124,7 @@ jobs:
    test-rex:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20200226
+       - image: thoughtmachine/please_ubuntu:20200326
      steps:
        - checkout
        - attach_workspace:

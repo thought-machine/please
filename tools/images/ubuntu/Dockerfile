@@ -4,7 +4,7 @@ MAINTAINER peter.ebden@gmail.com
 # Go, Python, Java and other dependencies.
 RUN apt-get update && \
     apt-get install -y python3 python3-dev python3-pip openjdk-8-jdk-headless \
-    curl unzip git locales pkg-config zlib1g-dev && \
+    curl unzip git locales pkg-config zlib1g-dev psmisc && \
     apt-get clean
 
 # Go - we want 1.14 here but the latest package available is 1.10.
