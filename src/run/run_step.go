@@ -49,9 +49,6 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLa
 			return
 		})
 	}
-	if detach {
-		return 0
-	}
 	if err := g.Wait(); err != nil {
 		if ctx.Err() != context.Canceled { // Don't error if the context killed the process.
 			log.Error("Command failed: %s", err)
@@ -110,8 +107,10 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 		must(syscall.Exec(splitCmd[0], args, env), args)
 	} else if detach {
 		// Bypass the whole process management system since we explicitly aim not to manage this subprocess.
-		_, err := syscall.ForkExec(splitCmd[0], args, &syscall.ProcAttr{Env: env})
-		must(err, args)
+		cmd := exec.Command(splitCmd[0], args[1:]...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return toExitError(cmd.Start(), args, nil)
 	}
 	// Run as a normal subcommand.
 	// Note that we don't connect stdin. It doesn't make sense for multiple processes.

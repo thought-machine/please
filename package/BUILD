@@ -2,9 +2,8 @@ subinclude("//build_defs:version")
 
 # This is the master list of files that get installed.
 filegroup(
-    name = "installed_files",
+    name = "tools",
     srcs = [
-        "//src:please",
         "//tools/build_langserver",
         "//tools/go_buildid_replacer",
         "//tools/jarcat",
@@ -15,6 +14,17 @@ filegroup(
         "//tools/please_pex",
         "//tools/sandbox:please_sandbox",
     ],
+    binary = True,
+    visibility = ["//src:tools"],
+)
+
+filegroup(
+    name = "installed_files",
+    srcs = [
+        ":tools",
+        "//src:please",
+    ],
+    binary = True,
     visibility = ["//:install"],
 )
 
