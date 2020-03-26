@@ -556,7 +556,7 @@ func (target *BuildTarget) NamedOutputs(name string) []string {
 // filename(plz-out/tmp/) if output has the same name as the package, this avoids the name conflict issue
 func (target *BuildTarget) GetTmpOutput(parseOutput string) string {
 	if target.IsFilegroup {
-		return parseOutput  // Filegroups never need this.
+		return parseOutput // Filegroups never need this.
 	} else if parseOutput == target.Label.PackageName {
 		return parseOutput + tempOutputSuffix
 	} else if target.Label.PackageName == "" && target.HasSource(parseOutput) {
