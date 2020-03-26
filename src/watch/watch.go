@@ -173,6 +173,6 @@ func build(ctx context.Context, state *core.BuildState, labels []core.BuildLabel
 	callback(ns, labels)
 	if state.NeedRun {
 		// Don't wait for this, its lifetime will be controlled by the context.
-		go run.Parallel(ctx, state, labels, nil, state.Config.Please.NumThreads, false, false)
+		go run.Parallel(ctx, state, labels, nil, state.Config.Please.NumThreads, false, false, false)
 	}
 }

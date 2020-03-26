@@ -32,3 +32,10 @@ filegroup(
     binary = True,
     visibility = ["//third_party/go:all"],
 )
+
+filegroup(
+    name = "pleasew",
+    srcs = ["pleasew"],
+    binary = True,
+    visibility = ["//src/utils:all"],
+)

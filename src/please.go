@@ -162,7 +162,8 @@ var opts struct {
 			PositionalArgs struct {
 				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
-			Args cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
+			Args   cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
+			Detach bool          `long:"detach" description:"Detach from the parent process when all children have spawned"`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
@@ -439,7 +440,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"parallel": func() int {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false, false); success {
-			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env))
+			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Env, opts.Run.Parallel.Detach))
 		}
 		return 1
 	},

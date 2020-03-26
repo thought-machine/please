@@ -30,3 +30,11 @@ go_binary(
         "//third_party/go:logging",
     ],
 )
+
+# This is handy for things like plz plz --repo_root
+filegroup(
+    name = "tools",
+    srcs = ["//package:tools"],
+    visibility = ["//:install"],
+    binary = True,
+)

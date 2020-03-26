@@ -1,0 +1,14 @@
+; This is used for CI of the remote execution code.
+[remote]
+url = localhost:7778
+casurl = localhost:7777
+asseturl = localhost:7776
+instance = mettle
+secure = false
+numexecutors = 10
+
+[build]
+hashfunction = sha256
+
+[please]
+location = ~/.please

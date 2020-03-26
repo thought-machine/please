@@ -22,8 +22,8 @@ go_library(
 go_bindata(
     name = "bindata",
     srcs = [
+        "//:pleasew",
         "//tools/misc:completion_script",
-        "//tools/misc:wrapper_script",
     ],
     prefix = "tools/misc",
 )
