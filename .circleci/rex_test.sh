@@ -9,6 +9,7 @@ DIR="${1:-~/.please}"
 # Extract the plz installation from earlier step
 mkdir -p $DIR
 tar -xzf /tmp/workspace/please_*.tar.gz --strip-components=1 -C $DIR
+ln -s "${DIR}/please" "${DIR}/plz"
 export PATH="$DIR:$PATH"
 
 # Start the servers in the background
