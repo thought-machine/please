@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -32,21 +31,14 @@ func Run(state *core.BuildState, label core.BuildLabel, args []string, env bool)
 // that code, otherwise 0 if all were successful).
 // The given context can be used to control the lifetime of the subprocesses.
 func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, args []string, numTasks int, quiet, env, detach bool) int {
-	pool := NewGoroutinePool(numTasks)
+	limiter := make(chan struct{}, numTasks)
 	var g errgroup.Group
 	for _, label := range labels {
 		label := label // capture locally
-		g.Go(func() (err error) {
-			var wg sync.WaitGroup
-			wg.Add(1)
-			pool.Submit(func() {
-				if e := run(ctx, state, label, args, true, quiet, env, detach); e != nil {
-					err = e
-				}
-				wg.Done()
-			})
-			wg.Wait()
-			return
+		g.Go(func() error {
+			limiter <- struct{}{}
+			defer func() { <-limiter }()
+			return run(ctx, state, label, args, true, quiet, env, detach)
 		})
 	}
 	if err := g.Wait(); err != nil {
@@ -66,7 +58,7 @@ func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string,
 		log.Notice("Running %s", label)
 		if err := run(context.Background(), state, label, args, true, quiet, env, false); err != nil {
 			log.Error("%s", err)
-			return err.code
+			return err.(*exitError).code
 		}
 	}
 	return 0
@@ -76,7 +68,7 @@ func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string,
 // If fork is true then we fork to run the target and return any error from the subprocesses.
 // If it's false this function never returns (because we either win or die; it's like
 // Game of Thrones except rather less glamorous).
-func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, args []string, fork, quiet, setenv, detach bool) *exitError {
+func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, args []string, fork, quiet, setenv, detach bool) error {
 	target := state.Graph.TargetOrDie(label)
 	if !target.IsBinary {
 		log.Fatalf("Target %s cannot be run; it's not marked as binary", label)
@@ -159,7 +151,7 @@ func must(err error, cmd []string) {
 }
 
 // toExitError attempts to extract the exit code from an error.
-func toExitError(err error, cmd []string, out []byte) *exitError {
+func toExitError(err error, cmd []string, out []byte) error {
 	exitCode := 1
 	if err == nil {
 		return nil
