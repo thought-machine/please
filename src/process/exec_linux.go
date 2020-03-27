@@ -15,6 +15,9 @@ func (e *Executor) ExecCommand(command string, args ...string) *exec.Cmd {
 		Pdeathsig: syscall.SIGHUP,
 		Setpgid:   true,
 	}
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	e.processes[cmd] = struct{}{}
 	return cmd
 }
 

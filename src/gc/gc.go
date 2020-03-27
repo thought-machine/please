@@ -31,7 +31,7 @@ type targetMap map[*core.BuildTarget]bool
 func GarbageCollect(state *core.BuildState, filter, targets, keepTargets []core.BuildLabel, keepLabels []string, conservative, targetsOnly, srcsOnly, noPrompt, dryRun, git bool) {
 	if targets, srcs := targetsToRemove(state.Graph, filter, targets, keepTargets, keepLabels, conservative); len(targets) > 0 {
 		if !srcsOnly {
-			fmt.Fprintf(os.Stderr, "Targets to remove (total %d of %d):\n", len(targets), len(state.Graph.AllTargets()))
+			fmt.Fprintf(os.Stderr, "Targets to remove (total %d of %d):\n", len(targets), state.Graph.Len())
 			for _, target := range targets {
 				fmt.Printf("  %s\n", target)
 			}

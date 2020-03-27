@@ -732,7 +732,7 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 	}
 	// If this target has no deps, add it to the queue now, otherwise handle its deps.
 	// Only add if we need to build targets (not if we're just parsing) but we might need it to parse...
-	if target.State() == Active && target.AllDepsBuilt() {
+	if target.State() == Active && state.Graph.AllDepsBuilt(target) {
 		if target.SyncUpdateState(Active, Pending) {
 			state.AddPendingBuild(label, dependent.IsAllTargets())
 		}

@@ -77,8 +77,6 @@ var KnownFields = map[string]bool{
 	"ShowProgress":        true,
 	"Progress":            true,
 	"NeededForSubinclude": true,
-	"reverseDeps":         true,
-	"mutex":               true,
 
 	// Used to save the rule hash rather than actually being hashed itself.
 	"RuleHash": true,
