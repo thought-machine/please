@@ -1,3 +1,11 @@
+Version 14.3.6
+--------------
+
+    * Python testrunner compatible with newer versions of coverage (#870)
+    * Updated a number of third-party Python libraries (#872)
+    * Temporarily reverted concurrency change from last release.
+
+
 Version 14.3.5
 --------------
 
