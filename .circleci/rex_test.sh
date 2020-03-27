@@ -19,4 +19,4 @@ plz run parallel -p -v notice --colour --detach //test/remote:run_elan //test/re
 # Test we can rebuild plz itself.
 plz build --profile ci_remote -p -v notice --colour //src:please
 # Check we can actually run some tests
-plz test --profile ci_remote -p -v notice --colour //src/core:all
+plz test --profile ci_remote -p -v notice --colour --exclude e2e
