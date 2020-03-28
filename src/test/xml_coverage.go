@@ -4,12 +4,13 @@ package test
 
 import (
 	"encoding/xml"
-	"github.com/thought-machine/please/src/cli"
-	"github.com/thought-machine/please/src/core"
 	"math"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
 )
 
 func parseXMLCoverageResults(target *core.BuildTarget, coverage *core.TestCoverage, data []byte) error {
@@ -69,12 +70,10 @@ func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 				continue
 			}
 
-			name := strings.Replace(className, label.PackageName+"/", "", -1)
-
 			lines, covered, total := getLineCoverageInfo(lineCover)
 			classLineRate := float64(covered) / float64(total)
 
-			cls := class{Name: name, Filename: name,
+			cls := class{Name: className, Filename: className,
 				Lines: lines, LineRate: formatFloatPrecision(classLineRate, 4)}
 
 			classes = append(classes, cls)
