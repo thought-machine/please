@@ -473,3 +473,9 @@ plz_e2e_test(
     name = "failing_tests_ok_test",
     cmd = "plz test //test:failing_test --failing_tests_ok",
 )
+
+plz_e2e_test(
+    name = "init_test",
+    cmd = "plz init --dir=$TEST_DIR",
+    expect_file_exists = ".plzconfig",
+)
