@@ -479,3 +479,9 @@ plz_e2e_test(
     cmd = "plz init --dir=$TEST_DIR",
     expect_file_exists = ".plzconfig",
 )
+
+plz_e2e_test(
+    name = "completion_test",
+    cmd = "plz --completion_script",
+    expect_output_contains = "plz completion",
+)

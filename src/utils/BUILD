@@ -21,9 +21,13 @@ go_library(
 
 go_bindata(
     name = "bindata",
+    srcs = [":bindata_files"],
+)
+
+filegroup(
+    name = "bindata_files",
     srcs = [
         "//:pleasew",
         "//tools/misc:completion_script",
     ],
-    prefix = "tools/misc",
 )
