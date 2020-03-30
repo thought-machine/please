@@ -4,6 +4,7 @@
 package output
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -15,42 +16,65 @@ import (
 
 var log = logging.MustGetLogger("output")
 
-var traces = make([]traceEntry, 0, 1000)
-
-func addTrace(result *core.BuildResult, previous core.BuildLabel, active bool) {
-	// It's a bit fiddly to keep all the phases in line here.
-	if !active {
-		traces = append(traces, translateEvent(result, "E"))
-	} else if result.Label != previous {
-		traces = append(traces, translateEvent(result, "B"))
-	} else {
-		traces = append(traces, translateEvent(result, "E"))
-		traces = append(traces, translateEvent(result, "B"))
-	}
+// A traceWriter is responsible for writing the JSON trace info.
+type traceWriter struct {
+	b     *bufio.Writer
+	f     *os.File
+	first bool  // have we written the first record
 }
 
-func writeTrace(traceFile string) {
-	file, err := os.Create(traceFile)
+// newTraceWriter returns a new traceWriter writing to the given file.
+// The filename may be empty in which case it will silently discard all information given.
+func newTraceWriter(filename string) *traceWriter {
+	if filename == "" {
+		return &traceWriter{}
+	}
+	f, err := os.Create(filename)
 	if err != nil {
 		log.Errorf("Couldn't create trace file: %s", err)
+		return &traceWriter{}
+	}
+	b := bufio.NewWriter(f)
+	// To be well-formed the file has to start with a [ in JSON array format.
+	// This is more robust than the object format and we don't write anything of use into that anyway.
+	b.Write([]byte("[\n"))
+	return &traceWriter{
+		b: b,
+		f: f,
+	}
+}
+
+// Close closes this write and any associated files.
+func (tw *traceWriter) Close() error {
+	if _, err := tw.b.Write([]byte{'\n', ']', '\n'}); err != nil {
+		return err
+    } else if err := tw.b.Flush(); err != nil {
+		return err
+	}
+	return tw.f.Close()
+}
+
+// AddTrace adds a single trace to this writer.
+func (tw *traceWriter) AddTrace(result *core.BuildResult, previous core.BuildLabel, active bool) {
+	// It's a bit fiddly to keep all the phases in line here.
+	if tw.b == nil {
 		return
+	} else if !active {
+		tw.writeEvent(result, "E")
+	} else if result.Label != previous {
+		tw.writeEvent(result, "B")
+	} else {
+		tw.writeEvent(result, "E")
+		tw.writeEvent(result, "B")
 	}
-	defer file.Close()
-	file.Write(formatTrace())
 }
 
-func formatTrace() []byte {
-	var out traceObjectFormat
-	out.OtherData.Version = "Please v" + core.PleaseVersion.String()
-	out.TraceEvents = traces
-	data, err := json.Marshal(out)
-	if err != nil {
-		log.Errorf("Error serialising JSON trace data: %s", err)
+func (tw *traceWriter) writeEvent(result *core.BuildResult, phase string) {
+	if !tw.first {
+		tw.first = true
+	} else {
+		tw.b.Write([]byte{',', '\n'})
 	}
-	return data
-}
-
-func translateEvent(result *core.BuildResult, phase string) traceEntry {
 	entry := traceEntry{
 		Name:  result.Label.String(),
 		Cat:   result.Status.Category(),
@@ -67,15 +91,8 @@ func translateEvent(result *core.BuildResult, phase string) traceEntry {
 	} else if entry.Cat == "Test" {
 		entry.Cname = "good"
 	}
-	return entry
-}
-
-type traceObjectFormat struct {
-	TraceEvents []traceEntry `json:"traceEvents"`
-	OtherData   struct {
-		Version string `json:"version"`
-	} `json:"otherData"`
-	// Ignoring other properties for now.
+	b, _ := json.Marshal(entry)
+	tw.b.Write(b)
 }
 
 type traceEntry struct {
