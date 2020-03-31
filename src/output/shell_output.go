@@ -78,16 +78,17 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 	}()
 	failedTargets := []core.BuildLabel{}
 	failedNonTests := []core.BuildLabel{}
+	tw := newTraceWriter(traceFile)
 	for result := range state.Results() {
 		if state.DebugTests && result.Status == core.TargetTesting {
 			cancel() // signals the interactive display goroutines to stop
 		}
-		processResult(state, result, buildingTargets, plainOutput, &failedTargets, &failedNonTests, failedTargetMap, traceFile != "", streamTestResults)
+		processResult(state, result, buildingTargets, plainOutput, &failedTargets, &failedNonTests, failedTargetMap, tw, streamTestResults)
 	}
 	<-ctx.Done()
 	wg.Wait()
-	if traceFile != "" {
-		writeTrace(traceFile)
+	if err := tw.Close(); err != nil {
+		log.Error("Failed to write trace data: %s", err)
 	}
 	duration := time.Since(state.StartTime).Round(durationGranularity)
 	if len(failedNonTests) > 0 { // Something failed in the build step.
@@ -162,7 +163,7 @@ func yesNo(b bool) string {
 }
 
 func processResult(state *core.BuildState, result *core.BuildResult, buildingTargets []buildingTarget, plainOutput bool,
-	failedTargets, failedNonTests *[]core.BuildLabel, failedTargetMap map[core.BuildLabel]error, shouldTrace, streamTestResults bool) {
+	failedTargets, failedNonTests *[]core.BuildLabel, failedTargetMap map[core.BuildLabel]error, tw *traceWriter, streamTestResults bool) {
 	label := result.Label
 	active := result.Status.IsActive()
 	failed := result.Status.IsFailure()
@@ -170,8 +171,8 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 	stopped := result.Status == core.TargetBuildStopped
 	parse := result.Status == core.PackageParsing || result.Status == core.PackageParsed || result.Status == core.ParseFailed
 	// Parse events can overlap in weird ways that mess up the display.
-	if shouldTrace && !parse {
-		addTrace(result, buildingTargets[result.ThreadID].Label, active)
+	if !parse {
+		tw.AddTrace(result, buildingTargets[result.ThreadID].Label, active)
 	}
 	target := state.Graph.Target(label)
 	if !parse { // Parse tasks happen on a different set of threads.
