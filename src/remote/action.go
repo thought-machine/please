@@ -106,7 +106,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 // stampedBuildEnvironment returns a build environment, optionally with a stamp if the
 // target requires one.
 func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb.Directory) []string {
-	if !target.Stamp {
+	if !target.Stamp && !target.StampScm {
 		return core.BuildEnvironment(c.state, target, ".")
 	}
 	// We generate the stamp ourselves from the input root.

@@ -241,6 +241,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	// change the hash of every single other target everywhere.
 	// Might consider removing this the next time we peturb the hashing strategy.
 	hashOptionalBool(h, target.Stamp)
+	hashOptionalBool(h, target.StampScm)
 	hashOptionalBool(h, target.IsFilegroup)
 	hashOptionalBool(h, target.IsHashFilegroup)
 	hashOptionalBool(h, target.IsRemoteFile)
