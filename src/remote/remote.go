@@ -492,6 +492,9 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 		c.locallyCacheResults(target, digest, metadata, response.Result)
 		return metadata, response.Result, nil
 	default:
+		if !resp.Done {
+			return nil, nil, fmt.Errorf("Received an incomplete response for %s", target)
+		}
 		return nil, nil, fmt.Errorf("Unknown response type (was a %T): %#v", resp.Result, resp) // Shouldn't get here
 	}
 }
