@@ -46,7 +46,9 @@ func newTraceWriter(filename string) *traceWriter {
 
 // Close closes this write and any associated files.
 func (tw *traceWriter) Close() error {
-	if _, err := tw.b.Write([]byte{'\n', ']', '\n'}); err != nil {
+	if tw.b == nil {
+		return nil
+	} else if _, err := tw.b.Write([]byte{'\n', ']', '\n'}); err != nil {
 		return err
     } else if err := tw.b.Flush(); err != nil {
 		return err
