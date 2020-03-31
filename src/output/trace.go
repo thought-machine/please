@@ -20,7 +20,7 @@ var log = logging.MustGetLogger("output")
 type traceWriter struct {
 	b     *bufio.Writer
 	f     *os.File
-	first bool  // have we written the first record
+	first bool // have we written the first record
 }
 
 // newTraceWriter returns a new traceWriter writing to the given file.
@@ -50,7 +50,7 @@ func (tw *traceWriter) Close() error {
 		return nil
 	} else if _, err := tw.b.Write([]byte{'\n', ']', '\n'}); err != nil {
 		return err
-    } else if err := tw.b.Flush(); err != nil {
+	} else if err := tw.b.Flush(); err != nil {
 		return err
 	}
 	return tw.f.Close()
