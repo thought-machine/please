@@ -175,9 +175,11 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 // Optionally includes a stamp if the target is marked as such.
 func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte, tmpDir string) BuildEnv {
 	env := BuildEnvironment(state, target, tmpDir)
-	if target.Stamp {
+	if target.StampScm {
 		stampEnvOnce.Do(initStampEnv)
 		env = append(env, stampEnv...)
+	}
+	if target.Stamp {
 		env = append(env, "STAMP_FILE="+target.StampFileName())
 		return append(env, "STAMP="+base64.RawURLEncoding.EncodeToString(stamp))
 	}
