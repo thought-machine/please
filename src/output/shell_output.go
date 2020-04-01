@@ -446,14 +446,17 @@ func printBuildResults(state *core.BuildState, duration time.Duration) {
 		incrementality = 100 // avoid NaN
 	}
 	// Print this stuff so we always see it.
-	printf("Build finished; total time %s, incrementality %.1f%%. Outputs:\n", duration, incrementality)
-	if state.RemoteClient == nil || state.DownloadOutputs {
-		for _, label := range state.ExpandVisibleOriginalTargets() {
-			target := state.Graph.TargetOrDie(label)
-			fmt.Printf("%s:\n", label)
-			for _, result := range buildResult(target) {
-				fmt.Printf("  %s\n", result)
-			}
+	printf("Build finished; total time %s, incrementality %.1f%%.", duration, incrementality)
+	if state.RemoteClient != nil && !state.DownloadOutputs {
+		fmt.Printf("\n")  // Outputs are not downloaded so do not print them out.
+		return
+	}
+	fmt.Printf(" Outputs:\n")
+	for _, label := range state.ExpandVisibleOriginalTargets() {
+		target := state.Graph.TargetOrDie(label)
+		fmt.Printf("%s:\n", label)
+		for _, result := range buildResult(target) {
+			fmt.Printf("  %s\n", result)
 		}
 	}
 }
