@@ -36,6 +36,8 @@ var errStop = fmt.Errorf("stopping build")
 var httpClient http.Client
 var httpClientOnce sync.Once
 
+var magicSourcesWorkerKey = "WORKER"
+
 // Build implements the core logic for building a single target.
 func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
 	target := state.Graph.TargetOrDie(label)
@@ -827,11 +829,23 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 		return nil, err
 	}
 	log.Debug("Sending remote build request for %s to %s; opts %s", target.Label, workerCmd, workerArgs)
+
+	// Allow callers to specify only a subset of sources to send to the worker
+	// If they don't do this, send all sources.
+
+	var workerSources []string
+	workerSourceInputs, present := target.NamedSources[magicSourcesWorkerKey]
+	if !present {
+		workerSources = target.AllSourcePaths(state.Graph)
+	} else {
+		workerSources = target.SourcePaths(state.Graph, workerSourceInputs)
+	}
+
 	resp, err := worker.BuildRemotely(state, target, workerCmd, &worker.Request{
 		Rule:    target.Label.String(),
 		Labels:  target.Labels,
 		TempDir: path.Join(core.RepoRoot, target.TmpDir()),
-		Sources: target.AllSourcePaths(state.Graph),
+		Sources: workerSources,
 		Options: opts,
 	})
 	if err != nil {
