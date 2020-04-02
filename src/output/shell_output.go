@@ -448,7 +448,7 @@ func printBuildResults(state *core.BuildState, duration time.Duration) {
 	// Print this stuff so we always see it.
 	printf("Build finished; total time %s, incrementality %.1f%%.", duration, incrementality)
 	if state.RemoteClient != nil && !state.DownloadOutputs {
-		fmt.Printf("\n")  // Outputs are not downloaded so do not print them out.
+		fmt.Printf("\n") // Outputs are not downloaded so do not print them out.
 		return
 	}
 	fmt.Printf(" Outputs:\n")
