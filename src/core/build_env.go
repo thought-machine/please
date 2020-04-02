@@ -89,6 +89,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	// Named source groups if the target declared any.
 	for name, srcs := range target.NamedSources {
 		paths := target.SourcePaths(state.Graph, srcs)
+		// TODO(macripps): Quote these to prevent spaces from breaking everything (consider joining with NUL or sth?)
 		env = append(env, "SRCS_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
 	}
 	// Named output groups similarly.
