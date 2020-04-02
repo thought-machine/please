@@ -36,7 +36,7 @@ var errStop = fmt.Errorf("stopping build")
 var httpClient http.Client
 var httpClientOnce sync.Once
 
-var MAGIC_SOURCES_WORKER_KEY = "WORKER"
+var magicSourcesWorkerKey = "WORKER"
 
 // Build implements the core logic for building a single target.
 func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
@@ -834,7 +834,7 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 	// If they don't do this, send all sources.
 
 	var workerSources []string
-	workerSourceInputs, present := target.NamedSources[MAGIC_SOURCES_WORKER_KEY]
+	workerSourceInputs, present := target.NamedSources[magicSourcesWorkerKey]
 	if !present {
 		workerSources = target.AllSourcePaths(state.Graph)
 	} else {
