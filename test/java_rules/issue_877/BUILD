@@ -30,5 +30,8 @@ plz_e2e_test(
     data = [
         ":issue_877",
     ],
+    labels = [
+        "java",
+    ],
     expect_output_contains = "some.txt",
 )
