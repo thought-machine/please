@@ -107,7 +107,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
 		}
 		// Ensure we have downloaded any previous dependencies if that's relevant.
-		if err := downloadInputsIfNeeded(state, target); err != nil {
+		if err := downloadInputsIfNeeded(tid, state, target); err != nil {
 			return err
 		}
 		if err := prepareDirectories(target); err != nil {
@@ -133,7 +133,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			updateHashFilegroupPaths(state, target)
 		}
 		// Ensure we have downloaded any previous dependencies if that's relevant.
-		if err := downloadInputsIfNeeded(state, target); err != nil {
+		if err := downloadInputsIfNeeded(tid, state, target); err != nil {
 			return err
 		}
 
@@ -499,8 +499,9 @@ func checkForStaleOutput(filename string, err error) bool {
 }
 
 // downloadInputs downloads all the inputs for this target if we are building remotely.
-func downloadInputsIfNeeded(state *core.BuildState, target *core.BuildTarget) error {
+func downloadInputsIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) error {
 	if state.RemoteClient != nil {
+		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading inputs...")
 		for input := range core.IterInputs(state.Graph, target, true, false) {
 			if l := input.Label(); l != nil {
 				if dep := state.Graph.TargetOrDie(*l); dep.State() == core.BuiltRemotely {
