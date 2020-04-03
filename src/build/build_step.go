@@ -106,6 +106,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		if target.IsFilegroup {
 			return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
 		}
+		// Ensure we have downloaded any previous dependencies if that's relevant.
+		if err := downloadInputsIfNeeded(state, target); err != nil {
+			return err
+		}
 		if err := prepareDirectories(target); err != nil {
 			return err
 		}
@@ -129,16 +133,8 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			updateHashFilegroupPaths(state, target)
 		}
 		// Ensure we have downloaded any previous dependencies if that's relevant.
-		if state.Config.NumRemoteExecutors() > 0 {
-			for input := range core.IterInputs(state.Graph, target, true, false) {
-				if l := input.Label(); l != nil {
-					if dep := state.Graph.TargetOrDie(*l); dep.State() == core.BuiltRemotely {
-						if err := state.RemoteClient.Download(dep); err != nil {
-							return err
-						}
-					}
-				}
-			}
+		if err := downloadInputsIfNeeded(state, target); err != nil {
+			return err
 		}
 
 		// We don't record rule hashes for filegroups since we know the implementation and the check
@@ -500,6 +496,22 @@ func checkForStaleOutput(filename string, err error) bool {
 		}
 	}
 	return false
+}
+
+// downloadInputs downloads all the inputs for this target if we are building remotely.
+func downloadInputsIfNeeded(state *core.BuildState, target *core.BuildTarget) error {
+	if state.RemoteClient != nil {
+		for input := range core.IterInputs(state.Graph, target, true, false) {
+			if l := input.Label(); l != nil {
+				if dep := state.Graph.TargetOrDie(*l); dep.State() == core.BuiltRemotely {
+					if err := state.RemoteClient.Download(dep); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // calculateAndCheckRuleHash checks the output hash for a rule.
