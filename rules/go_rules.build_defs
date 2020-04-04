@@ -285,7 +285,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
 
 def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[],
               visibility:list=None, test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
-              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool|str=False):
+              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False):
     """Compiles a Go binary.
 
     Args:
@@ -307,10 +307,8 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
                      when calling the Go linker.  If set to a list, pass each value as a
                      definition to the linker.  If set to a dict, each key/value pair is
                      used to contruct the list of definitions passed to the linker.
-      stamp (bool|str): Allows this rule to gain access to information about SCM revision etc
-                        via env vars. These can be useful to pass into `definitions`.
-                        Can be True for SCM and rule env vars or 'scm' or 'target' to just get one
-                        or the other. By default neither are available.
+      stamp (bool): Allows this rule to gain access to information about SCM revision etc
+                    via env vars. These can be useful to pass into `definitions`.
     """
     lib = go_library(
         name=f'_{name}#lib',

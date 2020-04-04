@@ -50,7 +50,6 @@ var KnownFields = map[string]bool{
 	"NamedSecrets":                true,
 	"TestOutputs":                 true,
 	"Stamp":                       true,
-	"StampScm":                    true,
 
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
