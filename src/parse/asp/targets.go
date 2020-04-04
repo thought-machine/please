@@ -64,14 +64,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	}
 
 	target.BuildTimeout = sizeAndTimeout(s, size, args[24], s.state.Config.Build.Timeout)
-	switch t := args[33].(type) {
-	case pyBool:
-		target.Stamp = bool(t)
-		target.StampScm = bool(t)
-	case pyString:
-		target.Stamp = string(t) == "target"
-		target.StampScm = string(t) == "scm"
-	}
+	target.Stamp = isTruthy(33)
 	target.IsHashFilegroup = args[1] == hashFilegroupCommand
 	target.IsFilegroup = args[1] == filegroupCommand || target.IsHashFilegroup
 	if desc := args[16]; desc != nil && desc != None {

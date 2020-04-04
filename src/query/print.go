@@ -66,16 +66,6 @@ var specialFields = map[string]func(*printer) (string, bool){
 	"data": func(p *printer) (string, bool) {
 		return p.genericPrint(reflect.ValueOf(p.target.AllData()))
 	},
-	"stamp": func(p *printer) (string, bool) {
-		if p.target.Stamp && p.target.StampScm {
-			return p.genericPrint(reflect.ValueOf(p.target.Stamp))
-		} else if p.target.Stamp {
-			return p.genericPrint(reflect.ValueOf("target"))
-		} else if p.target.StampScm {
-			return p.genericPrint(reflect.ValueOf("scm"))
-		}
-		return "", false
-	},
 }
 
 // fieldPrecedence defines a specific ordering for fields.

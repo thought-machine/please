@@ -118,8 +118,6 @@ type BuildTarget struct {
 	// If true, the rule is given an env var at build time that contains the hash of its
 	// transitive dependencies, which can be used to identify the output in a predictable way.
 	Stamp bool
-	// If true, the rule is given env vars at build time for SCM_REVISION, SCM_DESCRIBE, etc.
-	StampScm bool `print:"false"`
 	// If true, the target must be run locally (i.e. is not compatible with remote execution).
 	Local bool
 	// If true, the target is needed for a subinclude and therefore we will have to make sure its
