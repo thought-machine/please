@@ -57,7 +57,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             javac_cmd = f'$(worker {CONFIG.JAVAC_WORKER}) {javac_flags} {mflag} {srcflag}'
         else:
             find = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
-            srcflag = '$SRCS' if srcs else '`find $SRCS -name "*.java"`'
+            srcflag = '$SRCS_WORKER' if srcs else '`find $SRCS_WORKER -name "*.java"`'
             javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
 
         cmd = ' && '.join([
