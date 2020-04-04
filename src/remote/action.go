@@ -34,7 +34,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest bool) (*pb.Comman
 		}
 		inputRootChunker, _ := chunker.NewFromProto(inputRoot, int(c.client.ChunkMaxSize))
 		ch <- inputRootChunker
-		command, err = c.buildCommand(target, inputRoot, isTest)
+		command, err = c.buildCommand(target, inputRoot, isTest, target.Stamp)
 		if err != nil {
 			return err
 		}
@@ -53,13 +53,13 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest bool) (*pb.Comman
 }
 
 // buildAction creates a build action for a target and returns the command and the action digest digest. No uploading is done.
-func (c *Client) buildAction(target *core.BuildTarget, isTest bool) (*pb.Command, *pb.Digest, error) {
+func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.Command, *pb.Digest, error) {
 	inputRoot, err := c.uploadInputs(nil, target, isTest)
 	if err != nil {
 		return nil, nil, err
 	}
 	inputRootDigest := c.digestMessage(inputRoot)
-	command, err := c.buildCommand(target, inputRoot, isTest)
+	command, err := c.buildCommand(target, inputRoot, isTest, stamp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -73,7 +73,7 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest bool) (*pb.Command
 }
 
 // buildCommand builds the command for a single target.
-func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest bool) (*pb.Command, error) {
+func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest, stamp bool) (*pb.Command, error) {
 	if isTest {
 		return c.buildTestCommand(target)
 	}
@@ -96,23 +96,22 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		Arguments: []string{
 			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
 		},
-		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(target, inputRoot), target.Sandbox),
+		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(target, inputRoot, stamp), target.Sandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
 	}, err
 }
 
-// stampedBuildEnvironment returns a build environment, optionally with a stamp if the
-// target requires one.
-func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb.Directory) []string {
-	if !target.Stamp {
+// stampedBuildEnvironment returns a build environment, optionally with a stamp if stamp is true.
+func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb.Directory, stamp bool) []string {
+	if !stamp {
 		return core.BuildEnvironment(c.state, target, ".")
 	}
 	// We generate the stamp ourselves from the input root.
 	// TODO(peterebden): it should include the target properties too...
-	stamp := c.sum(mustMarshal(inputRoot))
-	return core.StampedBuildEnvironment(c.state, target, stamp, ".")
+	hash := c.sum(mustMarshal(inputRoot))
+	return core.StampedBuildEnvironment(c.state, target, hash, ".")
 }
 
 // buildTestCommand builds a command for a target when testing.
