@@ -448,7 +448,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 
 // uploadLocalTarget uploads the outputs of a target that was built locally.
 func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
-	m, ar, err := tree.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), int(c.client.ChunkMaxSize), &filemetadata.NoopFileMetadataCache{})
+	m, ar, err := tree.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), int(c.client.ChunkMaxSize), filemetadata.NewNoopCache())
 	if err != nil {
 		return err
 	}
