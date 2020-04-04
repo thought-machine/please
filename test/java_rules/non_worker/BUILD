@@ -7,8 +7,8 @@ java_library(
 )
 
 java_test(
-    name = "Test",
-    srcs = ["Test.java"],
+    name = "non_worker_test",
+    srcs = ["NonWorkerTest.java"],
     deps = [
         ":lib",
         "//third_party/java:junit",

@@ -5,8 +5,8 @@ import java.util.Scanner;
 
 public class Lib {
   public String readData() throws Exception {
-    InputStream stream = getClass().getClassLoader().getResourceAsStream("data.txt");
+    InputStream stream = getClass().getClassLoader().getResourceAsStream("test/java_rules/non_worker/data.txt");
     java.util.Scanner scanner = new java.util.Scanner(stream).useDelimiter("\\A");
-    return scanner.next();
+    return scanner.next().trim();
   }
 }
