@@ -9,6 +9,7 @@ java_library(
 java_test(
     name = "non_worker_test",
     srcs = ["NonWorkerTest.java"],
+    resources = ["data2.txt"],
     deps = [
         ":lib",
         "//third_party/java:junit",
