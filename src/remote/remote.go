@@ -266,24 +266,18 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	needStdout := target.PostBuildFunction != nil
 	// If we're gonna stamp the target, first check the unstamped equivalent that we store results under.
 	// This implements the rules of stamp whereby we don't force rebuilds every time e.g. the SCM revision changes.
-	if target.Stamp {
-		if command, digest, err := c.buildAction(target, false, false); err == nil {
-			if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, needStdout); metadata != nil {
-				return metadata, ar, digest, nil
-			}
-		}
-	}
-	command, digest, err := c.buildAction(target, false, target.Stamp)
+	command, stampedDigest, unstampedDigest, err := c.buildStampedAndUnstampedAction(target)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	metadata, ar, err := c.execute(tid, target, command, digest, target.BuildTimeout, false, needStdout)
-	if err != nil {
-		return metadata, ar, digest, err
-	}
 	if target.Stamp {
+		if metadata, ar := c.maybeRetrieveResults(tid, target, command, unstampedDigest, needStdout); metadata != nil {
+			return metadata, ar, stampedDigest, nil
+		}
+	}
+	metadata, ar, err := c.execute(tid, target, command, stampedDigest, target.BuildTimeout, false, needStdout)
+	if target.Stamp && err == nil {
 		// Store results under unstamped digest too.
-		_, unstampedDigest, _ := c.buildAction(target, false, false)
 		c.locallyCacheResults(target, unstampedDigest, metadata, ar)
 		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 		defer cancel()
@@ -293,7 +287,7 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 			ActionResult: ar,
 		})
 	}
-	return metadata, ar, digest, nil
+	return metadata, ar, stampedDigest, err
 }
 
 // Download downloads outputs for the given target.
