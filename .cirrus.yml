@@ -1,5 +1,5 @@
 freebsd_instance:
-  image: freebsd-11-2-release-amd64
+  image_family: freebsd-11-3-snap
 
 env:
   GOPROXY: https://proxy.golang.org
