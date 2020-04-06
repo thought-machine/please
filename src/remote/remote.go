@@ -235,11 +235,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	command, digest, err := c.buildAction(target, false)
-	if err != nil {
-		return nil, err
-	}
-	metadata, ar, err := c.execute(tid, target, command, digest, target.BuildTimeout, false, target.PostBuildFunction != nil)
+	metadata, ar, digest, err := c.build(tid, target)
 	if err != nil {
 		return metadata, err
 	}
@@ -265,10 +261,39 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	return metadata, nil
 }
 
+// build implements the actual build of a target.
+func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, *pb.ActionResult, *pb.Digest, error) {
+	needStdout := target.PostBuildFunction != nil
+	// If we're gonna stamp the target, first check the unstamped equivalent that we store results under.
+	// This implements the rules of stamp whereby we don't force rebuilds every time e.g. the SCM revision changes.
+	command, stampedDigest, unstampedDigest, err := c.buildStampedAndUnstampedAction(target)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if target.Stamp {
+		if metadata, ar := c.maybeRetrieveResults(tid, target, command, unstampedDigest, needStdout); metadata != nil {
+			return metadata, ar, stampedDigest, nil
+		}
+	}
+	metadata, ar, err := c.execute(tid, target, command, stampedDigest, target.BuildTimeout, false, needStdout)
+	if target.Stamp && err == nil {
+		// Store results under unstamped digest too.
+		c.locallyCacheResults(target, unstampedDigest, metadata, ar)
+		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
+		defer cancel()
+		c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
+			InstanceName: c.instance,
+			ActionDigest: unstampedDigest,
+			ActionResult: ar,
+		})
+	}
+	return metadata, ar, stampedDigest, err
+}
+
 // Download downloads outputs for the given target.
 func (c *Client) Download(target *core.BuildTarget) error {
 	return c.download(target, func() error {
-		command, digest, err := c.buildAction(target, false)
+		command, digest, err := c.buildAction(target, false, target.Stamp)
 		if err != nil {
 			return fmt.Errorf("Failed to create action for %s: %s", target, err)
 		}
@@ -312,7 +337,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	if err := c.CheckInitialised(); err != nil {
 		return nil, nil, nil, err
 	}
-	command, digest, err := c.buildAction(target, true)
+	command, digest, err := c.buildAction(target, true, false)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -369,14 +394,23 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 	return nil, nil
 }
 
+// maybeRetrieveResults is like retrieveResults but only retrieves if we aren't forcing a rebuild of the target
+// (i.e. not if we're doing plz build --rebuild).
+func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult) {
+	if !(c.state.ForceRebuild && (c.state.IsOriginalTarget(target.Label) || c.state.IsOriginalTarget(target.Label.Parent()))) {
+		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking remote...")
+		if metadata, ar := c.retrieveResults(target, command, digest, needStdout); metadata != nil {
+			return metadata, ar
+		}
+	}
+	return nil, nil
+}
+
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
-	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking remote...")
-	if !(c.state.ForceRebuild && (c.state.IsOriginalTarget(target.Label) || c.state.IsOriginalTarget(target.Label.Parent()))) {
-		if metadata, ar := c.retrieveResults(target, command, digest, needStdout); metadata != nil {
-			return metadata, ar, nil
-		}
+	if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, needStdout); metadata != nil {
+		return metadata, ar, nil
 	}
 	// We didn't actually upload the inputs before, so we must do so now.
 	command, digest, err := c.uploadAction(target, isTest)
@@ -538,7 +572,7 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 	fmt.Printf("Remote execution hashes:\n")
 	inputRootDigest := c.digestMessage(inputRoot)
 	fmt.Printf("  Input: %7d bytes: %s\n", inputRootDigest.SizeBytes, inputRootDigest.Hash)
-	cmd, _ := c.buildCommand(target, inputRoot, isTest)
+	cmd, _ := c.buildCommand(target, inputRoot, isTest, target.Stamp)
 	commandDigest := c.digestMessage(cmd)
 	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {
