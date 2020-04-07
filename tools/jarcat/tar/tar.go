@@ -59,6 +59,7 @@ func write(w io.Writer, output string, srcs []string, prefix string, flatten boo
 			strip = filepath.Dir(src)
 		}
 		if err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+			var link string
 			if err != nil {
 				return err
 			} else if info.IsDir() {
@@ -66,7 +67,12 @@ func write(w io.Writer, output string, srcs []string, prefix string, flatten boo
 			} else if abs, _ := filepath.Abs(path); abs == output {
 				return nil // don't write the output tarball into itself :)
 			}
-			hdr, err := tar.FileInfoHeader(info, "") // We don't write symlinks into plz-out/tmp, so the argument doesn't matter.
+			if info.Mode()&os.ModeSymlink != 0 {
+				if link, err = os.Readlink(path); err != nil {
+					return err
+				}
+			}
+			hdr, err := tar.FileInfoHeader(info, link)
 			if err != nil {
 				return err
 			}
@@ -88,6 +94,10 @@ func write(w io.Writer, output string, srcs []string, prefix string, flatten boo
 			hdr.Mode |= 0220
 			if err := tw.WriteHeader(hdr); err != nil {
 				return err
+			}
+			// only copy content of regular files
+			if ! info.Mode().IsRegular() {
+				return nil
 			}
 			f, err := os.Open(path)
 			if err != nil {
