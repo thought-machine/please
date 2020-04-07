@@ -3,6 +3,7 @@ package remote
 import (
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -159,9 +160,11 @@ func TestNoAbsolutePaths(t *testing.T) {
 	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false)
 	testDir := os.Getenv("TEST_DIR")
 	for _, env := range cmd.EnvironmentVariables {
-		assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
-		assert.NotContains(t, env.Value, core.OutDir, "Env var %s contains %s: %s", env.Name, core.OutDir, env.Value)
-		assert.NotContains(t, env.Value, testDir, "Env var %s contains the test dir %s: %s", env.Name, testDir, env.Value)
+		if !strings.HasPrefix(env.Value, "//") {
+			assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
+			assert.NotContains(t, env.Value, core.OutDir, "Env var %s contains %s: %s", env.Name, core.OutDir, env.Value)
+			assert.NotContains(t, env.Value, testDir, "Env var %s contains the test dir %s: %s", env.Name, testDir, env.Value)
+		}
 	}
 }
 
@@ -175,8 +178,10 @@ func TestNoAbsolutePaths2(t *testing.T) {
 	target.AddTool(core.SystemPathLabel{Path: []string{os.Getenv("TMP_DIR")}, Name: "remote_test"})
 	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false)
 	for _, env := range cmd.EnvironmentVariables {
-		assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
-		assert.NotContains(t, env.Value, core.OutDir, "Env var %s contains %s: %s", env.Name, core.OutDir, env.Value)
+		if !strings.HasPrefix(env.Value, "//") {
+			assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
+			assert.NotContains(t, env.Value, core.OutDir, "Env var %s contains %s: %s", env.Name, core.OutDir, env.Value)
+		}
 	}
 }
 
