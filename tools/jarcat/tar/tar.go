@@ -96,7 +96,7 @@ func write(w io.Writer, output string, srcs []string, prefix string, flatten boo
 				return err
 			}
 			// only copy content of regular files
-			if ! info.Mode().IsRegular() {
+			if !info.Mode().IsRegular() {
 				return nil
 			}
 			f, err := os.Open(path)
