@@ -1,3 +1,9 @@
+Version 14.3.8
+--------------
+
+    * Fix for python_test which was not correctly accepting `data` as a dict.
+
+
 Version 14.3.7
 --------------
 
