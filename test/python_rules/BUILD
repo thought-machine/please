@@ -181,3 +181,10 @@ python_test(
     ],
     deps = ["//third_party/python:importlib_metadata"],
 )
+
+python_test(
+    name = "data_dict_test",
+    srcs = ["data_dict_test.py"],
+    data = {"txt": ["data.txt"]},
+    labels = ["py3"],
+)
