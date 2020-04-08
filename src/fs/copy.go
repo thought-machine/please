@@ -9,7 +9,7 @@ import (
 // Falls back to a copy if link fails and fallback is true.
 func copyOrLinkFile(from, to string, fromMode, toMode os.FileMode, link, fallback bool) error {
 	if link {
-		if (fromMode&os.ModeSymlink) != 0 {
+		if (fromMode & os.ModeSymlink) != 0 {
 			// Don't try to hard-link to a symlink, that doesn't work reliably across all platforms.
 			// Instead recreate an equivalent symlink in the new location.
 			dest, err := os.Readlink(from)
