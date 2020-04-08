@@ -744,13 +744,20 @@ func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix s
 
 // linkIfNotExists creates dest as a link to src if it doesn't already exist.
 func linkIfNotExists(src, dest string, f linkFunc) {
-	if !fs.PathExists(dest) {
-		if err := fs.EnsureDir(dest); err != nil {
-			log.Warning("Failed to create directory for %s: %s", dest, err)
-		} else if err := f(src, dest); err != nil && !os.IsExist(err) {
-			log.Warning("Failed to create %s: %s", dest, err)
-		}
+	if fs.PathExists(dest) {
+		return
 	}
+	fs.Walk(src, func(name string, isDir bool) error {
+		if !isDir {
+			fullDest := path.Join(dest, name[len(src):])
+			if err := fs.EnsureDir(fullDest); err != nil {
+				log.Warning("Failed to create directory for %s: %s", fullDest, err)
+			} else if err := f(src, fullDest); err != nil && !os.IsExist(err) {
+				log.Warning("Failed to create %s: %s", fullDest, err)
+			}
+		}
+		return nil
+	})
 }
 
 // fetchRemoteFile fetches a remote file from a URL.
