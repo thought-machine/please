@@ -518,20 +518,20 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 		env = append(env, "SANDBOX=true")
 	}
 	if target != nil {
-	// This is an awkward little hack; the protocol says we always create directories for declared
-	// outputs, which (mostly by luck) is the same as plz would normally do. However targets that
-	// have post-build functions that detect their outputs do not get this on the first run since
-	// they don't *have* any at that point, but can then fail on the second because now they do,
-	// which is very hard to debug since it doesn't happen locally where we only run once.
-	// For now resolve with this hack; it is not nice but the whole protocol does not well support
-	// what we want to do here.
+		// This is an awkward little hack; the protocol says we always create directories for declared
+		// outputs, which (mostly by luck) is the same as plz would normally do. However targets that
+		// have post-build functions that detect their outputs do not get this on the first run since
+		// they don't *have* any at that point, but can then fail on the second because now they do,
+		// which is very hard to debug since it doesn't happen locally where we only run once.
+		// For now resolve with this hack; it is not nice but the whole protocol does not well support
+		// what we want to do here.
 		if target.PostBuildFunction != nil && c.targetOutputs(target.Label) != nil {
 			env = append(env, "_CREATE_OUTPUT_DIRS=false")
 		}
 		if target.IsBinary {
 			env = append(env, "_BINARY=true")
 		}
-		env = append(env, "_TARGET=" + target.Label.String())
+		env = append(env, "_TARGET="+target.Label.String())
 	}
 	sort.Strings(env) // Proto says it must be sorted (not just consistently ordered :( )
 	vars := make([]*pb.Command_EnvironmentVariable, len(env))
