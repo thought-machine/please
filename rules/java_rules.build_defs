@@ -68,9 +68,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             '"$TOOLS_JARCAT" z -d -o "$OUT" -i .',
         ])
 
-        src_dir_label = []
-        if not srcs:
-            src_dir_label = ['src_dir:'+src_dir]
+        src_dir_label = [] if srcs else ['src_dir:'+src_dir]
 
         return build_rule(
             name=name,
@@ -93,6 +91,26 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
                 'javac': [CONFIG.JAVAC_TOOL or CONFIG.JAVAC_WORKER],
                 'jarcat': [CONFIG.JARCAT_TOOL],
             },
+        )
+    elif resources:
+        # Can't run javac since there are no java files.
+        if resources_root:
+            cmd = 'cd ${PKG_DIR}/%s && $TOOL z -d -o ${OUT} -i .' % resources_root
+        else:
+            cmd = '$TOOL z -d -o ${OUTS} -i .'
+        return build_rule(
+            name=name,
+            srcs=resources,
+            deps=deps,
+            exported_deps=exported_deps,
+            outs=[name + '.jar'],
+            visibility=visibility,
+            cmd=cmd,
+            building_description="Linking...",
+            requires=['java'],
+            labels = labels + ['rule:test_resources' if test_only else 'rule:resources'],
+            test_only=test_only,
+            tools=[CONFIG.JARCAT_TOOL],
         )
     else:
         # If input is only jar files (as maven_jar produces in some cases) we simply collect them
