@@ -1,7 +1,8 @@
 Version 14.3.8
 --------------
 
-    * Fix for python_test which was not correctly accepting `data` as a dict.
+    * Fix for python_test which was not correctly accepting `data` as a dict (#899).
+    * Allow symlinks in jarcat tarballs (#898)
 
 
 Version 14.3.7
