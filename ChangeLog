@@ -1,3 +1,11 @@
+Version 14.3.9
+--------------
+
+    * Fix creation of links in e.g. plz-out/go which in some rare circumstances could
+      end up polluting other parts of plz-out (#899).
+    * Fixed java_library rules that took only resources and not srcs (#900)
+
+
 Version 14.3.8
 --------------
 
