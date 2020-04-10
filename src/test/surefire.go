@@ -17,10 +17,11 @@ func CopySurefireXMLFilesToDir(state *core.BuildState, surefireDir string) {
 			if path := target.TestResultsFile(); fs.PathExists(path) {
 				fs.WalkMode(path, func(path string, isDir bool, mode os.FileMode) error {
 					if !isDir {
-						if bytes, _ := ioutil.ReadFile(path); looksLikeJUnitXMLTestResults(bytes) {
-							surefireResult := filepath.Join(surefireDir, filepath.Base(path))
-							if err := fs.CopyOrLinkFile(path, surefireResult, mode, 0644, true, true); err != nil {
-								log.Errorf("Error linking %s to %s - %s", surefireResult, path, err)
+						if surefireResult := filepath.Join(surefireDir, filepath.Base(path)); !fs.PathExists(surefireResult) {
+							if bytes, _ := ioutil.ReadFile(path); looksLikeJUnitXMLTestResults(bytes) {
+								if err := fs.CopyOrLinkFile(path, surefireResult, mode, 0644, true, true); err != nil {
+									log.Errorf("Error linking %s to %s - %s", surefireResult, path, err)
+								}
 							}
 						}
 					}
