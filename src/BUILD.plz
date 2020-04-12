@@ -9,7 +9,6 @@ go_binary(
         "//src/cli",
         "//src/core",
         "//src/export",
-        "//src/follow",
         "//src/fs",
         "//src/gc",
         "//src/hashes",

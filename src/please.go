@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/op/go-logging.v1"
@@ -22,7 +21,6 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/export"
-	"github.com/thought-machine/please/src/follow"
 	"github.com/thought-machine/please/src/gc"
 	"github.com/thought-machine/please/src/hashes"
 	"github.com/thought-machine/please/src/help"
@@ -241,14 +239,6 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"outputs" description:"Exports outputs of a set of targets"`
 	} `command:"export" subcommands-optional:"true" description:"Exports a set of targets and files from the repo."`
-
-	Follow struct {
-		Retries int          `long:"retries" description:"Number of times to retry the connection"`
-		Delay   cli.Duration `long:"delay" default:"1s" description:"Delay between timeouts"`
-		Args    struct {
-			URL cli.URL `positional-arg-name:"URL" required:"yes" description:"URL of remote server to connect to, e.g. 10.23.0.5:7777"`
-		} `positional-args:"true" required:"yes"`
-	} `command:"follow" description:"Connects to a remote Please instance to stream build events from."`
 
 	Help struct {
 		Args struct {
@@ -519,11 +509,6 @@ var buildFunctions = map[string]func() int{
 			export.ToDir(state, opts.Export.Output, state.ExpandOriginalTargets())
 		}
 		return toExitCode(success, state)
-	},
-	"follow": func() int {
-		// This is only temporary, ConnectClient will alter it to match the server.
-		state := core.NewBuildState(config)
-		return toExitCode(follow.ConnectClient(state, opts.Follow.Args.URL.String(), opts.Follow.Retries, time.Duration(opts.Follow.Delay)), nil)
 	},
 	"outputs": func() int {
 		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false, true)
