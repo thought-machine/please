@@ -1,14 +1,10 @@
-// +build !bootstrap
-
-package follow
+package core
 
 import (
 	"time"
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
-
-	"github.com/thought-machine/please/src/core"
 )
 
 // resourceUpdateFrequency is the frequency that we re-check CPU usage etc at.
@@ -16,9 +12,9 @@ import (
 // we don't want to spend all our time looking at it anyway.
 var resourceUpdateFrequency = 500 * time.Millisecond
 
-// UpdateResources continuously updates the resources that we store on the BuildState object.
+// UpdateResources continuously updates the resources on this state object.
 // It should probably be run in a goroutine since it never returns.
-func UpdateResources(state *core.BuildState) {
+func (state *BuildState) UpdateResources() {
 	lastTime := time.Now()
 	// Assume this doesn't change through the process lifetime.
 	count, _ := cpu.Counts(true)
