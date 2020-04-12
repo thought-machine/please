@@ -1,6 +1,9 @@
 go_library(
     name = "help",
-    srcs = glob(["*.go"], exclude=["*_test.go"]),
+    srcs = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
     visibility = ["PUBLIC"],
     deps = [
         "//rules",
