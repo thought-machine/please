@@ -1,2 +1,2 @@
 [cache]
-rpcmaxmsgsize = 500mabob
+dircachehighwatermark = 500mabob
