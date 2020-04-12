@@ -100,10 +100,6 @@ type BuildState struct {
 	pendingTasks *queue.PriorityQueue
 	// Stream of results from the build
 	results chan *BuildResult
-	// Stream of results pushed to remote clients.
-	remoteResults chan *BuildResult
-	// Last results for each thread. These are used to catch up remote clients quickly.
-	lastResults []*BuildResult
 	// Timestamp that the build is considered to start at.
 	StartTime time.Time
 	// Various system statistics. Mostly used during remote communication.
@@ -343,9 +339,6 @@ func (state *BuildState) CloseResults() {
 	if state.results != nil {
 		close(state.results)
 	}
-	if state.remoteResults != nil {
-		close(state.remoteResults)
-	}
 }
 
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
@@ -494,10 +487,6 @@ func (state *BuildState) LogResult(result *BuildResult) {
 	if state.results != nil {
 		state.results <- result
 	}
-	if state.remoteResults != nil {
-		state.remoteResults <- result
-		state.lastResults[result.ThreadID] = result
-	}
 	if result.Status.IsFailure() {
 		state.Success = false
 		if result.Status == TargetBuildFailed {
@@ -514,15 +503,6 @@ func (state *BuildState) Results() <-chan *BuildResult {
 		state.results = make(chan *BuildResult, 1000)
 	}
 	return state.results
-}
-
-// RemoteResults returns a channel for distributing remote results too, as well as
-// the last set of results per thread.
-func (state *BuildState) RemoteResults() (<-chan *BuildResult, []*BuildResult) {
-	if state.remoteResults == nil {
-		state.remoteResults = make(chan *BuildResult, 1000)
-	}
-	return state.remoteResults, state.lastResults
 }
 
 // NumActive returns the number of currently active tasks (i.e. those that are
@@ -831,7 +811,6 @@ func NewBuildState(config *Configuration) *BuildState {
 	state := &BuildState{
 		Graph:        NewGraph(),
 		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
-		lastResults:  make([]*BuildResult, config.Please.NumThreads),
 		hashers: map[string]*fs.PathHasher{
 			// For compatibility reasons the sha1 hasher has no suffix.
 			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, ""),
