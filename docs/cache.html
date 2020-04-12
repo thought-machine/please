@@ -36,27 +36,3 @@
 
     <p>Thanks to Diana Costea who implemented the original version of this as part of her internship
       with us, and prodded us into getting on and actually deploying it for our CI servers.</p>
-
-    <h2>The RPC cache</h2>
-
-    <p>This cache uses gRPC for communication. It is conceptually similar to the HTTP cache but
-      uses a different protocol that is bespoke to Please.</p>
-
-    <p>It is nearing the end of its lifespan, the client remains in Please at present but we
-      are no longer releasing new versions of the server (the last please-servers release is
-      <a href="https://github.com/thought-machine/please/releases/tag/v13.8.2">v13.8.2</a>).<br/>
-      Any users should migrate to either the HTTP or remote execution caches.</p>
-
-    <h2>The Remote Execution cache</h2>
-
-    <p class="experimental">This feature is still experimental; some aspects may not work fully
-      or at all as yet. Proceed with caution!</p>
-
-    <p>This cache is based on Google's <a href="https://github.com/bazelbuild/remote-apis">remote execution API</a>.
-      It functions similarly to the HTTP cache but will become more useful as we introduce further
-      remote execution capabilities into Please.</p>
-
-    <p>It is configured by setting the <code>url</code> property in the
-      <a href="config.html#remote">remote section of the config</a>. There are some more settings,
-      of which <code>instance</code> is the most relevant here - that must be set in agreement
-      with the server.</p>
