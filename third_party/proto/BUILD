@@ -1,5 +1,5 @@
 protoc_binary(
     name = "protoc",
-    version = "3.6.1",
-    visibility = ["PUBLIC"],
+    version = "3.11.4",
+    visibility = ["//test/..."],  # Not a requirement for building plz itself
 )
