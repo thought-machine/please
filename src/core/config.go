@@ -112,10 +112,6 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		defaultPathIfExists(&config.Java.JlinkTool, config.Java.JavaHome, "bin/jlink")
 	}
 
-	if (config.Cache.RPCPrivateKey == "") != (config.Cache.RPCPublicKey == "") {
-		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
-	}
-
 	if config.Colours == nil {
 		config.Colours = map[string]string{
 			"py":   "${GREEN}",
@@ -254,7 +250,6 @@ func DefaultConfiguration() *Configuration {
 	config.BuildEnv = map[string]string{}
 	config.Cache.HTTPWriteable = true
 	config.Cache.HTTPTimeout = cli.Duration(25 * time.Second)
-	config.Cache.RPCTimeout = cli.Duration(25 * time.Second)
 	if dir, err := os.UserCacheDir(); err == nil {
 		config.Cache.Dir = path.Join(dir, "please")
 	}
@@ -262,7 +257,6 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.DirCacheLowWaterMark = 8 * cli.GiByte
 	config.Cache.DirClean = true
 	config.Cache.Workers = runtime.NumCPU() + 2 // Mirrors the number of workers in please.go.
-	config.Cache.RPCMaxMsgSize.UnmarshalFlag("200MiB")
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Display.SystemStats = true
 	config.Display.MaxWorkers = 40
@@ -389,14 +383,6 @@ type Configuration struct {
 		HTTPURL               cli.URL      `help:"Base URL of the HTTP cache.\nNot set to anything by default which means the cache will be disabled."`
 		HTTPWriteable         bool         `help:"If True this plz instance will write content back to the HTTP cache.\nBy default it runs in read-only mode."`
 		HTTPTimeout           cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`
-		RPCURL                cli.URL      `help:"Base URL of the RPC cache.\nNot set to anything by default which means the cache will be disabled."`
-		RPCWriteable          bool         `help:"If True this plz instance will write content back to the RPC cache.\nBy default it runs in read-only mode."`
-		RPCTimeout            cli.Duration `help:"Timeout for operations contacting the RPC cache, in seconds."`
-		RPCPublicKey          string       `help:"File containing a PEM-encoded private key which is used to authenticate to the RPC cache." example:"my_key.pem"`
-		RPCPrivateKey         string       `help:"File containing a PEM-encoded certificate which is used to authenticate to the RPC cache." example:"my_cert.pem"`
-		RPCCACert             string       `help:"File containing a PEM-encoded certificate which is used to validate the RPC cache's certificate." example:"ca.pem"`
-		RPCSecure             bool         `help:"Forces SSL on for the RPC cache. It will be activated if any of rpcpublickey, rpcprivatekey or rpccacert are set, but this can be used if none of those are needed and SSL is still in use."`
-		RPCMaxMsgSize         cli.ByteSize `help:"Maximum size of a single message that we'll send to the RPC server.\nThis should agree with the server's limit, if it's higher the artifacts will be rejected.\nThe value is given as a byte size so can be suffixed with M, GB, KiB, etc."`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
 		Timeout         cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
