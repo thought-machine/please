@@ -1,5 +1,3 @@
-// +build !bootstrap
-
 package update
 
 import (
@@ -22,7 +20,7 @@ const identity = "Please Releases <releases@please.build>"
 // verifySignature verifies an OpenPGP detached signature of a file.
 // It returns true if the signature is correct according to our key.
 func verifySignature(signed, signature io.Reader) bool {
-	entities, err := openpgp.ReadArmoredKeyRing(bytes.NewReader(MustAsset("pubkey.gpg.asc")))
+	entities, err := openpgp.ReadArmoredKeyRing(strings.NewReader(pubkey))
 	if err != nil {
 		log.Fatalf("%s", err) // Shouldn't happen
 	}

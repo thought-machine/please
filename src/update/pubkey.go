@@ -1,3 +1,7 @@
+package update
+
+// pubkey is the public key we verify Please releases with.
+const pubkey = `
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1
 
@@ -1371,3 +1375,4 @@ uNxTgSvMxQsHlb3pcogZz+55KdvKmiR/7WIZYruE3azmUmm4w+HGWXOCufbyID95
 fW5YgZzvJHjbMkW/gh+zWrAb8LUnqlnV
 =11fD
 -----END PGP PUBLIC KEY BLOCK-----
+`

@@ -1,5 +1,3 @@
-// +build !bootstrap
-
 // Package update contains code for Please auto-updating itself.
 // At startup, Please can check a version set in the config file. If that doesn't
 // match the version of the current binary, it will download the appropriate

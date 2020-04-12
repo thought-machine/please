@@ -1,5 +1,3 @@
-// +build !bootstrap
-
 package update
 
 import (
