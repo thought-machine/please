@@ -1,5 +1,3 @@
-// +build !bootstrap
-
 package help
 
 import (

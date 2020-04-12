@@ -1,10 +1,7 @@
-// +build !bootstrap
-
 // Package help prints help messages about parts of plz.
 package help
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -54,9 +51,12 @@ func help(topic string) string {
 	if topic == "topics" {
 		return fmt.Sprintf(topicsHelpMessage, strings.Join(allTopics(""), "\n"))
 	}
-	for _, filename := range AssetNames() {
-		if message, found := findHelpFromFile(topic, filename); found {
-			return message
+	for _, section := range []helpSection{allConfigHelp(), miscTopics} {
+		if message, found := section.Topics[topic]; found {
+			if section.Preamble == "" {
+				return message
+			}
+			return fmt.Sprintf(section.Preamble+"\n\n", topic) + message
 		}
 	}
 	// Check built-in build rules.
@@ -83,27 +83,6 @@ func helpFromBuildRule(f *asp.FuncDef) string {
 	return s
 }
 
-func findHelpFromFile(topic, filename string) (string, bool) {
-	preamble, topics := loadData(filename)
-	message, found := topics[topic]
-	if !found {
-		return "", false
-	}
-	if preamble == "" {
-		return message, true
-	}
-	return fmt.Sprintf(preamble+"\n\n", topic) + message, true
-}
-
-func loadData(filename string) (string, map[string]string) {
-	data := MustAsset(filename)
-	f := helpFile{}
-	if err := json.Unmarshal(data, &f); err != nil {
-		log.Fatalf("Failed to load help data: %s\n", err)
-	}
-	return f.Preamble, f.Topics
-}
-
 // suggest looks through all known help topics and tries to make a suggestion about what the user might have meant.
 func suggest(topic string) string {
 	return utils.PrettyPrintSuggestion(topic, allTopics(""), maxSuggestionDistance)
@@ -112,9 +91,8 @@ func suggest(topic string) string {
 // allTopics returns all the possible topics to get help on.
 func allTopics(prefix string) []string {
 	topics := []string{}
-	for _, filename := range AssetNames() {
-		_, data := loadData(filename)
-		for t := range data {
+	for _, section := range []helpSection{allConfigHelp(), miscTopics} {
+		for t := range section.Topics {
 			if strings.HasPrefix(t, prefix) {
 				topics = append(topics, t)
 			}
@@ -129,10 +107,9 @@ func allTopics(prefix string) []string {
 	return topics
 }
 
-// helpFile is a struct we use for unmarshalling.
-type helpFile struct {
-	Preamble string            `json:"preamble"`
-	Topics   map[string]string `json:"topics"`
+type helpSection struct {
+	Preamble string
+	Topics   map[string]string
 }
 
 // printMessage prints a message, with some string replacements for ANSI codes.
