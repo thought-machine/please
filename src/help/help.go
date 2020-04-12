@@ -53,6 +53,7 @@ func help(topic string) string {
 	}
 	for _, section := range []helpSection{allConfigHelp(), miscTopics} {
 		if message, found := section.Topics[topic]; found {
+			message = strings.TrimSpace(message)
 			if section.Preamble == "" {
 				return message
 			}

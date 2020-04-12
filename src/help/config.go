@@ -77,12 +77,13 @@ func allConfigHelp() helpSection {
 					name := strings.ToLower(subt.Name)
 					example := subt.Tag.Get("example")
 					preamble := fmt.Sprintf("${BOLD_YELLOW}[%s]${RESET}\n${YELLOW}%s${RESET} = ${GREEN}%s${RESET}\n\n", sectname, name, ExampleValue(subf, name, subt.Type, example, subt.Tag.Get("options")))
-					help = strings.Replace(help, "\\n", "\n", -1) + "\n"
+					help = preamble + strings.Replace(help, "\\n", "\n", -1) + "\n"
 					if v := subt.Tag.Get("var"); v != "" {
 						help += fmt.Sprintf("\nThis variable is exposed to BUILD rules via the variable ${BOLD_CYAN}CONFIG.%s${RESET},\n"+
 							"and can be overridden package-locally via ${GREEN}package${RESET}(${YELLOW}%s${RESET}='${GREY}<value>${RESET}').\n", v, strings.ToLower(v))
 					}
-					sect.Topics[name] = preamble + help
+					sect.Topics[name] = help
+					sect.Topics[sectname + "." + name] = help
 					subfields = append(subfields, "  "+name)
 				} else if f.CanSet() {
 					log.Fatalf("Missing help struct tag on %s.%s", t.Field(i).Name, subt.Name)

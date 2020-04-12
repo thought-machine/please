@@ -358,7 +358,7 @@ type Configuration struct {
 		PassEnv           []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
 		HTTPProxy         cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
 		HashFunction      string       `help:"The hash function to use internally for build actions." options:"sha1,sha256"`
-	}
+	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
 	Cache       struct {
@@ -377,7 +377,7 @@ type Configuration struct {
 		Sandbox         bool         `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
 		DisableCoverage []string     `help:"Disables coverage for tests that have any of these labels spcified."`
 		Upload          cli.URL      `help:"URL to upload test results to (in XML format)"`
-	}
+	} `help:"A config section describing settings related to testing in general."`
 	Remote struct {
 		URL           string       `help:"URL for the remote server."`
 		CASURL        string       `help:"URL for the CAS service, if it is different to the main one."`
