@@ -83,7 +83,7 @@ func allConfigHelp() helpSection {
 							"and can be overridden package-locally via ${GREEN}package${RESET}(${YELLOW}%s${RESET}='${GREY}<value>${RESET}').\n", v, strings.ToLower(v))
 					}
 					sect.Topics[name] = help
-					sect.Topics[sectname + "." + name] = help
+					sect.Topics[sectname+"."+name] = help
 					subfields = append(subfields, "  "+name)
 				} else if f.CanSet() {
 					log.Fatalf("Missing help struct tag on %s.%s", t.Field(i).Name, subt.Name)

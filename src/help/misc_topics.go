@@ -31,7 +31,7 @@ Or see the website (${BLUE}https://please.build${RESET}) for more information.
 var miscTopics = helpSection{
 	Topics: map[string]string{
 		"plzconfig": plzconfig,
-		"tracing": tracing,
-		"": toplevel,
+		"tracing":   tracing,
+		"":          toplevel,
 	},
 }
