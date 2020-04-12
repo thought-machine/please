@@ -1,5 +1,3 @@
-// +build !bootstrap
-
 package hashes
 
 import (
