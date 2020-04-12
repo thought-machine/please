@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
+	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
 	"gopkg.in/op/go-logging.v1"
 
@@ -104,6 +105,8 @@ func (c *Client) CheckInitialised() error {
 
 // init is passed to the sync.Once to do the actual initialisation.
 func (c *Client) init() {
+	// Change grpc to log using our implementation
+	grpclog.SetLoggerV2(&grpcLogMabob{})
 	var g errgroup.Group
 	g.Go(c.initExec)
 	if c.state.Config.Remote.AssetURL != "" {
@@ -722,3 +725,20 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 	}
 	return &core.BuildMetadata{}, ar, nil
 }
+
+// A grpcLogMabob is an implementation of grpc's logging interface using our backend.
+type grpcLogMabob struct{}
+
+func (g *grpcLogMabob) Info(args ...interface{})                    { log.Info("%s", args) }
+func (g *grpcLogMabob) Infof(format string, args ...interface{})    { log.Info(format, args...) }
+func (g *grpcLogMabob) Infoln(args ...interface{})                  { log.Info("%s", args) }
+func (g *grpcLogMabob) Warning(args ...interface{})                 { log.Warning("%s", args) }
+func (g *grpcLogMabob) Warningf(format string, args ...interface{}) { log.Warning(format, args...) }
+func (g *grpcLogMabob) Warningln(args ...interface{})               { log.Warning("%s", args) }
+func (g *grpcLogMabob) Error(args ...interface{})                   { log.Error("", args...) }
+func (g *grpcLogMabob) Errorf(format string, args ...interface{})   { log.Errorf(format, args...) }
+func (g *grpcLogMabob) Errorln(args ...interface{})                 { log.Error("", args...) }
+func (g *grpcLogMabob) Fatal(args ...interface{})                   { log.Fatal(args...) }
+func (g *grpcLogMabob) Fatalf(format string, args ...interface{})   { log.Fatalf(format, args...) }
+func (g *grpcLogMabob) Fatalln(args ...interface{})                 { log.Fatal(args...) }
+func (g *grpcLogMabob) V(l int) bool                                { return log.IsEnabledFor(logging.Level(l)) }
