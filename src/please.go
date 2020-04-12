@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/op/go-logging.v1"
