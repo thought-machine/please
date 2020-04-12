@@ -26,13 +26,6 @@ go_test(
     ],
 )
 
-genrule(
-    name = "config_json",
-    outs = ["config.json"],
-    cmd = '"$TOOL" > "$OUTS"',
-    tools = ["//src/help/config:config_help"],
-)
-
 go_test(
     name = "rules_test",
     srcs = ["rules_test.go"],
