@@ -350,9 +350,6 @@ type Configuration struct {
 		MaxWorkers  int  `help:"Maximum number of worker rows to display at any one time."`
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
 	Colours map[string]string `help:"Colour code overrides in interactive output. These correspond to requirements on each target."`
-	Events  struct {
-		Port int `help:"Port to start the streaming build event server on."`
-	} `help:"The [events] section in the config contains settings relating to the internal build event system & streaming them externally."`
 	Build struct {
 		Arch              cli.Arch     `help:"Architecture to compile for. Defaults to the host architecture."`
 		Timeout           cli.Duration `help:"Default timeout for build actions. Default is ten minutes."`

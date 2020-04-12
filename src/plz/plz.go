@@ -29,13 +29,8 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	if state.Config.Remote.URL != "" {
 		state.RemoteClient = remote.New(state)
 	}
-
-	if config.Events.Port != 0 && state.NeedBuild {
-		shutdown := follow.InitialiseServer(state, config.Events.Port)
-		defer shutdown()
-	}
-	if config.Events.Port != 0 || config.Display.SystemStats {
-		go follow.UpdateResources(state)
+	if config.Display.SystemStats {
+		go state.UpdateResources()
 	}
 
 	// Start looking for the initial targets to kick the build off
