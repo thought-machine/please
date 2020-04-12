@@ -9,7 +9,6 @@ import (
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/follow"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/remote"
