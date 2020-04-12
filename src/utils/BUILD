@@ -3,8 +3,7 @@ go_library(
     srcs = glob(
         ["*.go"],
         exclude = [
-            "wrapper_script.go",
-            "stub.go",
+            "*_bindata.go",
             "*_test.go",
         ],
     ) + [":bindata"],
