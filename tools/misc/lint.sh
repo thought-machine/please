@@ -9,6 +9,9 @@ for TARGET in `$plz query alltargets --include go_src --hidden | grep -v "_test#
     SRCS=`$plz query print $TARGET -f srcs | grep -v // | while read SRC; do echo $DIR/$SRC; done`
     FILTERED=`plz-out/bin/tools/please_go_filter/please_go_filter -tags bootstrap $SRCS`
     if [ "$FILTERED" != "" ]; then
+        if [ "$TARGET" == "//src/utils:_utils#srcs" ]; then
+            FILTERED="$FILTERED src/utils/scripts_bindata.go"
+        fi
         go vet -tags bootstrap $FILTERED || {
             echo Failed: go vet -tags bootstrap $FILTERED
             exit 1
