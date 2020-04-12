@@ -1,11 +1,6 @@
 go_library(
     name = "update",
-    srcs = [
-        "clean.go",
-        "update.go",
-        "verify.go",
-        ":pubkey",
-    ],
+    srcs = glob(["*.go"], exclude=["*_test.go"]),
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
@@ -16,11 +11,6 @@ go_library(
         "//third_party/go:semver",
         "//third_party/go:xz",
     ],
-)
-
-go_bindata(
-    name = "pubkey",
-    srcs = ["pubkey.gpg.asc"],
 )
 
 go_test(
