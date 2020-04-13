@@ -8,7 +8,7 @@ import (
 
 func TestAddTarget(t *testing.T) {
 	graph := NewGraph()
-	target := makeTarget("//src/core:target1")
+	target := makeTarget3("//src/core:target1")
 	graph.AddTarget(target)
 	assert.Equal(t, target, graph.TargetOrDie(target.Label))
 }
@@ -29,9 +29,9 @@ func TestTarget(t *testing.T) {
 
 func TestRevDeps(t *testing.T) {
 	graph := NewGraph()
-	target1 := makeTarget("//src/core:target1")
-	target2 := makeTarget("//src/core:target2", target1)
-	target3 := makeTarget("//src/core:target3", target2)
+	target1 := makeTarget3("//src/core:target1")
+	target2 := makeTarget3("//src/core:target2", target1)
+	target3 := makeTarget3("//src/core:target3", target2)
 	graph.AddTarget(target1)
 	graph.AddTarget(target2)
 	graph.AddTarget(target3)
@@ -42,8 +42,8 @@ func TestRevDeps(t *testing.T) {
 
 func TestAllDepsBuilt(t *testing.T) {
 	graph := NewGraph()
-	target1 := makeTarget("//src/core:target1")
-	target2 := makeTarget("//src/core:target2", target1)
+	target1 := makeTarget3("//src/core:target1")
+	target2 := makeTarget3("//src/core:target2", target1)
 	graph.AddTarget(target1)
 	graph.AddTarget(target2)
 	graph.AddDependency(target2.Label, target1.Label)
@@ -57,8 +57,8 @@ func TestAllDepsBuilt(t *testing.T) {
 
 func TestAllDepsResolved(t *testing.T) {
 	graph := NewGraph()
-	target1 := makeTarget("//src/core:target1")
-	target2 := makeTarget("//src/core:target2")
+	target1 := makeTarget3("//src/core:target1")
+	target2 := makeTarget3("//src/core:target2")
 	target2.AddDependency(target1.Label)
 	graph.AddTarget(target2)
 	assert.False(t, graph.AllDependenciesResolved(target2), "Haven't added a proper dep for target2 yet.")
@@ -69,9 +69,9 @@ func TestAllDepsResolved(t *testing.T) {
 
 func TestDependentTargets(t *testing.T) {
 	graph := NewGraph()
-	target1 := makeTarget("//src/core:target1")
-	target2 := makeTarget("//src/core:target2")
-	target3 := makeTarget("//src/core:target3")
+	target1 := makeTarget3("//src/core:target1")
+	target2 := makeTarget3("//src/core:target2")
+	target3 := makeTarget3("//src/core:target3")
 	target2.AddDependency(target1.Label)
 	target1.AddDependency(target3.Label)
 	target1.AddProvide("go", ParseBuildLabel(":target3", "src/core"))
@@ -90,8 +90,8 @@ func TestSubrepo(t *testing.T) {
 	assert.Equal(t, "plz-out/gen/test", subrepo.Root)
 }
 
-// makeTarget creates a new build target for us.
-func makeTarget(label string, deps ...*BuildTarget) *BuildTarget {
+// makeTarget3 creates a new build target for us.
+func makeTarget3(label string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	for _, dep := range deps {
 		target.AddDependency(dep.Label)

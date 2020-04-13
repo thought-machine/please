@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestString(t *testing.T) {
+func TestLabelString(t *testing.T) {
 	assert.Equal(t, "//src/core:core", BuildLabel{PackageName: "src/core", Name: "core"}.String())
 	assert.Equal(t, "///please//src/core:core", BuildLabel{Subrepo: "please", PackageName: "src/core", Name: "core"}.String())
 	assert.Equal(t, "//src/core/...", BuildLabel{PackageName: "src/core", Name: "..."}.String())
@@ -49,7 +49,7 @@ func TestIncludesSubpackages(t *testing.T) {
 	assert.True(t, label1.Includes(label2))
 }
 
-func TestParent(t *testing.T) {
+func TestLabelParent(t *testing.T) {
 	label := BuildLabel{PackageName: "src/core", Name: "core"}
 	assert.Equal(t, label, label.Parent())
 	label2 := BuildLabel{PackageName: "src/core", Name: "_core#src"}

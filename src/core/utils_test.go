@@ -153,7 +153,7 @@ func TestAsyncDeleteDir(t *testing.T) {
 func buildGraph() *BuildGraph {
 	graph := NewGraph()
 	mt := func(label string, deps ...string) *BuildTarget {
-		target := makeTarget(graph, label, deps...)
+		target := makeTarget4(graph, label, deps...)
 		graph.AddTarget(target)
 		return target
 	}
@@ -171,8 +171,8 @@ func buildGraph() *BuildGraph {
 	return graph
 }
 
-// makeTarget creates a new build target for us.
-func makeTarget(graph *BuildGraph, label string, deps ...string) *BuildTarget {
+// makeTarget4 creates a new build target for us.
+func makeTarget4(graph *BuildGraph, label string, deps ...string) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	for _, dep := range deps {
 		t := graph.TargetOrDie(ParseBuildLabel(dep, ""))

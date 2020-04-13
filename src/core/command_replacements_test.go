@@ -24,63 +24,63 @@ func init() {
 }
 
 func TestLocation(t *testing.T) {
-	target2 := makeTarget("//path/to:target2", "", nil)
-	target1 := makeTarget("//path/to:target1", "ln -s $(location //path/to:target2) ${OUT}", target2)
+	target2 := makeTarget2("//path/to:target2", "", nil)
+	target1 := makeTarget2("//path/to:target1", "ln -s $(location //path/to:target2) ${OUT}", target2)
 
 	expected := "ln -s path/to/target2.py ${OUT}"
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestLocations(t *testing.T) {
-	target2 := makeTarget("//path/to:target2", "", nil)
+	target2 := makeTarget2("//path/to:target2", "", nil)
 	target2.AddOutput("target2_other.py")
-	target1 := makeTarget("//path/to:target1", "cat $(locations //path/to:target2) > ${OUT}", target2)
+	target1 := makeTarget2("//path/to:target1", "cat $(locations //path/to:target2) > ${OUT}", target2)
 
 	expected := "cat path/to/target2.py path/to/target2_other.py > ${OUT}"
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestExe(t *testing.T) {
-	target2 := makeTarget("//path/to:target2", "", nil)
+	target2 := makeTarget2("//path/to:target2", "", nil)
 	target2.IsBinary = true
-	target1 := makeTarget("//path/to:target1", "$(exe //path/to:target2) -o ${OUT}", target2)
+	target1 := makeTarget2("//path/to:target1", "$(exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "path/to/target2.py -o ${OUT}"
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestOutExe(t *testing.T) {
-	target2 := makeTarget("//path/to:target2", "", nil)
+	target2 := makeTarget2("//path/to:target2", "", nil)
 	target2.IsBinary = true
-	target1 := makeTarget("//path/to:target1", "$(out_exe //path/to:target2) -o ${OUT}", target2)
+	target1 := makeTarget2("//path/to:target1", "$(out_exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "plz-out/bin/path/to/target2.py -o ${OUT}"
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestJavaExe(t *testing.T) {
-	target2 := makeTarget("//path/to:target2", "", nil)
+	target2 := makeTarget2("//path/to:target2", "", nil)
 	target2.IsBinary = true
 	target2.AddLabel("java_non_exe") // This label tells us to prefix it with java -jar.
-	target1 := makeTarget("//path/to:target1", "$(exe //path/to:target2) -o ${OUT}", target2)
+	target1 := makeTarget2("//path/to:target1", "$(exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "java -jar path/to/target2.py -o ${OUT}"
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestJavaOutExe(t *testing.T) {
-	target2 := makeTarget("//path/to:target2", "", nil)
+	target2 := makeTarget2("//path/to:target2", "", nil)
 	target2.IsBinary = true
 	target2.AddLabel("java_non_exe") // This label tells us to prefix it with java -jar.
-	target1 := makeTarget("//path/to:target1", "$(out_exe //path/to:target2) -o ${OUT}", target2)
+	target1 := makeTarget2("//path/to:target1", "$(out_exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "java -jar plz-out/bin/path/to/target2.py -o ${OUT}"
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
 func TestReplacementsForTest(t *testing.T) {
-	target2 := makeTarget("//path/to:target2", "", nil)
-	target1 := makeTarget("//path/to:target1", "$(exe //path/to:target1) $(location //path/to:target2)", target2)
+	target2 := makeTarget2("//path/to:target2", "", nil)
+	target1 := makeTarget2("//path/to:target1", "$(exe //path/to:target1) $(location //path/to:target2)", target2)
 	target1.IsBinary = true
 	target1.IsTest = true
 
@@ -90,7 +90,7 @@ func TestReplacementsForTest(t *testing.T) {
 }
 
 func TestDataReplacementForTest(t *testing.T) {
-	target := makeTarget("//path/to:target1", "cat $(location test_data.txt)", nil)
+	target := makeTarget2("//path/to:target1", "cat $(location test_data.txt)", nil)
 	target.AddDatum(FileLabel{File: "test_data.txt", Package: "path/to"})
 
 	expected := "cat path/to/test_data.txt"
@@ -99,15 +99,15 @@ func TestDataReplacementForTest(t *testing.T) {
 }
 
 func TestAmpersandReplacement(t *testing.T) {
-	target := makeTarget("//path/to:target1", "cat $(location b&b.txt)", nil)
+	target := makeTarget2("//path/to:target1", "cat $(location b&b.txt)", nil)
 	expected := "cat \"path/to/b&b.txt\""
 	cmd, _ := ReplaceSequences(state, target, target.Command)
 	assert.Equal(t, expected, cmd)
 }
 
 func TestToolReplacement(t *testing.T) {
-	target2 := makeTarget("//path/to:target2", "blah", nil)
-	target1 := makeTarget("//path/to:target1", "$(location //path/to:target2)", target2)
+	target2 := makeTarget2("//path/to:target2", "blah", nil)
+	target1 := makeTarget2("//path/to:target1", "$(location //path/to:target2)", target2)
 	target1.Tools = append(target1.Tools, target2.Label)
 
 	wd, _ := os.Getwd()
@@ -117,8 +117,8 @@ func TestToolReplacement(t *testing.T) {
 }
 
 func TestToolReplacementSubrepo(t *testing.T) {
-	target2 := makeTarget("///subrepo//path/to:target2", "blah", nil)
-	target1 := makeTarget("///subrepo//path/to:target1", "$(location //path/to:target2)", target2)
+	target2 := makeTarget2("///subrepo//path/to:target2", "blah", nil)
+	target1 := makeTarget2("///subrepo//path/to:target1", "$(location //path/to:target2)", target2)
 	target1.Tools = append(target1.Tools, target2.Label)
 
 	wd, _ := os.Getwd()
@@ -128,9 +128,9 @@ func TestToolReplacementSubrepo(t *testing.T) {
 }
 
 func TestDirReplacement(t *testing.T) {
-	target2 := makeTarget("//path/to:target2", "blah", nil)
+	target2 := makeTarget2("//path/to:target2", "blah", nil)
 	target2.AddOutput("blah2.txt")
-	target1 := makeTarget("//path/to:target1", "$(dir //path/to:target2)", target2)
+	target1 := makeTarget2("//path/to:target1", "$(dir //path/to:target2)", target2)
 
 	expected := "path/to"
 	cmd, _ := ReplaceSequences(state, target1, target1.Command)
@@ -138,9 +138,9 @@ func TestDirReplacement(t *testing.T) {
 }
 
 func TestToolDirReplacement(t *testing.T) {
-	target2 := makeTarget("//path/to:target2", "blah", nil)
+	target2 := makeTarget2("//path/to:target2", "blah", nil)
 	target2.AddOutput("blah2.txt")
-	target1 := makeTarget("//path/to:target1", "$(dir //path/to:target2)", target2)
+	target1 := makeTarget2("//path/to:target1", "$(dir //path/to:target2)", target2)
 	target1.Tools = append(target1.Tools, target2.Label)
 
 	wd, _ := os.Getwd()
@@ -151,7 +151,7 @@ func TestToolDirReplacement(t *testing.T) {
 
 func TestBazelCompatReplacements(t *testing.T) {
 	// Check that we don't do any of these things normally.
-	target := makeTarget("//path/to:target", "cp $< $@", nil)
+	target := makeTarget2("//path/to:target", "cp $< $@", nil)
 	assert.Equal(t, "cp $< $@", replaceSequences(state, target))
 	// In Bazel compat mode we do though.
 	state := NewDefaultBuildState()
@@ -172,15 +172,15 @@ func TestHashReplacement(t *testing.T) {
 	err = ioutil.WriteFile("plz-out/gen/path/to/target2.py", []byte(`"""Test file for command_replacements_test"""`), 0644)
 	assert.NoError(t, err)
 
-	target2 := makeTarget("//path/to:target2", "cp $< $@", nil)
-	target := makeTarget("//path/to:target", "echo $(hash //path/to:target2)", target2)
+	target2 := makeTarget2("//path/to:target2", "cp $< $@", nil)
+	target := makeTarget2("//path/to:target", "echo $(hash //path/to:target2)", target2)
 	assert.Equal(t, "echo "+testHash, replaceSequences(state, target))
 }
 
 func TestWorkerReplacement(t *testing.T) {
-	tool := makeTarget("//path/to:target2", "", nil)
+	tool := makeTarget2("//path/to:target2", "", nil)
 	tool.IsBinary = true
-	target := makeTarget("//path/to:target", "$(worker //path/to:target2) --some_arg", tool)
+	target := makeTarget2("//path/to:target", "$(worker //path/to:target2) --some_arg", tool)
 	target.Tools = append(target.Tools, tool.Label)
 	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
 	assert.NoError(t, err)
@@ -190,7 +190,7 @@ func TestWorkerReplacement(t *testing.T) {
 }
 
 func TestSystemWorkerReplacement(t *testing.T) {
-	target := makeTarget("//path/to:target", "$(worker /usr/bin/javac) --some_arg", nil)
+	target := makeTarget2("//path/to:target", "$(worker /usr/bin/javac) --some_arg", nil)
 	target.Tools = append(target.Tools, SystemFileLabel{Path: "/usr/bin/javac"})
 	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
 	assert.NoError(t, err)
@@ -200,9 +200,9 @@ func TestSystemWorkerReplacement(t *testing.T) {
 }
 
 func TestLocalCommandWorker(t *testing.T) {
-	tool := makeTarget("//path/to:target2", "", nil)
+	tool := makeTarget2("//path/to:target2", "", nil)
 	tool.IsBinary = true
-	target := makeTarget("//path/to:target", "$(worker //path/to:target2) --some_arg && find . | xargs rm && echo hello", tool)
+	target := makeTarget2("//path/to:target", "$(worker //path/to:target2) --some_arg && find . | xargs rm && echo hello", tool)
 	target.Tools = append(target.Tools, tool.Label)
 	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
 	assert.NoError(t, err)
@@ -212,15 +212,15 @@ func TestLocalCommandWorker(t *testing.T) {
 }
 
 func TestWorkerCommandAndArgsMustComeFirst(t *testing.T) {
-	tool := makeTarget("//path/to:target2", "", nil)
+	tool := makeTarget2("//path/to:target2", "", nil)
 	tool.IsBinary = true
-	target := makeTarget("//path/to:target", "something something $(worker javac)", tool)
+	target := makeTarget2("//path/to:target", "something something $(worker javac)", tool)
 	target.Tools = append(target.Tools, tool.Label)
 	assert.Panics(t, func() { WorkerCommandAndArgs(state, target) })
 }
 
 func TestWorkerReplacementWithNoWorker(t *testing.T) {
-	target := makeTarget("//path/to:target", "echo hello", nil)
+	target := makeTarget2("//path/to:target", "echo hello", nil)
 	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, "", worker)
@@ -229,7 +229,7 @@ func TestWorkerReplacementWithNoWorker(t *testing.T) {
 }
 
 func TestWorkerReplacementNotTarget(t *testing.T) {
-	target := makeTarget("//path/to:target", "$(worker javac_worker) --some_arg && find . | xargs rm && echo hello", nil)
+	target := makeTarget2("//path/to:target", "$(worker javac_worker) --some_arg && find . | xargs rm && echo hello", nil)
 	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
 	assert.NoError(t, err)
 	assert.Equal(t, "javac_worker", worker)
@@ -238,14 +238,14 @@ func TestWorkerReplacementNotTarget(t *testing.T) {
 }
 
 func TestCrossCompileReplacement(t *testing.T) {
-	target2 := makeTarget("///linux_x86//path/to:target2", "", nil)
-	target1 := makeTarget("///linux_x86//path/to:target1", "ln -s $(location //path/to:target2) ${OUT}", target2)
+	target2 := makeTarget2("///linux_x86//path/to:target2", "", nil)
+	target1 := makeTarget2("///linux_x86//path/to:target1", "ln -s $(location //path/to:target2) ${OUT}", target2)
 
 	expected := "ln -s path/to/target2.py ${OUT}"
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
-func makeTarget(name string, command string, dep *BuildTarget) *BuildTarget {
+func makeTarget2(name string, command string, dep *BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Command = command
 	target.AddOutput(target.Label.Name + ".py")

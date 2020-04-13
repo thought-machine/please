@@ -10,45 +10,45 @@ import (
 )
 
 func TestTmpDir(t *testing.T) {
-	target := makeTarget("//mickey/donald:goofy", "")
+	target := makeTarget1("//mickey/donald:goofy", "")
 	assert.Equal(t, "plz-out/tmp/mickey/donald/goofy._build", target.TmpDir())
 }
 
 func TestOutDir(t *testing.T) {
-	target := makeTarget("//mickey/donald:goofy", "")
+	target := makeTarget1("//mickey/donald:goofy", "")
 	assert.Equal(t, "plz-out/gen/mickey/donald", target.OutDir())
 	target.IsBinary = true
 	assert.Equal(t, "plz-out/bin/mickey/donald", target.OutDir())
 }
 
 func TestTestDir(t *testing.T) {
-	target := makeTarget("//mickey/donald:goofy", "")
+	target := makeTarget1("//mickey/donald:goofy", "")
 	assert.Equal(t, "plz-out/tmp/mickey/donald/goofy._test", target.TestDir())
 }
 
 func TestTmpDirSubrepo(t *testing.T) {
-	target := makeTarget("@test_x86//mickey/donald:goofy", "")
+	target := makeTarget1("@test_x86//mickey/donald:goofy", "")
 	assert.Equal(t, "plz-out/tmp/test_x86/mickey/donald/goofy._build", target.TmpDir())
 }
 
 func TestOutDirSubrepo(t *testing.T) {
-	target := makeTarget("@test_x86//mickey/donald:goofy", "")
+	target := makeTarget1("@test_x86//mickey/donald:goofy", "")
 	assert.Equal(t, "plz-out/gen/test_x86/mickey/donald", target.OutDir())
 	target.IsBinary = true
 	assert.Equal(t, "plz-out/bin/test_x86/mickey/donald", target.OutDir())
 }
 
 func TestTestDirSubrepo(t *testing.T) {
-	target := makeTarget("@test_x86//mickey/donald:goofy", "")
+	target := makeTarget1("@test_x86//mickey/donald:goofy", "")
 	assert.Equal(t, "plz-out/tmp/test_x86/mickey/donald/goofy._test", target.TestDir())
 }
 
 func TestCanSee(t *testing.T) {
 	state := NewDefaultBuildState()
-	target1 := makeTarget("//src/build/python:lib1", "")
-	target2 := makeTarget("//src/build/python:lib2", "PUBLIC")
-	target3 := makeTarget("//src/test/python:lib3", "//src/test/...")
-	target4 := makeTarget("//src/test/python/moar:lib4", "")
+	target1 := makeTarget1("//src/build/python:lib1", "")
+	target2 := makeTarget1("//src/build/python:lib2", "PUBLIC")
+	target3 := makeTarget1("//src/test/python:lib3", "//src/test/...")
+	target4 := makeTarget1("//src/test/python/moar:lib4", "")
 
 	// target2 is public so anything can import it
 	assert.True(t, target3.CanSee(state, target2), "couldn't see public target")
@@ -69,8 +69,8 @@ func TestCanSee(t *testing.T) {
 	assert.True(t, target4.CanSee(state, target3), "couldn't see target within its visibility spec")
 
 	// Sub-targets can see things visible to their parents.
-	target5 := makeTarget("//src/build/python:lib5", "//src/test/python:test5")
-	target6 := makeTarget("//src/test/python:_test5#pex", "")
+	target5 := makeTarget1("//src/build/python:lib5", "//src/test/python:test5")
+	target6 := makeTarget1("//src/test/python:_test5#pex", "")
 	assert.True(t, target6.CanSee(state, target5))
 	assert.False(t, target5.CanSee(state, target6))
 }
@@ -80,8 +80,8 @@ func TestCanSeeExperimental(t *testing.T) {
 	config.Parse.ExperimentalDir = []string{"experimental"}
 	state := NewBuildState(config)
 
-	target1 := makeTarget("//src/core:target1", "")
-	target2 := makeTarget("//experimental/user:target2", "PUBLIC")
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//experimental/user:target2", "PUBLIC")
 
 	// target2 can see target1 since it's in experimental, which suppress normal visibility constraints.
 	assert.True(t, target2.CanSee(state, target1))
@@ -90,15 +90,15 @@ func TestCanSeeExperimental(t *testing.T) {
 }
 
 func TestCheckDependencyVisibility(t *testing.T) {
-	target1 := makeTarget("//src/build/python:lib1", "")
-	target2 := makeTarget("//src/build/python:lib2", "PUBLIC", target1)
-	target3 := makeTarget("//src/test/python:lib3", "//src/test/...", target2)
-	target4 := makeTarget("//src/test/python/moar:lib4", "//src/test/...", target3)
-	target5 := makeTarget("//third_party/python:mock", "PUBLIC")
+	target1 := makeTarget1("//src/build/python:lib1", "")
+	target2 := makeTarget1("//src/build/python:lib2", "PUBLIC", target1)
+	target3 := makeTarget1("//src/test/python:lib3", "//src/test/...", target2)
+	target4 := makeTarget1("//src/test/python/moar:lib4", "//src/test/...", target3)
+	target5 := makeTarget1("//third_party/python:mock", "PUBLIC")
 	target5.TestOnly = true
-	target6 := makeTarget("//src/test/python:test_lib", "", target5)
+	target6 := makeTarget1("//src/test/python:test_lib", "", target5)
 	target6.TestOnly = true
-	target7 := makeTarget("//src/test/python:test1", "", target5, target4)
+	target7 := makeTarget1("//src/test/python:test1", "", target5, target4)
 	target7.IsTest = true
 
 	state := NewDefaultBuildState()
@@ -130,7 +130,7 @@ func TestCheckDependencyVisibility(t *testing.T) {
 }
 
 func TestAddOutput(t *testing.T) {
-	target := makeTarget("//src/test/python:lib1", "")
+	target := makeTarget1("//src/test/python:lib1", "")
 	target.AddOutput("thingy.py")
 	target.AddOutput("thingy2.py")
 	target.AddOutput("thingy.py")
@@ -140,7 +140,7 @@ func TestAddOutput(t *testing.T) {
 }
 
 func TestAddOutputSorting(t *testing.T) {
-	target := makeTarget("//src/test/python:lib1", "")
+	target := makeTarget1("//src/test/python:lib1", "")
 	target.AddOutput("1.py")
 	target.AddOutput("2.py")
 	target.AddOutput("1.py")
@@ -158,7 +158,7 @@ func TestAddOutputSorting(t *testing.T) {
 }
 
 func TestAddOutputPanics(t *testing.T) {
-	target := makeTarget("//src/test/python:lib1", "")
+	target := makeTarget1("//src/test/python:lib1", "")
 	assert.Panics(t, func() { target.AddOutput("") })
 	assert.Panics(t, func() { target.AddOptionalOutput("") })
 	assert.Panics(t, func() { target.AddTestOutput("") })
@@ -166,7 +166,7 @@ func TestAddOutputPanics(t *testing.T) {
 }
 
 func TestAddSource(t *testing.T) {
-	target := makeTarget("//src/test/python:lib1", "")
+	target := makeTarget1("//src/test/python:lib1", "")
 	target.AddSource(ParseBuildLabel("//src/test/python:lib2", ""))
 	target.AddSource(ParseBuildLabel("//src/test/python:lib3", ""))
 	target.AddSource(ParseBuildLabel("//src/test/python:lib2", ""))
@@ -175,7 +175,7 @@ func TestAddSource(t *testing.T) {
 }
 
 func TestOutputs(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "PUBLIC")
+	target1 := makeTarget1("//src/core:target1", "PUBLIC")
 	target1.AddOutput("file1.go")
 	target1.AddOutput("file2.go")
 	target2 := makeFilegroup("//src/test:target2", "PUBLIC", target1)
@@ -191,7 +191,7 @@ func TestOutputs(t *testing.T) {
 }
 
 func TestFullOutputs(t *testing.T) {
-	target := makeTarget("//src/core:target1", "PUBLIC")
+	target := makeTarget1("//src/core:target1", "PUBLIC")
 	target.AddOutput("file1.go")
 	target.AddOutput("file2.go")
 	assert.Equal(t, []string{"plz-out/gen/src/core/file1.go", "plz-out/gen/src/core/file2.go"}, target.FullOutputs())
@@ -199,26 +199,26 @@ func TestFullOutputs(t *testing.T) {
 
 func TestProvideFor(t *testing.T) {
 	// target1 is provided directly since they have a simple dependency
-	target1 := makeTarget("//src/core:target1", "PUBLIC")
-	target2 := makeTarget("//src/core:target2", "PUBLIC", target1)
+	target1 := makeTarget1("//src/core:target1", "PUBLIC")
+	target2 := makeTarget1("//src/core:target2", "PUBLIC", target1)
 	assert.Equal(t, []BuildLabel{target1.Label}, target1.ProvideFor(target2))
 	// Now have target2 provide target1. target3 will get target1 instead.
 	target2.Provides = map[string]BuildLabel{"whatevs": target1.Label}
-	target3 := makeTarget("//src/core:target3", "PUBLIC", target2)
+	target3 := makeTarget1("//src/core:target3", "PUBLIC", target2)
 	target3.Requires = append(target3.Requires, "whatevs")
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.ProvideFor(target3))
 	// Now target4 has a data dependency on target2. It has the same requirement as target3 but
 	// it gets target2 instead of target1, because that's just how data deps work.
-	target4 := makeTarget("//src/core:target4", "PUBLIC", target2)
+	target4 := makeTarget1("//src/core:target4", "PUBLIC", target2)
 	target4.Data = append(target4.Data, target2.Label)
 	target4.Requires = append(target4.Requires, "whatevs")
 	assert.Equal(t, []BuildLabel{target2.Label}, target2.ProvideFor(target4))
 }
 
 func TestAddProvide(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "PUBLIC")
-	target2 := makeTarget("//src/core:target2", "PUBLIC", target1)
-	target3 := makeTarget("//src/core:target3", "PUBLIC", target2)
+	target1 := makeTarget1("//src/core:target1", "PUBLIC")
+	target2 := makeTarget1("//src/core:target2", "PUBLIC", target1)
+	target3 := makeTarget1("//src/core:target3", "PUBLIC", target2)
 	target2.AddDependency(target1.Label)
 	target2.AddProvide("go", ParseBuildLabel(":target1", "src/core"))
 	target3.Requires = append(target3.Requires, "go")
@@ -226,8 +226,8 @@ func TestAddProvide(t *testing.T) {
 }
 
 func TestAddDatum(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "PUBLIC")
-	target2 := makeTarget("//src/core:target2", "PUBLIC")
+	target1 := makeTarget1("//src/core:target1", "PUBLIC")
+	target2 := makeTarget1("//src/core:target2", "PUBLIC")
 	target1.AddDatum(target2.Label)
 	assert.Equal(t, target1.Data, []BuildInput{target2.Label})
 	assert.True(t, target1.dependencies[0].data)
@@ -253,7 +253,7 @@ func TestCheckDuplicateOutputs(t *testing.T) {
 }
 
 func TestLabels(t *testing.T) {
-	target := makeTarget("//src/core:target1", "PUBLIC")
+	target := makeTarget1("//src/core:target1", "PUBLIC")
 	assert.False(t, target.HasLabel("py"))
 	assert.False(t, target.HasAnyLabel([]string{"py", "go"}))
 	target.AddLabel("py")
@@ -269,7 +269,7 @@ func TestLabels(t *testing.T) {
 }
 
 func TestGetCommandConfig(t *testing.T) {
-	target := makeTarget("//src/core:target1", "PUBLIC")
+	target := makeTarget1("//src/core:target1", "PUBLIC")
 	target.Command = "test1"
 	assert.Equal(t, "test1", target.GetCommandConfig(""))
 	target.Command = ""
@@ -283,7 +283,7 @@ func TestGetCommand(t *testing.T) {
 	state := NewDefaultBuildState()
 	state.Config.Build.Config = "dbg"
 	state.Config.Build.FallbackConfig = "opt"
-	target := makeTarget("//src/core:target1", "PUBLIC")
+	target := makeTarget1("//src/core:target1", "PUBLIC")
 	target.Command = "test1"
 	assert.Equal(t, "test1", target.GetCommand(state))
 	assert.Panics(t, func() { target.AddCommand("opt", "test2") },
@@ -302,7 +302,7 @@ func TestGetTestCommand(t *testing.T) {
 	state := NewDefaultBuildState()
 	state.Config.Build.Config = "dbg"
 	state.Config.Build.FallbackConfig = "opt"
-	target := makeTarget("//src/core:target1", "PUBLIC")
+	target := makeTarget1("//src/core:target1", "PUBLIC")
 	target.TestCommand = "test1"
 	assert.Equal(t, "test1", target.GetTestCommand(state))
 	assert.Panics(t, func() { target.AddTestCommand("opt", "test2") },
@@ -318,7 +318,7 @@ func TestGetTestCommand(t *testing.T) {
 }
 
 func TestHasSource(t *testing.T) {
-	target := makeTarget("//src/core:target1", "")
+	target := makeTarget1("//src/core:target1", "")
 	target.Sources = append(target.Sources, FileLabel{File: "file1.go"})
 	target.AddNamedSource("wevs", FileLabel{File: "file2.go"})
 	assert.True(t, target.HasSource("file1.go"))
@@ -327,7 +327,7 @@ func TestHasSource(t *testing.T) {
 }
 
 func TestHasAbsoluteSource(t *testing.T) {
-	target := makeTarget("//src/core:target1", "")
+	target := makeTarget1("//src/core:target1", "")
 	target.Sources = append(target.Sources, FileLabel{File: "file1.go"})
 	target.AddNamedSource("wevs", FileLabel{File: "file2.go"})
 	assert.False(t, target.HasSource("src/core/file1.go"))
@@ -337,7 +337,7 @@ func TestHasAbsoluteSource(t *testing.T) {
 }
 
 func TestToolPath(t *testing.T) {
-	target := makeTarget("//src/core:target1", "")
+	target := makeTarget1("//src/core:target1", "")
 	target.AddOutput("file1.go")
 	target.AddOutput("file2.go")
 	wd, _ := os.Getwd()
@@ -348,9 +348,9 @@ func TestToolPath(t *testing.T) {
 }
 
 func TestDependencies(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "")
-	target2 := makeTarget("//src/core:target2", "", target1)
-	target3 := makeTarget("//src/core:target3", "", target1, target2)
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "", target1)
+	target3 := makeTarget1("//src/core:target3", "", target1, target2)
 	assert.Equal(t, []BuildLabel{}, target1.DeclaredDependencies())
 	assert.Equal(t, []*BuildTarget{}, target1.Dependencies())
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
@@ -360,9 +360,9 @@ func TestDependencies(t *testing.T) {
 }
 
 func TestBuildDependencies(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "")
-	target2 := makeTarget("//src/core:target2", "", target1)
-	target3 := makeTarget("//src/core:target3", "", target2)
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "", target1)
+	target3 := makeTarget1("//src/core:target3", "", target2)
 	target3.AddDatum(target1.Label)
 	assert.Equal(t, []*BuildTarget{}, target1.BuildDependencies())
 	assert.Equal(t, []*BuildTarget{target1}, target2.BuildDependencies())
@@ -370,9 +370,9 @@ func TestBuildDependencies(t *testing.T) {
 }
 
 func TestDeclaredDependenciesStrict(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "")
-	target2 := makeTarget("//src/core:target2", "", target1)
-	target3 := makeTarget("//src/core:target3", "", target2)
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "", target1)
+	target3 := makeTarget1("//src/core:target3", "", target2)
 	target3.AddMaybeExportedDependency(target1.Label, true, false, false)
 	assert.Equal(t, []BuildLabel{}, target1.DeclaredDependenciesStrict())
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependenciesStrict())
@@ -380,8 +380,8 @@ func TestDeclaredDependenciesStrict(t *testing.T) {
 }
 
 func TestAddDependency(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "")
-	target2 := makeTarget("//src/core:target2", "")
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "")
 	assert.Equal(t, []BuildLabel{}, target2.DeclaredDependencies())
 	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
 	target2.AddDependency(target1.Label)
@@ -396,8 +396,8 @@ func TestAddDependency(t *testing.T) {
 }
 
 func TestAddDependencySource(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "")
-	target2 := makeTarget("//src/core:target2", "")
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "")
 	target2.AddMaybeExportedDependency(target1.Label, true, true, false)
 	assert.True(t, target2.IsSourceOnlyDep(target1.Label))
 	// N.B. It's important that calling this again cancels the source flag.
@@ -406,8 +406,8 @@ func TestAddDependencySource(t *testing.T) {
 }
 
 func TestDependencyFor(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "")
-	target2 := makeTarget("//src/core:target2", "", target1)
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "", target1)
 	assert.Equal(t, []*BuildTarget{target1}, target2.DependenciesFor(target1.Label))
 	assert.Equal(t, []*BuildTarget(nil), target2.DependenciesFor(target2.Label))
 	assert.Equal(t, 1, len(target2.dependencies))
@@ -416,9 +416,9 @@ func TestDependencyFor(t *testing.T) {
 func TestParent(t *testing.T) {
 	// "grandchild" is of course a misnomer since we only really have a concept of
 	// one level of parent-child relationship.
-	grandchild := makeTarget("//src/core:__target1#child#grandchild", "")
-	child := makeTarget("//src/core:_target1#child", "", grandchild)
-	parent := makeTarget("//src/core:target1", "", child)
+	grandchild := makeTarget1("//src/core:__target1#child#grandchild", "")
+	child := makeTarget1("//src/core:_target1#child", "", grandchild)
+	parent := makeTarget1("//src/core:target1", "", child)
 	graph := NewGraph()
 	graph.AddTarget(grandchild)
 	graph.AddTarget(child)
@@ -433,9 +433,9 @@ func TestParent(t *testing.T) {
 }
 
 func TestHasParent(t *testing.T) {
-	grandchild := makeTarget("//src/core:__target1#child#grandchild", "")
-	child := makeTarget("//src/core:_target1#child", "", grandchild)
-	parent := makeTarget("//src/core:target1", "", child)
+	grandchild := makeTarget1("//src/core:__target1#child#grandchild", "")
+	child := makeTarget1("//src/core:_target1#child", "", grandchild)
+	parent := makeTarget1("//src/core:target1", "", child)
 	assert.True(t, grandchild.HasParent())
 	assert.True(t, child.HasParent())
 	assert.False(t, parent.HasParent())
@@ -444,7 +444,7 @@ func TestHasParent(t *testing.T) {
 func TestOutMode(t *testing.T) {
 	// Check that output modes match the binary flag correctly.
 	// This feels a little fatuous but it's hard to have any less specific assertions on it.
-	target := makeTarget("//src/core:target1", "")
+	target := makeTarget1("//src/core:target1", "")
 	assert.Equal(t, os.FileMode(0444), target.OutMode())
 	target.IsBinary = true
 	assert.Equal(t, os.FileMode(0555), target.OutMode())
@@ -454,10 +454,10 @@ func TestOutputOrdering(t *testing.T) {
 	// Check that outputs come out ordered, this is important for hash stability; previously
 	// we preserved the original order, but tools like buildifier may reorder them assuming
 	// that the order of arguments is not important.
-	target1 := makeTarget("//src/core:target1", "")
+	target1 := makeTarget1("//src/core:target1", "")
 	target1.AddOutput("file1.txt")
 	target1.AddOutput("file2.txt")
-	target2 := makeTarget("//src/core:target2", "")
+	target2 := makeTarget1("//src/core:target2", "")
 	target2.AddOutput("file2.txt")
 	target2.AddOutput("file1.txt")
 	assert.Equal(t, target1.DeclaredOutputs(), target2.DeclaredOutputs())
@@ -465,7 +465,7 @@ func TestOutputOrdering(t *testing.T) {
 }
 
 func TestNamedOutputs(t *testing.T) {
-	target := makeTarget("//src/core:target1", "")
+	target := makeTarget1("//src/core:target1", "")
 	target.AddOutput("a.txt")
 	target.AddOutput("z.txt")
 	target.AddNamedOutput("srcs", "src1.c")
@@ -483,7 +483,7 @@ func TestNamedOutputs(t *testing.T) {
 }
 
 func TestAllLocalSources(t *testing.T) {
-	target := makeTarget("//src/core:target1", "")
+	target := makeTarget1("//src/core:target1", "")
 	target.AddSource(FileLabel{File: "target1.go", Package: "src/core"})
 	target.AddSource(BuildLabel{Name: "target2", PackageName: "src/core"})
 	target.AddSource(SystemFileLabel{Path: "/usr/bin/bash"})
@@ -492,7 +492,7 @@ func TestAllLocalSources(t *testing.T) {
 
 func TestAllURLs(t *testing.T) {
 	config := DefaultConfiguration()
-	target := makeTarget("//src/core:remote1", "")
+	target := makeTarget1("//src/core:remote1", "")
 	target.IsRemoteFile = true
 	target.AddSource(URLLabel("https://github.com/thought-machine/please"))
 	target.AddSource(URLLabel("https://github.com/thought-machine/pleasings"))
@@ -503,7 +503,7 @@ func TestAllURLs(t *testing.T) {
 }
 
 func TestCheckSecrets(t *testing.T) {
-	target := makeTarget("//src/core:target1", "")
+	target := makeTarget1("//src/core:target1", "")
 	assert.NoError(t, target.CheckSecrets())
 	target.Secrets = append(target.Secrets, "/bin/sh")
 	assert.NoError(t, target.CheckSecrets())
@@ -516,16 +516,16 @@ func TestCheckSecrets(t *testing.T) {
 }
 
 func TestAddTool(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "")
-	target2 := makeTarget("//src/core:target2", "")
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "")
 	target1.AddTool(target2.Label)
 	assert.Equal(t, []BuildInput{target2.Label}, target1.Tools)
 	assert.True(t, target1.HasDependency(target2.Label))
 }
 
 func TestAddNamedTool(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "")
-	target2 := makeTarget("//src/core:target2", "")
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "")
 	target1.AddNamedTool("test", target2.Label)
 	assert.Equal(t, 0, len(target1.Tools))
 	assert.Equal(t, []BuildInput{target2.Label}, target1.NamedTools("test"))
@@ -533,10 +533,10 @@ func TestAddNamedTool(t *testing.T) {
 }
 
 func TestAllTools(t *testing.T) {
-	target1 := makeTarget("//src/core:target1", "")
-	target2 := makeTarget("//src/core:target2", "")
-	target3 := makeTarget("//src/core:target3", "")
-	target4 := makeTarget("//src/core:target4", "")
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "")
+	target3 := makeTarget1("//src/core:target3", "")
+	target4 := makeTarget1("//src/core:target4", "")
 	target1.AddTool(target2.Label)
 	target1.AddNamedTool("test1", target4.Label)
 	target1.AddNamedTool("test2", target3.Label)
@@ -544,7 +544,7 @@ func TestAllTools(t *testing.T) {
 }
 
 func TestShouldIncludeSimple(t *testing.T) {
-	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	target := makeTarget1WithLabels("//src/core:target1", "a", "b", "c")
 	excludes := []string{}
 	includes := []string{"a"}
 	assert.True(t, target.ShouldInclude(includes, excludes))
@@ -557,14 +557,14 @@ func TestShouldIncludeSimple(t *testing.T) {
 }
 
 func TestShouldIncludeNonMatchingInclude(t *testing.T) {
-	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	target := makeTarget1WithLabels("//src/core:target1", "a", "b", "c")
 	excludes := []string{}
 	includes := []string{"d"}
 	assert.False(t, target.ShouldInclude(includes, excludes))
 }
 
 func TestShouldIncludeWithExclude(t *testing.T) {
-	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	target := makeTarget1WithLabels("//src/core:target1", "a", "b", "c")
 	includes := []string{}
 	excludes := []string{"a"}
 	assert.False(t, target.ShouldInclude(includes, excludes))
@@ -577,14 +577,14 @@ func TestShouldIncludeWithExclude(t *testing.T) {
 }
 
 func TestShouldIncludeWithIncludeAndExclude(t *testing.T) {
-	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	target := makeTarget1WithLabels("//src/core:target1", "a", "b", "c")
 	includes := []string{"a"}
 	excludes := []string{"b"}
 	assert.False(t, target.ShouldInclude(includes, excludes))
 }
 
 func TestShouldIncludeWithCompoundInclude(t *testing.T) {
-	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	target := makeTarget1WithLabels("//src/core:target1", "a", "b", "c")
 	includes := []string{"a,b"}
 	excludes := []string{}
 	assert.True(t, target.ShouldInclude(includes, excludes))
@@ -597,7 +597,7 @@ func TestShouldIncludeWithCompoundInclude(t *testing.T) {
 }
 
 func TestShouldIncludeWithCompoundExclude(t *testing.T) {
-	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	target := makeTarget1WithLabels("//src/core:target1", "a", "b", "c")
 	includes := []string{}
 	excludes := []string{"a,d"}
 	assert.True(t, target.ShouldInclude(includes, excludes))
@@ -607,7 +607,7 @@ func TestShouldIncludeWithCompoundExclude(t *testing.T) {
 }
 
 func TestShouldIncludeWithCompoundIncludeAndExclude(t *testing.T) {
-	target := makeTargetWithLabels("//src/core:target1", "a", "b", "c")
+	target := makeTarget1WithLabels("//src/core:target1", "a", "b", "c")
 	includes := []string{"a,b"}
 	excludes := []string{"a,d"}
 	assert.True(t, target.ShouldInclude(includes, excludes))
@@ -618,14 +618,14 @@ func TestShouldIncludeWithCompoundIncludeAndExclude(t *testing.T) {
 }
 
 func TestExternalDependencies(t *testing.T) {
-	t1a := makeTarget("//src/core:_target1#a", "PUBLIC")
-	t1 := makeTarget("//src/core:target1", "PUBLIC", t1a)
-	t2a := makeTarget("//src/core:_target2#a", "PUBLIC", t1)
-	t2 := makeTarget("//src/core:target2", "PUBLIC", t2a)
+	t1a := makeTarget1("//src/core:_target1#a", "PUBLIC")
+	t1 := makeTarget1("//src/core:target1", "PUBLIC", t1a)
+	t2a := makeTarget1("//src/core:_target2#a", "PUBLIC", t1)
+	t2 := makeTarget1("//src/core:target2", "PUBLIC", t2a)
 	assert.Equal(t, []*BuildTarget{t1}, t2.ExternalDependencies())
 }
 
-func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
+func makeTarget1(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {
 		target.Visibility = append(target.Visibility, BuildLabel{PackageName: "", Name: "..."})
@@ -639,8 +639,8 @@ func makeTarget(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	return target
 }
 
-func makeTargetWithLabels(name string, labels ...string) *BuildTarget {
-	target := makeTarget(name, "")
+func makeTarget1WithLabels(name string, labels ...string) *BuildTarget {
+	target := makeTarget1(name, "")
 	for _, label := range labels {
 		target.AddLabel(label)
 	}
@@ -648,7 +648,7 @@ func makeTargetWithLabels(name string, labels ...string) *BuildTarget {
 }
 
 func makeFilegroup(label, visibility string, deps ...*BuildTarget) *BuildTarget {
-	target := makeTarget(label, visibility, deps...)
+	target := makeTarget1(label, visibility, deps...)
 	target.IsFilegroup = true
 	return target
 }
