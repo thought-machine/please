@@ -5,7 +5,7 @@ genrule(
     srcs = build_defs,
     outs = [build_def + ".gob" for build_def in build_defs],
     cmd = '"$TOOL" -o "$TMP_DIR" $SRCS',
-    tools = ["//src/parse/asp/main:compiler"],
+    tools = ["//src/parse/asp/compiler"],
 )
 
 go_bindata(
