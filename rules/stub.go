@@ -1,5 +1,3 @@
-// +build bootstrap
-
 // Package rules provides stubs for the builtin rules for Please.
 package rules
 
