@@ -23,6 +23,16 @@ go_test(
 )
 
 go_test(
+    name = "glob_test",
+    srcs = ["glob_test.go"],
+    data = glob(["test_data/**"]),
+    deps = [
+        ":fs",
+        "//third_party/go:testify",
+    ],
+)
+
+go_test(
     name = "hash_test",
     srcs = ["hash_test.go"],
     data = ["test_data"],

@@ -8,11 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var buildFileNames = []string{"TEST_BUILD"}
+
 func TestCanGlobFirstFile(t *testing.T) {
 	// If this fails then we probably failed to interpret /**/ properly,
 	// which can resolve to just / - ie. we glob test_data/**/*.txt,
 	// which should include test_data/test.txt
-	if !FileExists("src/core/test_data/test.txt") {
+	if !FileExists("src/fs/test_data/test.txt") {
 		t.Errorf("Can't load test_data/test.txt")
 	}
 }
@@ -21,23 +23,22 @@ func TestCanGlobSecondFile(t *testing.T) {
 	// If this fails then we haven't walked down enough subdirectories
 	// or something. Shouldn't really be hard - it's a sanity check really
 	// since it's similar to the third file but without a package boundary.
-	if !FileExists("src/core/test_data/test_subfolder1/a.txt") {
+	if !FileExists("src/fs/test_data/test_subfolder1/a.txt") {
 		t.Errorf("Can't load test_data/test_subfolder1/a.txt")
 	}
 }
 
 func TestCannotGlobThirdFile(t *testing.T) {
 	// This one we should not be able to glob because it's inside its own subpackage.
-	if FileExists("src/core/test_data/test_subfolder2/b.txt") {
+	if FileExists("src/fs/test_data/test_subfolder2/b.txt") {
 		t.Errorf("Incorrectly loaded test_data/test_subfolder2/b.txt; have globbed it through a package boundary")
 	}
 }
 
 func TestCanGlobFileAtRootWithDoubleStar(t *testing.T) {
-	state := NewDefaultBuildState()
-	files, err := glob(state, "src/core/test_data/test_subfolder1", "**/*.txt", false, nil)
+	files, err := glob(buildFileNames, "src/fs/test_data/test_subfolder1", "**/*.txt", false, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"src/core/test_data/test_subfolder1/a.txt"}, files)
+	assert.Equal(t, []string{"src/fs/test_data/test_subfolder1/a.txt"}, files)
 }
 
 func TestIsGlob(t *testing.T) {
@@ -50,15 +51,13 @@ func TestIsGlob(t *testing.T) {
 }
 
 func TestGlobPlusPlus(t *testing.T) {
-	state := NewDefaultBuildState()
-	files, err := glob(state, "src/core/test_data/test_subfolder++", "**/*.txt", false, nil)
+	files, err := glob(buildFileNames, "src/fs/test_data/test_subfolder++", "**/*.txt", false, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"src/core/test_data/test_subfolder++/test.txt"}, files)
+	assert.Equal(t, []string{"src/fs/test_data/test_subfolder++/test.txt"}, files)
 }
 
 func TestGlobExcludes(t *testing.T) {
-	state := NewDefaultBuildState()
-	files := Glob(state, "src/core", []string{"test_data/**/*.txt"}, nil, []string{"test.txt"}, false)
+	files := Glob(buildFileNames, "src/fs", []string{"test_data/**/*.txt"}, nil, []string{"test.txt"}, false)
 	expected := []string{"test_data/test_subfolder1/a.txt"}
 	assert.Equal(t, expected, files)
 }
