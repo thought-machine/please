@@ -47,7 +47,7 @@ func inCompressedCache(target *core.BuildTarget) bool {
 
 func TestStoreAndRetrieve(t *testing.T) {
 	cache := makeCache(".plz-cache-test1", false)
-	target := makeTarget("//test1:target1", 20)
+	target := makeTarget2("//test1:target1", 20)
 	cache.Store(target, hash, &core.BuildMetadata{}, target.Outputs())
 	// Should now exist in cache at this path
 	assert.True(t, inCache(target))
@@ -60,10 +60,10 @@ func TestStoreAndRetrieve(t *testing.T) {
 
 func TestCleanNoop(t *testing.T) {
 	cache := makeCache(".plz-cache-test2", false)
-	target1 := makeTarget("//test2:target1", 2000)
+	target1 := makeTarget2("//test2:target1", 2000)
 	cache.Store(target1, hash, &core.BuildMetadata{}, target1.Outputs())
 	assert.True(t, inCache(target1))
-	target2 := makeTarget("//test2:target2", 2000)
+	target2 := makeTarget2("//test2:target2", 2000)
 	cache.Store(target2, hash, &core.BuildMetadata{}, target2.Outputs())
 	assert.True(t, inCache(target2))
 	// Doesn't clean anything this time because the high water mark is sufficiently high
@@ -75,10 +75,10 @@ func TestCleanNoop(t *testing.T) {
 
 func TestCleanNoop2(t *testing.T) {
 	cache := makeCache(".plz-cache-test3", false)
-	target1 := makeTarget("//test3:target1", 2000)
+	target1 := makeTarget2("//test3:target1", 2000)
 	cache.Store(target1, hash, &core.BuildMetadata{}, target1.Outputs())
 	assert.True(t, inCache(target1))
-	target2 := makeTarget("//test3:target2", 2000)
+	target2 := makeTarget2("//test3:target2", 2000)
 	cache.Store(target2, hash, &core.BuildMetadata{}, target2.Outputs())
 	assert.True(t, inCache(target2))
 	// Doesn't clean anything this time, the high water mark is lower but both targets have
@@ -91,10 +91,10 @@ func TestCleanNoop2(t *testing.T) {
 
 func TestCleanForReal(t *testing.T) {
 	cache := makeCache(".plz-cache-test4", false)
-	target1 := makeTarget("//test4:target1", 2000)
+	target1 := makeTarget2("//test4:target1", 2000)
 	cache.Store(target1, hash, &core.BuildMetadata{}, target1.Outputs())
 	assert.True(t, inCache(target1))
-	target2 := makeTarget("//test4:target2", 2000)
+	target2 := makeTarget2("//test4:target2", 2000)
 	writeFile(cachePath(target2, false), 2000)
 	assert.True(t, inCache(target2))
 	// This time it should clean target2, because target1 has just been stored
@@ -106,10 +106,10 @@ func TestCleanForReal(t *testing.T) {
 
 func TestCleanForReal2(t *testing.T) {
 	cache := makeCache(".plz-cache-test5", false)
-	target1 := makeTarget("//test5:target1", 2000)
+	target1 := makeTarget2("//test5:target1", 2000)
 	writeFile(cachePath(target1, false), 2000)
 	assert.True(t, inCache(target1))
-	target2 := makeTarget("//test5:target2", 2000)
+	target2 := makeTarget2("//test5:target2", 2000)
 	cache.Store(target2, hash, &core.BuildMetadata{}, target2.Outputs())
 	assert.True(t, inCache(target2))
 	// This time it should clean target1, because target2 has just been stored
@@ -121,7 +121,7 @@ func TestCleanForReal2(t *testing.T) {
 
 func TestStoreAndRetrieveCompressed(t *testing.T) {
 	cache := makeCache(".plz-cache-test6", true)
-	target := makeTarget("//test6:target6", 20)
+	target := makeTarget2("//test6:target6", 20)
 	cache.Store(target, hash, &core.BuildMetadata{}, target.Outputs())
 	// Should now exist in cache at this path
 	assert.True(t, inCompressedCache(target))
@@ -134,10 +134,10 @@ func TestStoreAndRetrieveCompressed(t *testing.T) {
 
 func TestCleanCompressed(t *testing.T) {
 	cache := makeCache(".plz-cache-test7", true)
-	target1 := makeTarget("//test7:target1", 2000)
+	target1 := makeTarget2("//test7:target1", 2000)
 	writeFile(cachePath(target1, true), 2000)
 	assert.True(t, inCompressedCache(target1))
-	target2 := makeTarget("//test7:target2", 2000)
+	target2 := makeTarget2("//test7:target2", 2000)
 	cache.Store(target2, hash, &core.BuildMetadata{}, target2.Outputs())
 	assert.True(t, inCompressedCache(target2))
 	// Don't want to assert the size here since it depends on how well gzip compresses.
@@ -156,7 +156,7 @@ func makeCache(dir string, compress bool) *dirCache {
 	return newDirCache(config)
 }
 
-func makeTarget(label string, size int) *core.BuildTarget {
+func makeTarget2(label string, size int) *core.BuildTarget {
 	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 	target.AddOutput("test.go")
 	writeFile(path.Join("plz-out/gen", target.Label.PackageName, "test.go"), size)
