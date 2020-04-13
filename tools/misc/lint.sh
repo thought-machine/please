@@ -4,7 +4,7 @@ set -eu
 go vet github.com/thought-machine/please/src/... github.com/thought-machine/please/tools/...
 golint src/... tools/...
 if [ "`find src/ tools/ -name '*.go' | xargs gofmt -s -l `" != "" ]; then
-    echo "Files are not gofmt'd: find src/ tools/ -name '*.go' | gofmt -s -w"
+    echo "Files are not gofmt'd: find src/ tools/ -name '*.go' | xargs gofmt -s -w"
     exit 1
 fi
 $plz run //tools/misc:buildify -p -- --mode=check || {
