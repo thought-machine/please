@@ -13,12 +13,14 @@ go_library(
     srcs = glob(
         ["*.go"],
         exclude = [
+            "stub.go",
             "*_test.go",
             "version.go",
         ],
     ) + [
         ":version",
     ],
+    filter_srcs = False,  # Fix to make tags work until we have #532
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
