@@ -1,5 +1,3 @@
-// +build bootstrap
-
 // Package bazel provides stubs for Bazel extensions for Please.
 package bazel
 
