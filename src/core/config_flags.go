@@ -1,4 +1,4 @@
-// +build !bootstrap
+// +build please
 
 package core
 
