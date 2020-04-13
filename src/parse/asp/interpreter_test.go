@@ -34,7 +34,7 @@ func parseFile(filename string) (*scope, error) {
 	return s, err
 }
 
-func TestBasic(t *testing.T) {
+func TestInterpreterBasic(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/basic.build")
 	require.NoError(t, err)
 	assert.NotNil(t, s.Lookup("test"))
@@ -44,7 +44,7 @@ func TestBasic(t *testing.T) {
 	assert.NotNil(t, s.Lookup("None"))
 }
 
-func TestFunctionDef(t *testing.T) {
+func TestInterpreterFunctionDef(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/function_def.build")
 	require.NoError(t, err)
 	require.NotNil(t, s.Lookup("cc_library"))
@@ -58,7 +58,7 @@ func TestFunctionDef(t *testing.T) {
 	assert.NotNil(t, f.constants[1])
 }
 
-func TestOperators(t *testing.T) {
+func TestInterpreterInterpreterOperators(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/operators.build")
 	require.NoError(t, err)
 	require.NotNil(t, s.Lookup("y"))
@@ -67,13 +67,13 @@ func TestOperators(t *testing.T) {
 	assert.True(t, s.Lookup("z").IsTruthy())
 }
 
-func TestInterpolation(t *testing.T) {
+func TestInterpreterInterpolation(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/interpolation.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, "//abc:123", s.Lookup("x"))
 }
 
-func TestCollections(t *testing.T) {
+func TestInterpreterCollections(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/collections.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, True, s.Lookup("x"))
@@ -81,7 +81,7 @@ func TestCollections(t *testing.T) {
 	assert.EqualValues(t, False, s.Lookup("z"))
 }
 
-func TestArguments(t *testing.T) {
+func TestInterpreterArguments(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/arguments.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, "a:b:True", s.Lookup("x"))
@@ -89,26 +89,26 @@ func TestArguments(t *testing.T) {
 	assert.EqualValues(t, "a:b:c", s.Lookup("z"))
 }
 
-func TestMutableArguments(t *testing.T) {
+func TestInterpreterMutableArguments(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/mutable_arguments.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, 8, s.Lookup("y"))
 }
 
-func TestBuiltins(t *testing.T) {
+func TestInterpreterBuiltins(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/builtins.build")
 	require.NoError(t, err)
 	assert.Equal(t, 1, s.pkg.NumTargets())
 	assert.NotNil(t, s.pkg.Target("lib"))
 }
 
-func TestParentheses(t *testing.T) {
+func TestInterpreterParentheses(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/parentheses.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, s.Lookup("x"))
 }
 
-func TestComprehensions(t *testing.T) {
+func TestInterpreterComprehensions(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/comprehensions.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, pyList{pyString("file1"), pyString("file2")}, s.Lookup("file_srcs"))
@@ -116,7 +116,7 @@ func TestComprehensions(t *testing.T) {
 		pyString("file2+file1"), pyString("file2+file2"), pyString("file2+:rule1")}, s.Lookup("pairs"))
 }
 
-func TestEquality(t *testing.T) {
+func TestInterpreterEquality(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/equality.build")
 	require.NoError(t, err)
 	assert.Equal(t, True, s.Lookup("a"))
@@ -128,7 +128,7 @@ func TestEquality(t *testing.T) {
 	assert.Equal(t, False, s.Lookup("g"))
 }
 
-func TestSlicing(t *testing.T) {
+func TestInterpreterSlicing(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/slicing.build")
 	require.NoError(t, err)
 	assert.Equal(t, pyInt(2), s.Lookup("a"))
@@ -140,14 +140,14 @@ func TestSlicing(t *testing.T) {
 	assert.Equal(t, pyList{pyInt(1), pyInt(2), pyInt(3)}, s.Lookup("g"))
 }
 
-func TestSorting(t *testing.T) {
+func TestInterpreterSorting(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/sorted.build")
 	require.NoError(t, err)
 	assert.Equal(t, pyList{pyInt(1), pyInt(2), pyInt(3)}, s.Lookup("y"))
 	// N.B. sorted() sorts in-place, unlike Python's one. We may change that later.
 }
 
-func TestUnpacking(t *testing.T) {
+func TestInterpreterUnpacking(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/unpacking.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, "a", s.Lookup("a"))
@@ -158,19 +158,19 @@ func TestUnpacking(t *testing.T) {
 	assert.EqualValues(t, "def", s.Lookup("f"))
 }
 
-func TestPrecedence(t *testing.T) {
+func TestInterpreterPrecedence(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/precedence.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, pyList{pyString("a.go")}, s.Lookup("file_srcs"))
 }
 
-func TestPrecedence2(t *testing.T) {
+func TestInterpreterPrecedence2(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/precedence2.build")
 	require.NoError(t, err)
 	assert.True(t, s.Lookup("y").IsTruthy())
 }
 
-func TestZip(t *testing.T) {
+func TestInterpreterZip(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/zip.build")
 	require.NoError(t, err)
 	expected := pyList{
@@ -181,25 +181,25 @@ func TestZip(t *testing.T) {
 	assert.EqualValues(t, expected, s.Lookup("x"))
 }
 
-func TestOptimisations(t *testing.T) {
+func TestInterpreterOptimisations(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/optimisations.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, "python2.7", s.Lookup("PARSER_LIB_NAME"))
 }
 
-func TestContinue(t *testing.T) {
+func TestInterpreterContinue(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/continue.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, pyList{pyInt(4), pyInt(5)}, s.Lookup("a"))
 }
 
-func TestAliases(t *testing.T) {
+func TestInterpreterAliases(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/aliases.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, 42, s.Lookup("v"))
 }
 
-func TestPaths(t *testing.T) {
+func TestInterpreterPaths(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/paths.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, "a/b/c", s.Lookup("a"))
@@ -214,7 +214,7 @@ func TestPaths(t *testing.T) {
 	assert.EqualValues(t, "", s.Lookup("j"))
 }
 
-func TestStrings(t *testing.T) {
+func TestInterpreterStrings(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/strings.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, pyList{
@@ -225,7 +225,7 @@ func TestStrings(t *testing.T) {
 	assert.EqualValues(t, "acpi base64 basename blkid blockdev bunzip2 bzcat cal cat catv chattr\nwhoami xargs xxd yes", s.Lookup("TOYS3"))
 }
 
-func TestArgumentCompatibility(t *testing.T) {
+func TestInterpreterArgumentCompatibility(t *testing.T) {
 	// This isn't a totally obvious property of the interpreter, but when an argument specifies
 	// a type and is given None, we adopt the default. This allows external functions to use None
 	// for various arguments (e.g. deps), but internally we can treat them as lists.
@@ -234,7 +234,7 @@ func TestArgumentCompatibility(t *testing.T) {
 	assert.EqualValues(t, pyList{pyInt(1)}, s.Lookup("x"))
 }
 
-func TestOptimiseConfig(t *testing.T) {
+func TestInterpreterOptimiseConfig(t *testing.T) {
 	s, statements, err := parseFileToStatements("src/parse/asp/test_data/interpreter/optimise_config.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
@@ -245,14 +245,14 @@ func TestOptimiseConfig(t *testing.T) {
 	assert.EqualValues(t, "go", s.Lookup("x"))
 }
 
-func TestPartition(t *testing.T) {
+func TestInterpreterPartition(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/partition.build")
 	assert.NoError(t, err)
 	assert.EqualValues(t, "27", s.Lookup("major"))
 	assert.EqualValues(t, "3", s.Lookup("minor"))
 }
 
-func TestFStrings(t *testing.T) {
+func TestInterpreterFStrings(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/fstring.build")
 	assert.NoError(t, err)
 	assert.EqualValues(t, "a", s.Lookup("x"))
@@ -260,7 +260,7 @@ func TestFStrings(t *testing.T) {
 	assert.EqualValues(t, "x: a y: a fin", s.Lookup("z"))
 }
 
-func TestSubincludeConfig(t *testing.T) {
+func TestInterpreterSubincludeConfig(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/partition.build")
 	assert.NoError(t, err)
 	pkg := core.NewPackage("test")
@@ -268,36 +268,36 @@ func TestSubincludeConfig(t *testing.T) {
 	assert.EqualValues(t, "test test", s.config.Get("test", None))
 }
 
-func TestValidateReturnVal(t *testing.T) {
+func TestInterpreterValidateReturnVal(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/return_type.build")
 	assert.NotNil(t, s.Lookup("subinclude"))
 	assert.Error(t, err, "Invalid return type str from function dict_val, expecting dict")
 }
 
-func TestLen(t *testing.T) {
+func TestInterpreterLen(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/len.build")
 	assert.NoError(t, err)
 	assert.EqualValues(t, "sync", s.Lookup("y"))
 }
 
-func TestFStringDollars(t *testing.T) {
+func TestInterpreterFStringDollars(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/fstrings.build")
 	assert.NoError(t, err)
 	assert.EqualValues(t, "mickey donald ${goofy} {sora}", s.Lookup("z"))
 }
 
-func TestDoubleIndex(t *testing.T) {
+func TestInterpreterDoubleIndex(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/double_index.build")
 	assert.NoError(t, err)
 	assert.EqualValues(t, 1, s.Lookup("y"))
 }
 
-func TestSubincludeAll(t *testing.T) {
+func TestInterpreterSubincludeAll(t *testing.T) {
 	_, err := parseFile("src/parse/asp/test_data/interpreter/subinclude_all.build")
 	assert.Error(t, err)
 }
 
-func TestDictUnion(t *testing.T) {
+func TestInterpreterDictUnion(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/dict_union.build")
 	assert.NoError(t, err)
 	assert.EqualValues(t, pyDict{

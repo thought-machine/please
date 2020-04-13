@@ -20,7 +20,7 @@ type record struct {
 	Msg   string
 }
 
-func parseFile(filename string) (*scope, error) {
+func parseFile2(filename string) (*scope, error) {
 	state := core.NewDefaultBuildState()
 	pkg := core.NewPackage("test/package")
 	pkg.Filename = "test/package/BUILD"
@@ -44,7 +44,7 @@ func assertRecords(t *testing.T, backend *logging.MemoryBackend, expected []reco
 
 func TestLogNotice(t *testing.T) {
 	backend := logging.InitForTesting(logging.NOTICE)
-	_, err := parseFile("src/parse/asp/test_data/interpreter/log.build")
+	_, err := parseFile2("src/parse/asp/test_data/interpreter/log.build")
 	require.NoError(t, err)
 	assertRecords(t, backend, []record{
 		{logging.NOTICE, "//test/package/BUILD: notice"},
@@ -56,7 +56,7 @@ func TestLogNotice(t *testing.T) {
 func TestLogInfo(t *testing.T) {
 	// N.B. we don't test at DEBUG because then other things get logged from the parser.
 	backend := logging.InitForTesting(logging.INFO)
-	_, err := parseFile("src/parse/asp/test_data/interpreter/log.build")
+	_, err := parseFile2("src/parse/asp/test_data/interpreter/log.build")
 	require.NoError(t, err)
 	assertRecords(t, backend, []record{
 		{logging.INFO, "//test/package/BUILD: info"},

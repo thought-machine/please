@@ -12,9 +12,3 @@ go_binary(
         "//tools/jarcat/zip",
     ],
 )
-
-go_binary(
-    name = "jarcat_unzip",
-    srcs = ["unzip_main.go"],
-    visibility = ["PUBLIC"],
-)

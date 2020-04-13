@@ -38,7 +38,7 @@ genrule(
 go_test(
     name = "write_test_main_test",
     srcs = ["write_test_main_test.go"],
-    data = glob(["test_data/*.go"]),
+    data = glob(["test_data/**/*.go"]),
     deps = [
         ":gotest",
         "//third_party/go:testify",

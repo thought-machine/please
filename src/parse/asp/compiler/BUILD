@@ -1,12 +1,11 @@
 go_binary(
-    name = "asp",
-    srcs = ["main.go"],
+    name = "compiler",
+    srcs = ["compiler.go"],
+    visibility = ["//rules:all"],
     deps = [
-        "//rules",
         "//src/cli",
         "//src/core",
         "//src/parse/asp",
         "//third_party/go:logging",
-        "//third_party/go:spew",
     ],
 )

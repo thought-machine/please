@@ -40,3 +40,11 @@ func TestFindCoverVarsReturnsNothingForEmptyPath(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(vars))
 }
+
+func readPkgdef(name string) ([]string, error) {
+	return nil, nil
+}
+
+func FindCoverVars(filename string, vars []string) ([]string, error) {
+	return nil, nil
+}

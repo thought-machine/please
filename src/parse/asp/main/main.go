@@ -46,9 +46,8 @@ func parseFile(pkg *core.Package, p *asp.Parser, filename string) error {
 		if opts.DumpAst {
 			config := spew.NewDefaultConfig()
 			config.DisablePointerAddresses = true
-			config.DisableLengths = true
-			config.DisableTypes = true
-			config.OmitEmpty = true
+			//config.DisableTypes = true
+			//config.OmitEmpty = true
 			config.Indent = "  "
 			os.Stdout.Write([]byte(cleanup(config.Sdump(stmts))))
 		}
@@ -63,7 +62,9 @@ func cleanup(ast string) string {
 	r := regexp.MustCompile(`\n *Pos: .*\n`)
 	ast = r.ReplaceAllString(ast, "\n")
 	r = regexp.MustCompile(`String: "\\"(.*)\\"",`)
-	return r.ReplaceAllString(ast, `String: "$1",`)
+	ast = r.ReplaceAllString(ast, `String: "$1",`)
+	r = regexp.MustCompile(`: \(len=[0-9]+\) "`)
+	return r.ReplaceAllString(ast, `: "`)
 }
 
 func mustLoadBuildDefsDir(state *core.BuildState, dirname string) {

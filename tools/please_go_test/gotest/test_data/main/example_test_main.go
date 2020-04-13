@@ -5,7 +5,6 @@ package parse
 import (
 	"os"
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
@@ -53,11 +52,10 @@ func TestParseSourceWithAbsolutePath(t *testing.T) {
 }
 
 func TestAddTarget(t *testing.T) {
+	state := core.NewDefaultBuildState()
 	pkg := core.NewPackage("src/parse")
 	addTargetTest1 := func(name string, binary, container, test bool, testCmd string) *core.BuildTarget {
-		target := addTarget(unsafe.Pointer(pkg), name, "true", testCmd, binary, test,
-			false, false, container, false, false, false, 0, 0, 0, "Building...")
-		return (*core.BuildTarget)(target)
+		return &core.BuildTarget{}
 	}
 	addTargetTest := func(name string, binary, container bool) *core.BuildTarget {
 		return addTargetTest1(name, binary, container, false, "")
@@ -80,18 +78,20 @@ func TestAddTarget(t *testing.T) {
 	assert.Panics(t, func() { addTargetTest1("target5", false, false, false, "true") },
 		"Should panic attempting to add a non-test target with a test command")
 
-	assert.Nil(t, core.State.Graph.Target(core.ParseBuildLabel("//src/parse:target1", "")),
+	assert.Nil(t, state.Graph.Target(core.ParseBuildLabel("//src/parse:target1", "")),
 		"Shouldn't have added target to the graph yet")
-	core.State.Graph.AddPackage(pkg)
+	state.Graph.AddPackage(pkg)
 	addTargetTest("target6", true, false)
-	target6 := core.State.Graph.Target(core.ParseBuildLabel("//src/parse:target6", ""))
+	target6 := state.Graph.Target(core.ParseBuildLabel("//src/parse:target6", ""))
 	assert.NotNil(t, target6, "Should have been added to the graph since the package is added")
 	assert.True(t, target6.HasLabel("bin"))
 }
 
 func TestMain(m *testing.M) {
-	// Need to set this before calling parseSource. It's a bit of a hack but whatevs.
-	buildFileNames = []string{"TEST_BUILD"}
 	core.NewDefaultBuildState()
 	os.Exit(m.Run())
+}
+
+func parseSource(src, dir string) core.BuildLabel {
+	panic("nope")
 }
