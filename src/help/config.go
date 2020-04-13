@@ -1,9 +1,6 @@
-// Package main implements a parser for our config structure
-// that emits help topics based on its struct tags.
-package main
+package help
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -56,11 +53,12 @@ func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options
 	} else if t.Name() == "Arch" {
 		return runtime.GOOS + "_" + runtime.GOARCH
 	}
-	panic(fmt.Sprintf("Unknown type: %s", t.Kind()))
+	log.Fatalf("Unknown type: %s", t.Kind())
+	return ""
 }
 
-func main() {
-	o := output{
+func allConfigHelp() helpSection {
+	sect := helpSection{
 		Preamble: "${BOLD_BLUE}%s${RESET} is a config setting defined in the .plzconfig file. See `plz help plzconfig` for more information.",
 		Topics:   map[string]string{},
 	}
@@ -79,15 +77,16 @@ func main() {
 					name := strings.ToLower(subt.Name)
 					example := subt.Tag.Get("example")
 					preamble := fmt.Sprintf("${BOLD_YELLOW}[%s]${RESET}\n${YELLOW}%s${RESET} = ${GREEN}%s${RESET}\n\n", sectname, name, ExampleValue(subf, name, subt.Type, example, subt.Tag.Get("options")))
-					help = strings.Replace(help, "\\n", "\n", -1) + "\n"
+					help = preamble + strings.Replace(help, "\\n", "\n", -1) + "\n"
 					if v := subt.Tag.Get("var"); v != "" {
 						help += fmt.Sprintf("\nThis variable is exposed to BUILD rules via the variable ${BOLD_CYAN}CONFIG.%s${RESET},\n"+
 							"and can be overridden package-locally via ${GREEN}package${RESET}(${YELLOW}%s${RESET}='${GREY}<value>${RESET}').\n", v, strings.ToLower(v))
 					}
-					o.Topics[name] = preamble + help
+					sect.Topics[name] = help
+					sect.Topics[sectname+"."+name] = help
 					subfields = append(subfields, "  "+name)
 				} else if f.CanSet() {
-					panic(fmt.Sprintf("Missing help struct tag on %s.%s", t.Field(i).Name, subt.Name))
+					log.Fatalf("Missing help struct tag on %s.%s", t.Field(i).Name, subt.Name)
 				}
 			}
 		}
@@ -96,9 +95,8 @@ func main() {
 			if len(subfields) > 0 {
 				help += "\n${YELLOW}This option has the following sub-fields:${RESET}\n${GREEN}" + strings.Join(subfields, "\n") + "${RESET}\n"
 			}
-			o.Topics[sectname] = urlRegex.ReplaceAllStringFunc(help, func(s string) string { return "${BLUE}" + s + "${RESET}" })
+			sect.Topics[sectname] = urlRegex.ReplaceAllStringFunc(help, func(s string) string { return "${BLUE}" + s + "${RESET}" })
 		}
 	}
-	b, _ := json.Marshal(o)
-	fmt.Println(string(b))
+	return sect
 }
