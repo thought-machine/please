@@ -7,7 +7,9 @@ if [ "`find src/ tools/ -name '*.go' | xargs gofmt -s -l `" != "" ]; then
     echo "Files are not gofmt'd: find src/ tools/ -name '*.go' | xargs gofmt -s -w"
     exit 1
 fi
-$plz run //tools/misc:buildify -p -- --mode=check || {
+
+[ -f "plz-out/bin/src/please" ] && PLZ="plz-out/bin/src/please" || PLZ="plz"
+$PLZ run //tools/misc:buildify -p -- --mode=check || {
     echo "BUILD files are not correctly formatted; run plz buildify to fix."
     exit 1
 }
