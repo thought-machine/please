@@ -341,7 +341,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
 
 
 def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='', visibility:list=None,
-            flags:str='', sandbox:bool=None, cgo:bool=False,
+            flags:str='', sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=None,
             labels:list&features&tags=None, size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC,
             definitions:str|list|dict=None):
@@ -357,6 +357,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
       flags (str): Flags to apply to the test invocation.
       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
       cgo (bool): True if this test depends on a cgo_library.
+      filter_srcs (bool): If True, filters source files through Go's standard build constraints.
       external (bool): True if this test is external to the library it's testing, i.e. it uses the
                        feature of Go that allows it to be in the same directory with a _test suffix.
       timeout (int): Timeout in seconds to allow the test to run for.
@@ -382,6 +383,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
         out = name + ('_lib.a' if cgo else '.a'),
         deps = deps,
         test_only = True,
+        filter_srcs = filter_srcs,
         _all_srcs = not external,
         _link_extra = False,
         complete = False,

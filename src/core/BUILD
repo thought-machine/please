@@ -42,6 +42,7 @@ go_test(
     name = "config_test",
     srcs = ["config_test.go"],
     data = glob(["test_data/*.plzconfig*"]),
+    filter_srcs = False,  # As above
     deps = [
         ":core",
         "//src/cli",
