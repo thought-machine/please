@@ -13,7 +13,7 @@ import (
 
 func TestStore(t *testing.T) {
 	mCache, aCache := makeCaches()
-	target := makeTarget("//pkg1:test_store")
+	target := makeTarget1("//pkg1:test_store")
 	aCache.Store(target, nil, &core.BuildMetadata{}, target.Outputs())
 	aCache.Shutdown()
 	assert.False(t, mCache.inFlight[target])
@@ -22,7 +22,7 @@ func TestStore(t *testing.T) {
 
 func TestRetrieve(t *testing.T) {
 	mCache, aCache := makeCaches()
-	target := makeTarget("//pkg1:test_retrieve")
+	target := makeTarget1("//pkg1:test_retrieve")
 	aCache.Retrieve(target, nil, target.Outputs())
 	aCache.Shutdown()
 	assert.False(t, mCache.inFlight[target])
@@ -31,7 +31,7 @@ func TestRetrieve(t *testing.T) {
 
 func TestClean(t *testing.T) {
 	mCache, aCache := makeCaches()
-	target := makeTarget("//pkg1:test_clean")
+	target := makeTarget1("//pkg1:test_clean")
 	aCache.Clean(target)
 	aCache.Shutdown()
 	assert.False(t, mCache.inFlight[target])
@@ -50,7 +50,7 @@ func TestSimulateBuild(t *testing.T) {
 	mCache, aCache := makeCaches()
 	for i := 0; i < n; i++ {
 		go func(i int) {
-			target := makeTarget(fmt.Sprintf("//test_pkg:target%03d", i))
+			target := makeTarget1(fmt.Sprintf("//test_pkg:target%03d", i))
 			aCache.Store(target, nil, &core.BuildMetadata{}, []string{fmt.Sprintf("file%03d", i), fmt.Sprintf("file%03d_2", i)})
 			wg.Done()
 		}(i)
@@ -106,7 +106,7 @@ func (c *mockCache) CleanAll() {}
 
 func (*mockCache) Shutdown() {}
 
-func makeTarget(label string) *core.BuildTarget {
+func makeTarget1(label string) *core.BuildTarget {
 	return core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 }
 

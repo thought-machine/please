@@ -26,7 +26,7 @@ func init() {
 	}()
 }
 
-func TestStoreAndRetrieve(t *testing.T) {
+func TestStoreAndRetrieveHTTP(t *testing.T) {
 	target := core.NewBuildTarget(core.NewBuildLabel("pkg/name", "label_name"))
 	target.AddOutput("testfile2")
 	config := core.DefaultConfiguration()
