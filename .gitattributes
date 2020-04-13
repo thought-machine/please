@@ -2,4 +2,5 @@
 BUILD linguist-language=Python diff=python
 BUILD.plz linguist-language=Python diff=python
 docs/* linguist-documentation
+*_bindata.go linguist-generated
 third_party/go/zip/* linguist-vendored
