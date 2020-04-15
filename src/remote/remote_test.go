@@ -22,8 +22,8 @@ func TestBadAPIVersion(t *testing.T) {
 	// We specify a required API version of v2.0.0, so should fail initialisation if the server
 	// specifies something incompatible with that.
 	defer server.Reset()
-	server.HighApiVersion.Major = 1
-	server.LowApiVersion.Major = 1
+	server.HighAPIVersion.Major = 1
+	server.LowAPIVersion.Major = 1
 	c := newClient()
 	assert.Error(t, c.CheckInitialised())
 	assert.Contains(t, c.CheckInitialised().Error(), "1.0.0 - 1.1.0")

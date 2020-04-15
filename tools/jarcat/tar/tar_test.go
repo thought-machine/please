@@ -24,10 +24,10 @@ func TestNoCompression(t *testing.T) {
 
 	m := ReadTar(t, filename, false, false)
 	assert.EqualValues(t, map[string]string{
-		"dir1/file1.txt": "test file 1",
-		"dir2/file2.txt": "test file 2",
+		"dir1/file1.txt":     "test file 1",
+		"dir2/file2.txt":     "test file 2",
 		"symlink/source.txt": "symlink file",
-		"symlink/link.txt": "",
+		"symlink/link.txt":   "",
 	}, toFilenameMap(m))
 
 	// All the timestamps should be fixated and there should be no user/group id.
@@ -52,10 +52,10 @@ func TestCompression(t *testing.T) {
 
 	m := ReadTar(t, filename, true, false)
 	assert.EqualValues(t, map[string]string{
-		"dir1/file1.txt": "test file 1",
-		"dir2/file2.txt": "test file 2",
+		"dir1/file1.txt":     "test file 1",
+		"dir2/file2.txt":     "test file 2",
 		"symlink/source.txt": "symlink file",
-		"symlink/link.txt": "",
+		"symlink/link.txt":   "",
 	}, toFilenameMap(m))
 }
 
@@ -66,10 +66,10 @@ func TestXzipCompression(t *testing.T) {
 
 	m := ReadTar(t, filename, false, true)
 	assert.EqualValues(t, map[string]string{
-		"dir1/file1.txt": "test file 1",
-		"dir2/file2.txt": "test file 2",
+		"dir1/file1.txt":     "test file 1",
+		"dir2/file2.txt":     "test file 2",
 		"symlink/source.txt": "symlink file",
-		"symlink/link.txt": "",
+		"symlink/link.txt":   "",
 	}, toFilenameMap(m))
 }
 
@@ -80,10 +80,10 @@ func TestWithPrefix(t *testing.T) {
 
 	m := ReadTar(t, filename, false, false)
 	assert.EqualValues(t, map[string]string{
-		"/dir1/file1.txt": "test file 1",
-		"/dir2/file2.txt": "test file 2",
+		"/dir1/file1.txt":     "test file 1",
+		"/dir2/file2.txt":     "test file 2",
 		"/symlink/source.txt": "symlink file",
-		"/symlink/link.txt": "",
+		"/symlink/link.txt":   "",
 	}, toFilenameMap(m))
 }
 
@@ -94,10 +94,10 @@ func TestWithoutFlatten(t *testing.T) {
 
 	m := ReadTar(t, filename, false, false)
 	assert.EqualValues(t, map[string]string{
-		"tools/jarcat/tar/test_data/dir1/file1.txt": "test file 1",
-		"tools/jarcat/tar/test_data/dir2/file2.txt": "test file 2",
+		"tools/jarcat/tar/test_data/dir1/file1.txt":     "test file 1",
+		"tools/jarcat/tar/test_data/dir2/file2.txt":     "test file 2",
 		"tools/jarcat/tar/test_data/symlink/source.txt": "symlink file",
-		"tools/jarcat/tar/test_data/symlink/link.txt": "",
+		"tools/jarcat/tar/test_data/symlink/link.txt":   "",
 	}, toFilenameMap(m))
 }
 
@@ -109,9 +109,9 @@ func TestStripPrefixWithoutFlatten(t *testing.T) {
 	m := ReadTar(t, filename, false, false)
 	assert.EqualValues(t, map[string]string{
 		"file1.txt": "test file 1",
-		"tools/jarcat/tar/test_data/dir2/file2.txt": "test file 2",
+		"tools/jarcat/tar/test_data/dir2/file2.txt":     "test file 2",
 		"tools/jarcat/tar/test_data/symlink/source.txt": "symlink file",
-		"tools/jarcat/tar/test_data/symlink/link.txt": "",
+		"tools/jarcat/tar/test_data/symlink/link.txt":   "",
 	}, toFilenameMap(m))
 }
 
@@ -122,10 +122,10 @@ func TestStripPrefixWithPrefix(t *testing.T) {
 
 	m := ReadTar(t, filename, false, false)
 	assert.EqualValues(t, map[string]string{
-		"prefix/dir1/file1.txt": "test file 1",
-		"prefix/dir2/file2.txt": "test file 2",
+		"prefix/dir1/file1.txt":     "test file 1",
+		"prefix/dir2/file2.txt":     "test file 2",
 		"prefix/symlink/source.txt": "symlink file",
-		"prefix/symlink/link.txt": "",
+		"prefix/symlink/link.txt":   "",
 	}, toFilenameMap(m))
 }
 
@@ -137,7 +137,7 @@ func TestSymlink(t *testing.T) {
 	m := ReadTar(t, filename, false, false)
 	assert.EqualValues(t, map[string]string{
 		"tools/jarcat/tar/test_data/symlink/source.txt": "symlink file",
-		"tools/jarcat/tar/test_data/symlink/link.txt": "",
+		"tools/jarcat/tar/test_data/symlink/link.txt":   "",
 	}, toFilenameMap(m))
 	for hdr := range m {
 		if hdr.Name == "tools/jarcat/tar/test_data/symlink/link.txt" {

@@ -50,7 +50,7 @@ func newClientInstance(name string) *Client {
 // A testServer implements the server interface for the various servers we test against.
 type testServer struct {
 	DigestFunction                []pb.DigestFunction_Value
-	LowApiVersion, HighApiVersion semver.SemVer
+	LowAPIVersion, HighAPIVersion semver.SemVer
 	actionResults                 map[string]*pb.ActionResult
 	blobs                         map[string][]byte
 	bytestreams                   map[string][]byte
@@ -69,8 +69,8 @@ func (s *testServer) GetCapabilities(ctx context.Context, req *pb.GetCapabilitie
 			DigestFunction: pb.DigestFunction_SHA256,
 			ExecEnabled:    true,
 		},
-		LowApiVersion:  &s.LowApiVersion,
-		HighApiVersion: &s.HighApiVersion,
+		LowApiVersion:  &s.LowAPIVersion,
+		HighApiVersion: &s.HighAPIVersion,
 	}, nil
 }
 
@@ -79,8 +79,8 @@ func (s *testServer) Reset() {
 		pb.DigestFunction_SHA1,
 		pb.DigestFunction_SHA256,
 	}
-	s.LowApiVersion = semver.SemVer{Major: 2}
-	s.HighApiVersion = semver.SemVer{Major: 2, Minor: 1}
+	s.LowAPIVersion = semver.SemVer{Major: 2}
+	s.HighAPIVersion = semver.SemVer{Major: 2, Minor: 1}
 	s.actionResults = map[string]*pb.ActionResult{}
 	s.blobs = map[string][]byte{}
 	s.bytestreams = map[string][]byte{}
