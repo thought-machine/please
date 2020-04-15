@@ -845,8 +845,6 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 		if len(targets) == 0 {
 			// Assume they want us to read from stdin since nothing else was given.
 			targets = []core.BuildLabel{core.BuildLabelStdin}
-		} else if shouldBuild || shouldTest || len(targets) != 1 || targets[0] != core.WholeGraph[0] {
-			log.Warning("Input is being piped to stdin but is not being read; you need to pass - explicitly to read it.")
 		}
 	}
 	if len(targets) == 0 {

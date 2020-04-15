@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/op/go-logging.v1"
 
-	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/rules"
+	"github.com/thought-machine/please/src/core"
 )
 
 type record struct {
