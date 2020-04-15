@@ -1,3 +1,9 @@
+Version 14.3.10
+---------------
+
+    * Suppressed some spurious errors about linking duplicate test results into surefire directory.
+
+
 Version 14.3.9
 --------------
 
