@@ -1,4 +1,5 @@
 // This isn't a 'real' source file, it's test data for //src/build/go:write_test_main_test
+// Code generated for the purpose of the above test. DO NOT EDIT.
 
 package parse
 
