@@ -195,7 +195,8 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
 def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:list=[], worker:str='',
                 labels:list&features&tags=[], size:str=None, flags:str='', visibility:list=None,
                 sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
-                test_outputs:list=None, zip_safe:bool=None, interpreter:str=None, site:bool=False):
+                test_outputs:list=None, zip_safe:bool=None, interpreter:str=None, site:bool=False,
+                test_runner:str=None):
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
@@ -229,10 +230,13 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
                         'pypy' or whatever.
       site (bool): Allows the Python interpreter to import site; conversely if False, it will be
                    started with the -S flag to avoid importing site.
+      test_runner (str): Specify which Python test runner to use for these tests. One of
+                         `unittest`, `pytest`, or a custom test runner entry point.
     """
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
+    test_runner = test_runner or CONFIG.PYTHON_TEST_RUNNER
     cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$STAMP"' % (
-        interpreter, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_TEST_RUNNER,
+        interpreter, CONFIG.PYTHON_MODULE_DIR, test_runner,
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
