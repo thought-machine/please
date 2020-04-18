@@ -18,7 +18,9 @@ func CopyOrLinkFile(from, to string, fromMode, toMode os.FileMode, link, fallbac
 			}
 			return os.Symlink(dest, to)
 		}
-		return os.Link(from, to)
+		if err := os.Link(from, to); err == nil || !fallback {
+			return err
+		}
 	}
 	return CopyFile(from, to, toMode)
 }
