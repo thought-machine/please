@@ -112,7 +112,9 @@ func (c *Client) init() {
 	flag.CommandLine.Parse([]string{"-v", "0", "-log_dir", "/dev/null"})
 	var g errgroup.Group
 	g.Go(c.initExec)
-	g.Go(c.initFetch)
+	if c.state.Config.Remote.AssetURL != "" {
+		g.Go(c.initFetch)
+	}
 	c.err = g.Wait()
 	if c.err != nil {
 		log.Error("Error setting up remote execution client: %s", c.err)
@@ -182,14 +184,14 @@ func (c *Client) initExec() error {
 	}
 	c.platform = convertPlatform(c.state.Config)
 	log.Debug("Remote execution client initialised for execution")
+	if c.state.Config.Remote.AssetURL == "" {
+		c.fetchClient = fpb.NewFetchClient(client.Connection)
+	}
 	return nil
 }
 
 // initFetch initialises the remote fetch server.
 func (c *Client) initFetch() error {
-	if c.state.Config.Remote.AssetURL == "" {
-		return fmt.Errorf("You must specify remote.asseturl in configuration to use remote execution")
-	}
 	tlsOption := func() grpc.DialOption {
 		if c.state.Config.Remote.Secure {
 			return grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, ""))
