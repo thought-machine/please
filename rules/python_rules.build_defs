@@ -93,7 +93,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
 
 
 def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
-                  visibility:list=None, test_only:bool=False, zip_safe:bool=None,
+                  data:list=None, visibility:list=None, test_only:bool=False, zip_safe:bool=None,
                   site:bool=False, strip:bool=False,
                   interpreter:str=None, shebang:str='', labels:list&features&tags=[]):
     """Generates a Python binary target.
@@ -108,6 +108,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
       main (str): Python file which is the entry point and __main__ module.
       srcs (list): List of additional Python source files for this binary.
       resources (list): List of static resources to include in the .pex.
+      data (list): Runtime data files for this rule.
       out (str): Name of the output file. Default to name + .pex
       deps (list): Dependencies of this rule.
       visibility (list): Visibility specification.
@@ -172,6 +173,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         srcs=[pex_rule],
         deps=[lib_rule],
         outs=[out or (name + '.pex')],
+        data=data,
         cmd=cmd,
         needs_transitive_deps=True,
         binary=True,
