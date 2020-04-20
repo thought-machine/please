@@ -23,18 +23,18 @@ import (
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
-func (c *Client) uploadAction(target *core.BuildTarget, isTest bool) (*pb.Command, *pb.Digest, error) {
+func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb.Command, *pb.Digest, error) {
 	var command *pb.Command
 	var digest *pb.Digest
 	err := c.uploadBlobs(func(ch chan<- *chunker.Chunker) error {
 		defer close(ch)
-		inputRoot, err := c.uploadInputs(ch, target, isTest)
+		inputRoot, err := c.uploadInputs(ch, target, isTest || isRun)
 		if err != nil {
 			return err
 		}
 		inputRootChunker, _ := chunker.NewFromProto(inputRoot, int(c.client.ChunkMaxSize))
 		ch <- inputRootChunker
-		command, err = c.buildCommand(target, inputRoot, isTest, target.Stamp)
+		command, err = c.buildCommand(target, inputRoot, isTest, isRun, target.Stamp)
 		if err != nil {
 			return err
 		}
@@ -59,7 +59,7 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 		return nil, nil, err
 	}
 	inputRootDigest := c.digestMessage(inputRoot)
-	command, err := c.buildCommand(target, inputRoot, isTest, stamp)
+	command, err := c.buildCommand(target, inputRoot, isTest, false, stamp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -84,9 +84,11 @@ func (c *Client) buildStampedAndUnstampedAction(target *core.BuildTarget) (comma
 }
 
 // buildCommand builds the command for a single target.
-func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest, stamp bool) (*pb.Command, error) {
+func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest, isRun, stamp bool) (*pb.Command, error) {
 	if isTest {
 		return c.buildTestCommand(target)
+	} else if isRun {
+		return c.buildRunCommand(target)
 	}
 	// We can't predict what variables like this should be so we sneakily bung something on
 	// the front of the command. It'd be nicer if there were a better way though...
@@ -159,6 +161,19 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
 	}, err
+}
+
+// buildRunCommand builds the command to run a target remotely.
+func (c *Client) buildRunCommand(target *core.BuildTarget) (*pb.Command, error) {
+	outs := target.Outputs()
+	if len(outs) == 0 {
+		return nil, fmt.Errorf("Target %s has no outputs, it can't be run with `plz run`", target)
+	}
+	return &pb.Command{
+		Platform: c.platform,
+		Arguments: outs,
+		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(c.state.Config), false),
+	}, nil
 }
 
 // getCommand returns the appropriate command to use for a target.
