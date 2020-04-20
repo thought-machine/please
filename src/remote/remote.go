@@ -258,6 +258,13 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 			}); err != nil {
 				return metadata, err
 			}
+			for _, datum := range target.AllData() {
+				if l := datum.Label(); l != nil {
+					if err := c.Download(c.state.Graph.TargetOrDie(*l)); err != nil {
+						return metadata, err
+					}
+				}
+			}
 		}
 	}
 	return metadata, nil
