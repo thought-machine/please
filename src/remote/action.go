@@ -170,8 +170,8 @@ func (c *Client) buildRunCommand(target *core.BuildTarget) (*pb.Command, error) 
 		return nil, fmt.Errorf("Target %s has no outputs, it can't be run with `plz run`", target)
 	}
 	return &pb.Command{
-		Platform: c.platform,
-		Arguments: outs,
+		Platform:             c.platform,
+		Arguments:            outs,
 		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(c.state.Config), false),
 	}, nil
 }

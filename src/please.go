@@ -175,7 +175,7 @@ var opts struct {
 			Target core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
 			Args   cli.Filepaths   `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
 		} `positional-args:"true"`
-		Remote bool          `long:"remote" description:"Send targets to be executed remotely."`
+		Remote bool `long:"remote" description:"Send targets to be executed remotely."`
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
 
 	Clean struct {
