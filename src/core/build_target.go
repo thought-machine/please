@@ -1038,7 +1038,7 @@ func (target *BuildTarget) AllLocalSources() []string {
 func (target *BuildTarget) HasSource(source string) bool {
 	for _, src := range append(target.AllSources(), target.AllData()...) {
 		// Check for both the source matching and a prefix match indicating it's a directory with the file within.
-		if s := src.String(); s == source || strings.HasPrefix(source, s + "/") {
+		if s := src.String(); s == source || strings.HasPrefix(source, s+"/") {
 			return true
 		}
 	}
