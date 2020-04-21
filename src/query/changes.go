@@ -111,8 +111,10 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) (hash []byte, 
 
 // addRevdeps walks back up the reverse dependencies of a target, marking them all changed.
 func addRevdeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}, target *core.BuildTarget, includeDirect, includeTransitive bool) {
-	if _, present := changed[target]; !present && state.ShouldInclude(target) {
-		changed[target] = struct{}{}
+	if _, present := changed[target]; !present {
+		if state.ShouldInclude(target) {
+			changed[target] = struct{}{}
+		}
 		if includeDirect || includeTransitive {
 			for _, revdep := range state.Graph.ReverseDependencies(target) {
 				addRevdeps(state, changed, revdep, false, includeTransitive)

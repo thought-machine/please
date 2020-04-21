@@ -227,13 +227,13 @@ plz_e2e_test(
 # Tests for query changes.
 plz_e2e_test(
     name = "query_affected_tests_test",
-    cmd = "plz query changes --tests --include_dependees=transitive test/affectedtests_test.go",
+    cmd = "plz query changes --include_dependees=transitive --include test test/affectedtests_test.go",
     expected_output = "query_affectedtests_test.txt",
 )
 
 plz_e2e_test(
     name = "query_affected_tests_stdin_test",
-    cmd = "echo test/affectedtests_test.go | plz query changes --tests --include_dependees=transitive -",
+    cmd = "echo test/affectedtests_test.go | plz query changes --include_dependees=transitive --include test -",
     expected_output = "query_affectedtests_test.txt",
 )
 
@@ -428,7 +428,7 @@ go_binary(
 sh_test(
     name = "glob_build_test",
     src = "glob_build_test.sh",
-    data = glob(["*"]),
+    data = glob(["*"], exclude=["*.go"]),
 )
 
 genrule(
