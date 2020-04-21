@@ -324,7 +324,7 @@ var opts struct {
 			Args             struct {
 				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to calculate changes for. Overrides flags relating to SCM operations."`
 			} `positional-args:"true"`
-		} `command:"changes" description:"Calculates the difference between two different states of the build graph"`
+		} `command:"changes" description:"Calculates the set of changed targets in regard to a set of modified files or SCM commits."`
 		Roots struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`

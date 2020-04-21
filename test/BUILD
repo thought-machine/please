@@ -224,16 +224,16 @@ plz_e2e_test(
     expect_output_contains = "5 passed",
 )
 
-# Tests for query affectedtests.
+# Tests for query changes.
 plz_e2e_test(
-    name = "query_affectedtests_test",
-    cmd = "plz query affectedtargets --tests -p test/affectedtests_test.go",
+    name = "query_affected_tests_test",
+    cmd = "plz query changes --tests --include_dependees=transitive test/affectedtests_test.go",
     expected_output = "query_affectedtests_test.txt",
 )
 
 plz_e2e_test(
-    name = "query_affectedtests_stdin_test",
-    cmd = "echo test/affectedtests_test.go | plz query affectedtargets --tests -p -",
+    name = "query_affected_tests_stdin_test",
+    cmd = "echo test/affectedtests_test.go | plz query changes --tests --include_dependees=transitive -",
     expected_output = "query_affectedtests_test.txt",
 )
 
