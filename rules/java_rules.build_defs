@@ -215,7 +215,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
       out (str): Name of output .jar file. Defaults to name + .jar.
       srcs (list): Source files to compile.
       deps (list): Dependencies of this rule.
-      data (list): Deprecated, has no effect.
+      data (list): Runtime data for this rule.
       visibility (list): Visibility declaration of this rule.
       jvm_args (str): Arguments to pass to the JVM in the run script.
       self_executable (bool): True to make the jar self executable.
@@ -243,6 +243,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
         deps=deps,
         outs=[out or name + '.jar'],
         srcs=[manifest],
+        data=data,
         cmd=cmd,
         needs_transitive_deps=True,
         output_is_complete=True,

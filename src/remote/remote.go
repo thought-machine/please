@@ -258,9 +258,30 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 			}); err != nil {
 				return metadata, err
 			}
+			for _, datum := range target.AllData() {
+				if l := datum.Label(); l != nil {
+					if err := c.Download(c.state.Graph.TargetOrDie(*l)); err != nil {
+						return metadata, err
+					}
+				}
+			}
 		}
 	}
 	return metadata, nil
+}
+
+// Run runs a target on the remote executors.
+func (c *Client) Run(target *core.BuildTarget) error {
+	if err := c.CheckInitialised(); err != nil {
+		return err
+	}
+	cmd, digest, err := c.uploadAction(target, false, true)
+	if err != nil {
+		return err
+	}
+	// 24 hours is kind of an arbitrarily long timeout. Basically we just don't want to limit it here.
+	_, _, err = c.execute(0, target, cmd, digest, 24*time.Hour, false, false)
+	return err
 }
 
 // build implements the actual build of a target.
@@ -415,7 +436,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 		return metadata, ar, nil
 	}
 	// We didn't actually upload the inputs before, so we must do so now.
-	command, digest, err := c.uploadAction(target, isTest)
+	command, digest, err := c.uploadAction(target, isTest, false)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
@@ -431,6 +452,12 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 		// take into account time to fetch inputs etc, so we might need to extend.
 		timeout = c.reqTimeout
 	}
+	return c.reallyExecute(tid, target, command, digest, timeout, needStdout)
+}
+
+// reallyExecute is like execute but after the initial cache check etc.
+// The action & sources must have already been uploaded.
+func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	resp, err := c.client.ExecuteAndWaitProgress(ctx, &pb.ExecuteRequest{
@@ -574,7 +601,7 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 	fmt.Printf("Remote execution hashes:\n")
 	inputRootDigest := c.digestMessage(inputRoot)
 	fmt.Printf("  Input: %7d bytes: %s\n", inputRootDigest.SizeBytes, inputRootDigest.Hash)
-	cmd, _ := c.buildCommand(target, inputRoot, isTest, target.Stamp)
+	cmd, _ := c.buildCommand(target, inputRoot, isTest, false, target.Stamp)
 	commandDigest := c.digestMessage(cmd)
 	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {

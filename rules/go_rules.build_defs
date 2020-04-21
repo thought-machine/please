@@ -283,7 +283,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
     )
 
 
-def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[],
+def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[], data:list=None,
               visibility:list=None, test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
               filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False):
     """Compiles a Go binary.
@@ -294,6 +294,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
       asm_srcs (list): Assembly source files.
       out (str): Name of the output file to create. Defaults to the same as `name`.
       deps (list): Dependencies
+      data (list): Runtime dependencies of this rule.
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
       static (bool): If True, passes flags to the linker to try to force fully static linking.
@@ -325,6 +326,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
         name=name,
         srcs=[lib],
         deps=deps,
+        data=data,
         outs=[out or name],
         cmd=cmds,
         building_description="Linking...",

@@ -157,7 +157,7 @@ func TestNoAbsolutePaths(t *testing.T) {
 	target.AddOutput("remote_test")
 	target.AddSource(core.FileLabel{Package: "package", File: "file"})
 	target.AddTool(tool.Label)
-	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false)
+	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false)
 	testDir := os.Getenv("TEST_DIR")
 	for _, env := range cmd.EnvironmentVariables {
 		if !strings.HasPrefix(env.Value, "//") {
@@ -176,7 +176,7 @@ func TestNoAbsolutePaths2(t *testing.T) {
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target5"})
 	target.AddOutput("remote_test")
 	target.AddTool(core.SystemPathLabel{Path: []string{os.Getenv("TMP_DIR")}, Name: "remote_test"})
-	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false)
+	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false)
 	for _, env := range cmd.EnvironmentVariables {
 		if !strings.HasPrefix(env.Value, "//") {
 			assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)

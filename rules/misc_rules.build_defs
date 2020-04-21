@@ -3,7 +3,7 @@
 
 def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs:list|dict=None, deps:list=None,
             labels:list&features&tags=None, visibility:list=None, building_description:str='Building...',
-            hashes:list=None, timeout:int=0, binary:bool=False, sandbox:bool=None,
+            data:list=None, hashes:list=None, timeout:int=0, binary:bool=False, sandbox:bool=None,
             needs_transitive_deps:bool=False, output_is_complete:bool=True, test_only:bool&testonly=False,
             secrets:list|dict=None, requires:list=None, provides:dict=None, pre_build:function=None,
             post_build:function=None, tools:list|dict=None, pass_env:list=None, local:bool=False):
@@ -28,6 +28,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
                           similarly to named srcs; they have separate environment variables and
                           can be accessed directly by other rules.
       out (str): A single output of this rule, as a string. Discouraged in favour of 'outs'.
+      data (list): Runtime data for this rule.
       deps (list): Dependencies of this rule.
       tools (list | dict): Tools used to build this rule; similar to srcs but are not copied to the
                            temporary build directory. Should be accessed via $(exe //path/to:tool)
@@ -102,6 +103,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         outs = [out] if out else outs,
         cmd = ' && '.join(cmd) if isinstance(cmd, list) else cmd,
         deps = deps,
+        data = data,
         tools = tools,
         secrets = secrets,
         labels = labels,

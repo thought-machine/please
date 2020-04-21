@@ -22,15 +22,15 @@ import (
 var log = logging.MustGetLogger("run")
 
 // Run implements the running part of 'plz run'.
-func Run(state *core.BuildState, label core.BuildLabel, args []string, env bool) {
-	run(context.Background(), state, label, args, false, false, env, false)
+func Run(state *core.BuildState, label core.BuildLabel, args []string, remote, env bool) {
+	run(context.Background(), state, label, args, false, false, remote, env, false)
 }
 
 // Parallel runs a series of targets in parallel.
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
 // The given context can be used to control the lifetime of the subprocesses.
-func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, args []string, numTasks int, quiet, env, detach bool) int {
+func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, args []string, numTasks int, quiet, remote, env, detach bool) int {
 	limiter := make(chan struct{}, numTasks)
 	var g errgroup.Group
 	for _, label := range labels {
@@ -38,7 +38,7 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLa
 		g.Go(func() error {
 			limiter <- struct{}{}
 			defer func() { <-limiter }()
-			return run(ctx, state, label, args, true, quiet, env, detach)
+			return run(ctx, state, label, args, true, quiet, remote, env, detach)
 		})
 	}
 	if err := g.Wait(); err != nil {
@@ -53,10 +53,10 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLa
 // Sequential runs a series of targets sequentially.
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
-func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string, quiet, env bool) int {
+func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string, quiet, remote, env bool) int {
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		if err := run(context.Background(), state, label, args, true, quiet, env, false); err != nil {
+		if err := run(context.Background(), state, label, args, true, quiet, remote, env, false); err != nil {
 			log.Error("%s", err)
 			return err.(*exitError).code
 		}
@@ -68,13 +68,22 @@ func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string,
 // If fork is true then we fork to run the target and return any error from the subprocesses.
 // If it's false this function never returns (because we either win or die; it's like
 // Game of Thrones except rather less glamorous).
-func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, args []string, fork, quiet, setenv, detach bool) error {
+func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, args []string, fork, quiet, remote, setenv, detach bool) error {
 	target := state.Graph.TargetOrDie(label)
 	if !target.IsBinary {
 		log.Fatalf("Target %s cannot be run; it's not marked as binary", label)
 	}
 	if len(target.Outputs()) != 1 && target.IsTest {
 		log.Fatalf("Targets %s cannot be run as it has %d outputs; Only tests with 1 output can be run.", label, len(target.Outputs()))
+	}
+	if remote {
+		// Send this off to be done remotely.
+		// This deliberately misses the out_exe bit below, but also doesn't pick up whatever's going on with java -jar;
+		// however that will be obsolete post #920 anyway.
+		if state.RemoteClient == nil {
+			log.Fatalf("You must configure remote execution to use plz run --remote")
+		}
+		return state.RemoteClient.Run(target)
 	}
 	// ReplaceSequences always quotes stuff in case it contains spaces or special characters,
 	// that works fine if we interpret it as a shell but not to pass it as an argument here.
