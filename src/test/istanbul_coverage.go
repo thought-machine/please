@@ -58,7 +58,7 @@ func (file *istanbulFile) toLineCoverage() []core.LineCoverage {
 		}
 		s := file.StatementMap[statement]
 		for i := s.Start.Line; i <= s.End.Line; i++ {
-			if val > ret[i-1] {
+			if ret[i-1] != core.Uncovered {
 				ret[i-1] = val // -1 because 1-indexed
 			}
 		}
@@ -84,6 +84,8 @@ func sanitiseFileName(target *core.BuildTarget, filename string) string {
 	} else if s := sanitiseFileNameDir(filename, target.TmpDir(), true); s != "" {
 		return s
 	} else if s := sanitiseFileNameDir(filename, target.TestDir(), true); s != "" {
+		return s
+	} else if s := sanitiseFileNameDir(filename, core.SandboxDir, false); s != "" {
 		return s
 	}
 	return filename

@@ -209,13 +209,13 @@ func TestIstanbulCoverage2(t *testing.T) {
 	lines := coverage.Files["common/js/components/Table/Table.js"]
 	// This exercises a slightly more complex example with multiple overlapping statements.
 	assertLine(t, lines, 15, core.Covered)
-	assertLine(t, lines, 16, core.Covered)
-	assertLine(t, lines, 17, core.Covered)
-	assertLine(t, lines, 18, core.Covered)
-	assertLine(t, lines, 19, core.Covered)
-	assertLine(t, lines, 20, core.Covered)
-	assertLine(t, lines, 21, core.Covered)
-	assertLine(t, lines, 22, core.Covered)
+	assertLine(t, lines, 16, core.Uncovered)
+	assertLine(t, lines, 17, core.Uncovered)
+	assertLine(t, lines, 18, core.Uncovered)
+	assertLine(t, lines, 19, core.Uncovered)
+	assertLine(t, lines, 20, core.Uncovered)
+	assertLine(t, lines, 21, core.Uncovered)
+	assertLine(t, lines, 22, core.Uncovered)
 	assertLine(t, lines, 23, core.Covered)
 }
 

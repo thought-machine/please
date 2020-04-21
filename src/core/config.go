@@ -96,8 +96,8 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	}
 	setBuildPath(&config.Build.Path, config.Build.PassEnv)
 	setDefault(&config.Build.PassEnv)
-	setDefault(&config.Cover.FileExtension, ".go", ".py", ".java", ".js", ".cc", ".h", ".c")
-	setDefault(&config.Cover.ExcludeExtension, ".pb.go", "_pb2.py", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc")
+	setDefault(&config.Cover.FileExtension, ".go", ".py", ".java", ".tsx", ".ts", ".js", ".cc", ".h", ".c")
+	setDefault(&config.Cover.ExcludeExtension, ".pb.go", "_pb2.py", ".spec.tsx", ".spec.ts", ".spec.js", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc")
 	setDefault(&config.Proto.Language, "cc", "py", "java", "go", "js")
 	setDefault(&config.Parse.BuildDefsDir, "build_defs")
 
