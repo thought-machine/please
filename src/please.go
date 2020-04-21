@@ -584,6 +584,9 @@ var buildFunctions = map[string]func() int{
 		return 0
 	},
 	"changes": func() int {
+		// query changes always excludes 'manual' targets.
+		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
+
 		transitive := opts.Query.Changes.IncludeDependees == "transitive"
 		direct := opts.Query.Changes.IncludeDependees == "direct" || transitive
 		runInexact := func(files []string) int {
