@@ -428,7 +428,10 @@ go_binary(
 sh_test(
     name = "glob_build_test",
     src = "glob_build_test.sh",
-    data = glob(["*"], exclude=["*.go"]),
+    data = glob(
+        ["*"],
+        exclude = ["*.go"],
+    ),
 )
 
 genrule(
