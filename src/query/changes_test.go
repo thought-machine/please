@@ -22,7 +22,8 @@ func TestDiffGraphs(t *testing.T) {
 	assert.EqualValues(t, []core.BuildLabel{t2.Label, t4.Label}, DiffGraphs(s1, s2, nil, true, true))
 
 	t2.AddLabel("nope")
-	s2.SetIncludeAndExclude(nil, []string{"nope"})
+	t4.AddLabel("test")
+	s2.SetIncludeAndExclude(nil, []string{"nope", "test"})
 	assert.EqualValues(t, []core.BuildLabel{}, DiffGraphs(s1, s2, nil, true, true))
 }
 
@@ -67,7 +68,7 @@ func TestChangesIncludesDataDirs(t *testing.T) {
 	t1 := addTarget(s, "//src/core:core", nil, "src/core/core.go")
 	t2 := addTarget(s, "//src/query:changes", t1, "src/query/changes.go")
 	t3 := addTarget(s, "//src/query:changes_test", t2, "src/query/changes_test.go")
-	t3.AddDatum(core.FileLabel{Package: "src/query", File:"test_data"})
+	t3.AddDatum(core.FileLabel{Package: "src/query", File: "test_data"})
 	assert.EqualValues(t, []core.BuildLabel{t3.Label}, Changes(s, []string{"src/query/test_data/some_dir/test_file1.txt"}, false, false))
 }
 
