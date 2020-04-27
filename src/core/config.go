@@ -801,6 +801,7 @@ func (config *Configuration) NumRemoteExecutors() int {
 // A ConfigProfile is a string that knows how to handle completions given all the possible config file locations.
 type ConfigProfile string
 
+// Complete implements command-line flags completion for a ConfigProfile.
 func (profile ConfigProfile) Complete(match string) (completions []flags.Completion) {
 	for _, filename := range defaultConfigFiles() {
 		matches, _ := filepath.Glob(filename + "." + match + "*")
