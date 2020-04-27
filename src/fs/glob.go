@@ -68,7 +68,6 @@ func glob(buildFileNames []string, rootPath, pattern string, includeHidden bool,
 		return filepath.Glob(path.Join(rootPath, pattern))
 	}
 
-
 	globMatches, err := doublestar.Glob(path.Join(rootPath, pattern))
 	if err != nil {
 		return nil, err
@@ -76,14 +75,14 @@ func glob(buildFileNames []string, rootPath, pattern string, includeHidden bool,
 
 	var subPackages []string
 	for _, m := range globMatches {
-		if IsBuildFile(buildFileNames, m) {
-			subPackages = append(subPackages,filepath.Dir(m))
+		if isBuildFile(buildFileNames, m) {
+			subPackages = append(subPackages, filepath.Dir(m))
 		}
 	}
 
 	var matches []string
 	for _, m := range globMatches {
-		if IsInPackages(m, subPackages) {
+		if isInPackages(m, subPackages) {
 			continue
 		}
 		if shouldExcludeMatch(m, excludes) {
@@ -117,9 +116,8 @@ func WalkMode(rootPath string, callback func(name string, isDir bool, mode os.Fi
 	}})
 }
 
-
 // IsPackage returns true if the given directory name is a package (i.e. contains a build file)
-func IsBuildFile(buildFileNames []string, name string) bool {
+func isBuildFile(buildFileNames []string, name string) bool {
 	for _, buildFileName := range buildFileNames {
 		if strings.HasSuffix(name, buildFileName) {
 			return true
@@ -128,7 +126,7 @@ func IsBuildFile(buildFileNames []string, name string) bool {
 	return false
 }
 
-func IsInPackages(name string, packages []string) bool {
+func isInPackages(name string, packages []string) bool {
 	for _, p := range packages {
 		if strings.HasPrefix(name, p) {
 			return true
