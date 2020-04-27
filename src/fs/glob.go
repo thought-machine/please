@@ -1,14 +1,14 @@
 package fs
 
 import (
-	"github.com/bmatcuk/doublestar"
-	_ "github.com/bmatcuk/doublestar"
-	"github.com/karrick/godirwalk"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/bmatcuk/doublestar"
+	"github.com/karrick/godirwalk"
 )
 
 // Used to identify the fixed part at the start of a glob pattern.
