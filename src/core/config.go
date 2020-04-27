@@ -64,13 +64,18 @@ func readConfigFile(config *Configuration, filename string) error {
 // merges them into a config object.
 // The repo root must have already have been set before calling this.
 func ReadDefaultConfigFiles(profiles []string) (*Configuration, error) {
-	return ReadConfigFiles([]string{
+	return ReadConfigFiles(defaultConfigFiles(), profiles)
+}
+
+// defaultConfigFiles returns the set of default config file names.
+func defaultConfigFiles() []string {
+	return []string{
 		MachineConfigFileName,
 		ExpandHomePath(UserConfigFileName),
 		path.Join(RepoRoot, ConfigFileName),
 		path.Join(RepoRoot, ArchConfigFileName),
 		path.Join(RepoRoot, LocalConfigFileName),
-	}, profiles)
+	}
 }
 
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
@@ -791,4 +796,35 @@ func (config *Configuration) NumRemoteExecutors() int {
 		return 0
 	}
 	return config.Remote.NumExecutors
+}
+
+// A ConfigProfile is a string that knows how to handle completions given all the possible config file locations.
+type ConfigProfile string
+
+// Complete implements command-line flags completion for a ConfigProfile.
+func (profile ConfigProfile) Complete(match string) (completions []flags.Completion) {
+	for _, filename := range defaultConfigFiles() {
+		matches, _ := filepath.Glob(filename + "." + match + "*")
+		for _, match := range matches {
+			if suffix := strings.TrimPrefix(match, filename+"."); suffix != "local" { // .plzconfig.local doesn't count
+				completions = append(completions, flags.Completion{
+					Item:        suffix,
+					Description: "Profile defined at " + match,
+				})
+			}
+		}
+	}
+	return completions
+}
+
+// ConfigProfiles makes it easier to convert ConfigProfile slices.
+type ConfigProfiles []ConfigProfile
+
+// Strings converts this to a slice of strings.
+func (profiles ConfigProfiles) Strings() []string {
+	ret := make([]string, len(profiles))
+	for i, p := range profiles {
+		ret[i] = string(p)
+	}
+	return ret
 }
