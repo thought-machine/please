@@ -31,9 +31,9 @@ func Changes(state *core.BuildState, files []string, includeDirect, includeTrans
 func diffGraphs(before, after *core.BuildState) map[*core.BuildTarget]struct{} {
 	configChanged := !bytes.Equal(before.Hashes.Config, after.Hashes.Config)
 	changed := map[*core.BuildTarget]struct{}{}
-	for _, t2 := range after.Graph.AllTargets() {
-		if t1 := before.Graph.Target(t2.Label); t1 == nil || targetChanged(before, after, t1, t2) || configChanged {
-			changed[t2] = struct{}{}
+	for _, afterTarget := range after.Graph.AllTargets() {
+		if beforeTarget := before.Graph.Target(afterTarget.Label); beforeTarget == nil || targetChanged(before, after, beforeTarget, afterTarget) || configChanged {
+			changed[afterTarget] = struct{}{}
 		}
 	}
 	return changed
