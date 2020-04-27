@@ -6,6 +6,7 @@ require (
 	github.com/bazelbuild/buildtools v0.0.0-20190228125936-4bcdbd1064fc
 	github.com/bazelbuild/remote-apis v0.0.0-20200127100703-2846a67ac8fe
 	github.com/bazelbuild/remote-apis-sdks v0.0.0-20200331142530-d833149cbc0b
+	github.com/bmatcuk/doublestar v1.3.0
 	github.com/coreos/go-semver v0.2.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/djherbis/atime v1.0.0

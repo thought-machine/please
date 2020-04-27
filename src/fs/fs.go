@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 	"syscall"
 
 	"gopkg.in/op/go-logging.v1"
@@ -118,4 +119,32 @@ func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
 func IsDirectory(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
+}
+
+// Memoize this to cut down on filesystem operations
+var isPackageMemo = map[string]bool{}
+var isPackageMutex sync.RWMutex
+
+// IsPackage returns true if the given directory name is a package (i.e. contains a build file)
+func IsPackage(buildFileNames []string, name string) bool {
+	isPackageMutex.RLock()
+	ret, present := isPackageMemo[name]
+	isPackageMutex.RUnlock()
+	if present {
+		return ret
+	}
+	ret = isPackageInternal(buildFileNames, name)
+	isPackageMutex.Lock()
+	isPackageMemo[name] = ret
+	isPackageMutex.Unlock()
+	return ret
+}
+
+func isPackageInternal(buildFileNames []string, name string) bool {
+	for _, buildFileName := range buildFileNames {
+		if FileExists(path.Join(name, buildFileName)) {
+			return true
+		}
+	}
+	return false
 }
