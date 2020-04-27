@@ -137,16 +137,14 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest
 	}
 	data, _ := proto.Marshal(ar)
 	metadata.RemoteAction = data
-	key, _ := hex.DecodeString(digest.Hash)
-	c.state.Cache.Store(target, key, metadata, nil)
+	c.state.Cache.Store(target, c.localCacheKey(digest), metadata, nil)
 }
 
 // retrieveLocalResults retrieves locally cached results for a target if possible.
 // Note that this does not handle any file data, only the actionresult metadata.
 func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult) {
 	if c.state.Cache != nil {
-		key, _ := hex.DecodeString(digest.Hash)
-		if metadata := c.state.Cache.Retrieve(target, key, nil); metadata != nil && len(metadata.RemoteAction) > 0 {
+		if metadata := c.state.Cache.Retrieve(target, c.localCacheKey(digest), nil); metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
 			if err := proto.Unmarshal(metadata.RemoteAction, ar); err == nil {
 				if err := c.setOutputs(target.Label, ar); err == nil {
@@ -156,6 +154,20 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		}
 	}
 	return nil, nil
+}
+
+// localCacheKey returns the key we use in the local cache for a target.
+// This is not the same as the digest hash since it includes the instance name (allowing them to be stored separately)
+func (c *Client) localCacheKey(digest *pb.Digest) []byte {
+	key, _ := hex.DecodeString(digest.Hash)
+	instance := c.state.Config.Remote.Instance
+	if len(instance) > len(key) {
+		instance = instance[len(key):]
+	}
+	for i := 0; i < len(instance); i++ {
+		key[i] ^= instance[i]
+	}
+	return key
 }
 
 // outputsExist returns true if the outputs for this target exist and are up to date.
