@@ -548,6 +548,7 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 		}
 		env = append(env, "_TARGET="+target.Label.String())
 	}
+	env = append(env, "_INSTANCE=" + c.state.Config.Remote.Instance)
 	sort.Strings(env) // Proto says it must be sorted (not just consistently ordered :( )
 	vars := make([]*pb.Command_EnvironmentVariable, len(env))
 	for i, e := range env {
