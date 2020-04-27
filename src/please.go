@@ -254,7 +254,6 @@ var opts struct {
 
 	Query struct {
 		Deps struct {
-			Unique bool `long:"unique" short:"u" description:"Only output each dependency once"`
 			Hidden bool `long:"hidden" short:"h" description:"Output internal / hidden dependencies too"`
 			Level  int  `long:"level" default:"-1" description:"Levels of the dependencies to retrieve."`
 			Args   struct {
@@ -520,7 +519,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
-			query.Deps(state, state.ExpandOriginalTargets(), opts.Query.Deps.Unique, opts.Query.Deps.Hidden, opts.Query.Deps.Level)
+			query.Deps(state, state.ExpandOriginalTargets(), opts.Query.Deps.Hidden, opts.Query.Deps.Level)
 		})
 	},
 	"revdeps": func() int {
