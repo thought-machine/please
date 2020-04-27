@@ -5,6 +5,7 @@ package cache
 import (
 	"archive/tar"
 	"bufio"
+	"bytes"
 	"compress/gzip"
 	"encoding/base64"
 	"io"
@@ -48,15 +49,22 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, metadata *cor
 	}
 	cache.storeFiles(target, key, "", cacheDir, tmpDir, files, true)
 	if len(metadata.RemoteAction) > 0 {
-		filename := path.Join(tmpDir, remoteActionFilename)
-		if err := cache.ensureStoreReady(filename); err == nil {
-			if err := ioutil.WriteFile(filename, metadata.RemoteAction, 0644); err != nil {
-				log.Warning("Failed to store remote action in local cache: %s", err)
-			}
+		cache.storeData(path.Join(tmpDir, remoteActionFilename), metadata.RemoteAction)
+		if target.PostBuildFunction != nil {
+			cache.storeData(path.Join(tmpDir, target.PostBuildOutputFileName()), metadata.Stdout)
 		}
 	}
 	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
+	}
+}
+
+// storeData attempts to store a preexisting piece of data (usually from remote execution).
+func (cache *dirCache) storeData(filename string, contents []byte) {
+	if err := cache.ensureStoreReady(filename); err == nil {
+		if err := fs.WriteFile(bytes.NewReader(contents), filename, 0644); err != nil {
+			log.Warning("Failed to store remote action in local cache: %s", err)
+		}
 	}
 }
 
@@ -192,6 +200,7 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 }
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) *core.BuildMetadata {
+	numOuts := len(outs)
 	if needsPostBuildFile(target) {
 		outs = append(outs, target.PostBuildOutputFileName())
 	}
@@ -202,7 +211,7 @@ func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []str
 	if needsPostBuildFile(target) {
 		metadata = loadPostBuildFile(target)
 	}
-	if len(outs) == 0 && metadata != nil { // Only need to retrieve this in one particular case
+	if numOuts == 0 && metadata != nil { // Only need to retrieve this in one particular case
 		if data, err := ioutil.ReadFile(path.Join(cache.getPath(target, key, ""), remoteActionFilename)); err == nil {
 			metadata.RemoteAction = data
 		}
