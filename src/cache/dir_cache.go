@@ -200,6 +200,7 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 }
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) *core.BuildMetadata {
+	numOuts := len(outs)
 	if needsPostBuildFile(target) {
 		outs = append(outs, target.PostBuildOutputFileName())
 	}
@@ -210,7 +211,7 @@ func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []str
 	if needsPostBuildFile(target) {
 		metadata = loadPostBuildFile(target)
 	}
-	if len(outs) == 0 && metadata != nil { // Only need to retrieve this in one particular case
+	if numOuts == 0 && metadata != nil { // Only need to retrieve this in one particular case
 		if data, err := ioutil.ReadFile(path.Join(cache.getPath(target, key, ""), remoteActionFilename)); err == nil {
 			metadata.RemoteAction = data
 		}
