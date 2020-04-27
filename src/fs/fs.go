@@ -119,3 +119,13 @@ func IsDirectory(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
 }
+
+// IsPackage returns true if the given directory name is a package (i.e. contains a build file)
+func IsPackage(buildFileNames []string, name string) bool {
+	for _, buildFileName := range buildFileNames {
+		if FileExists(path.Join(name, buildFileName)) {
+			return true
+		}
+	}
+	return false
+}

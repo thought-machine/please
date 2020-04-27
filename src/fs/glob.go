@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 
+	"github.com/bmatcuk/doublestar"
 	"github.com/karrick/godirwalk"
 )
 
@@ -68,48 +68,29 @@ func glob(buildFileNames []string, rootPath, pattern string, includeHidden bool,
 		return filepath.Glob(path.Join(rootPath, pattern))
 	}
 
-	// Optimisation: when we have a fixed part at the start, add that to the root path.
-	// e.g. glob(["src/**/*"]) should start walking in src and not at the current directory,
-	// because it can't possibly match anything else at that level.
-	// Can be quite important in cases where it would descend into a massive node_modules tree
-	// or similar, which leads to a big slowdown since it's synchronous with parsing
-	// (ideally it would not be of course, but that's a more complex change and this is useful anyway).
-	submatches := initialFixedPart.FindStringSubmatch(pattern)
-	if submatches != nil {
-		rootPath = path.Join(rootPath, submatches[1])
-		pattern = submatches[2]
-	}
-	if !PathExists(rootPath) {
-		return nil, nil
-	}
-
-	matches := []string{}
-	// Turn the pattern into a regex. Oh dear...
-	pattern = "^" + path.Join(rootPath, pattern) + "$"
-	pattern = strings.Replace(pattern, "*", "[^/]*", -1)        // handle single (all) * components
-	pattern = strings.Replace(pattern, "[^/]*[^/]*", ".*", -1)  // handle ** components
-	pattern = strings.Replace(pattern, "/.*/", "/(?:.*/)?", -1) // allow /**/ to match nothing
-	pattern = strings.Replace(pattern, "+", "\\+", -1)          // escape +
-	regex, err := regexp.Compile(pattern)
+	globMatches, err := doublestar.Glob(path.Join(rootPath, pattern))
 	if err != nil {
-		return matches, err
+		return nil, err
 	}
 
-	err = Walk(rootPath, func(name string, isDir bool) error {
-		if isDir {
-			if name != rootPath && IsPackage(buildFileNames, name) {
-				return filepath.SkipDir // Can't glob past a package boundary
-			} else if !includeHidden && strings.HasPrefix(path.Base(name), ".") {
-				return filepath.SkipDir // Don't descend into hidden directories
-			} else if shouldExcludeMatch(name, excludes) {
-				return filepath.SkipDir
-			}
-		} else if regex.MatchString(name) && !shouldExcludeMatch(name, excludes) {
-			matches = append(matches, name)
+	var subPackages []string
+	for _, m := range globMatches {
+		if isBuildFile(buildFileNames, m) {
+			subPackages = append(subPackages, filepath.Dir(m))
 		}
-		return nil
-	})
-	return matches, err
+	}
+
+	var matches []string
+	for _, m := range globMatches {
+		if isInPackages(m, subPackages) {
+			continue
+		}
+		if shouldExcludeMatch(m, excludes) {
+			continue
+		}
+		matches = append(matches, m)
+	}
+	return matches, nil
 }
 
 // Walk implements an equivalent to filepath.Walk.
@@ -135,28 +116,19 @@ func WalkMode(rootPath string, callback func(name string, isDir bool, mode os.Fi
 	}})
 }
 
-// Memoize this to cut down on filesystem operations
-var isPackageMemo = map[string]bool{}
-var isPackageMutex sync.RWMutex
-
 // IsPackage returns true if the given directory name is a package (i.e. contains a build file)
-func IsPackage(buildFileNames []string, name string) bool {
-	isPackageMutex.RLock()
-	ret, present := isPackageMemo[name]
-	isPackageMutex.RUnlock()
-	if present {
-		return ret
+func isBuildFile(buildFileNames []string, name string) bool {
+	for _, buildFileName := range buildFileNames {
+		if strings.HasSuffix(name, buildFileName) {
+			return true
+		}
 	}
-	ret = isPackageInternal(buildFileNames, name)
-	isPackageMutex.Lock()
-	isPackageMemo[name] = ret
-	isPackageMutex.Unlock()
-	return ret
+	return false
 }
 
-func isPackageInternal(buildFileNames []string, name string) bool {
-	for _, buildFileName := range buildFileNames {
-		if FileExists(path.Join(name, buildFileName)) {
+func isInPackages(name string, packages []string) bool {
+	for _, p := range packages {
+		if strings.HasPrefix(name, p) {
 			return true
 		}
 	}
