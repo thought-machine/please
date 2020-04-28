@@ -337,6 +337,7 @@ var opts struct {
 		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 		Changes struct {
 			Since           string `short:"s" long:"since" default:"origin/master" description:"Revision to compare against"`
+			IncludeDependees string `long:"include_dependees" hidden:"true" default:"transitive" choice:"transitive" description:"Transitional flag to help moving to v15. Has no effect at present."`
 			CheckoutCommand string `long:"checkout_command" hidden:"true" description:"Deprecated, has no effect."`
 			CurrentCommand  string `long:"current_revision_command" hidden:"true" description:"Deprecated, has no effect."`
 			Args            struct {
