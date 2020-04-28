@@ -4,15 +4,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/bmatcuk/doublestar"
 	"github.com/karrick/godirwalk"
 )
-
-// Used to identify the fixed part at the start of a glob pattern.
-var initialFixedPart = regexp.MustCompile(`([^\*]+)/(.*)`)
 
 // IsGlob returns true if the given pattern requires globbing (i.e. contains characters that would be expanded by it)
 func IsGlob(pattern string) bool {
@@ -22,9 +18,14 @@ func IsGlob(pattern string) bool {
 // Glob implements matching using Go's built-in filepath.Glob, but extends it to support
 // Ant-style patterns using **.
 func Glob(buildFileNames []string, rootPath string, includes, prefixedExcludes, excludes []string, includeHidden bool) []string {
-	filenames := []string{}
+	subPackages, err := findSubPackages(rootPath, buildFileNames)
+	if err != nil {
+		panic(err)
+	}
+
+	var filenames []string
 	for _, include := range includes {
-		matches, err := glob(buildFileNames, rootPath, include, includeHidden, prefixedExcludes)
+		matches, err := glob(rootPath, include, prefixedExcludes, subPackages)
 		if err != nil {
 			panic(err)
 		}
@@ -59,7 +60,7 @@ func shouldExcludeMatch(match string, excludes []string) bool {
 	return false
 }
 
-func glob(buildFileNames []string, rootPath, pattern string, includeHidden bool, excludes []string) ([]string, error) {
+func glob(rootPath, pattern string, excludes []string, subPackages []string) ([]string, error) {
 	// Go's Glob function doesn't handle Ant-style ** patterns. Do it ourselves if we have to,
 	// but we prefer not since our solution will have to do a potentially inefficient walk.
 	if !strings.Contains(pattern, "*") {
@@ -71,13 +72,6 @@ func glob(buildFileNames []string, rootPath, pattern string, includeHidden bool,
 	globMatches, err := doublestar.Glob(path.Join(rootPath, pattern))
 	if err != nil {
 		return nil, err
-	}
-
-	var subPackages []string
-	for _, m := range globMatches {
-		if isBuildFile(buildFileNames, m) {
-			subPackages = append(subPackages, filepath.Dir(m))
-		}
 	}
 
 	var matches []string
@@ -114,6 +108,21 @@ func WalkMode(rootPath string, callback func(name string, isDir bool, mode os.Fi
 	return godirwalk.Walk(rootPath, &godirwalk.Options{Callback: func(name string, info *godirwalk.Dirent) error {
 		return callback(name, info.IsDir(), info.ModeType())
 	}})
+}
+
+func findSubPackages(rootPath string, buildFileNames []string,) ([]string, error) {
+	ms, err := doublestar.Glob(path.Join(rootPath, "*/**"))
+	if err != nil {
+		return nil, err
+	}
+
+	var subPackages []string
+	for _, m := range ms {
+		if isBuildFile(buildFileNames, m) {
+			subPackages = append(subPackages, filepath.Dir(m))
+		}
+	}
+	return subPackages, nil
 }
 
 // IsPackage returns true if the given directory name is a package (i.e. contains a build file)

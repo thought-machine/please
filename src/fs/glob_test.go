@@ -36,7 +36,7 @@ func TestCannotGlobThirdFile(t *testing.T) {
 }
 
 func TestCanGlobFileAtRootWithDoubleStar(t *testing.T) {
-	files, err := glob(buildFileNames, "src/fs/test_data/test_subfolder1", "**/*.txt", false, nil)
+	files, err := glob("src/fs/test_data/test_subfolder1", "**/*.txt", nil, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"src/fs/test_data/test_subfolder1/a.txt"}, files)
 }
@@ -51,7 +51,7 @@ func TestIsGlob(t *testing.T) {
 }
 
 func TestGlobPlusPlus(t *testing.T) {
-	files, err := glob(buildFileNames, "src/fs/test_data/test_subfolder++", "**/*.txt", false, nil)
+	files, err := glob("src/fs/test_data/test_subfolder++", "**/*.txt", nil, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"src/fs/test_data/test_subfolder++/test.txt"}, files)
 }
@@ -60,4 +60,15 @@ func TestGlobExcludes(t *testing.T) {
 	files := Glob(buildFileNames, "src/fs", []string{"test_data/**/*.txt"}, nil, []string{"test.txt"}, false)
 	expected := []string{"test_data/test_subfolder1/a.txt"}
 	assert.Equal(t, expected, files)
+}
+
+func TestGlobExcludesSubPackages(t *testing.T) {
+	files := Glob(buildFileNames, "src/fs", []string{"**/*.txt", "**/*.py"}, nil, nil, false)
+	expected := []string{
+		"test_data/test_subfolder++/test.txt",
+		"test_data/test_subfolder1/a.txt",
+		"test_data/test_subfolder3/test.py",
+		"test_data/test.txt",
+	}
+	assert.ElementsMatch(t, expected, files)
 }

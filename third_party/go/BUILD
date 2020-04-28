@@ -178,6 +178,7 @@ go_get(
     name = "spew",
     get = "github.com/davecgh/go-spew/spew",
     patch = "spew_omit_empty.patch",
+    licences = ["ISC"],
     revision = "ecdeabc65495df2dec95d7c4a4c3e021903035e5",
 )
 
@@ -187,11 +188,37 @@ go_get(
     install = [
         "assert",
         "require",
-        "vendor/github.com/davecgh/go-spew/spew",
-        "vendor/github.com/pmezard/go-difflib/difflib",
+        "vendor/...",
     ],
-    revision = "f390dcf405f7b83c997eac1b06768bb9f44dec18",
-    deps = [":spew"],
+    licences = ["MIT"],
+    revision = "v1.4.0",
+    deps = [
+        ":difflib",
+        ":spew",
+        ":objx",
+        ":yaml.v2",
+    ],
+)
+
+go_get(
+    name = "difflib",
+    get = "github.com/pmezard/go-difflib/...",
+    licences = ["BSD 3-Clause"],
+    revision = "792786c7400a136282c1664665ae0a8db921c6c2",
+)
+
+go_get(
+    name = "objx",
+    get = "github.com/stretchr/objx",
+    licences = ["MIT"],
+    revision = "1a9d0bb9f541897e62256577b352fdbc1fb4fd94",
+)
+
+go_get(
+    name = "yaml.v2",
+    get = "gopkg.in/yaml.v2",
+    licences = ["Apache 2.0"],
+    revision = "v2.2.4",
 )
 
 go_get(
