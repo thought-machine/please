@@ -1,3 +1,13 @@
+Version 14.4.0
+--------------
+
+    * Binary rules now generally accept a `data` argument indicating dependencies they need at runtime
+      (paralleling the existing equivalent on tests). This is mostly relevant for remote execution.
+    * Double-star globbing is now more consistent (#927, #874)
+    * Parsing of JSON coverage output from Istanbul is now more correct (#923)
+    * `plz run` now accepts a `--remote` flag allowing it to leverage remote execution.
+
+
 Version 14.3.11
 ---------------
 
