@@ -1111,7 +1111,8 @@ func (target *BuildTarget) AllLocalSources() []string {
 // HasSource returns true if this target has the given file as a source (named or not, or data).
 func (target *BuildTarget) HasSource(source string) bool {
 	for _, src := range append(target.AllSources(), target.AllData()...) {
-		if src.String() == source { // Comparison is a bit dodgy tbh
+		// Check for both the source matching and a prefix match indicating it's a directory with the file within.
+		if s := src.String(); s == source || strings.HasPrefix(source, s+"/") {
 			return true
 		}
 	}
