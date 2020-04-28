@@ -292,13 +292,6 @@ var opts struct {
 				Fragments cli.StdinStrings `positional-arg-name:"fragment" description:"Initial fragment to attempt to complete"`
 			} `positional-args:"true"`
 		} `command:"completions" subcommands-optional:"true" description:"Prints possible completions for a string."`
-		AffectedTargets struct {
-			Tests        bool `long:"tests" description:"Shows only affected tests, no other targets."`
-			Intransitive bool `long:"intransitive" description:"Shows only immediately affected targets, not transitive dependencies."`
-			Args         struct {
-				Files cli.StdinStrings `positional-arg-name:"files" required:"true" description:"Files to query affected tests for"`
-			} `positional-args:"true"`
-		} `command:"affectedtargets" description:"Prints any targets affected by a set of files."`
 		Input struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to display inputs for" required:"true"`
@@ -327,13 +320,13 @@ var opts struct {
 		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 		Changes struct {
 			Since            string `short:"s" long:"since" default:"origin/master" description:"Revision to compare against"`
-			IncludeDependees string `long:"include_dependees" hidden:"true" default:"transitive" choice:"transitive" description:"Transitional flag to help moving to v15. Has no effect at present."`
-			CheckoutCommand  string `long:"checkout_command" hidden:"true" description:"Deprecated, has no effect."`
-			CurrentCommand   string `long:"current_revision_command" hidden:"true" description:"Deprecated, has no effect."`
+			IncludeDependees string `long:"include_dependees" default:"none" choice:"none" choice:"direct" choice:"transitive" description:"Include direct or transitive dependees of changed targets."`
+			Inexact          bool   `long:"inexact" description:"Calculate changes more quickly and without doing any SCM checkouts, but may miss some targets."`
+			In               string `long:"in" description:"Calculate changes contained within given scm spec (commit range/sha/ref/etc). Implies --inexact."`
 			Args             struct {
-				Files cli.StdinStrings `positional-arg-name:"files" description:"Deprecated, no longer necessary."`
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to calculate changes for. Overrides flags relating to SCM operations."`
 			} `positional-args:"true"`
-		} `command:"changes" description:"Calculates the difference between two different states of the build graph"`
+		} `command:"changes" description:"Calculates the set of changed targets in regard to a set of modified files or SCM commits."`
 		Roots struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
@@ -344,11 +337,6 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
-		Changed struct {
-			Since            string `long:"since" description:"Calculate changes since this tree-ish/scm ref (defaults to current HEAD/tip)."`
-			DiffSpec         string `long:"diffspec" description:"Calculate changes contained within given scm spec (commit range/sha/ref/etc)."`
-			IncludeDependees string `long:"include-dependees" default:"none" choice:"none" choice:"direct" choice:"transitive" description:"Include direct or transitive dependees of changed targets."`
-		} `command:"changed" description:"Show changed targets since some diffspec."`
 	} `command:"query" description:"Queries information about the build graph"`
 
 	Ide struct {
@@ -545,19 +533,6 @@ var buildFunctions = map[string]func() int{
 			query.Print(state.Graph, state.ExpandOriginalTargets(), opts.Query.Print.Fields, opts.Query.Print.Labels)
 		})
 	},
-	"affectedtargets": func() int {
-		files := opts.Query.AffectedTargets.Args.Files
-		targets := core.WholeGraph
-		if opts.Query.AffectedTargets.Intransitive {
-			state := core.NewBuildState(config)
-			targets = core.FindOwningPackages(state, files)
-		}
-		return runQuery(true, targets, func(state *core.BuildState) {
-			// affectedtargets deliberately does not include targets labelled "manual".
-			state.SetIncludeAndExclude(opts.BuildFlags.Include, append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch))
-			query.AffectedTargets(state, files.Get(), opts.Query.AffectedTargets.Tests, !opts.Query.AffectedTargets.Intransitive)
-		})
-	},
 	"input": func() int {
 		return runQuery(true, opts.Query.Input.Args.Targets, func(state *core.BuildState) {
 			query.TargetInputs(state.Graph, state.ExpandOriginalTargets())
@@ -610,24 +585,28 @@ var buildFunctions = map[string]func() int{
 		help.PrintRuleArgs()
 		return 0
 	},
-	"changed": func() int {
-		success, state := runBuild(core.WholeGraph, false, false, false)
-		if !success {
-			return 1
-		}
-		for _, label := range query.ChangedLabels(
-			state,
-			query.ChangedRequest{
-				Since:            opts.Query.Changed.Since,
-				DiffSpec:         opts.Query.Changed.DiffSpec,
-				IncludeDependees: opts.Query.Changed.IncludeDependees,
-			}) {
-			fmt.Printf("%s\n", label)
-		}
-		return 0
-	},
 	"changes": func() int {
+		// query changes always excludes 'manual' targets.
+		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
+
+		transitive := opts.Query.Changes.IncludeDependees == "transitive"
+		direct := opts.Query.Changes.IncludeDependees == "direct" || transitive
+		runInexact := func(files []string) int {
+			return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
+				for _, target := range query.Changes(state, files, direct, transitive) {
+					fmt.Println(target.String())
+				}
+			})
+		}
+		if len(opts.Query.Changes.Args.Files) > 0 {
+			return runInexact(opts.Query.Changes.Args.Files.Get())
+		}
 		scm := scm.MustNew(core.RepoRoot)
+		if opts.Query.Changes.In != "" {
+			return runInexact(scm.ChangesIn(opts.Query.Changes.In, ""))
+		} else if opts.Query.Changes.Inexact {
+			return runInexact(scm.ChangedFiles(scm.CurrentRevIdentifier(), true, ""))
+		}
 		original := scm.CurrentRevIdentifier()
 		files := scm.ChangedFiles(opts.Query.Changes.Since, true, "")
 		if err := scm.Checkout(opts.Query.Changes.Since); err != nil {
@@ -645,8 +624,8 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return 1
 		}
-		for _, target := range query.DiffGraphs(before, after, files) {
-			fmt.Printf("%s\n", target)
+		for _, target := range query.DiffGraphs(before, after, files, direct, transitive) {
+			fmt.Println(target.String())
 		}
 		return 0
 	},
