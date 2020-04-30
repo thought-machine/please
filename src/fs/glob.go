@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"fmt"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -14,7 +15,11 @@ type matcher interface {
 type builtInGlob string
 
 func (p builtInGlob) Match(name string) (bool, error) {
-	return filepath.Match(string(p), name)
+	matched, err := filepath.Match(string(p), name)
+	if err != nil {
+		return false, fmt.Errorf("failed to glob, invalid patern: %v, %w", string(p), err)
+	}
+	return matched, nil
 }
 
 type regexGlob struct {
@@ -35,7 +40,10 @@ func patternToMatcher(root, pattern string) (matcher, error) {
 		return builtInGlob(fullPattern), nil
 	}
 	regex, err := regexp.Compile(toRegexString(fullPattern))
-	return regexGlob{regex: regex}, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile glob pattern %s, %w", pattern, err)
+	}
+	return regexGlob{regex: regex}, nil
 }
 
 func toRegexString(pattern string) string {
@@ -57,18 +65,19 @@ func IsGlob(pattern string) bool {
 // Glob implements matching using Go's built-in filepath.Glob, but extends it to support
 // Ant-style patterns using **.
 func Glob(buildFileNames []string, rootPath string, includes, excludes []string, includeHidden bool) []string {
+	if rootPath == "" {
+		rootPath = "."
+	}
+
 	var filenames []string
 	for _, include := range includes {
 		matches, err := glob(rootPath, include, excludes, buildFileNames, includeHidden)
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("error globbing files with %v: %v", include, err))
 		}
 		// Remove the root path from the returned files and add them to the output
 		for _, filename := range matches {
-			if strings.HasPrefix(filename, rootPath) && rootPath != "" {
-				filename = filename[len(rootPath)+1:] // +1 to strip the slash too
-			}
-			filenames = append(filenames, filename)
+			filenames = append(filenames, strings.TrimPrefix(filename, rootPath + "/"))
 		}
 	}
 	return filenames
