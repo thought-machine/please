@@ -365,7 +365,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
       srcs (list): C or C++ source files to compile.
       hdrs (list): Header files. These will be made available to dependent rules, so the distinction
                    between srcs and hdrs is important.
-      out (str): Name of the output .so. Defaults to name + .so.
+      out (str): Name of the output .so. Defaults to lib<name>.so (or just <name>.so if name already begins with 'lib').
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker.
       deps (list): Dependent rules.
@@ -399,10 +399,12 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
             'cc': ':' + name,
         }
     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, shared=True)
+    if not out:
+        out = f'{name}.so' if name.startswith('lib') else f'lib{name}.so'
     return build_rule(
         name=name,
         srcs={'srcs': srcs, 'hdrs': hdrs},
-        outs=[out or name + '.so'],
+        outs=[out],
         deps=deps,
         visibility=visibility,
         cmd=cmds,
