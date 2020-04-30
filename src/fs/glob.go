@@ -92,21 +92,19 @@ func glob(rootPath string, glob string, excludes []string, buildFileNames []stri
 	var globMatches []string
 	var subPackages []string
 	err = Walk(rootPath, func(name string, isDir bool) error {
-		if !isDir {
-			if isBuildFile(buildFileNames, name) {
-				packageName := filepath.Dir(name)
-				if packageName != rootPath {
-					subPackages = append(subPackages, packageName)
-					return filepath.SkipDir
-				}
+		if isBuildFile(buildFileNames, name) {
+			packageName := filepath.Dir(name)
+			if packageName != rootPath {
+				subPackages = append(subPackages, packageName)
+				return filepath.SkipDir
 			}
-			match, err := p.Match(name)
-			if err != nil {
-				return err
-			}
-			if match {
-				globMatches = append(globMatches, name)
-			}
+		}
+		match, err := p.Match(name)
+		if err != nil {
+			return err
+		}
+		if match {
+			globMatches = append(globMatches, name)
 		}
 		return nil
 	})
