@@ -12,11 +12,10 @@ import (
 
 var buildFileNames = []string{"TEST_BUILD", "BUILD"}
 
-
 func TestCanGlobFileAtRootWithDoubleStar(t *testing.T) {
 	files, err := glob("src/fs/test_data/test_subfolder1", "**/*.txt", nil, buildFileNames, false)
 	assert.NoError(t, err)
-	assert.ElementsMatch	(t, []string{
+	assert.ElementsMatch(t, []string{
 		"src/fs/test_data/test_subfolder1/a.txt",
 		"src/fs/test_data/test_subfolder1/sub_sub_folder/b.txt",
 	}, files)
@@ -37,7 +36,8 @@ func TestGlobRanges(t *testing.T) {
 	assert.ElementsMatch(t, []string{
 		"src/fs/test_data/test_subfolder3/test.py",
 		"src/fs/test_data/test_subfolder3/best.py",
-	}, files)}
+	}, files)
+}
 
 func TestGlobQuestion(t *testing.T) {
 	files, err := glob("src/fs/test_data", "test_subfolder3/?est.py", nil, buildFileNames, false)
@@ -195,34 +195,34 @@ func TestCompilePattern(t *testing.T) {
 }
 
 func TestShouldExcludeMatch(t *testing.T) {
-	testCases := []struct{
-		testName string
-		matchName string
-		exclude string
+	testCases := []struct {
+		testName      string
+		matchName     string
+		exclude       string
 		shouldExclude bool
-	} {
+	}{
 		{
-			testName: "relative match",
-			matchName: "src/test_data/test.txt",
-			exclude: "test.txt",
+			testName:      "relative match",
+			matchName:     "src/test_data/test.txt",
+			exclude:       "test.txt",
 			shouldExclude: true,
 		},
 		{
-			testName: "exact match",
-			matchName: "src/test_data/test.txt",
-			exclude: "test_data/test.txt",
+			testName:      "exact match",
+			matchName:     "src/test_data/test.txt",
+			exclude:       "test_data/test.txt",
 			shouldExclude: true,
 		},
 		{
-			testName: "relative no match",
-			matchName: "src/test_data/test.txt",
-			exclude: "test.py",
+			testName:      "relative no match",
+			matchName:     "src/test_data/test.txt",
+			exclude:       "test.py",
 			shouldExclude: false,
 		},
 		{
-			testName: "exact no match",
-			matchName: "src/test_data/test.txt",
-			exclude: "test_data/test.py",
+			testName:      "exact no match",
+			matchName:     "src/test_data/test.txt",
+			exclude:       "test_data/test.py",
 			shouldExclude: false,
 		},
 	}

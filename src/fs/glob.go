@@ -48,12 +48,12 @@ func patternToMatcher(root, pattern string) (matcher, error) {
 
 func toRegexString(pattern string) string {
 	pattern = "^" + pattern + "$"
-	pattern = strings.Replace(pattern, "+", "\\+", -1)          // escape +
-	pattern = strings.Replace(pattern, ".", "\\.", -1)          // escape .
-	pattern = strings.Replace(pattern, "?", ".", -1)          // match ? as any single char
-	pattern = strings.Replace(pattern, "*", "[^/]*", -1)        // handle single (all) * components
-	pattern = strings.Replace(pattern, "[^/]*[^/]*", ".*", -1)  // handle ** components
-	pattern = strings.Replace(pattern, "/.*/", "/(.*/)?", -1) // Allow ** to match zero directories
+	pattern = strings.Replace(pattern, "+", "\\+", -1)         // escape +
+	pattern = strings.Replace(pattern, ".", "\\.", -1)         // escape .
+	pattern = strings.Replace(pattern, "?", ".", -1)           // match ? as any single char
+	pattern = strings.Replace(pattern, "*", "[^/]*", -1)       // handle single (all) * components
+	pattern = strings.Replace(pattern, "[^/]*[^/]*", ".*", -1) // handle ** components
+	pattern = strings.Replace(pattern, "/.*/", "/(.*/)?", -1)  // Allow ** to match zero directories
 	return pattern
 }
 
@@ -77,12 +77,11 @@ func Glob(buildFileNames []string, rootPath string, includes, excludes []string,
 		}
 		// Remove the root path from the returned files and add them to the output
 		for _, filename := range matches {
-			filenames = append(filenames, strings.TrimPrefix(filename, rootPath + "/"))
+			filenames = append(filenames, strings.TrimPrefix(filename, rootPath+"/"))
 		}
 	}
 	return filenames
 }
-
 
 func glob(rootPath string, glob string, excludes []string, buildFileNames []string, includeHidden bool) ([]string, error) {
 	p, err := patternToMatcher(rootPath, glob)
