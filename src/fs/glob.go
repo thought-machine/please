@@ -1,14 +1,53 @@
 package fs
 
 import (
-	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
-
-	"github.com/bmatcuk/doublestar"
-	"github.com/karrick/godirwalk"
 )
+
+type matcher interface {
+	Match(name string) (bool, error)
+}
+
+type builtInGlob string
+
+func (p builtInGlob) Match(name string) (bool, error) {
+	return filepath.Match(string(p), name)
+}
+
+type regexGlob struct {
+	regex *regexp.Regexp
+}
+
+func (r regexGlob) Match(name string) (bool, error) {
+	return r.regex.Match([]byte(name)), nil
+}
+
+// This converts the string pattern into a matcher. A matcher can either be one of our homebrew compiled regexs that
+//support ** or a matcher that uses the built in filesystem.Match functionality.
+func patternToMatcher(root, pattern string) (matcher, error) {
+	fullPattern := filepath.Join(root, pattern)
+
+	// Use the built in filesystem.Match globs when not using double star as it's far more efficient
+	if !strings.Contains(pattern, "**") {
+		return builtInGlob(fullPattern), nil
+	}
+	regex, err := regexp.Compile(toRegexString(fullPattern))
+	return regexGlob{regex: regex}, err
+}
+
+func toRegexString(pattern string) string {
+	pattern = "^" + pattern + "$"
+	pattern = strings.Replace(pattern, "+", "\\+", -1)          // escape +
+	pattern = strings.Replace(pattern, ".", "\\.", -1)          // escape .
+	pattern = strings.Replace(pattern, "?", ".", -1)          // match ? as any single char
+	pattern = strings.Replace(pattern, "*", "[^/]*", -1)        // handle single (all) * components
+	pattern = strings.Replace(pattern, "[^/]*[^/]*", ".*", -1)  // handle ** components
+	pattern = strings.Replace(pattern, "/.*/", "/(.*/)?", -1) // Allow ** to match zero directories
+	return pattern
+}
 
 // IsGlob returns true if the given pattern requires globbing (i.e. contains characters that would be expanded by it)
 func IsGlob(pattern string) bool {
@@ -17,129 +56,133 @@ func IsGlob(pattern string) bool {
 
 // Glob implements matching using Go's built-in filepath.Glob, but extends it to support
 // Ant-style patterns using **.
-func Glob(buildFileNames []string, rootPath string, includes, prefixedExcludes, excludes []string, includeHidden bool) []string {
-	subPackages, err := findSubPackages(rootPath, buildFileNames)
-	if err != nil {
-		panic(err)
-	}
-
+func Glob(buildFileNames []string, rootPath string, includes, excludes []string, includeHidden bool) []string {
 	var filenames []string
 	for _, include := range includes {
-		matches, err := glob(rootPath, include, prefixedExcludes, subPackages)
+		matches, err := glob(rootPath, include, excludes, buildFileNames, includeHidden)
 		if err != nil {
 			panic(err)
 		}
+		// Remove the root path from the returned files and add them to the output
 		for _, filename := range matches {
-			if !includeHidden {
-				// Exclude hidden & temporary files
-				_, file := path.Split(filename)
-				if strings.HasPrefix(file, ".") || (strings.HasPrefix(file, "#") && strings.HasSuffix(file, "#")) {
-					continue
-				}
-			}
 			if strings.HasPrefix(filename, rootPath) && rootPath != "" {
 				filename = filename[len(rootPath)+1:] // +1 to strip the slash too
 			}
-			if !shouldExcludeMatch(filename, excludes) {
-				filenames = append(filenames, filename)
-			}
+			filenames = append(filenames, filename)
 		}
 	}
 	return filenames
 }
 
-func shouldExcludeMatch(match string, excludes []string) bool {
-	for _, excl := range excludes {
-		if strings.ContainsRune(match, '/') && !strings.ContainsRune(excl, '/') {
-			match = path.Base(match)
-		}
-		if matches, err := filepath.Match(excl, match); matches || err != nil {
-			return true
-		}
-	}
-	return false
-}
 
-func glob(rootPath, pattern string, excludes []string, subPackages []string) ([]string, error) {
-	// Go's Glob function doesn't handle Ant-style ** patterns. Do it ourselves if we have to,
-	// but we prefer not since our solution will have to do a potentially inefficient walk.
-	if !strings.Contains(pattern, "*") {
-		return []string{path.Join(rootPath, pattern)}, nil
-	} else if !strings.Contains(pattern, "**") {
-		return filepath.Glob(path.Join(rootPath, pattern))
+func glob(rootPath string, glob string, excludes []string, buildFileNames []string, includeHidden bool) ([]string, error) {
+	p, err := patternToMatcher(rootPath, glob)
+	if err != nil {
+		return nil, err
 	}
 
-	globMatches, err := doublestar.Glob(path.Join(rootPath, pattern))
+	var globMatches []string
+	var subPackages []string
+	err = Walk(rootPath, func(name string, isDir bool) error {
+		if !isDir {
+			if isBuildFile(buildFileNames, name) {
+				packageName := filepath.Dir(name)
+				if packageName != rootPath {
+					subPackages = append(subPackages, packageName)
+					return filepath.SkipDir
+				}
+			}
+			match, err := p.Match(name)
+			if err != nil {
+				return err
+			}
+			if match {
+				globMatches = append(globMatches, name)
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	var matches []string
 	for _, m := range globMatches {
-		if isInPackages(m, subPackages) {
+		if isInDirectories(m, subPackages) {
 			continue
 		}
-		if shouldExcludeMatch(m, excludes) {
+		if !includeHidden && isHidden(m) {
 			continue
 		}
+
+		shouldExclude, err := shouldExcludeMatch(rootPath, m, excludes)
+		if err != nil {
+			return nil, err
+		}
+		if shouldExclude {
+			continue
+		}
+
 		matches = append(matches, m)
 	}
 	return matches, nil
 }
 
-// Walk implements an equivalent to filepath.Walk.
-// It's implemented over github.com/karrick/godirwalk but the provided interface doesn't use that
-// to make it a little easier to handle.
-func Walk(rootPath string, callback func(name string, isDir bool) error) error {
-	return WalkMode(rootPath, func(name string, isDir bool, mode os.FileMode) error {
-		return callback(name, isDir)
-	})
-}
+// shouldExcludeMatch checks if the match also matches any of the exclude patterns. If the exclude pattern is a relative
+// pattern i.e. doesn't contain any /'s, then the pattern is checked against the file name part only. Otherwise the
+// pattern is checked against the whole path. This is so `glob(["**/*.go"], exclude = ["*_test.go"])` will match as
+// you'd expect.
+func shouldExcludeMatch(root, match string, excludes []string) (bool, error) {
+	for _, excl := range excludes {
+		rootPath := root
+		m := match
 
-// WalkMode is like Walk but the callback receives an additional type specifying the file mode type.
-// N.B. This only includes the bits of the mode that determine the mode type, not the permissions.
-func WalkMode(rootPath string, callback func(name string, isDir bool, mode os.FileMode) error) error {
-	// Compatibility with filepath.Walk which allows passing a file as the root argument.
-	if info, err := os.Lstat(rootPath); err != nil {
-		return err
-	} else if !info.IsDir() {
-		return callback(rootPath, false, info.Mode())
-	}
-	return godirwalk.Walk(rootPath, &godirwalk.Options{Callback: func(name string, info *godirwalk.Dirent) error {
-		return callback(name, info.IsDir(), info.ModeType())
-	}})
-}
+		// If the exclude pattern doesn't contain any slashes and the match does, we only match against the base of the
+		// match path.
+		if strings.ContainsRune(match, '/') && !strings.ContainsRune(excl, '/') {
+			m = path.Base(match)
+			rootPath = ""
+		}
 
-func findSubPackages(rootPath string, buildFileNames []string,) ([]string, error) {
-	ms, err := doublestar.Glob(path.Join(rootPath, "*/**"))
-	if err != nil {
-		return nil, err
-	}
+		matcher, err := patternToMatcher(rootPath, excl)
+		if err != nil {
+			return false, err
+		}
 
-	var subPackages []string
-	for _, m := range ms {
-		if isBuildFile(buildFileNames, m) {
-			subPackages = append(subPackages, filepath.Dir(m))
+		match, err := matcher.Match(m)
+		if err != nil {
+			return false, err
+		}
+		if match {
+			return true, nil
 		}
 	}
-	return subPackages, nil
+	return false, nil
 }
 
-// IsPackage returns true if the given directory name is a package (i.e. contains a build file)
+// isBuildFile checks if the filename is considered a build filename
 func isBuildFile(buildFileNames []string, name string) bool {
+	fileName := filepath.Base(name)
 	for _, buildFileName := range buildFileNames {
-		if strings.HasSuffix(name, buildFileName) {
+		if fileName == buildFileName {
 			return true
 		}
 	}
 	return false
 }
 
-func isInPackages(name string, packages []string) bool {
-	for _, p := range packages {
+// isInDirectories checks to see if the file is in any of the provided directories
+func isInDirectories(name string, directories []string) bool {
+	for _, p := range directories {
 		if strings.HasPrefix(name, p) {
 			return true
 		}
 	}
 	return false
+}
+
+// isHidden checks if the file is a hidden file i.e. starts with . or, starts and ends with #.
+func isHidden(name string) bool {
+	file := filepath.Base(name)
+	return strings.HasPrefix(file, ".") || (strings.HasPrefix(file, "#") && strings.HasSuffix(file, "#"))
 }

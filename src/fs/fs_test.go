@@ -28,9 +28,9 @@ func TestEnsureDir(t *testing.T) {
 }
 
 func TestIsPackage(t *testing.T) {
-	isPackage := IsPackage([]string{"BUILD"}, "src/fs/test_data/test_subfolder1")
+	isPackage := IsPackage([]string{"TEST_BUILD"}, "src/fs/test_data/test_subfolder1")
 	assert.False(t, isPackage)
 
-	isPackage = IsPackage([]string{"BUILD"}, "src/fs/test_data/test_subfolder2")
+	isPackage = IsPackage([]string{"TEST_BUILD"}, "src/fs/test_data/test_subfolder4")
 	assert.True(t, isPackage)
 }

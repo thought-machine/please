@@ -635,9 +635,3 @@ go_get(
     revision = "v1.0.0",
     test_only = True,
 )
-
-go_get(
-    name = "doublestar",
-    get = "github.com/bmatcuk/doublestar",
-    revision = "v1.3.0",
-)

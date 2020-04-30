@@ -6,7 +6,6 @@ go_library(
     ),
     visibility = ["PUBLIC"],
     deps = [
-        "//third_party/go:doublestar",
         "//third_party/go:godirwalk",
         "//third_party/go:logging",
         "//third_party/go:xattr",
@@ -15,7 +14,7 @@ go_library(
 
 go_test(
     name = "fs_test",
-    srcs = ["fs_test.go"],
+    srcs = glob(["*_test.go"], exclude = ["glob_integration_test.go"]),
     data = ["test_data"],
     deps = [
         ":fs",
@@ -24,39 +23,8 @@ go_test(
 )
 
 go_test(
-    name = "glob_test",
-    srcs = ["glob_test.go"],
+    name = "glob_integration_test",
+    srcs = ["glob_integration_test.go"],
+    # This must remain a glob because the tests rely on data being loaded in via globs
     data = glob(["test_data/**"]),
-    deps = [
-        ":fs",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "hash_test",
-    srcs = ["hash_test.go"],
-    data = ["test_data"],
-    deps = [
-        ":fs",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "home_test",
-    srcs = ["home_test.go"],
-    deps = [
-        ":fs",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "sort_test",
-    srcs = ["sort_test.go"],
-    deps = [
-        ":fs",
-        "//third_party/go:testify",
-    ],
 )

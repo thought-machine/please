@@ -595,7 +595,7 @@ func (r *rpc) Notify(ctx context.Context, method string, params interface{}, opt
 }
 
 // Request is a slightly higher-level wrapper for testing that handles JSON serialisation.
-func (h *Handler) Request(method string, req, resp interface{}) *jsonrpc2.Error {
+func (h *Handler) Request(method string, req, resp interface{}) error {
 	b, err := json.Marshal(req)
 	if err != nil {
 		log.Fatalf("failed to encode request: %s", err)
