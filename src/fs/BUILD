@@ -14,7 +14,10 @@ go_library(
 
 go_test(
     name = "fs_test",
-    srcs = glob(["*_test.go"], exclude = ["glob_integration_test.go"]),
+    srcs = glob(
+        ["*_test.go"],
+        exclude = ["glob_integration_test.go"],
+    ),
     data = ["test_data"],
     deps = [
         ":fs",

@@ -416,7 +416,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	}
 	// Optional outputs get moved but don't contribute to the hash or for incrementality.
 	// Glob patterns are supported on these.
-	for _, output := range fs.Glob(state.Config.Parse.BuildFileName, tmpDir, target.OptionalOutputs,  nil, true) {
+	for _, output := range fs.Glob(state.Config.Parse.BuildFileName, tmpDir, target.OptionalOutputs, nil, true) {
 		log.Debug("Discovered optional output %s", output)
 		tmpOutput := path.Join(tmpDir, output)
 		realOutput := path.Join(outDir, output)
