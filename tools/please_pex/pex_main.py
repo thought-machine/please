@@ -1,11 +1,12 @@
 """Zipfile entry point which supports auto-extracting itself based on zip-safety."""
 
-import fcntl
 from importlib import import_module
 from zipfile import ZipFile, ZipInfo, is_zipfile
 import os
 import runpy
 import sys
+
+import portalocker
 
 PY_VERSION = sys.version_info
 
@@ -282,10 +283,11 @@ def explode_zip():
         # Acquire the lockfile.
         lockfile_path = os.path.join(basepath, '.lock-%s' % uniquedir)
         lockfile = open(lockfile_path, "a+")
-        fcntl.flock(lockfile, fcntl.LOCK_EX)  # Block until we can acquire the lockfile.
+        # Block until we can acquire the lockfile.
+        portalocker.lock(lockfile, portalocker.LOCK_EX)
         lockfile.seek(0)
         yield lockfile
-        fcntl.flock(lockfile, fcntl.LOCK_UN)
+        portalocker.lock(lockfile, portalocker.LOCK_UN)
 
     @contextlib.contextmanager
     def _explode_zip():

@@ -270,6 +270,12 @@ pip_library(
 )
 
 pip_library(
+    name = "portalocker",
+    version = "1.7.0",
+    licences = ["PSF"],
+)
+
+pip_library(
     name = "pytz",
     test_only = True,
     version = "2018.4",
