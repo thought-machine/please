@@ -180,7 +180,7 @@ func isBuildFile(buildFileNames []string, name string) bool {
 // isInDirectories checks to see if the file is in any of the provided directories
 func isInDirectories(name string, directories []string) bool {
 	for _, dir := range directories {
-		if strings.HasPrefix(name, dir + "/") || name == dir {
+		if strings.HasPrefix(name, dir+"/") || name == dir {
 			return true
 		}
 	}
