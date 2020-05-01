@@ -246,3 +246,10 @@ func TestShouldExcludeMatch(t *testing.T) {
 		})
 	}
 }
+
+func TestIsInDirectories(t *testing.T) {
+	assert.False(t, isInDirectories("test.go", []string{"test"}))
+	assert.False(t, isInDirectories("foo/test.go", []string{"test"}))
+	assert.True(t, isInDirectories("test/test.go", []string{"test"}))
+	assert.True(t, isInDirectories("test/foo", []string{"test"}))
+}
