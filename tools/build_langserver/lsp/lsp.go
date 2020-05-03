@@ -76,7 +76,7 @@ func NewHandler() *Handler {
 // Handle implements the jsonrpc2.Handler interface
 func (h *Handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) {
 	if resp, err := h.handle(req.Method, req.Params); err != nil {
-		if err := conn.ReplyWithError(ctx, req.ID, err); err != nil {
+		if err := conn.ReplyWithError(ctx, req.ID, err.(*jsonrpc2.Error)); err != nil {
 			log.Error("Failed to send error response: %s", err)
 		}
 	} else if resp != nil {
@@ -87,7 +87,7 @@ func (h *Handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2
 }
 
 // handle is the slightly higher-level handler that deals with individual methods.
-func (h *Handler) handle(method string, params *json.RawMessage) (i interface{}, err *jsonrpc2.Error) {
+func (h *Handler) handle(method string, params *json.RawMessage) (i interface{}, err error) {
 	start := time.Now()
 	log.Debug("Received %s message", method)
 	defer func() {

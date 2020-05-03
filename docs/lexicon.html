@@ -46,10 +46,17 @@
       expansion or Python's builtin <a href="https://docs.python.org/3/library/glob.html">glob</a>
       module.</p>
 
-    <p>Note that the only expansion patterns accepted are <code>*</code> to match an arbitrary
-      number of non-separator characters (i.e. not <code>/</code>), and <code>**</code> to
-      match any number of <b>complete</b> path components.<br/>
+    <p>Note that the expansion patterns accepted are <code>*</code> to match an arbitrary
+      number of non-separator characters (i.e. not <code>/</code>), <code>**</code> to
+      match any number of <b>complete</b> path components, ? to match a single character,
+      and [class] to match a class of character e.g. [a-z], [^0-9], or [abc]. <br/>
       These are often referred to as &quot;Ant-style&quot; patterns since Ant introduced them.</p>
+
+    <p>Glob exclude patterns can be evaluated relative to the matched file or the package root. If the
+      exclude pattern does not contain a path separator, it is considered relative and will be
+      evaluated against the file name of the match only, otherwise it will be evaluated from the
+      directory of the build file. This means that <code>glob(["**/*.go"], exclude = ["*_test.go"])</code>
+      will exclude all files ending in &quot;test.go&quot;.</p>
 
     <p>It bears noting that you cannot glob generated files, only source files. Also glob will not
       descend into any directories that contain a BUILD file; this maintains an invariant that
@@ -80,10 +87,7 @@
 	<td>exclude</td>
 	<td>None</td>
 	<td>list</td>
-	<td>List of filenames to exclude from any patterns matched by <code>includes</code>.<br/>
-      These are subject to glob expansion of <code>*</code> themselves, but
-      <code>**</code> is <b>not</b> expanded (although since these are applied to each file found
-      individually, it's not necessary).</td>
+	<td>List of glob patterns to exclude from anything matched by <code>includes</code>.
       </tr>
 
       <tr>

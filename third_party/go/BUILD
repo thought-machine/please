@@ -177,8 +177,8 @@ go_get(
 go_get(
     name = "spew",
     get = "github.com/davecgh/go-spew/spew",
-    patch = "spew_omit_empty.patch",
     licences = ["ISC"],
+    patch = "spew_omit_empty.patch",
     revision = "ecdeabc65495df2dec95d7c4a4c3e021903035e5",
 )
 
@@ -194,8 +194,8 @@ go_get(
     revision = "v1.4.0",
     deps = [
         ":difflib",
-        ":spew",
         ":objx",
+        ":spew",
         ":yaml.v2",
     ],
 )
@@ -634,10 +634,4 @@ go_get(
     get = "github.com/peterebden/go-sri",
     revision = "v1.0.0",
     test_only = True,
-)
-
-go_get(
-    name = "doublestar",
-    get = "github.com/bmatcuk/doublestar",
-    revision = "v1.3.0",
 )
