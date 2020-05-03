@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"path"
 	"strings"
 	"sync"
@@ -126,16 +127,25 @@ func (c *Client) initExec() error {
 	// Create a copy of the state where we can modify the config
 	c.state = c.state.ForConfig()
 	c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
+	// Check if we need per-rpc credentials.
+	var dialOpts []grpc.DialOption
+	if c.state.Config.Remote.TokenFile != "" {
+		token, err := ioutil.ReadFile(c.state.Config.Remote.TokenFile)
+		if err != nil {
+			return fmt.Errorf("Failed to load token from file: %s", err)
+		}
+		dialOpts = []grpc.DialOption{grpc.WithPerRPCCredentials(preSharedToken(string(token)))}
+	}
 	client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
 		Service:            c.state.Config.Remote.URL,
 		CASService:         c.state.Config.Remote.CASURL,
 		NoSecurity:         !c.state.Config.Remote.Secure,
 		TransportCredsOnly: c.state.Config.Remote.Secure,
-		DialOpts: []grpc.DialOption{
+		DialOpts: append([]grpc.DialOption{
 			grpc.WithStatsHandler(c.stats),
 			// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
 			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400)),
-		},
+		}, dialOpts...),
 	}, client.UseBatchOps(true), client.RetryTransient())
 	if err != nil {
 		return err
