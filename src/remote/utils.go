@@ -463,3 +463,20 @@ func updateHashFilename(name string, digest *pb.Digest) string {
 	b, _ := hex.DecodeString(digest.Hash)
 	return before + "-" + base64.RawURLEncoding.EncodeToString(b) + ext
 }
+
+// preSharedToken returns a gRPC credential provider for a pre-shared token.
+func preSharedToken(token string) tokenCredProvider {
+	return tokenCredProvider{
+		"authorization": "Bearer " + strings.TrimSpace(token),
+	}
+}
+
+type tokenCredProvider map[string]string
+
+func (cred tokenCredProvider) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
+	return cred, nil
+}
+
+func (cred tokenCredProvider) RequireTransportSecurity() bool {
+	return false // Allow these to be provided over an insecure channel; this facilitates e.g. service meshes like Istio.
+}
