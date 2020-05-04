@@ -12,7 +12,7 @@ func FindTarget(statements []*Statement, name string) (target *Statement) {
 		if arg := FindArgument(stmt, "name"); arg != nil && arg.Value.Val != nil && arg.Value.Val.String != "" && strings.Trim(arg.Value.Val.String, `"`) == name {
 			target = stmt
 		}
-		return false  // FindArgument is recursive so we never need to visit more deeply.
+		return false // FindArgument is recursive so we never need to visit more deeply.
 	})
 	return
 }
@@ -51,7 +51,7 @@ func FindArgument(statement *Statement, args ...string) (argument *CallArgument)
 				break
 			}
 		}
-		return false  // CallArguments can't contain other arguments so no point recursing further.
+		return false // CallArguments can't contain other arguments so no point recursing further.
 	})
 	return
 }
