@@ -245,7 +245,7 @@ func DefaultConfiguration() *Configuration {
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
 	config.Build.PleaseSandboxTool = "please_sandbox"
 	config.Build.Xattrs = true
-	config.Build.HashFunction = "sha1" // will likely be changed to sha256 at some future date.
+	config.Build.HashFunction = "sha256"
 	config.BuildConfig = map[string]string{}
 	config.BuildEnv = map[string]string{}
 	config.Cache.HTTPWriteable = true
