@@ -1,3 +1,10 @@
+Version 14.4.1
+--------------
+
+    * Various improvements to double-star globbing implementation.
+    * `plz hash --update` is now a bit more robust to non-trivial BUILD files.
+
+
 Version 14.4.0
 --------------
 
