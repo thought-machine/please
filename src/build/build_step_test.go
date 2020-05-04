@@ -257,10 +257,10 @@ func TestFileGroupBinDir(t *testing.T) {
 func TestOutputHash(t *testing.T) {
 	state, target := newState("//package3:target1")
 	target.AddOutput("file1")
-	target.Hashes = []string{"6c6d66a0852b49cdeeb0e183b4f10b0309c5dd4a"}
+	target.Hashes = []string{"634b027b1b69e1242d40d53e312b3b4ac7710f55be81f289b549446ef6778bee"}
 	b, err := state.TargetHasher.OutputHash(target)
 	assert.NoError(t, err)
-	assert.Equal(t, "6c6d66a0852b49cdeeb0e183b4f10b0309c5dd4a", hex.EncodeToString(b))
+	assert.Equal(t, "634b027b1b69e1242d40d53e312b3b4ac7710f55be81f289b549446ef6778bee", hex.EncodeToString(b))
 }
 
 func TestCheckRuleHashes(t *testing.T) {
