@@ -478,5 +478,5 @@ func (cred tokenCredProvider) GetRequestMetadata(ctx context.Context, uri ...str
 }
 
 func (cred tokenCredProvider) RequireTransportSecurity() bool {
-	return false  // Allow these to be provided over an insecure channel; this facilitates e.g. service meshes like Istio.
+	return false // Allow these to be provided over an insecure channel; this facilitates e.g. service meshes like Istio.
 }
