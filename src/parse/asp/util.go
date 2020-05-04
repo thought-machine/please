@@ -5,21 +5,16 @@ import (
 	"strings"
 )
 
-// FindTarget returns the top-level call in a BUILD file that corresponds to a target
+// FindTarget returns the statement in a BUILD file that corresponds to a target
 // of the given name (or nil if one does not exist).
-func FindTarget(statements []*Statement, name string) *Statement {
-	for _, statement := range statements {
-		if ident := statement.Ident; ident != nil && ident.Action != nil && ident.Action.Call != nil {
-			for _, arg := range ident.Action.Call.Arguments {
-				if arg.Name == "name" {
-					if arg.Value.Val != nil && arg.Value.Val.String != "" && strings.Trim(arg.Value.Val.String, `"`) == name {
-						return statement
-					}
-				}
-			}
+func FindTarget(statements []*Statement, name string) (target *Statement) {
+	WalkAST(statements, func(stmt *Statement) bool {
+		if arg := FindArgument(stmt, "name"); arg != nil && arg.Value.Val != nil && arg.Value.Val.String != "" && strings.Trim(arg.Value.Val.String, `"`) == name {
+			target = stmt
 		}
-	}
-	return nil
+		return false  // FindArgument is recursive so we never need to visit more deeply.
+	})
+	return
 }
 
 // NextStatement finds the statement that follows the given one.
@@ -48,15 +43,17 @@ func GetExtents(statements []*Statement, statement *Statement, max int) (int, in
 
 // FindArgument finds an argument of any one of the given names, or nil if there isn't one.
 // The statement must be a function call (e.g. as returned by FindTarget).
-func FindArgument(statement *Statement, args ...string) *CallArgument {
-	for i, a := range statement.Ident.Action.Call.Arguments {
-		for _, arg := range args {
-			if a.Name == arg {
-				return &statement.Ident.Action.Call.Arguments[i]
+func FindArgument(statement *Statement, args ...string) (argument *CallArgument) {
+	WalkAST([]*Statement{statement}, func(arg *CallArgument) bool {
+		for _, a := range args {
+			if arg.Name == a {
+				argument = arg
+				break
 			}
 		}
-	}
-	return nil
+		return false  // CallArguments can't contain other arguments so no point recursing further.
+	})
+	return
 }
 
 // WalkAST is a generic function that walks through the ast recursively,
