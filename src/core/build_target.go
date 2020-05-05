@@ -2,8 +2,10 @@ package core
 
 import (
 	"fmt"
+	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -646,6 +648,69 @@ func (target *BuildTarget) CheckDuplicateOutputs() error {
 			return fmt.Errorf("Target %s declares output file %s multiple times", target.Label, output)
 		}
 		outputs[output] = struct{}{}
+	}
+	return nil
+}
+
+// CheckTargetOwnsBuildOutputs checks that any outputs to this rule output into directories this of this package.
+func (target *BuildTarget) CheckTargetOwnsBuildOutputs(state *BuildState) error {
+	for _, output := range target.outputs {
+		out := filepath.Join(target.Label.PackageName, output)
+		pkg := FindOwningPackage(state, out)
+		if target.Label.PackageName != pkg.PackageName {
+			return fmt.Errorf("trying to output file %s, but that directory belongs to another package (%s)", out, pkg.PackageName)
+		}
+
+		if fs.IsPackage(state.Config.Parse.BuildFileName, out) {
+			return fmt.Errorf("trying to output file %s, but that directory is another package", out)
+		}
+	}
+	return nil
+}
+
+// CheckTargetOwnsBuildInputs checks that any file inputs to this rule belong to this package.
+func (target *BuildTarget) CheckTargetOwnsBuildInputs(state *BuildState) error {
+	for _, input := range target.Sources {
+		if err := target.checkTargetOwnsBuildInput(state, input); err != nil {
+			return err
+		}
+	}
+
+	for _, input := range target.Data {
+		if err := target.checkTargetOwnsBuildInput(state, input); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (target *BuildTarget) checkTargetOwnsBuildInput(state *BuildState, input BuildInput) error {
+	if input, ok := input.(FileLabel); ok {
+		for _, f := range input.Paths(state.Graph) {
+			if err := target.checkTargetOwnsFileAndSubDirectories(state, f); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (target *BuildTarget) checkTargetOwnsFileAndSubDirectories(state *BuildState, file string) error {
+	pkg := FindOwningPackage(state, file)
+	if target.Label.PackageName != pkg.PackageName {
+		return fmt.Errorf("package %s is trying to use file %s, but that belongs to another package (%s)", target.Label.PackageName, file, pkg.PackageName)
+	}
+
+	if fs.IsDirectory(file) {
+		err := fs.Walk(file, func(name string, isDir bool) error {
+			if isDir && fs.IsPackage(state.Config.Parse.BuildFileName, name){
+				return fmt.Errorf("cannot include %s as it contains subpackage %s", file, name)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

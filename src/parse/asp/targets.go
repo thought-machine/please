@@ -2,13 +2,11 @@ package asp
 
 import (
 	"os"
-	"path"
 	"strings"
 	"time"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/fs"
 )
 
 // filegroupCommand is the command we put on filegroup rules.
@@ -220,7 +218,6 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 			if li != None {
 				out, ok := li.(pyString)
 				s.Assert(ok, "outs must be strings")
-				checkSubDir(s, out.String())
 				anon(string(out))
 				if !optional || !strings.HasPrefix(string(out), "*") {
 					s.pkg.MustRegisterOutput(string(out), t)
@@ -236,7 +233,6 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 				if li != None {
 					out, ok := li.(pyString)
 					s.Assert(ok, "outs must be strings")
-					checkSubDir(s, out.String())
 					named(k, string(out))
 					if !optional || !strings.HasPrefix(string(out), "*") {
 						s.pkg.MustRegisterOutput(string(out), t)
@@ -374,7 +370,6 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	}
 	s.Assert(src != "", "Empty source path")
 	s.Assert(!strings.Contains(src, "../"), "%s is an invalid path; build target paths can't contain ../", src)
-	checkSubDir(s, src)
 	if src[0] == '/' || src[0] == '~' {
 		s.Assert(systemAllowed, "%s is an absolute path; that's not allowed", src)
 		return core.SystemFileLabel{Path: src}
@@ -476,13 +471,3 @@ func asDict(obj pyObject) (pyDict, bool) {
 	return nil, false
 }
 
-// Target is in a subdirectory, check nobody else owns that.
-func checkSubDir(s *scope, src string) {
-	if strings.Contains(src, "/") {
-		// Target is in a subdirectory, check nobody else owns that.
-		sr := s.pkg.SourceRoot()
-		for dir := path.Dir(path.Join(sr, src)); dir != sr && dir != "." && dir != "/"; dir = path.Dir(dir) {
-			s.Assert(!fs.IsPackage(s.state.Config.Parse.BuildFileName, dir), "Trying to use file %s, but that belongs to another package (%s)", src, dir)
-		}
-	}
-}

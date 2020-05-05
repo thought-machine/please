@@ -245,6 +245,9 @@ func FindOwningPackage(state *BuildState, file string) BuildLabel {
 	for f != "." {
 		f = path.Dir(f)
 		if fs.IsPackage(state.Config.Parse.BuildFileName, f) {
+			if f == "." {
+				return BuildLabel{PackageName: "", Name: "all"}
+			}
 			return BuildLabel{PackageName: f, Name: "all"}
 		}
 	}
