@@ -655,9 +655,16 @@ func (target *BuildTarget) CheckDuplicateOutputs() error {
 // CheckTargetOwnsBuildOutputs checks that any outputs to this rule output into directories this of this package.
 func (target *BuildTarget) CheckTargetOwnsBuildOutputs(state *BuildState) error {
 	for _, output := range target.outputs {
+		targetPackage := target.Label.PackageName
 		out := filepath.Join(target.Label.PackageName, output)
+
+		if target.Subrepo != nil {
+			targetPackage = filepath.Join(target.Subrepo.Root, targetPackage)
+			out = filepath.Join(target.Subrepo.Root, out)
+		}
+
 		pkg := FindOwningPackage(state, out)
-		if target.Label.PackageName != pkg.PackageName {
+		if targetPackage != pkg.PackageName {
 			return fmt.Errorf("trying to output file %s, but that directory belongs to another package (%s)", out, pkg.PackageName)
 		}
 
