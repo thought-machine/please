@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -462,6 +464,18 @@ func updateHashFilename(name string, digest *pb.Digest) string {
 	before := name[:len(name)-len(ext)]
 	b, _ := hex.DecodeString(digest.Hash)
 	return before + "-" + base64.RawURLEncoding.EncodeToString(b) + ext
+}
+
+// dialOpts returns a set of dial options to apply based on the config.
+func (c *Client) dialOpts() ([]grpc.DialOption, error) {
+	if c.state.Config.Remote.TokenFile == "" {
+		return nil, nil
+	}
+	token, err := ioutil.ReadFile(c.state.Config.Remote.TokenFile)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load token from file: %s", err)
+	}
+	return []grpc.DialOption{grpc.WithPerRPCCredentials(preSharedToken(string(token)))}, nil
 }
 
 // preSharedToken returns a gRPC credential provider for a pre-shared token.

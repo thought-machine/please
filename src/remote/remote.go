@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"path"
 	"strings"
 	"sync"
@@ -127,14 +126,9 @@ func (c *Client) initExec() error {
 	// Create a copy of the state where we can modify the config
 	c.state = c.state.ForConfig()
 	c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
-	// Check if we need per-rpc credentials.
-	var dialOpts []grpc.DialOption
-	if c.state.Config.Remote.TokenFile != "" {
-		token, err := ioutil.ReadFile(c.state.Config.Remote.TokenFile)
-		if err != nil {
-			return fmt.Errorf("Failed to load token from file: %s", err)
-		}
-		dialOpts = []grpc.DialOption{grpc.WithPerRPCCredentials(preSharedToken(string(token)))}
+	dialOpts, err := c.dialOpts()
+	if err != nil {
+		return err
 	}
 	client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
 		Service:            c.state.Config.Remote.URL,
@@ -202,16 +196,16 @@ func (c *Client) initExec() error {
 
 // initFetch initialises the remote fetch server.
 func (c *Client) initFetch() error {
-	tlsOption := func() grpc.DialOption {
-		if c.state.Config.Remote.Secure {
-			return grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, ""))
-		}
-		return grpc.WithInsecure()
+	dialOpts, err := c.dialOpts()
+	if err != nil {
+		return err
 	}
-	conn, err := grpc.Dial(c.state.Config.Remote.AssetURL,
-		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()),
-		tlsOption(),
-	)
+	if c.state.Config.Remote.Secure {
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
+	} else {
+		dialOpts = append(dialOpts, grpc.WithInsecure())
+	}
+	conn, err := grpc.Dial(c.state.Config.Remote.AssetURL, append(dialOpts, grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()))...)
 	if err != nil {
 		return fmt.Errorf("Failed to connect to the remote fetch server: %s", err)
 	}
