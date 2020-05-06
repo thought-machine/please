@@ -712,7 +712,7 @@ func (target *BuildTarget) checkTargetOwnsFileAndSubDirectories(state *BuildStat
 
 	if fs.IsDirectory(file) {
 		err := fs.Walk(file, func(name string, isDir bool) error {
-			if isDir && fs.IsPackage(state.Config.Parse.BuildFileName, name){
+			if isDir && fs.IsPackage(state.Config.Parse.BuildFileName, name) {
 				return fmt.Errorf("cannot include %s as it contains subpackage %s", file, name)
 			}
 			return nil

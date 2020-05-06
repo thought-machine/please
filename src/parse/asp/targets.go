@@ -470,4 +470,3 @@ func asDict(obj pyObject) (pyDict, bool) {
 	}
 	return nil, false
 }
-
