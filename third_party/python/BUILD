@@ -255,14 +255,14 @@ python_wheel(
 pip_library(
     name = "numpy",
     test_only = True,
-    version = "1.18.4",
+    version = "1.14.0",
     zip_safe = False,
 )
 
 pip_library(
     name = "tensorflow",
     test_only = True,
-    version = "1.15.2",
+    version = "1.4.0",
     deps = [
         ":numpy",
         ":protobuf",
@@ -278,7 +278,7 @@ pip_library(
 pip_library(
     name = "pandas",
     test_only = True,
-    version = "1.0.3",
+    version = "0.22.0",
     deps = [
         ":dateutil",
         ":numpy",
