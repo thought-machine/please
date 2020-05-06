@@ -1,3 +1,10 @@
+Version 14.4.2
+--------------
+
+    * Auth tokens are now attached to outgoing requests on the remote asset API when
+      the URL differs to the main execution API.
+
+
 Version 14.4.1
 --------------
 
