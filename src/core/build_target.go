@@ -658,9 +658,11 @@ func (target *BuildTarget) CheckTargetOwnsBuildOutputs(state *BuildState) error 
 		targetPackage := target.Label.PackageName
 		out := filepath.Join(target.Label.PackageName, output)
 
+		// Skip this check for sub-repos because sub-repos are currently outputted into plz-gen so the output might also
+		// be a sub-repo that contains a package. This isn't the best solution but we can't fix this without reworking
+		// how sub-repos are done.
 		if target.Subrepo != nil {
-			targetPackage = filepath.Join(target.Subrepo.Root, targetPackage)
-			out = filepath.Join(target.Subrepo.Root, out)
+			return nil
 		}
 
 		pkg := FindOwningPackage(state, out)
