@@ -200,6 +200,22 @@ func TestUpdateHashFilename(t *testing.T) {
 	)
 }
 
+func TestRemoteFilesHashConsistently(t *testing.T) {
+	c := newClientInstance("test")
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "download"})
+	target.IsRemoteFile = true
+	target.AddSource(core.URLLabel("https://localhost/file"))
+	cmd, digest, err := c.buildAction(target, false, false)
+	assert.NoError(t, err)
+	// After we change this path, the rule should still give back the same protos since it is
+	// not relevant to how we fetch a remote asset.
+	c.state.Config.Build.Path = []string{"/usr/bin/nope"}
+	cmd2, digest2, err := c.buildAction(target, false, false)
+	assert.NoError(t, err)
+	assert.Equal(t, cmd, cmd2)
+	assert.Equal(t, digest, digest2)
+}
+
 // Store is a small hack that stores a target's outputs for testing only.
 func (c *Client) Store(target *core.BuildTarget) error {
 	if err := c.CheckInitialised(); err != nil {
