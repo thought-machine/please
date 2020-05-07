@@ -134,6 +134,15 @@ func glob(rootPath string, glob string, excludes []string, buildFileNames []stri
 	return matches, nil
 }
 
+func isBathPathOf(path string, base string) bool {
+	if !strings.HasPrefix(path, base) {
+		return false
+	}
+
+	rest := strings.TrimPrefix(path, base)
+	return rest == "" || rest[0] == filepath.Separator
+}
+
 // shouldExcludeMatch checks if the match also matches any of the exclude patterns. If the exclude pattern is a relative
 // pattern i.e. doesn't contain any /'s, then the pattern is checked against the file name part only. Otherwise the
 // pattern is checked against the whole path. This is so `glob(["**/*.go"], exclude = ["*_test.go"])` will match as
@@ -142,6 +151,10 @@ func shouldExcludeMatch(root, match string, excludes []string) (bool, error) {
 	for _, excl := range excludes {
 		rootPath := root
 		m := match
+
+		if isBathPathOf(match, filepath.Join(root, excl)) {
+			return true, nil
+		}
 
 		// If the exclude pattern doesn't contain any slashes and the match does, we only match against the base of the
 		// match path.

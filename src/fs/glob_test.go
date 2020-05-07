@@ -95,6 +95,15 @@ func TestGlobExcludes(t *testing.T) {
 		assert.ElementsMatch(t, expected, files)
 	})
 
+	t.Run("entire directory via base path exclusion", func(t *testing.T) {
+		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/test_subfolder1"}, false)
+		expected := []string{
+			"test_data/test_subfolder++/test.txt",
+			"test_data/test.txt",
+		}
+		assert.ElementsMatch(t, expected, files)
+	})
+
 	t.Run("mix of relative and total", func(t *testing.T) {
 		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test.txt", "test_data/test_subfolder1/a.txt"}, false)
 		expected := []string{
