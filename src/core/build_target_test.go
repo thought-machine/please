@@ -625,6 +625,99 @@ func TestExternalDependencies(t *testing.T) {
 	assert.Equal(t, []*BuildTarget{t1}, t2.ExternalDependencies())
 }
 
+func TestBuildTargetOwnBuildInputs(t *testing.T) {
+	buildFiles := []string{"BUILD_FILE"}
+	t.Run("file is in package", func(t *testing.T) {
+		state := NewDefaultBuildState()
+		state.Config.Parse.BuildFileName = buildFiles
+
+		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+		target.AddSource(FileLabel{
+			File:    "project.file",
+			Package: "src/core/test_data/project",
+		})
+
+		target = state.Graph.AddTarget(target)
+
+		err := target.CheckTargetOwnsBuildInputs(state)
+		assert.NoError(t, err)
+	})
+
+	t.Run("file is subpackage", func(t *testing.T) {
+		state := NewDefaultBuildState()
+		state.Config.Parse.BuildFileName = buildFiles
+
+		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+		target.AddSource(FileLabel{
+			File:    "sub_package",
+			Package: "src/core/test_data/project",
+		})
+
+		target = state.Graph.AddTarget(target)
+
+		err := target.CheckTargetOwnsBuildInputs(state)
+		assert.Error(t, err)
+	})
+
+	t.Run("file is in subpackage", func(t *testing.T) {
+		state := NewDefaultBuildState()
+		state.Config.Parse.BuildFileName = buildFiles
+
+		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+		target.AddSource(FileLabel{
+			File:    "sub_package/sub_package.file",
+			Package: "src/core/test_data/project",
+		})
+
+		target = state.Graph.AddTarget(target)
+
+		err := target.CheckTargetOwnsBuildInputs(state)
+		assert.Error(t, err)
+	})
+}
+
+func TestBuildTargetOwnBuildOutput(t *testing.T) {
+	buildFiles := []string{"BUILD_FILE"}
+	t.Run("file is in package", func(t *testing.T) {
+		state := NewDefaultBuildState()
+		state.Config.Parse.BuildFileName = buildFiles
+
+		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+		target.AddOutput("project.file")
+
+		target = state.Graph.AddTarget(target)
+
+		err := target.CheckTargetOwnsBuildOutputs(state)
+		assert.NoError(t, err)
+	})
+
+	t.Run("file is subpackage", func(t *testing.T) {
+		state := NewDefaultBuildState()
+		state.Config.Parse.BuildFileName = buildFiles
+
+		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+		target.AddOutput("sub_package")
+
+		target = state.Graph.AddTarget(target)
+
+		err := target.CheckTargetOwnsBuildOutputs(state)
+		assert.Error(t, err)
+	})
+
+	t.Run("file is in subpackage", func(t *testing.T) {
+		state := NewDefaultBuildState()
+		state.Config.Parse.BuildFileName = buildFiles
+
+		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+		target.AddOutput("sub_package/sub_package.file")
+
+		target = state.Graph.AddTarget(target)
+
+		err := target.CheckTargetOwnsBuildOutputs(state)
+		assert.Error(t, err)
+	})
+}
+
 func makeTarget1(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {
