@@ -106,9 +106,9 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 			Arguments: []string{
 				"fetch", strings.Join(target.AllURLs(c.state.Config), " "), "verify", strings.Join(target.Hashes, " "),
 			},
-			OutputFiles:          files,
-			OutputDirectories:    dirs,
-			OutputPaths:          append(files, dirs...),
+			OutputFiles:       files,
+			OutputDirectories: dirs,
+			OutputPaths:       append(files, dirs...),
 		}, nil
 	}
 	cmd := target.GetCommand(c.state)
