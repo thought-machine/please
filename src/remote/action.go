@@ -98,7 +98,24 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	if len(target.Outputs()) == 1 { // $OUT is relative when running remotely; make it absolute
 		commandPrefix += `export OUT="$TMP_DIR/$OUT" && `
 	}
-	cmd, err := core.ReplaceSequences(c.state, target, c.getCommand(target))
+	if target.IsRemoteFile {
+		// Synthesize something for the Command proto. We never execute this, but it does get hashed for caching
+		// purposes so it's useful to have it be a minimal expression of what we care about (for example, it should
+		// not include the environment variables since we don't communicate those to the remote server).
+		return &pb.Command{
+			Arguments: []string{
+				"fetch", strings.Join(target.AllURLs(c.state.Config), " "), "verify", strings.Join(target.Hashes, " "),
+			},
+			OutputFiles:       files,
+			OutputDirectories: dirs,
+			OutputPaths:       append(files, dirs...),
+		}, nil
+	}
+	cmd := target.GetCommand(c.state)
+	if cmd == "" {
+		cmd = "true"
+	}
+	cmd, err := core.ReplaceSequences(c.state, target, cmd)
 	return &pb.Command{
 		Platform: c.platform,
 		// We have to run everything through bash since our commands are arbitrary.
@@ -174,23 +191,6 @@ func (c *Client) buildRunCommand(target *core.BuildTarget) (*pb.Command, error) 
 		Arguments:            outs,
 		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(c.state.Config), false),
 	}, nil
-}
-
-// getCommand returns the appropriate command to use for a target.
-func (c *Client) getCommand(target *core.BuildTarget) string {
-	if target.IsRemoteFile {
-		// This isn't a real command, but it suits us to construct a pseudo-version of one.
-		cmd := "fetch " + strings.Join(target.AllURLs(c.state.Config), " ") + " & verify " + strings.Join(target.Hashes, " ")
-		if target.IsBinary {
-			return cmd + " binary"
-		}
-		return cmd
-	}
-	cmd := target.GetCommand(c.state)
-	if cmd == "" {
-		cmd = "true"
-	}
-	return cmd
 }
 
 // uploadInputs finds and uploads a set of inputs from a target.

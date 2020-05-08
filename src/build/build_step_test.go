@@ -189,12 +189,12 @@ func TestRecursiveInitPyCreation(t *testing.T) {
 }
 
 func TestCreatePlzOutGo(t *testing.T) {
-	state, target := newState("//gopkg:target")
+	state, target := newState("//package1:target")
 	target.AddLabel("link:plz-out/go/${PKG}/src")
 	target.AddOutput("file1.go")
 	assert.False(t, fs.PathExists("plz-out/go"))
 	assert.NoError(t, buildTarget(1, state, target, false))
-	assert.True(t, fs.PathExists("plz-out/go/gopkg/src/file1.go"))
+	assert.True(t, fs.PathExists("plz-out/go/package1/src/file1.go"))
 }
 
 func TestLicenceEnforcement(t *testing.T) {
@@ -285,6 +285,7 @@ func TestCheckRuleHashes(t *testing.T) {
 func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	config, _ := core.ReadConfigFiles(nil, nil)
 	state := core.NewBuildState(config)
+	state.Config.Parse.BuildFileName = []string{"BUILD_FILE"}
 	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 	target.Command = fmt.Sprintf("echo 'output of %s' > $OUT", target.Label)
 	target.BuildTimeout = 100 * time.Second

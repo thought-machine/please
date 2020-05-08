@@ -92,6 +92,17 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	if err := target.CheckDuplicateOutputs(); err != nil {
 		return err
 	}
+
+	// Check that the build inputs don't belong to another package
+	if err := target.CheckTargetOwnsBuildInputs(state); err != nil {
+		return err
+	}
+
+	// Check that the build outputs don't belong to another package
+	if err := target.CheckTargetOwnsBuildOutputs(state); err != nil {
+		return err
+	}
+
 	// This must run before we can leave this function successfully by any path.
 	if target.PreBuildFunction != nil {
 		log.Debug("Running pre-build function for %s", target.Label)

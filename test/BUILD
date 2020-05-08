@@ -425,12 +425,6 @@ go_binary(
     srcs = ["name_conflict.go"],
 )
 
-sh_test(
-    name = "glob_build_test",
-    src = "glob_build_test.sh",
-    data = glob(["*"]),
-)
-
 genrule(
     name = "pass_env",
     outs = ["pass_env.sh"],
