@@ -275,8 +275,12 @@ func (c *Client) downloadData(target *core.BuildTarget) error {
 	var g errgroup.Group
 	for _, datum := range target.AllData() {
 		if l := datum.Label(); l != nil {
+			t := c.state.Graph.TargetOrDie(*l)
 			g.Go(func() error {
-				return c.Download(c.state.Graph.TargetOrDie(*l))
+				if err := c.Download(t); err != nil {
+					return err
+				}
+				return c.downloadData(t)
 			})
 		}
 	}
