@@ -262,16 +262,29 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 			}); err != nil {
 				return metadata, err
 			}
-			for _, datum := range target.AllData() {
-				if l := datum.Label(); l != nil {
-					if err := c.Download(c.state.Graph.TargetOrDie(*l)); err != nil {
-						return metadata, err
-					}
-				}
-			}
+		}
+		if err := c.downloadData(target); err != nil {
+			return metadata, err
 		}
 	}
 	return metadata, nil
+}
+
+// downloadData downloads all the runtime data for a target, recursively.
+func (c *Client) downloadData(target *core.BuildTarget) error {
+	var g errgroup.Group
+	for _, datum := range target.AllData() {
+		if l := datum.Label(); l != nil {
+			t := c.state.Graph.TargetOrDie(*l)
+			g.Go(func() error {
+				if err := c.Download(t); err != nil {
+					return err
+				}
+				return c.downloadData(t)
+			})
+		}
+	}
+	return g.Wait()
 }
 
 // Run runs a target on the remote executors.
