@@ -17,7 +17,7 @@ jobs:
            key: python-linux-main-{{ checksum "third_party/python/BUILD" }}
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/please/test_results.xml
+           command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
        - store_test_results:
            path: plz-out/results
        - run:
@@ -64,7 +64,7 @@ jobs:
            key: python-linux-alt-{{ checksum "third_party/python/BUILD" }}
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/please/test_results.xml
+           command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
        - store_test_results:
            path: plz-out/results
        - store_artifacts:
@@ -112,7 +112,7 @@ jobs:
            command: ./.circleci/setup_osx.sh
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh --exclude no_circleci --test_results_file plz-out/results/please/test_results.xml
+           command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
        - store_test_results:
            path: plz-out/results
        - store_artifacts:
