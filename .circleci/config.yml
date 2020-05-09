@@ -86,6 +86,8 @@ jobs:
      steps:
        - checkout
        - restore_cache:
+           key: go-mod-linux-v4-{{ checksum "go.mod" }}
+       - restore_cache:
            key: go-linux-main-v3-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Lint
