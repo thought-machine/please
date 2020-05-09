@@ -4,10 +4,10 @@ package fs
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var buildFileNames = []string{"TEST_BUILD", "BUILD"}
@@ -88,6 +88,15 @@ func TestGlobExcludes(t *testing.T) {
 
 	t.Run("entire directory", func(t *testing.T) {
 		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/test_subfolder1/**"}, false)
+		expected := []string{
+			"test_data/test_subfolder++/test.txt",
+			"test_data/test.txt",
+		}
+		assert.ElementsMatch(t, expected, files)
+	})
+
+	t.Run("entire directory via base path exclusion", func(t *testing.T) {
+		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/test_subfolder1"}, false)
 		expected := []string{
 			"test_data/test_subfolder++/test.txt",
 			"test_data/test.txt",
