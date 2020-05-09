@@ -20,9 +20,7 @@ go_library(
 go_test(
     name = "grpc_test",
     srcs = ["grpc_test.go"],
-    # Doesn't seem to work on CircleCI - the client is inexplicably unable to connect
-    # to the server, even though that's running. Maybe something related to its network config?
-    labels = ["no_circleci"],
+    labels = ["manual"],  # Having many issues with this test. Feature is soon to be removed.
     deps = [
         ":follow",
         "//src/cli",

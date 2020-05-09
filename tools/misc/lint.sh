@@ -3,6 +3,10 @@
 plz="plz-out/bin/src/please"
 BLACKLIST="src/parse/asp/main|//test|tools/please_pex|third_party"
 
+if [ ! -f $plz ]; then
+    plz="./pleasew"
+fi
+
 # gofmt and go vet
 for TARGET in `$plz query alltargets --include go_src --hidden | grep -v "_test#lib" | grep -v "#main" | grep -v proto | grep -Ev $BLACKLIST`; do
     DIR=`echo $TARGET | cut -f 1 -d ':' | cut -c 3-`
