@@ -4,6 +4,7 @@ jobs:
      working_directory: ~/please
      docker:
        - image: thoughtmachine/please_ubuntu:20200226
+     resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
      steps:
@@ -49,6 +50,7 @@ jobs:
      working_directory: ~/please
      docker:
        - image: thoughtmachine/please_ubuntu_alt:20200226
+     resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
        PLZ_COVER: "cover"
@@ -139,6 +141,7 @@ jobs:
      working_directory: ~/please
      docker:
        - image: thoughtmachine/please_ubuntu:20200326
+     resource_class: large
      steps:
        - checkout
        - attach_workspace:
