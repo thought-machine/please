@@ -78,6 +78,20 @@ jobs:
            key: python-linux-alt-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
 
+   lint:
+     working_directory: ~/please
+     docker:
+       - image: thoughtmachine/please_ubuntu:20200226
+     environment:
+       PLZ_ARGS: "-p --profile ci"
+     steps:
+       - checkout
+       - restore_cache:
+           key: go-linux-main-v3-{{ checksum "third_party/go/BUILD" }}
+       - run:
+           name: Lint
+           command: ./pleasew lint
+
    build-darwin:
       macos:
         xcode: "9.0"
@@ -173,6 +187,10 @@ workflows:
     jobs:
       - build-linux
       - build-linux-alt
+      - lint:
+          filters:
+            branches:
+              ignore: master
       - build-darwin:
           requires:
             - build-linux
