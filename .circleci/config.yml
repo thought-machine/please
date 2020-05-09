@@ -21,9 +21,6 @@ jobs:
        - store_test_results:
            path: plz-out/results
        - run:
-           name: Lint
-           command: plz-out/bin/src/please lint
-       - run:
            name: Package
            command: ./plz-out/bin/src/please build //package:all //tools/misc:gen_release //docs:tarball -p
        - persist_to_workspace:
