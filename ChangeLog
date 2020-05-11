@@ -1,3 +1,11 @@
+Version 14.4.3
+--------------
+
+    * Rules consuming files across package boundaries are now checked more accurately and
+      at build time rather than parse time.
+    * Data attributes are downloaded recursively when building remotely.
+
+
 Version 14.4.2
 --------------
 
