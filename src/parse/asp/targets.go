@@ -15,21 +15,68 @@ const filegroupCommand = pyString("filegroup")
 // hashFilegroupCommand is similarly the command for hash_filegroup rules.
 const hashFilegroupCommand = pyString("hash_filegroup")
 
+const defaultFlakiness = 3
+
+const (
+	nameBuildRuleArgIdx = iota
+	cmdBuildRuleArgIdx
+	testCMDBuildRuleArgIdx
+	srcsBuildRuleArgIdx
+	dataBuildRuleArgIdx
+	outsBuildRuleArgIdx
+	depsBuildRuleArgIdx
+	exportedDepsBuildRuleArgIdx
+	secretsBuildRuleArgIdx
+	toolsBuildRuleArgIdx
+	labelsBuildRuleArgIdx
+	visibilityBuildRuleArgIdx
+	hashesBuildRuleArgIdx
+	binaryBuildRuleArgIdx
+	testBuildRuleArgIdx
+	testOnlyBuildRuleArgIdx
+	buildingDescriptionBuildRuleArgIdx
+	needsTransitiveDepsBuildRuleArgIdx
+	outputIsCompleteBuildRuleArgIdx
+	reserved1BuildRuleArgIdx
+	sandboxBuildRuleArgIdx
+	testSandboxBuildRuleArgIdx
+	noTestOutputBuildRuleArgIdx
+	flakyBuildRuleArgIdx
+	buildTimeoutBuildRuleArgIdx
+	testTimeoutBuildRuleArgIdx
+	preBuildBuildRuleArgIdx
+	postBuildBuildRuleArgIdx
+	requiresBuildRuleArgIdx
+	providesBuildRuleArgIdx
+	licencesBuildRuleArgIdx
+	testOutputsBuildRuleArgIdx
+	systemSrcsBuildRuleArgIdx
+	stampBuildRuleArgIdx
+	tagBuildRuleArgIdx
+	optionalOutsBuildRuleArgIdx
+	progressBuildRuleArgIdx
+	sizeBuildRuleArgIdx
+	urlsBuildRuleArgIdx
+	internalDepsBuildRuleArgIdx
+	passEnvBuildRuleArgIdx
+	localBuildRuleArgIdx
+)
+
 // createTarget creates a new build target as part of build_rule().
 func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	isTruthy := func(i int) bool {
 		return args[i] != nil && args[i] != None && (args[i] == &True || args[i].IsTruthy())
 	}
-	name := string(args[0].(pyString))
-	testCmd := args[2]
-	test := isTruthy(14)
+	name := string(args[nameBuildRuleArgIdx].(pyString))
+	testCmd := args[testCMDBuildRuleArgIdx]
+	test := isTruthy(testBuildRuleArgIdx)
 	// A bunch of error checking first
 	s.NAssert(name == "all", "'all' is a reserved build target name.")
 	s.NAssert(name == "", "Target name is empty")
 	s.NAssert(strings.ContainsRune(name, '/'), "/ is a reserved character in build target names")
 	s.NAssert(strings.ContainsRune(name, ':'), ": is a reserved character in build target names")
 
-	if tag := args[34]; tag != nil {
+	if tag := args[tagBuildRuleArgIdx]; tag != nil {
 		if tagStr := string(tag.(pyString)); tagStr != "" {
 			name = tagName(name, tagStr)
 		}
@@ -40,42 +87,42 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 
 	target := core.NewBuildTarget(label)
 	target.Subrepo = s.pkg.Subrepo
-	target.IsBinary = isTruthy(13)
+	target.IsBinary = isTruthy(binaryBuildRuleArgIdx)
 	target.IsTest = test
-	target.NeedsTransitiveDependencies = isTruthy(17)
-	target.OutputIsComplete = isTruthy(18)
-	target.Sandbox = isTruthy(20)
-	target.TestOnly = test || isTruthy(15)
-	target.ShowProgress = isTruthy(36)
-	target.IsRemoteFile = isTruthy(38)
-	target.Local = isTruthy(41)
+	target.NeedsTransitiveDependencies = isTruthy(needsTransitiveDepsBuildRuleArgIdx)
+	target.OutputIsComplete = isTruthy(outputIsCompleteBuildRuleArgIdx)
+	target.Sandbox = isTruthy(sandboxBuildRuleArgIdx)
+	target.TestOnly = test || isTruthy(testOnlyBuildRuleArgIdx)
+	target.ShowProgress = isTruthy(progressBuildRuleArgIdx)
+	target.IsRemoteFile = isTruthy(urlsBuildRuleArgIdx)
+	target.Local = isTruthy(localBuildRuleArgIdx)
 
 	var size *core.Size
-	if args[37] != None {
-		name := string(args[37].(pyString))
+	if args[sizeBuildRuleArgIdx] != None {
+		name := string(args[sizeBuildRuleArgIdx].(pyString))
 		size = mustSize(s, name)
 		target.AddLabel(name)
 	}
-	if args[40] != None {
-		l := asStringList(s, args[40].(pyList), "pass_env")
+	if args[passEnvBuildRuleArgIdx] != None {
+		l := asStringList(s, args[passEnvBuildRuleArgIdx].(pyList), "pass_env")
 		target.PassEnv = &l
 	}
 
-	target.BuildTimeout = sizeAndTimeout(s, size, args[24], s.state.Config.Build.Timeout)
-	target.Stamp = isTruthy(33)
-	target.IsHashFilegroup = args[1] == hashFilegroupCommand
-	target.IsFilegroup = args[1] == filegroupCommand || target.IsHashFilegroup
-	if desc := args[16]; desc != nil && desc != None {
+	target.BuildTimeout = sizeAndTimeout(s, size, args[buildTimeoutBuildRuleArgIdx], s.state.Config.Build.Timeout)
+	target.Stamp = isTruthy(stampBuildRuleArgIdx)
+	target.IsHashFilegroup = args[cmdBuildRuleArgIdx] == hashFilegroupCommand
+	target.IsFilegroup = args[cmdBuildRuleArgIdx] == filegroupCommand || target.IsHashFilegroup
+	if desc := args[buildingDescriptionBuildRuleArgIdx]; desc != nil && desc != None {
 		target.BuildingDescription = string(desc.(pyString))
 	}
 	if target.IsBinary {
 		target.AddLabel("bin")
 	}
-	target.Command, target.Commands = decodeCommands(s, args[1])
+	target.Command, target.Commands = decodeCommands(s, args[cmdBuildRuleArgIdx])
 	if test {
-		if flaky := args[23]; flaky != nil {
+		if flaky := args[flakyBuildRuleArgIdx]; flaky != nil {
 			if flaky == True {
-				target.Flakiness = 3
+				target.Flakiness = defaultFlakiness
 				target.AddLabel("flaky") // Automatically label flaky tests
 			} else if flaky == False {
 				target.Flakiness = 1
@@ -91,11 +138,11 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 			target.Flakiness = 1
 		}
 		if testCmd != nil && testCmd != None {
-			target.TestCommand, target.TestCommands = decodeCommands(s, args[2])
+			target.TestCommand, target.TestCommands = decodeCommands(s, args[testCMDBuildRuleArgIdx])
 		}
-		target.TestTimeout = sizeAndTimeout(s, size, args[25], s.state.Config.Test.Timeout)
-		target.TestSandbox = isTruthy(21)
-		target.NoTestOutput = isTruthy(22)
+		target.TestTimeout = sizeAndTimeout(s, size, args[testTimeoutBuildRuleArgIdx], s.state.Config.Test.Timeout)
+		target.TestSandbox = isTruthy(testSandboxBuildRuleArgIdx)
+		target.NoTestOutput = isTruthy(noTestOutputBuildRuleArgIdx)
 	}
 	return target
 }
@@ -147,34 +194,34 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 // populateTarget sets the assorted attributes on a build target.
 func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	if t.IsRemoteFile {
-		for _, url := range args[38].(pyList) {
+		for _, url := range args[urlsBuildRuleArgIdx].(pyList) {
 			t.AddSource(core.URLLabel(url.(pyString)))
 		}
 	} else {
-		addMaybeNamed(s, "srcs", args[3], t.AddSource, t.AddNamedSource, false, false)
+		addMaybeNamed(s, "srcs", args[srcsBuildRuleArgIdx], t.AddSource, t.AddNamedSource, false, false)
 	}
-	addMaybeNamed(s, "tools", args[9], t.AddTool, t.AddNamedTool, true, true)
-	addMaybeNamed(s, "system_srcs", args[32], t.AddSource, nil, true, false)
-	addMaybeNamed(s, "data", args[4], t.AddDatum, t.AddNamedDatum, false, false)
-	addMaybeNamedOutput(s, "outs", args[5], t.AddOutput, t.AddNamedOutput, t, false)
-	addMaybeNamedOutput(s, "optional_outs", args[35], t.AddOptionalOutput, nil, t, true)
-	addMaybeNamedOutput(s, "test_outputs", args[31], t.AddTestOutput, nil, t, false)
-	addDependencies(s, "deps", args[6], t, false, false)
-	addDependencies(s, "exported_deps", args[7], t, true, false)
-	addDependencies(s, "internal_deps", args[39], t, false, true)
-	addStrings(s, "labels", args[10], t.AddLabel)
-	addStrings(s, "hashes", args[12], t.AddHash)
-	addStrings(s, "licences", args[30], t.AddLicence)
-	addStrings(s, "requires", args[28], t.AddRequire)
-	addStrings(s, "visibility", args[11], func(str string) {
+	addMaybeNamed(s, "tools", args[toolsBuildRuleArgIdx], t.AddTool, t.AddNamedTool, true, true)
+	addMaybeNamed(s, "system_srcs", args[systemSrcsBuildRuleArgIdx], t.AddSource, nil, true, false)
+	addMaybeNamed(s, "data", args[dataBuildRuleArgIdx], t.AddDatum, t.AddNamedDatum, false, false)
+	addMaybeNamedOutput(s, "outs", args[outsBuildRuleArgIdx], t.AddOutput, t.AddNamedOutput, t, false)
+	addMaybeNamedOutput(s, "optional_outs", args[optionalOutsBuildRuleArgIdx], t.AddOptionalOutput, nil, t, true)
+	addMaybeNamedOutput(s, "test_outputs", args[testOutputsBuildRuleArgIdx], t.AddTestOutput, nil, t, false)
+	addDependencies(s, "deps", args[depsBuildRuleArgIdx], t, false, false)
+	addDependencies(s, "exported_deps", args[exportedDepsBuildRuleArgIdx], t, true, false)
+	addDependencies(s, "internal_deps", args[internalDepsBuildRuleArgIdx], t, false, true)
+	addStrings(s, "labels", args[labelsBuildRuleArgIdx], t.AddLabel)
+	addStrings(s, "hashes", args[hashesBuildRuleArgIdx], t.AddHash)
+	addStrings(s, "licences", args[licencesBuildRuleArgIdx], t.AddLicence)
+	addStrings(s, "requires", args[requiresBuildRuleArgIdx], t.AddRequire)
+	addStrings(s, "visibility", args[visibilityBuildRuleArgIdx], func(str string) {
 		t.Visibility = append(t.Visibility, parseVisibility(s, str))
 	})
-	addMaybeNamedSecret(s, "secrets", args[8], t.AddSecret, t.AddNamedSecret, t, true)
-	addProvides(s, "provides", args[29], t)
-	if f := callbackFunction(s, "pre_build", args[26], 1, "argument"); f != nil {
+	addMaybeNamedSecret(s, "secrets", args[secretsBuildRuleArgIdx], t.AddSecret, t.AddNamedSecret, t, true)
+	addProvides(s, "provides", args[providesBuildRuleArgIdx], t)
+	if f := callbackFunction(s, "pre_build", args[preBuildBuildRuleArgIdx], 1, "argument"); f != nil {
 		t.PreBuildFunction = &preBuildFunction{f: f, s: s}
 	}
-	if f := callbackFunction(s, "post_build", args[27], 2, "arguments"); f != nil {
+	if f := callbackFunction(s, "post_build", args[postBuildBuildRuleArgIdx], 2, "arguments"); f != nil {
 		t.PostBuildFunction = &postBuildFunction{f: f, s: s}
 	}
 }
