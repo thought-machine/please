@@ -68,22 +68,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 	}
 }
 
-// Builds a single target
-func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(error); ok {
-				err = e
-			} else {
-				err = fmt.Errorf("%s", r)
-			}
-			log.Debug("Build failed: %s", err)
-			log.Debug(string(debug.Stack()))
-		}
-	}()
-
-	metadata := &core.BuildMetadata{StartTime: time.Now()}
-
+func validateBuildTargetBeforeBuild(state *core.BuildState, target *core.BuildTarget) error {
 	if err := target.CheckDependencyVisibility(state); err != nil {
 		return err
 	}
@@ -102,6 +87,49 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	if err := target.CheckTargetOwnsBuildOutputs(state); err != nil {
 		return err
 	}
+	return nil
+}
+
+func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) error {
+	if target.IsFilegroup {
+		return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
+	}
+	// Ensure we have downloaded any previous dependencies if that's relevant.
+	if err := downloadInputsIfNeeded(tid, state, target); err != nil {
+		return err
+	}
+	if err := prepareDirectories(target); err != nil {
+		return err
+	}
+	if err := prepareSources(state.Graph, target); err != nil {
+		return err
+	}
+	// This is important to catch errors here where we will recover the panic, rather
+	// than later when we shell into the temp dir.
+	mustShortTargetHash(state, target)
+	return errStop
+}
+
+// Builds a single target
+func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				err = e
+			} else {
+				err = fmt.Errorf("%s", r)
+			}
+			log.Debug("Build failed: %s", err)
+			log.Debug(string(debug.Stack()))
+		}
+	}()
+
+	metadata := &core.BuildMetadata{StartTime: time.Now()}
+
+	err = validateBuildTargetBeforeBuild(state, target)
+	if err != nil {
+		return err
+	}
 
 	// This must run before we can leave this function successfully by any path.
 	if target.PreBuildFunction != nil {
@@ -111,27 +139,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 		log.Debug("Finished pre-build function for %s", target.Label)
 	}
+
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Preparing...")
-	var postBuildOutput string
 	if state.PrepareOnly && state.IsOriginalTarget(target.Label) {
-		if target.IsFilegroup {
-			return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
-		}
-		// Ensure we have downloaded any previous dependencies if that's relevant.
-		if err := downloadInputsIfNeeded(tid, state, target); err != nil {
-			return err
-		}
-		if err := prepareDirectories(target); err != nil {
-			return err
-		}
-		if err := prepareSources(state.Graph, target); err != nil {
-			return err
-		}
-		// This is important to catch errors here where we will recover the panic, rather
-		// than later when we shell into the temp dir.
-		mustShortTargetHash(state, target)
-		return errStop
+		return prepareOnly(tid, state, target)
 	}
+
+	var postBuildOutput string
 	var cacheKey, out []byte
 	if runRemotely {
 		m, err := state.RemoteClient.Build(tid, target)

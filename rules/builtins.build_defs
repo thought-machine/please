@@ -1,8 +1,7 @@
 # Contains declarations of built-in functions & objects
 
 
-# Do not change the order of arguments to this function unless you feel like
-# updating all of targets.go to match it.
+# Do not change the order of arguments to this function without updating the iota in targets.go to match it.
 def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', srcs:list|dict=None, data:list|dict=None, outs:list|dict=None,
                deps:list=None, exported_deps:list=None, secrets:list|dict=None, tools:list|dict=None, labels:list=None,
                visibility:list=CONFIG.DEFAULT_VISIBILITY, hashes:list=None, binary:bool=False, test:bool=False,
