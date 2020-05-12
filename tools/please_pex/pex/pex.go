@@ -22,7 +22,7 @@ type Writer struct {
 	realEntryPoint   string
 	pexStamp         string
 	testSrcs         []string
-	testIncludes     []string
+	includeLibs      []string
 	testRunner       string
 	customTestRunner string
 }
@@ -112,7 +112,7 @@ func (pw *Writer) SetTest(srcs []string, testRunner string, addTestRunnerDeps bo
 	}
 
 	if addTestRunnerDeps {
-		pw.testIncludes = testRunnerDeps
+		pw.includeLibs = testRunnerDeps
 	}
 }
 
@@ -125,13 +125,17 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	if err := f.WritePreamble([]byte(pw.shebang)); err != nil {
 		return err
 	}
+	// Non-zip-safe pexes need portalocker
+	if !pw.zipSafe {
+		pw.includeLibs = append(pw.includeLibs, ".bootstrap/portalocker")
+	}
 
-	// Write required pex stuff for tests. Note that this executable is also a zipfile and we can
+	// Write required extra libraries. Note that this executable is also a zipfile and we can
 	// jarcat it directly in (nifty, huh?).
 	//
 	// Note that if the target contains its own test-runner, then we don't need to add anything.
-	if len(pw.testIncludes) > 0 {
-		f.Include = pw.testIncludes
+	if len(pw.includeLibs) > 0 {
+		f.Include = pw.includeLibs
 		pexPath, err := os.Executable() // get abspath to currently-running executable
 		if err != nil {
 			return err

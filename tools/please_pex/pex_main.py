@@ -6,7 +6,6 @@ import os
 import runpy
 import sys
 
-import portalocker
 
 PY_VERSION = sys.version_info
 
@@ -276,7 +275,7 @@ def explode_zip():
     This is primarily used for binary extensions which can't be imported directly from
     inside a zipfile.
     """
-    import contextlib
+    import contextlib, portalocker
 
     @contextlib.contextmanager
     def pex_lockfile(basepath, uniquedir):

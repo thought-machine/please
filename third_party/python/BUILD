@@ -252,6 +252,12 @@ python_wheel(
     deps = [":six"],
 )
 
+python_wheel(
+    name = "portalocker",
+    version = "1.7.0",
+    hashes = ["9fa00efa3102a84ed5281de63189de813f0f83fd"],
+)
+
 pip_library(
     name = "numpy",
     test_only = True,
@@ -267,12 +273,6 @@ pip_library(
         ":numpy",
         ":protobuf",
     ],
-)
-
-pip_library(
-    name = "portalocker",
-    version = "1.7.0",
-    licences = ["PSF"],
 )
 
 pip_library(
