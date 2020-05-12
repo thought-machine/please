@@ -6,7 +6,6 @@ package remote
 import (
 	"context"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"path"
 	"strings"
@@ -105,10 +104,6 @@ func (c *Client) CheckInitialised() error {
 
 // init is passed to the sync.Once to do the actual initialisation.
 func (c *Client) init() {
-	// Disable all logging from glog (which is transitively called from remote-apis-sdks)
-	if err := flag.CommandLine.Parse([]string{"-v", "0"}); err != nil {
-		log.Warning("%s", err)
-	}
 	var g errgroup.Group
 	g.Go(c.initExec)
 	if c.state.Config.Remote.AssetURL != "" {
