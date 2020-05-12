@@ -1,3 +1,10 @@
+Version 14.4.4
+--------------
+
+    * Pexes are now more Windows compatible (#947)
+    * Suppressed some spurious logfile creation (#949)
+
+
 Version 14.4.3
 --------------
 
