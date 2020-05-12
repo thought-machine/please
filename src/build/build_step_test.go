@@ -115,6 +115,18 @@ func TestPostBuildFunction(t *testing.T) {
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 }
 
+func TestOutputDir(t *testing.T) {
+	// Test modifying a command in the post-build function.
+	state, target := newState("//package1:target8")
+	target.Command = "echo 'wibble wibble wibble' | tee OUT_DIR/file7"
+	target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR")
+	err := buildTarget(1, state, target, false)
+	assert.NoError(t, err)
+	assert.Equal(t, core.Built, target.State())
+	assert.Equal(t, []string{"file7"}, target.Outputs())
+}
+
+
 func TestCacheRetrieval(t *testing.T) {
 	// Test retrieving stuff from the cache
 	state, target := newState("//package1:target8")

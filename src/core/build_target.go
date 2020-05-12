@@ -182,7 +182,8 @@ type BuildTarget struct {
 	TestTimeout  time.Duration `name:"test_timeout"`
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
-	TestOutputs []string `name:"test_outputs"`
+	TestOutputs       []string `name:"test_outputs"`
+	OutputDirectories []string `name:"output_dirs"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -1309,6 +1310,11 @@ func (target *BuildTarget) OutMode() os.FileMode {
 // PostBuildOutputFileName returns the post-build output file for this target.
 func (target *BuildTarget) PostBuildOutputFileName() string {
 	return ".build_output_" + target.Label.Name
+}
+
+// OutDirAdditionalOutsFileName returns the file name containing the csv of outputs added from the out_directories.
+func (target *BuildTarget) OutDirAdditionalOutsFileName() string {
+	return ".out_dir_outs_" + target.Label.Name
 }
 
 // StampFileName returns the stamp filename for this target.

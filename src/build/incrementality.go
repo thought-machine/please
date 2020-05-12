@@ -16,6 +16,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/csv"
 	"fmt"
 	"hash"
 	"io/ioutil"
@@ -362,6 +363,10 @@ func postBuildOutputFileName(target *core.BuildTarget) string {
 	return path.Join(target.OutDir(), target.PostBuildOutputFileName())
 }
 
+func outDirsAdditionalOutsFileName(target *core.BuildTarget) string {
+	return path.Join(target.OutDir(), target.OutDirAdditionalOutsFileName())
+}
+
 // For targets that have post-build functions, we have to store and retrieve the target's
 // output to feed to it
 func loadPostBuildOutput(target *core.BuildTarget) (string, error) {
@@ -382,6 +387,50 @@ func storePostBuildOutput(target *core.BuildTarget, out []byte) {
 		panic(err)
 	} else if err := ioutil.WriteFile(filename, out, 0644); err != nil {
 		panic(err)
+	}
+}
+
+// loadOutDitOuts reads the outputs for this target that were added via the output directories and re-adds
+// the to the target
+func loadOutDirOuts(target *core.BuildTarget) {
+	out, err := os.Open(outDirsAdditionalOutsFileName(target))
+	if err != nil {
+		panic(err)
+	}
+	defer out.Close()
+
+	records, err := csv.NewReader(out).ReadAll()
+	if err != nil {
+		panic(err)
+	}
+
+	for _, r := range records {
+		log.Warningf("adding out dir out from saved file: %v", r[0])
+		target.AddOutput(r[0])
+	}
+}
+
+// storeOutDirOuts stores the outs that were added to the target from its output dirs as a CSV so they can
+// be re-added (above) when a re-build is not needed
+func storeOutDirOuts(target *core.BuildTarget, outs []string) {
+	filename := outDirsAdditionalOutsFileName(target)
+
+	if err := os.RemoveAll(filename); err != nil {
+		panic(err)
+	}
+
+	csvFile, err := os.Create(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer csvFile.Close()
+
+	csvWriter := csv.NewWriter(csvFile)
+	defer csvWriter.Flush()
+	for _, o := range outs {
+		if err := csvWriter.Write([]string{o}); err != nil {
+			panic(err)
+		}
 	}
 }
 

@@ -255,18 +255,108 @@ python_wheel(
 pip_library(
     name = "numpy",
     test_only = True,
-    version = "1.14.0",
+    version = "1.18.4",
     zip_safe = False,
 )
 
 pip_library(
     name = "tensorflow",
     test_only = True,
-    version = "1.4.0",
+    version = "2.1.0",
     deps = [
         ":numpy",
         ":protobuf",
+        ":absl",
+        ":wrapt",
+        ":keras_applications",
+        ":keras_preprocessing",
+        ":gast",
+        ":astor",
+        ":termcolor",
+        ":opt_einsum",
+        ":grpcio",
+        ":google-pasta",
     ],
+)
+
+pip_library(
+    name = "keras_applications",
+    test_only = True,
+    version = "1.0.8",
+    deps = [
+        ":h5py",
+    ],
+)
+
+pip_library(
+    name = "opt_einsum",
+    test_only = True,
+    version = "3.2.1",
+    deps = [
+        ":numpy",
+    ],
+)
+
+pip_library(
+    name = "keras_preprocessing",
+    test_only = True,
+    version = "1.1.0",
+    deps = [
+      ":numpy",
+      ":six",
+    ],
+)
+
+pip_library(
+    name = "grpcio",
+    test_only = True,
+    version = "1.14.0",
+    deps = [
+      ":six",
+    ],
+)
+
+pip_library(
+    name = "google-pasta",
+    test_only = True,
+    version = "0.2.0",
+    deps = [
+      ":six",
+    ],
+)
+
+pip_library(
+    name = "gast",
+    test_only = True,
+    version = "0.2.2",
+)
+
+pip_library(
+    name = "astor",
+    test_only = True,
+    version = "0.8.1",
+)
+
+pip_library(
+    name = "termcolor",
+    test_only = True,
+    version = "1.1.0",
+)
+
+pip_library(
+    name = "wrapt",
+    test_only = True,
+    version = "1.12.1",
+)
+
+pip_library(
+  name = "h5py",
+  test_only = True,
+  version = "2.10.0",
+  deps = [
+      ":numpy",
+      ":six",
+  ],
 )
 
 pip_library(
@@ -278,7 +368,7 @@ pip_library(
 pip_library(
     name = "pandas",
     test_only = True,
-    version = "0.22.0",
+    version = "1.0.3",
     deps = [
         ":dateutil",
         ":numpy",

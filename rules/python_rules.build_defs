@@ -320,7 +320,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     )
 
 
-def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
+def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=[],
                 test_only:bool&testonly=False, deps:list=[], post_install_commands:list=None,
                 install_subdirectory:bool=False, repo:str=None, use_pypi:bool=None, patch:str|list=None,
                 visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None,
@@ -348,7 +348,6 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     """
     package_name = package_name or name
     package_name = f'{package_name}=={version}'
-    outs = outs or [name]
     post_install_commands = post_install_commands or []
     post_build = None
     use_pypi = CONFIG.USE_PYPI if use_pypi is None else use_pypi
@@ -364,7 +363,16 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         else:
             repo_flag = '-f ' + repo
 
-    target = outs[0] if install_subdirectory else '.'
+    target = ''
+    output_dirs = []
+    if outs:
+        target = outs[0] if install_subdirectory else '.'
+    else:
+        target = "pip_install"
+        output_dirs = [target]
+        if install_subdirectory:
+            target = f'{target}/{name}'
+
 
     # TODO: This is a total mess on pip's side with --user flag. https://github.com/pypa/pip/issues/1668
     cmd = 'PIP_CONFIG_FILE=/dev/null $TOOLS_PIP install --isolated --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
@@ -399,7 +407,11 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
 
     # TODO(peterebden): --prefix preserves the old behaviour here, but I'm not sure how intuitive that is; leaving it
     #                   out puts everything at the top level of the pex, which is more normal for Python really.
-    cmd += ' && $TOOLS_JARCAT z -d --prefix $PKG_DIR -i ' + ' -i '.join(outs) + ' -i *.*-info'
+    cmd += f' && $TOOLS_JARCAT z -d --prefix $PKG_DIR '
+    if outs:
+      cmd += '-i *.*-info ' + ' -i '.join(outs)
+    else:
+      cmd += f' -i {target}'
 
     wheel_rule = build_rule(
         name = name,
@@ -425,11 +437,11 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         name = name,
         srcs = [wheel_rule],
         outs = outs,
+        output_dirs = output_dirs,
         post_build = _add_dist_info,
         cmd = '$TOOL x $SRCS -s $PKG_DIR; find . -maxdepth 1 -regex \'.*\.\(dist\|egg\)-info\'',
         tools = [CONFIG.JARCAT_TOOL],
         labels = ['py', 'pip:' + package_name],
-        provides = {'py': wheel_rule},
         visibility = visibility,
         test_only = test_only,
         deps = deps,

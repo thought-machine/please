@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -168,6 +170,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		haveRunPostBuildFunction := false
 		if !target.IsFilegroup && !needsBuilding(state, target, false) {
 			log.Debug("Not rebuilding %s, nothing's changed", target.Label)
+			if len(target.OutputDirectories) != 0 {
+				loadOutDirOuts(target)
+			}
+
 			if target.PostBuildFunction != nil {
 				postBuildOutput, err := loadPostBuildOutput(target)
 				if err != nil {
@@ -279,6 +285,17 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return err
 		}
 	}
+	if len(target.OutputDirectories) > 0 {
+		if runRemotely {
+			// TODO(jpoole): implement remote execution for output directories
+			panic("remote execution is not supported for output directories yet")
+		}
+		newOuts, err := addOutputDirectoriesToBuildOutput(target)
+		if err != nil {
+			return err
+		}
+		storeOutDirOuts(target, newOuts)
+	}
 	if target.PostBuildFunction != nil {
 		out = bytes.TrimSpace(out)
 		outs := target.Outputs()
@@ -364,13 +381,12 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	return out, nil
 }
 
-// Prepares the output directories for a target
-func prepareDirectories(target *core.BuildTarget) error {
-	if err := prepareDirectory(target.TmpDir(), true); err != nil {
-		return err
-	}
-	if err := prepareDirectory(target.OutDir(), false); err != nil {
-		return err
+func prepareOutputDirectories(target *core.BuildTarget) error {
+	// Prepare the output directories declared on the rule
+	for _, dir := range target.OutputDirectories {
+		if err := os.Mkdir(filepath.Join(target.TmpDir(), dir), core.DirPermissions); err != nil {
+			return err
+		}
 	}
 	// Nicety for the build rules: create any directories that it's
 	// declared it'll create files in.
@@ -385,6 +401,17 @@ func prepareDirectories(target *core.BuildTarget) error {
 		}
 	}
 	return nil
+}
+
+// Prepares the temp and out directories for a target
+func prepareDirectories(target *core.BuildTarget) error {
+	if err := prepareDirectory(target.TmpDir(), true); err != nil {
+		return err
+	}
+	if err := prepareDirectory(target.OutDir(), false); err != nil {
+		return err
+	}
+	return prepareOutputDirectories(target)
 }
 
 func prepareDirectory(directory string, remove bool) error {
@@ -413,6 +440,46 @@ func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
 		}
 	}
 	return nil
+}
+
+// addOutputDirectoriesToBuildOutput moves all the files from the output dirs into the root of the build temp dir
+// and adds them as outputs to the build target
+func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, error) {
+	var outs []string
+	for _, dir := range target.OutputDirectories {
+		o, err := addOutputDirectoryToBuildOutput(target, dir)
+		if err != nil {
+			return nil, err
+		}
+		outs = append(outs, o...)
+	}
+	return outs, nil
+}
+
+func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir string) ([]string, error) {
+	fullDir := filepath.Join(target.TmpDir(), dir)
+
+	files, err := ioutil.ReadDir(fullDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var outs []string
+	for _, f := range files {
+		log.Warningf("outputs: %v", target.Outputs())
+		target.AddOutput(f.Name())
+
+		from := filepath.Join(fullDir, f.Name())
+		to := filepath.Join(target.TmpDir(), f.Name())
+
+		log.Warningf("moving file from %v, to %v", from, to)
+		if err := os.Rename(from, to); err != nil {
+			return nil, err
+		}
+
+		outs = append(outs, f.Name())
+	}
+	return outs, nil
 }
 
 func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bool, error) {
