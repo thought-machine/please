@@ -264,18 +264,18 @@ pip_library(
     test_only = True,
     version = "2.1.0",
     deps = [
-        ":numpy",
-        ":protobuf",
         ":absl",
-        ":wrapt",
+        ":astor",
+        ":gast",
+        ":google-pasta",
+        ":grpcio",
         ":keras_applications",
         ":keras_preprocessing",
-        ":gast",
-        ":astor",
-        ":termcolor",
+        ":numpy",
         ":opt_einsum",
-        ":grpcio",
-        ":google-pasta",
+        ":protobuf",
+        ":termcolor",
+        ":wrapt",
     ],
 )
 
@@ -302,8 +302,8 @@ pip_library(
     test_only = True,
     version = "1.1.0",
     deps = [
-      ":numpy",
-      ":six",
+        ":numpy",
+        ":six",
     ],
 )
 
@@ -312,7 +312,7 @@ pip_library(
     test_only = True,
     version = "1.14.0",
     deps = [
-      ":six",
+        ":six",
     ],
 )
 
@@ -321,7 +321,7 @@ pip_library(
     test_only = True,
     version = "0.2.0",
     deps = [
-      ":six",
+        ":six",
     ],
 )
 
@@ -350,13 +350,13 @@ pip_library(
 )
 
 pip_library(
-  name = "h5py",
-  test_only = True,
-  version = "2.10.0",
-  deps = [
-      ":numpy",
-      ":six",
-  ],
+    name = "h5py",
+    test_only = True,
+    version = "2.10.0",
+    deps = [
+        ":numpy",
+        ":six",
+    ],
 )
 
 pip_library(
