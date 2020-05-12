@@ -262,7 +262,7 @@ pip_library(
 pip_library(
     name = "tensorflow",
     test_only = True,
-    version = "2.1.0",
+    version = "1.14.0",
     deps = [
         ":absl",
         ":astor",

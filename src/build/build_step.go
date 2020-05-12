@@ -466,13 +466,11 @@ func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir string) ([]st
 
 	var outs []string
 	for _, f := range files {
-		log.Warningf("outputs: %v", target.Outputs())
 		target.AddOutput(f.Name())
 
 		from := filepath.Join(fullDir, f.Name())
 		to := filepath.Join(target.TmpDir(), f.Name())
 
-		log.Warningf("moving file from %v, to %v", from, to)
 		if err := os.Rename(from, to); err != nil {
 			return nil, err
 		}
