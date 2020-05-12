@@ -275,7 +275,10 @@ def explode_zip():
     This is primarily used for binary extensions which can't be imported directly from
     inside a zipfile.
     """
+    # Temporarily add bootstrap to sys path
+    sys.path = [os.path.join(sys.path[0], '.bootstrap')] + sys.path[1:]
     import contextlib, portalocker
+    sys.path = sys.path[1:]
 
     @contextlib.contextmanager
     def pex_lockfile(basepath, uniquedir):
