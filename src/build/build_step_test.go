@@ -122,7 +122,6 @@ func TestOutputDir(t *testing.T) {
 	target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR")
 	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
-	assert.Equal(t, core.Built, target.State())
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 }
 
