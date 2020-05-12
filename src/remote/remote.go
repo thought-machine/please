@@ -35,9 +35,6 @@ import (
 
 var log = logging.MustGetLogger("remote")
 
-// Timeout to initially contact the server.
-const dialTimeout = 5 * time.Second
-
 // The API version we support.
 var apiVersion = semver.SemVer{Major: 2}
 
@@ -147,9 +144,7 @@ func (c *Client) initExec() error {
 	c.client = client
 	// Query the server for its capabilities. This tells us whether it is capable of
 	// execution, caching or both.
-	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	defer cancel()
-	resp, err := c.client.GetCapabilities(ctx)
+	resp, err := c.client.GetCapabilities(context.Background())
 	if err != nil {
 		return err
 	}
