@@ -254,8 +254,8 @@ python_wheel(
 
 python_wheel(
     name = "portalocker",
-    version = "1.7.0",
     hashes = ["9fa00efa3102a84ed5281de63189de813f0f83fd"],
+    version = "1.7.0",
 )
 
 pip_library(
