@@ -106,7 +106,9 @@ func (c *Client) CheckInitialised() error {
 // init is passed to the sync.Once to do the actual initialisation.
 func (c *Client) init() {
 	// Disable all logging from glog (which is transitively called from remote-apis-sdks)
-	flag.CommandLine.Parse([]string{"-v", "0", "-log_dir", "/dev/null"})
+	if err := flag.CommandLine.Parse([]string{"-v", "0", "-log_dir", "/dev/null"}); err != nil {
+		log.Warning("%s", err)
+	}
 	var g errgroup.Group
 	g.Go(c.initExec)
 	if c.state.Config.Remote.AssetURL != "" {
