@@ -262,7 +262,8 @@ pip_library(
 pip_library(
     name = "tensorflow",
     test_only = True,
-    version = "1.14.0",
+    version = "1.13.1", # the next version of TF breaks due to an upstream bug fixed in this pr:
+                        # https://github.com/tensorflow/tensorflow/pull/38663
     deps = [
         ":absl",
         ":astor",
