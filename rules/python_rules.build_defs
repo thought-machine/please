@@ -407,15 +407,14 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
 
     # TODO(peterebden): --prefix preserves the old behaviour here, but I'm not sure how intuitive that is; leaving it
     #                   out puts everything at the top level of the pex, which is more normal for Python really.
-    cmd += f' && $TOOLS_JARCAT z -d --prefix $PKG_DIR '
+    cmd += f' && cd {target} && $TOOLS_JARCAT z -d --prefix $PKG_DIR '
     if outs:
       cmd += '-i *.*-info ' + ' -i '.join(outs)
     else:
-      cmd += f' -i {target}'
+      cmd += f' -i .'
 
-    wheel_rule = build_rule(
+    return build_rule(
         name = name,
-        tag = 'wheel',
         cmd = cmd,
         outs = [name + '.whl'],
         srcs = patches if patch else [],
@@ -429,24 +428,11 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
             'pip': [CONFIG.PIP_TOOL],
             'jarcat': [CONFIG.JARCAT_TOOL],
         },
-        post_build = None if licences else _add_licences,
+        post_build = _add_dist_infos if licences else _add_dist_info_and_licences,
         sandbox = False,
-        labels = ['py:zip-unsafe'] if not zip_safe else None,
-    )
-    return build_rule(
-        name = name,
-        srcs = [wheel_rule],
-        outs = outs,
-        output_dirs = output_dirs,
-        post_build = _add_dist_info,
-        cmd = '$TOOL x $SRCS -s $PKG_DIR; find . -maxdepth 1 -regex \'.*\.\(dist\|egg\)-info\'',
-        tools = [CONFIG.JARCAT_TOOL],
-        labels = ['py', 'pip:' + package_name],
+        labels = ['py:zip-unsafe', 'py', 'pip:' + package_name] if not zip_safe else None,
         visibility = visibility,
-        test_only = test_only,
-        deps = deps,
     )
-
 
 def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
                  post_install_commands:list=None, patch:str|list=None, licences:list=None,
@@ -596,6 +582,10 @@ def _handle_zip_safe(name):
     if has_label(name, 'py:zip-unsafe'):
         set_command(name, get_command(name).replace(' --zip_safe', ''))
 
+
+def _add_dist_info_and_licences(name, output):
+    _add_licences(name, output)
+    _add_dist_info(name, output)
 
 def _add_licences(name, output):
     """Annotates a pip_library rule with detected licences after download."""

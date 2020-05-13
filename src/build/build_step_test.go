@@ -8,8 +8,10 @@
 package build
 
 import (
+	"encoding/csv"
 	"encoding/hex"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
 	"os"
@@ -116,12 +118,41 @@ func TestPostBuildFunction(t *testing.T) {
 }
 
 func TestOutputDir(t *testing.T) {
-	// Test modifying a command in the post-build function.
-	state, target := newState("//package1:target8")
-	target.Command = "echo 'wibble wibble wibble' | tee OUT_DIR/file7"
-	target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR")
+	newTarget := func() (*core.BuildState, *core.BuildTarget) {
+		// Test modifying a command in the post-build function.
+		state, target := newState("//package1:target8")
+		target.Command = "echo 'wibble wibble wibble' | tee OUT_DIR/file7"
+		target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR")
+
+		return state, target
+	}
+
+	state, target := newTarget()
+
+	assert.False(t, fs.FileExists(outDirsAdditionalOutsFileName(target)), "out dir additional output file existed before test ran")
+
 	err := buildTarget(1, state, target, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"file7"}, target.Outputs())
+
+	require.True(t, fs.FileExists(outDirsAdditionalOutsFileName(target)), "out dir additional output file wasn't created")
+	f, err := os.Open(outDirsAdditionalOutsFileName(target))
+	require.NoError(t, err)
+
+	additionalOuts, err := csv.NewReader(f).ReadAll()
+	require.NoError(t, err)
+
+	assert.Len(t, additionalOuts, 1)
+	assert.Equal(t, "file7", additionalOuts[0][0])
+
+	// Test modifying a command in the post-build function.
+	state, target = newTarget()
+
+	assert.True(t, fs.FileExists(outDirsAdditionalOutsFileName(target)), "out dir additional outputs file should exist on second build")
+
+
+	err = buildTarget(1, state, target, false)
+	require.NoError(t, err)
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 }
 

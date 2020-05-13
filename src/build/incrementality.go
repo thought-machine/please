@@ -409,7 +409,6 @@ func loadOutDirOuts(target *core.BuildTarget) {
 	}
 
 	for _, r := range records {
-		log.Warningf("adding out dir out from saved file: %v", r[0])
 		target.AddOutput(r[0])
 	}
 }
