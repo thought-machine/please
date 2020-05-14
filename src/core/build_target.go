@@ -203,6 +203,8 @@ type BuildMetadata struct {
 	RemoteAction []byte
 	// True if this represents a test run.
 	Test bool
+	// Additional outputs from output directories serialised as a csv
+	OutputDirOuts []string
 }
 
 // A PreBuildFunction is a type that allows hooking a pre-build callback.
@@ -1307,14 +1309,9 @@ func (target *BuildTarget) OutMode() os.FileMode {
 	return 0444
 }
 
-// PostBuildOutputFileName returns the post-build output file for this target.
-func (target *BuildTarget) PostBuildOutputFileName() string {
-	return ".build_output_" + target.Label.Name
-}
-
-// OutDirAdditionalOutsFileName returns the file name containing the csv of outputs added from the out_directories.
-func (target *BuildTarget) OutDirAdditionalOutsFileName() string {
-	return ".out_dir_outs_" + target.Label.Name
+// TargetBuildMetadataFileName returns the target build metadata file name for this target.
+func (target *BuildTarget) TargetBuildMetadataFileName() string {
+	return ".target_build_metadata_" + target.Label.Name
 }
 
 // StampFileName returns the stamp filename for this target.
@@ -1363,6 +1360,12 @@ func (target *BuildTarget) ProgressDescription() string {
 // SetProgress sets the current progress of this target.
 func (target *BuildTarget) SetProgress(progress float32) {
 	target.Progress = progress
+}
+
+// BuildCouldModifyTarget will return true when the action of building this target could change the target itself e.g.
+// by adding new outputs
+func (target *BuildTarget) BuildCouldModifyTarget() bool {
+	return target.PostBuildFunction != nil || len(target.OutputDirectories) > 0
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

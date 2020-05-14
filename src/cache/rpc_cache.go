@@ -69,7 +69,7 @@ func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, metadata *cor
 		artifacts := []*pb.Artifact{}
 		totalSize := 0
 		if needsPostBuildFile(target) {
-			files = append(files, target.PostBuildOutputFileName())
+			// TODO(jpoole) store the metadata in the cache
 		}
 		for _, out := range files {
 			artifacts2, size, err := cache.loadArtifacts(target, out)

@@ -69,7 +69,7 @@ func (cache *httpCache) write(w io.WriteCloser, target *core.BuildTarget, key []
 		}
 	}
 	if needsPostBuildFile(target) {
-		cache.storeFile(tw, target.PostBuildOutputFileName())
+		// TODO(jpoole) store the metadata in the cache
 	}
 }
 
@@ -197,14 +197,8 @@ func newHTTPCache(config *core.Configuration) *httpCache {
 
 // Convenience function to load a post-build output file after retrieving it from the cache.
 func loadPostBuildFile(target *core.BuildTarget) *core.BuildMetadata {
-	if !needsPostBuildFile(target) {
-		return &core.BuildMetadata{}
-	}
-	b, err := ioutil.ReadFile(path.Join(target.OutDir(), target.PostBuildOutputFileName()))
-	if err != nil {
-		return nil
-	}
-	return &core.BuildMetadata{Stdout: b}
+	// TODO(jpoole) store the metadata in the cache
+	return nil
 }
 
 // Another one to work out if we should try to store/retrieve a post-build output file.
