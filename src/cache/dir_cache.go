@@ -9,7 +9,6 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/gob"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -211,7 +210,8 @@ func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []str
 		var err error
 		metadata, err = loadTargetMetadata(filepath.Join(cache.getPath(target, key, ""), target.TargetBuildMetadataFileName()))
 		if err != nil {
-			panic(fmt.Errorf("failed to load %s build metadata from cache: %w", target.Label, err))
+			log.Warningf("failed to load %s build metadata from cache: %w", target.Label, err)
+			return nil
 		}
 	}
 	if numOuts == 0 && metadata != nil { // Only need to retrieve this in one particular case
