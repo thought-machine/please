@@ -12,13 +12,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"gopkg.in/op/go-logging.v1"
@@ -279,6 +282,32 @@ func TestCheckRuleHashes(t *testing.T) {
 	target.Hashes = []string{"634b027b1b69e1242d40d53e312b3b4ac7710f55be81f289b549446ef6778bee"}
 	err = checkRuleHashes(state, target, b)
 	assert.NoError(t, err)
+}
+
+func TestBuildMetadatafileIsCreated(t *testing.T) {
+	stdOut := "wibble wibble wibble"
+
+	state, target := newState("//package1:mdtest")
+	target.AddOutput("file1")
+	err := buildTarget(rand.Int(), state, target, false)
+	require.NoError(t, err)
+	assert.False(t, target.BuildCouldModifyTarget())
+	assert.False(t, fs.FileExists(filepath.Join(target.OutDir(), target.TargetBuildMetadataFileName())))
+
+	state, target = newState("//package1:mdtest_post_build")
+	target.Command = fmt.Sprintf("echo '%s' | tee $OUT", stdOut)
+	target.AddOutput("file1")
+	target.PostBuildFunction =  postBuildFunction(func(target *core.BuildTarget, output string) error {
+		assert.Equal(t, stdOut, string(output))
+		return nil
+	})
+	err = buildTarget(rand.Int(), state, target, false)
+	require.NoError(t, err)
+	assert.True(t, target.BuildCouldModifyTarget())
+	assert.True(t, fs.FileExists(filepath.Join(target.OutDir(), target.TargetBuildMetadataFileName())))
+	md, err := loadTargetMetadata(target)
+	require.NoError(t, err)
+	assert.Equal(t, stdOut, string(md.Stdout))
 }
 
 func newState(label string) (*core.BuildState, *core.BuildTarget) {

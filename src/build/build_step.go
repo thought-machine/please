@@ -201,7 +201,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			}
 
 			// If we still don't need to build, return immediately
-			if !needsBuilding(state, target, true) {
+			if !target.BuildCouldModifyTarget() || !needsBuilding(state, target, true) {
 				if target.IsFilegroup {
 					// Small optimisation to ensure we don't need to rehash things unnecessarily.
 					copyFilegroupHashes(state, target)
@@ -302,11 +302,14 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		target.SetState(core.BuiltRemotely)
 		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
 		return nil
-	} else if err := storeTargetMetadata(target, metadata); err != nil {
-		// TODO(jpoole): the plz-out dir doesn't seem to exist at this point when it's run remotely so storing the md
-		// fails. I'm not sure if this is correct.
-		return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
+	} else if target.BuildCouldModifyTarget() {
+		if err := storeTargetMetadata(target, metadata); err != nil {
+			// TODO(jpoole): the plz-out dir doesn't seem to exist at this point when it's run remotely so storing the md
+			// fails. I'm not sure if this is correct.
+			return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
+		}
 	}
+
 
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
 	outs, outputsChanged, err := moveOutputs(state, target)
