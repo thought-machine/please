@@ -295,9 +295,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	}
 
 	metadata.EndTime = time.Now()
-	if err := storeTargetMetadata(target, metadata); err != nil {
-		return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
-	}
 
 	checkLicences(state, target)
 
@@ -305,6 +302,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		target.SetState(core.BuiltRemotely)
 		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
 		return nil
+	} else if err := storeTargetMetadata(target, metadata); err != nil {
+		// TODO(jpoole): the plz-out dir doesn't seem to exist at this point when it's run remotely so storing the md
+		// fails. I'm not sure if this is correct.
+		return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
 	}
 
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
