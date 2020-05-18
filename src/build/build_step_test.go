@@ -241,10 +241,15 @@ func TestFileGroupBinDir(t *testing.T) {
 	assert.True(t, fs.FileExists("plz-out/bin/package1/package2/file1.py"))
 	assert.True(t, fs.IsDirectory("plz-out/bin/package1/package2/"))
 
-	// Ensure correct permission on directory
+	// Ensure permissions on directory are not modified
 	info, err := os.Stat("plz-out/bin/package1/package2/")
 	assert.NoError(t, err)
-	assert.Equal(t, os.FileMode(0755), info.Mode().Perm())
+    compare_dir := "plz-out/bin/package1/package2_cmp/"
+    os.Mkdir(compare_dir, core.DirPermissions)
+    info_cmp, err := os.Stat(compare_dir)
+    assert.NoError(t, err)
+
+    assert.Equal(t, info_cmp.Mode().Perm(), info.Mode().Perm())
 }
 
 func TestOutputHash(t *testing.T) {
