@@ -310,7 +310,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 	}
 
-
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
 	outs, outputsChanged, err := moveOutputs(state, target)
 	if err != nil {
