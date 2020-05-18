@@ -68,8 +68,8 @@ func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, metadata *cor
 		log.Debug("Storing %s in RPC cache...", target.Label)
 		artifacts := []*pb.Artifact{}
 		totalSize := 0
-		if needsPostBuildFile(target) {
-			files = append(files, target.PostBuildOutputFileName())
+		if needsBuildMetadataFile(target) {
+			files = append(files, target.TargetBuildMetadataFileName())
 		}
 		for _, out := range files {
 			artifacts2, size, err := cache.loadArtifacts(target, out)
@@ -151,6 +151,10 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte, files []st
 		return nil
 	}
 	req := pb.RetrieveRequest{Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
+
+	if target.BuildCouldModifyTarget() {
+		files = append(files, target.TargetBuildMetadataFileName())
+	}
 	for _, out := range files {
 		req.Artifacts = append(req.Artifacts, &pb.Artifact{
 			Package: target.Label.PackageName,
@@ -166,7 +170,7 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte, files []st
 	}
 	if !cache.retrieveArtifacts(target, &req, true, files) {
 		return nil
-	} else if needsPostBuildFile(target) {
+	} else if needsBuildMetadataFile(target) {
 		return loadPostBuildFile(target)
 	}
 	return &core.BuildMetadata{}

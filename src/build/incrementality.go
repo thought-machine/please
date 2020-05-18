@@ -16,9 +16,9 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/gob"
 	"fmt"
 	"hash"
-	"io/ioutil"
 	"os"
 	"path"
 	"sort"
@@ -60,29 +60,33 @@ func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild b
 			}
 		}
 	}
-	oldRuleHash, oldConfigHash, oldSourceHash, oldSecretHash := readRuleHash(state, target, postBuild)
-	if !bytes.Equal(oldConfigHash, state.Hashes.Config) {
-		if len(oldConfigHash) == 0 {
+	// If the metadata file containing the std-out and additional outputs doesn't exist, and we need it, rebuild
+	if target.BuildCouldModifyTarget() && !fs.FileExists(targetBuildMetadataFileName(target)) {
+		return true
+	}
+	oldHashes := readRuleHashFromXattrs(state, target, postBuild)
+	if !bytes.Equal(oldHashes.config, state.Hashes.Config) {
+		if len(oldHashes.config) == 0 {
 			// Small nicety to make it a bit clearer what's going on.
 			log.Debug("Need to build %s, outputs aren't there", target.Label)
 		} else {
-			log.Debug("Need to rebuild %s, config has changed (was %s, need %s)", target.Label, b64(oldConfigHash), b64(state.Hashes.Config))
+			log.Debug("Need to rebuild %s, config has changed (was %s, need %s)", target.Label, b64(oldHashes.config), b64(state.Hashes.Config))
 		}
 		return true
 	}
 	newRuleHash := RuleHash(state, target, false, postBuild)
-	if !bytes.Equal(oldRuleHash, newRuleHash) {
-		log.Debug("Need to rebuild %s, rule has changed (was %s, need %s)", target.Label, b64(oldRuleHash), b64(newRuleHash))
+	if !bytes.Equal(oldHashes.rule, newRuleHash) {
+		log.Debug("Need to rebuild %s, rule has changed (was %s, need %s)", target.Label, b64(oldHashes.rule), b64(newRuleHash))
 		return true
 	}
 	newSourceHash, err := sourceHash(state, target)
-	if err != nil || !bytes.Equal(oldSourceHash, newSourceHash) {
-		log.Debug("Need to rebuild %s, sources have changed (was %s, need %s)", target.Label, b64(oldSourceHash), b64(newSourceHash))
+	if err != nil || !bytes.Equal(oldHashes.source, newSourceHash) {
+		log.Debug("Need to rebuild %s, sources have changed (was %s, need %s)", target.Label, b64(oldHashes.source), b64(newSourceHash))
 		return true
 	}
 	newSecretHash, err := secretHash(state, target)
-	if err != nil || !bytes.Equal(oldSecretHash, newSecretHash) {
-		log.Debug("Need to rebuild %s, secrets have changed (was %s, need %s)", target.Label, b64(oldSecretHash), b64(newSecretHash))
+	if err != nil || !bytes.Equal(oldHashes.secret, newSecretHash) {
+		log.Debug("Need to rebuild %s, secrets have changed (was %s, need %s)", target.Label, b64(oldHashes.secret), b64(newSecretHash))
 		return true
 	}
 
@@ -167,7 +171,7 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 // Note that we have to hash on the declared fields, we obviously can't hash pointers etc.
 // incrementality_test will warn if new fields are added to the struct but not here.
 func RuleHash(state *core.BuildState, target *core.BuildTarget, runtime, postBuild bool) []byte {
-	if runtime || (postBuild && target.PostBuildFunction != nil) {
+	if runtime || (postBuild && target.BuildCouldModifyTarget()) {
 		return ruleHash(state, target, runtime)
 	}
 	// Non-post-build hashes get stored on the target itself.
@@ -288,41 +292,57 @@ func hashOptionalBool(writer hash.Hash, b bool) {
 	}
 }
 
-// readRuleHash reads the hash of a file using xattrs.
+type ruleHashes struct {
+	rule, config, source, secret []byte
+	postBuildHash                bool
+}
+
+// readRuleHashFromXattrs reads the hash of a file using xattrs.
 // If postBuild is true then the rule hash will be the post-build one if present.
-func readRuleHash(state *core.BuildState, target *core.BuildTarget, postBuild bool) ([]byte, []byte, []byte, []byte) {
+func readRuleHashFromXattrs(state *core.BuildState, target *core.BuildTarget, postBuild bool) ruleHashes {
 	var h []byte
 	for _, output := range target.FullOutputs() {
 		b := fs.ReadAttr(output, xattrName, state.XattrsSupported)
 		if b == nil {
-			return nil, nil, nil, nil
+			return ruleHashes{}
 		} else if h != nil && !bytes.Equal(h, b) {
 			// Not an error; we could warn but it's possible to get here legitimately so
 			// just return nothing.
-			return nil, nil, nil, nil
+			return ruleHashes{}
 		}
 		h = b
 	}
 	if h == nil {
-		// If the target has a post-build function, we might have written it there.
+		// If the target could be modified during build, we might have written the hash on the build MD file.
 		// Only works for pre-build, though.
-		if target.PostBuildFunction != nil && !postBuild {
-			h = fs.ReadAttr(postBuildOutputFileName(target), xattrName, state.XattrsSupported)
+		if target.BuildCouldModifyTarget() && !postBuild {
+			h = fs.ReadAttr(targetBuildMetadataFileName(target), xattrName, state.XattrsSupported)
 			if h == nil {
-				return nil, nil, nil, nil
+				return ruleHashes{}
 			}
 		} else {
 			// Try the fallback file; target might not have had any outputs, for example.
 			h = fs.ReadAttrFile(path.Join(target.OutDir(), target.Label.Name))
 			if h == nil {
-				return nil, nil, nil, nil
+				return ruleHashes{}
 			}
 		}
 	}
 	if postBuild {
-		return h[hashLength : 2*hashLength], h[2*hashLength : 3*hashLength], h[3*hashLength : 4*hashLength], h[4*hashLength : fullHashLength]
+		return ruleHashes{
+			rule:          h[hashLength : 2*hashLength],
+			config:        h[2*hashLength : 3*hashLength],
+			source:        h[3*hashLength : 4*hashLength],
+			secret:        h[4*hashLength : fullHashLength],
+			postBuildHash: true,
+		}
 	}
-	return h[0:hashLength], h[2*hashLength : 3*hashLength], h[3*hashLength : 4*hashLength], h[4*hashLength : fullHashLength]
+	return ruleHashes{
+		rule:   h[0:hashLength],
+		config: h[2*hashLength : 3*hashLength],
+		source: h[3*hashLength : 4*hashLength],
+		secret: h[4*hashLength : fullHashLength],
+	}
 }
 
 // writeRuleHash attaches the rule hash to the file to its outputs using xattrs.
@@ -346,8 +366,8 @@ func writeRuleHash(state *core.BuildState, target *core.BuildTarget) error {
 			return err
 		}
 	}
-	if target.PostBuildFunction != nil {
-		return fs.RecordAttr(postBuildOutputFileName(target), hash, xattrName, state.XattrsSupported)
+	if target.BuildCouldModifyTarget() {
+		return fs.RecordAttr(targetBuildMetadataFileName(target), hash, xattrName, state.XattrsSupported)
 	}
 	return nil
 }
@@ -358,31 +378,46 @@ func fallbackRuleHashFileName(target *core.BuildTarget) string {
 	return path.Join(target.OutDir(), target.Label.Name)
 }
 
-func postBuildOutputFileName(target *core.BuildTarget) string {
-	return path.Join(target.OutDir(), target.PostBuildOutputFileName())
+func targetBuildMetadataFileName(target *core.BuildTarget) string {
+	return path.Join(target.OutDir(), target.TargetBuildMetadataFileName())
 }
 
 // For targets that have post-build functions, we have to store and retrieve the target's
 // output to feed to it
-func loadPostBuildOutput(target *core.BuildTarget) (string, error) {
-	// Normally filegroups don't have post-build functions, but we use this sometimes for testing.
-	if target.IsFilegroup {
-		return "", nil
-	}
-	out, err := ioutil.ReadFile(postBuildOutputFileName(target))
+func loadTargetMetadata(target *core.BuildTarget) (*core.BuildMetadata, error) {
+	file, err := os.Open(targetBuildMetadataFileName(target))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(out), nil
+
+	md := new(core.BuildMetadata)
+
+	reader := gob.NewDecoder(file)
+	if err := reader.Decode(&md); err != nil {
+		return nil, err
+	}
+
+	return md, nil
 }
 
-func storePostBuildOutput(target *core.BuildTarget, out []byte) {
-	filename := postBuildOutputFileName(target)
+func storeTargetMetadata(target *core.BuildTarget, md *core.BuildMetadata) error {
+	filename := targetBuildMetadataFileName(target)
 	if err := os.RemoveAll(filename); err != nil {
-		panic(err)
-	} else if err := ioutil.WriteFile(filename, out, 0644); err != nil {
-		panic(err)
+		return fmt.Errorf("failed to remove existing %s build metadata file: %w", target.Label, err)
 	}
+
+	mdFile, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create new %s build metadata file: %w", target.Label, err)
+	}
+
+	defer mdFile.Close()
+
+	writer := gob.NewEncoder(mdFile)
+	if err := writer.Encode(md); err != nil {
+		return fmt.Errorf("failed to encode %s build metadata file: %w", target.Label, err)
+	}
+	return nil
 }
 
 // targetHash returns the hash for a target and any error encountered while calculating it.

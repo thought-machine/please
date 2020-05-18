@@ -19,10 +19,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/op/go-logging.v1"
-
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"gopkg.in/op/go-logging.v1"
 )
 
 var cache core.Cache
@@ -314,10 +313,19 @@ func (*mockCache) Store(target *core.BuildTarget, key []byte, metadata *core.Bui
 func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []string) *core.BuildMetadata {
 	if target.Label.Name == "target8" {
 		ioutil.WriteFile("plz-out/gen/package1/file8", []byte("retrieved from cache"), 0664)
-		return &core.BuildMetadata{}
+		md := &core.BuildMetadata{}
+		if err := storeTargetMetadata(target, md); err != nil {
+			panic(err)
+		}
+		return md
+
 	} else if target.Label.Name == "target10" {
 		ioutil.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
-		return &core.BuildMetadata{Stdout: []byte("retrieved from cache")}
+		md := &core.BuildMetadata{Stdout: []byte("retrieved from cache")}
+		if err := storeTargetMetadata(target, md); err != nil {
+			panic(err)
+		}
+		return md
 	}
 	return nil
 }

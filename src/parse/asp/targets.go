@@ -37,7 +37,7 @@ const (
 	buildingDescriptionBuildRuleArgIdx
 	needsTransitiveDepsBuildRuleArgIdx
 	outputIsCompleteBuildRuleArgIdx
-	reserved1BuildRuleArgIdx
+	_
 	sandboxBuildRuleArgIdx
 	testSandboxBuildRuleArgIdx
 	noTestOutputBuildRuleArgIdx

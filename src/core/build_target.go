@@ -1306,9 +1306,9 @@ func (target *BuildTarget) OutMode() os.FileMode {
 	return 0444
 }
 
-// PostBuildOutputFileName returns the post-build output file for this target.
-func (target *BuildTarget) PostBuildOutputFileName() string {
-	return ".build_output_" + target.Label.Name
+// TargetBuildMetadataFileName returns the target build metadata file name for this target.
+func (target *BuildTarget) TargetBuildMetadataFileName() string {
+	return ".target_build_metadata_" + target.Label.Name
 }
 
 // StampFileName returns the stamp filename for this target.
@@ -1357,6 +1357,12 @@ func (target *BuildTarget) ProgressDescription() string {
 // SetProgress sets the current progress of this target.
 func (target *BuildTarget) SetProgress(progress float32) {
 	target.Progress = progress
+}
+
+// BuildCouldModifyTarget will return true when the action of building this target could change the target itself e.g.
+// by adding new outputs
+func (target *BuildTarget) BuildCouldModifyTarget() bool {
+	return target.PostBuildFunction != nil
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.
