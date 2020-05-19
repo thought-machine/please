@@ -419,7 +419,7 @@ func storeTargetMetadata(target *core.BuildTarget, md *core.BuildMetadata) error
 
 	writer := gob.NewEncoder(mdFile)
 	if err := writer.Encode(md); err != nil {
-		return fmt.Errorf("failed to encode %s build metadata file: %w", target.Label,  err)
+		return fmt.Errorf("failed to encode %s build metadata file: %w", target.Label, err)
 	}
 	return nil
 }

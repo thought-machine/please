@@ -71,6 +71,8 @@ func Glob(buildFileNames []string, rootPath string, includes, excludes []string,
 
 	var filenames []string
 	for _, include := range includes {
+		mustBeValidGlobString(include)
+
 		matches, err := glob(rootPath, include, excludes, buildFileNames, includeHidden)
 		if err != nil {
 			panic(fmt.Errorf("error globbing files with %v: %v", include, err))
@@ -134,6 +136,12 @@ func glob(rootPath string, glob string, excludes []string, buildFileNames []stri
 	return matches, nil
 }
 
+func mustBeValidGlobString(glob string) {
+	if glob == "" {
+		panic("cannot use an empty string as a glob")
+	}
+}
+
 func isBathPathOf(path string, base string) bool {
 	if !strings.HasPrefix(path, base) {
 		return false
@@ -149,6 +157,8 @@ func isBathPathOf(path string, base string) bool {
 // you'd expect.
 func shouldExcludeMatch(root, match string, excludes []string) (bool, error) {
 	for _, excl := range excludes {
+		mustBeValidGlobString(excl)
+
 		rootPath := root
 		m := match
 

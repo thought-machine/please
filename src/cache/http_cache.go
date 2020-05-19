@@ -60,6 +60,10 @@ func (cache *httpCache) write(w io.WriteCloser, target *core.BuildTarget, key []
 	tw := tar.NewWriter(gzw)
 	defer tw.Close()
 	outDir := target.OutDir()
+
+	if needsBuildMetadataFile(target) {
+		files = append(files, target.TargetBuildMetadataFileName())
+	}
 	for _, out := range files {
 		if err := fs.Walk(path.Join(outDir, out), func(name string, isDir bool) error {
 			return cache.storeFile(tw, name)
@@ -67,9 +71,6 @@ func (cache *httpCache) write(w io.WriteCloser, target *core.BuildTarget, key []
 			log.Warning("Error uploading artifacts to HTTP cache: %s", err)
 			// TODO(peterebden): How can we cancel the request at this point?
 		}
-	}
-	if needsPostBuildFile(target) {
-		// TODO(jpoole) store the metadata in the cache
 	}
 }
 
@@ -197,11 +198,12 @@ func newHTTPCache(config *core.Configuration) *httpCache {
 
 // Convenience function to load a post-build output file after retrieving it from the cache.
 func loadPostBuildFile(target *core.BuildTarget) *core.BuildMetadata {
-	// TODO(jpoole) store the metadata in the cache
-	return nil
-}
-
-// Another one to work out if we should try to store/retrieve a post-build output file.
-func needsPostBuildFile(target *core.BuildTarget) bool {
-	return target.PostBuildFunction != nil && target.State() < core.Built
+	if !needsBuildMetadataFile(target) {
+		return &core.BuildMetadata{}
+	}
+	b, err := ioutil.ReadFile(path.Join(target.OutDir(), target.TargetBuildMetadataFileName()))
+	if err != nil {
+		return nil
+	}
+	return &core.BuildMetadata{Stdout: b}
 }

@@ -6,7 +6,6 @@ package remote
 import (
 	"context"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"path"
 	"strings"
@@ -34,9 +33,6 @@ import (
 )
 
 var log = logging.MustGetLogger("remote")
-
-// Timeout to initially contact the server.
-const dialTimeout = 5 * time.Second
 
 // The API version we support.
 var apiVersion = semver.SemVer{Major: 2}
@@ -108,8 +104,6 @@ func (c *Client) CheckInitialised() error {
 
 // init is passed to the sync.Once to do the actual initialisation.
 func (c *Client) init() {
-	// Disable all logging from glog (which is transitively called from remote-apis-sdks)
-	flag.CommandLine.Parse([]string{"-v", "0", "-log_dir", "/dev/null"})
 	var g errgroup.Group
 	g.Go(c.initExec)
 	if c.state.Config.Remote.AssetURL != "" {
@@ -147,9 +141,7 @@ func (c *Client) initExec() error {
 	c.client = client
 	// Query the server for its capabilities. This tells us whether it is capable of
 	// execution, caching or both.
-	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	defer cancel()
-	resp, err := c.client.GetCapabilities(ctx)
+	resp, err := c.client.GetCapabilities(context.Background())
 	if err != nil {
 		return err
 	}

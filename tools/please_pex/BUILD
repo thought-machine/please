@@ -41,6 +41,7 @@ genrule(
         "//third_party/python:behave",
         "//third_party/python:parse",
         "//third_party/python:parse_type",
+        "//third_party/python:portalocker",
         "//third_party/python:traceback2",
         "//third_party/python:enum34",
         "//third_party/python:win_unicode_console",

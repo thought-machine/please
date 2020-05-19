@@ -205,7 +205,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			}
 
 			// If we still don't need to build, return immediately
-			if !needsBuilding(state, target, true) {
+			if !target.BuildCouldModifyTarget() || !needsBuilding(state, target, true) {
 				if target.IsFilegroup {
 					// Small optimisation to ensure we don't need to rehash things unnecessarily.
 					copyFilegroupHashes(state, target)
@@ -311,9 +311,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	}
 
 	metadata.EndTime = time.Now()
-	if err := storeTargetMetadata(target, metadata); err != nil {
-		return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
-	}
 
 	checkLicences(state, target)
 
@@ -321,6 +318,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		target.SetState(core.BuiltRemotely)
 		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
 		return nil
+	} else if target.BuildCouldModifyTarget() {
+		if err := storeTargetMetadata(target, metadata); err != nil {
+			return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
+		}
 	}
 
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
@@ -363,7 +364,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	return nil
 }
 
-func outputHashOrNil(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash) []byte{
+func outputHashOrNil(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash) []byte {
 	h, err := outputHash(target, outputs, hasher, combine)
 	if err != nil {
 		// We might get an error because somebody deleted the outputs from plz-out. In this case return nil and attempt
@@ -390,7 +391,6 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 
 	if state.Cache.Retrieve(target, mustShortTargetHash(state, target), target.Outputs()) != nil {
 		log.Debug("Retrieved artifacts for %s from cache", target.Label)
-		// TODO(jpoole): can this be moved to a unified place at the end of the build function?
 		checkLicences(state, target)
 		newOutputHash, err := calculateAndCheckRuleHash(state, target)
 		if err != nil { // Most likely hash verification failure
@@ -404,7 +404,6 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 			target.SetState(core.Unchanged)
 			state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached (unchanged)")
 		}
-		// TODO(jpoole): can this be moved to a unified place at the end of the build function?
 		buildLinks(state, target)
 		return true // got from cache
 	}
@@ -417,7 +416,6 @@ func addOutDirOutsFromMetadata(target *core.BuildTarget, md *core.BuildMetadata)
 		target.AddOutput(o)
 	}
 }
-
 // runBuildCommand runs the actual command to build a target.
 // On success it returns the stdout of the target, otherwise an error.
 func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command string, inputHash []byte) ([]byte, error) {
@@ -433,6 +431,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	return out, nil
 }
 
+// Prepares the output directories for a target
 func prepareOutputDirectories(target *core.BuildTarget) error {
 	// Prepare the output directories declared on the rule
 	for _, dir := range target.OutputDirectories {

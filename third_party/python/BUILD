@@ -252,6 +252,12 @@ python_wheel(
     deps = [":six"],
 )
 
+python_wheel(
+    name = "portalocker",
+    hashes = ["9fa00efa3102a84ed5281de63189de813f0f83fd"],
+    version = "1.7.0",
+)
+
 pip_library(
     name = "numpy",
     test_only = True,

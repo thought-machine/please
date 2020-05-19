@@ -9,7 +9,6 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/gob"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -46,8 +45,9 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, metadata *cor
 		log.Warning("Failed to remove existing cache directory %s: %s", cacheDir, err)
 		return
 	}
-	files = append(files, target.TargetBuildMetadataFileName())
-
+	if target.BuildCouldModifyTarget() && len(metadata.RemoteAction) == 0 {
+		files = append(files, target.TargetBuildMetadataFileName())
+	}
 	cache.storeFiles(target, key, "", cacheDir, tmpDir, files, true)
 	if len(metadata.RemoteAction) > 0 {
 		cache.storeData(path.Join(tmpDir, remoteActionFilename), metadata.RemoteAction)
@@ -199,14 +199,20 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) *core.BuildMetadata {
 	numOuts := len(outs)
-	outs = append(outs, target.TargetBuildMetadataFileName())
-
+	if needsBuildMetadataFile(target) {
+		outs = append(outs, target.TargetBuildMetadataFileName())
+	}
 	if !cache.retrieveFiles(target, key, "", outs) {
 		return nil
 	}
-	metadata, err := loadTargetMetadata(filepath.Join(cache.getPath(target, key, ""), target.TargetBuildMetadataFileName()))
-	if err != nil {
-		panic(fmt.Errorf("failed to load %s build metadata from cache: %w", target.Label, err))
+	metadata := new(core.BuildMetadata)
+	if needsBuildMetadataFile(target) {
+		var err error
+		metadata, err = loadTargetMetadata(filepath.Join(cache.getPath(target, key, ""), target.TargetBuildMetadataFileName()))
+		if err != nil {
+			log.Warningf("failed to load %s build metadata from cache: %w", target.Label, err)
+			return nil
+		}
 	}
 
 	if numOuts == 0 && metadata != nil { // Only need to retrieve this in one particular case
