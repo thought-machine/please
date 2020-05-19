@@ -12,17 +12,19 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/op/go-logging.v1"
-
+	"github.com/stretchr/testify/require"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"gopkg.in/op/go-logging.v1"
 )
 
 var cache core.Cache
@@ -287,6 +289,32 @@ func TestCheckRuleHashes(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestBuildMetadatafileIsCreated(t *testing.T) {
+	stdOut := "wibble wibble wibble"
+
+	state, target := newState("//package1:mdtest")
+	target.AddOutput("file1")
+	err := buildTarget(rand.Int(), state, target, false)
+	require.NoError(t, err)
+	assert.False(t, target.BuildCouldModifyTarget())
+	assert.False(t, fs.FileExists(filepath.Join(target.OutDir(), target.TargetBuildMetadataFileName())))
+
+	state, target = newState("//package1:mdtest_post_build")
+	target.Command = fmt.Sprintf("echo '%s' | tee $OUT", stdOut)
+	target.AddOutput("file1")
+	target.PostBuildFunction =  postBuildFunction(func(target *core.BuildTarget, output string) error {
+		assert.Equal(t, stdOut, string(output))
+		return nil
+	})
+	err = buildTarget(rand.Int(), state, target, false)
+	require.NoError(t, err)
+	assert.True(t, target.BuildCouldModifyTarget())
+	assert.True(t, fs.FileExists(filepath.Join(target.OutDir(), target.TargetBuildMetadataFileName())))
+	md, err := loadTargetMetadata(target)
+	require.NoError(t, err)
+	assert.Equal(t, stdOut, string(md.Stdout))
+}
+
 func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	config, _ := core.ReadConfigFiles(nil, nil)
 	state := core.NewBuildState(config)
@@ -319,10 +347,19 @@ func (*mockCache) Store(target *core.BuildTarget, key []byte, metadata *core.Bui
 func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []string) *core.BuildMetadata {
 	if target.Label.Name == "target8" {
 		ioutil.WriteFile("plz-out/gen/package1/file8", []byte("retrieved from cache"), 0664)
-		return &core.BuildMetadata{}
+		md := &core.BuildMetadata{}
+		if err := storeTargetMetadata(target, md); err != nil {
+			panic(err)
+		}
+		return md
+
 	} else if target.Label.Name == "target10" {
 		ioutil.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
-		return &core.BuildMetadata{Stdout: []byte("retrieved from cache")}
+		md := &core.BuildMetadata{Stdout: []byte("retrieved from cache")}
+		if err := storeTargetMetadata(target, md); err != nil {
+			panic(err)
+		}
+		return md
 	}
 	return nil
 }

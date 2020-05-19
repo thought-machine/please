@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"encoding/gob"
 	"io"
 	"io/ioutil"
 	"os"
@@ -44,15 +45,12 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, metadata *cor
 		log.Warning("Failed to remove existing cache directory %s: %s", cacheDir, err)
 		return
 	}
-	if target.PostBuildFunction != nil && len(metadata.RemoteAction) == 0 {
-		files = append(files, target.PostBuildOutputFileName())
+	if target.BuildCouldModifyTarget() && len(metadata.RemoteAction) == 0 {
+		files = append(files, target.TargetBuildMetadataFileName())
 	}
 	cache.storeFiles(target, key, "", cacheDir, tmpDir, files, true)
 	if len(metadata.RemoteAction) > 0 {
 		cache.storeData(path.Join(tmpDir, remoteActionFilename), metadata.RemoteAction)
-		if target.PostBuildFunction != nil {
-			cache.storeData(path.Join(tmpDir, target.PostBuildOutputFileName()), metadata.Stdout)
-		}
 	}
 	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
@@ -201,15 +199,20 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) *core.BuildMetadata {
 	numOuts := len(outs)
-	if needsPostBuildFile(target) {
-		outs = append(outs, target.PostBuildOutputFileName())
+	if needsBuildMetadataFile(target) {
+		outs = append(outs, target.TargetBuildMetadataFileName())
 	}
 	if !cache.retrieveFiles(target, key, "", outs) {
 		return nil
 	}
-	metadata := &core.BuildMetadata{}
-	if needsPostBuildFile(target) {
-		metadata = loadPostBuildFile(target)
+	metadata := new(core.BuildMetadata)
+	if needsBuildMetadataFile(target) {
+		var err error
+		metadata, err = loadTargetMetadata(filepath.Join(cache.getPath(target, key, ""), target.TargetBuildMetadataFileName()))
+		if err != nil {
+			log.Warningf("failed to load %s build metadata from cache: %w", target.Label, err)
+			return nil
+		}
 	}
 	if numOuts == 0 && metadata != nil { // Only need to retrieve this in one particular case
 		if data, err := ioutil.ReadFile(path.Join(cache.getPath(target, key, ""), remoteActionFilename)); err == nil {
@@ -217,6 +220,22 @@ func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []str
 		}
 	}
 	return metadata
+}
+
+func loadTargetMetadata(filename string) (*core.BuildMetadata, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	md := new(core.BuildMetadata)
+
+	reader := gob.NewDecoder(file)
+	if err := reader.Decode(&md); err != nil {
+		return nil, err
+	}
+
+	return md, nil
 }
 
 // retrieveFiles retrieves the given set of files from the cache.
