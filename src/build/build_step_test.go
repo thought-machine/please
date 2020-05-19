@@ -298,7 +298,7 @@ func TestBuildMetadatafileIsCreated(t *testing.T) {
 	err := buildTarget(rand.Int(), state, target, false)
 	require.NoError(t, err)
 	assert.False(t, target.BuildCouldModifyTarget())
-	assert.False(t, fs.FileExists(filepath.Join(target.OutDir(), target.TargetBuildMetadataFileName())))
+	assert.True(t, fs.FileExists(filepath.Join(target.OutDir(), target.TargetBuildMetadataFileName())))
 
 	state, target = newState("//package1:mdtest_post_build")
 	target.Command = fmt.Sprintf("echo -n '%s' | tee $OUT", stdOut)
