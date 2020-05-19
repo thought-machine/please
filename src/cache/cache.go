@@ -52,8 +52,8 @@ type cacheMultiplexer struct {
 	caches []core.Cache
 }
 
-func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
-	mplex.storeUntil(target, key, metadata, files, len(mplex.caches))
+func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte, files []string) {
+	mplex.storeUntil(target, key, files, len(mplex.caches))
 }
 
 // storeUntil stores artifacts into higher priority caches than the given one.
@@ -61,7 +61,7 @@ func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte, metada
 // downloading from the RPC cache.
 // This is a little inefficient since we could write the file to plz-out then copy it to the dir cache,
 // but it's hard to fix that without breaking the cache abstraction.
-func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string, stopAt int) {
+func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, files []string, stopAt int) {
 	// Attempt to store on all caches simultaneously.
 	var wg sync.WaitGroup
 	for i, cache := range mplex.caches {
@@ -70,24 +70,24 @@ func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, m
 		}
 		wg.Add(1)
 		go func(cache core.Cache) {
-			cache.Store(target, key, metadata, files)
+			cache.Store(target, key, files)
 			wg.Done()
 		}(cache)
 	}
 	wg.Wait()
 }
 
-func (mplex cacheMultiplexer) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+func (mplex cacheMultiplexer) Retrieve(target *core.BuildTarget, key []byte, files []string) bool {
 	// Retrieve from caches sequentially; if we did them simultaneously we could
 	// easily write the same file from two goroutines at once.
 	for i, cache := range mplex.caches {
-		if metadata := cache.Retrieve(target, key, files); metadata != nil {
+		if ok := cache.Retrieve(target, key, files); ok {
 			// Store this into other caches
-			mplex.storeUntil(target, key, metadata, files, i)
-			return metadata
+			mplex.storeUntil(target, key, files, i)
+			return ok
 		}
 	}
-	return nil
+	return false
 }
 
 func (mplex cacheMultiplexer) Clean(target *core.BuildTarget) {
@@ -108,7 +108,3 @@ func (mplex cacheMultiplexer) Shutdown() {
 	}
 }
 
-// Another one to work out if we should try to store/retrieve a post-build output file.
-func needsBuildMetadataFile(target *core.BuildTarget) bool {
-	return target.BuildCouldModifyTarget() && target.State() < core.Built
-}

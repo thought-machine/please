@@ -20,7 +20,6 @@ type asyncCache struct {
 // A cacheRequest models an incoming cache request on our queue.
 type cacheRequest struct {
 	target   *core.BuildTarget
-	metadata *core.BuildMetadata
 	key      []byte
 	files    []string
 	file     string
@@ -38,16 +37,15 @@ func newAsyncCache(realCache core.Cache, config *core.Configuration) core.Cache 
 	return c
 }
 
-func (c *asyncCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (c *asyncCache) Store(target *core.BuildTarget, key []byte, files []string) {
 	c.requests <- cacheRequest{
 		target:   target,
-		metadata: metadata,
 		key:      key,
 		files:    files,
 	}
 }
 
-func (c *asyncCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+func (c *asyncCache) Retrieve(target *core.BuildTarget, key []byte, files []string) bool {
 	return c.realCache.Retrieve(target, key, files)
 }
 
@@ -69,7 +67,7 @@ func (c *asyncCache) Shutdown() {
 // run implements the actual async logic.
 func (c *asyncCache) run() {
 	for r := range c.requests {
-		c.realCache.Store(r.target, r.key, r.metadata, r.files)
+		c.realCache.Store(r.target, r.key, r.files)
 	}
 	c.wg.Done()
 }

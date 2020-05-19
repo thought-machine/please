@@ -58,6 +58,7 @@ func TestBuildTargetWhichDoesntNeedRebuilding(t *testing.T) {
 	// We write a rule hash for this target before building it, so we don't need to build again.
 	state, target := newState("//package1:target3")
 	target.AddOutput("file3")
+	storeTargetMetadata(target, new(core.BuildMetadata))
 	assert.NoError(t, writeRuleHash(state, target))
 	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
@@ -70,7 +71,7 @@ func TestModifiedBuildTargetStillNeedsRebuilding(t *testing.T) {
 	state, target := newState("//package1:target4")
 	target.AddOutput("file4")
 	assert.NoError(t, writeRuleHash(state, target))
-	target.Command = "echo 'wibble wibble wibble' > $OUT"
+	target.Command = "echo -n 'wibble wibble wibble' > $OUT"
 	target.RuleHash = nil // Have to force a reset of this
 	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
@@ -105,7 +106,7 @@ func TestPreBuildFunction(t *testing.T) {
 func TestPostBuildFunction(t *testing.T) {
 	// Test modifying a command in the post-build function.
 	state, target := newState("//package1:target7")
-	target.Command = "echo 'wibble wibble wibble' | tee file7"
+	target.Command = "echo -n 'wibble wibble wibble' | tee file7"
 	target.PostBuildFunction = postBuildFunction(func(target *core.BuildTarget, output string) error {
 		target.AddOutput("file7")
 		assert.Equal(t, "wibble wibble wibble", output)
@@ -133,7 +134,7 @@ func TestPostBuildFunctionAndCache(t *testing.T) {
 	// In this case when it fails to retrieve the post-build output it should still call the function after building.
 	state, target := newState("//package1:target9")
 	target.AddOutput("file9")
-	target.Command = "echo 'wibble wibble wibble' | tee $OUT"
+	target.Command = "echo -n 'wibble wibble wibble' | tee $OUT"
 	called := false
 	target.PostBuildFunction = postBuildFunction(func(target *core.BuildTarget, output string) error {
 		called = true
@@ -300,7 +301,7 @@ func TestBuildMetadatafileIsCreated(t *testing.T) {
 	assert.False(t, fs.FileExists(filepath.Join(target.OutDir(), target.TargetBuildMetadataFileName())))
 
 	state, target = newState("//package1:mdtest_post_build")
-	target.Command = fmt.Sprintf("echo '%s' | tee $OUT", stdOut)
+	target.Command = fmt.Sprintf("echo -n '%s' | tee $OUT", stdOut)
 	target.AddOutput("file1")
 	target.PostBuildFunction =  postBuildFunction(func(target *core.BuildTarget, output string) error {
 		assert.Equal(t, stdOut, string(output))
@@ -310,7 +311,7 @@ func TestBuildMetadatafileIsCreated(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, target.BuildCouldModifyTarget())
 	assert.True(t, fs.FileExists(filepath.Join(target.OutDir(), target.TargetBuildMetadataFileName())))
-	md, err := loadTargetMetadata(target)
+	md, err := LoadTargetMetadata(target)
 	require.NoError(t, err)
 	assert.Equal(t, stdOut, string(md.Stdout))
 }
@@ -341,17 +342,17 @@ func newPyFilegroup(state *core.BuildState, label, filename string) *core.BuildT
 // Fake cache implementation with hardcoded behaviour for the various tests above.
 type mockCache struct{}
 
-func (*mockCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (*mockCache) Store(target *core.BuildTarget, key []byte, files []string) {
 }
 
-func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []string) *core.BuildMetadata {
+func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []string) bool {
 	if target.Label.Name == "target8" {
 		ioutil.WriteFile("plz-out/gen/package1/file8", []byte("retrieved from cache"), 0664)
 		md := &core.BuildMetadata{}
 		if err := storeTargetMetadata(target, md); err != nil {
 			panic(err)
 		}
-		return md
+		return true
 
 	} else if target.Label.Name == "target10" {
 		ioutil.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
@@ -359,9 +360,9 @@ func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []strin
 		if err := storeTargetMetadata(target, md); err != nil {
 			panic(err)
 		}
-		return md
+		return true
 	}
-	return nil
+	return false
 }
 
 func (*mockCache) Clean(target *core.BuildTarget) {}

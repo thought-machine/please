@@ -136,8 +136,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 	}()
 
-	metadata := &core.BuildMetadata{StartTime: time.Now()}
-
 	err = validateBuildTargetBeforeBuild(state, target)
 	if err != nil {
 		return err
@@ -158,13 +156,14 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	}
 
 	var postBuildOutput string
-	var cacheKey, out []byte
+	var cacheKey []byte
+	var metadata *core.BuildMetadata
+
 	if runRemotely {
-		m, err := state.RemoteClient.Build(tid, target)
+		metadata, err = state.RemoteClient.Build(tid, target)
 		if err != nil {
 			return err
 		}
-		out = m.Stdout
 	} else {
 		if target.IsHashFilegroup {
 			updateHashFilegroupPaths(state, target)
@@ -185,13 +184,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			// changes from the build metadata and check if we need to build the target again
 			if target.BuildCouldModifyTarget() {
 				// needsBuilding checks that the metadata file exists so this is safe
-				buildMetadata, err := loadTargetMetadata(target)
+				metadata, err = LoadTargetMetadata(target)
 				if err != nil {
 					return fmt.Errorf("failed to load build metadata for %s: %w", target.Label, err)
 				}
 
 				if target.PostBuildFunction != nil {
-					if err := runPostBuildFunction(tid, state, target, string(buildMetadata.Stdout), ""); err != nil {
+					if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), ""); err != nil {
 						log.Warning("Error from post-build function for %s: %s; will rebuild", target.Label, err)
 					}
 				}
@@ -244,7 +243,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			// what we would retrieve from the cache.
 			if target.BuildCouldModifyTarget() {
 				log.Debug("Checking for build metadata for %s in cache...", target.Label)
-				if metadata := state.Cache.Retrieve(target, cacheKey, nil); metadata != nil {
+				if metadata = retrieveFromCache(state.Cache, target, cacheKey, nil); metadata != nil {
 					if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
 						postBuildOutput = string(metadata.Stdout)
 						if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
@@ -269,30 +268,28 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, target.BuildingDescription)
-		out, err = buildMaybeRemotely(state, target, cacheKey)
+		metadata, err = buildMaybeRemotely(state, target, cacheKey)
 		if err != nil {
 			return err
 		}
 	}
+
 	if target.PostBuildFunction != nil {
-		out = bytes.TrimSpace(out)
 		outs := target.Outputs()
-		if err := runPostBuildFunction(tid, state, target, string(out), postBuildOutput); err != nil {
+		if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), postBuildOutput); err != nil {
 			return err
 		}
-		metadata.Stdout = out
+		// TODO(jpoole): do we not care about other changes to the build function here? Perhaps a more robust solution
+		// would be to check the hashes haven't changed
 		if runRemotely && len(outs) != len(target.Outputs()) {
 			// postBuildFunction has changed the target - must rebuild it
 			log.Info("Rebuilding %s after post-build function", target)
-			m, err := state.RemoteClient.Build(tid, target)
+			metadata, err = state.RemoteClient.Build(tid, target)
 			if err != nil {
 				return err
 			}
-			out = m.Stdout
 		}
 	}
-
-	metadata.EndTime = time.Now()
 
 	checkLicences(state, target)
 
@@ -323,14 +320,18 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	if state.Cache != nil {
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Storing...")
 		newCacheKey := mustShortTargetHash(state, target)
+
+		// If the build could modify the target, store the metadata in the cache based on the original state of the
+		// target. This is so it can be retrieved to apply the modifications so we can retrieve the files based on the
+		// modified target hash.
 		if target.BuildCouldModifyTarget() {
 			if !bytes.Equal(newCacheKey, cacheKey) {
 				// NB. Important this is stored with the earlier hash - if we calculate the hash
 				//     now, it might be different, and we could of course never retrieve it again.
-				state.Cache.Store(target, cacheKey, metadata, nil)
+				storeInCache(state.Cache, target, cacheKey, nil)
 			}
 		}
-		state.Cache.Store(target, newCacheKey, metadata, outs)
+		storeInCache(state.Cache, target, newCacheKey, outs)
 	}
 	// Clean up the temporary directory once it's done.
 	if state.CleanWorkdirs {
@@ -356,6 +357,24 @@ func outputHashOrNil(target *core.BuildTarget, outputs []string, hasher *fs.Path
 	return h
 }
 
+func retrieveFromCache(cache core.Cache, target *core.BuildTarget, cacheKey []byte, files []string) *core.BuildMetadata {
+	files = append(files, target.TargetBuildMetadataFileName())
+	if ok := cache.Retrieve(target, cacheKey, files); ok {
+		md, err := LoadTargetMetadata(target)
+		if err != nil {
+			log.Warningf("failed to retrieve %s build metadata from cache: %v", target.Label, err)
+			return nil
+		}
+		return md
+	}
+	return nil
+}
+
+func storeInCache(cache core.Cache, target *core.BuildTarget, key []byte, files []string) {
+	files = append(files, target.TargetBuildMetadataFileName())
+	cache.Store(target, key, files)
+}
+
 // retrieveArtifacts attempts to retrieve artifacts from the cache
 //   1) if there are no declared outputs, return true; there's nothing to be done
 //   2) pull all the declared outputs from the cache has based on the short hash of the target
@@ -371,7 +390,7 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 
-	if state.Cache.Retrieve(target, mustShortTargetHash(state, target), target.Outputs()) != nil {
+	if retrieveFromCache(state.Cache, target, mustShortTargetHash(state, target), target.Outputs()) != nil {
 		log.Debug("Retrieved artifacts for %s from cache", target.Label)
 		checkLicences(state, target)
 		newOutputHash, err := calculateAndCheckRuleHash(state, target)
@@ -908,12 +927,15 @@ func (r *progressReader) Read(b []byte) (int, error) {
 
 // buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
 // or locally if not.
-func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) ([]byte, error) {
+func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) (*core.BuildMetadata, error) {
+	metadata := new(core.BuildMetadata)
+
 	workerCmd, workerArgs, localCmd, err := core.WorkerCommandAndArgs(state, target)
 	if err != nil {
 		return nil, err
 	} else if workerCmd == "" {
-		return runBuildCommand(state, target, localCmd, inputHash)
+		metadata.Stdout, err = runBuildCommand(state, target, localCmd, inputHash)
+		return metadata, err
 	}
 	// The scheme here is pretty minimal; remote workers currently have quite a bit less info than
 	// local ones get. Over time we'll probably evolve it to add more information.
@@ -951,7 +973,9 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 	// Okay, now we might need to do something locally too...
 	if localCmd != "" {
 		out2, err := runBuildCommand(state, target, localCmd, inputHash)
-		return append([]byte(out+"\n"), out2...), err
+		metadata.Stdout = append([]byte(out+"\n"), out2...)
+		return metadata, err
 	}
-	return []byte(out), nil
+	metadata.Stdout = []byte(out)
+	return metadata, nil
 }
