@@ -297,10 +297,8 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		target.SetState(core.BuiltRemotely)
 		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
 		return nil
-	} else {
-		if err := storeTargetMetadata(target, metadata); err != nil {
-			return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
-		}
+	} else if err := storeTargetMetadata(target, metadata); err != nil {
+		return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
 	}
 
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
