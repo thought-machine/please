@@ -298,7 +298,7 @@ func hashOptionalBool(writer hash.Hash, b bool) {
 
 type ruleHashes struct {
 	rule, config, source, secret []byte
-	postBuildHash                        bool
+	postBuildHash                bool
 }
 
 // readRuleHashFromXattrs reads the hash of a file using xattrs.
@@ -336,14 +336,14 @@ func readRuleHashFromXattrs(state *core.BuildState, target *core.BuildTarget, po
 		return ruleHashes{
 			rule:          h[hashLength : 2*hashLength],
 			config:        h[2*hashLength : 3*hashLength],
-			source:    h[3*hashLength : 4*hashLength],
-			secret:    h[4*hashLength : fullHashLength],
+			source:        h[3*hashLength : 4*hashLength],
+			secret:        h[4*hashLength : fullHashLength],
 			postBuildHash: true,
 		}
 	}
 	return ruleHashes{
-		rule:       h[0:hashLength],
-		config:     h[2*hashLength : 3*hashLength],
+		rule:   h[0:hashLength],
+		config: h[2*hashLength : 3*hashLength],
 		source: h[3*hashLength : 4*hashLength],
 		secret: h[4*hashLength : fullHashLength],
 	}
@@ -423,7 +423,6 @@ func storeTargetMetadata(target *core.BuildTarget, md *core.BuildMetadata) error
 	}
 	return nil
 }
-
 
 // targetHash returns the hash for a target and any error encountered while calculating it.
 func targetHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {

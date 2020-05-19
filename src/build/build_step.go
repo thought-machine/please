@@ -411,11 +411,12 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 	return false
 }
 
-func addOutDirOutsFromMetadata(target *core.BuildTarget, md *core.BuildMetadata){
+func addOutDirOutsFromMetadata(target *core.BuildTarget, md *core.BuildMetadata) {
 	for _, o := range md.OutputDirOuts {
 		target.AddOutput(o)
 	}
 }
+
 // runBuildCommand runs the actual command to build a target.
 // On success it returns the stdout of the target, otherwise an error.
 func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command string, inputHash []byte) ([]byte, error) {
