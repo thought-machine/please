@@ -124,8 +124,6 @@ func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) erro
 // 3) Actually build the rule
 // 4) Store result in the cache
 func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
-	// TODO(jpoole): we've defined 4 steps that this function performs. We should be able to break it out into
-	// smaller functions
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -304,8 +302,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		return nil
 	} else if target.BuildCouldModifyTarget() {
 		if err := storeTargetMetadata(target, metadata); err != nil {
-			// TODO(jpoole): the plz-out dir doesn't seem to exist at this point when it's run remotely so storing the md
-			// fails. I'm not sure if this is correct.
 			return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
 		}
 	}
@@ -377,7 +373,6 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 
 	if state.Cache.Retrieve(target, mustShortTargetHash(state, target), target.Outputs()) != nil {
 		log.Debug("Retrieved artifacts for %s from cache", target.Label)
-		// TODO(jpoole): can this be moved to a unified place at the end of the build function?
 		checkLicences(state, target)
 		newOutputHash, err := calculateAndCheckRuleHash(state, target)
 		if err != nil { // Most likely hash verification failure
@@ -391,7 +386,6 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 			target.SetState(core.Unchanged)
 			state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached (unchanged)")
 		}
-		// TODO(jpoole): can this be moved to a unified place at the end of the build function?
 		buildLinks(state, target)
 		return true // got from cache
 	}
