@@ -26,9 +26,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/build"
 )
 
 // xattrName is the name we use to record attributes on files.

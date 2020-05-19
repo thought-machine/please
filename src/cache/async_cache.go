@@ -19,10 +19,10 @@ type asyncCache struct {
 
 // A cacheRequest models an incoming cache request on our queue.
 type cacheRequest struct {
-	target   *core.BuildTarget
-	key      []byte
-	files    []string
-	file     string
+	target *core.BuildTarget
+	key    []byte
+	files  []string
+	file   string
 }
 
 func newAsyncCache(realCache core.Cache, config *core.Configuration) core.Cache {
@@ -39,9 +39,9 @@ func newAsyncCache(realCache core.Cache, config *core.Configuration) core.Cache 
 
 func (c *asyncCache) Store(target *core.BuildTarget, key []byte, files []string) {
 	c.requests <- cacheRequest{
-		target:   target,
-		key:      key,
-		files:    files,
+		target: target,
+		key:    key,
+		files:  files,
 	}
 }
 

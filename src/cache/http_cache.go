@@ -192,4 +192,3 @@ func newHTTPCache(config *core.Configuration) *httpCache {
 		},
 	}
 }
-

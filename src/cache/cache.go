@@ -107,4 +107,3 @@ func (mplex cacheMultiplexer) Shutdown() {
 		cache.Shutdown()
 	}
 }
-
