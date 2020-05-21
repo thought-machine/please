@@ -946,9 +946,9 @@ func initBuild(args []string) string {
 		os.Exit(0)
 	}
 	if opts.OutputFlags.Colour {
-		output.SetColouredOutput(true)
+		cli.ShowColouredOutput = true
 	} else if opts.OutputFlags.NoColour {
-		output.SetColouredOutput(false)
+		cli.ShowColouredOutput = false
 	}
 	if opts.OutputFlags.ShowAllOutput {
 		opts.OutputFlags.PlainOutput = true
