@@ -16,7 +16,6 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/worker"
 )
 
 var log = logging.MustGetLogger("parse")
@@ -175,12 +174,10 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 	}
 	filename, dir := buildFileName(state, label.PackageName, subrepo)
 	if filename == "" {
-		if success, err := providePackage(state, pkg); err != nil {
-			return nil, err
-		} else if !success && packageName == "" && dependent.Subrepo == "pleasings" && subrepo == nil && state.Config.Parse.BuiltinPleasings {
+		if packageName == "" && dependent.Subrepo == "pleasings" && subrepo == nil && state.Config.Parse.BuiltinPleasings {
 			// Deliberate fallthrough, for the case where someone depended on the default
 			// @pleasings subrepo, and there is no BUILD file at their root.
-		} else if !success {
+		} else {
 			exists := core.PathExists(dir)
 			// Handle quite a few cases to provide more obvious error messages.
 			if dependent != core.OriginalTarget && exists {
@@ -260,50 +257,6 @@ http_archive(
     urls = ["https://github.com/thought-machine/pleasings/archive/master.zip"],
 )
 `
-
-// providePackage looks through all the configured BUILD file providers to see if any of them
-// can handle the given package. It returns true if any of them did.
-// N.B. More than one is allowed to handle a single directory.
-func providePackage(state *core.BuildState, pkg *core.Package) (bool, error) {
-	if len(state.Config.Provider) == 0 {
-		return false, nil
-	}
-	success := false
-	label := pkg.Label()
-	for name, p := range state.Config.Provider {
-		if !shouldProvide(p.Path, label) {
-			continue
-		}
-		t := state.WaitForBuiltTarget(p.Target, label)
-		outs := t.Outputs()
-		if !t.IsBinary && len(outs) != 1 {
-			log.Error("Cannot use %s as build provider %s, it must be a binary with exactly 1 output.", p.Target, name)
-			continue
-		}
-		dir := pkg.SourceRoot()
-		resp, err := worker.ProvideParse(state, path.Join(t.OutDir(), outs[0]), dir)
-		if err != nil {
-			return false, fmt.Errorf("Failed to start build provider %s: %s", name, err)
-		} else if resp != "" {
-			log.Debug("Received BUILD file from %s provider for %s: %s", name, dir, resp)
-			if err := state.Parser.ParseReader(state, pkg, strings.NewReader(resp)); err != nil {
-				return false, err
-			}
-			success = true
-		}
-	}
-	return success, nil
-}
-
-// shouldProvide returns true if a provider's set of configured paths overlaps a package.
-func shouldProvide(paths []core.BuildLabel, label core.BuildLabel) bool {
-	for _, p := range paths {
-		if p.Includes(label) {
-			return true
-		}
-	}
-	return false
-}
 
 // exportFile adds a single-file export target. This is primarily used for Bazel compat.
 func exportFile(state *core.BuildState, pkg *core.Package, label core.BuildLabel) {
