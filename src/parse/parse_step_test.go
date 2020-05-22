@@ -89,7 +89,7 @@ func TestAddDepRescan(t *testing.T) {
 	rescanDeps(state, map[*core.BuildTarget]struct{}{target1: {}})
 	assertPendingBuilds(t, state, "//package1:target4")
 	assertPendingParses(t, state)
-	assert.True(t, state.Graph.AllDependenciesResolved(target1))
+	assert.True(t, target1.AllDependenciesResolved())
 }
 
 func TestAddParseDepDeferred(t *testing.T) {

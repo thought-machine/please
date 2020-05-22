@@ -85,6 +85,7 @@ var KnownFields = map[string]bool{
 	"PassUnsafeEnv":       true,
 	"NeededForSubinclude": true,
 	"RuleMetadata":        true, // This is only accessible through the build language at parse time
+	"mutex":               true,
 
 	// Used to save the rule hash rather than actually being hashed itself.
 	"RuleHash": true,
