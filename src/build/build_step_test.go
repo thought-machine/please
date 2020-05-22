@@ -246,12 +246,12 @@ func TestFileGroupBinDir(t *testing.T) {
 	// Ensure permissions on directory are not modified
 	info, err := os.Stat("plz-out/bin/package1/package2/")
 	assert.NoError(t, err)
-    compare_dir := "plz-out/bin/package1/package2_cmp/"
-    os.Mkdir(compare_dir, core.DirPermissions)
-    info_cmp, err := os.Stat(compare_dir)
-    assert.NoError(t, err)
+	compareDir := "plz-out/bin/package1/package2_cmp/"
+	os.Mkdir(compareDir, core.DirPermissions)
+	infoCmp, err := os.Stat(compareDir)
+	assert.NoError(t, err)
 
-    assert.Equal(t, info_cmp.Mode().Perm(), info.Mode().Perm())
+	assert.Equal(t, infoCmp.Mode().Perm(), info.Mode().Perm())
 }
 
 func TestOutputHash(t *testing.T) {
@@ -302,7 +302,7 @@ func TestBuildMetadatafileIsCreated(t *testing.T) {
 	state, target = newState("//package1:mdtest_post_build")
 	target.Command = fmt.Sprintf("echo '%s' | tee $OUT", stdOut)
 	target.AddOutput("file1")
-	target.PostBuildFunction =  postBuildFunction(func(target *core.BuildTarget, output string) error {
+	target.PostBuildFunction = postBuildFunction(func(target *core.BuildTarget, output string) error {
 		assert.Equal(t, stdOut, string(output))
 		return nil
 	})
