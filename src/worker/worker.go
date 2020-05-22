@@ -65,25 +65,6 @@ func buildRemotely(state *core.BuildState, target *core.BuildTarget, worker, msg
 	}
 }
 
-// ProvideParse sends a request to a subprocess to derive pseudo-contents of a BUILD file from
-// a directory (e.g. they may infer it from file contents).
-// If the provider cannot infer anything, they will return an empty string.
-func ProvideParse(state *core.BuildState, worker string, dir string) (string, error) {
-	w, err := getOrStartWorker(state, worker)
-	if err != nil {
-		return "", err
-	}
-	w.requests <- &Request{
-		Rule: dir,
-	}
-	ch := make(chan *Response, 1)
-	w.responseMutex.Lock()
-	w.responses[dir] = ch
-	w.responseMutex.Unlock()
-	response := <-ch
-	return response.BuildFile, nil
-}
-
 // EnsureWorkerStarted ensures that a worker server is started and has responded saying it's ready.
 func EnsureWorkerStarted(state *core.BuildState, worker, test string, target *core.BuildTarget) (*Response, error) {
 	resp, err := buildRemotely(state, target, worker, "waiting for "+worker+" to start", &Request{
