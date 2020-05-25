@@ -15,10 +15,10 @@ import (
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
 	targets sync.Map
+	// Targets that have been depended on by something that we're waiting to appear.
+	pendingTargets sync.Map
 	// Map of all currently known packages.
 	packages sync.Map
-	// Reverse dependencies that are pending on targets actually being added to the graph.
-	pendingRevDeps sync.Map
 	// Registered subrepos, as a map of their name to their root.
 	subrepos sync.Map
 }
@@ -28,11 +28,14 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	if _, loaded := graph.targets.LoadOrStore(target.Label, target); loaded {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
-	// Register any of its dependencies now
-	for _, dep := range target.DeclaredDependencies() {
-		graph.addDependencyForTarget(target, dep)
+	go target.registerDependencies(graph)
+	// Notify anything that called WaitForTarget
+	if pkg, present := graph.pendingTargets.Load(target.Label.packageKey()); present {
+		if ch, present := pkg.(*sync.Map).Load(target.Label.Name); present {
+			close(ch)
+			pkg.(*sync.Map).Delete(target.Label.Name)
+		}
 	}
-	graph.attachPendingRevDeps(target)
 	return target
 }
 
@@ -41,6 +44,19 @@ func (graph *BuildGraph) AddPackage(pkg *Package) {
 	key := packageKey{Name: pkg.Name, Subrepo: pkg.SubrepoName}
 	if _, loaded := graph.packages.LoadOrStore(key, pkg); loaded {
 		panic("Attempt to readd existing package: " + key.String())
+	}
+	// Notify anything left waiting for any targets in this package (which likely don't exist)
+	if pkg, present := graph.pendingTargets.Load(key); present {
+		pkg.(*sync.Map).Range(func(k, v interface{}) bool {
+			close(v.(chan struct{}))
+			// TODO(peterebden): Temp sanity check...
+			l := BuildLabel{Subrepo: pkg.SubrepoName, PackageName: pkg.Name, Name: k.(string)}
+			if graph.Target(l) == nil {
+				log.Warning("target %s still in map", l)
+			}
+			return true
+		})
+		graph.pendingTargets.Delete(key)
 	}
 }
 
@@ -70,6 +86,20 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 	return target
 }
 
+// WaitForTarget returns the given target, waiting for it to be added if it doesn't now.
+// It returns nil if the target finally turns out not to exist.
+func (graph *BuildGraph) WaitForTarget(label BuildLabel) *BuildTarget {
+	if t := graph.Target(label); t != nil {
+		return t
+	} else if graph.PackageByLabel(label) != nil {
+		return nil  // Package has been added but target didn't exist in it
+	}
+	pkg, _ := graph.pendingTargets.LoadOrStore(label.packageKey(), &sync.Map{})
+	ch, _ := pkg.LoadOrStore(label.Name, chan struct{}{})
+	<-ch
+	return graph.Target(label)
+}
+
 // PackageByLabel retrieves a package from the graph using the appropriate parts of the given label.
 // The Name entry is ignored.
 func (graph *BuildGraph) PackageByLabel(label BuildLabel) *Package {
@@ -89,7 +119,7 @@ func (graph *BuildGraph) Package(name, subrepo string) *Package {
 func (graph *BuildGraph) PackageOrDie(label BuildLabel) *Package {
 	pkg := graph.PackageByLabel(label)
 	if pkg == nil {
-		log.Fatalf("Package %s doesn't exist in graph", packageKey{Name: label.PackageName, Subrepo: label.Subrepo})
+		log.Fatalf("Package %s doesn't exist in graph", label.packageKey())
 	}
 	return pkg
 }
@@ -154,25 +184,13 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 
 // AddDependency adds a dependency between two build targets.
 // The 'to' target doesn't necessarily have to exist in the graph yet (but 'from' must).
+// TODO(peterebden): This now doesn't *add* dependencies, it simply waits for them to become registered. Remove.
 func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
-	graph.addDependencyForTarget(graph.Target(from), to)
-}
-
-// addDependencyForTarget adds a dependency between two build targets.
-// The 'to' target doesn't necessarily have to exist in the graph yet.
-// The caller must already hold the lock before calling this.
-func (graph *BuildGraph) addDependencyForTarget(fromTarget *BuildTarget, to BuildLabel) {
-	// We might have done this already; do a quick check here first.
-	if fromTarget.hasResolvedDependency(to) {
-		return
+	toTarget := graph.WaitForTarget(to)
+	if toTarget == nil {
+		log.Fatalf("Tried to add %s as a dependency of %s, but %s doesn't exist", to, from, to)
 	}
-	// The dependency may not exist yet if we haven't parsed its package.
-	// In that case we stash it away for later.
-	if toTarget := graph.Target(to); toTarget == nil {
-		graph.addPendingRevDep(fromTarget.Label, to, nil)
-	} else {
-		graph.linkDependencies(fromTarget, toTarget)
-	}
+	<-toTarget.dependenciesRegistered
 }
 
 // NewGraph constructs and returns a new BuildGraph.
@@ -188,47 +206,6 @@ func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget
 		return target.reverseDependencies() // Need to recalculate after we attached some more.
 	}
 	return revdeps
-}
-
-// linkDependencies adds the dependency of fromTarget on toTarget and the corresponding
-// reverse dependency in the other direction.
-// This is complicated somewhat by the require/provide mechanism which is resolved at this
-// point, but some of the dependencies may not yet exist.
-func (graph *BuildGraph) linkDependencies(fromTarget, toTarget *BuildTarget) {
-	for _, label := range toTarget.ProvideFor(fromTarget) {
-		if target := graph.Target(label); target != nil {
-			fromTarget.resolveDependency(toTarget.Label, target)
-		} else {
-			graph.addPendingRevDep(fromTarget.Label, label, toTarget)
-		}
-	}
-}
-
-func (graph *BuildGraph) addPendingRevDep(from, to BuildLabel, orig *BuildTarget) {
-	revdeps, _ := graph.pendingRevDeps.LoadOrStore(to, &sync.Map{})
-	revdeps.(*sync.Map).Store(from, orig)
-}
-
-// attachPendingRevDeps attaches any lurking revdeps for a target onto the target itself.
-// It returns true if any were attached.
-func (graph *BuildGraph) attachPendingRevDeps(target *BuildTarget) bool {
-	if revdeps, present := graph.pendingRevDeps.Load(target.Label); present {
-		any := false
-		m := revdeps.(*sync.Map)
-		m.Range(func(k, v interface{}) bool {
-			revdep := graph.Target(k.(BuildLabel))
-			if originalTarget, ok := v.(*BuildTarget); ok && originalTarget != nil {
-				graph.linkDependencies(revdep, originalTarget)
-			} else {
-				graph.linkDependencies(revdep, target)
-			}
-			any = true
-			m.Delete(k)
-			return true
-		})
-		return any
-	}
-	return false
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.

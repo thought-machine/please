@@ -783,6 +783,22 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 			}
 		}
 	}
+	// Put this target onto the queue once all its dependencies are done.
+	go state.queueTarget(target, dependent, rescan, forceBuild)
+	return nil
+}
+
+// queueTarget enqueues a target's dependencies and the target itself once they are done.
+func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceBuild bool) {
+	// TODO(peterebden): This is slightly inefficient in that we wait for all dependencies to resolve before
+	//                   queuing up the actual build actions. Would be better to do both at once.
+	if err := target.WaitForResolvedDependencies(); err != nil {
+		state.asyncError(label, err)
+		return
+	}
+
+
+
 	// If this target has no deps, add it to the queue now, otherwise handle its deps.
 	// Only add if we need to build targets (not if we're just parsing) but we might need it to parse...
 	if target.State() == Active && target.AllDepsBuilt() {

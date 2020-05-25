@@ -207,6 +207,8 @@ type BuildTarget struct {
 	reverseDeps []*BuildTarget `print:"false"`
 	// Used to arbitrate concurrent access to dependencies
 	mutex sync.Mutex `print:"false"`
+	// Used to notify once all dependencies are registered.
+	dependenciesRegistered chan struct{} `print:"false"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -558,6 +560,33 @@ func (target *BuildTarget) dependenciesFor(label BuildLabel) []*BuildTarget {
 	return nil
 }
 
+// registerDependencies runs through all the target's dependencies and waits for them to be added to the build graph.
+func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
+	// TODO(peterebden): can we do something with the mutex here? I don't *think* it's a problem but would be nice
+	//                   if the race detector could verify that.
+	for i := range target.dependencies {
+		info := &target.dependencies[i]
+		t := graph.WaitForTarget(info.declared)
+		if t == nil {
+			continue // This doesn't exist; that will get handled later.
+		}
+		info.resolved = true
+		if deps := t.ProvideFor(target); len(deps) == 1 && deps[0].Label == t.Label {
+			info.deps = []*BuildTarget{t} // small optimisation to save looking this thing up again in the common case
+		} else {
+			for _, l := range deps {
+				t := graph.WaitForTarget(l)
+				if t == nil {
+					info.resolved = false
+					continue
+				}
+				info.deps = append(info.deps, t)
+			}
+		}
+	}
+	close(target.dependenciesRegistered)
+}
+
 // DeclaredOutputs returns the outputs from this target's original declaration.
 // Hence it's similar to Outputs() but without the resolving of other rule names.
 func (target *BuildTarget) DeclaredOutputs() []string {
@@ -734,14 +763,30 @@ func (target *BuildTarget) UnbuiltDeps() []string {
 // AllDependenciesResolved returns true once all the dependencies of a target have been
 // parsed and resolved to real targets.
 func (target *BuildTarget) AllDependenciesResolved() bool {
+	return len(target.UnresolvedDependencies()) == 0
+}
+
+// UnresolvedDependencies returns the list of dependencies for this target that aren't resolved yet.
+func (target *BuildTarget) UnresolvedDependencies() BuildLabels {
+	ret := []BuildLabel{}
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
 	for _, deps := range target.dependencies {
 		if !deps.resolved {
-			return false
+			ret = append(ret, deps.declared)
 		}
 	}
-	return true
+	return ret
+}
+
+// WaitForResolvedDependencies blocks until all the dependencies are resolved, or we know they cannot be.
+// It returns an error if they cannot be successfully resolved.
+func (target *BuildTarget) WaitForResolvedDependencies() error {
+	<-target.dependenciesRegistered
+	if !target.AllDependenciesResolved() {
+		return fmt.Errorf("Failed to resolve some dependencies for %s: %s", target, target.UnresolvedDependencies())
+	}
+	return nil
 }
 
 // CanSee returns true if target can see the given dependency, or false if not.
@@ -1575,13 +1620,6 @@ func (target *BuildTarget) BuildCouldModifyTarget() bool {
 // AddOutputDirectory adds an output directory to the target
 func (target *BuildTarget) AddOutputDirectory(dir string) {
 	target.OutputDirectories = append(target.OutputDirectories, OutputDirectory(dir))
-}
-
-// reverseDependencies returns the set of revdeps on this target.
-func (target *BuildTarget) reverseDependencies() []*BuildTarget {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
-	return target.reverseDeps[:]
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.
