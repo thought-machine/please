@@ -29,6 +29,7 @@ func init() {
 
 // A semaphore implements the standard synchronisation mechanism based on a buffered channel.
 type semaphore chan struct{}
+
 func (s semaphore) Acquire() { s <- struct{}{} }
 func (s semaphore) Release() { <-s }
 
