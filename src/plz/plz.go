@@ -85,10 +85,10 @@ func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, buil
 				parses = nil
 				break
 			}
-			state.ParsePool <- func() {
+			go func() {
 				parse.Parse(tid, state, p.Label, p.Dependent, p.ForSubinclude)
 				state.TaskDone(false)
-			}
+			}()
 		case l, ok := <-builds:
 			if !ok {
 				builds = nil
