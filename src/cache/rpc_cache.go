@@ -63,14 +63,11 @@ type cacheNode struct {
 	hashEnd   uint32
 }
 
-func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (cache *rpcCache) Store(target *core.BuildTarget, key []byte, files []string) {
 	if cache.isConnected() && cache.Writeable {
 		log.Debug("Storing %s in RPC cache...", target.Label)
 		artifacts := []*pb.Artifact{}
 		totalSize := 0
-		if needsBuildMetadataFile(target) {
-			files = append(files, target.TargetBuildMetadataFileName())
-		}
 		for _, out := range files {
 			artifacts2, size, err := cache.loadArtifacts(target, out)
 			if err != nil {
@@ -146,9 +143,9 @@ func (cache *rpcCache) sendArtifacts(target *core.BuildTarget, key []byte, artif
 	})
 }
 
-func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte, files []string) bool {
 	if !cache.isConnected() {
-		return nil
+		return false
 	}
 	req := pb.RetrieveRequest{Hash: key, Os: runtime.GOOS, Arch: runtime.GOARCH}
 
@@ -166,14 +163,9 @@ func (cache *rpcCache) Retrieve(target *core.BuildTarget, key []byte, files []st
 	// This is kind of weird but not actually disallowed, and we already have a test case for it,
 	// so might as well try to get it right here.
 	if len(req.Artifacts) == 0 {
-		return nil
+		return false
 	}
-	if !cache.retrieveArtifacts(target, &req, true, files) {
-		return nil
-	} else if needsBuildMetadataFile(target) {
-		return loadPostBuildFile(target)
-	}
-	return &core.BuildMetadata{}
+	return cache.retrieveArtifacts(target, &req, true, files)
 }
 
 func (cache *rpcCache) retrieveArtifacts(target *core.BuildTarget, req *pb.RetrieveRequest, remove bool, files []string) bool {

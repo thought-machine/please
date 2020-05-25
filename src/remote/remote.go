@@ -530,6 +530,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		}
 		failed := respErr != nil || response.Result.ExitCode != 0
 		metadata, err := c.buildMetadata(response.Result, needStdout || failed, failed)
+		logResponseTimings(target, response.Result)
 		// The original error is higher priority than us trying to retrieve the
 		// output of the thing that failed.
 		if respErr != nil {
@@ -557,7 +558,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		} else if err != nil {
 			return nil, nil, err
 		}
-		log.Debug("Completed remote build action for %s; input fetch %s, build time %s", target, metadata.InputFetchEndTime.Sub(metadata.InputFetchStartTime), metadata.EndTime.Sub(metadata.StartTime))
+		log.Debug("Completed remote build action for %s", target)
 		if err := c.verifyActionResult(target, command, digest, response.Result, false); err != nil {
 			return metadata, response.Result, err
 		}
@@ -568,6 +569,16 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 			return nil, nil, fmt.Errorf("Received an incomplete response for %s", target)
 		}
 		return nil, nil, fmt.Errorf("Unknown response type (was a %T): %#v", resp.Result, resp) // Shouldn't get here
+	}
+}
+
+func logResponseTimings(target *core.BuildTarget, ar *pb.ActionResult) {
+	if ar != nil {
+		startTime := toTime(ar.ExecutionMetadata.ExecutionStartTimestamp)
+		endTime := toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp)
+		inputFetchStartTime := toTime(ar.ExecutionMetadata.InputFetchStartTimestamp)
+		inputFetchEndTime := toTime(ar.ExecutionMetadata.InputFetchCompletedTimestamp)
+		log.Debug("Completed remote build action for %s; input fetch %s, build time %s", target, inputFetchEndTime.Sub(inputFetchStartTime), endTime.Sub(startTime))
 	}
 }
 

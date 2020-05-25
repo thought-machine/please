@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -139,14 +140,14 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest
 	}
 	data, _ := proto.Marshal(ar)
 	metadata.RemoteAction = data
-	c.state.Cache.Store(target, c.localCacheKey(digest), metadata, nil)
+	c.state.Cache.Store(target, c.localCacheKey(digest), nil)
 }
 
 // retrieveLocalResults retrieves locally cached results for a target if possible.
 // Note that this does not handle any file data, only the actionresult metadata.
 func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult) {
 	if c.state.Cache != nil {
-		if metadata := c.state.Cache.Retrieve(target, c.localCacheKey(digest), nil); metadata != nil && len(metadata.RemoteAction) > 0 {
+		if metadata := retrieveTargetMetadataFromCache(c, target, digest); metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
 			if err := proto.Unmarshal(metadata.RemoteAction, ar); err == nil {
 				if err := c.setOutputs(target.Label, ar); err == nil {
@@ -156,6 +157,21 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		}
 	}
 	return nil, nil
+}
+
+func retrieveTargetMetadataFromCache(c *Client, target *core.BuildTarget, digest *pb.Digest) *core.BuildMetadata {
+	if c.state.Cache.Retrieve(target, c.localCacheKey(digest), []string{target.TargetBuildMetadataFileName()}) {
+		// TODO(jpoole): Retrieving the metadata file from the cache loads it into the targets output directory. This feels like a
+		// leaky abstration. A cleaner solution might be to enable the caches to load files into a writer. We could then
+		// load metadate without having to save it to disk first.
+		md, err := build.LoadTargetMetadata(target)
+		if err != nil {
+			log.Warningf("failed to retrieve metadata from cache for target %v: %v", target.Label, err)
+			return nil
+		}
+		return md
+	}
+	return nil
 }
 
 // localCacheKey returns the key we use in the local cache for a target.
