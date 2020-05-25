@@ -18,7 +18,7 @@ type interpreter struct {
 	mutex           sync.RWMutex
 	configMutex     sync.RWMutex
 	breakpointMutex sync.Mutex
-	limiter         chan struct{}
+	limiter         semaphore
 }
 
 // newInterpreter creates and returns a new interpreter instance.
@@ -33,7 +33,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		parser:      p,
 		subincludes: map[string]pyDict{},
 		config:      map[*core.Configuration]*pyConfig{},
-		limiter:     make(chan struct{}, state.Config.Please.NumThreads),
+		limiter:     make(semaphore, state.Config.Please.NumThreads),
 	}
 	s.interpreter = i
 	s.LoadSingletons(state)
