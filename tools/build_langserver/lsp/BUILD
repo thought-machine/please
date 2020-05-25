@@ -20,11 +20,11 @@ go_library(
 
 go_test(
     name = "lsp_test",
+    size = "medium",
     srcs = glob(["*_test.go"]),
     data = ["test_data"],
-    labels = ["manual"] if CONFIG.OS == "freebsd" else [],
-    size = "medium",
     flaky = True,
+    labels = ["manual"] if CONFIG.OS == "freebsd" else [],
     deps = [
         ":lsp",
         "//src/cli",
