@@ -115,7 +115,7 @@ type helpSection struct {
 
 // printMessage prints a message, with some string replacements for ANSI codes.
 func printMessage(msg string) {
-	if cli.StdErrIsATerminal && cli.StdOutIsATerminal {
+	if cli.ShowColouredOutput {
 		backtickRegex := regexp.MustCompile("\\`[^\\`\n]+\\`")
 		msg = backtickRegex.ReplaceAllStringFunc(msg, func(s string) string {
 			return "${BOLD_CYAN}" + strings.Replace(s, "`", "", -1) + "${RESET}"

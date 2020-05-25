@@ -38,7 +38,7 @@ func Printf(msg string, args ...interface{}) {
 // some ANSI sequences, e.g. ${BOLD_RED} -> \x1bwhatever.
 func Fprintf(w io.Writer, msg string, args ...interface{}) {
 	for k, v := range replacements {
-		if !StdErrIsATerminal || !StdOutIsATerminal {
+		if !ShowColouredOutput {
 			v = ""
 		}
 		msg = strings.Replace(msg, fmt.Sprintf("${%s}", k), v, -1)

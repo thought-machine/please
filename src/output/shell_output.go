@@ -26,11 +26,6 @@ import (
 const durationGranularity = 10 * time.Millisecond
 const testDurationGranularity = time.Millisecond
 
-// SetColouredOutput forces on or off coloured output in logging and other console output.
-func SetColouredOutput(on bool) {
-	cli.StdErrIsATerminal = on
-}
-
 // Used to track currently building targets.
 type buildingTarget struct {
 	sync.Mutex
@@ -530,7 +525,7 @@ func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap ma
 	for _, label := range failedTargets {
 		err := failedTargetMap[label]
 		if err != nil {
-			if cli.StdErrIsATerminal {
+			if cli.ShowColouredOutput {
 				printf("    ${BOLD_RED}%s\n${RESET}%s${RESET}\n", label, colouriseError(err))
 			} else {
 				printf("    %s\n%s\n", label, err)

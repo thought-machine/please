@@ -104,12 +104,12 @@ func (stack *errorStack) stackTrace() string {
 		_, line, _ := stack.readLine(stack.Readers[i], frame.Line-1)
 		if line == "" {
 			line = "<source unavailable>"
-			if cli.StdErrIsATerminal {
+			if cli.ShowColouredOutput {
 				line = grey + line + reset
 			}
 		}
 		s := fmt.Sprintf("%s:%s:%s:", filenames[i], lines[i], cols[i])
-		if !cli.StdErrIsATerminal {
+		if !cli.ShowColouredOutput {
 			ret[i] = fmt.Sprintf("%s   %s", s, line)
 		} else {
 			ret[i] = fmt.Sprintf("%s%s%s   %s", yellow, s, reset, line)
@@ -118,7 +118,7 @@ func (stack *errorStack) stackTrace() string {
 		lastFile = frame.Filename
 	}
 	msg := "Traceback:\n"
-	if cli.StdErrIsATerminal {
+	if cli.ShowColouredOutput {
 		msg = boldWhite + msg + reset
 	}
 	return msg + strings.Join(ret, "\n")
@@ -150,7 +150,7 @@ func (stack *errorStack) errorMessage() string {
 			return stack.Error() // probably something's gone wrong and we're on totally the wrong line.
 		}
 		spaces := strings.Repeat(" ", charsBefore)
-		if !cli.StdErrIsATerminal {
+		if !cli.ShowColouredOutput {
 			return fmt.Sprintf("%s:%d:%d: error: %s\n%s\n%s\n%s^\n%s\n",
 				frame.Filename, frame.Line, frame.Column, stack.err, before, line, spaces, after)
 		}

@@ -27,6 +27,9 @@ var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
 // StdOutIsATerminal is true if the process' stdout is an interactive TTY.
 var StdOutIsATerminal = terminal.IsTerminal(int(os.Stdout.Fd()))
 
+// ShowColouredOutput tracks whether we are displaying coloured output or not.
+var ShowColouredOutput = StdErrIsATerminal
+
 // StripAnsi is a regex to find & replace ANSI console escape sequences.
 var StripAnsi = regexp.MustCompile("\x1b[^m]+m")
 

@@ -10,7 +10,7 @@ import (
 
 // initPrintf sets up the replacements used by printf.
 func initPrintf(config *core.Configuration) {
-	if !cli.StdErrIsATerminal {
+	if !cli.ShowColouredOutput {
 		replacements = map[string]string{}
 	} else {
 		for k, v := range config.Colours {
