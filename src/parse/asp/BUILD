@@ -67,6 +67,7 @@ go_test(
     data = ["test_data"],
     deps = [
         ":asp",
+        "//src/core",
         "//third_party/go:testify",
     ],
 )
