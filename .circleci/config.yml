@@ -6,7 +6,7 @@ jobs:
        - image: thoughtmachine/please_ubuntu:20200226
      resource_class: large
      environment:
-       PLZ_ARGS: "-p --profile ci"
+       PLZ_ARGS: "-p -v notice --profile ci"
      steps:
        - checkout
        - restore_cache:
@@ -49,7 +49,7 @@ jobs:
        - image: thoughtmachine/please_ubuntu_alt:20200226
      resource_class: large
      environment:
-       PLZ_ARGS: "-p --profile ci"
+       PLZ_ARGS: "-p -v notice --profile ci"
        PLZ_COVER: "cover"
      steps:
        - checkout
@@ -82,7 +82,7 @@ jobs:
      docker:
        - image: thoughtmachine/please_ubuntu:20200226
      environment:
-       PLZ_ARGS: "-p --profile ci"
+       PLZ_ARGS: "-p -v notice --profile ci"
      steps:
        - checkout
        - restore_cache:
@@ -97,7 +97,7 @@ jobs:
       macos:
         xcode: "9.0"
       environment:
-        PLZ_ARGS: "-p --profile ci --exclude pip --exclude embed"
+        PLZ_ARGS: "-p -v notice --profile ci --exclude pip --exclude embed"
       steps:
        - checkout
        - restore_cache:

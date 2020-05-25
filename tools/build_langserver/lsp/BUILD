@@ -23,6 +23,8 @@ go_test(
     srcs = glob(["*_test.go"]),
     data = ["test_data"],
     labels = ["manual"] if CONFIG.OS == "freebsd" else [],
+    size = "medium",
+    flaky = True,
     deps = [
         ":lsp",
         "//src/cli",
