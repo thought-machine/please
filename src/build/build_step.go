@@ -360,7 +360,7 @@ func retrieveFromCache(cache core.Cache, target *core.BuildTarget, cacheKey []by
 	if ok := cache.Retrieve(target, cacheKey, files); ok {
 		md, err := LoadTargetMetadata(target)
 		if err != nil {
-			log.Warningf("failed to retrieve %s build metadata from cache: %v", target.Label, err)
+			log.Debugf("failed to retrieve %s build metadata from cache: %v", target.Label, err)
 			return nil
 		}
 		return md
