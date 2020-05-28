@@ -10,6 +10,7 @@ import (
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/test"
 )
 
@@ -51,8 +52,10 @@ func cleanTarget(state *core.BuildState, target *core.BuildTarget, cleanCache bo
 		log.Fatalf("Failed to remove output: %s", err)
 	}
 	if target.IsTest {
-		if err := test.RemoveTestOutputs(target); err != nil {
-			log.Fatalf("Failed to remove file: %s", err)
+		for i := 1; fs.FileExists(target.TestResultsFile(i)); i++ {
+			if err := test.RemoveTestOutputs(target, i); err != nil {
+				log.Fatalf("Failed to remove file: %s", err)
+			}
 		}
 	}
 	if cleanCache && state.Cache != nil {

@@ -478,7 +478,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 		env := core.StampedBuildEnvironment(state, target, nil, path.Join(core.RepoRoot, target.TmpDir()))
 		if state.NeedTests {
 			cmd = target.GetTestCommand(state)
-			dir = path.Join(core.RepoRoot, target.TestDir())
+			dir = path.Join(core.RepoRoot, target.TestDirs())
 			env = core.TestEnvironment(state, target, dir)
 		}
 		cmd, _ = core.ReplaceSequences(state, target, cmd)

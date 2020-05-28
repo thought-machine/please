@@ -49,13 +49,13 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	wg.Add(config.Please.NumThreads + config.NumRemoteExecutors())
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go func(tid int) {
-			doTasks(tid, state, parses, builds, tests, arch, false)
+			doTasks(tid, state, parses, builds, tests, false)
 			wg.Done()
 		}(i)
 	}
 	for i := 0; i < config.NumRemoteExecutors(); i++ {
 		go func(tid int) {
-			doTasks(tid, state, nil, remoteBuilds, remoteTests, arch, true)
+			doTasks(tid, state, nil, remoteBuilds, remoteTests, true)
 			wg.Done()
 		}(config.Please.NumThreads + i)
 	}
@@ -77,7 +77,7 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 	Run(targets, nil, state, state.Config, cli.Arch{})
 }
 
-func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, builds, tests <-chan core.BuildLabel, arch cli.Arch, remote bool) {
+func doTasks(tid int, state *core.BuildState, parses core.ParseTaskQueue, builds core.BuildTaskQueue, tests core.TestTaskQueue, remote bool) {
 	for parses != nil || builds != nil || tests != nil {
 		select {
 		case p, ok := <-parses:
@@ -96,12 +96,12 @@ func doTasks(tid int, state *core.BuildState, parses <-chan core.LabelPair, buil
 			}
 			build.Build(tid, state, l, remote)
 			state.TaskDone(true)
-		case l, ok := <-tests:
+		case testTask, ok := <-tests:
 			if !ok {
 				tests = nil
 				break
 			}
-			test.Test(tid, state, l, remote)
+			test.Test(tid, state, testTask.Label, remote, testTask.Run)
 			state.TaskDone(true)
 		}
 	}
