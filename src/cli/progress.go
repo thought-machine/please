@@ -32,7 +32,7 @@ func NewProgressReader(reader io.ReadCloser, total int, message string) io.ReadC
 	if StdErrIsATerminal {
 		_, cols, err := WindowSize()
 		if err != nil {
-			log.Error("%s", err)
+			log.Warning("Error getting terminal size: %s", err)
 			r.interactive = false
 		}
 		r.width = cols

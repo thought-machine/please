@@ -30,10 +30,10 @@ var mtime = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 // nobody is the usual uid / gid of the 'nobody' user.
 const nobody = 65534
 
-func (cache *httpCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files []string) {
 	if cache.writable {
 		r, w := io.Pipe()
-		go cache.write(w, target, key, metadata, files)
+		go cache.write(w, target, files)
 		req, err := http.NewRequest(http.MethodPut, cache.makeURL(key), r)
 		if err != nil {
 			log.Warning("Invalid cache URL: %s", err)
@@ -53,7 +53,7 @@ func (cache *httpCache) makeURL(key []byte) string {
 }
 
 // write writes a series of files into the given Writer.
-func (cache *httpCache) write(w io.WriteCloser, target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (cache *httpCache) write(w io.WriteCloser, target *core.BuildTarget, files []string) {
 	defer w.Close()
 	gzw := gzip.NewWriter(w)
 	defer gzw.Close()
@@ -61,9 +61,6 @@ func (cache *httpCache) write(w io.WriteCloser, target *core.BuildTarget, key []
 	defer tw.Close()
 	outDir := target.OutDir()
 
-	if needsBuildMetadataFile(target) {
-		files = append(files, target.TargetBuildMetadataFileName())
-	}
 	for _, out := range files {
 		if err := fs.Walk(path.Join(outDir, out), func(name string, isDir bool) error {
 			return cache.storeFile(tw, name)
@@ -111,7 +108,7 @@ func (cache *httpCache) storeFile(tw *tar.Writer, name string) error {
 	return err
 }
 
-func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, files []string) *core.BuildMetadata {
+func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, files []string) bool {
 	m, err := cache.retrieve(target, key)
 	if err != nil {
 		log.Warning("%s: Failed to retrieve files from HTTP cache: %s", target.Label, err)
@@ -119,24 +116,24 @@ func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, files []s
 	return m
 }
 
-func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (*core.BuildMetadata, error) {
+func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, error) {
 	req, err := http.NewRequest(http.MethodGet, cache.makeURL(key), nil)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	resp, err := cache.client.Do(req)
 	if err != nil {
-		return nil, err
+		return false, err
 	} else if resp.StatusCode == http.StatusNotFound {
-		return nil, nil // doesn't exist - not an error
+		return false, nil // doesn't exist - not an error
 	} else if resp.StatusCode != http.StatusOK {
 		b, _ := ioutil.ReadAll(resp.Body)
-		return nil, fmt.Errorf("%s", string(b))
+		return false, fmt.Errorf("%s", string(b))
 	}
 	defer resp.Body.Close()
 	gzr, err := gzip.NewReader(resp.Body)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	defer gzr.Close()
 	tr := tar.NewReader(gzr)
@@ -144,31 +141,31 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (*core.Bu
 		hdr, err := tr.Next()
 		if err != nil {
 			if err == io.EOF {
-				return loadPostBuildFile(target), nil
+				return true, nil
 			}
-			return nil, err
+			return false, err
 		}
 		switch hdr.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(hdr.Name, core.DirPermissions); err != nil {
-				return nil, err
+				return false, err
 			}
 		case tar.TypeReg:
 			if dir := path.Dir(hdr.Name); dir != "." {
 				if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
-					return nil, err
+					return false, err
 				}
 			}
 			if f, err := os.OpenFile(hdr.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(hdr.Mode)); err != nil {
-				return nil, err
+				return false, err
 			} else if _, err := io.Copy(f, tr); err != nil {
-				return nil, err
+				return false, err
 			} else if err := f.Close(); err != nil {
-				return nil, err
+				return false, err
 			}
 		case tar.TypeSymlink:
 			if err := os.Symlink(hdr.Linkname, hdr.Name); err != nil {
-				return nil, err
+				return false, err
 			}
 		default:
 			log.Warning("Unhandled file type %d for %s", hdr.Typeflag, hdr.Name)
@@ -194,16 +191,4 @@ func newHTTPCache(config *core.Configuration) *httpCache {
 			Timeout: time.Duration(config.Cache.HTTPTimeout),
 		},
 	}
-}
-
-// Convenience function to load a post-build output file after retrieving it from the cache.
-func loadPostBuildFile(target *core.BuildTarget) *core.BuildMetadata {
-	if !needsBuildMetadataFile(target) {
-		return &core.BuildMetadata{}
-	}
-	b, err := ioutil.ReadFile(path.Join(target.OutDir(), target.TargetBuildMetadataFileName()))
-	if err != nil {
-		return nil
-	}
-	return &core.BuildMetadata{Stdout: b}
 }

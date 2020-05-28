@@ -60,8 +60,8 @@ func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild b
 			}
 		}
 	}
-	// If the metadata file containing the std-out and additional outputs doesn't exist, and we need it, rebuild
-	if target.BuildCouldModifyTarget() && !fs.FileExists(targetBuildMetadataFileName(target)) {
+	// If the metadata file containing the std-out and additional outputs doesn't exist, rebuild
+	if !fs.FileExists(targetBuildMetadataFileName(target)) {
 		return true
 	}
 	oldHashes := readRuleHashFromXattrs(state, target, postBuild)
@@ -370,7 +370,7 @@ func writeRuleHash(state *core.BuildState, target *core.BuildTarget) error {
 			return err
 		}
 	}
-	if target.BuildCouldModifyTarget() {
+	if fs.FileExists(targetBuildMetadataFileName(target)) {
 		return fs.RecordAttr(targetBuildMetadataFileName(target), hash, xattrName, state.XattrsSupported)
 	}
 	return nil
@@ -386,9 +386,8 @@ func targetBuildMetadataFileName(target *core.BuildTarget) string {
 	return path.Join(target.OutDir(), target.TargetBuildMetadataFileName())
 }
 
-// For targets that have post-build functions, we have to store and retrieve the target's
-// output to feed to it
-func loadTargetMetadata(target *core.BuildTarget) (*core.BuildMetadata, error) {
+// LoadTargetMetadata retrieves the target metadata from a file in the output directory of this target
+func LoadTargetMetadata(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	file, err := os.Open(targetBuildMetadataFileName(target))
 	if err != nil {
 		return nil, err

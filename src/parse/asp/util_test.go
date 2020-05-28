@@ -5,10 +5,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 func TestFindTarget(t *testing.T) {
-	p := NewParser(nil)
+	state := core.NewDefaultBuildState()
+	p := NewParser(state)
 	stmts, err := p.ParseFileOnly("src/parse/asp/test_data/example.build")
 	require.NoError(t, err)
 
@@ -29,7 +32,8 @@ func TestFindTarget(t *testing.T) {
 }
 
 func TestGetExtents(t *testing.T) {
-	p := NewParser(nil)
+	state := core.NewDefaultBuildState()
+	p := NewParser(state)
 	stmts, err := p.ParseFileOnly("src/parse/asp/test_data/example.build")
 	require.NoError(t, err)
 
@@ -59,7 +63,8 @@ func TestGetExtents(t *testing.T) {
 }
 
 func TestGetArg(t *testing.T) {
-	p := NewParser(nil)
+	state := core.NewDefaultBuildState()
+	p := NewParser(state)
 	stmts, err := p.ParseFileOnly("src/parse/asp/test_data/example.build")
 	require.NoError(t, err)
 

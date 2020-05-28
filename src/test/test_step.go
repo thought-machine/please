@@ -53,7 +53,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	outputFile := path.Join(target.TestDir(), core.TestResultsFile)
 	coverageFile := path.Join(target.TestDir(), core.CoverageFile)
 	needCoverage := target.NeedCoverage(state)
-	metadata := &core.BuildMetadata{Test: true, StartTime: time.Now()}
 
 	// If the user passed --shell then just prepare the directory.
 	if state.PrepareShell {
@@ -118,7 +117,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			outs = append(outs, output)
 		}
 		if state.Cache != nil {
-			state.Cache.Store(target, hash, metadata, outs)
+			state.Cache.Store(target, hash, outs)
 		}
 		return true
 	}
@@ -142,7 +141,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		if needCoverage {
 			files = append(files, path.Base(target.CoverageFile()))
 		}
-		return state.Cache == nil || state.Cache.Retrieve(target, hash, files) == nil
+		return state.Cache == nil || !state.Cache.Retrieve(target, hash, files)
 	}
 
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
@@ -228,7 +227,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		// So if you ask for 3 runs you get 3 separate `PASS`es.
 		target.Results.Collapse(flakeResults)
 	}
-	metadata.EndTime = time.Now()
 	if target.Results.TestCases.AllSucceeded() && !runRemotely {
 		// Success, store in cache
 		moveAndCacheOutputFiles(&target.Results, coverage)

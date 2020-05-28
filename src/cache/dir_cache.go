@@ -10,7 +10,6 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -26,8 +25,6 @@ import (
 	"github.com/thought-machine/please/src/fs"
 )
 
-const remoteActionFilename = ".plz_remote_action"
-
 type dirCache struct {
 	Dir      string
 	Compress bool
@@ -37,7 +34,7 @@ type dirCache struct {
 	mutex    sync.Mutex
 }
 
-func (cache *dirCache) Store(target *core.BuildTarget, key []byte, metadata *core.BuildMetadata, files []string) {
+func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files []string) {
 	cacheDir := cache.getPath(target, key, "")
 	tmpDir := cache.getFullPath(target, key, "", "=")
 	cache.markDir(cacheDir, 0)
@@ -45,13 +42,7 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, metadata *cor
 		log.Warning("Failed to remove existing cache directory %s: %s", cacheDir, err)
 		return
 	}
-	if target.BuildCouldModifyTarget() && len(metadata.RemoteAction) == 0 {
-		files = append(files, target.TargetBuildMetadataFileName())
-	}
 	cache.storeFiles(target, key, "", cacheDir, tmpDir, files, true)
-	if len(metadata.RemoteAction) > 0 {
-		cache.storeData(path.Join(tmpDir, remoteActionFilename), metadata.RemoteAction)
-	}
 	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
 	}
@@ -197,30 +188,8 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 	return size
 }
 
-func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) *core.BuildMetadata {
-	numOuts := len(outs)
-	if needsBuildMetadataFile(target) {
-		outs = append(outs, target.TargetBuildMetadataFileName())
-	}
-	if !cache.retrieveFiles(target, key, "", outs) {
-		return nil
-	}
-	metadata := new(core.BuildMetadata)
-	if needsBuildMetadataFile(target) {
-		var err error
-		metadata, err = loadTargetMetadata(filepath.Join(cache.getPath(target, key, ""), target.TargetBuildMetadataFileName()))
-		if err != nil {
-			log.Warningf("failed to load %s build metadata from cache: %w", target.Label, err)
-			return nil
-		}
-	}
-
-	if numOuts == 0 && metadata != nil { // Only need to retrieve this in one particular case
-		if data, err := ioutil.ReadFile(path.Join(cache.getPath(target, key, ""), remoteActionFilename)); err == nil {
-			metadata.RemoteAction = data
-		}
-	}
-	return metadata
+func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) bool {
+	return cache.retrieve(target, key, "", outs)
 }
 
 func loadTargetMetadata(filename string) (*core.BuildMetadata, error) {
@@ -240,8 +209,8 @@ func loadTargetMetadata(filename string) (*core.BuildMetadata, error) {
 }
 
 // retrieveFiles retrieves the given set of files from the cache.
-func (cache *dirCache) retrieveFiles(target *core.BuildTarget, key []byte, suffix string, outs []string) bool {
-	found, err := cache.retrieveFiles2(target, cache.getPath(target, key, suffix), outs)
+func (cache *dirCache) retrieve(target *core.BuildTarget, key []byte, suffix string, outs []string) bool {
+	found, err := cache.retrieveFiles(target, cache.getPath(target, key, suffix), outs)
 	if err != nil && !os.IsNotExist(err) {
 		log.Warning("Failed to retrieve %s from dir cache: %s", target.Label, err)
 		return false
@@ -251,7 +220,7 @@ func (cache *dirCache) retrieveFiles(target *core.BuildTarget, key []byte, suffi
 	return found
 }
 
-func (cache *dirCache) retrieveFiles2(target *core.BuildTarget, cacheDir string, outs []string) (bool, error) {
+func (cache *dirCache) retrieveFiles(target *core.BuildTarget, cacheDir string, outs []string) (bool, error) {
 	if !core.PathExists(cacheDir) {
 		log.Debug("%s: %s doesn't exist in dir cache", target.Label, cacheDir)
 		return false, nil

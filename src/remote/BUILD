@@ -6,6 +6,7 @@ go_library(
     ),
     visibility = ["PUBLIC"],
     deps = [
+        "//src/build",
         "//src/core",
         "//src/fs",
         "//third_party/go:bytestream",

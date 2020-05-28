@@ -437,9 +437,10 @@ go_get(
 go_get(
     name = "cli-init",
     get = "github.com/peterebden/go-cli-init",
-    revision = "v1.2.0",
+    revision = "v1.3.1",
     deps = [
         ":go-flags",
+        ":humanize",
         ":logging",
         ":terminal",
     ],

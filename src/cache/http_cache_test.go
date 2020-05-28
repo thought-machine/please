@@ -35,7 +35,7 @@ func TestStoreAndRetrieveHTTP(t *testing.T) {
 	cache := newHTTPCache(config)
 
 	key := []byte("test_key")
-	cache.Store(target, key, &core.BuildMetadata{}, target.Outputs())
+	cache.Store(target, key, target.Outputs())
 
 	b, err := ioutil.ReadFile("plz-out/gen/pkg/name/testfile2")
 	assert.NoError(t, err)

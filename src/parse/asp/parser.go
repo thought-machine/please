@@ -27,23 +27,35 @@ func init() {
 	gob.Register(pyDict{})
 }
 
+// A semaphore implements the standard synchronisation mechanism based on a buffered channel.
+type semaphore chan struct{}
+
+func (s semaphore) Acquire() { s <- struct{}{} }
+func (s semaphore) Release() { <-s }
+
 // A Parser implements parsing of BUILD files.
 type Parser struct {
 	interpreter *interpreter
 	// Stashed set of source code for builtin rules.
 	builtins map[string][]byte
+	// Parallelism limiter to ensure we don't try to run too many parses simultaneously
+	limiter semaphore
 }
 
 // NewParser creates a new parser instance. One is normally sufficient for a process lifetime.
 func NewParser(state *core.BuildState) *Parser {
 	p := newParser()
 	p.interpreter = newInterpreter(state, p)
+	p.limiter = p.interpreter.limiter
 	return p
 }
 
 // newParser creates just the parser with no interpreter.
 func newParser() *Parser {
-	return &Parser{builtins: map[string][]byte{}}
+	return &Parser{
+		builtins: map[string][]byte{},
+		limiter:  make(semaphore, 10),
+	}
 }
 
 // LoadBuiltins instructs the parser to load rules from this file as built-ins.
@@ -78,6 +90,9 @@ func (p *Parser) MustLoadBuiltins(filename string, contents, encoded []byte) {
 // It returns true if the call was deferred at some point awaiting  target to build,
 // along with any error encountered.
 func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
+	p.limiter.Acquire()
+	defer p.limiter.Release()
+
 	statements, err := p.parse(filename)
 	if err != nil {
 		return err
@@ -94,6 +109,9 @@ func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
 // The first return value is true if parsing succeeds - if the error is still non-nil
 // that indicates that interpretation failed.
 func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker) (bool, error) {
+	p.limiter.Acquire()
+	defer p.limiter.Release()
+
 	stmts, err := p.parseAndHandleErrors(r)
 	if err != nil {
 		return false, err
@@ -104,6 +122,9 @@ func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker) (bool, error) {
 
 // ParseToFile parses the given file and writes a binary form of the result to the output file.
 func (p *Parser) ParseToFile(input, output string) error {
+	p.limiter.Acquire()
+	defer p.limiter.Release()
+
 	stmts, err := p.parse(input)
 	if err != nil {
 		return err

@@ -349,12 +349,6 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		Stdout: ar.StdoutRaw,
 		Stderr: ar.StderrRaw,
 	}
-	if ar.ExecutionMetadata != nil {
-		metadata.StartTime = toTime(ar.ExecutionMetadata.ExecutionStartTimestamp)
-		metadata.EndTime = toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp)
-		metadata.InputFetchStartTime = toTime(ar.ExecutionMetadata.InputFetchStartTimestamp)
-		metadata.InputFetchEndTime = toTime(ar.ExecutionMetadata.InputFetchCompletedTimestamp)
-	}
 	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 		defer cancel()
