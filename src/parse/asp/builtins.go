@@ -264,7 +264,11 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		s.NAssert(s.contextPkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
 	s.NAssert(l.IsAllTargets() || l.IsAllSubpackages(), "Can't pass :all or /... to subinclude()")
+	// Temporarily release the parallelism limiter; this is important to keep us from deadlocking
+	// all available parser threads (easy to happen if they're all waiting on a single target which now can't start)
+	s.interpreter.limiter.Release()
 	t := s.state.WaitForBuiltTarget(l, pkgLabel)
+	s.interpreter.limiter.Acquire()
 	// This is not quite right, if you subinclude from another subinclude we can basically
 	// lose track of it later on. It's hard to know what better to do at this point though.
 	s.contextPkg.RegisterSubinclude(l)

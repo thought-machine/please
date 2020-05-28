@@ -114,8 +114,6 @@ type BuildState struct {
 	Config *Configuration
 	// Parser implementation. Other things can call this to perform various external parse tasks.
 	Parser Parser
-	// Worker pool for the parser
-	ParsePool Pool
 	// Subprocess executor.
 	ProcessExecutor *process.Executor
 	// Hashes of variouts bits of the configuration, used for incrementality.
@@ -619,9 +617,7 @@ func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
 	state.progress.pendingPackageMutex.Lock()
 	if ch, present := state.progress.pendingPackages[key]; present {
 		state.progress.pendingPackageMutex.Unlock()
-		state.ParsePool.AddWorker()
 		<-ch
-		state.ParsePool.StopWorker()
 		return state.Graph.PackageByLabel(label)
 	}
 	// Nothing's registered this so we do it ourselves.
@@ -647,11 +643,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 	if ch, present := state.progress.pendingTargets[l]; present {
 		// Something's already registered for this, get on the train
 		state.progress.pendingTargetMutex.Unlock()
-		log.Debug("Pausing parse of %s to wait for %s", dependent, l)
-		state.ParsePool.AddWorker()
 		<-ch
-		state.ParsePool.StopWorker()
-		log.Debug("Resuming parse of %s now %s is ready", dependent, l)
 		t := state.Graph.Target(l)
 		state.ensureDownloaded(t)
 		return t
@@ -842,7 +834,6 @@ func NewBuildState(config *Configuration) *BuildState {
 		ProcessExecutor: process.New(sandboxTool),
 		StartTime:       startTime,
 		Config:          config,
-		ParsePool:       NewPool(config.Please.NumThreads),
 		VerifyHashes:    true,
 		NeedBuild:       true,
 		Success:         true,
