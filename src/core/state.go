@@ -196,6 +196,9 @@ type BuildState struct {
 	Watch bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
 	NumTestRuns int
+	// Whether to run multiple test runs sequentially or across multiple workers (can be useful if tests bind to ports
+	// or similar)
+	TestSequentially bool
 	// True to clean working directories after successful builds.
 	CleanWorkdirs bool
 	// True if we're forcing a rebuild of the original targets.

@@ -15,7 +15,6 @@ import (
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/utils"
 	"github.com/thought-machine/please/src/worker"
 )
 
@@ -178,42 +177,64 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		addTestCasesToTargetResult(target, core.TestCases{testCase})
 		return
 	}
+
 	coverage := &core.TestCoverage{}
+	if state.NumTestRuns == 1 {
+		var results core.TestSuite
+		results, coverage =  doFlakeRun(tid, state, target, runRemotely)
+		addResultsToTarget(target, results)
 
-
-	//TODO(jpoole): check the parallelism flag here
-	// Always run the test this number of times
-	status := "Testing"
-	var runStatus string
-	var numFlakes int
-	if state.NumTestRuns > 1 {
-		runStatus = status + fmt.Sprintf(" (run %d of %d)", run, state.NumTestRuns)
-		numFlakes = 1 // only run the test NumTestRuns times if this is greater than 1
-	} else {
-		runStatus = status
-		// Run tests at least once, but possibly more if it's flaky.
-		// Flakiness will be `3` if `flaky` is `True` in the build_def.
-		numFlakes = utils.Max(target.Flakiness, 1)
-	}
-	// New group of test cases for each group of flaky runs
-	flakeResults := core.TestSuite{}
-	for flakes := 1; flakes <= numFlakes; flakes++ {
-		var flakeStatus string
-		if numFlakes > 1 {
-			flakeStatus = runStatus + fmt.Sprintf(" (flake %d of %d)", flakes, numFlakes)
-		} else {
-			flakeStatus = runStatus
+		if target.Results.TestCases.AllSucceeded() && !runRemotely {
+			// Success, store in cache
+			moveAndCacheOutputFiles(&target.Results, coverage)
 		}
-		state.LogBuildResult(tid, label, core.TargetTesting, fmt.Sprintf("%s...", flakeStatus))
+	} else if state.TestSequentially {
+		for run := 1; run <= state.NumTestRuns; run++ {
+			state.LogBuildResult(tid, target.Label, core.TargetTesting, getRunStatus(run, state.NumTestRuns))
+			var results core.TestSuite
+			results, coverage = doTest(tid, state, target, runRemotely, 1) // Sequential tests re-use run 1's test dir
+			addResultsToTarget(target, results)
+		}
+	} else {
+		state.LogBuildResult(tid, target.Label, core.TargetTesting, getRunStatus(run, state.NumTestRuns))
+		var results core.TestSuite
+		results, coverage = doTest(tid, state, target, runRemotely, run)
+		addResultsToTarget(target, results)
+	}
 
-		testSuite, cov := doTest(tid, state, target, runRemotely, run)
+	logTargetResults(tid, state, target, coverage, run)
+}
 
-		flakeResults.TimedOut = flakeResults.TimedOut || testSuite.TimedOut
-		flakeResults.Properties = testSuite.Properties
-		flakeResults.Duration += testSuite.Duration
+func addResultsToTarget(target *core.BuildTarget, results core.TestSuite) {
+	target.ResultsMux.Lock()
+	defer target.ResultsMux.Unlock()
+	target.Results.Collapse(results)
+}
+
+func doRun(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
+	coverage := &core.TestCoverage{}
+	results := core.TestSuite{}
+
+	return results, coverage
+}
+
+// doFlakeRun runs a test repeatably until it succeeds or exceeds the max number of flakes for the test
+func doFlakeRun(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (core.TestSuite, *core.TestCoverage) {
+	coverage := &core.TestCoverage{}
+	results := core.TestSuite{}
+
+	// New group of test cases for each group of flaky runs
+	for flakes := 1; flakes <= target.Flakiness; flakes++ {
+		state.LogBuildResult(tid, target.Label, core.TargetTesting, getFlakeStatus(flakes, target.Flakiness))
+
+		testSuite, cov := doTest(tid, state, target, runRemotely, 1) // If we're running flakes, numRuns must be 1
+
+		results.TimedOut = results.TimedOut || testSuite.TimedOut
+		results.Properties = testSuite.Properties
+		results.Duration += testSuite.Duration
 		// Each set of executions is treated as a group
 		// So if a test flakes three times, three executions will be part of one test case.
-		flakeResults.Add(testSuite.TestCases...)
+		results.Add(testSuite.TestCases...)
 		coverage.Aggregate(cov)
 
 		// If execution succeeded, we can break out of the flake loop
@@ -223,17 +244,23 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	}
 
-	// Each set of executions is now treated separately
-	// So if you ask for 3 runs you get 3 separate `PASS`es.
-	target.ResultsMux.Lock()
-	defer target.ResultsMux.Unlock()
-	target.Results.Collapse(flakeResults)
+	return results, coverage
+}
 
-	if state.NumTestRuns == 1 && target.Results.TestCases.AllSucceeded() && !runRemotely {
-		// Success, store in cache
-		moveAndCacheOutputFiles(&target.Results, coverage)
+func getFlakeStatus(flake int, flakes int) string {
+	if flakes > 1 {
+		return fmt.Sprintf("Testing (flake %d of %d)...", flake, flakes)
+	} else {
+		return "Testing..."
 	}
-	logTargetResults(tid, state, target, coverage, run)
+}
+
+func getRunStatus(run int, numRuns int) string {
+	if numRuns == 1 {
+		return "Testing..."
+	}
+
+	return fmt.Sprintf("Testing (run %d of %d)...", run, numRuns)
 }
 
 func initialiseTargetResults(target *core.BuildTarget) {
@@ -259,7 +286,6 @@ func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget,
 	if target.Results.TestCases.AllSucceeded() {
 		// Clean up the test directory.
 		if state.CleanWorkdirs {
-			//TODO(jpoole): num runs
 			if err := os.RemoveAll(target.TestDir(run)); err != nil {
 				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
 			}
