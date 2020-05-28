@@ -47,8 +47,8 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		return
 	}
 
-	cachedOutputFile := target.TestResultsFile(run)
-	cachedCoverageFile := target.CoverageFile(run)
+	cachedOutputFile := target.TestResultsFile()
+	cachedCoverageFile := target.CoverageFile()
 	outputFile := path.Join(target.TestDir(run), core.TestResultsFile)
 	coverageFile := path.Join(target.TestDir(run), core.CoverageFile)
 	needCoverage := target.NeedCoverage(state)
@@ -136,9 +136,9 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		}
 		log.Debug("Output file %s does not exist for %s", cachedOutputFile, target.Label)
 		// Check the cache for these artifacts.
-		files := []string{path.Base(target.TestResultsFile(run))}
+		files := []string{path.Base(target.TestResultsFile())}
 		if needCoverage {
-			files = append(files, path.Base(target.CoverageFile(run)))
+			files = append(files, path.Base(target.CoverageFile()))
 		}
 		return state.Cache == nil || !state.Cache.Retrieve(target, hash, files)
 	}
@@ -155,7 +155,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	initialiseTargetResults(target)
 
 	// Remove any cached test result file.
-	if err := RemoveTestOutputs(target, run); err != nil {
+	if err := RemoveTestOutputs(target); err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to remove test output files")
 		return
 	}
@@ -604,10 +604,10 @@ func parseCoverageFile(target *core.BuildTarget, coverageFile string, run int) *
 }
 
 // RemoveTestOutputs removes any cached test or coverage result files for a target.
-func RemoveTestOutputs(target *core.BuildTarget, run int) error {
-	if err := os.RemoveAll(target.TestResultsFile(run)); err != nil {
+func RemoveTestOutputs(target *core.BuildTarget) error {
+	if err := os.RemoveAll(target.TestResultsFile()); err != nil {
 		return err
-	} else if err := os.RemoveAll(target.CoverageFile(run)); err != nil {
+	} else if err := os.RemoveAll(target.CoverageFile()); err != nil {
 		return err
 	}
 	for _, output := range target.TestOutputs {

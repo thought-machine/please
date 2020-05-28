@@ -14,9 +14,7 @@ func CopySurefireXMLFilesToDir(state *core.BuildState, surefireDir string) {
 	for _, label := range state.ExpandOriginalLabels() {
 		target := state.Graph.TargetOrDie(label)
 		if state.ShouldInclude(target) && target.IsTest && !target.NoTestOutput {
-			for i := 1; fs.PathExists(target.TestResultsFile(i)); i++ {
-				copySurefireXMLtoDir(target.TestResultsFile(i), surefireDir)
-			}
+			copySurefireXMLtoDir(target.TestResultsFile(), surefireDir)
 		}
 	}
 }
