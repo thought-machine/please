@@ -371,57 +371,10 @@ func outputHashOrNil(target *core.BuildTarget, outputs []string, hasher *fs.Path
 	return h
 }
 
-// retrieveArtifacts attempts to retrieve artifacts from the cache
-//   1) if there are no declared outputs, return true; there's nothing to be done
-//   2) pull all the declared outputs from the cache has based on the short hash of the target
-//   3) check that pulling the artifacts changed the output hash and set the build state accordingly
-func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget, oldOutputHash []byte) bool {
-	// If there aren't any outputs, we don't have to do anything right now.
-	// Checks later will handle the case of something with a post-build function that
-	// later tries to add more outputs.
-	if len(target.DeclaredOutputs()) == 0 && len(target.DeclaredNamedOutputs()) == 0 {
-		target.SetState(core.Unchanged)
-		state.LogBuildResult(tid, target.Label, core.TargetCached, "Nothing to do")
-		return true
-	}
-	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
-
-	if state.Cache.Retrieve(target, mustShortTargetHash(state, target), target.Outputs()) != nil {
-		log.Debug("Retrieved artifacts for %s from cache", target.Label)
-		checkLicences(state, target)
-		newOutputHash, err := calculateAndCheckRuleHash(state, target)
-		if err != nil { // Most likely hash verification failure
-			log.Warning("Error retrieving cached artifacts for %s: %s", target.Label, err)
-			RemoveOutputs(target)
-			return false
-		} else if oldOutputHash == nil || !bytes.Equal(oldOutputHash, newOutputHash) {
-			target.SetState(core.Cached)
-			state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
-		} else {
-			target.SetState(core.Unchanged)
-			state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached (unchanged)")
-		}
-		buildLinks(state, target)
-		return true // got from cache
-	}
-	log.Debug("Nothing retrieved from remote cache for %s", target.Label)
-	return false
-}
-
 func addOutDirOutsFromMetadata(target *core.BuildTarget, md *core.BuildMetadata) {
 	for _, o := range md.OutputDirOuts {
 		target.AddOutput(o)
 	}
-}
-
-func outputHashOrNil(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash) []byte {
-	h, err := outputHash(target, outputs, hasher, combine)
-	if err != nil {
-		// We might get an error because somebody deleted the outputs from plz-out. In this case return nil and attempt
-		// to rebuild or fetch from the cache.
-		return nil
-	}
-	return h
 }
 
 func retrieveFromCache(cache core.Cache, target *core.BuildTarget, cacheKey []byte, files []string) *core.BuildMetadata {

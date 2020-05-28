@@ -136,7 +136,7 @@ func TestOutputDir(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 
-	md, err := loadTargetMetadata(target)
+	md, err := LoadTargetMetadata(target)
 	require.NoError(t, err)
 
 	assert.Len(t, md.OutputDirOuts, 1)
@@ -382,7 +382,7 @@ func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []strin
 	if target.Label.Name == "target8" {
 		ioutil.WriteFile("plz-out/gen/package1/file8", []byte("retrieved from cache"), 0664)
 		md := &core.BuildMetadata{}
-		if err := StoreTargetMetadata(target, md); err != nil {
+		if err := storeTargetMetadata(target, md); err != nil {
 			panic(err)
 		}
 		return true
@@ -390,7 +390,7 @@ func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []strin
 	} else if target.Label.Name == "target10" {
 		ioutil.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
 		md := &core.BuildMetadata{Stdout: []byte("retrieved from cache")}
-		if err := StoreTargetMetadata(target, md); err != nil {
+		if err := storeTargetMetadata(target, md); err != nil {
 			panic(err)
 		}
 		return true
