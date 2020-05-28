@@ -135,7 +135,7 @@ var opts struct {
 		NoCoverageReport    bool          `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
 		LineCoverageReport  bool          `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
 		NumRuns             int           `short:"n" long:"num_runs" default:"1" description:"Number of times to run each test target."`
-		Sequentially    bool         `long:"sequentially" description:"Whether to run multiple runs of the same test sequentially"`
+		Sequentially        bool          `long:"sequentially" description:"Whether to run multiple runs of the same test sequentially"`
 		IncludeAllFiles     bool          `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
 		IncludeFile         cli.Filepaths `long:"include_file" description:"Filenames to filter coverage display to"`
 		TestResultsFile     cli.Filepath  `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
@@ -760,9 +760,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	}
 	state := core.NewBuildState(config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
-	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)  // Only one of these can be passed
-	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially  // Similarly here.
-	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...) // And here
+	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)       // Only one of these can be passed
+	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially // Similarly here.
+	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)      // And here
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest

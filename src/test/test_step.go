@@ -154,7 +154,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	// If the test results haven't been initialised, initialise them now
 	initialiseTargetResults(target)
 
-
 	// Remove any cached test result file.
 	if err := RemoveTestOutputs(target, run); err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to remove test output files")
@@ -181,7 +180,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	coverage := &core.TestCoverage{}
 	if state.NumTestRuns == 1 {
 		var results core.TestSuite
-		results, coverage =  doFlakeRun(tid, state, target, runRemotely)
+		results, coverage = doFlakeRun(tid, state, target, runRemotely)
 		addResultsToTarget(target, results)
 
 		if target.Results.TestCases.AllSucceeded() && !runRemotely {
@@ -248,18 +247,16 @@ func doFlakeRun(tid int, state *core.BuildState, target *core.BuildTarget, runRe
 }
 
 func getFlakeStatus(flake int, flakes int) string {
-	if flakes > 1 {
-		return fmt.Sprintf("Testing (flake %d of %d)...", flake, flakes)
-	} else {
+	if flakes == 1 {
 		return "Testing..."
 	}
+	return fmt.Sprintf("Testing (flake %d of %d)...", flake, flakes)
 }
 
 func getRunStatus(run int, numRuns int) string {
 	if numRuns == 1 {
 		return "Testing..."
 	}
-
 	return fmt.Sprintf("Testing (run %d of %d)...", run, numRuns)
 }
 
@@ -372,7 +369,7 @@ func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte,
 	return stderr, err
 }
 
-func doTest(tid int, state *core.BuildState, target *core.BuildTarget,  runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
+func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
 	startTime := time.Now()
 	metadata, resultsData, coverage, err := doTestResults(tid, state, target, runRemotely, run)
 	duration := time.Since(startTime)

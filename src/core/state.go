@@ -71,7 +71,7 @@ type ParseTaskQueue = chan ParseTask
 // BuildTaskQueue is a channel to send build tasks down to please worker pool
 type BuildTaskQueue = chan BuildTask
 
-// BuildTaskQueue is a channel to send test tasks down to please worker pool
+// TestTaskQueue is a channel to send test tasks down to please worker pool
 type TestTaskQueue = chan TestTask
 
 // A Parser is the interface to reading and interacting with BUILD files.
@@ -335,7 +335,7 @@ func (state *BuildState) feedQueues(parses ParseTaskQueue, builds BuildTaskQueue
 			atomic.AddInt64(&state.progress.numRunning, 1)
 			testTask := TestTask{
 				Label: task.Label,
-				Run: task.Run,
+				Run:   task.Run,
 			}
 			if remote {
 				remoteTests <- testTask
