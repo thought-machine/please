@@ -86,7 +86,7 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 				output := strings.Join(outputLines, "\n")
 				testCase.Executions = append(testCase.Executions, core.TestExecution{
 					Failure: &core.TestResultFailure{
-						Traceback: string(output),
+						Traceback: output,
 					},
 					Stderr:   strings.Join(testOutput, ""),
 					Duration: &duration,
