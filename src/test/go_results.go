@@ -49,22 +49,44 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 					Stderr:   strings.Join(testOutput, ""),
 				})
 			} else if bytes.Equal(testResultMatches[1], []byte("SKIP")) {
-				i++ // Following line has the reason for being skipped
+				// The skip message is found at the bottom of the test output segment.
+				// Prior to Go 1.14 the test output segment follows the results line.
+				// In Go 1.14 the test output segment sits between the start line and the results line.
+
+				var outputLines []string
+				if resultLooksPriorGo114(i, lines) {
+					outputLines = getPostResultOutput(i, lines)
+				} else {
+					outputLines = getPreResultOutput(i, lines)
+				}
+
+				var skipMessage string
+				if len(outputLines) == 0 {
+					skipMessage = ""
+				} else {
+					skipMessage = strings.TrimSpace(outputLines[len(outputLines)-1])
+				}
+
 				testCase.Executions = append(testCase.Executions, core.TestExecution{
 					Skip: &core.TestResultSkip{
-						Message: string(bytes.TrimSpace(lines[i])),
+						Message: skipMessage,
 					},
 					Stderr:   strings.Join(testOutput, ""),
 					Duration: &duration,
 				})
 			} else {
-				output := ""
-				for j := i + 1; j < len(lines) && !bytes.HasPrefix(lines[j], []byte("===")); j++ {
-					output += string(lines[j]) + "\n"
+
+				var outputLines []string
+				if resultLooksPriorGo114(i, lines) {
+					outputLines = getPostResultOutput(i, lines)
+				} else {
+					outputLines = getPreResultOutput(i, lines)
 				}
+
+				output := strings.Join(outputLines, "\n")
 				testCase.Executions = append(testCase.Executions, core.TestExecution{
 					Failure: &core.TestResultFailure{
-						Traceback: output,
+						Traceback: string(output),
 					},
 					Stderr:   strings.Join(testOutput, ""),
 					Duration: &duration,
@@ -84,4 +106,48 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 	}
 	results.Duration = suiteDuration
 	return results, nil
+}
+
+// A skip result looks like go test output prior to 114 the previous line matches against a start test block.
+// Only fully applicable for failing and skipped tests
+// (as a message is guaranteed to occur before the results block).
+func resultLooksPriorGo114(currentIndex int, lines [][]byte) bool {
+	if currentIndex == 0 {
+		return false
+	}
+
+	prevLine := lines[currentIndex-1]
+	prevLineMatchesStart := testStart.FindSubmatch(prevLine)
+	if prevLineMatchesStart != nil {
+		return true
+	}
+
+	return false
+}
+
+// Get the output for Go test output prior to Go 1.14
+func getPostResultOutput(resultsIndex int, lines [][]byte) []string {
+	output := []string{}
+	for j := resultsIndex + 1; j < len(lines) && !lineMatchesRunOrResultsLine(lines[j]); j++ {
+		output = append(output, string(lines[j]))
+	}
+
+	return output
+}
+
+// Get output for Go tests output after Go 1.14
+func getPreResultOutput(resultsIndex int, lines [][]byte) []string {
+	output := []string{}
+	for j := resultsIndex - 1; j > 0 && !lineMatchesRunOrResultsLine(lines[j]); j-- {
+		output = append([]string{string(lines[j])}, output...)
+	}
+	return output
+}
+
+func lineMatchesRunOrResultsLine(line []byte) bool {
+
+	testStartMatches := testStart.FindSubmatch(line)
+	matchesRunLine := (testStartMatches != nil)
+
+	return matchesRunLine || bytes.Equal(line, []byte("PASS")) || bytes.Equal(line, []byte("FAIL"))
 }
