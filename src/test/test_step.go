@@ -402,10 +402,12 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 
 	var data [][]byte
 	// If this test is meant to produce an output file and the test ran successfully
-	if !target.NoTestOutput && err == nil {
-		data, err = readTestResultsDir(path.Join(target.TestDir(run), core.TestResultsFile))
-		if err != nil {
-			err = fmt.Errorf("failed to read test results file: %w", err)
+	if !target.NoTestOutput {
+		d, readErr := readTestResultsDir(path.Join(target.TestDir(run), core.TestResultsFile))
+		if readErr != nil {
+			log.Warningf("failed to read test results file: %w", readErr)
+		} else {
+			data = d
 		}
 	}
 	return &core.BuildMetadata{Stdout: stdout}, data, coverage, err
@@ -438,8 +440,8 @@ func testFailure(name string, duration *time.Duration, stdOut string, stdErr str
 						Stdout:   stdOut,
 						Stderr:   stdErr,
 						Error: &core.TestResultFailure{
-							Message: message,
-							Type:    _type,
+							Message:   message,
+							Type:      _type,
 							Traceback: traceback,
 						},
 					},
