@@ -67,7 +67,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	cachedTestResults := func() *core.TestSuite {
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, cachedCoverageFile, run)
-		results, err := parseTestResults(cachedOutputFile, nil)
+		results, err := parseTestResultsFile(cachedOutputFile)
 		results.Package = strings.Replace(target.Label.PackageName, "/", ".", -1)
 		results.Name = target.Label.Name
 		results.Cached = true
@@ -373,7 +373,7 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemote
 	startTime := time.Now()
 	metadata, resultsData, coverage, err := doTestResults(tid, state, target, runRemotely, run)
 	duration := time.Since(startTime)
-	parsedSuite := parseTestOutput(metadata.Stdout, string(metadata.Stderr), err, duration, target, path.Join(target.TestDir(run), core.TestResultsFile), resultsData)
+	parsedSuite := parseTestOutput(string(metadata.Stdout), string(metadata.Stderr), err, duration, target, resultsData)
 
 	return core.TestSuite{
 		Package:    strings.Replace(target.Label.PackageName, "/", ".", -1),
@@ -399,7 +399,16 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 	}
 	stdout, err := prepareAndRunTest(tid, state, target, run)
 	coverage := parseCoverageFile(target, path.Join(target.TestDir(run), core.CoverageFile), run)
-	return &core.BuildMetadata{Stdout: stdout}, nil, coverage, err
+
+	var data [][]byte
+	// If this test is meant to produce an output file and the test ran successfully
+	if !target.NoTestOutput && err == nil {
+		data, err = readTestResultsDir(path.Join(target.TestDir(run), core.TestResultsFile))
+		if err != nil {
+			err = fmt.Errorf("failed to read test results file: %w", err)
+		}
+	}
+	return &core.BuildMetadata{Stdout: stdout}, data, coverage, err
 }
 
 func parseRemoteCoverage(state *core.BuildState, target *core.BuildTarget, coverage []byte, run int) (*core.TestCoverage, error) {
@@ -418,7 +427,29 @@ func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget
 	return runTest(state, target, run)
 }
 
-func parseTestOutput(stdout []byte, stderr string, runError error, duration time.Duration, target *core.BuildTarget, outputFile string, resultsData [][]byte) core.TestSuite {
+func testFailure(name string, duration *time.Duration, stdOut string, stdErr string, message string, _type string, traceback string) core.TestSuite {
+	return core.TestSuite{
+		TestCases: []core.TestCase{
+			{
+				Name: name,
+				Executions: []core.TestExecution{
+					{
+						Duration: duration,
+						Stdout:   stdOut,
+						Stderr:   stdErr,
+						Error: &core.TestResultFailure{
+							Message: message,
+							Type:    _type,
+							Traceback: traceback,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func parseTestOutput(stdout string, stderr string, runError error, duration time.Duration, target *core.BuildTarget, resultsData [][]byte) core.TestSuite {
 	// This is all pretty involved; there are lots of different possibilities of what could happen.
 	// The contract is that the test must return zero on success or non-zero on failure (Unix FTW).
 	// If it's successful, it must produce a parseable file named "test.results" in its temp folder.
@@ -430,165 +461,56 @@ func parseTestOutput(stdout []byte, stderr string, runError error, duration time
 	// No output and no execution error and output not expected - OK
 	// No output and no execution error and output expected - SYNTHETIC ERROR - Missing Results
 	// No output and execution error - SYNTHETIC ERROR - Failed to Run
+	// Output fails to parse - SYNTHETIC ERROR - Failed to parse output
+	// Output fails to parse with execution error - SYNTHETIC ERROR + EXECUTION ERROR - Failed to parse output
 	// Output and no execution error - PARSE OUTPUT - Ignore noTestOutput
 	// Output and execution error - PARSE OUTPUT + SYNTHETIC ERROR - Incomplete Run
-	if !fs.PathExists(outputFile) && len(resultsData) == 0 {
-		if runError == nil && target.NoTestOutput {
-			return core.TestSuite{
-				TestCases: []core.TestCase{
-					{
-						// Need a name so that multiple runs get collated correctly.
-						Name: target.Results.Name,
-						Executions: []core.TestExecution{
-							{
-								Duration: &duration,
-								Stdout:   string(stdout),
-								Stderr:   stderr,
-							},
-						},
-					},
-				},
-			}
-		} else if runError == nil {
-			return core.TestSuite{
-				TestCases: []core.TestCase{
-					{
-						Name: target.Results.Name,
-						Executions: []core.TestExecution{
-							{
-								Duration: &duration,
-								Stdout:   string(stdout),
-								Stderr:   stderr,
-								Error: &core.TestResultFailure{
-									Message: "Test failed to produce output results file",
-									Type:    "MissingResults",
-								},
-							},
-						},
-					},
-				},
-			}
-		} else if target.NoTestOutput {
-			return core.TestSuite{
-				TestCases: []core.TestCase{
-					{
-						Name: target.Results.Name,
-						Executions: []core.TestExecution{
-							{
-								Duration: &duration,
-								Stdout:   string(stdout),
-								Stderr:   stderr,
-								Failure: &core.TestResultFailure{
-									Message: "Test failed: " + runError.Error(),
-									Type:    "TestFailed",
-								},
-							},
-						},
-					},
-				},
-			}
-		}
 
-		return core.TestSuite{
-			TestCases: []core.TestCase{
-				{
-					Name: target.Results.Name,
-					Executions: []core.TestExecution{
+	fail := func(msg, _type, traceback string) core.TestSuite {
+		return testFailure(target.Results.Name, &duration, stdout, stderr, msg, _type, traceback)
+	}
+	if len(resultsData) == 0 {
+		if runError == nil {
+			// No output and no execution error and output not expected - OK
+			if target.NoTestOutput {
+				return core.TestSuite{
+					TestCases: []core.TestCase{
 						{
-							Duration: &duration,
-							Stdout:   string(stdout),
-							Stderr:   stderr,
-							Error: &core.TestResultFailure{
-								Message:   "Test failed with no results",
-								Type:      "NoResults",
-								Traceback: runError.Error(),
+							// Need a name so that multiple runs get collated correctly.
+							Name: target.Results.Name,
+							Executions: []core.TestExecution{
+								{
+									Duration: &duration,
+									Stdout:   stdout,
+									Stderr:   stderr,
+								},
 							},
 						},
 					},
-				},
-			},
+				}
+			}
+			//No output and no execution error and output expected - SYNTHETIC ERROR - Missing Results
+			return fail("Test failed to produce output results file", "MissingResults", "")
 		}
+		return fail("Test failed", "TestFailed", runError.Error())
 	}
 
-	results, parseError := parseTestResults(outputFile, resultsData)
+	results, parseError := parseTestResults(resultsData)
 	if parseError != nil {
+		// Output fails to parse with execution error - SYNTHETIC ERROR + EXECUTION ERROR - Failed to parse output
 		if runError != nil {
-			return core.TestSuite{
-				TestCases: []core.TestCase{
-					{
-						Name: target.Results.Name,
-						Executions: []core.TestExecution{
-							{
-								Duration: &duration,
-								Stdout:   string(stdout),
-								Stderr:   stderr,
-								Error: &core.TestResultFailure{
-									Message:   "Test failed with no results",
-									Type:      "NoResults",
-									Traceback: runError.Error(),
-								},
-							},
-						},
-					},
-				},
-			}
+			return fail("Test failed with no results", "NoResults", runError.Error())
 		}
-
-		return core.TestSuite{
-			TestCases: []core.TestCase{
-				{
-					Name: "Unknown",
-					Executions: []core.TestExecution{
-						{
-							Duration: &duration,
-							Stdout:   string(stdout),
-							Stderr:   stderr,
-							Error: &core.TestResultFailure{
-								Message:   "Couldn't parse test output file",
-								Type:      "NoResults",
-								Traceback: parseError.Error(),
-							},
-						},
-					},
-				},
-			},
-		}
+		// Output fails to parse - SYNTHETIC ERROR - Failed to parse output
+		return fail("Couldn't parse test output file", "NoResults", parseError.Error())
 	}
 
+	// Output and no execution error - PARSE OUTPUT - Ignore noTestOutput
 	if runError != nil && results.Failures() == 0 {
 		// Add a failure result to the test so it shows up in the final aggregation.
-		results.TestCases = append(results.TestCases, core.TestCase{
-			// We don't know the type of test we ran :(
-			Name: target.Results.Name,
-			Executions: []core.TestExecution{
-				{
-					Duration: &duration,
-					Stdout:   string(stdout),
-					Stderr:   stderr,
-					Error: &core.TestResultFailure{
-						Type:      "ReturnValue",
-						Message:   "Test returned nonzero but reported no errors",
-						Traceback: runError.Error(),
-					},
-				},
-			},
-		})
+		results.Add(fail("Test returned nonzero but reported no errors", "ReturnValue", runError.Error()).TestCases...)
 	} else if runError == nil && results.Failures() != 0 {
-		results.TestCases = append(results.TestCases, core.TestCase{
-			// We don't know the type of test we ran :(
-			Name: target.Results.Name,
-			Executions: []core.TestExecution{
-				{
-					Duration: &duration,
-					Stdout:   string(stdout),
-					Stderr:   stderr,
-					Failure: &core.TestResultFailure{
-						Type:    "ReturnValue",
-						Message: "Test returned 0 but still reported failures",
-					},
-				},
-			},
-		})
+		results.Add(fail("Test returned 0 but still reported failures", "ReturnValue", "").TestCases...)
 	}
 
 	return results

@@ -12,13 +12,10 @@ import (
 	"github.com/thought-machine/please/src/fs"
 )
 
-func parseTestResults(outputFile string, data [][]byte) (core.TestSuite, error) {
-	if len(data) == 0 {
-		return parseTestResultsDir(outputFile)
-	}
+func parseTestResults(data [][]byte) (core.TestSuite, error) {
 	suite := core.TestSuite{}
 	for _, datum := range data {
-		newSuite, err := parseTestResultData(datum)
+		newSuite, err := parseTestResultDatum(datum)
 		if err != nil {
 			return suite, err
 		}
@@ -27,15 +24,15 @@ func parseTestResults(outputFile string, data [][]byte) (core.TestSuite, error) 
 	return suite, nil
 }
 
-func parseTestResultsFile(outputFile string) (core.TestSuite, error) {
-	data, err := ioutil.ReadFile(outputFile)
+func parseTestResultsFile(file string) (core.TestSuite, error) {
+	data, err := readTestResultsDir(file)
 	if err != nil {
 		return core.TestSuite{}, err
 	}
-	return parseTestResultData(data)
+	return parseTestResults(data)
 }
 
-func parseTestResultData(data []byte) (core.TestSuite, error) {
+func parseTestResultDatum(data []byte) (core.TestSuite, error) {
 	if len(data) == 0 {
 		return core.TestSuite{}, fmt.Errorf("No results")
 	} else if looksLikeJUnitXMLTestResults(data) {
@@ -50,18 +47,18 @@ func parseTestResultData(data []byte) (core.TestSuite, error) {
 	}
 }
 
-func parseTestResultsDir(outputDir string) (core.TestSuite, error) {
-	results := core.TestSuite{}
+func readTestResultsDir(outputDir string) ([][]byte, error) {
+	var results [][]byte
 	if !core.PathExists(outputDir) {
 		return results, fmt.Errorf("Didn't find any test results in %s", outputDir)
 	}
 	err := fs.Walk(outputDir, func(path string, isDir bool) error {
 		if !isDir {
-			fileResults, err := parseTestResultsFile(path)
+			fileResults, err := ioutil.ReadFile(path)
 			if err != nil {
 				return fmt.Errorf("Error parsing %s: %s", path, err)
 			}
-			results.Collapse(fileResults)
+			results = append(results, fileResults)
 		}
 		return nil
 	})
