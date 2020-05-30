@@ -296,6 +296,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	if runRemotely {
 		target.SetState(core.BuiltRemotely)
 		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
+		if state.ShouldDownload(target) {
+			buildLinks(state, target)
+		}
 		return nil
 	} else if err := storeTargetMetadata(target, metadata); err != nil {
 		return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
