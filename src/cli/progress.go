@@ -36,6 +36,9 @@ func NewProgressReader(reader io.ReadCloser, total int, message string) io.ReadC
 			r.interactive = false
 		}
 		r.width = cols
+		if cols < 40 { // Too small to print much of use at this point, and save a crash (see #967)
+			r.interactive = false
+		}
 	}
 	return r
 }
