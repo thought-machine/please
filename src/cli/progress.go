@@ -19,6 +19,10 @@ type progressReader struct {
 	interactive               bool
 }
 
+// This is the minimum column width we support. Below this it becomes hard to print sensible
+// content (and later we can run into issues with repeats, see #967)
+const minCols = 40
+
 // NewProgressReader returns a new progress bar reader.
 // total describes the total size of it, in bytes. It can be zero.
 func NewProgressReader(reader io.ReadCloser, total int, message string) io.ReadCloser {
@@ -36,7 +40,7 @@ func NewProgressReader(reader io.ReadCloser, total int, message string) io.ReadC
 			r.interactive = false
 		}
 		r.width = cols
-		if cols < 40 { // Too small to print much of use at this point, and save a crash (see #967)
+		if cols < minCols { // Too small to print much of use at this point, and save a crash (see #967)
 			r.interactive = false
 		}
 	}
@@ -84,7 +88,7 @@ func (pr *progressReader) update() {
 	maxBytes := humanize.Bytes(uint64(pr.max))
 	proportion := float64(pr.current) / float64(pr.max)
 	percentage := 100.0 * proportion
-	totalCols := pr.width - 40 // Pretty arbitrary amount of overhead to make sure we have space.
+	totalCols := pr.width - minCols // Pretty arbitrary amount of overhead to make sure we have space.
 	currentPos := int(proportion * float64(totalCols))
 	if currentPos > totalCols {
 		currentPos = totalCols
