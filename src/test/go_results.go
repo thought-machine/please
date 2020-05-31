@@ -52,18 +52,9 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 				// The skip message is found at the bottom of the test output segment.
 				// Prior to Go 1.14 the test output segment follows the results line.
 				// In Go 1.14 the test output segment sits between the start line and the results line.
-
-				var outputLines []string
-				if resultLooksPriorGo114(i, lines) {
-					outputLines = getPostResultOutput(i, lines)
-				} else {
-					outputLines = getPreResultOutput(i, lines)
-				}
-
-				var skipMessage string
-				if len(outputLines) == 0 {
-					skipMessage = ""
-				} else {
+				outputLines := getTestOutputLines(i, lines)
+				skipMessage := ""
+				if len(outputLines) > 0 {
 					skipMessage = strings.TrimSpace(outputLines[len(outputLines)-1])
 				}
 
@@ -76,12 +67,7 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 				})
 			} else {
 
-				var outputLines []string
-				if resultLooksPriorGo114(i, lines) {
-					outputLines = getPostResultOutput(i, lines)
-				} else {
-					outputLines = getPreResultOutput(i, lines)
-				}
+				outputLines := getTestOutputLines(i, lines)
 
 				output := strings.Join(outputLines, "\n")
 				testCase.Executions = append(testCase.Executions, core.TestExecution{
@@ -108,9 +94,16 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 	return results, nil
 }
 
-// A skip result looks like go test output prior to 114 the previous line matches against a start test block.
-// Only fully applicable for failing and skipped tests
-// (as a message is guaranteed to occur before the results block).
+func getTestOutputLines(currentIndex int, lines [][]byte) []string {
+	if resultLooksPriorGo114(currentIndex, lines) {
+		return getPostResultOutput(currentIndex, lines)
+	}
+	return getPreResultOutput(currentIndex, lines)
+}
+
+// Go test output looks prior to 114 if the previous line matches against a start test block.
+// Only fully applicable for failing and skipped tests as a message may not
+// appear for passed tests.
 func resultLooksPriorGo114(currentIndex int, lines [][]byte) bool {
 	if currentIndex == 0 {
 		return false
@@ -118,11 +111,8 @@ func resultLooksPriorGo114(currentIndex int, lines [][]byte) bool {
 
 	prevLine := lines[currentIndex-1]
 	prevLineMatchesStart := testStart.FindSubmatch(prevLine)
-	if prevLineMatchesStart != nil {
-		return true
-	}
 
-	return false
+	return prevLineMatchesStart != nil
 }
 
 // Get the output for Go test output prior to Go 1.14
