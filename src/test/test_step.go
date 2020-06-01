@@ -147,6 +147,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	if state.NumTestRuns == 1 && !runRemotely && !needToRun() {
 		if cachedResults := cachedTestResults(); cachedResults != nil {
 			target.Results = *cachedResults
+			log.Warningf("Loading test results from cache %v", target.Label)
 			return
 		}
 	}
