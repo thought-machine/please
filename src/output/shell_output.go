@@ -107,7 +107,7 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 		if state.PrepareOnly || state.PrepareShell {
 			printTempDirs(state, duration)
 		} else if state.NeedTests { // Got to the test phase, report their results.
-			printTestResults(state, failedTargets, duration, detailedTests)
+			printTestResults(state, failedTargets, failedTargetMap, duration, detailedTests)
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
 		} else if !state.NeedRun { // Must be plz build or similar, report build outputs.
@@ -204,20 +204,22 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 	}
 }
 
-func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, duration time.Duration, detailed bool) {
+func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, failedTargetsMap map[core.BuildLabel]error, duration time.Duration, detailed bool) {
 	if len(failedTargets) > 0 {
 		for _, failed := range failedTargets {
 			target := state.Graph.TargetOrDie(failed)
 			if target.Results.Failures() == 0 && target.Results.Errors() == 0 {
 				if target.Results.TimedOut {
 				} else {
-					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}\n", target.Label)
+					err := failedTargetsMap[target.Label]
+					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}: %v\n", target.Label, err)
 					target.Results.TestCases = append(target.Results.TestCases, core.TestCase{
 						Executions: []core.TestExecution{
 							{
 								Error: &core.TestResultFailure{
 									Type:    "FailedToRun",
-									Message: "Failed to run test", // TODO(jpoole): include the build resuult message here
+									Message: "Failed to run test",
+									Traceback: err.Error(),
 								},
 							},
 						},
