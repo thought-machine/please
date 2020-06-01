@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -140,6 +141,8 @@ type BuildTarget struct {
 	Progress float32 `print:"false"`
 	// The results of this test target, if it is one.
 	Results TestSuite `print:"false"`
+	// A mutex to control access to Results
+	resultsMux sync.Mutex `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
 	BuildingDescription string `name:"building_description"`
@@ -302,10 +305,15 @@ func (target *BuildTarget) OutDir() string {
 }
 
 // TestDir returns the test directory for this target, eg.
-// //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy._test
+// //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy._test/run_1
 // This is different to TmpDir so we run tests in a clean environment
 // and to facilitate containerising tests.
-func (target *BuildTarget) TestDir() string {
+func (target *BuildTarget) TestDir(runNumber int) string {
+	return path.Join(target.TestDirs(), fmt.Sprint("run_", runNumber))
+}
+
+// TestDirs contains the parent directory of all the test run directories above
+func (target *BuildTarget) TestDirs() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
 }
 
@@ -317,6 +325,29 @@ func (target *BuildTarget) TestResultsFile() string {
 // CoverageFile returns the output coverage file for tests for this target.
 func (target *BuildTarget) CoverageFile() string {
 	return path.Join(target.OutDir(), ".test_coverage_"+target.Label.Name)
+}
+
+// AddTestResults adds results to the target
+func (target *BuildTarget) AddTestResults(results TestSuite) {
+	target.resultsMux.Lock()
+	defer target.resultsMux.Unlock()
+
+	target.Results.Collapse(results)
+}
+
+// StartTestSuite sets the initial properties on the result test suite
+func (target *BuildTarget) StartTestSuite() {
+	target.resultsMux.Lock()
+	defer target.resultsMux.Unlock()
+
+	// If the results haven't been set yet, set them
+	if target.Results.Name == "" {
+		target.Results = TestSuite{
+			Package:   strings.Replace(target.Label.PackageName, "/", ".", -1),
+			Name:      target.Label.Name,
+			Timestamp: time.Now().Format(time.RFC3339),
+		}
+	}
 }
 
 // AllSourcePaths returns all the source paths for this target

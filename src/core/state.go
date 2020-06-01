@@ -42,6 +42,7 @@ const (
 type pendingTask struct {
 	Label     BuildLabel // Label of target to parse
 	Dependent BuildLabel // The target that depended on it (only for parse tasks)
+	Run       int        // The run number of this task (only for tests)
 	Type      taskType
 }
 
@@ -49,11 +50,29 @@ func (t pendingTask) Compare(that queue.Item) int {
 	return int((t.Type & priorityMask) - (that.(pendingTask).Type & priorityMask))
 }
 
-// A LabelPair is the type returned for parse tasks
-type LabelPair struct {
+// ParseTask is the type for the parse task queue
+type ParseTask struct {
 	Label, Dependent BuildLabel
 	ForSubinclude    bool
 }
+
+// BuildTask is the type for the build task queue
+type BuildTask = BuildLabel
+
+// TestTask is the type for the test task queue
+type TestTask struct {
+	Label BuildLabel
+	Run   int
+}
+
+// ParseTaskQueue is a channel to send parse tasks down to parse worker pool
+type ParseTaskQueue = chan ParseTask
+
+// BuildTaskQueue is a channel to send build tasks down to please worker pool
+type BuildTaskQueue = chan BuildTask
+
+// TestTaskQueue is a channel to send test tasks down to please worker pool
+type TestTaskQueue = chan TestTask
 
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
@@ -175,6 +194,9 @@ type BuildState struct {
 	Watch bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
 	NumTestRuns int
+	// Whether to run multiple test runs sequentially or across multiple workers (can be useful if tests bind to ports
+	// or similar)
+	TestSequentially bool
 	// True to clean working directories after successful builds.
 	CleanWorkdirs bool
 	// True if we're forcing a rebuild of the original targets.
@@ -258,20 +280,24 @@ func (state *BuildState) AddPendingBuild(label BuildLabel, forSubinclude bool) {
 }
 
 // AddPendingTest adds a task for a pending test of a target.
-func (state *BuildState) AddPendingTest(label BuildLabel) {
+func (state *BuildState) AddPendingTest(label BuildLabel, run int) {
 	if state.NeedTests {
-		state.addPending(label, Test)
+		state.addPendingTask(pendingTask{
+			Label: label,
+			Type:  Test,
+			Run:   run,
+		})
 	}
 }
 
 // TaskQueues returns a set of channels to listen on for tasks of various types.
 // This should only be called once per state (otherwise you will not get a full set of tasks).
-func (state *BuildState) TaskQueues() (parses <-chan LabelPair, builds, tests, remoteBuilds, remoteTests <-chan BuildLabel) {
-	p := make(chan LabelPair, 100)
-	b := make(chan BuildLabel, 100)
-	t := make(chan BuildLabel, 100)
+func (state *BuildState) TaskQueues() (parses ParseTaskQueue, builds BuildTaskQueue, tests TestTaskQueue, remoteBuilds BuildTaskQueue, remoteTests TestTaskQueue) {
+	p := make(chan ParseTask, 100)
+	b := make(chan BuildTask, 100)
+	t := make(chan TestTask, 100)
 	rb := make(chan BuildLabel, 100)
-	rt := make(chan BuildLabel, 100)
+	rt := make(chan TestTask, 100)
 	go state.feedQueues(p, b, t, rb, rt)
 	return p, b, t, rb, rt
 }
@@ -279,17 +305,15 @@ func (state *BuildState) TaskQueues() (parses <-chan LabelPair, builds, tests, r
 // feedQueues feeds the build queues created in TaskQueues.
 // We retain the internal priority queue since it is unbounded size which is pretty important
 // for us not to deadlock.
-func (state *BuildState) feedQueues(parses chan<- LabelPair, builds, tests, remoteBuilds, remoteTests chan<- BuildLabel) {
+func (state *BuildState) feedQueues(parses ParseTaskQueue, builds BuildTaskQueue, tests TestTaskQueue, remoteBuilds BuildTaskQueue, remoteTests TestTaskQueue) {
 	anyRemote := state.Config.NumRemoteExecutors() > 0
-	queue := func(label BuildLabel, local, remote chan<- BuildLabel) chan<- BuildLabel {
-		if anyRemote && !state.Graph.Target(label).Local {
-			return remote
-		}
-		return local
-	}
 	for {
 		t, _ := state.pendingTasks.Get(1)
 		task := t[0].(pendingTask)
+		remote := func() bool {
+			return anyRemote && !state.Graph.Target(task.Label).Local
+		}
+
 		switch task.Type {
 		case Stop, Kill:
 			close(parses)
@@ -299,20 +323,36 @@ func (state *BuildState) feedQueues(parses chan<- LabelPair, builds, tests, remo
 			close(remoteTests)
 			return
 		case Parse, SubincludeParse:
-			parses <- LabelPair{Label: task.Label, Dependent: task.Dependent, ForSubinclude: task.Type == SubincludeParse}
+			parses <- ParseTask{Label: task.Label, Dependent: task.Dependent, ForSubinclude: task.Type == SubincludeParse}
 		case Build, SubincludeBuild:
 			atomic.AddInt64(&state.progress.numRunning, 1)
-			queue(task.Label, builds, remoteBuilds) <- task.Label
+			if remote() {
+				remoteBuilds <- task.Label
+			} else {
+				builds <- task.Label
+			}
 		case Test:
 			atomic.AddInt64(&state.progress.numRunning, 1)
-			queue(task.Label, tests, remoteTests) <- task.Label
+			testTask := TestTask{
+				Label: task.Label,
+				Run:   task.Run,
+			}
+			if remote() {
+				remoteTests <- testTask
+			} else {
+				tests <- testTask
+			}
 		}
 	}
 }
 
 func (state *BuildState) addPending(label BuildLabel, t taskType) {
+	state.addPendingTask(pendingTask{Label: label, Type: t})
+}
+
+func (state *BuildState) addPendingTask(task pendingTask) {
 	atomic.AddInt64(&state.progress.numPending, 1)
-	state.pendingTasks.Put(pendingTask{Label: label, Type: t})
+	_ = state.pendingTasks.Put(task)
 }
 
 // TaskDone indicates that a single task is finished. Should be called after one is finished with

@@ -31,10 +31,6 @@ python_test(
 )
 
 # Test that has no actual tests in it. Should still count as a pass.
-python_test(
-    name = "empty_test",
-    srcs = ["empty_test.py"],
-)
 
 # Test that the build rules accept a python_binary that has a rule as the main.
 filegroup(

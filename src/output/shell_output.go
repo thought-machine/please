@@ -96,7 +96,7 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 			log.Fatalf("Target %s doesn't exist in build graph", label)
 		} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
 			// Do nothing, we will output about this shortly.
-		} else if state.NeedBuild && target != nil && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
+		} else if state.NeedBuild && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
 			// N.B. Currently targets that are added post-build are excluded here, because in some legit cases this
 			//      check can fail incorrectly. It'd be better to verify this more precisely though.
 			cycle := graphCycleMessage(state.Graph, target)
@@ -107,7 +107,7 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 		if state.PrepareOnly || state.PrepareShell {
 			printTempDirs(state, duration)
 		} else if state.NeedTests { // Got to the test phase, report their results.
-			printTestResults(state, failedTargets, duration, detailedTests)
+			printTestResults(state, failedTargets, failedTargetMap, duration, detailedTests)
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
 		} else if !state.NeedRun { // Must be plz build or similar, report build outputs.
@@ -204,20 +204,22 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 	}
 }
 
-func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, duration time.Duration, detailed bool) {
+func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, failedTargetsMap map[core.BuildLabel]error, duration time.Duration, detailed bool) {
 	if len(failedTargets) > 0 {
 		for _, failed := range failedTargets {
 			target := state.Graph.TargetOrDie(failed)
 			if target.Results.Failures() == 0 && target.Results.Errors() == 0 {
 				if target.Results.TimedOut {
 				} else {
-					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}\n", target.Label)
+					err := failedTargetsMap[target.Label]
+					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}: %v\n", target.Label, err)
 					target.Results.TestCases = append(target.Results.TestCases, core.TestCase{
 						Executions: []core.TestExecution{
 							{
 								Error: &core.TestResultFailure{
-									Type:    "FailedToRun",
-									Message: "Failed to run test",
+									Type:      "FailedToRun",
+									Message:   "Failed to run test",
+									Traceback: err.Error(),
 								},
 							},
 						},
@@ -478,7 +480,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 		env := core.StampedBuildEnvironment(state, target, nil, path.Join(core.RepoRoot, target.TmpDir()))
 		if state.NeedTests {
 			cmd = target.GetTestCommand(state)
-			dir = path.Join(core.RepoRoot, target.TestDir())
+			dir = path.Join(core.RepoRoot, target.TestDirs())
 			env = core.TestEnvironment(state, target, dir)
 		}
 		cmd, _ = core.ReplaceSequences(state, target, cmd)

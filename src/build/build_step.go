@@ -64,7 +64,13 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 		}
 	}
 	if target.IsTest && state.NeedTests && ((state.IsOriginalTarget(target.Label) && state.ShouldInclude(target)) || state.IsExactOriginalTarget(target.Label)) {
-		state.AddPendingTest(target.Label)
+		if state.TestSequentially {
+			state.AddPendingTest(target.Label, 1)
+		} else {
+			for runNum := 1; runNum <= state.NumTestRuns; runNum++ {
+				state.AddPendingTest(target.Label, runNum)
+			}
+		}
 	}
 }
 
