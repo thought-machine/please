@@ -73,11 +73,12 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		results.Cached = true
 		if err != nil {
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to parse cached test file %s", cachedOutputFile)
-		} else if results.Failures() > 0 {
+		} else if !results.TestCases.AllSucceeded() {
 			log.Warning("Test results (for %s) with failures shouldn't be cached - ignoring.", label)
 			state.Cache.Clean(target)
 			return nil
 		} else {
+			log.Warningf("Test success for %v", target.Label)
 			logTestSuccess(state, tid, label, &results, coverage)
 		}
 		return &results
@@ -212,13 +213,6 @@ func addResultsToTarget(target *core.BuildTarget, results core.TestSuite) {
 	log.Warningf("Adding results to target, %v, test cases: %d", target.Label, len(results.TestCases))
 
 	target.Results.Collapse(results)
-}
-
-func doRun(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
-	coverage := &core.TestCoverage{}
-	results := core.TestSuite{}
-
-	return results, coverage
 }
 
 // doFlakeRun runs a test repeatably until it succeeds or exceeds the max number of flakes for the test

@@ -174,6 +174,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		updateTarget(state, plainOutput, &buildingTargets[result.ThreadID], label, active, failed, cached, result.Description, result.Err, targetColour(target), target)
 	}
 	if failed {
+		log.Warningf("%v was a failure: %v", label, result.Status)
 		failedTargetMap[label] = result.Err
 		// Don't stop here after test failure, aggregate them for later.
 		if result.Status != core.TargetTestFailed {
