@@ -96,7 +96,7 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 			log.Fatalf("Target %s doesn't exist in build graph", label)
 		} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
 			// Do nothing, we will output about this shortly.
-		} else if state.NeedBuild && target != nil && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
+		} else if state.NeedBuild && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
 			// N.B. Currently targets that are added post-build are excluded here, because in some legit cases this
 			//      check can fail incorrectly. It'd be better to verify this more precisely though.
 			cycle := graphCycleMessage(state.Graph, target)
@@ -174,7 +174,6 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		updateTarget(state, plainOutput, &buildingTargets[result.ThreadID], label, active, failed, cached, result.Description, result.Err, targetColour(target), target)
 	}
 	if failed {
-		log.Warningf("%v was a failure: %v", label, result.Status)
 		failedTargetMap[label] = result.Err
 		// Don't stop here after test failure, aggregate them for later.
 		if result.Status != core.TargetTestFailed {
@@ -218,8 +217,8 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 							{
 								Error: &core.TestResultFailure{
 									Type:    "FailedToRun",
-									Message: "Failed to run test",
-								},
+									Message: "Failed to run test", // TODO(jpoole): include the build resuult message here
+,								},
 							},
 						},
 					})

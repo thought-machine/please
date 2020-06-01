@@ -72,13 +72,14 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		results.Name = target.Label.Name
 		results.Cached = true
 		if err != nil {
-			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to parse cached test file %s", cachedOutputFile)
+			log.Warningf("Failed to parse cached test file (for %v), Rerunning test. %w", target.Label, err)
+			state.Cache.Clean(target)
+			return nil
 		} else if !results.TestCases.AllSucceeded() {
 			log.Warning("Test results (for %s) with failures shouldn't be cached - ignoring.", label)
 			state.Cache.Clean(target)
 			return nil
 		} else {
-			log.Warningf("Test success for %v", target.Label)
 			logTestSuccess(state, tid, label, &results, coverage)
 		}
 		return &results
@@ -148,7 +149,6 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	if state.NumTestRuns == 1 && !runRemotely && !needToRun() {
 		if cachedResults := cachedTestResults(); cachedResults != nil {
 			target.Results = *cachedResults
-			log.Warningf("Loading test results from cache %v", target.Label)
 			return
 		}
 	}
