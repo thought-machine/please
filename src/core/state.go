@@ -312,7 +312,9 @@ func (state *BuildState) feedQueues(parses ParseTaskQueue, builds BuildTaskQueue
 	for {
 		t, _ := state.pendingTasks.Get(1)
 		task := t[0].(pendingTask)
-		remote := anyRemote && !state.Graph.Target(task.Label).Local
+		remote := func() bool {
+			return anyRemote && !state.Graph.Target(task.Label).Local
+		}
 
 		switch task.Type {
 		case Stop, Kill:
@@ -326,7 +328,7 @@ func (state *BuildState) feedQueues(parses ParseTaskQueue, builds BuildTaskQueue
 			parses <- ParseTask{Label: task.Label, Dependent: task.Dependent, ForSubinclude: task.Type == SubincludeParse}
 		case Build, SubincludeBuild:
 			atomic.AddInt64(&state.progress.numRunning, 1)
-			if remote {
+			if remote() {
 				remoteBuilds <- task.Label
 			} else {
 				builds <- task.Label
@@ -337,7 +339,7 @@ func (state *BuildState) feedQueues(parses ParseTaskQueue, builds BuildTaskQueue
 				Label: task.Label,
 				Run:   task.Run,
 			}
-			if remote {
+			if remote() {
 				remoteTests <- testTask
 			} else {
 				tests <- testTask
