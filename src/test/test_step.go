@@ -207,6 +207,9 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 func addResultsToTarget(target *core.BuildTarget, results core.TestSuite) {
 	target.ResultsMux.Lock()
 	defer target.ResultsMux.Unlock()
+
+	log.Warningf("Adding results to target, %v, test cases: %d", target.Label, len(results.TestCases))
+
 	target.Results.Collapse(results)
 }
 
@@ -429,28 +432,6 @@ func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget
 	return runTest(state, target, run)
 }
 
-func testFailure(name string, duration *time.Duration, stdOut string, stdErr string, message string, _type string, traceback string) core.TestSuite {
-	return core.TestSuite{
-		TestCases: []core.TestCase{
-			{
-				Name: name,
-				Executions: []core.TestExecution{
-					{
-						Duration: duration,
-						Stdout:   stdOut,
-						Stderr:   stdErr,
-						Error: &core.TestResultFailure{
-							Message:   message,
-							Type:      _type,
-							Traceback: traceback,
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
 func parseTestOutput(stdout string, stderr string, runError error, duration time.Duration, target *core.BuildTarget, resultsData [][]byte) core.TestSuite {
 	// This is all pretty involved; there are lots of different possibilities of what could happen.
 	// The contract is that the test must return zero on success or non-zero on failure (Unix FTW).
@@ -468,9 +449,28 @@ func parseTestOutput(stdout string, stderr string, runError error, duration time
 	// Output and no execution error - PARSE OUTPUT - Ignore noTestOutput
 	// Output and execution error - PARSE OUTPUT + SYNTHETIC ERROR - Incomplete Run
 
-	fail := func(msg, _type, traceback string) core.TestSuite {
-		return testFailure(target.Results.Name, &duration, stdout, stderr, msg, _type, traceback)
+	failSuite := func(msg, resultType, traceback string) core.TestSuite {
+		return core.TestSuite{
+			TestCases: []core.TestCase{
+				{
+					Name: target.Results.Name,
+					Executions: []core.TestExecution{
+						{
+							Duration: &duration,
+							Stdout:   stdout,
+							Stderr:   stderr,
+							Error: &core.TestResultFailure{
+								Message:   msg,
+								Type:      resultType,
+								Traceback: traceback,
+							},
+						},
+					},
+				},
+			},
+		}
 	}
+
 	if len(resultsData) == 0 {
 		if runError == nil {
 			// No output and no execution error and output not expected - OK
@@ -492,27 +492,27 @@ func parseTestOutput(stdout string, stderr string, runError error, duration time
 				}
 			}
 			//No output and no execution error and output expected - SYNTHETIC ERROR - Missing Results
-			return fail("Test failed to produce output results file", "MissingResults", "")
+			return failSuite("Test failed to produce output results file", "MissingResults", "")
 		}
-		return fail("Test failed", "TestFailed", runError.Error())
+		return failSuite("Test failed", "TestFailed", runError.Error())
 	}
 
 	results, parseError := parseTestResults(resultsData)
 	if parseError != nil {
 		// Output fails to parse with execution error - SYNTHETIC ERROR + EXECUTION ERROR - Failed to parse output
 		if runError != nil {
-			return fail("Test failed with no results", "NoResults", runError.Error())
+			return failSuite("Test failed with no results", "NoResults", runError.Error())
 		}
 		// Output fails to parse - SYNTHETIC ERROR - Failed to parse output
-		return fail("Couldn't parse test output file", "NoResults", parseError.Error())
+		return failSuite("Couldn't parse test output file", "NoResults", parseError.Error())
 	}
 
 	// Output and no execution error - PARSE OUTPUT - Ignore noTestOutput
 	if runError != nil && results.Failures() == 0 {
 		// Add a failure result to the test so it shows up in the final aggregation.
-		results.Add(fail("Test returned nonzero but reported no errors", "ReturnValue", runError.Error()).TestCases...)
+		results.Add(failSuite("Test returned nonzero but reported no errors", "ReturnValue", runError.Error()).TestCases...)
 	} else if runError == nil && results.Failures() != 0 {
-		results.Add(fail("Test returned 0 but still reported failures", "ReturnValue", "").TestCases...)
+		results.Add(failSuite("Test returned 0 but still reported failures", "ReturnValue", "").TestCases...)
 	}
 
 	return results
