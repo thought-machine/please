@@ -210,8 +210,6 @@ func addResultsToTarget(target *core.BuildTarget, results core.TestSuite) {
 	target.ResultsMux.Lock()
 	defer target.ResultsMux.Unlock()
 
-	log.Warningf("Adding results to target, %v, test cases: %d", target.Label, len(results.TestCases))
-
 	target.Results.Collapse(results)
 }
 

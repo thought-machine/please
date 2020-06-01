@@ -218,7 +218,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 								Error: &core.TestResultFailure{
 									Type:    "FailedToRun",
 									Message: "Failed to run test", // TODO(jpoole): include the build resuult message here
-,								},
+								},
 							},
 						},
 					})
