@@ -441,8 +441,10 @@ func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
-	if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, needStdout); metadata != nil {
-		return metadata, ar, nil
+	if !isTest || c.state.NumTestRuns == 1 {
+		if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, needStdout); metadata != nil {
+			return metadata, ar, nil
+		}
 	}
 	// We didn't actually upload the inputs before, so we must do so now.
 	command, digest, err := c.uploadAction(target, isTest, false)

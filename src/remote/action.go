@@ -161,6 +161,9 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 	}
 	const commandPrefix = "export TMP_DIR=\"`pwd`\" TEST_DIR=\"`pwd`\" && "
 	cmd, err := core.ReplaceTestSequences(c.state, target, target.GetTestCommand(c.state))
+	if len(c.state.TestArgs) != 0 {
+		cmd += " " + strings.Join(c.state.TestArgs, " ")
+	}
 	return &pb.Command{
 		Platform: &pb.Platform{
 			Properties: []*pb.Platform_Property{
