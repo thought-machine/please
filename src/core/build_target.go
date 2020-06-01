@@ -336,7 +336,7 @@ func (target *BuildTarget) AddTestResults(results TestSuite) {
 }
 
 // StartTestSuite sets the initial properties on the result test suite
-func (target *BuildTarget) StartTestSuite(){
+func (target *BuildTarget) StartTestSuite() {
 	target.resultsMux.Lock()
 	defer target.resultsMux.Unlock()
 

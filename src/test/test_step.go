@@ -514,7 +514,7 @@ func moveOutputFile(state *core.BuildState, hash []byte, from, to, dummy string)
 func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) error {
 	workerCmd, _, testCmd, err := core.TestWorkerCommand(state, target)
 	if err != nil {
-		return  err
+		return err
 	} else if workerCmd == "" {
 		return nil
 	}
