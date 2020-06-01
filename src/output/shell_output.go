@@ -217,8 +217,8 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 						Executions: []core.TestExecution{
 							{
 								Error: &core.TestResultFailure{
-									Type:    "FailedToRun",
-									Message: "Failed to run test",
+									Type:      "FailedToRun",
+									Message:   "Failed to run test",
 									Traceback: err.Error(),
 								},
 							},

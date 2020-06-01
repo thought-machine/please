@@ -142,7 +142,7 @@ type BuildTarget struct {
 	// The results of this test target, if it is one.
 	Results TestSuite `print:"false"`
 	// A mutex to control access to Results
-	ResultsMux sync.Mutex
+	resultsMux sync.Mutex `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
 	BuildingDescription string `name:"building_description"`
@@ -325,6 +325,29 @@ func (target *BuildTarget) TestResultsFile() string {
 // CoverageFile returns the output coverage file for tests for this target.
 func (target *BuildTarget) CoverageFile() string {
 	return path.Join(target.OutDir(), ".test_coverage_"+target.Label.Name)
+}
+
+// AddTestResults adds results to the target
+func (target *BuildTarget) AddTestResults(results TestSuite) {
+	target.resultsMux.Lock()
+	defer target.resultsMux.Unlock()
+
+	target.Results.Collapse(results)
+}
+
+// StartTestSuite sets the initial properties on the result test suite
+func (target *BuildTarget) StartTestSuite(){
+	target.resultsMux.Lock()
+	defer target.resultsMux.Unlock()
+
+	// If the results haven't been set yet, set them
+	if target.Results.Name == "" {
+		target.Results = TestSuite{
+			Package:   strings.Replace(target.Label.PackageName, "/", ".", -1),
+			Name:      target.Label.Name,
+			Timestamp: time.Now().Format(time.RFC3339),
+		}
+	}
 }
 
 // AllSourcePaths returns all the source paths for this target

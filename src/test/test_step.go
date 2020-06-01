@@ -153,29 +153,13 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		}
 	}
 
-	// If the test results haven't been initialised, initialise them now
-	initialiseTargetResults(target)
-
 	// Remove any cached test result file.
 	if err := RemoveTestOutputs(target); err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to remove test output files")
 		return
 	}
-	if worker, err := startTestWorkerIfNeeded(tid, state, target); err != nil {
-		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to start test worker")
-		testCase := core.TestCase{
-			Name: worker,
-			Executions: []core.TestExecution{
-				{
-					Failure: &core.TestResultFailure{
-						Message:   "Failed to start test worker",
-						Type:      "WorkerFail",
-						Traceback: err.Error(),
-					},
-				},
-			},
-		}
-		addTestCasesToTargetResult(target, core.TestCases{testCase})
+	if err := startTestWorkerIfNeeded(tid, state, target); err != nil {
+		state.LogBuildError(tid, label, core.TargetTestFailed, fmt.Errorf("failed to start test worker: %w", err), "Failed to start test worker")
 		return
 	}
 
@@ -183,7 +167,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	if state.NumTestRuns == 1 {
 		var results core.TestSuite
 		results, coverage = doFlakeRun(tid, state, target, runRemotely)
-		addResultsToTarget(target, results)
+		target.AddTestResults(results)
 
 		if target.Results.TestCases.AllSucceeded() && !runRemotely {
 			// Success, store in cache
@@ -194,23 +178,16 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			state.LogBuildResult(tid, target.Label, core.TargetTesting, getRunStatus(run, state.NumTestRuns))
 			var results core.TestSuite
 			results, coverage = doTest(tid, state, target, runRemotely, 1) // Sequential tests re-use run 1's test dir
-			addResultsToTarget(target, results)
+			target.AddTestResults(results)
 		}
 	} else {
 		state.LogBuildResult(tid, target.Label, core.TargetTesting, getRunStatus(run, state.NumTestRuns))
 		var results core.TestSuite
 		results, coverage = doTest(tid, state, target, runRemotely, run)
-		addResultsToTarget(target, results)
+		target.AddTestResults(results)
 	}
 
 	logTargetResults(tid, state, target, coverage, run)
-}
-
-func addResultsToTarget(target *core.BuildTarget, results core.TestSuite) {
-	target.ResultsMux.Lock()
-	defer target.ResultsMux.Unlock()
-
-	target.Results.Collapse(results)
 }
 
 // doFlakeRun runs a test repeatably until it succeeds or exceeds the max number of flakes for the test
@@ -254,25 +231,6 @@ func getRunStatus(run int, numRuns int) string {
 		return "Testing..."
 	}
 	return fmt.Sprintf("Testing (run %d of %d)...", run, numRuns)
-}
-
-func initialiseTargetResults(target *core.BuildTarget) {
-	target.ResultsMux.Lock()
-	defer target.ResultsMux.Unlock()
-
-	if target.Results.Name == "" {
-		target.Results = core.TestSuite{
-			Package:   strings.Replace(target.Label.PackageName, "/", ".", -1),
-			Name:      target.Label.Name,
-			Timestamp: time.Now().Format(time.RFC3339),
-		}
-	}
-}
-
-func addTestCasesToTargetResult(target *core.BuildTarget, cases core.TestCases) {
-	target.ResultsMux.Lock()
-	defer target.ResultsMux.Unlock()
-	target.Results.TestCases = append(target.Results.TestCases, cases...)
 }
 
 func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget, coverage *core.TestCoverage, run int) {
@@ -553,12 +511,12 @@ func moveOutputFile(state *core.BuildState, hash []byte, from, to, dummy string)
 }
 
 // startTestWorkerIfNeeded starts a worker server if the test needs one.
-func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) (string, error) {
+func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) error {
 	workerCmd, _, testCmd, err := core.TestWorkerCommand(state, target)
 	if err != nil {
-		return "", err
+		return  err
 	} else if workerCmd == "" {
-		return "", nil
+		return nil
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Starting test worker...")
 	resp, err := worker.EnsureWorkerStarted(state, workerCmd, testCmd, target)
@@ -569,7 +527,7 @@ func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.Build
 			target.TestCommand = resp.Command
 		}
 	}
-	return workerCmd, err
+	return err
 }
 
 // verifyHash verifies that the hash on a test file matches the one for the current test.
