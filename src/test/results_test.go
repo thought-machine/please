@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 func TestGoFailure(t *testing.T) {
@@ -41,6 +43,60 @@ func TestGoSkipped(t *testing.T) {
 	assert.Equal(t, 3, results.Passes())
 	assert.Equal(t, 0, results.Failures())
 	assert.Equal(t, 1, results.Skips())
+}
+
+// TestGoSkipped tests the skip messages in versions of Go prior to 1.14.
+func TestGoSkippedMessage(t *testing.T) {
+	results, err := parseTestResultsFile("src/test/test_data/go_test_skip.txt")
+	require.NoError(t, err)
+
+	var skippedTC = getFirstSkippedTestCase(results)
+	assert.Equal(t, "interactive_display_test.go:21: haven't written proper support for this yet", skippedTC.Executions[0].Skip.Message)
+}
+
+// Go 1.14 changes the ordering of skipped messages in Go tests
+func TestGoSkippedMessage114(t *testing.T) {
+	results, err := parseTestResultsFile("src/test/test_data/go_test_skip_1_14.txt")
+	require.NoError(t, err)
+
+	var skippedTC = getFirstSkippedTestCase(results)
+	assert.Equal(t, "TestSomething: my_test.go:9: This test is skipped", skippedTC.Executions[0].Skip.Message)
+}
+
+func getFirstSkippedTestCase(ts core.TestSuite) *core.TestCase {
+	for _, tc := range ts.TestCases {
+		if tc.Skip() != nil {
+			return &tc
+		}
+	}
+	return nil
+}
+
+// TestGoFailedMessage tests the location of failed test output in versions of Go prior to 1.14.
+func TestGoFailedTraceback(t *testing.T) {
+	results, err := parseTestResultsFile("src/test/test_data/go_test_failure.txt")
+	require.NoError(t, err)
+
+	var failedTC = getFirstFailedTestCase(results)
+	assert.Equal(t, "\tresults_test.go:11: Unable to parse file: EOF", failedTC.Executions[0].Failure.Traceback)
+}
+
+// Go 1.14 changes the ordering of failed messages in Go tests
+func TestGoFailedTracebackGo114(t *testing.T) {
+	results, err := parseTestResultsFile("src/test/test_data/go_test_fail_1_14.txt")
+	require.NoError(t, err)
+
+	var failedTC = getFirstFailedTestCase(results)
+	assert.Equal(t, "    TestFail: my_test.go:17: This test is going to fail.", failedTC.Executions[0].Failure.Traceback)
+}
+
+func getFirstFailedTestCase(ts core.TestSuite) *core.TestCase {
+	for _, tc := range ts.TestCases {
+		if len(tc.Failures()) > 0 {
+			return &tc
+		}
+	}
+	return nil
 }
 
 func TestGoSubtests(t *testing.T) {
