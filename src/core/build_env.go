@@ -25,10 +25,6 @@ func GeneralBuildEnvironment(config *Configuration) BuildEnv {
 	env := BuildEnv{
 		// Need this for certain tools, for example sass
 		"LANG=" + config.Build.Lang,
-		// Expose the requested build config. We might also want to expose
-		// the command that's actually running (although typically this is more useful,
-		// because targets using this want to avoid defining different commands).
-		"BUILD_CONFIG=" + config.Build.Config,
 	}
 	if config.Go.GoRoot != "" {
 		env = append(env, "GOROOT="+config.Go.GoRoot)
@@ -45,8 +41,12 @@ func buildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 		"PKG="+target.Label.PackageName,
 		"PKG_DIR="+target.Label.PackageDir(),
 		"NAME="+target.Label.Name,
-		"CONFIG="+state.Config.Build.Config,
 	)
+	if state.Config.Remote.URL == "" || target.Local {
+		// Expose the requested build config, but it is not available for remote execution.
+		// TODO(peterebden): Investigate removing these env vars completely.
+		env = append(env, "BUILD_CONFIG="+state.Config.Build.Config, "CONFIG="+state.Config.Build.Config)
+	}
 	if target.PassEnv != nil {
 		for _, e := range *target.PassEnv {
 			env = append(env, e+"="+os.Getenv(e))
