@@ -23,7 +23,7 @@ func TestOutDir(t *testing.T) {
 
 func TestTestDir(t *testing.T) {
 	target := makeTarget1("//mickey/donald:goofy", "")
-	assert.Equal(t, "plz-out/tmp/mickey/donald/goofy._test", target.TestDir())
+	assert.Equal(t, "plz-out/tmp/mickey/donald/goofy._test/run_1", target.TestDir(1))
 }
 
 func TestTmpDirSubrepo(t *testing.T) {
@@ -40,7 +40,7 @@ func TestOutDirSubrepo(t *testing.T) {
 
 func TestTestDirSubrepo(t *testing.T) {
 	target := makeTarget1("@test_x86//mickey/donald:goofy", "")
-	assert.Equal(t, "plz-out/tmp/test_x86/mickey/donald/goofy._test", target.TestDir())
+	assert.Equal(t, "plz-out/tmp/test_x86/mickey/donald/goofy._test/run_1", target.TestDir(1))
 }
 
 func TestCanSee(t *testing.T) {

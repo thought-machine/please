@@ -244,9 +244,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if err := c.setOutputs(target.Label, ar); err != nil {
 		return metadata, c.wrapActionErr(err, digest)
 	}
-	// Need to download the target if it was originally requested (and the user didn't pass --nodownload).
-	// Also anything needed for subinclude needs to be local.
-	if (c.state.IsOriginalTarget(target.Label) && c.state.DownloadOutputs && !c.state.NeedTests) || target.NeededForSubinclude {
+	if c.state.ShouldDownload(target) {
 		if !c.outputsExist(target, digest) {
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
 			if err := c.download(target, func() error {
@@ -441,8 +439,10 @@ func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
-	if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, needStdout); metadata != nil {
-		return metadata, ar, nil
+	if !isTest || c.state.NumTestRuns == 1 {
+		if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, needStdout); metadata != nil {
+			return metadata, ar, nil
+		}
 	}
 	// We didn't actually upload the inputs before, so we must do so now.
 	command, digest, err := c.uploadAction(target, isTest, false)

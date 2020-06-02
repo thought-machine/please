@@ -17,13 +17,13 @@ func looksLikeIstanbulCoverageResults(results []byte) bool {
 	return bytes.HasPrefix(results, []byte("{"))
 }
 
-func parseIstanbulCoverageResults(target *core.BuildTarget, coverage *core.TestCoverage, data []byte) error {
+func parseIstanbulCoverageResults(target *core.BuildTarget, coverage *core.TestCoverage, data []byte, run int) error {
 	files := map[string]istanbulFile{}
 	if err := json.Unmarshal(data, &files); err != nil {
 		return err
 	}
 	for filename, file := range files {
-		coverage.Files[sanitiseFileName(target, filename)] = file.toLineCoverage()
+		coverage.Files[sanitiseFileName(target, filename, run)] = file.toLineCoverage()
 	}
 	coverage.Tests[target.Label] = coverage.Files
 	return nil
@@ -78,12 +78,12 @@ func (file *istanbulFile) maxLineNumber() int {
 }
 
 // sanitiseFileName strips out any build/test paths found in the given file.
-func sanitiseFileName(target *core.BuildTarget, filename string) string {
+func sanitiseFileName(target *core.BuildTarget, filename string, run int) string {
 	if s := sanitiseFileNameDir(filename, target.OutDir(), false); s != "" {
 		return s
 	} else if s := sanitiseFileNameDir(filename, target.TmpDir(), true); s != "" {
 		return s
-	} else if s := sanitiseFileNameDir(filename, target.TestDir(), true); s != "" {
+	} else if s := sanitiseFileNameDir(filename, target.TestDir(run), true); s != "" {
 		return s
 	} else if s := sanitiseFileNameDir(filename, core.SandboxDir, false); s != "" {
 		return s

@@ -447,9 +447,10 @@ func (f testFunction) Call(t *core.BuildTarget, o string) error { return nil }
 
 func TestMain(m *testing.M) {
 	server.Reset()
-	lis, err := net.Listen("tcp", "127.0.0.1:9987")
+	addr := "127.0.0.1:9987"
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatalf("Failed to listen on %s: %v", lis.Addr(), err)
+		log.Fatalf("Failed to listen on %s: %v", addr, err)
 	}
 	s := grpc.NewServer(grpc.UnaryInterceptor(server.RecoverUnaryPanics), grpc.StreamInterceptor(server.RecoverStreamPanics))
 	pb.RegisterCapabilitiesServer(s, server)
