@@ -51,6 +51,7 @@ func TestWriteTestMain(t *testing.T) {
 		"",
 		[]string{"tools/please_go_test/gotest/test_data/test/example_test.go"},
 		"test.go",
+		false,
 		[]CoverVar{},
 	)
 	assert.NoError(t, err)
@@ -67,6 +68,7 @@ func TestWriteTestMainWithCoverage(t *testing.T) {
 		"",
 		[]string{"tools/please_go_test/gotest/test_data/test/example_test.go"},
 		"test.go",
+		true,
 		[]CoverVar{{
 			Dir:        "tools/please_go_test/gotest/test_data",
 			ImportPath: "core",
