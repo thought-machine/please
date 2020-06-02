@@ -35,7 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error scanning for coverage: %s", err)
 	}
-	if err = gotest.WriteTestMain(opts.Package, opts.ImportPath, opts.Args.Sources, opts.Output, coverVars); err != nil {
+	if err = gotest.WriteTestMain(opts.Package, opts.ImportPath, opts.Args.Sources, opts.Output, opts.Dir != "", coverVars); err != nil {
 		log.Fatalf("Error writing test main: %s", err)
 	}
 	os.Exit(0)

@@ -21,15 +21,17 @@ type testDescr struct {
 	Examples  []*doc.Example
 	CoverVars []CoverVar
 	Imports   []string
+	Coverage  bool
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(pkgDir, importPath string, sources []string, output string, coverVars []CoverVar) error {
+func WriteTestMain(pkgDir, importPath string, sources []string, output string, coverage bool, coverVars []CoverVar) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
 	}
+	testDescr.Coverage = coverage
 	testDescr.CoverVars = coverVars
 	if len(testDescr.Functions) > 0 || len(testDescr.Examples) > 0 {
 		// Can't set this if there are no test functions, it'll be an unused import.
@@ -152,7 +154,7 @@ var examples = []testing.InternalExample{
 {{end}}
 }
 
-{{if .CoverVars}}
+{{if .Coverage}}
 
 // Only updated by init functions, so no need for atomicity.
 var (
@@ -192,7 +194,7 @@ func coverRegisterFile(fileName string, counter []uint32, pos []uint32, numStmts
 var testDeps = testdeps.TestDeps{}
 
 func main() {
-{{if .CoverVars}}
+{{if .Coverage}}
 	testing.RegisterCover(testing.Cover{
 		Mode: "set",
 		Counters: coverCounters,
