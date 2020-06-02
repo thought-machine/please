@@ -344,7 +344,7 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 		metadata, results, coverage, err := state.RemoteClient.Test(tid, target)
 		cov, err2 := parseRemoteCoverage(state, target, coverage, run)
 		if err == nil && err2 != nil {
-			log.Error("Error parsing coverage data: %s", err2)
+			log.Error("Error parsing coverage data for %s: %s", target, err2)
 		}
 		if metadata == nil {
 			metadata = &core.BuildMetadata{}
