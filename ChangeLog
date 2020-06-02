@@ -1,3 +1,12 @@
+Version 14.5.0
+--------------
+
+    * Runs tests in parallel across multiple workers when providing --num_runs flag (#996)
+    * Fixes for go coverage to make sure the coverage file is always generated (#977)
+    * Fix for parsing go 1.14 test output (#969)
+    * Fixed "negative repeat" issue with narrow terminal size when rending progress bars (#967)
+    * Supporting --num_runs meaningfully for remote execution (#974)
+
 Version 14.4.4
 --------------
 
