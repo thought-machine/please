@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sort"
 	"strings"
 	"time"
 
@@ -414,6 +415,11 @@ func (b *dirBuilder) dfs(name string, ch chan<- *chunker.Chunker) *pb.Digest {
 			d.Digest = b.dfs(path.Join(name, d.Name), ch)
 		}
 	}
+	// The protocol requires that these are sorted into lexicographic order. Not all servers
+	// necessarily care, but some do, and we should be compliant.
+	sort.Slice(dir.Files, func(i, j int) bool { return dir.Files[i].Name < dir.Files[j].Name })
+	sort.Slice(dir.Directories, func(i, j int) bool { return dir.Directories[i].Name < dir.Directories[j].Name })
+	sort.Slice(dir.Symlinks, func(i, j int) bool { return dir.Symlinks[i].Name < dir.Symlinks[j].Name })
 	chomk, _ := chunker.NewFromProto(dir, int(chunker.DefaultChunkSize))
 	if ch != nil {
 		ch <- chomk
