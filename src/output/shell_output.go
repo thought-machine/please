@@ -284,10 +284,10 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 					}
 					format := fmt.Sprintf("%%-%ds", width+1)
 					for _, result := range target.Results.TestCases {
-						printf("    %s\n", formatTestCase(result, fmt.Sprintf(format, result.Name)))
+						printf("    %s\n", formatTestCase(result, fmt.Sprintf(format, result.Name), detailed))
 						if len(result.Executions) > 1 {
 							for run, execution := range result.Executions {
-								printf("        RUN %d: %s\n", run+1, formatTestExecution(execution))
+								printf("        RUN %d: %s\n", run+1, formatTestExecution(execution, detailed))
 								if state.ShowTestOutput {
 									showExecutionOutput(execution)
 								}
@@ -320,7 +320,7 @@ func showExecutionOutput(execution core.TestExecution) {
 	}
 }
 
-func formatTestCase(result core.TestCase, name string) string {
+func formatTestCase(result core.TestCase, name string, detailed bool) string {
 	if len(result.Executions) == 0 {
 		return fmt.Sprintf("%s (No results)", formatTestName(result, name))
 	}
@@ -338,7 +338,7 @@ func formatTestCase(result core.TestCase, name string) string {
 	} else if len(result.Failures()) > 0 {
 		outcome = result.Failures()[0]
 	}
-	return fmt.Sprintf("%s %s", formatTestName(result, name), formatTestExecution(outcome))
+	return fmt.Sprintf("%s %s", formatTestName(result, name), formatTestExecution(outcome, detailed))
 }
 
 func formatTestName(testCase core.TestCase, name string) string {
@@ -357,7 +357,7 @@ func formatTestName(testCase core.TestCase, name string) string {
 	return testCase.Name
 }
 
-func formatTestExecution(execution core.TestExecution) string {
+func formatTestExecution(execution core.TestExecution, detailed bool) string {
 	if execution.Error != nil {
 		return "${BOLD_CYAN}ERROR${RESET}"
 	}
@@ -365,8 +365,12 @@ func formatTestExecution(execution core.TestExecution) string {
 		return fmt.Sprintf("${BOLD_RED}FAIL${RESET} %s", maybeToString(execution.Duration))
 	}
 	if execution.Skip != nil {
+		if detailed {
+			return fmt.Sprintf("${BOLD_YELLOW}SKIP\n        Reason:${RESET} %s", execution.Skip.Message)
+		}
 		// Not usually interesting to have a duration when we did no work.
 		return "${BOLD_YELLOW}SKIP${RESET}"
+
 	}
 	return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", maybeToString(execution.Duration))
 }
