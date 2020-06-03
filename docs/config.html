@@ -154,6 +154,12 @@
         <code>PassEnv = HTTP_PROXY</code>
         would copy your HTTP_PROXY environment variable to the build env for any rules.</li>
 
+      <li><b>PassUnsafeEnv</b> (repeated string)<br/>
+        Similar to PassEnv. A list of environment variables to pass from the current environment to build
+        rules. For example <code>PassUnsafeEnv = HTTP_PROXY</code>
+        would copy your HTTP_PROXY environment variable to the build env for any rules. Unlike PassEnv,
+        environment variable values are not used to calculate build target hashes.</li>
+
       <li><b>Sandbox</b> (bool)<br/>
         Activates sandboxing for individual build actions, which isolates them from network
         access, IPC and some aspects of the filesystem. Currently only works on Linux.

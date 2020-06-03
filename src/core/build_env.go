@@ -47,6 +47,12 @@ func buildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 		// TODO(peterebden): Investigate removing these env vars completely.
 		env = append(env, "BUILD_CONFIG="+state.Config.Build.Config, "CONFIG="+state.Config.Build.Config)
 	}
+	if target.PassUnsafeEnv != nil {
+		for _, e := range *target.PassUnsafeEnv {
+			env = append(env, e+"="+os.Getenv(e))
+		}
+	}
+
 	if target.PassEnv != nil {
 		for _, e := range *target.PassEnv {
 			env = append(env, e+"="+os.Getenv(e))
