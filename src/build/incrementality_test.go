@@ -77,6 +77,7 @@ var KnownFields = map[string]bool{
 	"BuildingDescription": true,
 	"ShowProgress":        true,
 	"Progress":            true,
+	"PassUnsafeEnv":       true,
 	"NeededForSubinclude": true,
 
 	// Used to save the rule hash rather than actually being hashed itself.

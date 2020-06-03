@@ -233,6 +233,27 @@ func TestPassEnv(t *testing.T) {
 	assert.Equal(t, expected, config.GetBuildEnv())
 }
 
+func TestPassUnsafeEnv(t *testing.T) {
+	err := os.Setenv("FOO", "first")
+	assert.NoError(t, err)
+	err = os.Setenv("BAR", "second")
+	assert.NoError(t, err)
+	config, err := ReadConfigFiles([]string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
+	assert.NoError(t, err)
+	expected := []string{
+		"ARCH=" + runtime.GOARCH,
+		"BAR=second",
+		"FOO=first",
+		"GOARCH=" + runtime.GOARCH,
+		"GOOS=" + runtime.GOOS,
+		"OS=" + runtime.GOOS,
+		"PATH=" + os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
+		"XARCH=x86_64",
+		"XOS=" + xos(),
+	}
+	assert.Equal(t, expected, config.GetBuildEnv())
+}
+
 func TestBuildPathWithPathEnv(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
