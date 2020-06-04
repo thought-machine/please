@@ -20,6 +20,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/jessevdk/go-flags v1.4.0
+	github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024
 	github.com/karrick/godirwalk v1.7.8
 	github.com/kevinburke/go-bindata v3.13.0+incompatible // indirect
 	github.com/manifoldco/promptui v0.3.2
