@@ -17,7 +17,7 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 	testPackage, err := parser.Parse(bytes.NewReader(data), "")
 
 	if err != nil {
-		return core.TestSuite{}, fmt.Errorf("Failed to parser go test output: %w", err)
+		return core.TestSuite{}, fmt.Errorf("Failed to parse go test output: %w", err)
 	}
 
 	results := fromGoJunitReport(testPackage)
