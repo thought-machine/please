@@ -15,6 +15,7 @@ go_library(
         "//src/utils",
         "//src/worker",
         "//third_party/go:cover",
+        "//third_party/go:go-junit-report",
         "//third_party/go:logging",
     ],
 )
