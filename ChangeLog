@@ -1,3 +1,11 @@
+Version 14.5.1
+--------------
+
+    * Various improvements to Go test result parsing, especially skip messages (#980, #982)
+    * Remote execution now orders directory contents lexicographically (#979)
+    * `plz test --shell` correctly sets environment variables accounting for multiple runs.
+
+
 Version 14.5.0
 --------------
 
