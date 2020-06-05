@@ -200,6 +200,16 @@ func (c *Client) outputsExist(target *core.BuildTarget, digest *pb.Digest) bool 
 	return true
 }
 
+// resultsCachePolicy returns an appropriate policy for an execution, or nil if not needed.
+// The only case we really need to do anything with is when executing multiple test runs
+// (where we try to indicate they are unimportant by setting the priority appropriately)
+func (c *Client) resultsCachePolicy(isTest bool) *pb.ResultsCachePolicy {
+	if !isTest || c.state.NumTestRuns == 1 {
+		return nil
+	}
+	return &pb.ResultsCachePolicy{Priority: c.minCachePriority}
+}
+
 // recordAttrs sets the xattrs on output files which we will use in outputsExist in future runs.
 func (c *Client) recordAttrs(target *core.BuildTarget, digest *pb.Digest) {
 	hash, _ := hex.DecodeString(digest.Hash)

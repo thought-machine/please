@@ -62,6 +62,7 @@ type Client struct {
 	// Server-sent cache properties
 	maxBlobBatchSize int64
 	cacheWritable    bool
+	minCachePriority int32
 
 	// Platform properties that we will request from the remote.
 	// TODO(peterebden): this will need some modification for cross-compiling support.
@@ -157,6 +158,15 @@ func (c *Client) initExec() error {
 	}
 	if caps.ActionCacheUpdateCapabilities != nil {
 		c.cacheWritable = caps.ActionCacheUpdateCapabilities.UpdateEnabled
+	}
+	if caps.CachePriorityCapabilities != nil {
+		// Store the minimum possible priority, we use that when doing repeated test runs
+		// (that seems to be the only way we can indicate that we don't care about them)
+		for _, p := range caps.CachePriorityCapabilities.Priorities {
+			if p.MinPriority < c.minCachePriority {
+				c.minCachePriority = p.MinPriority
+			}
+		}
 	}
 	c.maxBlobBatchSize = caps.MaxBatchTotalSizeBytes
 	if c.maxBlobBatchSize == 0 {
@@ -461,18 +471,19 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 		// take into account time to fetch inputs etc, so we might need to extend.
 		timeout = c.reqTimeout
 	}
-	return c.reallyExecute(tid, target, command, digest, timeout, needStdout)
+	return c.reallyExecute(tid, target, command, digest, timeout, isTest, needStdout)
 }
 
 // reallyExecute is like execute but after the initial cache check etc.
 // The action & sources must have already been uploaded.
-func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	resp, err := c.client.ExecuteAndWaitProgress(ctx, &pb.ExecuteRequest{
-		InstanceName:    c.instance,
-		ActionDigest:    digest,
-		SkipCacheLookup: true, // We've already done it above.
+		InstanceName:       c.instance,
+		ActionDigest:       digest,
+		SkipCacheLookup:    true, // We've already done it above.
+		ResultsCachePolicy: c.resultsCachePolicy(isTest),
 	}, func(metadata *pb.ExecuteOperationMetadata) {
 		c.updateProgress(tid, target, metadata)
 	})
