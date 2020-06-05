@@ -469,7 +469,7 @@ func prepareOutputDirectories(target *core.BuildTarget) error {
 	return nil
 }
 
-// prepareParentDirs will create any parent directories of an output i.e. for the output foo/bar/baz it will creawte
+// prepareParentDirs will create any parent directories of an output i.e. for the output foo/bar/baz it will create
 // foo and foo/bar
 func prepareParentDirs(target *core.BuildTarget, out string) error {
 	if dir := path.Dir(out); dir != "." {

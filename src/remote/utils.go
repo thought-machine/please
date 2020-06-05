@@ -81,7 +81,7 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 				target.AddOutput(out.Name) // Output might exist if built locally but AddOutput handles this case
 				o.Directories = append(o.Directories, &pb.DirectoryNode{
 					Name:   out.Name,
-					Digest:	out.Digest,
+					Digest: out.Digest,
 				})
 			}
 			for _, out := range tree.Root.Directories {

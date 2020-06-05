@@ -399,7 +399,7 @@ func moveTmpFilesToOutDir(target *core.BuildTarget) error {
 
 	for _, f := range files {
 		oldPath := filepath.Join(target.TmpDir(), f.Name())
-		newPath :=  filepath.Join(target.OutDir(), f.Name())
+		newPath := filepath.Join(target.OutDir(), f.Name())
 		if err := fs.RecursiveCopy(oldPath, newPath, target.OutMode()); err != nil {
 			return err
 		}
@@ -420,7 +420,6 @@ func moveOutDirsToTmpRoot(target *core.BuildTarget) error {
 	}
 	return nil
 }
-
 
 func moveOutDirFilesToTmpRoot(target *core.BuildTarget, dir string) error {
 	fullDir := filepath.Join(target.TmpDir(), dir)
