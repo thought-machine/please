@@ -275,6 +275,10 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 			h.Write([]byte(os.Getenv(env)))
 		}
 	}
+
+	for _, o := range target.OutputDirectories {
+		h.Write([]byte(o))
+	}
 	return h.Sum(nil)
 }
 

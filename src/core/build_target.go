@@ -187,7 +187,8 @@ type BuildTarget struct {
 	TestTimeout  time.Duration `name:"test_timeout"`
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
-	TestOutputs []string `name:"test_outputs"`
+	TestOutputs       []string `name:"test_outputs"`
+	OutputDirectories []string `name:"output_dirs"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -199,6 +200,8 @@ type BuildMetadata struct {
 	RemoteAction []byte
 	// True if this represents a test run.
 	Test bool
+	// Additional outputs from output directories serialised as a csv
+	OutputDirOuts []string
 }
 
 // A PreBuildFunction is a type that allows hooking a pre-build callback.
@@ -1387,7 +1390,7 @@ func (target *BuildTarget) SetProgress(progress float32) {
 // BuildCouldModifyTarget will return true when the action of building this target could change the target itself e.g.
 // by adding new outputs
 func (target *BuildTarget) BuildCouldModifyTarget() bool {
-	return target.PostBuildFunction != nil
+	return target.PostBuildFunction != nil || len(target.OutputDirectories) > 0
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

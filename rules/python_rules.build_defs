@@ -346,6 +346,8 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
       pip_flags (str): List of additional flags to pass to pip.
       strip (list): Files to strip after install. Note that these are done at any level.
     """
+    pip_target_dir = "pip_install"
+
     package_name = package_name or name
     package_name = f'{package_name}=={version}'
     outs = outs or [name]
@@ -364,77 +366,74 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         else:
             repo_flag = '-f ' + repo
 
-    target = outs[0] if install_subdirectory else '.'
+    target = pip_target_dir
+    if install_subdirectory:
+     target += '/' + outs[0]
+
 
     # TODO: This is a total mess on pip's side with --user flag. https://github.com/pypa/pip/issues/1668
-    cmd = 'PIP_CONFIG_FILE=/dev/null $TOOLS_PIP install --isolated --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
+    pip_cmd = 'PIP_CONFIG_FILE=/dev/null $TOOLS_PIP install --isolated --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
     if CONFIG.HOSTOS == 'darwin':
         # Fix for Homebrew which fails with a superficially similar issue.
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
         # but that prevents downloading binary wheels. This is more fiddly but seems to work.
         # Unfortunately it does *not* work similarly on the Debian problem :(
-        cmd = 'echo "[install]\nprefix=" > setup.cfg; ' + cmd
+        pip_cmd = 'echo "[install]\nprefix=" > setup.cfg; ' + pip_cmd
     if CONFIG.OS == 'linux':
         # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
         # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
         # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
-        cmd = f'[ -f /etc/debian_version ] && [ $TOOLS_PIP == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; {cmd} $SYS_FLAG'
-    cmd += f' -b build {repo_flag} {index_flag} {pip_flags} {package_name}'
+        pip_cmd = f'[ -f /etc/debian_version ] && [ $TOOLS_PIP == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; {pip_cmd} $SYS_FLAG'
+    pip_cmd += f' -b build {repo_flag} {index_flag} {pip_flags} {package_name}'
 
     if strip:
-        cmd += ' && find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])
-
-    if not licences:
-        cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
+        pip_cmd += ' && find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])
 
     if install_subdirectory:
-        cmd += f' && touch {target}/__init__.py && rm -rf {target}/*.egg-info {target}/*.dist-info'
+        pip_cmd += f' && touch {target}/__init__.py && rm -rf {target}/*.egg-info {target}/*.dist-info'
 
     if patch:
         patches, c = _patch_cmd(patch)
-        cmd += ' && ' + ' && '.join(c)
+        pip_cmd += ' && ' + ' && '.join(c)
 
     if post_install_commands:
-        cmd = ' && '.join([cmd] + post_install_commands)
+        pip_cmd = ' && '.join([pip_cmd] + post_install_commands)
 
-    # TODO(peterebden): --prefix preserves the old behaviour here, but I'm not sure how intuitive that is; leaving it
-    #                   out puts everything at the top level of the pex, which is more normal for Python really.
-    cmd += ' && $TOOLS_JARCAT z -d --prefix $PKG_DIR -i ' + ' -i '.join(outs) + ' -i *.*-info'
-
-    wheel_rule = build_rule(
+    srcs = build_rule(
         name = name,
-        tag = 'wheel',
-        cmd = cmd,
-        outs = [name + '.whl'],
+        tag = "srcs",
+        cmd = pip_cmd,
+        test_only = test_only,
+        output_dirs = [pip_target_dir],
         srcs = patches if patch else [],
-        deps = deps,
         building_description = 'Fetching...',
+        tools = {
+            'pip': [CONFIG.PIP_TOOL],
+        },
+    )
+
+    cmd = '$TOOLS_JARCAT z -d --prefix $PKG_DIR -i .'
+    if not licences:
+        cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
+
+    return build_rule(
+        name = name,
+        cmd = '$TOOLS_JARCAT z -d -i .',
+        outs = [name + '.whl'],
+        srcs = [srcs],
+        deps = [] + deps,
+        building_description = 'Collecting...',
         hashes = hashes,
-        requires = ['py'],
         test_only = test_only,
         licences = licences,
         tools = {
-            'pip': [CONFIG.PIP_TOOL],
             'jarcat': [CONFIG.JARCAT_TOOL],
         },
         post_build = None if licences else _add_licences,
         sandbox = False,
-        labels = ['py:zip-unsafe'] if not zip_safe else None,
-    )
-    return build_rule(
-        name = name,
-        srcs = [wheel_rule],
-        outs = outs,
-        post_build = _add_dist_info,
-        cmd = '$TOOL x $SRCS -s $PKG_DIR; find . -maxdepth 1 -regex \'.*\.\(dist\|egg\)-info\'',
-        tools = [CONFIG.JARCAT_TOOL],
-        labels = ['py', 'pip:' + package_name],
-        provides = {'py': wheel_rule},
+        labels = ['py:zip-unsafe', 'py', 'pip:' + package_name] if not zip_safe else None,
         visibility = visibility,
-        test_only = test_only,
-        deps = deps,
     )
-
 
 def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
                  post_install_commands:list=None, patch:str|list=None, licences:list=None,
@@ -585,6 +584,10 @@ def _handle_zip_safe(name):
         set_command(name, get_command(name).replace(' --zip_safe', ''))
 
 
+def _add_dist_info_and_licences(name, output):
+    _add_licences(name, output)
+    _add_dist_info(name, output)
+
 def _add_licences(name, output):
     """Annotates a pip_library rule with detected licences after download."""
     found = False
@@ -600,12 +603,6 @@ def _add_licences(name, output):
             found = True
     if not found:
         log.warning('No licence found for %s, should add licences = [...] to the rule', name.lstrip('_').split('#')[0])
-
-def _add_dist_info(name, output):
-    """Add dist-info (or egg-info) folder if present."""
-    for line in output:
-        if line.endswith("-info"):
-            add_out(name, line)
 
 if CONFIG.BAZEL_COMPATIBILITY:
     py_library = python_library

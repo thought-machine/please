@@ -107,3 +107,8 @@ func (mplex cacheMultiplexer) Shutdown() {
 		cache.Shutdown()
 	}
 }
+
+// Another one to work out if we should try to store/retrieve a post-build output file.
+func needsBuildMetadataFile(target *core.BuildTarget) bool {
+	return target.BuildCouldModifyTarget() && target.State() < core.Built
+}

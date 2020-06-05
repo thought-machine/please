@@ -22,9 +22,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/op/go-logging.v1"
+
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"gopkg.in/op/go-logging.v1"
 )
 
 var cache core.Cache
@@ -117,6 +118,38 @@ func TestPostBuildFunction(t *testing.T) {
 	assert.Equal(t, core.Built, target.State())
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 }
+
+func TestOutputDir(t *testing.T) {
+	newTarget := func() (*core.BuildState, *core.BuildTarget) {
+		// Test modifying a command in the post-build function.
+		state, target := newState("//package1:target8")
+		target.Command = "echo 'wibble wibble wibble' | tee OUT_DIR/file7"
+		target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR")
+
+		return state, target
+	}
+
+	state, target := newTarget()
+
+
+	err := buildTarget(1, state, target, false)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"file7"}, target.Outputs())
+
+	md, err := LoadTargetMetadata(target)
+	require.NoError(t, err)
+
+	assert.Len(t, md.OutputDirOuts, 1)
+	assert.Equal(t, "file7",md.OutputDirOuts[0])
+
+	// Test modifying a command in the post-build function.
+	state, target = newTarget()
+
+	err = buildTarget(1, state, target, false)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"file7"}, target.Outputs())
+}
+
 
 func TestCacheRetrieval(t *testing.T) {
 	// Test retrieving stuff from the cache

@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -130,6 +132,8 @@ func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) erro
 // 3) Actually build the rule
 // 4) Store result in the cache
 func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
+	// TODO(jpoole): we've defined 4 steps that this function performs. We should be able to break it out into
+	// smaller functions
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -195,6 +199,8 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 					return fmt.Errorf("failed to load build metadata for %s: %w", target.Label, err)
 				}
 
+				addOutDirOutsFromMetadata(target, metadata)
+
 				if target.PostBuildFunction != nil {
 					if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), ""); err != nil {
 						log.Warning("Error from post-build function for %s: %s; will rebuild", target.Label, err)
@@ -250,6 +256,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			if target.BuildCouldModifyTarget() {
 				log.Debug("Checking for build metadata for %s in cache...", target.Label)
 				if metadata = retrieveFromCache(state.Cache, target, cacheKey, nil); metadata != nil {
+					addOutDirOutsFromMetadata(target, metadata)
 					if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
 						postBuildOutput = string(metadata.Stdout)
 						if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
@@ -264,6 +271,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			} else if retrieveArtifacts(tid, state, target, oldOutputHash) {
 				return nil
 			}
+
 		}
 		if err := target.CheckSecrets(); err != nil {
 			return err
@@ -279,14 +287,22 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return err
 		}
 	}
-
+	if len(target.OutputDirectories) > 0 {
+		if runRemotely {
+			// TODO(jpoole): implement remote execution for output directories
+			panic("remote execution is not supported for output directories yet")
+		}
+		metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(target)
+		if err != nil {
+			return err
+		}
+	}
 	if target.PostBuildFunction != nil {
 		outs := target.Outputs()
 		if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), postBuildOutput); err != nil {
 			return err
 		}
-		// TODO(jpoole): do we not care about other changes to the build function here? Perhaps a more robust solution
-		// would be to check the hashes haven't changed
+
 		if runRemotely && len(outs) != len(target.Outputs()) {
 			// postBuildFunction has changed the target - must rebuild it
 			log.Info("Rebuilding %s after post-build function", target)
@@ -364,6 +380,12 @@ func outputHashOrNil(target *core.BuildTarget, outputs []string, hasher *fs.Path
 	return h
 }
 
+func addOutDirOutsFromMetadata(target *core.BuildTarget, md *core.BuildMetadata) {
+	for _, o := range md.OutputDirOuts {
+		target.AddOutput(o)
+	}
+}
+
 func retrieveFromCache(cache core.Cache, target *core.BuildTarget, cacheKey []byte, files []string) *core.BuildMetadata {
 	files = append(files, target.TargetBuildMetadataFileName())
 	if ok := cache.Retrieve(target, cacheKey, files); ok {
@@ -435,6 +457,13 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 }
 
 func prepareOutputDirectories(target *core.BuildTarget) error {
+	// Prepare the output directories declared on the rule
+	for _, dir := range target.OutputDirectories {
+		if err := os.Mkdir(filepath.Join(target.TmpDir(), dir), core.DirPermissions); err != nil {
+			return err
+		}
+	}
+
 	// Nicety for the build rules: create any directories that it's
 	// declared it'll create files in.
 	for _, out := range target.Outputs() {
@@ -487,6 +516,44 @@ func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
 		}
 	}
 	return nil
+}
+
+// addOutputDirectoriesToBuildOutput moves all the files from the output dirs into the root of the build temp dir
+// and adds them as outputs to the build target
+func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, error) {
+	var outs []string
+	for _, dir := range target.OutputDirectories {
+		o, err := addOutputDirectoryToBuildOutput(target, dir)
+		if err != nil {
+			return nil, err
+		}
+		outs = append(outs, o...)
+	}
+	return outs, nil
+}
+
+func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir string) ([]string, error) {
+	fullDir := filepath.Join(target.TmpDir(), dir)
+
+	files, err := ioutil.ReadDir(fullDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var outs []string
+	for _, f := range files {
+		target.AddOutput(f.Name())
+
+		from := filepath.Join(fullDir, f.Name())
+		to := filepath.Join(target.TmpDir(), f.Name())
+
+		if err := os.Rename(from, to); err != nil {
+			return nil, err
+		}
+
+		outs = append(outs, f.Name())
+	}
+	return outs, nil
 }
 
 func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bool, error) {
