@@ -6,7 +6,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
             data:list=None, hashes:list=None, timeout:int=0, binary:bool=False, sandbox:bool=None,
             needs_transitive_deps:bool=False, output_is_complete:bool=True, test_only:bool&testonly=False,
             secrets:list|dict=None, requires:list=None, provides:dict=None, pre_build:function=None,
-            post_build:function=None, tools:list|dict=None, pass_env:list=None, local:bool=False):
+            post_build:function=None, tools:list|dict=None, pass_env:list=None, local:bool=False, output_dirs:list=[]):
     """A general build rule which allows the user to specify a command.
 
     Args:
@@ -94,6 +94,9 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
                 be recorded in this target's hash and will hence force it to rebuild.
       local: Forces the rule to be built locally; when remote execution is enabled it will not
              be sent remotely but executed on the local machine.
+      output_dirs: Directories to add to the output of the rule. Files inside these directories will be added to
+                   the root of the rule e.g. if you have an outdir foo, foo/bar.txt will be added as if bar.txt was in
+                   the root of the build directory.
     """
     if out and outs:
         raise TypeError('Can\'t specify both "out" and "outs".')
@@ -122,6 +125,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         test_only = test_only,
         pass_env = pass_env,
         local = local,
+        output_dirs = output_dirs,
     )
 
 
