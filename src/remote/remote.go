@@ -61,7 +61,6 @@ type Client struct {
 
 	// Server-sent cache properties
 	maxBlobBatchSize int64
-	cacheWritable    bool
 
 	// Platform properties that we will request from the remote.
 	// TODO(peterebden): this will need some modification for cross-compiling support.
@@ -154,9 +153,6 @@ func (c *Client) initExec() error {
 	}
 	if err := c.chooseDigest(caps.DigestFunction); err != nil {
 		return err
-	}
-	if caps.ActionCacheUpdateCapabilities != nil {
-		c.cacheWritable = caps.ActionCacheUpdateCapabilities.UpdateEnabled
 	}
 	c.maxBlobBatchSize = caps.MaxBatchTotalSizeBytes
 	if c.maxBlobBatchSize == 0 {
