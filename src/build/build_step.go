@@ -547,7 +547,7 @@ func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir string) ([]st
 		from := filepath.Join(fullDir, f.Name())
 		to := filepath.Join(target.TmpDir(), f.Name())
 
-		if err := os.Rename(from, to); err != nil {
+		if err := fs.RecursiveCopy(from, to, target.OutMode()); err != nil {
 			return nil, err
 		}
 
