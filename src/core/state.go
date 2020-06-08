@@ -729,6 +729,12 @@ func (state *BuildState) ShouldDownload(target *BuildTarget) bool {
 	return (state.IsOriginalTarget(target.Label) && state.DownloadOutputs && !state.NeedTests) || target.NeededForSubinclude
 }
 
+// ShouldRebuild returns true if we should force a rebuild of this target (i.e. the user
+// has done plz build --rebuild where we would not otherwise build it).
+func (state *BuildState) ShouldRebuild(target *BuildTarget) bool {
+	return state.ForceRebuild && (state.IsOriginalTarget(target.Label) || state.IsOriginalTarget(target.Label.Parent()))
+}
+
 // ensureDownloaded ensures that a target has been downloaded when built remotely.
 // If remote execution is not enabled it has no effect.
 func (state *BuildState) ensureDownloaded(target *BuildTarget) {
