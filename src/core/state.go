@@ -389,22 +389,21 @@ func (state *BuildState) CloseResults() {
 }
 
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
-func (state *BuildState) IsOriginalTarget(label BuildLabel) bool {
-	return state.isOriginalTarget(label, false)
-}
-
-// IsExactOriginalTarget returns true if a target is an original target, specified exactly
-// (i.e. not via a :all label).
-func (state *BuildState) IsExactOriginalTarget(label BuildLabel) bool {
-	return state.isOriginalTarget(label, true)
-}
-
-// isOriginalTarget implementsIsOriginalTarget, optionally allowing disabling matching :all labels.
-func (state *BuildState) isOriginalTarget(label BuildLabel, exact bool) bool {
+func (state *BuildState) IsOriginalTarget(target *BuildTarget) bool {
 	for _, original := range state.OriginalTargets {
-		if original == label || (!exact && original.IsAllTargets() && original.PackageName == label.PackageName) {
+		if original == target.Label || (original.IsAllTargets() && original.PackageName == target.Label.PackageName && state.ShouldInclude(target)) {
 			return true
 		}
+	}
+	return false
+}
+
+// IsOriginalTargetOrParent is like IsOriginalTarget but checks the target's parent too (if it has one)
+func (state *BuildState) IsOriginalTargetOrParent(target *BuildTarget) bool {
+	if state.IsOriginalTarget(target) {
+		return true
+	} else if parent := target.Parent(state.Graph); parent != nil {
+		return state.IsOriginalTarget(parent)
 	}
 	return false
 }
@@ -639,7 +638,7 @@ func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel) BuildLabel
 func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 	ret := BuildLabels{}
 	for _, target := range state.ExpandOriginalTargets() {
-		if !target.HasParent() || state.isOriginalTarget(target, true) {
+		if !target.HasParent() || state.IsOriginalTarget(state.Graph.TargetOrDie(target)) {
 			ret = append(ret, target)
 		}
 	}
@@ -726,13 +725,13 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 func (state *BuildState) ShouldDownload(target *BuildTarget) bool {
 	// Need to download the target if it was originally requested (and the user didn't pass --nodownload).
 	// Also anything needed for subinclude needs to be local.
-	return (state.IsOriginalTarget(target.Label) && state.DownloadOutputs && !state.NeedTests) || target.NeededForSubinclude
+	return (state.IsOriginalTarget(target) && state.DownloadOutputs && !state.NeedTests) || target.NeededForSubinclude
 }
 
 // ShouldRebuild returns true if we should force a rebuild of this target (i.e. the user
 // has done plz build --rebuild where we would not otherwise build it).
 func (state *BuildState) ShouldRebuild(target *BuildTarget) bool {
-	return state.ForceRebuild && (state.IsOriginalTarget(target.Label) || state.IsOriginalTarget(target.Label.Parent()))
+	return state.ForceRebuild && state.IsOriginalTargetOrParent(target)
 }
 
 // ensureDownloaded ensures that a target has been downloaded when built remotely.
