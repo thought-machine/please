@@ -131,7 +131,6 @@ func TestOutputDir(t *testing.T) {
 
 	state, target := newTarget()
 
-
 	err := buildTarget(1, state, target, false)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"file7"}, target.Outputs())
@@ -140,7 +139,7 @@ func TestOutputDir(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, md.OutputDirOuts, 1)
-	assert.Equal(t, "file7",md.OutputDirOuts[0])
+	assert.Equal(t, "file7", md.OutputDirOuts[0])
 
 	// Test modifying a command in the post-build function.
 	state, target = newTarget()
@@ -149,7 +148,6 @@ func TestOutputDir(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 }
-
 
 func TestCacheRetrieval(t *testing.T) {
 	// Test retrieving stuff from the cache
