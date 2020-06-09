@@ -412,13 +412,13 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         },
     )
 
-    cmd = '$TOOLS_JARCAT z -d --prefix $PKG_DIR -i .'
+    cmd = '$TOOLS_JARCAT z -d -i .'
     if not licences:
         cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
 
     return build_rule(
         name = name,
-        cmd = '$TOOLS_JARCAT z -d -i .',
+        cmd = cmd,
         outs = [name + '.whl'],
         srcs = [srcs],
         deps = [] + deps,
