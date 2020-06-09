@@ -78,7 +78,7 @@ python_wheel(
 python_wheel(
     name = "protobuf",
     outs = ["google"],
-    version = "3.6.1",
+    version = "3.12.2",
     deps = [":six"],
 )
 
