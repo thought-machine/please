@@ -418,7 +418,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
 
     return build_rule(
         name = name,
-        cmd = '$TOOLS_JARCAT z -d -i .',
+        cmd = cmd,
         outs = [name + '.whl'],
         srcs = [srcs],
         deps = [] + deps,
