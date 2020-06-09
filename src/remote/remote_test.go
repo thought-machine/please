@@ -1,10 +1,6 @@
 package remote
 
 import (
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/stretchr/testify/require"
-	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -12,8 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/thought-machine/please/src/fs"
 
 	"github.com/thought-machine/please/src/core"
 )
