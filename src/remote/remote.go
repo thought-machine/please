@@ -7,7 +7,10 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -30,6 +33,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 var log = logging.MustGetLogger("remote")
@@ -61,7 +65,6 @@ type Client struct {
 
 	// Server-sent cache properties
 	maxBlobBatchSize int64
-	cacheWritable    bool
 
 	// Platform properties that we will request from the remote.
 	// TODO(peterebden): this will need some modification for cross-compiling support.
@@ -155,9 +158,6 @@ func (c *Client) initExec() error {
 	if err := c.chooseDigest(caps.DigestFunction); err != nil {
 		return err
 	}
-	if caps.ActionCacheUpdateCapabilities != nil {
-		c.cacheWritable = caps.ActionCacheUpdateCapabilities.UpdateEnabled
-	}
 	c.maxBlobBatchSize = caps.MaxBatchTotalSizeBytes
 	if c.maxBlobBatchSize == 0 {
 		// No limit was set by the server, assume we are implicitly limited to 4MB (that's
@@ -241,9 +241,10 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if c.state.TargetHasher != nil {
 		c.state.TargetHasher.SetHash(target, hash)
 	}
-	if err := c.setOutputs(target.Label, ar); err != nil {
+	if err := c.setOutputs(target, ar); err != nil {
 		return metadata, c.wrapActionErr(err, digest)
 	}
+
 	if c.state.ShouldDownload(target) {
 		if !c.outputsExist(target, digest) {
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
@@ -353,11 +354,85 @@ func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar 
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
 	defer cancel()
-	if err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir()); err != nil {
+
+	if err := c.downloadActionOutputs(ctx, ar, target); err != nil {
 		return c.wrapActionErr(err, digest)
 	}
 	c.recordAttrs(target, digest)
 	log.Debug("Downloaded outputs for %s", target)
+	return nil
+}
+
+func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult, target *core.BuildTarget) error {
+	// We can download straight into the out dir if there are no outdirs to worry about
+	if len(target.OutputDirectories) == 0 {
+		return c.client.DownloadActionOutputs(ctx, ar, target.OutDir())
+	}
+
+	defer os.RemoveAll(target.TmpDir())
+
+	if err := c.client.DownloadActionOutputs(ctx, ar, target.TmpDir()); err != nil {
+		return err
+	}
+
+	if err := moveOutDirsToTmpRoot(target); err != nil {
+		return fmt.Errorf("failed to move out directories to correct place in tmp folder: %w", err)
+	}
+
+	if err := moveTmpFilesToOutDir(target); err != nil {
+		return fmt.Errorf("failed to move downloaded action output from target tmp dir to out dir: %w", err)
+	}
+
+	return nil
+}
+
+// moveTmpFilesToOutDir moves files from the target tmp dir to the out dir
+func moveTmpFilesToOutDir(target *core.BuildTarget) error {
+	files, err := ioutil.ReadDir(target.TmpDir())
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		oldPath := filepath.Join(target.TmpDir(), f.Name())
+		newPath := filepath.Join(target.OutDir(), f.Name())
+		if err := fs.RecursiveCopy(oldPath, newPath, target.OutMode()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// moveOutDirsToTmpRoot moves all the files from the output dirs into the root of the build temp dir and deletes the
+// now empty directory
+func moveOutDirsToTmpRoot(target *core.BuildTarget) error {
+	for _, dir := range target.OutputDirectories {
+		if err := moveOutDirFilesToTmpRoot(target, dir); err != nil {
+			return fmt.Errorf("failed to move output dir (%s) contents to rule root: %w", dir, err)
+		}
+		if err := os.Remove(filepath.Join(target.TmpDir(), dir)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func moveOutDirFilesToTmpRoot(target *core.BuildTarget, dir string) error {
+	fullDir := filepath.Join(target.TmpDir(), dir)
+
+	files, err := ioutil.ReadDir(fullDir)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		from := filepath.Join(fullDir, f.Name())
+		to := filepath.Join(target.TmpDir(), f.Name())
+
+		if err := os.Rename(from, to); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

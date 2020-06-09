@@ -54,6 +54,7 @@ type testServer struct {
 	actionResults                 map[string]*pb.ActionResult
 	blobs                         map[string][]byte
 	bytestreams                   map[string][]byte
+	mockActionResult *pb.ActionResult
 }
 
 func (s *testServer) GetCapabilities(ctx context.Context, req *pb.GetCapabilitiesRequest) (*pb.ServerCapabilities, error) {
@@ -84,6 +85,7 @@ func (s *testServer) Reset() {
 	s.actionResults = map[string]*pb.ActionResult{}
 	s.blobs = map[string][]byte{}
 	s.bytestreams = map[string][]byte{}
+	s.mockActionResult = nil
 }
 
 func (s *testServer) GetActionResult(ctx context.Context, req *pb.GetActionResultRequest) (*pb.ActionResult, error) {
@@ -322,6 +324,22 @@ func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteSer
 							ExecutionCompletedTimestamp: completed,
 						},
 					},
+					Status: &rpcstatus.Status{
+						Code: int32(codes.OK),
+					},
+				}),
+			},
+		})
+	} else if req.InstanceName == "mock" {
+		srv.Send(&longrunning.Operation{
+			Name: "geoff",
+			Metadata: mm(&pb.ExecuteOperationMetadata{
+				Stage: pb.ExecutionStage_COMPLETED,
+			}),
+			Done: true,
+			Result: &longrunning.Operation_Response{
+				Response: mm(&pb.ExecuteResponse{
+					Result: server.mockActionResult,
 					Status: &rpcstatus.Status{
 						Code: int32(codes.OK),
 					},

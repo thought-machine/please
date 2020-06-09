@@ -372,7 +372,8 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
 
 
     # TODO: This is a total mess on pip's side with --user flag. https://github.com/pypa/pip/issues/1668
-    pip_cmd = 'PIP_CONFIG_FILE=/dev/null $TOOLS_PIP install --isolated --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
+    pip_cmd = f'mkdir {pip_target_dir} && '
+    pip_cmd += 'PIP_CONFIG_FILE=/dev/null $TOOLS_PIP install --isolated --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
     if CONFIG.HOSTOS == 'darwin':
         # Fix for Homebrew which fails with a superficially similar issue.
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
@@ -412,13 +413,13 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         },
     )
 
-    cmd = '$TOOLS_JARCAT z -d --prefix $PKG_DIR -i .'
+    cmd = '$TOOLS_JARCAT z -d -i .'
     if not licences:
         cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
 
     return build_rule(
         name = name,
-        cmd = '$TOOLS_JARCAT z -d -i .',
+        cmd = cmd,
         outs = [name + '.whl'],
         srcs = [srcs],
         deps = [] + deps,

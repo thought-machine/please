@@ -78,7 +78,7 @@ python_wheel(
 python_wheel(
     name = "protobuf",
     outs = ["google"],
-    version = "3.6.1",
+    version = "3.12.2",
     deps = [":six"],
 )
 
@@ -267,6 +267,7 @@ pip_library(
 
 pip_library(
     name = "tensorflow",
+    licences = ["Apache 2.0"],
     test_only = True,
     # the next version of TF breaks due to an upstream bug fixed in this pr:
     # https://github.com/tensorflow/tensorflow/pull/38663

@@ -51,10 +51,10 @@ func (c *Client) targetOutputs(label core.BuildLabel) *pb.Directory {
 }
 
 // setOutputs sets the outputs for a previously executed target.
-func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
+func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error {
 	o := &pb.Directory{
 		Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
-		Directories: make([]*pb.DirectoryNode, len(ar.OutputDirectories)),
+		Directories: make([]*pb.DirectoryNode, 0, len(ar.OutputDirectories)),
 		Symlinks:    make([]*pb.SymlinkNode, len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks)),
 	}
 	// N.B. At this point the various things we stick into this Directory proto can be in
@@ -69,14 +69,30 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 			IsExecutable: f.IsExecutable,
 		}
 	}
-	for i, d := range ar.OutputDirectories {
+	for _, d := range ar.OutputDirectories {
+
 		tree := &pb.Tree{}
 		if err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
-		o.Directories[i] = &pb.DirectoryNode{
-			Name:   d.Path,
-			Digest: c.digestMessage(tree.Root),
+
+		if isOutDir(d.Path, target.OutputDirectories) {
+			for _, out := range tree.Root.Files {
+				target.AddOutput(out.Name) // Output might exist if built locally but AddOutput handles this case
+				o.Directories = append(o.Directories, &pb.DirectoryNode{
+					Name:   out.Name,
+					Digest: out.Digest,
+				})
+			}
+			for _, out := range tree.Root.Directories {
+				target.AddOutput(out.Name) // Output might exist if built locally but AddOutput handles this case
+				o.Directories = append(o.Directories, out)
+			}
+		} else {
+			o.Directories = append(o.Directories, &pb.DirectoryNode{
+				Name:   d.Path,
+				Digest: c.digestMessage(tree.Root),
+			})
 		}
 	}
 	for i, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) {
@@ -87,8 +103,17 @@ func (c *Client) setOutputs(label core.BuildLabel, ar *pb.ActionResult) error {
 	}
 	c.outputMutex.Lock()
 	defer c.outputMutex.Unlock()
-	c.outputs[label] = o
+	c.outputs[target.Label] = o
 	return nil
+}
+
+func isOutDir(dir string, outDirs []string) bool {
+	for _, outDir := range outDirs {
+		if dir == outDir {
+			return true
+		}
+	}
+	return false
 }
 
 // digestMessage calculates the digest of a proto message as described in the
@@ -151,7 +176,7 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		if metadata := retrieveTargetMetadataFromCache(c, target, digest); metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
 			if err := proto.Unmarshal(metadata.RemoteAction, ar); err == nil {
-				if err := c.setOutputs(target.Label, ar); err == nil {
+				if err := c.setOutputs(target, ar); err == nil {
 					return metadata, ar
 				}
 			}
@@ -313,6 +338,10 @@ func outputs(target *core.BuildTarget) (files, dirs []string) {
 		} else {
 			files = append(files, out)
 		}
+	}
+
+	for _, out := range target.OutputDirectories {
+		dirs = append(dirs, out)
 	}
 	return files, dirs
 }

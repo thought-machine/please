@@ -123,7 +123,7 @@ func TestOutputDir(t *testing.T) {
 	newTarget := func() (*core.BuildState, *core.BuildTarget) {
 		// Test modifying a command in the post-build function.
 		state, target := newState("//package1:target8")
-		target.Command = "echo 'wibble wibble wibble' | tee OUT_DIR/file7"
+		target.Command = "mkdir OUT_DIR && echo 'wibble wibble wibble' | tee OUT_DIR/file7"
 		target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR")
 
 		return state, target
