@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	parser "github.com/jstemmer/go-junit-report/parser"
+	parser "github.com/peterebden/go-junit-report/parser"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -34,7 +34,6 @@ func fromGoJunitReport(report *parser.Report) core.TestSuite {
 		for _, test := range pkg.Tests {
 			coreTestCase := core.TestCase{Name: test.Name}
 			testOutput := strings.Join(test.Output, "\n")
-
 			if test.Result == parser.PASS {
 				coreTestCase.Executions = append(coreTestCase.Executions, core.TestExecution{
 					Stderr:   testOutput,

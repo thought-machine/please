@@ -640,7 +640,7 @@ go_get(
 
 go_get(
     name = "go-junit-report",
-    get = "github.com/jstemmer/go-junit-report/...",
+    get = "github.com/peterebden/go-junit-report/parser",
     licences = ["MIT"],
-    revision = "984a47ca6b0a7d704c4b589852051b4d7865aa17",
+    revision = "7884553bc963d73b0d1e2fbd55dfa8df5ae9f010",
 )
