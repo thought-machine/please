@@ -390,8 +390,12 @@ func (state *BuildState) CloseResults() {
 
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
 func (state *BuildState) IsOriginalTarget(target *BuildTarget) bool {
+	return state.isOriginalTarget(target, false)
+}
+
+func (state *BuildState) isOriginalTarget(target *BuildTarget, exact bool) bool {
 	for _, original := range state.OriginalTargets {
-		if original == target.Label || (original.IsAllTargets() && original.PackageName == target.Label.PackageName && state.ShouldInclude(target)) {
+		if original == target.Label || (!exact && original.IsAllTargets() && original.PackageName == target.Label.PackageName && state.ShouldInclude(target)) {
 			return true
 		}
 	}
@@ -638,7 +642,7 @@ func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel) BuildLabel
 func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 	ret := BuildLabels{}
 	for _, target := range state.ExpandOriginalTargets() {
-		if !target.HasParent() || state.IsOriginalTarget(state.Graph.TargetOrDie(target)) {
+		if !target.HasParent() || state.isOriginalTarget(state.Graph.TargetOrDie(target), true) {
 			ret = append(ret, target)
 		}
 	}
