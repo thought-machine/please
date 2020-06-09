@@ -101,7 +101,7 @@ func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild b
 		}
 	}
 	// Maybe we've forced a rebuild. Do this last; might be interesting to see if it needed building anyway.
-	return state.ForceRebuild && (state.IsOriginalTarget(target.Label) || state.IsOriginalTarget(target.Label.Parent()))
+	return state.ShouldRebuild(target)
 }
 
 // b64 base64 encodes a string of bytes for printing.

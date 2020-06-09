@@ -65,7 +65,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 			state.AddPendingBuild(reverseDep.Label, false)
 		}
 	}
-	if target.IsTest && state.NeedTests && ((state.IsOriginalTarget(target.Label) && state.ShouldInclude(target)) || state.IsExactOriginalTarget(target.Label)) {
+	if target.IsTest && state.NeedTests && state.IsOriginalTarget(target) {
 		if state.TestSequentially {
 			state.AddPendingTest(target.Label, 1)
 		} else {
@@ -161,7 +161,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	}
 
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Preparing...")
-	if state.PrepareOnly && state.IsOriginalTarget(target.Label) {
+	if state.PrepareOnly && state.IsOriginalTarget(target) {
 		return prepareOnly(tid, state, target)
 	}
 
@@ -692,7 +692,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 		return nil, err
 	}
 	if err = checkRuleHashes(state, target, hash); err != nil {
-		if state.NeedHashesOnly && (state.IsOriginalTarget(target.Label) || state.IsOriginalTarget(target.Label.Parent())) {
+		if state.NeedHashesOnly && state.IsOriginalTargetOrParent(target) {
 			return nil, errStop
 		} else if state.VerifyHashes {
 			return nil, err
