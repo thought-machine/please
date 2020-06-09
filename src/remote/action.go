@@ -482,7 +482,7 @@ func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
 	if err := c.client.UploadIfMissing(context.Background(), chomks...); err != nil {
 		return err
 	}
-	return c.setOutputs(target.Label, ar)
+	return c.setOutputs(target, ar)
 }
 
 // markOutputsAsExecutable updates an ActionResult for a binary rule.

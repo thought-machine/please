@@ -3,12 +3,17 @@ package remote
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/thought-machine/please/src/fs"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -214,6 +219,69 @@ func TestRemoteFilesHashConsistently(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, cmd, cmd2)
 	assert.Equal(t, digest, digest2)
+}
+
+func TestOutDirsSetOutsOnTarget(t *testing.T) {
+	c := newClientInstance("mock")
+
+	foo := []byte("this is the content of foo")
+	fooDigest := digest.NewFromBlob(foo)
+
+	bar := []byte("this is the content of bar")
+	barDigest := digest.NewFromBlob(bar)
+
+	tree := mustMarshal(&pb.Tree{
+		Root: &pb.Directory{
+			Files: []*pb.FileNode{
+				{Name: "foo.txt", Digest: fooDigest.ToProto()},
+				{Name: "bar.txt", Digest: barDigest.ToProto()},
+			},
+		},
+	})
+	treeDigest := digest.NewFromBlob(tree)
+
+	server.mockActionResult = &pb.ActionResult{
+		OutputDirectories: []*pb.OutputDirectory{
+			{
+				Path:       "foo",
+				TreeDigest: treeDigest.ToProto(),
+			},
+		},
+		ExitCode: 0,
+		ExecutionMetadata: &pb.ExecutedActionMetadata{
+			Worker:                      "kev",
+			QueuedTimestamp:             ptypes.TimestampNow(),
+			ExecutionStartTimestamp:     ptypes.TimestampNow(),
+			ExecutionCompletedTimestamp: ptypes.TimestampNow(),
+		},
+	}
+
+	server.blobs[treeDigest.Hash] = tree
+
+	server.blobs[fooDigest.Hash] = foo
+	server.blobs[barDigest.Hash] = bar
+
+	outDirTarget := core.NewBuildTarget(core.BuildLabel{
+		PackageName: "package",
+		Name:        "out_dir_target",
+	})
+
+	c.state.OriginalTargets = append(c.state.OriginalTargets, outDirTarget.Label)
+	c.state.DownloadOutputs = true
+	require.True(t, c.state.ShouldDownload(outDirTarget))
+
+	outDirTarget.OutputDirectories = []string{"foo"}
+	// Doesn't actually get executed but gives an idea as to how this rule is mocked up
+	outDirTarget.Command = "touch foo/bar.txt && touch foo/baz.txt"
+	c.state.Graph.AddTarget(outDirTarget)
+	_, err := c.Build(0, outDirTarget)
+	require.NoError(t, err)
+
+	assert.Len(t, outDirTarget.Outputs(), 2)
+	assert.ElementsMatch(t, []string{"foo.txt", "bar.txt"}, outDirTarget.Outputs())
+	for _, out := range outDirTarget.Outputs() {
+		assert.True(t, fs.FileExists(filepath.Join(outDirTarget.OutDir(), out)), "output %s doesn't exist in target out folder", out)
+	}
 }
 
 // Store is a small hack that stores a target's outputs for testing only.

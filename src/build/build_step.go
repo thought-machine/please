@@ -287,11 +287,8 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return err
 		}
 	}
-	if len(target.OutputDirectories) > 0 {
-		if runRemotely {
-			// TODO(jpoole): implement remote execution for output directories
-			panic("remote execution is not supported for output directories yet")
-		}
+	// The remote action will set the output directory outs here
+	if !runRemotely {
 		metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(target)
 		if err != nil {
 			return err
@@ -456,23 +453,30 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	return out, nil
 }
 
+// prepareOutputDirectories creates any directories the target has declared it will output into as a nicety
 func prepareOutputDirectories(target *core.BuildTarget) error {
-	// Prepare the output directories declared on the rule
 	for _, dir := range target.OutputDirectories {
-		if err := os.Mkdir(filepath.Join(target.TmpDir(), dir), core.DirPermissions); err != nil {
+		if err := prepareParentDirs(target, dir); err != nil {
 			return err
 		}
 	}
 
-	// Nicety for the build rules: create any directories that it's
-	// declared it'll create files in.
 	for _, out := range target.Outputs() {
-		if dir := path.Dir(out); dir != "." {
-			outPath := path.Join(target.TmpDir(), dir)
-			if !core.PathExists(outPath) {
-				if err := os.MkdirAll(outPath, core.DirPermissions); err != nil {
-					return err
-				}
+		if err := prepareParentDirs(target, out); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// prepareParentDirs will create any parent directories of an output i.e. for the output foo/bar/baz it will create
+// foo and foo/bar
+func prepareParentDirs(target *core.BuildTarget, out string) error {
+	if dir := path.Dir(out); dir != "." {
+		outPath := path.Join(target.TmpDir(), dir)
+		if !core.PathExists(outPath) {
+			if err := os.MkdirAll(outPath, core.DirPermissions); err != nil {
+				return err
 			}
 		}
 	}
@@ -525,7 +529,7 @@ func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, erro
 	for _, dir := range target.OutputDirectories {
 		o, err := addOutputDirectoryToBuildOutput(target, dir)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to move output dir (%s) contents to rule root: %w", dir, err)
 		}
 		outs = append(outs, o...)
 	}
