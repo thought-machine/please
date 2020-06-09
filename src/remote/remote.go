@@ -433,7 +433,7 @@ func moveOutDirFilesToTmpRoot(target *core.BuildTarget, dir string) error {
 		from := filepath.Join(fullDir, f.Name())
 		to := filepath.Join(target.TmpDir(), f.Name())
 
-		if err := fs.RecursiveCopy(from, to, target.OutMode()); err != nil {
+		if err := os.Rename(from, to); err != nil {
 			return err
 		}
 	}
