@@ -1,0 +1,28 @@
+=== RUN   TestExpandOriginalTargets
+--- PASS: TestExpandOriginalTargets (0.00s)
+=== RUN   TestExpandOriginalTestTargets
+--- PASS: TestExpandOriginalTestTargets (0.00s)
+=== RUN   TestExpandVisibleOriginalTargets
+    TestExpandVisibleOriginalTargets: state_test.go:56: 
+        	Error Trace:	state_test.go:56
+        	Error:      	Not equal: 
+        	            	expected: core.BuildLabels{core.BuildLabel{PackageName:"src/core", Name:"_target1#zip", Subrepo:""}, core.BuildLabel{PackageName:"src/core", Name:"target1", Subrepo:""}}
+        	            	actual  : core.BuildLabels{core.BuildLabel{PackageName:"src/core", Name:"target1", Subrepo:""}}
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1,3 +1,2 @@
+        	            	-(core.BuildLabels) (len=2) {
+        	            	- (core.BuildLabel) //src/core:_target1#zip,
+        	            	+(core.BuildLabels) (len=1) {
+        	            	  (core.BuildLabel) //src/core:target1
+        	Test:       	TestExpandVisibleOriginalTargets
+--- FAIL: TestExpandVisibleOriginalTargets (0.00s)
+=== RUN   TestExpandOriginalSubTargets
+--- PASS: TestExpandOriginalSubTargets (0.00s)
+=== RUN   TestExpandOriginalTargetsOrdering
+--- PASS: TestExpandOriginalTargetsOrdering (0.00s)
+=== RUN   TestComparePendingTasks
+--- PASS: TestComparePendingTasks (0.00s)
+FAIL

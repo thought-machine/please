@@ -181,3 +181,11 @@ func TestParseGoFileWithLogging(t *testing.T) {
 	assert.Equal(t, 3, results.Passes())
 	assert.Equal(t, 0, results.Failures())
 }
+
+func TestParseGoFileWithAssertion(t *testing.T) {
+	results, err := parseTestResultsFile("src/test/test_data/go_test_assertion.txt")
+	assert.NoError(t, err)
+	assert.Equal(t, 6, len(results.TestCases))
+	assert.NotNil(t, results.TestCases[3].Executions[0].Error)
+	assert.Contains(t, results.TestCases[3].Executions[0].Error.Message, "expected: core.BuildLabels")
+}
