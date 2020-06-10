@@ -561,7 +561,7 @@ func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir string) ([]st
 
 func copyOutDir(target *core.BuildTarget, from string, to string) ([]string, error) {
 	relativeToTmpdir := func(path string) string {
-		return  strings.TrimPrefix(strings.TrimPrefix(path, target.TmpDir()), "/")
+		return strings.TrimPrefix(strings.TrimPrefix(path, target.TmpDir()), "/")
 	}
 
 	var outs []string
