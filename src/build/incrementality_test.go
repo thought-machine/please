@@ -86,11 +86,11 @@ var KnownFields = map[string]bool{
 }
 
 func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
-	target := core.BuildTarget{}
+	target := &core.BuildTarget{}
 	val := reflect.ValueOf(target)
-	for i := 0; i < val.Type().NumField(); i++ {
-		field := val.Type().Field(i)
-		if !KnownFields[field.Name] {
+	typ := val.Elem().Type()
+	for i := 0; i < typ.NumField(); i++ {
+		if field := typ.Field(i); !KnownFields[field.Name] {
 			t.Errorf("Unaccounted field in RuleHash: %s", field.Name)
 		}
 	}

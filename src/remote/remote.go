@@ -253,6 +253,8 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 			}); err != nil {
 				return metadata, err
 			}
+		} else {
+			log.Debug("Not downloading outputs for %s, they are already up-to-date", target)
 		}
 		if err := c.downloadData(target); err != nil {
 			return metadata, err

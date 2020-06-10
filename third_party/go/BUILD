@@ -637,10 +637,3 @@ go_get(
     revision = "v1.0.0",
     test_only = True,
 )
-
-go_get(
-    name = "go-junit-report",
-    get = "github.com/jstemmer/go-junit-report/...",
-    licences = ["MIT"],
-    revision = "984a47ca6b0a7d704c4b589852051b4d7865aa17",
-)

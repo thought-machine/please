@@ -60,7 +60,7 @@ func TestGoSkippedMessage114(t *testing.T) {
 	require.NoError(t, err)
 
 	var skippedTC = getFirstSkippedTestCase(results)
-	assert.Equal(t, "    TestSomething: my_test.go:8: This thing is also here\n    TestSomething: my_test.go:9: This test is skipped", skippedTC.Executions[0].Skip.Message)
+	assert.Equal(t, "TestSomething: my_test.go:9: This test is skipped", skippedTC.Executions[0].Skip.Message)
 }
 
 func getFirstSkippedTestCase(ts core.TestSuite) *core.TestCase {
@@ -78,7 +78,7 @@ func TestGoFailedTraceback(t *testing.T) {
 	require.NoError(t, err)
 
 	var failedTC = getFirstFailedTestCase(results)
-	assert.Equal(t, "results_test.go:11: Unable to parse file: EOF", failedTC.Executions[0].Failure.Traceback)
+	assert.Equal(t, "\tresults_test.go:11: Unable to parse file: EOF", failedTC.Executions[0].Failure.Traceback)
 }
 
 // Go 1.14 changes the ordering of failed messages in Go tests
@@ -167,6 +167,11 @@ func TestGoIgnoreUnknownOutput(t *testing.T) {
 	assert.Equal(t, 4, results.Passes())
 	assert.Equal(t, 0, results.Failures())
 	assert.Equal(t, 0, results.Skips())
+}
+
+func TestGoFailIfUnknownTestPasses(t *testing.T) {
+	_, err := parseTestResultsFile("src/test/test_data/go_test_unknown_test.txt")
+	assert.Error(t, err)
 }
 
 func TestParseGoFileWithNoTests(t *testing.T) {

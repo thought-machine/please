@@ -5,7 +5,6 @@ filegroup(
     name = "tools",
     srcs = [
         "//tools/build_langserver",
-        "//tools/go_buildid_replacer",
         "//tools/jarcat",
         "//tools/java:javac_worker",
         "//tools/java:junit_runner",
