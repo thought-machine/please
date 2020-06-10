@@ -17,6 +17,7 @@ import (
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
+	treesdk "github.com/bazelbuild/remote-apis-sdks/go/pkg/tree"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/proto"
@@ -77,15 +78,21 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 		}
 
 		if isOutDir(d.Path, target.OutputDirectories) {
+			outs, err := treesdk.FlattenTree(tree, "")
+			if err != nil {
+				return err
+			}
+			for _, o := range outs {
+				if o.IsEmptyDirectory {
+					continue
+				}
+				target.AddOutput(o.Path)
+			}
+
 			for _, out := range tree.Root.Files {
-				target.AddOutput(out.Name) // Output might exist if built locally but AddOutput handles this case
-				o.Directories = append(o.Directories, &pb.DirectoryNode{
-					Name:   out.Name,
-					Digest: out.Digest,
-				})
+				o.Files = append(o.Files, out)
 			}
 			for _, out := range tree.Root.Directories {
-				target.AddOutput(out.Name) // Output might exist if built locally but AddOutput handles this case
 				o.Directories = append(o.Directories, out)
 			}
 		} else {

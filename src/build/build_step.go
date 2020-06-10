@@ -546,18 +546,47 @@ func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir string) ([]st
 
 	var outs []string
 	for _, f := range files {
-		target.AddOutput(f.Name())
-
 		from := filepath.Join(fullDir, f.Name())
 		to := filepath.Join(target.TmpDir(), f.Name())
 
-		if err := fs.RecursiveCopy(from, to, target.OutMode()); err != nil {
+		newOuts, err := copyOutDir(target, from, to)
+		if err != nil {
 			return nil, err
 		}
 
-		outs = append(outs, f.Name())
+		outs = append(outs, newOuts...)
 	}
 	return outs, nil
+}
+
+func copyOutDir(target *core.BuildTarget, from string, to string) ([]string, error) {
+	relativeToTmpdir := func(path string) string {
+		return  strings.TrimPrefix(strings.TrimPrefix(path, target.TmpDir()), "/")
+	}
+
+	var outs []string
+
+	info, err := os.Lstat(from)
+	if err != nil {
+		return nil, err
+	}
+	if info.IsDir() {
+		err := fs.Walk(from, func(name string, isDir bool) error {
+			dest := path.Join(to, name[len(from):])
+			if isDir {
+				return fs.EnsureDir(dest)
+			}
+
+			outName := relativeToTmpdir(dest)
+			outs = append(outs, outName)
+			target.AddOutput(outName)
+			return fs.CopyFile(name, dest, target.OutMode())
+		})
+		return outs, err
+	}
+	outs = append(outs, relativeToTmpdir(to))
+	target.AddOutput(outs[0])
+	return outs, os.Rename(from, to)
 }
 
 func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bool, error) {

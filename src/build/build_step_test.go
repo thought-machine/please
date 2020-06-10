@@ -123,7 +123,7 @@ func TestOutputDir(t *testing.T) {
 	newTarget := func() (*core.BuildState, *core.BuildTarget) {
 		// Test modifying a command in the post-build function.
 		state, target := newState("//package1:target8")
-		target.Command = "mkdir OUT_DIR && echo 'wibble wibble wibble' | tee OUT_DIR/file7"
+		target.Command = "mkdir OUT_DIR && touch OUT_DIR/file7"
 		target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR")
 
 		return state, target
@@ -140,9 +140,8 @@ func TestOutputDir(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, md.OutputDirOuts, 1)
-	assert.Equal(t, "file7",md.OutputDirOuts[0])
+	assert.Equal(t, "file7", md.OutputDirOuts[0])
 
-	// Test modifying a command in the post-build function.
 	state, target = newTarget()
 
 	err = buildTarget(1, state, target, false)

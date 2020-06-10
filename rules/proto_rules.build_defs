@@ -305,7 +305,7 @@ def grpc_languages():
                 pkg_config_libs = ['grpc++', 'grpc', 'protobuf'],
                 compiler_flags = ['-I$PKG_DIR', '-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
             ),
-            protoc_flags = ['--cpp_out="$TMP_DIR/cc"', '--plugin=protoc-gen-grpc-cc="$TOOLS_CC"', '--grpc-cc_out="$TMP_DIR"'],
+            protoc_flags = ['--cpp_out="$TMP_DIR/cc"', '--plugin=protoc-gen-grpc-cc="$TOOLS_CC"', '--grpc-cc_out="$TMP_DIR/cc"'],
             tools = [CONFIG.GRPC_CC_PLUGIN],
             provides=['hdrs'],
         ),
@@ -314,7 +314,7 @@ def grpc_languages():
             proto_language = 'python',
             extensions = ['_pb2.py', '_pb2_grpc.py'],
             func = python_library,
-            protoc_flags = ['--python_out="$TMP_DIR/py"', '--plugin=protoc-gen-grpc-python="$TOOLS_PY"', '--grpc-python_out="$TMP_DIR"'],
+            protoc_flags = ['--python_out="$TMP_DIR/py"', '--plugin=protoc-gen-grpc-python="$TOOLS_PY"', '--grpc-python_out="$TMP_DIR/py"'],
             tools = [CONFIG.GRPC_PYTHON_PLUGIN],
             deps = [CONFIG.PROTO_PYTHON_DEP, CONFIG.GRPC_PYTHON_DEP],
         ),
@@ -329,7 +329,7 @@ def grpc_languages():
                 test_only = test_only,
                 labels = ['proto'],
             ),
-            protoc_flags = ['--java_out="$TMP_DIR/java"', '--plugin=protoc-gen-grpc-java="$TOOLS_JAVA"', '--grpc-java_out="$TMP_DIR"'],
+            protoc_flags = ['--java_out="$TMP_DIR/java"', '--plugin=protoc-gen-grpc-java="$TOOLS_JAVA"', '--grpc-java_out="$TMP_DIR/java"'],
             tools = [CONFIG.GRPC_JAVA_PLUGIN],
             deps = [CONFIG.GRPC_JAVA_DEP, CONFIG.PROTO_JAVA_DEP],
         ),
@@ -375,15 +375,15 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
     out_dir = "out_dir"
     language_out_dir = plugin['language']
 
-    cmd = f'mkdir {language_out_dir} && mkdir {out_dir} && $TOOLS_PROTOC ' + ' '.join(flags)
+    cmd = f'$TOOLS_PROTOC ' + ' '.join(flags)
     if root_dir:
-        cmd = cmd.replace('$TMP_DIR', '.')
         cmd = f'cd {root_dir}; {cmd} ${{SRCS//{root_dir}\\//}} && cd "$TMP_DIR"'
     else:
         cmd += ' ${SRCS}'
 
+    cmd += f' && (mv -f {language_out_dir}/${{PKG_DIR}}/* {out_dir}; true) && (mv -f {language_out_dir}/* {out_dir}; true)'
 
-    cmds = [cmd, f'(mv -f {language_out_dir}/${{PKG_DIR}}/* {out_dir}; true)']
+    cmd = f'mkdir out_dir && mkdir {language_out_dir} && {cmd}'
 
     # protoc_flags are applied transitively to dependent rules via labels.
     labels += ['protoc:' + flag for flag in protoc_flags]
@@ -392,10 +392,10 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
         tag = f'protoc_{language}',
         srcs = srcs,
         output_dirs = [out_dir],
-        cmd = ' && '.join(cmds),
+        cmd = cmd,
         deps = deps,
         tools = tools,
-        requires = ['proto'],
+        requires = ['proto', language],
         pre_build = pre_build,
         labels = labels,
         needs_transitive_deps = True,
