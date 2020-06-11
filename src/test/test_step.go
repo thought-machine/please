@@ -163,6 +163,8 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		return
 	}
 
+	target.StartTestSuite()
+
 	coverage := &core.TestCoverage{}
 	if state.NumTestRuns == 1 {
 		var results core.TestSuite
