@@ -1,6 +1,11 @@
 Version 14.5.2
 --------------
 
+    * Fix issue where test_results.xml was missing package and suite names
+
+Version 14.5.2
+--------------
+
     * Go test output now parses correctly again (#994)
     * Matches of original targets for downloading outputs are now more exact (#987)
 
