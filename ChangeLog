@@ -1,4 +1,4 @@
-Version 14.5.2
+Version 14.5.3
 --------------
 
     * Fix issue where test_results.xml was missing package and suite names
