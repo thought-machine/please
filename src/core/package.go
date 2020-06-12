@@ -235,22 +235,21 @@ func FindOwningPackages(state *BuildState, files []string) []BuildLabel {
 	ret := make([]BuildLabel, len(files))
 	for i, file := range files {
 		ret[i] = FindOwningPackage(state, file)
+		if ret[i].PackageName == "" {
+			log.Fatalf("No BUILD file owns file %s", file)
+		}
 	}
 	return ret
 }
 
 // FindOwningPackage returns a build label identifying the package that owns a given file.
 func FindOwningPackage(state *BuildState, file string) BuildLabel {
-	f := file
+	f := path.Dir(file)
 	for f != "." {
-		f = path.Dir(f)
 		if fs.IsPackage(state.Config.Parse.BuildFileName, f) {
-			if f == "." {
-				return BuildLabel{PackageName: "", Name: "all"}
-			}
 			return BuildLabel{PackageName: f, Name: "all"}
 		}
+		f = path.Dir(f)
 	}
-	log.Fatalf("No BUILD file owns file %s", file)
-	return BuildLabel{}
+	return BuildLabel{PackageName: "", Name: "all"}
 }
