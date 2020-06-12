@@ -690,21 +690,21 @@ func (target *BuildTarget) CheckTargetOwnsBuildOutputs(state *BuildState) error 
 	}
 
 	for _, output := range target.outputs {
+		targetPackage := target.Label.PackageName
+		out := filepath.Join(targetPackage, output)
+
+		if fs.IsPackage(state.Config.Parse.BuildFileName, out) {
+			return fmt.Errorf("trying to output file %s, but that directory is another package", out)
+		}
+
 		// If the output is just a file in the package root, we don't need to check anything else.
 		if filepath.Dir(output) == "." {
 			continue
 		}
 
-		targetPackage := target.Label.PackageName
-		out := filepath.Join(target.Label.PackageName, output)
-
 		pkg := FindOwningPackage(state, out)
 		if targetPackage != pkg.PackageName {
 			return fmt.Errorf("trying to output file %s, but that directory belongs to another package (%s)", out, pkg.PackageName)
-		}
-
-		if fs.IsPackage(state.Config.Parse.BuildFileName, out) {
-			return fmt.Errorf("trying to output file %s, but that directory is another package", out)
 		}
 	}
 	return nil
