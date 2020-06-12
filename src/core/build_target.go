@@ -682,16 +682,21 @@ func (target *BuildTarget) CheckDuplicateOutputs() error {
 
 // CheckTargetOwnsBuildOutputs checks that any outputs to this rule output into directories this of this package.
 func (target *BuildTarget) CheckTargetOwnsBuildOutputs(state *BuildState) error {
+	// Skip this check for sub-repos because sub-repos are currently outputted into plz-gen so the output might also
+	// be a sub-repo that contains a package. This isn't the best solution but we can't fix this without reworking
+	// how sub-repos are done.
+	if target.Subrepo != nil {
+		return nil
+	}
+
 	for _, output := range target.outputs {
+		// If the output is just a file in the package root, we don't need to check anything else.
+		if filepath.Dir(output) == "." {
+			continue
+		}
+
 		targetPackage := target.Label.PackageName
 		out := filepath.Join(target.Label.PackageName, output)
-
-		// Skip this check for sub-repos because sub-repos are currently outputted into plz-gen so the output might also
-		// be a sub-repo that contains a package. This isn't the best solution but we can't fix this without reworking
-		// how sub-repos are done.
-		if target.Subrepo != nil {
-			return nil
-		}
 
 		pkg := FindOwningPackage(state, out)
 		if targetPackage != pkg.PackageName {
