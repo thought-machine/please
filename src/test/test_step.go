@@ -370,7 +370,7 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 }
 
 func parseRemoteCoverage(state *core.BuildState, target *core.BuildTarget, coverage []byte, run int) (*core.TestCoverage, error) {
-	if !state.NeedCoverage {
+	if !state.NeedCoverage || len(coverage) == 0 {
 		return core.NewTestCoverage(), nil
 	}
 	return parseTestCoverage(target, coverage, run)
