@@ -134,6 +134,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		}
 	}
 	findOriginalTaskSet(state, targets, true, arch)
+	log.Debug("Original target scan complete")
 	state.TaskDone(true) // initial target adding counts as one.
 }
 
