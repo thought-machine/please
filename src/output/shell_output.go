@@ -206,7 +206,12 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 
 func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, failedTargetsMap map[core.BuildLabel]error, duration time.Duration, detailed bool) {
 	if len(failedTargets) > 0 {
+		done := map[core.BuildLabel]bool{}
 		for _, failed := range failedTargets {
+			if done[failed] {
+				continue
+			}
+			done[failed] = true
 			target := state.Graph.TargetOrDie(failed)
 			if target.Results.Failures() == 0 && target.Results.Errors() == 0 {
 				if target.Results.TimedOut {
