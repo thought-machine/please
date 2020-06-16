@@ -28,7 +28,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
-	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"google.golang.org/grpc/status"
 	"gopkg.in/op/go-logging.v1"
 
@@ -132,11 +131,7 @@ func (c *Client) initExec() error {
 		CASService:         c.state.Config.Remote.CASURL,
 		NoSecurity:         !c.state.Config.Remote.Secure,
 		TransportCredsOnly: c.state.Config.Remote.Secure,
-		DialOpts: append([]grpc.DialOption{
-			grpc.WithStatsHandler(c.stats),
-			// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
-			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400)),
-		}, dialOpts...),
+		DialOpts:           dialOpts,
 	}, client.UseBatchOps(true), client.RetryTransient())
 	if err != nil {
 		return err
