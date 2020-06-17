@@ -25,6 +25,7 @@ import (
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
 
 	"github.com/thought-machine/please/src/build"
@@ -519,14 +520,23 @@ func updateHashFilename(name string, digest *pb.Digest) string {
 
 // dialOpts returns a set of dial options to apply based on the config.
 func (c *Client) dialOpts() ([]grpc.DialOption, error) {
+	// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
+	callOpts := []grpc.CallOption{grpc.MaxCallRecvMsgSize(419430400)}
+	if c.state.Config.Remote.Gzip {
+		callOpts = append(callOpts, grpc.UseCompressor(gzip.Name))
+	}
+	opts := []grpc.DialOption{
+		grpc.WithStatsHandler(c.stats),
+		grpc.WithDefaultCallOptions(callOpts...),
+	}
 	if c.state.Config.Remote.TokenFile == "" {
-		return nil, nil
+		return opts, nil
 	}
 	token, err := ioutil.ReadFile(c.state.Config.Remote.TokenFile)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to load token from file: %s", err)
+		return opts, fmt.Errorf("Failed to load token from file: %s", err)
 	}
-	return []grpc.DialOption{grpc.WithPerRPCCredentials(preSharedToken(string(token)))}, nil
+	return append(opts, grpc.WithPerRPCCredentials(preSharedToken(string(token)))), nil
 }
 
 // preSharedToken returns a gRPC credential provider for a pre-shared token.
