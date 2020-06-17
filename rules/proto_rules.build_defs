@@ -14,6 +14,7 @@ should be the return value of proto_language.
 
 _DEFAULT_GRPC_LABELS = ['grpc']
 
+
 def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, labels:list&features&tags=[],
                   languages:list|dict=None, test_only:bool&testonly=False, root_dir:str='', protoc_flags:list=[]):
     """Compile a .proto file to generated code for various languages.
@@ -35,8 +36,32 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
                            will be necessary for them to build too).
     """
     languages = _merge_dicts(languages or CONFIG.PROTO_LANGUAGES, proto_languages())
+
+    # We detect output names for normal sources, but will have to do a post-build rule for
+    # any input rules. We could just do that for everything but it's nicer to avoid them
+    # when possible since they obscure what's going on with the build graph.
+    file_srcs = [src for src in srcs if src[0] not in [':', '/']]
+    need_post_build = file_srcs != srcs
+    provides = {'proto': f':_{name}#proto'}
+
     lang_plugins = sorted(languages.items())
     plugins = [plugin for _, plugin in lang_plugins]
+    file_extensions = []
+    outs = {ext_lang: [src.replace('.proto', ext) for src in file_srcs for ext in exts]
+    if plugin['use_file_names'] else []
+            for language, plugin in lang_plugins for ext_lang, exts in plugin['extensions'].items()}
+    flags = [' '.join(plugin['protoc_flags']) for plugin in plugins]
+    tools = {lang: plugin.get('tools') for lang, plugin in lang_plugins}
+    tools['protoc'] = [CONFIG.PROTOC_TOOL]
+    cmd = '$TOOLS_PROTOC ' + ' '.join(flags)
+    if root_dir:
+        cmd = 'export RD="%s"; cd $RD; %s ${SRCS//$RD\\//} && cd "$TMP_DIR"' % (root_dir, cmd.replace('$TMP_DIR', '.'))
+    else:
+        cmd += ' ${SRCS}'
+    cmds = [cmd, '(mv -f ${PKG_DIR}/* .; true)']
+
+    # protoc_flags are applied transitively to dependent rules via labels.
+    labels += ['protoc:' + flag for flag in protoc_flags]
 
     # TODO(pebers): genericise this bit?
     if 'go' in languages:
@@ -46,29 +71,53 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
             base_path = join_path(CONFIG.GO_IMPORT_PATH, base_path)
         labels += [f'proto:go-map: {base_path}/{src}={base_path}/{name}' for src in srcs
                    if not src.startswith(':') and not src.startswith('/') and
-                       (src != (name + '.proto') or len(srcs) > 1 or diff_pkg)]
+                   (src != (name + '.proto') or len(srcs) > 1 or diff_pkg)]
+
+    # Figure out which languages we need to detect output files for.
+    # This always happens for Java, and will be needed for any other language where the inputs aren't plain files.
+    post_build = None
+    search_extensions = [(lang, exts) for plugin in plugins
+                         for lang, exts in sorted(plugin['extensions'].items())
+                         if need_post_build or not plugin['use_file_names']]
+    if search_extensions:
+        all_exts = [ext for _, exts in search_extensions for ext in exts]
+        cmds += ['find . %s | sort' % ' -or '.join(['-name "*%s"' % ext for ext in all_exts])]
+        post_build = _annotate_outs(search_extensions)
 
     # Plugins can declare their own pre-build functions. If there are any, we need to apply them all in sequence.
     pre_build_functions = [plugin['pre_build'] for plugin in plugins if plugin['pre_build']]
     pre_build_functions += [_collect_transitive_labels]
     pre_build = lambda rule: [fn(rule) for fn in pre_build_functions]
-    protoc_rules = {lang: _protoc_rule(name, srcs, deps, lang, plugin, protoc_flags, root_dir, pre_build, labels, test_only,
-                                       visibility) for lang, plugin in lang_plugins}
+    protoc_rule = build_rule(
+        name = name,
+        tag = 'protoc',
+        srcs = srcs,
+        outs = outs,
+        cmd = ' && '.join(cmds),
+        deps = deps,
+        tools = tools,
+        requires = ['proto'],
+        pre_build = pre_build,
+        post_build = post_build,
+        labels = labels,
+        needs_transitive_deps = True,
+        test_only = test_only,
+        visibility = visibility,
+    )
 
-    provides = {'proto': f':_{name}#proto'}
     for language, plugin in lang_plugins:
         lang_name = f'_{name}#{language}'
         provides[language] = plugin['func'](
             name = lang_name,
-            srcs = [protoc_rules[language]],
+            srcs = [f'{protoc_rule}|{language}'],
             deps = deps + plugin['deps'],
             test_only = test_only
         ) or (':' + lang_name)
-        # Add any provided labels from the generated rule above to the final output rule
-        for p in plugin.provides:
-            tag_name = f'{language}_{p}'
-            current_package = package_name()
-            provides[tag_name] = f'//{current_package}:_{name}#{tag_name}'
+        # TODO(pebers): find a way of genericising this too...
+        if language == 'cc':
+            provides['cc_hdrs'] = provides['cc'].replace('#cc', '#cc_hdrs')
+        elif language == 'go':
+            provides['go_src'] = provides['go'].replace('#go', '#go_srcs')
 
     # This simply collects the sources, it's used for other proto_library rules to depend on.
     filegroup(
@@ -135,7 +184,7 @@ def _go_path_mapping(grpc):
 
 
 def proto_language(language:str, extensions:list|dict, func:function, use_file_names:bool=True, protoc_flags:list=[],
-                   tools:list=[], deps:list=[], pre_build:function=None, proto_language:str='', provides:list=[]):
+                   tools:list=[], deps:list=[], pre_build:function=None, proto_language:str=''):
     """Returns the definition of how to build a particular language for proto_library or grpc_library.
 
     Args:
@@ -155,8 +204,6 @@ def proto_language(language:str, extensions:list|dict, func:function, use_file_n
       deps (list): Additional dependencies to apply to this rule.
       pre_build (function): Definition of pre-build function to apply to this language.
       proto_language (str): Name of the language (as protoc would name it). Defaults to the same as language.
-      provides (list[str]): Any tags from the rule generated by func that should be provided by the final proto_library
-                            rule.
     """
     return {
         'language': language,
@@ -168,7 +215,6 @@ def proto_language(language:str, extensions:list|dict, func:function, use_file_n
         'tools': tools,
         'deps': deps,
         'pre_build': pre_build,
-        'provides': provides,
     }
 
 
@@ -194,11 +240,11 @@ def _annotate_outs(extensions):
     return _annotate_outs
 
 
-def _merge_dicts(lhs_dict, rhs_dict):
+def _merge_dicts(a, b):
     """Merges dictionary a into dictionary b, overwriting where a's values are not None."""
-    if not isinstance(lhs_dict, dict):
-        return {lang: rhs_dict[lang] for lang in lhs_dict}  # Languages can be passed as just a list.
-    return {k: v or rhs_dict[k] for k, v in lhs_dict.items()}
+    if not isinstance(a, dict):
+        return {x: b[x] for x in a}  # Languages can be passed as just a list.
+    return {k: v or b[k] for k, v in a.items()}
 
 
 def _collect_transitive_labels(rule):
@@ -231,8 +277,7 @@ def proto_languages():
                 pkg_config_libs = ['protobuf'],
                 compiler_flags = ['-I$PKG_DIR'],
             ),
-            provides=["hdrs"],
-            protoc_flags = ['--cpp_out="$TMP_DIR/cc"'],
+            protoc_flags = ['--cpp_out="$TMP_DIR"'],
         ),
         'java': proto_language(
             language = 'java',
@@ -245,7 +290,7 @@ def proto_languages():
                 test_only = test_only,
                 labels = ['proto'],
             ),
-            protoc_flags = ['--java_out="$TMP_DIR/java"'],
+            protoc_flags = ['--java_out="$TMP_DIR"'],
             deps = [CONFIG.PROTO_JAVA_DEP],
         ),
         'go': proto_language(
@@ -258,11 +303,10 @@ def proto_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out=paths=source_relative:"$TMP_DIR/go"', '--plugin=protoc-gen-go=$TOOLS_GO'],
+            protoc_flags = ['--go_out=paths=source_relative:"$TMP_DIR"', '--plugin=protoc-gen-go=$TOOLS_GO'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP],
             pre_build = _go_path_mapping(False),
-            provides=["srcs"],
         ),
         'js': proto_language(
             language = 'js',
@@ -275,7 +319,7 @@ def proto_languages():
                 requires = ['js'],
                 output_is_complete = False,
             ),
-            protoc_flags = ['--js_out=import_style=commonjs,binary:"$TMP_DIR/js"'],
+            protoc_flags = ['--js_out=import_style=commonjs,binary:"$TMP_DIR"'],
             deps = [CONFIG.PROTO_JS_DEP],
         ),
         'py': proto_language(
@@ -283,7 +327,7 @@ def proto_languages():
             proto_language = 'python',
             extensions = ['_pb2.py'],
             func = python_library,
-            protoc_flags = ['--python_out="$TMP_DIR/py"'],
+            protoc_flags = ['--python_out="$TMP_DIR"'],
             deps = [CONFIG.PROTO_PYTHON_DEP],
         ),
     }
@@ -305,16 +349,15 @@ def grpc_languages():
                 pkg_config_libs = ['grpc++', 'grpc', 'protobuf'],
                 compiler_flags = ['-I$PKG_DIR', '-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
             ),
-            protoc_flags = ['--cpp_out="$TMP_DIR/cc"', '--plugin=protoc-gen-grpc-cc="$TOOLS_CC"', '--grpc-cc_out="$TMP_DIR/cc"'],
+            protoc_flags = ['--cpp_out="$TMP_DIR"', '--plugin=protoc-gen-grpc-cc="$TOOLS_CC"', '--grpc-cc_out="$TMP_DIR"'],
             tools = [CONFIG.GRPC_CC_PLUGIN],
-            provides=['hdrs'],
         ),
         'py': proto_language(
             language = 'py',
             proto_language = 'python',
             extensions = ['_pb2.py', '_pb2_grpc.py'],
             func = python_library,
-            protoc_flags = ['--python_out="$TMP_DIR/py"', '--plugin=protoc-gen-grpc-python="$TOOLS_PY"', '--grpc-python_out="$TMP_DIR/py"'],
+            protoc_flags = ['--python_out="$TMP_DIR"', '--plugin=protoc-gen-grpc-python="$TOOLS_PY"', '--grpc-python_out="$TMP_DIR"'],
             tools = [CONFIG.GRPC_PYTHON_PLUGIN],
             deps = [CONFIG.PROTO_PYTHON_DEP, CONFIG.GRPC_PYTHON_DEP],
         ),
@@ -329,7 +372,7 @@ def grpc_languages():
                 test_only = test_only,
                 labels = ['proto'],
             ),
-            protoc_flags = ['--java_out="$TMP_DIR/java"', '--plugin=protoc-gen-grpc-java="$TOOLS_JAVA"', '--grpc-java_out="$TMP_DIR/java"'],
+            protoc_flags = ['--java_out="$TMP_DIR"', '--plugin=protoc-gen-grpc-java="$TOOLS_JAVA"', '--grpc-java_out="$TMP_DIR"'],
             tools = [CONFIG.GRPC_JAVA_PLUGIN],
             deps = [CONFIG.GRPC_JAVA_DEP, CONFIG.PROTO_JAVA_DEP],
         ),
@@ -343,11 +386,10 @@ def grpc_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out=paths=source_relative:"$TMP_DIR/go"', '--plugin=protoc-gen-go="$TOOLS_GO"'],
+            protoc_flags = ['--go_out=paths=source_relative:"$TMP_DIR"', '--plugin=protoc-gen-go="$TOOLS_GO"'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP, CONFIG.GRPC_GO_DEP],
             pre_build = _go_path_mapping(True),
-            provides=['srcs'],
         ),
         # We don't really support grpc-js right now, so this is the same as proto-js.
         'js': proto_language(
@@ -361,47 +403,11 @@ def grpc_languages():
                 requires = ['js'],
                 output_is_complete = False,
             ),
-            protoc_flags = ['--js_out=import_style=commonjs,binary:"$TMP_DIR/js"'],
+            protoc_flags = ['--js_out=import_style=commonjs,binary:"$TMP_DIR"'],
             deps = [CONFIG.PROTO_JS_DEP],
         ),
     }
 
-
-def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre_build, labels, test_only, visibility):
-    tools = {language: plugin['tools'], 'protoc': [CONFIG.PROTOC_TOOL]}
-
-    flags = [' '.join(plugin['protoc_flags'])]
-
-    out_dir = "out_dir"
-    language_out_dir = plugin['language']
-
-    cmd = f'$TOOLS_PROTOC ' + ' '.join(flags)
-    if root_dir:
-        cmd = f'cd {root_dir}; {cmd} ${{SRCS//{root_dir}\\//}} && cd "$TMP_DIR"'
-    else:
-        cmd += ' ${SRCS}'
-
-    cmd += f' && (mv -f {language_out_dir}/${{PKG_DIR}}/* {out_dir}; true) && (mv -f {language_out_dir}/* {out_dir}; true)'
-
-    cmd = f'mkdir out_dir && mkdir {language_out_dir} && {cmd}'
-
-    # protoc_flags are applied transitively to dependent rules via labels.
-    labels += ['protoc:' + flag for flag in protoc_flags]
-    return build_rule(
-        name = name,
-        tag = f'protoc_{language}',
-        srcs = srcs,
-        output_dirs = [f'{out_dir}/**'],
-        cmd = cmd,
-        deps = deps,
-        tools = tools,
-        requires = ['proto', language],
-        pre_build = pre_build,
-        labels = labels,
-        needs_transitive_deps = True,
-        test_only = test_only,
-        visibility = visibility,
-    )
 
 def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
     """Downloads a precompiled protoc binary.
@@ -435,7 +441,7 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
         labels = [
             'protoc:-I"$TMP_DIR"/' + package_name(),
             'protoc:-I"$TMP_DIR"',
-        ],
+            ],
     )
     return genrule(
         name = name,
