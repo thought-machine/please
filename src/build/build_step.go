@@ -456,7 +456,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 // prepareOutputDirectories creates any directories the target has declared it will output into as a nicety
 func prepareOutputDirectories(target *core.BuildTarget) error {
 	for _, dir := range target.OutputDirectories {
-		if err := prepareParentDirs(target, dir); err != nil {
+		if err := prepareParentDirs(target, dir.Dir()); err != nil {
 			return err
 		}
 	}
@@ -536,8 +536,8 @@ func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, erro
 	return outs, nil
 }
 
-func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir string) ([]string, error) {
-	fullDir := filepath.Join(target.TmpDir(), dir)
+func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir core.OutputDirectory) ([]string, error) {
+	fullDir := filepath.Join(target.TmpDir(), dir.Dir())
 
 	files, err := ioutil.ReadDir(fullDir)
 	if err != nil {
@@ -549,12 +549,21 @@ func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir string) ([]st
 		from := filepath.Join(fullDir, f.Name())
 		to := filepath.Join(target.TmpDir(), f.Name())
 
-		newOuts, err := copyOutDir(target, from, to)
-		if err != nil {
-			return nil, err
-		}
+		if dir.ShouldAddFiles() {
+			newOuts, err := copyOutDir(target, from, to)
+			if err != nil {
+				return nil, err
+			}
 
-		outs = append(outs, newOuts...)
+			outs = append(outs, newOuts...)
+		} else {
+			target.AddOutput(f.Name())
+			outs = append(outs, f.Name())
+
+			if err := fs.RecursiveCopy(from, to, target.OutMode()); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return outs, nil
 }

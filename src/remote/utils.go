@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	treesdk "github.com/bazelbuild/remote-apis-sdks/go/pkg/tree"
 	"io/ioutil"
 	"os"
 	"path"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
-	treesdk "github.com/bazelbuild/remote-apis-sdks/go/pkg/tree"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/proto"
@@ -77,24 +77,14 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 
-		if isOutDir(d.Path, target.OutputDirectories) {
-			outs, err := treesdk.FlattenTree(tree, "")
+		if outDir := maybeGetOutDir(d.Path, target.OutputDirectories); outDir != "" {
+			files, dirs, err := getOutputsForOutDir(target, outDir, tree)
 			if err != nil {
 				return err
 			}
-			for _, o := range outs {
-				if o.IsEmptyDirectory {
-					continue
-				}
-				target.AddOutput(o.Path)
-			}
 
-			for _, out := range tree.Root.Files {
-				o.Files = append(o.Files, out)
-			}
-			for _, out := range tree.Root.Directories {
-				o.Directories = append(o.Directories, out)
-			}
+			o.Directories = append(o.Directories, dirs...)
+			o.Files = append(o.Files, files...)
 		} else {
 			o.Directories = append(o.Directories, &pb.DirectoryNode{
 				Name:   d.Path,
@@ -114,13 +104,48 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	return nil
 }
 
-func isOutDir(dir string, outDirs []string) bool {
-	for _, outDir := range outDirs {
-		if dir == outDir {
-			return true
+func getOutputsForOutDir(target *core.BuildTarget, outDir core.OutputDirectory, tree *pb.Tree) ([]*pb.FileNode, []*pb.DirectoryNode, error) {
+	files := make([]*pb.FileNode, 0, len(tree.Root.Files))
+	dirs := make([]*pb.DirectoryNode, 0, len(tree.Root.Directories))
+
+	if outDir.ShouldAddFiles() {
+		outs, err := treesdk.FlattenTree(tree, "")
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, o := range outs {
+			if o.IsEmptyDirectory {
+				continue
+			}
+			target.AddOutput(o.Path)
 		}
 	}
-	return false
+
+	for _, out := range tree.Root.Files {
+		if !outDir.ShouldAddFiles() {
+			target.AddOutput(out.Name)
+		}
+		files = append(files, out)
+	}
+	for _, out := range tree.Root.Directories {
+		if !outDir.ShouldAddFiles() {
+			target.AddOutput(out.Name)
+		}
+		dirs = append(dirs, out)
+	}
+
+	return files, dirs, nil
+}
+
+// maybeGetOutDir will get the output directory based on the directory provided. If there's no matching directory, this
+// will return an empty string indicating that that action output was not an output directory.
+func maybeGetOutDir(dir string, outDirs []core.OutputDirectory) core.OutputDirectory {
+	for _, outDir := range outDirs {
+		if dir == outDir.Dir() {
+			return outDir
+		}
+	}
+	return ""
 }
 
 // digestMessage calculates the digest of a proto message as described in the
@@ -348,7 +373,7 @@ func outputs(target *core.BuildTarget) (files, dirs []string) {
 	}
 
 	for _, out := range target.OutputDirectories {
-		dirs = append(dirs, out)
+		dirs = append(dirs, out.Dir())
 	}
 	return files, dirs
 }

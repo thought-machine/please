@@ -391,7 +391,7 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
         name = name,
         tag = f'protoc_{language}',
         srcs = srcs,
-        output_dirs = [out_dir],
+        output_dirs = [f'{out_dir}/**'],
         cmd = cmd,
         deps = deps,
         tools = tools,

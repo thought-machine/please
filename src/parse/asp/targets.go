@@ -97,7 +97,10 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.ShowProgress = isTruthy(progressBuildRuleArgIdx)
 	target.IsRemoteFile = isTruthy(urlsBuildRuleArgIdx)
 	target.Local = isTruthy(localBuildRuleArgIdx)
-	target.OutputDirectories = asStringList(s, args[outDirsBuildRuleArgIdx], "output_dirs")
+
+	for _, o := range asStringList(s, args[outDirsBuildRuleArgIdx], "output_dirs") {
+		target.AddOutputDirectory(o)
+	}
 
 	var size *core.Size
 	if args[sizeBuildRuleArgIdx] != None {

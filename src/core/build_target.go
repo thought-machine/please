@@ -188,7 +188,7 @@ type BuildTarget struct {
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	TestOutputs       []string `name:"test_outputs"`
-	OutputDirectories []string `name:"output_dirs"`
+	OutputDirectories []OutputDirectory `name:"output_dirs"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -226,6 +226,26 @@ type depInfo struct {
 	internal bool           // is it an internal dependency (that is not picked up implicitly by transitive searches)
 	source   bool           // is it implicit because it's a source (not true if it's a dependency too)
 	data     bool           // is it a data item for a test
+}
+
+// OutputDirectory is an output directory for the build rule. It may have a suffix of /** which means that we should
+// traverse the directory tree adding each file individually rather than just adding whatever files/directories are in
+// the top level.
+type OutputDirectory string
+
+// Dir returns the actual directory name for this output directory
+func (o OutputDirectory) Dir() string {
+	return strings.TrimSuffix(string(o), "/**")
+}
+
+// ShouldAddFiles checks whether the contents of this directory should include all the files in the directory tree
+// individually i.e. out_dir/net/thoughtmachine/Main.java -> net/thoughtmachine/Main.java. If this is false then these
+// files would be included as out_dir/net/thoughtmachine/Main.java -> net.
+func (o OutputDirectory) ShouldAddFiles() bool {
+	// TODO(jpoole): consider if we should have full glob matching for the suffix so we can do stuff like **.java
+	// or *_test.go. This will prove difficult for rex where we only have the file names rather than the actual
+	// directory
+	return strings.HasSuffix(string(o), "/**")
 }
 
 // A BuildTargetState tracks the current state of this target in regard to whether it's built
@@ -1391,6 +1411,11 @@ func (target *BuildTarget) SetProgress(progress float32) {
 // by adding new outputs
 func (target *BuildTarget) BuildCouldModifyTarget() bool {
 	return target.PostBuildFunction != nil || len(target.OutputDirectories) > 0
+}
+
+// AddOutputDirectory adds an output directory to the target
+func (target *BuildTarget) AddOutputDirectory(dir string) {
+	target.OutputDirectories = append(target.OutputDirectories, OutputDirectory(dir))
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

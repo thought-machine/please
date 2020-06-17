@@ -270,7 +270,7 @@ func TestOutDirsSetOutsOnTarget(t *testing.T) {
 	c.state.DownloadOutputs = true
 	require.True(t, c.state.ShouldDownload(outDirTarget))
 
-	outDirTarget.OutputDirectories = []string{"foo"}
+	outDirTarget.AddOutputDirectory("foo")
 	// Doesn't actually get executed but gives an idea as to how this rule is mocked up
 	outDirTarget.Command = "touch foo/bar.txt && touch foo/baz.txt"
 	c.state.Graph.AddTarget(outDirTarget)
