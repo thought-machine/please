@@ -187,7 +187,7 @@ type BuildTarget struct {
 	TestTimeout  time.Duration `name:"test_timeout"`
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
-	TestOutputs       []string `name:"test_outputs"`
+	TestOutputs       []string          `name:"test_outputs"`
 	OutputDirectories []OutputDirectory `name:"output_dirs"`
 }
 
