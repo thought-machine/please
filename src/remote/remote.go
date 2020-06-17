@@ -49,6 +49,7 @@ type Client struct {
 	fetchClient fpb.FetchClient
 	initOnce    sync.Once
 	state       *core.BuildState
+	origState   *core.BuildState
 	reqTimeout  time.Duration
 	err         error // for initialisation
 	instance    string
@@ -90,6 +91,7 @@ type pendingDownload struct {
 func New(state *core.BuildState) *Client {
 	c := &Client{
 		state:      state,
+		origState:  state,
 		instance:   state.Config.Remote.Instance,
 		reqTimeout: time.Duration(state.Config.Remote.Timeout),
 		outputs:    map[core.BuildLabel]*pb.Directory{},
@@ -245,7 +247,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 		return metadata, c.wrapActionErr(err, digest)
 	}
 
-	if c.state.ShouldDownload(target) {
+	if c.origState.ShouldDownload(target) {
 		if !c.outputsExist(target, digest) {
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
 			if err := c.download(target, func() error {
