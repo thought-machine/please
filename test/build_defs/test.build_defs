@@ -1,6 +1,5 @@
 
-# TODO(jpoole): write more of these and move this to somewhere more common. Right now this is pretty specific to this
-# test case. We might want to do more tests that just checking plz-out e.g. testing the output of plz query print.
+
 def please_repo_e2e_test(
         name: str,
         plz_command: str,
