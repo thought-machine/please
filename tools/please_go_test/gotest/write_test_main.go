@@ -135,6 +135,7 @@ package main
 
 import (
 	"os"
+	"strings"
 	"testing"
     "testing/internal/testdeps"
 
@@ -208,7 +209,8 @@ func main() {
 {{end}}
     testVar := os.Getenv("TESTS")
     if testVar != "" {
-        args = append(args, "-test.run", testVar)
+		testVar = strings.Replace(testVar, " ", "|", -1)
+		args = append(args, "-test.run", testVar)
     }
     os.Args = append(args, os.Args[1:]...)
 	m := testing.MainStart(testDeps, tests, nil, examples)
