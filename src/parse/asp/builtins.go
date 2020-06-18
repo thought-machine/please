@@ -236,7 +236,6 @@ const (
 
 func getRuleMetadata(s *scope, args []pyObject) pyObject {
 
-
 	name := args[getConfigRuleConfigNameIndex].(pyString).String()
 	label := core.ParseBuildLabelContext(name, s.pkg)
 	t := s.state.WaitForBuiltTarget(label, core.NewBuildLabel(s.pkg.Name, "all"))
