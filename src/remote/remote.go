@@ -406,10 +406,10 @@ func moveTmpFilesToOutDir(target *core.BuildTarget) error {
 // now empty directory
 func moveOutDirsToTmpRoot(target *core.BuildTarget) error {
 	for _, dir := range target.OutputDirectories {
-		if err := moveOutDirFilesToTmpRoot(target, dir); err != nil {
+		if err := moveOutDirFilesToTmpRoot(target, dir.Dir()); err != nil {
 			return fmt.Errorf("failed to move output dir (%s) contents to rule root: %w", dir, err)
 		}
-		if err := os.Remove(filepath.Join(target.TmpDir(), dir)); err != nil {
+		if err := os.Remove(filepath.Join(target.TmpDir(), dir.Dir())); err != nil {
 			return err
 		}
 	}

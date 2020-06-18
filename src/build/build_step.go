@@ -456,7 +456,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 // prepareOutputDirectories creates any directories the target has declared it will output into as a nicety
 func prepareOutputDirectories(target *core.BuildTarget) error {
 	for _, dir := range target.OutputDirectories {
-		if err := prepareParentDirs(target, dir); err != nil {
+		if err := prepareParentDirs(target, dir.Dir()); err != nil {
 			return err
 		}
 	}
@@ -536,8 +536,8 @@ func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, erro
 	return outs, nil
 }
 
-func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir string) ([]string, error) {
-	fullDir := filepath.Join(target.TmpDir(), dir)
+func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir core.OutputDirectory) ([]string, error) {
+	fullDir := filepath.Join(target.TmpDir(), dir.Dir())
 
 	files, err := ioutil.ReadDir(fullDir)
 	if err != nil {
@@ -546,18 +546,56 @@ func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir string) ([]st
 
 	var outs []string
 	for _, f := range files {
-		target.AddOutput(f.Name())
-
 		from := filepath.Join(fullDir, f.Name())
 		to := filepath.Join(target.TmpDir(), f.Name())
 
-		if err := os.Rename(from, to); err != nil {
-			return nil, err
-		}
+		if dir.ShouldAddFiles() {
+			newOuts, err := copyOutDir(target, from, to)
+			if err != nil {
+				return nil, err
+			}
 
-		outs = append(outs, f.Name())
+			outs = append(outs, newOuts...)
+		} else {
+			target.AddOutput(f.Name())
+			outs = append(outs, f.Name())
+
+			if err := fs.RecursiveCopy(from, to, target.OutMode()); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return outs, nil
+}
+
+func copyOutDir(target *core.BuildTarget, from string, to string) ([]string, error) {
+	relativeToTmpdir := func(path string) string {
+		return strings.TrimPrefix(strings.TrimPrefix(path, target.TmpDir()), "/")
+	}
+
+	var outs []string
+
+	info, err := os.Lstat(from)
+	if err != nil {
+		return nil, err
+	}
+	if info.IsDir() {
+		err := fs.Walk(from, func(name string, isDir bool) error {
+			dest := path.Join(to, name[len(from):])
+			if isDir {
+				return fs.EnsureDir(dest)
+			}
+
+			outName := relativeToTmpdir(dest)
+			outs = append(outs, outName)
+			target.AddOutput(outName)
+			return fs.CopyFile(name, dest, target.OutMode())
+		})
+		return outs, err
+	}
+	outs = append(outs, relativeToTmpdir(to))
+	target.AddOutput(outs[0])
+	return outs, os.Rename(from, to)
 }
 
 func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bool, error) {

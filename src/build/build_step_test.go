@@ -123,7 +123,7 @@ func TestOutputDir(t *testing.T) {
 	newTarget := func() (*core.BuildState, *core.BuildTarget) {
 		// Test modifying a command in the post-build function.
 		state, target := newState("//package1:target8")
-		target.Command = "mkdir OUT_DIR && echo 'wibble wibble wibble' | tee OUT_DIR/file7"
+		target.Command = "mkdir OUT_DIR && touch OUT_DIR/file7"
 		target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR")
 
 		return state, target
@@ -141,12 +141,46 @@ func TestOutputDir(t *testing.T) {
 	assert.Len(t, md.OutputDirOuts, 1)
 	assert.Equal(t, "file7", md.OutputDirOuts[0])
 
-	// Test modifying a command in the post-build function.
+	// Run again to load the outputs from the metadata
 	state, target = newTarget()
-
 	err = buildTarget(1, state, target, false)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"file7"}, target.Outputs())
+	assert.Equal(t, core.Reused, target.State())
+}
+
+func TestOutputDirDoubleStar(t *testing.T) {
+	newTarget := func(withDoubleStar bool) (*core.BuildState, *core.BuildTarget) {
+		// Test modifying a command in the post-build function.
+		state, target := newState("//package1:target8")
+		target.Command = "mkdir OUT_DIR && mkdir OUT_DIR/foo && touch OUT_DIR/foo/file7"
+
+		if withDoubleStar {
+			target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR/**")
+		} else {
+			target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR")
+		}
+
+		return state, target
+	}
+
+	state, target := newTarget(false)
+
+	err := buildTarget(1, state, target, false)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"foo"}, target.Outputs())
+
+	md, err := LoadTargetMetadata(target)
+	require.NoError(t, err)
+
+	assert.Len(t, md.OutputDirOuts, 1)
+	assert.Equal(t, "foo", md.OutputDirOuts[0])
+
+	state, target = newTarget(true)
+
+	err = buildTarget(1, state, target, false)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"foo/file7"}, target.Outputs())
 }
 
 func TestCacheRetrieval(t *testing.T) {
