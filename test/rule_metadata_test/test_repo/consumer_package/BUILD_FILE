@@ -1,5 +1,5 @@
 genrule(
     name="wibble", 
     outs=[get_rule_metadata("//md_package:metadata_rule").output_file],
-    cmd = "touch $OUT",
+    cmd = "echo wibble wibble wibble > $OUT",
 )
