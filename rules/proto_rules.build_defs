@@ -48,7 +48,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     plugins = [plugin for _, plugin in lang_plugins]
     file_extensions = []
     outs = {ext_lang: [src.replace('.proto', ext) for src in file_srcs for ext in exts]
-                      if plugin['use_file_names'] else []
+    if plugin['use_file_names'] else []
             for language, plugin in lang_plugins for ext_lang, exts in plugin['extensions'].items()}
     flags = [' '.join(plugin['protoc_flags']) for plugin in plugins]
     tools = {lang: plugin.get('tools') for lang, plugin in lang_plugins}
@@ -71,7 +71,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
             base_path = join_path(CONFIG.GO_IMPORT_PATH, base_path)
         labels += [f'proto:go-map: {base_path}/{src}={base_path}/{name}' for src in srcs
                    if not src.startswith(':') and not src.startswith('/') and
-                       (src != (name + '.proto') or len(srcs) > 1 or diff_pkg)]
+                   (src != (name + '.proto') or len(srcs) > 1 or diff_pkg)]
 
     # Figure out which languages we need to detect output files for.
     # This always happens for Java, and will be needed for any other language where the inputs aren't plain files.
@@ -441,7 +441,7 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
         labels = [
             'protoc:-I"$TMP_DIR"/' + package_name(),
             'protoc:-I"$TMP_DIR"',
-        ],
+            ],
     )
     return genrule(
         name = name,

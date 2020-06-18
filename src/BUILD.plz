@@ -35,6 +35,6 @@ go_binary(
 filegroup(
     name = "tools",
     srcs = ["//package:tools"],
-    visibility = ["//:install"],
     binary = True,
+    visibility = ["//:install"],
 )
