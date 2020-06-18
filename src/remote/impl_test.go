@@ -54,7 +54,7 @@ type testServer struct {
 	actionResults                 map[string]*pb.ActionResult
 	blobs                         map[string][]byte
 	bytestreams                   map[string][]byte
-	mockActionResult *pb.ActionResult
+	mockActionResult              *pb.ActionResult
 }
 
 func (s *testServer) GetCapabilities(ctx context.Context, req *pb.GetCapabilitiesRequest) (*pb.ServerCapabilities, error) {
