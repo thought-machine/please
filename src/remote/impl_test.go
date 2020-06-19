@@ -54,7 +54,7 @@ type testServer struct {
 	actionResults                 map[string]*pb.ActionResult
 	blobs                         map[string][]byte
 	bytestreams                   map[string][]byte
-	mockActionResult *pb.ActionResult
+	mockActionResult              *pb.ActionResult
 }
 
 func (s *testServer) GetCapabilities(ctx context.Context, req *pb.GetCapabilitiesRequest) (*pb.ServerCapabilities, error) {
@@ -303,7 +303,7 @@ func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteSer
 							Path: "test.results",
 							Digest: &pb.Digest{
 								Hash:      "a4226cbd3e94a835ffcb5832ddd07eafe29e99494105b01d0df236bd8e9a15c3",
-								SizeBytes: 181,
+								SizeBytes: 180,
 							},
 						}, {
 							Path: "test.coverage",
