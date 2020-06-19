@@ -231,7 +231,7 @@ func checkAndReplaceSequence(state *BuildState, target, dep *BuildTarget, in str
 	output := ""
 	for _, out := range dep.Outputs() {
 		if allOutputs || out == in {
-			if tool {
+			if tool && !state.WillRunRemotely(target) {
 				abs, err := filepath.Abs(handleDir(dep.OutDir(), out, dir))
 				if err != nil {
 					log.Fatalf("Couldn't calculate relative path: %s", err)

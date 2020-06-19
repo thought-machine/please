@@ -738,6 +738,11 @@ func (state *BuildState) ShouldRebuild(target *BuildTarget) bool {
 	return state.ForceRebuild && state.IsOriginalTargetOrParent(target)
 }
 
+// WillRunRemotely returns true if the given target will be run on a remote executor.
+func (state *BuildState) WillRunRemotely(target *BuildTarget) bool {
+	return state.RemoteClient != nil && state.Config.NumRemoteExecutors() > 0 && !target.Local
+}
+
 // ensureDownloaded ensures that a target has been downloaded when built remotely.
 // If remote execution is not enabled it has no effect.
 func (state *BuildState) ensureDownloaded(target *BuildTarget) {

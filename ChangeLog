@@ -3,6 +3,7 @@ Version 14.5.5
 
     * Test outputs are no longer downloaded in batches for remote execution
       to avoid exceeding the size limit.
+	* $(exe) replacements no longer include local paths for remote execution.
 
 
 Version 14.5.4
