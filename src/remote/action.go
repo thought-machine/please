@@ -391,20 +391,17 @@ func (c *Client) downloadAllPrefixedFiles(ar *pb.ActionResult, prefix string) ([
 	if err != nil {
 		return nil, err
 	}
-	digests := []digest.Digest{}
+	ret := [][]byte{}
 	for name, out := range outs {
 		if strings.HasPrefix(name, prefix) {
-			digests = append(digests, out.Digest)
+			blob, err := c.client.ReadBlob(context.Background(), out.Digest)
+			if err != nil {
+				return nil, err
+			}
+			ret = append(ret, blob)
 		}
 	}
-	ctx, cancel = context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	blobs, err := c.client.BatchDownloadBlobs(ctx, digests)
-	ret := make([][]byte, 0, len(blobs))
-	for _, blob := range blobs {
-		ret = append(ret, blob)
-	}
-	return ret, err
+	return ret, nil
 }
 
 // verifyActionResult verifies that all the requested outputs actually exist in a returned
