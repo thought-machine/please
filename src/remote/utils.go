@@ -199,6 +199,8 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest
 	}
 	data, _ := proto.Marshal(ar)
 	metadata.RemoteAction = data
+	// TODO(jpoole): Similar to retrieveTargetMetadataFromCache, it would be cleaner if we could store
+	//               into the cache from an arbitrary reader.
 	if err := build.StoreTargetMetadata(target, metadata); err != nil {
 		log.Warning("%s", err)
 		return
