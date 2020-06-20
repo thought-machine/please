@@ -726,7 +726,7 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 		Timeout:      ptypes.DurationProto(target.BuildTimeout),
 		Uris:         urls,
 	}
-	if c.state.NeedHashesOnly && c.state.IsOriginalTargetOrParent(target) {
+	if !c.state.NeedHashesOnly || !c.state.IsOriginalTargetOrParent(target) {
 		if sri := subresourceIntegrity(target); sri != "" {
 			req.Qualifiers = []*fpb.Qualifier{{
 				Name:  "checksum.sri",
