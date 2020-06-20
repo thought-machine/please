@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
-	"encoding/gob"
 	"io"
 	"os"
 	"path"
@@ -190,22 +189,6 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) bool {
 	return cache.retrieve(target, key, "", outs)
-}
-
-func loadTargetMetadata(filename string) (*core.BuildMetadata, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	md := new(core.BuildMetadata)
-
-	reader := gob.NewDecoder(file)
-	if err := reader.Decode(&md); err != nil {
-		return nil, err
-	}
-
-	return md, nil
 }
 
 // retrieveFiles retrieves the given set of files from the cache.
