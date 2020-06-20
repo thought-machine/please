@@ -324,7 +324,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			buildLinks(state, target)
 		}
 		return nil
-	} else if err := storeTargetMetadata(target, metadata); err != nil {
+	} else if err := StoreTargetMetadata(target, metadata); err != nil {
 		return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
 	}
 

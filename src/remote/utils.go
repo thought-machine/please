@@ -199,7 +199,11 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest
 	}
 	data, _ := proto.Marshal(ar)
 	metadata.RemoteAction = data
-	c.state.Cache.Store(target, c.localCacheKey(digest), nil)
+	if err := build.StoreTargetMetadata(target, metadata); err != nil {
+		log.Warning("%s", err)
+		return
+	}
+	c.state.Cache.Store(target, c.localCacheKey(digest), []string{target.TargetBuildMetadataFileName()})
 }
 
 // retrieveLocalResults retrieves locally cached results for a target if possible.

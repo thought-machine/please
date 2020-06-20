@@ -403,10 +403,13 @@ func LoadTargetMetadata(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	return md, nil
 }
 
-func storeTargetMetadata(target *core.BuildTarget, md *core.BuildMetadata) error {
+// StoreTargetMetadata stores the target metadata into a file in the output directory of the target.
+func StoreTargetMetadata(target *core.BuildTarget, md *core.BuildMetadata) error {
 	filename := targetBuildMetadataFileName(target)
 	if err := os.RemoveAll(filename); err != nil {
 		return fmt.Errorf("failed to remove existing %s build metadata file: %w", target.Label, err)
+	} else if err := os.MkdirAll(path.Dir(filename), core.DirPermissions); err != nil {
+		return fmt.Errorf("Failed to create directory for build metadata file for %s: %w", target, err)
 	}
 
 	mdFile, err := os.Create(filename)
