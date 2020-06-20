@@ -213,6 +213,7 @@ func doFlakeRun(tid int, state *core.BuildState, target *core.BuildTarget, runRe
 
 		// If execution succeeded, we can break out of the flake loop
 		if testSuite.TestCases.AllSucceeded() {
+			results.Cached = testSuite.Cached
 			break
 		}
 
@@ -330,10 +331,6 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemote
 	metadata, resultsData, coverage, err := doTestResults(tid, state, target, runRemotely, run)
 	duration := time.Since(startTime)
 	parsedSuite := parseTestOutput(string(metadata.Stdout), string(metadata.Stderr), err, duration, target, resultsData)
-	if metadata.Cached {
-		parsedSuite.Cached = true
-	}
-
 	return core.TestSuite{
 		Package:    strings.Replace(target.Label.PackageName, "/", ".", -1),
 		Name:       target.Label.Name,
@@ -341,6 +338,7 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemote
 		TimedOut:   err == context.DeadlineExceeded,
 		Properties: parsedSuite.Properties,
 		TestCases:  parsedSuite.TestCases,
+		Cached:     metadata.Cached,
 	}, coverage
 }
 

@@ -360,6 +360,11 @@ func (target *BuildTarget) AddTestResults(results TestSuite) {
 	target.resultsMux.Lock()
 	defer target.resultsMux.Unlock()
 
+	if len(target.Results.TestCases) == 0 {
+		target.Results.Cached = results.Cached // On the first run we take whatever this is
+	} else {
+		target.Results.Cached = target.Results.Cached && results.Cached
+	}
 	target.Results.Collapse(results)
 }
 
