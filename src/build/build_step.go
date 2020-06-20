@@ -313,8 +313,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	checkLicences(state, target)
 
 	if runRemotely {
-		target.SetState(core.BuiltRemotely)
-		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
+		if metadata.Cached {
+			target.SetState(core.ReusedRemotely)
+			state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Reused existing action")
+		} else {
+			target.SetState(core.BuiltRemotely)
+			state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
+		}
 		if state.ShouldDownload(target) {
 			buildLinks(state, target)
 		}

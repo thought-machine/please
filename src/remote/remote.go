@@ -474,6 +474,7 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 	// First see if this execution is cached locally
 	if metadata, ar := c.retrieveLocalResults(target, digest); metadata != nil {
 		log.Debug("Got locally cached results for %s %s", target.Label, c.actionURL(digest, true))
+		metadata.Cached = true
 		return metadata, ar
 	}
 	// Now see if it is cached on the remote server
@@ -490,6 +491,7 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 			err := c.verifyActionResult(target, command, digest, ar, c.state.Config.Remote.VerifyOutputs)
 			if err == nil {
 				c.locallyCacheResults(target, digest, metadata, ar)
+				metadata.Cached = true
 				return metadata, ar
 			}
 			log.Debug("Remotely cached results for %s were missing some outputs, forcing a rebuild: %s", target.Label, err)

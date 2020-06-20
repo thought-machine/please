@@ -330,6 +330,9 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemote
 	metadata, resultsData, coverage, err := doTestResults(tid, state, target, runRemotely, run)
 	duration := time.Since(startTime)
 	parsedSuite := parseTestOutput(string(metadata.Stdout), string(metadata.Stderr), err, duration, target, resultsData)
+	if metadata.Cached {
+		parsedSuite.Cached = true
+	}
 
 	return core.TestSuite{
 		Package:    strings.Replace(target.Label.PackageName, "/", ".", -1),
