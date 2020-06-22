@@ -322,6 +322,9 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 
 // Download downloads outputs for the given target.
 func (c *Client) Download(target *core.BuildTarget) error {
+	if target.Local {
+		return nil // No download needed since this target was built locally
+	}
 	return c.download(target, func() error {
 		command, digest, err := c.buildAction(target, false, target.Stamp)
 		if err != nil {
