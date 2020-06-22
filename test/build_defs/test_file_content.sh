@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if ! test -f "$1"; then
   echo "$1" doesnt exist
