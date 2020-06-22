@@ -187,8 +187,13 @@ type BuildTarget struct {
 	TestTimeout  time.Duration `name:"test_timeout"`
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
-	TestOutputs       []string          `name:"test_outputs"`
+	TestOutputs []string `name:"test_outputs"`
+	// OutputDirectories are the directories that outputs can be produced into which will be added to the root of the
+	// output for the rule. For example if an output directory "foo" contains "bar.txt" the rule will have the output
+	// "bar.txt"
 	OutputDirectories []OutputDirectory `name:"output_dirs"`
+	// RuleMetadata is the metadata attached to this build rule. It can be accessed through the "get_rule_metadata" BIF.
+	RuleMetadata interface{} `name:"config"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't

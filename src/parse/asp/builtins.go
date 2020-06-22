@@ -54,6 +54,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
 	setNativeCode(s, "breakpoint", breakpoint)
+	setNativeCode(s, "get_rule_metadata", getRuleMetadata)
 	stringMethods = map[string]*pyFunc{
 		"join":       setNativeCode(s, "join", strJoin),
 		"split":      setNativeCode(s, "split", strSplit),
@@ -227,6 +228,18 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	}
 	s.SetAll(s.interpreter.Subinclude(filename, s.contextPkg), false)
 	return None
+}
+
+const (
+	getConfigRuleConfigNameIndex = iota
+)
+
+func getRuleMetadata(s *scope, args []pyObject) pyObject {
+
+	name := args[getConfigRuleConfigNameIndex].(pyString).String()
+	label := core.ParseBuildLabelContext(name, s.pkg)
+	t := s.state.WaitForBuiltTarget(label, core.NewBuildLabel(s.pkg.Name, "all"))
+	return t.RuleMetadata.(pyObject)
 }
 
 // builtinFail raises an immediate error that can't be intercepted.
