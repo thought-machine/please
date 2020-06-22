@@ -51,7 +51,6 @@ var KnownFields = map[string]bool{
 	"TestOutputs":                 true,
 	"Stamp":                       true,
 	"OutputDirectories":           true,
-	"RuleMetadata":                true,
 
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
@@ -81,6 +80,7 @@ var KnownFields = map[string]bool{
 	"Progress":            true,
 	"PassUnsafeEnv":       true,
 	"NeededForSubinclude": true,
+	"RuleMetadata":        true, // This is only accessible through the build language at parse time
 
 	// Used to save the rule hash rather than actually being hashed itself.
 	"RuleHash": true,
