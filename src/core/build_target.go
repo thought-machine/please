@@ -198,10 +198,12 @@ type BuildMetadata struct {
 	Stdout, Stderr []byte
 	// Serialised build action metadata.
 	RemoteAction []byte
-	// True if this represents a test run.
-	Test bool
 	// Additional outputs from output directories serialised as a csv
 	OutputDirOuts []string
+	// True if this represents a test run.
+	Test bool
+	// True if the results were retrieved from a cache, false if we ran the full build action.
+	Cached bool
 }
 
 // A PreBuildFunction is a type that allows hooking a pre-build callback.
@@ -254,18 +256,19 @@ type BuildTargetState int32
 
 // The available states for a target.
 const (
-	Inactive      BuildTargetState = iota // Target isn't used in current build
-	Semiactive                            // Target would be active if we needed a build
-	Active                                // Target is going to be used in current build
-	Pending                               // Target is ready to be built but not yet started.
-	Building                              // Target is currently being built
-	Stopped                               // We stopped building the target because we'd gone as far as needed.
-	Built                                 // Target has been successfully built
-	Cached                                // Target has been retrieved from the cache
-	Unchanged                             // Target has been built but hasn't changed since last build
-	Reused                                // Outputs of previous build have been reused.
-	BuiltRemotely                         // Target has been built but outputs are not necessarily local.
-	Failed                                // Target failed for some reason
+	Inactive       BuildTargetState = iota // Target isn't used in current build
+	Semiactive                             // Target would be active if we needed a build
+	Active                                 // Target is going to be used in current build
+	Pending                                // Target is ready to be built but not yet started.
+	Building                               // Target is currently being built
+	Stopped                                // We stopped building the target because we'd gone as far as needed.
+	Built                                  // Target has been successfully built
+	Cached                                 // Target has been retrieved from the cache
+	Unchanged                              // Target has been built but hasn't changed since last build
+	Reused                                 // Outputs of previous build have been reused.
+	BuiltRemotely                          // Target has been built but outputs are not necessarily local.
+	ReusedRemotely                         // Outputs of previous remote action have been reused.
+	Failed                                 // Target failed for some reason
 )
 
 // String implements the fmt.Stringer interface.
@@ -357,6 +360,11 @@ func (target *BuildTarget) AddTestResults(results TestSuite) {
 	target.resultsMux.Lock()
 	defer target.resultsMux.Unlock()
 
+	if len(target.Results.TestCases) == 0 {
+		target.Results.Cached = results.Cached // On the first run we take whatever this is
+	} else {
+		target.Results.Cached = target.Results.Cached && results.Cached
+	}
 	target.Results.Collapse(results)
 }
 

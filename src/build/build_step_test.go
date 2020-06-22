@@ -59,7 +59,7 @@ func TestBuildTargetWhichDoesntNeedRebuilding(t *testing.T) {
 	// We write a rule hash for this target before building it, so we don't need to build again.
 	state, target := newState("//package1:target3")
 	target.AddOutput("file3")
-	storeTargetMetadata(target, new(core.BuildMetadata))
+	StoreTargetMetadata(target, new(core.BuildMetadata))
 	assert.NoError(t, writeRuleHash(state, target))
 	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
@@ -312,12 +312,12 @@ func TestFileGroupBinDir(t *testing.T) {
 	// Ensure permissions on directory are not modified
 	info, err := os.Stat("plz-out/bin/package1/package2/")
 	assert.NoError(t, err)
-    compare_dir := "plz-out/bin/package1/package2_cmp/"
-    os.Mkdir(compare_dir, core.DirPermissions)
-    info_cmp, err := os.Stat(compare_dir)
-    assert.NoError(t, err)
+	compare_dir := "plz-out/bin/package1/package2_cmp/"
+	os.Mkdir(compare_dir, core.DirPermissions)
+	info_cmp, err := os.Stat(compare_dir)
+	assert.NoError(t, err)
 
-    assert.Equal(t, info_cmp.Mode().Perm(), info.Mode().Perm())
+	assert.Equal(t, info_cmp.Mode().Perm(), info.Mode().Perm())
 }
 
 func TestOutputHash(t *testing.T) {
@@ -368,7 +368,7 @@ func TestBuildMetadatafileIsCreated(t *testing.T) {
 	state, target = newState("//package1:mdtest_post_build")
 	target.Command = fmt.Sprintf("echo -n '%s' | tee $OUT", stdOut)
 	target.AddOutput("file1")
-	target.PostBuildFunction =  postBuildFunction(func(target *core.BuildTarget, output string) error {
+	target.PostBuildFunction = postBuildFunction(func(target *core.BuildTarget, output string) error {
 		assert.Equal(t, stdOut, string(output))
 		return nil
 	})
@@ -414,7 +414,7 @@ func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []strin
 	if target.Label.Name == "target8" {
 		ioutil.WriteFile("plz-out/gen/package1/file8", []byte("retrieved from cache"), 0664)
 		md := &core.BuildMetadata{}
-		if err := storeTargetMetadata(target, md); err != nil {
+		if err := StoreTargetMetadata(target, md); err != nil {
 			panic(err)
 		}
 		return true
@@ -422,7 +422,7 @@ func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []strin
 	} else if target.Label.Name == "target10" {
 		ioutil.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
 		md := &core.BuildMetadata{Stdout: []byte("retrieved from cache")}
-		if err := storeTargetMetadata(target, md); err != nil {
+		if err := StoreTargetMetadata(target, md); err != nil {
 			panic(err)
 		}
 		return true

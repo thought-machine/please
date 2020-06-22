@@ -441,9 +441,9 @@ func printBuildResults(state *core.BuildState, duration time.Duration) {
 	totalBuilt := 0
 	totalReused := 0
 	for _, target := range state.Graph.AllTargets() {
-		if target.State() == core.Built {
+		if s := target.State(); s == core.Built || s == core.BuiltRemotely {
 			totalBuilt++
-		} else if target.State() == core.Reused {
+		} else if s == core.Reused || s == core.ReusedRemotely {
 			totalReused++
 		}
 	}

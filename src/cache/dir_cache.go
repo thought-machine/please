@@ -5,10 +5,8 @@ package cache
 import (
 	"archive/tar"
 	"bufio"
-	"bytes"
 	"compress/gzip"
 	"encoding/base64"
-	"encoding/gob"
 	"io"
 	"os"
 	"path"
@@ -45,15 +43,6 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files []strin
 	cache.storeFiles(target, key, "", cacheDir, tmpDir, files, true)
 	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
-	}
-}
-
-// storeData attempts to store a preexisting piece of data (usually from remote execution).
-func (cache *dirCache) storeData(filename string, contents []byte) {
-	if err := cache.ensureStoreReady(filename); err == nil {
-		if err := fs.WriteFile(bytes.NewReader(contents), filename, 0644); err != nil {
-			log.Warning("Failed to store remote action in local cache: %s", err)
-		}
 	}
 }
 
@@ -190,22 +179,6 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) bool {
 	return cache.retrieve(target, key, "", outs)
-}
-
-func loadTargetMetadata(filename string) (*core.BuildMetadata, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	md := new(core.BuildMetadata)
-
-	reader := gob.NewDecoder(file)
-	if err := reader.Decode(&md); err != nil {
-		return nil, err
-	}
-
-	return md, nil
 }
 
 // retrieveFiles retrieves the given set of files from the cache.
