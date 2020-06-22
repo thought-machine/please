@@ -238,7 +238,15 @@ func getRuleMetadata(s *scope, args []pyObject) pyObject {
 
 	name := args[getConfigRuleConfigNameIndex].(pyString).String()
 	label := core.ParseBuildLabelContext(name, s.pkg)
-	t := s.state.WaitForBuiltTarget(label, core.NewBuildLabel(s.pkg.Name, "all"))
+
+	t := s.state.Graph.Target(label)
+	if t == nil {
+		if label.Subrepo == s.pkg.SubrepoName && label.PackageName == s.pkg.Name {
+			// This is a get_rule_metadata in the same package, check the target exists.
+			log.Fatalf("Target %s is not defined in this package yet; it has to be defined before the get_rule_metadata() call", name)
+		}
+		t = s.state.WaitForBuiltTarget(label, core.NewBuildLabel(s.pkg.Name, "all"))
+	}
 	return t.RuleMetadata.(pyObject)
 }
 

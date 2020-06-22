@@ -1,9 +1,55 @@
 """Built-in rules to compile Java code."""
 
+def java_toolchain(name : str, sdk_url : str, visibility:list = ["PUBLIC"]) -> str:
+    current_package = package_name()
+
+    download = remote_file(
+        name=f"_{name}#download",
+        url = sdk_url,
+        visibility = visibility,
+    )
+
+    javac = sh_cmd(
+        name=f"_{name}#javac",
+        cmd=f"$(location //{current_package}:{name})/bin/javac \\\$@",
+        visibility = visibility,
+        deps = [f"//{current_package}:{name}"],
+    )
+
+    java = sh_cmd(
+        name=f"_{name}#java",
+        cmd=f"$(location //{current_package}:{name})/bin/java \\\$@",
+        visibility = visibility,
+        deps = [f"//{current_package}:{name}"],
+    )
+
+    md = {
+        "deps": [f"//{current_package}:{name}"],
+        "javac": f"//{current_package}" + javac,
+        "java": f"//{current_package}" + java,
+    }
+
+    return build_rule(
+        name = name,
+        srcs = [download],
+        outs = [name],
+        tools = [CONFIG.JARCAT_TOOL],
+        cmd = " && ".join([
+            '"$TOOL" x $SRCS -o extract_dir',
+            'mkdir $OUT && mkdir $OUT/bin',
+            'mv $(find extract_dir -name javac) $OUT/bin',
+            'mv $(find extract_dir -name java) $OUT/bin',
+            'mv $(find extract_dir -name lib) $OUT',
+        ]),
+        building_description = 'Extracting...',
+        metadata = md,
+        binary = True,
+        visibility = visibility,
+    )
 
 def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], resources_root:str=None,
                  deps:list=[], modular:bool=False, exported_deps:list=None, visibility:list=None,
-                 test_only:bool&testonly=False, javac_flags:list&javacopts=None, labels:list=[]):
+                 test_only:bool&testonly=False, javac_flags:list&javacopts=None, labels:list=[], toolchain:str=''):
     """Compiles Java source to a .jar which can be collected by other rules.
 
     Args:
@@ -25,9 +71,11 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
       javac_flags (list): List of flags passed to javac.
       labels (list): Additional labels to apply to this rule.
     """
+    toolchain = toolchain if toolchain else CONFIG.JAVA_TOOLCHAIN
+
     resources_cmd = 'true'
     if resources:
-        # TODO(macripps): Check this actually matches the documented behaviour, as it's not clear it does
+        # TODO(jpoole): Check this actually matches the documented behaviour, as it's not clear it does
         if resources_root:
             resources_cmd = f'$(for SRC in $SRCS_RESOURCES; do DEST=${SRC#"{resources_root}"};mkdir -p $(dirname "_tmp/$DEST");cp "$SRC" "_tmp/$DEST"; done)'
         else:
@@ -51,14 +99,26 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
         else:
             javac_flags = f'-source {CONFIG.JAVA_SOURCE_LEVEL} -target {CONFIG.JAVA_TARGET_LEVEL} ' + javac_flags
 
-        if not CONFIG.JAVAC_TOOL:
+        javac = CONFIG.JAVAC_TOOL
+
+        # Override old config if we have a toolchain c configured
+        if toolchain:
+            jdk_info = get_rule_metadata(toolchain)
+
+            deps += jdk_info.deps
+            javac = jdk_info.javac
+
+        if javac:
+            find = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
+            srcflag = '`find $SRCS_WORKER -name "*.java"`' if src_dir else '$SRCS_WORKER'
+            javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
+        else:
+            # TODO(jpoole): add worker to toolchain (probably need to just invoke the jar with the correct version of java)
+            javac = CONFIG.JAVAC_WORKER
             mflag = '--modular' if modular else ''
             srcflag = '--src_dir' if src_dir else ''
             javac_cmd = f'$(worker {CONFIG.JAVAC_WORKER}) {javac_flags} {mflag} {srcflag}'
-        else:
-            find = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
-            srcflag = '$SRCS_WORKER' if srcs else '`find $SRCS_WORKER -name "*.java"`'
-            javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
+
 
         cmd = ' && '.join([
             javac_cmd,
@@ -88,7 +148,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             labels = labels + ['rule:java_test_library' if test_only else 'rule:java_library'] + src_dir_label,
             test_only=test_only,
             tools={
-                'javac': [CONFIG.JAVAC_TOOL or CONFIG.JAVAC_WORKER],
+                'javac': [javac],
                 'jarcat': [CONFIG.JARCAT_TOOL],
             },
         )
@@ -257,10 +317,10 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
 
 
 def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
-              data:list|dict=None, deps:list=None, worker:str='',
+              data:list|dict=[], deps:list=None, worker:str='',
               labels:list&features&tags=[], visibility:list=None, flags:str='',
               sandbox:bool=None, timeout:int=0, flaky:bool|int=0, test_outputs:list=None, size:str=None,
-              test_package:str=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args:str=''):
+              test_package:str=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args:str='', toolchain:str=''):
     """Defines a Java test.
 
     Args:
@@ -284,6 +344,8 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
       test_package (str): Java package to scan for test classes to run.
       jvm_args (str): Arguments to pass to the JVM in the run script.
     """
+    toolchain = toolchain if toolchain else CONFIG.JAVA_TOOLCHAIN
+
     lib_rule = java_library(
         name=f'_{name}#lib',
         srcs=srcs,
@@ -292,13 +354,23 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
         deps=deps,
         test_only=True,
         labels=labels + ["rule:java_test"],
+        toolchain = toolchain,
         # Deliberately not visible outside this package.
     )
     # As above, would be nicer if we could make the jars self-executing again.
     cmd, tools = _jarcat_cmd('build.please.main.TestMain')
     tools['junit'] = [CONFIG.JUNIT_RUNNER]
+
+    data = {'data': data}
+    java_cmd = 'java'
+    if toolchain:
+        toolchain_info = get_rule_metadata(toolchain)
+        data['java'] = [toolchain_info.java]
+        data['data'] += toolchain_info.deps
+        java_cmd = '$DATA_JAVA'
+
     cmd = 'ln -s `which $TOOLS_JUNIT` . && ' + cmd
-    test_cmd = f'java -Dbuild.please.testpackage={test_package} {jvm_args} -jar $(location :{name}) {flags}'
+    test_cmd = f'{java_cmd} -Dbuild.please.testpackage={test_package} {jvm_args} -jar $(location :{name}) {flags}'
 
     deps = [lib_rule]
     if worker:
