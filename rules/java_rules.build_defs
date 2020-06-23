@@ -2,7 +2,8 @@
 
 def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], resources_root:str=None,
                  deps:list=[], modular:bool=False, exported_deps:list=None, visibility:list=None,
-                 test_only:bool&testonly=False, javac_flags:list&javacopts=None, labels:list=[], toolchain:str=''):
+                 test_only:bool&testonly=False, javac_flags:list&javacopts=None, labels:list=[],
+                 toolchain:str=CONFIG.JAVA_TOOLCHAIN):
     """Compiles Java source to a .jar which can be collected by other rules.
 
     Args:
@@ -23,9 +24,8 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
       test_only (bool): If True, this rule can only be depended on by tests.
       javac_flags (list): List of flags passed to javac.
       labels (list): Additional labels to apply to this rule.
+      toolchain (str): A label identifying a java_toolchain rule which will be used to build this java library.
     """
-    toolchain = toolchain if toolchain else CONFIG.JAVA_TOOLCHAIN
-
     resources_cmd = 'true'
     if resources:
         # TODO(jpoole): Check this actually matches the documented behaviour, as it's not clear it does
@@ -142,7 +142,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
 
 def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None, resources_root:str=None,
                 deps:list=None, visibility:list=None, test_only:bool&testonly=False, javac_flags:list&javacopts=None,
-                toolchain:str=''):
+                toolchain:str=CONFIG.JAVA_TOOLCHAIN):
     """Compiles Java source to a modular .jar which can be collected by other rules.
 
     Args:
@@ -161,6 +161,7 @@ def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None,
       visibility (list): Visibility declaration of this rule.
       test_only (bool): If True, this rule can only be depended on by tests.
       javac_flags (list): List of flags passed to javac.
+      toolchain (str): A label identifying a java_toolchain rule which will be used to build this java module.
     """
     return java_library(
         name = name,
@@ -221,7 +222,7 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
 
 def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, deps:list=[],
                 data:list=None, visibility:list=None, jvm_args:str=None,
-                self_executable:bool=False, manifest:str=None, toolchain:str=''):
+                self_executable:bool=False, manifest:str=None, toolchain:str=CONFIG.JAVA_TOOLCHAIN):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
@@ -236,6 +237,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
       self_executable (bool): True to make the jar self executable.
       manifest (str): Manifest file to put into the jar. Can't be passed at the same time as
                       main_class.
+      toolchain (str): A label identifying a java_toolchain rule which will be used to build this java binary.
     """
     if main_class and manifest:
         raise ParseError("Can't pass both main_class and manifest to java_binary")
@@ -276,7 +278,7 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
               data:list|dict=[], deps:list=None, worker:str='',
               labels:list&features&tags=[], visibility:list=None, flags:str='',
               sandbox:bool=None, timeout:int=0, flaky:bool|int=0, test_outputs:list=None, size:str=None,
-              test_package:str=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args:str='', toolchain:str=''):
+              test_package:str=CONFIG.DEFAULT_TEST_PACKAGE, jvm_args:str='', toolchain:str=CONFIG.JAVA_TOOLCHAIN):
     """Defines a Java test.
 
     Args:
@@ -299,9 +301,8 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
       size (str): Test size (enormous, large, medium or small).
       test_package (str): Java package to scan for test classes to run.
       jvm_args (str): Arguments to pass to the JVM in the run script.
+      toolchain (str): A label identifying a java_toolchain rule which will be used to run this java test.
     """
-    toolchain = toolchain if toolchain else CONFIG.JAVA_TOOLCHAIN
-
     lib_rule = java_library(
         name=f'_{name}#lib',
         srcs=srcs,
