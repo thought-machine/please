@@ -1,7 +1,12 @@
 """Built-in rules to compile Java code."""
 
-def java_toolchain(name : str, sdk_url : str, visibility:list = ["PUBLIC"]) -> str:
+def java_toolchain(name : str, sdk_url : str|dict, visibility:list = ["PUBLIC"]) -> str:
     current_package = package_name()
+
+    sdk_url = sdk_url if isinstance(sdk_url, str) else sdk_url[CONFIG.OS]
+
+    if not sdk_url:
+        raise ParseError(f"No java sdk_url defined for platform {CONFIG.OS}")
 
     download = remote_file(
         name=f"_{name}#download",
