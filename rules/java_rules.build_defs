@@ -506,6 +506,60 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
         cmd += ' --manifest "$SRCS"'
     return cmd, {'jarcat': [CONFIG.JARCAT_TOOL]}
 
+# This function is exposed as java_toolchain unless Bazel compatibility is enabled in which case it is exposed as
+# please_java_toolchain. This is to avoid namespace conflicts with Bazel's java_toolchain rule. 
+def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]) -> str:
+    """Downloads the JDK and sets up build rule metadata so the language rules can use the toolchain"""
+    current_package = package_name()
+
+    jdk_url = jdk_url if isinstance(jdk_url, str) else jdk_url[CONFIG.OS]
+
+    if not jdk_url:
+        raise ParseError(f"No java jdk_url defined for platform {CONFIG.OS}")
+
+    download = remote_file(
+        name=f"_{name}#download",
+        url = jdk_url,
+        visibility = visibility,
+    )
+
+    javac = sh_cmd(
+        name=f"_{name}#javac",
+        cmd=f"$(location //{current_package}:{name})/bin/javac \\\$@",
+        visibility = visibility,
+        deps = [f"//{current_package}:{name}"],
+    )
+
+    java = sh_cmd(
+        name=f"_{name}#java",
+        cmd=f"$(location //{current_package}:{name})/bin/java \\\$@",
+        visibility = visibility,
+        deps = [f"//{current_package}:{name}"],
+    )
+
+    md = {
+        "deps": [f"//{current_package}:{name}"],
+        "javac": f"//{current_package}" + javac,
+        "java": f"//{current_package}" + java,
+    }
+
+    return build_rule(
+        name = name,
+        srcs = [download],
+        outs = [name],
+        tools = [CONFIG.JARCAT_TOOL],
+        cmd = " && ".join([
+            '"$TOOL" x $SRCS -o extract_dir',
+            'mkdir $OUT && mkdir $OUT/bin',
+            'mv $(find extract_dir -name javac) $OUT/bin',
+            'mv $(find extract_dir -name java) $OUT/bin',
+            'mv $(find extract_dir -name lib) $OUT',
+        ]),
+        building_description = 'Extracting...',
+        metadata = md,
+        binary = True,
+        visibility = visibility,
+    )
 
 if CONFIG.BAZEL_COMPATIBILITY:
     def java_toolchain(javac=None, source_version=None, target_version=None):
@@ -530,55 +584,7 @@ if CONFIG.BAZEL_COMPATIBILITY:
             test_only = test_only,
             visibility = visibility,
         )
+
+    please_java_toolchain = _java_toolchain
 else:
-    def java_toolchain(name : str, sdk_url : str|dict, visibility:list = ["PUBLIC"]) -> str:
-        current_package = package_name()
-
-        sdk_url = sdk_url if isinstance(sdk_url, str) else sdk_url[CONFIG.OS]
-
-        if not sdk_url:
-            raise ParseError(f"No java sdk_url defined for platform {CONFIG.OS}")
-
-        download = remote_file(
-            name=f"_{name}#download",
-            url = sdk_url,
-            visibility = visibility,
-        )
-
-        javac = sh_cmd(
-            name=f"_{name}#javac",
-            cmd=f"$(location //{current_package}:{name})/bin/javac \\\$@",
-            visibility = visibility,
-            deps = [f"//{current_package}:{name}"],
-        )
-
-        java = sh_cmd(
-            name=f"_{name}#java",
-            cmd=f"$(location //{current_package}:{name})/bin/java \\\$@",
-            visibility = visibility,
-            deps = [f"//{current_package}:{name}"],
-        )
-
-        md = {
-            "deps": [f"//{current_package}:{name}"],
-            "javac": f"//{current_package}" + javac,
-            "java": f"//{current_package}" + java,
-        }
-
-        return build_rule(
-            name = name,
-            srcs = [download],
-            outs = [name],
-            tools = [CONFIG.JARCAT_TOOL],
-            cmd = " && ".join([
-                '"$TOOL" x $SRCS -o extract_dir',
-                'mkdir $OUT && mkdir $OUT/bin',
-                'mv $(find extract_dir -name javac) $OUT/bin',
-                'mv $(find extract_dir -name java) $OUT/bin',
-                'mv $(find extract_dir -name lib) $OUT',
-            ]),
-            building_description = 'Extracting...',
-            metadata = md,
-            binary = True,
-            visibility = visibility,
-        )
+    java_toolchain = _java_toolchain
