@@ -1,57 +1,5 @@
 """Built-in rules to compile Java code."""
 
-def java_toolchain(name : str, sdk_url : str|dict, visibility:list = ["PUBLIC"]) -> str:
-    current_package = package_name()
-
-    sdk_url = sdk_url if isinstance(sdk_url, str) else sdk_url[CONFIG.OS]
-
-    if not sdk_url:
-        raise ParseError(f"No java sdk_url defined for platform {CONFIG.OS}")
-
-    download = remote_file(
-        name=f"_{name}#download",
-        url = sdk_url,
-        visibility = visibility,
-    )
-
-    javac = sh_cmd(
-        name=f"_{name}#javac",
-        cmd=f"$(location //{current_package}:{name})/bin/javac \\\$@",
-        visibility = visibility,
-        deps = [f"//{current_package}:{name}"],
-    )
-
-    java = sh_cmd(
-        name=f"_{name}#java",
-        cmd=f"$(location //{current_package}:{name})/bin/java \\\$@",
-        visibility = visibility,
-        deps = [f"//{current_package}:{name}"],
-    )
-
-    md = {
-        "deps": [f"//{current_package}:{name}"],
-        "javac": f"//{current_package}" + javac,
-        "java": f"//{current_package}" + java,
-    }
-
-    return build_rule(
-        name = name,
-        srcs = [download],
-        outs = [name],
-        tools = [CONFIG.JARCAT_TOOL],
-        cmd = " && ".join([
-            '"$TOOL" x $SRCS -o extract_dir',
-            'mkdir $OUT && mkdir $OUT/bin',
-            'mv $(find extract_dir -name javac) $OUT/bin',
-            'mv $(find extract_dir -name java) $OUT/bin',
-            'mv $(find extract_dir -name lib) $OUT',
-        ]),
-        building_description = 'Extracting...',
-        metadata = md,
-        binary = True,
-        visibility = visibility,
-    )
-
 def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], resources_root:str=None,
                  deps:list=[], modular:bool=False, exported_deps:list=None, visibility:list=None,
                  test_only:bool&testonly=False, javac_flags:list&javacopts=None, labels:list=[], toolchain:str=''):
@@ -106,7 +54,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
 
         javac = CONFIG.JAVAC_TOOL
 
-        # Override old config if we have a toolchain c configured
+        # Override old config if we have a toolchain configured
         if toolchain:
             jdk_info = get_rule_metadata(toolchain)
 
@@ -193,7 +141,8 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
 
 
 def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None, resources_root:str=None,
-                deps:list=None, visibility:list=None, test_only:bool&testonly=False, javac_flags:list&javacopts=None):
+                deps:list=None, visibility:list=None, test_only:bool&testonly=False, javac_flags:list&javacopts=None,
+                toolchain:str=''):
     """Compiles Java source to a modular .jar which can be collected by other rules.
 
     Args:
@@ -224,6 +173,7 @@ def java_module(name:str, srcs:list=None, src_dir:str=None, resources:list=None,
         test_only = test_only,
         javac_flags = javac_flags,
         modular = True,
+        toolchain = toolchain,
     )
 
 
@@ -271,7 +221,7 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
 
 def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, deps:list=[],
                 data:list=None, visibility:list=None, jvm_args:str=None,
-                self_executable:bool=False, manifest:str=None):
+                self_executable:bool=False, manifest:str=None, toolchain:str=''):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
@@ -294,6 +244,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
             name = f'_{name}#lib',
             srcs = srcs,
             deps = deps,
+            toolchain = toolchain,
         )
         deps += [lib_rule]
     if self_executable:
@@ -577,5 +528,57 @@ if CONFIG.BAZEL_COMPATIBILITY:
             deps = deps,
             exported_deps = exports,
             test_only = test_only,
+            visibility = visibility,
+        )
+else:
+    def java_toolchain(name : str, sdk_url : str|dict, visibility:list = ["PUBLIC"]) -> str:
+        current_package = package_name()
+
+        sdk_url = sdk_url if isinstance(sdk_url, str) else sdk_url[CONFIG.OS]
+
+        if not sdk_url:
+            raise ParseError(f"No java sdk_url defined for platform {CONFIG.OS}")
+
+        download = remote_file(
+            name=f"_{name}#download",
+            url = sdk_url,
+            visibility = visibility,
+        )
+
+        javac = sh_cmd(
+            name=f"_{name}#javac",
+            cmd=f"$(location //{current_package}:{name})/bin/javac \\\$@",
+            visibility = visibility,
+            deps = [f"//{current_package}:{name}"],
+        )
+
+        java = sh_cmd(
+            name=f"_{name}#java",
+            cmd=f"$(location //{current_package}:{name})/bin/java \\\$@",
+            visibility = visibility,
+            deps = [f"//{current_package}:{name}"],
+        )
+
+        md = {
+            "deps": [f"//{current_package}:{name}"],
+            "javac": f"//{current_package}" + javac,
+            "java": f"//{current_package}" + java,
+        }
+
+        return build_rule(
+            name = name,
+            srcs = [download],
+            outs = [name],
+            tools = [CONFIG.JARCAT_TOOL],
+            cmd = " && ".join([
+                '"$TOOL" x $SRCS -o extract_dir',
+                'mkdir $OUT && mkdir $OUT/bin',
+                'mv $(find extract_dir -name javac) $OUT/bin',
+                'mv $(find extract_dir -name java) $OUT/bin',
+                'mv $(find extract_dir -name lib) $OUT',
+            ]),
+            building_description = 'Extracting...',
+            metadata = md,
+            binary = True,
             visibility = visibility,
         )
