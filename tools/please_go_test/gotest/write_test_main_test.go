@@ -20,7 +20,7 @@ func TestParseTestSources(t *testing.T) {
 		"TestFindCoverVarsFailsGracefully",
 		"TestFindCoverVarsReturnsNothingForEmptyPath",
 	}
-	assert.Equal(t, functions, descr.Functions)
+	assert.Equal(t, functions, descr.TestFunctions)
 }
 
 func TestParseTestSourcesWithMain(t *testing.T) {
@@ -37,7 +37,7 @@ func TestParseTestSourcesWithMain(t *testing.T) {
 		"TestParseSourceWithAbsolutePath",
 		"TestAddTarget",
 	}
-	assert.Equal(t, functions, descr.Functions)
+	assert.Equal(t, functions, descr.TestFunctions)
 }
 
 func TestParseTestSourcesFailsGracefully(t *testing.T) {

@@ -15,28 +15,32 @@ import (
 )
 
 type testDescr struct {
-	Package   string
-	Main      string
-	Functions []string
-	Examples  []*doc.Example
-	CoverVars []CoverVar
-	Imports   []string
-	Coverage  bool
+	Package        string
+	Main           string
+	TestFunctions  []string
+	BenchFunctions []string
+	Examples       []*doc.Example
+	CoverVars      []CoverVar
+	Imports        []string
+	Coverage       bool
+	Benchmark      bool
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(pkgDir, importPath string, sources []string, output string, coverage bool, coverVars []CoverVar) error {
+func WriteTestMain(pkgDir, importPath string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark bool) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
 	}
 	testDescr.Coverage = coverage
 	testDescr.CoverVars = coverVars
-	if len(testDescr.Functions) > 0 || len(testDescr.Examples) > 0 {
+	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 {
 		// Can't set this if there are no test functions, it'll be an unused import.
 		testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, importPath, coverVars)
 	}
+
+	testDescr.Benchmark = benchmark
 
 	f, err := os.Create(output)
 	if err != nil {
@@ -80,7 +84,9 @@ func parseTestSources(sources []string) (testDescr, error) {
 				if isTestMain(fd) {
 					descr.Main = name
 				} else if isTest(fd, 1, name, "Test") {
-					descr.Functions = append(descr.Functions, name)
+					descr.TestFunctions = append(descr.TestFunctions, name)
+				} else if isTest(fd, 1, name, "Benchmark") {
+					descr.BenchFunctions = append(descr.BenchFunctions, name)
 				}
 			}
 		}
@@ -124,6 +130,7 @@ func isTest(fd *ast.FuncDecl, argLen int, name, prefix string) bool {
 	} else if len(name) == len(prefix) { // "Test" is ok
 		return true
 	}
+
 	rune, _ := utf8.DecodeRuneInString(name[len(prefix):])
 	return !unicode.IsLower(rune)
 }
@@ -144,13 +151,19 @@ import (
 )
 
 var tests = []testing.InternalTest{
-{{range .Functions}}
+{{range .TestFunctions}}
 	{"{{.}}", {{$.Package}}.{{.}}},
 {{end}}
 }
 var examples = []testing.InternalExample{
 {{range .Examples}}
 	{"{{.Name}}", {{$.Package}}.Example{{.Name}}, {{.Output | printf "%q"}}, {{.Unordered}}},
+{{end}}
+}
+
+var benchmarks = []testing.InternalBenchmark{
+{{range .BenchFunctions}}
+	{"{{.}}", {{$.Package}}.{{.}}},
 {{end}}
 }
 
@@ -206,12 +219,19 @@ func main() {
 {{else}}
     args := []string{os.Args[0], "-test.v"}
 {{end}}
+{{if not .Benchmark}}
     testVar := os.Getenv("TESTS")
     if testVar != "" {
         args = append(args, "-test.run", testVar)
     }
     os.Args = append(args, os.Args[1:]...)
 	m := testing.MainStart(testDeps, tests, nil, examples)
+{{else}}
+	args = append(args, "-test.bench", ".*")
+	os.Args = append(args, os.Args[1:]...)
+	m := testing.MainStart(testDeps, nil, benchmarks, nil)
+{{end}}
+
 {{if .Main}}
 	{{.Package}}.{{.Main}}(m)
 {{else}}
