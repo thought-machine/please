@@ -85,5 +85,5 @@ BUILD language, command line or other behaviour. We try to minimise this where
 possible.
 
 We're very happy to accept pull requests & feature requests, and bugs if it's
-not working for you. We don't always have time for everything since Please is
-only part-time work for us, but we'll do our best.
+not working for you. We don't always have time for everything but please is 
+under active development. 
