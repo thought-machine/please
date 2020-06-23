@@ -4,8 +4,8 @@ go_benchmark(
 )
 
 go_test(
-    name="benchmark_test",
-    srcs=["bench_test.go"],
-    data=[":benchmark"],
-    deps=["//third_party/go:testify"]
+    name = "benchmark_test",
+    srcs = ["bench_test.go"],
+    data = [":benchmark"],
+    deps = ["//third_party/go:testify"],
 )
