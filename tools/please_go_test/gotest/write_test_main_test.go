@@ -3,6 +3,7 @@ package gotest
 import (
 	"go/parser"
 	"go/token"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -90,7 +91,7 @@ func TestWriteTestMainWithBenchmark(t *testing.T) {
 	err := WriteTestMain(
 		"tools/please_go_test/gotest/test_data",
 		"",
-		[]string{"tools/please_go_test/gotest/test_data/test/example_test.go"},
+		[]string{"tools/please_go_test/gotest/test_data/bench/example_benchmark.go"},
 		"test.go",
 		true,
 		[]CoverVar{},
@@ -102,6 +103,10 @@ func TestWriteTestMainWithBenchmark(t *testing.T) {
 	f, err := parser.ParseFile(token.NewFileSet(), "test.go", nil, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "main", f.Name.Name)
+
+	test, err := ioutil.ReadFile("test.go")
+	assert.NoError(t, err)
+	assert.Contains(t, string(test), "BenchmarkExample")
 }
 
 func TestExtraImportPaths(t *testing.T) {
