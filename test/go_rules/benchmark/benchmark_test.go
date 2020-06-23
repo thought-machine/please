@@ -14,5 +14,5 @@ func Benchmark100msWait(b *testing.B) {
 }
 
 func TestSomething(t *testing.T) {
-	panic("shoudln't run")
+	panic("shouldn't run")
 }
