@@ -717,7 +717,8 @@ func downloadInputsIfNeeded(tid int, state *core.BuildState, target *core.BuildT
 		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading inputs...")
 		for input := range core.IterInputs(state.Graph, target, true, false) {
 			if l := input.Label(); l != nil {
-				if dep := state.Graph.TargetOrDie(*l); dep.State() == core.BuiltRemotely {
+				dep := state.Graph.TargetOrDie(*l)
+				if s := dep.State(); s == core.BuiltRemotely || s == core.ReusedRemotely {
 					if err := state.RemoteClient.Download(dep); err != nil {
 						return err
 					}

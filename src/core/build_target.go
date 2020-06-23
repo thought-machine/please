@@ -300,6 +300,10 @@ func (s BuildTargetState) String() string {
 		return "Reused"
 	} else if s == Failed {
 		return "Failed"
+	} else if s == BuiltRemotely {
+		return "Built remotely"
+	} else if s == ReusedRemotely {
+		return "Reused remote outputs"
 	}
 	return "Unknown"
 }
