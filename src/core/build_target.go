@@ -141,6 +141,8 @@ type BuildTarget struct {
 	Progress float32 `print:"false"`
 	// The results of this test target, if it is one.
 	Results TestSuite `print:"false"`
+	// The number of completed runs
+	completedRuns int `print:"false"`
 	// A mutex to control access to Results
 	resultsMux sync.Mutex `print:"false"`
 	// Description displayed while the command is building.
@@ -352,6 +354,15 @@ func (target *BuildTarget) TestDir(runNumber int) string {
 // TestDirs contains the parent directory of all the test run directories above
 func (target *BuildTarget) TestDirs() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
+}
+
+// CompleteRun completes a run and returns true if this was the last run
+func (target *BuildTarget) CompleteRun(state *BuildState) bool {
+	target.resultsMux.Lock()
+	defer target.resultsMux.Unlock()
+
+	target.completedRuns++
+	return target.completedRuns == state.NumTestRuns
 }
 
 // TestResultsFile returns the output results file for tests for this target.
