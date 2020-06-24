@@ -393,6 +393,8 @@ func LoadTargetMetadata(target *core.BuildTarget) (*core.BuildMetadata, error) {
 		return nil, err
 	}
 
+	defer file.Close()
+
 	md := new(core.BuildMetadata)
 
 	reader := gob.NewDecoder(file)
