@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"fmt"
+	"path"
 	"sort"
 
 	"github.com/thought-machine/please/src/build"
@@ -13,31 +14,66 @@ import (
 // DiffGraphs calculates the difference between two build graphs.
 // Note that this is not symmetric; targets that have been removed from 'before' do not appear
 // (because this is designed to be fed into 'plz test' and we can't test targets that no longer exist).
-func DiffGraphs(before, after *core.BuildState, files []string) []core.BuildLabel {
+func DiffGraphs(before, after *core.BuildState, files []string, includeDirect, includeTransitive bool) core.BuildLabels {
 	log.Notice("Calculating difference...")
-	configChanged := !bytes.Equal(before.Hashes.Config, after.Hashes.Config)
-	targets := after.Graph.AllTargets()
-	done := make(map[*core.BuildTarget]struct{}, len(targets))
-	for _, t2 := range targets {
-		if t1 := before.Graph.Target(t2.Label); t1 == nil || changed(before, after, t1, t2, files) || configChanged {
-			addRevdeps(after, t2, done)
-		}
-	}
-	ret := make(core.BuildLabels, 0, len(done))
-	for target := range done {
-		ret = append(ret, target.Label)
-	}
-	sort.Sort(ret)
-	return ret
+	changed := diffGraphs(before, after)
+	log.Info("Including changed files...")
+	return changedTargets(after, files, changed, includeDirect, includeTransitive)
 }
 
-// changed returns true if the given two targets are not equivalent.
-func changed(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget, files []string) bool {
-	for _, f := range files {
-		if t2.HasAbsoluteSource(f) {
-			return true
+// Changes calculates changes for a given set of files. It does a subset of what DiffGraphs does due to not having
+// the "before" state so is less accurate (but faster).
+func Changes(state *core.BuildState, files []string, includeDirect, includeTransitive bool) core.BuildLabels {
+	return changedTargets(state, files, map[*core.BuildTarget]struct{}{}, includeDirect, includeTransitive)
+}
+
+// diffGraphs performs a non-recursive diff of two build graphs.
+func diffGraphs(before, after *core.BuildState) map[*core.BuildTarget]struct{} {
+	configChanged := !bytes.Equal(before.Hashes.Config, after.Hashes.Config)
+	changed := map[*core.BuildTarget]struct{}{}
+	for _, afterTarget := range after.Graph.AllTargets() {
+		if beforeTarget := before.Graph.Target(afterTarget.Label); beforeTarget == nil || targetChanged(before, after, beforeTarget, afterTarget) || configChanged {
+			changed[afterTarget] = struct{}{}
 		}
 	}
+	return changed
+}
+
+// changedTargets returns the set of targets that have changed for the given files.
+func changedTargets(state *core.BuildState, files []string, changed map[*core.BuildTarget]struct{}, includeDirect, includeTransitive bool) core.BuildLabels {
+	for _, filename := range files {
+		for dir := filename; dir != "." && dir != "/"; {
+			dir = path.Dir(dir)
+			if pkg := state.Graph.Package(dir, ""); pkg != nil {
+				// This is the package closest to the file; it is the only one allowed to consume it directly.
+				for _, t := range pkg.AllTargets() {
+					if t.HasAbsoluteSource(filename) {
+						changed[t] = struct{}{}
+					}
+				}
+				break
+			}
+		}
+	}
+	if includeDirect || includeTransitive {
+		changed2 := make(map[*core.BuildTarget]struct{}, len(changed))
+		for target := range changed {
+			addRevdeps(state, changed2, target, includeDirect, includeTransitive)
+		}
+		changed = changed2
+	}
+	labels := make(core.BuildLabels, 0, len(changed))
+	for target := range changed {
+		if state.ShouldInclude(target) {
+			labels = append(labels, target.Label)
+		}
+	}
+	sort.Sort(labels)
+	return labels
+}
+
+// targetChanged returns true if the given two targets are not equivalent.
+func targetChanged(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget) bool {
 	h1 := build.RuleHash(s1, t1, true, false)
 	h2 := build.RuleHash(s2, t2, true, false)
 	if !bytes.Equal(h1, h2) {
@@ -74,11 +110,15 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) (hash []byte, 
 }
 
 // addRevdeps walks back up the reverse dependencies of a target, marking them all changed.
-func addRevdeps(state *core.BuildState, target *core.BuildTarget, done map[*core.BuildTarget]struct{}) {
-	if _, present := done[target]; !present && state.ShouldInclude(target) {
-		done[target] = struct{}{}
-		for _, revdep := range state.Graph.ReverseDependencies(target) {
-			addRevdeps(state, revdep, done)
+func addRevdeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}, target *core.BuildTarget, includeDirect, includeTransitive bool) {
+	if _, present := changed[target]; !present {
+		if state.ShouldInclude(target) {
+			changed[target] = struct{}{}
+		}
+		if includeDirect || includeTransitive {
+			for _, revdep := range state.Graph.ReverseDependencies(target) {
+				addRevdeps(state, changed, revdep, false, includeTransitive)
+			}
 		}
 	}
 }

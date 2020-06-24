@@ -112,10 +112,6 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		defaultPathIfExists(&config.Java.JlinkTool, config.Java.JavaHome, "bin/jlink")
 	}
 
-	if (config.Cache.RPCPrivateKey == "") != (config.Cache.RPCPublicKey == "") {
-		return config, fmt.Errorf("Must pass both rpcprivatekey and rpcpublickey properties for cache")
-	}
-
 	if config.Colours == nil {
 		config.Colours = map[string]string{
 			"py":   "${GREEN}",
@@ -249,12 +245,11 @@ func DefaultConfiguration() *Configuration {
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
 	config.Build.PleaseSandboxTool = "please_sandbox"
 	config.Build.Xattrs = true
-	config.Build.HashFunction = "sha1" // will likely be changed to sha256 at some future date.
+	config.Build.HashFunction = "sha256"
 	config.BuildConfig = map[string]string{}
 	config.BuildEnv = map[string]string{}
 	config.Cache.HTTPWriteable = true
 	config.Cache.HTTPTimeout = cli.Duration(25 * time.Second)
-	config.Cache.RPCTimeout = cli.Duration(25 * time.Second)
 	if dir, err := os.UserCacheDir(); err == nil {
 		config.Cache.Dir = path.Join(dir, "please")
 	}
@@ -262,7 +257,6 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.DirCacheLowWaterMark = 8 * cli.GiByte
 	config.Cache.DirClean = true
 	config.Cache.Workers = runtime.NumCPU() + 2 // Mirrors the number of workers in please.go.
-	config.Cache.RPCMaxMsgSize.UnmarshalFlag("200MiB")
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Display.SystemStats = true
 	config.Display.MaxWorkers = 40
@@ -361,10 +355,7 @@ type Configuration struct {
 		MaxWorkers  int  `help:"Maximum number of worker rows to display at any one time."`
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
 	Colours map[string]string `help:"Colour code overrides in interactive output. These correspond to requirements on each target."`
-	Events  struct {
-		Port int `help:"Port to start the streaming build event server on."`
-	} `help:"The [events] section in the config contains settings relating to the internal build event system & streaming them externally."`
-	Build struct {
+	Build   struct {
 		Arch              cli.Arch     `help:"Architecture to compile for. Defaults to the host architecture."`
 		Timeout           cli.Duration `help:"Default timeout for build actions. Default is ten minutes."`
 		Path              []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
@@ -392,14 +383,6 @@ type Configuration struct {
 		HTTPURL               cli.URL      `help:"Base URL of the HTTP cache.\nNot set to anything by default which means the cache will be disabled."`
 		HTTPWriteable         bool         `help:"If True this plz instance will write content back to the HTTP cache.\nBy default it runs in read-only mode."`
 		HTTPTimeout           cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`
-		RPCURL                cli.URL      `help:"Base URL of the RPC cache.\nNot set to anything by default which means the cache will be disabled."`
-		RPCWriteable          bool         `help:"If True this plz instance will write content back to the RPC cache.\nBy default it runs in read-only mode."`
-		RPCTimeout            cli.Duration `help:"Timeout for operations contacting the RPC cache, in seconds."`
-		RPCPublicKey          string       `help:"File containing a PEM-encoded private key which is used to authenticate to the RPC cache." example:"my_key.pem"`
-		RPCPrivateKey         string       `help:"File containing a PEM-encoded certificate which is used to authenticate to the RPC cache." example:"my_cert.pem"`
-		RPCCACert             string       `help:"File containing a PEM-encoded certificate which is used to validate the RPC cache's certificate." example:"ca.pem"`
-		RPCSecure             bool         `help:"Forces SSL on for the RPC cache. It will be activated if any of rpcpublickey, rpcprivatekey or rpccacert are set, but this can be used if none of those are needed and SSL is still in use."`
-		RPCMaxMsgSize         cli.ByteSize `help:"Maximum size of a single message that we'll send to the RPC server.\nThis should agree with the server's limit, if it's higher the artifacts will be rejected.\nThe value is given as a byte size so can be suffixed with M, GB, KiB, etc."`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
 		Timeout         cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
@@ -508,11 +491,7 @@ type Configuration struct {
 		Accept []string `help:"Licences that are accepted in this repository.\nWhen this is empty licences are ignored. As soon as it's set any licence detected or assigned must be accepted explicitly here.\nThere's no fuzzy matching, so some package managers (especially PyPI and Maven, but shockingly not npm which rather nicely uses SPDX) will generate a lot of slightly different spellings of the same thing, which will all have to be accepted here. We'd rather that than trying to 'cleverly' match them which might result in matching the wrong thing."`
 		Reject []string `help:"Licences that are explicitly rejected in this repository.\nAn astute observer will notice that this is not very different to just not adding it to the accept section, but it does have the advantage of explicitly documenting things that the team aren't allowed to use."`
 	} `help:"Please has some limited support for declaring acceptable licences and detecting them from some libraries. You should not rely on this for complete licence compliance, but it can be a useful check to try to ensure that unacceptable licences do not slip in."`
-	Alias    map[string]*Alias `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
-	Provider map[string]*struct {
-		Target BuildLabel   `help:"The in-repo target to build this provider."`
-		Path   []BuildLabel `help:"The paths that this provider should operate for."`
-	} `help:"Allows configuring BUILD file providers, which are subprocesses that know how to provide the contents of a BUILD file when none exists. For example, a Go provider might infer the contents of a BUILD file from the Go source files directly."`
+	Alias map[string]*Alias `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
 	Bazel struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`

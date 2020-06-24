@@ -61,6 +61,7 @@ cc_library(
 cc_shared_object(
     name = "so_test",
     srcs = ["so_test.cc"],
+    out = "so_test.so",
     linker_flags = ["-bundle -undefined dynamic_lookup"] if (CONFIG.OS == "darwin") else [],
     pkg_config_cflags = ["python3"],
     deps = [

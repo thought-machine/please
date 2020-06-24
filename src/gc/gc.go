@@ -1,5 +1,3 @@
-// +build !bootstrap
-
 // Package gc implements "garbage collection" logic for Please, which is an attempt to identify
 // targets in the repo that are no longer needed.
 // The definition of "needed" is a bit unclear; we define it as non-test binaries, but the

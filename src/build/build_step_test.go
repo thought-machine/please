@@ -312,21 +312,21 @@ func TestFileGroupBinDir(t *testing.T) {
 	// Ensure permissions on directory are not modified
 	info, err := os.Stat("plz-out/bin/package1/package2/")
 	assert.NoError(t, err)
-	compare_dir := "plz-out/bin/package1/package2_cmp/"
-	os.Mkdir(compare_dir, core.DirPermissions)
-	info_cmp, err := os.Stat(compare_dir)
+	compareDir := "plz-out/bin/package1/package2_cmp/"
+	os.Mkdir(compareDir, core.DirPermissions)
+	infoCmp, err := os.Stat(compareDir)
 	assert.NoError(t, err)
 
-	assert.Equal(t, info_cmp.Mode().Perm(), info.Mode().Perm())
+	assert.Equal(t, infoCmp.Mode().Perm(), info.Mode().Perm())
 }
 
 func TestOutputHash(t *testing.T) {
 	state, target := newState("//package3:target1")
 	target.AddOutput("file1")
-	target.Hashes = []string{"6c6d66a0852b49cdeeb0e183b4f10b0309c5dd4a"}
+	target.Hashes = []string{"634b027b1b69e1242d40d53e312b3b4ac7710f55be81f289b549446ef6778bee"}
 	b, err := state.TargetHasher.OutputHash(target)
 	assert.NoError(t, err)
-	assert.Equal(t, "6c6d66a0852b49cdeeb0e183b4f10b0309c5dd4a", hex.EncodeToString(b))
+	assert.Equal(t, "634b027b1b69e1242d40d53e312b3b4ac7710f55be81f289b549446ef6778bee", hex.EncodeToString(b))
 }
 
 func TestCheckRuleHashes(t *testing.T) {
