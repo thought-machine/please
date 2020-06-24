@@ -844,11 +844,6 @@ func outputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHashe
 	return h.Sum(nil), nil
 }
 
-func mustOutputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash) []byte {
-	h, _ := outputHash(target, outputs, hasher, combine)
-	return h
-}
-
 // Verify the hash of output files for a rule match the ones set on it.
 func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []byte) error {
 	// TODO(peterebden): can we genericise all of this to lean on the hashers we're getting
