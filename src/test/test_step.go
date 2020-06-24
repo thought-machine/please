@@ -30,14 +30,20 @@ const xattrName = "user.plz_test"
 
 // Test runs the tests for a single target.
 func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, run int) {
-	state.LogBuildResult(tid, label, core.TargetTesting, "Testing...")
 	target := state.Graph.TargetOrDie(label)
-	test(tid, state.ForTarget(target), label, target, remote, run)
-	if state.Config.Test.Upload != "" {
-		if err := uploadResults(target, state.Config.Test.Upload.String()); err != nil {
-			log.Warning("%s", err)
+
+	// Defer this so that no matter what happens in this test run, we always call target.CompleteRun
+	defer func() {
+		runsAllCompleted := target.CompleteRun(state)
+		if runsAllCompleted && state.Config.Test.Upload != "" {
+			if err := uploadResults(target, state.Config.Test.Upload.String()); err != nil {
+				log.Warning("%s", err)
+			}
 		}
-	}
+	}()
+
+	state.LogBuildResult(tid, label, core.TargetTesting, "Testing...")
+	test(tid, state.ForTarget(target), label, target, remote, run)
 }
 
 func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool, run int) {
