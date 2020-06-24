@@ -199,6 +199,7 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest
 	}
 	data, _ := proto.Marshal(ar)
 	metadata.RemoteAction = data
+	metadata.Timestamp = time.Now()
 	// TODO(jpoole): Similar to retrieveTargetMetadataFromCache, it would be cleaner if we could store
 	//               into the cache from an arbitrary reader.
 	if err := build.StoreTargetMetadata(target, metadata); err != nil {
@@ -232,6 +233,9 @@ func retrieveTargetMetadataFromCache(c *Client, target *core.BuildTarget, digest
 		md, err := build.LoadTargetMetadata(target)
 		if err != nil {
 			log.Warningf("failed to retrieve metadata from cache for target %v: %v", target.Label, err)
+			return nil
+		} else if time.Now().Sub(md.Timestamp) > time.Duration(c.state.Config.Remote.CacheDuration) {
+			log.Debug("Cached results for %s are stale, will re-query server", target)
 			return nil
 		}
 		return md
