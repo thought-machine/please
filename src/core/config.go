@@ -422,6 +422,7 @@ type Configuration struct {
 		VerifyOutputs bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
 		HomeDir       string       `help:"The home directory on the build machine."`
 		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`
+		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
