@@ -75,6 +75,7 @@ var KnownFields = map[string]bool{
 	"state":               true,
 	"Results":             true, // Recall that unsuccessful test results aren't cached...
 	"resultsMux":          true,
+	"completedRuns":       true,
 	"BuildingDescription": true,
 	"ShowProgress":        true,
 	"Progress":            true,
