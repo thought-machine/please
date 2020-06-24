@@ -49,7 +49,6 @@ type Client struct {
 	initOnce    sync.Once
 	state       *core.BuildState
 	origState   *core.BuildState
-	reqTimeout  time.Duration
 	err         error // for initialisation
 	instance    string
 
@@ -89,11 +88,10 @@ type pendingDownload struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:      state,
-		origState:  state,
-		instance:   state.Config.Remote.Instance,
-		reqTimeout: time.Duration(state.Config.Remote.Timeout),
-		outputs:    map[core.BuildLabel]*pb.Directory{},
+		state:     state,
+		origState: state,
+		instance:  state.Config.Remote.Instance,
+		outputs:   map[core.BuildLabel]*pb.Directory{},
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
@@ -739,9 +737,7 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 			IsExecutable: target.IsBinary,
 		}},
 	}
-	ctx, cancel = context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	if _, err := c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
+	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: actionDigest,
 		ActionResult: ar,
@@ -787,9 +783,7 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 	}); err != nil {
 		return nil, nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	if _, err := c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
+	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: actionDigest,
 		ActionResult: ar,
