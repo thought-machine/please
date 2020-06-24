@@ -34,7 +34,8 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, r
 
 	// Defer this so that no matter what happens in this test run, we always call target.CompleteRun
 	defer func() {
-		if state.Config.Test.Upload != "" && target.CompleteRun(state) {
+		runsAllCompleted := target.CompleteRun(state)
+		if runsAllCompleted && state.Config.Test.Upload != "" {
 			if err := uploadResults(target, state.Config.Test.Upload.String()); err != nil {
 				log.Warning("%s", err)
 			}
