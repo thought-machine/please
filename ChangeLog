@@ -1,3 +1,25 @@
+Version 15.0.0
+--------------
+
+    * Please now supports remote execution using the
+      [Remote Execution API](https://github.com/bazelbuild/remote-apis).
+      See the documentation for more detailed information about
+      how to set it up and what's needed.
+    * `plz query affectedtargets`, `changed` and `changes` have been
+      consolidated into a single command `plz query changes`. See #922
+      for more details & migration info.
+    * `plz query deps` now always outputs unique dependencies (like the
+      `--unique` flag used to do).
+    * The RPC cache has been completely removed. We recommend the HTTP
+      cache for simple caching setups, which some CI providers may
+      offer by default.
+    * `plz follow` has been removed.
+    * The output of `cc_shared_object` rules are automatically prefixed
+      with `lib` where appropriate.
+    * SHA256 is now the default hash function. SHA1 hashes specified in
+      BUILD files will continue to work.
+
+
 Version 14.6.0
 --------------
 
@@ -13,6 +35,7 @@ Version 14.6.0
       things, most notably javac workers. #1011
     * Added a go_benchmark rule that can be used to produce a binary to
       run a go benchmark suite. #1014
+
 
 Version 14.5.7
 --------------
