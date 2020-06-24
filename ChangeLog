@@ -1,16 +1,9 @@
-Version 14.5.8
+Version 14.6.0
 --------------
 
     * Fixed a file leak in please #1017
     * Fixed a concurrency issue with uploading test results when using
       --num_runs #1016
-
-
-Version 14.5.7
---------------
-
-    * Reused outputs of previously remotely built targets are now downloaded
-      correctly in some circumstances.
     * Added metadata field to build rules that can be an arbitrary object.
       This metadata can later be retrieved by a new BIF get_rule_metadata.
       #1006
@@ -20,6 +13,12 @@ Version 14.5.7
       support a number of things most notably java workers. #1011
     * Added a go_benchmark rule that can be used to produce a binary to
       run a go benchmark suite. #1014
+
+Version 14.5.7
+--------------
+
+    * Reused outputs of previously remotely built targets are now downloaded
+      correctly in some circumstances.
 
 
 Version 14.5.6
