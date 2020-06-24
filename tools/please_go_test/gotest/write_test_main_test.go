@@ -3,6 +3,7 @@ package gotest
 import (
 	"go/parser"
 	"go/token"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,7 @@ func TestParseTestSources(t *testing.T) {
 		"TestFindCoverVarsFailsGracefully",
 		"TestFindCoverVarsReturnsNothingForEmptyPath",
 	}
-	assert.Equal(t, functions, descr.Functions)
+	assert.Equal(t, functions, descr.TestFunctions)
 }
 
 func TestParseTestSourcesWithMain(t *testing.T) {
@@ -37,7 +38,7 @@ func TestParseTestSourcesWithMain(t *testing.T) {
 		"TestParseSourceWithAbsolutePath",
 		"TestAddTarget",
 	}
-	assert.Equal(t, functions, descr.Functions)
+	assert.Equal(t, functions, descr.TestFunctions)
 }
 
 func TestParseTestSourcesFailsGracefully(t *testing.T) {
@@ -53,6 +54,7 @@ func TestWriteTestMain(t *testing.T) {
 		"test.go",
 		false,
 		[]CoverVar{},
+		false,
 	)
 	assert.NoError(t, err)
 	// It's not really practical to assert the contents of the file in great detail.
@@ -75,6 +77,7 @@ func TestWriteTestMainWithCoverage(t *testing.T) {
 			Var:        "GoCover_lock_go",
 			File:       "tools/please_go_test/gotest/test_data/lock.go",
 		}},
+		false,
 	)
 	assert.NoError(t, err)
 	// It's not really practical to assert the contents of the file in great detail.
@@ -82,6 +85,28 @@ func TestWriteTestMainWithCoverage(t *testing.T) {
 	f, err := parser.ParseFile(token.NewFileSet(), "test.go", nil, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "main", f.Name.Name)
+}
+
+func TestWriteTestMainWithBenchmark(t *testing.T) {
+	err := WriteTestMain(
+		"tools/please_go_test/gotest/test_data",
+		"",
+		[]string{"tools/please_go_test/gotest/test_data/bench/example_benchmark.go"},
+		"test.go",
+		true,
+		[]CoverVar{},
+		true,
+	)
+	assert.NoError(t, err)
+	// It's not really practical to assert the contents of the file in great detail.
+	// We'll do the obvious thing of asserting that it is valid Go source.
+	f, err := parser.ParseFile(token.NewFileSet(), "test.go", nil, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, "main", f.Name.Name)
+
+	test, err := ioutil.ReadFile("test.go")
+	assert.NoError(t, err)
+	assert.Contains(t, string(test), "BenchmarkExample")
 }
 
 func TestExtraImportPaths(t *testing.T) {

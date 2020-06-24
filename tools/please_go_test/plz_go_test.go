@@ -23,6 +23,7 @@ var opts struct {
 	Output     string        `short:"o" long:"output" description:"Output filename" required:"true"`
 	Package    string        `short:"p" long:"package" description:"Package containing this test" env:"PKG_DIR"`
 	ImportPath string        `short:"i" long:"import_path" description:"Full import path to the package"`
+	Benchmark  bool          `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
 	Args       struct {
 		Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 	} `positional-args:"true" required:"true"`
@@ -35,7 +36,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error scanning for coverage: %s", err)
 	}
-	if err = gotest.WriteTestMain(opts.Package, opts.ImportPath, opts.Args.Sources, opts.Output, opts.Dir != "", coverVars); err != nil {
+	if err = gotest.WriteTestMain(opts.Package, opts.ImportPath, opts.Args.Sources, opts.Output, opts.Dir != "", coverVars, opts.Benchmark); err != nil {
 		log.Fatalf("Error writing test main: %s", err)
 	}
 	os.Exit(0)
