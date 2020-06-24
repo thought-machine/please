@@ -23,8 +23,5 @@ func (c *Client) uploadBlobs(f func(ch chan<- *chunker.Chunker) error) error {
 	if err := g.Wait(); err != nil {
 		return err
 	}
-	// TODO(peterebden): This timeout is kind of arbitrary since it represents a lot of requests.
-	ctx, cancel := context.WithTimeout(context.Background(), 10*c.reqTimeout)
-	defer cancel()
-	return c.client.UploadIfMissing(ctx, chomks...)
+	return c.client.UploadIfMissing(context.Background(), chomks...)
 }

@@ -49,7 +49,6 @@ type Client struct {
 	initOnce    sync.Once
 	state       *core.BuildState
 	origState   *core.BuildState
-	reqTimeout  time.Duration
 	err         error // for initialisation
 	instance    string
 
@@ -89,11 +88,10 @@ type pendingDownload struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:      state,
-		origState:  state,
-		instance:   state.Config.Remote.Instance,
-		reqTimeout: time.Duration(state.Config.Remote.Timeout),
-		outputs:    map[core.BuildLabel]*pb.Directory{},
+		state:     state,
+		origState: state,
+		instance:  state.Config.Remote.Instance,
+		outputs:   map[core.BuildLabel]*pb.Directory{},
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
@@ -134,7 +132,7 @@ func (c *Client) initExec() error {
 		NoSecurity:         !c.state.Config.Remote.Secure,
 		TransportCredsOnly: c.state.Config.Remote.Secure,
 		DialOpts:           dialOpts,
-	}, client.UseBatchOps(true), client.RetryTransient())
+	}, client.UseBatchOps(true), client.RetryTransient(), client.RPCTimeout(c.state.Config.Remote.Timeout))
 	if err != nil {
 		return err
 	}
@@ -309,9 +307,7 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if target.Stamp && err == nil {
 		// Store results under unstamped digest too.
 		c.locallyCacheResults(target, unstampedDigest, metadata, ar)
-		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-		defer cancel()
-		c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
+		c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 			InstanceName: c.instance,
 			ActionDigest: unstampedDigest,
 			ActionResult: ar,
@@ -354,10 +350,7 @@ func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar 
 	if err := removeOutputs(target); err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-
-	if err := c.downloadActionOutputs(ctx, ar, target); err != nil {
+	if err := c.downloadActionOutputs(context.Background(), ar, target); err != nil {
 		return c.wrapActionErr(err, digest)
 	}
 	c.recordAttrs(target, digest)
@@ -460,9 +453,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMe
 	}
 	if target.NeedCoverage(c.state) && ar != nil {
 		if digest := c.digestForFilename(ar, core.CoverageFile); digest != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-			defer cancel()
-			coverage, err = c.client.ReadBlob(ctx, sdkdigest.NewFromProtoUnvalidated(digest))
+			coverage, err = c.client.ReadBlob(context.Background(), sdkdigest.NewFromProtoUnvalidated(digest))
 			if execErr == nil && err != nil {
 				return metadata, results, nil, err
 			}
@@ -481,9 +472,7 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 		return metadata, ar
 	}
 	// Now see if it is cached on the remote server
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	if ar, err := c.client.GetActionResult(ctx, &pb.GetActionResultRequest{
+	if ar, err := c.client.GetActionResult(context.Background(), &pb.GetActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,
 		InlineStdout: needStdout,
@@ -535,20 +524,13 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	} else if target.IsRemoteFile {
 		return c.fetchRemoteFile(tid, target, digest)
 	}
-	if timeout < c.reqTimeout {
-		// This is the timeout for the individual action to execute, but doesn't necessarily
-		// take into account time to fetch inputs etc, so we might need to extend.
-		timeout = c.reqTimeout
-	}
-	return c.reallyExecute(tid, target, command, digest, timeout, needStdout)
+	return c.reallyExecute(tid, target, command, digest, needStdout)
 }
 
 // reallyExecute is like execute but after the initial cache check etc.
 // The action & sources must have already been uploaded.
-func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, timeout time.Duration, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	resp, err := c.client.ExecuteAndWaitProgress(ctx, &pb.ExecuteRequest{
+func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+	resp, err := c.client.ExecuteAndWaitProgress(context.Background(), &pb.ExecuteRequest{
 		InstanceName:    c.instance,
 		ActionDigest:    digest,
 		SkipCacheLookup: true, // We've already done it above.
@@ -755,9 +737,7 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 			IsExecutable: target.IsBinary,
 		}},
 	}
-	ctx, cancel = context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	if _, err := c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
+	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: actionDigest,
 		ActionResult: ar,
@@ -803,9 +783,7 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 	}); err != nil {
 		return nil, nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	if _, err := c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
+	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: actionDigest,
 		ActionResult: ar,

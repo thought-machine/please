@@ -353,18 +353,14 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		Stderr: ar.StderrRaw,
 	}
 	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-		defer cancel()
-		b, err := c.client.ReadBlob(ctx, digest.NewFromProtoUnvalidated(ar.StdoutDigest))
+		b, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StdoutDigest))
 		if err != nil {
 			return metadata, err
 		}
 		metadata.Stdout = b
 	}
 	if needStderr && len(metadata.Stderr) == 0 && ar.StderrDigest != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-		defer cancel()
-		b, err := c.client.ReadBlob(ctx, digest.NewFromProtoUnvalidated(ar.StderrDigest))
+		b, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StderrDigest))
 		if err != nil {
 			return metadata, err
 		}
@@ -385,9 +381,7 @@ func (c *Client) digestForFilename(ar *pb.ActionResult, name string) *pb.Digest 
 
 // downloadAllFiles returns the contents of all files in the given action result
 func (c *Client) downloadAllPrefixedFiles(ar *pb.ActionResult, prefix string) ([][]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	outs, err := c.client.FlattenActionOutputs(ctx, ar)
+	outs, err := c.client.FlattenActionOutputs(context.Background(), ar)
 	if err != nil {
 		return nil, err
 	}
@@ -444,9 +438,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	}
 	start := time.Now()
 	// Do more in-depth validation that blobs exist remotely.
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	outputs, err := c.client.FlattenActionOutputs(ctx, ar)
+	outputs, err := c.client.FlattenActionOutputs(context.Background(), ar)
 	if err != nil {
 		return fmt.Errorf("Failed to verify action result: %s", err)
 	}
@@ -455,9 +447,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	for _, output := range outputs {
 		digests = append(digests, output.Digest)
 	}
-	ctx, cancel = context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	if missing, err := c.client.MissingBlobs(ctx, digests); err != nil {
+	if missing, err := c.client.MissingBlobs(context.Background(), digests); err != nil {
 		return fmt.Errorf("Failed to verify action result outputs: %s", err)
 	} else if len(missing) != 0 {
 		return fmt.Errorf("Action result missing %d blobs", len(missing))
@@ -494,9 +484,7 @@ func (c *Client) markOutputsAsExecutable(ar *pb.ActionResult, actionDigest *pb.D
 	if !modified {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), c.reqTimeout)
-	defer cancel()
-	_, err := c.client.UpdateActionResult(ctx, &pb.UpdateActionResultRequest{
+	_, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: actionDigest,
 		ActionResult: ar,
