@@ -40,7 +40,7 @@ import (
 var log = logging.MustGetLogger("remote")
 
 // The API version we support.
-var apiVersion = semver.SemVer{Major: 2}
+var apiVersion = semver.SemVer{Major: 2, Minor: 1}
 
 // A Client is the interface to the remote API.
 //
