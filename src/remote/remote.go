@@ -250,6 +250,9 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 			}
 		} else {
 			log.Debug("Not downloading outputs for %s, they are already up-to-date", target)
+			// Ensure this is marked as already downloaded.
+			v, _ := c.downloads.LoadOrStore(target, &pendingDownload{})
+			v.(*pendingDownload).once.Do(func() {})
 		}
 		if err := c.downloadData(target); err != nil {
 			return metadata, err
