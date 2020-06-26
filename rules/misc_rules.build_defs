@@ -286,8 +286,8 @@ def hash_filegroup(name:str, srcs:list=None, deps:list=None, exported_deps:list=
     return build_rule(
         name=name,
         srcs=srcs,
-        out_dirs = ['_out'],
-        cmd = 'for S in SRCS; do mv $S "${S%.*}-$(sha256sum $S)${S##*.}"; done',
+        output_dirs = ['_out'],
+        cmd = 'mkdir _out; for S in $SRCS; do B="$(basename $S)"; mv "$S" "_out/${B%.*}-$(shasum -a 256 $S | cut -d " " -f 1 ).${B##*.}"; done',
         deps=deps,
         exported_deps=exported_deps,
         visibility=visibility,
