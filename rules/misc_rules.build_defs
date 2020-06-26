@@ -286,16 +286,16 @@ def hash_filegroup(name:str, srcs:list=None, deps:list=None, exported_deps:list=
     return build_rule(
         name=name,
         srcs=srcs,
-        cmd='',
+        out_dirs = ['_out'],
+        cmd = 'for S in SRCS; do mv $S "${S%.*}-$(sha256sum $S)${S##*.}"; done',
         deps=deps,
         exported_deps=exported_deps,
         visibility=visibility,
-        building_description='Copying...',
+        building_description='Hashing...',
         output_is_complete=True,
         test_only=test_only,
         labels=labels,
         requires=requires,
-        _hash_filegroup=True,
     )
 
 
