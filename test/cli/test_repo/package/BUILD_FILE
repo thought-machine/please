@@ -1,5 +1,5 @@
 gentest(
     name = "wibble", 
-    #outs = ["wibble.txt"],
-    test_cmd = "echo wibble wibble wibble && echo '' > $RESULTS_FILE",
+    no_test_output = True,
+    test_cmd = "echo wibble wibble wibble",
 )
