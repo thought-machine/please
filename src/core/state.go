@@ -198,7 +198,7 @@ type BuildState struct {
 	// True if we're forcing a rebuild of the original targets.
 	ForceRebuild bool
 	// True if we're forcing to rerun tests of the targets.
-	ForceTestRerun bool
+	ForceRerun bool
 	// True to always show test output, even on success.
 	ShowTestOutput bool
 	// True to print all output of all tasks to stderr.

@@ -732,7 +732,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.Watch = len(opts.Watch.Args.Targets) > 0
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild
-	state.ForceTestRerun = opts.Test.Rerun || opts.Cover.Rerun
+	state.ForceRerun = opts.Test.Rerun || opts.Cover.Rerun
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
 	state.DebugTests = debugTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput

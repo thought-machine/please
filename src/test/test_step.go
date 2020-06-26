@@ -130,7 +130,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	}
 
 	needToRun := func() bool {
-		if state.ForceTestRerun {
+		if state.ForceRerun {
 			return true
 		}
 
