@@ -11,7 +11,6 @@
 package build
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"path"
@@ -83,7 +82,7 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, err
 	outDir := target.OutDir()
 	localSources := target.AllLocalSourcePaths(state.Graph)
 	for i, source := range target.AllFullSourcePaths(state.Graph) {
-		out, _ := filegroupOutputPath(state, target, outDir, localSources[i], source)
+		out := path.Join(outDir, localSources[i])
 		fileChanged, err := theFilegroupBuilder.Build(state, target, source, out)
 		if err != nil {
 			return true, err
@@ -109,37 +108,10 @@ func copyFilegroupHashes(state *core.BuildState, target *core.BuildTarget) {
 	outDir := target.OutDir()
 	localSources := target.AllLocalSourcePaths(state.Graph)
 	for i, source := range target.AllFullSourcePaths(state.Graph) {
-		if out, _ := filegroupOutputPath(state, target, outDir, localSources[i], source); out != source {
+		if out := path.Join(outDir, localSources[i]); out != source {
 			state.PathHasher.MoveHash(source, out, true)
 		}
 	}
-}
-
-// updateHashFilegroupPaths sets the output paths on a hash_filegroup rule.
-// Unlike normal filegroups, hash filegroups can't calculate these themselves very readily.
-func updateHashFilegroupPaths(state *core.BuildState, target *core.BuildTarget) {
-	outDir := target.OutDir()
-	localSources := target.AllLocalSourcePaths(state.Graph)
-	for i, source := range target.AllFullSourcePaths(state.Graph) {
-		_, relOut := filegroupOutputPath(state, target, outDir, localSources[i], source)
-		target.AddOutput(relOut)
-	}
-}
-
-// filegroupOutputPath returns the output path for a single filegroup source.
-func filegroupOutputPath(state *core.BuildState, target *core.BuildTarget, outDir, source, full string) (string, string) {
-	if !target.IsHashFilegroup {
-		return path.Join(outDir, source), source
-	}
-	// Hash filegroups have a hash embedded into the output name.
-	ext := path.Ext(source)
-	before := source[:len(source)-len(ext)]
-	hash, err := state.PathHasher.Hash(full, false, false)
-	if err != nil {
-		panic(err)
-	}
-	out := before + "-" + base64.RawURLEncoding.EncodeToString(hash) + ext
-	return path.Join(outDir, out), out
 }
 
 func createInitPy(dir string) {

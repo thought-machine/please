@@ -552,14 +552,6 @@ func reencodeSRI(target *core.BuildTarget, h string) string {
 	return h
 }
 
-// updateHashFilename updates an output filename for a hash_filegroup.
-func updateHashFilename(name string, digest *pb.Digest) string {
-	ext := path.Ext(name)
-	before := name[:len(name)-len(ext)]
-	b, _ := hex.DecodeString(digest.Hash)
-	return before + "-" + base64.RawURLEncoding.EncodeToString(b) + ext
-}
-
 // dialOpts returns a set of dial options to apply based on the config.
 func (c *Client) dialOpts() ([]grpc.DialOption, error) {
 	// Set an arbitrarily large (400MB) max message size so it isn't a limitation.

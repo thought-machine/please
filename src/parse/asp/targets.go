@@ -12,9 +12,6 @@ import (
 // filegroupCommand is the command we put on filegroup rules.
 const filegroupCommand = pyString("filegroup")
 
-// hashFilegroupCommand is similarly the command for hash_filegroup rules.
-const hashFilegroupCommand = pyString("hash_filegroup")
-
 const defaultFlakiness = 3
 
 const (
@@ -117,8 +114,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 
 	target.BuildTimeout = sizeAndTimeout(s, size, args[buildTimeoutBuildRuleArgIdx], s.state.Config.Build.Timeout)
 	target.Stamp = isTruthy(stampBuildRuleArgIdx)
-	target.IsHashFilegroup = args[cmdBuildRuleArgIdx] == hashFilegroupCommand
-	target.IsFilegroup = args[cmdBuildRuleArgIdx] == filegroupCommand || target.IsHashFilegroup
+	target.IsFilegroup = args[cmdBuildRuleArgIdx] == filegroupCommand
 	if desc := args[buildingDescriptionBuildRuleArgIdx]; desc != nil && desc != None {
 		target.BuildingDescription = string(desc.(pyString))
 	}
