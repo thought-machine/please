@@ -12,9 +12,9 @@ jobs:
        - restore_cache:
            key: go-mod-linux-v4-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-linux-main-v3-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v4-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
-           key: python-linux-main-{{ checksum "third_party/python/BUILD" }}
+           key: python-linux-main-v2-{{ checksum "third_party/python/BUILD" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
@@ -37,10 +37,10 @@ jobs:
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-linux-main-v3-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v4-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
-           key: python-linux-main-{{ checksum "third_party/python/BUILD" }}
+           key: python-linux-main-v2-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
 
    build-linux-alt:
@@ -56,9 +56,9 @@ jobs:
        - restore_cache:
            key: go-mod-linux-alt-v3-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-linux-alt-v2-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-alt-v3-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
-           key: python-linux-alt-{{ checksum "third_party/python/BUILD" }}
+           key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
@@ -71,10 +71,10 @@ jobs:
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-linux-alt-v2-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-alt-v3-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
-           key: python-linux-alt-{{ checksum "third_party/python/BUILD" }}
+           key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
 
    lint:
@@ -88,7 +88,7 @@ jobs:
        - restore_cache:
            key: go-mod-linux-v4-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-linux-main-v3-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v4-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Lint
            command: ./pleasew lint
@@ -103,9 +103,9 @@ jobs:
        - restore_cache:
            key: go-mod-darwin-v3-{{ checksum "bootstrap.sh" }}
        - restore_cache:
-           key: go-darwin-go114-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go114-v2-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
-           key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
+           key: python-darwin-py372-{{ checksum "third_party/python/BUILD" }}
        - run:
            name: Install deps
            command: ./.circleci/setup_osx.sh
@@ -130,10 +130,10 @@ jobs:
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-darwin-go114-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go114-v2-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
-           key: python-darwin-py370-{{ checksum "third_party/python/BUILD" }}
+           key: python-darwin-py372-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
 
    test-rex:
@@ -146,7 +146,7 @@ jobs:
        - attach_workspace:
            at: /tmp/workspace
        - restore_cache:
-           key: elan-v1-{{ checksum "third_party/go/BUILD" }}
+           key: elan-v2-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Test Remote Execution
            command: ./.circleci/rex_test.sh
@@ -155,7 +155,7 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: elan-v1-{{ checksum "third_party/go/BUILD" }}
+           key: elan-v2-{{ checksum "third_party/go/BUILD" }}
            paths: [ "plz-out/elan" ]
 
    release:
