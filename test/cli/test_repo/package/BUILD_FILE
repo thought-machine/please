@@ -1,0 +1,5 @@
+gentest(
+    name = "wibble", 
+    #outs = ["wibble.txt"],
+    test_cmd = "echo wibble wibble wibble && echo '' > $RESULTS_FILE",
+)
