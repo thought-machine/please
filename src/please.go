@@ -256,6 +256,7 @@ var opts struct {
 		Deps struct {
 			Hidden bool `long:"hidden" short:"h" description:"Output internal / hidden dependencies too"`
 			Level  int  `long:"level" default:"-1" description:"Levels of the dependencies to retrieve."`
+			Unique bool `long:"unique" hidden:"true" description:"Has no effect, only exists for compatibility."`
 			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
