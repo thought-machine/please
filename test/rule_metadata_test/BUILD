@@ -5,6 +5,6 @@ please_repo_e2e_test(
     expected_output = {
         "plz-out/gen/consumer_package/wibble.txt": "wibble wibble wibble",
     },
-    plz_command = "build //consumer_package:wibble",
+    plz_command = "$PLZ build //consumer_package:wibble",
     repo = "test_repo",
 )
