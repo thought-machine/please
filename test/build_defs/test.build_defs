@@ -8,7 +8,7 @@ def please_repo_e2e_test(
         expected_output: dict,
 ):
     test_cmd = " && ".join(
-        ["cd $DATA_REPO", "export PLZ=$TMP_DIR/$DATA_PLEASE", f"$PLZ {plz_command}"] +
+        ["cd $DATA_REPO", "export PLZ=$TMP_DIR/$DATA_PLEASE", f"{plz_command}"] +
         [f"$TMP_DIR/$DATA_CONTENT_CHECKER '{o}' '{c}'" for o, c in expected_output.items()])
 
     return build_rule(
