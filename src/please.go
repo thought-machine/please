@@ -134,6 +134,7 @@ var opts struct {
 		NoCoverageReport    bool          `long:"nocoverage_report" description:"Suppress the per-file coverage report displayed in the shell"`
 		LineCoverageReport  bool          `short:"l" long:"line_coverage_report" description:" Show a line-by-line coverage report for all affected files."`
 		NumRuns             int           `short:"n" long:"num_runs" default:"1" description:"Number of times to run each test target."`
+		Rerun               bool          `long:"rerun" description:"To force rerunning tests for a target"`
 		Sequentially        bool          `long:"sequentially" description:"Whether to run multiple runs of the same test sequentially"`
 		IncludeAllFiles     bool          `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
 		IncludeFile         cli.Filepaths `long:"include_file" description:"Filenames to filter coverage display to"`
@@ -731,7 +732,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.Watch = len(opts.Watch.Args.Targets) > 0
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild
-	state.ForceTestRerun = opts.Test.Rerun
+	state.ForceTestRerun = opts.Test.Rerun || opts.Cover.Rerun
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
 	state.DebugTests = debugTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
