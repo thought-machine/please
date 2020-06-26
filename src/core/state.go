@@ -190,6 +190,8 @@ type BuildState struct {
 	Watch bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
 	NumTestRuns int
+	// Whether we should rerun the test even if the hash hasn't changed
+	Rerun bool
 	// Whether to run multiple test runs sequentially or across multiple workers (can be useful if tests bind to ports
 	// or similar)
 	TestSequentially bool

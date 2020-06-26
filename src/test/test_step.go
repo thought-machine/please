@@ -130,6 +130,9 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	}
 
 	needToRun := func() bool {
+		if state.Rerun {
+			return true
+		}
 		if s := target.State(); (s == core.Unchanged || s == core.Reused) && core.PathExists(cachedOutputFile) {
 			// Output file exists already and appears to be valid. We might still need to rerun though
 			// if the coverage files aren't available.
