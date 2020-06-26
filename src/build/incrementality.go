@@ -241,14 +241,10 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 
 	hashBool(h, target.NeedsTransitiveDependencies)
 	hashBool(h, target.OutputIsComplete)
-	// Should really not be conditional here, but we don't want adding the new flag to
-	// change the hash of every single other target everywhere.
-	// Might consider removing this the next time we peturb the hashing strategy.
-	hashOptionalBool(h, target.Stamp)
-	hashOptionalBool(h, target.IsFilegroup)
-	hashOptionalBool(h, target.IsHashFilegroup)
-	hashOptionalBool(h, target.IsRemoteFile)
-	hashOptionalBool(h, target.Local)
+	hashBool(h, target.Stamp)
+	hashBool(h, target.IsFilegroup)
+	hashBool(h, target.IsRemoteFile)
+	hashBool(h, target.Local)
 	for _, require := range target.Requires {
 		h.Write([]byte(require))
 	}

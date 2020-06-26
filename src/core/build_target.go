@@ -128,8 +128,6 @@ type BuildTarget struct {
 	NeededForSubinclude bool
 	// Marks the target as a filegroup.
 	IsFilegroup bool `print:"false"`
-	// Marks the target as a hash_filegroup.
-	IsHashFilegroup bool `print:"false"`
 	// Marks the target as a remote_file.
 	IsRemoteFile bool `print:"false"`
 	// Marks that the target was added in a post-build function.
@@ -557,7 +555,7 @@ func (target *BuildTarget) DeclaredOutputNames() []string {
 // Outputs returns a slice of all the outputs of this rule.
 func (target *BuildTarget) Outputs() []string {
 	var ret []string
-	if target.IsFilegroup && !target.IsHashFilegroup {
+	if target.IsFilegroup {
 		ret = make([]string, 0, len(target.Sources))
 		// Filegroups just re-output their inputs.
 		for _, src := range target.Sources {

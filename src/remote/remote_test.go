@@ -190,21 +190,6 @@ func TestNoAbsolutePaths2(t *testing.T) {
 	}
 }
 
-func TestUpdateHashFilename(t *testing.T) {
-	digest := &pb.Digest{
-		Hash:      "fdb56422f239f8a53940e510720da53c08783d117135abab6e2df343be70eb77",
-		SizeBytes: 506,
-	}
-	assert.Equal(t,
-		"script/bundle-_bVkIvI5-KU5QOUQcg2lPAh4PRFxNaurbi3zQ75w63c.js",
-		updateHashFilename("script/bundle.js", digest),
-	)
-	assert.Equal(t,
-		"bundle-_bVkIvI5-KU5QOUQcg2lPAh4PRFxNaurbi3zQ75w63c",
-		updateHashFilename("bundle", digest),
-	)
-}
-
 func TestRemoteFilesHashConsistently(t *testing.T) {
 	c := newClientInstance("test")
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "download"})

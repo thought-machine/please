@@ -175,9 +175,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return err
 		}
 	} else {
-		if target.IsHashFilegroup {
-			updateHashFilegroupPaths(state, target)
-		}
 		// Ensure we have downloaded any previous dependencies if that's relevant.
 		if err := downloadInputsIfNeeded(tid, state, target); err != nil {
 			return err

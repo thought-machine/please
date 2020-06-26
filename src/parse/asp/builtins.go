@@ -111,7 +111,6 @@ func registerSubincludePackage(s *scope) {
 	f.defaults = buildRule.defaults
 	f.constants = buildRule.constants
 	f.types = buildRule.types
-	f = setNativeCode(s, "hash_filegroup", hashFilegroup)
 	f.args = buildRule.args
 	f.argIndices = buildRule.argIndices
 	f.defaults = buildRule.defaults
@@ -170,12 +169,6 @@ func buildRule(s *scope, args []pyObject) pyObject {
 // filegroup implements the filegroup() builtin.
 func filegroup(s *scope, args []pyObject) pyObject {
 	args[1] = filegroupCommand
-	return buildRule(s, args)
-}
-
-// hashFilegroup implements the hash_filegroup() builtin.
-func hashFilegroup(s *scope, args []pyObject) pyObject {
-	args[1] = hashFilegroupCommand
 	return buildRule(s, args)
 }
 

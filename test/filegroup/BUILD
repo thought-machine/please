@@ -12,3 +12,14 @@ plz_e2e_test(
     name = "filegroup_concurrent_build_test",
     cmd = "plz clean //test/filegroup:gen && plz build //test/filegroup/many:all",
 )
+
+hash_filegroup(
+    name = "hashed",
+    srcs = ["hash_filegroup_test.txt"],
+)
+
+sh_test(
+    name = "hash_filegroup_test",
+    src = "hash_filegroup_test.sh",
+    data = [":hashed"],
+)

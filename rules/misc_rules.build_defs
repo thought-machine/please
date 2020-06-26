@@ -286,16 +286,16 @@ def hash_filegroup(name:str, srcs:list=None, deps:list=None, exported_deps:list=
     return build_rule(
         name=name,
         srcs=srcs,
-        cmd='',
+        output_dirs = ['_out'],
+        cmd = 'mkdir _out; for S in $SRCS; do B="$(basename $S)"; mv "$S" "_out/${B%.*}-$(shasum -a 256 $S | cut -d " " -f 1 ).${B##*.}"; done',
         deps=deps,
         exported_deps=exported_deps,
         visibility=visibility,
-        building_description='Copying...',
+        building_description='Hashing...',
         output_is_complete=True,
         test_only=test_only,
         labels=labels,
         requires=requires,
-        _hash_filegroup=True,
     )
 
 
