@@ -18,6 +18,9 @@ Version 15.0.0
       with `lib` where appropriate.
     * SHA256 is now the default hash function. SHA1 hashes specified in
       BUILD files will continue to work.
+    * `hash_filegroup` is now implemented in the BUILD language instead of
+      as a builtin. Generally it shouldn't matter but the output format is
+      slightly different (it is hex-encoded instead of base64).
 
 
 Version 14.6.0
