@@ -111,6 +111,7 @@ var opts struct {
 	Test struct {
 		FailingTestsOk  bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
 		NumRuns         int          `long:"num_runs" short:"n" default:"1" description:"Number of times to run each test target."`
+		Rerun           bool         `long:"rerun" description:"To force rerunning tests for a target"`
 		Sequentially    bool         `long:"sequentially" description:"Whether to run multiple runs of the same test sequentially"`
 		TestResultsFile cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		SurefireDir     cli.Filepath `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
@@ -730,6 +731,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.Watch = len(opts.Watch.Args.Targets) > 0
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild
+	state.ForceTestRerun = opts.Test.Rerun
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
 	state.DebugTests = debugTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
