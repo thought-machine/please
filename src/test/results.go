@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -83,7 +84,8 @@ func LoadPreviousFailures(filename string) ([]core.BuildLabel, []string) {
 	args := []string{}
 	for _, suite := range junit.TestSuites {
 		if suite.Failures > 0 {
-			labels = append(labels, core.ParseBuildLabel(suite.Name, "")) // These always have complete labels
+			labels = append(labels, core.NewBuildLabel(
+				strings.Replace(suite.Package, ".", "/", -1), suite.Name))
 			for _, c := range suite.TestCases {
 				if c.Failure != nil || c.Error != nil {
 					args = append(args, c.Name)
