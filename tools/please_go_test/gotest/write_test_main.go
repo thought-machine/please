@@ -142,7 +142,7 @@ package main
 
 import (
 	"os"
-	"strings"
+	{{if not .Benchmark}}"strings"{{end}}
 	"testing"
     "testing/internal/testdeps"
 
