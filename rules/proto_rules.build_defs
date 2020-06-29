@@ -233,7 +233,7 @@ def proto_languages():
                 compiler_flags = ['-I$PKG_DIR'],
             ),
             provides=["hdrs"],
-            protoc_flags = ['--cpp_out="$TMP_DIR/cc"'],
+            protoc_flags = ['--cpp_out="$TMP_DIR"'],
         ),
         'java': proto_language(
             language = 'java',
@@ -246,7 +246,7 @@ def proto_languages():
                 test_only = test_only,
                 labels = ['proto'],
             ),
-            protoc_flags = ['--java_out="$TMP_DIR/java"'],
+            protoc_flags = ['--java_out="$TMP_DIR"'],
             deps = [CONFIG.PROTO_JAVA_DEP],
         ),
         'go': proto_language(
@@ -259,7 +259,7 @@ def proto_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out=paths=source_relative:"$TMP_DIR/go"', '--plugin=protoc-gen-go=$TOOLS_GO'],
+            protoc_flags = ['--go_out=paths=source_relative:"$TMP_DIR"', '--plugin=protoc-gen-go=$TOOLS_GO'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP],
             pre_build = _go_path_mapping(False),
@@ -276,7 +276,7 @@ def proto_languages():
                 requires = ['js'],
                 output_is_complete = False,
             ),
-            protoc_flags = ['--js_out=import_style=commonjs,binary:"$TMP_DIR/js"'],
+            protoc_flags = ['--js_out=import_style=commonjs,binary:"$TMP_DIR"'],
             deps = [CONFIG.PROTO_JS_DEP],
         ),
         'py': proto_language(
@@ -284,7 +284,7 @@ def proto_languages():
             proto_language = 'python',
             extensions = ['_pb2.py'],
             func = python_library,
-            protoc_flags = ['--python_out="$TMP_DIR/py"'],
+            protoc_flags = ['--python_out="$TMP_DIR"'],
             deps = [CONFIG.PROTO_PYTHON_DEP],
         ),
     }
@@ -306,7 +306,7 @@ def grpc_languages():
                 pkg_config_libs = ['grpc++', 'grpc', 'protobuf'],
                 compiler_flags = ['-I$PKG_DIR', '-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
             ),
-            protoc_flags = ['--cpp_out="$TMP_DIR/cc"', '--plugin=protoc-gen-grpc-cc="$TOOLS_CC"', '--grpc-cc_out="$TMP_DIR/cc"'],
+            protoc_flags = ['--cpp_out="$TMP_DIR"', '--plugin=protoc-gen-grpc-cc="$TOOLS_CC"', '--grpc-cc_out="$TMP_DIR"'],
             tools = [CONFIG.GRPC_CC_PLUGIN],
             provides=['hdrs'],
         ),
@@ -315,7 +315,7 @@ def grpc_languages():
             proto_language = 'python',
             extensions = ['_pb2.py', '_pb2_grpc.py'],
             func = python_library,
-            protoc_flags = ['--python_out="$TMP_DIR/py"', '--plugin=protoc-gen-grpc-python="$TOOLS_PY"', '--grpc-python_out="$TMP_DIR/py"'],
+            protoc_flags = ['--python_out="$TMP_DIR"', '--plugin=protoc-gen-grpc-python="$TOOLS_PY"', '--grpc-python_out="$TMP_DIR"'],
             tools = [CONFIG.GRPC_PYTHON_PLUGIN],
             deps = [CONFIG.PROTO_PYTHON_DEP, CONFIG.GRPC_PYTHON_DEP],
         ),
@@ -330,7 +330,7 @@ def grpc_languages():
                 test_only = test_only,
                 labels = ['proto'],
             ),
-            protoc_flags = ['--java_out="$TMP_DIR/java"', '--plugin=protoc-gen-grpc-java="$TOOLS_JAVA"', '--grpc-java_out="$TMP_DIR/java"'],
+            protoc_flags = ['--java_out="$TMP_DIR"', '--plugin=protoc-gen-grpc-java="$TOOLS_JAVA"', '--grpc-java_out="$TMP_DIR"'],
             tools = [CONFIG.GRPC_JAVA_PLUGIN],
             deps = [CONFIG.GRPC_JAVA_DEP, CONFIG.PROTO_JAVA_DEP],
         ),
@@ -344,7 +344,7 @@ def grpc_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out=paths=source_relative:"$TMP_DIR/go"', '--plugin=protoc-gen-go="$TOOLS_GO"'],
+            protoc_flags = ['--go_out=paths=source_relative:"$TMP_DIR"', '--plugin=protoc-gen-go="$TOOLS_GO"'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP, CONFIG.GRPC_GO_DEP],
             pre_build = _go_path_mapping(True),
@@ -362,7 +362,7 @@ def grpc_languages():
                 requires = ['js'],
                 output_is_complete = False,
             ),
-            protoc_flags = ['--js_out=import_style=commonjs,binary:"$TMP_DIR/js"'],
+            protoc_flags = ['--js_out=import_style=commonjs,binary:"$TMP_DIR"'],
             deps = [CONFIG.PROTO_JS_DEP],
         ),
     }
@@ -381,6 +381,8 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
         cmd = f'cd {root_dir}; {cmd} ${{SRCS//{root_dir}\\//}} && cd "$TMP_DIR"'
     else:
         cmd += ' ${SRCS}'
+
+    cmd = f'(export TMP_DIR=$TMP_DIR/{language_out_dir} && {cmd})'
 
     cmd += f' && (mv -f {language_out_dir}/${{PKG_DIR}}/* {out_dir}; true) && (mv -f {language_out_dir}/* {out_dir}; true)'
 
