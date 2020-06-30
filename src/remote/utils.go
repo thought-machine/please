@@ -83,7 +83,6 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 			if err != nil {
 				return err
 			}
-
 			o.Directories = append(o.Directories, dirs...)
 			o.Files = append(o.Files, files...)
 		} else {
@@ -119,19 +118,21 @@ func getOutputsForOutDir(target *core.BuildTarget, outDir core.OutputDirectory, 
 				continue
 			}
 			target.AddOutput(o.Path)
+			files = append(files, &pb.FileNode{
+				Digest:       o.Digest.ToProto(),
+				Name:         o.Path,
+				IsExecutable: o.IsExecutable,
+			})
 		}
+		return files, dirs, nil
 	}
 
 	for _, out := range tree.Root.Files {
-		if !outDir.ShouldAddFiles() {
-			target.AddOutput(out.Name)
-		}
+		target.AddOutput(out.Name)
 		files = append(files, out)
 	}
 	for _, out := range tree.Root.Directories {
-		if !outDir.ShouldAddFiles() {
-			target.AddOutput(out.Name)
-		}
+		target.AddOutput(out.Name)
 		dirs = append(dirs, out)
 	}
 
