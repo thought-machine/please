@@ -24,7 +24,7 @@ Version 15.0.0
     * Changed the proto_language contract: language plugins now have to output
       into $OUT_DIR instead of $TMP_DIR. This is to facilitate a change that
       simplifies the inner workings of proto_library improving incrementality,
-      as well as doubling the performance when build using remote execution.
+      as well as doubling the performance when built using remote execution.
 
 
 Version 14.6.0
