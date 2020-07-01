@@ -851,13 +851,21 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 		return nil // nothing to check
 	}
 	outputs := target.FullOutputs()
-	if checkRuleHashesOfType(target, outputs, state.Hasher("sha1"), sha1.New, sha1Len) ||
-		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.Hasher("sha1"), nil, sha1Len)) ||
-		(len(outputs) != 1 && checkRuleHashesOfType(target, outputs, state.Hasher("sha256"), sha256.New, sha256Len)) ||
-		(len(outputs) == 1 && checkRuleHashesOfType(target, outputs, state.Hasher("sha256"), nil, sha256Len)) {
+	hashes := target.UnprefixedHashes()
+	// Check if the hash we've already calculated matches any of these before we go off
+	// trying any other combinations.
+	hashStr := hex.EncodeToString(hash)
+	for _, h := range hashes {
+		if h == hashStr {
+			return nil
+		}
+	}
+	if checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha1"), sha1.New, sha1Len) ||
+		(len(outputs) == 1 && checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha1"), nil, sha1Len)) ||
+		(len(outputs) != 1 && checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha256"), sha256.New, sha256Len)) ||
+		(len(outputs) == 1 && checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha256"), nil, sha256Len)) {
 		return nil
 	}
-	hashStr := hex.EncodeToString(hash)
 	if len(target.Hashes) == 1 {
 		return fmt.Errorf("Bad output hash for rule %s: was %s but expected %s",
 			target.Label, hashStr, target.Hashes[0])
@@ -871,12 +879,8 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 // where a target has a single output so as not to double-hash it.
 // It is a bit fiddly, but is organised this way to avoid calculating hashes of
 // unused types unnecessarily since that could get quite expensive.
-func checkRuleHashesOfType(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash, size int) bool {
-	for _, h := range target.Hashes {
-		// Hashes can have an arbitrary label prefix. Strip it off if present.
-		if index := strings.LastIndexByte(h, ':'); index != -1 {
-			h = strings.TrimSpace(h[index+1:])
-		}
+func checkRuleHashesOfType(target *core.BuildTarget, hashes, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash, size int) bool {
+	for _, h := range hashes {
 		if len(h) == size { // Check if the hash is of the right algorithm
 			bhash, _ := outputHash(target, outputs, hasher, combine)
 			if hex.EncodeToString(bhash) == h {
