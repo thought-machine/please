@@ -1002,6 +1002,19 @@ func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
 	return []BuildLabel{target.Label}
 }
 
+// UnprefixedHashes returns the hashes for the target without any prefixes;
+// they are allowed to have optional prefixes before a colon which aren't taken
+// into account for the resulting hash.
+func (target *BuildTarget) UnprefixedHashes() []string {
+	hashes := target.Hashes[:]
+	for i, h := range hashes {
+		if index := strings.LastIndexByte(h, ':'); index != -1 {
+			hashes[i] = strings.TrimSpace(h[index+1:])
+		}
+	}
+	return hashes
+}
+
 // AddSource adds a source to the build target, deduplicating against existing entries.
 func (target *BuildTarget) AddSource(source BuildInput) {
 	target.Sources = target.addSource(target.Sources, source)
