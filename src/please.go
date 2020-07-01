@@ -900,7 +900,7 @@ func initBuild(args []string) string {
 		// Attempt to read config files to produce help for aliases.
 		cli.InitLogging(cli.MinVerbosity)
 		parser.WriteHelp(os.Stderr)
-		if core.FindRepoRoot() {
+		if cli.ActiveCommand(parser.Command) == "please" && core.FindRepoRoot() {
 			if config, err := core.ReadDefaultConfigFiles(nil); err == nil {
 				config.PrintAliases(os.Stderr)
 			}
