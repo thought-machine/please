@@ -57,8 +57,9 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 	}
 	if includeDirect || includeTransitive {
 		changed2 := make(map[*core.BuildTarget]struct{}, len(changed))
+		done := map[*core.BuildTarget]struct{}{}
 		for target := range changed {
-			addRevdeps(state, changed2, target, includeDirect, includeTransitive)
+			addRevdeps(state, done, changed2, target, includeDirect, includeTransitive)
 		}
 		changed = changed2
 	}
@@ -110,14 +111,15 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) (hash []byte, 
 }
 
 // addRevdeps walks back up the reverse dependencies of a target, marking them all changed.
-func addRevdeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}, target *core.BuildTarget, includeDirect, includeTransitive bool) {
-	if _, present := changed[target]; !present {
+func addRevdeps(state *core.BuildState, done, changed map[*core.BuildTarget]struct{}, target *core.BuildTarget, includeDirect, includeTransitive bool) {
+	if _, present := done[target]; !present {
+		done[target] = struct{}{}
 		if state.ShouldInclude(target) {
 			changed[target] = struct{}{}
 		}
 		if includeDirect || includeTransitive {
 			for _, revdep := range state.Graph.ReverseDependencies(target) {
-				addRevdeps(state, changed, revdep, false, includeTransitive)
+				addRevdeps(state, done, changed, revdep, false, includeTransitive)
 			}
 		}
 	}
