@@ -53,6 +53,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             javac_flags = f'-source {CONFIG.JAVA_SOURCE_LEVEL} -target {CONFIG.JAVA_TARGET_LEVEL} ' + javac_flags
 
         javac = CONFIG.JAVAC_TOOL
+        javac_worker = CONFIG.JAVAC_WORKER
 
         # Override old config if we have a toolchain configured
         if toolchain:
@@ -60,13 +61,13 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
 
             deps += jdk_info.deps
             javac = jdk_info.javac
+            javac_worker = jdk_info.javac_worker
 
-        if javac:
+        if not javac_worker:
             find = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
             srcflag = '`find $SRCS_WORKER -name "*.java"`' if src_dir else '$SRCS_WORKER'
             javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
         else:
-            # TODO(jpoole): add worker to toolchain (probably need to just invoke the jar with the correct version of java)
             javac = CONFIG.JAVAC_WORKER
             mflag = '--modular' if modular else ''
             srcflag = '--src_dir' if src_dir else ''
@@ -509,7 +510,7 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
 
 # This function is exposed as java_toolchain unless Bazel compatibility is enabled in which case it is exposed as
 # please_java_toolchain. This is to avoid namespace conflicts with Bazel's java_toolchain rule. 
-def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]) -> str:
+def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"], javac_worker:str=CONFIG.JAVAC_WORKER) -> str:
     """Downloads the JDK and sets up build rule metadata so the language rules can use the toolchain"""
     current_package = package_name()
 
@@ -517,6 +518,8 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
 
     if not jdk_url:
         raise ParseError(f"No java jdk_url defined for platform {CONFIG.OS}")
+
+    this = f"//{current_package}:{name}"
 
     download = remote_file(
         name=f"_{name}#download",
@@ -528,21 +531,32 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
         name=f"_{name}#javac",
         cmd=f"$(location //{current_package}:{name})/bin/javac \\\$@",
         visibility = visibility,
-        deps = [f"//{current_package}:{name}"],
+        deps = [this],
     )
 
     java = sh_cmd(
         name=f"_{name}#java",
         cmd=f"$(location //{current_package}:{name})/bin/java \\\$@",
         visibility = visibility,
-        deps = [f"//{current_package}:{name}"],
+        deps = [this],
     )
+
+
+
 
     md = {
         "deps": [f"//{current_package}:{name}"],
         "javac": f"//{current_package}" + javac,
         "java": f"//{current_package}" + java,
     }
+
+    if javac_worker:
+        wrapper = sh_cmd(
+            name=f"_{name}#javac_worker",
+            cmd=f"(export PATH=$(out_location //{current_package}:{name})/bin:$PATH && java --version && $(out_exe {javac_worker}))",
+            deps = [this, javac_worker],
+        )
+        md["javac_worker"] = f"//{current_package}" + wrapper
 
     return build_rule(
         name = name,

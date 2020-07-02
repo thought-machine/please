@@ -10,3 +10,6 @@ defaultdbgcflags = -m32 --std=c99 -g3 -pipe -DDEBUG -Wall -Werror
 defaultoptcppflags = -m32 --std=c++11 -O3 -pipe -DNDEBUG -Wall -Werror
 defaultdbgcppflags = -m32 --std=c++11 -g3 -pipe -DDEBUG -Wall -Werror
 defaultldflags = -melf_i386
+
+[java]
+javatoolchain = //tools/java:toolchain
