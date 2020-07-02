@@ -543,7 +543,6 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
 
 
 
-
     md = {
         "deps": [f"//{current_package}:{name}"],
         "javac": f"//{current_package}" + javac,
@@ -557,6 +556,7 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
             deps = [this, javac_worker],
         )
         md["javac_worker"] = f"//{current_package}" + wrapper
+        md["deps"] += [md["javac_worker"]]
 
     return build_rule(
         name = name,
