@@ -562,8 +562,26 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
         visibility = visibility,
     )
 
+please_java_toolchain = _java_toolchain
+
+def java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]):
+    """This is an experimental feature and is subject to change in minor releases.
+
+    Defines a toolchain that downloads a JDK that can be used with java languages rules. This can be configured in your
+    .plzconfig via the config option java.toolchain.
+
+    This rule is aliased please_java_toolchain as well. When Bazel compatibility is enabled, this alias must be used
+    instead.
+
+    Args:
+      name (str): Name of the rule.
+      jdk_url (str): A URL to a zip or tarbal containing a JDK distribution.
+      visibility (list[str]): Visibility of this rule. Defaults to PUBLIC.
+    """
+    return _java_toolchain(name = name, jdk_url = jdk_url, visibility = visibility)
+
 if CONFIG.BAZEL_COMPATIBILITY:
-    def java_toolchain(javac=None, source_version=None, target_version=None):
+    def bazel_java_toolchain(javac=None, source_version=None, target_version=None):
         """Mimics some effort at Bazel compatibility.
 
         This doesn't really have the same semantics and ignores a bunch of arguments but it
@@ -574,6 +592,8 @@ if CONFIG.BAZEL_COMPATIBILITY:
             java_source_level = source_version,
             java_target_level = target_version,
         )
+
+    java_toolchain = bazel_java_toolchain
 
     def java_import(name, jars, deps=None, exports=None, test_only=False, visibility=None):
         """Mimics java_import, as far as I can tell we don't need to do much here."""
@@ -586,6 +606,3 @@ if CONFIG.BAZEL_COMPATIBILITY:
             visibility = visibility,
         )
 
-    please_java_toolchain = _java_toolchain
-else:
-    java_toolchain = _java_toolchain
