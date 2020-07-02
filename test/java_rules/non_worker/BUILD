@@ -1,4 +1,4 @@
-package(javac_tool = "javac")
+package(javac_tool = "javac", java_toolchain = "")
 
 java_library(
     name = "lib",

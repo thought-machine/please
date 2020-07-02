@@ -541,8 +541,6 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
         deps = [this],
     )
 
-
-
     md = {
         "deps": [f"//{current_package}:{name}"],
         "javac": f"//{current_package}" + javac,
@@ -565,15 +563,13 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
         outs = [name],
         tools = [CONFIG.JARCAT_TOOL],
         cmd = " && ".join([
-            '"$TOOL" x $SRCS -o extract_dir',
-            'mkdir $OUT && mkdir $OUT/bin',
-            'mv $(find extract_dir -name javac) $OUT/bin',
-            'mv $(find extract_dir -name java) $OUT/bin',
-            'mv $(find extract_dir -name lib) $OUT',
+            'mkdir extract_dir',
+            'tar -xf $SRCS -C extract_dir',
+            'mv extract_dir/* $OUT',
         ]),
+        binary = True,
         building_description = 'Extracting...',
         metadata = md,
-        binary = True,
         visibility = visibility,
     )
 
