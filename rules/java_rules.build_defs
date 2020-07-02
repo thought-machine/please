@@ -565,7 +565,7 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
 please_java_toolchain = _java_toolchain
 
 def java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]):
-    """This is an experimental feature and is subject to change in minor releases.
+    """This is an experimental feature and is subject to breaking changes in minor releases.
 
     Defines a toolchain that downloads a JDK that can be used with java languages rules. This can be configured in your
     .plzconfig via the config option java.toolchain.
