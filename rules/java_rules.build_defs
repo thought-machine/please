@@ -554,6 +554,7 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
             name=f"_{name}#javac_worker",
             cmd=f"(export PATH=$(out_location //{current_package}:{name})/bin:$PATH && java --version && $(out_exe {javac_worker}))",
             deps = [this, javac_worker],
+            visibility = visibility,
         )
         md["javac_worker"] = f"//{current_package}" + wrapper
         md["deps"] += [md["javac_worker"]]
