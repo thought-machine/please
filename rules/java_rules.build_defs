@@ -71,7 +71,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             javac = CONFIG.JAVAC_WORKER
             mflag = '--modular' if modular else ''
             srcflag = '--src_dir' if src_dir else ''
-            javac_cmd = f'$(worker {CONFIG.JAVAC_WORKER}) {javac_flags} {mflag} {srcflag}'
+            javac_cmd = f'$(worker {javac_worker}) {javac_flags} {mflag} {srcflag}'
 
 
         cmd = ' && '.join([
