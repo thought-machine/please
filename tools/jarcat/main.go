@@ -25,7 +25,7 @@ import (
 
 var javaExcludePrefixes = []string{
 	"META-INF/LICENSE", "META-INF/NOTICE", "META-INF/maven/*", "META-INF/MANIFEST.MF",
-	// Unsign all jars by default, after concatenation the signatures will no longer be valid.
+	// Un-sign all jars by default, after concatenation the signatures will no longer be valid.
 	"META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.LIST",
 }
 
