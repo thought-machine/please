@@ -63,7 +63,10 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             javac = jdk_info.javac
             javac_worker = jdk_info.javac_worker
 
-        if not javac_worker:
+            if CONFIG.USE_JAVAC_WORKER:
+                deps += [javac_worker]
+
+        if not javac_worker or not CONFIG.USE_JAVAC_WORKER:
             find = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
             srcflag = '`find $SRCS_WORKER -name "*.java"`' if src_dir else '$SRCS_WORKER'
             javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
@@ -510,10 +513,9 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
 
 # This function is exposed as java_toolchain unless Bazel compatibility is enabled in which case it is exposed as
 # please_java_toolchain. This is to avoid namespace conflicts with Bazel's java_toolchain rule. 
-def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"], javac_worker:str=CONFIG.JAVAC_WORKER) -> str:
+def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"], javac_worker:str=CONFIG.JAVAC_WORKER,
+                    download_hashes = []) -> str:
     """Downloads the JDK and sets up build rule metadata so the language rules can use the toolchain"""
-    current_package = package_name()
-
     jdk_url = jdk_url if isinstance(jdk_url, str) else jdk_url[CONFIG.OS]
 
     if not jdk_url:
@@ -525,6 +527,7 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
         name=f"_{name}#download",
         url = jdk_url,
         visibility = visibility,
+        hashes = download_hashes,
     )
 
     javac = sh_cmd(
@@ -555,7 +558,6 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
             visibility = visibility,
         )
         md["javac_worker"] = canonicalise(wrapper)
-        md["deps"] += [md["javac_worker"]]
 
     return build_rule(
         name = name,
@@ -565,7 +567,7 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
         cmd = " && ".join([
             'mkdir extract_dir',
             'tar -xf $SRCS -C extract_dir',
-            'mv extract_dir/* $OUT',
+            f'mv extract_dir/* $TMP_DIR/{name}',
         ]),
         binary = True,
         building_description = 'Extracting...',
