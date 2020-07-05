@@ -39,6 +39,52 @@ func TestColouriseError(t *testing.T) {
 	assert.EqualValues(t, expected, colouriseError(err))
 }
 
+func TestShouldInclude(t *testing.T) {
+	testCases := []struct {
+		testName        string
+		includeFiles    []string
+		file            string
+		expectedOutcome bool
+	}{
+		{
+			testName:        "with empty file list",
+			includeFiles:    []string{},
+			file:            "opt/tm/file.go",
+			expectedOutcome: true,
+		},
+		{
+			testName:        "with matching file",
+			includeFiles:    []string{"opt/tm/file.go"},
+			file:            "opt/tm/file.go",
+			expectedOutcome: true,
+		},
+		{
+			testName:        "with wildcard match",
+			includeFiles:    []string{"opt/tm/*"},
+			file:            "opt/tm/file.go",
+			expectedOutcome: true,
+		},
+		{
+			testName:        "with no matching files",
+			includeFiles:    []string{"opt/tm/foo.go", "opt/tm/wibble.go"},
+			file:            "opt/tm/file.go",
+			expectedOutcome: false,
+		},
+		{
+			testName:        "with nonsense input",
+			includeFiles:    []string{"opt/tm/%^.&"},
+			file:            "opt/tm/file.go",
+			expectedOutcome: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.testName, func(t *testing.T) {
+			assert.Equal(t, testCase.expectedOutcome, shouldInclude(testCase.file, testCase.includeFiles))
+		})
+	}
+}
+
 // Factory function for build targets
 func makeTarget(label string, deps ...string) *core.BuildTarget {
 	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))

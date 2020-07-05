@@ -686,7 +686,7 @@ func shouldInclude(file string, files []string) bool {
 		return true
 	}
 	for _, f := range files {
-		if file == f {
+		if isMatch, _ := path.Match(f, file); isMatch {
 			return true
 		}
 	}
