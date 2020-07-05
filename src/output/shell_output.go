@@ -686,9 +686,18 @@ func shouldInclude(file string, files []string) bool {
 		return true
 	}
 	for _, f := range files {
-		if file == f {
+		if file == f || wildcardMatch(file, f) {
 			return true
 		}
+	}
+	return false
+}
+
+// wildcardMatch returns true if fileToMatch ends with wildcard and the file matches the subpath
+func wildcardMatch(file string, fileToMatch string) bool {
+	if strings.HasSuffix(fileToMatch, "*") {
+		subPath := fileToMatch[:len(fileToMatch)-1]
+		return strings.HasPrefix(file, subPath)
 	}
 	return false
 }

@@ -48,6 +48,29 @@ func makeTarget(label string, deps ...string) *core.BuildTarget {
 	return target
 }
 
+func TestWildcardMatch(t *testing.T) {
+	t.Run("with non-wildcard input", func(t *testing.T) {
+		file := "opt/tm/file.txt"
+		pathToMatch := "opt/tm/"
+
+		assert.False(t, wildcardMatch(file, pathToMatch))
+	})
+
+	t.Run("with non-matching filepath", func(t *testing.T) {
+		file := "opt/tm/file.txt"
+		pathToMatch := "some/otherpath/*"
+
+		assert.False(t, wildcardMatch(file, pathToMatch))
+	})
+
+	t.Run("with matching filepath", func(t *testing.T) {
+		file := "opt/tm/file.txt"
+		pathToMatch := "opt/tm/*"
+
+		assert.True(t, wildcardMatch(file, pathToMatch))
+	})
+}
+
 // Set dependency pointers on all contents of the graph.
 // Has to be done after to test cycles etc.
 func updateDependencies(graph *core.BuildGraph) {
