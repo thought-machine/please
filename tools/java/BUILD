@@ -13,11 +13,12 @@ java_binary(
     visibility = ["PUBLIC"],
     deps = ["//third_party/java:junit_runner"],
 )
+
 if CONFIG.OS == "linux" or CONFIG.OS == "darwin":
     java_toolchain(
         "toolchain",
         jdk_url = {
-            'linux': "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.tar.gz",
-            'darwin': "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-macos-jdk.tar.gz",
+            "linux": "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.tar.gz",
+            "darwin": "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-macos-jdk.tar.gz",
         },
     )
