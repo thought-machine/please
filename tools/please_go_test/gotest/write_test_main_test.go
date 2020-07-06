@@ -91,7 +91,7 @@ func TestWriteTestMainWithBenchmark(t *testing.T) {
 	err := WriteTestMain(
 		"tools/please_go_test/gotest/test_data",
 		"",
-		[]string{"tools/please_go_test/gotest/test_data/bench/example_benchmark.go"},
+		[]string{"tools/please_go_test/gotest/test_data/bench/example_benchmark_test.go"},
 		"test.go",
 		true,
 		[]CoverVar{},

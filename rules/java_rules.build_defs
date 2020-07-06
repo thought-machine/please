@@ -53,24 +53,28 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             javac_flags = f'-source {CONFIG.JAVA_SOURCE_LEVEL} -target {CONFIG.JAVA_TARGET_LEVEL} ' + javac_flags
 
         javac = CONFIG.JAVAC_TOOL
+        javac_worker = CONFIG.JAVAC_WORKER
 
         # Override old config if we have a toolchain configured
         if toolchain:
             jdk_info = get_rule_metadata(toolchain)
 
             deps += jdk_info.deps
-            javac = jdk_info.javac
+            javac = javac if javac else jdk_info.javac
 
-        if javac:
-            find = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
-            srcflag = '`find $SRCS_WORKER -name "*.java"`' if src_dir else '$SRCS_WORKER'
-            javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
-        else:
-            # TODO(jpoole): add worker to toolchain (probably need to just invoke the jar with the correct version of java)
+            if CONFIG.USE_JAVAC_WORKER and javac_worker:
+                javac_worker = jdk_info.javac_worker
+                deps += [javac_worker]
+
+        if javac_worker and CONFIG.USE_JAVAC_WORKER:
             javac = CONFIG.JAVAC_WORKER
             mflag = '--modular' if modular else ''
             srcflag = '--src_dir' if src_dir else ''
-            javac_cmd = f'$(worker {CONFIG.JAVAC_WORKER}) {javac_flags} {mflag} {srcflag}'
+            javac_cmd = f'$(worker {javac_worker}) {javac_flags} {mflag} {srcflag}'
+        else:
+            find = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
+            srcflag = '`find $SRCS_WORKER -name "*.java"`' if src_dir else '$SRCS_WORKER'
+            javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
 
 
         cmd = ' && '.join([
@@ -509,40 +513,51 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
 
 # This function is exposed as java_toolchain unless Bazel compatibility is enabled in which case it is exposed as
 # please_java_toolchain. This is to avoid namespace conflicts with Bazel's java_toolchain rule. 
-def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]) -> str:
+def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"], javac_worker:str=CONFIG.JAVAC_WORKER,
+                    download_hashes = []) -> str:
     """Downloads the JDK and sets up build rule metadata so the language rules can use the toolchain"""
-    current_package = package_name()
-
     jdk_url = jdk_url if isinstance(jdk_url, str) else jdk_url[CONFIG.OS]
 
     if not jdk_url:
         raise ParseError(f"No java jdk_url defined for platform {CONFIG.OS}")
 
+    this = canonicalise(f":{name}")
+
     download = remote_file(
         name=f"_{name}#download",
         url = jdk_url,
         visibility = visibility,
+        hashes = download_hashes,
     )
 
     javac = sh_cmd(
         name=f"_{name}#javac",
-        cmd=f"$(location //{current_package}:{name})/bin/javac \\\$@",
+        cmd=f"$(location {this})/bin/javac \\\$@",
         visibility = visibility,
-        deps = [f"//{current_package}:{name}"],
+        deps = [this],
     )
 
     java = sh_cmd(
         name=f"_{name}#java",
-        cmd=f"$(location //{current_package}:{name})/bin/java \\\$@",
+        cmd=f"$(location {this})/bin/java \\\$@",
         visibility = visibility,
-        deps = [f"//{current_package}:{name}"],
+        deps = [this],
     )
 
     md = {
-        "deps": [f"//{current_package}:{name}"],
-        "javac": f"//{current_package}" + javac,
-        "java": f"//{current_package}" + java,
+        "deps": [this],
+        "javac": canonicalise(javac),
+        "java": canonicalise(java),
     }
+
+    if javac_worker:
+        wrapper = sh_cmd(
+            name=f"_{name}#javac_worker",
+            cmd=f"(export PATH=$(out_location {this})/bin:$PATH && $(out_exe {javac_worker}))",
+            deps = [this, javac_worker],
+            visibility = visibility,
+        )
+        md["javac_worker"] = canonicalise(wrapper)
 
     return build_rule(
         name = name,
@@ -550,15 +565,13 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
         outs = [name],
         tools = [CONFIG.JARCAT_TOOL],
         cmd = " && ".join([
-            '"$TOOL" x $SRCS -o extract_dir',
-            'mkdir $OUT && mkdir $OUT/bin',
-            'mv $(find extract_dir -name javac) $OUT/bin',
-            'mv $(find extract_dir -name java) $OUT/bin',
-            'mv $(find extract_dir -name lib) $OUT',
+            'mkdir extract_dir',
+            'tar -xf $SRCS -C extract_dir',
+            f'mv $(dirname $(dirname $(find extract_dir/ -name javac))) {name}',
         ]),
+        binary = True,
         building_description = 'Extracting...',
         metadata = md,
-        binary = True,
         visibility = visibility,
     )
 
