@@ -65,8 +65,7 @@ if ! hash gold 2>/dev/null ; then
     warn "Gold not found, excluding Gold tests"
     EXCLUDES="${EXCLUDES} --exclude=gold"
 fi
-
-if [ ! hash java 2>/dev/null ] && [ "$GOOS" != "linux" ] ; then
+if ! hash java 2>/dev/null ; then
     warn "Java not found, excluding Java tests"
     EXCLUDES="${EXCLUDES} --exclude=java"
 elif [ "`uname`" = "Darwin" ]; then
