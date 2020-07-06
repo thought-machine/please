@@ -693,7 +693,7 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 	commandDigest := c.digestMessage(cmd)
 	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {
-		fmt.Printf("    URL: %s\n", c.actionURL(commandDigest, false))
+		fmt.Printf("    URL: %s\n", strings.Replace(c.actionURL(commandDigest, false), "/action/", "/command/", 1))
 	}
 	actionDigest := c.digestMessage(&pb.Action{
 		CommandDigest:   commandDigest,
