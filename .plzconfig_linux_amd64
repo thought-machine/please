@@ -1,2 +1,2 @@
 [java]
-toolchain = //tools/java:toolchains
+toolchain = //tools/java:toolchain

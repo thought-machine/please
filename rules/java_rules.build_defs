@@ -514,7 +514,7 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
 # This function is exposed as java_toolchain unless Bazel compatibility is enabled in which case it is exposed as
 # please_java_toolchain. This is to avoid namespace conflicts with Bazel's java_toolchain rule. 
 def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"], javac_worker:str=CONFIG.JAVAC_WORKER,
-                    download_hashes = []) -> str:
+                    hashes = []) -> str:
     """Downloads the JDK and sets up build rule metadata so the language rules can use the toolchain"""
     jdk_url = jdk_url if isinstance(jdk_url, str) else jdk_url[CONFIG.OS]
 
@@ -527,7 +527,6 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
         name=f"_{name}#download",
         url = jdk_url,
         visibility = visibility,
-        hashes = download_hashes,
     )
 
     javac = sh_cmd(
@@ -565,18 +564,46 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
         outs = [name],
         tools = [CONFIG.JARCAT_TOOL],
         cmd = " && ".join([
-            'mkdir extract_dir',
-            'tar -xf $SRCS -C extract_dir',
+            '"$TOOL" x $SRCS -o extract_dir',
             f'mv $(dirname $(dirname $(find extract_dir/ -name javac))) {name}',
         ]),
         binary = True,
         building_description = 'Extracting...',
         metadata = md,
         visibility = visibility,
+        hashes = hashes,
+    )
+
+please_java_toolchain = _java_toolchain
+
+def java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"], javac_worker:str=CONFIG.JAVAC_WORKER,
+                   hashes : list = []):
+    """This is an experimental feature and is subject to breaking changes in minor releases.
+
+    Defines a toolchain that downloads a JDK that can be used with java languages rules. This can be configured in your
+    .plzconfig via the config option java.toolchain.
+
+    This rule is aliased please_java_toolchain as well. When Bazel compatibility is enabled, this alias must be used
+    instead.
+
+    Args:
+      name (str): Name of the rule.
+      jdk_url (str): A URL to a zip or tarbal containing a JDK distribution.
+      visibility (list[str]): Visibility of this rule. Defaults to PUBLIC.
+      javac_worker (str): The javac_worker rule to use with this toolchain. Defaults to whatever is configured in your
+                          please config.
+      hashes (list[str]): A list of valid hashes for the produced rule.
+    """
+    return _java_toolchain(
+        name = name,
+        jdk_url = jdk_url,
+        visibility = visibility,
+        javac_worker = javac_worker,
+        hashes = hashes,
     )
 
 if CONFIG.BAZEL_COMPATIBILITY:
-    def java_toolchain(javac=None, source_version=None, target_version=None):
+    def bazel_java_toolchain(javac=None, source_version=None, target_version=None):
         """Mimics some effort at Bazel compatibility.
 
         This doesn't really have the same semantics and ignores a bunch of arguments but it
@@ -587,6 +614,8 @@ if CONFIG.BAZEL_COMPATIBILITY:
             java_source_level = source_version,
             java_target_level = target_version,
         )
+
+    java_toolchain = bazel_java_toolchain
 
     def java_import(name, jars, deps=None, exports=None, test_only=False, visibility=None):
         """Mimics java_import, as far as I can tell we don't need to do much here."""
@@ -599,6 +628,3 @@ if CONFIG.BAZEL_COMPATIBILITY:
             visibility = visibility,
         )
 
-    please_java_toolchain = _java_toolchain
-else:
-    java_toolchain = _java_toolchain
