@@ -763,7 +763,12 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 		if target.SyncUpdateState(Semiactive, Active) {
 			state.AddActiveTarget()
 			if target.IsTest && state.NeedTests {
-				state.AddActiveTarget() // Tests count twice if we're gonna run them.
+				if state.TestSequentially {
+					atomic.AddInt64(&state.progress.numActive, 1)
+				} else {
+					// Tests count however many times we're going to run them if parallel.
+					atomic.AddInt64(&state.progress.numActive, int64(state.NumTestRuns))
+				}
 			}
 		}
 	}
