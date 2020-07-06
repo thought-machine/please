@@ -60,21 +60,21 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             jdk_info = get_rule_metadata(toolchain)
 
             deps += jdk_info.deps
-            javac = jdk_info.javac
-            javac_worker = jdk_info.javac_worker
+            javac = javac if javac else jdk_info.javac
 
-            if CONFIG.USE_JAVAC_WORKER:
+            if CONFIG.USE_JAVAC_WORKER and javac_worker:
+                javac_worker = jdk_info.javac_worker
                 deps += [javac_worker]
 
-        if not javac_worker or not CONFIG.USE_JAVAC_WORKER:
-            find = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
-            srcflag = '`find $SRCS_WORKER -name "*.java"`' if src_dir else '$SRCS_WORKER'
-            javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
-        else:
+        if javac_worker and CONFIG.USE_JAVAC_WORKER:
             javac = CONFIG.JAVAC_WORKER
             mflag = '--modular' if modular else ''
             srcflag = '--src_dir' if src_dir else ''
             javac_cmd = f'$(worker {javac_worker}) {javac_flags} {mflag} {srcflag}'
+        else:
+            find = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
+            srcflag = '`find $SRCS_WORKER -name "*.java"`' if src_dir else '$SRCS_WORKER'
+            javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
 
 
         cmd = ' && '.join([
@@ -567,7 +567,7 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
         cmd = " && ".join([
             'mkdir extract_dir',
             'tar -xf $SRCS -C extract_dir',
-            f'mv extract_dir/* $TMP_DIR/{name}',
+            f'mv $(dirname $(dirname $(find extract_dir/ -name javac))) {name}',
         ]),
         binary = True,
         building_description = 'Extracting...',
