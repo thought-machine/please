@@ -25,6 +25,9 @@ Version 15.0.0
       into $OUT_DIR instead of $TMP_DIR. This is to facilitate a change that
       simplifies the inner workings of proto_library improving incrementality,
       as well as doubling the performance when built using remote execution.
+    * Added a --rerun flag to plz test. This shouldn't be strictly necessary
+      if you're builds are pure however it can be useful when changing your
+      environment/toolchain.
 
 
 Version 14.6.0
