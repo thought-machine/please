@@ -110,7 +110,7 @@ func (e *extractor) extractTar(f io.Reader) error {
 				return err
 			}
 		case tar.TypeSymlink:
-			if err := os.Symlink(path.Join(e.Out, hdr.Linkname), out); err != nil {
+			if err := os.Symlink(hdr.Linkname, out); err != nil {
 				return err
 			}
 		default:

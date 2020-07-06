@@ -18,6 +18,7 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	sdkdigest "github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/retry"
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
@@ -141,6 +142,9 @@ func (c *Client) initExec() error {
 		return err
 	}
 	c.client = client
+	// Extend timeouts a bit, RetryTransient only gives about 1.5 seconds total which isn't
+	// necessarily very much if the other end needs to sort its life out.
+	c.client.Retrier.Backoff = retry.ExponentialBackoff(500*time.Millisecond, 5*time.Second, retry.Attempts(8))
 	// Query the server for its capabilities. This tells us whether it is capable of
 	// execution, caching or both.
 	resp, err := c.client.GetCapabilities(context.Background())
@@ -693,7 +697,7 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 	commandDigest := c.digestMessage(cmd)
 	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {
-		fmt.Printf("    URL: %s\n", c.actionURL(commandDigest, false))
+		fmt.Printf("    URL: %s\n", strings.Replace(c.actionURL(commandDigest, false), "/action/", "/command/", 1))
 	}
 	actionDigest := c.digestMessage(&pb.Action{
 		CommandDigest:   commandDigest,

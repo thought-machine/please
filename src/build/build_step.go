@@ -328,10 +328,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
 	outs, outputsChanged, err := moveOutputs(state, target)
 	if err != nil {
-		return fmt.Errorf("error moving outputs for target %s: %s", target.Label, err)
+		return fmt.Errorf("error moving outputs for target %s: %w", target.Label, err)
 	}
 	if _, err = calculateAndCheckRuleHash(state, target); err != nil {
-		return err
+		return fmt.Errorf("failed to calculate hash: %w", err)
 	}
 	if outputsChanged {
 		target.SetState(core.Built)
@@ -615,7 +615,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 		}
 		outputChanged, err := moveOutput(state, target, tmpOutput, realOutput)
 		if err != nil {
-			return nil, true, err
+			return nil, true, fmt.Errorf("failed to move output %s: %w", output, err)
 		}
 		changed = changed || outputChanged
 	}
@@ -750,7 +750,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	if target.IsBinary {
 		for _, output := range target.FullOutputs() {
 			// Walk through the output,
-			// if the output is a directory,apply output mode to the file instead of the directory
+			// if the output is a directory, apply output mode to the file instead of the directory
 			err := fs.Walk(output, func(path string, isDir bool) error {
 				if isDir {
 					return nil
@@ -758,7 +758,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 				return os.Chmod(path, target.OutMode())
 			})
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to mark rule output as binary: %w", err)
 			}
 		}
 	}
