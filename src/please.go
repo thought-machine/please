@@ -137,7 +137,7 @@ var opts struct {
 		Rerun               bool          `long:"rerun" description:"Rerun the test even if the hash hasn't changed."`
 		Sequentially        bool          `long:"sequentially" description:"Whether to run multiple runs of the same test sequentially"`
 		IncludeAllFiles     bool          `short:"a" long:"include_all_files" description:"Include all dependent files in coverage (default is just those from relevant packages)"`
-		IncludeFile         cli.Filepaths `long:"include_file" description:"Filenames to filter coverage display to"`
+		IncludeFile         cli.Filepaths `long:"include_file" description:"Filenames to filter coverage display to. Supports shell pattern matching e.g. file/path/*."`
 		TestResultsFile     cli.Filepath  `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		SurefireDir         cli.Filepath  `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
 		CoverageResultsFile cli.Filepath  `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
