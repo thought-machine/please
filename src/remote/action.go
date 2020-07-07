@@ -249,6 +249,11 @@ func (c *Client) uploadInputDir(ch chan<- *chunker.Chunker, target *core.BuildTa
 					Name:   path.Base(d.Name),
 					Digest: d.Digest,
 				})
+				if target.IsFilegroup {
+					if err := c.addChildDirs(b, path.Join(pkgName, d.Name), d.Digest); err != nil {
+						return b, err
+					}
+				}
 			}
 			for _, s := range o.Symlinks {
 				d := b.Dir(path.Join(pkgName, path.Dir(s.Name)))
@@ -276,6 +281,24 @@ func (c *Client) uploadInputDir(ch chan<- *chunker.Chunker, target *core.BuildTa
 		})
 	}
 	return b, nil
+}
+
+// addChildDirs adds a set of child directories to a builder.
+func (c *Client) addChildDirs(b *dirBuilder, name string, dg *pb.Digest) error {
+	dir := &pb.Directory{}
+	if err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir); err != nil {
+		return err
+	}
+	d := b.Dir(name)
+	d.Directories = append(d.Directories, dir.Directories...)
+	d.Files = append(d.Files, dir.Files...)
+	d.Symlinks = append(d.Symlinks, dir.Symlinks...)
+	for _, subdir := range dir.Directories {
+		if err := c.addChildDirs(b, path.Join(name, subdir.Name), subdir.Digest); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // uploadInput finds and uploads a single input.
