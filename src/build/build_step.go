@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -46,7 +47,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
 	if err := buildTarget(tid, state, target, remote); err != nil {
-		if err == errStop {
+		if errors.Is(err, errStop) {
 			target.SetState(core.Stopped)
 			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Build stopped")
 			return
