@@ -135,7 +135,9 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 
 // stampedBuildEnvironment returns a build environment, optionally with a stamp if stamp is true.
 func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb.Directory, stamp bool) []string {
-	if !stamp {
+	if target.IsFilegroup {
+		return core.GeneralBuildEnvironment(c.state.Config) // filegroups don't need a full build environment
+	} else if !stamp {
 		return core.BuildEnvironment(c.state, target, ".")
 	}
 	// We generate the stamp ourselves from the input root.
