@@ -518,7 +518,6 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 		if target.IsBinary {
 			env = append(env, "_BINARY=true")
 		}
-		env = append(env, "_TARGET="+target.Label.String())
 	}
 	sort.Strings(env) // Proto says it must be sorted (not just consistently ordered :( )
 	vars := make([]*pb.Command_EnvironmentVariable, len(env))
