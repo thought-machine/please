@@ -571,7 +571,7 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
         )
         md["javac_worker"] = canonicalise(wrapper)
     else:
-        md["javac"] = connicalise(javac)
+        md["javac"] = canonicalise(javac)
 
     return build_rule(
         name = name,
