@@ -518,7 +518,7 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
 def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"], javac_worker:str=CONFIG.JAVAC_WORKER,
                     javac_tool:str=CONFIG.JAVAC_TOOL, use_javac_worker:bool=True, hashes = []) -> str:
     """Downloads the JDK and sets up build rule metadata so the language rules can use the toolchain"""
-    jdk_url = jdk_url if isinstance(jdk_url, str) else jdk_url[CONFIG.OS]
+    jdk_url = jdk_url if isinstance(jdk_url, str) else jdk_url.get(CONFIG.OS)
 
     if not jdk_url:
         raise ParseError(f"No java jdk_url defined for platform {CONFIG.OS}")
@@ -548,10 +548,11 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
     if javac_tool:
         javac = sh_cmd(
             name=f"_{name}#javac",
-            cmd=f"(export PATH=$(out_location {this})/bin:$PATH && $(location {javac_tool}))",
-            deps = [this, javac_worker],
+            cmd=f"(export PATH=$(out_location {this})/bin:$PATH && $(location {javac_tool}) \\\\$@)",
+            deps = [this, javac_tool],
             visibility = visibility,
         )
+        md["deps"] += [javac_tool]
     else:
         javac = sh_cmd(
             name=f"_{name}#javac",
