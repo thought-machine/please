@@ -450,14 +450,6 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
 		}
 	}
-	// If the rule is marked as binary we need to make sure its output files are also marked
-	// as such. Please does this locally but the remote execution API provides no means of
-	// indicating this to the server :(
-	if target.IsBinary {
-		if err := c.markOutputsAsExecutable(ar, actionDigest); err != nil {
-			return fmt.Errorf("Failed to update action result for %s: %s", target, err)
-		}
-	}
 	if !verifyOutputs {
 		return nil
 	}
@@ -495,26 +487,6 @@ func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
 		return err
 	}
 	return c.setOutputs(target, ar)
-}
-
-// markOutputsAsExecutable updates an ActionResult for a binary rule.
-func (c *Client) markOutputsAsExecutable(ar *pb.ActionResult, actionDigest *pb.Digest) error {
-	modified := false
-	for _, f := range ar.OutputFiles {
-		if !f.IsExecutable {
-			f.IsExecutable = true
-			modified = true
-		}
-	}
-	if !modified {
-		return nil
-	}
-	_, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
-		InstanceName: c.instance,
-		ActionDigest: actionDigest,
-		ActionResult: ar,
-	})
-	return err
 }
 
 // translateOS converts the OS name of a subrepo into a Bazel-style OS name.
