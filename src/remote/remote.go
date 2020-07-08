@@ -541,6 +541,23 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 // reallyExecute is like execute but after the initial cache check etc.
 // The action & sources must have already been uploaded.
 func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		for i := 1; i < 1000000; i++ {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(1 * time.Minute):
+				if i == 1 {
+					log.Notice("%s still executing after 1 minute", target)
+				} else {
+					log.Notice("%s still executing after %d minutes", target, i)
+				}
+			}
+		}
+	}()
+
 	resp, err := c.client.ExecuteAndWaitProgress(context.Background(), &pb.ExecuteRequest{
 		InstanceName:    c.instance,
 		ActionDigest:    digest,
