@@ -180,8 +180,10 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 			// Reset colour so the entire compiler error output doesn't appear red.
 			log.Errorf("%s failed:\x1b[0m\n%s", result.Label, shortError(result.Err))
 			state.Stop()
-		} else if !plainOutput { // plain output will have already logged this
-			log.Errorf("%s failed: %s", result.Label, shortError(result.Err))
+		} else if msg := shortError(result.Err); msg != "" {
+			log.Errorf("%s failed: %s", result.Label, msg)
+		} else {
+			log.Errorf("%s failed", result.Label)
 		}
 		*failedTargets = append(*failedTargets, label)
 		if result.Status != core.TargetTestFailed {

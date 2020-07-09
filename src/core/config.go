@@ -265,6 +265,7 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.Secure = true
 	config.Remote.Gzip = true
 	config.Remote.VerifyOutputs = true
+	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
 	config.Go.TestTool = "please_go_test"
