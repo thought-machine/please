@@ -52,8 +52,15 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb
 	return command, digest, err
 }
 
-// buildAction creates a build action for a target and returns the command and the action digest digest. No uploading is done.
+// buildAction creates a build action for a target and returns the command and the action digest. No uploading is done.
 func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.Command, *pb.Digest, error) {
+	c.buildActionMutex.Lock()
+	defer c.buildActionMutex.Unlock()
+
+	if d, ok := c.buildActions[target.Label]; ok {
+		return d.command, d.actionDigest, nil
+	}
+
 	inputRoot, err := c.uploadInputs(nil, target, isTest)
 	if err != nil {
 		return nil, nil, err
@@ -69,6 +76,11 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 		InputRootDigest: inputRootDigest,
 		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
 	})
+
+	c.buildActions[target.Label] = buildAction{
+		command:      command,
+		actionDigest: actionDigest,
+	}
 	return command, actionDigest, nil
 }
 

@@ -61,6 +61,12 @@ type Client struct {
 	outputs     map[core.BuildLabel]*pb.Directory
 	outputMutex sync.RWMutex
 
+	// Stored build actions containing the command and action digest based off the original state of the build target.
+	// This isn't just a cache - it is needed because building a target can modify the target and things like plz hash
+	// --detailed and --shell will fail to get the right action digest.
+	buildActions     map[core.BuildLabel]buildAction
+	buildActionMutex sync.RWMutex
+
 	// Used to control downloading targets (we must make sure we don't re-fetch them
 	// while another target is trying to use them).
 	downloads sync.Map
@@ -80,6 +86,11 @@ type Client struct {
 	stats                                                *statsHandler
 }
 
+type buildAction struct {
+	command *pb.Command
+	actionDigest *pb.Digest
+}
+
 // A pendingDownload represents a pending download of a build target. It is used to
 // ensure we only download each target exactly once.
 type pendingDownload struct {
@@ -91,10 +102,11 @@ type pendingDownload struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:     state,
-		origState: state,
-		instance:  state.Config.Remote.Instance,
-		outputs:   map[core.BuildLabel]*pb.Directory{},
+		state:        state,
+		origState:    state,
+		instance:     state.Config.Remote.Instance,
+		outputs:      map[core.BuildLabel]*pb.Directory{},
+		buildActions: map[core.BuildLabel]buildAction{},
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
