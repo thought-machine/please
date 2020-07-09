@@ -15,6 +15,8 @@ jobs:
            key: go-linux-main-v4-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-main-v2-{{ checksum "third_party/python/BUILD" }}
+       - restore_cache:
+           key: java-toolchain-linux-v1-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
@@ -42,6 +44,9 @@ jobs:
        - save_cache:
            key: python-linux-main-v2-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
+       - save_cache:
+           key: java-toolchain-linux-v1-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
+           paths: [ ".plz-cache/test/java_rules/java_toolchain" ]
 
    build-linux-alt:
      working_directory: ~/please
@@ -59,6 +64,8 @@ jobs:
            key: go-linux-alt-v3-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
+       - restore_cache:
+           key: java-toolchain-linux-alt-v1-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
@@ -73,6 +80,9 @@ jobs:
        - save_cache:
            key: go-linux-alt-v3-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
+       - save_cache:
+           key: java-toolchain-linux-alt-v1-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
+           paths: [ ".plz-cache/test/java_rules/java_toolchain" ]
        - save_cache:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
@@ -106,6 +116,8 @@ jobs:
            key: go-darwin-go114-v2-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-darwin-py372-{{ checksum "third_party/python/BUILD" }}
+       - restore_cache:
+           key: java-toolchain-darwin-v1-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
        - run:
            name: Install deps
            command: ./.circleci/setup_osx.sh
@@ -135,6 +147,9 @@ jobs:
        - save_cache:
            key: python-darwin-py372-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
+       - save_cache:
+           key: java-toolchain-darwin-v1-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
+           paths: [ ".plz-cache/test/java_rules/java_toolchain" ]
 
    test-rex:
      working_directory: ~/please
