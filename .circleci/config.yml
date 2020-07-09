@@ -76,7 +76,7 @@ jobs:
            key: go-linux-alt-v3-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
-           key: go-linux-alt-v3-{{ checksum "plz-out/JAVA_TOOLCHAIN_CHECKSUM" }}
+           key: java-toolchain-v1-{{ checksum "plz-out/JAVA_TOOLCHAIN_CHECKSUM" }}
            paths: [ ".plz-cache/test/java_rules/java_toolchain" ]
        - save_cache:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
