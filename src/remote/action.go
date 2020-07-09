@@ -470,7 +470,10 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	// At this point it's verified all the directories, but not the files themselves.
 	digests := make([]digest.Digest, 0, len(outputs))
 	for _, output := range outputs {
-		digests = append(digests, output.Digest)
+		// FlattenTree doesn't populate the digest in for empty dirs... we don't need to check them anyway
+		if !output.IsEmptyDirectory {
+			digests = append(digests, output.Digest)
+		}
 	}
 	if missing, err := c.client.MissingBlobs(context.Background(), digests); err != nil {
 		return fmt.Errorf("Failed to verify action result outputs: %s", err)
