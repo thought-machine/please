@@ -62,6 +62,8 @@ jobs:
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
+       - run: |
+           echo $(find test/java_rules/java_toolchain -type f -exec md5sum {} \; | md5sum | cut -d' ' -f1) >> plz-out/JAVA_TOOLCHAIN_CHECKSUM
        - store_test_results:
            path: plz-out/results
        - store_artifacts:
@@ -73,6 +75,9 @@ jobs:
        - save_cache:
            key: go-linux-alt-v3-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
+       - save_cache:
+           key: go-linux-alt-v3-{{ checksum "plz-out/JAVA_TOOLCHAIN_CHECKSUM" }}
+           paths: [ ".plz-cache/test/java_rules/java_toolchain" ]
        - save_cache:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
