@@ -52,7 +52,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb
 	return command, digest, err
 }
 
-// buildAction creates a build action for a target and returns the command and the action digest digest. No uploading is done.
+// buildAction creates a build action for a target and returns the command and the action digest. No uploading is done.
 func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.Command, *pb.Digest, error) {
 	inputRoot, err := c.uploadInputs(nil, target, isTest)
 	if err != nil {
@@ -76,7 +76,12 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 // needs stamping, otherwise it returns the same one twice.
 func (c *Client) buildStampedAndUnstampedAction(target *core.BuildTarget) (command *pb.Command, stamped, unstamped *pb.Digest, err error) {
 	command, unstampedDigest, err := c.buildAction(target, false, false)
-	if !target.Stamp || err != nil {
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	c.unstampedBuildActionDigests.Put(target.Label, unstampedDigest)
+	if !target.Stamp {
 		return command, unstampedDigest, unstampedDigest, err
 	}
 	command, stampedDigest, err := c.buildAction(target, false, true)

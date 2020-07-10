@@ -150,26 +150,13 @@ func maybeGetOutDir(dir string, outDirs []core.OutputDirectory) core.OutputDirec
 	return ""
 }
 
-// digestMessage calculates the digest of a proto message as described in the
-// Digest message's comments.
+// digestMessage calculates the digest of a protobuf in SHA-256 mode.
 func (c *Client) digestMessage(msg proto.Message) *pb.Digest {
-	digest, _ := c.digestMessageContents(msg)
-	return digest
-}
-
-// digestMessageContents is like DigestMessage but returns the serialised contents as well.
-func (c *Client) digestMessageContents(msg proto.Message) (*pb.Digest, []byte) {
-	b := mustMarshal(msg)
-	return c.digestBlob(b), b
-}
-
-// digestBlob digests a byteslice and returns the proto for it.
-func (c *Client) digestBlob(b []byte) *pb.Digest {
-	sum := c.sum(b)
-	return &pb.Digest{
-		Hash:      hex.EncodeToString(sum[:]),
-		SizeBytes: int64(len(b)),
+	d, err := digest.NewFromMessage(msg)
+	if err != nil {
+		panic(err)
 	}
+	return d.ToProto()
 }
 
 // wrapActionErr wraps an error with information about the action related to it.
@@ -493,7 +480,7 @@ func (b *dirBuilder) dfs(name string, ch chan<- *chunker.Chunker) *pb.Digest {
 	sort.Slice(dir.Files, func(i, j int) bool { return dir.Files[i].Name < dir.Files[j].Name })
 	sort.Slice(dir.Directories, func(i, j int) bool { return dir.Directories[i].Name < dir.Directories[j].Name })
 	sort.Slice(dir.Symlinks, func(i, j int) bool { return dir.Symlinks[i].Name < dir.Symlinks[j].Name })
-	chomk, _ := chunker.NewFromProto(dir, int(chunker.DefaultChunkSize))
+	chomk, _ := chunker.NewFromProto(dir, chunker.DefaultChunkSize)
 	if ch != nil {
 		ch <- chomk
 	}
