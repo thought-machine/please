@@ -574,6 +574,17 @@ func (c *Client) dialOpts() ([]grpc.DialOption, error) {
 	return append(opts, grpc.WithPerRPCCredentials(preSharedToken(string(token)))), nil
 }
 
+// outputHash returns an output hash for a target. If it has a single output it's the hash
+// of that output, otherwise it's the hash of the whole thing.
+// The special-casing is important to make remote_file hash properly (also so you can
+// calculate it manually by sha256sum'ing the file).
+func (c *Client) outputHash(ar *pb.ActionResult) string {
+	if len(ar.OutputFiles) == 1 && len(ar.OutputDirectories) == 0 && len(ar.OutputFileSymlinks) == 0 && len(ar.OutputDirectorySymlinks) == 0 {
+		return ar.OutputFiles[0].Digest.Hash
+	}
+	return c.digestMessage(ar).Hash
+}
+
 // preSharedToken returns a gRPC credential provider for a pre-shared token.
 func preSharedToken(token string) tokenCredProvider {
 	return tokenCredProvider{
