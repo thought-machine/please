@@ -141,28 +141,28 @@ var testMainTmpl = template.Must(template.New("main").Parse(`
 package main
 
 import (
-	"os"
-	{{if not .Benchmark}}"strings"{{end}}
-	"testing"
-    "testing/internal/testdeps"
+	_gostdlib_os "os"
+	{{if not .Benchmark}}_gostdlib_strings "strings"{{end}}
+	_gostdlib_testing "testing"
+	_gostdlib_testdeps "testing/internal/testdeps"
 
 {{range .Imports}}
 	{{.}}
 {{end}}
 )
 
-var tests = []testing.InternalTest{
+var tests = []_gostdlib_testing.InternalTest{
 {{range .TestFunctions}}
 	{"{{.}}", {{$.Package}}.{{.}}},
 {{end}}
 }
-var examples = []testing.InternalExample{
+var examples = []_gostdlib_testing.InternalExample{
 {{range .Examples}}
 	{"{{.Name}}", {{$.Package}}.Example{{.Name}}, {{.Output | printf "%q"}}, {{.Unordered}}},
 {{end}}
 }
 
-var benchmarks = []testing.InternalBenchmark{
+var benchmarks = []_gostdlib_testing.InternalBenchmark{
 {{range .BenchFunctions}}
 	{"{{.}}", {{$.Package}}.{{.}}},
 {{end}}
@@ -173,7 +173,7 @@ var benchmarks = []testing.InternalBenchmark{
 // Only updated by init functions, so no need for atomicity.
 var (
 	coverCounters = make(map[string][]uint32)
-	coverBlocks = make(map[string][]testing.CoverBlock)
+	coverBlocks = make(map[string][]_gostdlib_testing.CoverBlock)
 )
 
 func init() {
@@ -191,9 +191,9 @@ func coverRegisterFile(fileName string, counter []uint32, pos []uint32, numStmts
 		return
 	}
 	coverCounters[fileName] = counter
-	block := make([]testing.CoverBlock, len(counter))
+	block := make([]_gostdlib_testing.CoverBlock, len(counter))
 	for i := range counter {
-		block[i] = testing.CoverBlock{
+		block[i] = _gostdlib_testing.CoverBlock{
 			Line0: pos[3*i+0],
 			Col0: uint16(pos[3*i+2]),
 			Line1: pos[3*i+1],
@@ -205,39 +205,39 @@ func coverRegisterFile(fileName string, counter []uint32, pos []uint32, numStmts
 }
 {{end}}
 
-var testDeps = testdeps.TestDeps{}
+var testDeps = _gostdlib_testdeps.TestDeps{}
 
 func main() {
 {{if .Coverage}}
-	testing.RegisterCover(testing.Cover{
+	_gostdlib_testing.RegisterCover(_gostdlib_testing.Cover{
 		Mode: "set",
 		Counters: coverCounters,
 		Blocks: coverBlocks,
 		CoveredPackages: "",
 	})
-    coverfile := os.Getenv("COVERAGE_FILE")
-    args := []string{os.Args[0], "-test.v", "-test.coverprofile", coverfile}
+    coverfile := _gostdlib_os.Getenv("COVERAGE_FILE")
+    args := []string{_gostdlib_os.Args[0], "-test.v", "-test.coverprofile", coverfile}
 {{else}}
-    args := []string{os.Args[0], "-test.v"}
+    args := []string{_gostdlib_os.Args[0], "-test.v"}
 {{end}}
 {{if not .Benchmark}}
-    testVar := os.Getenv("TESTS")
+    testVar := _gostdlib_os.Getenv("TESTS")
     if testVar != "" {
-		testVar = strings.Replace(testVar, " ", "|", -1)
+		testVar = _gostdlib_strings.Replace(testVar, " ", "|", -1)
 		args = append(args, "-test.run", testVar)
     }
-    os.Args = append(args, os.Args[1:]...)
-	m := testing.MainStart(testDeps, tests, nil, examples)
+    _gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
+	m := _gostdlib_testing.MainStart(testDeps, tests, nil, examples)
 {{else}}
 	args = append(args, "-test.bench", ".*")
-	os.Args = append(args, os.Args[1:]...)
-	m := testing.MainStart(testDeps, nil, benchmarks, nil)
+	_gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
+	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks, nil)
 {{end}}
 
 {{if .Main}}
 	{{.Package}}.{{.Main}}(m)
 {{else}}
-	os.Exit(m.Run())
+	_gostdlib_os.Exit(m.Run())
 {{end}}
 }
 `))
