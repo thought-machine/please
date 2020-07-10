@@ -114,10 +114,10 @@ type pendingDownload struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:        state,
-		origState:    state,
-		instance:     state.Config.Remote.Instance,
-		outputs:      map[core.BuildLabel]*pb.Directory{},
+		state:     state,
+		origState: state,
+		instance:  state.Config.Remote.Instance,
+		outputs:   map[core.BuildLabel]*pb.Directory{},
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
