@@ -157,6 +157,7 @@ var opts struct {
 
 	Run struct {
 		Env      bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
+		Rebuild  bool `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
 		Parallel struct {
 			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
@@ -732,7 +733,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.PrepareShell = opts.Build.Shell || opts.Test.Shell || opts.Cover.Shell
 	state.Watch = len(opts.Watch.Args.Targets) > 0
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
-	state.ForceRebuild = opts.Build.Rebuild
+	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
 	state.ForceRerun = opts.Test.Rerun || opts.Cover.Rerun
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
 	state.DebugTests = debugTests
