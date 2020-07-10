@@ -61,14 +61,15 @@ type Client struct {
 	outputs     map[core.BuildLabel]*pb.Directory
 	outputMutex sync.RWMutex
 
-	// Stored build actions containing the command and action digest based off the original state of the build target.
+	// The unstamped build action digests. Stamped and test digests are not stored.
 	// This isn't just a cache - it is needed because building a target can modify the target and things like plz hash
 	// --detailed and --shell will fail to get the right action digest.
-	buildActions     map[core.BuildLabel]buildAction
-	buildActionMutex sync.RWMutex
+	unstampedBuildActionDigests actionDigestMap
 
 	// Used to control downloading targets (we must make sure we don't re-fetch them
 	// while another target is trying to use them).
+	//
+	// This map is of effective type `map[*core.BuildTarget]*pendingDownload`
 	downloads sync.Map
 
 	// Server-sent cache properties
@@ -86,9 +87,20 @@ type Client struct {
 	stats                                                *statsHandler
 }
 
-type buildAction struct {
-	command *pb.Command
-	actionDigest *pb.Digest
+type actionDigestMap struct {
+	m sync.Map
+}
+
+func (m *actionDigestMap) Get(label core.BuildLabel) *pb.Digest {
+	d, ok := m.m.Load(label)
+	if !ok {
+		panic(fmt.Sprintf("could not find action digest for label: %s", label.String()))
+	}
+	return d.(*pb.Digest)
+}
+
+func (m *actionDigestMap) Put(label core.BuildLabel, actionDigest *pb.Digest) {
+	m.m.Store(label, actionDigest)
 }
 
 // A pendingDownload represents a pending download of a build target. It is used to
@@ -106,7 +118,6 @@ func New(state *core.BuildState) *Client {
 		origState:    state,
 		instance:     state.Config.Remote.Instance,
 		outputs:      map[core.BuildLabel]*pb.Directory{},
-		buildActions: map[core.BuildLabel]buildAction{},
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
@@ -345,17 +356,14 @@ func (c *Client) Download(target *core.BuildTarget) error {
 		return nil // No download needed since this target was built locally
 	}
 	return c.download(target, func() error {
-		command, digest, err := c.buildAction(target, false, target.Stamp)
-		if err != nil {
-			return fmt.Errorf("Failed to create action for %s: %s", target, err)
-		}
-		_, ar := c.retrieveResults(target, command, digest, false)
+		buildAction := c.unstampedBuildActionDigests.Get(target.Label)
+		_, ar := c.retrieveResults(target, nil, buildAction, false)
 		if ar == nil {
 			return fmt.Errorf("Failed to retrieve action result for %s", target)
-		} else if c.outputsExist(target, digest) {
+		} else if c.outputsExist(target, buildAction) {
 			return nil
 		}
-		return c.reallyDownload(target, digest, ar)
+		return c.reallyDownload(target, buildAction, ar)
 	})
 }
 
@@ -503,7 +511,9 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 		// This action already exists and has been cached.
 		if metadata, err := c.buildMetadata(ar, needStdout, false); err == nil {
 			log.Debug("Got remotely cached results for %s %s", target.Label, c.actionURL(digest, true))
-			err := c.verifyActionResult(target, command, digest, ar, c.state.Config.Remote.VerifyOutputs)
+			if command != nil {
+				err = c.verifyActionResult(target, command, digest, ar, c.state.Config.Remote.VerifyOutputs)
+			}
 			if err == nil {
 				c.locallyCacheResults(target, digest, metadata, ar)
 				metadata.Cached = true
@@ -715,24 +725,7 @@ func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.
 
 // PrintHashes prints the action hashes for a target.
 func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
-	inputRoot, err := c.uploadInputs(nil, target, isTest)
-	if err != nil {
-		log.Fatalf("Unable to calculate input hash: %s", err)
-	}
-	fmt.Printf("Remote execution hashes:\n")
-	inputRootDigest := c.digestMessage(inputRoot)
-	fmt.Printf("  Input: %7d bytes: %s\n", inputRootDigest.SizeBytes, inputRootDigest.Hash)
-	cmd, _ := c.buildCommand(target, inputRoot, isTest, false, target.Stamp)
-	commandDigest := c.digestMessage(cmd)
-	fmt.Printf("Command: %7d bytes: %s\n", commandDigest.SizeBytes, commandDigest.Hash)
-	if c.state.Config.Remote.DisplayURL != "" {
-		fmt.Printf("    URL: %s\n", strings.Replace(c.actionURL(commandDigest, false), "/action/", "/command/", 1))
-	}
-	actionDigest := c.digestMessage(&pb.Action{
-		CommandDigest:   commandDigest,
-		InputRootDigest: inputRootDigest,
-		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
-	})
+	actionDigest := c.unstampedBuildActionDigests.Get(target.Label)
 	fmt.Printf(" Action: %7d bytes: %s\n", actionDigest.SizeBytes, actionDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {
 		fmt.Printf("    URL: %s\n", c.actionURL(actionDigest, false))
