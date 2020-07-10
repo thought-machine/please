@@ -404,11 +404,7 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 	} else if expr.UnaryOp != nil {
 		obj = s.interpretValueExpression(&expr.UnaryOp.Expr)
 		if expr.UnaryOp.Op == "not" {
-			if obj.IsTruthy() {
-				obj = False
-			} else {
-				obj = True
-			}
+			obj = s.negate(obj)
 		} else {
 			i, ok := obj.(pyInt)
 			s.Assert(ok, "Unary - can only be applied to an integer")
@@ -427,18 +423,9 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 		case NotEqual:
 			obj = newPyBool(!reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
 		case Is:
-			// Is only works None or boolean types.
-			expr := s.interpretExpression(op.Expr)
-			switch tobj := obj.(type) {
-			case pyNone:
-				_, ok := expr.(pyNone)
-				obj = newPyBool(ok)
-			case pyBool:
-				b, ok := expr.(pyBool)
-				obj = newPyBool(ok && b == tobj)
-			default:
-				obj = newPyBool(false)
-			}
+			obj = s.interpretIs(obj, op)
+		case IsNot:
+			obj = s.negate(s.interpretIs(obj, op))
 		case In, NotIn:
 			// the implementation of in is defined by the right-hand side, not the left.
 			obj = s.interpretExpression(op.Expr).Operator(op.Op, obj)
@@ -447,6 +434,28 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 		}
 	}
 	return obj
+}
+
+func (s *scope) interpretIs(obj pyObject, op OpExpression) pyObject {
+	// Is only works None or boolean types.
+	expr := s.interpretExpression(op.Expr)
+	switch tobj := obj.(type) {
+	case pyNone:
+		_, ok := expr.(pyNone)
+		return newPyBool(ok)
+	case pyBool:
+		b, ok := expr.(pyBool)
+		return newPyBool(ok && b == tobj)
+	default:
+		return newPyBool(false)
+	}
+}
+
+func (s *scope) negate(obj pyObject) pyBool {
+	if obj.IsTruthy() {
+		return False
+	}
+	return True
 }
 
 func (s *scope) interpretValueExpression(expr *ValueExpression) pyObject {

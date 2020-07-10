@@ -293,6 +293,8 @@ const (
 	Union = '∪'
 	// Is implements type identity.
 	Is = '≡'
+	// IsNot is the inverse of Is.
+	IsNot = '≢'
 	// Index is used in the parser, but not when parsing code.
 	Index = '['
 )
@@ -317,6 +319,7 @@ var operators = map[string]Operator{
 	"and":    And,
 	"or":     Or,
 	"is":     Is,
+	"is not": IsNot,
 	"in":     In,
 	"not in": NotIn,
 	"==":     Equal,
