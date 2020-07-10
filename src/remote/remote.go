@@ -263,8 +263,8 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if err != nil {
 		return metadata, err
 	}
-	hash, _ := hex.DecodeString(c.digestMessage(ar).Hash)
 	if c.state.TargetHasher != nil {
+		hash, _ := hex.DecodeString(c.outputHash(ar))
 		c.state.TargetHasher.SetHash(target, hash)
 	}
 	if err := c.setOutputs(target, ar); err != nil {
