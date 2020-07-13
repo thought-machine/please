@@ -306,3 +306,9 @@ func TestInterpreterDictUnion(t *testing.T) {
 		"goofy":  pyInt(3),
 	}, s.Lookup("z"))
 }
+
+func TestIsNotNone(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/isnot.build")
+	assert.NoError(t, err)
+	assert.Equal(t, True, s.Lookup("x"))
+}

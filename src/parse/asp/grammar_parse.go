@@ -410,6 +410,14 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 		tok = p.l.Next()
 		o := &e.Op[p.newElement(&e.Op)]
 		o.Op = op
+		if op == Is {
+			if tok := p.l.Peek(); tok.Value == "not" {
+				// Mild hack for "is not" which needs to become a single operator.
+				o.Op = IsNot
+				p.endPos = tok.EndPos()
+				p.l.Next()
+			}
+		}
 		o.Expr = p.parseUnconditionalExpression()
 		if len(o.Expr.Op) > 0 {
 			if op := o.Expr.Op[0].Op; op == And || op == Or || op == Is {
@@ -419,7 +427,6 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 				o.Expr.Op = nil
 			}
 		}
-		p.l.Peek()
 	}
 }
 
