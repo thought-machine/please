@@ -357,11 +357,12 @@ func (c *Client) Download(target *core.BuildTarget) error {
 	}
 	return c.download(target, func() error {
 		buildAction := c.unstampedBuildActionDigests.Get(target.Label)
+		if c.outputsExist(target, buildAction) {
+			return nil
+		}
 		_, ar := c.retrieveResults(target, nil, buildAction, false)
 		if ar == nil {
 			return fmt.Errorf("Failed to retrieve action result for %s", target)
-		} else if c.outputsExist(target, buildAction) {
-			return nil
 		}
 		return c.reallyDownload(target, buildAction, ar)
 	})
