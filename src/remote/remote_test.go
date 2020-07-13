@@ -251,7 +251,7 @@ func TestOutDirsSetOutsOnTarget(t *testing.T) {
 		Name:        "out_dir_target",
 	})
 
-	c.state.OriginalTargets = append(c.state.OriginalTargets, outDirTarget.Label)
+	c.state.AddOriginalTarget(outDirTarget.Label, true)
 	c.state.DownloadOutputs = true
 	require.True(t, c.state.ShouldDownload(outDirTarget))
 

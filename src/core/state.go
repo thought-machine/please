@@ -147,7 +147,8 @@ type BuildState struct {
 	// Hasher for targets
 	TargetHasher TargetHasher
 	// Targets that we were originally requested to build
-	OriginalTargets []BuildLabel
+	originalTargets     []BuildLabel
+	originalTargetMutex sync.Mutex
 	// Arguments to tests.
 	TestArgs []string
 	// Labels of targets that we will include / exclude
@@ -389,7 +390,9 @@ func (state *BuildState) IsOriginalTarget(target *BuildTarget) bool {
 }
 
 func (state *BuildState) isOriginalTarget(target *BuildTarget, exact bool) bool {
-	for _, original := range state.OriginalTargets {
+	state.originalTargetMutex.Lock()
+	defer state.originalTargetMutex.Unlock()
+	for _, original := range state.originalTargets {
 		if original == target.Label || (!exact && original.IsAllTargets() && original.PackageName == target.Label.PackageName && state.ShouldInclude(target)) {
 			return true
 		}
@@ -446,9 +449,11 @@ func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 	if addToList {
 		// The sets of original targets are duplicated between states for all architectures,
 		// we must add it to all of them to ensure everything sees the same set.
+		state.originalTargetMutex.Lock()
 		for _, s := range state.progress.allStates {
-			s.OriginalTargets = append(s.OriginalTargets, label)
+			s.originalTargets = append(s.originalTargets, label)
 		}
+		state.originalTargetMutex.Unlock()
 	}
 	state.AddPendingParse(label, OriginalTarget, false)
 }
@@ -578,7 +583,10 @@ func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 // ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
 // from the set of original labels.
 func (state *BuildState) ExpandOriginalLabels() BuildLabels {
-	return state.ExpandLabels(state.OriginalTargets)
+	state.originalTargetMutex.Lock()
+	targets := state.originalTargets[:]
+	state.originalTargetMutex.Unlock()
+	return state.ExpandLabels(targets)
 }
 
 // ExpandLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets) from a set of labels.
