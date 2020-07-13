@@ -572,8 +572,12 @@ var buildFunctions = map[string]func() int{
 		return 1
 	},
 	"graph": func() int {
-		return runQuery(true, opts.Query.Graph.Args.Targets, func(state *core.BuildState) {
-			query.Graph(state, state.ExpandLabels(opts.Query.Graph.Args.Targets))
+		targets := opts.Query.Graph.Args.Targets
+		return runQuery(true, targets, func(state *core.BuildState) {
+			if len(opts.Query.Graph.Args.Targets) == 0 {
+				targets = opts.Query.Graph.Args.Targets // It special-cases doing the full graph.
+			}
+			query.Graph(state, state.ExpandLabels(targets))
 		})
 	},
 	"whatoutputs": func() int {
