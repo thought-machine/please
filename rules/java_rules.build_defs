@@ -63,20 +63,20 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             javac = jdk_info.get("javac")
             javac_worker = jdk_info.get("javac_worker")
 
-            if javac:
-                deps += [javac]
-            if javac_worker:
-                deps += [javac_worker]
-
         if not javac:
             javac = CONFIG.JAVAC_WORKER
             mflag = '--modular' if modular else ''
             srcflag = '--src_dir' if src_dir else ''
             javac_cmd = f'$(worker {javac_worker}) {javac_flags} {mflag} {srcflag}'
         else:
-            find = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
+            find = f'find "$TMP_DIR" -name "*.jar"'
+            if toolchain:
+                jdk_info = get_rule_metadata(toolchain)
+                for path in jdk_info.get("excluded_class_paths"):
+                    find += f' -not -path "$TMP_DIR/{path}/*"'
+
             srcflag = '`find $SRCS_WORKER -name "*.java"`' if src_dir else '$SRCS_WORKER'
-            javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:{find} -d _tmp {srcflag}'
+            javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:`{find} | tr \\\\\\\\n :` -d _tmp {srcflag}'
 
 
         cmd = ' && '.join([
@@ -515,13 +515,24 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
 
 # This function is exposed as java_toolchain unless Bazel compatibility is enabled in which case it is exposed as
 # please_java_toolchain. This is to avoid namespace conflicts with Bazel's java_toolchain rule. 
-def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"], javac_worker:str=CONFIG.JAVAC_WORKER,
-                    javac_tool:str=CONFIG.JAVAC_TOOL, use_javac_worker:bool=True, hashes = []) -> str:
+def _java_toolchain(name : str, jdk_url : str|dict='', jdk:str='', visibility:list = ["PUBLIC"],
+                    javac_worker:str=CONFIG.JAVAC_WORKER, javac_tool:str=CONFIG.JAVAC_TOOL, use_javac_worker:bool=True,
+                    hashes = []) -> str:
     """Downloads the JDK and sets up build rule metadata so the language rules can use the toolchain"""
-    jdk_url = jdk_url if isinstance(jdk_url, str) else jdk_url.get(CONFIG.OS)
+    if jdk_url and jdk:
+        raise ParseError("Either jdk or jdk_url should be provided but not both")
 
-    if not jdk_url:
-        raise ParseError(f"No java jdk_url defined for platform {CONFIG.OS}")
+    if not jdk:
+        jdk_url = jdk_url if isinstance(jdk_url, str) else jdk_url.get(CONFIG.OS)
+
+        if not jdk_url:
+            raise ParseError(f"No jdk_url defined for platform {CONFIG.OS}")
+
+        jdk = remote_file(
+            name=f"_{name}#download",
+            url = jdk_url,
+            visibility = visibility,
+        )
 
     this = canonicalise(f":{name}")
 
@@ -535,24 +546,32 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
     md = {
         "deps": [this],
         "java": canonicalise(java),
+        "excluded_class_paths": [package_name()+f'/{name}'],
     }
-
-    download = remote_file(
-        name=f"_{name}#download",
-        url = jdk_url,
-        visibility = visibility,
-    )
 
     # Declare this here even if we have javac_worker because other rules might find it useful to reference it e.g.
     # to bootstrap the worker, or for remote execution
     if javac_tool:
+        # If the javac rule needs ot be compiled, it will need to refer to the jdks javac
+        jdk_javac = sh_cmd(
+            name=f"_{name}#jdk_javac",
+            cmd=f"$(location {this})/bin/javac \\\$@",
+            visibility = visibility,
+            deps = [this],
+        )
+
         javac = sh_cmd(
             name=f"_{name}#javac",
-            cmd=f"(export PATH=$(out_location {this})/bin:$PATH && $(location {javac_tool}) \\\\$@)",
+            cmd=f"(export PATH=$(location {this})/bin:$PATH && $(location {javac_tool}) \\\\$@)",
             deps = [this, javac_tool],
             visibility = visibility,
         )
-        md["deps"] += [javac_tool]
+        javac_tool_package, _ = decompose(javac_tool)
+
+        md["javac"] = canonicalise(javac)
+        md["jdk_javac"] = canonicalise(jdk_javac)
+        md["excluded_class_paths"] += [javac_tool_package]
+        md["deps"] += [javac_tool, md.javac, md.jdk_javac]
     else:
         javac = sh_cmd(
             name=f"_{name}#javac",
@@ -560,6 +579,9 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
             visibility = visibility,
             deps = [this],
         )
+        md["javac"] = canonicalise(javac)
+        md["jdk_javac"] = md.javac
+        md["deps"] += [md.javac]
 
     if use_javac_worker:
         if not javac_worker:
@@ -571,12 +593,13 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
             visibility = visibility,
         )
         md["javac_worker"] = canonicalise(wrapper)
+        md["deps"] += [md["javac_worker"]]
     else:
         md["javac"] = canonicalise(javac)
 
     return build_rule(
         name = name,
-        srcs = [download],
+        srcs = [jdk],
         outs = [name],
         tools = [CONFIG.JARCAT_TOOL],
         cmd = " && ".join([
@@ -592,8 +615,9 @@ def _java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"]
 
 please_java_toolchain = _java_toolchain
 
-def java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"], javac_worker:str=CONFIG.JAVAC_WORKER,
-                   javac_tool:str=CONFIG.JAVAC_TOOL, use_javac_worker:bool=True, hashes : list = []):
+def java_toolchain(name : str, jdk_url : str|dict='', jdk:str='', visibility:list = ["PUBLIC"],
+                   javac_worker:str=CONFIG.JAVAC_WORKER, javac_tool:str=CONFIG.JAVAC_TOOL, use_javac_worker:bool=True,
+                   hashes : list = []):
     """This is an experimental feature and is subject to breaking changes in minor releases.
 
     Defines a toolchain that downloads a JDK that can be used with java languages rules. This can be configured in your
@@ -604,7 +628,9 @@ def java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"],
 
     Args:
       name (str): Name of the rule.
-      jdk_url (str): A URL to a zip or tarbal containing a JDK distribution.
+      jdk_url (str): A URL to an archive containing a JDK distribution. Either this or jdk should be provided.
+      jdk (str): An archive of a jdk distribution or a label of a rule that produces one. Either this or jdk_url should
+                 be provided.
       visibility (list[str]): Visibility of this rule. Defaults to PUBLIC.
       javac_worker (str): The javac_worker rule to use with this toolchain. Defaults to whatever is configured in your
                           please config.
@@ -617,6 +643,7 @@ def java_toolchain(name : str, jdk_url : str|dict, visibility:list = ["PUBLIC"],
     return _java_toolchain(
         name = name,
         jdk_url = jdk_url,
+        jdk = jdk,
         visibility = visibility,
         javac_worker = javac_worker,
         javac_tool = javac_tool,
