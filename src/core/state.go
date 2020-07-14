@@ -146,9 +146,6 @@ type BuildState struct {
 	RemoteClient RemoteClient
 	// Hasher for targets
 	TargetHasher TargetHasher
-	// Targets that we were originally requested to build
-	originalTargets     []BuildLabel
-	originalTargetMutex sync.Mutex
 	// Arguments to tests.
 	TestArgs []string
 	// Labels of targets that we will include / exclude
@@ -231,6 +228,9 @@ type stateProgress struct {
 	pendingPackageMutex sync.Mutex
 	// The set of known states
 	allStates []*BuildState
+	// Targets that we were originally requested to build
+	originalTargets     []BuildLabel
+	originalTargetMutex sync.Mutex
 }
 
 // SystemStats stores information about the system.
@@ -390,9 +390,9 @@ func (state *BuildState) IsOriginalTarget(target *BuildTarget) bool {
 }
 
 func (state *BuildState) isOriginalTarget(target *BuildTarget, exact bool) bool {
-	state.originalTargetMutex.Lock()
-	defer state.originalTargetMutex.Unlock()
-	for _, original := range state.originalTargets {
+	state.progress.originalTargetMutex.Lock()
+	defer state.progress.originalTargetMutex.Unlock()
+	for _, original := range state.progress.originalTargets {
 		if original == target.Label || (!exact && original.IsAllTargets() && original.PackageName == target.Label.PackageName && state.ShouldInclude(target)) {
 			return true
 		}
@@ -447,13 +447,9 @@ func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 		}
 	}
 	if addToList {
-		// The sets of original targets are duplicated between states for all architectures,
-		// we must add it to all of them to ensure everything sees the same set.
-		state.originalTargetMutex.Lock()
-		for _, s := range state.progress.allStates {
-			s.originalTargets = append(s.originalTargets, label)
-		}
-		state.originalTargetMutex.Unlock()
+		state.progress.originalTargetMutex.Lock()
+		state.progress.originalTargets = append(state.progress.originalTargets, label)
+		state.progress.originalTargetMutex.Unlock()
 	}
 	state.AddPendingParse(label, OriginalTarget, false)
 }
@@ -583,9 +579,9 @@ func (state *BuildState) ExpandOriginalTargets() BuildLabels {
 // ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
 // from the set of original labels.
 func (state *BuildState) ExpandOriginalLabels() BuildLabels {
-	state.originalTargetMutex.Lock()
-	targets := state.originalTargets[:]
-	state.originalTargetMutex.Unlock()
+	state.progress.originalTargetMutex.Lock()
+	targets := state.progress.originalTargets[:]
+	state.progress.originalTargetMutex.Unlock()
 	return state.ExpandLabels(targets)
 }
 
