@@ -685,7 +685,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 }
 
 func logResponseTimings(target *core.BuildTarget, ar *pb.ActionResult) {
-	if ar != nil {
+	if ar != nil && ar.ExecutionMetadata != nil {
 		startTime := toTime(ar.ExecutionMetadata.ExecutionStartTimestamp)
 		endTime := toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp)
 		inputFetchStartTime := toTime(ar.ExecutionMetadata.InputFetchStartTimestamp)
