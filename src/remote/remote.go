@@ -666,7 +666,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 					err = fmt.Errorf("%s\n%s", err, url)
 				}
 			}
-			return nil, nil, err
+			return metadata, response.Result, err
 		} else if err != nil {
 			return nil, nil, err
 		}
