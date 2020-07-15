@@ -708,7 +708,7 @@ func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.
 		case pb.ExecutionStage_EXECUTING:
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Building...")
 		case pb.ExecutionStage_COMPLETED:
-			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Completed...")
+			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Completed")
 		}
 	} else {
 		switch metadata.Stage {
@@ -719,7 +719,7 @@ func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.
 		case pb.ExecutionStage_EXECUTING:
 			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
 		case pb.ExecutionStage_COMPLETED:
-			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Completed...")
+			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Completed")
 		}
 	}
 }
