@@ -466,12 +466,15 @@ func (state *BuildState) Hasher(name string) *fs.PathHasher {
 // LogBuildResult logs the result of a target either building or parsing.
 func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
 	if status == PackageParsed {
-		// We may have parse tasks waiting for this package to exist, check for them.
-		state.progress.pendingPackageMutex.Lock()
-		if ch, present := state.progress.pendingPackages[packageKey{Name: label.PackageName, Subrepo: label.Subrepo}]; present {
-			close(ch) // This signals to anyone waiting that it's done.
-		}
-		state.progress.pendingPackageMutex.Unlock()
+		func(){
+			// We may have parse tasks waiting for this package to exist, check for them.
+			state.progress.pendingPackageMutex.Lock()
+			defer state.progress.pendingPackageMutex.Unlock()
+
+			if ch, present := state.progress.pendingPackages[packageKey{Name: label.PackageName, Subrepo: label.Subrepo}]; present {
+				close(ch) // This signals to anyone waiting that it's done.
+			}
+		}()
 		return // We don't notify anything else on these.
 	}
 	state.LogResult(&BuildResult{
@@ -483,12 +486,15 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 		Description: description,
 	})
 	if status == TargetBuilt || status == TargetCached {
-		// We may have parse tasks waiting for this guy to build, check for them.
-		state.progress.pendingTargetMutex.Lock()
-		if ch, present := state.progress.pendingTargets[label]; present {
-			close(ch) // This signals to anyone waiting that it's done.
-		}
-		state.progress.pendingTargetMutex.Unlock()
+		func(){
+			// We may have parse tasks waiting for this guy to build, check for them.
+			state.progress.pendingTargetMutex.Lock()
+			defer state.progress.pendingTargetMutex.Unlock()
+
+			if ch, present := state.progress.pendingTargets[label]; present {
+				close(ch) // This signals to anyone waiting that it's done.
+			}
+		}()
 	}
 }
 
