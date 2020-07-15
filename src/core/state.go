@@ -466,7 +466,7 @@ func (state *BuildState) Hasher(name string) *fs.PathHasher {
 // LogBuildResult logs the result of a target either building or parsing.
 func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
 	if status == PackageParsed {
-		func(){
+		func() {
 			// We may have parse tasks waiting for this package to exist, check for them.
 			state.progress.pendingPackageMutex.Lock()
 			defer state.progress.pendingPackageMutex.Unlock()
@@ -486,7 +486,7 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 		Description: description,
 	})
 	if status == TargetBuilt || status == TargetCached {
-		func(){
+		func() {
 			// We may have parse tasks waiting for this guy to build, check for them.
 			state.progress.pendingTargetMutex.Lock()
 			defer state.progress.pendingTargetMutex.Unlock()
