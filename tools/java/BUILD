@@ -18,7 +18,7 @@ if CONFIG.OS == "linux" or CONFIG.OS == "darwin":
     java_toolchain(
         name = "toolchain",
         hashes = [
-            "81bf8bee66555b8177fb4c4dd770ee9c1d243bced4bade4661f10fb1b1cf24be",
+            "bcd6c66f3c8a8b78c2caf7e0006be5598c365a2245120b6e8af9096d7c495c34",
             "a357054504bd55cceec52a9468834da5d12448e2b7779b6a1f24367d20454a33",
         ],
         jdk_url = {
