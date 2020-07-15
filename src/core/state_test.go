@@ -9,7 +9,8 @@ import (
 
 func TestExpandOriginalTargets(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "all"}, {PackageName: "src/parse", Name: "parse"}}
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/parse", Name: "parse"}, true)
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
 
@@ -33,7 +34,7 @@ func TestExpandOriginalTargets(t *testing.T) {
 
 func TestExpandOriginalTestTargets(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "all"}}
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
 	state.NeedTests = true
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
@@ -49,7 +50,7 @@ func TestExpandOriginalTestTargets(t *testing.T) {
 
 func TestExpandVisibleOriginalTargets(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "all"}}
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
 
 	addTarget(state, "//src/core:target1", "py")
 	addTarget(state, "//src/core:_target1#zip", "py")
@@ -58,7 +59,7 @@ func TestExpandVisibleOriginalTargets(t *testing.T) {
 
 func TestExpandOriginalSubTargets(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.OriginalTargets = []BuildLabel{{PackageName: "src/core", Name: "..."}}
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "..."}, true)
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
 	addTarget(state, "//src/core:target1", "go")
@@ -74,11 +75,9 @@ func TestExpandOriginalSubTargets(t *testing.T) {
 
 func TestExpandOriginalTargetsOrdering(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.OriginalTargets = []BuildLabel{
-		{PackageName: "src/parse", Name: "parse"},
-		{PackageName: "src/core", Name: "..."},
-		{PackageName: "src/build", Name: "build"},
-	}
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/parse", Name: "parse"}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "..."}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/build", Name: "build"}, true)
 	addTarget(state, "//src/core:target1", "go")
 	addTarget(state, "//src/core:target2", "py")
 	addTarget(state, "//src/core/tests:target3", "go")

@@ -10,7 +10,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-var tid int = 1
+const tid = 1
 
 func TestAddDepSimple(t *testing.T) {
 	// Simple case with only one package parsed and one target added

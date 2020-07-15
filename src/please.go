@@ -468,8 +468,7 @@ var buildFunctions = map[string]func() int{
 	"gc": func() int {
 		success, state := runBuild(core.WholeGraph, false, false, true)
 		if success {
-			state.OriginalTargets = state.Config.Gc.Keep
-			gc.GarbageCollect(state, opts.Gc.Args.Targets, state.ExpandOriginalTargets(), state.Config.Gc.Keep, state.Config.Gc.KeepLabel,
+			gc.GarbageCollect(state, opts.Gc.Args.Targets, state.ExpandLabels(state.Config.Gc.Keep), state.Config.Gc.Keep, state.Config.Gc.KeepLabel,
 				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly, opts.Gc.NoPrompt, opts.Gc.DryRun, opts.Gc.Git)
 		}
 		return toExitCode(success, state)
@@ -573,11 +572,12 @@ var buildFunctions = map[string]func() int{
 		return 1
 	},
 	"graph": func() int {
-		return runQuery(true, opts.Query.Graph.Args.Targets, func(state *core.BuildState) {
+		targets := opts.Query.Graph.Args.Targets
+		return runQuery(true, targets, func(state *core.BuildState) {
 			if len(opts.Query.Graph.Args.Targets) == 0 {
-				state.OriginalTargets = opts.Query.Graph.Args.Targets // It special-cases doing the full graph.
+				targets = opts.Query.Graph.Args.Targets // It special-cases doing the full graph.
 			}
-			query.Graph(state, state.ExpandOriginalTargets())
+			query.Graph(state, state.ExpandLabels(targets))
 		})
 	},
 	"whatoutputs": func() int {
