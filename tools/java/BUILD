@@ -22,7 +22,7 @@ if CONFIG.OS == "linux" or CONFIG.OS == "darwin":
             "2486b53995134cf1d4f1a2d5d9590257336fb7ddf19b89ba9a8df9a2d6c05e56",
         ],
         jdk_url = {
-            "linux": "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.tar.gz",
-            "darwin": "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-macos-jdk.tar.gz",
+            "linux": "https://corretto.aws/downloads/resources/11.0.8.10.1/amazon-corretto-11.0.8.10.1-linux-x64.tar.gz",
+            "darwin": "https://corretto.aws/downloads/resources/11.0.8.10.1/amazon-corretto-11.0.8.10.1-macosx-x64.tar.gz",
         },
     )
