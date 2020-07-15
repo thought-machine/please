@@ -18,11 +18,11 @@ if CONFIG.OS == "linux" or CONFIG.OS == "darwin":
     java_toolchain(
         name = "toolchain",
         hashes = [
-            "81bf8bee66555b8177fb4c4dd770ee9c1d243bced4bade4661f10fb1b1cf24be",
-            "a357054504bd55cceec52a9468834da5d12448e2b7779b6a1f24367d20454a33",
+            "bcd6c66f3c8a8b78c2caf7e0006be5598c365a2245120b6e8af9096d7c495c34",
+            "2486b53995134cf1d4f1a2d5d9590257336fb7ddf19b89ba9a8df9a2d6c05e56",
         ],
         jdk_url = {
-            "linux": "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.tar.gz",
-            "darwin": "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-macos-jdk.tar.gz",
+            "linux": "https://corretto.aws/downloads/resources/11.0.8.10.1/amazon-corretto-11.0.8.10.1-linux-x64.tar.gz",
+            "darwin": "https://corretto.aws/downloads/resources/11.0.8.10.1/amazon-corretto-11.0.8.10.1-macosx-x64.tar.gz",
         },
     )
