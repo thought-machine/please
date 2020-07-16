@@ -6,9 +6,9 @@ The root of a Please repo is identified by a ${CYAN}.plzconfig${RESET} file. Thi
 See ${BLUE}https://please.build/config.html${RESET} for a detailed reference of all options.
 
 There are several different .plzconfig files that can be loaded, which override one another. From lowest to highest priority:
+ ${CYAN}/etc/please/plzconfig${RESET} can be used to define machine-specific options (e.g. on a CI server)
  ${CYAN}.plzconfig${RESET}, which identifies the repo root.
  ${CYAN}.plzconfig_linux_amd64${RESET} (or ${CYAN}.plzconfig_darwin_amd64${RESET}, etc) defines arch-specific options.
- ${CYAN}/etc/please/plzconfig${RESET} can be used to define machine-specific options (e.g. on a CI server)
  ${CYAN}.plzconfig.local${RESET} is used for non-checked-in config that is bespoke to the user.
 `
 
