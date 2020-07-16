@@ -28,6 +28,9 @@ Version 15.0.0
     * Added a --rerun flag to plz test. This shouldn't be strictly necessary
       if you're builds are pure however it can be useful when changing your
       environment/toolchain.
+    * Added module_major_version argument to go_get rule. This works around
+      some issues with modules that have done a major release. See the
+      go_get documentation for more information. #1078
 
 
 Version 14.6.0
