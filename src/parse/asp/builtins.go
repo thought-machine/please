@@ -239,14 +239,17 @@ func getRuleMetadata(s *scope, args []pyObject) pyObject {
 			// This is a get_rule_metadata in the same package, check the target exists.
 			log.Fatalf("Target %s is not defined in this package yet; it has to be defined before the get_rule_metadata() call", name)
 		}
-		func(){
-			s.interpreter.limiter.Release()
-			defer s.interpreter.limiter.Acquire()
 
-			t = s.state.WaitForBuiltTarget(label, core.NewBuildLabel(s.pkg.Name, "all"))
-		}()
+		t = s.WaitForBuiltTargetWithoutLimiter(label, core.NewBuildLabel(s.pkg.Name, "all"))
 	}
 	return t.RuleMetadata.(pyObject)
+}
+
+func (s *scope) WaitForBuiltTargetWithoutLimiter(l, dependent core.BuildLabel) *core.BuildTarget {
+	s.interpreter.limiter.Release()
+	defer s.interpreter.limiter.Acquire()
+
+	return s.state.WaitForBuiltTarget(l, dependent)
 }
 
 // builtinFail raises an immediate error that can't be intercepted.
@@ -286,12 +289,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	s.NAssert(l.IsAllTargets() || l.IsAllSubpackages(), "Can't pass :all or /... to subinclude()")
 	// Temporarily release the parallelism limiter; this is important to keep us from deadlocking
 	// all available parser threads (easy to happen if they're all waiting on a single target which now can't start)
-	t := func() *core.BuildTarget {
-		s.interpreter.limiter.Release()
-		defer s.interpreter.limiter.Acquire()
-
-		return s.state.WaitForBuiltTarget(l, pkgLabel)
-	}()
+	t := s.WaitForBuiltTargetWithoutLimiter(l, pkgLabel)
 	// This is not quite right, if you subinclude from another subinclude we can basically
 	// lose track of it later on. It's hard to know what better to do at this point though.
 	s.contextPkg.RegisterSubinclude(l)
