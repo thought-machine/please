@@ -625,7 +625,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
 def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str=None, binary:bool=False, test_only:bool&testonly=False,
            install:list=None, revision:str|list=None, strip:list=None, hashes:list=None,
-           extra_outs:list=[], licences:list=None, module_major_version:str=''):
+           extra_outs:list=[], licences:list=None, module_major_version:str|list=''):
     """Defines a dependency on a third-party Go library.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -669,14 +669,16 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         get = [get]
         revision = [revision]
         tags = ['get']
+        module_major_version = [module_major_version]
     else:
         tags = [basename(dirname(g)) for g in get]
         revision = revision or [None for g in get]
+        module_major_version = module_major_version or ['' for g in get]
     all_installs = []
     outs = extra_outs
     provides = None
     srcs = []
-    for getone, revision, tag in zip(get, revision, tags):
+    for getone, revision, tag, module_major_version in zip(get, revision, tags, module_major_version):
         get_rule, getroot = _go_get_download(
             name = name,
             tag = tag,
