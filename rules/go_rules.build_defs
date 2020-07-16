@@ -661,8 +661,9 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
       extra_outs (list): List of additional output files after the compile.
       licences (list): Licences this rule is subject to.
       module_major_version (str): The go module major version. This rule is not module aware so when a go module does
-                                  a major version release, the import path changes however the output path of the srcs
-                                  might not. This value will be used to adjust the output path of the srcs.
+                                  a major version release, the import path may no longer match the repository structure.
+                                  This rule allows us to map the source path in the repo github.com/some/repo/main.go to
+                                  the actual source path github.com/some/repo/v2/main.go.
     """
     if isinstance(get, str):
         get = [get]
