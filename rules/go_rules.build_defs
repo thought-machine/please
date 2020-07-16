@@ -625,7 +625,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
 def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str=None, binary:bool=False, test_only:bool&testonly=False,
            install:list=None, revision:str|list=None, strip:list=None, hashes:list=None,
-           extra_outs:list=[], licences:list=None):
+           extra_outs:list=[], licences:list=None, module_major_version:str=''):
     """Defines a dependency on a third-party Go library.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -660,6 +660,9 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
       hashes (list): List of hashes to verify the downloaded sources against.
       extra_outs (list): List of additional output files after the compile.
       licences (list): Licences this rule is subject to.
+      module_major_version (str): The go module major version. This rule is not module aware so when a go module does
+                                  a major version release, the import path changes however the output path of the srcs
+                                  might not. This value will be used to adjust the output path of the srcs.
     """
     if isinstance(get, str):
         get = [get]
@@ -684,6 +687,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             revision = revision,
             strip = strip,
             licences = licences,
+            module_major_version = module_major_version,
         )
         outs += [getroot]
         srcs += [get_rule]
@@ -736,7 +740,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
 
 def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, hashes:list=None,
                      test_only:bool&testonly=False, revision:str=None, strip:list=None,
-                     labels:list=[], licences:list=None):
+                     labels:list=[], licences:list=None, module_major_version:str):
     if hashes and not revision:
         log.warning("You shouldn't specify hashes on go_get without specifying revision as well")
     labels = [f'go_get:{get}@{revision}' if revision else f'go_get:{get}']
@@ -747,14 +751,14 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
     # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
     # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
     if repo.startswith('github.com'):
-            cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, repo, revision)
+            cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, repo, revision, module_major_version)
     elif get.startswith('github.com'):
-        cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, getroot, revision)
+        cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, getroot, revision, module_major_version)
     elif get.startswith('golang.org/x/') and not repo:
         # We know about these guys...
-        cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, 'github.com/golang/' + getroot[len('golang.org/x/'):], revision)
+        cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, 'github.com/golang/' + getroot[len('golang.org/x/'):], revision, module_major_version)
     elif get.startswith('google.golang.org/grpc') and not repo:
-        cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, 'github.com/grpc/grpc-go' + getroot[len('google.golang.org/grpc'):], revision)
+        cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, 'github.com/grpc/grpc-go' + getroot[len('google.golang.org/grpc'):], revision, module_major_version)
     else:
         get_deps = []
         if repo:
@@ -798,7 +802,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
     ), getroot
 
 
-def _go_github_repo_cmd(name, get, repo, revision):
+def _go_github_repo_cmd(name, get, repo, revision, module_major_version):
     """Returns a partial command to fetch a Go repo from Github."""
     parts = get.split('/')
     out = '/'.join(parts[:3])
@@ -814,11 +818,20 @@ def _go_github_repo_cmd(name, get, repo, revision):
         url = f'https://{repo}/archive/{revision}.zip',
         out = name + '-' + parts[-1] + '.zip',
     )
-    return [
+
+    cmds = [
         'rm -rf src/' + out,
         '"$TOOL" x $SRCS_GET',
-        f'mv {dest}*/ src/{out}',
-    ], [remote_rule], [CONFIG.JARCAT_TOOL]
+    ]
+    if module_major_version:
+        cmds += [
+            f'mkdir -p src/{out}',
+            f'mv {dest}*/ src/{out}/{module_major_version}'
+        ]
+    else:
+        cmds += [f'mv {dest}*/ src/{out}']
+
+    return cmds, [remote_rule], [CONFIG.JARCAT_TOOL]
 
 
 def _replace_test_package(name, output, static, definitions, cgo):
