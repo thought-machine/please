@@ -199,6 +199,9 @@ type lines struct {
 }
 
 func (lns lines) getPercentage() float32 {
+	if lns.totalCoverable == 0 {
+		return 0.0
+	}
 	return 100.0 * float32(lns.covered) / float32(lns.totalCoverable)
 }
 
@@ -216,7 +219,6 @@ func getDirectoryCoverage(coverage core.TestCoverage) map[string]float32 {
 		} else {
 			linesByDir[dirpath] = &lines{covered, total}
 		}
-
 		dirCoverage[dirpath] = linesByDir[dirpath].getPercentage()
 	}
 
