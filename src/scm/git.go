@@ -116,7 +116,7 @@ func (g *git) IgnoreFile(name string) error {
 	if len(b) > 0 { // Don't append an initial newline if at the start of the file.
 		b = append(b, '\n')
 	}
-	b = append(b, []byte("# Please output directory\nplz-out\n")...)
+	b = append(b, []byte("# Please output directory and local configuration\nplz-out\n.plzconfig.local\n")...)
 	return ioutil.WriteFile(gitignore, b, 0644)
 }
 
