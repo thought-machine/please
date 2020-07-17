@@ -712,6 +712,7 @@ func newCache(state *core.BuildState) core.Cache {
 func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
+		config.Parse.NumThreads = opts.BuildFlags.NumThreads
 	}
 	debugTests := opts.Test.Debug || opts.Cover.Debug
 	if opts.BuildFlags.Config != "" {

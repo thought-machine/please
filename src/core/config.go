@@ -235,6 +235,7 @@ func DefaultConfiguration() *Configuration {
 	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.NumOldVersions = 10
 	config.Please.NumThreads = runtime.NumCPU() + 2
+	config.Parse.NumThreads = config.Please.NumThreads
 	config.Parse.BuiltinPleasings = true
 	config.Parse.GitFunctions = true
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
@@ -348,6 +349,7 @@ type Configuration struct {
 		PreloadBuildDefs []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths." example:"build_defs/go_bindata.build_defs"`
 		BuildDefsDir     []string `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
 		BuiltinPleasings bool     `help:"Adds github.com/thought-machine/pleasings as a default subrepo named pleasings. This makes some builtin extensions available, but is not fully deterministic (it always uses the latest version). You may prefer to disable this and define your own subrepo for it (or not use it at all, of course)."`
+		NumThreads       int      `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
 		GitFunctions     bool     `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
 	} `help:"The [parse] section in the config contains settings specific to parsing files."`
 	Display struct {

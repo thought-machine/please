@@ -33,7 +33,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		parser:      p,
 		subincludes: map[string]pyDict{},
 		config:      map[*core.Configuration]*pyConfig{},
-		limiter:     make(semaphore, state.Config.Please.NumThreads),
+		limiter:     make(semaphore, state.Config.Parse.NumThreads),
 	}
 	s.interpreter = i
 	s.LoadSingletons(state)
