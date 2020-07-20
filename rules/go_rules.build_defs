@@ -554,6 +554,13 @@ def go_test_main(name:str, srcs:list, test_only:bool=False,
     cmd = f'"$TOOLS" --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
     if benchmark:
         cmd = f'{cmd} --benchmark'
+    cmds = {
+        'dbg': f'{cmd} $SRCS',
+        'opt': f'{cmd} $SRCS',
+    }
+
+    if not benchmark:
+        cmds['cover'] = f'{cmd} --dir . $SRCS'
 
     return build_rule(
         name = name,
@@ -561,11 +568,7 @@ def go_test_main(name:str, srcs:list, test_only:bool=False,
         srcs = srcs,
         outs = [name + '_main.go'],
         deps = deps,
-        cmd = {
-            'dbg': f'{cmd} $SRCS',
-            'opt': f'{cmd} $SRCS',
-            'cover': f'{cmd} --dir . $SRCS',
-        },
+        cmd = cmds,
         needs_transitive_deps = True,  # Need all dependencies to template coverage variables
         requires = ['go', 'go_src'],
         test_only = test_only,
