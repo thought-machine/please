@@ -264,7 +264,7 @@ def proto_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out=paths=source_relative:"$OUT_DIR"', '--plugin=protoc-gen-go=$TOOLS_GO'],
+            protoc_flags = ['--go_out=paths=source_relative:"$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP],
             pre_build = _go_path_mapping(False),
@@ -311,7 +311,7 @@ def grpc_languages():
                 pkg_config_libs = ['grpc++', 'grpc', 'protobuf'],
                 compiler_flags = ['-I$PKG_DIR', '-Wno-unused-parameter'],  # Generated gRPC code is not robust to this.
             ),
-            protoc_flags = ['--cpp_out="$OUT_DIR"', '--plugin=protoc-gen-grpc-cc="$TOOLS_CC"', '--grpc-cc_out="$OUT_DIR"'],
+            protoc_flags = ['--cpp_out="$OUT_DIR"', '--plugin=protoc-gen-grpc-cc="`which $TOOLS_CC`"', '--grpc-cc_out="$OUT_DIR"'],
             tools = [CONFIG.GRPC_CC_PLUGIN],
             provides=['hdrs'],
         ),
@@ -320,7 +320,7 @@ def grpc_languages():
             proto_language = 'python',
             extensions = ['_pb2.py', '_pb2_grpc.py'],
             func = python_library,
-            protoc_flags = ['--python_out="$OUT_DIR"', '--plugin=protoc-gen-grpc-python="$TOOLS_PY"', '--grpc-python_out="$OUT_DIR"'],
+            protoc_flags = ['--python_out="$OUT_DIR"', '--plugin=protoc-gen-grpc-python="`which $TOOLS_PY`"', '--grpc-python_out="$OUT_DIR"'],
             tools = [CONFIG.GRPC_PYTHON_PLUGIN],
             deps = [CONFIG.PROTO_PYTHON_DEP, CONFIG.GRPC_PYTHON_DEP],
         ),
@@ -335,7 +335,7 @@ def grpc_languages():
                 test_only = test_only,
                 labels = ['proto'],
             ),
-            protoc_flags = ['--java_out="$OUT_DIR"', '--plugin=protoc-gen-grpc-java="$TOOLS_JAVA"', '--grpc-java_out="$OUT_DIR"'],
+            protoc_flags = ['--java_out="$OUT_DIR"', '--plugin=protoc-gen-grpc-java="`which $TOOLS_JAVA`"', '--grpc-java_out="$OUT_DIR"'],
             tools = [CONFIG.GRPC_JAVA_PLUGIN],
             deps = [CONFIG.GRPC_JAVA_DEP, CONFIG.PROTO_JAVA_DEP],
         ),
@@ -349,7 +349,7 @@ def grpc_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out=paths=source_relative:"$OUT_DIR"', '--plugin=protoc-gen-go="$TOOLS_GO"'],
+            protoc_flags = ['--go_out=paths=source_relative:"$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP, CONFIG.GRPC_GO_DEP],
             pre_build = _go_path_mapping(True),
@@ -443,7 +443,7 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
         labels = [
             'protoc:-I"$TMP_DIR"/' + package_name(),
             'protoc:-I"$TMP_DIR"',
-            ],
+        ],
     )
     return genrule(
         name = name,

@@ -310,6 +310,9 @@ func (c *Client) addChildDirs(b *dirBuilder, name string, dg *pb.Digest) error {
 
 // uploadInput finds and uploads a single input.
 func (c *Client) uploadInput(b *dirBuilder, ch chan<- *chunker.Chunker, input core.BuildInput) error {
+	if _, ok := input.(core.SystemPathLabel); ok {
+		return nil // Don't need to upload things off the system (the remote is expected to have them)
+	}
 	fullPaths := input.FullPaths(c.state.Graph)
 	for i, out := range input.Paths(c.state.Graph) {
 		in := fullPaths[i]
