@@ -61,7 +61,7 @@ func TestExecuteBuild(t *testing.T) {
 	assert.Equal(t, []byte("hello\n"), metadata.Stdout)
 }
 
-type postBuildFunction func(*core.BuildTarget, string) error
+type postBuildFunction func(*core.BuildTarget, string) error //nolint:unused
 
 func (f postBuildFunction) Call(target *core.BuildTarget, output string) error {
 	return f(target, output)

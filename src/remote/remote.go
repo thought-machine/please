@@ -193,6 +193,9 @@ func (c *Client) initExec() error {
 	}
 	// Look this up just once now.
 	bash, err := core.LookBuildPath("bash", c.state.Config)
+	if err != nil {
+		return fmt.Errorf("Failed to set path for bash: %w", err)
+	}
 	c.bashPath = bash
 	log.Debug("Remote execution client initialised for storage")
 	// Now check if it can do remote execution
