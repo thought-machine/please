@@ -26,8 +26,13 @@
       field). At time of writing relatively few servers identify as this, but
       we hope they'll upgrade soon.</li>
     <li>Whatever tools you use off the system also have to be available on the server; if your
-      build rule invokes <code>go</code> you have to have that on the PATH somewhere in both cases.</li>
+      build rule invokes <code>go</code> you have to have that on the PATH on the remote.<br/>
+      This isn't needed if you use tools as other build rules though.</li>
     <li>You have to have plz installed on the agent to access the tools it comes with. You might
       need to customise the <code>remote.homedir</code> property to find it.</li>
   </ul>
-  We're actively working on a nmber of things to make the above easier.</p>
+  We're actively working on a nmber of things to make the above easier and expect it to
+  evolve quite a bit over the next few versions.</p>
+
+<p>Come and chat to us <a href="https://gitter.im/please-build/Lobby">on Gitter</a> if you're
+  interested in setting up Please for remote execution and would like some tips!</p>

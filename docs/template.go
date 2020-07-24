@@ -55,6 +55,7 @@ var pageTitles = map[string]string{
 	"lexicon.html":          "Please Lexicon",
 	"pleasings.html":        "Extra rules (aka. Pleasings)",
 	"post_build.html":       "Pre- and post-build functions",
+	"remote_builds.html":    "Remote build execution",
 	"require_provide.html":  "Require & Provide",
 	"quickstart.html":       "Please quickstart",
 	"reference.html":        "Reference documentation",
