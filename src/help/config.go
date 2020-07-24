@@ -10,11 +10,6 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-type output struct {
-	Preamble string            `json:"preamble"`
-	Topics   map[string]string `json:"topics"`
-}
-
 var urlRegex = regexp.MustCompile("https?://[^ ]+[^.]")
 
 // ExampleValue returns an example value for a config field based on its type.

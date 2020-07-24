@@ -45,14 +45,6 @@ func TestUnsupportedDigest(t *testing.T) {
 	assert.Error(t, c.CheckInitialised())
 }
 
-const xmlResults = `<?xml version="1.0" encoding="UTF-8"?>
-<testsuite errors="0" failures="0" name="src.build.python.pex_test.PexTest-20150416153858" tests="1" time="0.000">
-<properties/>
-<testcase classname="src.build.python.pex_test.PexTest" name="testSuccess" time="0.000"/>           <testcase classname="src.build.python.pex_test.PexTest" name="testSuccess" time="0.000">
-        </testcase>
-</testsuite>
-`
-
 func TestExecuteBuild(t *testing.T) {
 	c := newClient()
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target2"})

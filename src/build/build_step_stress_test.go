@@ -18,7 +18,6 @@ import (
 var log = logging.MustGetLogger("build_test")
 
 const size = 1000
-const numWorkers = 10
 
 var state *core.BuildState
 

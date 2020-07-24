@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -115,14 +114,6 @@ func mergeCoverage(state *core.BuildState, recordedCoverage core.TestCoverage, c
 			}
 		}
 	}
-}
-
-// isOwnedBy returns true if the given file is owned by any of the given packages.
-func isOwnedBy(file string, coveragePackages map[string]bool) bool {
-	for file != "." && file != "/" {
-		return coveragePackages[path.Dir(file)]
-	}
-	return false
 }
 
 // countLines returns the number of lines in a file.
