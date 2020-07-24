@@ -356,7 +356,7 @@ var opts struct {
 // Functions are called after args are parsed and return true for success.
 var buildFunctions = map[string]func() int{
 	"build": func() int {
-		if opts.Build.Rebuild == true {
+		if opts.Build.Rebuild {
 			opts.FeatureFlags.NoCache = true
 		}
 		success, state := runBuild(opts.Build.Args.Targets, true, false, false)

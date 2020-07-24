@@ -749,7 +749,7 @@ func graphCycleMessage(graph *core.BuildGraph, target *core.BuildTarget) string 
 			msg += fmt.Sprintf(" -> %s\n", cycle[i].Label)
 		}
 		msg += fmt.Sprintf(" -> %s\n", cycle[len(cycle)-1].Label)
-		return msg + fmt.Sprintf("Sorry, but you'll have to refactor your build files to avoid this cycle.")
+		return msg + "Sorry, but you'll have to refactor your build files to avoid this cycle."
 	}
 	return unbuiltTargetsMessage(graph)
 }
