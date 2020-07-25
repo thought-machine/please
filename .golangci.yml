@@ -28,3 +28,4 @@ linters:
     - dupl
     - exportloopref
     - gocritic
+    - gofmt
