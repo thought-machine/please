@@ -424,7 +424,7 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 		log.Error("error walking cache directory: %s\n", err)
 		return totalSize
 	}
-	log.Info("Total cache size: %s", humanize.Bytes(uint64(totalSize)))
+	log.Info("Total cache size: %s", humanize.Bytes(totalSize))
 	if totalSize < highWaterMark {
 		return totalSize // Nothing to do, cache is small enough.
 	}
@@ -441,7 +441,7 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 			continue
 		}
 
-		log.Debug("Cleaning %s, accessed %s, saves %s", entry.Path, humanize.Time(time.Unix(entry.Atime, 0)), humanize.Bytes(uint64(entry.Size)))
+		log.Debug("Cleaning %s, accessed %s, saves %s", entry.Path, humanize.Time(time.Unix(entry.Atime, 0)), humanize.Bytes(entry.Size))
 		// Try to rename the directory first so we don't delete bits while someone might access them.
 		newPath := entry.Path + "="
 		if err := os.Rename(entry.Path, newPath); err != nil {
