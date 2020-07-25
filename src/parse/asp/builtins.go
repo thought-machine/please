@@ -197,9 +197,9 @@ func tagName(name, tag string) string {
 		name = "_" + name
 	}
 	if strings.ContainsRune(name, '#') {
-		name = name + "_"
+		name += "_"
 	} else {
-		name = name + "#"
+		name += "#"
 	}
 	return name + tag
 }

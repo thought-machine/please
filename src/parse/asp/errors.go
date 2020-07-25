@@ -145,7 +145,7 @@ func (stack *errorStack) errorMessage() string {
 		if charsBefore < 0 { // strings.Repeat panics if negative
 			charsBefore = 0
 		} else if charsBefore == len(line) {
-			line = line + "  "
+			line += "  "
 		} else if charsBefore > len(line) {
 			return stack.Error() // probably something's gone wrong and we're on totally the wrong line.
 		}

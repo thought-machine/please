@@ -2,6 +2,14 @@ issues:
   exclude:
     - SA4006  # Too many false positives :(
     - SA5008  # Warns for duplicate struct tags which are meaningful to go-flags
+    - unslice  # This may be useful in some places.
+    - ifElseChain  # Generally don't agree.
+    - appendAssign
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - dupl
 linters:
   disable-all: true
   enable:
@@ -16,3 +24,7 @@ linters:
     - varcheck
     - asciicheck
     - bodyclose
+    - dogsled
+    - dupl
+    - exportloopref
+    - gocritic

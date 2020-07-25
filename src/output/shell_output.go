@@ -300,10 +300,8 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 									showExecutionOutput(execution)
 								}
 							}
-						} else {
-							if state.ShowTestOutput {
-								showExecutionOutput(result.Executions[0])
-							}
+						} else if state.ShowTestOutput {
+							showExecutionOutput(result.Executions[0])
 						}
 					}
 				}

@@ -34,7 +34,7 @@ func parseJUnitXMLTestResults(data []byte) (core.TestSuites, error) {
 			return results, err
 		}
 
-		switch tok := token.(type) {
+		switch tok := token.(type) { //nolint:gocritic
 		case xml.StartElement:
 			switch tok.Name.Local {
 			case "test":

@@ -50,7 +50,7 @@ func NewProgressReader(reader io.ReadCloser, total int, message string) io.ReadC
 // Read implements the io.Reader interface
 func (pr *progressReader) Read(b []byte) (int, error) {
 	n, err := pr.reader.Read(b)
-	pr.current = pr.current + n
+	pr.current += n
 	pr.update()
 	pr.last = pr.current
 	return n, err
