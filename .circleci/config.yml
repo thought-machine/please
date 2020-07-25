@@ -90,7 +90,9 @@ jobs:
    lint:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20200724
+       - image: thoughtmachine/please_ubuntu:20200226
+     environment:
+       PLZ_ARGS: "-p --profile ci"
      steps:
        - checkout
        - restore_cache:
