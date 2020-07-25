@@ -232,7 +232,9 @@ func mustDownload(url string, progress bool) io.ReadCloser {
 	response, err := httpClient.Get(url)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to download %s: %s", url, err))
-	} else if response.StatusCode < 200 || response.StatusCode > 299 {
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode > 299 {
 		panic(fmt.Sprintf("Failed to download %s: got response %s", url, response.Status))
 	} else if progress {
 		i, _ := strconv.Atoi(response.Header.Get("Content-Length"))

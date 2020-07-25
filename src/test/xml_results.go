@@ -436,9 +436,12 @@ func SerialiseResultsToXML(target *core.BuildTarget, indent bool) []byte {
 // uploadResults uploads test results to a remote server.
 func uploadResults(target *core.BuildTarget, url string) error {
 	b := SerialiseResultsToXML(target, true)
-	if resp, err := http.Post(url, "application/xml", bytes.NewReader(b)); err != nil {
+	resp, err := http.Post(url, "application/xml", bytes.NewReader(b))
+	if err != nil {
 		return fmt.Errorf("Failed to upload test results: %s", err)
-	} else if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("Error from remote server on uploading test results: %s", resp.Status)
 	}
 	return nil
