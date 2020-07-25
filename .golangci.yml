@@ -5,6 +5,7 @@ issues:
     - unslice  # This may be useful in some places.
     - ifElseChain  # Generally don't agree.
     - appendAssign
+    - halp  # Make misspell be quiet about this.
   exclude-rules:
     - path: _test\.go
       linters:
@@ -30,3 +31,5 @@ linters:
     - gocritic
     - gofmt
     - golint
+    - misspell
+    - prealloc

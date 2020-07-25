@@ -528,7 +528,7 @@ func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
 // addOutputDirectoriesToBuildOutput moves all the files from the output dirs into the root of the build temp dir
 // and adds them as outputs to the build target
 func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, error) {
-	var outs []string
+	outs := make([]string, 0, len(target.OutputDirectories))
 	for _, dir := range target.OutputDirectories {
 		o, err := addOutputDirectoryToBuildOutput(target, dir)
 		if err != nil {

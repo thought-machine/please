@@ -36,7 +36,7 @@ func ReadStdin() <-chan string {
 // Since this reads it completely before returning it won't handle a slow input
 // very nicely. ReadStdin is therefore preferable when possible.
 func ReadAllStdin() []string {
-	var ret []string
+	var ret []string //nolint:prealloc
 	for s := range ReadStdin() {
 		ret = append(ret, s)
 	}

@@ -114,7 +114,7 @@ func glob(rootPath string, glob string, excludes []string, buildFileNames []stri
 		return nil, err
 	}
 
-	var matches []string
+	matches := make([]string, 0, len(globMatches))
 	for _, m := range globMatches {
 		if isInDirectories(m, subPackages) {
 			continue
