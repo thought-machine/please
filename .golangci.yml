@@ -1,0 +1,18 @@
+issues:
+  exclude:
+    - SA4006  # Too many false positives :(
+    - SA5008  # Warns for duplicate struct tags which are meaningful to go-flags
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+    - asciicheck
+    - bodyclose
