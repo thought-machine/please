@@ -49,9 +49,7 @@ func FindCoverVars(dir, importPath string, exclude, srcs []string) ([]CoverVar, 
 			if err != nil {
 				return err
 			}
-			for _, v := range vars {
-				ret = append(ret, v)
-			}
+			ret = append(ret, vars...)
 		}
 		return nil
 	})
