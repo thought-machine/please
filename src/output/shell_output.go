@@ -376,7 +376,6 @@ func formatTestExecution(execution core.TestExecution, detailed bool) string {
 		}
 		// Not usually interesting to have a duration when we did no work.
 		return "${BOLD_YELLOW}SKIP${RESET}"
-
 	}
 	return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", maybeToString(execution.Duration))
 }

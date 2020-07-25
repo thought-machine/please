@@ -418,7 +418,6 @@ func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []strin
 			panic(err)
 		}
 		return true
-
 	} else if target.Label.Name == "target10" {
 		ioutil.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
 		md := &core.BuildMetadata{Stdout: []byte("retrieved from cache")}

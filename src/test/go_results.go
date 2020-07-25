@@ -66,7 +66,6 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 					Duration: &duration,
 				})
 			} else {
-
 				outputLines := getTestOutputLines(i, lines)
 
 				output := strings.Join(outputLines, "\n")
@@ -135,7 +134,6 @@ func getPreResultOutput(resultsIndex int, lines [][]byte) []string {
 }
 
 func lineMatchesRunOrResultsLine(line []byte) bool {
-
 	testStartMatches := testStart.FindSubmatch(line)
 	matchesRunLine := (testStartMatches != nil)
 

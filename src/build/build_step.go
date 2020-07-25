@@ -204,7 +204,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 						log.Warning("Error from post-build function for %s: %s; will rebuild", target.Label, err)
 					}
 				}
-
 			}
 
 			// If we still don't need to build, return immediately
@@ -269,7 +268,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			} else if retrieveArtifacts(tid, state, target, oldOutputHash) {
 				return nil
 			}
-
 		}
 		if err := target.CheckSecrets(); err != nil {
 			return err

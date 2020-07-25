@@ -226,7 +226,6 @@ func doFlakeRun(tid int, state *core.BuildState, target *core.BuildTarget, runRe
 			results.Cached = testSuite.Cached
 			break
 		}
-
 	}
 
 	return results, coverage

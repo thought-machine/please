@@ -51,7 +51,6 @@ func newLibrary(graph *core.BuildGraph, target *core.BuildTarget) Library {
 						ContentURL: "jar://$PROJECT_DIR$/../../" + depTarget.OutDir() + "/" + o + "!/",
 					})
 				}
-
 			}
 			if depTarget.HasLabel("maven-javadocs") {
 				for _, o := range depTarget.Outputs() {
@@ -59,7 +58,6 @@ func newLibrary(graph *core.BuildGraph, target *core.BuildTarget) Library {
 						ContentURL: "jar://$PROJECT_DIR$/../../" + depTarget.OutDir() + "/" + o + "!/",
 					})
 				}
-
 			}
 		}
 	}

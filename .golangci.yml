@@ -34,6 +34,7 @@ linters:
     - misspell
     - prealloc
     - unconvert
+    - whitespace
 
     # To consider enabling in future (once we fix errors etc):
     # - maligned
