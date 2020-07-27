@@ -562,8 +562,8 @@ func (target *BuildTarget) dependenciesFor(label BuildLabel) []*BuildTarget {
 
 // registerDependencies runs through all the target's dependencies and waits for them to be added to the build graph.
 func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
-	// TODO(peterebden): can we do something with the mutex here? I don't *think* it's a problem but would be nice
-	//                   if the race detector could verify that.
+	// TODO(peterebden): can we do something with the mutex here? I don't *think* it's a problem
+	//                   but would be nice if the race detector could verify that.
 	for i := range target.dependencies {
 		info := &target.dependencies[i]
 		t := graph.WaitForTarget(info.declared)
@@ -951,8 +951,6 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 	// Important we acquire both mutexes here so the resolution & revdeps are done atomically.
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
-	dep.mutex.Lock()
-	defer dep.mutex.Unlock()
 	info := target.dependencyInfo(label)
 	if info == nil {
 		target.dependencies = append(target.dependencies, depInfo{declared: label})
@@ -962,7 +960,6 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 		info.deps = append(info.deps, dep)
 	}
 	info.resolved = true
-	dep.reverseDeps = append(dep.reverseDeps, target)
 }
 
 // dependencyInfo returns the information about a declared dependency, or nil if the target doesn't have it.

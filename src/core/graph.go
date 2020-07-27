@@ -31,9 +31,10 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	go target.registerDependencies(graph)
 	// Notify anything that called WaitForTarget
 	if pkg, present := graph.pendingTargets.Load(target.Label.packageKey()); present {
-		if ch, present := pkg.(*sync.Map).Load(target.Label.Name); present {
+		m := pkg.(*sync.Map)
+		if ch, present := m.Load(target.Label.Name); present {
 			close(ch)
-			pkg.(*sync.Map).Delete(target.Label.Name)
+			m.Delete(target.Label.Name)
 		}
 	}
 	return target
@@ -92,10 +93,10 @@ func (graph *BuildGraph) WaitForTarget(label BuildLabel) *BuildTarget {
 	if t := graph.Target(label); t != nil {
 		return t
 	} else if graph.PackageByLabel(label) != nil {
-		return nil  // Package has been added but target didn't exist in it
+		return nil // Package has been added but target didn't exist in it
 	}
 	pkg, _ := graph.pendingTargets.LoadOrStore(label.packageKey(), &sync.Map{})
-	ch, _ := pkg.LoadOrStore(label.Name, chan struct{}{})
+	ch, _ := pkg.LoadOrStore(label.Name, make(chan struct{}))
 	<-ch
 	return graph.Target(label)
 }
@@ -200,12 +201,9 @@ func NewGraph() *BuildGraph {
 }
 
 // ReverseDependencies returns the set of revdeps on the given target.
+// TODO(peterebden): Move out of Graph; should only be used for queries.
 func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
-	revdeps := target.reverseDependencies()
-	if graph.attachPendingRevDeps(target) {
-		return target.reverseDependencies() // Need to recalculate after we attached some more.
-	}
-	return revdeps
+	panic("not implemented yet")
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.
