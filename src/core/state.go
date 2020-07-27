@@ -787,6 +787,7 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 				}
 			}
 			// Actual queuing stuff now happens asynchronously in here.
+			atomic.AddInt64(&state.progress.numActive, 1)
 			atomic.AddInt64(&state.progress.numPending, 1)
 			go state.queueTargetAsync(target, dependent, rescan, forceBuild)
 		}
@@ -827,6 +828,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 
 // asyncError reports an error that's happened in an asynchronous function.
 func (state *BuildState) asyncError(label BuildLabel, err error) {
+	log.Error("Error queuing %s: %s", label, err)
 	state.LogBuildError(0, label, TargetBuildFailed, err, "")
 	state.KillAll()
 }
