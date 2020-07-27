@@ -33,7 +33,7 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	if pkg, present := graph.pendingTargets.Load(target.Label.packageKey()); present {
 		m := pkg.(*sync.Map)
 		if ch, present := m.Load(target.Label.Name); present {
-			close(ch)
+			close(ch.(chan struct{}))
 			m.Delete(target.Label.Name)
 		}
 	}
@@ -51,7 +51,7 @@ func (graph *BuildGraph) AddPackage(pkg *Package) {
 		pkg.(*sync.Map).Range(func(k, v interface{}) bool {
 			close(v.(chan struct{}))
 			// TODO(peterebden): Temp sanity check...
-			l := BuildLabel{Subrepo: pkg.SubrepoName, PackageName: pkg.Name, Name: k.(string)}
+			l := BuildLabel{Subrepo: key.Subrepo, PackageName: key.Name, Name: k.(string)}
 			if graph.Target(l) == nil {
 				log.Warning("target %s still in map", l)
 			}
@@ -96,8 +96,8 @@ func (graph *BuildGraph) WaitForTarget(label BuildLabel) *BuildTarget {
 		return nil // Package has been added but target didn't exist in it
 	}
 	pkg, _ := graph.pendingTargets.LoadOrStore(label.packageKey(), &sync.Map{})
-	ch, _ := pkg.LoadOrStore(label.Name, make(chan struct{}))
-	<-ch
+	ch, _ := pkg.(*sync.Map).LoadOrStore(label.Name, make(chan struct{}))
+	<-ch.(chan struct{})
 	return graph.Target(label)
 }
 

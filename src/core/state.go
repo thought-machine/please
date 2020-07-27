@@ -766,7 +766,7 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 }
 
 // queueTarget is like QueueTarget but once we have a resolved target.
-func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceBuild bool) error {
+func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, rescan, forceBuild bool) error {
 	if target.State() >= Active && !rescan && !forceBuild {
 		return nil // Target is already tagged to be built and likely on the queue.
 	}
@@ -798,12 +798,12 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 	// TODO(peterebden): This is slightly inefficient in that we wait for all dependencies to resolve before
 	//                   queuing up the actual build actions. Would be better to do both at once.
 	if err := target.WaitForResolvedDependencies(); err != nil {
-		state.asyncError(label, err)
+		state.asyncError(target.Label, err)
 		return
 	}
 	deps := target.Dependencies()
 	for _, dep := range deps {
-		if err := state.queueTarget(target, dependent, rescan, forceBuild); err != nil {
+		if err := state.queueTarget(dep, target.Label, rescan, forceBuild); err != nil {
 			state.asyncError(target.Label, err)
 			return
 		}
@@ -815,7 +815,12 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 	if target.SyncUpdateState(Active, Pending) {
 		state.addPendingBuild(target.Label, dependent.IsAllTargets())
 	}
-	return nil
+}
+
+// asyncError reports an error that's happened in an asynchronous function.
+func (state *BuildState) asyncError(label BuildLabel, err error) {
+	state.LogBuildError(0, label, TargetBuildFailed, err, "")
+	state.KillAll()
 }
 
 // ForTarget returns the state associated with a given target.
