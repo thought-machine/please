@@ -269,8 +269,8 @@ func (state *BuildState) AddPendingParse(label, dependent BuildLabel, forSubincl
 	}
 }
 
-// AddPendingBuild adds a task for a pending build of a target.
-func (state *BuildState) AddPendingBuild(label BuildLabel, forSubinclude bool) {
+// addPendingBuild adds a task for a pending build of a target.
+func (state *BuildState) addPendingBuild(label BuildLabel, forSubinclude bool) {
 	if forSubinclude {
 		state.addPending(label, SubincludeBuild)
 	} else {
@@ -762,6 +762,11 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 			return fmt.Errorf("Target %s (referenced by %s) doesn't exist", label, dependent)
 		}
 	}
+	return state.queueTarget(target, dependent, rescan, forceBuild)
+}
+
+// queueTarget is like QueueTarget but once we have a resolved target.
+func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceBuild bool) error {
 	if target.State() >= Active && !rescan && !forceBuild {
 		return nil // Target is already tagged to be built and likely on the queue.
 	}
@@ -781,49 +786,34 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 					atomic.AddInt64(&state.progress.numActive, int64(state.NumTestRuns))
 				}
 			}
+			// Actual queuing stuff now happens asynchronously in here.
+			go state.queueTargetAsync(target, dependent, rescan, forceBuild)
 		}
 	}
-	// Put this target onto the queue once all its dependencies are done.
-	go state.queueTarget(target, dependent, rescan, forceBuild)
 	return nil
 }
 
 // queueTarget enqueues a target's dependencies and the target itself once they are done.
-func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceBuild bool) {
+func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLabel, rescan, forceBuild bool) {
 	// TODO(peterebden): This is slightly inefficient in that we wait for all dependencies to resolve before
 	//                   queuing up the actual build actions. Would be better to do both at once.
 	if err := target.WaitForResolvedDependencies(); err != nil {
 		state.asyncError(label, err)
 		return
 	}
-
-
-
-	// If this target has no deps, add it to the queue now, otherwise handle its deps.
-	// Only add if we need to build targets (not if we're just parsing) but we might need it to parse...
-	if target.State() == Active && target.AllDepsBuilt() {
-		if target.SyncUpdateState(Active, Pending) {
-			state.AddPendingBuild(label, dependent.IsAllTargets())
-		}
-		if !rescan {
-			return nil
+	deps := target.Dependencies()
+	for _, dep := range deps {
+		if err := state.queueTarget(target, dependent, rescan, forceBuild); err != nil {
+			state.asyncError(target.Label, err)
+			return
 		}
 	}
-	for _, dep := range target.DeclaredDependencies() {
-		// Check the require/provide stuff; we may need to add a different target.
-		if len(target.Requires) > 0 {
-			if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
-				for _, provided := range depTarget.ProvideFor(target) {
-					if err := state.QueueTarget(provided, label, false, forceBuild); err != nil {
-						return err
-					}
-				}
-				continue
-			}
-		}
-		if err := state.QueueTarget(dep, label, false, forceBuild); err != nil {
-			return err
-		}
+	// Now wait for each of them to finish building
+	for _, dep := range deps {
+		dep.WaitForBuild()
+	}
+	if target.SyncUpdateState(Active, Pending) {
+		state.addPendingBuild(target.Label, dependent.IsAllTargets())
 	}
 	return nil
 }

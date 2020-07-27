@@ -209,6 +209,8 @@ type BuildTarget struct {
 	mutex sync.Mutex `print:"false"`
 	// Used to notify once all dependencies are registered.
 	dependenciesRegistered chan struct{} `print:"false"`
+	// Used to notify once this target has built successfully.
+	finishedBuilding chan struct{} `print:"false"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -326,9 +328,11 @@ func (s BuildTargetState) String() string {
 // NewBuildTarget constructs & returns a new BuildTarget.
 func NewBuildTarget(label BuildLabel) *BuildTarget {
 	return &BuildTarget{
-		Label:               label,
-		state:               int32(Inactive),
-		BuildingDescription: DefaultBuildingDescription,
+		Label:                  label,
+		state:                  int32(Inactive),
+		BuildingDescription:    DefaultBuildingDescription,
+		dependenciesRegistered: make(chan struct{}),
+		finishedBuilding:       make(chan struct{}),
 	}
 }
 
@@ -585,6 +589,16 @@ func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
 		}
 	}
 	close(target.dependenciesRegistered)
+}
+
+// FinishBuild marks this target as having built.
+func (target *BuildTarget) FinishBuild() {
+	close(target.finishedBuilding)
+}
+
+// WaitForBuild blocks until this target has finished building.
+func (target *BuildTarget) WaitForBuild() {
+	<-target.finishedBuilding
 }
 
 // DeclaredOutputs returns the outputs from this target's original declaration.
