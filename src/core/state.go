@@ -787,6 +787,7 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 				}
 			}
 			// Actual queuing stuff now happens asynchronously in here.
+			atomic.AddInt64(&state.progress.numPending, 1)
 			go state.queueTargetAsync(target, dependent, rescan, forceBuild)
 		}
 	}
@@ -795,6 +796,7 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 
 // queueTarget enqueues a target's dependencies and the target itself once they are done.
 func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLabel, rescan, forceBuild bool) {
+	defer state.TaskDone(false)
 	// TODO(peterebden): This is slightly inefficient in that we wait for all dependencies to resolve before
 	//                   queuing up the actual build actions. Would be better to do both at once.
 	if err := target.WaitForResolvedDependencies(); err != nil {
