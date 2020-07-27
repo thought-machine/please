@@ -797,6 +797,12 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 // queueTarget enqueues a target's dependencies and the target itself once they are done.
 func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLabel, rescan, forceBuild bool) {
 	defer state.TaskDone(false)
+	for _, dep := range target.DeclaredDependencies() {
+		if err := state.QueueTarget(dep, target.Label, rescan, forceBuild); err != nil {
+			state.asyncError(dep, err)
+			return
+		}
+	}
 	// TODO(peterebden): This is slightly inefficient in that we wait for all dependencies to resolve before
 	//                   queuing up the actual build actions. Would be better to do both at once.
 	if err := target.WaitForResolvedDependencies(); err != nil {
