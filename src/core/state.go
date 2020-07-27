@@ -218,6 +218,7 @@ type stateProgress struct {
 	numRunning int64
 	numDone    int64
 	mutex      sync.Mutex
+	closeOnce  sync.Once
 	// Used to track subinclude() calls that block until targets are built.
 	pendingTargets     map[BuildLabel]chan struct{}
 	pendingTargetMutex sync.Mutex
@@ -380,7 +381,9 @@ func (state *BuildState) KillAll() {
 // CloseResults closes the result channels.
 func (state *BuildState) CloseResults() {
 	if state.results != nil {
-		close(state.results)
+		state.progress.closeOnce.Do(func() {
+			close(state.results)
+		})
 	}
 }
 
