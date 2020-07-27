@@ -93,7 +93,8 @@ func (graph *BuildGraph) WaitForTarget(label BuildLabel) *BuildTarget {
 	if t := graph.Target(label); t != nil {
 		return t
 	} else if graph.PackageByLabel(label) != nil {
-		return nil // Package has been added but target didn't exist in it
+		// Check target again to avoid race conditions
+		return graph.Target(label)
 	}
 	pkg, _ := graph.pendingTargets.LoadOrStore(label.packageKey(), &sync.Map{})
 	ch, _ := pkg.(*sync.Map).LoadOrStore(label.Name, make(chan struct{}))
