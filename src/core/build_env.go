@@ -213,8 +213,8 @@ func toolPath(state *BuildState, tool BuildInput, abs bool) string {
 			path = "./" + path
 		}
 		return path
-	} else if path := tool.Paths(state.Graph)[0]; abs || !strings.HasPrefix(path, state.Config.PleaseLocation) {
-		return path
+	} else if abs {
+		return tool.Paths(state.Graph)[0]
 	}
 	return tool.LocalPaths(state.Graph)[0]
 }
