@@ -30,6 +30,10 @@
       This isn't needed if you use tools as other build rules though.</li>
     <li>You have to have plz installed on the agent to access the tools it comes with. You might
       need to customise the <code>remote.homedir</code> property to find it.</li>
+    <li>One of the remote servers will need to implement the
+      <a href="https://github.com/bazelbuild/remote-apis/blob/master/build/bazel/remote/asset/v1/remote_asset.proto">Remote Asset API</a>.
+      This can be a different endpoint from the others but will be needed for any
+      <code>remote_file</code> rules to work.</li>
   </ul>
   We're actively working on a nmber of things to make the above easier and expect it to
   evolve quite a bit over the next few versions.</p>
