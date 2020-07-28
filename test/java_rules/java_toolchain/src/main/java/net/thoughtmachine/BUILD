@@ -2,16 +2,16 @@ if CONFIG.OS == "linux" or CONFIG.OS == "darwin":
     java_toolchain(
         name = "java8",
         jdk_url = {
-            "linux": "https://corretto.aws/downloads/latest/amazon-corretto-8-x64-linux-jdk.tar.gz",
-            "darwin": "https://corretto.aws/downloads/latest/amazon-corretto-8-x64-macos-jdk.tar.gz",
+            "linux": "https://corretto.aws/downloads/resources/8.262.10.1/amazon-corretto-8.262.10.1-linux-x64.tar.gz",
+            "darwin": "https://corretto.aws/downloads/resources/8.262.10.1/amazon-corretto-8-x64-macos-jdk.tar.gz",
         },
     )
 
     java_toolchain(
         name = "java11",
         jdk_url = {
-            "linux": "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.tar.gz",
-            "darwin": "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-macos-jdk.tar.gz",
+            "linux": "https://corretto.aws/downloads/resources/11.0.8.10.1/amazon-corretto-11.0.8.10.1-linux-x64.tar.gz",
+            "darwin": "https://corretto.aws//downloads/resources/11.0.8.10.1/amazon-corretto-11-x64-macos-jdk.tar.gz",
         },
     )
 
@@ -26,7 +26,7 @@ if CONFIG.OS == "linux" or CONFIG.OS == "darwin":
     java_test(
         name = "java8_test",
         srcs = ["VersionTest.java"],
-        jvm_args = "-Dexpected_version=1.8.0_252",
+        jvm_args = "-Dexpected_version=1.8.0_262",
         toolchain = ":java8",
         deps = ["//third_party/java:junit"],
     )
@@ -34,7 +34,7 @@ if CONFIG.OS == "linux" or CONFIG.OS == "darwin":
     java_test(
         name = "java11_test",
         srcs = ["VersionTest.java"],
-        jvm_args = "-Dexpected_version=11.0.7",
+        jvm_args = "-Dexpected_version=11.0.8",
         toolchain = ":java11",
         deps = ["//third_party/java:junit"],
     )
