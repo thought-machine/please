@@ -2,6 +2,7 @@ package cache
 
 import (
 	"fmt"
+	"io"
 	"sync"
 	"testing"
 	"time"
@@ -91,11 +92,18 @@ func (c *mockCache) Store(target *core.BuildTarget, key []byte, files []string) 
 	c.Unlock()
 }
 
+func (c *mockCache) StoreFile(target *core.BuildTarget, key []byte, contents io.Reader, filename string) {
+}
+
 func (c *mockCache) Retrieve(target *core.BuildTarget, key []byte, files []string) bool {
 	c.Lock()
 	c.completed[target] = true
 	c.Unlock()
 	return false
+}
+
+func (c *mockCache) RetrieveFile(target *core.BuildTarget, key []byte, filename string) io.ReadCloser {
+	return nil
 }
 
 func (c *mockCache) Clean(target *core.BuildTarget) {

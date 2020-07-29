@@ -410,6 +410,9 @@ type mockCache struct{}
 func (*mockCache) Store(target *core.BuildTarget, key []byte, files []string) {
 }
 
+func (*mockCache) StoreFile(target *core.BuildTarget, key []byte, contents io.Reader, filename string) {
+}
+
 func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []string) bool {
 	if target.Label.Name == "target8" {
 		ioutil.WriteFile("plz-out/gen/package1/file8", []byte("retrieved from cache"), 0664)
@@ -427,6 +430,10 @@ func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []strin
 		return true
 	}
 	return false
+}
+
+func (*mockCache) RetrieveFile(target *core.BuildTarget, key []byte, filename string) io.ReadCloser {
+	return nil
 }
 
 func (*mockCache) Clean(target *core.BuildTarget) {}
