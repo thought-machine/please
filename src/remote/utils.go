@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	treesdk "github.com/bazelbuild/remote-apis-sdks/go/pkg/tree"
@@ -29,7 +30,6 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
 
-	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -187,13 +187,12 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest
 	data, _ := proto.Marshal(ar)
 	metadata.RemoteAction = data
 	metadata.Timestamp = time.Now()
-	// TODO(jpoole): Similar to retrieveTargetMetadataFromCache, it would be cleaner if we could store
-	//               into the cache from an arbitrary reader.
-	if err := build.StoreTargetMetadata(target, metadata); err != nil {
-		log.Warning("%s", err)
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(metadata); err != nil {
+		log.Warning("Failed to encode build metadata: %s", err)
 		return
 	}
-	c.state.Cache.Store(target, c.localCacheKey(digest), []string{target.TargetBuildMetadataFileName()})
+	c.state.Cache.StoreFile(target, c.localCacheKey(digest), &buf, target.TargetBuildMetadataFileName())
 }
 
 // retrieveLocalResults retrieves locally cached results for a target if possible.
@@ -213,12 +212,10 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 }
 
 func retrieveTargetMetadataFromCache(c *Client, target *core.BuildTarget, digest *pb.Digest) *core.BuildMetadata {
-	if c.state.Cache.Retrieve(target, c.localCacheKey(digest), []string{target.TargetBuildMetadataFileName()}) {
-		// TODO(jpoole): Retrieving the metadata file from the cache loads it into the targets output directory. This feels like a
-		// leaky abstration. A cleaner solution might be to enable the caches to load files into a writer. We could then
-		// load metadate without having to save it to disk first.
-		md, err := build.LoadTargetMetadata(target)
-		if err != nil {
+	if r := c.state.Cache.RetrieveFile(target, c.localCacheKey(digest), target.TargetBuildMetadataFileName()); r != nil {
+		md := &core.BuildMetadata{}
+		defer r.Close()
+		if err := gob.NewDecoder(r).Decode(md); err != nil {
 			log.Warningf("failed to retrieve metadata from cache for target %v: %v", target.Label, err)
 			return nil
 		} else if time.Since(md.Timestamp) > time.Duration(c.state.Config.Remote.CacheDuration) {
