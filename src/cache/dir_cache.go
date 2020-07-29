@@ -46,6 +46,18 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files []strin
 	}
 }
 
+func (cache *dirCache) StoreFile(target *core.BuildTarget, key []byte, r io.Reader, filename string) {
+	if cache.Compress {
+		return // We don't store partial tarballs.
+	}
+	filename = path.Join(cache.getPath(target, key, ""), filename)
+	if err := cache.ensureStoreReady(filename); err != nil {
+		log.Warning("Failed to create directory in dir cache: %s", err)
+	} else if err := fs.WriteFile(r, filename, 0444); err != nil {
+		log.Warning("Failed to store %s: %s in cache: %s", target, filename, err)
+	}
+}
+
 // storeFiles stores the given files in the cache, either compressed or not.
 func (cache *dirCache) storeFiles(target *core.BuildTarget, key []byte, suffix, cacheDir, tmpDir string, files []string, clean bool) {
 	var totalSize uint64
@@ -178,19 +190,31 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 }
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) bool {
-	return cache.retrieve(target, key, "", outs)
-}
-
-// retrieveFiles retrieves the given set of files from the cache.
-func (cache *dirCache) retrieve(target *core.BuildTarget, key []byte, suffix string, outs []string) bool {
-	found, err := cache.retrieveFiles(target, cache.getPath(target, key, suffix), outs)
+	found, err := cache.retrieveFiles(target, cache.getPath(target, key, ""), outs)
 	if err != nil && !os.IsNotExist(err) {
 		log.Warning("Failed to retrieve %s from dir cache: %s", target.Label, err)
 		return false
 	} else if found {
-		log.Debug("Retrieved %s: %s from dir cache", target.Label, suffix)
+		log.Debug("Retrieved %s from dir cache", target.Label)
 	}
 	return found
+}
+
+func (cache *dirCache) RetrieveFile(target *core.BuildTarget, key []byte, filename string) io.ReadCloser {
+	if cache.Compress {
+		return nil // We don't support retrieving single files from the compressed cache (yet?)
+	}
+	cachedOut := path.Join(cache.getPath(target, key, ""), filename)
+	f, err := os.Open(cachedOut)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Debug("%s: %s doesn't exist in dir cache", target, filename)
+		} else {
+			log.Warning("Failed to retrieve %s: %s from dir cache: %s", target, filename, err)
+		}
+		return nil
+	}
+	return f
 }
 
 func (cache *dirCache) retrieveFiles(target *core.BuildTarget, cacheDir string, outs []string) (bool, error) {

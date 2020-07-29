@@ -1,5 +1,9 @@
 package core
 
+import (
+	"io"
+)
+
 // Cache is our general interface to caches for built targets.
 // The implementations are in //src/cache, but the interface is in this package because
 // it's passed around on the BuildState object.
@@ -13,7 +17,11 @@ type Cache interface {
 	// that have post-build functions).
 	// If unsuccessful, it will return nil.
 	Retrieve(target *BuildTarget, key []byte, files []string) bool
-	// Retrieves the results of a test run.
+	// Stores the contents of a single file from the given reader.
+	StoreFile(target *BuildTarget, key []byte, contents io.Reader, filename string)
+	// Retrieves the contents of a single file for a build target.
+	// The returned reader is nil if it couldn't be retrieved.
+	RetrieveFile(target *BuildTarget, key []byte, filename string) io.ReadCloser
 	// Cleans any artifacts associated with this target from the cache, for any possible key.
 	// Some implementations may not honour this, depending on configuration etc.
 	Clean(target *BuildTarget)

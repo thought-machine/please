@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"io"
 	"sync"
 
 	"github.com/thought-machine/please/src/core"
@@ -22,6 +23,7 @@ type cacheRequest struct {
 	target *core.BuildTarget
 	key    []byte
 	files  []string
+	data   io.Reader
 }
 
 func newAsyncCache(realCache core.Cache, config *core.Configuration) core.Cache {
@@ -44,8 +46,21 @@ func (c *asyncCache) Store(target *core.BuildTarget, key []byte, files []string)
 	}
 }
 
+func (c *asyncCache) StoreFile(target *core.BuildTarget, key []byte, contents io.Reader, filename string) {
+	c.requests <- cacheRequest{
+		target: target,
+		key:    key,
+		files:  []string{filename},
+		data:   contents,
+	}
+}
+
 func (c *asyncCache) Retrieve(target *core.BuildTarget, key []byte, files []string) bool {
 	return c.realCache.Retrieve(target, key, files)
+}
+
+func (c *asyncCache) RetrieveFile(target *core.BuildTarget, key []byte, filename string) io.ReadCloser {
+	return c.realCache.RetrieveFile(target, key, filename)
 }
 
 func (c *asyncCache) Clean(target *core.BuildTarget) {
@@ -66,7 +81,11 @@ func (c *asyncCache) Shutdown() {
 // run implements the actual async logic.
 func (c *asyncCache) run() {
 	for r := range c.requests {
-		c.realCache.Store(r.target, r.key, r.files)
+		if r.data != nil {
+			c.realCache.StoreFile(r.target, r.key, r.data, r.files[0])
+		} else {
+			c.realCache.Store(r.target, r.key, r.files)
+		}
 	}
 	c.wg.Done()
 }

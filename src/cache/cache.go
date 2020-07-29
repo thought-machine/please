@@ -3,6 +3,7 @@
 package cache
 
 import (
+	"io"
 	"sync"
 
 	"gopkg.in/op/go-logging.v1"
@@ -45,7 +46,15 @@ type cacheMultiplexer struct {
 }
 
 func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte, files []string) {
-	mplex.storeUntil(target, key, files, len(mplex.caches))
+	mplex.storeUntil(target, key, len(mplex.caches), func(cache core.Cache) {
+		cache.Store(target, key, files)
+	})
+}
+
+func (mplex cacheMultiplexer) StoreFile(target *core.BuildTarget, key []byte, content io.Reader, filename string) {
+	mplex.storeUntil(target, key, len(mplex.caches), func(cache core.Cache) {
+		cache.StoreFile(target, key, content, filename)
+	})
 }
 
 // storeUntil stores artifacts into higher priority caches than the given one.
@@ -53,7 +62,7 @@ func (mplex cacheMultiplexer) Store(target *core.BuildTarget, key []byte, files 
 // downloading from the RPC cache.
 // This is a little inefficient since we could write the file to plz-out then copy it to the dir cache,
 // but it's hard to fix that without breaking the cache abstraction.
-func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, files []string, stopAt int) {
+func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, stopAt int, f func(cache core.Cache)) {
 	// Attempt to store on all caches simultaneously.
 	var wg sync.WaitGroup
 	for i, cache := range mplex.caches {
@@ -62,7 +71,7 @@ func (mplex cacheMultiplexer) storeUntil(target *core.BuildTarget, key []byte, f
 		}
 		wg.Add(1)
 		go func(cache core.Cache) {
-			cache.Store(target, key, files)
+			f(cache)
 			wg.Done()
 		}(cache)
 	}
@@ -75,11 +84,24 @@ func (mplex cacheMultiplexer) Retrieve(target *core.BuildTarget, key []byte, fil
 	for i, cache := range mplex.caches {
 		if ok := cache.Retrieve(target, key, files); ok {
 			// Store this into other caches
-			mplex.storeUntil(target, key, files, i)
+			mplex.storeUntil(target, key, i, func(cache core.Cache) {
+				cache.Store(target, key, files)
+			})
 			return ok
 		}
 	}
 	return false
+}
+
+func (mplex cacheMultiplexer) RetrieveFile(target *core.BuildTarget, key []byte, filename string) io.ReadCloser {
+	for _, cache := range mplex.caches {
+		if r := cache.RetrieveFile(target, key, filename); r != nil {
+			// We don't store this right now. We could add that later if we wanted (but it's a bit
+			// nontrivial since we'd have to wrap the reader and re-store it)
+			return r
+		}
+	}
+	return nil
 }
 
 func (mplex cacheMultiplexer) Clean(target *core.BuildTarget) {

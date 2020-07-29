@@ -31,19 +31,36 @@ var mtime = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 const nobody = 65534
 
 func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files []string) {
-	if cache.writable {
-		r, w := io.Pipe()
-		go cache.write(w, target, files)
-		req, err := http.NewRequest(http.MethodPut, cache.makeURL(key), r)
-		if err != nil {
-			log.Warning("Invalid cache URL: %s", err)
-			return
-		}
-		if resp, err := cache.client.Do(req); err != nil {
-			log.Warning("Failed to store files in HTTP cache: %s", err)
-		} else {
-			resp.Body.Close()
-		}
+	if !cache.writable {
+		return
+	}
+	r, w := io.Pipe()
+	go cache.write(w, target, files)
+	req, err := http.NewRequest(http.MethodPut, cache.makeURL(key), r)
+	if err != nil {
+		log.Warning("Invalid cache URL: %s", err)
+		return
+	}
+	if resp, err := cache.client.Do(req); err != nil {
+		log.Warning("Failed to store files in HTTP cache: %s", err)
+	} else {
+		resp.Body.Close()
+	}
+}
+
+func (cache *httpCache) StoreFile(target *core.BuildTarget, key []byte, contents io.Reader, filename string) {
+	if !cache.writable {
+		return
+	}
+	req, err := http.NewRequest(http.MethodPut, cache.makeURL(key), contents)
+	if err != nil {
+		log.Warning("Invalid cache URL: %s", err)
+		return
+	}
+	if resp, err := cache.client.Do(req); err != nil {
+		log.Warning("Failed to store files in HTTP cache: %s", err)
+	} else {
+		resp.Body.Close()
 	}
 }
 
@@ -116,22 +133,36 @@ func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, files []s
 	return m
 }
 
-func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, error) {
+func (cache *httpCache) RetrieveFile(target *core.BuildTarget, key []byte, filename string) io.ReadCloser {
+	body, _ := cache.request(target, key)
+	return body
+}
+
+func (cache *httpCache) request(target *core.BuildTarget, key []byte) (io.ReadCloser, error) {
 	req, err := http.NewRequest(http.MethodGet, cache.makeURL(key), nil)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	resp, err := cache.client.Do(req)
 	if err != nil {
-		return false, err
+		return nil, err
 	} else if resp.StatusCode == http.StatusNotFound {
-		return false, nil // doesn't exist - not an error
+		return nil, nil // doesn't exist - not an error
 	} else if resp.StatusCode != http.StatusOK {
+		defer resp.Body.Close()
 		b, _ := ioutil.ReadAll(resp.Body)
-		return false, fmt.Errorf("%s", string(b))
+		return nil, fmt.Errorf("%s", string(b))
 	}
-	defer resp.Body.Close()
-	gzr, err := gzip.NewReader(resp.Body)
+	return resp.Body, nil
+}
+
+func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, error) {
+	body, err := cache.request(target, key)
+	if err != nil {
+		return false, err
+	}
+	defer body.Close()
+	gzr, err := gzip.NewReader(body)
 	if err != nil {
 		return false, err
 	}
