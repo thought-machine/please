@@ -363,7 +363,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
             labels = labels,
         )
         if strip_prefix:
-            cmd = '"$TOOL" x $SRCS -s ' + strip_prefix
+            cmd = '"$TOOL" x $SRCS -o "$OUT" -s ' + strip_prefix
         else:
             cmd = '"$TOOL" x $SRCS -o "$OUT"'
         return build_rule(

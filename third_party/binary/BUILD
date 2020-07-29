@@ -1,4 +1,4 @@
-# TODO(peterebden): Use the following once v15 is out.
+# TODO(peterebden): Use the following once we fix #1098
 # remote_file(
 #     name = "golangci-lint",
 #     out = "golangci-lint",
