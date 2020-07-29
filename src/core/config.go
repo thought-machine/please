@@ -683,6 +683,12 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 				return fmt.Errorf("Invalid value for a duration field: %s", v)
 			}
 			field.Set(reflect.ValueOf(d))
+		case reflect.Uint64:
+			var s cli.ByteSize
+			if err := s.UnmarshalText([]byte(v)); err != nil {
+				return fmt.Errorf("Invalid value for a size field: %s", v)
+			}
+			field.Set(reflect.ValueOf(s))
 		case reflect.Slice:
 			// Comma-separated values are accepted.
 			if field.Type().Elem().Kind() == reflect.Struct {
