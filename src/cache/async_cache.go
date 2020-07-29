@@ -22,7 +22,6 @@ type cacheRequest struct {
 	target *core.BuildTarget
 	key    []byte
 	files  []string
-	file   string
 }
 
 func newAsyncCache(realCache core.Cache, config *core.Configuration) core.Cache {

@@ -204,7 +204,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 						log.Warning("Error from post-build function for %s: %s; will rebuild", target.Label, err)
 					}
 				}
-
 			}
 
 			// If we still don't need to build, return immediately
@@ -269,7 +268,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			} else if retrieveArtifacts(tid, state, target, oldOutputHash) {
 				return nil
 			}
-
 		}
 		if err := target.CheckSecrets(); err != nil {
 			return err
@@ -528,7 +526,7 @@ func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
 // addOutputDirectoriesToBuildOutput moves all the files from the output dirs into the root of the build temp dir
 // and adds them as outputs to the build target
 func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, error) {
-	var outs []string
+	outs := make([]string, 0, len(target.OutputDirectories))
 	for _, dir := range target.OutputDirectories {
 		o, err := addOutputDirectoryToBuildOutput(target, dir)
 		if err != nil {

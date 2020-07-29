@@ -145,7 +145,7 @@ type ModuleComponent struct {
 	XMLName               xml.Name       `xml:"component"`
 	Name                  string         `xml:"name,attr"`
 	InheritCompilerOutput bool           `xml:"inherit-compiler-output,attr"`
-	Content               *ModuleContent `xml:"content,omitEmpty"`
+	Content               *ModuleContent `xml:"content,omitempty"`
 	OrderEntries          []OrderEntry   `xml:"orderEntry"`
 }
 
@@ -207,7 +207,7 @@ type SourceFolder struct {
 	XMLName       xml.Name `xml:"sourceFolder"`
 	URL           string   `xml:"url,attr"`
 	IsTestSource  bool     `xml:"isTestSource,attr"`
-	PackagePrefix *string  `xml:"packagePrefix,attr,omitEmpty"`
+	PackagePrefix *string  `xml:"packagePrefix,attr,omitempty"`
 }
 
 // OrderEntry represents a dependency on (e.g.) another module, or a library or an SDK.
@@ -215,14 +215,14 @@ type OrderEntry struct {
 	XMLName xml.Name `xml:"orderEntry"`
 	Type    string   `xml:"type,attr"`
 
-	ForTests *bool `xml:"forTests,attr,omitEmpty"`
+	ForTests *bool `xml:"forTests,attr,omitempty"`
 
-	Exported *string `xml:"exported,attr,omitEmpty"`
+	Exported *string `xml:"exported,attr,omitempty"`
 
-	LibraryName  *string `xml:"name,attr,omitEmpty"`
-	LibraryLevel *string `xml:"level,attr,omitEmpty"`
+	LibraryName  *string `xml:"name,attr,omitempty"`
+	LibraryLevel *string `xml:"level,attr,omitempty"`
 
-	ModuleName *string `xml:"module-name,attr,omitEmpty"`
+	ModuleName *string `xml:"module-name,attr,omitempty"`
 }
 
 func newLibraryEntry(name, level string) OrderEntry {

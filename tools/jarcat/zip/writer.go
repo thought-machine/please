@@ -151,7 +151,7 @@ func (f *File) AddZipFile(filepath string) error {
 		hasTrailingSlash := strings.HasSuffix(rf.Name, "/")
 		isDir := hasTrailingSlash || rf.FileInfo().IsDir()
 		if isDir && !hasTrailingSlash {
-			rf.Name = rf.Name + "/"
+			rf.Name += "/"
 		}
 		if existing, present := f.files[rf.Name]; present {
 			// Allow duplicates of directories. Seemingly the best way to identify them is that
@@ -177,7 +177,7 @@ func (f *File) AddZipFile(filepath string) error {
 			if strings.HasPrefix(rf.Name, before) {
 				rf.Name = path.Join(after, strings.TrimPrefix(rf.Name, before))
 				if isDir {
-					rf.Name = rf.Name + "/"
+					rf.Name += "/"
 				}
 				break
 			}

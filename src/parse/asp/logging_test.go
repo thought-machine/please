@@ -15,7 +15,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-type record struct {
+type record struct { //nolint:unused
 	Level logging.Level
 	Msg   string
 }
@@ -34,7 +34,7 @@ func parseFile2(filename string) (*scope, error) {
 }
 
 // assertRecords asserts equality of a series of logging records.
-func assertRecords(t *testing.T, backend *logging.MemoryBackend, expected []record) {
+func assertRecords(t *testing.T, backend *logging.MemoryBackend, expected []record) { //nolint:unused
 	actual := []record{}
 	for node := backend.Head(); node != nil; node = node.Next() {
 		actual = append(actual, record{node.Record.Level, node.Record.Message()})

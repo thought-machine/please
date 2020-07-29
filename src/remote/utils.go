@@ -72,7 +72,6 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 		}
 	}
 	for _, d := range ar.OutputDirectories {
-
 		tree := &pb.Tree{}
 		if err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
@@ -222,7 +221,7 @@ func retrieveTargetMetadataFromCache(c *Client, target *core.BuildTarget, digest
 		if err != nil {
 			log.Warningf("failed to retrieve metadata from cache for target %v: %v", target.Label, err)
 			return nil
-		} else if time.Now().Sub(md.Timestamp) > time.Duration(c.state.Config.Remote.CacheDuration) {
+		} else if time.Since(md.Timestamp) > time.Duration(c.state.Config.Remote.CacheDuration) {
 			log.Debug("Cached results for %s are stale, will re-query server", target)
 			return nil
 		}

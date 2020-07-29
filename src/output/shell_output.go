@@ -300,10 +300,8 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 									showExecutionOutput(execution)
 								}
 							}
-						} else {
-							if state.ShowTestOutput {
-								showExecutionOutput(result.Executions[0])
-							}
+						} else if state.ShowTestOutput {
+							showExecutionOutput(result.Executions[0])
 						}
 					}
 				}
@@ -378,7 +376,6 @@ func formatTestExecution(execution core.TestExecution, detailed bool) string {
 		}
 		// Not usually interesting to have a duration when we did no work.
 		return "${BOLD_YELLOW}SKIP${RESET}"
-
 	}
 	return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", maybeToString(execution.Duration))
 }
@@ -749,7 +746,7 @@ func graphCycleMessage(graph *core.BuildGraph, target *core.BuildTarget) string 
 			msg += fmt.Sprintf(" -> %s\n", cycle[i].Label)
 		}
 		msg += fmt.Sprintf(" -> %s\n", cycle[len(cycle)-1].Label)
-		return msg + fmt.Sprintf("Sorry, but you'll have to refactor your build files to avoid this cycle.")
+		return msg + "Sorry, but you'll have to refactor your build files to avoid this cycle."
 	}
 	return unbuiltTargetsMessage(graph)
 }

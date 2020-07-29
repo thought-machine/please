@@ -1,16 +1,12 @@
 package fs
 
 import (
-	"crypto/sha1"
 	"io/ioutil"
 	"os"
 	"path"
 
 	"github.com/pkg/xattr"
 )
-
-// Length of the full hash we write, which has multiple parts.
-const fullHashLength = 5 * sha1.Size
 
 // RecordAttr records an attribute on the given file, using xattrs if available, otherwise
 // falling back to writing a separate file.

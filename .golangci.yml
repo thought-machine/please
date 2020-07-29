@@ -1,0 +1,42 @@
+issues:
+  exclude:
+    - SA4006  # Too many false positives :(
+    - SA5008  # Warns for duplicate struct tags which are meaningful to go-flags
+    - unslice  # This may be useful in some places.
+    - ifElseChain  # Generally don't agree.
+    - appendAssign
+    - halp  # Make misspell be quiet about this.
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - dupl
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+    - asciicheck
+    - bodyclose
+    - dogsled
+    - dupl
+    - exportloopref
+    - gocritic
+    - gofmt
+    - golint
+    - misspell
+    - prealloc
+    - unconvert
+    - whitespace
+
+    # To consider enabling in future (once we fix errors etc):
+    # - maligned
+    # - errcheck
+    # - scopelint

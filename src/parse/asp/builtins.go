@@ -197,9 +197,9 @@ func tagName(name, tag string) string {
 		name = "_" + name
 	}
 	if strings.ContainsRune(name, '#') {
-		name = name + "_"
+		name += "_"
 	} else {
-		name = name + "#"
+		name += "#"
 	}
 	return name + tag
 }
@@ -228,7 +228,6 @@ const (
 )
 
 func getRuleMetadata(s *scope, args []pyObject) pyObject {
-
 	name := args[getConfigRuleConfigNameIndex].(pyString).String()
 	label := core.ParseBuildLabelContext(name, s.pkg)
 
@@ -672,7 +671,7 @@ func getTargetPost(s *scope, name string) *core.BuildTarget {
 	s.Assert(target != nil, "Unknown build target %s in %s", name, s.pkg.Name)
 	// It'd be cheating to try to modify targets that're already built.
 	// Prohibit this because it'd likely end up with nasty race conditions.
-	s.Assert(target.State() < core.Built, "Attempted to modify target %s, but it's already built", target.Label)
+	s.Assert(target.State() < core.Built, "Attempted to modify target %s, but it's already built", target.Label) //nolint:staticcheck
 	return target
 }
 

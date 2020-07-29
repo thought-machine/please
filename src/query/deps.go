@@ -27,7 +27,7 @@ func printTarget(state *core.BuildState, target *core.BuildTarget, indent string
 			done[parent.Label] = true
 		}
 	}
-	indent = indent + "  "
+	indent += "  "
 
 	// access the level of dependency, as default is -1 which prints out everything
 	if targetLevel != -1 && currentLevel == targetLevel {

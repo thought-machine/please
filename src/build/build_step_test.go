@@ -369,7 +369,7 @@ func TestBuildMetadatafileIsCreated(t *testing.T) {
 	target.Command = fmt.Sprintf("echo -n '%s' | tee $OUT", stdOut)
 	target.AddOutput("file1")
 	target.PostBuildFunction = postBuildFunction(func(target *core.BuildTarget, output string) error {
-		assert.Equal(t, stdOut, string(output))
+		assert.Equal(t, stdOut, output)
 		return nil
 	})
 	err = buildTarget(rand.Int(), state, target, false)
@@ -418,7 +418,6 @@ func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []strin
 			panic(err)
 		}
 		return true
-
 	} else if target.Label.Name == "target10" {
 		ioutil.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
 		md := &core.BuildMetadata{Stdout: []byte("retrieved from cache")}

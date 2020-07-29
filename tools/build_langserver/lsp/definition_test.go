@@ -66,5 +66,4 @@ func TestDefinitionBuiltin(t *testing.T) {
 			Range: xrng(3, 0, 128, 5),
 		},
 	}, locs)
-
 }

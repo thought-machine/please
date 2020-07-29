@@ -103,7 +103,6 @@ func validateSuffixes(pkgName, name string) error {
 		strings.HasSuffix(name, testDirSuffix) ||
 		strings.HasSuffix(pkgName, buildDirSuffix) ||
 		strings.HasSuffix(pkgName, testDirSuffix) {
-
 		return fmt.Errorf("._build and ._test are reserved suffixes")
 	}
 	return nil

@@ -256,16 +256,6 @@ func TestCompletion(t *testing.T) {
 	}, completions)
 }
 
-const testCompletionPackages = `
-go_library(
-    name = "test",
-    srcs = glob(["*.go"]),
-    deps = [
-        "//sr"
-    ],
-)
-`
-
 func TestCompletionPackages(t *testing.T) {
 	h := initHandler()
 	err := h.Request("textDocument/didOpen", &lsp.DidOpenTextDocumentParams{

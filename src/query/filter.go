@@ -8,7 +8,6 @@ import (
 
 // Filter takes the list of BuildLabels and checks which ones match the label selectors passed in.
 func Filter(state *core.BuildState, labels core.BuildLabels) {
-
 	// Eventually this could be more clever...
 	matcher := state.ShouldInclude
 

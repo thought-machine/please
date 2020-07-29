@@ -29,7 +29,7 @@ type taskType int
 // Subinclude tasks order first, but we're happy for all build / parse / test tasks
 // to be treated equivalently.
 const (
-	Kill            taskType = 0x0000 | 0
+	Kill            taskType = 0x0000 | 0 //nolint:staticcheck
 	SubincludeBuild          = 0x1000 | 1
 	SubincludeParse          = 0x2000 | 2
 	Build                    = 0x4000 | 3

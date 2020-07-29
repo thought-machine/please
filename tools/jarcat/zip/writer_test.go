@@ -97,7 +97,7 @@ func assertExpected(t *testing.T, filename string, alignment int) {
 	}
 	for i, f := range r.File {
 		assert.Equal(t, f.Name, files[i].Name)
-		assert.Equal(t, expectedModTime, f.ModTime())
+		assert.Equal(t, expectedModTime, f.ModTime()) //nolint:staticcheck
 
 		fr, err := f.Open()
 		require.NoError(t, err)

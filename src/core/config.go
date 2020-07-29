@@ -208,13 +208,6 @@ func setBuildPath(conf *[]string, passEnv []string, passUnsafeEnv []string) {
 	setDefault(conf, pathVal...)
 }
 
-// defaultPath sets a variable to a location in a directory if it's not already set.
-func defaultPath(conf *string, dir, file string) {
-	if *conf == "" {
-		*conf = path.Join(dir, file)
-	}
-}
-
 // defaultPathIfExists sets a variable to a location in a directory if it's not already set and if the location exists.
 func defaultPathIfExists(conf *string, dir, file string) {
 	if *conf == "" {

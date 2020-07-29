@@ -82,7 +82,7 @@ func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 			linesCovered += covered
 		}
 
-		pkgLineRate := float64(classLineRateTotal) / float64(len(classes))
+		pkgLineRate := classLineRateTotal / float64(len(classes))
 
 		if len(classes) != 0 {
 			pkg := pkg{Name: packageName, Classes: classes, LineRate: formatFloatPrecision(pkgLineRate, 4)}
@@ -94,9 +94,10 @@ func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 
 	// Create the coverage object based on the data collected
 	coverageObj := coverageType{Packages: packages, LineRate: formatFloatPrecision(topLevelLineRate, 4),
-		LinesCovered: int(linesCovered), LinesValid: int(linesValid),
-		Timestamp: int(time.Now().UnixNano()) / int(time.Millisecond),
-		Sources:   sourcesAsStr}
+		LinesCovered: linesCovered,
+		LinesValid:   linesValid,
+		Timestamp:    int(time.Now().UnixNano()) / int(time.Millisecond),
+		Sources:      sourcesAsStr}
 
 	// Serialise struct to xml bytes
 	xmlBytes, err := xml.MarshalIndent(coverageObj, "", "	")
@@ -132,9 +133,7 @@ func getLineCoverageInfo(lineCover []core.LineCoverage) ([]line, int, int) {
 // format the float64 numbers to a specific precision
 func formatFloatPrecision(val float64, precision int) float64 {
 	unit := math.Pow10(precision)
-	newFloat := math.Round(val*unit) / unit
-
-	return float64(newFloat)
+	return math.Round(val*unit) / unit
 }
 
 // Note that this is based off coverage.py's format, which is originally a Java format

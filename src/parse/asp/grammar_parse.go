@@ -388,11 +388,9 @@ func (p *parser) parseUnconditionalExpression() *Expression {
 func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 	if tok := p.l.Peek(); tok.Type == '-' || tok.Value == "not" {
 		p.l.Next()
-		var valueExp *ValueExpression
-		valueExp = p.parseValueExpression()
 		e.UnaryOp = &UnaryOp{
 			Op:   tok.Value,
-			Expr: *valueExp,
+			Expr: *p.parseValueExpression(),
 		}
 	} else {
 		e.Val = p.parseValueExpression()

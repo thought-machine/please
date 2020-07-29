@@ -166,7 +166,7 @@ func (pw *Writer) Write(out, moduleDir string) error {
 }
 
 // pythonBool returns a Python bool representation of a Go bool.
-func pythonBool(b bool) string {
+func pythonBool(b bool) string { //nolint:unused
 	if b {
 		return "True"
 	}

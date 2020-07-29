@@ -372,12 +372,6 @@ func writeRuleHash(state *core.BuildState, target *core.BuildTarget) error {
 	return nil
 }
 
-// fallbackRuleHashFile returns the filename we'll store the hashes for this file on if we have
-// no alternative (for example, if it doesn't have any outputs we have to put them *somewhere*)
-func fallbackRuleHashFileName(target *core.BuildTarget) string {
-	return path.Join(target.OutDir(), target.Label.Name)
-}
-
 func targetBuildMetadataFileName(target *core.BuildTarget) string {
 	return path.Join(target.OutDir(), target.TargetBuildMetadataFileName())
 }

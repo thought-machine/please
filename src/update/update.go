@@ -229,7 +229,7 @@ func copyTarFile(zr io.Reader, newDir, url string) {
 // It panics if the download fails.
 func mustDownload(url string, progress bool) io.ReadCloser {
 	log.Info("Downloading %s", url)
-	response, err := httpClient.Get(url)
+	response, err := httpClient.Get(url) //nolint:bodyclose
 	if err != nil {
 		panic(fmt.Sprintf("Failed to download %s: %s", url, err))
 	} else if response.StatusCode < 200 || response.StatusCode > 299 {
