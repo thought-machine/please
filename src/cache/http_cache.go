@@ -158,7 +158,7 @@ func (cache *httpCache) request(target *core.BuildTarget, key []byte) (io.ReadCl
 
 func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, error) {
 	body, err := cache.request(target, key)
-	if err != nil {
+	if err != nil || body == nil {
 		return false, err
 	}
 	defer body.Close()
