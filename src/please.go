@@ -609,7 +609,7 @@ var buildFunctions = map[string]func() int{
 		if opts.Query.Changes.In != "" {
 			return runInexact(scm.ChangesIn(opts.Query.Changes.In, ""))
 		} else if opts.Query.Changes.Inexact {
-			return runInexact(scm.ChangedFiles(scm.CurrentRevIdentifier(), true, ""))
+			return runInexact(scm.ChangedFiles(opts.Query.Changes.Since, true, ""))
 		}
 		original := scm.CurrentRevIdentifier()
 		files := scm.ChangedFiles(opts.Query.Changes.Since, true, "")
