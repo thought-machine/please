@@ -21,6 +21,9 @@ type BuildGraph struct {
 	packages sync.Map
 	// Registered subrepos, as a map of their name to their root.
 	subrepos sync.Map
+	// Reverse dependencies
+	revdeps     map[*BuildTarget][]*BuildTarget
+	revdepsOnce sync.Once
 }
 
 // AddTarget adds a new target to the graph.
@@ -202,9 +205,18 @@ func NewGraph() *BuildGraph {
 }
 
 // ReverseDependencies returns the set of revdeps on the given target.
-// TODO(peterebden): Move out of Graph; should only be used for queries.
+// N.B. This runs in amortised constant time and initialises itself once, so should
+//      only be used for queries.
 func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
-	panic("not implemented yet")
+	graph.revdepsOnce.Do(func() {
+		graph.revdeps = map[*BuildTarget][]*BuildTarget{}
+		for _, t := range graph.AllTargets() {
+			for _, d := range t.Dependencies() {
+				graph.revdeps[d] = append(graph.revdeps[d], t)
+			}
+		}
+	})
+	return graph.revdeps[target]
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.
