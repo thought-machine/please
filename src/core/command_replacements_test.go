@@ -282,7 +282,10 @@ func makeTarget2(name string, command string, dep *BuildTarget) *BuildTarget {
 		graph := NewGraph()
 		graph.AddTarget(target)
 		graph.AddTarget(dep)
-		graph.AddDependency(target.Label, dep.Label)
+		target.AddDependency(dep.Label)
+		if err := target.WaitForResolvedDependencies(); err != nil {
+			log.Fatalf("Failed to resolve dependency %s -> %s: %s", target, dep, err)
+		}
 	}
 	return target
 }

@@ -27,19 +27,6 @@ func TestTarget(t *testing.T) {
 	assert.Equal(t, 0, len(graph.AllTargets()))
 }
 
-func TestRevDeps(t *testing.T) {
-	graph := NewGraph()
-	target1 := makeTarget3("//src/core:target1")
-	target2 := makeTarget3("//src/core:target2", target1)
-	target3 := makeTarget3("//src/core:target3", target2)
-	graph.AddTarget(target1)
-	graph.AddTarget(target2)
-	graph.AddTarget(target3)
-	assert.Equal(t, []*BuildTarget{target2}, graph.ReverseDependencies(target1))
-	assert.Equal(t, []*BuildTarget{target3}, graph.ReverseDependencies(target2))
-	assert.Equal(t, 0, len(graph.ReverseDependencies(target3)))
-}
-
 func TestAllDepsBuilt(t *testing.T) {
 	graph := NewGraph()
 	target1 := makeTarget3("//src/core:target1")
@@ -63,6 +50,8 @@ func TestAllDepsResolved(t *testing.T) {
 	graph.AddTarget(target2)
 	assert.False(t, target2.AllDependenciesResolved(), "Haven't added a proper dep for target2 yet.")
 	graph.AddTarget(target1)
+	assert.NoError(t, target1.WaitForResolvedDependencies())
+	assert.NoError(t, target2.WaitForResolvedDependencies())
 	assert.True(t, target1.AllDependenciesResolved(), "Has no dependencies so they're all resolved")
 	assert.True(t, target2.AllDependenciesResolved(), "Should be resolved now we've added target1.")
 }
