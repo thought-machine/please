@@ -42,16 +42,18 @@ func makeGraph() *core.BuildState {
 	graph := state.Graph
 	pkg1 := core.NewPackage("package1")
 	pkg1.AddTarget(makeTarget("//package1:target1"))
-	pkg1.AddTarget(makeTarget("//package1:target2", "//package1:target1"))
+	t2 := makeTarget("//package1:target2", "//package1:target1")
+	pkg1.AddTarget(t2)
 	graph.AddPackage(pkg1)
 	graph.AddTarget(pkg1.Target("target1"))
 	graph.AddTarget(pkg1.Target("target2"))
 	pkg2 := core.NewPackage("package2")
-	pkg2.AddTarget(makeTarget("//package2:target3", "//package1:target2"))
+	t3 := makeTarget("//package2:target3", "//package1:target2")
+	pkg2.AddTarget(t3)
 	graph.AddPackage(pkg2)
 	graph.AddTarget(pkg2.Target("target3"))
-	graph.AddDependency(core.ParseBuildLabel("//package1:target2", ""), core.ParseBuildLabel("//package1:target1", ""))
-	graph.AddDependency(core.ParseBuildLabel("//package2:target3", ""), core.ParseBuildLabel("//package1:target2", ""))
+	t2.WaitForResolvedDependencies()
+	t3.WaitForResolvedDependencies()
 	return state
 }
 

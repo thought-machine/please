@@ -187,17 +187,6 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 	return packages
 }
 
-// AddDependency adds a dependency between two build targets.
-// The 'to' target doesn't necessarily have to exist in the graph yet (but 'from' must).
-// TODO(peterebden): This now doesn't *add* dependencies, it simply waits for them to become registered. Remove.
-func (graph *BuildGraph) AddDependency(from BuildLabel, to BuildLabel) {
-	toTarget := graph.WaitForTarget(to)
-	if toTarget == nil {
-		log.Fatalf("Tried to add %s as a dependency of %s, but %s doesn't exist", to, from, to)
-	}
-	<-toTarget.dependenciesRegistered
-}
-
 // NewGraph constructs and returns a new BuildGraph.
 // Users should not attempt to construct one themselves.
 func NewGraph() *BuildGraph {

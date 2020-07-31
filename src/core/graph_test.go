@@ -33,7 +33,7 @@ func TestAllDepsBuilt(t *testing.T) {
 	target2 := makeTarget3("//src/core:target2", target1)
 	graph.AddTarget(target1)
 	graph.AddTarget(target2)
-	graph.AddDependency(target2.Label, target1.Label)
+	target2.WaitForResolvedDependencies()
 	assert.True(t, target1.AllDepsBuilt(), "Should be true because it has no dependencies")
 	assert.False(t, target2.AllDepsBuilt(), "Should be false because target1 isn't built yet")
 	target1.SyncUpdateState(Inactive, Building)

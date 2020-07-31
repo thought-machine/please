@@ -20,7 +20,9 @@ func TestFindGraphCycle(t *testing.T) {
 	graph.AddTarget(makeTarget("//third_party/go:target2", "//third_party/go:target1"))
 	graph.AddTarget(makeTarget("//third_party/go:target3", "//third_party/go:target1"))
 	graph.AddTarget(makeTarget("//third_party/go:target1"))
-	updateDependencies(graph)
+	for _, target := range graph.AllTargets() {
+		target.WaitForResolvedDependencies()
+	}
 
 	cycle := findGraphCycle(graph, graph.TargetOrDie(core.ParseBuildLabel("//src/output:target1", "")))
 	if len(cycle) == 0 {
@@ -92,16 +94,6 @@ func makeTarget(label string, deps ...string) *core.BuildTarget {
 		target.AddDependency(core.ParseBuildLabel(dep, ""))
 	}
 	return target
-}
-
-// Set dependency pointers on all contents of the graph.
-// Has to be done after to test cycles etc.
-func updateDependencies(graph *core.BuildGraph) {
-	for _, target := range graph.AllTargets() {
-		for _, dep := range target.DeclaredDependencies() {
-			graph.AddDependency(target.Label, dep)
-		}
-	}
 }
 
 func assertTarget(t *testing.T, target *core.BuildTarget, label string) {
