@@ -53,11 +53,6 @@ func (graph *BuildGraph) AddPackage(pkg *Package) {
 	if pkg, present := graph.pendingTargets.Load(key); present {
 		pkg.(*sync.Map).Range(func(k, v interface{}) bool {
 			close(v.(chan struct{}))
-			// TODO(peterebden): Temp sanity check...
-			l := BuildLabel{Subrepo: key.Subrepo, PackageName: key.Name, Name: k.(string)}
-			if graph.Target(l) == nil {
-				log.Warning("target %s still in map", l)
-			}
 			return true
 		})
 		graph.pendingTargets.Delete(key)
