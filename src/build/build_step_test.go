@@ -135,7 +135,7 @@ func TestOutputDir(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 
-	md, err := LoadTargetMetadata(target)
+	md, err := loadTargetMetadata(target)
 	require.NoError(t, err)
 
 	assert.Len(t, md.OutputDirOuts, 1)
@@ -170,7 +170,7 @@ func TestOutputDirDoubleStar(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"foo"}, target.Outputs())
 
-	md, err := LoadTargetMetadata(target)
+	md, err := loadTargetMetadata(target)
 	require.NoError(t, err)
 
 	assert.Len(t, md.OutputDirOuts, 1)
@@ -385,7 +385,7 @@ func TestBuildMetadatafileIsCreated(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, target.BuildCouldModifyTarget())
 	assert.True(t, fs.FileExists(filepath.Join(target.OutDir(), target.TargetBuildMetadataFileName())))
-	md, err := LoadTargetMetadata(target)
+	md, err := loadTargetMetadata(target)
 	require.NoError(t, err)
 	assert.Equal(t, stdOut, string(md.Stdout))
 }

@@ -376,8 +376,8 @@ func targetBuildMetadataFileName(target *core.BuildTarget) string {
 	return path.Join(target.OutDir(), target.TargetBuildMetadataFileName())
 }
 
-// LoadTargetMetadata retrieves the target metadata from a file in the output directory of this target
-func LoadTargetMetadata(target *core.BuildTarget) (*core.BuildMetadata, error) {
+// loadTargetMetadata retrieves the target metadata from a file in the output directory of this target
+func loadTargetMetadata(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	file, err := os.Open(targetBuildMetadataFileName(target))
 	if err != nil {
 		return nil, err
