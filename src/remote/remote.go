@@ -121,7 +121,7 @@ func New(state *core.BuildState) *Client {
 		origState: state,
 		instance:  state.Config.Remote.Instance,
 		outputs:   map[core.BuildLabel]*pb.Directory{},
-		mdStore:   newDirMDStore(),
+		mdStore:   newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.

@@ -261,6 +261,47 @@ func TestOutDirsSetOutsOnTarget(t *testing.T) {
 	}
 }
 
+func TestDirectoryMetadataStore(t *testing.T) {
+	cacheDuration := time.Hour
+	now := time.Now().UTC()
+
+	store := directoryMetadataStore{
+		directory:     storeDirectoryName,
+		cacheDuration: cacheDuration,
+	}
+
+	mds := map[string]*core.BuildMetadata{
+		"delete": {
+			Timestamp: now.Add(-cacheDuration * 2),
+		},
+		"keep": {
+			Timestamp: now,
+		},
+	}
+
+	for key, value := range mds {
+		err := store.storeMetadata(key, value)
+		require.NoError(t, err)
+
+		assert.FileExists(t, filepath.Join(storeDirectoryName, key[:2], key))
+	}
+
+	md, err := store.retrieveMetadata("delete")
+	require.NoError(t, err)
+	assert.Nil(t, md)
+
+	md, err = store.retrieveMetadata("keep")
+	require.NoError(t, err)
+	assert.Equal(t, md, mds["keep"])
+
+	store.clean()
+
+	assert.FileExists(t, filepath.Join(storeDirectoryName, "ke", "keep"))
+
+	_, err = os.Lstat(filepath.Join(storeDirectoryName, "de", "delete"))
+	assert.True(t, os.IsNotExist(err))
+}
+
 // Store is a small hack that stores a target's outputs for testing only.
 func (c *Client) Store(target *core.BuildTarget) error {
 	if err := c.CheckInitialised(); err != nil {
