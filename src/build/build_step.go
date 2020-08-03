@@ -961,7 +961,7 @@ func linkIfNotExists(src, dest string, f linkFunc) {
 			fullDest := path.Join(dest, name[len(src):])
 			if err := fs.EnsureDir(fullDest); err != nil {
 				log.Warning("Failed to create directory for %s: %s", fullDest, err)
-			} else if err := f(src, fullDest); err != nil && !os.IsExist(err) {
+			} else if err := f(name, fullDest); err != nil && !os.IsExist(err) {
 				log.Warning("Failed to create %s: %s", fullDest, err)
 			}
 		}
