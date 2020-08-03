@@ -256,6 +256,15 @@ func TestRecursiveInitPyCreation(t *testing.T) {
 	assert.True(t, fs.FileExists("plz-out/gen/package1/__init__.py"))
 }
 
+func TestGoModCreation(t *testing.T) {
+	state, _ := newState("//package_go/subpackage:wevs")
+	target := newPyFilegroup(state, "//package1/package2:target1", "file1.py")
+	target.AddLabel("go")
+	_, err := buildFilegroup(state, target)
+	assert.NoError(t, err)
+	assert.True(t, fs.PathExists("plz-out/go.mod"))
+}
+
 func TestCreatePlzOutGo(t *testing.T) {
 	state, target := newState("//package1:target")
 	target.AddLabel("link:plz-out/go/${PKG}/src")

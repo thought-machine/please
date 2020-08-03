@@ -12,6 +12,7 @@ package build
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"sync"
@@ -19,6 +20,9 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
+
+// Used to ensure we only write our dummy go.mod once.
+var goModOnce sync.Once
 
 // Init initialises common resources for the build package.
 func Init(state *core.BuildState) {
@@ -89,6 +93,7 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, err
 		}
 		changed = changed || fileChanged
 	}
+
 	if target.HasLabel("py") && !target.IsBinary {
 		// Pre-emptively create __init__.py files so the outputs can be loaded dynamically.
 		// It's a bit cheeky to do non-essential language-specific logic but this enables
@@ -98,6 +103,10 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, err
 			// Don't create this if someone else is going to create this in the package.
 			createInitPy(outDir)
 		}
+	}
+	if target.HasLabel("go") {
+		// Create a dummy go.mod file so Go tooling ignores the contents of plz-out.
+		goModOnce.Do(writeGoMod)
 	}
 	return changed, nil
 }
@@ -125,5 +134,13 @@ func createInitPy(dir string) {
 	dir = path.Dir(dir)
 	if dir != core.GenDir && dir != "." && !core.PathExists(path.Join(dir, "__init__.py")) {
 		createInitPy(dir)
+	}
+}
+
+func writeGoMod() {
+	const contents = "module please-ignore  // Dummy module to exclude this directory from other tools\n"
+	const filename = core.OutDir + "/go.mod"
+	if !fs.PathExists(filename) {
+		ioutil.WriteFile(filename, []byte(contents), 0644)
 	}
 }
