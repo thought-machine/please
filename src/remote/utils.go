@@ -29,7 +29,6 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
 
-	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -187,20 +186,21 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest
 	data, _ := proto.Marshal(ar)
 	metadata.RemoteAction = data
 	metadata.Timestamp = time.Now()
-	// TODO(jpoole): Similar to retrieveTargetMetadataFromCache, it would be cleaner if we could store
-	//               into the cache from an arbitrary reader.
-	if err := build.StoreTargetMetadata(target, metadata); err != nil {
-		log.Warning("%s", err)
-		return
+	if err := c.mdStore.StoreMetadata(c.metadataStoreKey(digest), metadata); err != nil {
+		log.Warningf("Failed to store build metadata for target %s: %v", target.Label, err)
 	}
-	c.state.Cache.Store(target, c.localCacheKey(digest), []string{target.TargetBuildMetadataFileName()})
+
 }
 
 // retrieveLocalResults retrieves locally cached results for a target if possible.
 // Note that this does not handle any file data, only the actionresult metadata.
 func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult) {
 	if c.state.Cache != nil {
-		if metadata := retrieveTargetMetadataFromCache(c, target, digest); metadata != nil && len(metadata.RemoteAction) > 0 {
+		metadata, err := c.mdStore.RetrieveMetadata(c.metadataStoreKey(digest))
+		if err != nil {
+			log.Warningf("Failed to retrieve stored matadata for target %s, %v", target.Label, err)
+		}
+		if metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
 			if err := proto.Unmarshal(metadata.RemoteAction, ar); err == nil {
 				if err := c.setOutputs(target, ar); err == nil {
@@ -212,27 +212,10 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 	return nil, nil
 }
 
-func retrieveTargetMetadataFromCache(c *Client, target *core.BuildTarget, digest *pb.Digest) *core.BuildMetadata {
-	if c.state.Cache.Retrieve(target, c.localCacheKey(digest), []string{target.TargetBuildMetadataFileName()}) {
-		// TODO(jpoole): Retrieving the metadata file from the cache loads it into the targets output directory. This feels like a
-		// leaky abstration. A cleaner solution might be to enable the caches to load files into a writer. We could then
-		// load metadate without having to save it to disk first.
-		md, err := build.LoadTargetMetadata(target)
-		if err != nil {
-			log.Warningf("failed to retrieve metadata from cache for target %v: %v", target.Label, err)
-			return nil
-		} else if time.Since(md.Timestamp) > time.Duration(c.state.Config.Remote.CacheDuration) {
-			log.Debug("Cached results for %s are stale, will re-query server", target)
-			return nil
-		}
-		return md
-	}
-	return nil
-}
 
-// localCacheKey returns the key we use in the local cache for a target.
+// metadataStoreKey returns the key we use to store the metadata of a target.
 // This is not the same as the digest hash since it includes the instance name (allowing them to be stored separately)
-func (c *Client) localCacheKey(digest *pb.Digest) []byte {
+func (c *Client) metadataStoreKey(digest *pb.Digest) string {
 	key, _ := hex.DecodeString(digest.Hash)
 	instance := c.state.Config.Remote.Instance
 	if len(instance) > len(key) {
@@ -241,7 +224,7 @@ func (c *Client) localCacheKey(digest *pb.Digest) []byte {
 	for i := 0; i < len(instance); i++ {
 		key[i] ^= instance[i]
 	}
-	return key
+	return hex.EncodeToString(key)
 }
 
 // outputsExist returns true if the outputs for this target exist and are up to date.

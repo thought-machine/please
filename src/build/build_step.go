@@ -192,7 +192,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			// changes from the build metadata and check if we need to build the target again
 			if target.BuildCouldModifyTarget() {
 				// needsBuilding checks that the metadata file exists so this is safe
-				metadata, err = LoadTargetMetadata(target)
+				metadata, err = loadTargetMetadata(target)
 				if err != nil {
 					return fmt.Errorf("failed to load build metadata for %s: %w", target.Label, err)
 				}
@@ -387,7 +387,7 @@ func addOutDirOutsFromMetadata(target *core.BuildTarget, md *core.BuildMetadata)
 func retrieveFromCache(cache core.Cache, target *core.BuildTarget, cacheKey []byte, files []string) *core.BuildMetadata {
 	files = append(files, target.TargetBuildMetadataFileName())
 	if ok := cache.Retrieve(target, cacheKey, files); ok {
-		md, err := LoadTargetMetadata(target)
+		md, err := loadTargetMetadata(target)
 		if err != nil {
 			log.Debugf("failed to retrieve %s build metadata from cache: %v", target.Label, err)
 			return nil

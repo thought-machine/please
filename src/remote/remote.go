@@ -85,6 +85,9 @@ type Client struct {
 	// Stats used to report RPC data rates
 	byteRateIn, byteRateOut, totalBytesIn, totalBytesOut int
 	stats                                                *statsHandler
+
+	// Used to store and retrieve action results to reduce RPC calls when re-building targets
+	mdStore buildMetadataStore
 }
 
 type actionDigestMap struct {
@@ -118,6 +121,7 @@ func New(state *core.BuildState) *Client {
 		origState: state,
 		instance:  state.Config.Remote.Instance,
 		outputs:   map[core.BuildLabel]*pb.Directory{},
+		mdStore:   newDirMDStore(),
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
