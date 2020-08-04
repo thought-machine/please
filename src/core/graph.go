@@ -47,15 +47,13 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 func (graph *BuildGraph) AddPackage(pkg *Package) {
 	key := packageKey{Name: pkg.Name, Subrepo: pkg.SubrepoName}
 	if _, loaded := graph.packages.LoadOrStore(key, pkg); loaded {
-		panic("Attempt to readd existing package: " + key.String())
+		panic("Attempt to read existing package: " + key.String())
 	}
 	// Notify anything left waiting for any targets in this package (which likely don't exist)
-	if pkg, present := graph.pendingTargets.Load(key); present {
-		pkg.(*sync.Map).Range(func(k, v interface{}) bool {
-			close(v.(chan struct{}))
-			return true
-		})
-		graph.pendingTargets.Delete(key)
+	targets, _ := graph.pendingTargets.LoadOrStore(key, &sync.Map{})
+	for label, _ := range pkg.targets {
+		ch, _ := targets.(*sync.Map).LoadOrStore(label, make(chan struct{}))
+		close(ch.(chan struct{}))
 	}
 }
 

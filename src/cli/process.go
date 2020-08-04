@@ -1,15 +1,82 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 var atexitHandlers []func()
 
 func init() {
 	go handleSignals()
+	TargetLogger.run()
+}
+
+type stringable interface {
+	String() string
+}
+
+
+type targetState struct {
+	label stringable
+	state string
+}
+type tLogger struct {
+	c chan *targetState
+	done chan string
+	targetStatuses map[string]string
+	doneTargets map[string]struct{}
+}
+
+// TODO(jpoole): delete this when done
+var TargetLogger = &tLogger{
+	c: make(chan *targetState, 100),
+	done: make(chan string, 100),
+	targetStatuses: map[string]string{},
+	doneTargets: map[string]struct{}{},
+}
+
+func (t *tLogger) run() {
+	go func() {
+		for msg := range t.c {
+			t.targetStatuses[msg.label.String()] = msg.state
+		}
+	}()
+
+	go func() {
+		for label := range t.done {
+			t.doneTargets[label] = struct {}{}
+		}
+	}()
+}
+
+func (t *tLogger) Log(label stringable, msg string, args ...interface{}) {
+	t.c <- &targetState{
+		label: label,
+		state: fmt.Sprintf(msg, args...),
+	}
+}
+
+func (t *tLogger) PrintState(){
+	time.Sleep(time.Second)
+	log.Warningf("Done:")
+	for k, _ := range t.doneTargets {
+		log.Warningf(k)
+	}
+	log.Warningf("Pending: ")
+	for k, v := range t.targetStatuses {
+		if _, ok := t.doneTargets[k]; ok {
+			continue
+		}
+		log.Warningf("%v %v", k, v)
+	}
+}
+
+func(t *tLogger) Done(label stringable) {
+	t.done <- label.String()
 }
 
 // handleSignals waits until it receives a terminating signal from the OS, at which point it executes any
@@ -27,6 +94,9 @@ func handleSignals() {
 		}
 		close(done)
 	}()
+
+	TargetLogger.PrintState()
+
 	select {
 	case <-done:
 		log.Info("All exit handlers run, shutting down process")

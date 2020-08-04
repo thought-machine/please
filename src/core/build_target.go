@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path"
@@ -570,6 +571,7 @@ func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
 	//                   but would be nice if the race detector could verify that.
 	for i := range target.dependencies {
 		info := &target.dependencies[i]
+		cli.TargetLogger.Log(target.Label, "waiting for target %v", info.declared)
 		t := graph.WaitForTarget(info.declared)
 		if t == nil {
 			continue // This doesn't exist; that will get handled later.
@@ -579,6 +581,7 @@ func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
 			info.deps = []*BuildTarget{t} // small optimisation to save looking this thing up again in the common case
 		} else {
 			for _, l := range deps {
+				cli.TargetLogger.Log(target.Label, "waiting for target %v", l)
 				t := graph.WaitForTarget(l)
 				if t == nil {
 					info.resolved = false
