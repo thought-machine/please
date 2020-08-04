@@ -1,3 +1,9 @@
+Version 15.0.1
+--------------
+
+    * Go rules now write a go.mod file to plz-out to help go tooling work better with a please repo.
+
+
 Version 15.0.0
 --------------
 
