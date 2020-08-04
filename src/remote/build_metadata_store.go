@@ -98,8 +98,6 @@ func (d *directoryMetadataStore) retrieveMetadata(key string) (*core.BuildMetada
 	if d.hasExpired(md) {
 		return nil, nil
 	}
-
-	log.Warningf("Successfully got md")
 	return md, nil
 }
 
