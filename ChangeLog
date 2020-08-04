@@ -2,7 +2,7 @@ Version 15.0.1
 --------------
 
     * Go rules now write a go.mod file to plz-out to help go tooling work better with a please repo.
-
+    * Fix links in plz-out/go/src so that they link to files rather than just the root of the repo. #1105
 
 Version 15.0.0
 --------------
