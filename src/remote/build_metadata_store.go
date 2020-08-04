@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"bytes"
 	"encoding/gob"
 	"fmt"
 	"github.com/thought-machine/please/src/core"
@@ -68,19 +69,12 @@ func (d *directoryMetadataStore) storeMetadata(key string, md *core.BuildMetadat
 		return err
 	}
 
-	mdFile, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-
-	defer mdFile.Close()
-
-	writer := gob.NewEncoder(mdFile)
+	var buf bytes.Buffer
+	writer := gob.NewEncoder(&buf)
 	if err := writer.Encode(md); err != nil {
 		return fmt.Errorf("failed to encode build metadata file: %w", err)
 	}
-
-	return nil
+	return fs.WriteFile(&buf, filename, 0644)
 }
 
 func (d *directoryMetadataStore) retrieveMetadata(key string) (*core.BuildMetadata, error) {
