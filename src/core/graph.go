@@ -10,13 +10,17 @@ import (
 	"sync"
 )
 
+type pendingTargets struct {
+	m sync.Map
+}
+
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
 	targets sync.Map
 	// Targets that have been depended on by something that we're waiting to appear.
-	pendingTargets sync.Map
+	pendingTargets pendingTargets
 	// Map of all currently known packages.
 	packages sync.Map
 	// Registered subrepos, as a map of their name to their root.
@@ -24,6 +28,26 @@ type BuildGraph struct {
 	// Reverse dependencies
 	revdeps     map[*BuildTarget][]*BuildTarget
 	revdepsOnce sync.Once
+	// checks for cycles in the graph asynchronously
+	cycleDetector *cycleDetector
+}
+
+func (p *pendingTargets) GetTargetChannel(label BuildLabel) chan struct{} {
+	pkg, _ := p.m.LoadOrStore(label.packageKey(), &sync.Map{})
+	ch, _ := pkg.(*sync.Map).LoadOrStore(label.Name, make(chan struct{}))
+	return ch.(chan struct{})
+}
+
+func (p *pendingTargets) NotifyPendingPackageTargets(key packageKey) {
+	pkg, _ := p.m.LoadOrStore(key, &sync.Map{})
+	pkg.(*sync.Map).Range(func(key, ch interface{}) bool {
+		select {
+		case <-ch.(chan struct{}):
+		default:
+			close(ch.(chan struct{}))
+		}
+		return true
+	})
 }
 
 // AddTarget adds a new target to the graph.
@@ -33,13 +57,7 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 	}
 	go target.registerDependencies(graph)
 	// Notify anything that called WaitForTarget
-	if pkg, present := graph.pendingTargets.Load(target.Label.packageKey()); present {
-		m := pkg.(*sync.Map)
-		if ch, present := m.Load(target.Label.Name); present {
-			close(ch.(chan struct{}))
-			m.Delete(target.Label.Name)
-		}
-	}
+	close(graph.pendingTargets.GetTargetChannel(target.Label))
 	return target
 }
 
@@ -49,12 +67,7 @@ func (graph *BuildGraph) AddPackage(pkg *Package) {
 	if _, loaded := graph.packages.LoadOrStore(key, pkg); loaded {
 		panic("Attempt to read existing package: " + key.String())
 	}
-	// Notify anything left waiting for any targets in this package (which likely don't exist)
-	targets, _ := graph.pendingTargets.LoadOrStore(key, &sync.Map{})
-	for label, _ := range pkg.targets {
-		ch, _ := targets.(*sync.Map).LoadOrStore(label, make(chan struct{}))
-		close(ch.(chan struct{}))
-	}
+	graph.pendingTargets.NotifyPendingPackageTargets(key)
 }
 
 // Target retrieves a target from the graph by label
@@ -83,18 +96,17 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 	return target
 }
 
-// WaitForTarget returns the given target, waiting for it to be added if it doesn't now.
+// WaitForDependency returns the given target, waiting for it to be added if it isn't yet.
 // It returns nil if the target finally turns out not to exist.
-func (graph *BuildGraph) WaitForTarget(label BuildLabel) *BuildTarget {
+func (graph *BuildGraph) WaitForDependency(self, label BuildLabel) *BuildTarget {
+	graph.cycleDetector.AddDependency(self, label)
 	if t := graph.Target(label); t != nil {
 		return t
 	} else if graph.PackageByLabel(label) != nil {
 		// Check target again to avoid race conditions
 		return graph.Target(label)
 	}
-	pkg, _ := graph.pendingTargets.LoadOrStore(label.packageKey(), &sync.Map{})
-	ch, _ := pkg.(*sync.Map).LoadOrStore(label.Name, make(chan struct{}))
-	<-ch.(chan struct{})
+	<-graph.pendingTargets.GetTargetChannel(label)
 	return graph.Target(label)
 }
 
@@ -182,7 +194,11 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 
 // NewGraph constructs and returns a new BuildGraph.
 func NewGraph() *BuildGraph {
-	return &BuildGraph{}
+	g := &BuildGraph{
+		cycleDetector: newCycleDetector(),
+	}
+	g.cycleDetector.run()
+	return g
 }
 
 // ReverseDependencies returns the set of revdeps on the given target.

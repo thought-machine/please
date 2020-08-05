@@ -97,10 +97,7 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 		} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
 			// Do nothing, we will output about this shortly.
 		} else if state.NeedBuild && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
-			// N.B. Currently targets that are added post-build are excluded here, because in some legit cases this
-			//      check can fail incorrectly. It'd be better to verify this more precisely though.
-			cycle := graphCycleMessage(state.Graph, target)
-			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, cycle)
+			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltTargetsMessage(state.Graph))
 		}
 	}
 	if state.NeedBuild && len(failedNonTests) == 0 {
@@ -736,20 +733,6 @@ func colouriseError(err error) error {
 
 // errorMessageRe is a regex to find lines that look like they're specifying a file.
 var errorMessageRe = regexp.MustCompile(`^([^ ]+\.[^: /]+):([0-9]+):(?:([0-9]+):)? *(?:([a-z-_ ]+):)? (.*)$`)
-
-// graphCycleMessage attempts to detect graph cycles and produces a readable message from it.
-func graphCycleMessage(graph *core.BuildGraph, target *core.BuildTarget) string {
-	if cycle := findGraphCycle(graph, target); len(cycle) > 0 {
-		msg := "Dependency cycle found:\n"
-		msg += fmt.Sprintf("    %s\n", cycle[len(cycle)-1].Label)
-		for i := len(cycle) - 2; i >= 0; i-- {
-			msg += fmt.Sprintf(" -> %s\n", cycle[i].Label)
-		}
-		msg += fmt.Sprintf(" -> %s\n", cycle[len(cycle)-1].Label)
-		return msg + "Sorry, but you'll have to refactor your build files to avoid this cycle."
-	}
-	return unbuiltTargetsMessage(graph)
-}
 
 // Attempts to detect cycles in the build graph. Returns an empty slice if none is found,
 // otherwise returns a slice of labels describing the cycle.

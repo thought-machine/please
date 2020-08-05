@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path"
@@ -569,27 +568,25 @@ func (target *BuildTarget) dependenciesFor(label BuildLabel) []*BuildTarget {
 func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
 	// TODO(peterebden): can we do something with the mutex here? I don't *think* it's a problem
 	//                   but would be nice if the race detector could verify that.
+
 	for i := range target.dependencies {
 		info := &target.dependencies[i]
-		cli.TargetLogger.Log(target.Label, "waiting for target %v", info.declared)
-		t := graph.WaitForTarget(info.declared)
+		t := graph.WaitForDependency(target.Label, info.declared)
 		if t == nil {
 			continue // This doesn't exist; that will get handled later.
 		}
-		info.resolved = true
 		if deps := t.ProvideFor(target); len(deps) == 1 && deps[0].Label() != nil && *deps[0].Label() == t.Label {
 			info.deps = []*BuildTarget{t} // small optimisation to save looking this thing up again in the common case
 		} else {
 			for _, l := range deps {
-				cli.TargetLogger.Log(target.Label, "waiting for target %v", l)
-				t := graph.WaitForTarget(l)
+				t := graph.WaitForDependency(target.Label, l)
 				if t == nil {
-					info.resolved = false
 					continue
 				}
 				info.deps = append(info.deps, t)
 			}
 		}
+		info.resolved = true
 	}
 	close(target.dependenciesRegistered)
 }
@@ -955,15 +952,8 @@ func (target *BuildTarget) HasDependency(label BuildLabel) bool {
 	return target.dependencyInfo(label) != nil
 }
 
-// hasResolvedDependency returns true if a particular dependency has been resolved to real targets yet.
-func (target *BuildTarget) hasResolvedDependency(label BuildLabel) bool {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
-	info := target.dependencyInfo(label)
-	return info != nil && info.resolved
-}
-
 // resolveDependency resolves a particular dependency on a target.
+// TODO(jpoole): this is only used by tests: remove
 func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget) {
 	// Important we acquire both mutexes here so the resolution & revdeps are done atomically.
 	target.mutex.Lock()
