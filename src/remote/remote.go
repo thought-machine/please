@@ -335,14 +335,19 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	needStdout := target.PostBuildFunction != nil
 	// If we're gonna stamp the target, first check the unstamped equivalent that we store results under.
 	// This implements the rules of stamp whereby we don't force rebuilds every time e.g. the SCM revision changes.
-	command, stampedDigest, unstampedDigest, err := c.buildStampedAndUnstampedAction(target)
+	var unstampedDigest *pb.Digest
+	if target.Stamp {
+		command, digest, err := c.buildAction(target, false, false)
+		if err != nil {
+			return nil, nil, nil, err
+		} else if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, false, needStdout); metadata != nil {
+			return metadata, ar, digest, nil
+		}
+		unstampedDigest = digest
+	}
+	command, stampedDigest, err := c.buildAction(target, false, true)
 	if err != nil {
 		return nil, nil, nil, err
-	}
-	if target.Stamp {
-		if metadata, ar := c.maybeRetrieveResults(tid, target, command, unstampedDigest, false, needStdout); metadata != nil {
-			return metadata, ar, stampedDigest, nil
-		}
 	}
 	metadata, ar, err := c.execute(tid, target, command, stampedDigest, target.BuildTimeout, false, needStdout)
 	if target.Stamp && err == nil {
@@ -353,6 +358,9 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 			ActionDigest: unstampedDigest,
 			ActionResult: ar,
 		})
+		c.unstampedBuildActionDigests.Put(target.Label, unstampedDigest)
+	} else {
+		c.unstampedBuildActionDigests.Put(target.Label, stampedDigest)
 	}
 	return metadata, ar, stampedDigest, err
 }
