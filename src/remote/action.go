@@ -72,22 +72,6 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 	return command, actionDigest, nil
 }
 
-// buildStampedAndUnstampedAction builds both a stamped and unstamped version of the action for a target, if it
-// needs stamping, otherwise it returns the same one twice.
-func (c *Client) buildStampedAndUnstampedAction(target *core.BuildTarget) (command *pb.Command, stamped, unstamped *pb.Digest, err error) {
-	command, unstampedDigest, err := c.buildAction(target, false, false)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	c.unstampedBuildActionDigests.Put(target.Label, unstampedDigest)
-	if !target.Stamp {
-		return command, unstampedDigest, unstampedDigest, err
-	}
-	command, stampedDigest, err := c.buildAction(target, false, true)
-	return command, stampedDigest, unstampedDigest, err
-}
-
 // buildCommand builds the command for a single target.
 func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest, isRun, stamp bool) (*pb.Command, error) {
 	if isTest {
