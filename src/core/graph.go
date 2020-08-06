@@ -98,8 +98,7 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 
 // WaitForDependency returns the given target, waiting for it to be added if it isn't yet.
 // It returns nil if the target finally turns out not to exist.
-func (graph *BuildGraph) WaitForDependency(self, label BuildLabel) *BuildTarget {
-	graph.cycleDetector.AddDependency(self, label)
+func (graph *BuildGraph) WaitForDependency(label BuildLabel) *BuildTarget {
 	if t := graph.Target(label); t != nil {
 		return t
 	} else if graph.PackageByLabel(label) != nil {
