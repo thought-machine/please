@@ -575,13 +575,6 @@ func (state *BuildState) SetTaskNumbers(active, done int64) {
 	atomic.StoreInt64(&state.progress.numDone, done)
 }
 
-// ExpandOriginalTargets expands any pseudo-targets (ie. :all, ... has already been resolved to a bunch :all targets)
-// from the set of original targets.
-// Deprecated: Callers should use ExpandOriginalLabels instead.
-func (state *BuildState) ExpandOriginalTargets() BuildLabels {
-	return state.ExpandOriginalLabels()
-}
-
 // ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
 // from the set of original labels.
 func (state *BuildState) ExpandOriginalLabels() BuildLabels {
@@ -633,7 +626,7 @@ func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel) BuildLabel
 // from the set of original targets. Hidden targets are not included.
 func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 	ret := BuildLabels{}
-	for _, target := range state.ExpandOriginalTargets() {
+	for _, target := range state.ExpandOriginalLabels() {
 		if !target.HasParent() || state.isOriginalTarget(state.Graph.TargetOrDie(target), true) {
 			ret = append(ret, target)
 		}

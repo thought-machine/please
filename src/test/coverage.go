@@ -58,7 +58,7 @@ func AddOriginalTargetsToCoverage(state *core.BuildState, includeAllFiles bool) 
 func collectCoverageFiles(state *core.BuildState, includeAllFiles bool) map[string]bool {
 	doneTargets := map[*core.BuildTarget]bool{}
 	coverageFiles := map[string]bool{}
-	for _, label := range state.ExpandOriginalTargets() {
+	for _, label := range state.ExpandOriginalLabels() {
 		collectAllFiles(state, state.Graph.TargetOrDie(label), coverageFiles, includeAllFiles, true, doneTargets)
 	}
 	return coverageFiles

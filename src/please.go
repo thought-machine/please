@@ -366,12 +366,12 @@ var buildFunctions = map[string]func() int{
 		success, state := runBuild(opts.Hash.Args.Targets, true, false, false)
 		if success {
 			if opts.Hash.Detailed {
-				for _, target := range state.ExpandOriginalTargets() {
+				for _, target := range state.ExpandOriginalLabels() {
 					build.PrintHashes(state, state.Graph.TargetOrDie(target))
 				}
 			}
 			if opts.Hash.Update {
-				hashes.RewriteHashes(state, state.ExpandOriginalTargets())
+				hashes.RewriteHashes(state, state.ExpandOriginalLabels())
 			}
 		}
 		return toExitCode(success, state)
@@ -423,13 +423,13 @@ var buildFunctions = map[string]func() int{
 	},
 	"parallel": func() int {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false, false); success {
-			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalTargets(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach))
+			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalLabels(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach))
 		}
 		return 1
 	},
 	"sequential": func() int {
 		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false, false); success {
-			os.Exit(run.Sequential(state, state.ExpandOriginalTargets(), opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env))
+			os.Exit(run.Sequential(state, state.ExpandOriginalLabels(), opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env))
 		}
 		return 1
 	},
@@ -445,7 +445,7 @@ var buildFunctions = map[string]func() int{
 			opts.Clean.Args.Targets = core.WholeGraph
 		}
 		if success, state := runBuild(opts.Clean.Args.Targets, false, false, false); success {
-			clean.Targets(state, state.ExpandOriginalTargets(), !opts.FeatureFlags.NoCache)
+			clean.Targets(state, state.ExpandOriginalLabels(), !opts.FeatureFlags.NoCache)
 			return 0
 		}
 		return 1
@@ -490,14 +490,14 @@ var buildFunctions = map[string]func() int{
 	"export": func() int {
 		success, state := runBuild(opts.Export.Args.Targets, false, false, false)
 		if success {
-			export.ToDir(state, opts.Export.Output, state.ExpandOriginalTargets())
+			export.ToDir(state, opts.Export.Output, state.ExpandOriginalLabels())
 		}
 		return toExitCode(success, state)
 	},
 	"outputs": func() int {
 		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false, true)
 		if success {
-			export.Outputs(state, opts.Export.Output, state.ExpandOriginalTargets())
+			export.Outputs(state, opts.Export.Output, state.ExpandOriginalLabels())
 		}
 		return toExitCode(success, state)
 	},
@@ -510,7 +510,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
-			query.Deps(state, state.ExpandOriginalTargets(), opts.Query.Deps.Hidden, opts.Query.Deps.Level)
+			query.Deps(state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level)
 		})
 	},
 	"revdeps": func() int {
@@ -528,22 +528,22 @@ var buildFunctions = map[string]func() int{
 	},
 	"alltargets": func() int {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
-			query.AllTargets(state.Graph, state.ExpandOriginalTargets(), opts.Query.AllTargets.Hidden)
+			query.AllTargets(state.Graph, state.ExpandOriginalLabels(), opts.Query.AllTargets.Hidden)
 		})
 	},
 	"print": func() int {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.Print(state.Graph, state.ExpandOriginalTargets(), opts.Query.Print.Fields, opts.Query.Print.Labels)
+			query.Print(state.Graph, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
 		})
 	},
 	"input": func() int {
 		return runQuery(true, opts.Query.Input.Args.Targets, func(state *core.BuildState) {
-			query.TargetInputs(state.Graph, state.ExpandOriginalTargets())
+			query.TargetInputs(state.Graph, state.ExpandOriginalLabels())
 		})
 	},
 	"output": func() int {
 		return runQuery(true, opts.Query.Output.Args.Targets, func(state *core.BuildState) {
-			query.TargetOutputs(state.Graph, state.ExpandOriginalTargets())
+			query.TargetOutputs(state.Graph, state.ExpandOriginalLabels())
 		})
 	},
 	"completions": func() int {
@@ -642,12 +642,12 @@ var buildFunctions = map[string]func() int{
 		// Don't ask it to test now since we don't know if any of them are tests yet.
 		success, state := runBuild(opts.Watch.Args.Targets, true, false, false)
 		state.NeedRun = opts.Watch.Run
-		watch.Watch(state, state.ExpandOriginalTargets(), runPlease)
+		watch.Watch(state, state.ExpandOriginalLabels(), runPlease)
 		return toExitCode(success, state)
 	},
 	"filter": func() int {
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
-			query.Filter(state, state.ExpandOriginalTargets())
+			query.Filter(state, state.ExpandOriginalLabels())
 		})
 	},
 	"intellij": func() int {
