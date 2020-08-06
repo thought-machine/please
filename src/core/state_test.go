@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExpandOriginalTargets(t *testing.T) {
+func TestExpandOriginalLabels(t *testing.T) {
 	state := NewDefaultBuildState()
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/parse", Name: "parse"}, true)
@@ -26,13 +26,13 @@ func TestExpandOriginalTargets(t *testing.T) {
 	// and target5 has 'go' but 'manual' should also take priority.
 	// //src/parse:parse doesn't have 'go' but was explicitly requested so will be
 	// added anyway.
-	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{
+	assert.Equal(t, state.ExpandOriginalLabels(), BuildLabels{
 		{PackageName: "src/core", Name: "target1"},
 		{PackageName: "src/parse", Name: "parse"},
 	})
 }
 
-func TestExpandOriginalTestTargets(t *testing.T) {
+func TestExpandOriginalTestLabels(t *testing.T) {
 	state := NewDefaultBuildState()
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
 	state.NeedTests = true
@@ -45,7 +45,7 @@ func TestExpandOriginalTestTargets(t *testing.T) {
 	addTarget(state, "//src/core:target3_test")
 	// Only the one target comes out here; it must be a test and otherwise follows
 	// the same include / exclude logic as the previous test.
-	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{{PackageName: "src/core", Name: "target1_test"}})
+	assert.Equal(t, state.ExpandOriginalLabels(), BuildLabels{{PackageName: "src/core", Name: "target1_test"}})
 }
 
 func TestExpandVisibleOriginalTargets(t *testing.T) {
@@ -57,7 +57,7 @@ func TestExpandVisibleOriginalTargets(t *testing.T) {
 	assert.Equal(t, state.ExpandVisibleOriginalTargets(), BuildLabels{{PackageName: "src/core", Name: "target1"}})
 }
 
-func TestExpandOriginalSubTargets(t *testing.T) {
+func TestExpandOriginalSubLabels(t *testing.T) {
 	state := NewDefaultBuildState()
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "..."}, true)
 	state.Include = []string{"go"}
@@ -67,13 +67,13 @@ func TestExpandOriginalSubTargets(t *testing.T) {
 	addTarget(state, "//src/core/tests:target3", "go")
 	// Only the one target comes out here; it must be a test and otherwise follows
 	// the same include / exclude logic as the previous test.
-	assert.Equal(t, state.ExpandOriginalTargets(), BuildLabels{
+	assert.Equal(t, state.ExpandOriginalLabels(), BuildLabels{
 		{PackageName: "src/core", Name: "target1"},
 		{PackageName: "src/core/tests", Name: "target3"},
 	})
 }
 
-func TestExpandOriginalTargetsOrdering(t *testing.T) {
+func TestExpandOriginalLabelsOrdering(t *testing.T) {
 	state := NewDefaultBuildState()
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/parse", Name: "parse"}, true)
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "..."}, true)
@@ -88,7 +88,7 @@ func TestExpandOriginalTargetsOrdering(t *testing.T) {
 		{PackageName: "src/core/tests", Name: "target3"},
 		{PackageName: "src/build", Name: "build"},
 	}
-	assert.Equal(t, expected, state.ExpandOriginalTargets())
+	assert.Equal(t, expected, state.ExpandOriginalLabels())
 }
 
 func TestComparePendingTasks(t *testing.T) {

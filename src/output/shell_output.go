@@ -91,7 +91,7 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 		return
 	}
 	// Check all the targets we wanted to build actually have been built.
-	for _, label := range state.ExpandOriginalTargets() {
+	for _, label := range state.ExpandOriginalLabels() {
 		if target := state.Graph.Target(label); target == nil {
 			log.Fatalf("Target %s doesn't exist in build graph", label)
 		} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
