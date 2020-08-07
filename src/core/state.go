@@ -679,7 +679,10 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 	// Nothing's registered this, set it up.
 	state.progress.pendingTargets[l] = make(chan struct{})
 	state.progress.pendingTargetMutex.Unlock()
-	state.QueueTarget(l, dependent, false, true)
+	if err := state.QueueTarget(l, dependent, false, true); err != nil {
+		log.Fatalf("%v", err)
+	}
+
 	// Do this all over; the re-checking that happens here is actually fairly important to resolve
 	// a potential race condition if the target was built between us checking earlier and registering
 	// the channel just now.
