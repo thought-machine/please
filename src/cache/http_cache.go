@@ -22,6 +22,18 @@ type httpCache struct {
 	url      string
 	writable bool
 	client   *http.Client
+
+	requestLimiter limiter
+}
+
+type limiter chan struct{}
+
+func (l limiter) acquire() {
+	l <- struct{}{}
+}
+
+func (l limiter) release() {
+	<-l
 }
 
 // mtime is the time we attach for the modification time of all files.
@@ -32,6 +44,9 @@ const nobody = 65534
 
 func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files []string) {
 	if cache.writable {
+		cache.requestLimiter.acquire()
+		defer cache.requestLimiter.release()
+
 		r, w := io.Pipe()
 		go cache.write(w, target, files)
 		req, err := http.NewRequest(http.MethodPut, cache.makeURL(key), r)
@@ -109,6 +124,9 @@ func (cache *httpCache) storeFile(tw *tar.Writer, name string) error {
 }
 
 func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, files []string) bool {
+	cache.requestLimiter.acquire()
+	defer cache.requestLimiter.release()
+
 	m, err := cache.retrieve(target, key)
 	if err != nil {
 		log.Warning("%s: Failed to retrieve files from HTTP cache: %s", target.Label, err)
@@ -190,5 +208,6 @@ func newHTTPCache(config *core.Configuration) *httpCache {
 		client: &http.Client{
 			Timeout: time.Duration(config.Cache.HTTPTimeout),
 		},
+		requestLimiter: make(limiter, config.Cache.HTTPConcurrentRequestLimit),
 	}
 }
