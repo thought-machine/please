@@ -198,11 +198,23 @@ var stampEnvOnce sync.Once
 
 func initStampEnv() {
 	repoScm := scm.NewFallback(RepoRoot)
-	revision := repoScm.CurrentRevIdentifier()
+	var wg sync.WaitGroup
+	var revision, commitDate, describe string
+	wg.Add(2)
+	go func() {
+		revision = repoScm.CurrentRevIdentifier()
+		describe = repoScm.DescribeIdentifier(revision)
+		wg.Done()
+	}()
+	go func() {
+		commitDate = repoScm.CurrentRevDate("20060102")
+		wg.Done()
+	}()
+	wg.Wait()
 	stampEnv = BuildEnv{
-		"SCM_COMMIT_DATE=" + repoScm.CurrentRevDate("20060102"),
+		"SCM_COMMIT_DATE=" + commitDate,
 		"SCM_REVISION=" + revision,
-		"SCM_DESCRIBE=" + repoScm.DescribeIdentifier(revision),
+		"SCM_DESCRIBE=" + describe,
 	}
 }
 
