@@ -43,7 +43,7 @@ func TestVerifyBadFile(t *testing.T) {
 func TestMustVerifyGoodSignature(t *testing.T) {
 	signed := readFile("src/update/test_data/test.txt")
 	signature := readFile("src/update/test_data/test.txt.asc")
-	r := mustVerifySignature(signed, signature)
+	r := mustVerifySignature(signed, signature, true)
 	b, err := ioutil.ReadAll(r)
 	assert.NoError(t, err)
 	assert.EqualValues(t, []byte("Test file for verifying release signatures.\n"), b)
@@ -52,13 +52,13 @@ func TestMustVerifyGoodSignature(t *testing.T) {
 func TestMustVerifyBadSignature(t *testing.T) {
 	signed := readFile("src/update/test_data/test.txt")
 	signature := readFile("src/update/test_data/bad.txt.asc")
-	assert.Panics(t, func() { mustVerifySignature(signed, signature) })
+	assert.Panics(t, func() { mustVerifySignature(signed, signature, true) })
 }
 
 func TestMustVerifyBadFile(t *testing.T) {
 	signed := readFile("src/update/test_data/bad.txt")
 	signature := readFile("src/update/test_data/test.txt.asc")
-	assert.Panics(t, func() { mustVerifySignature(signed, signature) })
+	assert.Panics(t, func() { mustVerifySignature(signed, signature, true) })
 }
 
 func TestMustVerifyHash(t *testing.T) {

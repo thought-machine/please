@@ -46,7 +46,7 @@ var httpClient http.Client
 // updateCommand indicates whether an update is specifically requested (due to e.g. `plz update`)
 // forceUpdate indicates whether the user passed --force on the command line, in which case we
 // will always update even if the version exists.
-func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify bool) {
+func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify bool, progress bool) {
 	if !shouldUpdate(config, updatesEnabled, updateCommand) && !forceUpdate {
 		clean(config, updateCommand)
 		return
@@ -77,7 +77,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	}
 
 	// Download it.
-	newPlease := downloadAndLinkPlease(config, verify)
+	newPlease := downloadAndLinkPlease(config, verify, progress)
 
 	// Clean out any old ones
 	clean(config, updateCommand)
@@ -132,12 +132,12 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool
 
 // downloadAndLinkPlease downloads a new Please version and links it into place, if needed.
 // It returns the new location and dies on failure.
-func downloadAndLinkPlease(config *core.Configuration, verify bool) string {
+func downloadAndLinkPlease(config *core.Configuration, verify bool, progress bool) string {
 	config.Please.Location = core.ExpandHomePath(config.Please.Location)
 	newPlease := path.Join(config.Please.Location, config.Please.Version.VersionString(), "please")
 
 	if !core.PathExists(newPlease) {
-		downloadPlease(config, verify)
+		downloadPlease(config, verify, progress)
 	}
 	if !verifyNewPlease(newPlease, config.Please.Version.VersionString()) {
 		cleanDir(path.Join(config.Please.Location, config.Please.Version.VersionString()))
@@ -147,7 +147,7 @@ func downloadAndLinkPlease(config *core.Configuration, verify bool) string {
 	return newPlease
 }
 
-func downloadPlease(config *core.Configuration, verify bool) {
+func downloadPlease(config *core.Configuration, verify bool, progress bool) {
 	newDir := path.Join(config.Please.Location, config.Please.Version.VersionString())
 	if err := os.MkdirAll(newDir, core.DirPermissions); err != nil {
 		log.Fatalf("Failed to create directory %s: %s", newDir, err)
@@ -178,7 +178,7 @@ func downloadPlease(config *core.Configuration, verify bool) {
 	}
 	v := config.Please.Version.VersionString()
 	url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.%s", url, runtime.GOOS, runtime.GOARCH, v, v, ext)
-	rc := mustDownload(url, true)
+	rc := mustDownload(url, progress)
 	defer mustClose(rc)
 	var r io.Reader = bufio.NewReader(rc)
 
@@ -189,7 +189,7 @@ func downloadPlease(config *core.Configuration, verify bool) {
 	if verify && config.Please.Version.LessThan(minSignedVersion) {
 		log.Warning("Won't verify signature of download, version is too old to be signed.")
 	} else if verify {
-		r = verifyDownload(r, url)
+		r = verifyDownload(r, url, progress)
 	} else {
 		log.Warning("Signature verification disabled for %s", url)
 	}

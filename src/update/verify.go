@@ -35,16 +35,16 @@ func verifySignature(signed, signature io.Reader) bool {
 
 // verifyDownload fetches a detached signature for a download and verifies it's OK.
 // It returns a reader to the verified content.
-func verifyDownload(signed io.Reader, url string) io.Reader {
+func verifyDownload(signed io.Reader, url string, progress bool) io.Reader {
 	signature := mustDownload(url+".asc", false)
 	defer signature.Close()
-	return mustVerifySignature(signed, signature)
+	return mustVerifySignature(signed, signature, progress)
 }
 
 // mustVerifySignature verifies an OpenPGP detached signature of a file.
 // It panics if the signature is not correct.
 // On success it returns an equivalent reader to the original.
-func mustVerifySignature(signed, signature io.Reader) io.Reader {
+func mustVerifySignature(signed, signature io.Reader, progress bool) io.Reader {
 	// We need to be able to reuse the body again afterwards so we have to
 	// download the original into a buffer.
 	b, err := ioutil.ReadAll(signed)
@@ -55,7 +55,10 @@ func mustVerifySignature(signed, signature io.Reader) io.Reader {
 	if !verifySignature(bytes.NewReader(b), signature) {
 		panic("Invalid signature on downloaded file, possible tampering; will not continue.")
 	}
-	return bufio.NewReader(cli.NewProgressReader(ioutil.NopCloser(bytes.NewReader(b)), len(b), "Extracting"))
+	if progress {
+		return bufio.NewReader(cli.NewProgressReader(ioutil.NopCloser(bytes.NewReader(b)), len(b), "Extracting"))
+	}
+	return bufio.NewReader(ioutil.NopCloser(bytes.NewReader(b)))
 }
 
 // mustVerifyHash verifies the sha256 hash of the downloaded file matches one of the given ones.
