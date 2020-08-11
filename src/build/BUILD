@@ -6,7 +6,6 @@ go_library(
     ),
     visibility = ["PUBLIC"],
     deps = [
-        "//src/cache",
         "//src/core",
         "//src/fs",
         "//src/worker",

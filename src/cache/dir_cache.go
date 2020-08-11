@@ -19,6 +19,7 @@ import (
 	"github.com/djherbis/atime"
 	"github.com/dustin/go-humanize"
 
+	"github.com/thought-machine/please/src/clean"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -299,13 +300,8 @@ func (cache *dirCache) Clean(target *core.BuildTarget) {
 }
 
 func (cache *dirCache) CleanAll() {
-	if err := core.AsyncDeleteDir(cache.Dir); err != nil {
+	if err := clean.AsyncDeleteDir(cache.Dir); err != nil {
 		log.Error("Failed to clean cache: %s", err)
-	}
-	// We used to store the cache in .plz-cache by default; we now use UserCacheDir but
-	// if the old one's there, we'll clean it out too.
-	if dir2 := path.Join(core.RepoRoot, ".plz-cache"); dir2 != cache.Dir && fs.PathExists(dir2) {
-		core.AsyncDeleteDir(dir2)
 	}
 }
 
