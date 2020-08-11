@@ -331,7 +331,7 @@ def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
 def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:bool=False,
                 visibility:list=None, licences:list=None, test_only:bool&testonly=False,
                 labels:list=[], deps:list=None, exported_deps:list=None,
-                extract:bool=False, strip_prefix:str='', _tag:str=''):
+                extract:bool=False, strip_prefix:str='', _tag:str='',exported_files=[]):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -350,16 +350,19 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
       extract (bool): Extracts the contents of the downloaded file. It must be either zip or
                       tar format.
       strip_prefix (str): When extracting, strip this prefix from the extracted files.
+      exported_files (list): A list of files to export from the archive when extracting.
     """
     if extract:
         if out:
             outs = [out]
             output_dirs = []
-            extract_location = "$OUT"
+            extract_location = "_extract_dir" if exported_files else f"{out}"
+            mv_cmds = ' && '.join([f'mv _extract_dir/{file} {out}' for file in exported_files])
         else:
             outs = []
-            output_dirs = ["_extract_dir"]
-            extract_location = "_extract_dir"
+            output_dirs = ["_out_dir"]
+            extract_location = "_extract_dir" if exported_files else "_out_dir"
+            mv_cmds = ' && '.join([f'mv _extract_dir/{file} _out_dir' for file in exported_files])
 
         remote_rule = remote_file(
             name = name,
@@ -370,10 +373,19 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
             test_only = test_only,
             labels = labels,
         )
-        if strip_prefix:
-            cmd = f'"$TOOL" x $SRCS -o "{extract_location}" -s "{strip_prefix}"'
+
+        if out:
+            cmd = 'mkdir $OUT'
         else:
-            cmd = f'"$TOOL" x $SRCS -o "{extract_location}"'
+            cmd = 'mkdir _out_dir'
+
+        cmd = f'{cmd} && "$TOOL" x $SRCS -o "{extract_location}"'
+        if strip_prefix:
+            cmd = f'{cmd} -s "{strip_prefix}"'
+
+        if mv_cmds:
+            cmd = f'{cmd} && {mv_cmds}'
+
         return build_rule(
             name = name,
             srcs = [remote_rule],
