@@ -352,7 +352,15 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
       strip_prefix (str): When extracting, strip this prefix from the extracted files.
     """
     if extract:
-        assert out, "Must pass 'out' when passing 'extract' to remote_file"
+        if out:
+            outs = [out]
+            output_dirs = []
+            extract_location = "$OUT"
+        else:
+            outs = []
+            output_dirs = ["_extract_dir"]
+            extract_location = "_extract_dir"
+
         remote_rule = remote_file(
             name = name,
             _tag = _tag + 'download',
@@ -363,13 +371,14 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
             labels = labels,
         )
         if strip_prefix:
-            cmd = '"$TOOL" x $SRCS -o "$OUT" -s ' + strip_prefix
+            cmd = f'"$TOOL" x $SRCS -o "{extract_location}" -s "{strip_prefix}"'
         else:
-            cmd = '"$TOOL" x $SRCS -o "$OUT"'
+            cmd = f'"$TOOL" x $SRCS -o "{extract_location}"'
         return build_rule(
             name = name,
             srcs = [remote_rule],
-            outs = [out],
+            outs = outs,
+            output_dirs = output_dirs,
             tools = [CONFIG.JARCAT_TOOL],
             cmd = cmd,
             binary = binary,
