@@ -605,6 +605,7 @@ def _java_toolchain(name : str, jdk_url : str|dict='', jdk:str='', visibility:li
         cmd = " && ".join([
             '"$TOOL" x $SRCS -o extract_dir',
             f'mv $(dirname $(dirname $(find extract_dir/ -name javac))) {name}',
+            f"chmod +x {name}/bin/*",
         ]),
         binary = True,
         building_description = 'Extracting...',
