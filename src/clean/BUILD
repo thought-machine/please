@@ -1,6 +1,6 @@
 go_library(
     name = "clean",
-    srcs = glob(["*.go"]),
+    srcs = ["clean.go"],
     visibility = ["PUBLIC"],
     deps = [
         "//src/build",
@@ -8,5 +8,15 @@ go_library(
         "//src/fs",
         "//src/test",
         "//third_party/go:logging",
+    ],
+)
+
+go_test(
+    name = "clean_test",
+    srcs = ["clean_test.go"],
+    deps = [
+        ":clean",
+        "//src/fs",
+        "//third_party/go:testify",
     ],
 )
