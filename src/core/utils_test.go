@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
