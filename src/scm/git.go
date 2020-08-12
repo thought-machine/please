@@ -77,7 +77,7 @@ func (g *git) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo 
 		command = []string{"diff", "--name-only", fromCommit + "...HEAD"}
 		out, err = exec.Command("git", append(command, relSuffix...)...).CombinedOutput()
 		if err != nil {
-			log.Fatalf("unable to check current branch: %s", err)
+			log.Fatalf("unable to check diff vs. %s: %s", fromCommit, err)
 		}
 		committedChanges := strings.Split(string(out), "\n")
 		files = append(files, committedChanges...)
@@ -159,7 +159,7 @@ func (g *git) parseHunks(hunks []*diff.Hunk) []int {
 
 func (g *git) Checkout(revision string) error {
 	if out, err := exec.Command("git", "checkout", revision).CombinedOutput(); err != nil {
-		return fmt.Errorf("git checkout failed: %s\n%s", err, out)
+		return fmt.Errorf("git checkout of %s failed: %s\n%s", revision, err, out)
 	}
 	return nil
 }
