@@ -2,16 +2,12 @@ package core
 
 import (
 	"bytes"
-	"crypto/rand"
 	"crypto/sha1"
-	"encoding/hex"
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/thought-machine/please/src/fs"
 )
@@ -386,38 +382,6 @@ func LookPath(filename string, paths []string) (string, error) {
 // LookBuildPath is like LookPath but takes the config's build path into account.
 func LookBuildPath(filename string, config *Configuration) (string, error) {
 	return LookPath(filename, config.Path())
-}
-
-// AsyncDeleteDir deletes a directory asynchronously.
-// First it renames the directory to something temporary and then forks to delete it.
-// The rename is done synchronously but the actual deletion is async (after fork) so
-// you don't have to wait for large directories to be removed.
-// Conversely there is obviously no guarantee about at what point it will actually cease to
-// be on disk any more.
-func AsyncDeleteDir(dir string) error {
-	rm, err := exec.LookPath("rm")
-	if err != nil {
-		return err
-	} else if !PathExists(dir) {
-		return nil // not an error, just don't need to do anything.
-	}
-	newDir, err := moveDir(dir)
-	if err != nil {
-		return err
-	}
-	// Note that we can't fork() directly and continue running Go code, but ForkExec() works okay.
-	// Hence why we're using rm rather than fork() + os.RemoveAll.
-	_, err = syscall.ForkExec(rm, []string{rm, "-rf", newDir}, nil)
-	return err
-}
-
-// moveDir moves a directory to a new location and returns that new location.
-func moveDir(dir string) (string, error) {
-	b := make([]byte, 16)
-	rand.Read(b)
-	name := path.Join(path.Dir(dir), ".plz_clean_"+hex.EncodeToString(b))
-	log.Notice("Moving %s to %s", dir, name)
-	return name, os.Rename(dir, name)
 }
 
 // PathExists is an alias to fs.PathExists.
