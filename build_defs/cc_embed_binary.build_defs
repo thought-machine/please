@@ -64,7 +64,7 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
         ])
         tools['asm'] = [CONFIG.ASM_TOOL]
     else:
-        cmd = '$TOOLS_LD -r --format binary -z noexecstack %s -o "${OUTS/.a/.o}" $SRC && $TOOLS_JARCAT ar --srcs "${OUTS/.a/.o}" && $TOOLS_AR s "$OUTS"' % CONFIG.DEFAULT_LDFLAGS
+        cmd = '$TOOLS_LD -r --format binary -z noexecstack -m elf_$XARCH %s -o "${OUTS/.a/.o}" $SRC && $TOOLS_JARCAT ar --srcs "${OUTS/.a/.o}" && $TOOLS_AR s "$OUTS"' % CONFIG.DEFAULT_LDFLAGS
         tools['ld'] = [CONFIG.LD_TOOL]
 
     lib_rule = build_rule(
