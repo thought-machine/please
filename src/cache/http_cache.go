@@ -142,13 +142,14 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, er
 	resp, err := cache.client.Do(req)
 	if err != nil {
 		return false, err
-	} else if resp.StatusCode == http.StatusNotFound {
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
 		return false, nil // doesn't exist - not an error
 	} else if resp.StatusCode != http.StatusOK {
 		b, _ := ioutil.ReadAll(resp.Body)
 		return false, fmt.Errorf("%s", string(b))
 	}
-	defer resp.Body.Close()
 	gzr, err := gzip.NewReader(resp.Body)
 	if err != nil {
 		return false, err
