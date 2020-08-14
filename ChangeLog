@@ -11,7 +11,7 @@ Version 15.1.0
       files from the archive. The out parameter is now also optional and if it is not
       provided, the files are extracted into the root of the rule's output. #1123
     * Updated please to use go 1.15
-    * HTTP cache now cleans connections more robustly #1129
+    * HTTP cache now cleans up connections more robustly #1129
     * `plz clean --nobackground` now cleans read only files #1122
     * Support for custom output name for sh_binary rules #1119
 
