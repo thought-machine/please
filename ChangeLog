@@ -1,9 +1,30 @@
+Version 15.1.0
+--------------
+
+    * Some improvements around git operations and stamping targets. There's
+      performance improvements (#1114 and #1113) as well as better error
+      reporting (#1125)
+    * New configuration option to limit the number of concurrent http cache
+      requests. The default limit is 20. #1115
+    * Made plz update respect the plain output flag #1120
+    * Some improvements to the remote file so that it can extract a subset of
+      files from the archive. The out parameter is now also optional and if it is not
+      provided, the files are extracted into the root of the rule's output. #1123
+    * Updated please to use go 1.15
+    * HTTP cache now cleans up connections more robustly #1129
+    * `plz clean --nobackground` now cleans read only files #1122
+    * Support for custom output name for sh_binary rules #1119
+
+
 Version 15.0.1
 --------------
 
-    * Go rules now write a go.mod file to plz-out to help go tooling work better with a please repo.
-    * Fix links in plz-out/go/src so that they link to files rather than just the root of the repo. #1105
-    * Fixed the --rerun flag on tests for remote execution to force a re-run of an already passed test. #1100
+    * Go rules now write a go.mod file to plz-out to help go tooling work better
+      with a please repo.
+    * Fix links in plz-out/go/src so that they link to files rather than just the
+      root of the repo. #1105
+    * Fixed the --rerun flag on tests for remote execution to force a re-run of an
+      already passed test. #1100
 
 
 Version 15.0.0
