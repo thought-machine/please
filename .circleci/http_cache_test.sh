@@ -14,7 +14,10 @@ ln -s "${DIR}/please" "${DIR}/plz"
 export PATH="$DIR:$PATH"
 
 # Start the server in the background
-plz run -p -v notice --colour --detach //tools/http_cache -- -p 1771 -d plz-out/http_cache
+plz run parallel -p -v notice --colour --detach //tools/http_cache:run_local
 
 # Test we can rebuild plz itself.
+plz test --profile localcache -p -v notice --colour //src/...
+
+# Run that again to make sure cache restoration works
 plz test --profile localcache -p -v notice --colour //src/...

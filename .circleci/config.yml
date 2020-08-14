@@ -182,7 +182,7 @@ jobs:
            at: /tmp/workspace
        - run:
            name: Test HTTP Cache
-           command: ./.circleci/http_cahce_test.sh
+           command: ./.circleci/http_cache_test.sh
        - store_test_results:
            path: plz-out/results
        - store_artifacts:
@@ -230,12 +230,16 @@ workflows:
       - test-rex:
           requires:
             - build-linux
+      - test-http-cache:
+          requires:
+            - build-linux
       - release:
           requires:
             - build-linux
             - build-linux-alt
             - build-darwin
             - test-rex
+            - test-http-cache
           filters:
             branches:
               only: master
