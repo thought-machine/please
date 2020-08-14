@@ -15,8 +15,8 @@ var log = logging.MustGetLogger("httpcache")
 var opts = struct {
 	Usage     string
 	Verbosity cli.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
-	CacheDir string `short:"d" long:"dir" default:"" description:"The directory to use to store cached artifacts."`
-	Port int `short:"p" long:"port" description:"The port to run the server on"`
+	CacheDir  string        `short:"d" long:"dir" default:"" description:"The directory to use to store cached artifacts."`
+	Port      int           `short:"p" long:"port" description:"The port to run the server on"`
 }{
 	Usage: `
 HTTP cache implements a resource based http server that please can use as a cache. The cache supports storing files
@@ -25,7 +25,7 @@ cache for please however this is a light weight and easy to configure option.
 `,
 }
 
-func main(){
+func main() {
 	cli.ParseFlagsOrDie("HTTP Cache", &opts)
 
 	if opts.CacheDir == "" {
