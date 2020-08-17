@@ -171,6 +171,23 @@ jobs:
            key: elan-v3-{{ checksum "third_party/go/BUILD" }}
            paths: [ "plz-out/elan" ]
 
+   test-http-cache:
+     working_directory: ~/please
+     docker:
+       - image: thoughtmachine/please_ubuntu:20200812
+     resource_class: large
+     steps:
+       - checkout
+       - attach_workspace:
+           at: /tmp/workspace
+       - run:
+           name: Test HTTP Cache
+           command: ./.circleci/http_cache_test.sh
+       - store_test_results:
+           path: plz-out/results
+       - store_artifacts:
+           path: plz-out/log
+
    release:
      docker:
        - image: thoughtmachine/please_docs:20190318
@@ -213,12 +230,16 @@ workflows:
       - test-rex:
           requires:
             - build-linux
+      - test-http-cache:
+          requires:
+            - build-linux
       - release:
           requires:
             - build-linux
             - build-linux-alt
             - build-darwin
             - test-rex
+            - test-http-cache
           filters:
             branches:
               only: master
