@@ -882,8 +882,9 @@ def _create_gopkg_flags(var:str, flag:str):
     gopath = f"echo $GOPATH | awk -F: '{{OFS=ORS;for(k=1;k<=NF;k++){{print $k,$k\"/{suffix}\"}}}}'"
     search = f'find "$TMP_DIR" -type d -path "*/{suffix}"'
     gopkgs = f'sort -u <({gopath}) <({search})'
+    setvar = f'declare -a {var}; while read -r FN; do {var}+=("$FN"); done'
 
-    return f"GOPATH=\"{CONFIG.GOPATH}\" && mapfile -t {var} < <({gopkgs} | awk '{{OFS=ORS;print \"{flag}\",$0}}')"
+    return f"GOPATH=\"{CONFIG.GOPATH}\" && {setvar} < <({gopkgs} | awk '{{OFS=ORS;print \"{flag}\",$0}}')"
 
 def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False):
     """Returns the commands to run for building a Go library."""
