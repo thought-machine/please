@@ -19,5 +19,8 @@ plz run parallel -p -v notice --colour --detach //tools/http_cache:run_local
 # Test we can rebuild plz itself.
 plz test --profile localcache -p -v notice --colour //src/...
 
+# Clean out plz-out and the dir cache. This doesn't clean the http cache.
+plz clean -f
+
 # Run that again to make sure cache restoration works
 plz test --profile localcache -p -v notice --colour //src/...
