@@ -364,6 +364,15 @@ func TestCheckRuleHashes(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestFetchLocalRemoteFile(t *testing.T) {
+	state, target := newState("//package4:target2")
+	target.AddSource(core.URLLabel("file://" + os.Getenv("TMP_DIR") + "/src/build/test_data/local_remote_file.txt"))
+	target.AddOutput("local_remote_file.txt")
+	err := fetchRemoteFile(state, target)
+	assert.NoError(t, err)
+	assert.True(t, fs.FileExists(path.Join(target.TmpDir(), "local_remote_file.txt")))
+}
+
 func TestBuildMetadatafileIsCreated(t *testing.T) {
 	stdOut := "wibble wibble wibble"
 
