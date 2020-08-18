@@ -365,12 +365,36 @@ func TestCheckRuleHashes(t *testing.T) {
 }
 
 func TestFetchLocalRemoteFile(t *testing.T) {
+	state, target := newState("//package4:target1")
+	target.AddSource(core.URLLabel("file://" + os.Getenv("TMP_DIR") + "/src/build/test_data/local_remote_file.txt"))
+	target.AddOutput("local_remote_file.txt")
+
+	// Temporarily reset the repo root so we can test this locally
+	oldRoot := core.RepoRoot
+	core.RepoRoot = "/wibble"
+	defer func() {
+		core.RepoRoot = oldRoot
+	}()
+
+	err := fetchRemoteFile(state, target)
+	assert.NoError(t, err)
+	assert.True(t, fs.FileExists(path.Join(target.TmpDir(), "local_remote_file.txt")))
+}
+
+func TestFetchLocalRemoteFileCannotBeRelative(t *testing.T) {
+	state, target := newState("//package4:target2")
+	target.AddSource(core.URLLabel("src/build/test_data/local_remote_file.txt"))
+	target.AddOutput("local_remote_file.txt")
+	err := fetchRemoteFile(state, target)
+	assert.Error(t, err)
+}
+
+func TestFetchLocalRemoteFileCannotBeWithinRepo(t *testing.T) {
 	state, target := newState("//package4:target2")
 	target.AddSource(core.URLLabel("file://" + os.Getenv("TMP_DIR") + "/src/build/test_data/local_remote_file.txt"))
 	target.AddOutput("local_remote_file.txt")
 	err := fetchRemoteFile(state, target)
-	assert.NoError(t, err)
-	assert.True(t, fs.FileExists(path.Join(target.TmpDir(), "local_remote_file.txt")))
+	assert.Error(t, err)
 }
 
 func TestBuildMetadatafileIsCreated(t *testing.T) {
