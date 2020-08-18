@@ -42,6 +42,9 @@ information.
 Building Please
 ===============
 
+If you're looking to get involved, check out the contributor 
+[guidance](CONTRIBUTING.md) to help you get started. 
+
 To build Please yourself, run `./bootstrap.sh` in the repo root.
 This will bootstrap a minimal version of Please using Go and then
 rebuild it using itself.
