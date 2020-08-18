@@ -1004,6 +1004,24 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	if err != nil {
 		return err
 	}
+	defer f.Close()
+	if strings.HasPrefix(url, "file://") {
+		filename := strings.TrimPrefix(url, "file://")
+		if !path.IsAbs(filename) {
+			return fmt.Errorf("URL %s must be an absolute path", url)
+		} else if strings.HasPrefix(filename, core.RepoRoot) {
+			return fmt.Errorf("URL %s is within the repo, you cannot use remote_file for this", url)
+		}
+		fromfile, err := os.Open(filename)
+		if err != nil {
+			return fmt.Errorf("Error copying %s: %w", url, err)
+		}
+		defer fromfile.Close()
+		if _, err := io.Copy(f, fromfile); err != nil {
+			return fmt.Errorf("Error copying %s: %w", url, err)
+		}
+		return nil
+	}
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return err
@@ -1019,12 +1037,12 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 		}
 	}
 	target.ShowProgress = true // Required for it to actually display
-	h := sha1.New()
+	h := state.PathHasher.NewHash()
 	if _, err := io.Copy(io.MultiWriter(f, h), r); err != nil {
 		return err
 	}
 	state.PathHasher.SetHash(tmpPath, h.Sum(nil))
-	return f.Close()
+	return nil
 }
 
 // A progressReader tracks progress from a HTTP response and marks it on the given target.
