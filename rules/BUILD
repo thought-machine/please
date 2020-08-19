@@ -18,3 +18,18 @@ go_library(
     srcs = [":builtin_data"],
     visibility = ["PUBLIC"],
 )
+
+sh_cmd(
+    name = "generate",
+    cmd = "cp $(out_location :builtin_data) rules/rules.go",
+    data = [":builtin_data"],
+)
+
+sh_test(
+    name = "up_to_date_test",
+    src = "up_to_date_test.sh",
+    data = {
+        "BIN_DATA": [":builtin_data"],
+        "GENERATED": ["rules.go"],
+    },
+)
