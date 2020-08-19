@@ -71,6 +71,7 @@ filegroup(
         "images/thoughtmachine.png",
         "plz-recording.json",
         "//third_party/js:asciinema",
+        "favicon",
     ],
 )
 
