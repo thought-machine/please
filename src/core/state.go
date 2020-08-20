@@ -219,12 +219,10 @@ type stateProgress struct {
 	numDone    int64
 	mutex      sync.Mutex
 	closeOnce  sync.Once
-	// Used to track subinclude() calls that block until targets are built.
-	pendingTargets     map[BuildLabel]chan struct{}
-	pendingTargetMutex sync.Mutex
-	// Used to track general package parsing requests.
-	pendingPackages     map[packageKey]chan struct{}
-	pendingPackageMutex sync.Mutex
+	// Used to track subinclude() calls that block until targets are built. Keyed by their label.
+	pendingTargets sync.Map
+	// Used to track general package parsing requests. Keyed by a packageKey struct.
+	pendingPackages sync.Map
 	// The set of known states
 	allStates []*BuildState
 	// Targets that we were originally requested to build
@@ -469,15 +467,10 @@ func (state *BuildState) Hasher(name string) *fs.PathHasher {
 // LogBuildResult logs the result of a target either building or parsing.
 func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
 	if status == PackageParsed {
-		func() {
-			// We may have parse tasks waiting for this package to exist, check for them.
-			state.progress.pendingPackageMutex.Lock()
-			defer state.progress.pendingPackageMutex.Unlock()
-
-			if ch, present := state.progress.pendingPackages[packageKey{Name: label.PackageName, Subrepo: label.Subrepo}]; present {
-				close(ch) // This signals to anyone waiting that it's done.
-			}
-		}()
+		// We may have parse tasks waiting for this package to exist, check for them.
+		if ch, present := state.progress.pendingPackages.Load(packageKey{Name: label.PackageName, Subrepo: label.Subrepo}); present {
+			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
+		}
 		return // We don't notify anything else on these.
 	}
 	state.LogResult(&BuildResult{
@@ -489,15 +482,10 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 		Description: description,
 	})
 	if status == TargetBuilt || status == TargetCached {
-		func() {
-			// We may have parse tasks waiting for this guy to build, check for them.
-			state.progress.pendingTargetMutex.Lock()
-			defer state.progress.pendingTargetMutex.Unlock()
-
-			if ch, present := state.progress.pendingTargets[label]; present {
-				close(ch) // This signals to anyone waiting that it's done.
-			}
-		}()
+		// We may have parse tasks waiting for this guy to build, check for them.
+		if ch, present := state.progress.pendingTargets.Load(label); present {
+			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
+		}
 	}
 }
 
@@ -649,16 +637,9 @@ func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
 	if p := state.Graph.PackageByLabel(label); p != nil {
 		return p
 	}
-	key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
-	state.progress.pendingPackageMutex.Lock()
-	if ch, present := state.progress.pendingPackages[key]; present {
-		state.progress.pendingPackageMutex.Unlock()
-		<-ch
-		return state.Graph.PackageByLabel(label)
+	if ch, present := state.progress.pendingPackages.LoadOrStore(packageKey{Name: label.PackageName, Subrepo: label.Subrepo}, make(chan struct{})); present {
+		<-ch.(chan struct{})
 	}
-	// Nothing's registered this so we do it ourselves.
-	state.progress.pendingPackages[key] = make(chan struct{})
-	state.progress.pendingPackageMutex.Unlock()
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
 }
 
@@ -675,18 +656,14 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 	}
 	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
-	state.progress.pendingTargetMutex.Lock()
-	if ch, present := state.progress.pendingTargets[l]; present {
+	ch, present := state.progress.pendingTargets.LoadOrStore(l, make(chan struct{}))
+	if present {
 		// Something's already registered for this, get on the train
-		state.progress.pendingTargetMutex.Unlock()
-		<-ch
+		<-ch.(chan struct{})
 		t := state.Graph.Target(l)
 		state.ensureDownloaded(t)
 		return t
 	}
-	// Nothing's registered this, set it up.
-	state.progress.pendingTargets[l] = make(chan struct{})
-	state.progress.pendingTargetMutex.Unlock()
 	if err := state.QueueTarget(l, dependent, false, true); err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -939,12 +916,10 @@ func NewBuildState(config *Configuration) *BuildState {
 		OriginalArch:    cli.HostArch(),
 		Stats:           &SystemStats{},
 		progress: &stateProgress{
-			numActive:       1, // One for the initial target adding on the main thread.
-			numRunning:      1, // Similarly.
-			numPending:      1,
-			pendingTargets:  map[BuildLabel]chan struct{}{},
-			pendingPackages: map[packageKey]chan struct{}{},
-			success:         true,
+			numActive:  1, // One for the initial target adding on the main thread.
+			numRunning: 1, // Similarly.
+			numPending: 1,
+			success:    true,
 		},
 	}
 	state.PathHasher = state.Hasher(config.Build.HashFunction)
