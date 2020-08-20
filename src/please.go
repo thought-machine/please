@@ -24,7 +24,6 @@ import (
 	"github.com/thought-machine/please/src/gc"
 	"github.com/thought-machine/please/src/hashes"
 	"github.com/thought-machine/please/src/help"
-	"github.com/thought-machine/please/src/ide/intellij"
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/src/query"
@@ -342,14 +341,6 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
 	} `command:"query" description:"Queries information about the build graph"`
-
-	Ide struct {
-		IntelliJ struct {
-			Args struct {
-				Labels []core.BuildLabel `positional-arg-name:"labels" description:"Targets to include."`
-			} `positional-args:"true"`
-		} `command:"intellij" description:"Export intellij structure for the given targets and their dependencies."`
-	} `command:"ide" description:"IDE Support and generation."`
 }
 
 // Definitions of what we do for each command.
@@ -649,13 +640,6 @@ var buildFunctions = map[string]func() int{
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
 			query.Filter(state, state.ExpandOriginalLabels())
 		})
-	},
-	"intellij": func() int {
-		success, state := runBuild(opts.Ide.IntelliJ.Args.Labels, false, false, false)
-		if success {
-			intellij.ExportIntellijStructure(state.Config, state.Graph, state.ExpandOriginalLabels())
-		}
-		return toExitCode(success, state)
 	},
 }
 
