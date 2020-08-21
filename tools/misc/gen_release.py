@@ -90,7 +90,7 @@ class ReleaseGen:
         arch = 'darwin_amd64' if 'darwin' in artifact else 'linux_amd64'
         filename = os.path.basename(artifact).replace(self.version, self.version + '_' + arch)
         _, ext = os.path.splitext(filename)
-        content_type = self.known_content_types[ext]
+        content_type = self.known_content_types.get(ext, 'application/octet-stream')
         url = self.upload_url + filename
         if FLAGS.dry_run:
             log.info('Would upload %s to %s as %s', filename, url, content_type)
