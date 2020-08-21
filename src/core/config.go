@@ -245,6 +245,7 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.HTTPWriteable = true
 	config.Cache.HTTPTimeout = cli.Duration(25 * time.Second)
 	config.Cache.HTTPConcurrentRequestLimit = 20
+	config.Cache.HTTPRetry = 4
 	if dir, err := os.UserCacheDir(); err == nil {
 		config.Cache.Dir = path.Join(dir, "please")
 	}
@@ -381,6 +382,7 @@ type Configuration struct {
 		HTTPWriteable              bool         `help:"If True this plz instance will write content back to the HTTP cache.\nBy default it runs in read-only mode."`
 		HTTPTimeout                cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`
 		HTTPConcurrentRequestLimit int          `help:"The maximum amount of concurrent requests that can be open. Default 20."`
+		HTTPRetry                  int          `help:"The maximum number of retries before a request will give up, if a request is retryable"`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
 		Timeout         cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`

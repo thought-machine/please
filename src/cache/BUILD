@@ -13,6 +13,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//third_party/go:atime",
+        "//third_party/go:go-retryablehttp",
         "//third_party/go:humanize",
         "//third_party/go:logging",
     ],
