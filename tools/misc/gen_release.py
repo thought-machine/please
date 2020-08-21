@@ -87,7 +87,7 @@ class ReleaseGen:
     def upload(self, artifact:str):
         """Uploads the given artifact to the new release."""
         # Artifact names aren't unique between OSs; make them so.
-        arch = 'darwin_amd64' if 'darwin' in artifact else 'linux_amd64'
+        arch = 'darwin_amd64' if 'darwin' in artifact else 'freebsd_amd64' if 'freebsd' in artifact else 'linux_amd64'
         filename = os.path.basename(artifact).replace(self.version, self.version + '_' + arch)
         _, ext = os.path.splitext(filename)
         content_type = self.known_content_types[ext]
