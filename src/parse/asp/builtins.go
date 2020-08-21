@@ -719,7 +719,18 @@ func getLicences(s *scope, args []pyObject) pyObject {
 // getCommand gets the command of a target, optionally for a configuration.
 func getCommand(s *scope, args []pyObject) pyObject {
 	target := getTargetPost(s, string(args[0].(pyString)))
-	return pyString(target.GetCommandConfig(string(args[1].(pyString))))
+	config := string(args[1].(pyString))
+	if config != "" {
+		return pyString(target.GetCommandConfig(config))
+	}
+	if len(target.Commands) > 0 {
+		commands := pyDict{}
+		for config, cmd := range target.Commands {
+			commands[config] = pyString(cmd)
+		}
+		return commands
+	}
+	return pyString(target.Command)
 }
 
 // valueAsJSON returns a JSON-formatted string representation of a plz value.

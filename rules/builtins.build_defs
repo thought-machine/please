@@ -225,7 +225,7 @@ def add_licence(target:str, licence:str):
     pass
 def get_licences(target:str):
     pass
-def get_command(target:str, config:str='') -> str:
+def get_command(target:str, config:str=''):
     pass
 def set_command(target:str, config:str, command:str=''):
     pass
