@@ -61,10 +61,14 @@ genrule(
 )
 
 filegroup(
-    name = "tarballs",
+    name = "release_files",
     srcs = [
         ":please_tarball",
         ":please_tarball_xz",
+    ],
+    deps = [
+        ":please",
+        ":jarcat",
     ],
     labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
 )

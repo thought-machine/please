@@ -28,7 +28,7 @@ jobs:
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
-             - linux_amd64/please_*.tar.*
+             - linux_amd64/*
              - gen_release.pex
              - release_signer
              - docs.tar.gz
@@ -103,11 +103,11 @@ jobs:
            command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch freebsd_amd64 //package:all
+           command: ./please/please build -p --profile ci --arch freebsd_amd64 //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
-             - freebsd_amd64/please_*.tar.*
+             - freebsd_amd64/*
        - store_artifacts:
            path: plz-out/log
        - save_cache:
@@ -155,11 +155,11 @@ jobs:
            path: plz-out/log
        - run:
            name: Package
-           command: ./plz-out/bin/src/please build //package:all -p
+           command: ./plz-out/bin/src/please build //package:release_files -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
-             - darwin_amd64/please_*.tar.*
+             - darwin_amd64/*
        - store_artifacts:
            path: /tmp/artifacts
        - save_cache:
