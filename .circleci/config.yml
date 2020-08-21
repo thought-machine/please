@@ -87,6 +87,33 @@ jobs:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
 
+   build-freebsd:
+     working_directory: ~/please
+     docker:
+       - image: thoughtmachine/please_freebsd_builder:20200820
+     resource_class: large
+     steps:
+       - checkout
+       - attach_workspace:
+           at: /tmp/workspace
+       - restore_cache:
+           key: go-freebsd-v1-{{ checksum "third_party/go/BUILD" }}
+       - run:
+           name: Extract plz
+           command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
+       - run:
+           name: Cross-compile
+           command: ./please/please build -p --profile ci --arch freebsd_amd64 //package:all
+       - persist_to_workspace:
+           root: plz-out/pkg
+           paths:
+             - freebsd_amd64/please_*.tar.*
+       - store_artifacts:
+           path: plz-out/log
+       - save_cache:
+           key: go-freebsd-v1-{{ checksum "third_party/go/BUILD" }}
+           paths: [ ".plz-cache/third_party/go" ]
+
    lint:
      working_directory: ~/please
      docker:
@@ -197,7 +224,7 @@ jobs:
        - add_ssh_keys:
            fingerprints:
              - "cc:57:b9:67:31:65:a6:70:8c:e3:e7:90:ca:e6:a6:41"
-       - run: /tmp/workspace/gen_release.pex --signer /tmp/workspace/release_signer /tmp/workspace/linux_amd64/* /tmp/workspace/darwin_amd64/*
+       - run: /tmp/workspace/gen_release.pex --signer /tmp/workspace/release_signer /tmp/workspace/*_amd64/*
 
    docs:
      docker:
@@ -227,6 +254,9 @@ workflows:
           requires:
             - build-linux
             - build-linux-alt
+      - build-freebsd:
+          requires:
+            - build-linux
       - test-rex:
           requires:
             - build-linux
@@ -235,6 +265,7 @@ workflows:
             - build-linux
       - release:
           requires:
+            - build-freebsd
             - build-linux
             - build-linux-alt
             - build-darwin
