@@ -46,8 +46,8 @@ genrule(
     name = "please",
     srcs = ["//src:please"],
     outs = ["please_" + VERSION],
-    cmd = "mv $SRC $OUT",
     binary = True,
+    cmd = "mv $SRC $OUT",
     labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
 )
 
@@ -55,8 +55,8 @@ genrule(
     name = "jarcat",
     srcs = ["//tools/jarcat"],
     outs = ["jarcat_" + VERSION],
-    cmd = "mv $SRC $OUT",
     binary = True,
+    cmd = "mv $SRC $OUT",
     labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
 )
 
@@ -66,11 +66,11 @@ filegroup(
         ":please_tarball",
         ":please_tarball_xz",
     ],
-    deps = [
-        ":please",
-        ":jarcat",
-    ],
     labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
+    deps = [
+        ":jarcat",
+        ":please",
+    ],
 )
 
 filegroup(
