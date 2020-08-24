@@ -206,7 +206,7 @@ type BuildTarget struct {
 	// List of reverse dependencies of this target
 	reverseDeps []*BuildTarget `print:"false"`
 	// Used to arbitrate concurrent access to dependencies
-	mutex sync.Mutex `print:"false"`
+	mutex sync.RWMutex `print:"false"`
 	// Used to notify once all dependencies are registered.
 	dependenciesRegistered chan struct{} `print:"false"`
 	// Used to notify once this target has built successfully.
@@ -461,8 +461,8 @@ func (target *BuildTarget) AllURLs(config *Configuration) []string {
 
 // DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).
 func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, len(target.dependencies))
 	for i, dep := range target.dependencies {
 		ret[i] = dep.declared
@@ -473,8 +473,8 @@ func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 
 // DeclaredDependenciesStrict returns the original declaration of this target's dependencies.
 func (target *BuildTarget) DeclaredDependenciesStrict() []BuildLabel {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, dep := range target.dependencies {
 		if !dep.exported && !dep.source && !target.IsTool(dep.declared) {
@@ -487,8 +487,8 @@ func (target *BuildTarget) DeclaredDependenciesStrict() []BuildLabel {
 
 // Dependencies returns the resolved dependencies of this target.
 func (target *BuildTarget) Dependencies() []*BuildTarget {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
 		for _, dep := range deps.deps {
@@ -501,8 +501,8 @@ func (target *BuildTarget) Dependencies() []*BuildTarget {
 
 // ExternalDependencies returns the non-internal dependencies of this target (i.e. not "_target#tag" ones).
 func (target *BuildTarget) ExternalDependencies() []*BuildTarget {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
 		for _, dep := range deps.deps {
@@ -519,8 +519,8 @@ func (target *BuildTarget) ExternalDependencies() []*BuildTarget {
 
 // BuildDependencies returns the build-time dependencies of this target (i.e. not data and not internal).
 func (target *BuildTarget) BuildDependencies() []*BuildTarget {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
 		if !deps.data && !deps.internal {
@@ -535,8 +535,8 @@ func (target *BuildTarget) BuildDependencies() []*BuildTarget {
 
 // ExportedDependencies returns any exported dependencies of this target.
 func (target *BuildTarget) ExportedDependencies() []BuildLabel {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, info := range target.dependencies {
 		if info.exported {
@@ -548,8 +548,8 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 
 // DependenciesFor returns the dependencies that relate to a given label.
 func (target *BuildTarget) DependenciesFor(label BuildLabel) []*BuildTarget {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	return target.dependenciesFor(label)
 }
 
@@ -741,8 +741,8 @@ func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f b
 
 // AllDepsBuilt returns true if all the dependencies of a target are built.
 func (target *BuildTarget) AllDepsBuilt() bool {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	for _, deps := range target.dependencies {
 		if !deps.resolved {
 			return false
@@ -758,8 +758,8 @@ func (target *BuildTarget) AllDepsBuilt() bool {
 
 // UnbuiltDeps returns the dependencies of this target that have not yet built.
 func (target *BuildTarget) UnbuiltDeps() []string {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	ret := []string{}
 	for _, deps := range target.dependencies {
 		if !deps.resolved {
@@ -784,8 +784,8 @@ func (target *BuildTarget) AllDependenciesResolved() bool {
 // UnresolvedDependencies returns the list of dependencies for this target that aren't resolved yet.
 func (target *BuildTarget) UnresolvedDependencies() BuildLabels {
 	ret := []BuildLabel{}
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	for _, deps := range target.dependencies {
 		if !deps.resolved {
 			ret = append(ret, deps.declared)
@@ -948,15 +948,14 @@ func (target *BuildTarget) AllSecrets() []string {
 
 // HasDependency checks if a target already depends on this label.
 func (target *BuildTarget) HasDependency(label BuildLabel) bool {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	return target.dependencyInfo(label) != nil
 }
 
 // resolveDependency resolves a particular dependency on a target.
 // TODO(jpoole): this is only used by tests: remove
 func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget) {
-	// Important we acquire both mutexes here so the resolution & revdeps are done atomically.
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
 	info := target.dependencyInfo(label)
@@ -1090,8 +1089,8 @@ func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
 
 // ProvideFor returns the build label that we'd provide for the given target.
 func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	ret := []BuildLabel{}
 	if target.Provides != nil && len(other.Requires) != 0 {
 		// Never do this if the other target has a data or tool dependency on us.

@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/OneOfOne/cmap"
 	"github.com/Workiva/go-datastructures/queue"
 
 	"github.com/thought-machine/please/src/cli"
@@ -220,9 +221,9 @@ type stateProgress struct {
 	mutex      sync.Mutex
 	closeOnce  sync.Once
 	// Used to track subinclude() calls that block until targets are built. Keyed by their label.
-	pendingTargets sync.Map
+	pendingTargets *cmap.CMap
 	// Used to track general package parsing requests. Keyed by a packageKey struct.
-	pendingPackages sync.Map
+	pendingPackages *cmap.CMap
 	// The set of known states
 	allStates []*BuildState
 	// Targets that we were originally requested to build
@@ -468,7 +469,7 @@ func (state *BuildState) Hasher(name string) *fs.PathHasher {
 func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
 	if status == PackageParsed {
 		// We may have parse tasks waiting for this package to exist, check for them.
-		if ch, present := state.progress.pendingPackages.Load(packageKey{Name: label.PackageName, Subrepo: label.Subrepo}); present {
+		if ch, present := state.progress.pendingPackages.GetOK(packageKey{Name: label.PackageName, Subrepo: label.Subrepo}); present {
 			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
 		}
 		return // We don't notify anything else on these.
@@ -483,7 +484,7 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 	})
 	if status == TargetBuilt || status == TargetCached {
 		// We may have parse tasks waiting for this guy to build, check for them.
-		if ch, present := state.progress.pendingTargets.Load(label); present {
+		if ch, present := state.progress.pendingTargets.GetOK(label); present {
 			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
 		}
 	}
@@ -637,8 +638,16 @@ func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
 	if p := state.Graph.PackageByLabel(label); p != nil {
 		return p
 	}
-	if ch, present := state.progress.pendingPackages.LoadOrStore(packageKey{Name: label.PackageName, Subrepo: label.Subrepo}, make(chan struct{})); present {
-		<-ch.(chan struct{})
+	var ch chan struct{}
+	state.progress.pendingPackages.Update(label.packageKey(), func(old interface{}) interface{} {
+		if old != nil {
+			ch = old.(chan struct{})
+			return old
+		}
+		return make(chan struct{})
+	})
+	if ch != nil {
+		<-ch
 	}
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
 }
@@ -656,10 +665,17 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 	}
 	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
-	ch, present := state.progress.pendingTargets.LoadOrStore(l, make(chan struct{}))
-	if present {
+	var ch chan struct{}
+	state.progress.pendingTargets.Update(l, func(old interface{}) interface{} {
+		if old != nil {
+			ch = old.(chan struct{})
+			return old
+		}
+		return make(chan struct{})
+	})
+	if ch != nil {
 		// Something's already registered for this, get on the train
-		<-ch.(chan struct{})
+		<-ch
 		t := state.Graph.Target(l)
 		state.ensureDownloaded(t)
 		return t
@@ -916,10 +932,12 @@ func NewBuildState(config *Configuration) *BuildState {
 		OriginalArch:    cli.HostArch(),
 		Stats:           &SystemStats{},
 		progress: &stateProgress{
-			numActive:  1, // One for the initial target adding on the main thread.
-			numRunning: 1, // Similarly.
-			numPending: 1,
-			success:    true,
+			numActive:       1, // One for the initial target adding on the main thread.
+			numRunning:      1, // Similarly.
+			numPending:      1,
+			pendingPackages: cmap.New(),
+			pendingTargets:  cmap.New(),
+			success:         true,
 		},
 	}
 	state.PathHasher = state.Hasher(config.Build.HashFunction)
