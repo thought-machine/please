@@ -8,23 +8,26 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+
+	"github.com/OneOfOne/cmap"
+	"github.com/OneOfOne/cmap/stringcmap"
 )
 
 type pendingTargets struct {
-	m sync.Map
+	m *cmap.CMap
 }
 
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
-	targets sync.Map
+	targets *cmap.CMap
 	// Targets that have been depended on by something that we're waiting to appear.
 	pendingTargets pendingTargets
 	// Map of all currently known packages.
-	packages sync.Map
+	packages *cmap.CMap
 	// Registered subrepos, as a map of their name to their root.
-	subrepos sync.Map
+	subrepos *cmap.CMap
 	// Reverse dependencies
 	revdeps     map[*BuildTarget][]*BuildTarget
 	revdepsOnce sync.Once
@@ -32,15 +35,33 @@ type BuildGraph struct {
 	cycleDetector *cycleDetector
 }
 
-func (p *pendingTargets) GetTargetChannel(label BuildLabel) chan struct{} {
-	pkg, _ := p.m.LoadOrStore(label.packageKey(), &sync.Map{})
-	ch, _ := pkg.(*sync.Map).LoadOrStore(label.Name, make(chan struct{}))
-	return ch.(chan struct{})
+func (p *pendingTargets) getPackage(key packageKey) (ret *stringcmap.LMap) {
+	p.m.Update(key, func(old interface{}) interface{} {
+		if old != nil {
+			ret = old.(*stringcmap.LMap)
+			return old
+		}
+		ret = stringcmap.NewLMap()
+		return ret
+	})
+	return ret
+}
+
+func (p *pendingTargets) GetTargetChannel(label BuildLabel) (ret chan struct{}) {
+	p.getPackage(label.packageKey()).Update(label.Name, func(old interface{}) interface{} {
+		if old != nil {
+			ret = old.(chan struct{})
+			return old
+		}
+		ret = make(chan struct{})
+		return ret
+	})
+	return ret
 }
 
 func (p *pendingTargets) NotifyPendingPackageTargets(key packageKey) {
-	pkg, _ := p.m.LoadOrStore(key, &sync.Map{})
-	pkg.(*sync.Map).Range(func(key, ch interface{}) bool {
+	pkg := p.getPackage(key)
+	pkg.ForEach(pkg.Keys(nil), func(_ string, ch interface{}) bool {
 		select {
 		case <-ch.(chan struct{}):
 		default:
@@ -52,9 +73,12 @@ func (p *pendingTargets) NotifyPendingPackageTargets(key packageKey) {
 
 // AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
-	if _, loaded := graph.targets.LoadOrStore(target.Label, target); loaded {
-		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
-	}
+	graph.targets.Update(target.Label, func(old interface{}) interface{} {
+		if old != nil {
+			panic("Attempted to re-add existing target to build graph: " + target.Label.String())
+		}
+		return target
+	})
 	go target.registerDependencies(graph)
 	// Notify anything that called WaitForTarget
 	close(graph.pendingTargets.GetTargetChannel(target.Label))
@@ -64,15 +88,18 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 // AddPackage adds a new package to the graph with given name.
 func (graph *BuildGraph) AddPackage(pkg *Package) {
 	key := packageKey{Name: pkg.Name, Subrepo: pkg.SubrepoName}
-	if _, loaded := graph.packages.LoadOrStore(key, pkg); loaded {
-		panic("Attempt to read existing package: " + key.String())
-	}
+	graph.packages.Update(key, func(old interface{}) interface{} {
+		if old != nil {
+			panic("Attempt to read existing package: " + key.String())
+		}
+		return pkg
+	})
 	graph.pendingTargets.NotifyPendingPackageTargets(key)
 }
 
 // Target retrieves a target from the graph by label
 func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
-	t, ok := graph.targets.Load(label)
+	t, ok := graph.targets.GetOK(label)
 	if !ok {
 		return nil
 	}
@@ -117,7 +144,7 @@ func (graph *BuildGraph) PackageByLabel(label BuildLabel) *Package {
 
 // Package retrieves a package from the graph by name & subrepo, or nil if it can't be found.
 func (graph *BuildGraph) Package(name, subrepo string) *Package {
-	p, present := graph.packages.Load(packageKey{Name: name, Subrepo: subrepo})
+	p, present := graph.packages.GetOK(packageKey{Name: name, Subrepo: subrepo})
 	if !present {
 		return nil
 	}
@@ -135,26 +162,34 @@ func (graph *BuildGraph) PackageOrDie(label BuildLabel) *Package {
 
 // AddSubrepo adds a new subrepo to the graph. It dies if one is already registered by this name.
 func (graph *BuildGraph) AddSubrepo(subrepo *Subrepo) {
-	if _, loaded := graph.subrepos.LoadOrStore(subrepo.Name, subrepo); loaded {
-		log.Fatalf("Subrepo %s is already registered", subrepo.Name)
-	}
+	graph.subrepos.Update(subrepo.Name, func(old interface{}) interface{} {
+		if old != nil {
+			log.Fatalf("Subrepo %s is already registered", subrepo.Name)
+		}
+		return subrepo
+	})
 }
 
 // MaybeAddSubrepo adds the given subrepo to the graph, or returns the existing one if one is already registered.
 func (graph *BuildGraph) MaybeAddSubrepo(subrepo *Subrepo) *Subrepo {
-	if sr, present := graph.subrepos.LoadOrStore(subrepo.Name, subrepo); present {
-		s := sr.(*Subrepo)
-		if !reflect.DeepEqual(s, subrepo) {
-			log.Fatalf("Found multiple definitions for subrepo '%s' (%+v s %+v)", s.Name, s, subrepo)
+	var sr *Subrepo
+	graph.subrepos.Update(subrepo.Name, func(old interface{}) interface{} {
+		if old != nil {
+			s := old.(*Subrepo)
+			if !reflect.DeepEqual(s, subrepo) {
+				log.Fatalf("Found multiple definitions for subrepo '%s' (%+v s %+v)", s.Name, s, subrepo)
+			}
+			sr = s
+			return old
 		}
-		return s
-	}
-	return subrepo
+		return subrepo
+	})
+	return sr
 }
 
 // Subrepo returns the subrepo with this name. It returns nil if one isn't registered.
 func (graph *BuildGraph) Subrepo(name string) *Subrepo {
-	subrepo, present := graph.subrepos.Load(name)
+	subrepo, present := graph.subrepos.GetOK(name)
 	if !present {
 		return nil
 	}
@@ -173,7 +208,7 @@ func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
 // AllTargets returns a consistently ordered slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
 	targets := BuildTargets{}
-	graph.targets.Range(func(k, v interface{}) bool {
+	graph.targets.ForEach(func(k, v interface{}) bool {
 		targets = append(targets, v.(*BuildTarget))
 		return true
 	})
@@ -184,7 +219,7 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 // PackageMap returns a copy of the graph's internal map of name to package.
 func (graph *BuildGraph) PackageMap() map[string]*Package {
 	packages := map[string]*Package{}
-	graph.packages.Range(func(k, v interface{}) bool {
+	graph.packages.ForEach(func(k, v interface{}) bool {
 		packages[k.(packageKey).String()] = v.(*Package)
 		return true
 	})
@@ -194,7 +229,11 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // NewGraph constructs and returns a new BuildGraph.
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
-		cycleDetector: newCycleDetector(),
+		cycleDetector:  newCycleDetector(),
+		targets:        cmap.New(),
+		pendingTargets: pendingTargets{m: cmap.New()},
+		packages:       cmap.New(),
+		subrepos:       cmap.New(),
 	}
 	g.cycleDetector.run()
 	return g

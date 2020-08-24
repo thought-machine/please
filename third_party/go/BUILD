@@ -664,3 +664,9 @@ go_get(
     ],
     revision = "v1.11.0",
 )
+
+go_get(
+    name = "cmap",
+    get = "github.com/OneOfOne/cmap/...",
+    revision = "ccaef7657ab896465978ddf580830288b61f9f6e",
+)
