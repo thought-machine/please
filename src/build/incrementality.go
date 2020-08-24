@@ -62,6 +62,7 @@ func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild b
 	}
 	// If the metadata file containing the std-out and additional outputs doesn't exist, rebuild
 	if !fs.FileExists(targetBuildMetadataFileName(target)) {
+		log.Debug("Need to rebuild %s, metadata file is missing", target.Label)
 		return true
 	}
 	oldHashes := readRuleHashFromXattrs(state, target, postBuild)
