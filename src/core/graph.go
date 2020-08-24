@@ -182,6 +182,7 @@ func (graph *BuildGraph) MaybeAddSubrepo(subrepo *Subrepo) *Subrepo {
 			sr = s
 			return old
 		}
+		sr = subrepo
 		return subrepo
 	})
 	return sr
