@@ -47,7 +47,7 @@ genrule(
     srcs = ["//src:please"],
     outs = ["please_" + VERSION],
     binary = True,
-    cmd = "mv $SRC $OUT",
+    cmd = "cp $SRC $OUT",
     labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
 )
 
@@ -56,7 +56,7 @@ genrule(
     srcs = ["//tools/jarcat"],
     outs = ["jarcat_" + VERSION],
     binary = True,
-    cmd = "mv $SRC $OUT",
+    cmd = "cp $SRC $OUT",
     labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
 )
 
