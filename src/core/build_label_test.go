@@ -74,13 +74,6 @@ func TestUnmarshalText(t *testing.T) {
 	assert.Error(t, label.UnmarshalText([]byte(":blahblah:")))
 }
 
-func TestPackageDir(t *testing.T) {
-	label := NewBuildLabel("src/core", "core")
-	assert.Equal(t, "src/core", label.PackageDir())
-	label = NewBuildLabel("", "core")
-	assert.Equal(t, ".", label.PackageDir())
-}
-
 func TestLooksLikeABuildLabel(t *testing.T) {
 	assert.True(t, LooksLikeABuildLabel("//src/core"))
 	assert.True(t, LooksLikeABuildLabel(":core"))

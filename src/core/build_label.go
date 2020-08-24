@@ -279,7 +279,8 @@ func (label BuildLabel) Less(other BuildLabel) bool {
 
 // Paths is an implementation of BuildInput interface; we use build labels directly as inputs.
 func (label BuildLabel) Paths(graph *BuildGraph) []string {
-	return addPathPrefix(graph.TargetOrDie(label).Outputs(), label.PackageName)
+	target := graph.TargetOrDie(label)
+	return addPathPrefix(target.Outputs(), target.PackageDir())
 }
 
 // FullPaths is an implementation of BuildInput interface.
@@ -358,16 +359,6 @@ func (label BuildLabel) HasParent() bool {
 // IsEmpty returns true if this is an empty build label, i.e. nothing's populated it yet.
 func (label BuildLabel) IsEmpty() bool {
 	return label.PackageName == "" && label.Name == ""
-}
-
-// PackageDir returns a path to the directory this target is in.
-// This is equivalent to PackageName in all cases except when at the repo root, when this
-// will return . instead. This is often easier to use in build rules.
-func (label BuildLabel) PackageDir() string {
-	if label.PackageName == "" {
-		return "."
-	}
-	return label.PackageName
 }
 
 // SubrepoLabel returns a build label corresponding to the subrepo part of this build label.

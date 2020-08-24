@@ -146,7 +146,7 @@ func mustSourceHash(state *core.BuildState, target *core.BuildTarget) []byte {
 // Calculate the hash of all sources of this rule
 func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
-	for source := range core.IterSources(state.Graph, target, false) {
+	for source := range core.IterSources(state.Graph, target) {
 		result, err := state.PathHasher.Hash(source.Src, false, true)
 		if err != nil {
 			return nil, err
@@ -275,6 +275,8 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	for _, o := range target.OutputDirectories {
 		h.Write([]byte(o))
 	}
+
+	h.Write([]byte(target.OutputLocation))
 	return h.Sum(nil)
 }
 
@@ -474,7 +476,7 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 	fmt.Printf("  Source: %s\n", b64(mustSourceHash(state, target)))
 	// Note that the logic here mimics sourceHash, but I don't want to pollute that with
 	// optional printing nonsense since it's on our hot path.
-	for source := range core.IterSources(state.Graph, target, false) {
+	for source := range core.IterSources(state.Graph, target) {
 		fmt.Printf("  Source: %s: %s\n", source.Src, b64(state.PathHasher.MustHash(source.Src)))
 	}
 	for _, tool := range target.AllTools() {

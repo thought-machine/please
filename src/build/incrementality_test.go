@@ -50,6 +50,7 @@ var KnownFields = map[string]bool{
 	"TestOutputs":                 true,
 	"Stamp":                       true,
 	"OutputDirectories":           true,
+	"OutputLocation":              true,
 
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,

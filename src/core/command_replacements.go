@@ -260,7 +260,7 @@ func fileDestination(target, dep *BuildTarget, out string, dir, outPrefix, test 
 		// Slightly fiddly case because tests put binaries in a possibly slightly unusual place.
 		return "./" + out
 	}
-	return handleDir(dep.Label.PackageName, out, dir)
+	return handleDir(dep.PackageDir(), out, dir)
 }
 
 // Encloses the given string in quotes if needed.

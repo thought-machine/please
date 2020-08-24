@@ -59,6 +59,7 @@ const (
 	localBuildRuleArgIdx
 	outDirsBuildRuleArgIdx
 	configBuildRuleArgIdx
+	outputLocationArgIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -96,6 +97,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.IsRemoteFile = isTruthy(urlsBuildRuleArgIdx)
 	target.Local = isTruthy(localBuildRuleArgIdx)
 	target.RuleMetadata = args[configBuildRuleArgIdx]
+	target.OutputLocation = string(args[outputLocationArgIdx].(pyString))
 
 	for _, o := range asStringList(s, args[outDirsBuildRuleArgIdx], "output_dirs") {
 		target.AddOutputDirectory(o)

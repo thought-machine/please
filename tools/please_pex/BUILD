@@ -54,6 +54,7 @@ genrule(
     binary = True,
     cmd = [
         # Have to make sure these exist.
+        "mkdir -p $PKG_DIR",
         "touch third_party/__init__.py third_party/python/__init__.py",
         "touch tools/__init__.py tools/please_pex/__init__.py",
         "mv third_party/python .bootstrap",

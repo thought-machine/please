@@ -128,11 +128,11 @@ func moduleName(buildLabel core.BuildLabel) string {
 }
 
 func moduleDirLocation(target *core.BuildTarget) string {
-	return filepath.Join(outputLocation(), target.Label.PackageDir())
+	return filepath.Join(outputLocation(), target.PackageDir())
 }
 
 func moduleFileLocation(label core.BuildLabel) string {
-	return filepath.Join(outputLocation(), label.PackageDir(), fmt.Sprintf("%s.iml", moduleName(label)))
+	return filepath.Join(outputLocation(), label.PackageName, fmt.Sprintf("%s.iml", moduleName(label)))
 }
 
 func libraryDirLocation() string {

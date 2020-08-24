@@ -194,6 +194,9 @@ type BuildTarget struct {
 	OutputDirectories []OutputDirectory `name:"output_dirs"`
 	// RuleMetadata is the metadata attached to this build rule. It can be accessed through the "get_rule_metadata" BIF.
 	RuleMetadata interface{} `name:"config"`
+	// OutputLocation optionally sets the root for this target's output
+	// TODO(jpoole): think of a better name for this? PackageLocation?
+	OutputLocation string `name:"output_location"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -339,9 +342,14 @@ func (target *BuildTarget) TmpDir() string {
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
 func (target *BuildTarget) OutDir() string {
 	if target.IsBinary {
-		return path.Join(BinDir, target.Label.Subrepo, target.Label.PackageName)
+		return path.Join(BinDir, target.Label.Subrepo, target.PackageDir())
 	}
-	return path.Join(GenDir, target.Label.Subrepo, target.Label.PackageName)
+	return path.Join(GenDir, target.Label.Subrepo, target.PackageDir())
+}
+
+// PackageDir determines the package directory of this build rule
+func (target *BuildTarget) PackageDir() string {
+	return filepath.Join(target.OutputLocation, target.Label.PackageName)
 }
 
 // TestDir returns the test directory for this target, eg.

@@ -177,7 +177,7 @@ func newModuleContent(target *core.BuildTarget) *ModuleContent {
 	}
 
 	sourceFolders := []SourceFolder{}
-	commonDir := target.Label.PackageDir()
+	commonDir := target.Label.PackageName
 
 	joined := filepath.Join(core.RepoRoot, commonDir)
 	location := relativisedPathTo(moduleDirLocation(target), &joined)

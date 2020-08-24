@@ -120,7 +120,7 @@ type ModulesModule struct {
 }
 
 func newModulesModule(label core.BuildLabel) ModulesModule {
-	filePath := "$PROJECT_DIR$/" + label.PackageDir() + "/" + fmt.Sprintf("%s.iml", moduleName(label))
+	filePath := "$PROJECT_DIR$/" + label.PackageName + "/" + fmt.Sprintf("%s.iml", moduleName(label))
 	return ModulesModule{
 		FileURL:  "file://" + filePath,
 		FilePath: filePath,

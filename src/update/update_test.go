@@ -30,8 +30,8 @@ func (*fakeLogBackend) Log(level logging.Level, calldepth int, rec *logging.Reco
 }
 
 func TestVerifyNewPlease(t *testing.T) {
-	assert.True(t, verifyNewPlease("src/please", core.PleaseVersion.String()))
-	assert.False(t, verifyNewPlease("src/please", "wibble"))
+	assert.True(t, verifyNewPlease("github.com/thought-machine/please/src/please", core.PleaseVersion.String()))
+	assert.False(t, verifyNewPlease("github.com/thought-machine/please/src/please", "wibble"))
 	assert.False(t, verifyNewPlease("wibble", core.PleaseVersion.String()))
 }
 

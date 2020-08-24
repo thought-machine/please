@@ -122,15 +122,24 @@ type SourcePair struct{ Src, Tmp string }
 // and rules that require transitive dependencies.
 // Yielded values are pairs of the original source location and its temporary location for this rule.
 // If includeTools is true it yields the target's tools as well.
-func IterSources(graph *BuildGraph, target *BuildTarget, includeTools bool) <-chan SourcePair {
+func IterSources(graph *BuildGraph, target *BuildTarget) <-chan SourcePair {
 	ch := make(chan SourcePair)
 	done := map[string]bool{}
 	tmpDir := target.TmpDir()
 	go func() {
-		for input := range IterInputs(graph, target, includeTools, false) {
+		for input := range iterDeps(graph, target) {
 			fullPaths := input.FullPaths(graph)
 			for i, sourcePath := range input.Paths(graph) {
 				if tmpPath := path.Join(tmpDir, sourcePath); !done[tmpPath] {
+					ch <- SourcePair{fullPaths[i], tmpPath}
+					done[tmpPath] = true
+				}
+			}
+		}
+		for input := range IterInputs(graph, target, false, true) {
+			fullPaths := input.FullPaths(graph)
+			for i, sourcePath := range input.Paths(graph) {
+				if tmpPath := path.Join(tmpDir, target.OutputLocation, sourcePath); !done[tmpPath] {
 					ch <- SourcePair{fullPaths[i], tmpPath}
 					done[tmpPath] = true
 				}
@@ -141,8 +150,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget, includeTools bool) <-ch
 	return ch
 }
 
-// IterInputs iterates all the inputs for a target.
-func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnly bool) <-chan BuildInput {
+func iterDeps(graph *BuildGraph, target *BuildTarget) <-chan BuildInput {
 	ch := make(chan BuildInput)
 	done := map[BuildLabel]bool{}
 	var inner func(dependency *BuildTarget)
@@ -176,6 +184,16 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnl
 		}
 	}
 	go func() {
+		inner(target)
+		close(ch)
+	}()
+	return ch
+}
+
+// IterInputs iterates all the inputs for a target.
+func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnly bool) <-chan BuildInput {
+	ch := make(chan BuildInput)
+	go func() {
 		// Yield the sources of the current target
 		srcs := target.AllSources()
 		if includeTools {
@@ -187,7 +205,9 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnl
 			}
 		}
 		if !sourcesOnly {
-			inner(target)
+			for src := range iterDeps(graph, target) {
+				ch <- src
+			}
 		}
 		close(ch)
 	}()

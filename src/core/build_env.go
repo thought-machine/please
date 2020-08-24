@@ -39,7 +39,7 @@ func GeneralBuildEnvironment(config *Configuration) BuildEnv {
 func buildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	env := append(GeneralBuildEnvironment(state.Config),
 		"PKG="+target.Label.PackageName,
-		"PKG_DIR="+target.Label.PackageDir(),
+		"PKG_DIR="+target.PackageDir(),
 		"NAME="+target.Label.Name,
 	)
 	if state.Config.Remote.URL == "" || target.Local {
@@ -61,12 +61,24 @@ func buildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	return env
 }
 
+// TODO(jpoole): is there somewhere better to do this?
+func sourcePaths(target *BuildTarget, srcs []string) []string {
+	if target.OutputLocation == "" {
+		return srcs
+	}
+	sources := make([]string, len(srcs))
+	for i, s := range srcs {
+		sources[i] = path.Join(target.OutputLocation, s)
+	}
+	return sources
+}
+
 // BuildEnvironment creates the shell env vars to be passed into the exec.Command calls made by plz.
 // Note that we lie about the location of HOME in order to keep some tools happy.
 // We read this as being slightly more POSIX-compliant than not having it set at all...
 func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) BuildEnv {
 	env := buildEnvironment(state, target)
-	sources := target.AllSourcePaths(state.Graph)
+	sources := sourcePaths(target, target.AllSourcePaths(state.Graph))
 	outEnv := target.GetTmpOutputAll(target.Outputs())
 	abs := path.IsAbs(tmpDir)
 
@@ -94,7 +106,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	}
 	// Named source groups if the target declared any.
 	for name, srcs := range target.NamedSources {
-		paths := target.SourcePaths(state.Graph, srcs)
+		paths := sourcePaths(target, target.SourcePaths(state.Graph, srcs))
 		// TODO(macripps): Quote these to prevent spaces from breaking everything (consider joining with NUL or sth?)
 		env = append(env, "SRCS_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
 	}

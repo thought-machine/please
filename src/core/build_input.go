@@ -200,7 +200,8 @@ type NamedOutputLabel struct {
 
 // Paths returns a slice of paths to the files of this input.
 func (label NamedOutputLabel) Paths(graph *BuildGraph) []string {
-	return addPathPrefix(graph.TargetOrDie(label.BuildLabel).NamedOutputs(label.Output), label.PackageName)
+	target := graph.TargetOrDie(label.BuildLabel)
+	return addPathPrefix(graph.TargetOrDie(label.BuildLabel).NamedOutputs(label.Output), target.PackageDir())
 }
 
 // FullPaths is like Paths but includes the leading plz-out/gen directory.
