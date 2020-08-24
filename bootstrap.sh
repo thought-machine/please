@@ -17,7 +17,7 @@ notice "Building Please..."
 go run src/please.go $PLZ_ARGS build //src:please --log_file plz-out/log/bootstrap_build.log
 # Use it to build the rest of the tools that come with it.
 notice "Building the tools..."
-plz-out/bin/src/please $PLZ_ARGS build //package:installed_files --log_file plz-out/log/tools_build.log
+plz-out/bin/github.com/thought-machine/please/src/please $PLZ_ARGS build //package:installed_files --log_file plz-out/log/tools_build.log
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     exit 0
