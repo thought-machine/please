@@ -158,8 +158,6 @@ type BuildState struct {
 	VerifyHashes bool
 	// Aggregated coverage for this run
 	Coverage TestCoverage
-	// True if the build has been successful so far (i.e. nothing has failed yet).
-	Success bool
 	// True if >= 1 target has failed to build
 	BuildFailed bool
 	// True if >= 1 target has failed test cases
@@ -231,6 +229,8 @@ type stateProgress struct {
 	// Targets that we were originally requested to build
 	originalTargets     []BuildLabel
 	originalTargetMutex sync.Mutex
+	// True if the build has been successful so far (i.e. nothing has failed yet).
+	success bool
 }
 
 // SystemStats stores information about the system.
@@ -540,13 +540,18 @@ func (state *BuildState) LogResult(result *BuildResult) {
 		state.results <- result
 	}
 	if result.Status.IsFailure() {
-		state.Success = false
+		state.progress.success = false
 		if result.Status == TargetBuildFailed {
 			state.BuildFailed = true
 		} else if result.Status == TargetTestFailed {
 			state.TestFailed = true
 		}
 	}
+}
+
+// Successful returns true if the state has been successful, i.e. no targets have errored.
+func (state *BuildState) Successful() bool {
+	return state.progress.success
 }
 
 // Results returns a channel on which the caller can listen for results.
@@ -889,7 +894,6 @@ func NewBuildState(config *Configuration) *BuildState {
 		Config:          config,
 		VerifyHashes:    true,
 		NeedBuild:       true,
-		Success:         true,
 		XattrsSupported: config.Build.Xattrs,
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
 		OriginalArch:    cli.HostArch(),
@@ -900,6 +904,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			numPending:      1,
 			pendingTargets:  map[BuildLabel]chan struct{}{},
 			pendingPackages: map[packageKey]chan struct{}{},
+			success:         true,
 		},
 	}
 	state.PathHasher = state.Hasher(config.Build.HashFunction)

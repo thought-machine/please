@@ -751,7 +751,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	}
 
 	runPlease(state, targets)
-	return state.Success, state
+	return state.Successful(), state
 }
 
 func runPlease(state *core.BuildState, targets []core.BuildLabel) {
