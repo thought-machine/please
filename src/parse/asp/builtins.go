@@ -56,22 +56,24 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "breakpoint", breakpoint)
 	setNativeCode(s, "get_rule_metadata", getRuleMetadata)
 	stringMethods = map[string]*pyFunc{
-		"join":       setNativeCode(s, "join", strJoin),
-		"split":      setNativeCode(s, "split", strSplit),
-		"replace":    setNativeCode(s, "replace", strReplace),
-		"partition":  setNativeCode(s, "partition", strPartition),
-		"rpartition": setNativeCode(s, "rpartition", strRPartition),
-		"startswith": setNativeCode(s, "startswith", strStartsWith),
-		"endswith":   setNativeCode(s, "endswith", strEndsWith),
-		"lstrip":     setNativeCode(s, "lstrip", strLStrip),
-		"rstrip":     setNativeCode(s, "rstrip", strRStrip),
-		"strip":      setNativeCode(s, "strip", strStrip),
-		"find":       setNativeCode(s, "find", strFind),
-		"rfind":      setNativeCode(s, "find", strRFind),
-		"format":     setNativeCode(s, "format", strFormat),
-		"count":      setNativeCode(s, "count", strCount),
-		"upper":      setNativeCode(s, "upper", strUpper),
-		"lower":      setNativeCode(s, "lower", strLower),
+		"join":         setNativeCode(s, "join", strJoin),
+		"split":        setNativeCode(s, "split", strSplit),
+		"replace":      setNativeCode(s, "replace", strReplace),
+		"partition":    setNativeCode(s, "partition", strPartition),
+		"rpartition":   setNativeCode(s, "rpartition", strRPartition),
+		"startswith":   setNativeCode(s, "startswith", strStartsWith),
+		"endswith":     setNativeCode(s, "endswith", strEndsWith),
+		"lstrip":       setNativeCode(s, "lstrip", strLStrip),
+		"rstrip":       setNativeCode(s, "rstrip", strRStrip),
+		"removeprefix": setNativeCode(s, "removeprefix", strRemovePrefix),
+		"removesuffix": setNativeCode(s, "removesuffix", strRemoveSuffix),
+		"strip":        setNativeCode(s, "strip", strStrip),
+		"find":         setNativeCode(s, "find", strFind),
+		"rfind":        setNativeCode(s, "find", strRFind),
+		"format":       setNativeCode(s, "format", strFormat),
+		"count":        setNativeCode(s, "count", strCount),
+		"upper":        setNativeCode(s, "upper", strUpper),
+		"lower":        setNativeCode(s, "lower", strLower),
 	}
 	stringMethods["format"].kwargs = true
 	dictMethods = map[string]*pyFunc{
@@ -413,6 +415,18 @@ func strStrip(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyString)
 	cutset := args[1].(pyString)
 	return pyString(strings.Trim(string(self), string(cutset)))
+}
+
+func strRemovePrefix(s *scope, args []pyObject) pyObject {
+	self := args[0].(pyString)
+	prefix := args[1].(pyString)
+	return pyString(strings.TrimPrefix(string(self), string(prefix)))
+}
+
+func strRemoveSuffix(s *scope, args []pyObject) pyObject {
+	self := args[0].(pyString)
+	suffix := args[1].(pyString)
+	return pyString(strings.TrimSuffix(string(self), string(suffix)))
 }
 
 func strFind(s *scope, args []pyObject) pyObject {

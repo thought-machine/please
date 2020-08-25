@@ -44,6 +44,10 @@ def rstrip(self:str, cutset:str=' \n') -> str:
     pass
 def strip(self:str, cutset:str=' \n') -> str:
     pass
+def removeprefix(self:str, prefix:str) -> str:
+    pass
+def removesuffix(self:str, suffix:str) -> str:
+    pass
 def find(self:str, needle:str) -> int:
     pass
 def rfind(self:str, needle:str) -> int:
