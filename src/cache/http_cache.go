@@ -14,6 +14,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -21,7 +22,7 @@ import (
 type httpCache struct {
 	url      string
 	writable bool
-	client   *http.Client
+	client   *retryablehttp.Client
 
 	requestLimiter limiter
 }
@@ -49,7 +50,7 @@ func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files []stri
 
 		r, w := io.Pipe()
 		go cache.write(w, target, files)
-		req, err := http.NewRequest(http.MethodPut, cache.makeURL(key), r)
+		req, err := retryablehttp.NewRequest(http.MethodPut, cache.makeURL(key), r)
 		if err != nil {
 			log.Warning("Invalid cache URL: %s", err)
 			return
@@ -135,7 +136,7 @@ func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, files []s
 }
 
 func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, error) {
-	req, err := http.NewRequest(http.MethodGet, cache.makeURL(key), nil)
+	req, err := retryablehttp.NewRequest(http.MethodGet, cache.makeURL(key), nil)
 	if err != nil {
 		return false, err
 	}
@@ -206,8 +207,16 @@ func newHTTPCache(config *core.Configuration) *httpCache {
 	return &httpCache{
 		url:      config.Cache.HTTPURL.String(),
 		writable: config.Cache.HTTPWriteable,
-		client: &http.Client{
-			Timeout: time.Duration(config.Cache.HTTPTimeout),
+		client: &retryablehttp.Client{
+			HTTPClient: &http.Client{
+				Timeout: time.Duration(config.Cache.HTTPTimeout),
+			},
+			Logger:       &logWrapper{log},
+			RetryWaitMin: 1 * time.Second,
+			RetryWaitMax: 30 * time.Second,
+			RetryMax:     config.Cache.HTTPRetry,
+			CheckRetry:   retryablehttp.DefaultRetryPolicy,
+			Backoff:      retryablehttp.DefaultBackoff,
 		},
 		requestLimiter: make(limiter, config.Cache.HTTPConcurrentRequestLimit),
 	}

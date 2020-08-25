@@ -637,3 +637,18 @@ go_get(
     revision = "v1.0.0",
     test_only = True,
 )
+
+go_get(
+    name = "go-cleanhttp",
+    get = "github.com/hashicorp/go-cleanhttp",
+    revision = "v0.5.1",
+)
+
+go_get(
+    name = "go-retryablehttp",
+    get = "github.com/hashicorp/go-retryablehttp",
+    revision = "v0.6.7",
+    deps = [
+        ":go-cleanhttp",
+    ],
+)
