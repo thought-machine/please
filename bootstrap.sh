@@ -84,9 +84,9 @@ if [ ! -d "/usr/lib/gcc/x86_64-linux-gnu/${GCCVER%.*.*}/32" ] && [ ! -d "/usr/li
     EXCLUDES="${EXCLUDES} --exclude=x86"
 fi
 
-plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --exclude=e2e --log_file plz-out/log/test_build.log --log_file_level 4 --trace_file plz-out/log/trace.json $@
+plz-out/bin/github.com/thought-machine/please/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --exclude=e2e --log_file plz-out/log/test_build.log --log_file_level 4 --trace_file plz-out/log/trace.json $@
 
 # We run the end-to-end tests separately to ensure things don't fight with one another; they are
 # finicky about some things due to running plz recursively and disabling the lock.
 notice "Running end-to-end tests..."
-plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e2e --log_file plz-out/log/e2e_build.log --log_file_level 4 $@
+plz-out/bin/github.com/thought-machine/please/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e2e --log_file plz-out/log/e2e_build.log --log_file_level 4 $@

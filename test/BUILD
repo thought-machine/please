@@ -312,7 +312,7 @@ go_test(
 plz_e2e_test(
     name = "extra_test_output_test",
     cmd = "plz test //test:extra_test_output_go_test",
-    expect_file_exists = "../../../../bin/test/truth.txt",
+    expect_file_exists = "../../../../bin/github.com/thought-machine/please/test/truth.txt",
 )
 
 # Test 'query alltargets'

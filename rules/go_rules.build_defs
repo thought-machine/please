@@ -15,7 +15,8 @@ _LINK_PKGS_CMD = ' '.join([
 def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
-               filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=False):
+               filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=False,
+               go_import_path:str=CONFIG.GO_IMPORT_PATH):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -62,7 +63,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             cmd = 'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS_${OS} -D GOARCH_${ARCH} -gensymabis -o "$OUT" $SRCS_ASM',
             tools=[CONFIG.GO_TOOL],
             test_only = test_only,
-            output_location = CONFIG.GO_IMPORT_PATH,
+            output_location = go_import_path,
         )
         lib_rule = go_library(
             name = f'_{name}#lib',
@@ -74,6 +75,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             _abi = abi_rule,
             _needs_transitive_deps = _needs_transitive_deps,
             _all_srcs = _all_srcs,
+            go_import_path = go_import_path,
         )
         asm_rule = build_rule(
             name = name,
@@ -88,7 +90,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             cmd = 'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS_${GOOS} -D GOARCH_${GOARCH} -o "$OUT" $SRCS_ASM',
             tools=[CONFIG.GO_TOOL],
             test_only = test_only,
-            output_location = CONFIG.GO_IMPORT_PATH,
+            output_location = go_import_path,
         )
         return build_rule(
             name = name,
@@ -105,7 +107,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             labels = labels,
             provides = {'go': ':' + name, 'go_src': lib_rule},
             test_only = test_only,
-            output_location = CONFIG.GO_IMPORT_PATH,
+            output_location = go_import_path,
         )
 
     # go_test and cgo_library need access to the sources as well.
@@ -118,7 +120,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         requires=['go'],
         labels = src_labels,
         test_only=test_only,
-        output_location = CONFIG.GO_IMPORT_PATH,
+        output_location = go_import_path,
     )
 
     tools = { 'go': [CONFIG.GO_TOOL] }
@@ -152,13 +154,14 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         test_only=test_only,
         tools=tools,
         needs_transitive_deps=_needs_transitive_deps,
-        output_location = CONFIG.GO_IMPORT_PATH,
+        output_location = go_import_path,
     )
 
 
 def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 out:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
-                subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False):
+                subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False,
+                go_import_path:str=CONFIG.GO_IMPORT_PATH):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -238,6 +241,7 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
         test_only = test_only,
         complete = False,
         deps = deps,
+        go_import_path = go_import_path,
     )
     # And finally combine the compiled C code into the Go archive object so go tool link can find it later.
     return _merge_cgo_obj(
@@ -255,11 +259,12 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
             'cgo': c_rule,
         },
         deps = deps,
+        go_import_path = go_import_path,
     )
 
 
 def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag='',
-                   linker_flags:list=[], deps=None, provides=None, out=None, labels:list=[]):
+                   linker_flags:list=[], deps=None, provides=None, out=None, labels:list=[], go_import_path):
     """Defines a rule to merge a cgo object into a Go library."""
     if o_rule:
         cmd = 'cp $SRCS_A "$OUT" && chmod +w "$OUT" && "$TOOLS_AR" x $SRCS_O && "$TOOLS_GO" tool pack r "$OUT" *.o'
@@ -286,13 +291,14 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
         requires = ['go', 'cgo'],
         provides = provides,
         deps = deps,
-        output_location = CONFIG.GO_IMPORT_PATH,
+        output_location = go_import_path,
     )
 
 
 def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[], data:list=None,
               visibility:list=None, test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
-              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False):
+              filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False,
+              go_import_path:str=CONFIG.GO_IMPORT_PATH):
     """Compiles a Go binary.
 
     Args:
@@ -327,6 +333,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
         test_only=test_only,
         _link_private = True,
         _link_extra = False,
+        go_import_path = go_import_path,
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
     return build_rule(
@@ -346,7 +353,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
         requires=['go'],
         pre_build=_collect_linker_flags(static),
         stamp = stamp,
-        output_location = CONFIG.GO_IMPORT_PATH,
+        output_location = go_import_path,
     )
 
 
@@ -354,7 +361,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
             flags:str='', sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=None,
             labels:list&features&tags=None, size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC,
-            definitions:str|list|dict=None):
+            definitions:str|list|dict=None, go_import_path:str=CONFIG.GO_IMPORT_PATH):
     """Defines a Go test rule.
 
     Args:
@@ -397,6 +404,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
         _all_srcs = not external,
         _link_extra = False,
         complete = False,
+        go_import_path = go_import_path,
     )
     if cgo:
         lib_rule = _merge_cgo_obj(
@@ -407,6 +415,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
             labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
             test_only = True,
             deps = deps,
+            go_import_path = go_import_path,
         )
     main_rule = go_test_main(
         name = name,
@@ -423,6 +432,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
         deps=deps,
         _needs_transitive_deps=True,  # Rather annoyingly this is only needed for coverage
         test_only=True,
+        go_import_path = go_import_path,
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
@@ -453,14 +463,14 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
         building_description="Compiling...",
         needs_transitive_deps=True,
         output_is_complete=True,
-        output_location = CONFIG.GO_IMPORT_PATH,
+        output_location = go_import_path,
     )
 
 
 def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibility:list=None,
                  sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True, external:bool=False, timeout:int=0,
                  labels:list&features&tags=None, static:bool=CONFIG.GO_DEFAULT_STATIC, definitions:str|list|dict=None,
-                 test_only=True):
+                 test_only=True, go_import_path:str=CONFIG.GO_IMPORT_PATH):
     """Defines a Go test suite that will be run as a benchmark.
 
     Args:
@@ -499,6 +509,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         _all_srcs = not external,
         _link_extra = False,
         complete = False,
+        go_import_path = go_import_path,
     )
     if cgo:
         lib_rule = _merge_cgo_obj(
@@ -508,6 +519,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
             visibility = visibility,
             labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
             deps = deps,
+            go_import_path = go_import_path,
         )
     main_rule = go_test_main(
         name = name,
@@ -522,6 +534,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         name='_%s#main_lib' % name,
         srcs=[main_rule],
         deps=deps,
+        go_import_path = go_import_path,
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
@@ -543,7 +556,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         needs_transitive_deps=True,
         output_is_complete=True,
         test_only=test_only,
-        output_location = CONFIG.GO_IMPORT_PATH,
+        output_location = go_import_path,
     )
 
 def go_test_main(name:str, srcs:list, test_only:bool=False,
@@ -590,7 +603,8 @@ def go_test_main(name:str, srcs:list, test_only:bool=False,
 
 def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:list=None,
              flags:str='', sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
-             test_outputs:list=None, labels:list&features&tags=None, size:str=None, static:bool=False):
+             test_outputs:list=None, labels:list&features&tags=None, size:str=None, static:bool=False,
+             go_import_path:str=CONFIG.GO_IMPORT_PATH):
     """Defines a Go test rule over a cgo_library.
 
     If the library you are testing is a cgo_library, you must use this instead of go_test.
@@ -632,6 +646,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
         test_outputs = test_outputs,
         labels = labels,
         size = size,
+        go_import_path = go_import_path,
     )
 
 
