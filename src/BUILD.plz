@@ -13,7 +13,6 @@ go_binary(
         "//src/gc",
         "//src/hashes",
         "//src/help",
-        "//src/ide/intellij",
         "//src/output",
         "//src/plz",
         "//src/query",
