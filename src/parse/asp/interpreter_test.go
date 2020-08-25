@@ -312,3 +312,11 @@ func TestIsNotNone(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, True, s.Lookup("x"))
 }
+
+func TestRemoveAffixes(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/remove_affixes.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, "PEP 616: New removeprefix() and removesuffix() string methods", s.Lookup("x"))
+	assert.EqualValues(t, "New removeprefix() and removesuffix() string methods", s.Lookup("y"))
+	assert.EqualValues(t, "removeprefix() and removesuffix() ", s.Lookup("z"))
+}

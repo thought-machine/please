@@ -1,0 +1,3 @@
+x = "PEP 616: New removeprefix() and removesuffix() string methods"
+y = x.removeprefix("PEP 616: ").removeprefix("wibble")
+z = y.removesuffix("string methods").removeprefix("New ")
