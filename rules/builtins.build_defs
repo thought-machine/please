@@ -58,7 +58,7 @@ def lower(self:str) -> str:
 def fail(msg:str):
     pass
 
-def subinclude(target:str, hash:str=None):
+def subinclude(target:str):
     pass
 def load(target:str, names:str=None):
     pass

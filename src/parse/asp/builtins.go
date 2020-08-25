@@ -28,7 +28,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "build_rule", buildRule)
 	setNativeCode(s, "subrepo", subrepo)
 	setNativeCode(s, "fail", builtinFail)
-	setNativeCode(s, "subinclude", subinclude)
+	setNativeCode(s, "subinclude", subinclude).varargs = true
 	setNativeCode(s, "load", bazelLoad).varargs = true
 	setNativeCode(s, "package", pkg).kwargs = true
 	setNativeCode(s, "sorted", sorted)
@@ -259,20 +259,21 @@ func builtinFail(s *scope, args []pyObject) pyObject {
 
 func subinclude(s *scope, args []pyObject) pyObject {
 	s.NAssert(s.contextPkg == nil, "Cannot subinclude() from this context")
-	target := string(args[0].(pyString))
-	t := subincludeTarget(s, core.ParseBuildLabelContext(target, s.contextPkg))
-	pkg := s.contextPkg
-	if t.Subrepo != s.contextPkg.Subrepo && t.Subrepo != nil {
-		pkg = &core.Package{
-			Name:        "@" + t.Subrepo.Name,
-			SubrepoName: t.Subrepo.Name,
-			Subrepo:     t.Subrepo,
+	for _, arg := range args {
+		t := subincludeTarget(s, core.ParseBuildLabelContext(string(arg.(pyString)), s.contextPkg))
+		pkg := s.contextPkg
+		if t.Subrepo != s.contextPkg.Subrepo && t.Subrepo != nil {
+			pkg = &core.Package{
+				Name:        "@" + t.Subrepo.Name,
+				SubrepoName: t.Subrepo.Name,
+				Subrepo:     t.Subrepo,
+			}
 		}
-	}
-	l := pkg.Label()
-	s.Assert(l.CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, l)
-	for _, out := range t.Outputs() {
-		s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), pkg), false)
+		l := pkg.Label()
+		s.Assert(l.CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, l)
+		for _, out := range t.Outputs() {
+			s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), pkg), false)
+		}
 	}
 	return None
 }
