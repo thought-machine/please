@@ -55,6 +55,32 @@ def upper(self:str) -> str:
 def lower(self:str) -> str:
     pass
 
+
+def starts_with(self:str, prefix:str) -> bool:
+    if len(self) < len(prefix):
+        return False
+    return self[:len(prefix)] == prefix
+
+
+def ends_with(self:str, suffix:str) -> bool:
+    if len(self) < len(suffix):
+        return False
+    idx = len(suffix)
+    return self[-idx:] == suffix
+
+
+def trim_prefix(self:str, prefix:str) -> str:
+    if starts_with(self, prefix):
+        return self[len(prefix):]
+    return self
+
+
+def trim_suffix(self:str, suffix:str) -> str:
+    if ends_with(self, suffix):
+        return self[:(len(self) - len(suffix))]
+    return self
+
+
 def fail(msg:str):
     pass
 
