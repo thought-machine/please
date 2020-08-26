@@ -253,9 +253,9 @@ type SystemStats struct {
 	NumWorkerProcesses int
 }
 
-// AddActiveTarget increments the counter for a newly active build target.
-func (state *BuildState) AddActiveTarget() {
-	atomic.AddInt64(&state.progress.numActive, 1)
+// addActiveTargets increments the counter for a number of newly active build targets.
+func (state *BuildState) addActiveTargets(n int) {
+	atomic.AddInt64(&state.progress.numActive, int64(n))
 }
 
 // AddPendingParse adds a task for a pending parse of a build label.
@@ -766,14 +766,15 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 	target.NeededForSubinclude = target.NeededForSubinclude || forceBuild
 	if state.NeedBuild || forceBuild {
 		if target.SyncUpdateState(Semiactive, Active) {
-			state.AddActiveTarget()
 			if target.IsTest && state.NeedTests {
 				if state.TestSequentially {
-					atomic.AddInt64(&state.progress.numActive, 1)
+					state.addActiveTargets(2)
 				} else {
 					// Tests count however many times we're going to run them if parallel.
-					atomic.AddInt64(&state.progress.numActive, int64(state.NumTestRuns))
+					state.addActiveTargets(1 + state.NumTestRuns)
 				}
+			} else {
+				state.addActiveTargets(1)
 			}
 			// Actual queuing stuff now happens asynchronously in here.
 			atomic.AddInt64(&state.progress.numPending, 1)

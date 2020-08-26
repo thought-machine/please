@@ -70,7 +70,6 @@ func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 			state.QueueTarget(target.Label, core.OriginalTarget, false, false)
 		}
 	}
-	state.AddActiveTarget()
 	return target
 }
 
