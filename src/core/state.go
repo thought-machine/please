@@ -565,13 +565,6 @@ func (state *BuildState) NumDone() int {
 	return int(atomic.LoadInt64(&state.progress.numDone))
 }
 
-// SetTaskNumbers allows a caller to set the number of active and done tasks.
-// This may drastically confuse matters if used incorrectly.
-func (state *BuildState) SetTaskNumbers(active, done int64) {
-	atomic.StoreInt64(&state.progress.numActive, active)
-	atomic.StoreInt64(&state.progress.numDone, done)
-}
-
 // ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
 // from the set of original labels.
 func (state *BuildState) ExpandOriginalLabels() BuildLabels {
