@@ -768,13 +768,13 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 		if target.SyncUpdateState(Semiactive, Active) {
 			if target.IsTest && state.NeedTests {
 				if state.TestSequentially {
-					state.addActiveTargets(2)
+					state.addActiveTargets(3) // One extra for the test
 				} else {
 					// Tests count however many times we're going to run them if parallel.
-					state.addActiveTargets(1 + state.NumTestRuns)
+					state.addActiveTargets(2 + state.NumTestRuns)
 				}
 			} else {
-				state.addActiveTargets(1)
+				state.addActiveTargets(2) // One for the target itself, one for queueTargetAsync
 			}
 			// Actual queuing stuff now happens asynchronously in here.
 			atomic.AddInt64(&state.progress.numPending, 1)
