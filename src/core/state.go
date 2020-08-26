@@ -215,6 +215,7 @@ type BuildState struct {
 type stateProgress struct {
 	// Used to count the number of currently active/pending targets
 	numActive  int64
+	numAsync   int64
 	numPending int64
 	numRunning int64
 	numDone    int64
@@ -357,7 +358,13 @@ func (state *BuildState) addPendingTask(task pendingTask) {
 // TaskDone indicates that a single task is finished. Should be called after one is finished with
 // a task returned from NextTask(), or from a call to ExtraTask().
 func (state *BuildState) TaskDone(wasBuildOrTest bool) {
-	atomic.AddInt64(&state.progress.numDone, 1)
+	state.taskDone(false, wasBuildOrTest)
+}
+
+func (state *BuildState) taskDone(wasSynthetic, wasBuildOrTest bool) {
+	if !wasSynthetic {
+		atomic.AddInt64(&state.progress.numDone, 1)
+	}
 	if wasBuildOrTest {
 		atomic.AddInt64(&state.progress.numRunning, -1)
 	}
@@ -768,13 +775,13 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 		if target.SyncUpdateState(Semiactive, Active) {
 			if target.IsTest && state.NeedTests {
 				if state.TestSequentially {
-					state.addActiveTargets(3) // One extra for the test
+					state.addActiveTargets(2) // One for build & one for test
 				} else {
 					// Tests count however many times we're going to run them if parallel.
-					state.addActiveTargets(2 + state.NumTestRuns)
+					state.addActiveTargets(1 + state.NumTestRuns)
 				}
 			} else {
-				state.addActiveTargets(2) // One for the target itself, one for queueTargetAsync
+				state.addActiveTargets(1)
 			}
 			// Actual queuing stuff now happens asynchronously in here.
 			atomic.AddInt64(&state.progress.numPending, 1)
@@ -803,7 +810,7 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 
 // queueTarget enqueues a target's dependencies and the target itself once they are done.
 func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLabel, rescan, forceBuild bool) {
-	defer state.TaskDone(false)
+	defer state.taskDone(true, false)
 	for _, dep := range target.DeclaredDependencies() {
 		if err := state.QueueTarget(dep, target.Label, rescan, forceBuild); err != nil {
 			state.asyncError(dep, err)
