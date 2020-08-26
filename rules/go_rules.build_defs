@@ -6,11 +6,10 @@ rules to Go packages.
 
 # This links all the .a files up one level. This is necessary for some Go tools to find them.
 _LINK_PKGS_CMD = ' '.join([
-    'for FN in `find . -name "*.a" | sort`; do',
+    'find . -name "*.a" -print0 | sort -z | xargs -0 -n1 | while read FN; do',
     'DN=${FN%/*}; BN=${FN##*/}; if [ "${DN##*/}" == "${BN%.a}" ]; then',
-    'ln -s "$TMP_DIR"/$FN ${DN%/*}; fi; done'
+    'ln -s "$TMP_DIR/$FN" "${DN%/*}"; fi; done'
 ])
-
 
 def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
@@ -868,15 +867,33 @@ def _replace_test_package(name, output, static, definitions, cgo):
                     set_command(lib, k, f'mv -f $PKG_DIR/{new_name}.a $PKG_DIR/{pkg_name}.a && {v}')
 
 
+def _create_gopkg_flags(var:str, flag:str):
+    """Returns a script which collects potential package archive directories
+    zipped with the provided flag and stored in an array with the provided var
+    name. The array can then be injected as flag arguments into another command.
+    Since the filepaths are stored as array elements we avoid bash word splitting
+    issues on filepaths which contain spaces. The script directories are
+    collected using a combination of the configured go path as well as searching
+    for directories inside of $TMP_DIR which have the configured pkg/GOOS_GOARCH
+    suffix.
+    """
+
+    suffix = f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}'
+    gopath = f"echo $GOPATH | awk -F: '{{OFS=ORS;for(k=1;k<=NF;k++){{print $k,$k\"/{suffix}\"}}}}'"
+    search = f'find "$TMP_DIR" -type d -path "*/{suffix}"'
+    gopkgs = f'sort -u <({gopath}) <({search})'
+    setvar = f'declare -a {var}; while read -r FN; do {var}+=("$FN"); done'
+
+    return f"GOPATH=\"{CONFIG.GOPATH}\" && {setvar} < <({gopkgs} | awk '{{OFS=ORS;print \"{flag}\",$0}}')"
+
 def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False):
     """Returns the commands to run for building a Go library."""
     filter_cmd = 'export SRCS="$(\"${TOOLS_FILTER}\" ${SRCS})"; ' if filter_srcs else ''
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
     out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
-    _GOPATH = ' '.join(
-        ['-I "%s" -I "%s/pkg/%s_%s"' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
-    compile_cmd = f'"$TOOLS_GO" tool compile -trimpath "$TMP_DIR" {complete_flag}{_GOPATH} $(for i in $(find "$TMP_DIR" -name pkg -type d); do echo -n " -I \"$i\"/{CONFIG.GOOS}_{CONFIG.GOARCH} "; done) -pack {out_cmd}'
+    create_gopkg_flags = _create_gopkg_flags("GOPKG_FLAGS", "-I")
+    compile_cmd = f'{create_gopkg_flags} && "$TOOLS_GO" tool compile -trimpath "$TMP_DIR" {complete_flag} "${GOPKG_FLAGS[@]}" -pack {out_cmd}'
     # Annotates files for coverage.
     cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + _LINK_PKGS_CMD) if all_srcs else _LINK_PKGS_CMD
@@ -893,9 +910,8 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
 def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, gcov=False):
     """Returns the commands to run for linking a Go binary."""
 
-    _GOPATH = ' '.join(
-        ['-I "%s" -I "%s/pkg/%s_%s"' % (p, p, CONFIG.GOOS, CONFIG.GOARCH) for p in CONFIG.GOPATH.split(':')])
-    _link_cmd = f'"$TOOLS_GO" tool link -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" %s $(find "$TMP_DIR" -type d -print | grep "pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}$" | sed -e "s/^/-L \\\"/" -e "s/$/\\"/g" | tr "\\n" " ") -o "$OUT" ' % _GOPATH.replace('-I ', '-L ')
+    create_gopkg_flags = _create_gopkg_flags("GOPKG_FLAGS", "-L")
+    _link_cmd = f'{create_gopkg_flags} && "$TOOLS_GO" tool link -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" "${GOPKG_FLAGS[@]}" -o "$OUT"'
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
     linkerdefs = []
