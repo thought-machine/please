@@ -11,6 +11,8 @@ _LINK_PKGS_CMD = ' '.join([
     'ln -s "$TMP_DIR/$FN" "${DN%/*}"; fi; done'
 ])
 
+_DEFAULT_GO_PATH = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/$PKG_DIR:$TMP_DIR/third_party/go:$TMP_DIR/third_party/"
+
 def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
@@ -756,7 +758,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
     # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
     # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
     if repo.startswith('github.com'):
-            cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, repo, revision, module_major_version)
+        cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, repo, revision, module_major_version)
     elif get.startswith('github.com'):
         cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, getroot, revision, module_major_version)
     elif get.startswith('golang.org/x/') and not repo:
@@ -868,7 +870,8 @@ def _replace_test_package(name, output, static, definitions, cgo):
 
 
 def _create_gopkg_flags(var:str, flag:str):
-    """Returns a script which collects potential package archive directories
+    """
+    Returns a script which collects potential package archive directories
     zipped with the provided flag and stored in an array with the provided var
     name. The array can then be injected as flag arguments into another command.
     Since the filepaths are stored as array elements we avoid bash word splitting
@@ -884,7 +887,14 @@ def _create_gopkg_flags(var:str, flag:str):
     gopkgs = f'sort -u <({gopath}) <({search})'
     setvar = f'declare -a {var}; while read -r FN; do {var}+=("$FN"); done'
 
-    return f"GOPATH=\"{CONFIG.GOPATH}\" && {setvar} < <({gopkgs} | awk '{{OFS=ORS;print \"{flag}\",$0}}')"
+    return f"GOPATH=\"{_DEFAULT_GO_PATH}\" && {setvar} < <({gopkgs} | awk '{{OFS=ORS;print \"{flag}\",$0}}')"
+
+def _create_gopkg_flags_from_gopath(flag:str) -> str:
+    paths = CONFIG.GOPATH.split(":")
+    return ' '.join([
+        f'{flag} "{path}" {flag} "{path}"/pkg/${GOOS}_${GOARCH}'
+        for path in paths
+    ])
 
 def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False):
     """Returns the commands to run for building a Go library."""
@@ -892,8 +902,14 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
     out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
-    create_gopkg_flags = _create_gopkg_flags("GOPKG_FLAGS", "-I")
-    compile_cmd = f'{create_gopkg_flags} && "$TOOLS_GO" tool compile -trimpath "$TMP_DIR" {complete_flag} "${GOPKG_FLAGS[@]}" -pack {out_cmd}'
+    if not CONFIG.GOPATH:
+        create_gopkg_flags = _create_gopkg_flags("GOPKG_FLAGS", "-I")
+        prefix = f'{create_gopkg_flags} &&'
+        pkg_flags = '"${GOPKG_FLAGS[@]}"'
+    else:
+        prefix = ''
+        pkg_flags = _create_gopkg_flags_from_gopath('-I')
+    compile_cmd = f'{prefix} "$TOOLS_GO" tool compile -trimpath "$TMP_DIR" {complete_flag} {pkg_flags} -pack {out_cmd}'
     # Annotates files for coverage.
     cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + _LINK_PKGS_CMD) if all_srcs else _LINK_PKGS_CMD
@@ -910,8 +926,14 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
 def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, gcov=False):
     """Returns the commands to run for linking a Go binary."""
 
-    create_gopkg_flags = _create_gopkg_flags("GOPKG_FLAGS", "-L")
-    _link_cmd = f'{create_gopkg_flags} && "$TOOLS_GO" tool link -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" "${GOPKG_FLAGS[@]}" -o "$OUT"'
+    if not CONFIG.GOPATH:
+        create_gopkg_flags = _create_gopkg_flags("GOPKG_FLAGS", "-L")
+        prefix = f'{create_gopkg_flags} &&'
+        pkg_flags = '"${GOPKG_FLAGS[@]}"'
+    else:
+        prefix = ''
+        pkg_flags = _create_gopkg_flags_from_gopath('-L')
+    _link_cmd = f'{prefix} "$TOOLS_GO" tool link -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" {pkg_flags} -o "$OUT"'
     prefix = _LINK_PKGS_CMD + _go_import_path_cmd(CONFIG.GO_IMPORT_PATH)
 
     linkerdefs = []
