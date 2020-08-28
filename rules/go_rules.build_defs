@@ -786,7 +786,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
         cmd += ['find . -name .git | xargs rm -rf']
         tools = [CONFIG.GO_TOOL]
     if patch:
-        cmd += [f'patch -s -d {subdir} -p1 < "$TMP_DIR"/$SRCS_PATCH']
+        cmd += [f'patch -d {subdir} -p1 < "$TMP_DIR"/$SRCS_PATCH']
     if strip:
         cmd += [f'rm -rf {subdir}/{s}' for s in strip]
     return build_rule(
