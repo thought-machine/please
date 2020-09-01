@@ -67,6 +67,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             _abi = abi_rule,
             _needs_transitive_deps = _needs_transitive_deps,
             _all_srcs = _all_srcs,
+            _generate_import_config=False,
         )
         asm_rule = build_rule(
             name = name,
@@ -167,6 +168,11 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     )
 
 def _generate_pkg_import_cfg_cmd(out, pkg_location, handle_basename_eq_dirname):
+    """
+    Generates a .importconfig file for all .a files within a go pkg directory for use with
+    `go tool {compile/link} -importcfg`. This is used to generate a config file for the go SDK and third party
+    dependencies.
+    """
     pkg_location = f'{pkg_location}/pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}'
     find_archives = f'find {pkg_location} -name "*.a"'
     remove_pkg_location = f'sed -e s=^{pkg_location}/=='
