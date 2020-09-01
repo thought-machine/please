@@ -155,9 +155,10 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
-		Env      bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
-		Rebuild  bool `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
-		Parallel struct {
+		Env       bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
+		Rebuild   bool `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
+		StayInDir bool `long:"stay_in_dir" description:"When running locally, stay in the original working directory."`
+		Parallel  struct {
 			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
@@ -408,19 +409,34 @@ var buildFunctions = map[string]func() int{
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false, false); success {
-			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env)
+			var dir string
+			if opts.Run.StayInDir {
+				dir = originalWorkingDirectory
+			}
+
+			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, dir)
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
 	"parallel": func() int {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false, false); success {
-			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalLabels(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach))
+			var dir string
+			if opts.Run.StayInDir {
+				dir = originalWorkingDirectory
+			}
+
+			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalLabels(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir))
 		}
 		return 1
 	},
 	"sequential": func() int {
 		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false, false); success {
-			os.Exit(run.Sequential(state, state.ExpandOriginalLabels(), opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env))
+			var dir string
+			if opts.Run.StayInDir {
+				dir = originalWorkingDirectory
+			}
+
+			os.Exit(run.Sequential(state, state.ExpandOriginalLabels(), opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir))
 		}
 		return 1
 	},
@@ -821,6 +837,8 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 	return Please(targets, config, shouldBuild, shouldTest)
 }
 
+var originalWorkingDirectory string
+
 // readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
 func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	if opts.BuildFlags.RepoRoot == "" {
@@ -828,6 +846,13 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	} else {
 		core.RepoRoot = string(opts.BuildFlags.RepoRoot)
 	}
+
+	// Save the current working directory before moving to root
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	originalWorkingDirectory = wd
 
 	// Please always runs from the repo root, so move there now.
 	if err := os.Chdir(core.RepoRoot); err != nil {
