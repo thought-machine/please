@@ -167,20 +167,27 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     )
 
 def _generate_pkg_import_cfg_cmd(out, pkg_location, handle_basename_eq_dirname):
-    pkg_location = f'{pkg_location}/pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/'
+    pkg_location = f'{pkg_location}/pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}'
     find_archives = f'find {pkg_location} -name "*.a"'
-    remove_pkg_location = f'sed -e s=^{pkg_location}=='
+    remove_pkg_location = f'sed -e s=^{pkg_location}/=='
     remove_ext = 'sed -e s="\.a\$"=='
 
     if handle_basename_eq_dirname:
-        format_packagefile_directive = 'while read -r; do if [ "$(basename $(dirname $REPLY))" == "$(basename $REPLY)" ]; then echo "packagefile $(dirname $REPLY)=' + pkg_location + '$REPLY.a"; else echo "packagefile $REPLY=' + pkg_location + '$REPLY.a"; fi; done'
+        format_packagefile_directive = ' '.join([
+            'while read -r IMPORT; do',
+                'if [ "$(basename $(dirname $IMPORT))" == "$(basename $IMPORT)" ];',
+                    'then echo "packagefile $(dirname $IMPORT)=' + pkg_location + '/$IMPORT.a";',
+                    'else echo "packagefile $IMPORT=' + pkg_location + '/$IMPORT.a";',
+                'fi;',
+            'done',
+        ])
     else:
-        format_packagefile_directive = 'xargs -I{} echo "packagefile {}=' + pkg_location + '{}.a"'
+        format_packagefile_directive = 'xargs -I{} echo "packagefile {}=' + pkg_location + '/{}.a"'
 
     return f'{find_archives} | {remove_pkg_location} | {remove_ext} | {format_packagefile_directive} > {out}'
 
 def _aggregate_import_cfg_cmd():
-    return 'find -name "*.importconfig" | xargs -I{} cat {} >> importconfig'
+    return 'find . -name "*.importconfig" | xargs -I{} cat {} >> importconfig'
 
 def _trim_import_path(pkg):
     parts = pkg.split("/")
