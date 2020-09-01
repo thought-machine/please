@@ -9,7 +9,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=False,
-               _generate_import_config:bool=True, _import_path:str= '', _pre_build=None):
+               _generate_import_config:bool=True, _import_path:str= ''):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -165,7 +165,6 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         labels = labels,
         test_only=test_only,
         tools=tools,
-        pre_build=_pre_build,
         needs_transitive_deps=_needs_transitive_deps,
     )
 
