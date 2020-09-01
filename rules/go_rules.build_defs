@@ -87,7 +87,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             provides['go_import_config'] = build_rule(
                 name=name,
                 tag='import_config',
-                cmd = _write_import_config_cmd(name, out, _import_path),
+                cmd = _write_import_config_cmd(out, _import_path),
                 outs = [f'{name}.importconfig'],
                 visibility=visibility,
                 test_only=test_only,
@@ -142,7 +142,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         provides['go_import_config'] = build_rule(
             name=name,
             tag='import_config',
-            cmd = _write_import_config_cmd(name, out, _import_path),
+            cmd = _write_import_config_cmd(out, _import_path),
             outs = [f'{name}.importconfig'],
             visibility=visibility,
             test_only=test_only,
@@ -182,8 +182,19 @@ def _generate_pkg_import_cfg_cmd(out, pkg_location, handle_basename_eq_dirname):
 def _aggregate_import_cfg_cmd():
     return 'find -name "*.importconfig" | xargs -I{} cat {} >> importconfig'
 
-def _write_import_config_cmd(name, out, import_path):
+def _trim_import_path(pkg):
+    parts = pkg.split("/")
+    name = parts[-1]
+    dir = parts[-2]
+
+    if name == dir:
+        return pkg.removesuffix(f'/{name}')
+    else:
+        return pkg
+
+def _write_import_config_cmd(out, import_path):
     if not import_path:
+        name = out.removesuffix(".a")
         pkg = package_name()
         if pkg.endswith(name):
             import_path = pkg
@@ -298,26 +309,17 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
     )
 
 
-def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False,
-                   linker_flags:list=[], deps=None, provides={}, out=None, labels:list=[], import_path:str=''):
+def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag='',
+                   linker_flags:list=[], deps=None, provides=None, out=None, labels:list=[]):
     """Defines a rule to merge a cgo object into a Go library."""
     if o_rule:
         cmd = 'cp $SRCS_A "$OUT" && chmod +w "$OUT" && "$TOOLS_AR" x $SRCS_O && "$TOOLS_GO" tool pack r "$OUT" *.o'
     else:
         cmd = 'cp $SRCS_A "$OUT" && chmod +w "$OUT" && "$TOOLS_AR" x $PKG_DIR/*#c.a && "$TOOLS_GO" tool pack r "$OUT" *.o'
 
-
-    provides['go_import_config'] = build_rule(
-        name=name,
-        tag='import_config',
-        cmd = _write_import_config_cmd(name, out or name + '.a', import_path),
-        outs = [f'{name}.importconfig'],
-        visibility=visibility,
-        test_only=test_only,
-    )
-    provides['go'] = f':{name}'
     return build_rule(
         name = name,
+        tag = tag,
         srcs = {
             'a': [a_rule],
             'o': [o_rule] if o_rule else [],
@@ -433,7 +435,6 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
                      definition to the linker.  If set to a dict, each key/value pair is
                      used to contruct the list of definitions passed to the linker.
     """
-    pkg = package_name() if not external else package_name() + '/' + package_name().split("/")[-1] + '_test'
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
         name = '_%s#lib' % name,
@@ -445,18 +446,16 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
         _all_srcs = not external,
         _link_extra = False,
         complete = False,
-        _import_path= f'{CONFIG.GO_IMPORT_PATH}/{pkg}' if CONFIG.GO_IMPORT_PATH else pkg,
-        _generate_import_config=not cgo, # don't generate the import config as we should import the merged cgo
     )
     if cgo:
         lib_rule = _merge_cgo_obj(
-            name = f'_{name}#cgo',
+            name = name,
+            tag='cgo',
             a_rule = lib_rule,
             visibility = visibility,
             labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
             test_only = True,
             deps = deps,
-            import_path=f'{CONFIG.GO_IMPORT_PATH}/{pkg}' if CONFIG.GO_IMPORT_PATH else pkg,
         )
 
     main_rule = go_test_main(
@@ -465,12 +464,8 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
         srcs = srcs,
         deps = deps,
         test_only = True,
+        _post_build = lambda name, output: _replace_test_package(name, output, static, definitions=definitions, cgo=cgo, external=external),
     )
-
-    # Delete the import config so the overriding test package .a from lib_rule is picked up instead
-    def _replace_test_package(name):
-        for config, cmd in get_command(name).items():
-            set_command(name, config, f'rm -f $PKG_DIR/$(basename $PKG_DIR).importconfig && {cmd}')
 
     deps += [lib_rule]
     lib_rule = go_library(
@@ -479,7 +474,6 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
         deps=deps,
         _needs_transitive_deps=True,  # Rather annoyingly this is only needed for coverage
         test_only=True,
-        _pre_build=_replace_test_package if not external else None,
         _generate_import_config=False,
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
@@ -511,7 +505,6 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
         building_description="Compiling...",
         needs_transitive_deps=True,
         output_is_complete=True,
-        pre_build=_replace_test_package if not external else None,
     )
 
 
@@ -579,6 +572,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         name='_%s#main_lib' % name,
         srcs=[main_rule],
         deps=deps,
+        _generate_import_config=False,
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
@@ -593,7 +587,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         visibility=visibility,
         test_sandbox=sandbox,
         test_timeout=timeout,
-        requires=['go', 'test'],
+        requires=['go', 'test', 'go_import_config'],
         labels=labels,
         binary=True,
         building_description="Compiling...",
@@ -1032,3 +1026,38 @@ def _get_ldflags_and_pkgconfig(name):
     ldflags = ' '.join([l[3:] for l in labels if l.startswith('ld:')])
     pkg_config = ' '.join([l[3:] for l in labels if l.startswith('pc:')])
     return (ldflags, f'`pkg-config --libs {pkg_config}`') if pkg_config else (ldflags, '')
+
+def _replace_test_package(name, output, static, definitions, cgo, external):
+    """Post-build function, called after we template the main function.
+
+    The purpose is to replace the real library with the specific one we've
+    built for this test which has the actual test functions in it.
+    """
+    if not name.endswith('#main') or not name.startswith('_'):
+        raise ValueError('unexpected rule name: ' + name)
+    lib = name[:-5] + '#main_lib'
+    new_name = name[1:-5]
+    for line in output:
+        if line.startswith('Package: '):
+            ldflags, pkg_config = _get_ldflags_and_pkgconfig(name)
+            pkg_name = line[9:]
+            name_changed = pkg_name != new_name
+
+            pkg_dir = package_name()
+            import_path = f'{CONFIG.GO_IMPORT_PATH}/{pkg_dir}/{pkg_name}' if CONFIG.GO_IMPORT_PATH else f'{pkg_dir}/{pkg_name}'
+            import_path = _trim_import_path(import_path)
+            import_config_cmd = f'echo packagefile {import_path}=$PKG_DIR/{new_name}.a > test_package_{pkg_name}.importconfig'
+            if not external:
+                import_config_cmd = f'rm -f $PKG_DIR/$(basename $PKG_DIR).importconfig && {import_config_cmd}'
+
+            if name_changed or ldflags or pkg_config:  # Might not be necessary if names match already.
+                binary_cmds, _ = _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config, definitions, cgo)
+                if name_changed:
+                    for k, v in binary_cmds.items():
+                        set_command(new_name, k, f'{import_config_cmd} && {v}')
+                else:
+                    for k, v in binary_cmds.items():
+                        set_command(new_name, k, v)
+            if name_changed:
+                for k, v in _go_library_cmds().items():
+                    set_command(lib, k, f'{import_config_cmd} && {v}')
