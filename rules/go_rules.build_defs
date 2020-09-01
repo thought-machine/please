@@ -812,15 +812,15 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         # For most it doesn't matter but the top-level one will get lost.
         cmd += [f' if [ -f {out}.a ]; then mkdir -p {out} && mv {out}.a {out}; fi' for out in outs]
 
-    provides["go_import_config"] = build_rule(
-        name=name,
-        tag='import_config',
-        deps = [go_rule],
-        visibility = visibility,
-        test_only = test_only,
-        cmd = _generate_pkg_import_cfg_cmd("$OUT", '$PKG_DIR', True),
-        outs = [f'{name}.importconfig'],
-    )
+        provides["go_import_config"] = build_rule(
+            name=name,
+            tag='import_config',
+            deps = [go_rule],
+            visibility = visibility,
+            test_only = test_only,
+            cmd = _generate_pkg_import_cfg_cmd("$OUT", '$PKG_DIR', True),
+            outs = [f'{name}.importconfig'],
+        )
 
     return build_rule(
         name = name,
