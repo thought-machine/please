@@ -858,7 +858,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
     # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
     # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
     if repo.startswith('github.com'):
-            cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, repo, revision, module_major_version)
+        cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, repo, revision, module_major_version)
     elif get.startswith('github.com'):
         cmd, get_deps, tools = _go_github_repo_cmd(name, getroot, getroot, revision, module_major_version)
     elif get.startswith('golang.org/x/') and not repo:
@@ -886,7 +886,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
         cmd += ['find . -name .git | xargs rm -rf']
         tools = [CONFIG.GO_TOOL]
     if patch:
-        cmd += [f'patch -s -d {subdir} -p1 < "$TMP_DIR"/$SRCS_PATCH']
+        cmd += [f'patch -d {subdir} -p1 < "$TMP_DIR"/$SRCS_PATCH']
     if strip:
         cmd += [f'rm -rf {subdir}/{s}' for s in strip]
     return build_rule(
@@ -942,24 +942,6 @@ def _go_github_repo_cmd(name, get, repo, revision, module_major_version):
 
 
 
-def _create_gopkg_flags(var:str, flag:str):
-    """Returns a script which collects potential package archive directories
-    zipped with the provided flag and stored in an array with the provided var
-    name. The array can then be injected as flag arguments into another command.
-    Since the filepaths are stored as array elements we avoid bash word splitting
-    issues on filepaths which contain spaces. The script directories are
-    collected using a combination of the configured go path as well as searching
-    for directories inside of $TMP_DIR which have the configured pkg/GOOS_GOARCH
-    suffix.
-    """
-
-    suffix = f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}'
-    gopath = f"echo $GOPATH | awk -F: '{{OFS=ORS;for(k=1;k<=NF;k++){{print $k,$k\"/{suffix}\"}}}}'"
-    search = f'find "$TMP_DIR" -type d -path "*/{suffix}"'
-    gopkgs = f'sort -u <({gopath}) <({search})'
-    setvar = f'declare -a {var}; while read -r FN; do {var}+=("$FN"); done'
-
-    return f"GOPATH=\"{CONFIG.GOPATH}\" && {setvar} < <({gopkgs} | awk '{{OFS=ORS;print \"{flag}\",$0}}')"
 
 def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False):
     """Returns the commands to run for building a Go library."""

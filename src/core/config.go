@@ -266,7 +266,6 @@ func DefaultConfiguration() *Configuration {
 	config.Go.CgoCCTool = "gcc"
 	config.Go.TestTool = "please_go_test"
 	config.Go.FilterTool = "please_go_filter"
-	config.Go.GoPath = "$TMP_DIR:$TMP_DIR/src:$TMP_DIR/$PKG_DIR:$TMP_DIR/third_party/go:$TMP_DIR/third_party/"
 	config.Python.PipTool = "pip3"
 	config.Python.PexTool = "please_pex"
 	config.Python.DefaultInterpreter = "python3"
