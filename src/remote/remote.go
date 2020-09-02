@@ -693,6 +693,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		return metadata, response.Result, nil
 	default:
 		if !resp.Done {
+			log.Error("Received an incomplete response for %s: %#v", target, resp)
 			return nil, nil, fmt.Errorf("Received an incomplete response for %s", target)
 		}
 		return nil, nil, fmt.Errorf("Unknown response type (was a %T): %#v", resp.Result, resp) // Shouldn't get here
