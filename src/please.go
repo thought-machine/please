@@ -155,10 +155,10 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
-		Env       bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
-		Rebuild   bool `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
-		StayInDir bool `long:"stay_in_dir" description:"When running locally, stay in the original working directory."`
-		Parallel  struct {
+		Env      bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
+		Rebuild  bool `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
+		InWD     bool `long:"in_wd" description:"When running locally, stay in the original working directory."`
+		Parallel struct {
 			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
@@ -410,7 +410,7 @@ var buildFunctions = map[string]func() int{
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false, false); success {
 			var dir string
-			if opts.Run.StayInDir {
+			if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
 
@@ -421,7 +421,7 @@ var buildFunctions = map[string]func() int{
 	"parallel": func() int {
 		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false, false); success {
 			var dir string
-			if opts.Run.StayInDir {
+			if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
 
@@ -432,7 +432,7 @@ var buildFunctions = map[string]func() int{
 	"sequential": func() int {
 		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false, false); success {
 			var dir string
-			if opts.Run.StayInDir {
+			if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
 
