@@ -7,9 +7,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var wd string
@@ -40,6 +42,25 @@ func TestLocations(t *testing.T) {
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
+func TestAbsOutLocation(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		os.Chdir(wd)
+	})
+
+	td := t.TempDir()
+
+	err = os.Chdir(td)
+	require.NoError(t, err)
+
+	target2 := makeTarget2("//path/to:target2", "", nil)
+	target1 := makeTarget2("//path/to:target1", "ln -s $(abs_out_location //path/to:target2) ${OUT}", target2)
+
+	expected := "ln -s " + filepath.Join(td, "plz-out/gen/path/to/target2.py") + " ${OUT}"
+	assert.Equal(t, expected, replaceSequences(state, target1))
+}
+
 func TestExe(t *testing.T) {
 	target2 := makeTarget2("//path/to:target2", "", nil)
 	target2.IsBinary = true
@@ -55,6 +76,26 @@ func TestOutExe(t *testing.T) {
 	target1 := makeTarget2("//path/to:target1", "$(out_exe //path/to:target2) -o ${OUT}", target2)
 
 	expected := "plz-out/bin/path/to/target2.py -o ${OUT}"
+	assert.Equal(t, expected, replaceSequences(state, target1))
+}
+
+func TestAbsOutExe(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		os.Chdir(wd)
+	})
+
+	td := t.TempDir()
+
+	err = os.Chdir(td)
+	require.NoError(t, err)
+
+	target2 := makeTarget2("//path/to:target2", "", nil)
+	target2.IsBinary = true
+	target1 := makeTarget2("//path/to:target1", "$(abs_out_exe //path/to:target2) -o ${OUT}", target2)
+
+	expected := filepath.Join(td, "plz-out/bin/path/to/target2.py") + " -o ${OUT}"
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
