@@ -9,7 +9,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=False,
-               _generate_import_config:bool=True, _import_path:str= ''):
+               _generate_import_config:bool=True, import_path:str= ''):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -29,6 +29,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
                     but if this is false they never will be. Can be useful for e.g. third-party
                     code that you never want to be instrumented.
       filter_srcs (bool): If True, filters source files through Go's standard build constraints.
+      import_path (str): If set, this will override the import path of the generated go package.
     """
     out = out or name + '.a'
     labels = []
@@ -89,7 +90,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             provides['go_import_config'] = build_rule(
                 name=name,
                 tag='import_config',
-                cmd = _write_import_config_cmd(out, _import_path),
+                cmd = _write_import_config_cmd(out, import_path),
                 outs = [f'{output}.importconfig'],
                 visibility=visibility,
                 test_only=test_only,
@@ -145,7 +146,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         provides['go_import_config'] = build_rule(
             name=name,
             tag='import_config',
-            cmd = _write_import_config_cmd(out, _import_path),
+            cmd = _write_import_config_cmd(out, import_path),
             outs = [f'{output}.importconfig'],
             visibility=visibility,
             test_only=test_only,
@@ -222,7 +223,7 @@ def _write_import_config_cmd(out, import_path):
 
 def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 out:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
-                subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, _import_path:str=''):
+                subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, import_path:str=''):
     """Generates a Go library which can be reused by other rules.
 
     Note that by its nature this is something of a hybrid of Go and C rules. It can depend
@@ -252,6 +253,7 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
                    and depending on that.
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
+      import_path (str): If set, this will override the import path of the generated go package.
     """
     file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
     post_build = lambda rule, output: [add_out(rule, 'c' if line.endswith('.c') else 'go', line) for line in output]
@@ -309,7 +311,7 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
     import_config = build_rule(
         name=name,
         tag='import_config',
-        cmd = _write_import_config_cmd(f'{output}.a', _import_path),
+        cmd = _write_import_config_cmd(f'{output}.a', import_path),
         outs = [f'{output}.importconfig'],
         visibility=visibility,
         test_only=test_only,
