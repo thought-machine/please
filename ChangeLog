@@ -1,3 +1,29 @@
+Version 15.2.0
+--------------
+
+    * Improved portability of applying patches to go_get rules #1160
+    * Allow staying in the current directory when using plz run by
+      passing the --in_wd flag
+    * Fixed some issues around linking go packages (#1061 and #1157)
+    * Added removeprefix and removesuffix built in functions to the
+      build language #1155
+    * Made subinclude variadic so multiple targets can be included on
+      one line #1153
+    * Removed `plz ide intellij` #1141
+    * Http cache now retries on error. #1143
+    * Please now returns the correct error code on cross compilation
+      failures #1151
+    * Improve the get_command built in function to return a dictionary
+      in that case #1147
+    * There is now a binary release of please for FreeBSD #1142
+    * Please now cleans up stale outputs correctly which was causing
+      issues when renaming a target #1134
+    * Added an example http cache implementation. This might be preferable
+      to something like nginx as its configuration is very light weight.
+      #1133
+
+
+
 Version 15.1.0
 --------------
 
