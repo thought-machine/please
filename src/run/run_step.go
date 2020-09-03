@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -98,6 +99,12 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 			log.Fatalf("Can't find binary %s", splitCmd[0])
 		}
 		splitCmd[0] = cmd
+	} else if dir != "" { // Find an absolute path before changing directory
+		abs, err := filepath.Abs(splitCmd[0])
+		if err != nil {
+			log.Fatalf("Couldn't calculate absolute path for %s: %s", splitCmd[0], err)
+		}
+		splitCmd[0] = abs
 	}
 	args = append(splitCmd, args...)
 	log.Info("Running target %s...", strings.Join(args, " "))
