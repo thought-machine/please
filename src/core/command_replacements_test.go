@@ -42,6 +42,14 @@ func TestLocations(t *testing.T) {
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
+func TestOutLocation(t *testing.T) {
+	target2 := makeTarget2("//path/to:target2", "", nil)
+	target1 := makeTarget2("//path/to:target1", "ln -s $(out_location //path/to:target2) ${OUT}", target2)
+
+	expected := "ln -s plz-out/gen/path/to/target2.py ${OUT}"
+	assert.Equal(t, expected, replaceSequences(state, target1))
+}
+
 func TestAbsOutLocation(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
