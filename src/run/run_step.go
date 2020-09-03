@@ -78,7 +78,7 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 	}
 	if remote {
 		// Send this off to be done remotely.
-		// This deliberately misses the out_exe bit below, but also doesn't pick up whatever's going on with java -jar;
+		// This deliberately misses the abs_out_exe bit below, but also doesn't pick up whatever's going on with java -jar;
 		// however that will be obsolete post #920 anyway.
 		if state.RemoteClient == nil {
 			log.Fatalf("You must configure remote execution to use plz run --remote")
@@ -87,7 +87,8 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 	}
 	// ReplaceSequences always quotes stuff in case it contains spaces or special characters,
 	// that works fine if we interpret it as a shell but not to pass it as an argument here.
-	command, _ := core.ReplaceSequences(state, target, fmt.Sprintf("$(out_exe %s)", target.Label))
+	// We use abs_out_exe instead of out_exe here so we can use the same command in the root dir and in subdirectories.
+	command, _ := core.ReplaceSequences(state, target, fmt.Sprintf("$(abs_out_exe %s)", target.Label))
 	arg0 := strings.Trim(command, "\"")
 	// Handle targets where $(exe ...) returns something nontrivial
 	splitCmd := strings.Split(arg0, " ")
