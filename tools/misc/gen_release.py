@@ -87,7 +87,7 @@ class ReleaseGen:
     def upload(self, artifact:str):
         """Uploads the given artifact to the new release."""
         # Artifact names aren't unique between OSs; make them so.
-        arch = 'darwin_amd64' if 'darwin' in artifact else 'freebsd_amd64' if 'freebsd' in artifact else 'linux_amd64'
+        arch = self._arch(artifact)
         filename = os.path.basename(artifact).replace(self.version, self.version + '_' + arch)
         _, ext = os.path.splitext(filename)
         content_type = self.known_content_types.get(ext, 'application/octet-stream')
@@ -101,6 +101,13 @@ class ReleaseGen:
             response = self.session.post(url, data=f)
             response.raise_for_status()
         print('%s uploaded' % filename)
+
+    def _arch(self, artifact:str) -> str:
+        if 'darwin' in artifact:
+            return 'darwin_amd64'
+        elif 'freebsd' in artifact:
+            return 'freebsd_amd64'
+        return 'linux_amd64'
 
     def sign(self, artifact:str) -> str:
         """Creates a detached ASCII-armored signature for an artifact."""
@@ -168,10 +175,11 @@ class ReleaseGen:
             f.write('cd vhosts/get.please.build/htdocs\n')
             f.write(f'mkdir linux_amd64/{self.version}\n')
             f.write(f'mkdir darwin_amd64/{self.version}\n')
+            f.write(f'mkdir freebsd_amd64/{self.version}\n')
             for artifact in artifacts + signatures + checksums:
-                arch = 'darwin' if 'darwin' in artifact else 'linux'
+                arch = self._arch(artifact)
                 filename = os.path.basename(artifact)
-                f.write(f'put {artifact} {arch}_amd64/{self.version}/{filename}\n')
+                f.write(f'put {artifact} {arch}/{self.version}/{filename}\n')
             f.write('put latest_prerelease_version\n')
             if not self.is_prerelease:
                 f.write('put latest_version\n')
