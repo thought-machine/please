@@ -73,6 +73,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
             # We probably need to make this a map
             if p == 'srcs' and language == 'go':
                 provides['go_src'] = f'//{current_package}:_{name}#go_srcs'
+                provides['go_import_config'] = f'//{current_package}:_{name}#go_import_config'
             else:
                 provides[tag_name] = f'//{current_package}:_{name}#{tag_name}'
 
