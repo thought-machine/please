@@ -4,7 +4,6 @@ Version 15.2.1
     * Improve the go rules to enable arbitrary import paths. #1158
 
 
-
 Version 15.2.0
 --------------
 
