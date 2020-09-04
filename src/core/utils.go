@@ -110,7 +110,7 @@ func StartedAtRepoRoot() bool {
 // ReturnToInitialWorkingDir changes directory back to where plz was first started from.
 func ReturnToInitialWorkingDir() {
 	if err := os.Chdir(initialWorkingDir); err != nil {
-		log.Error("Failed to change directory to %s: %s", err)
+		log.Error("Failed to change directory to %s: %s", initialWorkingDir, err)
 	}
 }
 
