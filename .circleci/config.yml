@@ -302,13 +302,13 @@ workflows:
             - build-linux-alt
       - build-freebsd:
           requires:
-            - build-linux
+            - build-alpine
       - test-rex:
           requires:
-            - build-linux
+            - build-alpine
       - test-http-cache:
           requires:
-            - build-linux
+            - build-alpine
       - release:
           requires:
             - build-alpine
