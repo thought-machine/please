@@ -13,7 +13,6 @@ A quick overview of the structure here:
  - fs: Filesystem operations
  - gc: Implementation of `plz gc` (garbage collection)
  - hashes: Implementation of `plz hash` (mostly hash updating)
- - ide: Implementation of `plz ide`
  - output: Logic for printing to terminal & showing interactive output
  - parse: Logic for parsing BUILD files
  - parse/asp: Lower-level parser implementation
