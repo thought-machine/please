@@ -3,7 +3,7 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_alpine:20200905
+       - image: thoughtmachine/please_alpine:20200905-2
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci --profile alpine"
