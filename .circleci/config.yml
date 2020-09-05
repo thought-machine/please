@@ -6,7 +6,7 @@ jobs:
        - image: thoughtmachine/please_alpine:20200905
      resource_class: large
      environment:
-       PLZ_ARGS: "-p --profile ci"
+       PLZ_ARGS: "-p --profile ci --profile alpine"
      steps:
        - checkout
        - restore_cache:
