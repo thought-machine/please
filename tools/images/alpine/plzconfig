@@ -1,2 +1,5 @@
 [go]
 defaultstatic = true
+
+[buildconfig]
+static-sandbox = true
