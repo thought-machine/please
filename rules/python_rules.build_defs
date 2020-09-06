@@ -405,7 +405,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         tag = "srcs",
         cmd = pip_cmd,
         test_only = test_only,
-        output_dirs = [pip_target_dir],
+        output_dirs = [f"{pip_target_dir}/**"],
         srcs = patches if patch else [],
         building_description = 'Fetching...',
         tools = {
