@@ -536,7 +536,7 @@ func (config *Configuration) Hash() []byte {
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}
-	for _, env := range config.getBuildEnv(false) {
+	for _, env := range config.getBuildEnv(false, false) {
 		h.Write([]byte(env))
 	}
 	return h.Sum(nil)
@@ -545,7 +545,7 @@ func (config *Configuration) Hash() []byte {
 // GetBuildEnv returns the build environment configured for this config object.
 func (config *Configuration) GetBuildEnv() []string {
 	config.buildEnvStored.Once.Do(func() {
-		config.buildEnvStored.Env = config.getBuildEnv(true)
+		config.buildEnvStored.Env = config.getBuildEnv(true, true)
 		for _, e := range config.buildEnvStored.Env {
 			if strings.HasPrefix(e, "PATH=") {
 				config.buildEnvStored.Path = strings.Split(strings.TrimPrefix(e, "PATH="), ":")
@@ -561,7 +561,7 @@ func (config *Configuration) Path() []string {
 	return config.buildEnvStored.Path
 }
 
-func (config *Configuration) getBuildEnv(includePath bool) []string {
+func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) []string {
 	env := []string{
 		// Need to know these for certain rules.
 		"ARCH=" + config.Build.Arch.Arch,
@@ -580,14 +580,16 @@ func (config *Configuration) getBuildEnv(includePath bool) []string {
 		env = append(env, pair)
 	}
 	// from the user's environment based on the PassUnsafeEnv config keyword
-	for _, k := range config.Build.PassUnsafeEnv {
-		if v, isSet := os.LookupEnv(k); isSet {
-			if k == "PATH" {
-				// plz's install location always needs to be on the path.
-				v = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir) + ":" + v
-				includePath = false // skip this in a bit
+	if includeUnsafe {
+		for _, k := range config.Build.PassUnsafeEnv {
+			if v, isSet := os.LookupEnv(k); isSet {
+				if k == "PATH" {
+					// plz's install location always needs to be on the path.
+					v = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir) + ":" + v
+					includePath = false // skip this in a bit
+				}
+				env = append(env, k+"="+v)
 			}
-			env = append(env, k+"="+v)
 		}
 	}
 	// from the user's environment based on the PassEnv config keyword
