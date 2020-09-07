@@ -851,7 +851,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             visibility = visibility,
             needs_transitive_deps = True,
             test_only = test_only,
-            requires = ['go', 'go_src'],
+            requires = ['go'],
             binary = binary,
         )
     else:
