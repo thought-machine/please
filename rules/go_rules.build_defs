@@ -811,7 +811,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
 
     a_rule = build_rule(
         name = name,
-        tag = "a_rule",
+        tag = "a_rule" if not binary else None,
         outs = outs,
         deps = deps,
         srcs = srcs,
@@ -842,17 +842,20 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         )
         exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
 
-    return filegroup(
-        name = name,
-        srcs = [a_rule],
-        deps = deps,
-        exported_deps = exported_deps,
-        provides = provides,
-        visibility = visibility,
-        needs_transitive_deps = True,
-        test_only = test_only,
-        requires = ['go', 'go_src'],
-    )
+        return filegroup(
+            name = name,
+            srcs = [a_rule],
+            deps = deps,
+            exported_deps = exported_deps,
+            provides = provides,
+            visibility = visibility,
+            needs_transitive_deps = True,
+            test_only = test_only,
+            requires = ['go', 'go_src'],
+            binary = binary,
+        )
+    else:
+        return a_rule
 
 
 def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, hashes:list=None,
