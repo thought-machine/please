@@ -11,5 +11,5 @@ import (
 )
 
 func TestAssemblyAdd(t *testing.T) {
-	assert.Equal(t, 42, asm.Add(40, 2))
+	assert.Equal(t, 15, asm.Add())
 }
