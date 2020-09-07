@@ -115,6 +115,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             provides =  {'go': ':' + name, 'go_src': lib_rule},
             test_only = test_only,
             exported_deps = exported_deps,
+            deps = deps,
         )
 
     # go_test and cgo_library need access to the sources as well.
