@@ -44,6 +44,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "join_path", joinPath).varargs = true
 	setNativeCode(s, "get_base_path", packageName)
 	setNativeCode(s, "package_name", packageName)
+	setNativeCode(s, "subrepo_name", subrepoName)
 	setNativeCode(s, "canonicalise", canonicalise)
 	setNativeCode(s, "get_labels", getLabels)
 	setNativeCode(s, "add_dep", addDep)
@@ -576,6 +577,10 @@ func joinPath(s *scope, args []pyObject) pyObject {
 
 func packageName(s *scope, args []pyObject) pyObject {
 	return pyString(s.pkg.Name)
+}
+
+func subrepoName(s *scope, args []pyObject) pyObject {
+	return pyString("///" + s.pkg.SubrepoName)
 }
 
 func canonicalise(s *scope, args []pyObject) pyObject {
