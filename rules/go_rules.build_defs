@@ -9,7 +9,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=False,
-               _generate_import_config:bool=True, import_path:str= ''):
+               _generate_import_config:bool=True, import_path:str='', labels:list=[]):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -32,7 +32,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
       import_path (str): If set, this will override the import path of the generated go package.
     """
     out = out or name + '.a'
-    labels = []
+    link_labels = []
     src_labels = []
     private = out.startswith('_')
 
@@ -45,6 +45,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             outs = [f'{output}.importconfig'],
             visibility=visibility,
             test_only=test_only,
+            labels=labels,
         )
         exported_deps = [import_cfg]
     else:
@@ -53,7 +54,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     if _link_private or not private:
         src_labels = ['link:plz-out/go/src/${PKG}', 'go_src']
         if not private:
-            labels = ['link:plz-out/go/pkg/${GOOS}_${GOARCH}/${PKG}']
+            link_labels = ['link:plz-out/go/pkg/${GOOS}_${GOARCH}/${PKG}']
         libname = out[:-2] if len(out) > 2 else out
         if libname != basename(package_name()) and _link_extra:
             # Libraries that are in a directory not of their own name will need the sources in
@@ -72,6 +73,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             cmd = 'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS_${OS} -D GOARCH_${ARCH} -gensymabis -o "$OUT" $SRCS_ASM',
             tools=[CONFIG.GO_TOOL],
             test_only = test_only,
+            labels=labels,
         )
         lib_rule = go_library(
             name = f'_{name}#lib',
@@ -84,6 +86,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             _needs_transitive_deps = _needs_transitive_deps,
             _all_srcs = _all_srcs,
             _generate_import_config=False,
+            labels=labels,
         )
         asm_rule = build_rule(
             name = name,
@@ -98,6 +101,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             cmd = 'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS_${GOOS} -D GOARCH_${GOARCH} -o "$OUT" $SRCS_ASM',
             tools=[CONFIG.GO_TOOL],
             test_only = test_only,
+            labels=labels,
         )
         return build_rule(
             name = name,
@@ -111,7 +115,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
             visibility = visibility,
             building_description = 'Packing...',
             requires = ['go'],
-            labels = labels,
+            labels = labels+link_labels,
             provides =  {'go': ':' + name, 'go_src': lib_rule},
             test_only = test_only,
             exported_deps = exported_deps,
@@ -126,7 +130,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         exported_deps=deps,
         visibility=visibility,
         requires=['go'],
-        labels = src_labels,
+        labels = labels + src_labels,
         test_only=test_only,
     )
 
@@ -157,7 +161,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         building_description="Compiling...",
         requires=['go', 'go_src'] if _all_srcs else ['go'],
         provides={'go': ':' + name, 'go_src': src_rule},
-        labels = labels,
+        labels = labels+link_labels,
         test_only=test_only,
         tools=tools,
         needs_transitive_deps=_needs_transitive_deps,
@@ -426,7 +430,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
 def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='', visibility:list=None,
             flags:str='', sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=None,
-            labels:list&features&tags=None, size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC,
+            labels:list&features&tags=[], size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC,
             definitions:str|list|dict=None):
     """Defines a Go test rule.
 
@@ -465,6 +469,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
         srcs = srcs,
         out = name + ('_lib.a' if cgo else '.a'),
         deps = deps,
+        labels = labels,
         test_only = True,
         filter_srcs = filter_srcs,
         _all_srcs = not external,
@@ -478,7 +483,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
             tag='cgo',
             a_rule = lib_rule,
             visibility = visibility,
-            labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
+            labels = labels + ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
             test_only = True,
             deps = deps,
         )
@@ -490,6 +495,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
         deps = deps,
         test_only = True,
         _post_build = lambda name, output: _replace_test_package(name, output, static, definitions=definitions, cgo=cgo),
+        labels = labels,
     )
 
     deps += [lib_rule]
@@ -500,6 +506,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
         _needs_transitive_deps=True,  # Rather annoyingly this is only needed for coverage
         test_only=True,
         _generate_import_config=False,
+        labels=labels,
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
@@ -575,6 +582,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         _all_srcs = not external,
         _link_extra = False,
         complete = False,
+        labels = labels,
     )
     if cgo:
         lib_rule = _merge_cgo_obj(
@@ -582,7 +590,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
             tag = 'cgo',
             a_rule = lib_rule,
             visibility = visibility,
-            labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
+            labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)] + labels,
             deps = deps,
         )
     main_rule = go_test_main(
@@ -599,6 +607,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         srcs=[main_rule],
         deps=deps,
         _generate_import_config=False,
+        labels = labels,
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
@@ -623,7 +632,8 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
     )
 
 def go_test_main(name:str, srcs:list, test_only:bool=False,
-                 deps:list=[], visibility:list=None, _post_build:function=None, _tag=None, benchmark=False):
+                 deps:list=[], visibility:list=None, _post_build:function=None, _tag=None, benchmark=False,
+                 labels:list=[]):
     """Outputs the main file for a Go test.
 
     This essentially does the test discovery and templates out the entry point from it. Note that
@@ -636,6 +646,7 @@ def go_test_main(name:str, srcs:list, test_only:bool=False,
       test_only: If True, can only be consumed by tests (or other test_only rules).
       deps: Any additional dependencies
       visibility: Visibility of the rule.
+      labels: Any labels to apply to this rule.
     """
     cmd = f'"$TOOLS" --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
     if benchmark:
@@ -661,6 +672,7 @@ def go_test_main(name:str, srcs:list, test_only:bool=False,
         tools = [CONFIG.GO_TEST_TOOL],
         post_build = _post_build,
         visibility = visibility,
+        labels = labels,
     )
 
 
