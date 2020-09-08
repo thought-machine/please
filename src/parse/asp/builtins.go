@@ -580,7 +580,7 @@ func packageName(s *scope, args []pyObject) pyObject {
 }
 
 func subrepoName(s *scope, args []pyObject) pyObject {
-	return pyString("///" + s.pkg.SubrepoName)
+	return pyString(s.pkg.SubrepoName)
 }
 
 func canonicalise(s *scope, args []pyObject) pyObject {

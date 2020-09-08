@@ -330,5 +330,5 @@ func TestSubrepoName(t *testing.T) {
 	s, _, err := parseFileToStatementsInPkg("src/parse/asp/test_data/interpreter/subrepo_name.build", pkg)
 	assert.NoError(t, err)
 
-	assert.EqualValues(t, "///pleasings", s.Lookup("subrepo"))
+	assert.EqualValues(t, "pleasings", s.Lookup("subrepo"))
 }
