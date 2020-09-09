@@ -225,10 +225,9 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
         tools=[CONFIG.JLINK_TOOL],
     )
 
-
 def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, deps:list=[],
                 data:list=None, visibility:list=None, jvm_args:str=None,
-                self_executable:bool=False, manifest:str=None, toolchain:str=CONFIG.JAVA_TOOLCHAIN):
+                self_executable:bool=CONFIG.FF_JAVA_SELF_EXEC, manifest:str=None, toolchain:str=CONFIG.JAVA_TOOLCHAIN):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
@@ -255,6 +254,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
             toolchain = toolchain,
         )
         deps += [lib_rule]
+    # TODO(jpoole): Remove self exec flag and do this always once JavaBinaryExecutableByDefault has been merged
     if self_executable:
         preamble = '#!/bin/sh\nexec java %s -jar $0 ${@}' % (jvm_args or '')
         cmd, tools = _jarcat_cmd(main_class, preamble, manifest=manifest)
