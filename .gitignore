@@ -12,4 +12,3 @@ __pycache__
 *.iml
 /venv
 /out
-tools/jarcat/zip/*.zip
