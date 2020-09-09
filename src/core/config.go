@@ -107,6 +107,10 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	setDefault(&config.Proto.Language, "cc", "py", "java", "go", "js")
 	setDefault(&config.Parse.BuildDefsDir, "build_defs")
 
+	if config.Go.GoRoot != "" {
+		config.Go.GoTool = filepath.Join(config.Go.GoRoot, "bin", "go")
+	}
+
 	// Default values for these guys depend on config.Java.JavaHome if that's been set.
 	if config.Java.JavaHome != "" {
 		defaultPathIfExists(&config.Java.JlinkTool, config.Java.JavaHome, "bin/jlink")
@@ -417,7 +421,7 @@ type Configuration struct {
 	} `help:"Please supports a form of 'garbage collection', by which it means identifying targets that are not used for anything. By default binary targets and all their transitive dependencies are always considered non-garbage, as are any tests directly on those. The config options here allow tweaking this behaviour to retain more things.\n\nNote that it's a very good idea that your BUILD files are in the standard format when running this."`
 	Go struct {
 		GoTool        string `help:"The binary to use to invoke Go & its subtools with." var:"GO_TOOL"`
-		GoRoot        string `help:"If set, will set the GOROOT environment variable appropriately during build actions."`
+		GoRoot        string `help:"If set, will set the GOROOT environment variable appropriately during build actions." var:"GOROOT"`
 		TestTool      string `help:"Sets the location of the please_go_test tool that is used to template the test main for go_test rules." var:"GO_TEST_TOOL"`
 		GoPath        string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
 		ImportPath    string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
