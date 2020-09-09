@@ -106,7 +106,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 }
 
 // Subinclude returns the global values corresponding to subincluding the given file.
-func (i *interpreter) Subinclude(path string, pkg *core.Package) pyDict {
+func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.Package) pyDict {
 	i.mutex.RLock()
 	globals, present := i.subincludes[path]
 	i.mutex.RUnlock()
@@ -124,6 +124,7 @@ func (i *interpreter) Subinclude(path string, pkg *core.Package) pyDict {
 	stmts = i.parser.optimise(stmts)
 	s := i.scope.NewScope()
 	s.contextPkg = pkg
+	s.subincludeLabel = &label
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
 	s.Set("CONFIG", s.config)
@@ -189,12 +190,16 @@ type scope struct {
 	interpreter *interpreter
 	state       *core.BuildState
 	pkg         *core.Package
-	contextPkg  *core.Package // used during subincludes
 	parent      *scope
 	locals      pyDict
 	config      *pyConfig
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
+
+	// used during subincludes
+	contextPkg *core.Package
+	// The label that was passed to subinclude(...)
+	subincludeLabel *core.BuildLabel
 }
 
 // NewScope creates a new child scope of this one.

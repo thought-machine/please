@@ -267,7 +267,7 @@ func TestInterpreterSubincludeConfig(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/partition.build")
 	assert.NoError(t, err)
 	pkg := core.NewPackage("test")
-	s.SetAll(s.interpreter.Subinclude("src/parse/asp/test_data/interpreter/subinclude_config.build", pkg), false)
+	s.SetAll(s.interpreter.Subinclude("src/parse/asp/test_data/interpreter/subinclude_config.build", pkg.Label(), pkg), false)
 	assert.EqualValues(t, "test test", s.config.Get("test", None))
 }
 

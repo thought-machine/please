@@ -222,7 +222,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 		}
 		filename = subrepo.Dir(filename)
 	}
-	s.SetAll(s.interpreter.Subinclude(filename, s.contextPkg), false)
+	s.SetAll(s.interpreter.Subinclude(filename, l, s.contextPkg), false)
 	return None
 }
 
@@ -275,7 +275,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		l := pkg.Label()
 		s.Assert(l.CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, l)
 		for _, out := range t.Outputs() {
-			s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), pkg), false)
+			s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), t.Label, pkg), false)
 		}
 	}
 	return None
@@ -576,11 +576,25 @@ func joinPath(s *scope, args []pyObject) pyObject {
 }
 
 func packageName(s *scope, args []pyObject) pyObject {
-	return pyString(s.pkg.Name)
+	if s.pkg != nil {
+		return pyString(s.pkg.Name)
+	}
+	if s.subincludeLabel != nil {
+		return pyString(s.subincludeLabel.PackageName)
+	}
+	s.Error("you cannot call package_name() from this context")
+	return nil
 }
 
 func subrepoName(s *scope, args []pyObject) pyObject {
-	return pyString(s.pkg.SubrepoName)
+	if s.pkg != nil {
+		return pyString(s.pkg.SubrepoName)
+	}
+	if s.subincludeLabel != nil {
+		return pyString(s.subincludeLabel.Subrepo)
+	}
+	s.Error("you cannot call subrepo_name() from this context")
+	return nil
 }
 
 func canonicalise(s *scope, args []pyObject) pyObject {
