@@ -98,9 +98,8 @@ func (e *extractor) extractTar(f io.Reader) error {
 		}
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			if err := os.Mkdir(out, 0755); err != nil {
-				return err
-			}
+			// Nothing else needs to be done if this member is a directory: a
+			// directory has just been created at the target path
 		case tar.TypeReg:
 			if f, err := os.Create(out); err != nil {
 				return err

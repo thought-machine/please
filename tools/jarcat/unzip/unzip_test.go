@@ -20,8 +20,16 @@ var files = []string{
 	"third_party/python/xmlrunner/version.py",
 }
 
-func TestExtract(t *testing.T) {
+func TestExtractZip(t *testing.T) {
 	assert.NoError(t, Extract("tools/jarcat/unzip/test_data/xmlrunner.whl", ".", "", ""))
+	for _, file := range files {
+		_, err := os.Stat(file)
+		assert.NoError(t, err)
+	}
+}
+
+func TestExtractTar(t *testing.T) {
+	assert.NoError(t, Extract("tools/jarcat/unzip/test_data/xmlrunner.tar", ".", "", ""))
 	for _, file := range files {
 		_, err := os.Stat(file)
 		assert.NoError(t, err)
