@@ -173,15 +173,7 @@ func (f *File) AddZipFile(filepath string) error {
 			}
 			continue
 		}
-		for before, after := range f.RenameDirs {
-			if strings.HasPrefix(rf.Name, before) {
-				rf.Name = path.Join(after, strings.TrimPrefix(rf.Name, before))
-				if isDir {
-					rf.Name += "/"
-				}
-				break
-			}
-		}
+		rf.Name = f.renamePathIfNeeded(rf.Name, isDir)
 		if f.StripPrefix != "" {
 			rf.Name = strings.TrimPrefix(rf.Name, f.StripPrefix)
 		}
@@ -241,25 +233,41 @@ func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
 					log.Debug("Skipping %s since %sc exists", path, path)
 					return nil
 				}
-				log.Debug("Including existing non-zip file %s", path)
+				targetPath := f.renamePathIfNeeded(path, false)
+				log.Debug("Including existing non-zip file %s as %s", path, targetPath)
 				if info, err := os.Lstat(path); err != nil {
 					return err
 				} else if b, err := ioutil.ReadFile(path); err != nil {
 					return fmt.Errorf("Error reading %s to zipfile: %s", path, err)
 				} else if err := f.StripBytecodeTimestamp(path, b); err != nil {
 					return err
-				} else if err := f.WriteFile(path, b, info.Mode()&os.ModePerm); err != nil {
+				} else if err := f.WriteFile(targetPath, b, info.Mode()&os.ModePerm); err != nil {
 					return err
 				}
 			}
 		}
 	} else if (len(f.Suffix) == 0 || f.AddInitPy) && path != "." && f.DirEntries { // Only add directory entries in "dumb" mode.
-		log.Debug("Adding directory entry %s/", path)
-		if err := f.WriteDir(path); err != nil {
+		targetPath := f.renamePathIfNeeded(path, true)
+		log.Debug("Adding directory entry %s/ as %s", path, targetPath)
+		if err := f.WriteDir(targetPath); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// renamePathIfNeeded checks if the given file should be renamed according to the rename dir flag
+func (f *File) renamePathIfNeeded(name string, isDir bool) string {
+	for before, after := range f.RenameDirs {
+		if strings.HasPrefix(name, before) {
+			name = path.Join(after, strings.TrimPrefix(name, before))
+			if isDir {
+				name += "/"
+			}
+			break
+		}
+	}
+	return name
 }
 
 // samePaths returns true if two paths are the same (taking relative/absolute paths into account).

@@ -319,7 +319,7 @@ pip_library(
 pip_library(
     name = "grpcio",
     test_only = True,
-    version = "1.14.0",
+    version = "1.29.0",
     deps = [
         ":six",
     ],
@@ -387,9 +387,39 @@ pip_library(
 )
 
 pip_library(
+    name = "setuptools",
+    test_only = True,
+    version = "47.1.1",
+)
+
+pip_library(
     name = "scipy",
     test_only = True,
-    version = "1.1.0",
+    version = "1.5.2",
     zip_safe = False,
-    deps = [":numpy"],
+    deps = [
+        ":numpy",
+        ":setuptools",
+    ],
+)
+
+pip_library(
+    name = "googleapis_common_protos",
+    package_name = "googleapis-common-protos",
+    test_only = True,
+    version = "1.52.0",
+    deps = [
+        ":protobuf_pip",
+    ],
+)
+
+pip_library(
+    name = "protobuf_pip",
+    package_name = "protobuf",
+    test_only = True,
+    version = "3.12.2",
+    deps = [
+        ":setuptools",
+        ":six",
+    ],
 )
