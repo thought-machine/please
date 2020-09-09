@@ -404,8 +404,8 @@ pip_library(
 pip_library(
     name = "googleapis_common_protos",
     package_name = "googleapis-common-protos",
-    version = "1.52.0",
     test_only = True,
+    version = "1.52.0",
     deps = [
         ":protobuf_pip",
     ],
@@ -414,9 +414,10 @@ pip_library(
 pip_library(
     name = "protobuf_pip",
     package_name = "protobuf",
-    version = "3.12.2",
     test_only = True,
+    version = "3.12.2",
     deps = [
         ":setuptools",
-        ":six",    ],
+        ":six",
+    ],
 )
