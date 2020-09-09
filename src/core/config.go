@@ -504,7 +504,7 @@ type Configuration struct {
 
 	FeatureFlags struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
-	}
+	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 }
 
 // An Alias represents aliases in the config.
