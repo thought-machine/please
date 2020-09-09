@@ -269,9 +269,7 @@ pip_library(
     name = "tensorflow",
     licences = ["Apache 2.0"],
     test_only = True,
-    # the next version of TF breaks due to an upstream bug fixed in this pr:
-    # https://github.com/tensorflow/tensorflow/pull/38663
-    version = "1.13.1",
+    version = "2.3.0",
     deps = [
         ":absl",
         ":astor",
@@ -319,7 +317,7 @@ pip_library(
 pip_library(
     name = "grpcio",
     test_only = True,
-    version = "1.14.0",
+    version = "1.29.0",
     deps = [
         ":six",
     ],
@@ -387,9 +385,38 @@ pip_library(
 )
 
 pip_library(
+    name = "setuptools",
+    test_only = True,
+    version = "47.1.1",
+)
+
+pip_library(
     name = "scipy",
     test_only = True,
-    version = "1.1.0",
+    version = "1.5.2",
     zip_safe = False,
-    deps = [":numpy"],
+    deps = [
+        ":numpy",
+        ":setuptools",
+    ],
+)
+
+pip_library(
+    name = "googleapis_common_protos",
+    package_name = "googleapis-common-protos",
+    version = "1.52.0",
+    test_only = True,
+    deps = [
+        ":protobuf_pip",
+    ],
+)
+
+pip_library(
+    name = "protobuf_pip",
+    package_name = "protobuf",
+    version = "3.12.2",
+    test_only = True,
+    deps = [
+        ":setuptools",
+        ":six",    ],
 )

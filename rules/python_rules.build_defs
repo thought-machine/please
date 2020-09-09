@@ -332,7 +332,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
       version (str): Specific version of the package to install.
       hashes (list): List of acceptable hashes for this target.
       package_name (str): Name of the pip package to install. Defaults to the same as 'name'.
-      outs (list): List of output files / directories. Defaults to [name].
+      outs (list): List of output files / directories. Defaults to [name]. If subdirectory is used outs[0] is used as the prefix.
       test_only (bool): If True, can only be used by test rules or other test_only libraries.
       deps (list): List of rules this library depends on.
       post_install_commands (list): Commands run after pip install has completed.
@@ -366,7 +366,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         else:
             repo_flag = '-f ' + repo
 
-    target = pip_target_dir
+    target = f"{pip_target_dir}/{name}/{version}"
     if install_subdirectory:
      target += '/' + outs[0]
 
@@ -405,7 +405,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         tag = "srcs",
         cmd = pip_cmd,
         test_only = test_only,
-        output_dirs = [f"{pip_target_dir}/**"],
+        output_dirs = [pip_target_dir],
         srcs = patches if patch else [],
         building_description = 'Fetching...',
         tools = {
@@ -413,8 +413,8 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         },
         sandbox = False,
     )
-
-    cmd = '$TOOLS_JARCAT z -d -i .'
+    
+    cmd = f'$TOOLS_JARCAT z -d -i . -r $PKG/{name}/{version}:$PKG'
     if not licences:
         cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
 
@@ -583,11 +583,6 @@ def _handle_zip_safe(name):
     """
     if has_label(name, 'py:zip-unsafe'):
         set_command(name, get_command(name).replace(' --zip_safe', ''))
-
-
-def _add_dist_info_and_licences(name, output):
-    _add_licences(name, output)
-    _add_dist_info(name, output)
 
 def _add_licences(name, output):
     """Annotates a pip_library rule with detected licences after download."""

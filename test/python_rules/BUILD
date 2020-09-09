@@ -133,6 +133,19 @@ python_test(
 )
 
 python_test(
+    name = "namespaced_packages_test",
+    srcs = ["namespaced_packages_test.py"],
+    labels = [
+        "py3",
+        "pip",
+    ],
+    deps = [
+        "//third_party/python:googleapis_common_protos",
+        "//third_party/python:protobuf_pip",
+    ],
+)
+
+python_test(
     name = "tensorflow_test",
     srcs = ["tensorflow_test.py"],
     labels = [
