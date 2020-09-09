@@ -1,19 +1,9 @@
 Please Ubuntu image
 -------------------
 
-This image contains everything needed to build Please and all its
-parser engines and run all the additional tests. It's the canonical
-Linux build environment for Please.
+This image contains everything needed to build Please & associated tools
+and run all the tests. It's the canonical supported environment for
+normal usage.
 
-The only tests that are excluded are tests that run in Docker since
-it's not easily possible to spawn more Docker containers from inside
-a container.
-
-Notes
------
-
- - The currently recommended version is Bionic (18.04). A few things
-   work notably better and/or easier in this version, although it's certainly
-   possibly to get things working in Xenial as well with a bit more work.
-   Most notably you'll need to build a version of unittest++ yourself
-   if you want to run the C++ tests.
+It is currently based on Bionic (18.04) but Focal (20.04) should work fine too.
+It should be possible to get older versions running in a similar way.
