@@ -14,9 +14,12 @@ import (
 )
 
 func parseFileToStatements(filename string) (*scope, []*Statement, error) {
+	return parseFileToStatementsInPkg(filename, core.NewPackage("test/package"))
+}
+
+func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*Statement, error) {
 	state := core.NewDefaultBuildState()
 	state.Config.BuildConfig = map[string]string{"parser-engine": "python27"}
-	pkg := core.NewPackage("test/package")
 	parser := NewParser(state)
 	parser.MustLoadBuiltins("builtins.build_defs", nil, rules.MustAsset("builtins.build_defs.gob"))
 	statements, err := parser.parse(filename)
@@ -319,4 +322,13 @@ func TestRemoveAffixes(t *testing.T) {
 	assert.EqualValues(t, "PEP 616: New removeprefix() and removesuffix() string methods", s.Lookup("x"))
 	assert.EqualValues(t, "New removeprefix() and removesuffix() string methods", s.Lookup("y"))
 	assert.EqualValues(t, "removeprefix() and removesuffix() ", s.Lookup("z"))
+}
+
+func TestSubrepoName(t *testing.T) {
+	pkg := core.NewPackage("test/pkg")
+	pkg.SubrepoName = "pleasings"
+	s, _, err := parseFileToStatementsInPkg("src/parse/asp/test_data/interpreter/subrepo_name.build", pkg)
+	assert.NoError(t, err)
+
+	assert.EqualValues(t, "pleasings", s.Lookup("subrepo"))
 }

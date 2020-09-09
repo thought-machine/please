@@ -170,6 +170,11 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	var cacheKey []byte
 	var metadata *core.BuildMetadata
 
+	if target.HasLabel("go") {
+		// Create a dummy go.mod file so Go tooling ignores the contents of plz-out.
+		goModOnce.Do(writeGoMod)
+	}
+
 	if runRemotely {
 		metadata, err = state.RemoteClient.Build(tid, target)
 		if err != nil {

@@ -26,9 +26,6 @@ func GeneralBuildEnvironment(config *Configuration) BuildEnv {
 		// Need this for certain tools, for example sass
 		"LANG=" + config.Build.Lang,
 	}
-	if config.Go.GoRoot != "" {
-		env = append(env, "GOROOT="+config.Go.GoRoot)
-	}
 	if config.Cpp.PkgConfigPath != "" {
 		env = append(env, "PKG_CONFIG_PATH="+config.Cpp.PkgConfigPath)
 	}

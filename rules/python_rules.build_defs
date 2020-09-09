@@ -41,6 +41,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
                          which is normally just 'python', but could be 'python3' or
                          'pypy' or whatever.
       strip (bool): If True, the original sources are stripped and only bytecode is output.
+      labels (list): Any labels to apply to this rule.
     """
     if not zip_safe:
         labels += ['py:zip-unsafe']
@@ -75,6 +76,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
                 'int': [interpreter],
                 'jarcat': [CONFIG.JARCAT_TOOL],
             },
+            labels = labels,
         )
         deps += [zip_rule]
     elif strip:
@@ -272,6 +274,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
             'pex': [CONFIG.PEX_TOOL],
         },
         stamp = True,
+        labels = labels,
     )
 
     # If there are resources specified, they have to get built into the pex.
@@ -284,6 +287,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         deps=deps,
         test_only=True,
         visibility=visibility,
+        labels = labels,
     )
 
     deps = [pex_rule, lib_rule]

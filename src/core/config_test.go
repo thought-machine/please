@@ -3,16 +3,17 @@ package core
 import (
 	"bytes"
 	"os"
+	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/thought-machine/please/src/cli"
-	"reflect"
-	"strings"
 )
 
 func TestPlzConfigWorking(t *testing.T) {
@@ -252,6 +253,26 @@ func TestPassUnsafeEnv(t *testing.T) {
 		"XOS=" + xos(),
 	}
 	assert.Equal(t, expected, config.GetBuildEnv())
+}
+
+func TestPassUnsafeEnvExcludedFromHash(t *testing.T) {
+	// Note: env vars once set in the same package are set for other tests as well
+	err := os.Unsetenv("FOO")
+	require.NoError(t, err)
+	err = os.Unsetenv("BAR")
+	require.NoError(t, err)
+
+	config, err := ReadConfigFiles([]string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
+	require.NoError(t, err)
+
+	expected := config.Hash()
+
+	err = os.Setenv("FOO", "first")
+	require.NoError(t, err)
+	err = os.Setenv("BAR", "second")
+	require.NoError(t, err)
+
+	assert.Equal(t, expected, config.Hash())
 }
 
 func TestBuildPathWithPathEnv(t *testing.T) {

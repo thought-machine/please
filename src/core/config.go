@@ -107,6 +107,10 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	setDefault(&config.Proto.Language, "cc", "py", "java", "go", "js")
 	setDefault(&config.Parse.BuildDefsDir, "build_defs")
 
+	if config.Go.GoRoot != "" {
+		config.Go.GoTool = filepath.Join(config.Go.GoRoot, "bin", "go")
+	}
+
 	// Default values for these guys depend on config.Java.JavaHome if that's been set.
 	if config.Java.JavaHome != "" {
 		defaultPathIfExists(&config.Java.JlinkTool, config.Java.JavaHome, "bin/jlink")
@@ -417,7 +421,7 @@ type Configuration struct {
 	} `help:"Please supports a form of 'garbage collection', by which it means identifying targets that are not used for anything. By default binary targets and all their transitive dependencies are always considered non-garbage, as are any tests directly on those. The config options here allow tweaking this behaviour to retain more things.\n\nNote that it's a very good idea that your BUILD files are in the standard format when running this."`
 	Go struct {
 		GoTool        string `help:"The binary to use to invoke Go & its subtools with." var:"GO_TOOL"`
-		GoRoot        string `help:"If set, will set the GOROOT environment variable appropriately during build actions."`
+		GoRoot        string `help:"If set, will set the GOROOT environment variable appropriately during build actions." var:"GOROOT"`
 		TestTool      string `help:"Sets the location of the please_go_test tool that is used to template the test main for go_test rules." var:"GO_TEST_TOOL"`
 		GoPath        string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
 		ImportPath    string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
@@ -536,7 +540,7 @@ func (config *Configuration) Hash() []byte {
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}
-	for _, env := range config.getBuildEnv(false) {
+	for _, env := range config.getBuildEnv(false, false) {
 		h.Write([]byte(env))
 	}
 	return h.Sum(nil)
@@ -545,7 +549,7 @@ func (config *Configuration) Hash() []byte {
 // GetBuildEnv returns the build environment configured for this config object.
 func (config *Configuration) GetBuildEnv() []string {
 	config.buildEnvStored.Once.Do(func() {
-		config.buildEnvStored.Env = config.getBuildEnv(true)
+		config.buildEnvStored.Env = config.getBuildEnv(true, true)
 		for _, e := range config.buildEnvStored.Env {
 			if strings.HasPrefix(e, "PATH=") {
 				config.buildEnvStored.Path = strings.Split(strings.TrimPrefix(e, "PATH="), ":")
@@ -561,7 +565,7 @@ func (config *Configuration) Path() []string {
 	return config.buildEnvStored.Path
 }
 
-func (config *Configuration) getBuildEnv(includePath bool) []string {
+func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) []string {
 	env := []string{
 		// Need to know these for certain rules.
 		"ARCH=" + config.Build.Arch.Arch,
@@ -580,14 +584,16 @@ func (config *Configuration) getBuildEnv(includePath bool) []string {
 		env = append(env, pair)
 	}
 	// from the user's environment based on the PassUnsafeEnv config keyword
-	for _, k := range config.Build.PassUnsafeEnv {
-		if v, isSet := os.LookupEnv(k); isSet {
-			if k == "PATH" {
-				// plz's install location always needs to be on the path.
-				v = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir) + ":" + v
-				includePath = false // skip this in a bit
+	if includeUnsafe {
+		for _, k := range config.Build.PassUnsafeEnv {
+			if v, isSet := os.LookupEnv(k); isSet {
+				if k == "PATH" {
+					// plz's install location always needs to be on the path.
+					v = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir) + ":" + v
+					includePath = false // skip this in a bit
+				}
+				env = append(env, k+"="+v)
 			}
-			env = append(env, k+"="+v)
 		}
 	}
 	// from the user's environment based on the PassEnv config keyword
