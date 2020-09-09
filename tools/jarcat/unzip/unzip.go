@@ -93,13 +93,14 @@ func (e *extractor) extractTar(f io.Reader) error {
 			return err
 		}
 		out := path.Join(e.Out, strings.TrimLeft(strings.TrimPrefix(hdr.Name, e.Prefix), "/"))
-		if err := e.makeDir(out); err != nil {
+		if err := e.makeParentDir(out); err != nil {
 			return err
 		}
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			// Nothing else needs to be done if this member is a directory: a
-			// directory has just been created at the target path
+			if err := os.MkdirAll(out, 0755); err != nil {
+				return err
+			}
 		case tar.TypeReg:
 			if f, err := os.Create(out); err != nil {
 				return err
@@ -163,7 +164,7 @@ func (e *extractor) extractFile(f *zip.File) error {
 	if e.File != "" {
 		out = e.Out
 	}
-	if err := e.makeDir(out); err != nil {
+	if err := e.makeParentDir(out); err != nil {
 		return err
 	}
 	o, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE, f.Mode())
@@ -175,7 +176,7 @@ func (e *extractor) extractFile(f *zip.File) error {
 	return err
 }
 
-func (e *extractor) makeDir(filename string) error {
+func (e *extractor) makeParentDir(filename string) error {
 	dir := path.Dir(filename)
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
