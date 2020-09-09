@@ -2,12 +2,11 @@
 
 import unittest
 
-
 class NamespacedPackagesTest(unittest.TestCase):
 
     def test_namespaced_packages_are_importable(self):
-        import google.common.api.auth
-        import google.protobuf.message
-        self.assertIsNotNone(auth.Provider)
+        from google.api import auth_pb2
+        from google.protobuf import message
+        self.assertIsNotNone(auth_pb2.AuthProvider)
         self.assertIsNotNone(message.Message)
 
