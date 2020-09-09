@@ -3,6 +3,7 @@ package asp
 import (
 	"io"
 	"reflect"
+	"runtime/debug"
 	"strconv"
 	"strings"
 )
@@ -58,6 +59,7 @@ func parseFileInput(r io.Reader) (input *FileInput, err error) {
 	// recover any such failures here and convert to an error.
 	defer func() {
 		if r := recover(); r != nil {
+			log.Debugf("error parsing build file: %v \n%v", r, string(debug.Stack()))
 			err = r.(error)
 		}
 	}()

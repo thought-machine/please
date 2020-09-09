@@ -576,8 +576,14 @@ func joinPath(s *scope, args []pyObject) pyObject {
 }
 
 func packageName(s *scope, args []pyObject) pyObject {
-	s.Assert(s.pkg != nil, "you cannot call package_name() from this context")
-	return pyString(s.pkg.Name)
+	if s.pkg != nil {
+		return pyString(s.pkg.Name)
+	}
+	if s.subincludeLabel != nil {
+		return pyString(s.subincludeLabel.PackageName)
+	}
+	s.Error("you cannot call package_name() from this context")
+	return nil
 }
 
 func subrepoName(s *scope, args []pyObject) pyObject {

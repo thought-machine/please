@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -45,7 +44,6 @@ func fail(pos Position, message string, args ...interface{}) {
 
 // AddStackFrame adds a new stack frame to the given errorStack, or wraps an existing error if not.
 func AddStackFrame(pos Position, err interface{}) error {
-	log.Debugf("error parsing build file: %v \n%v", err, string(debug.Stack()))
 	stack, ok := err.(*errorStack)
 	if !ok {
 		if e, ok := err.(error); ok {
