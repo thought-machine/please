@@ -1,3 +1,24 @@
+Version 15.4.0
+--------------
+
+    * The linux Please binary is now statically linked so is portable
+      across musl and glibc linux distributions #1180
+    * GOROOT is now respected when configured and the go tool is
+      determined based off this variable. If the GOROOT is not provided,
+      the GOROOT is determined as `go env GOROOT` based on the
+      configured go tool. #1195
+    * Java binaries are now self executable by default. This feature
+      is gated behind a feature flag until v16. Type plz help featureflags
+      for more information. #1197
+    * Fixed esoteric edge cases in jarcat #1203
+    * subrepo_name() and package_name() now work in the top level of a
+      build definition file returning the package and subrepo of their
+      build rule. #1198
+    * plz init is now interactive and will guide you through adding
+      the pleasings subrepo if you wish. The pleasings subrepo will
+      no longer be added implicitly as of please v16. #1205
+
+
 Version 15.3.0
 --------------
 
