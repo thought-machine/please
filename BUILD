@@ -37,7 +37,7 @@ filegroup(
     name = "pleasew",
     srcs = ["pleasew"],
     binary = True,
-    visibility = ["//src/utils:all"],
+    visibility = ["//src/assets/..."],
 )
 
 github_repo(

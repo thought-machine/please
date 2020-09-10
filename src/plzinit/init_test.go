@@ -1,4 +1,4 @@
-package utils
+package plzinit
 
 import (
 	"github.com/stretchr/testify/assert"

@@ -1,13 +1,15 @@
-package utils
+package plzinit
 
 import (
 	"fmt"
+	"gopkg.in/op/go-logging.v1"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -38,6 +40,8 @@ github_repo(
 )
 `
 
+var log = logging.MustGetLogger("init")
+
 // InitConfig initialises a .plzconfig template in the given directory.
 func InitConfig(dir string, bazelCompatibility bool) {
 	if dir == "." {
@@ -62,7 +66,7 @@ func InitConfig(dir string, bazelCompatibility bool) {
 	}
 	fmt.Printf("Wrote config template to %s, you're now ready to go!\n", config)
 	// Now write the wrapper script
-	data := MustAsset(wrapperScriptName)
+	data := assets.MustAsset(wrapperScriptName)
 	if err := ioutil.WriteFile(wrapperScriptName, data, 0755); err != nil {
 		log.Fatalf("Failed to write file: %s", err)
 	}
