@@ -283,11 +283,17 @@ def hash_filegroup(name:str, srcs:list=None, deps:list=None, exported_deps:list=
       test_only (bool): If true the exported file can only be used by test targets.
       requires (list): Kinds of output from other rules that this one requires.
     """
+    cmd = 'mkdir _out && '
+    cmd += 'for S in $SRCS; do '
+    cmd += '    B="$(basename $S)" && '
+    cmd += '    HASH="$(sha256sum $S | cut -d " " -f 1)" && '
+    cmd += '    mv "$S" "_out/${B%.*}-${HASH}.${B##*.}"; '
+    cmd += 'done'
     return build_rule(
         name=name,
         srcs=srcs,
         output_dirs = ['_out'],
-        cmd = 'mkdir _out; for S in $SRCS; do B="$(basename $S)"; mv "$S" "_out/${B%.*}-$(shasum -a 256 $S | cut -d " " -f 1 ).${B##*.}"; done',
+        cmd = cmd,
         deps=deps,
         exported_deps=exported_deps,
         visibility=visibility,
