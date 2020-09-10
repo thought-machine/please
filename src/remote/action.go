@@ -113,7 +113,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		// remote one (which is probably OK on the same OS, but not between say Linux and
 		// FreeBSD where bash is not idiomatically in the same place).
 		Arguments: []string{
-			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
+			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-e", "-c", commandPrefix + cmd,
 		},
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(target, inputRoot, stamp), target.Sandbox),
 		OutputFiles:          files,
@@ -165,7 +165,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 			},
 		},
 		Arguments: []string{
-			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
+			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-o", "errfail", "-c", commandPrefix + cmd,
 		},
 		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(c.state, target, "."), target.TestSandbox),
 		OutputFiles:          files,

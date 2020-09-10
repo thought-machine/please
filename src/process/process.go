@@ -122,7 +122,7 @@ func (e *Executor) ExecWithTimeoutShell(target Target, dir string, env []string,
 
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
 func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool) ([]byte, []byte, error) {
-	c := append([]string{"bash", "--noprofile", "--norc", "-u", "-o", "pipefail", "-c"}, cmd)
+	c := append([]string{"bash", "--noprofile", "--norc", "-u", "-o", "pipefail", "-e", "-c"}, cmd)
 	if sandbox {
 		if e.sandboxCommand == "" {
 			log.Fatalf("Sandbox tool not found on PATH")
