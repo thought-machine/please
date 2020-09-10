@@ -215,6 +215,11 @@ var opts struct {
 				Options ConfigOverrides `positional-arg-name:"config" required:"true" description:"Attributes to set"`
 			} `positional-args:"true" required:"true"`
 		} `command:"config" description:"Initialises specific attributes of config files"`
+		Pleasings struct {
+			Revision  string `short:"r" long:"revision" description:"The revision to pin the pleasings repo to. This can be a branch, commit, tag, or other git reference."`
+			Location  string `short:"l" long:"location" description:"The location of the build file to write the subrepo rule to" default:"BUILD"`
+			PrintOnly bool   `long:"print" description:"Print the rule to standard out instead of writing it to a file"`
+		} `command:"pleasings" description:"Initialises the pleasings repo"`
 	} `command:"init" subcommands-optional:"true" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {
@@ -656,6 +661,12 @@ var buildFunctions = map[string]func() int{
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
 			query.Filter(state, state.ExpandOriginalLabels())
 		})
+	},
+	"pleasings": func() int {
+		if err := utils.InitPleasings(opts.Init.Pleasings.Location, opts.Init.Pleasings.PrintOnly, opts.Init.Pleasings.Revision); err != nil {
+			log.Fatalf("failed to write pleasings subrepo file: %v", err)
+		}
+		return 0
 	},
 }
 

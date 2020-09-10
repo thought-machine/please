@@ -30,3 +30,13 @@ filegroup(
         "//tools/misc:completion_script",
     ],
 )
+
+go_test(
+    name = "wrapper_test",
+    srcs = ["wrapper_test.go"],
+    deps = [
+        ":utils",
+        "//src/fs",
+        "//third_party/go:testify",
+    ],
+)

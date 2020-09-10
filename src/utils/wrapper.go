@@ -30,6 +30,14 @@ compatibility = true
 `
 const wrapperScriptName = "pleasew"
 
+const pleasingsSubrepoTemplate = `
+github_repo(
+  name = "pleasings",
+  repo = "thought-machine/pleasings",
+  revision = "%s",
+)
+`
+
 // InitConfig initialises a .plzconfig template in the given directory.
 func InitConfig(dir string, bazelCompatibility bool) {
 	if dir == "." {
@@ -94,4 +102,30 @@ func readConfig(filename string) []byte {
 		log.Fatalf("Failed to read config file: %s", err)
 	}
 	return b
+}
+
+func InitPleasings(location string, printOnly bool, revision string) error {
+	if !printOnly && fs.FileExists(location) {
+		if !cli.PromptYN(fmt.Sprintf("It looks like a build file already exists at %v, would you like to override it? You may use --print to print the rule and add it manually instead.", location), false) {
+			return nil
+		}
+	}
+
+	if printOnly {
+		fmt.Printf(pleasingsSubrepoTemplate, revision)
+		return nil
+	}
+
+	dir := filepath.Dir(location)
+	if dir != "." {
+		if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
+			log.Fatalf("failed to create pleasings directory: %v", err)
+		}
+	}
+
+	// TODO(jpoole): We could probably parse the file, update/append the rule, and re-serialise that rather than nuking it
+	if err := os.RemoveAll(location); err != nil {
+		return err
+	}
+	return ioutil.WriteFile(location, []byte(fmt.Sprintf(pleasingsSubrepoTemplate, revision)), 0644)
 }

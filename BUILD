@@ -39,3 +39,9 @@ filegroup(
     binary = True,
     visibility = ["//src/utils:all"],
 )
+
+github_repo(
+    name = "pleasings",
+    repo = "thought-machine/pleasings",
+    revision = "master",
+)
