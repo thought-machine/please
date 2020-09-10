@@ -3,6 +3,7 @@ go_binary(
     srcs = ["please.go"],
     visibility = ["PUBLIC"],
     deps = [
+        "//src/assets",
         "//src/build",
         "//src/cache",
         "//src/clean",
@@ -22,6 +23,7 @@ go_binary(
         "//src/tool",
         "//src/update",
         "//src/utils",
+        "//src/plzinit",
         "//src/watch",
         "//src/worker",
         "//third_party/go:go-flags",
