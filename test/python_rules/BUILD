@@ -147,15 +147,15 @@ python_test(
     ],
 )
 
-python_test(
-    name = "tensorflow_test",
-    srcs = ["tensorflow_test.py"],
-    labels = [
-        "py3",
-        "pip",
-    ],
-    deps = ["//third_party/python:tensorflow"],
-)
+# python_test(
+#     name = "tensorflow_test",
+#     srcs = ["tensorflow_test.py"],
+#     labels = [
+#         "py3",
+#         "pip",
+#     ],
+#     deps = ["//third_party/python:tensorflow"],
+# )
 
 python_test(
     name = "pandas_test",
@@ -205,6 +205,7 @@ plz_e2e_test(
     cmd = "plz query print -f labels //third_party/python:numpy",
     expected_output = "expected_labels_on_numpy.txt",
     deps = ["//third_party/python:numpy"],
+    labels = ["py3"],
 )
 
 plz_e2e_test(
@@ -212,4 +213,5 @@ plz_e2e_test(
     cmd = "plz query print -f labels //third_party/python:grpcio",
     expected_output = "expected_labels_on_grpcio.txt",
     deps = ["//third_party/python:grpcio"],
+    labels = ["py3"],
 )
