@@ -1,3 +1,6 @@
+[please]
+location = /usr/bin/plz
+
 [buildenv]
 foo-bar = second
 bar-bar = first

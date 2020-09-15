@@ -9,21 +9,21 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-var target = &core.BuildTarget{Label: core.BuildLabel{PackageName: "src/test", Name: "coverage_test"}}
+var target = &core.BuildTarget{Label: core.BuildLabel{PackageName: ".", Name: "coverage_test"}}
 
 const (
-	pythonCoverageFile    = "src/test/test_data/python-coverage.xml"
-	goCoverageFile        = "src/test/test_data/go_coverage.txt"
-	goCoverageFile2       = "src/test/test_data/go_coverage_2.txt"
-	goCoverageFile3       = "src/test/test_data/go_coverage_3.txt"
-	gcovCoverageFile      = "src/test/test_data/gcov_coverage.gcov"
-	istanbulCoverageFile  = "src/test/test_data/istanbul_coverage.json"
-	istanbulCoverageFile2 = "src/test/test_data/istanbul_coverage_2.json"
+	pythonCoverageFile    = "test_data/python-coverage.xml"
+	goCoverageFile        = "test_data/go_coverage.txt"
+	goCoverageFile2       = "test_data/go_coverage_2.txt"
+	goCoverageFile3       = "test_data/go_coverage_3.txt"
+	gcovCoverageFile      = "test_data/gcov_coverage.gcov"
+	istanbulCoverageFile  = "test_data/istanbul_coverage.json"
+	istanbulCoverageFile2 = "test_data/istanbul_coverage_2.json"
 )
 
 // Test that tests aren't required to produce coverage, ie. it's not an error if the file doesn't exist.
 func TestCoverageNotRequired(t *testing.T) {
-	coverage, err := parseTestCoverageFile(target, "src/test/test_data/blah.xml", 1)
+	coverage, err := parseTestCoverageFile(target, "test_data/blah.xml", 1)
 	if err != nil {
 		t.Errorf("Incorrectly produced error attempting to read missing coverage file: %s", err)
 	}
@@ -224,17 +224,17 @@ func TestIncrementalStats(t *testing.T) {
 	state.Config.Cover.FileExtension = []string{".go"}
 	cov := core.TestCoverage{
 		Files: map[string][]core.LineCoverage{
-			"src/test/coverage.go":      {core.NotExecutable, core.Uncovered, core.Covered, core.Uncovered},
-			"src/test/coverage_test.go": {core.NotExecutable, core.Uncovered, core.Covered, core.Uncovered},
+			"coverage.go":      {core.NotExecutable, core.Uncovered, core.Covered, core.Uncovered},
+			"coverage_test.go": {core.NotExecutable, core.Uncovered, core.Covered, core.Uncovered},
 		},
 	}
 	lines := map[string][]int{
-		"src/test/coverage.go":      {1, 2, 3},
-		"src/test/coverage_test.go": {1, 2, 3},
+		"coverage.go":      {1, 2, 3},
+		"coverage_test.go": {1, 2, 3},
 	}
 	files := map[string]bool{
-		"src/test/coverage.go":      true,
-		"src/test/coverage_test.go": false,
+		"coverage.go":      true,
+		"coverage_test.go": false,
 	}
 	stats := calculateIncrementalStats(state, cov, lines, files)
 	// Only coverage.go should count as modified (because test files are not included)

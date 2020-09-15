@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	pubKey  = "tools/release_signer/signer/test_data/pub.gpg"
-	secKey  = "tools/release_signer/signer/test_data/sec.gpg"
-	testTxt = "tools/release_signer/signer/test_data/test.txt"
-	badTxt  = "tools/release_signer/signer/test_data/bad.txt"
+	pubKey  = "test_data/pub.gpg"
+	secKey  = "test_data/sec.gpg"
+	testTxt = "test_data/test.txt"
+	badTxt  = "test_data/bad.txt"
 )
 
 func must(err error) {

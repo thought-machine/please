@@ -17,6 +17,7 @@ keep = //package:all
 filtertool = //tools/please_go_filter
 testtool = //tools/please_go_test
 importpath = github.com/thought-machine/please
+gobuildcompat = true
 
 [cpp]
 defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter

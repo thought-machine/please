@@ -30,8 +30,8 @@ func (*fakeLogBackend) Log(level logging.Level, calldepth int, rec *logging.Reco
 }
 
 func TestVerifyNewPlease(t *testing.T) {
-	assert.True(t, verifyNewPlease("src/please", core.PleaseVersion.String()))
-	assert.False(t, verifyNewPlease("src/please", "wibble"))
+	assert.True(t, verifyNewPlease("../please", core.PleaseVersion.String()))
+	assert.False(t, verifyNewPlease("../please", "wibble"))
 	assert.False(t, verifyNewPlease("wibble", core.PleaseVersion.String()))
 }
 
@@ -160,7 +160,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/latest_version" {
 		w.Write([]byte("42.0.0"))
 	} else if r.URL.Path == vCurrent || r.URL.Path == v42 {
-		b, err := ioutil.ReadFile("src/update/please_test.tar.xz")
+		b, err := ioutil.ReadFile("please_test.tar.xz")
 		if err != nil {
 			panic(err)
 		}

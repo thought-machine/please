@@ -17,7 +17,7 @@ import (
 )
 
 func TestPlzConfigWorking(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/working.plzconfig"}, nil)
+	config, err := ReadConfigFiles([]string{"test_data/working.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "pexmabob", config.Python.PexTool)
 	assert.Equal(t, "javac", config.Java.JavacTool)
@@ -29,12 +29,12 @@ func TestPlzConfigWorking(t *testing.T) {
 }
 
 func TestPlzConfigFailing(t *testing.T) {
-	_, err := ReadConfigFiles([]string{"src/core/test_data/failing.plzconfig"}, nil)
+	_, err := ReadConfigFiles([]string{"test_data/failing.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestPlzConfigProfile(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/working.plzconfig"}, []string{"dev"})
+	config, err := ReadConfigFiles([]string{"test_data/working.plzconfig"}, []string{"dev"})
 	assert.NoError(t, err)
 	assert.Equal(t, "pexmabob", config.Python.PexTool)
 	assert.Equal(t, "/opt/java/bin/javac", config.Java.JavacTool)
@@ -45,8 +45,8 @@ func TestPlzConfigProfile(t *testing.T) {
 
 func TestMultiplePlzConfigFiles(t *testing.T) {
 	config, err := ReadConfigFiles([]string{
-		"src/core/test_data/working.plzconfig",
-		"src/core/test_data/failing.plzconfig",
+		"test_data/working.plzconfig",
+		"test_data/failing.plzconfig",
 	}, nil)
 	assert.Error(t, err)
 	// Quick check of this - we should have still read the first config file correctly.
@@ -54,7 +54,7 @@ func TestMultiplePlzConfigFiles(t *testing.T) {
 }
 
 func TestConfigSlicesOverwrite(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/slices.plzconfig"}, nil)
+	config, err := ReadConfigFiles([]string{"test_data/slices.plzconfig"}, nil)
 	assert.NoError(t, err)
 	// This should be completely overwritten by the config file
 	assert.Equal(t, []string{"/sbin"}, config.Build.Path)
@@ -154,29 +154,29 @@ func TestConfigOverrideOptions(t *testing.T) {
 }
 
 func TestReadSemver(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/version_good.plzconfig"}, nil)
+	config, err := ReadConfigFiles([]string{"test_data/version_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 2, config.Please.Version.Major)
 	assert.EqualValues(t, 3, config.Please.Version.Minor)
 	assert.EqualValues(t, 4, config.Please.Version.Patch)
-	config, err = ReadConfigFiles([]string{"src/core/test_data/version_bad.plzconfig"}, nil)
+	config, err = ReadConfigFiles([]string{"test_data/version_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestReadDurations(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/duration_good.plzconfig"}, nil)
+	config, err := ReadConfigFiles([]string{"test_data/duration_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 500*time.Millisecond, config.Build.Timeout)
 	assert.EqualValues(t, 5*time.Second, config.Test.Timeout)
-	config, err = ReadConfigFiles([]string{"src/core/test_data/duration_bad.plzconfig"}, nil)
+	config, err = ReadConfigFiles([]string{"test_data/duration_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestReadByteSizes(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/bytesize_good.plzconfig"}, nil)
+	config, err := ReadConfigFiles([]string{"test_data/bytesize_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 500*1000*1000, config.Cache.DirCacheHighWaterMark)
-	config, err = ReadConfigFiles([]string{"src/core/test_data/bytesize_bad.plzconfig"}, nil)
+	config, err = ReadConfigFiles([]string{"test_data/bytesize_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
@@ -189,15 +189,15 @@ func TestCompletions(t *testing.T) {
 }
 
 func TestConfigVerifiesOptions(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/testrunner_good.plzconfig"}, nil)
+	config, err := ReadConfigFiles([]string{"test_data/testrunner_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "pytest", config.Python.TestRunner)
-	_, err = ReadConfigFiles([]string{"src/core/test_data/testrunner_bad.plzconfig"}, nil)
+	_, err = ReadConfigFiles([]string{"test_data/testrunner_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestBuildEnvSection(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/buildenv.plzconfig"}, nil)
+	config, err := ReadConfigFiles([]string{"test_data/buildenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
 		"ARCH=" + runtime.GOARCH,
@@ -206,7 +206,7 @@ func TestBuildEnvSection(t *testing.T) {
 		"GOARCH=" + runtime.GOARCH,
 		"GOOS=" + runtime.GOOS,
 		"OS=" + runtime.GOOS,
-		"PATH=" + os.Getenv("TMP_DIR") + ":/usr/local/bin:/usr/bin:/bin",
+		"PATH=" + "/usr/bin/plz:/usr/local/bin:/usr/bin:/bin",
 		"XARCH=x86_64",
 		"XOS=" + xos(),
 	}
@@ -218,7 +218,7 @@ func TestPassEnv(t *testing.T) {
 	assert.NoError(t, err)
 	err = os.Setenv("BAR", "second")
 	assert.NoError(t, err)
-	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, nil)
+	config, err := ReadConfigFiles([]string{"test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
 		"ARCH=" + runtime.GOARCH,
@@ -227,11 +227,11 @@ func TestPassEnv(t *testing.T) {
 		"GOARCH=" + runtime.GOARCH,
 		"GOOS=" + runtime.GOOS,
 		"OS=" + runtime.GOOS,
-		"PATH=" + os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
+		"PATH=" + "/usr/bin/plz:" + os.Getenv("PATH"),
 		"XARCH=x86_64",
 		"XOS=" + xos(),
 	}
-	assert.Equal(t, expected, config.GetBuildEnv())
+	assert.ElementsMatch(t, expected, config.GetBuildEnv())
 }
 
 func TestPassUnsafeEnv(t *testing.T) {
@@ -239,7 +239,7 @@ func TestPassUnsafeEnv(t *testing.T) {
 	assert.NoError(t, err)
 	err = os.Setenv("BAR", "second")
 	assert.NoError(t, err)
-	config, err := ReadConfigFiles([]string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
+	config, err := ReadConfigFiles([]string{"test_data/passunsafeenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
 		"ARCH=" + runtime.GOARCH,
@@ -248,11 +248,11 @@ func TestPassUnsafeEnv(t *testing.T) {
 		"GOARCH=" + runtime.GOARCH,
 		"GOOS=" + runtime.GOOS,
 		"OS=" + runtime.GOOS,
-		"PATH=" + os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
+		"PATH=" + "/usr/bin/plz:" + os.Getenv("PATH"),
 		"XARCH=x86_64",
 		"XOS=" + xos(),
 	}
-	assert.Equal(t, expected, config.GetBuildEnv())
+	assert.ElementsMatch(t, expected, config.GetBuildEnv())
 }
 
 func TestPassUnsafeEnvExcludedFromHash(t *testing.T) {
@@ -262,7 +262,7 @@ func TestPassUnsafeEnvExcludedFromHash(t *testing.T) {
 	err = os.Unsetenv("BAR")
 	require.NoError(t, err)
 
-	config, err := ReadConfigFiles([]string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
+	config, err := ReadConfigFiles([]string{"test_data/passunsafeenv.plzconfig"}, nil)
 	require.NoError(t, err)
 
 	expected := config.Hash()
@@ -276,7 +276,7 @@ func TestPassUnsafeEnvExcludedFromHash(t *testing.T) {
 }
 
 func TestBuildPathWithPathEnv(t *testing.T) {
-	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, nil)
+	config, err := ReadConfigFiles([]string{"test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, config.Build.Path, strings.Split(os.Getenv("PATH"), ":"))
 }
@@ -318,7 +318,7 @@ func TestUpdateArgsWithQuotedAliases(t *testing.T) {
 }
 
 func TestParseNewFormatAliases(t *testing.T) {
-	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, nil)
+	c, err := ReadConfigFiles([]string{"test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(c.Alias))
 	a := c.Alias["auth"]
@@ -328,7 +328,7 @@ func TestParseNewFormatAliases(t *testing.T) {
 }
 
 func TestAttachAliasFlags(t *testing.T) {
-	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, nil)
+	c, err := ReadConfigFiles([]string{"test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
 	os.Setenv("GO_FLAGS_COMPLETION", "1")
 	p := flags.NewParser(&struct{}{}, 0)
@@ -364,7 +364,7 @@ func TestAttachAliasFlags(t *testing.T) {
 }
 
 func TestPrintAliases(t *testing.T) {
-	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, nil)
+	c, err := ReadConfigFiles([]string{"test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
 	var buf bytes.Buffer
 	c.PrintAliases(&buf)

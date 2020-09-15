@@ -10,7 +10,7 @@ import (
 )
 
 func TestGoFailure(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_test_failure.txt")
+	results, err := parseTestResultsFile("test_data/go_test_failure.txt")
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(results.TestCases))
 	assert.Equal(t, 2, results.Passes())
@@ -19,7 +19,7 @@ func TestGoFailure(t *testing.T) {
 }
 
 func TestGoPassed(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_test_pass.txt")
+	results, err := parseTestResultsFile("test_data/go_test_pass.txt")
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(results.TestCases))
 	assert.Equal(t, 4, results.Passes())
@@ -28,7 +28,7 @@ func TestGoPassed(t *testing.T) {
 }
 
 func TestGoMultipleFailure(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_multiple_failure.txt")
+	results, err := parseTestResultsFile("test_data/go_multiple_failure.txt")
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(results.TestCases))
 	assert.Equal(t, 0, results.Passes())
@@ -37,7 +37,7 @@ func TestGoMultipleFailure(t *testing.T) {
 }
 
 func TestGoSkipped(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_test_skip.txt")
+	results, err := parseTestResultsFile("test_data/go_test_skip.txt")
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(results.TestCases))
 	assert.Equal(t, 3, results.Passes())
@@ -47,7 +47,7 @@ func TestGoSkipped(t *testing.T) {
 
 // TestGoSkipped tests the skip messages in versions of Go prior to 1.14.
 func TestGoSkippedMessage(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_test_skip.txt")
+	results, err := parseTestResultsFile("test_data/go_test_skip.txt")
 	require.NoError(t, err)
 
 	var skippedTC = getFirstSkippedTestCase(results)
@@ -56,7 +56,7 @@ func TestGoSkippedMessage(t *testing.T) {
 
 // Go 1.14 changes the ordering of skipped messages in Go tests
 func TestGoSkippedMessage114(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_test_skip_1_14.txt")
+	results, err := parseTestResultsFile("test_data/go_test_skip_1_14.txt")
 	require.NoError(t, err)
 
 	var skippedTC = getFirstSkippedTestCase(results)
@@ -74,7 +74,7 @@ func getFirstSkippedTestCase(ts core.TestSuite) *core.TestCase {
 
 // TestGoFailedMessage tests the location of failed test output in versions of Go prior to 1.14.
 func TestGoFailedTraceback(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_test_failure.txt")
+	results, err := parseTestResultsFile("test_data/go_test_failure.txt")
 	require.NoError(t, err)
 
 	var failedTC = getFirstFailedTestCase(results)
@@ -83,7 +83,7 @@ func TestGoFailedTraceback(t *testing.T) {
 
 // Go 1.14 changes the ordering of failed messages in Go tests
 func TestGoFailedTracebackGo114(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_test_fail_1_14.txt")
+	results, err := parseTestResultsFile("test_data/go_test_fail_1_14.txt")
 	require.NoError(t, err)
 
 	var failedTC = getFirstFailedTestCase(results)
@@ -100,7 +100,7 @@ func getFirstFailedTestCase(ts core.TestSuite) *core.TestCase {
 }
 
 func TestGoSubtests(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_subtests.txt")
+	results, err := parseTestResultsFile("test_data/go_subtests.txt")
 	require.NoError(t, err)
 	assert.Equal(t, 7, len(results.TestCases))
 	assert.Equal(t, 7, results.Passes())
@@ -108,7 +108,7 @@ func TestGoSubtests(t *testing.T) {
 
 func TestBuckXML(t *testing.T) {
 	t.Skip("This format matches nothing we generate or care about")
-	results, err := parseTestResultsFile("src/test/test_data/junit.xml")
+	results, err := parseTestResultsFile("test_data/junit.xml")
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(results.TestCases))
 	assert.Equal(t, 4, results.Passes())
@@ -117,7 +117,7 @@ func TestBuckXML(t *testing.T) {
 }
 
 func TestJUnitXML(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/xmlrunner-junit.xml")
+	results, err := parseTestResultsFile("test_data/xmlrunner-junit.xml")
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(results.TestCases))
 	assert.Equal(t, 1, results.Passes())
@@ -126,7 +126,7 @@ func TestJUnitXML(t *testing.T) {
 }
 
 func TestKarmaXML(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/karma-junit.xml")
+	results, err := parseTestResultsFile("test_data/karma-junit.xml")
 	require.NoError(t, err)
 	assert.Equal(t, 10, len(results.TestCases))
 	assert.Equal(t, 10, results.Passes())
@@ -135,7 +135,7 @@ func TestKarmaXML(t *testing.T) {
 }
 
 func TestUnitTestXML(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/unittest.xml")
+	results, err := parseTestResultsFile("test_data/unittest.xml")
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(results.TestCases))
 	assert.Equal(t, 0, results.Passes())
@@ -144,7 +144,7 @@ func TestUnitTestXML(t *testing.T) {
 }
 
 func TestSkip(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/xmlrunner-skipped.xml")
+	results, err := parseTestResultsFile("test_data/xmlrunner-skipped.xml")
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(results.TestCases))
 	assert.Equal(t, 1, results.Passes())
@@ -152,7 +152,7 @@ func TestSkip(t *testing.T) {
 }
 
 func TestGoSuite(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_test_suite.txt")
+	results, err := parseTestResultsFile("test_data/go_test_suite.txt")
 	require.NoError(t, err)
 	assert.Equal(t, 7, len(results.TestCases))
 	assert.Equal(t, 5, results.Passes())
@@ -161,7 +161,7 @@ func TestGoSuite(t *testing.T) {
 }
 
 func TestGoIgnoreUnknownOutput(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_test_ignore_logs.txt")
+	results, err := parseTestResultsFile("test_data/go_test_ignore_logs.txt")
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(results.TestCases))
 	assert.Equal(t, 4, results.Passes())
@@ -170,17 +170,17 @@ func TestGoIgnoreUnknownOutput(t *testing.T) {
 }
 
 func TestGoFailIfUnknownTestPasses(t *testing.T) {
-	_, err := parseTestResultsFile("src/test/test_data/go_test_unknown_test.txt")
+	_, err := parseTestResultsFile("test_data/go_test_unknown_test.txt")
 	assert.Error(t, err)
 }
 
 func TestParseGoFileWithNoTests(t *testing.T) {
-	_, err := parseTestResultsFile("src/test/test_data/go_empty_test.txt")
+	_, err := parseTestResultsFile("test_data/go_empty_test.txt")
 	assert.NoError(t, err)
 }
 
 func TestParseGoFileWithLogging(t *testing.T) {
-	results, err := parseTestResultsFile("src/test/test_data/go_test_logging.txt")
+	results, err := parseTestResultsFile("test_data/go_test_logging.txt")
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(results.TestCases))
 	assert.Equal(t, 3, results.Passes())

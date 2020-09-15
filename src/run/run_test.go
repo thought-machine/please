@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	if err := os.Chdir("src/run/test_data"); err != nil {
+	if err := os.Chdir("test_data"); err != nil {
 		panic(err)
 	}
 }

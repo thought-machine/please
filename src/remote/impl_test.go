@@ -478,7 +478,7 @@ func TestMain(m *testing.M) {
 	pb.RegisterExecutionServer(s, server)
 	fpb.RegisterFetchServer(s, server)
 	go s.Serve(lis)
-	if err := os.Chdir("src/remote/test_data"); err != nil {
+	if err := os.Chdir("test_data"); err != nil {
 		log.Fatalf("Failed to chdir: %s", err)
 	}
 	code := m.Run()

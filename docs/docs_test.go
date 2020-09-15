@@ -23,7 +23,7 @@ func TestAllLinksAreLive(t *testing.T) {
 	allnames := map[string]bool{}
 	alllinks := []string{}
 	for filename := range htmlfiles {
-		f, err := os.Open("docs/" + filename)
+		f, err := os.Open(filename)
 		require.NoError(t, err)
 		defer f.Close() // not until function exits, o well
 		doc, err := html.Parse(f)

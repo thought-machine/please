@@ -13,22 +13,22 @@ import (
 var buildFileNames = []string{"TEST_BUILD", "BUILD"}
 
 func TestCanGlobFileAtRootWithDoubleStar(t *testing.T) {
-	files, err := glob("src/fs/test_data/test_subfolder1", "**/*.txt", nil, buildFileNames, false)
+	files, err := glob("test_data/test_subfolder1", "**/*.txt", nil, buildFileNames, false)
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []string{
-		"src/fs/test_data/test_subfolder1/a.txt",
-		"src/fs/test_data/test_subfolder1/sub_sub_folder/b.txt",
+		"test_data/test_subfolder1/a.txt",
+		"test_data/test_subfolder1/sub_sub_folder/b.txt",
 	}, files)
 }
 
 func TestCanGlobDirectories(t *testing.T) {
-	files, err := glob("src/fs", "test_data/*", nil, buildFileNames, false)
+	files, err := glob(".", "test_data/*", nil, buildFileNames, false)
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []string{
-		"src/fs/test_data/test_subfolder++",
-		"src/fs/test_data/test_subfolder1",
-		"src/fs/test_data/test_subfolder3",
-		"src/fs/test_data/test.txt",
+		"test_data/test_subfolder++",
+		"test_data/test_subfolder1",
+		"test_data/test_subfolder3",
+		"test_data/test.txt",
 	}, files)
 }
 
@@ -42,33 +42,33 @@ func TestIsGlob(t *testing.T) {
 }
 
 func TestGlobRanges(t *testing.T) {
-	files, err := glob("src/fs/test_data", "test_subfolder3/[a-z]est.py", nil, buildFileNames, false)
+	files, err := glob("test_data", "test_subfolder3/[a-z]est.py", nil, buildFileNames, false)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{
-		"src/fs/test_data/test_subfolder3/test.py",
-		"src/fs/test_data/test_subfolder3/best.py",
+		"test_data/test_subfolder3/test.py",
+		"test_data/test_subfolder3/best.py",
 	}, files)
 }
 
 func TestGlobQuestion(t *testing.T) {
-	files, err := glob("src/fs/test_data", "test_subfolder3/?est.py", nil, buildFileNames, false)
+	files, err := glob("test_data", "test_subfolder3/?est.py", nil, buildFileNames, false)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{
-		"src/fs/test_data/test_subfolder3/test.py",
-		"src/fs/test_data/test_subfolder3/best.py",
-		"src/fs/test_data/test_subfolder3/Zest.py",
+		"test_data/test_subfolder3/test.py",
+		"test_data/test_subfolder3/best.py",
+		"test_data/test_subfolder3/Zest.py",
 	}, files)
 }
 
 func TestGlobPlusPlusInDirName(t *testing.T) {
-	files, err := glob("src/fs/test_data/test_subfolder++", "**/*.txt", nil, buildFileNames, false)
+	files, err := glob("test_data/test_subfolder++", "**/*.txt", nil, buildFileNames, false)
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"src/fs/test_data/test_subfolder++/test.txt"}, files)
+	assert.ElementsMatch(t, []string{"test_data/test_subfolder++/test.txt"}, files)
 }
 
 func TestGlobExcludes(t *testing.T) {
 	t.Run("relative glob", func(t *testing.T) {
-		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test.txt"}, false)
+		files := Glob(buildFileNames, ".", []string{"test_data/**.txt"}, []string{"test.txt"}, false)
 		expected := []string{
 			"test_data/test_subfolder1/a.txt",
 			"test_data/test_subfolder1/sub_sub_folder/b.txt",
@@ -77,7 +77,7 @@ func TestGlobExcludes(t *testing.T) {
 	})
 
 	t.Run("exact glob", func(t *testing.T) {
-		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/*.txt"}, false)
+		files := Glob(buildFileNames, ".", []string{"test_data/**.txt"}, []string{"test_data/*.txt"}, false)
 		expected := []string{
 			"test_data/test_subfolder1/a.txt",
 			"test_data/test_subfolder1/sub_sub_folder/b.txt",
@@ -87,7 +87,7 @@ func TestGlobExcludes(t *testing.T) {
 	})
 
 	t.Run("entire directory", func(t *testing.T) {
-		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/test_subfolder1/**"}, false)
+		files := Glob(buildFileNames, ".", []string{"test_data/**.txt"}, []string{"test_data/test_subfolder1/**"}, false)
 		expected := []string{
 			"test_data/test_subfolder++/test.txt",
 			"test_data/test.txt",
@@ -96,7 +96,7 @@ func TestGlobExcludes(t *testing.T) {
 	})
 
 	t.Run("entire directory via base path exclusion", func(t *testing.T) {
-		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/test_subfolder1"}, false)
+		files := Glob(buildFileNames, ".", []string{"test_data/**.txt"}, []string{"test_data/test_subfolder1"}, false)
 		expected := []string{
 			"test_data/test_subfolder++/test.txt",
 			"test_data/test.txt",
@@ -105,7 +105,7 @@ func TestGlobExcludes(t *testing.T) {
 	})
 
 	t.Run("mix of relative and total", func(t *testing.T) {
-		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test.txt", "test_data/test_subfolder1/a.txt"}, false)
+		files := Glob(buildFileNames, ".", []string{"test_data/**.txt"}, []string{"test.txt", "test_data/test_subfolder1/a.txt"}, false)
 		expected := []string{
 			"test_data/test_subfolder1/sub_sub_folder/b.txt",
 		}
@@ -114,7 +114,7 @@ func TestGlobExcludes(t *testing.T) {
 }
 
 func TestCannotGlobBetweenPackageBoundaries(t *testing.T) {
-	files := Glob(buildFileNames, "src/fs", []string{"**/*.txt", "**/*.py"}, nil, false)
+	files := Glob(buildFileNames, ".", []string{"**/*.txt", "**/*.py"}, nil, false)
 	expected := []string{
 		"test_data/test_subfolder++/test.txt",
 		"test_data/test_subfolder1/a.txt",

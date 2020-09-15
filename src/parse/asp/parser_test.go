@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseBasic(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/basic.build")
+	statements, err := newParser().parse("test_data/basic.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].FuncDef)
@@ -23,7 +23,7 @@ func TestParseBasic(t *testing.T) {
 }
 
 func TestParseDefaultArguments(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/default_arguments.build")
+	statements, err := newParser().parse("test_data/default_arguments.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].FuncDef)
@@ -46,7 +46,7 @@ func TestParseDefaultArguments(t *testing.T) {
 }
 
 func TestParseFunctionCalls(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/function_call.build")
+	statements, err := newParser().parse("test_data/function_call.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 5, len(statements))
 
@@ -95,7 +95,7 @@ func TestParseFunctionCalls(t *testing.T) {
 }
 
 func TestParseAssignments(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/assignments.build")
+	statements, err := newParser().parse("test_data/assignments.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
@@ -117,7 +117,7 @@ func TestParseAssignments(t *testing.T) {
 }
 
 func TestForStatement(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/for_statement.build")
+	statements, err := newParser().parse("test_data/for_statement.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(statements))
 
@@ -138,7 +138,7 @@ func TestForStatement(t *testing.T) {
 }
 
 func TestOperators(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/operators.build")
+	statements, err := newParser().parse("test_data/operators.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
@@ -167,7 +167,7 @@ func TestOperators(t *testing.T) {
 }
 
 func TestIndexing(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/indexing.build")
+	statements, err := newParser().parse("test_data/indexing.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 7, len(statements))
 
@@ -231,7 +231,7 @@ func TestIndexing(t *testing.T) {
 }
 
 func TestIfStatement(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/if_statement.build")
+	statements, err := newParser().parse("test_data/if_statement.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
@@ -249,7 +249,7 @@ func TestIfStatement(t *testing.T) {
 }
 
 func TestDoubleUnindent(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/double_unindent.build")
+	statements, err := newParser().parse("test_data/double_unindent.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
@@ -271,7 +271,7 @@ func TestDoubleUnindent(t *testing.T) {
 }
 
 func TestInlineIf(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/inline_if.build")
+	statements, err := newParser().parse("test_data/inline_if.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
@@ -293,7 +293,7 @@ func TestInlineIf(t *testing.T) {
 }
 
 func TestFunctionDef(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/function_def.build")
+	statements, err := newParser().parse("test_data/function_def.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.Equal(t, 3, len(statements[0].FuncDef.Statements))
@@ -305,7 +305,7 @@ func TestFunctionDef(t *testing.T) {
 }
 
 func TestComprehension(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/comprehension.build")
+	statements, err := newParser().parse("test_data/comprehension.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(statements))
 
@@ -323,7 +323,7 @@ func TestComprehension(t *testing.T) {
 }
 
 func TestMethodsOnLiterals(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/literal_methods.build")
+	statements, err := newParser().parse("test_data/literal_methods.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
@@ -333,7 +333,7 @@ func TestMethodsOnLiterals(t *testing.T) {
 }
 
 func TestUnaryOp(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/unary_op.build")
+	statements, err := newParser().parse("test_data/unary_op.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(statements))
 
@@ -354,7 +354,7 @@ func TestUnaryOp(t *testing.T) {
 }
 
 func TestAugmentedAssignment(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/aug_assign.build")
+	statements, err := newParser().parse("test_data/aug_assign.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].Ident.Action.AugAssign)
@@ -365,7 +365,7 @@ func TestAugmentedAssignment(t *testing.T) {
 }
 
 func TestRaise(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/raise.build")
+	statements, err := newParser().parse("test_data/raise.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(statements))
 
@@ -377,7 +377,7 @@ func TestRaise(t *testing.T) {
 }
 
 func TestElseStatement(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/else.build")
+	statements, err := newParser().parse("test_data/else.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].If)
@@ -395,7 +395,7 @@ func TestElseStatement(t *testing.T) {
 }
 
 func TestDestructuringAssignment(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/destructuring_assign.build")
+	statements, err := newParser().parse("test_data/destructuring_assign.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].Ident)
@@ -412,7 +412,7 @@ func TestDestructuringAssignment(t *testing.T) {
 }
 
 func TestMultipleActions(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/multiple_action.build")
+	statements, err := newParser().parse("test_data/multiple_action.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(statements))
 	assert.NotNil(t, statements[0].Ident.Action.Assign)
@@ -428,7 +428,7 @@ func TestMultipleActions(t *testing.T) {
 }
 
 func TestAssert(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/assert.build")
+	statements, err := newParser().parse("test_data/assert.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(statements))
 
@@ -442,7 +442,7 @@ func TestAssert(t *testing.T) {
 
 func TestOptimise(t *testing.T) {
 	p := newParser()
-	statements, err := p.parse("src/parse/asp/test_data/optimise.build")
+	statements, err := p.parse("test_data/optimise.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 5, len(statements))
 	statements = p.optimise(statements)
@@ -478,7 +478,7 @@ func TestOptimise(t *testing.T) {
 }
 
 func TestMultilineStringQuotes(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/multiline_string_quotes.build")
+	statements, err := newParser().parse("test_data/multiline_string_quotes.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].Ident)
@@ -496,7 +496,7 @@ func TestMultilineStringQuotes(t *testing.T) {
 
 func TestExample0(t *testing.T) {
 	// These tests are specific examples that turned out to fail.
-	statements, err := newParser().parse("src/parse/asp/test_data/example.build")
+	statements, err := newParser().parse("test_data/example.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
@@ -512,7 +512,7 @@ func TestExample0(t *testing.T) {
 
 func TestExample1(t *testing.T) {
 	// These tests are specific examples that turned out to fail.
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_1.build")
+	stmts, err := newParser().parse("test_data/example_1.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
@@ -521,7 +521,7 @@ func TestExample1(t *testing.T) {
 }
 
 func TestExample2(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_2.build")
+	stmts, err := newParser().parse("test_data/example_2.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
@@ -532,7 +532,7 @@ func TestExample2(t *testing.T) {
 }
 
 func TestExample3(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_3.build")
+	stmts, err := newParser().parse("test_data/example_3.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
@@ -548,7 +548,7 @@ func TestExample3(t *testing.T) {
 }
 
 func TestExample4(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_4.build")
+	stmts, err := newParser().parse("test_data/example_4.build")
 	assert.NoError(t, err)
 	assert.Equal(t, len(stmts), 1)
 
@@ -558,7 +558,7 @@ func TestExample4(t *testing.T) {
 }
 
 func TestExample5(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_5.build")
+	stmts, err := newParser().parse("test_data/example_5.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
@@ -567,7 +567,7 @@ func TestExample5(t *testing.T) {
 }
 
 func TestExample6(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_6.build")
+	stmts, err := newParser().parse("test_data/example_6.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
@@ -589,7 +589,7 @@ func TestExample6(t *testing.T) {
 }
 
 func TestPrecedence(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/precedence.build")
+	stmts, err := newParser().parse("test_data/precedence.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(stmts))
 	assert.NotNil(t, stmts[0].Ident.Action.Assign.If)
@@ -600,7 +600,7 @@ func TestPrecedence(t *testing.T) {
 }
 
 func TestMissingNewlines(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/no_newline.build")
+	stmts, err := newParser().parse("test_data/no_newline.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(stmts))
 
@@ -610,17 +610,17 @@ func TestMissingNewlines(t *testing.T) {
 }
 
 func TestRepeatedArguments(t *testing.T) {
-	_, err := newParser().parse("src/parse/asp/test_data/repeated_arguments.build")
+	_, err := newParser().parse("test_data/repeated_arguments.build")
 	assert.Error(t, err)
 }
 
 func TestConstantAssignments(t *testing.T) {
-	_, err := newParser().parse("src/parse/asp/test_data/constant_assign.build")
+	_, err := newParser().parse("test_data/constant_assign.build")
 	assert.Error(t, err)
 }
 
 func TestFStrings(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/fstring.build")
+	stmts, err := newParser().parse("test_data/fstring.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(stmts))
 
@@ -652,7 +652,7 @@ func TestFStrings(t *testing.T) {
 }
 
 func TestFuncReturnTypes(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/return_type.build")
+	stmts, err := newParser().parse("test_data/return_type.build")
 	assert.NoError(t, err)
 
 	assert.Equal(t, "str", stmts[0].FuncDef.Return)

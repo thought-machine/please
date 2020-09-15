@@ -19,11 +19,15 @@ go_library(
 go_test(
     name = "update_test",
     srcs = ["update_test.go"],
-    data = [
-        ":test_tarball",
-        ":test_tarball_xz",
-        "//src:please",
-    ],
+    data = {
+        "DATA": [
+            ":test_tarball",
+            ":test_tarball_xz",
+        ],
+        "PLEASE": [
+            "//src:please",
+        ],
+    },
     labels = ["xz"],
     deps = [
         ":update",

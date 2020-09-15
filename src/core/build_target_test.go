@@ -631,10 +631,10 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 		state := NewDefaultBuildState()
 		state.Config.Parse.BuildFileName = buildFiles
 
-		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+		target := makeTarget1("//test_data/project", "PUBLIC")
 		target.AddSource(FileLabel{
 			File:    "project.file",
-			Package: "src/core/test_data/project",
+			Package: "test_data/project",
 		})
 
 		target = state.Graph.AddTarget(target)
@@ -647,10 +647,10 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 		state := NewDefaultBuildState()
 		state.Config.Parse.BuildFileName = buildFiles
 
-		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+		target := makeTarget1("//test_data/project", "PUBLIC")
 		target.AddSource(FileLabel{
 			File:    "sub_package",
-			Package: "src/core/test_data/project",
+			Package: "test_data/project",
 		})
 
 		target = state.Graph.AddTarget(target)
@@ -663,10 +663,10 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 		state := NewDefaultBuildState()
 		state.Config.Parse.BuildFileName = buildFiles
 
-		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+		target := makeTarget1("//test_data/project", "PUBLIC")
 		target.AddSource(FileLabel{
 			File:    "sub_package/sub_package.file",
-			Package: "src/core/test_data/project",
+			Package: "test_data/project",
 		})
 
 		target = state.Graph.AddTarget(target)
@@ -695,7 +695,7 @@ func TestBuildTargetOwnBuildOutput(t *testing.T) {
 		state := NewDefaultBuildState()
 		state.Config.Parse.BuildFileName = buildFiles
 
-		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+		target := makeTarget1("//test_data/project", "PUBLIC")
 		target.AddOutput("sub_package")
 
 		target = state.Graph.AddTarget(target)

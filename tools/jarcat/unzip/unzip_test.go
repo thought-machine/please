@@ -26,7 +26,7 @@ var xmlrunnerFiles = []string{
 }
 
 func TestExtractEdgeCasesTar(t *testing.T) {
-	assert.NoError(t, Extract("tools/jarcat/unzip/test_data/edgecases.tar", ".", "", ""))
+	assert.NoError(t, Extract("test_data/edgecases.tar", ".", "", ""))
 	for _, file := range edgecasesFiles {
 		_, err := os.Stat(file)
 		assert.NoError(t, err)
@@ -34,7 +34,7 @@ func TestExtractEdgeCasesTar(t *testing.T) {
 }
 
 func TestExtractEdgeCasesZip(t *testing.T) {
-	assert.NoError(t, Extract("tools/jarcat/unzip/test_data/edgecases.zip", ".", "", ""))
+	assert.NoError(t, Extract("test_data/edgecases.zip", ".", "", ""))
 	for _, file := range edgecasesFiles {
 		_, err := os.Stat(file)
 		assert.NoError(t, err)
@@ -42,7 +42,7 @@ func TestExtractEdgeCasesZip(t *testing.T) {
 }
 
 func TestExtractXMLRunnerTar(t *testing.T) {
-	assert.NoError(t, Extract("tools/jarcat/unzip/test_data/xmlrunner.tar", ".", "", ""))
+	assert.NoError(t, Extract("test_data/xmlrunner.tar", ".", "", ""))
 	for _, file := range xmlrunnerFiles {
 		_, err := os.Stat(file)
 		assert.NoError(t, err)
@@ -50,7 +50,7 @@ func TestExtractXMLRunnerTar(t *testing.T) {
 }
 
 func TestExtractXMLRunnerZip(t *testing.T) {
-	assert.NoError(t, Extract("tools/jarcat/unzip/test_data/xmlrunner.whl", ".", "", ""))
+	assert.NoError(t, Extract("test_data/xmlrunner.whl", ".", "", ""))
 	for _, file := range xmlrunnerFiles {
 		_, err := os.Stat(file)
 		assert.NoError(t, err)
@@ -59,7 +59,7 @@ func TestExtractXMLRunnerZip(t *testing.T) {
 
 func TestPrefix(t *testing.T) {
 	prefix := "third_party/python"
-	assert.NoError(t, Extract("tools/jarcat/unzip/test_data/xmlrunner.whl", ".", "", prefix))
+	assert.NoError(t, Extract("test_data/xmlrunner.whl", ".", "", prefix))
 	for _, file := range xmlrunnerFiles {
 		_, err := os.Stat(file[len(prefix)+1:])
 		assert.NoError(t, err)
@@ -67,7 +67,7 @@ func TestPrefix(t *testing.T) {
 }
 
 func TestSpecificFile(t *testing.T) {
-	assert.NoError(t, Extract("tools/jarcat/unzip/test_data/xmlrunner.whl", "wibble.py", "third_party/python/xmlrunner/result.py", ""))
+	assert.NoError(t, Extract("test_data/xmlrunner.whl", "wibble.py", "third_party/python/xmlrunner/result.py", ""))
 	_, err := os.Stat("wibble.py")
 	assert.NoError(t, err)
 }

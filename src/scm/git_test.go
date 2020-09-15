@@ -8,7 +8,7 @@ import (
 )
 
 func TestParseChangedLines(t *testing.T) {
-	b, err := ioutil.ReadFile("src/scm/test_data/git.diff")
+	b, err := ioutil.ReadFile("test_data/git.diff")
 	assert.NoError(t, err)
 	g := git{}
 	m, err := g.parseChangedLines(b)

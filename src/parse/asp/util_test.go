@@ -12,7 +12,7 @@ import (
 func TestFindTarget(t *testing.T) {
 	state := core.NewDefaultBuildState()
 	p := NewParser(state)
-	stmts, err := p.ParseFileOnly("src/parse/asp/test_data/example.build")
+	stmts, err := p.ParseFileOnly("test_data/example.build")
 	require.NoError(t, err)
 
 	stmt := FindTarget(stmts, "asp")
@@ -34,7 +34,7 @@ func TestFindTarget(t *testing.T) {
 func TestGetExtents(t *testing.T) {
 	state := core.NewDefaultBuildState()
 	p := NewParser(state)
-	stmts, err := p.ParseFileOnly("src/parse/asp/test_data/example.build")
+	stmts, err := p.ParseFileOnly("test_data/example.build")
 	require.NoError(t, err)
 
 	stmt := FindTarget(stmts, "asp")
@@ -65,7 +65,7 @@ func TestGetExtents(t *testing.T) {
 func TestGetArg(t *testing.T) {
 	state := core.NewDefaultBuildState()
 	p := NewParser(state)
-	stmts, err := p.ParseFileOnly("src/parse/asp/test_data/example.build")
+	stmts, err := p.ParseFileOnly("test_data/example.build")
 	require.NoError(t, err)
 
 	stmt := FindTarget(stmts, "asp")

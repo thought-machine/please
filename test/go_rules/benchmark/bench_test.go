@@ -3,7 +3,6 @@ package benchmark
 import (
 	"github.com/stretchr/testify/require"
 
-	"os"
 	"os/exec"
 	"testing"
 	"time"
@@ -12,8 +11,7 @@ import (
 func TestBenchDuration(t *testing.T) {
 	r := require.New(t)
 
-	dataCmd, _ := os.LookupEnv("DATA")
-	cmd := exec.Command(dataCmd)
+	cmd := exec.Command("./benchmark") // benchmark is the output of the go_benchmark rule
 
 	start := time.Now()
 	out, err := cmd.Output()
