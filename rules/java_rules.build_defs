@@ -332,7 +332,7 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
         data['data'] += toolchain_info.deps
         java_cmd = '$DATA_JAVA'
 
-    cmd = 'ln -s `which $TOOLS_JUNIT` . && ' + cmd
+    cmd = 'ln -s "$(if [ -f "$TOOLS_JUNIT" ]; then echo "$TOOLS_JUNIT"; else echo "$(which "$TOOLS_JUNIT")"; fi)" . && ' + cmd
     test_cmd = f'{java_cmd} -Dbuild.please.testpackage={test_package} {jvm_args} -jar $(location :{name}) {flags}'
 
     deps = [lib_rule]
