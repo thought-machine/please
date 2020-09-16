@@ -108,7 +108,7 @@ func TestStripPrefixWithoutFlatten(t *testing.T) {
 
 	m := ReadTar(t, filename, false, false)
 	assert.EqualValues(t, map[string]string{
-		"file1.txt": "test file 1",
+		"file1.txt":                    "test file 1",
 		"test_data/dir2/file2.txt":     "test file 2",
 		"test_data/symlink/source.txt": "symlink file",
 		"test_data/symlink/link.txt":   "",

@@ -510,12 +510,13 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
-    test_cmd = '$TEST %s 2>&1 | tee $RESULTS_FILE' % flags
+    test_cmd = '$TEST %s 2>&1 | tee $TMP_DIR/test.results' % flags
     if worker:
         test_cmd = f'$(worker {worker}) && {test_cmd} '
         deps += [worker]
 
     if CONFIG.GO_BUILD_COMPAT:
+        # This is a workaround for remote execution; $RESULTS_FILE is set to a relative path remotely.
         test_cmd = f'export TEST=./$(basename $TEST) && mkdir -p $PKG_DIR && mv $TEST $PKG_DIR && cd $PKG_DIR && {test_cmd}'
         for out in test_outputs:
             test_cmd += f' && mv {out} $TMP_DIR/{out}'
