@@ -11,16 +11,17 @@ import (
 func TestLocationExpansion(t *testing.T) {
 	pkg := "foo/bar"
 
-	cmd := parse("echo $(basename $(location :bar_test)) > $OUT", pkg)
+	cmd := parse("echo $(basename $(location :bar)) > $OUT", pkg)
 	state := core.NewDefaultBuildState()
 
 
 	bar := core.NewBuildTarget(core.ParseBuildLabel(":bar", pkg))
+	bar.AddOutput("bar_out")
 	state.AddTarget(core.NewPackage(pkg), bar)
 
 	barTest := core.NewBuildTarget(core.ParseBuildLabel(":bar_test", pkg))
-	bar.AddOutput("bar_out")
+	barTest.AddDependency(bar.Label)
 	state.AddTarget(core.NewPackage(pkg), barTest)
 
-	assert.Equal(t, "echo $(basename foo/bar/bar_out) > $OUT", cmd.String(state, bar))
+	assert.Equal(t, "echo $(basename foo/bar/bar_out) > $OUT", cmd.String(state, barTest))
 }

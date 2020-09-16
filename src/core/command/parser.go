@@ -8,19 +8,20 @@ import (
 )
 
 var keywords = []string{
-	"location", "locations", "out_location", "exe", "out_exe", "dir", "dir", "hash", "worker",
+	"location", "locations", "out_location", "exe", "out_exe", "dir", "hash",
 }
 
 // Matches keywords within a command: $(<keyword> ...)
 var keywordRegex = regexp.MustCompile(fmt.Sprintf("\\$\\((%v) [^\\)]+\\)", strings.Join(keywords, "|")))
 
-func parse(cmd string, packageName string) Command {
-	command := Command{
+func parse(cmdStr string, packageName string) Command {
+	cmd := Command{
 		tokens: []token{},
+		labels: []core.BuildLabel{},
 	}
 
 	for {
-		loc := keywordRegex.FindIndex([]byte(cmd))
+		loc := keywordRegex.FindIndex([]byte(cmdStr))
 		if loc == nil {
 			break
 		}
@@ -28,28 +29,47 @@ func parse(cmd string, packageName string) Command {
 		start := loc[0]
 		end := loc[1]
 
-		command.tokens = append(command.tokens, bash(cmd[:start]))
+		cmd.tokens = append(cmd.tokens, bash(cmdStr[:start]))
 
-		match := cmd[start:end]
-		cmd = cmd[end:]
+		match := cmdStr[start:end]
+		cmdStr = cmdStr[end:]
 
 		args := strings.Split(strings.TrimSuffix(strings.TrimPrefix(match, "$("), ")"), " ")
 
 		keyword, args := args[0], args[1:]
-		command.tokens = append(command.tokens, keywordToToken(keyword, args, packageName))
+		addKeywordToCommand(&cmd, keyword, args, packageName)
 	}
-	command.tokens = append(command.tokens, bash(cmd))
+	cmd.tokens = append(cmd.tokens, bash(cmdStr))
 
-	return command
+	return cmd
 }
 
-func keywordToToken(keyword string, args []string, packageName string) token {
+func addKeywordToCommand(cmd *Command, keyword string, args []string, packageName string) {
+	l := core.ParseBuildLabel(args[0], packageName)
+
+	//TODO(jpoole): move construction out of here and add validation
 	if keyword == "location" {
-		//TODO(jpoole): move construction out of here and add validation
-		return location(core.ParseBuildLabel(args[0], packageName))
+		cmd.tokens = append(cmd.tokens, location(l))
 	}
 	if keyword == "locations" {
-		return locations(core.ParseBuildLabel(args[0], packageName))
+		cmd.tokens = append(cmd.tokens, locations(l))
 	}
-	panic("TODO: implement keyword " + keyword)
+	if keyword == "out_location" {
+		cmd.tokens = append(cmd.tokens, outLocation(l))
+	}
+	if keyword == "exe" {
+		cmd.tokens = append(cmd.tokens, exe(l))
+	}
+	if keyword == "out_exe" {
+		cmd.tokens = append(cmd.tokens, outExe(l))
+	}
+	//TODO(jpoole): this one isn't documented
+	if keyword == "dir" {
+		cmd.tokens = append(cmd.tokens, dir(l))
+	}
+	if keyword == "hash" {
+		cmd.tokens = append(cmd.tokens, hash(l))
+	}
+
+	cmd.labels = append(cmd.labels, l)
 }
