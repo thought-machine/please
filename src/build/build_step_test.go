@@ -30,6 +30,9 @@ import (
 
 var cache core.Cache
 
+//TODO(jpoole): These tests are very confusing to follow. We should do the setup for each test in the test itself rather
+// than having stuff checked into test_data/plz-out. This way we can see how the hashes are generated/changing.
+// Currently it's completely opaque.
 func TestBuildTargetWithNoDeps(t *testing.T) {
 	state, target := newState("//package1:target1")
 	target.AddOutput("file1")
@@ -52,7 +55,7 @@ func TestBuildTargetWhichNeedsRebuilding(t *testing.T) {
 	target.AddOutput("file2")
 	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
-	assert.Equal(t, core.Built, target.State())
+	assert.Equal(t, core.Unchanged, target.State())
 }
 
 func TestBuildTargetWhichDoesntNeedRebuilding(t *testing.T) {
@@ -76,7 +79,7 @@ func TestModifiedBuildTargetStillNeedsRebuilding(t *testing.T) {
 	target.RuleHash = nil // Have to force a reset of this
 	err := buildTarget(1, state, target, false)
 	assert.NoError(t, err)
-	assert.Equal(t, core.Built, target.State())
+	assert.Equal(t, core.Unchanged, target.State())
 }
 
 func TestSymlinkedOutputs(t *testing.T) {
