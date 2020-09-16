@@ -123,9 +123,12 @@ type BuildTarget struct {
 	Stamp bool
 	// If true, the target must be run locally (i.e. is not compatible with remote execution).
 	Local bool
+	// If true, the executed commands will exit whenever an error is encountered (i.e. shells
+	// are executed with -e).
+	ExitOnError bool
 	// If true, the target is needed for a subinclude and therefore we will have to make sure its
 	// outputs are available locally when built.
-	NeededForSubinclude bool
+	NeededForSubinclude bool `print:"false"`
 	// Marks the target as a filegroup.
 	IsFilegroup bool `print:"false"`
 	// Marks the target as a remote_file.
@@ -1448,6 +1451,11 @@ func (target *BuildTarget) ProgressDescription() string {
 		return "testing"
 	}
 	return target.BuildingDescription
+}
+
+// ShouldExitOnError returns true if the subprocess should exit when an error occurs.
+func (target *BuildTarget) ShouldExitOnError() bool {
+	return target.ExitOnError
 }
 
 // SetProgress sets the current progress of this target.

@@ -48,6 +48,8 @@ type Target interface {
 	SetProgress(float32)
 	// ProgressDescription returns a description of what the target is doing as it runs.
 	ProgressDescription() string
+	// ShouldExitOnError returns true if the executed process should exit if an error occurs.
+	ShouldExitOnError() bool
 }
 
 // ExecWithTimeout runs an external command with a timeout.
@@ -122,7 +124,7 @@ func (e *Executor) ExecWithTimeoutShell(target Target, dir string, env []string,
 
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
 func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool) ([]byte, []byte, error) {
-	c := append([]string{"bash", "--noprofile", "--norc", "-u", "-o", "pipefail", "-e", "-c"}, cmd)
+	c := BashCommand("bash", cmd, target.ShouldExitOnError())
 	if sandbox {
 		if e.sandboxCommand == "" {
 			log.Fatalf("Sandbox tool not found on PATH")
@@ -253,4 +255,12 @@ func ExecCommand(args ...string) ([]byte, error) {
 	cmd := e.ExecCommand(args[0], args[1:]...)
 	defer e.removeProcess(cmd)
 	return cmd.CombinedOutput()
+}
+
+// BashCommand returns the command that we'd use to execute a subprocess in a shell with.
+func BashCommand(binary, command string, exitOnError bool) []string {
+	if exitOnError {
+		return []string{binary, "--noprofile", "--norc", "-e", "-u", "-o", "pipefail", "-c", command}
+	}
+	return []string{binary, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", command}
 }
