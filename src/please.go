@@ -15,6 +15,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cache"
 	"github.com/thought-machine/please/src/clean"
@@ -26,6 +27,7 @@ import (
 	"github.com/thought-machine/please/src/help"
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/plz"
+	"github.com/thought-machine/please/src/plzinit"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
 	"github.com/thought-machine/please/src/scm"
@@ -215,6 +217,11 @@ var opts struct {
 				Options ConfigOverrides `positional-arg-name:"config" required:"true" description:"Attributes to set"`
 			} `positional-args:"true" required:"true"`
 		} `command:"config" description:"Initialises specific attributes of config files"`
+		Pleasings struct {
+			Revision  string `short:"r" long:"revision" description:"The revision to pin the pleasings repo to. This can be a branch, commit, tag, or other git reference."`
+			Location  string `short:"l" long:"location" description:"The location of the build file to write the subrepo rule to" default:"BUILD"`
+			PrintOnly bool   `long:"print" description:"Print the rule to standard out instead of writing it to a file"`
+		} `command:"pleasings" description:"Initialises the pleasings repo"`
 	} `command:"init" subcommands-optional:"true" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {
@@ -481,16 +488,27 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"init": func() int {
-		utils.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility)
+		plzinit.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility)
+
+		fmt.Println()
+		fmt.Println("Pleasings are a collection of auxiliary build rules that support other languages and technologies not present in the core please distribution.")
+		fmt.Println("For more information visit https://github.com/thought-machine/pleasings")
+		fmt.Println()
+
+		if cli.PromptYN("Would you like to add pleasings to your project? You may also do this later with `plz init pleasings` if you wish.", true) {
+			if err := plzinit.InitPleasings("BUILD", false, "master"); err != nil {
+				log.Fatalf("failed to initialise pleasings in this repository: %v", err)
+			}
+		}
 		return 0
 	},
 	"config": func() int {
 		if opts.Init.Config.User {
-			utils.InitConfigFile(core.ExpandHomePath(core.UserConfigFileName), opts.Init.Config.Args.Options)
+			plzinit.InitConfigFile(core.ExpandHomePath(core.UserConfigFileName), opts.Init.Config.Args.Options)
 		} else if opts.Init.Config.Local {
-			utils.InitConfigFile(core.LocalConfigFileName, opts.Init.Config.Args.Options)
+			plzinit.InitConfigFile(core.LocalConfigFileName, opts.Init.Config.Args.Options)
 		} else {
-			utils.InitConfigFile(core.ConfigFileName, opts.Init.Config.Args.Options)
+			plzinit.InitConfigFile(core.ConfigFileName, opts.Init.Config.Args.Options)
 		}
 		return 0
 	},
@@ -656,6 +674,12 @@ var buildFunctions = map[string]func() int{
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
 			query.Filter(state, state.ExpandOriginalLabels())
 		})
+	},
+	"pleasings": func() int {
+		if err := plzinit.InitPleasings(opts.Init.Pleasings.Location, opts.Init.Pleasings.PrintOnly, opts.Init.Pleasings.Revision); err != nil {
+			log.Fatalf("failed to write pleasings subrepo file: %v", err)
+		}
+		return 0
 	},
 }
 
@@ -948,7 +972,7 @@ func initBuild(args []string) string {
 		}
 		os.Exit(buildFunctions[command]())
 	} else if opts.OutputFlags.CompletionScript {
-		utils.PrintCompletionScript()
+		fmt.Printf("%s\n", assets.MustAsset("plz_complete.sh"))
 		os.Exit(0)
 	}
 	// Read the config now

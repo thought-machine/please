@@ -57,7 +57,11 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
 		return nil
 	}
-	pkg, err = parsePackage(state, label, dependent, subrepo)
+	if state.Config.FeatureFlags.RemovePleasings {
+		pkg, err = parsePackage(state, label, dependent, subrepo)
+	} else {
+		pkg, err = parsePackageWithPleasings(state, label, dependent, subrepo)
+	}
 	if err != nil {
 		return err
 	}
@@ -166,6 +170,40 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 
 // parsePackage performs the initial parse of a package.
 func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo) (*core.Package, error) {
+	packageName := label.PackageName
+	pkg := core.NewPackage(packageName)
+	pkg.Subrepo = subrepo
+	if subrepo != nil {
+		pkg.SubrepoName = subrepo.Name
+	}
+	filename, dir := buildFileName(state, label.PackageName, subrepo)
+	if filename == "" {
+		exists := core.PathExists(dir)
+		// Handle quite a few cases to provide more obvious error messages.
+		if dependent != core.OriginalTarget && exists {
+			return nil, fmt.Errorf("%s depends on %s, but there's no %s file in %s/", dependent, label, buildFileNames(state.Config.Parse.BuildFileName), dir)
+		} else if dependent != core.OriginalTarget {
+			return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist", dependent, label, dir)
+		} else if exists {
+			return nil, fmt.Errorf("Can't build %s; there's no %s file in %s/", label, buildFileNames(state.Config.Parse.BuildFileName), dir)
+		}
+		return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, dir)
+	}
+	pkg.Filename = filename
+	if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
+		return nil, err
+	}
+
+	// Verify some details of the output files in the background. Don't need to wait for this
+	// since it only issues warnings sometimes.
+	go pkg.VerifyOutputs()
+	state.Graph.AddPackage(pkg) // Calling this means nobody else will add entries to pendingTargets for this package.
+	return pkg, nil
+}
+
+// TODO(jpoole): delete this code branch in the v16 release
+// parsePackageWithPleasings does the same as parse package but includes the default pleasings subrepo
+func parsePackageWithPleasings(state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo) (*core.Package, error) {
 	packageName := label.PackageName
 	pkg := core.NewPackage(packageName)
 	pkg.Subrepo = subrepo
