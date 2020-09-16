@@ -1,2 +1,2 @@
 py
-pip:grpcio==1.29.0
+pip:grpcio==1.32.0
