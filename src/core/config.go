@@ -46,6 +46,9 @@ const MachineConfigFileName = "/etc/please/plzconfig"
 // UserConfigFileName is the file name for user-specific config (for all their repos).
 const UserConfigFileName = "~/.config/please/plzconfig"
 
+// DefaultPath is the default location please looks for programs in
+var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
+
 func readConfigFile(config *Configuration, filename string) error {
 	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
@@ -198,7 +201,7 @@ func setDefault(conf *[]string, def ...string) {
 
 // setDefault checks if "PATH" is in passEnv, if it is set config.build.Path to use the environment variable.
 func setBuildPath(conf *[]string, passEnv []string, passUnsafeEnv []string) {
-	pathVal := []string{"/usr/local/bin", "/usr/bin", "/bin"}
+	pathVal := DefaultPath
 	for _, i := range passUnsafeEnv {
 		if i == "PATH" {
 			pathVal = strings.Split(os.Getenv("PATH"), ":")

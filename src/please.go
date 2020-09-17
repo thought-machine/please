@@ -210,6 +210,7 @@ var opts struct {
 	Init struct {
 		Dir                cli.Filepath `long:"dir" description:"Directory to create config in" default:"."`
 		BazelCompatibility bool         `long:"bazel_compat" description:"Initialises config for Bazel compatibility mode."`
+		NoPrompt           bool         `long:"no_prompt" description:"Don't interactively prompt for optional config'"`
 		Config             struct {
 			User  bool `short:"u" long:"user" description:"Modifies the user-level config file"`
 			Local bool `short:"l" long:"local" description:"Modifies the local config file (.plzconfig.local)"`
@@ -488,7 +489,11 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"init": func() int {
-		plzinit.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility)
+		plzinit.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility, opts.Init.NoPrompt)
+
+		if opts.Init.NoPrompt {
+			return 0
+		}
 
 		fmt.Println()
 		fmt.Println("Pleasings are a collection of auxiliary build rules that support other languages and technologies not present in the core please distribution.")

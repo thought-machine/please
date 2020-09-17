@@ -1,7 +1,6 @@
 package plzinit
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,10 +27,7 @@ const configTemplate = `; Please config file
 ; [please]
 ; version = %s
 `
-const goConfig = `
-[go]
-importpath = %s
-`
+
 const bazelCompatibilityConfig = `
 [bazel]
 compatibility = true
@@ -49,11 +45,14 @@ github_repo(
 var log = logging.MustGetLogger("init")
 
 // InitConfig initialises a .plzconfig template in the given directory.
-func InitConfig(dir string, bazelCompatibility bool) {
+func InitConfig(dir string, bazelCompatibility bool, noPrompt bool) {
 	if dir == "." {
 		if core.FindRepoRoot() {
+			if noPrompt {
+				log.Fatalf("This repository is already initialised with a .plzconfig. Aborting.")
+			}
 			config := path.Join(core.RepoRoot, core.ConfigFileName)
-			if !cli.PromptYN(fmt.Sprintf("You already seem to be in a plz repo (found %s). Continue?", config), false) {
+			if !cli.PromptYN(fmt.Sprintf("You already seem to be in a plz repo (found %s). Continue", config), false) {
 				os.Exit(1)
 			}
 		}
@@ -64,13 +63,14 @@ func InitConfig(dir string, bazelCompatibility bool) {
 	}
 	config := path.Join(dir, core.ConfigFileName)
 	contents := fmt.Sprintf(configTemplate, core.PleaseVersion)
-	goModule, ok := findGoModule(dir)
-	if ok {
-		contents += fmt.Sprintf(goConfig, goModule)
-	}
+
 	if bazelCompatibility {
 		contents += bazelCompatibilityConfig
 	}
+	if !noPrompt {
+		contents += golangConfig(dir)
+	}
+
 	if err := ioutil.WriteFile(config, []byte(contents), 0644); err != nil {
 		log.Fatalf("Failed to write file: %s", err)
 	}
@@ -116,49 +116,4 @@ func readConfig(filename string) []byte {
 		log.Fatalf("Failed to read config file: %s", err)
 	}
 	return b
-}
-
-func InitPleasings(location string, printOnly bool, revision string) error {
-	if !printOnly && fs.FileExists(location) {
-		if !cli.PromptYN(fmt.Sprintf("It looks like a build file already exists at %v, would you like to override it? You may use --print to print the rule and add it manually instead.", location), false) {
-			return nil
-		}
-	}
-
-	if printOnly {
-		fmt.Printf(pleasingsSubrepoTemplate, revision)
-		return nil
-	}
-
-	dir := filepath.Dir(location)
-	if dir != "." {
-		if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
-			log.Fatalf("failed to create pleasings directory: %v", err)
-		}
-	}
-
-	// TODO(jpoole): We could probably parse the file, update/append the rule, and re-serialise that rather than nuking it
-	if err := os.RemoveAll(location); err != nil {
-		return err
-	}
-	return ioutil.WriteFile(location, []byte(fmt.Sprintf(pleasingsSubrepoTemplate, revision)), 0644)
-}
-
-func findGoModule(dir string) (string, bool) {
-	goModFile, err := os.Open(path.Join(dir, "go.mod"))
-	if err != nil {
-		return "", false
-	}
-	defer goModFile.Close()
-
-	scanner := bufio.NewScanner(goModFile)
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if strings.HasPrefix(line, "module ") {
-			return strings.TrimPrefix(line, "module "), true
-		}
-	}
-
-	return "", false
 }
