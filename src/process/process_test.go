@@ -28,14 +28,16 @@ func TestExecWithTimeoutDeadline(t *testing.T) {
 }
 
 func TestExecWithTimeoutOutput(t *testing.T) {
-	out, stderr, err := New("").ExecWithTimeoutShell(nil, "", nil, 10*time.Second, false, "echo hello", false)
+	targ := &target{}
+	out, stderr, err := New("").ExecWithTimeoutShell(targ, "", nil, 10*time.Second, false, "echo hello", false)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello\n", string(out))
 	assert.Equal(t, "hello\n", string(stderr))
 }
 
 func TestExecWithTimeoutStderr(t *testing.T) {
-	out, stderr, err := New("").ExecWithTimeoutShell(nil, "", nil, 10*time.Second, false, "echo hello 1>&2", false)
+	targ := &target{}
+	out, stderr, err := New("").ExecWithTimeoutShell(targ, "", nil, 10*time.Second, false, "echo hello 1>&2", false)
 	assert.NoError(t, err)
 	assert.Equal(t, "", string(out))
 	assert.Equal(t, "hello\n", string(stderr))

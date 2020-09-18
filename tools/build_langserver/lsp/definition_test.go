@@ -63,7 +63,7 @@ func TestDefinitionBuiltin(t *testing.T) {
 	assert.Equal(t, []lsp.Location{
 		{
 			URI:   lsp.DocumentURI("file://" + path.Join(cacheDir, "please/misc_rules.build_defs")),
-			Range: xrng(3, 0, 128, 5),
+			Range: xrng(3, 0, 131, 5),
 		},
 	}, locs)
 }

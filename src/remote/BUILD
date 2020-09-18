@@ -9,6 +9,7 @@ go_library(
         "//src/build",
         "//src/core",
         "//src/fs",
+        "//src/process",
         "//third_party/go:bytestream",
         "//third_party/go:errgroup",
         "//third_party/go:grpc",
