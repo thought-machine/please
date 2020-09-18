@@ -1,13 +1,15 @@
 package plzinit
 
 import (
+	"bufio"
 	"fmt"
-	"gopkg.in/op/go-logging.v1"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/cli"
@@ -25,6 +27,10 @@ const configTemplate = `; Please config file
 ; when you change it all users will automatically get updated.
 ; [please]
 ; version = %s
+`
+const goConfig = `
+[go]
+importpath = %s
 `
 const bazelCompatibilityConfig = `
 [bazel]
@@ -58,6 +64,10 @@ func InitConfig(dir string, bazelCompatibility bool) {
 	}
 	config := path.Join(dir, core.ConfigFileName)
 	contents := fmt.Sprintf(configTemplate, core.PleaseVersion)
+	goModule, ok := findGoModule(dir)
+	if ok {
+		contents += fmt.Sprintf(goConfig, goModule)
+	}
 	if bazelCompatibility {
 		contents += bazelCompatibilityConfig
 	}
@@ -132,4 +142,23 @@ func InitPleasings(location string, printOnly bool, revision string) error {
 		return err
 	}
 	return ioutil.WriteFile(location, []byte(fmt.Sprintf(pleasingsSubrepoTemplate, revision)), 0644)
+}
+
+func findGoModule(dir string) (string, bool) {
+	goModFile, err := os.Open(path.Join(dir, "go.mod"))
+	if err != nil {
+		return "", false
+	}
+	defer goModFile.Close()
+
+	scanner := bufio.NewScanner(goModFile)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if strings.HasPrefix(line, "module ") {
+			return strings.TrimPrefix(line, "module "), true
+		}
+	}
+
+	return "", false
 }

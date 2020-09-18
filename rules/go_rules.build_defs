@@ -583,6 +583,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         _link_extra = False,
         complete = False,
         labels = labels,
+        test_only = test_only,
     )
     if cgo:
         lib_rule = _merge_cgo_obj(
@@ -592,6 +593,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
             visibility = visibility,
             labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)] + labels,
             deps = deps,
+            test_only = test_only,
         )
     main_rule = go_test_main(
         name = name,
@@ -600,6 +602,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         deps = deps,
         benchmark=True,
         _post_build = lambda name, output: _replace_test_package(name, output, static, definitions=definitions, cgo=cgo),
+        test_only = test_only,
     )
     deps += [lib_rule]
     lib_rule = go_library(
@@ -608,6 +611,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         deps=deps,
         _generate_import_config=False,
         labels = labels,
+        test_only = test_only,
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
