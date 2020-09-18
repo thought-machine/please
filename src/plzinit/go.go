@@ -21,7 +21,7 @@ const goConfig = `
 func golangConfig(dir string) string {
 	goModule, moduleFound := findGoModule(dir)
 
-	if !moduleFound && !cli.PromptYN("Would you like to setup golang in this repository", false) {
+	if !moduleFound && !cli.PromptYN("Would you like to setup Go in this repository", false) {
 		return ""
 	}
 
