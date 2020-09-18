@@ -91,7 +91,7 @@ type RemoteClient interface {
 	// Build invokes a build of the target remotely.
 	Build(tid int, target *BuildTarget) (*BuildMetadata, error)
 	// Test invokes a test run of the target remotely.
-	Test(tid int, target *BuildTarget) (metadata *BuildMetadata, results [][]byte, coverage []byte, err error)
+	Test(tid int, target *BuildTarget, run int) (metadata *BuildMetadata, err error)
 	// Run executes the target remotely.
 	Run(target *BuildTarget) error
 	// Download downloads the outputs for the given target that has already been built remotely.

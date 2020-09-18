@@ -132,7 +132,7 @@ func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb
 // buildTestCommand builds a command for a target when testing.
 func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error) {
 	// TODO(peterebden): Remove all this nonsense once API v2.1 is released.
-	files := make([]string, 0, 2)
+	files := target.TestOutputs
 	dirs := []string{}
 	if target.NeedCoverage(c.state) {
 		files = append(files, core.CoverageFile)
@@ -376,35 +376,6 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		metadata.Stderr = b
 	}
 	return metadata, nil
-}
-
-// digestForFilename returns the digest for an output of the given name, or nil if it doesn't exist.
-func (c *Client) digestForFilename(ar *pb.ActionResult, name string) *pb.Digest {
-	for _, file := range ar.OutputFiles {
-		if file.Path == name {
-			return file.Digest
-		}
-	}
-	return nil
-}
-
-// downloadAllFiles returns the contents of all files in the given action result
-func (c *Client) downloadAllPrefixedFiles(ar *pb.ActionResult, prefix string) ([][]byte, error) {
-	outs, err := c.client.FlattenActionOutputs(context.Background(), ar)
-	if err != nil {
-		return nil, err
-	}
-	ret := [][]byte{}
-	for name, out := range outs {
-		if strings.HasPrefix(name, prefix) {
-			blob, err := c.client.ReadBlob(context.Background(), out.Digest)
-			if err != nil {
-				return nil, err
-			}
-			ret = append(ret, blob)
-		}
-	}
-	return ret, nil
 }
 
 // verifyActionResult verifies that all the requested outputs actually exist in a returned

@@ -17,7 +17,6 @@ import (
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
-	sdkdigest "github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/retry"
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -484,33 +483,22 @@ func moveOutDirFilesToTmpRoot(target *core.BuildTarget, dir string) error {
 
 // Test executes a remote test of the given target.
 // It returns the results (and coverage if appropriate) as bytes to be parsed elsewhere.
-func (c *Client) Test(tid int, target *core.BuildTarget) (metadata *core.BuildMetadata, results [][]byte, coverage []byte, err error) {
+func (c *Client) Test(tid int, target *core.BuildTarget, run int) (metadata *core.BuildMetadata, err error) {
 	if err := c.CheckInitialised(); err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 	command, digest, err := c.buildAction(target, true, false)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
-	metadata, ar, execErr := c.execute(tid, target, command, digest, target.TestTimeout, true, false)
-	// Error handling here is a bit fiddly due to prioritisation; the execution error
-	// is more relevant, but we want to still try to get results if we can, and it's an
-	// error if we can't get those results on success.
-	if !target.NoTestOutput && ar != nil {
-		results, err = c.downloadAllPrefixedFiles(ar, core.TestResultsFile)
-		if execErr == nil && err != nil {
-			return metadata, nil, nil, err
+	metadata, ar, err := c.execute(tid, target, command, digest, target.TestTimeout, true, false)
+	if ar != nil {
+		dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run))
+		if err != nil {
+			log.Warningf("%v: failed to download test outputs: %v", target.Label, dlErr)
 		}
 	}
-	if target.NeedCoverage(c.state) && ar != nil {
-		if digest := c.digestForFilename(ar, core.CoverageFile); digest != nil {
-			coverage, err = c.client.ReadBlob(context.Background(), sdkdigest.NewFromProtoUnvalidated(digest))
-			if execErr == nil && err != nil {
-				return metadata, results, nil, err
-			}
-		}
-	}
-	return metadata, results, coverage, execErr
+	return metadata, err
 }
 
 // retrieveResults retrieves target results from where it can (either from the local cache or from remote).
