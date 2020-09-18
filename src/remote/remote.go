@@ -492,10 +492,13 @@ func (c *Client) Test(tid int, target *core.BuildTarget, run int) (metadata *cor
 		return nil, err
 	}
 	metadata, ar, err := c.execute(tid, target, command, digest, target.TestTimeout, true, false)
-	if err != nil {
-		return metadata, err
+	if ar != nil {
+		dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run))
+		if err != nil {
+			log.Warningf("%v: failed to download test outputs: %v", target.Label, dlErr)
+		}
 	}
-	return metadata, c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run))
+	return metadata, err
 }
 
 // retrieveResults retrieves target results from where it can (either from the local cache or from remote).
