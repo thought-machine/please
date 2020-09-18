@@ -252,7 +252,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		oldOutputHash := outputHashOrNil(target, target.FullOutputs(), state.PathHasher, state.PathHasher.NewHash)
 		cacheKey = mustShortTargetHash(state, target)
 
-		if state.Cache != nil && !runRemotely {
+		if state.Cache != nil && !runRemotely && !state.ShouldRebuild(target) {
 			// Note that ordering here is quite sensitive since the post-build function can modify
 			// what we would retrieve from the cache.
 			if target.BuildCouldModifyTarget() {
