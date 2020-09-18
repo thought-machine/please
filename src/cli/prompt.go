@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"strings"
-
 	"github.com/manifoldco/promptui"
 )
 
@@ -17,12 +15,28 @@ func PromptYN(msg string, defaultYes bool) bool {
 	if defaultYes {
 		prompt.Default = "Y"
 	}
-	input, err := prompt.Run()
+	_, err := prompt.Run()
+
+	if err == promptui.ErrInterrupt {
+		return false
+	}
+	// ErrAbort is returned when the user enters n (or the default value is n)
+	return err != promptui.ErrAbort
+}
+
+func Prompt(msg string, defaultVal string) (string, error) {
+	prompt := promptui.Prompt{
+		Label:   msg,
+		Default: defaultVal,
+	}
+
+	result, err := prompt.Run()
 	if err != nil {
 		if err.Error() == "" {
-			return defaultYes // Happens when the user enters nothing
+			return defaultVal, nil // Happens when the user enters nothing
 		}
-		return false // most likely ctrl+C etc
+		return "", err
 	}
-	return strings.ToLower(input) == "y" || (input == "" && defaultYes)
+
+	return result, nil
 }
