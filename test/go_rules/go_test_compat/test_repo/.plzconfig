@@ -1,0 +1,6 @@
+[Parse]
+BuildFileName = BUILD_FILE
+
+[go]
+GoTestRootCompat = true
+

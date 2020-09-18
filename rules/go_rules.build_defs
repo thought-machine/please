@@ -429,7 +429,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
 
 def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='', visibility:list=None,
             flags:str='', sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True,
-            external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=None,
+            external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=[],
             labels:list&features&tags=[], size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC,
             definitions:str|list|dict=None):
     """Defines a Go test rule.
@@ -510,10 +510,16 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
-    test_cmd = '$TEST %s 2>&1 | tee $RESULTS_FILE' % flags
+    test_cmd = '$TEST %s 2>&1 | tee $TMP_DIR/test.results' % flags
     if worker:
         test_cmd = f'$(worker {worker}) && {test_cmd} '
         deps += [worker]
+
+    if CONFIG.GO_TEST_ROOT_COMPAT:
+        # This is a workaround for remote execution; $RESULTS_FILE is set to a relative path remotely.
+        test_cmd = f'export TEST=./$(basename $TEST) && mkdir -p $PKG_DIR && mv $TEST $PKG_DIR && cd $PKG_DIR && {test_cmd}'
+        for out in test_outputs:
+            test_cmd += f' && mv {out} $TMP_DIR/{out}'
 
     return build_rule(
         name=name,
