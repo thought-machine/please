@@ -9,10 +9,10 @@ def plz_e2e_test(name:str, cmd:str, pre_cmd:str=None, expected_output:str=None,
     # but we can make it do it and it's a convenient way of testing the tool itself.
 
     def _e2e_test_cmd(cmd):
-        profile_flag = '--profile ci' if CONFIG.get('CI') else ''
+        args = '$PLZ_ARGS'
         if package_name().startswith('test/parse'):
-            profile_flag += ' -o parse.buildfilename:BUILD,BUILD.plz,BUILD.test '
-        cmd = cmd.replace('plz ', f'$(location //src:please) --nolock {profile_flag} -o cache.dirclean:false --log_file plz-out/log/{name}.log ')
+            args += ' -o parse.buildfilename:BUILD,BUILD.plz,BUILD.test '
+        cmd = cmd.replace('plz ', f'$(location //src:please) --nolock {args} -o cache.dirclean:false --log_file plz-out/log/{name}.log ')
         if expected_failure:
             test_cmd = '%s 2>&1 | tee output; if [ $? -eq 0 ]; then exit 1; fi; ' % cmd
         else:
@@ -52,4 +52,5 @@ def plz_e2e_test(name:str, cmd:str, pre_cmd:str=None, expected_output:str=None,
         no_test_output = True,
         sandbox = False,
         local = True,
+        pass_env = ["PLZ_ARGS"],
     )
