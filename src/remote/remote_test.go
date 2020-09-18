@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -108,10 +109,13 @@ func TestExecuteTest(t *testing.T) {
 	err := c.Store(target)
 	assert.NoError(t, err)
 	c.state.Graph.AddTarget(target)
-	_, results, coverage, err := c.Test(0, target)
+	_, err = c.Test(0, target, 1)
 	assert.NoError(t, err)
+
+	results, err := ioutil.ReadFile(filepath.Join(target.TestDir(1), core.TestResultsFile))
+	require.NoError(t, err)
+
 	assert.Equal(t, testResults, results)
-	assert.Equal(t, 0, len(coverage)) // Wasn't requested
 }
 
 func TestExecuteTestWithCoverage(t *testing.T) {
@@ -127,17 +131,24 @@ func TestExecuteTestWithCoverage(t *testing.T) {
 	assert.NoError(t, err)
 	target.SetState(core.Built)
 	c.state.Graph.AddTarget(target)
-	_, results, coverage, err := c.Test(0, target)
+	_, err = c.Test(0, target, 1)
 	assert.NoError(t, err)
+
+	results, err := ioutil.ReadFile(filepath.Join(target.TestDir(1), core.TestResultsFile))
+	require.NoError(t, err)
+
+	coverage, err := ioutil.ReadFile(filepath.Join(target.TestDir(1), core.CoverageFile))
+	require.NoError(t, err)
+
 	assert.Equal(t, testResults, results)
 	assert.Equal(t, coverageData, coverage)
 }
 
-var testResults = [][]byte{[]byte(`<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+var testResults = []byte(`<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <testcase name="//src/remote:remote_test">
   <test name="testResults" success="true" time="172" type="SUCCESS"/>
 </testcase>
-`)}
+`)
 
 var coverageData = []byte(`mode: set
 src/core/build_target.go:134.54,143.2 7 0

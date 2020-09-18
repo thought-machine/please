@@ -123,7 +123,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			}
 			outs = append(outs, output)
 		}
-		if state.Cache != nil {
+		if state.Cache != nil && !runRemotely {
 			state.Cache.Store(target, hash, outs)
 		}
 		return true
@@ -181,7 +181,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		results, coverage = doFlakeRun(tid, state, target, runRemotely)
 		target.AddTestResults(results)
 
-		if target.Results.TestCases.AllSucceeded() && !runRemotely {
+		if target.Results.TestCases.AllSucceeded() {
 			// Success, store in cache
 			moveAndCacheOutputFiles(&target.Results, coverage)
 		}
@@ -352,18 +352,17 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemote
 }
 
 func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (*core.BuildMetadata, [][]byte, *core.TestCoverage, error) {
+	var err error
+	var metadata *core.BuildMetadata
+
 	if runRemotely {
-		metadata, results, coverage, err := state.RemoteClient.Test(tid, target)
-		cov, err2 := parseRemoteCoverage(state, target, coverage, run)
-		if err == nil && err2 != nil {
-			log.Error("Error parsing coverage data for %s: %s", target, err2)
-		}
-		if metadata == nil {
-			metadata = &core.BuildMetadata{}
-		}
-		return metadata, results, cov, err
+		metadata, err = state.RemoteClient.Test(tid, target, run)
+	} else {
+		var stdout []byte
+		stdout, err = prepareAndRunTest(tid, state, target, run)
+		metadata = &core.BuildMetadata{Stdout: stdout}
 	}
-	stdout, err := prepareAndRunTest(tid, state, target, run)
+
 	coverage := parseCoverageFile(target, path.Join(target.TestDir(run), core.CoverageFile), run)
 
 	var data [][]byte
@@ -376,14 +375,7 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 			data = d
 		}
 	}
-	return &core.BuildMetadata{Stdout: stdout}, data, coverage, err
-}
-
-func parseRemoteCoverage(state *core.BuildState, target *core.BuildTarget, coverage []byte, run int) (*core.TestCoverage, error) {
-	if !state.NeedCoverage || len(coverage) == 0 {
-		return core.NewTestCoverage(), nil
-	}
-	return parseTestCoverage(target, coverage, run)
+	return metadata, data, coverage, err
 }
 
 // prepareAndRunTest sets up a test directory and runs the test.
