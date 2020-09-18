@@ -1,3 +1,5 @@
+subinclude("//build_defs:plz_e2e_test")
+
 # Test for a panic provoked by a python_library using a proto_library as a resource.
 proto_library(
     name = "test_proto",
@@ -196,4 +198,20 @@ python_test(
     srcs = ["data_dict_test.py"],
     data = {"txt": ["data.txt"]},
     labels = ["py3"],
+)
+
+plz_e2e_test(
+    name = "correct_labels_on_pip_libary_non_zip_safe",
+    cmd = "plz query print -f labels //third_party/python:numpy",
+    expected_output = "expected_labels_on_numpy.txt",
+    labels = ["py3"],
+    deps = ["//third_party/python:numpy"],
+)
+
+plz_e2e_test(
+    name = "correct_labels_on_pip_libary_zip_safe",
+    cmd = "plz query print -f labels //third_party/python:grpcio",
+    expected_output = "expected_labels_on_grpcio.txt",
+    labels = ["py3"],
+    deps = ["//third_party/python:grpcio"],
 )

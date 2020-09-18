@@ -1,0 +1,3 @@
+py
+pip:numpy==1.18.4
+py:zip-unsafe
