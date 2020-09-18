@@ -72,7 +72,7 @@ var opts struct {
 
 	FeatureFlags struct {
 		NoUpdate           bool    `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
-		NoCache            bool    `long:"nocache" description:"Disable caches (NB. not incrementality)"`
+		NoCache            bool    `long:"nocache" description:"Deprecated, use plz build --rebuild or plz test --rerun flags instead."`
 		NoHashVerification bool    `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
 		NoLock             bool    `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool    `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
@@ -356,9 +356,6 @@ var opts struct {
 // Functions are called after args are parsed and return true for success.
 var buildFunctions = map[string]func() int{
 	"build": func() int {
-		if opts.Build.Rebuild {
-			opts.FeatureFlags.NoCache = true
-		}
 		success, state := runBuild(opts.Build.Args.Targets, true, false, false)
 		return toExitCode(success, state)
 	},
@@ -732,6 +729,8 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 // newCache constructs a new cache based on the current config / flags.
 func newCache(state *core.BuildState) core.Cache {
 	if opts.FeatureFlags.NoCache {
+		log.Warning("--nocache is deprecated, use plz build --rebuild or plz test --rerun instead")
+		log.Warning("See https://github.com/thought-machine/please/issues/1212 for more information")
 		return nil
 	}
 	return cache.NewCache(state)
