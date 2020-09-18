@@ -319,7 +319,7 @@ pip_library(
 pip_library(
     name = "grpcio",
     test_only = True,
-    version = "1.29.0",
+    version = "1.32.0",
     deps = [
         ":six",
     ],

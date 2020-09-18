@@ -470,7 +470,7 @@ plz_e2e_test(
 
 plz_e2e_test(
     name = "init_test",
-    cmd = "plz init --dir=$TEST_DIR",
+    cmd = "plz init --dir=$TEST_DIR --no_prompt",
     expect_file_exists = ".plzconfig",
 )
 
