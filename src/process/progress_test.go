@@ -51,3 +51,4 @@ func (t *target) String() string               { return "//src/core:progress_tes
 func (t *target) ShouldShowProgress() bool     { return true }
 func (t *target) SetProgress(progress float32) { t.Progress = progress }
 func (t *target) ProgressDescription() string  { return "building" }
+func (t *target) ShouldExitOnError() bool      { return false }

@@ -53,4 +53,5 @@ def plz_e2e_test(name:str, cmd:str, pre_cmd:str=None, expected_output:str=None,
         sandbox = False,
         local = True,
         pass_env = ["PLZ_ARGS"],
+        exit_on_error = False,
     )

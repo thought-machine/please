@@ -13,16 +13,10 @@ go_library(
 
 go_test(
     name = "process_test",
-    srcs = ["process_test.go"],
-    deps = [
-        ":process",
-        "//third_party/go:testify",
+    srcs = [
+        "process_test.go",
+        "progress_test.go",
     ],
-)
-
-go_test(
-    name = "progress_test",
-    srcs = ["progress_test.go"],
     deps = [
         ":process",
         "//third_party/go:testify",

@@ -6,7 +6,8 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
             data:list=None, hashes:list=None, timeout:int=0, binary:bool=False, sandbox:bool=None,
             needs_transitive_deps:bool=False, output_is_complete:bool=True, test_only:bool&testonly=False,
             secrets:list|dict=None, requires:list=None, provides:dict=None, pre_build:function=None,
-            post_build:function=None, tools:list|dict=None, pass_env:list=None, local:bool=False, output_dirs:list=[]):
+            post_build:function=None, tools:list|dict=None, pass_env:list=None, local:bool=False, output_dirs:list=[],
+            exit_on_error:bool=CONFIG.EXIT_ON_ERROR):
     """A general build rule which allows the user to specify a command.
 
     Args:
@@ -97,6 +98,8 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
       output_dirs: Directories to add to the output of the rule. Files inside these directories will be added to
                    the root of the rule e.g. if you have an outdir foo, foo/bar.txt will be added as if bar.txt was in
                    the root of the build directory.
+      exit_on_error: If true, the executed command will fail immediately on any error (i.e. it is
+                     executed in a shell with -e).
     """
     if out and outs:
         raise TypeError('Can\'t specify both "out" and "outs".')
@@ -133,7 +136,8 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
             deps:list=None, tools:list|dict=None, data:list|dict=None, visibility:list=None, timeout:int=0,
             needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False,
             test_outputs:list=None, output_is_complete:bool=True, requires:list=None,
-            sandbox:bool=None, size:str=None, local:bool=False, pass_env:list=None):
+            sandbox:bool=None, size:str=None, local:bool=False, pass_env:list=None,
+            exit_on_error:bool=CONFIG.EXIT_ON_ERROR):
     """A rule which creates a test with an arbitrary command.
 
     The command must return zero on success and nonzero on failure. Test results are written
@@ -176,6 +180,8 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
              be sent remotely but executed on the local machine.
       pass_env: List of environment variables to be passed from outside. Any changes to them will
                 be recorded in this target's hash and will hence force it to rebuild.
+      exit_on_error: If true, the executed command will fail immediately on any error (i.e. it is
+                     executed in a shell with -e).
     """
     return build_rule(
         name = name,

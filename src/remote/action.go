@@ -20,6 +20,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/process"
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
@@ -106,15 +107,8 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 	cmd, err := core.ReplaceSequences(c.state, target, cmd)
 	return &pb.Command{
-		Platform: c.platform,
-		// We have to run everything through bash since our commands are arbitrary.
-		// Unfortunately we can't just say "bash", we need an absolute path which is
-		// a bit weird since it assumes that our absolute path is the same as the
-		// remote one (which is probably OK on the same OS, but not between say Linux and
-		// FreeBSD where bash is not idiomatically in the same place).
-		Arguments: []string{
-			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
-		},
+		Platform:             c.platform,
+		Arguments:            process.BashCommand(c.bashPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(target, inputRoot, stamp), target.Sandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
@@ -164,9 +158,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 				},
 			},
 		},
-		Arguments: []string{
-			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
-		},
+		Arguments:            process.BashCommand(c.bashPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(c.state, target, "."), target.TestSandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
