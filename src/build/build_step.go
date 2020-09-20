@@ -983,13 +983,14 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 				Proxy: http.ProxyURL(state.Config.Build.HTTPProxy.AsURL()),
 			}
 		}
+
+		httpClient.Timeout = time.Duration(state.Config.Build.Timeout)
 	})
 	if err := prepareDirectory(target.OutDir(), false); err != nil {
 		return err
 	} else if err := prepareDirectory(target.TmpDir(), false); err != nil {
 		return err
 	}
-	httpClient.Timeout = time.Duration(state.Config.Build.Timeout) // Can't set this when we init the client because config isn't loaded then.
 	var err error
 	for _, src := range target.Sources {
 		if e := fetchOneRemoteFile(state, target, src.String()); e != nil {
@@ -1027,7 +1028,12 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 		}
 		return nil
 	}
-	resp, err := httpClient.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", fmt.Sprintf("please.build/%s", core.PleaseVersion))
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}
