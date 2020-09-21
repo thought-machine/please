@@ -34,8 +34,8 @@ Version 15.4.0
     * The pip_library() rule now applies its labels to all its sub-rules
       #1211
     * Added a config option to make please `set -e` before running any
-      commands. This will make please fail fast and avoids silently
-      ignoring errors #1210
+      commands. This will make please fail fast and avoids errors being silently
+      ignored #1210
     * Additional test outputs are now downloaded to plz-out when tests
       are run through remote execution #1230
     * Please now adds a `User-Agent` header to remote_file() requests #1232
