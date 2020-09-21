@@ -378,33 +378,52 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 	return metadata, nil
 }
 
+func outputsForActionResult(ar *pb.ActionResult) map[string]bool {
+	ret := map[string]bool{}
+
+	for _, o := range ar.OutputFiles {
+		ret[o.Path] = true
+	}
+	for _, o := range ar.OutputDirectories {
+		ret[o.Path] = true
+	}
+	for _, o := range ar.OutputSymlinks {
+		ret[o.Path] = true
+	}
+
+	//TODO(jpoole): remove these two after REAPI 2.1
+	for _, o := range ar.OutputFileSymlinks {
+		ret[o.Path] = true
+	}
+	for _, o := range ar.OutputDirectorySymlinks {
+		ret[o.Path] = true
+	}
+	return ret
+}
+
 // verifyActionResult verifies that all the requested outputs actually exist in a returned
 // ActionResult. Servers do not necessarily verify this but we need to make sure they are
 // complete for future requests.
-func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest, ar *pb.ActionResult, verifyOutputs bool) error {
-	outs := make(map[string]bool, len(ar.OutputFiles)+len(ar.OutputDirectories)+len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks))
-	for _, f := range ar.OutputFiles {
-		outs[f.Path] = true
-	}
-	for _, f := range ar.OutputDirectories {
-		outs[f.Path] = true
-	}
-	for _, f := range ar.OutputFileSymlinks {
-		outs[f.Path] = true
-	}
-	for _, f := range ar.OutputDirectorySymlinks {
-		outs[f.Path] = true
-	}
-	for _, out := range command.OutputFiles {
-		if !outs[out] {
-			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
+func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest, ar *pb.ActionResult, verifyOutputs, isTest bool) error {
+	outs := outputsForActionResult(ar)
+	// Test outputs are optional
+	if isTest {
+		if !outs[core.TestResultsFile] && !target.NoTestOutput {
+			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, core.TestResultsFile, c.actionURL(actionDigest, true))
+		}
+	} else {
+		for _, out := range command.OutputFiles {
+			if !outs[out] {
+				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
+			}
+		}
+		for _, out := range command.OutputDirectories {
+			if !outs[out] {
+				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
+			}
 		}
 	}
-	for _, out := range command.OutputDirectories {
-		if !outs[out] {
-			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
-		}
-	}
+
 	if !verifyOutputs {
 		return nil
 	}
