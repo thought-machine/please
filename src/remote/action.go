@@ -20,6 +20,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/process"
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
@@ -106,15 +107,8 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 	cmd, err := core.ReplaceSequences(c.state, target, cmd)
 	return &pb.Command{
-		Platform: c.platform,
-		// We have to run everything through bash since our commands are arbitrary.
-		// Unfortunately we can't just say "bash", we need an absolute path which is
-		// a bit weird since it assumes that our absolute path is the same as the
-		// remote one (which is probably OK on the same OS, but not between say Linux and
-		// FreeBSD where bash is not idiomatically in the same place).
-		Arguments: []string{
-			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
-		},
+		Platform:             c.platform,
+		Arguments:            process.BashCommand(c.bashPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(target, inputRoot, stamp), target.Sandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
@@ -138,7 +132,7 @@ func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb
 // buildTestCommand builds a command for a target when testing.
 func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error) {
 	// TODO(peterebden): Remove all this nonsense once API v2.1 is released.
-	files := make([]string, 0, 2)
+	files := target.TestOutputs
 	dirs := []string{}
 	if target.NeedCoverage(c.state) {
 		files = append(files, core.CoverageFile)
@@ -164,9 +158,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 				},
 			},
 		},
-		Arguments: []string{
-			c.bashPath, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", commandPrefix + cmd,
-		},
+		Arguments:            process.BashCommand(c.bashPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(c.state, target, "."), target.TestSandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
@@ -384,35 +376,6 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		metadata.Stderr = b
 	}
 	return metadata, nil
-}
-
-// digestForFilename returns the digest for an output of the given name, or nil if it doesn't exist.
-func (c *Client) digestForFilename(ar *pb.ActionResult, name string) *pb.Digest {
-	for _, file := range ar.OutputFiles {
-		if file.Path == name {
-			return file.Digest
-		}
-	}
-	return nil
-}
-
-// downloadAllFiles returns the contents of all files in the given action result
-func (c *Client) downloadAllPrefixedFiles(ar *pb.ActionResult, prefix string) ([][]byte, error) {
-	outs, err := c.client.FlattenActionOutputs(context.Background(), ar)
-	if err != nil {
-		return nil, err
-	}
-	ret := [][]byte{}
-	for name, out := range outs {
-		if strings.HasPrefix(name, prefix) {
-			blob, err := c.client.ReadBlob(context.Background(), out.Digest)
-			if err != nil {
-				return nil, err
-			}
-			ret = append(ret, blob)
-		}
-	}
-	return ret, nil
 }
 
 // verifyActionResult verifies that all the requested outputs actually exist in a returned

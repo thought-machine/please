@@ -229,7 +229,7 @@ def proto_languages():
             func = lambda name, srcs, deps, test_only: cc_library(
                 name = name,
                 srcs = srcs,
-                hdrs = [filter_srcs(name + '_hdrs', srcs[0], "h")],
+                hdrs = [filter_srcs(name = name + '_protoc_hdrs', srcs = [srcs[0]], extension = "h")],
                 deps = deps,
                 test_only = test_only,
                 pkg_config_libs = ['protobuf'],
@@ -297,7 +297,7 @@ def grpc_languages():
             func = lambda name, srcs, deps, test_only: cc_library(
                 name = name,
                 srcs = srcs,
-                hdrs = [filter_srcs(name + '_hdrs', srcs[0], "h")],
+                hdrs = [filter_srcs(name = name + '_protoc_hdrs', srcs = [srcs[0]], extension = "h")],
                 deps = deps,
                 test_only = test_only,
                 pkg_config_libs = ['grpc++', 'grpc', 'protobuf'],

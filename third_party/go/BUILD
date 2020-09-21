@@ -592,7 +592,7 @@ go_get(
 go_get(
     name = "promptui",
     get = "github.com/manifoldco/promptui/...",
-    revision = "v0.3.2",
+    revision = "v0.7.0",
     deps = [
         ":ansiterm",
         ":readline",

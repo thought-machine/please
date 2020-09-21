@@ -59,14 +59,6 @@ func Max(x, y int) int {
 	return x
 }
 
-// AddAll adds all of one map[string]string to another.
-func AddAll(map1 map[string]string, map2 map[string]string) map[string]string {
-	for k, v := range map2 {
-		map1[k] = v
-	}
-	return map1
-}
-
 // ReadingStdin returns true if any of the given build labels are reading from stdin.
 func ReadingStdin(labels []core.BuildLabel) bool {
 	for _, l := range labels {

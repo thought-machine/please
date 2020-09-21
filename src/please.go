@@ -15,6 +15,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cache"
 	"github.com/thought-machine/please/src/clean"
@@ -26,6 +27,7 @@ import (
 	"github.com/thought-machine/please/src/help"
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/plz"
+	"github.com/thought-machine/please/src/plzinit"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
 	"github.com/thought-machine/please/src/scm"
@@ -70,7 +72,7 @@ var opts struct {
 
 	FeatureFlags struct {
 		NoUpdate           bool    `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
-		NoCache            bool    `long:"nocache" description:"Disable caches (NB. not incrementality)"`
+		NoCache            bool    `long:"nocache" description:"Deprecated, use plz build --rebuild or plz test --rerun flags instead."`
 		NoHashVerification bool    `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
 		NoLock             bool    `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool    `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
@@ -208,6 +210,7 @@ var opts struct {
 	Init struct {
 		Dir                cli.Filepath `long:"dir" description:"Directory to create config in" default:"."`
 		BazelCompatibility bool         `long:"bazel_compat" description:"Initialises config for Bazel compatibility mode."`
+		NoPrompt           bool         `long:"no_prompt" description:"Don't interactively prompt for optional config'"`
 		Config             struct {
 			User  bool `short:"u" long:"user" description:"Modifies the user-level config file"`
 			Local bool `short:"l" long:"local" description:"Modifies the local config file (.plzconfig.local)"`
@@ -215,6 +218,11 @@ var opts struct {
 				Options ConfigOverrides `positional-arg-name:"config" required:"true" description:"Attributes to set"`
 			} `positional-args:"true" required:"true"`
 		} `command:"config" description:"Initialises specific attributes of config files"`
+		Pleasings struct {
+			Revision  string `short:"r" long:"revision" description:"The revision to pin the pleasings repo to. This can be a branch, commit, tag, or other git reference."`
+			Location  string `short:"l" long:"location" description:"The location of the build file to write the subrepo rule to" default:"BUILD"`
+			PrintOnly bool   `long:"print" description:"Print the rule to standard out instead of writing it to a file"`
+		} `command:"pleasings" description:"Initialises the pleasings repo"`
 	} `command:"init" subcommands-optional:"true" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {
@@ -348,9 +356,6 @@ var opts struct {
 // Functions are called after args are parsed and return true for success.
 var buildFunctions = map[string]func() int{
 	"build": func() int {
-		if opts.Build.Rebuild {
-			opts.FeatureFlags.NoCache = true
-		}
 		success, state := runBuild(opts.Build.Args.Targets, true, false, false)
 		return toExitCode(success, state)
 	},
@@ -481,16 +486,31 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"init": func() int {
-		utils.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility)
+		plzinit.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility, opts.Init.NoPrompt)
+
+		if opts.Init.NoPrompt {
+			return 0
+		}
+
+		fmt.Println()
+		fmt.Println("Pleasings are a collection of auxiliary build rules that support other languages and technologies not present in the core please distribution.")
+		fmt.Println("For more information visit https://github.com/thought-machine/pleasings")
+		fmt.Println()
+
+		if cli.PromptYN("Would you like to add pleasings to your project? You may also do this later with `plz init pleasings` if you wish.", true) {
+			if err := plzinit.InitPleasings("BUILD", false, "master"); err != nil {
+				log.Fatalf("failed to initialise pleasings in this repository: %v", err)
+			}
+		}
 		return 0
 	},
 	"config": func() int {
 		if opts.Init.Config.User {
-			utils.InitConfigFile(core.ExpandHomePath(core.UserConfigFileName), opts.Init.Config.Args.Options)
+			plzinit.InitConfigFile(core.ExpandHomePath(core.UserConfigFileName), opts.Init.Config.Args.Options)
 		} else if opts.Init.Config.Local {
-			utils.InitConfigFile(core.LocalConfigFileName, opts.Init.Config.Args.Options)
+			plzinit.InitConfigFile(core.LocalConfigFileName, opts.Init.Config.Args.Options)
 		} else {
-			utils.InitConfigFile(core.ConfigFileName, opts.Init.Config.Args.Options)
+			plzinit.InitConfigFile(core.ConfigFileName, opts.Init.Config.Args.Options)
 		}
 		return 0
 	},
@@ -657,6 +677,12 @@ var buildFunctions = map[string]func() int{
 			query.Filter(state, state.ExpandOriginalLabels())
 		})
 	},
+	"pleasings": func() int {
+		if err := plzinit.InitPleasings(opts.Init.Pleasings.Location, opts.Init.Pleasings.PrintOnly, opts.Init.Pleasings.Revision); err != nil {
+			log.Fatalf("failed to write pleasings subrepo file: %v", err)
+		}
+		return 0
+	},
 }
 
 // ConfigOverrides are used to implement completion on the -o flag.
@@ -703,6 +729,8 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 // newCache constructs a new cache based on the current config / flags.
 func newCache(state *core.BuildState) core.Cache {
 	if opts.FeatureFlags.NoCache {
+		log.Warning("--nocache is deprecated, use plz build --rebuild or plz test --rerun instead")
+		log.Warning("See https://github.com/thought-machine/please/issues/1212 for more information")
 		return nil
 	}
 	return cache.NewCache(state)
@@ -948,7 +976,7 @@ func initBuild(args []string) string {
 		}
 		os.Exit(buildFunctions[command]())
 	} else if opts.OutputFlags.CompletionScript {
-		utils.PrintCompletionScript()
+		fmt.Printf("%s\n", assets.MustAsset("plz_complete.sh"))
 		os.Exit(0)
 	}
 	// Read the config now

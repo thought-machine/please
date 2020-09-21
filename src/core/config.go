@@ -46,6 +46,9 @@ const MachineConfigFileName = "/etc/please/plzconfig"
 // UserConfigFileName is the file name for user-specific config (for all their repos).
 const UserConfigFileName = "~/.config/please/plzconfig"
 
+// DefaultPath is the default location please looks for programs in
+var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
+
 func readConfigFile(config *Configuration, filename string) error {
 	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
@@ -198,7 +201,7 @@ func setDefault(conf *[]string, def ...string) {
 
 // setDefault checks if "PATH" is in passEnv, if it is set config.build.Path to use the environment variable.
 func setBuildPath(conf *[]string, passEnv []string, passUnsafeEnv []string) {
-	pathVal := []string{"/usr/local/bin", "/usr/bin", "/bin"}
+	pathVal := DefaultPath
 	for _, i := range passUnsafeEnv {
 		if i == "PATH" {
 			pathVal = strings.Split(os.Getenv("PATH"), ":")
@@ -346,9 +349,10 @@ type Configuration struct {
 		BlacklistDirs    []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
 		PreloadBuildDefs []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths." example:"build_defs/go_bindata.build_defs"`
 		BuildDefsDir     []string `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
-		BuiltinPleasings bool     `help:"Adds github.com/thought-machine/pleasings as a default subrepo named pleasings. This makes some builtin extensions available, but is not fully deterministic (it always uses the latest version). You may prefer to disable this and define your own subrepo for it (or not use it at all, of course)."`
-		NumThreads       int      `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
-		GitFunctions     bool     `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
+		// TODO(jpoole): Remove this in the v16 release
+		BuiltinPleasings bool `help:"Adds github.com/thought-machine/pleasings as a default subrepo named pleasings. This feature is deprecated and will be removed in the v16 release."`
+		NumThreads       int  `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
+		GitFunctions     bool `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
 	} `help:"The [parse] section in the config contains settings specific to parsing files."`
 	Display struct {
 		UpdateTitle bool `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
@@ -371,6 +375,7 @@ type Configuration struct {
 		PassUnsafeEnv     []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
 		HTTPProxy         cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
 		HashFunction      string       `help:"The hash function to use internally for build actions." options:"sha1,sha256"`
+		ExitOnError       bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
@@ -420,14 +425,15 @@ type Configuration struct {
 		KeepLabel []string     `help:"Defines a target label to be kept; for example, if you set this to go, no Go targets would ever be considered for deletion." example:"go"`
 	} `help:"Please supports a form of 'garbage collection', by which it means identifying targets that are not used for anything. By default binary targets and all their transitive dependencies are always considered non-garbage, as are any tests directly on those. The config options here allow tweaking this behaviour to retain more things.\n\nNote that it's a very good idea that your BUILD files are in the standard format when running this."`
 	Go struct {
-		GoTool        string `help:"The binary to use to invoke Go & its subtools with." var:"GO_TOOL"`
-		GoRoot        string `help:"If set, will set the GOROOT environment variable appropriately during build actions." var:"GOROOT"`
-		TestTool      string `help:"Sets the location of the please_go_test tool that is used to template the test main for go_test rules." var:"GO_TEST_TOOL"`
-		GoPath        string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
-		ImportPath    string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
-		CgoCCTool     string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`
-		FilterTool    string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
-		DefaultStatic bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
+		GoTool           string `help:"The binary to use to invoke Go & its subtools with." var:"GO_TOOL"`
+		GoRoot           string `help:"If set, will set the GOROOT environment variable appropriately during build actions." var:"GOROOT"`
+		TestTool         string `help:"Sets the location of the please_go_test tool that is used to template the test main for go_test rules." var:"GO_TEST_TOOL"`
+		GoPath           string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
+		ImportPath       string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
+		CgoCCTool        string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`
+		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
+		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
+		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
 	} `help:"Please has built-in support for compiling Go, and of course is written in Go itself.\nSee the config subfields or the Go rules themselves for more information.\n\nNote that Please is a bit more flexible than Go about directory layout - for example, it is possible to have multiple packages in a directory, but it's not a good idea to push this too far since Go's directory layout is inextricably linked with its import paths."`
 	Python struct {
 		PipTool             string  `help:"The tool that is invoked during pip_library rules." var:"PIP_TOOL"`
@@ -508,6 +514,7 @@ type Configuration struct {
 
 	FeatureFlags struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
+		RemovePleasings               bool `help:"Stops please adding the pleasings repo by default. Target release vesrion 16." var:"FF_PLEASINGS"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 }
 

@@ -2,11 +2,8 @@ go_library(
     name = "utils",
     srcs = glob(
         ["*.go"],
-        exclude = [
-            "*_bindata.go",
-            "*_test.go",
-        ],
-    ) + [":bindata"],
+        exclude = ["*_test.go"],
+    ),
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
@@ -15,18 +12,5 @@ go_library(
         "//src/scm",
         "//third_party/go:levenshtein",
         "//third_party/go:logging",
-    ],
-)
-
-go_bindata(
-    name = "bindata",
-    srcs = [":bindata_files"],
-)
-
-filegroup(
-    name = "bindata_files",
-    srcs = [
-        "//:pleasew",
-        "//tools/misc:completion_script",
     ],
 )
