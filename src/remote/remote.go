@@ -87,6 +87,10 @@ type Client struct {
 
 	// Used to store and retrieve action results to reduce RPC calls when re-building targets
 	mdStore buildMetadataStore
+
+	// existingBlobs is used to track the set of existing blobs remotely.
+	existingBlobs     map[string]struct{}
+	existingBlobMutex sync.Mutex
 }
 
 type actionDigestMap struct {
@@ -116,11 +120,12 @@ type pendingDownload struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:     state,
-		origState: state,
-		instance:  state.Config.Remote.Instance,
-		outputs:   map[core.BuildLabel]*pb.Directory{},
-		mdStore:   newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
+		state:         state,
+		origState:     state,
+		instance:      state.Config.Remote.Instance,
+		outputs:       map[core.BuildLabel]*pb.Directory{},
+		mdStore:       newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
+		existingBlobs: map[string]struct{}{},
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
