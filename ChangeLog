@@ -10,13 +10,35 @@ Version 15.4.0
     * Java binaries are now self executable by default. This feature
       is gated behind a feature flag until v16. Type plz help featureflags
       for more information. #1197
-    * Fixed esoteric edge cases in jarcat #1203
+    * Fixed esoteric edge cases in jarcat where it would fail to create
+      directories under some circumstances #1203
     * subrepo_name() and package_name() now work in the top level of a
       build definition file returning the package and subrepo of their
-      build rule. #1198
+      build rule respectively #1198
     * plz init is now interactive and will guide you through adding
       the pleasings subrepo if you wish. The pleasings subrepo will
-      no longer be added implicitly as of please v16. #1205
+      no longer be added implicitly as of please v16 #1205
+    * Java tests no longer fail when the junit tool is a real file rather
+      than being on the path #1207
+    * Fixed regression with C and C++ proto rules #1216
+    * Made hash_filegroup more portable by detecting available implementations
+      of sha1hash #1209
+    * The go_benchmark() rule now marks all its internal rules as test only #1221
+    * Added interactive golang setup to plz init. Please will now detect a
+      go.mod file and set your import path correspondingly. It will also
+      warn around common pitfalls when setting up go on the path #1224 #1225
+    * Added config option to make please descend into the package directory
+      before running go tests. This is closer to how `go test` works and can
+      help migrate from `go build` to please #1226
+    * Deprecated --nocache which will be removed in v16 #1229
+    * The pip_library() rule now applies its labels to all its sub-rules
+      #1211
+    * Added a config option to make please `set -e` before running any
+      commands. This will make please fail fast and avoids silently
+      ignoring errors #1210
+    * Additional test outputs are now downloaded to plz-out when tests
+      are run through remote execution #1230
+    * Please now adds a `User-Agent` header to remote_file() requests #1232
 
 
 Version 15.3.0
