@@ -815,7 +815,7 @@ func (target *BuildTarget) checkTargetOwnsFileAndSubDirectories(state *BuildStat
 // Returns an error if any aren't.
 func (target *BuildTarget) CheckSecrets() error {
 	for _, secret := range target.AllSecrets() {
-		if path := ExpandHomePath(secret); !PathExists(path) {
+		if path := fs.ExpandHomePath(secret); !PathExists(path) {
 			return fmt.Errorf("Path %s doesn't exist; it's required to build %s", secret, target.Label)
 		}
 	}

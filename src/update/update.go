@@ -29,6 +29,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/process"
 )
 
@@ -62,7 +63,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	defer core.ReleaseRepoLock()
 
 	// If the destination exists and the user passed --force, remove it to force a redownload.
-	newDir := core.ExpandHomePath(path.Join(config.Please.Location, config.Please.Version.VersionString()))
+	newDir := fs.ExpandHomePath(path.Join(config.Please.Location, config.Please.Version.VersionString()))
 	if forceUpdate && core.PathExists(newDir) {
 		if err := os.RemoveAll(newDir); err != nil {
 			log.Fatalf("Failed to remove existing directory: %s", err)
@@ -133,7 +134,7 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool
 // downloadAndLinkPlease downloads a new Please version and links it into place, if needed.
 // It returns the new location and dies on failure.
 func downloadAndLinkPlease(config *core.Configuration, verify bool, progress bool) string {
-	config.Please.Location = core.ExpandHomePath(config.Please.Location)
+	config.Please.Location = fs.ExpandHomePath(config.Please.Location)
 	newPlease := path.Join(config.Please.Location, config.Please.Version.VersionString(), "please")
 
 	if !core.PathExists(newPlease) {

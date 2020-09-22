@@ -11,11 +11,12 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // clean checks for any stale versions in the download directory and wipes them out if OK.
 func clean(config *core.Configuration, manualUpdate bool) {
-	location := core.ExpandHomePath(config.Please.Location)
+	location := fs.ExpandHomePath(config.Please.Location)
 	dir, _ := ioutil.ReadDir(location)
 	versions := make(semver.Versions, 0, len(dir))
 	// Convert these to semver
