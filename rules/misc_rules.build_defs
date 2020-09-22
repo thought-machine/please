@@ -129,6 +129,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         pass_env = pass_env,
         local = local,
         output_dirs = output_dirs,
+        exit_on_error = exit_on_error,
     )
 
 
@@ -208,6 +209,7 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
         flaky = flaky,
         local = local,
         pass_env = pass_env,
+        exit_on_error = exit_on_error,
     )
 
 
