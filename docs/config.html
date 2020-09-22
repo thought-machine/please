@@ -63,11 +63,6 @@
         web server (<code>https://get.please.build</code>), but you can point it to some location of your own if you prefer to keep
         traffic within your network or use home-grown versions.</li>
 
-      <li><b>Lang</b><br/>
-        Sets the language passed to build rules when building. This can be important for some
-        tools (although hopefully not many) - we've mostly observed it with Sass.
-        Defaults to <code>en_GB.UTF-8</code>.</li>
-
       <li><b>Nonce</b><br/>
         This is an arbitrary string that is added to the hash of every build target. It provides
         a way to force a rebuild of everything when it's changed.<br/>
@@ -165,6 +160,10 @@
         access, IPC and some aspects of the filesystem. Currently only works on Linux.
         Defaults to <code>False</code>.</li>
 
+      <li><b>Lang</b><br/>
+        Sets the language passed to build rules when building. This can be important for some
+        tools (although hopefully not many) - we've mostly observed it with Sass.
+        Defaults to <code>en_GB.UTF-8</code>.</li>
     </ul>
 
     <h3><a name="buildenv">[BuildEnv]</a></h3>
