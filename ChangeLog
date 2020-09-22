@@ -3,6 +3,8 @@ Version 15.4.1
 
     * Additional test outputs are now optional when when executing
       remotely just as they are when executed locally #1234
+    * Improved performance of preparing inputs for targets when
+      executing remotely #1236
 
 
 Version 15.4.0
