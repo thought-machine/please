@@ -441,7 +441,7 @@ func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
 	for _, c := range m {
 		chomks = append(chomks, c)
 	}
-	if err := c.client.UploadIfMissing(context.Background(), chomks...); err != nil {
+	if err := c.uploadIfMissing(context.Background(), chomks...); err != nil {
 		return err
 	}
 	return c.setOutputs(target, ar)

@@ -23,5 +23,32 @@ func (c *Client) uploadBlobs(f func(ch chan<- *chunker.Chunker) error) error {
 	if err := g.Wait(); err != nil {
 		return err
 	}
-	return c.client.UploadIfMissing(context.Background(), chomks...)
+	return c.uploadIfMissing(context.Background(), chomks...)
+}
+
+func (c *Client) uploadIfMissing(ctx context.Context, chomks ...*chunker.Chunker) error {
+	filtered := c.filterChunks(chomks)
+	if len(filtered) == 0 {
+		return nil
+	} else if err := c.client.UploadIfMissing(ctx, filtered...); err != nil {
+		return err
+	}
+	c.existingBlobMutex.Lock()
+	defer c.existingBlobMutex.Unlock()
+	for _, chunker := range filtered {
+		c.existingBlobs[chunker.Digest().Hash] = struct{}{}
+	}
+	return nil
+}
+
+func (c *Client) filterChunks(chomks []*chunker.Chunker) []*chunker.Chunker {
+	ret := make([]*chunker.Chunker, 0, len(chomks))
+	c.existingBlobMutex.Lock()
+	defer c.existingBlobMutex.Unlock()
+	for _, chunker := range chomks {
+		if _, present := c.existingBlobs[chunker.Digest().Hash]; !present {
+			ret = append(ret, chunker)
+		}
+	}
+	return ret
 }
