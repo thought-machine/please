@@ -191,7 +191,7 @@ func (label SystemPathLabel) String() string {
 	return label.Name
 }
 
-// NamedOutputLabel represents a reference to a subset of named outputs from a rule.
+// NamedOutputLabel represents a reference to a subset of named outputs from a rule or an entry point on a rule.
 // The rule must have declared those as a named group.
 type NamedOutputLabel struct {
 	BuildLabel
@@ -200,18 +200,29 @@ type NamedOutputLabel struct {
 
 // Paths returns a slice of paths to the files of this input.
 func (label NamedOutputLabel) Paths(graph *BuildGraph) []string {
-	return addPathPrefix(graph.TargetOrDie(label.BuildLabel).NamedOutputs(label.Output), label.PackageName)
+	target := graph.TargetOrDie(label.BuildLabel)
+	if _, ok := target.EntryPoints[label.Output]; ok {
+		return label.BuildLabel.Paths(graph)
+	}
+	return addPathPrefix(target.NamedOutputs(label.Output), label.PackageName)
 }
 
 // FullPaths is like Paths but includes the leading plz-out/gen directory.
 func (label NamedOutputLabel) FullPaths(graph *BuildGraph) []string {
 	target := graph.TargetOrDie(label.BuildLabel)
+	if _, ok := target.EntryPoints[label.Output]; ok {
+		return label.BuildLabel.FullPaths(graph)
+	}
 	return addPathPrefix(target.NamedOutputs(label.Output), target.OutDir())
 }
 
 // LocalPaths returns paths within the local package
 func (label NamedOutputLabel) LocalPaths(graph *BuildGraph) []string {
-	return graph.TargetOrDie(label.BuildLabel).NamedOutputs(label.Output)
+	target := graph.TargetOrDie(label.BuildLabel)
+	if _, ok := target.EntryPoints[label.Output]; ok {
+		return label.BuildLabel.LocalPaths(graph)
+	}
+	return target.NamedOutputs(label.Output)
 }
 
 // Label returns the build rule associated with this input. For a NamedOutputLabel it's always non-nil.

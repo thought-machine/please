@@ -82,6 +82,10 @@ var KnownFields = map[string]bool{
 	"PassUnsafeEnv":       true,
 	"NeededForSubinclude": true,
 	"RuleMetadata":        true, // This is only accessible through the build language at parse time
+	// TODO(jpoole): is this right? Why does visibility contribute to the hash? Surely that's also only checked at parse time.
+	"EntryPoints":         true, // Entry points don't change the output of the rule. They only affect how the build env
+								 // is set for rules using them. Removing an entry point will break anything using that
+								 // entry point at parse time.
 
 	// Used to save the rule hash rather than actually being hashed itself.
 	"RuleHash": true,

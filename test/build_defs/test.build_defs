@@ -1,20 +1,25 @@
 
-
 def please_repo_e2e_test(
         name: str,
         plz_command: str,
         repo: str,
         deps: list=[],
         expected_output: dict,
-        data: dict = {},
 ):
-    test_cmd = " && ".join(
-        ["cd $DATA_REPO", "export PLZ=$TMP_DIR/$DATA_PLEASE", f"{plz_command}"] +
-        [f"$TMP_DIR/$DATA_CONTENT_CHECKER '{o}' '{c}'" for o, c in expected_output.items()])
+    test_cmd = " && ".join([
+        "mv $DATA_FREE_BSD_CONFIG $DATA_REPO",
+        "cd $DATA_REPO",
+        plz_command.replace("plz", "$TMP_DIR/$DATA_PLEASE -o go.testtool:$TMP_DIR/$DATA_TEST_TOOL -o go.filtertool:$TMP_DIR/$DATA_FILTER_TOOL"),
+    ] + [f"$TMP_DIR/$DATA_CONTENT_CHECKER '{o}' '{c}'" for o, c in expected_output.items()])
 
-    data["REPO"] = [repo]
-    data["PLEASE"] = ["//src:please"]
-    data["CONTENT_CHECKER"] = ["//test/build_defs:content_checker"]
+    data = {
+        "TEST_TOOL": ["//tools/please_go_test"],
+        "FILTER_TOOL": ["//tools/please_go_filter"],
+        "REPO": [repo],
+        "PLEASE":  ["//src:please"],
+        "CONTENT_CHECKER": ["//test/build_defs:content_checker"],
+        "FREE_BSD_CONFIG": ["//test/build_defs:free_bsd_config"]
+    }
 
     return build_rule(
         name = name,
@@ -23,4 +28,5 @@ def please_repo_e2e_test(
         data = data,
         test = True,
         no_test_output = True,
+        labels = ["plz_e2e_test", "e2e"],
     )

@@ -197,6 +197,8 @@ type BuildTarget struct {
 	OutputDirectories []OutputDirectory `name:"output_dirs"`
 	// RuleMetadata is the metadata attached to this build rule. It can be accessed through the "get_rule_metadata" BIF.
 	RuleMetadata interface{} `name:"config"`
+	// EntryPoints represent named binaries within the rules output that can be targeted via //package:rule|entry_point_name
+	EntryPoints map[string]string
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -1315,17 +1317,29 @@ func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 }
 
 // toolPath returns a path to this target when used as a tool.
-func (target *BuildTarget) toolPath(abs bool) string {
-	outputs := target.Outputs()
-	ret := make([]string, len(outputs))
-	for i, o := range outputs {
-		if abs {
-			ret[i] = path.Join(RepoRoot, target.OutDir(), o)
-		} else {
-			ret[i] = path.Join(target.Label.PackageName, o)
+func (target *BuildTarget) toolPath(abs bool, namedOutput string) string {
+	outToolPath := func(outputs ... string) string {
+		ret := make([]string, len(outputs))
+		for i, o := range outputs {
+			if abs {
+				ret[i] = path.Join(RepoRoot, target.OutDir(), o)
+			} else {
+				ret[i] = path.Join(target.Label.PackageName, o)
+			}
 		}
+		return strings.Join(ret, " ")
 	}
-	return strings.Join(ret, " ")
+
+	if namedOutput != "" {
+		if o, ok := target.EntryPoints[namedOutput]; ok {
+			return outToolPath(o)
+		}
+		if outs, ok := target.namedOutputs[namedOutput]; ok {
+			return outToolPath(outs...)
+		}
+		panic(fmt.Sprintf("%v has no named output or entry point %v", target.Label, namedOutput))
+	}
+	return outToolPath(target.Outputs()...)
 }
 
 // AddOutput adds a new output to the target if it's not already there.

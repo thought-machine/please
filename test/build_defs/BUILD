@@ -9,3 +9,8 @@ filegroup(
     name = "build_defs",
     srcs = glob(["*.build_defs"]),
 )
+
+filegroup(
+    name = "free_bsd_config",
+    srcs = [".plzconfig_freebsd_amd64"],
+)
