@@ -35,8 +35,8 @@ func (c *Client) uploadIfMissing(ctx context.Context, chomks ...*chunker.Chunker
 	}
 	c.existingBlobMutex.Lock()
 	defer c.existingBlobMutex.Unlock()
-	for _, chunk := range chomks {
-		c.existingBlobs[chunk.Digest().Hash] = struct{}{}
+	for _, chunker := range filtered {
+		c.existingBlobs[chunker.Digest().Hash] = struct{}{}
 	}
 	return nil
 }
@@ -45,9 +45,9 @@ func (c *Client) filterChunks(chomks []*chunker.Chunker) []*chunker.Chunker {
 	ret := make([]*chunker.Chunker, 0, len(chomks))
 	c.existingBlobMutex.Lock()
 	defer c.existingBlobMutex.Unlock()
-	for _, chunk := range chomks {
-		if _, present := c.existingBlobs[chunk.Digest().Hash]; !present {
-			ret = append(ret, chunk)
+	for _, chunker := range chomks {
+		if _, present := c.existingBlobs[chunker.Digest().Hash]; !present {
+			ret = append(ret, chunker)
 		}
 	}
 	return ret
