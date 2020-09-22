@@ -361,14 +361,14 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		Stdout: ar.StdoutRaw,
 		Stderr: ar.StderrRaw,
 	}
-	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
+	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil && ar.StdoutDigest.Hash != digest.Empty.Hash {
 		b, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StdoutDigest))
 		if err != nil {
 			return metadata, err
 		}
 		metadata.Stdout = b
 	}
-	if needStderr && len(metadata.Stderr) == 0 && ar.StderrDigest != nil {
+	if needStderr && len(metadata.Stderr) == 0 && ar.StderrDigest != nil && ar.StderrDigest.Hash != digest.Empty.Hash {
 		b, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StderrDigest))
 		if err != nil {
 			return metadata, err
