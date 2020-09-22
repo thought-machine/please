@@ -22,6 +22,7 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/export"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/gc"
 	"github.com/thought-machine/please/src/hashes"
 	"github.com/thought-machine/please/src/help"
@@ -506,7 +507,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"config": func() int {
 		if opts.Init.Config.User {
-			plzinit.InitConfigFile(core.ExpandHomePath(core.UserConfigFileName), opts.Init.Config.Args.Options)
+			plzinit.InitConfigFile(fs.ExpandHomePath(core.UserConfigFileName), opts.Init.Config.Args.Options)
 		} else if opts.Init.Config.Local {
 			plzinit.InitConfigFile(core.LocalConfigFileName, opts.Init.Config.Args.Options)
 		} else {

@@ -12,9 +12,6 @@ import (
 	"github.com/thought-machine/please/src/scm"
 )
 
-// ExpandHomePath is an alias to the function in fs for compatibility.
-var ExpandHomePath func(string) string = fs.ExpandHomePath
-
 // A BuildEnv is a representation of the build environment that also knows how to log itself.
 type BuildEnv []string
 
@@ -106,13 +103,13 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	}
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
-		secrets := "SECRETS=" + ExpandHomePath(strings.Join(target.Secrets, ":"))
+		secrets := "SECRETS=" + fs.ExpandHomePath(strings.Join(target.Secrets, ":"))
 		secrets = strings.Replace(secrets, ":", " ", -1)
 		env = append(env, secrets)
 	}
 	// NamedSecrets, if they declared any.
 	for name, secrets := range target.NamedSecrets {
-		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + ExpandHomePath(strings.Join(secrets, ":"))
+		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + fs.ExpandHomePath(strings.Join(secrets, ":"))
 		secrets = strings.Replace(secrets, ":", " ", -1)
 		env = append(env, secrets)
 	}

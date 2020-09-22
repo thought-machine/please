@@ -52,6 +52,8 @@ import (
 	"regexp"
 	"runtime/debug"
 	"strings"
+
+	"github.com/thought-machine/please/src/fs"
 )
 
 var locationReplacement = regexp.MustCompile(`\$\(location ([^\)]+)\)`)
@@ -103,7 +105,7 @@ func workerAndArgs(state *BuildState, target *BuildTarget, command string) (stri
 		return "", "", "", err
 	}
 	cmd2, err := replaceSequencesInternal(state, target, match[4], false)
-	return replaceWorkerSequence(state, target, ExpandHomePath(match[2]), true, false, false, true, false, false), cmd1, cmd2, err
+	return replaceWorkerSequence(state, target, fs.ExpandHomePath(match[2]), true, false, false, true, false, false), cmd1, cmd2, err
 }
 
 func replaceSequencesInternal(state *BuildState, target *BuildTarget, command string, test bool) (cmd string, err error) {

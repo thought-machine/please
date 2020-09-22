@@ -74,7 +74,7 @@ func ReadDefaultConfigFiles(profiles []string) (*Configuration, error) {
 func defaultConfigFiles() []string {
 	return []string{
 		MachineConfigFileName,
-		ExpandHomePath(UserConfigFileName),
+		fs.ExpandHomePath(UserConfigFileName),
 		path.Join(RepoRoot, ConfigFileName),
 		path.Join(RepoRoot, ArchConfigFileName),
 		path.Join(RepoRoot, LocalConfigFileName),
@@ -171,7 +171,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		if exec, err := os.Executable(); err != nil {
 			log.Warning("Can't determine current executable: %s", err)
 			config.Please.Location = "~/.please"
-		} else if strings.HasPrefix(exec, ExpandHomePath("~/.please")) {
+		} else if strings.HasPrefix(exec, fs.ExpandHomePath("~/.please")) {
 			// Paths within ~/.please are managed by us and have symlinks to subdirectories
 			// that we don't want to follow.
 			config.Please.Location = "~/.please"
