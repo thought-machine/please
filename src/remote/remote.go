@@ -17,6 +17,7 @@ import (
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/retry"
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -88,6 +89,9 @@ type Client struct {
 	// Used to store and retrieve action results to reduce RPC calls when re-building targets
 	mdStore buildMetadataStore
 
+	// Passed to various SDK functions.
+	fileMetadataCache filemetadata.Cache
+
 	// existingBlobs is used to track the set of existing blobs remotely.
 	existingBlobs     map[string]struct{}
 	existingBlobMutex sync.Mutex
@@ -120,12 +124,13 @@ type pendingDownload struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:         state,
-		origState:     state,
-		instance:      state.Config.Remote.Instance,
-		outputs:       map[core.BuildLabel]*pb.Directory{},
-		mdStore:       newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
-		existingBlobs: map[string]struct{}{},
+		state:             state,
+		origState:         state,
+		instance:          state.Config.Remote.Instance,
+		outputs:           map[core.BuildLabel]*pb.Directory{},
+		mdStore:           newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
+		existingBlobs:     map[string]struct{}{},
+		fileMetadataCache: filemetadata.NewNoopCache(),
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
@@ -416,12 +421,12 @@ func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar 
 func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult, target *core.BuildTarget) error {
 	// We can download straight into the out dir if there are no outdirs to worry about
 	if len(target.OutputDirectories) == 0 {
-		return c.client.DownloadActionOutputs(ctx, ar, target.OutDir())
+		return c.client.DownloadActionOutputs(ctx, ar, target.OutDir(), c.fileMetadataCache)
 	}
 
 	defer os.RemoveAll(target.TmpDir())
 
-	if err := c.client.DownloadActionOutputs(ctx, ar, target.TmpDir()); err != nil {
+	if err := c.client.DownloadActionOutputs(ctx, ar, target.TmpDir(), c.fileMetadataCache); err != nil {
 		return err
 	}
 
@@ -499,7 +504,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget, run int) (metadata *cor
 	metadata, ar, err := c.execute(tid, target, command, digest, true, false)
 
 	if ar != nil {
-		dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run))
+		dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run), c.fileMetadataCache)
 		if dlErr != nil {
 			log.Warningf("%v: failed to download test outputs: %v", target.Label, dlErr)
 		}
