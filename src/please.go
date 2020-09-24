@@ -285,7 +285,7 @@ var opts struct {
 				Target1 core.BuildLabel `positional-arg-name:"target1" description:"First build target" required:"true"`
 				Target2 core.BuildLabel `positional-arg-name:"target2" description:"Second build target" required:"true"`
 			} `positional-args:"true" required:"true"`
-		} `command:"somepath" description:"Queries for a path between two targets"`
+		} `command:"somepath" description:"Queries for a dependency path between two targets in the build graph"`
 		AllTargets struct {
 			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
 			Args   struct {
@@ -341,12 +341,14 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"changes" description:"Calculates the set of changed targets in regard to a set of modified files or SCM commits."`
 		Roots struct {
-			Args struct {
+			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true"`
 		} `command:"roots" description:"Show build labels with no dependents in the given list, from the list."`
 		Filter struct {
-			Args struct {
+			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
+			Args   struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
@@ -663,7 +665,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"roots": func() int {
 		return runQuery(true, opts.Query.Roots.Args.Targets, func(state *core.BuildState) {
-			query.Roots(state.Graph, opts.Query.Roots.Args.Targets)
+			query.Roots(state.Graph, state.ExpandOriginalLabels(), opts.Query.Roots.Hidden)
 		})
 	},
 	"watch": func() int {
@@ -675,7 +677,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"filter": func() int {
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
-			query.Filter(state, state.ExpandOriginalLabels())
+			query.Filter(state, state.ExpandOriginalLabels(), opts.Query.Filter.Hidden)
 		})
 	},
 	"pleasings": func() int {
