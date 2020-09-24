@@ -28,8 +28,16 @@
 //   Useful for rules that have multiple outputs where you only need to know
 //   what directory they're in.
 //
+// $(out_dir //path/to:target)
+//   Expands to the out directory containing the outputs of the given target.
+//   Useful for scripts that users that need to know the out directory fo a rule.
+//
 // $(out_location //path/to:target)
 //   Expands to a path to the output of the given target, with the preceding plz-out/gen
+//   or plz-out/bin etc. Useful when these things will be run by a user.
+//
+// $(out_locations //path/to:target)
+//   Expands to a path(s) to the output of the given target, with the preceding plz-out/gen
 //   or plz-out/bin etc. Useful when these things will be run by a user.
 //
 // $(worker //path/to:target)
@@ -61,7 +69,9 @@ var locationsReplacement = regexp.MustCompile(`\$\(locations ([^\)]+)\)`)
 var exeReplacement = regexp.MustCompile(`\$\(exe ([^\)]+)\)`)
 var outExeReplacement = regexp.MustCompile(`\$\(out_exe ([^\)]+)\)`)
 var outReplacement = regexp.MustCompile(`\$\(out_location ([^\)]+)\)`)
+var outsReplacement = regexp.MustCompile(`\$\(out_locations ([^\)]+)\)`)
 var dirReplacement = regexp.MustCompile(`\$\(dir ([^\)]+)\)`)
+var outDirReplacement = regexp.MustCompile(`\$\(out_dir ([^\)]+)\)`)
 var hashReplacement = regexp.MustCompile(`\$\(hash ([^\)]+)\)`)
 var workerReplacement = regexp.MustCompile(`^(.*)\$\(worker ([^\)]+)\) *([^&]*)(?: *&& *(.*))?$`)
 
@@ -128,11 +138,17 @@ func replaceSequencesInternal(state *BuildState, target *BuildTarget, command st
 	cmd = outReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
 		return replaceSequence(state, target, in[15:len(in)-1], false, false, false, true, false, test)
 	})
+	cmd = outsReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
+		return replaceSequence(state, target, in[16:len(in)-1], false, true, false, true, false, test)
+	})
 	cmd = outExeReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
 		return replaceSequence(state, target, in[10:len(in)-1], true, false, false, true, false, test)
 	})
 	cmd = dirReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
 		return replaceSequence(state, target, in[6:len(in)-1], false, true, true, false, false, test)
+	})
+	cmd = outDirReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
+		return replaceSequence(state, target, in[10:len(in)-1], false, true, true, true, false, test)
 	})
 	cmd = hashReplacement.ReplaceAllStringFunc(cmd, func(in string) string {
 		return replaceSequence(state, target, in[7:len(in)-1], false, true, true, false, true, test)

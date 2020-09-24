@@ -100,11 +100,19 @@
       which must have a single output only.</li>
     <li><code>$(locations //path/to:target)</code> expands to the locations of the outputs of the
       given build rule, which can have any number of outputs.</li>
+    <li><code>$(dir //path/to:target)</code> expands to the directory containing the outputs of the
+      given label</li>
+    <li><code>$(out_dir //path/to:target)</code> expands to the directory containing the outputs of the
+      given label with the preceding plz-out/{gen|bin}</li>
     <li><code>$(exe //path/to:target)</code> expands to a command to run the output of the given
       target. The rule must be marked as binary.</li>
+    <li><code>$(out_exe //path/to:target)</code> expands to a command to run the output of the given
+      target with the precdeing plz-out/{gen|bin}. The rule must be marked as binary.</li>
     <li><code>$(out_location //path_to:target)</code> expands to the output of the given build rule,
-      with the preceding plz-out/gen etc.<br/>
+      with the preceding plz-out/{gen|bin}<br/>
       Consider carefully when to use this though; it is not normally useful.</li>
+    <li><code>$(out_locations //path_to:target)</code> expands to the locations of the outputs of the
+      given build rule, with the preceding plz-out/{gen|bin}. The rule can have any number of outputs.</li>
     <li><code>$(hash //path/to:target)</code> expands to a hash of the outputs of that target.<br/>
       This can be useful to uniquely fingerprint the given rule.</li>
     <li><code>$(worker //path/to:target)</code> invokes the given target as a

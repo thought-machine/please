@@ -48,6 +48,15 @@ func TestOutLocation(t *testing.T) {
 	assert.Equal(t, expected, replaceSequences(state, target1))
 }
 
+func TestOutLocations(t *testing.T) {
+	target2 := makeTarget2("//path/to:target2", "", nil)
+	target2.AddOutput("target2_other.py")
+	target1 := makeTarget2("//path/to:target1", "ln -s $(out_locations //path/to:target2) ${OUT}", target2)
+
+	expected := "ln -s plz-out/gen/path/to/target2.py plz-out/gen/path/to/target2_other.py ${OUT}"
+	assert.Equal(t, expected, replaceSequences(state, target1))
+}
+
 func TestExe(t *testing.T) {
 	target2 := makeTarget2("//path/to:target2", "", nil)
 	target2.IsBinary = true
@@ -141,6 +150,16 @@ func TestDirReplacement(t *testing.T) {
 	target1 := makeTarget2("//path/to:target1", "$(dir //path/to:target2)", target2)
 
 	expected := "path/to"
+	cmd, _ := ReplaceSequences(state, target1, target1.Command)
+	assert.Equal(t, expected, cmd)
+}
+
+func TestOutDirReplacement(t *testing.T) {
+	target2 := makeTarget2("//path/to:target2", "blah", nil)
+	target2.AddOutput("blah2.txt")
+	target1 := makeTarget2("//path/to:target1", "$(out_dir //path/to:target2)", target2)
+
+	expected := "plz-out/gen/path/to"
 	cmd, _ := ReplaceSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }
