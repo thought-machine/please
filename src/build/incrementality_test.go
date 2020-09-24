@@ -45,6 +45,8 @@ var KnownFields = map[string]bool{
 	"Sandbox":                     true,
 	"Tools":                       true,
 	"namedTools":                  true,
+	"TestTools":                   true,
+	"namedTestTools":              true,
 	"Secrets":                     true,
 	"NamedSecrets":                true,
 	"TestOutputs":                 true,
