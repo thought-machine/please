@@ -271,3 +271,7 @@ func (env BuildEnv) Redacted() interface{} {
 func (env BuildEnv) String() string {
 	return strings.Join(env, "\n")
 }
+
+func notused() string {
+	return "i am not used"
+}
