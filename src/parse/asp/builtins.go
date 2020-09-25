@@ -732,6 +732,9 @@ func addOut(s *scope, args []pyObject) pyObject {
 		target.AddOutput(name)
 		s.pkg.MustRegisterOutput(name, target)
 	} else {
+		_, ok := target.EntryPoints[name]
+		s.NAssert(ok, "Named outputs can't have the same name as entry points")
+
 		target.AddNamedOutput(name, out)
 		s.pkg.MustRegisterOutput(out, target)
 	}

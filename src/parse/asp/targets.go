@@ -234,7 +234,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	}
 }
 
-// addDependencies adds dependencies to a target, which may or may not be exported.
+// addEntryPoints adds entry points to a target
 func addEntryPoints(s *scope, arg pyObject, target *core.BuildTarget) {
 	entryPointsPy, ok := asDict(arg)
 	s.Assert(ok, "entry_points must be a dict")
@@ -243,6 +243,7 @@ func addEntryPoints(s *scope, arg pyObject, target *core.BuildTarget) {
 	for name, entryPointPy := range entryPointsPy {
 		entryPoint, ok := entryPointPy.(pyString)
 		s.Assert(ok, "Values of entry_points must be strings, found %v at key %v", entryPointPy.Type(), name)
+		s.Assert(target.NamedOutputs(entryPoint.String()) == nil, "Entry points can't have the same name as a named output")
 		entryPoints[name] = string(entryPoint)
 	}
 
