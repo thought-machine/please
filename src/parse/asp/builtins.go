@@ -153,11 +153,11 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	// because most rules pass them through anyway.
 	// TODO(peterebden): when we get rid of the old parser, put these defaults on all the build rules and
 	//                   get rid of this.
-	args[11] = defaultFromConfig(s.config, args[11], "DEFAULT_VISIBILITY")
-	args[15] = defaultFromConfig(s.config, args[15], "DEFAULT_TESTONLY")
-	args[30] = defaultFromConfig(s.config, args[30], "DEFAULT_LICENCES")
-	args[20] = defaultFromConfig(s.config, args[20], "BUILD_SANDBOX")
-	args[21] = defaultFromConfig(s.config, args[21], "TEST_SANDBOX")
+	args[visibilityBuildRuleArgIdx] = defaultFromConfig(s.config, args[visibilityBuildRuleArgIdx], "DEFAULT_VISIBILITY")
+	args[testOnlyBuildRuleArgIdx] = defaultFromConfig(s.config, args[testOnlyBuildRuleArgIdx], "DEFAULT_TESTONLY")
+	args[licencesBuildRuleArgIdx] = defaultFromConfig(s.config, args[licencesBuildRuleArgIdx], "DEFAULT_LICENCES")
+	args[sandboxBuildRuleArgIdx] = defaultFromConfig(s.config, args[sandboxBuildRuleArgIdx], "BUILD_SANDBOX")
+	args[testSandboxBuildRuleArgIdx] = defaultFromConfig(s.config, args[testSandboxBuildRuleArgIdx], "TEST_SANDBOX")
 	target := createTarget(s, args)
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
 	populateTarget(s, target, args)
@@ -169,18 +169,18 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	return pyString(":" + target.Label.Name)
 }
 
-// filegroup implements the filegroup() builtin.
-func filegroup(s *scope, args []pyObject) pyObject {
-	args[1] = filegroupCommand
-	return buildRule(s, args)
-}
-
 // defaultFromConfig sets a default value from the config if the property isn't set.
 func defaultFromConfig(config *pyConfig, arg pyObject, name string) pyObject {
 	if arg == nil || arg == None {
 		return config.Get(name, arg)
 	}
 	return arg
+}
+
+// filegroup implements the filegroup() builtin.
+func filegroup(s *scope, args []pyObject) pyObject {
+	args[1] = filegroupCommand
+	return buildRule(s, args)
 }
 
 // pkg implements the package() builtin function.

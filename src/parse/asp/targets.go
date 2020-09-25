@@ -25,6 +25,7 @@ const (
 	exportedDepsBuildRuleArgIdx
 	secretsBuildRuleArgIdx
 	toolsBuildRuleArgIdx
+	testToolsBuildRuleArgIdx
 	labelsBuildRuleArgIdx
 	visibilityBuildRuleArgIdx
 	hashesBuildRuleArgIdx
@@ -206,6 +207,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 		addMaybeNamed(s, "srcs", args[srcsBuildRuleArgIdx], t.AddSource, t.AddNamedSource, false, false)
 	}
 	addMaybeNamed(s, "tools", args[toolsBuildRuleArgIdx], t.AddTool, t.AddNamedTool, true, true)
+	addMaybeNamed(s, "test_tools", args[testToolsBuildRuleArgIdx], t.AddTestTool, t.AddNamedTestTool, true, true)
 	addMaybeNamed(s, "system_srcs", args[systemSrcsBuildRuleArgIdx], t.AddSource, nil, true, false)
 	addMaybeNamed(s, "data", args[dataBuildRuleArgIdx], t.AddDatum, t.AddNamedDatum, false, false)
 	addMaybeNamedOutput(s, "outs", args[outsBuildRuleArgIdx], t.AddOutput, t.AddNamedOutput, t, false)
@@ -367,7 +369,7 @@ func addStrings(s *scope, name string, obj pyObject, f func(string)) {
 func addProvides(s *scope, name string, obj pyObject, t *core.BuildTarget) {
 	if obj != nil && obj != None {
 		d, ok := asDict(obj)
-		s.Assert(ok, "Argument %s must be a dict, not %s", name, obj.Type())
+		s.Assert(ok, "Argument %s must be a dict, not %s, %v", name, obj.Type(), obj)
 		for k, v := range d {
 			str, ok := v.(pyString)
 			s.Assert(ok, "%s values must be strings", name)
