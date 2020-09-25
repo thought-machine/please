@@ -1353,7 +1353,7 @@ func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 
 // toolPath returns a path to this target when used as a tool.
 func (target *BuildTarget) toolPath(abs bool, namedOutput string) string {
-	outToolPath := func(outputs ... string) string {
+	outToolPath := func(outputs ...string) string {
 		ret := make([]string, len(outputs))
 		for i, o := range outputs {
 			if abs {
