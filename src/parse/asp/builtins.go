@@ -149,6 +149,15 @@ func setLogCode(s *scope, name string, f func(format string, args ...interface{}
 // new objects to the build graph.
 func buildRule(s *scope, args []pyObject) pyObject {
 	s.NAssert(s.pkg == nil, "Cannot create new build rules in this context")
+	// We need to set various defaults from config here; it is useful to put it on the rule but not often so
+	// because most rules pass them through anyway.
+	// TODO(peterebden): when we get rid of the old parser, put these defaults on all the build rules and
+	//                   get rid of this.
+	args[visibilityBuildRuleArgIdx] = defaultFromConfig(s.config, args[visibilityBuildRuleArgIdx], "DEFAULT_VISIBILITY")
+	args[testOnlyBuildRuleArgIdx] = defaultFromConfig(s.config, args[testOnlyBuildRuleArgIdx], "DEFAULT_TESTONLY")
+	args[licencesBuildRuleArgIdx] = defaultFromConfig(s.config, args[licencesBuildRuleArgIdx], "DEFAULT_LICENCES")
+	args[sandboxBuildRuleArgIdx] = defaultFromConfig(s.config, args[sandboxBuildRuleArgIdx], "BUILD_SANDBOX")
+	args[testSandboxBuildRuleArgIdx] = defaultFromConfig(s.config, args[testSandboxBuildRuleArgIdx], "TEST_SANDBOX")
 	target := createTarget(s, args)
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
 	populateTarget(s, target, args)
@@ -158,6 +167,14 @@ func buildRule(s *scope, args []pyObject) pyObject {
 		s.pkg.MarkTargetModified(target)
 	}
 	return pyString(":" + target.Label.Name)
+}
+
+// defaultFromConfig sets a default value from the config if the property isn't set.
+func defaultFromConfig(config *pyConfig, arg pyObject, name string) pyObject {
+	if arg == nil || arg == None {
+		return config.Get(name, arg)
+	}
+	return arg
 }
 
 // filegroup implements the filegroup() builtin.

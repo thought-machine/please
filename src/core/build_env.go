@@ -139,7 +139,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		// We shouldn't really have specific things like this here, but it really is just easier to set it.
 		"GTEST_OUTPUT=xml:"+resultsFile,
 		"PEX_NOCACHE=true",
-		"TOOLS="+strings.Join(toolPaths(state, target.TestTools, abs), " "),
+		"TOOLS="+strings.Join(toolPaths(state, target.TestTools(), abs), " "),
 	)
 	env = append(env, "HOME="+testDir)
 	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
@@ -156,8 +156,8 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 			env = append(env, "TEST="+path.Join(testDir, target.Outputs()[0]))
 		}
 	}
-	if len(target.TestTools) == 1 {
-		env = append(env, "TOOL="+toolPath(state, target.TestTools[0], abs))
+	if len(target.testTools) == 1 {
+		env = append(env, "TOOL="+toolPath(state, target.testTools[0], abs))
 	}
 	// Named tools as well.
 	for name, tools := range target.namedTestTools {

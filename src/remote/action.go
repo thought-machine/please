@@ -349,7 +349,7 @@ func (c *Client) iterInputs(target *core.BuildTarget, isTest, isFilegroup bool) 
 		for _, datum := range target.AllData() {
 			ch <- datum
 		}
-		for _, datum := range target.TestTools {
+		for _, datum := range target.TestTools() {
 			ch <- datum
 		}
 		close(ch)

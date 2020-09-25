@@ -178,7 +178,7 @@ type BuildTarget struct {
 	// copied into its source directory.
 	Tools []BuildInput
 	// Like tools but available to the test_cmd instead
-	TestTools []BuildInput
+	testTools []BuildInput
 	// Named tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"tools"`
 	// Named test tools, similar to named sources.
@@ -1085,10 +1085,21 @@ func (target *BuildTarget) AddTool(tool BuildInput) {
 
 // AddTestTool adds a new test tool to the target.
 func (target *BuildTarget) AddTestTool(tool BuildInput) {
-	target.TestTools = append(target.TestTools, tool)
+	target.testTools = append(target.testTools, tool)
 	if label := tool.Label(); label != nil {
 		target.AddDependency(*label)
 	}
+}
+
+func (target *BuildTarget) TestTools() []BuildInput {
+	if len(target.namedTestTools) > 0 {
+		var tools []BuildInput
+		for _, tool := range target.namedTestTools {
+			tools = append(tools, tool...)
+		}
+		return tools
+	}
+	return target.testTools
 }
 
 // AddDatum adds a new item of data to the target.
