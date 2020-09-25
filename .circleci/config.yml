@@ -158,20 +158,6 @@ jobs:
            key: go-freebsd-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
 
-   lint:
-     working_directory: ~/please
-     docker:
-       - image: thoughtmachine/please_ubuntu:20200812
-     steps:
-       - checkout
-       - restore_cache:
-           key: go-mod-linux-v5-{{ checksum "go.mod" }}
-       - restore_cache:
-           key: go-linux-main-v5-{{ checksum "third_party/go/BUILD" }}
-       - run:
-           name: Lint
-           command: ./pleasew lint
-
    build-darwin:
       macos:
         xcode: "9.0"
@@ -291,10 +277,6 @@ workflows:
       - build-alpine
       - build-linux
       - build-linux-alt
-      - lint:
-          filters:
-            branches:
-              ignore: master
       - build-darwin:
           requires:
             - build-alpine
