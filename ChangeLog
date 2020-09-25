@@ -1,3 +1,20 @@
+Version 15.5.0
+--------------
+
+    * Added `test_tools` which works the same as `tools` but
+      makes them available to `test_cmd` instead #1247
+    * Added $(out_dir ...) and $(out_locations ...) command
+      replacements #1244
+    * Made `plz query roots` and `plz query filter` omit hidden
+      rules from their results. This is closer to how other `plz query`
+      commands work. Also added a `--hidden` flag so they can be
+      included when needed #1242
+    * Avoid trying to download the empty blob in a few places for
+      remote execution #1241
+    * Fixed edge case issue with go tests when there's no tests
+      and a TestMain method #1245
+
+
 Version 15.4.1
 --------------
 
