@@ -10,7 +10,7 @@ func BenchmarkOneSecWait(b *testing.B) {
 }
 
 func Benchmark100msWait(b *testing.B) {
-	time.Sleep(100*time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 }
 
 func TestSomething(t *testing.T) {
