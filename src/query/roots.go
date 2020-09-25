@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/thought-machine/please/src/core"
 	"sort"
+	"strings"
 )
 
 // Roots returns build labels with no dependents from the given list.
@@ -11,7 +12,7 @@ import (
 // only `B` will be output.
 // This does not perform an ordering of the labels, but theoretically you could call this method repeatedly with a
 // shrinking set of labels.
-func Roots(graph *core.BuildGraph, labels core.BuildLabels) {
+func Roots(graph *core.BuildGraph, labels core.BuildLabels, showHidden bool) {
 	// allSeenTargets is every single reverse dependency of the passed in labels.
 	allSeenTargets := map[*core.BuildTarget]struct{}{}
 	for _, label := range labels {
@@ -43,7 +44,9 @@ func Roots(graph *core.BuildGraph, labels core.BuildLabels) {
 	}
 	sort.Sort(labels)
 	for _, l := range labels {
-		fmt.Printf("%s\n", l)
+		if showHidden || !strings.HasPrefix(l.Name, "_") {
+			fmt.Printf("%s\n", l)
+		}
 	}
 }
 

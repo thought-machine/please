@@ -5,6 +5,8 @@ package core
 import (
 	"path"
 	"strings"
+
+	"github.com/thought-machine/please/src/fs"
 )
 
 // A BuildInput represents some kind of input to a build rule. They can be implemented
@@ -126,7 +128,7 @@ func (label SystemFileLabel) Paths(graph *BuildGraph) []string {
 
 // FullPaths is like Paths but includes the leading plz-out/gen directory.
 func (label SystemFileLabel) FullPaths(graph *BuildGraph) []string {
-	return []string{ExpandHomePath(label.Path)}
+	return []string{fs.ExpandHomePath(label.Path)}
 }
 
 // LocalPaths returns paths within the local package

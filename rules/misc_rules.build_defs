@@ -134,7 +134,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
 
 
 def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str|dict=None, srcs:list|dict=None, outs:list=None,
-            deps:list=None, tools:list|dict=None, data:list|dict=None, visibility:list=None, timeout:int=0,
+            deps:list=None, tools:list|dict=None, test_tools:list|dict=None, data:list|dict=None, visibility:list=None, timeout:int=0,
             needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False,
             test_outputs:list=None, output_is_complete:bool=True, requires:list=None,
             sandbox:bool=None, size:str=None, local:bool=False, pass_env:list=None,
@@ -158,8 +158,9 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
       srcs (list | dict): Source files for this rule.
       outs (list): Output files of this rule.
       deps (list): Dependencies of this rule.
-      tools (list): Tools used to build this rule; similar to srcs but are not copied to the temporary
-                    build directory. Should be accessed via $(exe //path/to:tool) or similar.
+      tools (list| dict): Tools used to build this rule; similar to srcs but are not copied to the temporary
+                    build directory.
+      test_tools (list | dict): Like tools but available to test_cmd instead.
       secrets (list | dict): Secrets available to this rule while building.
       data (list | dict): Runtime data files for the test.
       visibility (list): Visibility declaration of this rule.
@@ -191,6 +192,7 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
         deps = deps,
         data = data,
         tools = tools,
+        test_tools = test_tools,
         secrets = secrets,
         test_cmd  =  test_cmd,
         cmd = cmd,

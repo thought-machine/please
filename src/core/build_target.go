@@ -177,8 +177,12 @@ type BuildTarget struct {
 	// Tools that this rule will use, ie. other rules that it may use at build time which are not
 	// copied into its source directory.
 	Tools []BuildInput
+	// Like tools but available to the test_cmd instead
+	testTools []BuildInput
 	// Named tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"tools"`
+	// Named test tools, similar to named sources.
+	namedTestTools map[string][]BuildInput `name:"test_tools"`
 	// Target-specific environment passthroughs.
 	PassEnv *[]string `name:"pass_env"`
 	// Target-specific unsafe environment passthroughs.
@@ -817,7 +821,7 @@ func (target *BuildTarget) checkTargetOwnsFileAndSubDirectories(state *BuildStat
 // Returns an error if any aren't.
 func (target *BuildTarget) CheckSecrets() error {
 	for _, secret := range target.AllSecrets() {
-		if path := ExpandHomePath(secret); !PathExists(path) {
+		if path := fs.ExpandHomePath(secret); !PathExists(path) {
 			return fmt.Errorf("Path %s doesn't exist; it's required to build %s", secret, target.Label)
 		}
 	}
@@ -1081,6 +1085,25 @@ func (target *BuildTarget) AddTool(tool BuildInput) {
 	}
 }
 
+// AddTestTool adds a new test tool to the target.
+func (target *BuildTarget) AddTestTool(tool BuildInput) {
+	target.testTools = append(target.testTools, tool)
+	if label := tool.Label(); label != nil {
+		target.AddDependency(*label)
+	}
+}
+
+func (target *BuildTarget) TestTools() []BuildInput {
+	if len(target.namedTestTools) > 0 {
+		var tools []BuildInput
+		for _, tool := range target.namedTestTools {
+			tools = append(tools, tool...)
+		}
+		return tools
+	}
+	return target.testTools
+}
+
 // AddDatum adds a new item of data to the target.
 func (target *BuildTarget) AddDatum(datum BuildInput) {
 	target.Data = append(target.Data, datum)
@@ -1109,6 +1132,18 @@ func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
 		target.namedTools = map[string][]BuildInput{name: {tool}}
 	} else {
 		target.namedTools[name] = append(target.namedTools[name], tool)
+	}
+	if label := tool.Label(); label != nil {
+		target.AddDependency(*label)
+	}
+}
+
+// AddNamedTestTool adds a new tool to the target.
+func (target *BuildTarget) AddNamedTestTool(name string, tool BuildInput) {
+	if target.namedTestTools == nil {
+		target.namedTestTools = map[string][]BuildInput{name: {tool}}
+	} else {
+		target.namedTestTools[name] = append(target.namedTestTools[name], tool)
 	}
 	if label := tool.Label(); label != nil {
 		target.AddDependency(*label)

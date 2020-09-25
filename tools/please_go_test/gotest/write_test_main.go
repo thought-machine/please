@@ -35,9 +35,9 @@ func WriteTestMain(pkgDir, importPath string, sources []string, output string, c
 	}
 	testDescr.Coverage = coverage
 	testDescr.CoverVars = coverVars
-	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 {
+	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || testDescr.Main != "" {
 		// Can't set this if there are no test functions, it'll be an unused import.
-		testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, importPath, coverVars)
+		testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, importPath, testDescr.CoverVars)
 	}
 
 	testDescr.Benchmark = benchmark

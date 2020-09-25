@@ -117,7 +117,6 @@ go_get(
         "internal/...",
         "keepalive",
         "metadata",
-        "naming",
         "peer",
         "resolver",
         "resolver/dns",
@@ -128,7 +127,7 @@ go_get(
         "tap",
     ],
     repo = "github.com/grpc/grpc-go",
-    revision = "v1.26.0",
+    revision = "v1.31.1",
     deps = [
         ":cmp",
         ":oauth2",
@@ -481,7 +480,7 @@ go_get(
     name = "remote-apis-sdks",
     get = "github.com/bazelbuild/remote-apis-sdks/go/...",
     repo = "github.com/peterebden/remote-apis-sdks",
-    revision = "d9c747b11b80d75575c2560bb62f89f5bd519c3b",
+    revision = "271eb5b72e7dca1dda1d4dee87d99a17194cf146",
     deps = [
         ":annotations",
         ":bytestream",

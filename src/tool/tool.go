@@ -7,6 +7,7 @@ package tool
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -14,7 +15,7 @@ import (
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
-	"sort"
+	"github.com/thought-machine/please/src/fs"
 )
 
 var log = logging.MustGetLogger("tool")
@@ -37,7 +38,7 @@ func Run(config *core.Configuration, tool Tool, args []string) {
 	if len(tools) != 1 {
 		log.Fatalf("Unknown tool: %s. Must be one of [%s]", tool, strings.Join(allToolNames(config, ""), ", "))
 	}
-	target := core.ExpandHomePath(tools[allToolNames(config, string(tool))[0]])
+	target := fs.ExpandHomePath(tools[allToolNames(config, string(tool))[0]])
 	if !core.LooksLikeABuildLabel(target) {
 		if !filepath.IsAbs(target) {
 			t, err := core.LookBuildPath(target, config)

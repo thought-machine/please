@@ -12,9 +12,6 @@ import (
 	"github.com/thought-machine/please/src/scm"
 )
 
-// ExpandHomePath is an alias to the function in fs for compatibility.
-var ExpandHomePath func(string) string = fs.ExpandHomePath
-
 // A BuildEnv is a representation of the build environment that also knows how to log itself.
 type BuildEnv []string
 
@@ -106,13 +103,13 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	}
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
-		secrets := "SECRETS=" + ExpandHomePath(strings.Join(target.Secrets, ":"))
+		secrets := "SECRETS=" + fs.ExpandHomePath(strings.Join(target.Secrets, ":"))
 		secrets = strings.Replace(secrets, ":", " ", -1)
 		env = append(env, secrets)
 	}
 	// NamedSecrets, if they declared any.
 	for name, secrets := range target.NamedSecrets {
-		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + ExpandHomePath(strings.Join(secrets, ":"))
+		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + fs.ExpandHomePath(strings.Join(secrets, ":"))
 		secrets = strings.Replace(secrets, ":", " ", -1)
 		env = append(env, secrets)
 	}
@@ -131,6 +128,8 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) BuildEnv {
 	env := buildEnvironment(state, target)
 	resultsFile := path.Join(testDir, TestResultsFile)
+	abs := path.IsAbs(testDir)
+
 	env = append(env,
 		"TEST_DIR="+testDir,
 		"TMP_DIR="+testDir,
@@ -140,6 +139,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		// We shouldn't really have specific things like this here, but it really is just easier to set it.
 		"GTEST_OUTPUT=xml:"+resultsFile,
 		"PEX_NOCACHE=true",
+		"TOOLS="+strings.Join(toolPaths(state, target.TestTools(), abs), " "),
 	)
 	env = append(env, "HOME="+testDir)
 	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
@@ -155,6 +155,13 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		} else {
 			env = append(env, "TEST="+path.Join(testDir, target.Outputs()[0]))
 		}
+	}
+	if len(target.testTools) == 1 {
+		env = append(env, "TOOL="+toolPath(state, target.testTools[0], abs))
+	}
+	// Named tools as well.
+	for name, tools := range target.namedTestTools {
+		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
 	}
 	if len(target.Data) > 0 {
 		env = append(env, "DATA="+strings.Join(target.AllDataPaths(state.Graph), " "))

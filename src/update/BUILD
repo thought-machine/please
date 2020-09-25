@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//src/cli",
         "//src/core",
+        "//src/fs",
         "//src/process",
         "//third_party/go:logging",
         "//third_party/go:openpgp",
