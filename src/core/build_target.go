@@ -261,9 +261,6 @@ func (o OutputDirectory) Dir() string {
 // individually i.e. out_dir/net/thoughtmachine/Main.java -> net/thoughtmachine/Main.java. If this is false then these
 // files would be included as out_dir/net/thoughtmachine/Main.java -> net.
 func (o OutputDirectory) ShouldAddFiles() bool {
-	// TODO(jpoole): consider if we should have full glob matching for the suffix so we can do stuff like **.java
-	// or *_test.go. This will prove difficult for rex where we only have the file names rather than the actual
-	// directory
 	return strings.HasSuffix(string(o), "/**")
 }
 

@@ -133,8 +133,6 @@ func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) erro
 // 3) Actually build the rule
 // 4) Store result in the cache
 func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
-	// TODO(jpoole): we've defined 4 steps that this function performs. We should be able to break it out into
-	// smaller functions
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
