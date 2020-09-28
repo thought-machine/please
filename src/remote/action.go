@@ -407,7 +407,7 @@ func outputsForActionResult(ar *pb.ActionResult) map[string]bool {
 // verifyActionResult verifies that all the requested outputs actually exist in a returned
 // ActionResult. Servers do not necessarily verify this but we need to make sure they are
 // complete for future requests.
-func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest, ar *pb.ActionResult, verifyOutputs, isTest bool) error {
+func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest, ar *pb.ActionResult, verifyRemoteBlobsExists, isTest bool) error {
 	outs := outputsForActionResult(ar)
 	// Test outputs are optional
 	if isTest {
@@ -425,9 +425,22 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
 			}
 		}
+
+		if len(target.EntryPoints) > 0 {
+			flatOuts, err := c.client.FlattenActionOutputs(context.Background(), ar)
+			if err != nil {
+				return fmt.Errorf("error checking for entry point in outputs: %w", err)
+			}
+
+			for ep, out := range target.EntryPoints {
+				if _, ok := flatOuts[out]; !ok {
+					return fmt.Errorf("failed to produce output %v for entry point %v", out, ep)
+				}
+			}
+		}
 	}
 
-	if !verifyOutputs {
+	if !verifyRemoteBlobsExists {
 		return nil
 	}
 	start := time.Now()

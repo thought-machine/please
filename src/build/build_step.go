@@ -285,14 +285,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		if err != nil {
 			return err
 		}
-	}
-	// The remote action will set the output directory outs here
-	if !runRemotely {
+
 		metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(target)
 		if err != nil {
 			return err
 		}
 	}
+
 	if target.PostBuildFunction != nil {
 		outs := target.Outputs()
 		if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), postBuildOutput); err != nil {
@@ -620,6 +619,11 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 			return nil, true, fmt.Errorf("failed to move output %s: %w", output, err)
 		}
 		changed = changed || outputChanged
+	}
+	for ep, out := range target.EntryPoints {
+		if !fs.PathExists(filepath.Join(target.OutDir(), out)) {
+			return nil, true, fmt.Errorf("failed to produce output %v for entry point %v", out, ep)
+		}
 	}
 	if changed {
 		log.Debug("Outputs for %s have changed", target.Label)
