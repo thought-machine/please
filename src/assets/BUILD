@@ -22,6 +22,7 @@ sh_cmd(
     name = "generate",
     cmd = "cp $(out_location :bindata) src/assets/bindata.go",
     data = [":bindata"],
+    labels = ["codegen"],
 )
 
 sh_test(

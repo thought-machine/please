@@ -41,7 +41,7 @@ go_get(
     name = "go-bindata",
     binary = True,
     get = "github.com/kevinburke/go-bindata/...",
-    revision = "46eb4c183bfc1ebb527d9d19bcded39476302eb8",
+    revision = "v3.21.0",
     strip = ["testdata"],
 )
 
