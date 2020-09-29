@@ -423,3 +423,10 @@ pip_library(
         ":six",
     ],
 )
+
+python_wheel(
+    name = "pyparsing",
+    hashes = ["89a50b53dd6811894a81d26901656b7ffbfe49e5"],
+    licences = ["LGPL"],
+    version = "2.4.6",
+)

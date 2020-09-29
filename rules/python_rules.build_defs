@@ -512,7 +512,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         licences = licences if licences else None,
     )
 
-    cmd = ['$TOOL x $SRCS_SRC']
+    cmd = ['$TOOL x $SRCS_SRC -o _extract', 'cd _extract'] if not outs else ['$TOOL x $SRCS_SRC']
 
     if strip:
         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
@@ -525,7 +525,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     if post_install_commands:
         cmd += post_install_commands
 
-    cmd += ['$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
+    cmd += ['rm -rf *.dist-info', '$TOOL z -d --prefix $PKG -i .'] if not outs else ['$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
     label = f'whl:{package_name}=={version}'
 
     wheel_rule = build_rule(
@@ -575,9 +575,9 @@ def _patch_cmd(patch):
     if CONFIG.HOSTOS == 'freebsd':
         # --no-backup-if-mismatch is not supported, but we need to get rid of the .orig
         # files for hashes to match correctly.
-        return patches, [f'patch -p0 < $(location {patch})' for patch in patches] + ['find . -name "*.orig" | xargs rm']
+        return patches, [f'patch -p0 < $TMP_DIR/$(location {patch})' for patch in patches] + ['find . -name "*.orig" | xargs rm']
     else:
-        return patches, [f'patch -p0 --no-backup-if-mismatch < $(location {patch})' for patch in patches]
+        return patches, [f'patch -p0 --no-backup-if-mismatch < $TMP_DIR/$(location {patch})' for patch in patches]
 
 
 def _handle_zip_safe(name):
