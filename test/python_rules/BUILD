@@ -19,6 +19,12 @@ python_test(
     deps = [":proto_lib"],
 )
 
+python_test(
+    name = "pyparsing_test",
+    srcs = ["pyparsing_test.py"],
+    deps = ["//third_party/python:pyparsing"],
+)
+
 python_binary(
     name = "strip_source",
     main = "strip_source.py",
