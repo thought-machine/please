@@ -23,6 +23,7 @@ sh_cmd(
     name = "generate",
     cmd = "cp $(out_location :builtin_data) rules/rules.go",
     data = [":builtin_data"],
+    labels = ["codegen"],
 )
 
 sh_test(

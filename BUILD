@@ -45,3 +45,8 @@ github_repo(
     repo = "thought-machine/pleasings",
     revision = "master",
 )
+
+sh_cmd(
+    name = "autofix",
+    cmd = "plz buildify && gofmt -s -w src tools test && plz run parallel --include codegen",
+)

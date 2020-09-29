@@ -19,7 +19,7 @@ func TestBenchDuration(t *testing.T) {
 	out, err := cmd.Output()
 	r.NoError(err)
 
-	r.Greater(int64(time.Since(start)),  int64(time.Second), "Benchmark run was too quick to have actually run the tests")
+	r.Greater(int64(time.Since(start)), int64(time.Second), "Benchmark run was too quick to have actually run the tests")
 
 	r.Contains(string(out), "BenchmarkOneSecWait")
 	r.Contains(string(out), "Benchmark100msWait")
