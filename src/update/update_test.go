@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/op/go-logging.v1"
 
@@ -184,6 +185,7 @@ func makeConfig(dir string) *core.Configuration {
 func TestMain(m *testing.M) {
 	// Reset this so it panics instead of exiting on Fatal messages
 	logging.SetBackend(&fakeLogBackend{})
+	httpClient = retryablehttp.NewClient()
 	server = httptest.NewServer(http.HandlerFunc(handler))
 	defer server.Close()
 	os.Exit(m.Run())
