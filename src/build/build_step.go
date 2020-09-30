@@ -133,8 +133,6 @@ func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) erro
 // 3) Actually build the rule
 // 4) Store result in the cache
 func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
-	// TODO(jpoole): we've defined 4 steps that this function performs. We should be able to break it out into
-	// smaller functions
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -287,14 +285,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		if err != nil {
 			return err
 		}
-	}
-	// The remote action will set the output directory outs here
-	if !runRemotely {
+
 		metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(target)
 		if err != nil {
 			return err
 		}
 	}
+
 	if target.PostBuildFunction != nil {
 		outs := target.Outputs()
 		if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), postBuildOutput); err != nil {
@@ -622,6 +619,11 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 			return nil, true, fmt.Errorf("failed to move output %s: %w", output, err)
 		}
 		changed = changed || outputChanged
+	}
+	for ep, out := range target.EntryPoints {
+		if !fs.PathExists(filepath.Join(target.OutDir(), out)) {
+			return nil, true, fmt.Errorf("failed to produce output %v for entry point %v", out, ep)
+		}
 	}
 	if changed {
 		log.Debug("Outputs for %s have changed", target.Label)

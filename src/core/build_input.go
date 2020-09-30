@@ -193,41 +193,53 @@ func (label SystemPathLabel) String() string {
 	return label.Name
 }
 
-// NamedOutputLabel represents a reference to a subset of named outputs from a rule.
-// The rule must have declared those as a named group.
-type NamedOutputLabel struct {
+// AnnotatedOutputLabel represents a build label with an annotation e.g. //foo:bar|baz where baz constitutes the
+// annotation. This can be used to target a named output of this rule when depended on or an entry point when used in
+// the context of tools.
+type AnnotatedOutputLabel struct {
 	BuildLabel
-	Output string
+	Annotation string
 }
 
 // Paths returns a slice of paths to the files of this input.
-func (label NamedOutputLabel) Paths(graph *BuildGraph) []string {
-	return addPathPrefix(graph.TargetOrDie(label.BuildLabel).NamedOutputs(label.Output), label.PackageName)
+func (label AnnotatedOutputLabel) Paths(graph *BuildGraph) []string {
+	target := graph.TargetOrDie(label.BuildLabel)
+	if _, ok := target.EntryPoints[label.Annotation]; ok {
+		return label.BuildLabel.Paths(graph)
+	}
+	return addPathPrefix(target.NamedOutputs(label.Annotation), label.PackageName)
 }
 
 // FullPaths is like Paths but includes the leading plz-out/gen directory.
-func (label NamedOutputLabel) FullPaths(graph *BuildGraph) []string {
+func (label AnnotatedOutputLabel) FullPaths(graph *BuildGraph) []string {
 	target := graph.TargetOrDie(label.BuildLabel)
-	return addPathPrefix(target.NamedOutputs(label.Output), target.OutDir())
+	if _, ok := target.EntryPoints[label.Annotation]; ok {
+		return label.BuildLabel.FullPaths(graph)
+	}
+	return addPathPrefix(target.NamedOutputs(label.Annotation), target.OutDir())
 }
 
 // LocalPaths returns paths within the local package
-func (label NamedOutputLabel) LocalPaths(graph *BuildGraph) []string {
-	return graph.TargetOrDie(label.BuildLabel).NamedOutputs(label.Output)
+func (label AnnotatedOutputLabel) LocalPaths(graph *BuildGraph) []string {
+	target := graph.TargetOrDie(label.BuildLabel)
+	if _, ok := target.EntryPoints[label.Annotation]; ok {
+		return label.BuildLabel.LocalPaths(graph)
+	}
+	return target.NamedOutputs(label.Annotation)
 }
 
-// Label returns the build rule associated with this input. For a NamedOutputLabel it's always non-nil.
-func (label NamedOutputLabel) Label() *BuildLabel {
+// Label returns the build rule associated with this input. For a AnnotatedOutputLabel it's always non-nil.
+func (label AnnotatedOutputLabel) Label() *BuildLabel {
 	return &label.BuildLabel
 }
 
-func (label NamedOutputLabel) nonOutputLabel() *BuildLabel {
+func (label AnnotatedOutputLabel) nonOutputLabel() *BuildLabel {
 	return nil
 }
 
 // String returns a string representation of this input.
-func (label NamedOutputLabel) String() string {
-	return label.BuildLabel.String() + "|" + label.Output
+func (label AnnotatedOutputLabel) String() string {
+	return label.BuildLabel.String() + "|" + label.Annotation
 }
 
 // MustParseNamedOutputLabel attempts to parse a build output label. It's allowed to just be
@@ -236,7 +248,7 @@ func (label NamedOutputLabel) String() string {
 func MustParseNamedOutputLabel(target string, pkg *Package) BuildInput {
 	if index := strings.IndexRune(target, '|'); index != -1 && index != len(target)-1 {
 		label := ParseBuildLabelContext(target[:index], pkg)
-		return NamedOutputLabel{BuildLabel: label, Output: target[index+1:]}
+		return AnnotatedOutputLabel{BuildLabel: label, Annotation: target[index+1:]}
 	}
 	return ParseBuildLabelContext(target, pkg)
 }

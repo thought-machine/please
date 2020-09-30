@@ -1,0 +1,18 @@
+build_rule(
+    name = "my_tool",
+    srcs = [
+        ":file_printer",
+    ],
+    cmd = "mkdir $OUT && echo wibble > $OUT/file.txt && mv $(location :file_printer) $OUT",
+    outs = ["my_tool"],
+    visibility = ["PUBLIC"],
+    entry_points = {
+      "printer": "my_tool/file_printer",
+    }
+)
+
+go_binary(
+    name = "file_printer",
+    srcs = ["file_printer.go"],
+)
+

@@ -87,8 +87,8 @@ tarball(
     name = "deep-tarball",
     srcs = [":docs"],
     out = "deep-docs.tar.gz",
-    labels = ["hlink:plz-out/pkg"],
     flatten = False,
+    labels = ["hlink:plz-out/pkg"],
 )
 
 go_binary(

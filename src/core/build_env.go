@@ -224,7 +224,11 @@ func initStampEnv() {
 
 func toolPath(state *BuildState, tool BuildInput, abs bool) string {
 	if label := tool.Label(); label != nil {
-		path := state.Graph.TargetOrDie(*label).toolPath(abs)
+		entryPoint := ""
+		if o, ok := tool.(AnnotatedOutputLabel); ok {
+			entryPoint = o.Annotation
+		}
+		path := state.Graph.TargetOrDie(*label).toolPath(abs, entryPoint)
 		if !strings.Contains(path, "/") {
 			path = "./" + path
 		}

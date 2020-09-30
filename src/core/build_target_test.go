@@ -343,8 +343,20 @@ func TestToolPath(t *testing.T) {
 	wd, _ := os.Getwd()
 	RepoRoot = wd
 	root := wd + "/plz-out/gen/src/core"
-	assert.Equal(t, fmt.Sprintf("%s/file1.go %s/file2.go", root, root), target.toolPath(true))
-	assert.Equal(t, "src/core/file1.go src/core/file2.go", target.toolPath(false))
+	assert.Equal(t, fmt.Sprintf("%s/file1.go %s/file2.go", root, root), target.toolPath(true, ""))
+	assert.Equal(t, "src/core/file1.go src/core/file2.go", target.toolPath(false, ""))
+}
+
+func TestToolPathWithEntryPoint(t *testing.T) {
+	target := makeTarget1("//src/core:target1", "")
+	target.AddOutput("file1.go")
+	target.AddOutput("file2.go")
+	target.EntryPoints = map[string]string{"f1": "file1.go"}
+	wd, _ := os.Getwd()
+	RepoRoot = wd
+	root := wd + "/plz-out/gen/src/core"
+	assert.Equal(t, fmt.Sprintf("%s/file1.go", root), target.toolPath(true, "f1"))
+	assert.Equal(t, "src/core/file1.go", target.toolPath(false, "f1"))
 }
 
 func TestDependencies(t *testing.T) {

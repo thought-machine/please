@@ -61,6 +61,7 @@ const (
 	outDirsBuildRuleArgIdx
 	configBuildRuleArgIdx
 	exitOnErrorArgIdx
+	entryPointsArgIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -99,7 +100,6 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.Local = isTruthy(localBuildRuleArgIdx)
 	target.ExitOnError = isTruthy(exitOnErrorArgIdx)
 	target.RuleMetadata = args[configBuildRuleArgIdx]
-
 	for _, o := range asStringList(s, args[outDirsBuildRuleArgIdx], "output_dirs") {
 		target.AddOutputDirectory(o)
 	}
@@ -223,6 +223,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addStrings(s, "visibility", args[visibilityBuildRuleArgIdx], func(str string) {
 		t.Visibility = append(t.Visibility, parseVisibility(s, str))
 	})
+	addEntryPoints(s, args[entryPointsArgIdx], t)
 	addMaybeNamedSecret(s, "secrets", args[secretsBuildRuleArgIdx], t.AddSecret, t.AddNamedSecret, t, true)
 	addProvides(s, "provides", args[providesBuildRuleArgIdx], t)
 	if f := callbackFunction(s, "pre_build", args[preBuildBuildRuleArgIdx], 1, "argument"); f != nil {
@@ -231,6 +232,22 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	if f := callbackFunction(s, "post_build", args[postBuildBuildRuleArgIdx], 2, "arguments"); f != nil {
 		t.PostBuildFunction = &postBuildFunction{f: f, s: s}
 	}
+}
+
+// addEntryPoints adds entry points to a target
+func addEntryPoints(s *scope, arg pyObject, target *core.BuildTarget) {
+	entryPointsPy, ok := asDict(arg)
+	s.Assert(ok, "entry_points must be a dict")
+
+	entryPoints := make(map[string]string, len(entryPointsPy))
+	for name, entryPointPy := range entryPointsPy {
+		entryPoint, ok := entryPointPy.(pyString)
+		s.Assert(ok, "Values of entry_points must be strings, found %v at key %v", entryPointPy.Type(), name)
+		s.Assert(target.NamedOutputs(entryPoint.String()) == nil, "Entry points can't have the same name as a named output")
+		entryPoints[name] = string(entryPoint)
+	}
+
+	target.EntryPoints = entryPoints
 }
 
 // addMaybeNamed adds inputs to a target, possibly in named groups.

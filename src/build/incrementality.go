@@ -277,6 +277,10 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	for _, o := range target.OutputDirectories {
 		h.Write([]byte(o))
 	}
+
+	for ep, out := range target.EntryPoints {
+		h.Write([]byte(ep + "=" + out))
+	}
 	return h.Sum(nil)
 }
 

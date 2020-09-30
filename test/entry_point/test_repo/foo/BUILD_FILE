@@ -1,0 +1,6 @@
+build_rule(
+  name = "foo",
+  cmd = "$TOOL > $OUT",
+  outs = ["wibble.txt"],
+  tools = ["//tools:my_tool|printer"]
+)

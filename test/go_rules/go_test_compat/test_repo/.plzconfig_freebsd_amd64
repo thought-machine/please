@@ -1,8 +1,0 @@
-# Binary downloads are not available for FreeBSD - will have to be added with 'pkg install protobuf'.
-[proto]
-protoctool = protoc
-
-# TODO(jpoole): delete this once https://github.com/thought-machine/please/issues/797 is done
-[cpp]
-cctool = cc
-cpptool = c++

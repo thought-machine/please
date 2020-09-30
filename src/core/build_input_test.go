@@ -9,27 +9,27 @@ import (
 func TestParseNamedOutputLabel(t *testing.T) {
 	pkg := NewPackage("")
 	input := MustParseNamedOutputLabel("//src/core:target1|test", pkg)
-	label, ok := input.(NamedOutputLabel)
+	label, ok := input.(AnnotatedOutputLabel)
 	assert.True(t, ok)
 	assert.Equal(t, "src/core", label.PackageName)
 	assert.Equal(t, "target1", label.Name)
-	assert.Equal(t, "test", label.Output)
+	assert.Equal(t, "test", label.Annotation)
 }
 
 func TestParseNamedOutputLabelRelative(t *testing.T) {
 	pkg := NewPackage("src/core")
 	input := MustParseNamedOutputLabel(":target1|test", pkg)
-	label, ok := input.(NamedOutputLabel)
+	label, ok := input.(AnnotatedOutputLabel)
 	assert.True(t, ok)
 	assert.Equal(t, "src/core", label.PackageName)
 	assert.Equal(t, "target1", label.Name)
-	assert.Equal(t, "test", label.Output)
+	assert.Equal(t, "test", label.Annotation)
 }
 
 func TestParseNamedOutputLabelNoOutput(t *testing.T) {
 	pkg := NewPackage("")
 	input := MustParseNamedOutputLabel("//src/core:target1", pkg)
-	_, ok := input.(NamedOutputLabel)
+	_, ok := input.(AnnotatedOutputLabel)
 	assert.False(t, ok)
 	label, ok := input.(BuildLabel)
 	assert.True(t, ok)
@@ -47,7 +47,7 @@ func TestParseNamedOutputLabelEmptyOutput(t *testing.T) {
 func TestParseNamedOutputLabelSubrepo(t *testing.T) {
 	pkg := NewPackage("")
 	input := MustParseNamedOutputLabel("@test_x86//src/core:target1", pkg)
-	_, ok := input.(NamedOutputLabel)
+	_, ok := input.(AnnotatedOutputLabel)
 	assert.False(t, ok)
 	label, ok := input.(BuildLabel)
 	assert.True(t, ok)
@@ -59,7 +59,7 @@ func TestParseNamedOutputLabelSubrepo(t *testing.T) {
 func TestParseNamedOutputLabelRelativeSubrepo(t *testing.T) {
 	pkg := NewPackage("src/core")
 	input := MustParseNamedOutputLabel("@test_x86:target1", pkg)
-	_, ok := input.(NamedOutputLabel)
+	_, ok := input.(AnnotatedOutputLabel)
 	assert.False(t, ok)
 	label, ok := input.(BuildLabel)
 	assert.True(t, ok)
