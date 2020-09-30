@@ -572,12 +572,33 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
 def _patch_cmd(patch):
     """Returns a command for the given patch or patches, with OS-specific tweaks where needed."""
     patches = [patch] if isinstance(patch, str) else patch
+
+    patch_opts = '' if CONFIG.HOSTOS == 'freebsd' else '--no-backup-if-mismatch'
+
+    cmds = []
+    for patch in patches:
+        # If the patch header contains the magic Git date, this is a patch
+        # generated with `git format-patch`, and needs to be applied with
+        # `patch -p1`; otherwise, default to `patch -p0`
+        cmds += [
+            "if sed -n 1p $(location {patch}) | grep -q '^From [0-9a-f]\{{40\}} Mon Sep 17 00:00:00 2001$'; then "
+                'level=1; '
+                'else '
+                'level=0; '
+                'fi'.format(patch=patch)
+        ]
+
+        cmds += [
+            'patch -p$level {patch_opts} < $(location {patch})'.format(patch=patch,
+                                                                       patch_opts=patch_opts)
+        ]
+
     if CONFIG.HOSTOS == 'freebsd':
-        # --no-backup-if-mismatch is not supported, but we need to get rid of the .orig
-        # files for hashes to match correctly.
-        return patches, [f'patch -p0 < $(location {patch})' for patch in patches] + ['find . -name "*.orig" | xargs rm']
+        # --no-backup-if-mismatch is not supported on BSD patch but we need to
+        # get rid of the .orig files for hashes to match correctly.
+        return patches, cmds + ['find . -name "*.orig" | xargs rm']
     else:
-        return patches, [f'patch -p0 --no-backup-if-mismatch < $(location {patch})' for patch in patches]
+        return patches, cmds
 
 
 def _handle_zip_safe(name):
