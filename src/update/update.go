@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path"
 	"runtime"
@@ -24,6 +23,7 @@ import (
 	"syscall"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/ulikunitz/xz"
 	"gopkg.in/op/go-logging.v1"
 
@@ -38,7 +38,7 @@ var log = logging.MustGetLogger("update")
 // minSignedVersion is the earliest version of Please that has a signature.
 var minSignedVersion = semver.Version{Major: 9, Minor: 2}
 
-var httpClient http.Client
+var httpClient *retryablehttp.Client
 
 // CheckAndUpdate checks whether we should update Please and does so if needed.
 // If it requires an update it will never return, it will either die on failure or on success will exec the new Please.
@@ -70,12 +70,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 		}
 	}
 
-	// Honour the proxy setting if it's in the config.
-	if config.Build.HTTPProxy != "" {
-		httpClient.Transport = &http.Transport{
-			Proxy: http.ProxyURL(config.Build.HTTPProxy.AsURL()),
-		}
-	}
+	httpClient = retryablehttp.NewClient()
 
 	// Download it.
 	newPlease := downloadAndLinkPlease(config, verify, progress)

@@ -186,6 +186,12 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	config.HomeDir = os.Getenv("HOME")
 	config.PleaseLocation = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir)
 
+	// If the HTTP proxy config is set and there is no env var overriding it, set it now
+	// so various other libraries will honour it.
+	if config.Build.HTTPProxy != "" {
+		os.Setenv("HTTP_PROXY", config.Build.HTTPProxy.String())
+	}
+
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,

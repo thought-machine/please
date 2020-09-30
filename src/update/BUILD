@@ -10,6 +10,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/process",
+        "//third_party/go:go-retryablehttp",
         "//third_party/go:logging",
         "//third_party/go:openpgp",
         "//third_party/go:semver",
@@ -29,6 +30,7 @@ go_test(
     deps = [
         ":update",
         "//src/cli",
+        "//third_party/go:go-retryablehttp",
         "//third_party/go:logging",
         "//third_party/go:testify",
     ],
