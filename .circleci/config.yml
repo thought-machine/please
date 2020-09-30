@@ -259,7 +259,7 @@ jobs:
 
    docs:
      docker:
-       - image: thoughtmachine/please_docs:20190318
+       - image: thoughtmachine/please_docs:20200930
      steps:
        - attach_workspace:
            at: /tmp/site
@@ -273,15 +273,14 @@ jobs:
 
    aws-sync:
      docker:
-       - image: thoughtmachine/please_docs:20190318
+       - image: thoughtmachine/please_docs:20200930
      steps:
        - attach_workspace:
            at: /tmp/site
        - run:
            name: Upload docs
            working_directory: /tmp/site
-           #TODO(jpoole): updawte the docs image instead of installing this here
-           command: apt-get update && DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y awscli  && tar -xzf deep-docs.tar.gz && aws s3 sync docs s3://please-build
+           command: tar -xzf deep-docs.tar.gz && aws s3 sync docs s3://please-build
 workflows:
   version: 2
   build-all:
