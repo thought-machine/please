@@ -75,11 +75,20 @@ filegroup(
     ],
 )
 
+#TODO(jpoole): unify these two once we switch to the new website
 tarball(
     name = "tarball",
     srcs = [":docs"],
     out = "docs.tar.gz",
     labels = ["hlink:plz-out/pkg"],
+)
+
+tarball(
+    name = "deep-tarball",
+    srcs = [":docs"],
+    out = "deep-docs.tar.gz",
+    labels = ["hlink:plz-out/pkg"],
+    flatten = False,
 )
 
 go_binary(
