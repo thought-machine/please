@@ -11,6 +11,6 @@ filegroup(
 )
 
 filegroup(
-    name = "free_bsd_config",
+    name = "freebsd_config",
     srcs = [".plzconfig_freebsd_amd64"],
 )

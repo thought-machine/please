@@ -18,7 +18,7 @@ def please_repo_e2e_test(
         "REPO": [repo],
         "PLEASE":  ["//src:please"],
         "CONTENT_CHECKER": ["//test/build_defs:content_checker"],
-        "FREE_BSD_CONFIG": ["//test/build_defs:free_bsd_config"]
+        "FREE_BSD_CONFIG": ["//test/build_defs:freebsd_config"]
     }
 
     return build_rule(

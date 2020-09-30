@@ -407,7 +407,7 @@ func outputsForActionResult(ar *pb.ActionResult) map[string]bool {
 // verifyActionResult verifies that all the requested outputs actually exist in a returned
 // ActionResult. Servers do not necessarily verify this but we need to make sure they are
 // complete for future requests.
-func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest, ar *pb.ActionResult, verifyRemoteBlobsExists, isTest bool) error {
+func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest, ar *pb.ActionResult, verifyRemoteBlobsExist, isTest bool) error {
 	outs := outputsForActionResult(ar)
 	// Test outputs are optional
 	if isTest {
@@ -440,7 +440,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 		}
 	}
 
-	if !verifyRemoteBlobsExists {
+	if !verifyRemoteBlobsExist {
 		return nil
 	}
 	start := time.Now()

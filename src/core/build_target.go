@@ -202,7 +202,7 @@ type BuildTarget struct {
 	// RuleMetadata is the metadata attached to this build rule. It can be accessed through the "get_rule_metadata" BIF.
 	RuleMetadata interface{} `name:"config"`
 	// EntryPoints represent named binaries within the rules output that can be targeted via //package:rule|entry_point_name
-	EntryPoints map[string]string
+	EntryPoints map[string]string `name:"entry_points"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
