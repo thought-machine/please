@@ -22,7 +22,7 @@ fi
 # If this exists at any version, let it handle any update.
 TARGET="${LOCATION}/please"
 if [ -f "$TARGET" ]; then
-    exec "$TARGET" "$@"
+    exec "$TARGET" ${PLZ_ARGS:-} "$@"
 fi
 
 URL_BASE="`grep -i "^downloadlocation" .plzconfig | cut -d '=' -f 2 | tr -d ' '`"
@@ -69,4 +69,4 @@ for x in `ls "$DIR"`; do
 done
 ln -sf "${DIR}/please" "${LOCATION}/plz"
 echo -e >&2 "${GREEN}Should be good to go now, running plz...${RESET}"
-exec "$TARGET" "$@"
+exec "$TARGET" ${PLZ_ARGS:-} "$@"
