@@ -547,7 +547,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         sandbox = False,
         labels = ['py:zip-unsafe', label] if not zip_safe else [label],
     )
-    cmd = '$TOOL x $SRCS -s $PKG_DIR'
+    cmd = '$TOOL x $SRCS -s $PKG_DIR -o _out'
     if outs:
         # Hacky solution to handle things being in subdirectories in awkward ways.
         before, _, after = outs[0].partition('/')
@@ -557,7 +557,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         name = name,
         srcs = [wheel_rule],
         hashes = hashes,  # TODO(peterebden): Move this onto wheel_rule when we're willing to break hash compatibility.
-        outs = outs or [name],
+        output_dirs = ["_out"],
         tools = [CONFIG.JARCAT_TOOL],
         cmd = cmd,
         deps = deps,

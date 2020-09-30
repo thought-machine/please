@@ -149,7 +149,7 @@ python_wheel(
 python_wheel(
     name = "pkg_resources",
     package_name = "setuptools",
-    hashes = ["05f20a29a5dff7dd5b908afcf37c2b1bea8d3db6"],
+    hashes = ["1f00b2cef82d472196b9b135245da20f6737eef458d0dc67f3558ef43b7b99a2"],
     version = "33.1.1",
 )
 
@@ -234,7 +234,7 @@ python_wheel(
 
 python_wheel(
     name = "win_unicode_console",
-    hashes = ["de9e0946c0f0774cbb6c9e340096da07a2b8b4db"],
+    hashes = ["0f2276925d96d9a611cd9ef3679ba56a44c9c51b9de6e984e0c06e62d35cdbc0"],
     version = "0.5",
 )
 
@@ -254,7 +254,7 @@ python_wheel(
 
 python_wheel(
     name = "portalocker",
-    hashes = ["9fa00efa3102a84ed5281de63189de813f0f83fd"],
+    hashes = ["ea9ee763ec17f29c251f1e448073d11dd8f69a6623ed2c6df4911772c51e07a5"],
     version = "1.7.0",
 )
 
@@ -426,7 +426,7 @@ pip_library(
 
 python_wheel(
     name = "pyparsing",
-    hashes = ["89a50b53dd6811894a81d26901656b7ffbfe49e5"],
+    hashes = ["429634dfe62cb4c73d7c8252d53efeb8a0c0483ff4ff0772069387761e9384bc"],
     licences = ["LGPL"],
     version = "2.4.6",
 )
