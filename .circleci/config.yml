@@ -248,7 +248,7 @@ jobs:
 
    release:
      docker:
-       - image: thoughtmachine/please_docs:20190318
+       - image: thoughtmachine/please_docs:20200930
      steps:
        - attach_workspace:
            at: /tmp/workspace
@@ -256,6 +256,19 @@ jobs:
            fingerprints:
              - "cc:57:b9:67:31:65:a6:70:8c:e3:e7:90:ca:e6:a6:41"
        - run: /tmp/workspace/gen_release.pex --signer /tmp/workspace/release_signer /tmp/workspace/*_amd64/*
+
+   # TODO(jpoole): rename this release once we switch web hosting
+   # TODO(jpoole): abort if s3://please-releases/latest_version == VERSION
+   release-s3:
+     docker:
+       - image: thoughtmachine/please_docs:20200930
+     steps:
+       - attach_workspace:
+           at: /tmp/workspace
+       - run: find /tmp/workspace/*_amd64 -type f | xargs /tmp/workspace/release_signer
+       - run: aws s3 sync /tmp/workspace/linux_amd64 s3://please-releases/linux_amd64/$(cat /tmp/workspace/VERSION)
+       - run: aws s3 sync /tmp/workspace/darwin_amd64 s3://please-releases/darwin_amd64/$(cat /tmp/workspace/VERSION)
+       - run: aws s3 sync /tmp/workspace/freebsd_amd64 s3://please-releases/freebsd_amd64/$(cat /tmp/workspace/VERSION)
 
    docs:
      docker:
@@ -303,6 +316,18 @@ workflows:
           requires:
             - build-alpine
       - release:
+          requires:
+            - build-alpine
+            - build-freebsd
+            - build-linux
+            - build-linux-alt
+            - build-darwin
+            - test-rex
+            - test-http-cache
+          filters:
+            branches:
+              only: master
+      - release-s3:
           requires:
             - build-alpine
             - build-freebsd
