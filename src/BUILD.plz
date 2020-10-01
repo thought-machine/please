@@ -10,6 +10,7 @@ go_binary(
         "//src/cli",
         "//src/core",
         "//src/export",
+        "//src/fmt",
         "//src/fs",
         "//src/gc",
         "//src/hashes",

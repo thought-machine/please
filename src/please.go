@@ -251,6 +251,13 @@ var opts struct {
 		} `command:"outputs" description:"Exports outputs of a set of targets"`
 	} `command:"export" subcommands-optional:"true" description:"Exports a set of targets and files from the repo."`
 
+	Format struct {
+		Write bool `long:"write" short:"w" description:"Rewrite files after update"`
+		Args  struct {
+			Files cli.Filepaths `positional-arg-name:"files" description:"BUILD files to reformat"`
+		} `positional-args:"true"`
+	} `command:"format" alias:"fmt" description:"Autoformats BUILD files"`
+
 	Help struct {
 		Args struct {
 			Topic help.Topic `positional-arg-name:"topic" description:"Topic to display help on"`
@@ -487,6 +494,14 @@ var buildFunctions = map[string]func() int{
 				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly, opts.Gc.NoPrompt, opts.Gc.DryRun, opts.Gc.Git)
 		}
 		return toExitCode(success, state)
+	},
+	"format": func() int {
+		if changed, err := fmt.Format(config, opts.Format.Args.Files.Get(), opts.Format.Write); err != nil {
+			log.Fatalf("Failed to reformat files: %s", err)
+		} else if changed && !opts.Format.Write {
+			return 1
+		}
+		return 0
 	},
 	"init": func() int {
 		plzinit.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility, opts.Init.NoPrompt)
