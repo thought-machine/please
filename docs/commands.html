@@ -315,6 +315,16 @@
     <p>The <code>--update</code> flag will cause Please to rewrite the BUILD file with
       any changed hashes that it can find.</p>
 
+  <h2><a name="fmt">plz fmt</a></h2>
+
+    <p>a.k.a. <code>plz format</code></p>
+
+    <p>Auto-formats existing BUILD files. You can either provide a list of files to reformat
+      or, if none are given, it will discover all BUILD files in the repository.</p>
+
+    <p>The <code>-w</code> flag rewrites existing files in-place; if not passed the
+      formatted version will be printed to stdout.</p>
+
   <h2><a name="init">plz init</a></h2>
 
     <p>Creates an initial (and pretty empty) <code>.plzconfig</code> file in the current
