@@ -23,9 +23,9 @@ var log = logging.MustGetLogger("format")
 // It either prints the reformatted versions to stdout or rewrites the files in-place.
 // If no files are given then all BUILD files under the repo root are discovered.
 // The returned bool is true if any changes were needed.
-func Format(config *core.Configuration, filenames []string, rewrite bool) (bool, error) {
+func Format(config *core.Configuration, filenames []string, rewrite, quiet bool) (bool, error) {
 	if len(filenames) == 0 {
-		return formatAll(utils.FindAllBuildFiles(config, core.RepoRoot, ""), rewrite)
+		return formatAll(utils.FindAllBuildFiles(config, core.RepoRoot, ""), rewrite, quiet)
 	}
 	ch := make(chan string)
 	go func() {
@@ -34,13 +34,13 @@ func Format(config *core.Configuration, filenames []string, rewrite bool) (bool,
 		}
 		close(ch)
 	}()
-	return formatAll(ch, rewrite)
+	return formatAll(ch, rewrite, quiet)
 }
 
-func formatAll(filenames <-chan string, rewrite bool) (bool, error) {
+func formatAll(filenames <-chan string, rewrite, quiet bool) (bool, error) {
 	changed := false
 	for filename := range filenames {
-		c, err := format(filename, rewrite)
+		c, err := format(filename, rewrite, quiet)
 		if err != nil {
 			return changed, err
 		}
@@ -49,7 +49,7 @@ func formatAll(filenames <-chan string, rewrite bool) (bool, error) {
 	return changed, nil
 }
 
-func format(filename string, rewrite bool) (bool, error) {
+func format(filename string, rewrite, quiet bool) (bool, error) {
 	before, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return true, err
@@ -64,7 +64,9 @@ func format(filename string, rewrite bool) (bool, error) {
 		return false, nil
 	} else if !rewrite {
 		log.Debug("%s is not in canonical format", filename)
-		os.Stdout.Write(after)
+		if !quiet {
+			os.Stdout.Write(after)
+		}
 		return true, nil
 	}
 	log.Info("Rewriting %s into canonical format", filename)

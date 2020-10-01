@@ -253,6 +253,7 @@ var opts struct {
 	} `command:"export" subcommands-optional:"true" description:"Exports a set of targets and files from the repo."`
 
 	Format struct {
+		Quiet bool `long:"quiet" short:"q" description:"Don't print corrections to stdout"`
 		Write bool `long:"write" short:"w" description:"Rewrite files after update"`
 		Args  struct {
 			Files cli.Filepaths `positional-arg-name:"files" description:"BUILD files to reformat"`
@@ -497,7 +498,7 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"format": func() int {
-		if changed, err := format.Format(config, opts.Format.Args.Files.AsStrings(), opts.Format.Write); err != nil {
+		if changed, err := format.Format(config, opts.Format.Args.Files.AsStrings(), opts.Format.Write, opts.Format.Quiet); err != nil {
 			log.Fatalf("Failed to reformat files: %s", err)
 		} else if changed && !opts.Format.Write {
 			return 1
