@@ -10,6 +10,7 @@ if s3 ls s3://please-releases/linux_amd64/$VERSION; then
 fi
 echo "Releasing Please $VERSION"
 
+find /tmp/workspace/darwin_amd64 -name "._*" | xargs rm -rf
 find /tmp/workspace/*_amd64 -type f | xargs /tmp/workspace/release_signer
 
 aws s3 sync /tmp/workspace/darwin_amd64 s3://please-releases/darwin_amd64/$VERSION
