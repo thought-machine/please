@@ -402,16 +402,6 @@ go_get(
 )
 
 go_get(
-    name = "buildifier",
-    binary = True,
-    get = [],
-    install = ["github.com/bazelbuild/buildtools/buildifier"],
-    deps = [
-        ":buildtools",
-    ],
-)
-
-go_get(
     name = "jsonrpc2",
     get = "github.com/sourcegraph/jsonrpc2",
     revision = "549eb959f029d014d623104d40ab966d159a92de",

@@ -1,8 +1,8 @@
-// Package fmt does autoformatting of BUILD files.
+// Package format does autoformatting of BUILD files.
 //
 // It is based on a mildly modified version of buildifier; that supports fstrings
 // but not some of the other dialetical differences (e.g. type annotations).
-package fmt
+package format
 
 import (
 	"bytes"

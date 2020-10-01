@@ -1,4 +1,4 @@
-package fmt
+package format
 
 import (
 	"io/ioutil"

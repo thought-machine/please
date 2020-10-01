@@ -22,7 +22,7 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/export"
-	"github.com/thought-machine/please/src/fmt"
+	"github.com/thought-machine/please/src/format"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/gc"
 	"github.com/thought-machine/please/src/hashes"
@@ -497,7 +497,7 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"format": func() int {
-		if changed, err := fmt.Format(config, opts.Format.Args.Files.AsStrings(), opts.Format.Write); err != nil {
+		if changed, err := format.Format(config, opts.Format.Args.Files.AsStrings(), opts.Format.Write); err != nil {
 			log.Fatalf("Failed to reformat files: %s", err)
 		} else if changed && !opts.Format.Write {
 			return 1

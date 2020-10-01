@@ -1,5 +1,5 @@
 go_library(
-    name = "fmt",
+    name = "format",
     srcs = ["fmt.go"],
     deps = [
         "//src/core",
@@ -11,7 +11,7 @@ go_library(
 )
 
 go_test(
-    name = "fmt_test",
+    name = "format_test",
     srcs = ["fmt_test.go"],
     deps = [
         ":fmt",
