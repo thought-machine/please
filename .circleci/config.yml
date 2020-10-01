@@ -262,6 +262,7 @@ jobs:
      docker:
        - image: thoughtmachine/please_docs:20200930
      steps:
+       - checkout
        - attach_workspace:
            at: /tmp/workspace
        - run: ./.circleci/release_s3.sh
