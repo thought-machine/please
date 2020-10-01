@@ -124,11 +124,12 @@
     <p>One downside to this is that the BUILD files are a little hard to automatically edit or
       update compared to a data format like XML, Yaml or JSON. We think this is worth the tradeoff
       for giving the developer more power and (in our opinion) a significantly nicer format.<br/>
-      A couple of Please features can help with updating BUILD files; see <a href="commands.html#gc">plz gc</a>
-      and <a href="commands.html#hash">plz hash --update</a> for more info.</p>
-
-    <p>We suggest investigating <a href="https://github.com/bazelbuild/buildifier">buildifier</a>
-      if you'd like a pretty-printer / autoformatter for them.</p>
+      A few Please features can help with updating BUILD files:
+      <ul>
+        <li><a href="commands.html#fmt">plz fmt</a> to autoformat your BUILD files</li>
+        <li><a href="commands.html#hash">plz hash --update</a> to automatically update hashes</li>
+        <li><a href="commands.html#gc">plz gc</a> to clean up unused targets</li>
+    </ul></p>
 
 
     <h3>Okay, but what exactly are you using to parse the files?</h3>

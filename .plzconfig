@@ -56,10 +56,6 @@ subcommand = test
 subcommand = build
 positionallabels = true
 
-[alias "buildify"]
-desc = Runs buildifier, a BUILD file autoformatter.
-cmd = run //tools/misc:buildify -p -- --mode=fix
-
 [alias "lint"]
 desc = Runs the linters for this repo
 cmd = run //tools/misc:lint -p --

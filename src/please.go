@@ -22,6 +22,7 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/export"
+	"github.com/thought-machine/please/src/format"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/gc"
 	"github.com/thought-machine/please/src/hashes"
@@ -250,6 +251,14 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"outputs" description:"Exports outputs of a set of targets"`
 	} `command:"export" subcommands-optional:"true" description:"Exports a set of targets and files from the repo."`
+
+	Format struct {
+		Quiet bool `long:"quiet" short:"q" description:"Don't print corrections to stdout, simply exit with a code indicating success / failure (for linting etc)."`
+		Write bool `long:"write" short:"w" description:"Rewrite files after update"`
+		Args  struct {
+			Files cli.Filepaths `positional-arg-name:"files" description:"BUILD files to reformat"`
+		} `positional-args:"true"`
+	} `command:"format" alias:"fmt" description:"Autoformats BUILD files"`
 
 	Help struct {
 		Args struct {
@@ -487,6 +496,14 @@ var buildFunctions = map[string]func() int{
 				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly, opts.Gc.NoPrompt, opts.Gc.DryRun, opts.Gc.Git)
 		}
 		return toExitCode(success, state)
+	},
+	"format": func() int {
+		if changed, err := format.Format(config, opts.Format.Args.Files.AsStrings(), opts.Format.Write, opts.Format.Quiet); err != nil {
+			log.Fatalf("Failed to reformat files: %s", err)
+		} else if changed && !opts.Format.Write {
+			return 1
+		}
+		return 0
 	},
 	"init": func() int {
 		plzinit.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility, opts.Init.NoPrompt)

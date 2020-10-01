@@ -24,11 +24,6 @@ python_test(
 )
 
 sh_binary(
-    name = "buildify",
-    main = "buildify.sh",
-)
-
-sh_binary(
     name = "lint",
     main = "lint.sh",
 )
