@@ -21,6 +21,19 @@ var log = logging.MustGetLogger("utils")
 func FindAllSubpackages(config *core.Configuration, rootPath, prefix string) <-chan string {
 	ch := make(chan string)
 	go func() {
+		for filename := range FindAllBuildFiles(config, rootPath, prefix) {
+			ch <- path.Dir(filename)
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+// FindAllBuildFiles finds all BUILD files under a particular path.
+// It's like FindAllSubpackages but gives the filename as well as the directory.
+func FindAllBuildFiles(config *core.Configuration, rootPath, prefix string) <-chan string {
+	ch := make(chan string)
+	go func() {
 		if rootPath == "" {
 			rootPath = "."
 		}
@@ -31,8 +44,7 @@ func FindAllSubpackages(config *core.Configuration, rootPath, prefix string) <-c
 			} else if isDir && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {
 				return filepath.SkipDir // Skip any directory without the prefix we're after (but not any directory beneath that)
 			} else if config.IsABuildFile(basename) && !isDir {
-				dir, _ := path.Split(name)
-				ch <- strings.TrimRight(dir, "/")
+				ch <- name
 			} else if cli.ContainsString(name, config.Parse.ExperimentalDir) {
 				return filepath.SkipDir // Skip the experimental directory if it's set
 			}

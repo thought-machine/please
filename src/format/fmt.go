@@ -10,11 +10,14 @@ import (
 	"os"
 
 	"github.com/bazelbuild/buildtools/build"
+	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/utils"
 )
+
+var log = logging.MustGetLogger("format")
 
 // Format reformats the given BUILD files to their canonical version.
 // It either prints the reformatted versions to stdout or rewrites the files in-place.
@@ -22,7 +25,7 @@ import (
 // The returned bool is true if any changes were needed.
 func Format(config *core.Configuration, filenames []string, rewrite bool) (bool, error) {
 	if len(filenames) == 0 {
-		return formatAll(utils.FindAllSubpackages(config, core.RepoRoot, ""), rewrite)
+		return formatAll(utils.FindAllBuildFiles(config, core.RepoRoot, ""), rewrite)
 	}
 	ch := make(chan string)
 	go func() {
@@ -57,11 +60,14 @@ func format(filename string, rewrite bool) (bool, error) {
 	}
 	after := build.Format(f)
 	if bytes.Equal(before, after) {
+		log.Debug("%s is already in canonical format", filename)
 		return false, nil
 	} else if !rewrite {
+		log.Debug("%s is not in canonical format", filename)
 		os.Stdout.Write(after)
 		return true, nil
 	}
+	log.Info("Rewriting %s into canonical format", filename)
 	info, err := os.Stat(filename)
 	if err != nil {
 		return true, err

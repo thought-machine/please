@@ -1,22 +1,23 @@
 go_library(
     name = "format",
     srcs = ["fmt.go"],
+    visibility = ["//src/..."],
     deps = [
         "//src/core",
         "//src/fs",
         "//src/utils",
         "//third_party/go:buildtools",
+        "//third_party/go:logging",
     ],
-    visibility = ["//src/..."],
 )
 
 go_test(
     name = "format_test",
     srcs = ["fmt_test.go"],
+    data = ["test_data"],
     deps = [
         ":fmt",
         "//src/core",
         "//third_party/go:testify",
     ],
-    data = ["test_data"],
 )
