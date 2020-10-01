@@ -394,7 +394,7 @@ go_get(
     name = "buildtools",
     get = "github.com/bazelbuild/buildtools/...",
     repo = "github.com/peterebden/buildtools",
-    revision = "e04bd68cf28f0bf0b0b647f92511f93880964fad",
+    revision = "f7a36c689cc9e038956d51005332c67ade7aa9c6",
     deps = [
         ":protobuf",
         ":skylark",

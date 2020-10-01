@@ -1,5 +1,5 @@
 go_library(
-    name = f'{name}_lib',
+    name = f"{name}_lib",
     srcs = glob(["*.go"]),
     visibility = ["PUBLIC"],
     deps = ["//src/core"],
