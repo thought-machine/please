@@ -258,17 +258,13 @@ jobs:
        - run: /tmp/workspace/gen_release.pex --signer /tmp/workspace/release_signer /tmp/workspace/*_amd64/*
 
    # TODO(jpoole): rename this release once we switch web hosting
-   # TODO(jpoole): abort if s3://please-releases/latest_version == VERSION
    release-s3:
      docker:
        - image: thoughtmachine/please_docs:20200930
      steps:
        - attach_workspace:
            at: /tmp/workspace
-       - run: find /tmp/workspace/*_amd64 -type f | xargs /tmp/workspace/release_signer
-       - run: aws s3 sync /tmp/workspace/linux_amd64 s3://please-releases/linux_amd64/$(cat /tmp/workspace/VERSION)
-       - run: aws s3 sync /tmp/workspace/darwin_amd64 s3://please-releases/darwin_amd64/$(cat /tmp/workspace/VERSION)
-       - run: aws s3 sync /tmp/workspace/freebsd_amd64 s3://please-releases/freebsd_amd64/$(cat /tmp/workspace/VERSION)
+       - run: ./.circleci/release_s3.sh
 
    docs:
      docker:
