@@ -386,14 +386,15 @@ go_get(
 
 go_get(
     name = "skylark",
-    get = "github.com/google/skylark/syntax",
-    revision = "a5f7082aabed29c0e429c722292c66ec8ecf9591",
+    get = "go.starlark.net/syntax",
+    revision = "88a10930eb75e9ec92aea441058f24a11184bb2f",
 )
 
 go_get(
     name = "buildtools",
     get = "github.com/bazelbuild/buildtools/...",
-    revision = "0.19.2",
+    repo = "github.com/peterebden/buildtools",
+    revision = "e04bd68cf28f0bf0b0b647f92511f93880964fad",
     deps = [
         ":protobuf",
         ":skylark",
