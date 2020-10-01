@@ -22,7 +22,8 @@ func FindAllSubpackages(config *core.Configuration, rootPath, prefix string) <-c
 	ch := make(chan string)
 	go func() {
 		for filename := range FindAllBuildFiles(config, rootPath, prefix) {
-			ch <- path.Dir(filename)
+			dir, _ := path.Split(filename)
+			ch <- strings.TrimRight(dir, "/")
 		}
 		close(ch)
 	}()
