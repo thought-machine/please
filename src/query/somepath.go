@@ -13,7 +13,7 @@ func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) {
 		for _, l2 := range expandAllTargets(graph, to) {
 			if path := somePath(graph, l1, l2); len(path) != 0 {
 				fmt.Println("Found path:")
-				for _, l := range path {
+				for _, l := range filterPath(path) {
 					fmt.Printf("  %s\n", l)
 				}
 				return
@@ -39,13 +39,34 @@ func expandAllTargets(graph *core.BuildGraph, labels []core.BuildLabel) []core.B
 }
 
 func somePath(graph *core.BuildGraph, label1, label2 core.BuildLabel) []core.BuildLabel {
+	// Have to try this both ways around since we don't know which is a dependency of the other.
+	if path := somePath2(graph, label1, label2); len(path) != 0 {
+		return path
+	}
+	return somePath2(graph, label2, label1)
+}
+
+func somePath2(graph *core.BuildGraph, label1, label2 core.BuildLabel) []core.BuildLabel {
 	if label1 == label2 {
 		return []core.BuildLabel{label1}
 	}
-	for _, dep := range graph.TargetOrDie(label2).DeclaredDependencies() {
-		if path := somePath(graph, label1, dep); len(path) != 0 {
+	for _, dep := range graph.TargetOrDie(label1).DeclaredDependencies() {
+		if path := somePath2(graph, dep, label2); len(path) != 0 {
 			return append([]core.BuildLabel{label1}, path...)
 		}
 	}
 	return nil
+}
+
+// filterPath filters out any internal targets on a path between two targets.
+func filterPath(path []core.BuildLabel) []core.BuildLabel {
+	ret := []core.BuildLabel{path[0]}
+	last := path[0]
+	for _, l := range path {
+		if l.Parent() != last {
+			ret = append(ret, l)
+			last = l
+		}
+	}
+	return ret
 }
