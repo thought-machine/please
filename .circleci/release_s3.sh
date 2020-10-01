@@ -17,6 +17,8 @@ aws s3 sync /tmp/workspace/darwin_amd64 s3://please-releases/darwin_amd64/$VERSI
 aws s3 sync /tmp/workspace/linux_amd64 s3://please-releases/linux_amd64/$VERSION
 aws s3 sync /tmp/workspace/freebsd_amd64 s3://please-releases/freebsd_amd64/$VERSION
 
+aws s3 cp tools/misc/get_plz.sh s3://please-releases/get_plz.sh
+
 if [[ "$VERSION" == *"beta"* ]] || [[ "$VERSION" == *"alpha"* ]]; then
   echo "$VERSION is a prerelease, only setting latest_prerelease_version"
 else
