@@ -16,7 +16,7 @@ go_test(
     srcs = ["fmt_test.go"],
     data = ["test_data"],
     deps = [
-        ":fmt",
+        ":format",
         "//src/core",
         "//third_party/go:testify",
     ],
