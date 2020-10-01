@@ -253,7 +253,7 @@ var opts struct {
 	} `command:"export" subcommands-optional:"true" description:"Exports a set of targets and files from the repo."`
 
 	Format struct {
-		Quiet bool `long:"quiet" short:"q" description:"Don't print corrections to stdout"`
+		Quiet bool `long:"quiet" short:"q" description:"Don't print corrections to stdout, simply exit with a code indicating success / failure (for linting etc)."`
 		Write bool `long:"write" short:"w" description:"Rewrite files after update"`
 		Args  struct {
 			Files cli.Filepaths `positional-arg-name:"files" description:"BUILD files to reformat"`
