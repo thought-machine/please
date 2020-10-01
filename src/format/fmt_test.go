@@ -11,15 +11,15 @@ import (
 )
 
 func TestFormat(t *testing.T) {
-	const before = "src/fmt/test_data/before.build"
-	const after = "src/fmt/test_data/after.build"
+	const before = "src/format/test_data/before.build"
+	const after = "src/format/test_data/after.build"
 
-	changed, err := Format(core.DefaultConfiguration(), []string{"src/fmt/test_data/before.build"}, false)
+	changed, err := Format(core.DefaultConfiguration(), []string{before}, false, true)
 	assert.NoError(t, err)
 	assert.True(t, changed)
 
 	// N.B. this rewrites the file; be careful if you're adding more tests here.
-	changed, err = Format(core.DefaultConfiguration(), []string{before}, true)
+	changed, err = Format(core.DefaultConfiguration(), []string{before}, true, false)
 	assert.NoError(t, err)
 	assert.True(t, changed)
 
