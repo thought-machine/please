@@ -27,5 +27,5 @@ else
 fi
 aws s3 cp VERSION s3://please-releases/latest_prerelease_version  --content-type text/plain
 
-echo "Invalidating cloudfront distribution $AWS_CF_RELEASE_DIST_ID"
-aws cloudfront create-invalidation --distribution-id "$AWS_CF_RELEASE_DIST_ID" --paths /latest_version /latest_prerelease_version /get_plz.sh /darwin_amd64/$VERSION /linux_amd64/$VERSION /freebsd_amd64/$VERSION
+echo "Releasing docs website"
+tar -xzf /tmp/workspace/deep-docs.tar.gz -C /tmp/workspace && aws s3 sync /tmp/workspace/docs s3://please-docs
