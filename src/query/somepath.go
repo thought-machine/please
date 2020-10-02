@@ -9,9 +9,12 @@ import "github.com/thought-machine/please/src/core"
 func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) {
 	from = expandAllTargets(graph, from)
 	to = expandAllTargets(graph, to)
+	s := somepath{
+		memo: map[core.BuildLabel]map[core.BuildLabel]struct{}{},
+	}
 	for _, l1 := range expandAllTargets(graph, from) {
 		for _, l2 := range expandAllTargets(graph, to) {
-			if path := somePath(graph, graph.TargetOrDie(l1), graph.TargetOrDie(l2)); len(path) != 0 {
+			if path := s.SomePath(graph.TargetOrDie(l1), graph.TargetOrDie(l2)); len(path) != 0 {
 				fmt.Println("Found path:")
 				for _, l := range filterPath(path) {
 					fmt.Printf("  %s\n", l)
@@ -38,22 +41,35 @@ func expandAllTargets(graph *core.BuildGraph, labels []core.BuildLabel) []core.B
 	return ret
 }
 
-func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget) []core.BuildLabel {
-	// Have to try this both ways around since we don't know which is a dependency of the other.
-	if path := somePath2(graph, target1, target2, map[core.BuildLabel]struct{}{}); len(path) != 0 {
-		return path
-	}
-	return somePath2(graph, target2, target1, map[core.BuildLabel]struct{}{})
+type somepath struct {
+	memo map[core.BuildLabel]map[core.BuildLabel]struct{}
 }
 
-func somePath2(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
+func (s *somepath) SomePath(target1, target2 *core.BuildTarget) []core.BuildLabel {
+	// Have to try this both ways around since we don't know which is a dependency of the other.
+	if path := s.somePath(target1, target2); len(path) != 0 {
+		return path
+	}
+	return s.somePath(target2, target1)
+}
+
+func (s *somepath) somePath(target1, target2 *core.BuildTarget) []core.BuildLabel {
+	m, present := s.memo[target2.Label]
+	if !present {
+		m = map[core.BuildLabel]struct{}{}
+		s.memo[target2.Label] = m
+	}
+	return s.somePath2(target1, target2, m)
+}
+
+func (s *somepath) somePath2(target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
 	if target1.Label == target2.Label {
 		return []core.BuildLabel{target1.Label}
 	} else if _, present := seen[target1.Label]; present {
 		return nil
 	}
 	for _, dep := range target1.Dependencies() {
-		if path := somePath2(graph, dep, target2, seen); len(path) != 0 {
+		if path := s.somePath2(dep, target2, seen); len(path) != 0 {
 			return append([]core.BuildLabel{target1.Label}, path...)
 		}
 	}
