@@ -38,7 +38,7 @@ plz_e2e_test(
 plz_e2e_test(
     name = "cc_query_somepath_test_2",
     cmd = "plz query somepath //test/cc_rules:_lib2#cc //test/cc_rules:_lib1#cc",
-    expected_output = "cc_query_somepath_test_2.txt",
+    expected_failure = True,
 )
 
 # These rules test that cc_library correctly accepts multiple srcs.
