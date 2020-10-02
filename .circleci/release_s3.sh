@@ -4,7 +4,7 @@ set -eu
 
 VERSION=$(cat VERSION)
 
-if s3 ls s3://please-releases/linux_amd64/$VERSION; then
+if aws s3 ls s3://please-releases/linux_amd64/$VERSION; then
   echo "Please $VERSION has already been released, nothing to do."
   exit 0
 fi
