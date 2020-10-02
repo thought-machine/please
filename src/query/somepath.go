@@ -11,7 +11,7 @@ func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) {
 	to = expandAllTargets(graph, to)
 	for _, l1 := range expandAllTargets(graph, from) {
 		for _, l2 := range expandAllTargets(graph, to) {
-			if path := somePath(graph, l1, l2); len(path) != 0 {
+			if path := somePath(graph, graph.TargetOrDie(l1), graph.TargetOrDie(l2)); len(path) != 0 {
 				fmt.Println("Found path:")
 				for _, l := range filterPath(path) {
 					fmt.Printf("  %s\n", l)
@@ -38,21 +38,21 @@ func expandAllTargets(graph *core.BuildGraph, labels []core.BuildLabel) []core.B
 	return ret
 }
 
-func somePath(graph *core.BuildGraph, label1, label2 core.BuildLabel) []core.BuildLabel {
+func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget) []core.BuildLabel {
 	// Have to try this both ways around since we don't know which is a dependency of the other.
-	if path := somePath2(graph, label1, label2); len(path) != 0 {
+	if path := somePath2(graph, target1, target2); len(path) != 0 {
 		return path
 	}
-	return somePath2(graph, label2, label1)
+	return somePath2(graph, target2, target1)
 }
 
-func somePath2(graph *core.BuildGraph, label1, label2 core.BuildLabel) []core.BuildLabel {
-	if label1 == label2 {
-		return []core.BuildLabel{label1}
+func somePath2(graph *core.BuildGraph, target1, target2 *core.BuildTarget) []core.BuildLabel {
+	if target1.Label == target2.Label {
+		return []core.BuildLabel{target1.Label}
 	}
-	for _, dep := range graph.TargetOrDie(label1).DeclaredDependencies() {
-		if path := somePath2(graph, dep, label2); len(path) != 0 {
-			return append([]core.BuildLabel{label1}, path...)
+	for _, dep := range target1.Dependencies() {
+		if path := somePath2(graph, dep, target2); len(path) != 0 {
+			return append([]core.BuildLabel{target1.Label}, path...)
 		}
 	}
 	return nil
