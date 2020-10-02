@@ -566,12 +566,14 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"somepath": func() int {
-		return runQuery(true,
-			[]core.BuildLabel{opts.Query.SomePath.Args.Target1, opts.Query.SomePath.Args.Target2},
-			func(state *core.BuildState) {
-				query.SomePath(state.Graph, opts.Query.SomePath.Args.Target1, opts.Query.SomePath.Args.Target2)
-			},
-		)
+		a := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
+		b := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
+		return runQuery(true, append(a, b...), func(state *core.BuildState) {
+			if err := query.SomePath(state.Graph, a, b); err != nil {
+				fmt.Printf("%s\n", err)
+				os.Exit(1)
+			}
+		})
 	},
 	"alltargets": func() int {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
