@@ -1,14 +1,14 @@
 package query
 
-import "fmt"
+import (
+	"fmt"
 
-import "github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/core"
+)
 
 // SomePath finds and returns a path between two targets, or between one and a set of targets.
 // Useful for a "why on earth do I depend on this thing" type query.
-func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) {
-	from = expandAllTargets(graph, from)
-	to = expandAllTargets(graph, to)
+func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) error {
 	s := somepath{
 		memo: map[core.BuildLabel]map[core.BuildLabel]struct{}{},
 	}
@@ -19,11 +19,14 @@ func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) {
 				for _, l := range filterPath(path) {
 					fmt.Printf("  %s\n", l)
 				}
-				return
+				return nil
 			}
 		}
 	}
-	log.Fatalf("Couldn't find any dependency path between those targets")
+	if len(from) == 1 && len(to) == 1 {
+		return fmt.Errorf("Couldn't find any dependency path between %s and %s", from, to)
+	}
+	return fmt.Errorf("Couldn't find any dependency path between those targets")
 }
 
 // expandAllTargets expands any :all labels in the given set.
@@ -59,17 +62,17 @@ func (s *somepath) somePath(target1, target2 *core.BuildTarget) []core.BuildLabe
 		m = map[core.BuildLabel]struct{}{}
 		s.memo[target2.Label] = m
 	}
-	return s.somePath2(target1, target2, m)
+	return somePath(target1, target2, m)
 }
 
-func (s *somepath) somePath2(target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
+func somePath(target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
 	if target1.Label == target2.Label {
 		return []core.BuildLabel{target1.Label}
 	} else if _, present := seen[target1.Label]; present {
 		return nil
 	}
 	for _, dep := range target1.Dependencies() {
-		if path := s.somePath2(dep, target2, seen); len(path) != 0 {
+		if path := somePath(dep, target2, seen); len(path) != 0 {
 			return append([]core.BuildLabel{target1.Label}, path...)
 		}
 	}
