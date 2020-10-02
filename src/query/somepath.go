@@ -24,7 +24,7 @@ func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) error {
 		}
 	}
 	if len(from) == 1 && len(to) == 1 {
-		return fmt.Errorf("Couldn't find any dependency path between %s and %s", from, to)
+		return fmt.Errorf("Couldn't find any dependency path between %s and %s", from[0], to[0])
 	}
 	return fmt.Errorf("Couldn't find any dependency path between those targets")
 }
