@@ -40,21 +40,24 @@ func expandAllTargets(graph *core.BuildGraph, labels []core.BuildLabel) []core.B
 
 func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget) []core.BuildLabel {
 	// Have to try this both ways around since we don't know which is a dependency of the other.
-	if path := somePath2(graph, target1, target2); len(path) != 0 {
+	if path := somePath2(graph, target1, target2, map[core.BuildLabel]struct{}{}); len(path) != 0 {
 		return path
 	}
-	return somePath2(graph, target2, target1)
+	return somePath2(graph, target2, target1, map[core.BuildLabel]struct{}{})
 }
 
-func somePath2(graph *core.BuildGraph, target1, target2 *core.BuildTarget) []core.BuildLabel {
+func somePath2(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
 	if target1.Label == target2.Label {
 		return []core.BuildLabel{target1.Label}
+	} else if _, present := seen[target1.Label]; present {
+		return nil
 	}
 	for _, dep := range target1.Dependencies() {
-		if path := somePath2(graph, dep, target2); len(path) != 0 {
+		if path := somePath2(graph, dep, target2, seen); len(path) != 0 {
 			return append([]core.BuildLabel{target1.Label}, path...)
 		}
 	}
+	seen[target1.Label] = struct{}{}
 	return nil
 }
 
