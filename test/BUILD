@@ -34,7 +34,7 @@ plz_e2e_test(
 plz_e2e_test(
     name = "query_somepath_nopath_test",
     cmd = "plz query somepath //src:please //third_party/java:junit",
-    expected_output = "query_somepath_nopath_test.txt",
+    expected_failure = True,
 )
 
 # Tests that targets can only use other targets that they depend on.
