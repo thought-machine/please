@@ -280,17 +280,6 @@ jobs:
            name: Upload docs
            working_directory: /tmp/site
            command: tar -xzf docs.tar.gz && sftp -oStrictHostKeyChecking=no -b /root/sftp.txt 3472291@sftp.dc2.gpaas.net
-
-   aws-sync:
-     docker:
-       - image: thoughtmachine/please_docs:20200930
-     steps:
-       - attach_workspace:
-           at: /tmp/site
-       - run:
-           name: Upload docs
-           working_directory: /tmp/site
-           command: tar -xzf deep-docs.tar.gz && aws s3 sync docs s3://please-build
 workflows:
   version: 2
   build-all:
@@ -337,12 +326,6 @@ workflows:
             branches:
               only: master
       - docs:
-          requires:
-            - build-linux
-          filters:
-            branches:
-              only: master
-      - aws-sync:
           requires:
             - build-linux
           filters:
