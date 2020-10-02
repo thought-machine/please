@@ -52,12 +52,16 @@ func InitLogging(verbosity Verbosity) {
 }
 
 // InitFileLogging initialises an optional logging backend to a file.
-func InitFileLogging(logFile string, logFileLevel Verbosity) {
+func InitFileLogging(logFile string, logFileLevel Verbosity, append bool) {
 	fileLogLevel = logging.Level(logFileLevel)
 	if err := os.MkdirAll(path.Dir(logFile), os.ModeDir|0775); err != nil {
 		log.Fatalf("Error creating log file directory: %s", err)
 	}
-	file, err := os.Create(logFile)
+	flags := os.O_RDWR | os.O_CREATE | os.O_TRUNC
+	if append {
+		flags = os.O_RDWR | os.O_CREATE | os.O_APPEND
+	}
+	file, err := os.OpenFile(logFile, flags, 0666)
 	if err != nil {
 		log.Fatalf("Error opening log file: %s", err)
 	}
