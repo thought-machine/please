@@ -15,7 +15,7 @@ var urlRegex = regexp.MustCompile("https?://[^ ]+[^.]")
 // ExampleValue returns an example value for a config field based on its type.
 func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options string) string {
 	if t.Kind() == reflect.Slice {
-		return ExampleValue(f, name, t.Elem(), example, options) + fmt.Sprintf("\n\n%s can be repeated", name)
+		return ExampleValue(reflect.New(t.Elem()).Elem(), name, t.Elem(), example, options) + fmt.Sprintf("${RESET}\n\n${YELLOW}%s${RESET} can be repeated", name)
 	} else if example != "" {
 		return example
 	} else if options != "" {
