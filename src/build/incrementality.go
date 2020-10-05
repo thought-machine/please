@@ -278,10 +278,20 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 		h.Write([]byte(o))
 	}
 
-	for ep, out := range target.EntryPoints {
-		h.Write([]byte(ep + "=" + out))
-	}
+	hashEntryPoints(h, target.EntryPoints)
+
 	return h.Sum(nil)
+}
+
+func hashEntryPoints(writer hash.Hash, eps map[string]string) {
+	keys := make([]string, len(eps))
+	for ep := range eps {
+		keys = append(keys, ep)
+	}
+	sort.Strings(keys)
+	for _, ep := range keys {
+		writer.Write([]byte(ep + "=" + eps[ep]))
+	}
 }
 
 func hashBool(writer hash.Hash, b bool) {
