@@ -22,6 +22,7 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/export"
+	"github.com/thought-machine/please/src/format"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/gc"
 	"github.com/thought-machine/please/src/hashes"
@@ -62,6 +63,7 @@ var opts struct {
 		Verbosity         cli.Verbosity `short:"v" long:"verbosity" description:"Verbosity of output (error, warning, notice, info, debug)" default:"warning"`
 		LogFile           cli.Filepath  `long:"log_file" description:"File to echo full logging output to" default:"plz-out/log/build.log"`
 		LogFileLevel      cli.Verbosity `long:"log_file_level" description:"Log level for file output" default:"debug"`
+		LogAppend         bool          `long:"log_append" description:"Append log to existing file instead of overwriting its content"`
 		InteractiveOutput bool          `long:"interactive_output" description:"Show interactive output in a terminal"`
 		PlainOutput       bool          `short:"p" long:"plain_output" description:"Don't show interactive output."`
 		Colour            bool          `long:"colour" description:"Forces coloured output from logging & other shell output."`
@@ -250,6 +252,14 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"outputs" description:"Exports outputs of a set of targets"`
 	} `command:"export" subcommands-optional:"true" description:"Exports a set of targets and files from the repo."`
+
+	Format struct {
+		Quiet bool `long:"quiet" short:"q" description:"Don't print corrections to stdout, simply exit with a code indicating success / failure (for linting etc)."`
+		Write bool `long:"write" short:"w" description:"Rewrite files after update"`
+		Args  struct {
+			Files cli.Filepaths `positional-arg-name:"files" description:"BUILD files to reformat"`
+		} `positional-args:"true"`
+	} `command:"format" alias:"fmt" description:"Autoformats BUILD files"`
 
 	Help struct {
 		Args struct {
@@ -488,6 +498,14 @@ var buildFunctions = map[string]func() int{
 		}
 		return toExitCode(success, state)
 	},
+	"format": func() int {
+		if changed, err := format.Format(config, opts.Format.Args.Files.AsStrings(), opts.Format.Write, opts.Format.Quiet); err != nil {
+			log.Fatalf("Failed to reformat files: %s", err)
+		} else if changed && !opts.Format.Write {
+			return 1
+		}
+		return 0
+	},
 	"init": func() int {
 		plzinit.InitConfig(string(opts.Init.Dir), opts.Init.BazelCompatibility, opts.Init.NoPrompt)
 
@@ -549,12 +567,14 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"somepath": func() int {
-		return runQuery(true,
-			[]core.BuildLabel{opts.Query.SomePath.Args.Target1, opts.Query.SomePath.Args.Target2},
-			func(state *core.BuildState) {
-				query.SomePath(state.Graph, opts.Query.SomePath.Args.Target1, opts.Query.SomePath.Args.Target2)
-			},
-		)
+		a := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
+		b := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
+		return runQuery(true, append(a, b...), func(state *core.BuildState) {
+			if err := query.SomePath(state.Graph, a, b); err != nil {
+				fmt.Printf("%s\n", err)
+				os.Exit(1)
+			}
+		})
 	},
 	"alltargets": func() int {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
@@ -894,7 +914,7 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 		if !path.IsAbs(string(opts.OutputFlags.LogFile)) {
 			opts.OutputFlags.LogFile = cli.Filepath(path.Join(core.RepoRoot, string(opts.OutputFlags.LogFile)))
 		}
-		cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel)
+		cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel, opts.OutputFlags.LogAppend)
 	}
 	if opts.FeatureFlags.NoHashVerification {
 		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")

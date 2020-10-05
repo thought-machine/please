@@ -991,7 +991,7 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
     compile_cmd = f'"$TOOLS_GO" tool compile -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag} -pack {out_cmd}'
     # Annotates files for coverage.
-    cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); go tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
+    cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); "$TOOLS_GO" tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
 
     gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '$GOROOT')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()

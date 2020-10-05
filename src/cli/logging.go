@@ -7,12 +7,10 @@ import (
 	"container/list"
 	"fmt"
 	"os"
-	"os/signal"
 	"path"
 	"regexp"
 	"strings"
 	"sync"
-	"syscall"
 
 	"github.com/peterebden/go-cli-init"
 	"golang.org/x/crypto/ssh/terminal"
@@ -52,12 +50,16 @@ func InitLogging(verbosity Verbosity) {
 }
 
 // InitFileLogging initialises an optional logging backend to a file.
-func InitFileLogging(logFile string, logFileLevel Verbosity) {
+func InitFileLogging(logFile string, logFileLevel Verbosity, append bool) {
 	fileLogLevel = logging.Level(logFileLevel)
 	if err := os.MkdirAll(path.Dir(logFile), os.ModeDir|0775); err != nil {
 		log.Fatalf("Error creating log file directory: %s", err)
 	}
-	file, err := os.Create(logFile)
+	flags := os.O_RDWR | os.O_CREATE | os.O_TRUNC
+	if append {
+		flags = os.O_RDWR | os.O_CREATE | os.O_APPEND
+	}
+	file, err := os.OpenFile(logFile, flags, 0666)
 	if err != nil {
 		log.Fatalf("Error opening log file: %s", err)
 	}
@@ -177,13 +179,7 @@ func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int)
 	backend.interactiveRows = interactiveRows
 	backend.mutex.Unlock()
 	if passthrough {
-		go func() {
-			sig := make(chan os.Signal, 10)
-			signal.Notify(sig, syscall.SIGWINCH)
-			for range sig {
-				backend.recalcWindowSize()
-			}
-		}()
+		go notifyOnWindowResize(backend.recalcWindowSize)
 	}
 	backend.recalcWindowSize()
 }

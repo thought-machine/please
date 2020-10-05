@@ -1,63 +1,94 @@
 package query
 
-import "fmt"
+import (
+	"fmt"
 
-import "github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/core"
+)
 
-// SomePath finds and returns a path between two targets.
+// SomePath finds and returns a path between two targets, or between one and a set of targets.
 // Useful for a "why on earth do I depend on this thing" type query.
-func SomePath(graph *core.BuildGraph, label1 core.BuildLabel, label2 core.BuildLabel) {
-	// Awkwardly either target can be :all. This is an extremely useful idiom though so despite
-	// trickiness is worth supporting.
-	// Of course this calculation is also quadratic but it's not very obvious how to avoid that.
-	if label1.IsAllTargets() {
-		for _, target := range graph.PackageOrDie(label1).AllTargets() {
-			if querySomePath1(graph, target, label2, false) {
-				return
+func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) error {
+	s := somepath{
+		memo: map[core.BuildLabel]map[core.BuildLabel]struct{}{},
+	}
+	for _, l1 := range expandAllTargets(graph, from) {
+		for _, l2 := range expandAllTargets(graph, to) {
+			if path := s.SomePath(graph.TargetOrDie(l1), graph.TargetOrDie(l2)); len(path) != 0 {
+				fmt.Println("Found path:")
+				for _, l := range filterPath(path) {
+					fmt.Printf("  %s\n", l)
+				}
+				return nil
 			}
 		}
-		fmt.Printf("Couldn't find any dependency path between %s and %s\n", label1, label2)
-	} else {
-		querySomePath1(graph, graph.TargetOrDie(label1), label2, true)
 	}
+	if len(from) == 1 && len(to) == 1 {
+		return fmt.Errorf("Couldn't find any dependency path between %s and %s", from[0], to[0])
+	}
+	return fmt.Errorf("Couldn't find any dependency path between those targets")
 }
 
-func querySomePath1(graph *core.BuildGraph, target1 *core.BuildTarget, label2 core.BuildLabel, print bool) bool {
-	// Now we do the same for label2.
-	if label2.IsAllTargets() {
-		for _, target2 := range graph.PackageOrDie(label2).AllTargets() {
-			if querySomePath2(graph, target1, target2, false) {
-				return true
+// expandAllTargets expands any :all labels in the given set.
+func expandAllTargets(graph *core.BuildGraph, labels []core.BuildLabel) []core.BuildLabel {
+	ret := make([]core.BuildLabel, 0, len(labels))
+	for _, l := range labels {
+		if l.IsAllTargets() {
+			for _, t := range graph.PackageOrDie(l).AllTargets() {
+				ret = append(ret, t.Label)
 			}
+		} else {
+			ret = append(ret, l)
 		}
-		return false
 	}
-	return querySomePath2(graph, target1, graph.TargetOrDie(label2), print)
+	return ret
 }
 
-func querySomePath2(graph *core.BuildGraph, target1, target2 *core.BuildTarget, print bool) bool {
-	if !printSomePath(graph, target1, target2) && !printSomePath(graph, target2, target1) {
-		if print {
-			fmt.Printf("Couldn't find any dependency path between %s and %s\n", target1.Label, target2.Label)
-		}
-		return false
-	}
-	return true
+type somepath struct {
+	memo map[core.BuildLabel]map[core.BuildLabel]struct{}
 }
 
-// This is just a simple DFS through the graph.
-func printSomePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget) bool {
-	if target1 == target2 {
-		fmt.Printf("Found path:\n  %s\n", target1.Label)
-		return true
+func (s *somepath) SomePath(target1, target2 *core.BuildTarget) []core.BuildLabel {
+	// Have to try this both ways around since we don't know which is a dependency of the other.
+	if path := s.somePath(target1, target2); len(path) != 0 {
+		return path
 	}
-	for _, target := range graph.ReverseDependencies(target2) {
-		if printSomePath(graph, target1, target) {
-			if target2.Parent(graph) != target {
-				fmt.Printf("  %s\n", target2.Label)
-			}
-			return true
+	return s.somePath(target2, target1)
+}
+
+func (s *somepath) somePath(target1, target2 *core.BuildTarget) []core.BuildLabel {
+	m, present := s.memo[target2.Label]
+	if !present {
+		m = map[core.BuildLabel]struct{}{}
+		s.memo[target2.Label] = m
+	}
+	return somePath(target1, target2, m)
+}
+
+func somePath(target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
+	if target1.Label == target2.Label {
+		return []core.BuildLabel{target1.Label}
+	} else if _, present := seen[target1.Label]; present {
+		return nil
+	}
+	for _, dep := range target1.Dependencies() {
+		if path := somePath(dep, target2, seen); len(path) != 0 {
+			return append([]core.BuildLabel{target1.Label}, path...)
 		}
 	}
-	return false
+	seen[target1.Label] = struct{}{}
+	return nil
+}
+
+// filterPath filters out any internal targets on a path between two targets.
+func filterPath(path []core.BuildLabel) []core.BuildLabel {
+	ret := []core.BuildLabel{path[0]}
+	last := path[0]
+	for _, l := range path {
+		if l.Parent() != last {
+			ret = append(ret, l)
+			last = l
+		}
+	}
+	return ret
 }

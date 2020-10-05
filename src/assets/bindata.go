@@ -239,8 +239,8 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"pleasew":         {pleasew, map[string]*bintree{}},
-	"plz_complete.sh": {plz_completeSh, map[string]*bintree{}},
+	"pleasew":         &bintree{pleasew, map[string]*bintree{}},
+	"plz_complete.sh": &bintree{plz_completeSh, map[string]*bintree{}},
 }}
 
 // RestoreAsset restores an asset under the given directory.

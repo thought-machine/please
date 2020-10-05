@@ -258,17 +258,14 @@ jobs:
        - run: /tmp/workspace/gen_release.pex --signer /tmp/workspace/release_signer /tmp/workspace/*_amd64/*
 
    # TODO(jpoole): rename this release once we switch web hosting
-   # TODO(jpoole): abort if s3://please-releases/latest_version == VERSION
    release-s3:
      docker:
        - image: thoughtmachine/please_docs:20200930
      steps:
+       - checkout
        - attach_workspace:
            at: /tmp/workspace
-       - run: find /tmp/workspace/*_amd64 -type f | xargs /tmp/workspace/release_signer
-       - run: aws s3 sync /tmp/workspace/linux_amd64 s3://please-releases/linux_amd64/$(cat /tmp/workspace/VERSION)
-       - run: aws s3 sync /tmp/workspace/darwin_amd64 s3://please-releases/darwin_amd64/$(cat /tmp/workspace/VERSION)
-       - run: aws s3 sync /tmp/workspace/freebsd_amd64 s3://please-releases/freebsd_amd64/$(cat /tmp/workspace/VERSION)
+       - run: ./.circleci/release_s3.sh
 
    docs:
      docker:
@@ -283,17 +280,6 @@ jobs:
            name: Upload docs
            working_directory: /tmp/site
            command: tar -xzf docs.tar.gz && sftp -oStrictHostKeyChecking=no -b /root/sftp.txt 3472291@sftp.dc2.gpaas.net
-
-   aws-sync:
-     docker:
-       - image: thoughtmachine/please_docs:20200930
-     steps:
-       - attach_workspace:
-           at: /tmp/site
-       - run:
-           name: Upload docs
-           working_directory: /tmp/site
-           command: tar -xzf deep-docs.tar.gz && aws s3 sync docs s3://please-build
 workflows:
   version: 2
   build-all:
@@ -340,12 +326,6 @@ workflows:
             branches:
               only: master
       - docs:
-          requires:
-            - build-linux
-          filters:
-            branches:
-              only: master
-      - aws-sync:
           requires:
             - build-linux
           filters:
