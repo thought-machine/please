@@ -33,8 +33,8 @@ go_get(
 go_get(
     name = "xattr",
     get = "github.com/pkg/xattr",
-    revision = "d15dbc2bb0b5da267362b5e066e2c44c1fcff6c7",
-    deps = [":unix"],
+    revision = "v0.4.1",
+    deps = [":xsys"],
 )
 
 go_get(
@@ -134,7 +134,7 @@ go_get(
         ":protobuf",
         ":rpccode",
         ":rpcstatus",
-        ":unix",
+        ":xsys",
     ],
 )
 
@@ -242,7 +242,7 @@ go_get(
     name = "fsnotify",
     get = "github.com/fsnotify/fsnotify",
     revision = "a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb",
-    deps = [":unix"],
+    deps = [":xsys"],
 )
 
 go_get(
@@ -311,13 +311,13 @@ go_get(
         "mem",
     ],
     revision = "v2.17.09",
-    deps = [":unix"],
+    deps = [":xsys"],
 )
 
 go_get(
-    name = "unix",
-    get = "golang.org/x/sys/unix",
-    revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2",
+    name = "xsys",
+    get = "golang.org/x/sys/...",
+    revision = "765f4ea38db36397e827c4153018aa272eed7835",
 )
 
 go_get(
