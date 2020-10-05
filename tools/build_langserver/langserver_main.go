@@ -36,7 +36,7 @@ func main() {
 	cli.ParseFlagsOrDie("build_langserver", &opts)
 	cli.InitLogging(opts.Verbosity)
 	if opts.LogFile != "" {
-		cli.InitFileLogging(string(opts.LogFile), opts.Verbosity)
+		cli.InitFileLogging(string(opts.LogFile), opts.Verbosity, false)
 	}
 	if err := serve(lsp.NewHandler()); err != nil {
 		log.Fatalf("fail to start server: %s", err)

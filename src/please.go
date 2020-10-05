@@ -63,6 +63,7 @@ var opts struct {
 		Verbosity         cli.Verbosity `short:"v" long:"verbosity" description:"Verbosity of output (error, warning, notice, info, debug)" default:"warning"`
 		LogFile           cli.Filepath  `long:"log_file" description:"File to echo full logging output to" default:"plz-out/log/build.log"`
 		LogFileLevel      cli.Verbosity `long:"log_file_level" description:"Log level for file output" default:"debug"`
+		LogAppend         bool          `long:"log_append" description:"Append log to existing file instead of overwriting its content"`
 		InteractiveOutput bool          `long:"interactive_output" description:"Show interactive output in a terminal"`
 		PlainOutput       bool          `short:"p" long:"plain_output" description:"Don't show interactive output."`
 		Colour            bool          `long:"colour" description:"Forces coloured output from logging & other shell output."`
@@ -913,7 +914,7 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 		if !path.IsAbs(string(opts.OutputFlags.LogFile)) {
 			opts.OutputFlags.LogFile = cli.Filepath(path.Join(core.RepoRoot, string(opts.OutputFlags.LogFile)))
 		}
-		cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel)
+		cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel, opts.OutputFlags.LogAppend)
 	}
 	if opts.FeatureFlags.NoHashVerification {
 		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
