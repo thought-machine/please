@@ -7,12 +7,10 @@ import (
 	"container/list"
 	"fmt"
 	"os"
-	"os/signal"
 	"path"
 	"regexp"
 	"strings"
 	"sync"
-	"syscall"
 
 	"github.com/peterebden/go-cli-init"
 	"golang.org/x/crypto/ssh/terminal"
@@ -177,13 +175,7 @@ func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int)
 	backend.interactiveRows = interactiveRows
 	backend.mutex.Unlock()
 	if passthrough {
-		go func() {
-			sig := make(chan os.Signal, 10)
-			signal.Notify(sig, syscall.SIGWINCH)
-			for range sig {
-				backend.recalcWindowSize()
-			}
-		}()
+		go notifyOnWindowResize(backend.recalcWindowSize)
 	}
 	backend.recalcWindowSize()
 }
