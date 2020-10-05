@@ -49,6 +49,10 @@
         Note that if this is not set, you can run <code>plz update</code> to update to the latest
         version available on the server.</li>
 
+      <li><b>VersionChecksum</b><br/>
+          Defines a hex-encoded sha256 checksum that the downloaded version must match. Can be
+          specified multiple times to support different architectures.
+
       <li><b>Location</b><br/>
         Defines the directory Please is installed into.<br/>
         Defaults to <code>~/.please</code> but you might want it to be somewhere else if you're
