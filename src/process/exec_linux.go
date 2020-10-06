@@ -32,10 +32,10 @@ func (e *Executor) MustSandboxCommand(cmd []string) []string {
 }
 
 func Kill(pid int, sig syscall.Signal) error {
-	return syscall.Kill(-cmd.Process.Pid, sig)
+	return syscall.Kill(pid, sig)
 }
 
-func ForkExec(cmd string, args []string ) err {
+func ForkExec(cmd string, args []string ) error {
 	_, err = syscall.ForkExec(cmd, args, nil)
 	return err
 }
