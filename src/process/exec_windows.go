@@ -1,9 +1,9 @@
-// +build !linux
-// +build !windows
+// +build windows
 
 package process
 
 import (
+	"errors"
 	"os/exec"
 	"syscall"
 )
@@ -14,7 +14,6 @@ import (
 func (e *Executor) ExecCommand(command string, args ...string) *exec.Cmd {
 	cmd := exec.Command(command, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
 	}
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
@@ -29,11 +28,9 @@ func (e *Executor) MustSandboxCommand(cmd []string) []string {
 }
 
 func Kill(pid int, sig syscall.Signal) error {
-	return syscall.Kill(-cmd.Process.Pid, sig)
+	return nil
 }
-
 // ForkExec runs the cmd asynchronously
-func ForkExec(cmd string, args []string ) err {
-	_, err = syscall.ForkExec(cmd, args, nil)
-	return err
+func ForkExec(cmd string, args []string ) error {
+	return errors.New("ForExec isn't supported on windows")
 }

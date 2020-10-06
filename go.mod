@@ -2,6 +2,7 @@ module github.com/thought-machine/please
 
 require (
 	github.com/Songmu/prompter v0.0.0-20181014095714-d227c68538bd
+	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/bazelbuild/buildtools v0.0.0-20190228125936-4bcdbd1064fc
 	github.com/bazelbuild/remote-apis v0.0.0-20200904140912-1aeb39973178
@@ -12,6 +13,7 @@ require (
 	github.com/djherbis/atime v1.0.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fsnotify/fsnotify v1.4.7
+	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/gogo/protobuf v1.2.0 // indirect
 	github.com/golang/protobuf v1.4.2
 	github.com/google/shlex v0.0.0-20181106134648-c34317bd91bf
@@ -30,7 +32,7 @@ require (
 	github.com/peterebden/go-cli-init v1.2.0
 	github.com/peterebden/go-sri v1.0.0
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
-	github.com/pkg/xattr v0.4.0
+	github.com/pkg/xattr v0.4.2-0.20201005142651-d304131d5e58
 	github.com/shirou/gopsutil v2.18.12+incompatible
 	github.com/sourcegraph/go-diff v0.5.1
 	github.com/sourcegraph/go-lsp v0.0.0-20181119182933-0c7d621186c1

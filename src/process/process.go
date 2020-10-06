@@ -160,7 +160,7 @@ func killProcess(cmd *exec.Cmd, sig syscall.Signal, timeout time.Duration) bool 
 	// This is a bit of a fiddle. We want to wait for the process to exit but only for just so
 	// long (we do not want to get hung up if it ignores our SIGTERM).
 	log.Debug("Sending signal %s to -%d", sig, cmd.Process.Pid)
-	syscall.Kill(-cmd.Process.Pid, sig) // Kill the group - we always set one in ExecCommand.
+	Kill(-cmd.Process.Pid, sig) // Kill the group - we always set one in ExecCommand.
 	ch := make(chan error, 1)
 	go runCommand(cmd, ch)
 	select {

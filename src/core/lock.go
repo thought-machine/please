@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"syscall"
 
 	"github.com/pkg/xattr"
 )
@@ -33,16 +32,7 @@ func AcquireRepoLock(state *BuildState) {
 	} else if lockFile, err = os.Create(lockFilePath); err != nil {
 		log.Fatalf("Failed to create lock: %s", err)
 	}
-	// Try a non-blocking acquire first so we can warn the user if we're waiting.
-	log.Debug("Attempting to acquire lock %s...", lockFilePath)
-	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err == nil {
-		log.Debug("Acquired lock %s", lockFilePath)
-	} else {
-		log.Warning("Looks like another plz is already running in this repo. Waiting for it to finish...")
-		if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
-			log.Fatalf("Failed to acquire lock: %s", err)
-		}
-	}
+	acquireLockfile(lockFile)
 
 	// Record the operation performed.
 	if _, err = lockFile.Seek(0, io.SeekStart); err == nil {
@@ -67,7 +57,7 @@ func ReleaseRepoLock() {
 		log.Errorf("Lock file not acquired!")
 		return
 	}
-	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN); err != nil {
+	if err := releaseLockFile(lockFile); err != nil {
 		log.Errorf("Failed to release lock: %s", err) // No point making this fatal really
 	}
 	if err := lockFile.Close(); err != nil {

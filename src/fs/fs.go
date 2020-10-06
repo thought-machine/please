@@ -2,12 +2,10 @@
 package fs
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
-	"syscall"
 
 	"gopkg.in/op/go-logging.v1"
 )
@@ -52,25 +50,6 @@ func IsSymlink(filename string) bool {
 	return err == nil && (info.Mode()&os.ModeSymlink) != 0
 }
 
-// IsSameFile returns true if two filenames describe the same underlying file (i.e. inode)
-func IsSameFile(a, b string) bool {
-	i1, err1 := getInode(a)
-	i2, err2 := getInode(b)
-	return err1 == nil && err2 == nil && i1 == i2
-}
-
-// getInode returns the inode of a file.
-func getInode(filename string) (uint64, error) {
-	fi, err := os.Stat(filename)
-	if err != nil {
-		return 0, err
-	}
-	s, ok := fi.Sys().(*syscall.Stat_t)
-	if !ok {
-		return 0, fmt.Errorf("Not a syscall.Stat_t")
-	}
-	return s.Ino, nil
-}
 
 // CopyFile copies a file from 'from' to 'to', with an attempt to perform a copy & rename
 // to avoid chaos if anything goes wrong partway.

@@ -1,3 +1,5 @@
+// +build linux
+
 package process
 
 import (
@@ -27,4 +29,13 @@ func (e *Executor) MustSandboxCommand(cmd []string) []string {
 		log.Fatalf("Sandbox tool not found on PATH")
 	}
 	return append([]string{e.sandboxCommand}, cmd...)
+}
+
+func Kill(pid int, sig syscall.Signal) error {
+	return syscall.Kill(-cmd.Process.Pid, sig)
+}
+
+func ForkExec(cmd string, args []string ) err {
+	_, err = syscall.ForkExec(cmd, args, nil)
+	return err
 }

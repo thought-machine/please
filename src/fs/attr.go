@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"syscall"
 
 	"github.com/pkg/xattr"
 )
@@ -56,7 +57,7 @@ func ReadAttr(filename, xattrName string, xattrsEnabled bool) []byte {
 		if IsSymlink(filename) {
 			// Symlinks can't take xattrs on Linux. We stash it on the fallback hash file instead.
 			return ReadAttrFile(filename)
-		} else if e2 := err.(*xattr.Error).Err; !os.IsNotExist(e2) && e2 != xattr.ENOATTR {
+		} else if e2 := err.(*xattr.Error).Err; !os.IsNotExist(e2) && e2 != syscall.ENODATA {
 			log.Warning("Failed to read hash for %s: %s", filename, err)
 		}
 		return nil
