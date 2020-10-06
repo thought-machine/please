@@ -36,6 +36,6 @@ func Kill(pid int, sig syscall.Signal) error {
 }
 
 func ForkExec(cmd string, args []string ) error {
-	_, err = syscall.ForkExec(cmd, args, nil)
+	_, err := syscall.ForkExec(cmd, args, nil)
 	return err
 }
