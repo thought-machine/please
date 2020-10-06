@@ -13,19 +13,20 @@ import (
 	"bufio"
 	"compress/gzip"
 	"fmt"
+	"github.com/coreos/go-semver/semver"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/thought-machine/please/src/utils"
+	"github.com/ulikunitz/xz"
+	"gopkg.in/op/go-logging.v1"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
-
-	"github.com/coreos/go-semver/semver"
-	"github.com/hashicorp/go-retryablehttp"
-	"github.com/ulikunitz/xz"
-	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -40,6 +41,8 @@ var minSignedVersion = semver.Version{Major: 9, Minor: 2}
 
 var httpClient *retryablehttp.Client
 
+const milestoneURL = "https://please.build/milestones"
+
 // CheckAndUpdate checks whether we should update Please and does so if needed.
 // If it requires an update it will never return, it will either die on failure or on success will exec the new Please.
 // Conversely, if an update isn't required it will return. It may adjust the version in the configuration.
@@ -48,6 +51,9 @@ var httpClient *retryablehttp.Client
 // forceUpdate indicates whether the user passed --force on the command line, in which case we
 // will always update even if the version exists.
 func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify bool, progress bool) {
+	httpClient = retryablehttp.NewClient()
+	httpClient.Logger = &utils.HTTPLogWrapper{Logger: log}
+
 	if !shouldUpdate(config, updatesEnabled, updateCommand) && !forceUpdate {
 		clean(config, updateCommand)
 		return
@@ -70,10 +76,11 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 		}
 	}
 
-	httpClient = retryablehttp.NewClient()
-
 	// Download it.
 	newPlease := downloadAndLinkPlease(config, verify, progress)
+
+	// Print update milestone message if we hit a milestone
+	printMilestoneMessage(config.Please.Version.VersionString())
 
 	// Clean out any old ones
 	clean(config, updateCommand)
@@ -87,6 +94,50 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	}
 	// Shouldn't ever get here. We should have either exec'd or died above.
 	panic("please update failed in an an unexpected and exciting way")
+}
+
+func printMilestoneMessage(pleaseVersion string) {
+	milestoneURL := fmt.Sprintf("%s/%s.html", milestoneURL, pleaseVersion)
+	resp, err := httpClient.Head(milestoneURL)
+	if err != nil {
+		log.Warningf("Failed to check for milestone update: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	border := "+-----------------------------------------------------------------------------------------------------+"
+
+	// Prints `| {line} |` center aligning the text to match the width of the border above
+	printLn := func(line string, args ...interface{}) {
+		line = fmt.Sprintf(line, args...)
+		targetWidth := len(border) - 2 // -2 for the | on each side
+		padLen := len(line) + (targetWidth-len(line))/2
+
+		// Prints the string ensuring it's the target width
+		fmtString := "|%-" + fmt.Sprint(targetWidth) + "s|\n"
+
+		// Left pad the string so it's center aligned
+		paddedString := fmt.Sprintf("%"+fmt.Sprint(padLen)+"s", line)
+
+		fmt.Printf(fmtString, paddedString)
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		fmt.Println(border)
+		printLn("")
+		printLn("You've successfully updated to Please v%v", pleaseVersion)
+		printLn("This release marks an exciting milestone in Please's development!")
+		printLn("Read all about it here: %v#cli", milestoneURL)
+		printLn("")
+		fmt.Println(border)
+		return
+	}
+
+	// If we get a 40x resp back, assume there's no milestone release. Cloudfront gives 403s rather than 404s.
+	if !(resp.StatusCode >= 400 && resp.StatusCode < 500) {
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Warningf("Got unexpected error code from %v: %v\n %v", milestoneURL, resp.StatusCode, string(body))
+	}
 }
 
 // shouldUpdate determines whether we should run an update or not. It returns true iff one is required.

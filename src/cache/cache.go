@@ -12,28 +12,6 @@ import (
 
 var log = logging.MustGetLogger("cache")
 
-// logWrapper wraps the standard logger to provide a Printf function
-// for use with retryablehttp.
-type logWrapper struct {
-	*logging.Logger
-}
-
-func (w *logWrapper) Error(msg string, keysAndValues ...interface{}) {
-	w.Errorf("%v: %v", msg, keysAndValues)
-}
-
-func (w *logWrapper) Info(msg string, keysAndValues ...interface{}) {
-	w.Infof("%v: %v", msg, keysAndValues)
-}
-
-func (w *logWrapper) Debug(msg string, keysAndValues ...interface{}) {
-	w.Debugf("%v: %v", msg, keysAndValues)
-}
-
-func (w *logWrapper) Warn(msg string, keysAndValues ...interface{}) {
-	w.Warningf("%v: %v", msg, keysAndValues)
-}
-
 // NewCache is the factory function for creating a cache setup from the given config.
 func NewCache(state *core.BuildState) core.Cache {
 	c := newSyncCache(state, false)

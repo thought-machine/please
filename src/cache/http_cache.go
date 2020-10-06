@@ -7,6 +7,7 @@ import (
 	"compress/gzip"
 	"encoding/hex"
 	"fmt"
+	"github.com/thought-machine/please/src/utils"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -212,7 +213,7 @@ func newHTTPCache(config *core.Configuration) *httpCache {
 			HTTPClient: &http.Client{
 				Timeout: time.Duration(config.Cache.HTTPTimeout),
 			},
-			Logger:       &logWrapper{log},
+			Logger:       &utils.HTTPLogWrapper{Logger: log},
 			RetryWaitMin: 1 * time.Second,
 			RetryWaitMax: 30 * time.Second,
 			RetryMax:     config.Cache.HTTPRetry,
