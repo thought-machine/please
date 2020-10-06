@@ -28,12 +28,13 @@ func (e *Executor) MustSandboxCommand(cmd []string) []string {
 	return cmd
 }
 
+// Kill will kill a process with the given signal
 func Kill(pid int, sig syscall.Signal) error {
-	return syscall.Kill(-cmd.Process.Pid, sig)
+	return syscall.Kill(pid, sig)
 }
 
-// ForkExec runs the cmd asynchronously
-func ForkExec(cmd string, args []string ) err {
-	_, err = syscall.ForkExec(cmd, args, nil)
+// ForkExec will run the process asyc
+func ForkExec(cmd string, args []string ) error {
+	_, err := syscall.ForkExec(cmd, args, nil)
 	return err
 }

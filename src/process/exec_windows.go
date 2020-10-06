@@ -27,6 +27,7 @@ func (e *Executor) MustSandboxCommand(cmd []string) []string {
 	return cmd
 }
 
+// TODO(jpoole): figure out how to do these on windows
 func Kill(pid int, sig syscall.Signal) error {
 	return nil
 }

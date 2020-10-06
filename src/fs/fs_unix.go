@@ -2,6 +2,7 @@
 
 package fs
 
+import "os"
 
 // IsSameFile returns true if two filenames describe the same underlying file (i.e. inode)
 func IsSameFile(a, b string) bool {
