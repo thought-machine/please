@@ -51,6 +51,6 @@ func TestAllLinksAreLive(t *testing.T) {
 		allnames[filename] = true
 	}
 	for _, link := range alllinks {
-		assert.Contains(t, allnames, link, "Broken link %s", link)
+		assert.Contains(t, allnames, strings.TrimPrefix(link, "/"), "Broken link %s", link)
 	}
 }
