@@ -1,7 +1,7 @@
 deps = []
 
 for src in glob(
-    ["*.html"],
+    ["*.html", "milestones/*.html"],
     exclude = [
         "template.html",
         "lexicon*.html",
@@ -9,7 +9,7 @@ for src in glob(
     ],
 ):
     templated_rule = genrule(
-        name = src.replace(".", "_"),
+        name = src.replace(".", "_").replace("/", "_"),
         srcs = ["template.html", src],
         outs = [src],
         cmd = '"$TOOL" $SRCS > "$OUT"',
@@ -109,7 +109,7 @@ go_binary(
 # Convenient for popping open the docs in a browser after building (must use 'plz run').
 sh_cmd(
     name = "view",
-    cmd = "sensible-browser $(out_location :index_html)",
+    cmd = "sensible-browser http://localhost:8080 && cd $(out_dir :index_html) && python3 -m http.server 8080",
     deps = [
         ":docs",
         ":index_html",
