@@ -3,11 +3,36 @@
 Go has a strong built-in concept of packages so it's probably a good idea to match Please
 rules to Go packages.
 """
-def go_toolchain(name:str, url:str = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"]):
+def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"]):
+    """
+    Downloads the golang SDK and exposes :<name>|go and :<name>|gofmt as entry points. To use this rule add the
+    following to your .plzconfig:
+
+    [go]
+    GoTool = //.../<name>|go
+
+    Args:
+      name (str): Name of the rule.
+      url (str | dict): The URL used to download the golang SDK. Can be a single string or a dictionary mapping
+                        GOOS-GOARCH to URLs i.e. lunux-amd64: 'https://...'. Either provide url or version, but not both.
+      version (str): The version of the golang SDK to download. The SDK will be downloaded from https://golang.org/dl/...
+                     and the rule will use the current platforms GOOS and GOARCH setting. Either provide url or version,
+                     but not both.
+      hashes (list): A list of possible hashes for the downloaded sdk archive. Optional.
+      visibility (list): Visibility specification. Defaults to public.
+    """
+    if url and version:
+        raise ParseError("Either version or url should be provided but not both")
+
+    if version:
+        sdk_url = f'https://golang.org/dl/go{version}.{CONFIG.GOOS}-{CONFIG.GOARCH}.tar.gz'
+    else:
+        sdk_url = url if isinstance(jdk_url, str) else url[f'{CONFIG.GOOS}-{CONFIG.GOARCH}']
+
     download = remote_file(
         name = name,
         _tag = 'download',
-        url = f'https://golang.org/dl/go{version}.linux-amd64.tar.gz' if version else url,
+        url = sdk_url,
         hashes = hashes,
     )
 
