@@ -3,6 +3,27 @@
 Go has a strong built-in concept of packages so it's probably a good idea to match Please
 rules to Go packages.
 """
+def go_toolchain(name:str, url:str = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"]):
+    download = remote_file(
+        name = name,
+        _tag = 'download',
+        url = f'https://golang.org/dl/go{version}.linux-amd64.tar.gz' if version else url,
+        hashes = hashes,
+    )
+
+    # TODO(jpoole): optionally build the SDK from source for cross compilation/race detector etc.
+    return build_rule(
+        name = name,
+        srcs = [download],
+        cmd = 'tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*',
+        outs = [name],
+        entry_points = {
+            'go': f'{name}/bin/go',
+            'gofmt': f'{name}/bin/gofmt',
+        },
+        binary = True,
+        visibility = visibility,
+    )
 
 
 def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
