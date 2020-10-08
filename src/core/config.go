@@ -272,7 +272,6 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.NumExecutors = 20 // kind of arbitrary
 	config.Remote.HomeDir = "~"
 	config.Remote.Secure = true
-	config.Remote.Gzip = true
 	config.Remote.VerifyOutputs = true
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
