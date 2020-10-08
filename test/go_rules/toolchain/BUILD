@@ -7,4 +7,5 @@ please_repo_e2e_test (
         "out.txt": "wibble wibble wibble",
     },
     repo = "test_repo",
+    labels = ["no-musl"],
 )
