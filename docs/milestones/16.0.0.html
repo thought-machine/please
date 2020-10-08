@@ -1,4 +1,197 @@
+    <h1>Please 16.0.0 is here!</h1>
+    <p>
+        We've been hard at work and we're very excited to share what we've been up to! This is the first
+        milestone newsletter so bear with, it's a big one!
 
-<h1>Please 16.0.0 isn't quite ready yet</h1>
-<p>How did you find this page? You're a bit early. We haven't quite finished up this milestone but check back soon!
-    We'll be updating this space!
+    <h2>Clustered builds!</h2>
+    <p>
+        Please now supports clustered builds through the
+        <a href="https://github.com/bazelbuild/remote-apis">REAPI (Remote Execution API)</a> which will enable superior
+        scalability and incrementality. More information on this can be found <a href="/remote_builds.html">here</a>.
+
+    <p>
+        Improving interoperability with existing build servers is an ongoing piece of work, however if you're trying to
+        set up remote execution for your project, we'd love to hear from you. Come on over to our
+        <a href="https://gitter.im/please-build/Lobby">gitter</a> and say hi!
+
+    <h2>More platforms!</h2>
+    <p>
+        Please is now available on more platforms than ever! FreeBSD joins ranks alongside Linux and macOS as the third
+        platform to receive binary releases. The linux binary now also runs on MUSL based linux distributions.
+    <p>
+        Help is dearly wanted to support Windows; come over to our <a href="https://gitter.im/please-build/Lobby">gitter</a>
+        if you're interested! See <a href="https://github.com/thought-machine/please/issues/1284">#1284</a> for more
+        information.
+
+    <h2>Better first time setup</h2>
+    <p>
+        We're always aiming to make please as easy to use as possible. One constant piece of feedback we get is that
+        please is great to use once you have it set up, but trying it out for the first time can be frustrating. We've
+        been trying to address that!
+    <p>
+        <code>plz init</code> is now much smarter! First of all, it is now interactive! It will now prompt you to ask if
+        you want to set up any specific configuration, and guide you through that process.
+    <p>
+        We've started with <a href="#golang-setup">golang</a> however expect to see similar love come to all the major
+        languages: java, python, c and c++.
+
+    <h2>Golang!</h2>
+    <p> We've not forgotten about you gophers out there! Go has received a lot of love in recent releases especially
+        around making it easier to transition from go build to please.
+    <h3>Go test compatibility</h3>
+    <p>
+        If you're working on a pure go project, it can be jarring that Please runs tests from the repo root whereas
+        go runs them from the package directory. To make it easier to migrate existing go projects, and improve
+        compatibility with IDEs and tooling, you can now change this behavior by adding the following to your config:
+    <pre><code>
+    [go]
+    GoTestRootCompat = true
+    </code></pre>
+    <p>
+        This will make Please run tests from the package directory just like <code>go test</code> would.
+    <h3 id="golang-setup">Project setup</h3>
+    <p>
+        Setting up please for the first time has never been easier! <code>plz init</code> is now much smarter than it
+        used to be! If you're migrating from an existing go project, <code>plz init</code> will detect any go.mod file
+        and set up your <code>.plzconfig</code> automatically!
+    <p>
+        It will also detect if your go installation is not in the path you have please configured to look in! This was
+        a common pitfall for a lot of first timers with please.
+    <p>
+        Speaking of your go path, we've now simplified configuration of go in please! You're expected to either set your
+        GOROOT, your go tool, or neither if you go installation is going to be on the configured path. Once Please knows
+        where your go installation is, it will then take care of setting everything else appropriately for you.
+    <h3>Go get v2 modules</h3>
+    <p>
+        You can now specify the module major version in <code>go_get()</code>. This allows Please to download and
+        install a go module and correctly handle the new import path. For example:
+    <pre><code class="language-plz">
+    go_get(
+        name = "some-module",
+        get = "github.com/some/module/v2",
+        revision = "v2.0.1",
+        module_major_version = "v2",
+        ...
+    )
+    </code></pre>
+    <p>
+        This module will now be available to your go code as <code>"github.com/some/module/v2"</code>.
+    <h3>New linking approach</h3>
+    <p>
+        This one is a bit down in the detail, but for those of you interested: we completely overhauled how we
+        find go sources and libraries. Originally we tried to generate a go path based on where we find go
+        sources and object files. This approach lead to a huge amount of rare but horrific edge cases where the go
+        tooling would find the incorrect package, or incorrect version of a package.
+    <p>
+        The new approach is based on <code>go tool compile --importcfg</code> and <code>go tool link --importcfg</code>
+        and is much more explicit. Each rule now generates an import config file that tells the go tooling where to
+        find any packages it has produced. This approach is much more reliable and has eliminated a large amount of
+        obscure compile errors.
+    <h3>New built in functions and command replacements</h3>
+    <p>
+        The're have been a number of small additions to the build language in the recent releases:
+    <ul>
+        <li>Added <code>removeprefix(...)</code> and <code>removesuffix(...)</code> string utils to the build language.</li>
+        <li>Added <code>subrepo_name(...)</code> which will return you the subrepo name of the current package. This
+            is extremely useful for setting default configuration for third party subrepos.</li>
+        <li>Added <code>$(out_dir ...)</code> and <code>$(out_locations ...)</code> command expansions. See more
+            <a href="/build_rules.html">here</a>. </li>
+    </ul>
+
+    <h2>For the rule authors out there!</h2>
+    <p>
+        There have been some huge improvements to the build language over the recent releases aimed at addressing some
+        common pain points when writing build rules.
+
+    <h3>Output directories</h3>
+    <p>
+        Traditionally dealing with rules where the outputs are difficult to know beforehand has been a major pain point.
+        This problem copped up commonly in code generation, downloading remote files, or just when a rule has a lot of
+        flat outputs. The old hat approach to this is to <code>find . -name *.go</code> or the like and add these
+        outputs via a post build function. Yuck!
+    <p>
+        For example, say we have <code>codegentool</code> that takes in some go srcs, and generates some <code>.go</code>
+        files, <code>foo.go</code> and <code>bar/bar.go</code>. We have no simple way of knowing what this tool will
+        output because it's dependent by the srcs we passed in.
+    <p>
+        Output directories aim to solve this problem by specifying a directory as the output root of your rule. Any
+        files that end up in here are outputted as if they were in the package directory. In the build language, this
+        looks a little something like:
+    <pre><code class="language-plz">
+    # //foo:foo
+    build_rule(
+        name = "codegen",
+        ...
+        cmd = "mkdir _out && codegentool $SRCS -o _out",
+        output_dirs = ["_out"],
+        ...
+    )
+    </code></pre>
+    <p>
+        When we build this rule, we get:
+    <pre><code>
+    Build finished; total time 250ms, incrementality 99.7%. Outputs:
+    //foo:codegen:
+      plz-out/gen/foo/foo.go
+      plz-out/gen/foo/bar
+    </code></pre>
+         Notice that the build rule doesn't need to know the exact files that are going to be generated.
+    <p>
+        Currently, only the top level files and folders in the output directory are added to the rule. If instead, all files
+        in the folders needs to be added, the rule can be changed to:
+    <pre><code class="language-plz">
+    build_rule(
+        name = "...",
+        ...
+        cmd = "mkdir _out && codegentool $SRCS -o _out",
+        output_dirs = ["_out/**"],
+        ...
+    )
+    </code></pre>
+    <p>
+        This will generate:
+    <pre><code>
+    Build finished; total time 250ms, incrementality 99.7%. Outputs:
+    //foo:codegen:
+      plz-out/gen/foo/foo.go
+      plz-out/gen/foo/bar/bar.go
+    </code></pre>
+    <p>
+        This can be useful when the output of the rule will be passed to some tool that doesn't accept directories e.g. javac.
+
+    <h3>Entry points</h3>
+    <p>
+        Another major pain-point in Please has been tooling that expect some resources to be in place in order to run.
+        For examaple, javac expects to be run from within a jdk instalation folder so it can  dynamically link to its
+        libraries.
+    <p>
+        Entry points address this problem by allowing you to name a subset of the output files of a rule as entry
+        points. These can then be referenced with an annotated build rule later on.
+    <pre><code class="language-plz">
+    build_rule(
+        name = "jdk",
+        ...
+        outs = ["jdk"],
+        entry_points = {
+            "java": f"jdk/bin/java",
+            "javac": f"jdk/bin/javac",
+        },
+        ...
+    )
+    </code></pre>
+    <p>
+        Once an entry point has been defined, it may be referred to with annotations as such:
+    <pre><code class="language-plz">
+    build_rule(
+        name = ...,
+        cmd = "$TOOLS_JAVAC ...",
+        tools = {
+            "java": f"//tools:jdk|java",
+            "javac": f"//tools:jdk|javac",
+        },
+        ...
+    )
+    </code></pre>
+    <p>
+        We're actively working on implementing a toolchain rules for java, python and go using this approach to improve
+        portability of please projects.

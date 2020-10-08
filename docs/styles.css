@@ -129,7 +129,7 @@ hr {
         flex: 1 4 25%;
     }
     .right {
-        flex: 3 4 75%;
+        flex: 3 4 100%;
     }
 }
 /* Header row */
@@ -381,8 +381,8 @@ hr {
 
 /* Main body */
 .body {
-    padding-left: 10%;
-    overflow-x: hidden;
+    padding-left: 30px;
+    max-width: 1200px;
 }
 .body h1 {
     font-family: "Calibre-Thin", sans-serif;
@@ -396,7 +396,7 @@ hr {
 .body h2, .body h3, .body h2 a, .body h3 a {
     font-family: "Calibre-Thin", sans-serif;
     color: #02e68f;
-    text-indent: -5%;
+    text-indent: -30px;
     padding: 2em 0 0 0;
     font-weight: normal;
 }
