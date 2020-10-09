@@ -907,7 +907,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             deps = [a_rule],
             visibility = visibility,
             test_only = test_only,
-            cmd = _generate_pkg_import_cfg_cmd("$OUT", '$PKG_DIR', True),
+            cmd = _generate_pkg_import_cfg_cmd('"$OUT"', '"$PKG_DIR"', True),
             outs = [f'{name}.importconfig'],
         )
         exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
@@ -1039,7 +1039,7 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     # Annotates files for coverage.
     cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); "$TOOLS_GO" tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
 
-    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '$GOROOT')
+    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + gen_import_cfg) if all_srcs else gen_import_cfg
     cmds = {
@@ -1056,7 +1056,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
 
     _link_cmd = f'"$TOOLS_GO" tool link -importcfg importconfig -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" -o "$OUT"'
 
-    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '$GOROOT')
+    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
 
     linkerdefs = []
