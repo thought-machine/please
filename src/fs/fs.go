@@ -90,8 +90,10 @@ func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
 		return err
 	}
 	dir, file := path.Split(to)
-	if err := os.MkdirAll(dir, DirPermissions); err != nil {
-		return err
+	if dir != "" {
+		if err := os.MkdirAll(dir, DirPermissions); err != nil {
+			return err
+		}
 	}
 	tempFile, err := ioutil.TempFile(dir, file)
 	if err != nil {
