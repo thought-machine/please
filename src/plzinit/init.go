@@ -76,10 +76,7 @@ func InitConfig(dir string, bazelCompatibility bool, noPrompt bool) {
 	}
 	fmt.Printf("Wrote config template to %s, you're now ready to go!\n", config)
 	// Now write the wrapper script
-	data := assets.MustAsset(wrapperScriptName)
-	if err := ioutil.WriteFile(wrapperScriptName, data, 0755); err != nil {
-		log.Fatalf("Failed to write file: %s", err)
-	}
+	InitWrapperScript()
 	fmt.Printf("\nAlso wrote wrapper script to %s; users can invoke that directly to run Please, even without it installed.\n", wrapperScriptName)
 	// If we're in a known repository type, ignore the plz-out directory.
 	if s := scm.New(dir); s != nil {
@@ -116,4 +113,12 @@ func readConfig(filename string) []byte {
 		log.Fatalf("Failed to read config file: %s", err)
 	}
 	return b
+}
+
+// InitWrapperScript initializes the pleasew script.
+func InitWrapperScript() {
+	data := assets.MustAsset(wrapperScriptName)
+	if err := ioutil.WriteFile(wrapperScriptName, data, 0755); err != nil {
+		log.Fatalf("Failed to write file: %s", err)
+	}
 }
