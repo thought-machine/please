@@ -14,7 +14,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     Args:
       name (str): Name of the rule.
       url (str | dict): The URL used to download the golang SDK. Can be a single string or a dictionary mapping
-                        GOOS-GOARCH to URLs i.e. lunux-amd64: 'https://...'. Either provide url or version, but not both.
+                        GOOS-GOARCH to URLs i.e. linux-amd64: 'https://...'. Either provide url or version, but not both.
       version (str): The version of the golang SDK to download. The SDK will be downloaded from https://golang.org/dl/...
                      and the rule will use the current platforms GOOS and GOARCH setting. Either provide url or version,
                      but not both.
