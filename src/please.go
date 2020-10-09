@@ -226,6 +226,8 @@ var opts struct {
 			Location  string `short:"l" long:"location" description:"The location of the build file to write the subrepo rule to" default:"BUILD"`
 			PrintOnly bool   `long:"print" description:"Print the rule to standard out instead of writing it to a file"`
 		} `command:"pleasings" description:"Initialises the pleasings repo"`
+		Pleasew struct {
+		} `command:"pleasew" description:"Initialises the pleasew wrapper script"`
 	} `command:"init" subcommands-optional:"true" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {
@@ -704,6 +706,10 @@ var buildFunctions = map[string]func() int{
 		if err := plzinit.InitPleasings(opts.Init.Pleasings.Location, opts.Init.Pleasings.PrintOnly, opts.Init.Pleasings.Revision); err != nil {
 			log.Fatalf("failed to write pleasings subrepo file: %v", err)
 		}
+		return 0
+	},
+	"pleasew": func() int {
+		plzinit.InitWrapperScript()
 		return 0
 	},
 }
