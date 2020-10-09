@@ -7,5 +7,6 @@ please_repo_e2e_test (
         "out.txt": "wibble wibble wibble",
     },
     repo = "test_repo",
-    labels = ["no-musl"],
+    #TODO(jpoole): Fix this on FreeBSD and re-enable this test of cirrus
+    labels = ["no-musl", "no_cirrus"],
 )
