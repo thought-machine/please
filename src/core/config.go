@@ -415,6 +415,7 @@ type Configuration struct {
 		Timeout       cli.Duration `help:"Timeout for connections made to the remote server."`
 		Secure        bool         `help:"Whether to use TLS for communication or not."`
 		Gzip          bool         `help:"Whether to use gzip compression for communication."`
+		Zstd          bool         `help:"Whether to use zstd compression for communication."`
 		VerifyOutputs bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
 		HomeDir       string       `help:"The home directory on the build machine."`
 		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`

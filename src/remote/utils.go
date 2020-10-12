@@ -23,6 +23,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/mostynb/go-grpc-compression/zstd"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -524,7 +525,9 @@ func reencodeSRI(target *core.BuildTarget, h string) string {
 func (c *Client) dialOpts() ([]grpc.DialOption, error) {
 	// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
 	callOpts := []grpc.CallOption{grpc.MaxCallRecvMsgSize(419430400)}
-	if c.state.Config.Remote.Gzip {
+	if c.state.Config.Remote.Zstd {
+		callOpts = append(callOpts, grpc.UseCompressor(zstd.Name))
+	} else if c.state.Config.Remote.Gzip {
 		callOpts = append(callOpts, grpc.UseCompressor(gzip.Name))
 	}
 	opts := []grpc.DialOption{
