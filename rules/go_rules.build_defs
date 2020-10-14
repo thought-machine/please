@@ -237,8 +237,7 @@ def _generate_pkg_import_cfg_cmd(out, pkg_location, handle_basename_eq_dirname=F
     else:
         format_packagefile_directive = 'xargs -I{} echo "packagefile {}=' + pkg_location + '/{}.a"'
 
-    cmd = f'{find_archives} | {remove_pkg_location} | {remove_ext} | {format_packagefile_directive} > {out}'
-    return f'echo "{find_archives} | {remove_pkg_location} | {remove_ext}" && {cmd}'
+    return f'{find_archives} | {remove_pkg_location} | {remove_ext} | {format_packagefile_directive} > {out}'
 def _aggregate_import_cfg_cmd():
     return 'find . -name "*.importconfig" | xargs -I{} cat {} >> importconfig'
 
@@ -1028,7 +1027,7 @@ def _set_go_env():
     if CONFIG.GOROOT:
         go_root = CONFIG.GOROOT
     elif CONFIG.GO_TOOL.startswith(":") or CONFIG.GO_TOOL.startswith("//"):
-        label = CONFIG.GO_TOOL.split('|')[0]
+        label, _, _ = CONFIG.GO_TOOL.rpartition('|')
         go_root = f'$(location {label})'
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
