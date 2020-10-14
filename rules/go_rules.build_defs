@@ -3,6 +3,52 @@
 Go has a strong built-in concept of packages so it's probably a good idea to match Please
 rules to Go packages.
 """
+def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"]):
+    """
+    Downloads Go and exposes :<name>|go and :<name>|gofmt as entry points. To use this rule add the
+    following to your .plzconfig:
+
+    [go]
+    GoTool = //.../<name>|go
+
+    Args:
+      name (str): Name of the rule.
+      url (str | dict): The URL used to download Go. Can be a single string or a dictionary mapping
+                        GOOS-GOARCH to URLs i.e. linux-amd64: 'https://...'. Either provide url or version, but not both.
+      version (str): The version of Go to download. Go will be downloaded from https://golang.org/dl/...
+                     and the rule will use the current platforms GOOS and GOARCH setting. Either provide url or version,
+                     but not both.
+      hashes (list): A list of possible hashes for the downloaded archive. Optional.
+      visibility (list): Visibility specification. Defaults to public.
+    """
+    if url and version:
+        raise ParseError("Either version or url should be provided but not both")
+
+    if version:
+        sdk_url = f'https://golang.org/dl/go{version}.{CONFIG.GOOS}-{CONFIG.GOARCH}.tar.gz'
+    else:
+        sdk_url = url if isinstance(sdk_url, str) else url[f'{CONFIG.GOOS}-{CONFIG.GOARCH}']
+
+    download = remote_file(
+        name = name,
+        _tag = 'download',
+        url = sdk_url,
+        hashes = hashes,
+    )
+
+    # TODO(jpoole): optionally build the stdlib from source for cross compilation/race detector etc.
+    return build_rule(
+        name = name,
+        srcs = [download],
+        cmd = 'tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*',
+        outs = [name],
+        entry_points = {
+            'go': f'{name}/bin/go',
+            'gofmt': f'{name}/bin/gofmt',
+        },
+        binary = True,
+        visibility = visibility,
+    )
 
 
 def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
@@ -861,7 +907,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             deps = [a_rule],
             visibility = visibility,
             test_only = test_only,
-            cmd = _generate_pkg_import_cfg_cmd("$OUT", '$PKG_DIR', True),
+            cmd = _generate_pkg_import_cfg_cmd('"$OUT"', '"$PKG_DIR"', True),
             outs = [f'{name}.importconfig'],
         )
         exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
@@ -993,7 +1039,7 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     # Annotates files for coverage.
     cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); "$TOOLS_GO" tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
 
-    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '$GOROOT')
+    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
     prefix = ('export SRCS="$PKG_DIR/*.go"; ' + gen_import_cfg) if all_srcs else gen_import_cfg
     cmds = {
@@ -1010,7 +1056,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
 
     _link_cmd = f'"$TOOLS_GO" tool link -importcfg importconfig -tmpdir "$TMP_DIR" -extld "$TOOLS_LD" -o "$OUT"'
 
-    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '$GOROOT')
+    gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
 
     linkerdefs = []

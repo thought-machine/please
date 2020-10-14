@@ -5,6 +5,7 @@ def please_repo_e2e_test(
         repo: str,
         deps: list=[],
         expected_output: dict,
+        labels: list = [],
 ):
     test_cmd = " && ".join([
         "mv $DATA_FREE_BSD_CONFIG $DATA_REPO",
@@ -28,5 +29,5 @@ def please_repo_e2e_test(
         data = data,
         test = True,
         no_test_output = True,
-        labels = ["plz_e2e_test", "e2e"],
+        labels = labels + ["plz_e2e_test", "e2e"],
     )

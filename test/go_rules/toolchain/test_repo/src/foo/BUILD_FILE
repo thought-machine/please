@@ -1,0 +1,11 @@
+go_library (
+  name = "foo",
+  srcs = ["foo.go"],
+  visibility = ["//src:main"],
+)
+
+go_test (
+  name = "foo_test",
+  srcs = ["foo_test.go"],
+  deps = [":foo"],
+)

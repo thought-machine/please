@@ -29,7 +29,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
-	_ "google.golang.org/grpc/encoding/gzip" // Registers the gzip compressor at init
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
 	"gopkg.in/op/go-logging.v1"

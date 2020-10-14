@@ -67,6 +67,5 @@ curl -fsSL "${PLEASE_URL}" | tar -xJpf- --strip-components=1 -C "$DIR"
 for x in `ls "$DIR"`; do
     ln -sf "${DIR}/${x}" "$LOCATION"
 done
-ln -sf "${DIR}/please" "${LOCATION}/plz"
 echo -e >&2 "${GREEN}Should be good to go now, running plz...${RESET}"
 exec "$TARGET" ${PLZ_ARGS:-} "$@"

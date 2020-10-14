@@ -12,6 +12,7 @@ go_library(
         "//src/process",
         "//third_party/go:bytestream",
         "//third_party/go:errgroup",
+        "//third_party/go:go-grpc-compression",
         "//third_party/go:grpc",
         "//third_party/go:grpc-middleware",
         "//third_party/go:logging",
