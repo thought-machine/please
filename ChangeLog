@@ -1,3 +1,37 @@
+Version 15.6.0
+--------------
+
+    * Added an `entry_points` dict to `build_rule()` which can be used
+      to name a number of outputs from a build rule. These can later be
+      referred to as tools in other rules. See `java_toolchain()` for an
+      example. #1243
+    * Rewrote `java_toolchain()` to use aforementioned entry points.
+      NB: this implementation lacks support for javac workers #1263
+    * Added `go_toolchain()` build rule. This is still a work in progress
+      but currently downloads the golang distribution. This can then be
+      used to set GoTool in your `.plzconfig`. #1286
+    * Please will now retry on failures to download updates #1257
+    * The pleasew wrapper script will now pass `$PLZ_ARGS` when it invokes
+      please much like the bootstrap script. This can be useful in a CI
+      environment. #1252
+    * Added new sub-command `plz fmt` that will try and format build files.
+      This uses a modified version of Bazel's buildifier that supports more
+      of please's build language. #1265
+    * Fix issue where `go_test()` wasn't using the configured `GoTool` for
+      coverage. #1271
+    * Allow `plz query somepath` to read from stdin #1269
+    * Added `--log_append` which will make please append to `plz-out/log/build.log`
+      instead of overriding it. This can be useful when piping outputs from
+      `plz query` back into please. #1273
+    * Introduced the concept of milestone releases! Once we feel please has reached
+      a milestone in its development, we will write up a summary of recent changes
+      and that release will be marked as a milestone. Please will print a dialogue
+      linking to this writeup when updating. Watch this space, we will also be
+      distributing these via a newsletter! #1281
+    * Remote execution: turn off gzip compression by default (#1283) and add support
+      for zstd compression (#1288)
+
+
 Version 15.5.0
 --------------
 
