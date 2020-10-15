@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path"
 	"runtime"
@@ -46,13 +47,36 @@ func buildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 			env = append(env, e+"="+os.Getenv(e))
 		}
 	}
-
 	if target.PassEnv != nil {
 		for _, e := range *target.PassEnv {
 			env = append(env, e+"="+os.Getenv(e))
 		}
 	}
 	return env
+}
+
+func escapeFile(file string) string {
+	if strings.Contains(file, " "){
+		panic(fmt.Errorf("failed to build env as path '%s' contains a space", file))
+	}
+	return file
+}
+
+func buildFileList(files []string, sep string) string {
+	switch len(files) {
+	case 0:
+		return ""
+	case 1:
+		return escapeFile(files[0])
+	}
+
+	var b strings.Builder
+	b.WriteString(escapeFile(files[0]))
+	for _, s := range files[1:] {
+		b.WriteString(sep)
+		b.WriteString(s)
+	}
+	return b.String()
 }
 
 // BuildEnvironment creates the shell env vars to be passed into the exec.Command calls made by plz.
@@ -67,8 +91,8 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	env = append(env,
 		"TMP_DIR="+tmpDir,
 		"TMPDIR="+tmpDir,
-		"SRCS="+strings.Join(sources, " "),
-		"OUTS="+strings.Join(outEnv, " "),
+		"SRCS="+buildFileList(sources, " "),
+		"OUTS="+buildFileList(outEnv, " "),
 		"HOME="+tmpDir,
 		"TOOLS="+strings.Join(toolPaths(state, target.Tools, abs), " "),
 		// Set a consistent hash seed for Python. Important for build determinism.
@@ -80,7 +104,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	}
 	// The SRC variable is only available on rules that have a single source file.
 	if len(sources) == 1 {
-		env = append(env, "SRC="+sources[0])
+		env = append(env, "SRC="+escapeFile(sources[0]))
 	}
 	// Similarly, TOOL is only available on rules with a single tool.
 	if len(target.Tools) == 1 {
@@ -89,27 +113,26 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	// Named source groups if the target declared any.
 	for name, srcs := range target.NamedSources {
 		paths := target.SourcePaths(state.Graph, srcs)
-		// TODO(macripps): Quote these to prevent spaces from breaking everything (consider joining with NUL or sth?)
-		env = append(env, "SRCS_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
+		env = append(env, "SRCS_"+strings.ToUpper(name) + "=" + buildFileList(paths, " "))
 	}
 	// Named output groups similarly.
 	for name, outs := range target.DeclaredNamedOutputs() {
 		outs = target.GetTmpOutputAll(outs)
-		env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
+		env = append(env, "OUTS_"+strings.ToUpper(name) + "=" + buildFileList(outs, " "))
 	}
 	// Named tools as well.
 	for name, tools := range target.namedTools {
-		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
+		env = append(env, "TOOLS_"+strings.ToUpper(name) + "=" + strings.Join(toolPaths(state, tools, abs), " "))
 	}
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
-		secrets := "SECRETS=" + fs.ExpandHomePath(strings.Join(target.Secrets, ":"))
+		secrets := "SECRETS=" + fs.ExpandHomePath(buildFileList(target.Secrets, ":"))
 		secrets = strings.Replace(secrets, ":", " ", -1)
 		env = append(env, secrets)
 	}
 	// NamedSecrets, if they declared any.
 	for name, secrets := range target.NamedSecrets {
-		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + fs.ExpandHomePath(strings.Join(secrets, ":"))
+		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + fs.ExpandHomePath(buildFileList(secrets, ":"))
 		secrets = strings.Replace(secrets, ":", " ", -1)
 		env = append(env, secrets)
 	}
@@ -164,12 +187,12 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
 	}
 	if len(target.Data) > 0 {
-		env = append(env, "DATA="+strings.Join(target.AllDataPaths(state.Graph), " "))
+		env = append(env, "DATA="+buildFileList(target.AllDataPaths(state.Graph), " "))
 	}
 	if target.namedData != nil {
 		for name, data := range target.namedData {
 			paths := target.SourcePaths(state.Graph, data)
-			env = append(env, "DATA_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
+			env = append(env, "DATA_"+strings.ToUpper(name)+"="+buildFileList(paths, " "))
 		}
 	}
 	// Bit of a hack for gcov which needs access to its .gcno files.
@@ -234,9 +257,9 @@ func toolPath(state *BuildState, tool BuildInput, abs bool) string {
 		}
 		return path
 	} else if abs {
-		return tool.Paths(state.Graph)[0]
+		return escapeFile(tool.Paths(state.Graph)[0])
 	}
-	return tool.LocalPaths(state.Graph)[0]
+	return escapeFile(tool.LocalPaths(state.Graph)[0])
 }
 
 func toolPaths(state *BuildState, tools []BuildInput, abs bool) []string {
