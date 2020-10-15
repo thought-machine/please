@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gopkg.in/op/go-logging.v1"
@@ -28,6 +29,10 @@ const dummyCoverage = "<?xml version=\"1.0\" ?><coverage></coverage>"
 // by the attr utility, but that is not done for us here.
 const xattrName = "user.plz_test"
 
+var numUploadFailures int64
+
+const maxUploadFailures int64 = 10
+
 // Test runs the tests for a single target.
 func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, run int) {
 	target := state.Graph.TargetOrDie(label)
@@ -36,8 +41,13 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, r
 	defer func() {
 		runsAllCompleted := target.CompleteRun(state)
 		if runsAllCompleted && state.Config.Test.Upload != "" {
-			if err := uploadResults(target, state.Config.Test.Upload.String()); err != nil {
-				log.Warning("%s", err)
+			if numUploadFailures < maxUploadFailures {
+				if err := uploadResults(target, state.Config.Test.Upload.String()); err != nil {
+					log.Warning("%s", err)
+					if atomic.AddInt64(&numUploadFailures, 1) >= maxUploadFailures {
+						log.Error("Failed to upload test results %d times, giving up", maxUploadFailures)
+					}
+				}
 			}
 		}
 	}()
