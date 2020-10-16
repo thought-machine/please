@@ -101,7 +101,7 @@ def dict(d):
     raise 'dict is not callable'
 
 
-def glob(include:list, exclude:list&excludes=[], hidden:bool=False) -> list:
+def glob(include:list, exclude:list&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY) -> list:
     pass
 
 
