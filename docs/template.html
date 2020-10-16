@@ -65,7 +65,7 @@
               <ul>
                 <li{{menuItem "config"}}><a href="/config.html">Config options</a></li>
                 <li{{menuItem "commands"}}><a href="/commands.html">Commands</a></li>
-                <li{{menuItem "build_rules"}}><a href="/build_rules.html">Build rules</a></li>
+                <li{{menuItem "build_rules"}}><a href="/build_rules.html">Writing build rules</a></li>
                 <li{{menuItem "tests"}}><a href="/tests.html">Testing with Please</a></li>
                 <li{{menuItem "verification"}}><a href="/verification.html">Hashes and licences</a></li>
                 <li{{menuItem "workers"}}><a href="/workers.html">Persistent workers</a></li>
@@ -106,9 +106,15 @@
         </div>
       {{ end }}
       </div>
-      <div class="body">
-      {{ .Contents }}
-      </div>
+      {{ if eq .Filename "index.html" }}
+        <div class="index-body body">
+          {{ .Contents }}
+        </div>
+      {{ else }}
+        <div class="body">
+          {{ .Contents }}
+        </div>
+      {{ end }}
     </div>
     </div>
 

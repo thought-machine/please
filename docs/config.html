@@ -37,7 +37,7 @@
       </code></pre>
       Comma-separating on the same line won't generally work.</p>
 
-    <h3>[Please]</h3>
+    <h3 id="please">[Please]</h3>
 
     <ul>
       <li><b>Version</b><br/>
@@ -79,7 +79,7 @@
         Defaults to the number of CPUs plus two.</li>
     </ul>
 
-    <h3>[Parse]</h3>
+    <h3 id="parse">[Parse]</h3>
 
     <ul>
       <li><b>BuildFileName</b> (repeated string)<br/>
@@ -126,7 +126,7 @@
         Defaults to <code>False</code>.</li>
     </ul>
 
-    <h3>[Build]</h3>
+    <h3 id="build">[Build]</h3>
 
     <ul>
 
@@ -170,7 +170,7 @@
         Defaults to <code>en_GB.UTF-8</code>.</li>
     </ul>
 
-    <h3><a name="buildenv">[BuildEnv]</a></h3>
+    <h3 id="build-env"><a name="buildenv">[BuildEnv]</a></h3>
 
     <p>A set of extra environment variables to define for build rules. For example:
 
@@ -206,7 +206,7 @@
         uploaded to remote storage to identify the original machine that created them.</li>
     </ul>
 
-    <h3><a name="cache">[Cache]</a></h3>
+    <h3 id="cache"><a name="cache">[Cache]</a></h3>
 
     <ul>
 
@@ -253,7 +253,7 @@
 
     </ul>
 
-    <h3>[Test]</h3>
+    <h3 id="test">[Test]</h3>
 
     <ul>
       <li><b>Timeout</b> (int)<br/>
@@ -273,7 +273,7 @@
         XML format.</li>
     </ul>
 
-    <h3>[Cover]</h3>
+    <h3 id="cover">[Cover]</h3>
 
     <ul>
       <li><b>FileExtension</b> (repeated string)<br/>
@@ -303,7 +303,7 @@
         no Go targets would ever be considered for deletion.</li>
     </ul>
 
-    <h3>[Go]</h3>
+    <h3 id="go">[Go]</h3>
 
     <p>Properties that affect how the various Go build rules work.</p>
 
@@ -341,7 +341,7 @@
         consequences for some code, including Go's DNS lookup code in the net module.</li>
     </ul>
 
-    <h3>[Python]</h3>
+    <h3 id="python">[Python]</h3>
 
     <p>Properties that affect how the various Python build rules work.</p>
 
@@ -384,7 +384,7 @@
         Templatized variables should be surrounded in curly braces within the scheme, and the available options are: <code>url_base</code>, <code>package_name</code>, and <code>version</code>. The default search pattern is <code>{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl</code> along with a few common variants.</li>
     </ul>
 
-    <h3>[Java]</h3>
+    <h3 id="java">[Java]</h3>
 
     <p>Properties that affect how the various Java build rules work.</p>
 
@@ -433,7 +433,7 @@
         Bear in mind that this flag is only supported in Java version 9+.</li>
     </ul>
 
-    <h3><a name="cpp">[Cpp]</a></h3>
+    <h3 id="cpp">[Cpp]</h3>
 
     <p>Properties that affect how the various C++ build rules work.</p>
 
@@ -493,7 +493,7 @@
         since the tests have to be compiled with extra instrumentation and without optimisation.</li>
     </ul>
 
-    <h3>[Proto]</h3>
+    <h3 id="proto">[Proto]</h3>
 
     <p>Properties that affect how the <code>proto_library</code> and
       <code>grpc_library</code> rules work.</p>
@@ -557,7 +557,7 @@
 
     </ul>
 
-    <h3>[Licences]</h3>
+    <h3 id="licences">[Licences]</h3>
 
     <p>Please has a limited ability to detect licences from third-party code. We
       obviously can't be 100% sure of these due to the complex nature of dependency
@@ -583,7 +583,7 @@
 	documenting things that the team aren't allowed to use.</li>
     </ul>
 
-    <h3>[Buildconfig]</h3>
+    <h3 id="build-config">[Buildconfig]</h3>
 
     <p>This section lets you define arbitrary key-value pairs that can be consumed by custom
       build rules. For example:</p>
@@ -621,7 +621,7 @@
       for completion.</p>
 
 
-    <h3>[Bazel]</h3>
+    <h3 id="bazel">[Bazel]</h3>
 
     <p>This section defines some settings to help with limited Bazel compatibility.<br/>
       We don't aspire to be fully compatible and mimic all the semantics of their system,

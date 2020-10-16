@@ -2,8 +2,9 @@
     <h1>Please quickstart</h1>
 
     <h2>System requirements</h2>
-    <p>Please supports Linux, macOS and FreeBSD at the moment. It should work on reasonably
-      recent releases of each without additional requirements.</p>
+    <p>Please supports Linux, macOS and FreeBSD at the moment. The included build rules require
+        <a href="https://www.gnu.org/software/coreutils/">core utils</a> and aim to be portable between recent
+        distributions of these platforms.</p>
 
     <h2>Installing</h2>
     <p><code>curl https://get.please.build | bash</code></p>
@@ -47,6 +48,11 @@ brew install please</code></pre></p>
     <p>You will need to write some BUILD files to define how to compile your code.
       Carry on to <a href="basics.html">Please Basics</a> which will explain more about it.
     </p>
+
+    <h2>Missing some rule?</h2>
+    <p>Please can automate nearly any part of your build process. If there's no build rule for your task, writing your
+      own is easy!</p>
+    <p>Learn more about writing custom build rules <a href="/build_rules.html">here</a>!</p>
 
     <h2>More info</h2>
     <p>If you want more information on Please, you can try
