@@ -58,6 +58,9 @@
       directory of the build file. This means that <code>glob(["**/*.go"], exclude = ["*_test.go"])</code>
       will exclude all files ending in &quot;test.go&quot;.</p>
 
+    <p>Hidden files (those starting with a <code>.</code>) are not matched by any patterns
+      unless you pass <code>hidden=True</code>.</p>
+
     <p>It bears noting that you cannot glob generated files, only source files. Also glob will not
       descend into any directories that contain a BUILD file; this maintains an invariant that
       each file is owned by exactly one package (or potentially none, but then Please doesn't know
