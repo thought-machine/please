@@ -113,7 +113,7 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 		// TODO(jpoole): This is just a small usability message to help with the migration from v15 to v16. We should
 		// probably remove this after a grace period.
 		if label.Subrepo == "pleasings" {
-			if _, ok := graph.subrepos["pleasings"]; !ok {
+			if _, ok := graph.subrepos.GetOK("pleasings"); !ok {
 				log.Warning("You've tried to use the pleasings sub-repo. This is no longer included automatically.")
 				log.Warning("Use `plz init pleasings` to add the pleasings repo to your project.")
 			}

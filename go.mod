@@ -1,6 +1,7 @@
 module github.com/thought-machine/please
 
 require (
+	github.com/OneOfOne/cmap v0.0.0-20170825200327-ccaef7657ab8
 	github.com/Songmu/prompter v0.0.0-20181014095714-d227c68538bd
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/bazelbuild/buildtools v0.0.0-20190228125936-4bcdbd1064fc
