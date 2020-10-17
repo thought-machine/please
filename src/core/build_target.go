@@ -203,8 +203,6 @@ type BuildTarget struct {
 	RuleMetadata interface{} `name:"config"`
 	// EntryPoints represent named binaries within the rules output that can be targeted via //package:rule|entry_point_name
 	EntryPoints map[string]string `name:"entry_points"`
-	// List of reverse dependencies of this target
-	reverseDeps []*BuildTarget `print:"false"`
 	// Used to arbitrate concurrent access to dependencies
 	mutex sync.RWMutex `print:"false"`
 	// Used to notify once all dependencies are registered.
