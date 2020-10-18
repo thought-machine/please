@@ -823,17 +823,28 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 		state.asyncError(target.Label, err)
 		return
 	}
-	deps := target.Dependencies()
-	for _, dep := range deps {
-		if err := state.queueTarget(dep, target.Label, rescan, forceBuild); err != nil {
+	for {
+		deps := target.Dependencies()
+		for _, dep := range deps {
+			if err := state.queueTarget(dep, target.Label, rescan, forceBuild); err != nil {
+				state.asyncError(target.Label, err)
+				return
+			}
+		}
+		// Now wait for each of them to finish building
+		for _, dep := range deps {
+			dep.WaitForBuild()
+		}
+		if target.AllDependenciesResolved() {
+			break
+		}
+		// If we're here it got modified by a post-build function, need to wait for it.
+		if err := target.reregisterDependencies(state.Graph); err != nil {
 			state.asyncError(target.Label, err)
 			return
 		}
 	}
-	// Now wait for each of them to finish building
-	for _, dep := range deps {
-		dep.WaitForBuild()
-	}
+
 	if target.SyncUpdateState(Active, Pending) {
 		state.addPendingBuild(target.Label, dependent.IsAllTargets())
 	}

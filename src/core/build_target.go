@@ -569,6 +569,9 @@ func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
 
 	for i := range target.dependencies {
 		info := &target.dependencies[i]
+		if info.resolved {
+			continue
+		}
 		t := graph.WaitForDependency(info.declared)
 		if t == nil {
 			continue // This doesn't exist; that will get handled later.
@@ -588,6 +591,13 @@ func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
 		info.resolved = true
 	}
 	close(target.dependenciesRegistered)
+}
+
+// reregisterDependencies redoes the work for registerDependencies after a target has had more added.
+func (target *BuildTarget) reregisterDependencies(graph *BuildGraph) error {
+	target.dependenciesRegistered = make(chan struct{})
+	go target.registerDependencies(graph)
+	return target.WaitForResolvedDependencies()
 }
 
 // FinishBuild marks this target as having built.
@@ -781,7 +791,7 @@ func (target *BuildTarget) AllDependenciesResolved() bool {
 
 // UnresolvedDependencies returns the list of dependencies for this target that aren't resolved yet.
 func (target *BuildTarget) UnresolvedDependencies() BuildLabels {
-	ret := []BuildLabel{}
+	var ret []BuildLabel
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
 	for _, deps := range target.dependencies {
