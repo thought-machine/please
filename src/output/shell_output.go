@@ -275,12 +275,12 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 			aggregate.Duration += target.Results.Duration
 			if len(target.Results.TestCases) > 0 {
 				if target.Results.Errors() > 0 {
-					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, true))
 				} else if target.Results.Failures() > 0 {
-					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, true))
 				} else if detailed || len(failedTargets) == 0 {
 					// Succeeded or skipped
-					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, true))
 				}
 				if state.ShowTestOutput || detailed {
 					// Determine max width of test name so we align them
@@ -312,8 +312,9 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 			}
 		}
 	}
-	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}. Total time %s.${RESET}\n",
-		pluralise(targets, "test target", "test targets"), testResultMessage(aggregate), duration))
+	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}.${RESET}\n",
+		pluralise(targets, "test target", "test targets"), testResultMessage(aggregate, false)))
+	printf("${BOLD_WHITE}Total time: %s real, %s compute.${RESET}\n", duration, aggregate.Duration)
 }
 
 func showExecutionOutput(execution core.TestExecution) {
@@ -409,9 +410,9 @@ func logProgress(ctx context.Context, state *core.BuildState, buildingTargets []
 }
 
 // Produces a string describing the results of one test (or a single aggregation).
-func testResultMessage(results core.TestSuite) string {
+func testResultMessage(results core.TestSuite, showDuration bool) string {
 	msg := fmt.Sprintf("%s run", pluralise(results.Tests(), "test", "tests"))
-	if results.Duration >= 0.0 {
+	if showDuration && results.Duration >= 0.0 {
 		msg += fmt.Sprintf(" in ${BOLD_WHITE}%s${RESET}", results.Duration.Round(testDurationGranularity))
 	}
 	msg += fmt.Sprintf("; ${BOLD_GREEN}%d passed${RESET}", results.Passes())
