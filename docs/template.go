@@ -60,9 +60,7 @@ var pageTitles = map[string]string{
 	"remote_builds.html":    "Remote build execution",
 	"require_provide.html":  "Require & Provide",
 	"quickstart.html":       "Please quickstart",
-	"reference.html":        "Reference documentation",
 	"tests.html":            "Testing with Please",
-	"verification.html":     "Hash verification",
 	"workers.html":          "Persistent worker processes",
 }
 
