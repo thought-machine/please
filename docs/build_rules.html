@@ -47,17 +47,17 @@
 
 <h2 id="srcs">Sources</h2>
 
-<p>Sources are the inputs to your rule - typically source code. This is defined in the
-  <code>srcs</code> argument.</p>
+<p>Sources are the inputs to your rule - typically source code, but like any other inputs, they can also be build
+  labels. This is defined in the <code>srcs</code> argument.</p>
 
 <p>All sources are linked into the build directory - for performance reasons they aren't copied
   so you shouldn't modify them in-place.</p>
 
-<p>Sources can be both files and directories. Sometimes it can be useful to use globs for sources.
-  see the <a href="/lexicon.html#builtins">built ins</a> for more information.</p>
+<p>Sources can be both files and directories, however it can be useful to use globs for sources e.g. to inlcude all
+  files with a given extension. See the <a href="/lexicon.html#builtins">built ins</a> for more information on this.</p>
 
 <p>Sources can be referred through the <code>$SRCS</code> environment variable. If there's only
-  one, a <code>$SRC</code> variable will be defined too.<br/>
+  one, <code>$SRC</code> will be defined too.<br/>
   Sources can also be named, e.g.
   <pre><code class="language-plz">
       srcs = {

@@ -3,6 +3,8 @@
 <p>Tests in Please are run using <code>plz test</code> (or <code>plz cover</code> if you
   want to extract coverage information).</p>
 
+<p>The documentation for <a href="lexicon.html#gentest">gentest()</a> may be of use as well, as that explains the
+  available arguments and what they do.</p>
 
 <h2>Specifying what to test</h2>
 
@@ -61,7 +63,8 @@
       &lt;/testsuite>
     &lt;/testsuites>
   </code></pre>
-  <p>There's no official format for this XML structure. We try and be compatible with Maven's surefire format.</p>
+  <p>There's no official format for this XML structure, however we try and be compatible with Maven's surefire
+    reports.</p>
 
 <p>Tests can also be marked as <em>flaky</em> which causes them to be automatically re-run
   several times until they pass. They are considered to pass if any one run passes.<br/>
