@@ -262,14 +262,15 @@ def _write_import_config_cmd(out, import_path):
     return cmd
 
 def _get_import_path(import_path):
-    pkg = package_name()
-    if not import_path:
-        if CONFIG.GO_IMPORT_PATH:
-            import_path = f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
-        else:
-            import_path = pkg
+    if import_path:
+        return import_path
 
-    return import_path
+    pkg = package_name()
+
+    if CONFIG.GO_IMPORT_PATH:
+        return f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
+
+    return pkg
 
 def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 out:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
