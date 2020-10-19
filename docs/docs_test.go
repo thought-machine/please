@@ -30,17 +30,24 @@ func TestAllLinksAreLive(t *testing.T) {
 		require.NoError(t, err)
 		var fn func(*html.Node)
 		fn = func(n *html.Node) {
-			if n.Type == html.ElementNode && n.Data == "a" {
+			if n.Type == html.ElementNode {
 				for _, attr := range n.Attr {
-					if attr.Key == "href" && !strings.HasPrefix(attr.Val, "http") && !strings.HasPrefix(attr.Val, "about:") && attr.Val != "#" {
-						if strings.HasPrefix(attr.Val, "#") {
-							alllinks = append(alllinks, filename+attr.Val)
-						} else {
-							alllinks = append(alllinks, attr.Val)
+					if n.Data == "a" {
+						if attr.Key == "href" && !strings.HasPrefix(attr.Val, "http") && !strings.HasPrefix(attr.Val, "about:") && attr.Val != "#" {
+							if strings.HasPrefix(attr.Val, "#") {
+								alllinks = append(alllinks, filename+attr.Val)
+							} else {
+								alllinks = append(alllinks, attr.Val)
+							}
+						} else if attr.Key == "name" {
+							allnames[filename+"#"+attr.Val] = true
 						}
-					} else if attr.Key == "name" {
-						allnames[filename+"#"+attr.Val] = true
+					} else {
+						if attr.Key == "id" {
+							allnames[filename+"#"+attr.Val] = true
+						}
 					}
+
 				}
 			}
 			for c := n.FirstChild; c != nil; c = c.NextSibling {

@@ -109,7 +109,7 @@ go_binary(
 # Convenient for popping open the docs in a browser after building (must use 'plz run').
 sh_cmd(
     name = "view",
-    cmd = "sensible-browser http://localhost:8080 && cd $(out_dir :index_html) && python3 -m http.server 8080",
+    cmd = "sensible-browser http://localhost:8080 && cd plz-out/gen/docs && python3 -m http.server 8080",
     deps = [
         ":docs",
         ":index_html",
