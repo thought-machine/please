@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"hash/adler32"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
@@ -121,10 +123,17 @@ func main() {
 			return false
 		},
 	}
-	title, present := pageTitles[basename]
-	if !present {
-		panic("missing title for " + basename)
+	var title string
+	if filepath.Dir(filename) == "docs/milestones" {
+		title = fmt.Sprintf("Please v%v", strings.TrimSuffix(basename, ".html"))
+	} else {
+		t, present := pageTitles[basename]
+		if !present {
+			panic("missing title for " + basename)
+		}
+		title = t
 	}
+
 	data := struct {
 		Title, Header, Contents, Filename string
 		SideImages                        []int

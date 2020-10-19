@@ -124,11 +124,11 @@
         name = 'six',
         version = '1.9.0',
         outs = ['six.py'],
-        hashes = ['sha1: 0c31ab7cf1a2761efa32d9a7e891ddeadc0d8673'],
+        hashes = ['sha256: 0c31ab7cf1a2761efa32d9a7e891ddeadc0d8673'],
     )
   </code></pre>
 
-This declares that the calculated sha1 hash of the package must match one of the given
+This declares that the calculated sha256 hash of the package must match one of the given
 set, and it's a failure if not.
 </p>
 
@@ -153,7 +153,7 @@ set, and it's a failure if not.
   not bit-for-bit identical if compiled locally, only if you downloaded a precompiled wheel.
   Different Python and OS versions can affect it too.</p>
 
-<p>The <code>sha1:</code> prefix is informative only and indeed any string can occur before
+<p>The <code>sha256:</code> prefix is informative only and indeed any string can occur before
   the colon. In future we may extend this to allow specifying other hash types.</p>
 
 

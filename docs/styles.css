@@ -129,7 +129,7 @@ hr {
         flex: 1 4 25%;
     }
     .right {
-        flex: 3 4 75%;
+        flex: 3 4 100%;
     }
 }
 /* Header row */
@@ -198,7 +198,7 @@ hr {
 .idximg1 img {
     transform: rotate(20deg);
     position: absolute;
-    left: 35%;
+    left: 25%;
     width: 300px;
     top: -120px;
     height: auto;
@@ -381,9 +381,14 @@ hr {
 
 /* Main body */
 .body {
-    padding-left: 10%;
-    overflow-x: hidden;
+    padding-left: 30px;
+    max-width: 1200px;
 }
+
+div.index-body {
+    max-width: none;
+}
+
 .body h1 {
     font-family: "Calibre-Thin", sans-serif;
     padding: 5em 0;
@@ -396,7 +401,7 @@ hr {
 .body h2, .body h3, .body h2 a, .body h3 a {
     font-family: "Calibre-Thin", sans-serif;
     color: #02e68f;
-    text-indent: -5%;
+    text-indent: -30px;
     padding: 2em 0 0 0;
     font-weight: normal;
 }
@@ -478,6 +483,10 @@ footer > div {
     flex: 1 1 50%;
     padding: 20px 40px 20px 0;
     color: white;
+}
+
+.index-layout > div > div > p {
+    max-width: 800px;
 }
 .index-layout h2 {
     text-indent: 0;

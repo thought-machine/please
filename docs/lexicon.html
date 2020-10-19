@@ -16,7 +16,7 @@
 
     <h2><a name="builtins">Built in functions</a></h2>
     <p>In addition to <a href="/language.html">the build language</a> built in functions, Please also has built
-    in functions.</p>
+    in rules.</p>
     <h3><a name="subinclude">subinclude</a></h3>
 
     <p><pre class="rule"><code>subinclude(target)</code></pre></p>
@@ -58,6 +58,9 @@
       evaluated against the file name of the match only, otherwise it will be evaluated from the
       directory of the build file. This means that <code>glob(["**/*.go"], exclude = ["*_test.go"])</code>
       will exclude all files ending in &quot;test.go&quot;.</p>
+
+    <p>Hidden files (those starting with a <code>.</code>) are not matched by any patterns
+      unless you pass <code>hidden=True</code>.</p>
 
     <p>It bears noting that you cannot glob generated files, only source files. Also glob will not
       descend into any directories that contain a BUILD file; this maintains an invariant that

@@ -1,4 +1,4 @@
-// Package query implements a simple query language for Please.
+// Package query implements a set of query operations for Please.
 //
 // Currently supported operations:
 //   'deps': 'plz query deps //src:please'
@@ -12,8 +12,8 @@
 //            produces a python-like function call that would define the rule.
 //   'completions': 'plz query completions //sr'
 //            produces a list of possible completions for the given stem.
-//   'affectedtargets': 'plz query affectedtargets path/to/changed_file.py'
-//            produces a list of test targets which have a transitive dependency on
+//   'changes': 'plz query changes path/to/changed_file.py'
+//            produces a list of targets which have a transitive dependency on
 //            the given file.
 //   'input': 'plz query input //src:label' produces a list of all the files
 //            (including transitive deps) that are referenced by this rule.

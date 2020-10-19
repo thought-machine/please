@@ -36,7 +36,7 @@ def config_setting(name:str, values:dict, visibility:list=None):
                      For example: {'cpu': 'amd64'} is successful if the CPU architecture is amd64.
       visibility (list): Visibility of the rule.
     """
-    on = any([_config_on(k, v) for k, v in sorted(values.items())])
+    on = all([_config_on(k, v) for k, v in sorted(values.items())])
     return build_rule(
         name = name,
         outs = [name],
