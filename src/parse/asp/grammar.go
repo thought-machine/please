@@ -267,6 +267,8 @@ const (
 	Add Operator = '+'
 	// Subtract implements binary - (only works on integers)
 	Subtract = '-'
+	// Multiply implements multiplication between two types
+	Multiply = '×'
 	// Modulo implements % (including string interpolation)
 	Modulo = '%'
 	// LessThan implements <
@@ -327,4 +329,5 @@ var operators = map[string]Operator{
 	">=":     GreaterThanOrEqual,
 	"<=":     LessThanOrEqual,
 	"|":      Union,
+	"*":      Multiply,
 }
