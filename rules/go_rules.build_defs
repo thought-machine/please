@@ -254,16 +254,22 @@ def _trim_import_path(pkg):
 def _write_import_config_cmd(out, import_path):
     name = out.removesuffix(".a")
     pkg = package_name()
+    import_path = _get_import_path(import_path)
+
+    cmd = f'echo packagefile {import_path}/{name}=$PKG_DIR/{out} > $OUT'
+    if pkg.endswith(name):
+        cmd = f'{cmd} && echo packagefile {import_path}=$PKG_DIR/{out} >> $OUT'
+    return cmd
+
+def _get_import_path(import_path):
+    pkg = package_name()
     if not import_path:
         if CONFIG.GO_IMPORT_PATH:
             import_path = f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
         else:
             import_path = pkg
 
-    cmd = f'echo packagefile {import_path}/{name}=$PKG_DIR/{out} > $OUT'
-    if pkg.endswith(name):
-        cmd = f'{cmd} && echo packagefile {import_path}=$PKG_DIR/{out} >> $OUT'
-    return cmd
+    return import_path
 
 def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 out:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
