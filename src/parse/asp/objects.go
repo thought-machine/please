@@ -204,6 +204,8 @@ func (i pyInt) Operator(operator Operator, operand pyObject) pyObject {
 			panic("bad operator: 'in' int")
 		case Multiply:
 			return i * o
+		case Divide:
+			return i / o
 		}
 		panic("unknown operator")
 	case pyString:

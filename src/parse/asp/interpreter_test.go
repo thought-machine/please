@@ -343,3 +343,11 @@ func TestMultiply(t *testing.T) {
 	assert.EqualValues(t, pyList{pyString("a"), pyString("b"), pyString("a"), pyString("b")}, s.Lookup("l1"))
 	assert.EqualValues(t, pyList{pyString("a"), pyString("b"), pyString("a"), pyString("b")}, s.Lookup("l2"))
 }
+
+func TestDivide(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/divide.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, 0, s.Lookup("i"))
+	assert.EqualValues(t, 7, s.Lookup("j"))
+	assert.EqualValues(t, -2, s.Lookup("k"))
+}
