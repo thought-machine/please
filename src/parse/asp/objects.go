@@ -190,6 +190,10 @@ func (i pyInt) Operator(operator Operator, operand pyObject) pyObject {
 			return i + o
 		case Subtract:
 			return i - o
+		case Multiply:
+			return i * o
+		case Divide:
+			return i / o
 		case LessThan:
 			return newPyBool(i < o)
 		case GreaterThan:
@@ -202,10 +206,6 @@ func (i pyInt) Operator(operator Operator, operand pyObject) pyObject {
 			return i % o
 		case In:
 			panic("bad operator: 'in' int")
-		case Multiply:
-			return i * o
-		case Divide:
-			return i / o
 		}
 		panic("unknown operator")
 	case pyString:
@@ -253,6 +253,12 @@ func (s pyString) Operator(operator Operator, operand pyObject) pyObject {
 	switch operator {
 	case Add:
 		return s + s2
+	case Multiply:
+		i, ok := operand.(pyInt)
+		if !ok {
+			panic("Can only multiply string with int, not with " + operand.Type())
+		}
+		return pyString(strings.Repeat(string(s), int(i)))
 	case LessThan:
 		return newPyBool(s < s2)
 	case GreaterThan:
@@ -285,14 +291,8 @@ func (s pyString) Operator(operator Operator, operand pyObject) pyObject {
 		return newPyBool(!strings.Contains(string(s), string(s2)))
 	case Index:
 		return pyString(s[pyIndex(s, operand, false)])
-	case Multiply:
-		i, ok := operand.(pyInt)
-		if !ok {
-			panic("Can only multiply string with int, not with " + operand.Type())
-		}
-		return pyString(strings.Repeat(string(s), int(i)))
 	}
-	panic("unknown operator")
+	panic("Unknown operator for string")
 }
 
 func (s pyString) IndexAssign(index, value pyObject) {
