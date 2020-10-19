@@ -38,17 +38,19 @@
             <li{{menuItem "basics"}}><a href="basics.html">Documentation</a>
               <ul>
                 <li{{menuItem "basics"}}><a href="basics.html">Basic concepts</a></li>
+                <li{{menuItem "config"}}><a href="config.html">Config options</a></li>
+                <li{{menuItem "commands"}}><a href="commands.html">Command line interface</a></li>
                 <li{{menuItem "dependencies"}}><a href="dependencies.html">Third-party dependencies</a></li>
                 <li{{menuItem "remote_builds"}}><a href="remote_builds.html">Remote builds</a></li>
                 <li{{menuItem "cross_compiling"}}><a href="cross_compiling.html">Cross-compiling</a></li>
                 <li{{menuItem "cache"}}><a href="cache.html">Caching</a></li>
               </ul>
             </li>
-            <li{{menuItem "language"}}><a href="language.html">The BUILD language</a></li>
-            <li{{menuItem "lexicon"}}><a href="lexicon.html">BUILD Rule Lexicon</a>
+            <li{{menuItem "language"}}><a href="language.html">Build files</a></li>
+            <li{{menuItem "lexicon"}}><a href="lexicon.html">Built in rules &amp; languages</a>
               {{ if eq .Filename "lexicon.html" }}
               <ul>
-                <li><a href="lexicon.html#builtins">Builtin rules & functions</a></li>
+                <li><a href="lexicon.html#builtins">Builtin functions</a></li>
                 <li><a href="lexicon.html#cc">C++ rules</a></li>
                 <li><a href="lexicon.html#go">Go rules</a></li>
                 <li><a href="lexicon.html#java">Java rules</a></li>
@@ -60,14 +62,11 @@
               </ul>
               {{ end }}
             </li>
-            <li{{menuItem "reference"}}><a href="reference.html">Reference</a>
-              {{ if matches .Filename "reference.html" "config.html" "commands.html" "build_rules.html" "workers.html" "post_build.html" "verification.html" "require_provide.html" "tests.html" }}
+            <li{{menuItem "reference"}}><a href="build_rules.html">Advanced Topics &amp; Custom Rules</a>
+              {{ if matches .Filename "build_rules.html" "workers.html" "post_build.html" "require_provide.html" "tests.html" }}
               <ul>
-                <li{{menuItem "config"}}><a href="config.html">Config options</a></li>
-                <li{{menuItem "commands"}}><a href="commands.html">Commands</a></li>
                 <li{{menuItem "build_rules"}}><a href="build_rules.html">Build rules</a></li>
                 <li{{menuItem "tests"}}><a href="tests.html">Testing with Please</a></li>
-                <li{{menuItem "verification"}}><a href="verification.html">Hashes and licences</a></li>
                 <li{{menuItem "workers"}}><a href="workers.html">Persistent workers</a></li>
                 <li{{menuItem "post_build"}}><a href="post_build.html">Post-build functions</a></li>
                 <li{{menuItem "require_provide"}}><a href="require_provide.html">Require & Provide</a></li>

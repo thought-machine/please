@@ -1,11 +1,13 @@
 
     <h1>Please cache</h1>
 
-    <p>In various places in these docs you might find reference to caches.
-      Please can make use of several caches to speed up its performance which are described here.</p>
-
-    <p>In all cases artifacts are only stored in the cache after a successful build or test run.<br/>
-      Please takes a <code>--nocache</code> flag which disables all caches for an individual run.</p>
+    <p>In various places in these docs you might find reference to caches. Please can make use of several caches to
+       speed up its performance which are described here.</p>
+    <p>Not that caches are different from the output in <code>plz-out</code>. Even without caching, please will
+       still reuse built artifacts from <code>plz-out</code> for incremental builds. Please has strict caching and
+       incrementality behavior. With that said, you can still force a rebuild or a test rerun, use the
+       <code>--rebuild</code> and <code>--rerun</code> flags respectively.</p>
+    <p>In all cases artifacts are only stored in the cache after a successful build or test run.</p>
 
     <h2>The directory cache</h2>
 
@@ -36,3 +38,8 @@
 
     <p>Thanks to Diana Costea who implemented the original version of this as part of her internship
       with us, and prodded us into getting on and actually deploying it for our CI servers.</p>
+
+    <p>A reference implementation of the http cache can be found
+      <a href="https://github.com/thought-machine/please/tree/master/tools/http_cache">here</a> however it should be
+      possible to use any off the shelf http server.</p>
+
