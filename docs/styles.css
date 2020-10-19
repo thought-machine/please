@@ -616,3 +616,57 @@ footer > div {
 .fn-str {
     color: #af7dff;
 }
+
+/* Example language selectors */
+div.language-examples {
+    padding: 0.5em 0;
+}
+
+div.language-examples > ul > li:before {
+    display: none;
+}
+
+div.language-examples > ul > li {
+    display: none;
+    text-indent: 0;
+}
+
+div.language-examples > ul.tabs {
+    margin: 0;
+    font-size: 0px;
+}
+
+div.language-examples > ul.tabs > li {
+    display: inline;
+    padding: 0.5em 2em;
+    border-top: 1px solid #02e68f;
+    border-bottom: 1px solid #02e68f;
+    border-right: 1px solid #02e68f;
+    cursor: pointer;
+    font-size: 14px;
+    background-color: #272a30;
+}
+
+div.language-examples > ul.tabs > li:first-child {
+    border-left: 1px solid #02e68f;
+    border-radius: 10px 0 0 0;
+}
+
+div.language-examples > ul.tabs > li:last-child {
+    border-radius: 0 10px 0 0;
+}
+
+div.language-examples > ul.tabs > li.selected {
+    font-weight: bold;
+    color: white;
+    background-color: #202328;
+    border-bottom: 1px solid #202328;
+}
+
+div.language-examples > ul.examples > li.selected {
+    display: block;
+}
+
+ul.examples {
+    margin-top: -0.5em;
+}
