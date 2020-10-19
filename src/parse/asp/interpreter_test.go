@@ -332,3 +332,14 @@ func TestSubrepoName(t *testing.T) {
 
 	assert.EqualValues(t, "pleasings", s.Lookup("subrepo"))
 }
+
+func TestMultiply(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/multiply.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, 42, s.Lookup("i1"))
+	assert.EqualValues(t, 42, s.Lookup("i2"))
+	assert.EqualValues(t, "abcabcabc", s.Lookup("s1"))
+	assert.EqualValues(t, "abcabcabc", s.Lookup("s2"))
+	assert.EqualValues(t, pyList{pyString("a"), pyString("b"), pyString("a"), pyString("b")}, s.Lookup("l1"))
+	assert.EqualValues(t, pyList{pyString("a"), pyString("b"), pyString("a"), pyString("b")}, s.Lookup("l2"))
+}
