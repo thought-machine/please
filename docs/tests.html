@@ -3,6 +3,8 @@
 <p>Tests in Please are run using <code>plz test</code> (or <code>plz cover</code> if you
   want to extract coverage information).</p>
 
+<p>The documentation for <a href="lexicon.html#gentest">gentest()</a> may be of use as well, as that explains the
+  available arguments and what they do.</p>
 
 <h2>Specifying what to test</h2>
 
@@ -31,16 +33,38 @@
 
 <h2>Success and failure</h2>
 
-<p>Please expects two things from tests:
+<p>Please expects two things from tests:</p>
   <ul>
     <li>That the test exits with code 0 if successful, or nonzero if unsuccessful</li>
     <li>That it writes its results into a file or directory defined by the env var
       <code>RESULTS_FILE</code> (unless the test has <code>no_test_output = True</code>,
       in which case it is evaluated only on its exit code).</li>
   </ul>
-  All tests are considered to end in a binary state where they are either successful or
+  <p>All tests are considered to end in a binary state where they are either successful or
   unsuccessful, so tests with variable output such as load tests are not a good fit for
   this system.</p>
+  <p>Result files are expected to either be golang style test output:</p>
+  <pre><code>
+    === RUN   Hello
+    --- PASS: Hello (0.00s)
+    === RUN   Salutations
+    --- PASS: Salutations (0.00s)
+  </code></pre>
+  <p>Or the junit/ant style xml test output:</p>
+  <pre><code>
+    &lt;testsuites time="0">
+      &lt;testsuite name="hello" tests="2" package="hello.test" time="0">
+          &lt;testcase name="Hello" classname="test" time="0">
+            &lt;system-err>Hello!&lt;/system-err>
+          &lt;/testcase>
+          &lt;testcase name="Salutations" classname="test" time="0">
+            &lt;system-err>Salutations!&lt;/system-err>
+          &lt;/testcase>
+      &lt;/testsuite>
+    &lt;/testsuites>
+  </code></pre>
+  <p>There's no official format for this XML structure, however we try and be compatible with Maven's surefire
+    reports.</p>
 
 <p>Tests can also be marked as <em>flaky</em> which causes them to be automatically re-run
   several times until they pass. They are considered to pass if any one run passes.<br/>
