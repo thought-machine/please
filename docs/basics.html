@@ -13,16 +13,16 @@
     <h2>Build targets</h2>
     <p>Each BUILD file can contain a number of <em>build targets</em>. These are units of buildable code
       which can be reused by other build targets. An example is probably worth 1000 words at this point:
-    <div class="language-examples">
+    <div class="tab-container">
         <div class="tabs">
-            <div data-lang="py" class="selected">Python</div>
-            <div data-lang="java">Java</div>
-            <div data-lang="go">Go</div>
-            <div data-lang="c">C</div>
-            <div data-lang="cpp">C++</div>
+            <div class="tab" data-tab="py">Python</div>
+            <div class="tab" data-tab="java">Java</div>
+            <div class="tab" data-tab="go">Go</div>
+            <div class="tab" data-tab="c">C</div>
+            <div class="tab" data-tab="cpp">C++</div>
         </div>
-        <div class="examples">
-            <div data-lang="py" class="selected">
+        <div class="tab-contents">
+            <div class="content" data-tab="py">
                 <pre><code class="language-plz">
         python_library(
             name = 'my_library',
@@ -42,7 +42,7 @@
         )
                 </code></pre>
             </div>
-            <div data-lang="java">
+            <div class="content" data-tab="java">
                 <pre><code class="language-plz">
         java_library(
             name = 'my_library',
@@ -62,7 +62,7 @@
         )
                 </code></pre>
             </div>
-            <div data-lang="go">
+            <div class="content" data-tab="go">
                 <pre><code class="language-plz">
         go_library(
             name = 'my_library',
@@ -82,7 +82,7 @@
         )
                 </code></pre>
             </div>
-            <div data-lang="cpp">
+            <div class="content" data-tab="cpp">
                 <pre><code class="language-plz">
         cc_library(
             name = 'my_library',
@@ -103,7 +103,7 @@
         )
                 </code></pre>
             </div>
-            <div data-lang="c">
+            <div class="content" data-tab="c">
                 <pre><code class="language-plz">
         c_library(
             name = 'my_library',

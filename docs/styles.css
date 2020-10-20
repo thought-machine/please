@@ -618,27 +618,26 @@ footer > div {
 }
 
 /* Example language selectors */
-.language-examples {
+.tab-container {
     padding: 0.5em 0;
     margin-bottom: 1em;
 }
 
-
-.language-examples > .examples > div {
+.tab-container > .tab-contents > .content {
     display: none;
     border: 1px solid #02e68f;
 }
 
-.examples > div > pre {
+.tab-container > .tab-contents > .content > pre {
     border: none;
 }
 
-.language-examples > .tabs {
+.tab-container > .tabs {
     margin: 0 0 1px; /* 1px for the border around the tabs */
     height: 2em;
 }
 
-.language-examples > .tabs > div {
+.tab-container > .tabs > .tab {
     float: left;
     padding: 0 2em;
     cursor: pointer;
@@ -646,15 +645,15 @@ footer > div {
     line-height: 2em;
 }
 
-.language-examples > .tabs > :first-child {
+.tab-container > .tabs > :first-child {
     border-radius: 10px 0 0 0;
 }
 
-.language-examples > .tabs > :last-child {
+.tab-container > .tabs > :last-child {
     border-radius: 0 10px 0 0;
 }
 
-.language-examples > .tabs > .selected {
+.tab-container > .tabs > .selected {
     font-weight: bold;
     color: white;
     background-color: #202328;
@@ -664,7 +663,7 @@ footer > div {
     border-left: 1px solid #02e68f;
 }
 
-.language-examples > .examples > .selected {
+.tab-container > .tab-contents > .selected {
     display: block;
 }
 
