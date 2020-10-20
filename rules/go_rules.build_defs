@@ -254,16 +254,23 @@ def _trim_import_path(pkg):
 def _write_import_config_cmd(out, import_path):
     name = out.removesuffix(".a")
     pkg = package_name()
-    if not import_path:
-        if CONFIG.GO_IMPORT_PATH:
-            import_path = f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
-        else:
-            import_path = pkg
+    import_path = _get_import_path(import_path)
 
     cmd = f'echo packagefile {import_path}/{name}=$PKG_DIR/{out} > $OUT'
     if pkg.endswith(name):
         cmd = f'{cmd} && echo packagefile {import_path}=$PKG_DIR/{out} >> $OUT'
     return cmd
+
+def _get_import_path(import_path):
+    if import_path:
+        return import_path
+
+    pkg = package_name()
+
+    if CONFIG.GO_IMPORT_PATH:
+        return f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
+
+    return pkg
 
 def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 out:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
@@ -303,6 +310,10 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
     post_build = lambda rule, output: [add_out(rule, 'c' if line.endswith('.c') else 'go', line) for line in output]
     subdir2 = (subdir + '/') if subdir and not subdir.endswith('/') else subdir
 
+    # Resolve the import_path early
+    # _write_import_config_cmd won't resolve it again
+    import_path = _get_import_path(import_path)
+
     cgo_rule = build_rule(
         name = name,
         tag = 'cgo',
@@ -316,7 +327,7 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
             (f'OUT_DIR="$TMP_DIR/{subdir}"') if subdir else 'OUT_DIR="$TMP_DIR"',
             'mkdir -p "$OUT_DIR"',
             'cd $PKG_DIR/' + subdir,
-            '$TOOL tool cgo -objdir "$OUT_DIR" -importpath ${PKG_DIR#*src/} *.go',
+            f'$TOOL tool cgo -objdir "$OUT_DIR" -importpath {import_path} *.go',
             # Remove the .o file which BSD sed gets upset about in the next command
             'rm -f "$OUT_DIR"/_cgo_.o "$OUT_DIR"/_cgo_main.c',
             # cgo leaves absolute paths in these files which we must get rid of :(
