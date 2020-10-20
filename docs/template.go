@@ -50,6 +50,7 @@ var pageTitles = map[string]string{
 	"config.html":           "Please config file reference",
 	"cross_compiling.html":  "Cross-compiling",
 	"dependencies.html":     "Third-party dependencies",
+	"quickstart_dropoff.html":     "What's next?",
 	"error.html":            "plz op...",
 	"faq.html":              "Please FAQ",
 	"index.html":            "Please",
