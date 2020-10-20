@@ -68,6 +68,7 @@ filegroup(
         ":lexicon_html",
         "styles.css",
         "action.js",
+        "tabs.js",
         "images/thoughtmachine.png",
         "plz-recording.json",
         "//third_party/js:asciinema",
