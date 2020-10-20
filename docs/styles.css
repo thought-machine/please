@@ -618,55 +618,53 @@ footer > div {
 }
 
 /* Example language selectors */
-div.language-examples {
+.language-examples {
     padding: 0.5em 0;
+    margin-bottom: 1em;
 }
 
-div.language-examples > ul > li:before {
+
+.language-examples > .examples > div {
     display: none;
+    border: 1px solid #02e68f;
 }
 
-div.language-examples > ul > li {
-    display: none;
-    text-indent: 0;
+.examples > div > pre {
+    border: none;
 }
 
-div.language-examples > ul.tabs {
-    margin: 0;
-    font-size: 0px;
+.language-examples > .tabs {
+    margin: 0 0 1px; /* 1px for the border around the tabs */
+    height: 2em;
 }
 
-div.language-examples > ul.tabs > li {
-    display: inline;
-    padding: 0.5em 2em;
-    border-top: 1px solid #02e68f;
-    border-bottom: 1px solid #02e68f;
-    border-right: 1px solid #02e68f;
+.language-examples > .tabs > div {
+    float: left;
+    padding: 0 2em;
     cursor: pointer;
-    font-size: 14px;
     background-color: #272a30;
+    line-height: 2em;
 }
 
-div.language-examples > ul.tabs > li:first-child {
-    border-left: 1px solid #02e68f;
+.language-examples > .tabs > :first-child {
     border-radius: 10px 0 0 0;
 }
 
-div.language-examples > ul.tabs > li:last-child {
+.language-examples > .tabs > :last-child {
     border-radius: 0 10px 0 0;
 }
 
-div.language-examples > ul.tabs > li.selected {
+.language-examples > .tabs > .selected {
     font-weight: bold;
     color: white;
     background-color: #202328;
     border-bottom: 1px solid #202328;
+    border-top: 1px solid #02e68f;
+    border-right: 1px solid #02e68f;
+    border-left: 1px solid #02e68f;
 }
 
-div.language-examples > ul.examples > li.selected {
+.language-examples > .examples > .selected {
     display: block;
 }
 
-ul.examples {
-    margin-top: -0.5em;
-}

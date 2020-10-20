@@ -13,7 +13,7 @@ function switchTab(event) {
 }
 
 document.addEventListener("DOMContentLoaded", function(event) {
-    document.querySelectorAll(".tabs > li").forEach(tab => {
+    document.querySelectorAll(".tabs > div").forEach(tab => {
         tab.onclick = switchTab
     })
 });

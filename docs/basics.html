@@ -14,15 +14,15 @@
     <p>Each BUILD file can contain a number of <em>build targets</em>. These are units of buildable code
       which can be reused by other build targets. An example is probably worth 1000 words at this point:
     <div class="language-examples">
-        <ul class="tabs">
-            <li data-lang="py" class="selected">Python</li>
-            <li data-lang="java">Java</li>
-            <li data-lang="go">Go</li>
-            <li data-lang="c">C</li>
-            <li data-lang="cpp">C++</li>
-        </ul>
-        <ul class="examples">
-            <li data-lang="py" class="selected">
+        <div class="tabs">
+            <div data-lang="py" class="selected">Python</div>
+            <div data-lang="java">Java</div>
+            <div data-lang="go">Go</div>
+            <div data-lang="c">C</div>
+            <div data-lang="cpp">C++</div>
+        </div>
+        <div class="examples">
+            <div data-lang="py" class="selected">
                 <pre><code class="language-plz">
         python_library(
             name = 'my_library',
@@ -41,8 +41,8 @@
             deps = [':my_library'],
         )
                 </code></pre>
-            </li>
-            <li data-lang="java">
+            </div>
+            <div data-lang="java">
                 <pre><code class="language-plz">
         java_library(
             name = 'my_library',
@@ -61,8 +61,8 @@
             deps = [':my_library'],
         )
                 </code></pre>
-            </li>
-            <li data-lang="go">
+            </div>
+            <div data-lang="go">
                 <pre><code class="language-plz">
         go_library(
             name = 'my_library',
@@ -81,8 +81,8 @@
             deps = [':my_library'],
         )
                 </code></pre>
-            </li>
-            <li data-lang="cpp">
+            </div>
+            <div data-lang="cpp">
                 <pre><code class="language-plz">
         cc_library(
             name = 'my_library',
@@ -102,8 +102,8 @@
             deps = [':my_library'],
         )
                 </code></pre>
-            </li>
-            <li data-lang="c">
+            </div>
+            <div data-lang="c">
                 <pre><code class="language-plz">
         c_library(
             name = 'my_library',
@@ -123,8 +123,8 @@
             deps = [':my_library'],
         )
                 </code></pre>
-            </li>
-        </ul>
+            </div>
+        </div>
     </div>
 
       This snippet defines three build targets; a build target is simply a thing that can be built
