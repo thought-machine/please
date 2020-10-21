@@ -306,6 +306,17 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
       test_only (bool): If True, is only visible to test rules.
       import_path (str): If set, this will override the import path of the generated go package.
     """
+    if not srcs:
+        return go_library(
+            name = name,
+            srcs = go_srcs,
+            out = out,
+            deps = deps,
+            import_path = import_path,
+            visibility = visibility,
+            test_only = test_only,
+        )
+
     file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
     post_build = lambda rule, output: [add_out(rule, 'c' if line.endswith('.c') else 'go', line) for line in output]
     subdir2 = (subdir + '/') if subdir and not subdir.endswith('/') else subdir
