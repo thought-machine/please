@@ -267,6 +267,10 @@ const (
 	Add Operator = '+'
 	// Subtract implements binary - (only works on integers)
 	Subtract = '-'
+	// Multiply implements multiplication between two types
+	Multiply = '×'
+	// Divide implements division, currently only between integers
+	Divide = '÷'
 	// Modulo implements % (including string interpolation)
 	Modulo = '%'
 	// LessThan implements <
@@ -313,6 +317,8 @@ func (o Operator) String() string {
 var operators = map[string]Operator{
 	"+":      Add,
 	"-":      Subtract,
+	"*":      Multiply,
+	"/":      Divide,
 	"%":      Modulo,
 	"<":      LessThan,
 	">":      GreaterThan,

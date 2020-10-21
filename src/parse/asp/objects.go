@@ -183,30 +183,43 @@ func (i pyInt) Property(name string) pyObject {
 }
 
 func (i pyInt) Operator(operator Operator, operand pyObject) pyObject {
-	i2, ok := operand.(pyInt)
-	if !ok {
-		panic("Cannot operate on int and " + operand.Type())
+	switch o := operand.(type) {
+	case pyInt:
+		switch operator {
+		case Add:
+			return i + o
+		case Subtract:
+			return i - o
+		case Multiply:
+			return i * o
+		case Divide:
+			return i / o
+		case LessThan:
+			return newPyBool(i < o)
+		case GreaterThan:
+			return newPyBool(i > o)
+		case LessThanOrEqual:
+			return newPyBool(i <= o)
+		case GreaterThanOrEqual:
+			return newPyBool(i >= o)
+		case Modulo:
+			return i % o
+		case In:
+			panic("bad operator: 'in' int")
+		}
+		panic("unknown operator")
+	case pyString:
+		if operator == Multiply {
+			return pyString(strings.Repeat(string(o), int(i)))
+		}
+	case pyList:
+		if operator == Multiply {
+			return o.Repeat(i)
+		}
 	}
-	switch operator {
-	case Add:
-		return i + i2
-	case Subtract:
-		return i - i2
-	case LessThan:
-		return newPyBool(i < i2)
-	case GreaterThan:
-		return newPyBool(i > i2)
-	case LessThanOrEqual:
-		return newPyBool(i <= i2)
-	case GreaterThanOrEqual:
-		return newPyBool(i >= i2)
-	case Modulo:
-		return i % i2
-	case In:
-		panic("bad operator: 'in' int")
-	}
-	panic("unknown operator")
+	panic("Cannot operate on int and " + operand.Type())
 }
+
 func (i pyInt) IndexAssign(index, value pyObject) {
 	panic("int type is not indexable")
 }
@@ -234,12 +247,18 @@ func (s pyString) Property(name string) pyObject {
 
 func (s pyString) Operator(operator Operator, operand pyObject) pyObject {
 	s2, ok := operand.(pyString)
-	if !ok && operator != Modulo && operator != Index {
+	if !ok && operator != Modulo && operator != Index && operator != Multiply {
 		panic("Cannot operate on str and " + operand.Type())
 	}
 	switch operator {
 	case Add:
 		return s + s2
+	case Multiply:
+		i, ok := operand.(pyInt)
+		if !ok {
+			panic("Can only multiply string with int, not with " + operand.Type())
+		}
+		return pyString(strings.Repeat(string(s), int(i)))
 	case LessThan:
 		return newPyBool(s < s2)
 	case GreaterThan:
@@ -273,7 +292,7 @@ func (s pyString) Operator(operator Operator, operand pyObject) pyObject {
 	case Index:
 		return pyString(s[pyIndex(s, operand, false)])
 	}
-	panic("unknown operator")
+	panic("Unknown operator for string")
 }
 
 func (s pyString) IndexAssign(index, value pyObject) {
@@ -335,6 +354,12 @@ func (l pyList) Operator(operator Operator, operand pyObject) pyObject {
 			return True
 		}
 		return False
+	case Multiply:
+		i, ok := operand.(pyInt)
+		if !ok {
+			panic("Can only multiply list with int, not with " + operand.Type())
+		}
+		return l.Repeat(i)
 	}
 	panic("Unsupported operator on list: " + operator.String())
 }
@@ -356,6 +381,15 @@ func (l pyList) String() string {
 // reference can still modify it.
 func (l pyList) Freeze() pyObject {
 	return pyFrozenList{pyList: l}
+}
+
+// Repeat returns a copy of this list, repeated n times
+func (l pyList) Repeat(n pyInt) pyList {
+	var ret pyList
+	for i := 0; i < int(n); i++ {
+		ret = append(ret, l...)
+	}
+	return ret
 }
 
 // A pyFrozenList implements an immutable list.
