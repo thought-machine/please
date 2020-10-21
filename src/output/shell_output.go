@@ -314,7 +314,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 	}
 	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}.${RESET}\n",
 		pluralise(targets, "test target", "test targets"), testResultMessage(aggregate, false)))
-	printf("${BOLD_WHITE}Total time: %s real, %s compute.${RESET}\n", duration, aggregate.Duration)
+	printf("${BOLD_WHITE}Total time: %s real, %s compute.${RESET}\n", duration, aggregate.Duration.Round(durationGranularity))
 }
 
 func showExecutionOutput(execution core.TestExecution) {
