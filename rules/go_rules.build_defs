@@ -27,7 +27,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     if version:
         sdk_url = f'https://golang.org/dl/go{version}.{CONFIG.GOOS}-{CONFIG.GOARCH}.tar.gz'
     else:
-        sdk_url = url if isinstance(sdk_url, str) else url[f'{CONFIG.GOOS}-{CONFIG.GOARCH}']
+        sdk_url = url if isinstance(url, str) else url[f'{CONFIG.GOOS}-{CONFIG.GOARCH}']
 
     download = remote_file(
         name = name,
