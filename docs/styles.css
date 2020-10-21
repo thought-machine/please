@@ -667,3 +667,36 @@ footer > div {
     display: block;
 }
 
+.content .content-wrapper {
+    margin: 2em 4em;
+}
+
+/* section guides */
+.section-guide {
+    height: 4em;
+    margin-left: -30px; /* for the title negative indent */
+    margin-top: 4em;
+    background: #1c1e23;
+    padding: 0 2em;
+    border-top: 4px solid #1c9465;
+}
+.section-guide .prev-section, .section-guide .next-section {
+    line-height: 4em;
+}
+
+.prev-section {
+    float: left;
+}
+
+.next-section {
+    text-align: right;
+    float: right;
+}
+
+.prev-section:before {
+    content: "\2190  ";
+}
+
+.next-section:after {
+    content: " \2192";
+}

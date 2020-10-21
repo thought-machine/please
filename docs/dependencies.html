@@ -9,11 +9,57 @@
   and manipulated as any other build rule. We encourage methods of fetching
   them that are repeatable; typically each language has one that matches
   up to a common package manager, for example:
-  <ul>
-    <li><a href="lexicon.html#go_get">go_get</a></li>
-    <li><a href="lexicon.html#pip_library">pip_library</a></li>
-    <li><a href="lexicon.html#maven_jar">maven_jar</a></li>
-  </ul>
+  <div class="tab-container">
+    <div class="tabs">
+      <div class="tab" data-tab="py">Python</div>
+      <div class="tab" data-tab="java">Java</div>
+      <div class="tab" data-tab="go">Go</div>
+      <div class="tab" data-tab="c">C / C++</div>
+    </div>
+    <div class="tab-contents">
+      <div class="content" data-tab="py">
+          <pre><code class="language-plz">
+          pip_library(
+              name = 'my_library',
+              version = "1.0.0",
+          )
+          </code></pre>
+          <pre class="comment">
+          See <a href="/lexicon.html#pip_library">pip_library()</a> for more information
+          </pre>
+      </div>
+      <div class="content" data-tab="java">
+                  <pre><code class="language-plz">
+          maven_jar(
+              name = 'my_library',
+              id = "me:mylibrary:1.0.0",
+          )
+                  </code></pre>
+          <pre class="comment">
+          See <a href="/lexicon.html#maven_jar">maven_jar()</a> for more information
+          </pre>
+      </div>
+      <div class="content" data-tab="go">
+          <pre><code class="language-plz">
+          go_get(
+              name = 'my_library',
+              get = "github.com/me/my_library",
+              version = "1.0.0",
+          )
+          </code></pre>
+          <pre class="comment">
+          See <a href="/lexicon.html#go_get">go_get()</a> for more information
+          </pre>
+      </div>
+      <div class="content" data-tab="c">
+        <div class="content-wrapper">
+            <p>Unfortunately the C/C++ ecosystem lacks a defacto standard third-party repository. Thankfully, the Please
+            build language is powerful and can reliably build nearly any part of your project.
+            See the <a href="/build_rules.html">writing build rules</a> documentation for more information on this.</p>
+        </div>
+      </div>
+    </div>
+  </div>
   Each of these require explicit declarations of all their dependencies in the
   BUILD file; this is how we pin dependencies & guarantee reproducibility.<br/>
   There are one or two alternatives that show slightly different approaches
@@ -185,3 +231,8 @@ in the config.</p>
 
 <p>Please also isn't a lawyer and can't provide advice about whether a specific licence is
   suitable for you or not. Only you can make that decision.</p>
+
+<div class="section-guide">
+  <div class="prev-section"><a href="/basics.html">Please basics</a></div>
+  <div class="next-section"><a href="/quickstart_dropoff.html">What's next?</a></div>
+</div>

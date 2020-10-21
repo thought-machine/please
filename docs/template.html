@@ -35,13 +35,20 @@
         <nav class="menu">
           <p><a href="#">&#x2630; Navigation</a></p>
           <ul>
-            <li{{menuItem "quickstart"}}><a href="/quickstart.html">Getting Started</a></li>
-            <li{{menuItem "basics"}}><a href="/basics.html">Documentation</a>
+            <li{{menuItem "quickstart"}}><a href="/quickstart.html">Getting Started</a>
+              {{ if matches .Filename "quickstart.html" "basics.html" "dependencies.html" "quickstart_dropoff.html"}}
+                <ul>
+                  <li{{menuItem "quickstart"}}><a href="/quickstart.html">Quick start</a></li>
+                  <li{{menuItem "basics"}}><a href="/basics.html">Basic concepts</a></li>
+                  <li{{menuItem "dependencies"}}><a href="/dependencies.html">Third-party dependencies</a></li>
+                  <li{{menuItem "quickstart_dropoff"}}><a href="/quickstart_dropoff.html">What's next?</a></li>
+                </ul>
+              {{ end }}
+            </li>
+            <li{{menuItem "config"}}><a href="/config.html">Documentation</a>
               <ul>
-                <li{{menuItem "basics"}}><a href="/basics.html">Basic concepts</a></li>
                 <li{{menuItem "config"}}><a href="config.html">Config options</a></li>
                 <li{{menuItem "commands"}}><a href="commands.html">Command line interface</a></li>
-                <li{{menuItem "dependencies"}}><a href="/dependencies.html">Third-party dependencies</a></li>
                 <li{{menuItem "remote_builds"}}><a href="/remote_builds.html">Remote builds</a></li>
                 <li{{menuItem "cross_compiling"}}><a href="/cross_compiling.html">Cross-compiling</a></li>
                 <li{{menuItem "cache"}}><a href="/cache.html">Caching</a></li>

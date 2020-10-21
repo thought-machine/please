@@ -20,6 +20,9 @@ brew install please</code></pre></p>
       <a href="https://github.com/thought-machine/please/releases">our releases page</a> and extract
       it yourself; it normally lives in <code>~/.please</code> but you can put it where you want.</p>
 
+    <p>Please will create a <code>pleasew</code> script in the repository root which can subsequently be used
+    to download and run please.</p>
+
     <h2>Shell completion</h2>
     <p>Please comes with a completion script for Bash and zsh built-in.</p>
 
@@ -27,7 +30,7 @@ brew install please</code></pre></p>
       This is handy to add to your <code>.bashrc</code> or <code>.zshrc</code>, for example:<br/>
       <pre><code>source <(plz --completion_script)</code></pre></p>
 
-    <p>The script will complete subcommands and flags but most relevantly can also complete
+    <p>The script will complete <a href="/commands.html">subcommands and flags</a> but most relevantly can also complete
       build labels by reading BUILD files for you.</p>
 
     <h2>BUILD file Language Protocol Server</h2>
@@ -42,19 +45,14 @@ brew install please</code></pre></p>
 
     <h2>Getting started</h2>
     <p>Run <code>plz init</code> at the root of your repo to create the .plzconfig file.
-      There are many options that can be configured in this file but you can worry about them
-      later - the defaults should be fine to begin with.</p>
-
-    <p>You will need to write some BUILD files to define how to compile your code.
-      Carry on to <a href="basics.html">Please Basics</a> which will explain more about it.
-    </p>
-
-    <h2>Missing some rule?</h2>
-    <p>Please can automate nearly any part of your build process. If there's no build rule for your task, writing your
-      own is easy!</p>
-    <p>Learn more about writing custom build rules <a href="/build_rules.html">here</a>!</p>
+        There are many options that can be configured in this file but you can worry about them
+        later - the defaults should be fine to begin with.</p>
 
     <h2>More info</h2>
-    <p>If you want more information on Please, you can try
-      <a href="https://groups.google.com/forum/#!forum/please-build">the mailing list</a> or catch us
-      <a href="https://gitter.im/please-build/Lobby">on Gitter</a> to ask questions.</p>
+    <p>If you want more information on Please, you can raise issues on
+        <a href="https://github.com/thought-machine/please">Github</a> or catch us
+        <a href="https://gitter.im/please-build/Lobby">on Gitter</a> to ask questions.</p>
+
+    <div class="section-guide">
+        <div class="next-section"><a href="/basics.html">Please basics</a></div>
+    </div>
