@@ -803,7 +803,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
 
 
 def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
-           visibility:list=None, patch:str|list=None, binary:bool=False, test_only:bool&testonly=False,
+           visibility:list=None, patch:str|list|dict=None, binary:bool=False, test_only:bool&testonly=False,
            install:list=None, revision:str|list=None, strip:list=None, hashes:list=None,
            extra_outs:list=[], licences:list=None, module_major_version:str|list=''):
     """Defines a dependency on a third-party Go library.
@@ -827,7 +827,9 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
       deps (list): Dependencies
       exported_deps (list): Dependencies to make available to anything using this rule.
       visibility (list): Visibility specification
-      patch (str | list): Patch file or files to apply
+      patch (str | list | dict): Patch file(s) to apply. If the dict form is used, each key should correspond
+                                 to a target in 'get', with the value defining the patch file(s) to apply to
+                                 that target.
       binary (bool): True if the output of the rule is a binary.
       test_only (bool): If true this rule will only be visible to tests.
       install (list): Allows specifying the exact list of packages to install. If this is not passed,
@@ -845,6 +847,26 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
                                   This rule allows us to map the source path in the repo github.com/some/repo/main.go to
                                   the actual source path github.com/some/repo/v2/main.go.
     """
+    def get_param_as_list(value, key):
+        if not value:
+            return []
+        elif isinstance(value, str):
+            return [value]
+        elif isinstance(value, list):
+            return value
+        elif isinstance(value, dict):
+            v = value.get(key)
+            if not v:
+                return []
+            if isinstance(v, str):
+                return [v]
+            elif isinstance(v, list):
+                return v
+            else:
+                error(f"get_param_as_list: unexpected type %s" % type(v))
+        else:
+            error(f"get_param_as_list: unexpected type %s" % type(value))
+
     go_rule = f':{name}'
     if isinstance(get, str):
         get = [get]
@@ -855,8 +877,6 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         tags = [g.replace('/', '_') for g in get]
         revision = revision or [None for g in get]
         module_major_version = module_major_version or ['' for g in get]
-    if isinstance(patch, str):
-        patch = [patch]
     all_installs = []
     outs = extra_outs
     provides = {}
@@ -867,7 +887,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             tag = tag,
             get = getone,
             repo = repo,
-            patch = patch,
+            patch = get_param_as_list(patch, getone),
             hashes = hashes,
             test_only = test_only,
             revision = revision,
