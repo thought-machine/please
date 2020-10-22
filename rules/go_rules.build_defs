@@ -272,7 +272,7 @@ def _get_import_path(import_path):
 
     return pkg
 
-def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
+def cgo_library(name:str, srcs:list=[], go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 out:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
                 subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, import_path:str=''):
     """Generates a Go library which can be reused by other rules.
@@ -306,6 +306,8 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
       test_only (bool): If True, is only visible to test rules.
       import_path (str): If set, this will override the import path of the generated go package.
     """
+    assert srcs or go_srcs, 'At least one of srcs and go_srcs must be provided'
+
     if not srcs:
         return go_library(
             name = name,
