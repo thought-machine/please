@@ -850,7 +850,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         tags = ['get']
         module_major_version = [module_major_version]
     else:
-        tags = [basename(dirname(g)) for g in get]
+        tags = [g.replace('/', '_') for g in get]
         revision = revision or [None for g in get]
         module_major_version = module_major_version or ['' for g in get]
     all_installs = []
