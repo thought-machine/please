@@ -700,3 +700,42 @@ footer > div {
 .next-section:after {
     content: " \2192";
 }
+
+/* codelabs */
+.code-lab {
+    margin: 3em 1em 1em;
+    background-color: #1c1e23;
+}
+
+.code-lab a {
+    display: block;
+    padding: 1em;
+    border-left: 4px solid #02e68f;
+}
+
+.code-lab h2 {
+    text-indent: 0;
+    margin-top: 0;
+    padding: 0;
+    font-size: x-large;
+}
+
+.code-lab-grid > .code-lab > a {
+    color: #999999;
+}
+
+.code-lab-author {
+    margin-top: 0;
+    font-size: small;
+    text-align: right;
+}
+
+.code-lab-duration {
+    margin-top: 0;
+    float: left;
+    font-size: small;
+}
+
+.code-lab-start {
+    text-align: right;
+}

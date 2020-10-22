@@ -648,8 +648,8 @@ go_get(
     get = "github.com/mostynb/go-grpc-compression/zstd",
     revision = "v1.1.2",
     deps = [
-        ":zstd",
         ":grpc",
+        ":zstd",
     ],
 )
 
@@ -663,4 +663,41 @@ go_get(
         "zstd/...",
     ],
     revision = "v1.11.0",
+)
+
+go_get(
+    name = "goldmark",
+    get = "github.com/yuin/goldmark/...",
+    revision = "v1.2.1",
+)
+
+go_get(
+    name = "csslex",
+    get = "github.com/x1ddos/csslex/...",
+    revision = "7894d8ab8bfebee68b6c32bacec8f5189b45c67f",
+)
+
+go_get(
+    name = "blackfriday",
+    get = "github.com/russross/blackfriday/...",
+    revision = "v2.0.1",
+    deps = [":sanitized_anchor_name"],
+)
+
+go_get(
+    name = "sanitized_anchor_name",
+    get = "github.com/shurcooL/sanitized_anchor_name",
+)
+
+go_get(
+    name = "claat",
+    binary = True,
+    get = "github.com/googlecodelabs/tools/claat",
+    revision = "v2.2.3",
+    deps = [
+        ":blackfriday",
+        ":csslex",
+        ":goldmark",
+        ":oauth2",
+    ],
 )

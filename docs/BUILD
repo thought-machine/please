@@ -1,21 +1,19 @@
+subinclude("//docs/build_defs")
+
 deps = []
 
 for src in glob(
-    ["*.html", "milestones/*.html"],
+    [
+        "*.html",
+        "milestones/*.html",
+    ],
     exclude = [
         "template.html",
         "lexicon*.html",
         "language.html",
     ],
 ):
-    templated_rule = genrule(
-        name = src.replace(".", "_").replace("/", "_"),
-        srcs = ["template.html", src],
-        outs = [src],
-        cmd = '"$TOOL" $SRCS > "$OUT"',
-        tools = [":templater"],
-    )
-    deps += [templated_rule]
+    deps += [html_template(name = src.replace(".", "_").replace("/", "_"), src = src)]
 
 genrule(
     name = "rules",
@@ -84,9 +82,13 @@ tarball(
     labels = ["hlink:plz-out/pkg"],
 )
 
+# This is used exclusively for the s3 website
 tarball(
     name = "deep-tarball",
-    srcs = [":docs"],
+    srcs = [
+        ":docs",
+        "//docs/codelabs",
+    ],
     out = "deep-docs.tar.gz",
     flatten = False,
     labels = ["hlink:plz-out/pkg"],
@@ -95,6 +97,13 @@ tarball(
 go_binary(
     name = "templater",
     srcs = ["template.go"],
+    visibility = ["//docs/..."],
+)
+
+filegroup(
+    name = "template_html",
+    srcs = ["template.html"],
+    visibility = ["//docs/..."],
 )
 
 go_binary(
