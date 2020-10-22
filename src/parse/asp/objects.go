@@ -894,14 +894,15 @@ func newConfig(state *core.BuildState) *pyConfig {
 	arch := config.Build.Arch
 	if state.OriginalArch.OS != "" {
 		arch = state.OriginalArch
-	} else {
-		c["OS"] = pyString(arch.OS)
-		c["ARCH"] = pyString(arch.Arch)
-		c["HOSTOS"] = pyString(arch.HostOS())
-		c["HOSTARCH"] = pyString(arch.HostArch())
-		c["GOOS"] = pyString(arch.OS)
-		c["GOARCH"] = pyString(arch.GoArch())
 	}
+
+	c["OS"] = pyString(arch.OS)
+	c["ARCH"] = pyString(arch.Arch)
+	c["HOSTOS"] = pyString(arch.HostOS())
+	c["HOSTARCH"] = pyString(arch.HostArch())
+	c["GOOS"] = pyString(arch.OS)
+	c["GOARCH"] = pyString(arch.GoArch())
+
 
 	return &pyConfig{base: c}
 }
