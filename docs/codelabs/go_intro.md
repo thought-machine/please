@@ -28,7 +28,7 @@ Duration: 2
 The easiest way to get started is from an existing go module:  
 
 ```
-$ mkdir example_module
+$ mkdir example_module && cd example_module
 $ go mod init example_module
 $ plz init 
 ```
@@ -366,3 +366,18 @@ go_test(
     external = True,
 )
 ```
+
+## What next?
+Duration: 1
+
+Hopefully have an idea as to how to build Go with Please. Please is capable of so much more though!
+
+- [Please basics](/basics.html) - A more general introduction to Please. It covers a lot of what we have in this 
+tutorial in more detail.  
+- [Builtin rules](/lexicon.html#go) - See the rest of the Go rules as well as rules for other languages and tools
+- [Config](/config.html#go) - See the available config options for Please, especially those relating to the Go language
+- [Command line interface](/commands.html) - Please has a powerful command line interface. Interrogate the build graph, 
+determine files changes since master, watch rules and build them automatically as things change and much more! Use 
+`plz halp`, and explore this rich set of commands!  
+
+Otherwise, why not try one of the other codelabs!
