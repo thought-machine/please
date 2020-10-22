@@ -890,16 +890,17 @@ func newConfig(state *core.BuildState) *pyConfig {
 	if config.Bazel.Compatibility {
 		c["FEATURES"] = pyList{}
 	}
-	c["OS"] = pyString(config.Build.Arch.OS)
-	c["ARCH"] = pyString(config.Build.Arch.Arch)
-	c["HOSTOS"] = pyString(config.Build.Arch.HostOS())
-	c["HOSTARCH"] = pyString(config.Build.Arch.HostArch())
-	c["GOOS"] = pyString(config.Build.Arch.OS)
-	c["GOARCH"] = pyString(config.Build.Arch.GoArch())
 
+	arch := config.Build.Arch
 	if state.OriginalArch.OS != "" {
-		c["OS"] = pyString(state.OriginalArch.OS)
-		c["ARCH"] = pyString(state.OriginalArch.Arch)
+		arch = state.OriginalArch
+	} else {
+		c["OS"] = pyString(arch.OS)
+		c["ARCH"] = pyString(arch.Arch)
+		c["HOSTOS"] = pyString(arch.HostOS())
+		c["HOSTARCH"] = pyString(arch.HostArch())
+		c["GOOS"] = pyString(arch.OS)
+		c["GOARCH"] = pyString(arch.GoArch())
 	}
 
 	return &pyConfig{base: c}
