@@ -648,8 +648,8 @@ go_get(
     get = "github.com/mostynb/go-grpc-compression/zstd",
     revision = "v1.1.2",
     deps = [
-        ":zstd",
         ":grpc",
+        ":zstd",
     ],
 )
 
