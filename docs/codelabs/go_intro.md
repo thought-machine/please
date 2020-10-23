@@ -61,7 +61,7 @@ this file, it can be useful for integrating your project with the go ecosystem a
 
 The `pleasew` script is a wrapper script that will automatically install Please if it's not already! This
 means Please projects are portable and can always be built via 
-`git clone https://... my_module && cd my_module && ./pleasew build`.
+`git clone https://... example_module && cd example_module && ./pleasew build`.
 
 Finally, `.plzconfig` contains the project configuration for Please. Please will have picked up the module's import path
 and added it to your config:
