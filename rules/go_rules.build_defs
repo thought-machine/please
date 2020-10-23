@@ -272,7 +272,7 @@ def _get_import_path(import_path):
 
     return pkg
 
-def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
+def cgo_library(name:str, srcs:list=[], go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 out:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
                 subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, import_path:str=''):
     """Generates a Go library which can be reused by other rules.
@@ -306,6 +306,8 @@ def cgo_library(name:str, srcs:list, go_srcs:list=[], c_srcs:list=[], hdrs:list=
       test_only (bool): If True, is only visible to test rules.
       import_path (str): If set, this will override the import path of the generated go package.
     """
+    assert srcs or go_srcs, 'At least one of srcs and go_srcs must be provided'
+
     if not srcs:
         return go_library(
             name = name,
@@ -801,7 +803,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
 
 
 def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
-           visibility:list=None, patch:str=None, binary:bool=False, test_only:bool&testonly=False,
+           visibility:list=None, patch:str|list|dict=None, binary:bool=False, test_only:bool&testonly=False,
            install:list=None, revision:str|list=None, strip:list=None, hashes:list=None,
            extra_outs:list=[], licences:list=None, module_major_version:str|list=''):
     """Defines a dependency on a third-party Go library.
@@ -825,7 +827,9 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
       deps (list): Dependencies
       exported_deps (list): Dependencies to make available to anything using this rule.
       visibility (list): Visibility specification
-      patch (str): Patch file to apply
+      patch (str | list | dict): Patch file(s) to apply. If the dict form is used, each key should correspond
+                                 to a target in 'get', with the value defining the patch file(s) to apply to
+                                 that target.
       binary (bool): True if the output of the rule is a binary.
       test_only (bool): If true this rule will only be visible to tests.
       install (list): Allows specifying the exact list of packages to install. If this is not passed,
@@ -843,6 +847,26 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
                                   This rule allows us to map the source path in the repo github.com/some/repo/main.go to
                                   the actual source path github.com/some/repo/v2/main.go.
     """
+    def get_param_as_list(value, key):
+        if not value:
+            return []
+        elif isinstance(value, str):
+            return [value]
+        elif isinstance(value, list):
+            return value
+        elif isinstance(value, dict):
+            v = value.get(key)
+            if not v:
+                return []
+            if isinstance(v, str):
+                return [v]
+            elif isinstance(v, list):
+                return v
+            else:
+                error(f"get_param_as_list: unexpected type %s" % type(v))
+        else:
+            error(f"get_param_as_list: unexpected type %s" % type(value))
+
     go_rule = f':{name}'
     if isinstance(get, str):
         get = [get]
@@ -850,7 +874,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         tags = ['get']
         module_major_version = [module_major_version]
     else:
-        tags = [basename(dirname(g)) for g in get]
+        tags = [g.replace('/', '_') for g in get]
         revision = revision or [None for g in get]
         module_major_version = module_major_version or ['' for g in get]
     all_installs = []
@@ -863,7 +887,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             tag = tag,
             get = getone,
             repo = repo,
-            patch = patch,
+            patch = get_param_as_list(patch, getone),
             hashes = hashes,
             test_only = test_only,
             revision = revision,
@@ -949,7 +973,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         return a_rule
 
 
-def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, hashes:list=None,
+def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:list=[], hashes:list=None,
                      test_only:bool&testonly=False, revision:str=None, strip:list=None,
                      labels:list=[], licences:list=None, module_major_version:str):
     if hashes and not revision:
@@ -990,14 +1014,14 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:str=None, ha
         cmd += ['find . -name .git | xargs rm -rf']
         tools = [CONFIG.GO_TOOL]
     if patch:
-        cmd += [f'patch -d {subdir} -p1 < "$TMP_DIR"/$SRCS_PATCH']
+        cmd += [f'for p in "$TMP_DIR"/$SRCS_PATCH; do patch -d {subdir} -p1 < $p; done']
     if strip:
         cmd += [f'rm -rf {subdir}/{s}' for s in strip]
     return build_rule(
         name = name,
         tag = tag,
         srcs = {
-            'patch': [patch],
+            'patch': patch,
             'get': get_deps,
         },
         outs = [subdir],
