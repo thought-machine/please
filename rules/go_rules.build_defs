@@ -804,7 +804,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
 
 def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str|list|dict=None, binary:bool=False, test_only:bool&testonly=False,
-           install:list=None, revision:str|list=None, strip:list=None, hashes:list=None,
+           install:list=None, revision:str|list=None, strip:list|dict=None, hashes:list=None,
            extra_outs:list=[], licences:list=None, module_major_version:str|list=''):
     """Defines a dependency on a third-party Go library.
 
@@ -838,7 +838,9 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
                       the root package from this repo.
       revision (str): Git hash to check out before building. Only works for git at present,
                       not for other version control systems.
-      strip (list): List of paths to strip from the installed target.
+      strip (list | dict): List of paths to strip from the target after downloading but before building it.
+                           If the dict form is used, each key should correspond to a target in 'get', with
+                           the value defining the paths to strip from that target.
       hashes (list): List of hashes to verify the downloaded sources against.
       extra_outs (list): List of additional output files after the compile.
       licences (list): Licences this rule is subject to.
@@ -891,7 +893,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             hashes = hashes,
             test_only = test_only,
             revision = revision,
-            strip = strip,
+            strip = get_param_as_list(strip, getone),
             licences = licences,
             module_major_version = module_major_version,
         )
