@@ -801,13 +801,6 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
         size = size,
     )
 
-def _install_output(get_root: str, i: str) -> str:
-    if not i:
-        return get_root
-    if i.endswith("..."):
-        return get_root + "/" + i.removesuffix("/...")
-    return f"{get_root}/{i}.a"
-
 
 def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str|list|dict=None, binary:bool=False, test_only:bool&testonly=False,
@@ -912,7 +905,15 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         if not install:
             outs += [getroot]
         else:
-            outs += [_install_output(getroot, i.removeprefix(getroot)) for i in installone]
+            for i in installone:
+                if not i:
+                    outs += [getroot + ".a"]
+                elif i.endswith("..."):
+                    out = getroot + "/" + i.removesuffix("/...")
+                    get_roots += [out]
+                    outs += [out]
+                else:
+                    outs += [f"{getroot}/{i}.a"]
 
         if installone:
             all_installs += [i if i.startswith(getroot) else (getroot + '/' + i) for i in installone]
@@ -939,7 +940,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         # Outputs are created one directory down from where we want them.
         # For most it doesn't matter but the top-level one will get lost.
         pkg_get_roots = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{getroot}' for getroot in get_roots]
-        cmd += [f' if [ -f {out}.a ]; then mkdir -p {out} && mv {out}.a {out}; fi' for out in pkg_get_roots]
+        cmd += [f' if [ -f {out}.a ]; then mkdir -p {out} && cp {out}.a {out}; fi' for out in pkg_get_roots]
 
     a_rule = build_rule(
         name = name,
