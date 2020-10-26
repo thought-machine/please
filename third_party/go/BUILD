@@ -661,6 +661,7 @@ go_get(
         "huff0",
         "snappy",
         "zstd/...",
+        "zstd",
     ],
     revision = "v1.11.0",
 )

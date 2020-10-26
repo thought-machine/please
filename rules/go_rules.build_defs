@@ -801,6 +801,13 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
         size = size,
     )
 
+def _install_output(get_root: str, i: str) -> str:
+    if not i:
+        return get_root
+    if i.endswith("..."):
+        return get_root + "/" + i.removesuffix("/...")
+    return f"{get_root}/{i}.a"
+
 
 def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str|list|dict=None, binary:bool=False, test_only:bool&testonly=False,
@@ -881,6 +888,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         module_major_version = module_major_version or ['' for g in get]
     all_installs = []
     outs = extra_outs
+    get_roots = []
     provides = {}
     srcs = []
     for getone, revision, tag, module_major_version in zip(get, revision, tags, module_major_version):
@@ -897,10 +905,18 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             licences = licences,
             module_major_version = module_major_version,
         )
-        outs += [getroot]
+        get_roots += [getroot]
         srcs += [get_rule]
         provides = {'go': go_rule, 'go_src': get_rule}
         installone = get_param_as_list(install, getone)
+        if not install:
+            outs += [getroot]
+        else:
+            for i in installone:
+                if i.startswith(getroot):
+                    outs += [_install_output(getroot, i.removeprefix(getroot))]
+                else:
+                    outs += [_install_output(getroot, i)]
         if installone:
             all_installs += [i if i.startswith(getroot) else (getroot + '/' + i) for i in installone]
         else:
@@ -925,7 +941,8 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in outs]
         # Outputs are created one directory down from where we want them.
         # For most it doesn't matter but the top-level one will get lost.
-        cmd += [f' if [ -f {out}.a ]; then mkdir -p {out} && mv {out}.a {out}; fi' for out in outs]
+        pkg_get_roots = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{getroot}' for getroot in get_roots]
+        cmd += [f' if [ -f {out}.a ]; then mkdir -p {out} && mv {out}.a {out}; fi' for out in pkg_get_roots]
 
     a_rule = build_rule(
         name = name,
