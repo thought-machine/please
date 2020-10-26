@@ -1,3 +1,25 @@
+Version 15.7.1
+--------------
+
+    * Subincludes now set the config values based on the --arch flag
+      correctly #1324
+
+
+Version 15.7.0
+--------------
+
+    * Glob will now include hidden files when Bazel compat is enabled #1305
+    * Fix some niggles around select() and config_setting() #1324
+    * Improved test output to include real and total time #1309
+    * Fix to cgo_library() to set its import path correctly #1310
+    * Adding multiplication and division to the BUILD language #1314
+    * go_get() now tags download rules based on the whole module name
+      rather than just the github group #1327
+    * go_get() now supports multiple patches #1328 #1333
+    * Fix nil pointer when failing to parse test output for remote execution
+      #1330
+
+
 Version 15.6.0
 --------------
 

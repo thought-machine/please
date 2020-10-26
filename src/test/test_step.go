@@ -366,6 +366,9 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 
 	if runRemotely {
 		metadata, err = state.RemoteClient.Test(tid, target, run)
+		if metadata == nil {
+			metadata = new(core.BuildMetadata)
+		}
 	} else {
 		var stdout []byte
 		stdout, err = prepareAndRunTest(tid, state, target, run)
@@ -379,7 +382,10 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 	if !target.NoTestOutput {
 		d, readErr := readTestResultsDir(path.Join(target.TestDir(run), core.TestResultsFile))
 		if readErr != nil {
-			log.Warningf("failed to read test results file: %v", readErr)
+			// If we got an error running the tests, this is probably to be expected and not worth warning about
+			if err == nil {
+				log.Warningf("failed to read test results file: %v", readErr)
+			}
 		} else {
 			data = d
 		}

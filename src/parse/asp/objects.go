@@ -847,7 +847,8 @@ func (c *pyConfig) Merge(other *pyFrozenConfig) {
 
 // newConfig creates a new pyConfig object from the configuration.
 // This is typically only created once at global scope, other scopes copy it with .Copy()
-func newConfig(config *core.Configuration) *pyConfig {
+func newConfig(state *core.BuildState) *pyConfig {
+	config := state.Config
 	c := make(pyDict, 100)
 	v := reflect.ValueOf(config).Elem()
 	for i := 0; i < v.NumField(); i++ {
@@ -889,12 +890,19 @@ func newConfig(config *core.Configuration) *pyConfig {
 	if config.Bazel.Compatibility {
 		c["FEATURES"] = pyList{}
 	}
-	c["OS"] = pyString(config.Build.Arch.OS)
-	c["ARCH"] = pyString(config.Build.Arch.Arch)
-	c["HOSTOS"] = pyString(config.Build.Arch.HostOS())
-	c["HOSTARCH"] = pyString(config.Build.Arch.HostArch())
-	c["GOOS"] = pyString(config.Build.Arch.OS)
-	c["GOARCH"] = pyString(config.Build.Arch.GoArch())
+
+	arch := config.Build.Arch
+	if state.OriginalArch.OS != "" {
+		arch = state.OriginalArch
+	}
+
+	c["OS"] = pyString(arch.OS)
+	c["ARCH"] = pyString(arch.Arch)
+	c["HOSTOS"] = pyString(arch.HostOS())
+	c["HOSTARCH"] = pyString(arch.HostArch())
+	c["GOOS"] = pyString(arch.OS)
+	c["GOARCH"] = pyString(arch.GoArch())
+
 	return &pyConfig{base: c}
 }
 

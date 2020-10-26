@@ -141,26 +141,26 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.P
 }
 
 // getConfig returns a new configuration object for the given configuration object.
-func (i *interpreter) getConfig(config *core.Configuration) *pyConfig {
+func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
 	i.configMutex.RLock()
-	if c, present := i.config[config]; present {
+	if c, present := i.config[state.Config]; present {
 		i.configMutex.RUnlock()
 		return c
 	}
 	i.configMutex.RUnlock()
 	i.configMutex.Lock()
 	defer i.configMutex.Unlock()
-	c := newConfig(config)
-	i.config[config] = c
+	c := newConfig(state)
+	i.config[state.Config] = c
 	return c
 }
 
 // pkgConfig returns a new configuration object for the given package.
 func (i *interpreter) pkgConfig(pkg *core.Package) *pyConfig {
 	if pkg.Subrepo != nil && pkg.Subrepo.State != nil {
-		return i.getConfig(pkg.Subrepo.State.Config)
+		return i.getConfig(pkg.Subrepo.State)
 	}
-	return i.getConfig(i.scope.state.Config)
+	return i.getConfig(i.scope.state)
 }
 
 // optimiseExpressions implements a peephole optimiser for expressions by precalculating constants
@@ -301,7 +301,7 @@ func (s *scope) LoadSingletons(state *core.BuildState) {
 	s.Set("False", False)
 	s.Set("None", None)
 	if state != nil {
-		s.config = s.interpreter.getConfig(state.Config)
+		s.config = s.interpreter.getConfig(state)
 		s.Set("CONFIG", s.config)
 	}
 }

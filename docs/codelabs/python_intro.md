@@ -1,5 +1,5 @@
 summary: Getting started with Python
-description: Building and testing with Python and Please, as well as managing third-party dependencies via go get
+description: Building and testing with Python and Please, as well as managing third-party dependencies via pip
 id: python_intro
 categories: beginner
 tags: medium
