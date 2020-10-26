@@ -912,11 +912,8 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         if not install:
             outs += [getroot]
         else:
-            for i in installone:
-                if i.startswith(getroot):
-                    outs += [_install_output(getroot, i.removeprefix(getroot))]
-                else:
-                    outs += [_install_output(getroot, i)]
+            outs += [_install_output(getroot, i.removeprefix(getroot)) for i in installone]
+
         if installone:
             all_installs += [i if i.startswith(getroot) else (getroot + '/' + i) for i in installone]
         else:
