@@ -804,7 +804,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
 
 def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str|list|dict=None, binary:bool=False, test_only:bool&testonly=False,
-           install:list=None, revision:str|list=None, strip:list|dict=None, hashes:list=None,
+           install:list|dict=None, revision:str|list=None, strip:list=None, hashes:list=None,
            extra_outs:list=[], licences:list=None, module_major_version:str|list=''):
     """Defines a dependency on a third-party Go library.
 
@@ -832,10 +832,10 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
                                  that target.
       binary (bool): True if the output of the rule is a binary.
       test_only (bool): If true this rule will only be visible to tests.
-      install (list): Allows specifying the exact list of packages to install. If this is not passed,
-                      the package passed to 'get' is installed. If you pass this for subpackages, you
-                      will need to explicitly add an empty string to the list if you want to install
-                      the root package from this repo.
+      install (list | dict): Only install listed (sub)packages. If the dict form is used, each key should
+                             correspond to a target in 'get', with the value defining the list of packages
+                             to install for that target. Specify the empty string as an element in the list
+                             to install a target's root package.
       revision (str): Git hash to check out before building. Only works for git at present,
                       not for other version control systems.
       strip (list | dict): List of paths to strip from the target after downloading but before building it.
@@ -900,8 +900,9 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         outs += [getroot]
         srcs += [get_rule]
         provides = {'go': go_rule, 'go_src': get_rule}
-        if install:
-            all_installs += [i if i.startswith(getroot) else (getroot + '/' + i) for i in install]
+        installone = get_param_as_list(install, getone)
+        if installone:
+            all_installs += [i if i.startswith(getroot) else (getroot + '/' + i) for i in installone]
         else:
             all_installs += [getone]
 
