@@ -1,7 +1,10 @@
 deps = []
 
 for src in glob(
-    ["*.html", "milestones/*.html"],
+    [
+        "*.html",
+        "milestones/*.html",
+    ],
     exclude = [
         "template.html",
         "lexicon*.html",
