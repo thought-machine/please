@@ -567,8 +567,8 @@ def exports_files(srcs, name='exported_files', visibility=['PUBLIC'], licenses=N
     )
 
 
-def is_platform(os:str=CONFIG.OS, arch:str=CONFIG.ARCH, host_os:str=CONFIG.HOSTOS,
-                host_arch:str=CONFIG.HOSTARCH) -> bool:
+def is_platform(os:str|list=CONFIG.OS, arch:str|list=CONFIG.ARCH, host_os:str|list=CONFIG.HOSTOS,
+                host_arch:str|list=CONFIG.HOSTARCH) -> bool:
     """
     Checks to see if the current platform that is configured matches the conditions provided. These follow the golang
     naming convention e.g. linux and amd64.
@@ -581,4 +581,14 @@ def is_platform(os:str=CONFIG.OS, arch:str=CONFIG.ARCH, host_os:str=CONFIG.HOSTO
         host_os (str): The host operating system we are running on.
         host_arch (str): The host cpu architecture we are running on.
     """
-    return os == CONFIG.OS and arch == CONFIG.ARCH and host_os == CONFIG.HOSTOS and host_arch == CONFIG.HOSTARCH
+    def as_list(i):
+        if isinstance(i, list):
+            return i
+        return [i]
+
+    os = as_list(os)
+    arch = as_list(arch)
+    host_os = as_list(host_os)
+    host_arch = as_list(host_arch)
+
+    return CONFIG.OS in os and CONFIG.ARCH in arch and CONFIG.HOSTOS in host_os and CONFIG.HOSTARCH in host_arch
