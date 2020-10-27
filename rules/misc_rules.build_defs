@@ -565,3 +565,20 @@ def exports_files(srcs, name='exported_files', visibility=['PUBLIC'], licenses=N
         srcs = srcs,
         visibility = visibility,
     )
+
+
+def is_platform(os:str=CONFIG.OS, arch:str=CONFIG.ARCH, host_os:str=CONFIG.HOSTOS,
+                host_arch:str=CONFIG.HOSTARCH) -> bool:
+    """
+    Checks to see if the current platform that is configured matches the conditions provided. These follow the golang
+    naming convention e.g. linux and amd64.
+
+    https://github.com/golang/go/blob/master/src/go/build/syslist.go
+
+    Args:
+        os (str): The target operating system we are compiling for.
+        arch (str): The target CPU architecture we are compiling for.
+        host_os (str): The host operating system we are running on.
+        host_arch (str): The host cpu architecture we are running on.
+    """
+    return os == CONFIG.OS and arch == CONFIG.ARCH and host_os == CONFIG.HOSTOS and host_arch == CONFIG.HOSTARCH
