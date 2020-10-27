@@ -814,7 +814,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
 
     Note also that while a single go_get is sufficient to compile all parts of a library,
     one may also want separate ones for a binary. Since two rules can't both output the same
-    source files (and you only want to downasdfload them once anyway) you should handle that by
+    source files (and you only want to download them once anyway) you should handle that by
     marking the non-binary rule as a dependency of the binary one - if you don't there may
     be warnings issued about conflicting output files.
 
