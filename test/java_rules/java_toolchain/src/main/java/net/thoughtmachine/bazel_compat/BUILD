@@ -1,6 +1,6 @@
 package(bazel_compatibility = True)
 
-if CONFIG.OS == "linux" or CONFIG.OS == "darwin":
+if is_platform(os = "linux") or is_platform(os = "darwin"):
     please_java_toolchain(
         name = "java8",
         jdk_url = {
@@ -44,7 +44,7 @@ if CONFIG.OS == "linux" or CONFIG.OS == "darwin":
     java_test(
         name = "java14_test",
         srcs = ["VersionTest.java"],
-        jvm_args = "-Dexpected_version=14" if CONFIG.OS == "linux" else "-Dexpected_version=14.0.1",
+        jvm_args = "-Dexpected_version=14" if is_platform(os = "linux") else "-Dexpected_version=14.0.1",
         toolchain = ":java14",
         deps = ["//third_party/java:junit"],
     )

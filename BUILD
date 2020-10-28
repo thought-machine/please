@@ -48,5 +48,5 @@ github_repo(
 
 sh_cmd(
     name = "autofix",
-    cmd = "plz buildify && gofmt -s -w src tools test && plz run parallel --include codegen",
+    cmd = "plz fmt -w && gofmt -s -w src tools test && plz run parallel --include codegen",
 )

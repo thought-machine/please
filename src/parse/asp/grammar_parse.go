@@ -430,6 +430,39 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 	}
 }
 
+func concatStrings(lhs *ValueExpression, rhs *ValueExpression) *ValueExpression {
+	// If they're both fStrngs
+	if lhs.FString != nil && rhs.FString != nil {
+		// If rhs has no variables, handle that
+		if len(rhs.FString.Vars) == 0 {
+			lhs.FString.Suffix += rhs.FString.Suffix
+			return lhs
+		}
+
+		// Otherwise merge the vars
+		rhs.FString.Vars[0].Prefix = lhs.FString.Suffix + rhs.FString.Vars[0].Prefix
+		rhs.FString.Vars = append(lhs.FString.Vars, rhs.FString.Vars...)
+
+		return rhs
+	}
+
+	// lhs is fString, add rhs to suffix
+	if lhs.FString != nil && rhs.FString == nil {
+		lhs.FString.Suffix += rhs.String[1 : len(rhs.String)-1]
+		return lhs
+	}
+
+	// lhs is string, add rhs to prefix of first var
+	if lhs.FString == nil && rhs.FString != nil {
+		rhs.FString.Vars[0].Prefix = lhs.String[1:len(lhs.String)-1] + rhs.FString.Vars[0].Prefix
+		return rhs
+	}
+
+	// otherwise they must both be strings
+	lhs.String = "\"" + lhs.String[1:len(lhs.String)-1] + rhs.String[1:len(rhs.String)-1] + "\""
+	return lhs
+}
+
 func (p *parser) parseValueExpression() *ValueExpression {
 	ve := &ValueExpression{}
 	tok := p.l.Peek()
@@ -440,6 +473,10 @@ func (p *parser) parseValueExpression() *ValueExpression {
 		} else {
 			ve.String = tok.Value
 			p.endPos = p.l.Next().EndPos()
+		}
+
+		if p.l.Peek().Type == String {
+			return concatStrings(ve, p.parseValueExpression())
 		}
 	} else if tok.Type == Int {
 		p.assert(len(tok.Value) < 19, tok, "int literal is too large: %s", tok)

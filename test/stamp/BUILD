@@ -15,7 +15,7 @@ sh_test(
     data = [":stamp"],
 )
 
-if CONFIG.OS == "linux":
+if is_platform(os = "linux"):
     go_binary(
         name = "stamp_static",
         srcs = ["main.go"],

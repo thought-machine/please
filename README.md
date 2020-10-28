@@ -66,6 +66,8 @@ This will overwrite whatever you currently have in `~/.please` with
 your local version, although you can get back to a released version
 again by running `plz update --force`.
 
+To automatically fix linting and code generation issues, run
+`plz autofix`. 
 
 Documentation
 =============
