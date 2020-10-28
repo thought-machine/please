@@ -326,9 +326,6 @@ func (l *lex) consumeString(quote byte, pos Position, multiline, raw, fString bo
 				if fString {
 					token.Value = "f" + token.Value
 				}
-				if l.braces > 0 {
-					return l.handleImplicitStringConcatenation(token)
-				}
 				return token
 			}
 		case '\n':
@@ -351,35 +348,6 @@ func (l *lex) consumeString(quote byte, pos Position, multiline, raw, fString bo
 			s = append(s, c)
 		}
 	}
-}
-
-// handleImplicitStringConcatenation looks ahead after a string token and checks if the next token will be a string; if so
-// we collapse them both into one string now.
-func (l *lex) handleImplicitStringConcatenation(token Token) Token {
-	col := l.col
-	line := l.line
-	for i, b := range l.b[l.i:] {
-		switch b {
-		case '\n':
-			col = 0
-			line++
-			continue
-		case ' ':
-			col++
-			continue
-		case '"', '\'':
-			l.i += i + 1
-			l.col = col + 1
-			l.line = line
-			// Note that we don't handle raw or format strings here. Anecdotally, that seems relatively rare...
-			tok := l.consumePossiblyTripleQuotedString(b, token.Pos, false, false)
-			token.Value = token.Value[:len(token.Value)-1] + tok.Value[1:]
-			return token
-		default:
-			return token
-		}
-	}
-	return token
 }
 
 // consumeIdent consumes all characters of an identifier.
