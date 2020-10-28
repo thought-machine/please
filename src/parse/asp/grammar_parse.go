@@ -448,7 +448,7 @@ func concatStrings(lhs *ValueExpression, rhs *ValueExpression) *ValueExpression 
 
 	// lhs is fString, add rhs to suffix
 	if lhs.FString != nil && rhs.FString == nil {
-		lhs.FString.Suffix += rhs.String[1:len(rhs.String)-1]
+		lhs.FString.Suffix += rhs.String[1 : len(rhs.String)-1]
 		return lhs
 	}
 

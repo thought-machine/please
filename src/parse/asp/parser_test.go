@@ -785,9 +785,7 @@ func TestFStringConcat(t *testing.T) {
 		require.NotEmpty(t, res.String)
 		assert.Equal(t, "\"this is the left hand side this is the right hand side\"", res.String)
 	})
-
 }
-
 
 func TestFStringImplicitStringConcat(t *testing.T) {
 	str := "str('testing that we can carry these ' f'over {multiple} lines')"

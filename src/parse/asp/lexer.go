@@ -350,7 +350,6 @@ func (l *lex) consumeString(quote byte, pos Position, multiline, raw, fString bo
 	}
 }
 
-
 // consumeIdent consumes all characters of an identifier.
 func (l *lex) consumeIdent(pos Position) Token {
 	s := make([]rune, 0, 100)
