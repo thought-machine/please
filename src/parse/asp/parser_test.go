@@ -788,12 +788,12 @@ func TestFStringConcat(t *testing.T) {
 }
 
 func TestFStringImplicitStringConcat(t *testing.T) {
-	str := "str('testing that we can carry these ' f'over {multiple} lines')"
+	str := "str('testing that we can carry these ' f'over {multiple} lines' r' \\n')"
 	prog, err := newParser().parseAndHandleErrors(strings.NewReader(strings.ReplaceAll(str, "\t", "")))
 	require.NoError(t, err)
 
 	fString := prog[0].Ident.Action.Call.Arguments[0].Value.Val.FString
 	assert.Equal(t, "testing that we can carry these over ", fString.Vars[0].Prefix)
 	assert.Equal(t, "multiple", fString.Vars[0].Var)
-	assert.Equal(t, " lines", fString.Suffix)
+	assert.Equal(t, " lines \\n", fString.Suffix)
 }
