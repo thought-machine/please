@@ -1,6 +1,8 @@
 package asp
 
 import (
+	"github.com/stretchr/testify/require"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -658,4 +660,142 @@ func TestFuncReturnTypes(t *testing.T) {
 	assert.Equal(t, "str", stmts[0].FuncDef.Return)
 	assert.Equal(t, "config", stmts[2].FuncDef.Return)
 	assert.Equal(t, "dict", stmts[3].FuncDef.Return)
+}
+
+func TestFStringConcat(t *testing.T) {
+	t.Run("lhs string, rhs fstring", func(t *testing.T) {
+		lhs := &ValueExpression{
+			String: "\"this is the left hand side\"",
+		}
+
+		rhs := &ValueExpression{
+			FString: &FString{
+				Vars: []struct {
+					Prefix string
+					Var    string
+					Config string
+				}{
+					{
+						Prefix: " this is the rhs: ",
+						Var:    "rhs",
+						Config: "",
+					},
+				},
+				Suffix: " suffix",
+			},
+		}
+
+		res := concatStrings(lhs, rhs)
+
+		require.NotNil(t, res.FString)
+		assert.Len(t, res.FString.Vars, 1)
+		assert.Equal(t, "this is the left hand side this is the rhs: ", res.FString.Vars[0].Prefix)
+		assert.Equal(t, "rhs", res.FString.Vars[0].Var)
+		assert.Equal(t, " suffix", res.FString.Suffix)
+	})
+
+	t.Run("lhs fstring, rhs string", func(t *testing.T) {
+		lhs := &ValueExpression{
+			FString: &FString{
+				Vars: []struct {
+					Prefix string
+					Var    string
+					Config string
+				}{
+					{
+						Prefix: "this is the lhs: ",
+						Var:    "lhs",
+						Config: "",
+					},
+				},
+				Suffix: " suffix",
+			},
+		}
+
+		rhs := &ValueExpression{
+			String: "\" this is the right hand side\"",
+		}
+
+		res := concatStrings(lhs, rhs)
+
+		require.NotNil(t, res.FString)
+		assert.Len(t, res.FString.Vars, 1)
+		assert.Equal(t, "this is the lhs: ", res.FString.Vars[0].Prefix)
+		assert.Equal(t, "lhs", res.FString.Vars[0].Var)
+		assert.Equal(t, " suffix this is the right hand side", res.FString.Suffix)
+	})
+
+	t.Run("both fstring", func(t *testing.T) {
+		lhs := &ValueExpression{
+			FString: &FString{
+				Vars: []struct {
+					Prefix string
+					Var    string
+					Config string
+				}{
+					{
+						Prefix: "this is the lhs: ",
+						Var:    "lhs",
+						Config: "",
+					},
+				},
+				Suffix: "lhs suffix",
+			},
+		}
+
+		rhs := &ValueExpression{
+			FString: &FString{
+				Vars: []struct {
+					Prefix string
+					Var    string
+					Config string
+				}{
+					{
+						Prefix: " this is the rhs: ",
+						Var:    "rhs",
+						Config: "",
+					},
+				},
+				Suffix: " rhs suffix",
+			},
+		}
+		res := concatStrings(lhs, rhs)
+
+		require.NotNil(t, res.FString)
+		assert.Len(t, res.FString.Vars, 2)
+		assert.Equal(t, "this is the lhs: ", res.FString.Vars[0].Prefix)
+		assert.Equal(t, "lhs", res.FString.Vars[0].Var)
+
+		assert.Equal(t, "lhs suffix this is the rhs: ", res.FString.Vars[1].Prefix)
+		assert.Equal(t, "rhs", res.FString.Vars[1].Var)
+
+		assert.Equal(t, " rhs suffix", res.FString.Suffix)
+	})
+
+	t.Run("both strings", func(t *testing.T) {
+		lhs := &ValueExpression{
+			String: "\"this is the left hand side\"",
+		}
+
+		rhs := &ValueExpression{
+			String: "\" this is the right hand side\"",
+		}
+		res := concatStrings(lhs, rhs)
+
+		require.NotEmpty(t, res.String)
+		assert.Equal(t, "\"this is the left hand side this is the right hand side\"", res.String)
+	})
+
+}
+
+
+func TestFStringImplicitStringConcat(t *testing.T) {
+	str := "str('testing that we can carry these ' f'over {multiple} lines')"
+	prog, err := newParser().parseAndHandleErrors(strings.NewReader(strings.ReplaceAll(str, "\t", "")))
+	require.NoError(t, err)
+
+	fString := prog[0].Ident.Action.Call.Arguments[0].Value.Val.FString
+	assert.Equal(t, "testing that we can carry these over ", fString.Vars[0].Prefix)
+	assert.Equal(t, "multiple", fString.Vars[0].Var)
+	assert.Equal(t, " lines", fString.Suffix)
 }
