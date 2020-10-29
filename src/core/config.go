@@ -278,7 +278,6 @@ func DefaultConfiguration() *Configuration {
 	config.Go.CgoCCTool = "gcc"
 	config.Go.TestTool = "please_go_test"
 	config.Go.FilterTool = "please_go_filter"
-	config.Python.PipTool = "pip3"
 	config.Python.PexTool = "please_pex"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.TestRunner = "unittest"

@@ -374,10 +374,18 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     if install_subdirectory:
      target += '/' + outs[0]
 
+    pip_tool = CONFIG.PIP_TOOL or '$TOOLS_PYTHON -m pip'
 
-    # TODO: This is a total mess on pip's side with --user flag. https://github.com/pypa/pip/issues/1668
-    pip_cmd = f'mkdir {pip_target_dir} && '
-    pip_cmd += 'PIP_CONFIG_FILE=/dev/null $TOOLS_PIP install --isolated --no-deps --no-compile --no-cache-dir --default-timeout=60 --target=' + target
+    pip_cmd = (
+        f'mkdir {pip_target_dir} && '
+        f'PIP_CONFIG_FILE=/dev/null {pip_tool} install --isolated --no-deps --prefix= --no-compile '
+        f'--no-cache-dir --default-timeout=60 --target={target}'
+    )
+
+    # TODO(jpoole): This is a total mess on pip's side with --user flag. https://github.com/pypa/pip/issues/1668
+    # It seems like most things have been resolved (Oct 2019ish) however a lot of python installs are probably not
+    # updated yet. Essentially the "user" default will be turned off when --target is passed. Right now, it complains
+    # that --prefix (and therefore --target) are incompatible with --user. See https://github.com/pypa/pip/pull/7002
     if CONFIG.HOSTOS == 'darwin':
         # Fix for Homebrew which fails with a superficially similar issue.
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
@@ -388,7 +396,8 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
         # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
         # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
-        pip_cmd = f'[ -f /etc/debian_version ] && [ $TOOLS_PIP == "/usr/bin/pip3" ] && SYS_FLAG="--system" || SYS_FLAG=""; {pip_cmd} $SYS_FLAG'
+        pip_cmd = f'[ -f /etc/debian_version ] && SYS_FLAG="--system" || SYS_FLAG=""; {pip_cmd} $SYS_FLAG'
+
     pip_cmd += f' -b build {repo_flag} {index_flag} {pip_flags} {package_name}'
 
     if strip:
@@ -404,6 +413,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     if post_install_commands:
         pip_cmd = ' && '.join([pip_cmd] + post_install_commands)
 
+    tools = {'pip': [CONFIG.PIP_TOOL]} if CONFIG.PIP_TOOL else {'python': [CONFIG.DEFAULT_PYTHON_INTERPRETER]}
     srcs = build_rule(
         name = name,
         tag = "srcs",
@@ -412,9 +422,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         output_dirs = [pip_target_dir],
         srcs = patches if patch else [],
         building_description = 'Fetching...',
-        tools = {
-            'pip': [CONFIG.PIP_TOOL],
-        },
+        tools = tools,
         sandbox = False,
     )
     
