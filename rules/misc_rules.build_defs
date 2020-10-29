@@ -2,12 +2,12 @@
 
 
 def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs:list|dict=None, deps:list=None,
-            labels:list&features&tags=None, visibility:list=None, building_description:str='Building...',
-            data:list=None, hashes:list=None, timeout:int=0, binary:bool=False, sandbox:bool=None,
-            needs_transitive_deps:bool=False, output_is_complete:bool=True, test_only:bool&testonly=False,
-            secrets:list|dict=None, requires:list=None, provides:dict=None, pre_build:function=None,
-            post_build:function=None, tools:list|dict=None, pass_env:list=None, local:bool=False, output_dirs:list=[],
-            exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}):
+            exported_deps:list=None, labels:list&features&tags=None, visibility:list=None,
+            building_description:str='Building...', data:list=None, hashes:list=None, timeout:int=0, binary:bool=False,
+            sandbox:bool=None, needs_transitive_deps:bool=False, output_is_complete:bool=True,
+            test_only:bool&testonly=False, secrets:list|dict=None, requires:list=None, provides:dict=None,
+            pre_build:function=None, post_build:function=None, tools:list|dict=None, pass_env:list=None,
+            local:bool=False, output_dirs:list=[], exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}):
     """A general build rule which allows the user to specify a command.
 
     Args:
@@ -31,6 +31,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
       out (str): A single output of this rule, as a string. Discouraged in favour of 'outs'.
       data (list): Runtime data for this rule.
       deps (list): Dependencies of this rule.
+      exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
       tools (list | dict): Tools used to build this rule; similar to srcs but are not copied to the
                            temporary build directory. Should be accessed via $(exe //path/to:tool)
                            or similar.
@@ -111,6 +112,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         outs = [out] if out else outs,
         cmd = ' && '.join(cmd) if isinstance(cmd, list) else cmd,
         deps = deps,
+        exported_deps = exported_deps,
         data = data,
         tools = tools,
         secrets = secrets,
@@ -136,12 +138,12 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
     )
 
 
-def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str|dict=None, srcs:list|dict=None, outs:list=None,
-            deps:list=None, tools:list|dict=None, test_tools:list|dict=None, data:list|dict=None, visibility:list=None, timeout:int=0,
-            needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False,
-            test_outputs:list=None, output_is_complete:bool=True, requires:list=None,
-            sandbox:bool=None, size:str=None, local:bool=False, pass_env:list=None,
-            exit_on_error:bool=CONFIG.EXIT_ON_ERROR):
+def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str|dict=None, srcs:list|dict=None,
+            outs:list=None, deps:list=None, exported_deps:list=None, tools:list|dict=None, test_tools:list|dict=None,
+            data:list|dict=None, visibility:list=None, timeout:int=0, needs_transitive_deps:bool=False,
+            flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False, test_outputs:list=None,
+            output_is_complete:bool=True, requires:list=None, sandbox:bool=None, size:str=None, local:bool=False,
+            pass_env:list=None, exit_on_error:bool=CONFIG.EXIT_ON_ERROR):
     """A rule which creates a test with an arbitrary command.
 
     The command must return zero on success and nonzero on failure. Test results are written
@@ -161,6 +163,7 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
       srcs (list | dict): Source files for this rule.
       outs (list): Output files of this rule.
       deps (list): Dependencies of this rule.
+      exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
       tools (list| dict): Tools used to build this rule; similar to srcs but are not copied to the temporary
                     build directory.
       test_tools (list | dict): Like tools but available to test_cmd instead.
@@ -193,6 +196,7 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
         srcs = srcs,
         outs = outs,
         deps = deps,
+        exported_deps = exported_deps,
         data = data,
         tools = tools,
         test_tools = test_tools,
