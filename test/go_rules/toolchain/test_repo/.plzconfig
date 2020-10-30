@@ -1,3 +1,5 @@
+[please]
+location = ~/.please
 [go]
 GoTool = //tools:toolchain|go
 ImportPath = testrepo

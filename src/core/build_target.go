@@ -1340,7 +1340,7 @@ func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 	}
 	for _, tools := range target.namedTools {
 		for _, t := range tools {
-			if t == tool {
+			if t.Label() != nil && *t.Label() == tool {
 				return true
 			}
 		}
