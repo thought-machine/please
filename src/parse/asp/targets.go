@@ -433,7 +433,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 				Name: pkg.Name,
 			}
 		}
-		label := core.MustParseNamedOutputLabel(src, s.pkg)
+		label := core.MustParseNamedOutputLabel(src, pkg)
 		if l := label.Label(); l != nil {
 			checkLabel(s, *l)
 		}
