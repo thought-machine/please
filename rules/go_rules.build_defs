@@ -933,7 +933,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
     if srcs == [] and isinstance(get, list) and get == [] and install != [] and binary == False:
         # we are going to infer the getroot name from the 1st install dependency
         getroot = install[0][:-4] if install[0].endswith('/...') else install[0]
-        if len(install) == 1:
+        if len(install) == 1 and not install[0].endswith('/...'):
             outs += [getroot + ".a"]
         else:
             outs += [getroot]
