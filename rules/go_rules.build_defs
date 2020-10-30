@@ -928,6 +928,13 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         else:
             all_installs += [getone]
 
+    # in case of installing packages using other package sources 
+    if srcs == [] and get == [] and install != [] and binary == False:
+        # we are going to infer the getroot name from the 1st install dependency
+        getroot = install[0][:-4] if install[0].endswith('/...') else install[0]
+        outs += [getroot]
+        provides = {'go': go_rule} # I can't find the sources 
+
     # Now compile it in a separate step.
     cmd = [
         'export GOPATH="$(find \"$TMP_DIR\" \( -name src -o -name pkg \) -exec dirname {} \; | sort | uniq | tr \'\\n\' \':\' | sed \'s/:$//\')" GO111MODULE="off"',
