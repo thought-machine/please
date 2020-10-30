@@ -25,9 +25,9 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         raise ParseError("Either version or url should be provided but not both")
 
     if version:
-        sdk_url = f'https://golang.org/dl/go{version}.{CONFIG.GOOS}-{CONFIG.GOARCH}.tar.gz'
+        sdk_url = f'https://golang.org/dl/go{version}.{CONFIG.HOSTOS}-{CONFIG.HOSTARCH}.tar.gz'
     else:
-        sdk_url = url if isinstance(url, str) else url[f'{CONFIG.GOOS}-{CONFIG.GOARCH}']
+        sdk_url = url if isinstance(url, str) else url[f'{CONFIG.HOSTOS}-{CONFIG.HOSTARCH}']
 
     download = remote_file(
         name = name,
@@ -36,11 +36,19 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         hashes = hashes,
     )
 
-    # TODO(jpoole): optionally build the stdlib from source for cross compilation/race detector etc.
+    cmd = 'tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*'
+
+    # If we're targeting another platform, build the std lib for that. We can't use CONFIG.OS as this is always set to
+    # the host OS for tools.
+    if CONFIG.TARGET_OS != CONFIG.HOSTOS or CONFIG.TARGET_ARCH != CONFIG.HOSTARCH:
+        cmd += f' && (export GOOS={CONFIG.TARGET_OS} && export GOARCH={CONFIG.TARGET_ARCH} && $OUT/bin/go install std)'
+
+    #TODO(jpoole): Add the option to compile these with -race for the race detector as well. This need to be plumbed
+    # through to the go_library rules as well though.
     return build_rule(
         name = name,
         srcs = [download],
-        cmd = 'tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*',
+        cmd = cmd,
         outs = [name],
         entry_points = {
             'go': f'{name}/bin/go',
