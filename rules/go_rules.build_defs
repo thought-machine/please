@@ -906,6 +906,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             licences = licences,
             module_major_version = module_major_version,
         )
+            
         get_roots += [getroot]
         srcs += [get_rule]
         provides = {'go': go_rule, 'go_src': get_rule}
@@ -927,6 +928,17 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             all_installs += [i if i.startswith(getroot) else (getroot + '/' + i) for i in installone]
         else:
             all_installs += [getone]
+
+    # in case of installing packages using other package sources 
+    if not get and not install:
+        raise ParseError("must provide get or install!")
+    else:
+        if srcs == [] and binary == False:
+            # we are going to infer the getroot name from the 1st install dependency
+            getroot = install[0][:-4] if install[0].endswith('/...') else install[0]
+            # NOTE: for this case in the install list I'm expecting full package names 
+            outs += [i[:-4] if i.endswith('/...') else i+".a" for i in install]
+            provides = {'go': go_rule} # I can't find the sources 
 
     # Now compile it in a separate step.
     cmd = [
