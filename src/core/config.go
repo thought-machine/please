@@ -218,7 +218,6 @@ func setJavaDefaults(config *Configuration) {
 	setDefault(&config.Java.JlinkTool, "jlink")
 	setDefault(&config.Java.JavaTool, "java")
 	setDefault(&config.Java.JavacTool, "javac")
-
 }
 
 // setDefault sets a slice of strings in the config if the set one is empty.
@@ -245,7 +244,6 @@ func setBuildPath(conf *[]string, passEnv []string, passUnsafeEnv []string) {
 	}
 	setDefault(conf, pathVal...)
 }
-
 
 // DefaultConfiguration returns the default configuration object with no overrides.
 // N.B. Slice fields are not populated by this (since it interferes with reading them)
@@ -394,7 +392,7 @@ type Configuration struct {
 		HTTPProxy         cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
 		HashFunction      string       `help:"The hash function to use internally for build actions." options:"sha1,sha256"`
 		ExitOnError       bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
-		CopySourceFiles bool  `help:"If true, please will copy source files into the build directory instead of just linking. This can be a huge performance impact on systems that don't support reflinks. '"`
+		CopySourceFiles   bool         `help:"If true, please will copy source files into the build directory instead of just linking. This can be a huge performance impact on systems that don't support reflinks. '"`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
@@ -471,7 +469,7 @@ type Configuration struct {
 	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty."`
 	Java struct {
 		JavacTool          string    `help:"Defines the tool used for the Java compiler. Defaults to javac." var:"JAVAC_TOOL"`
-		JavaTool          string    `help:"Defines the tool used for the Java compiler. Defaults to java." var:"JAVA_TOOL"`
+		JavaTool           string    `help:"Defines the tool used for the Java compiler. Defaults to java." var:"JAVA_TOOL"`
 		JlinkTool          string    `help:"Defines the tool used for the Java linker. Defaults to jlink." var:"JLINK_TOOL"`
 		JavaHome           string    `help:"Defines the path of the Java Home folder." var:"JAVA_HOME"`
 		JavacWorker        string    `help:"Defines the tool used for the Java persistent compiler. This is significantly (approx 4x) faster for large Java trees than invoking javac separately each time. Default to javac_worker in the install directory, but can be switched off to fall back to javactool and separate invocation." var:"JAVAC_WORKER"`
