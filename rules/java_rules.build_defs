@@ -28,7 +28,6 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
     """
     resources_cmd = 'true'
     if resources:
-        # TODO(jpoole): Check this actually matches the documented behaviour, as it's not clear it does
         if resources_root:
             resources_cmd = f'$(for SRC in $SRCS_RESOURCES; do DEST=${SRC#"{resources_root}"};mkdir -p $(dirname "_tmp/$DEST");cp "$SRC" "_tmp/$DEST"; done)'
         else:
@@ -60,19 +59,18 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             javac = f'{toolchain}|javac'
             javac_worker = ''
 
-        if not javac:
-            javac = CONFIG.JAVAC_WORKER
+        if javac_worker:
             mflag = '--modular' if modular else ''
             srcflag = '--src_dir' if src_dir else ''
             javac_cmd = f'$(worker {javac_worker}) {javac_flags} {mflag} {srcflag}'
         else:
             find = f'find "$TMP_DIR" -name "*.jar"'
+            # TODO(jpoole) there's probably a way to do this without passing in toolchain to this rule
             if toolchain:
                 find += f' -not -path "$TMP_DIR/$(location {toolchain})/*"'
 
             srcflag = '`find $SRCS_WORKER -name "*.java"`' if src_dir else '$SRCS_WORKER'
             javac_cmd = f'mkdir -p _tmp/META-INF && "$TOOLS_JAVAC" {javac_flags} -classpath .:`{find} | tr \\\\\\\\n :` -d _tmp {srcflag}'
-
 
         cmd = ' && '.join([
             javac_cmd,
@@ -102,7 +100,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             labels = labels + ['rule:java_test_library' if test_only else 'rule:java_library'] + src_dir_label,
             test_only=test_only,
             tools={
-                'javac': [javac],
+                'javac': [javac_worker or javac],
                 'jarcat': [CONFIG.JARCAT_TOOL],
             },
         )
@@ -322,7 +320,7 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
     if toolchain:
         java = f'{toolchain}|java'
     else:
-        java = 'java'
+        java = CONFIG.JAVA_TOOL
 
     cmd = 'ln -s "$(if [ -f "$TOOLS_JUNIT" ]; then echo "$TOOLS_JUNIT"; else echo "$(which "$TOOLS_JUNIT")"; fi)" . && ' + cmd
     test_cmd = f'$TOOLS_JAVA -Dbuild.please.testpackage={test_package} {jvm_args} -jar $(location :{name}) {flags}'
