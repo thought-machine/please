@@ -917,6 +917,9 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             for i in installone:
                 if not i or i == ".":
                     outs += [getroot + ".a"]
+                elif i == "...":
+                    get_roots += [getroot]
+                    outs += [getroot]
                 elif i.endswith("/..."):
                     out = getroot + "/" + i.removesuffix("/...")
                     get_roots += [out]
