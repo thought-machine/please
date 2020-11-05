@@ -5,7 +5,6 @@ import (
 	"hash/adler32"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -42,27 +41,28 @@ var rotations = []string{
 }
 
 var pageTitles = map[string]string{
-	"acknowledgements.html": "Acknowledgements",
-	"basics.html":           "Please basics",
-	"build_rules.html":      "Writing additional build rules",
-	"cache.html":            "Please caching system",
-	"commands.html":         "Please commands",
-	"config.html":           "Please config file reference",
-	"cross_compiling.html":  "Cross-compiling",
-	"dependencies.html":     "Third-party dependencies",
-	"quickstart_dropoff.html":     "What's next?",
-	"error.html":            "plz op...",
-	"faq.html":              "Please FAQ",
-	"index.html":            "Please",
-	"language.html":         "The Please BUILD language",
-	"lexicon.html":          "Please Lexicon",
-	"pleasings.html":        "Extra rules (aka. Pleasings)",
-	"post_build.html":       "Pre- and post-build functions",
-	"remote_builds.html":    "Remote build execution",
-	"require_provide.html":  "Require & Provide",
-	"quickstart.html":       "Please quickstart",
-	"tests.html":            "Testing with Please",
-	"workers.html":          "Persistent worker processes",
+	"acknowledgements.html":   "Acknowledgements",
+	"basics.html":             "Please basics",
+	"build_rules.html":        "Writing additional build rules",
+	"cache.html":              "Please caching system",
+	"commands.html":           "Please commands",
+	"config.html":             "Please config file reference",
+	"cross_compiling.html":    "Cross-compiling",
+	"dependencies.html":       "Third-party dependencies",
+	"quickstart_dropoff.html": "What's next?",
+	"error.html":              "plz op...",
+	"faq.html":                "Please FAQ",
+	"index.html":              "Please",
+	"language.html":           "The Please BUILD language",
+	"lexicon.html":            "Please Lexicon",
+	"pleasings.html":          "Extra rules (aka. Pleasings)",
+	"post_build.html":         "Pre- and post-build functions",
+	"remote_builds.html":      "Remote build execution",
+	"require_provide.html":    "Require & Provide",
+	"quickstart.html":         "Please quickstart",
+	"tests.html":              "Testing with Please",
+	"workers.html":            "Persistent worker processes",
+	"codelabs/codelabs.html":  "Codelabs",
 }
 
 func mustRead(filename string) string {
@@ -98,7 +98,7 @@ func mustHighlight(contents string) string {
 
 func main() {
 	filename := os.Args[2]
-	basename := path.Base(filename)
+	basename := strings.TrimPrefix(filename, "docs/")
 	basenameIndex := int(adler32.Checksum([]byte(basename)))
 	modulo := func(s []string, i int) string { return s[(basenameIndex+i)%len(s)] }
 	random := func(x, min, max int) int { return (x*basenameIndex+min)%(max-min) + min }

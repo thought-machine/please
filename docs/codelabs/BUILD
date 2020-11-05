@@ -1,0 +1,35 @@
+subinclude("//docs/build_defs")
+
+deps = []
+
+for src in glob(["*.md"]):
+    deps += [codelab(name = src.removesuffix(".md"), codelab_md = src)]
+
+filegroup(
+    name = "codelabs",
+    srcs = deps + [":codelabs_html", "style.css", "codelab.js"],
+    visibility = ["//docs/..."],
+)
+
+go_binary(
+    name = "codelab_templator",
+    srcs = ["codelab_template.go"],
+    deps = ["//third_party/go:cli-init"],
+)
+
+genrule(
+    name = "templated_index",
+    srcs = {
+        "TEMPLATE": ["template.html"],
+        "LABS": glob(["*.md"]),
+    },
+    outs = ["codelabs.html"],
+    cmd = "$TOOLS --template $SRCS_TEMPLATE $SRCS_LABS > $OUT",
+    tools = [":codelab_templator"],
+)
+
+html_template(
+    name = "codelabs_html",
+    src = ":templated_index",
+    output = "index.html",
+)
