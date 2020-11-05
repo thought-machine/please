@@ -4,6 +4,10 @@ google-codelab div#main {
     background: #202328;
 }
 
+#main {
+    font-family: "EssentialPragmataPro", monospace !important;
+}
+
 google-codelab-step div.instructions {
     color: #999999;
     background: #202328 !important;
@@ -20,14 +24,26 @@ google-codelab-step div.instructions {
 google-codelab #controls {
     background-color: #1c1e23;
     border-top: 4px solid #1c9465 !important;
+    border-bottom: 32px solid #202328 !important;
     padding: 1em !important;
     max-width: 1200px !important;
     margin-left: auto;
     margin-right: auto;
+    bottom: 0;
+
 }
 
 .instructions h1, .instructions h2, .instructions h3 {
     color: #02e68f !important;
+    text-indent: -30px;
+}
+
+.instructions {
+    padding-left: 30px;
+}
+
+h2 code {
+    margin-left: 30px;
 }
 
 #drawer {
@@ -64,10 +80,11 @@ a {
     color: #29abe2 !important;
 }
 
-#next-step, #previous-step {
+#next-step, #previous-step, #done {
     background: transparent !important;
     box-shadow: none !important;
     font-size: 100%;
+    font-family: "EssentialPragmataPro", monospace;
 }
 
 #previous-step:before {
@@ -75,7 +92,7 @@ a {
     color: white;
 }
 
-#next-step:after {
+#next-step:after, #done:after {
     content: " \2192";
     color: white;
 }
