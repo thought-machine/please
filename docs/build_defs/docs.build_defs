@@ -2,7 +2,8 @@ def codelab(name : str, codelab_md: str):
     return genrule(
         name = name,
         srcs = [codelab_md],
-        cmd = "mkdir _out && $TOOLS export $SRC ",
+        deps = ["//docs/build_defs:codelab_template"],
+        cmd = "$TOOLS export -f $(location //docs/build_defs:codelab_template) $SRC",
         outs = [f"{name}"],
         tools = ["//third_party/go:claat"],
         visibility = ["//docs/..."],

@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+    <meta name="theme-color" content="#4F7DC9">
+    <meta charset="UTF-8">
+    <title>{{.Meta.Title}}</title>
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+    <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="{{.Prefix}}/codelab-elements/codelab-elements.css">
+    <link rel="stylesheet" href="/codelabs/style.css">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+    <link rel="manifest" href="/favicon/site.webmanifest">
+    <link rel="mask-icon" href="/favicon/safari-pinned-tab.svg" color="#5bbad5">
+    <style>
+        .success {
+            color: #1e8e3e;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+<google-codelab codelab-gaid="{{.Meta.GA}}"
+                id="{{.Meta.ID}}"
+                title="{{.Meta.Title}}"
+                environment="{{index .Env}}"
+                feedback-link="{{.Meta.Feedback}}">
+    {{range $i, $e := .Steps}}{{if matchEnv .Tags $.Env}}
+        <google-codelab-step label="{{.Title}}" duration="{{.Duration.Minutes}}">
+            {{.Content | renderHTML $.Context}}
+        </google-codelab-step>
+    {{end}}{{end}}
+</google-codelab>
+
+<script src="{{.Prefix}}/codelab-elements/native-shim.js"></script>
+<script src="{{.Prefix}}/codelab-elements/custom-elements.min.js"></script>
+<script src="{{.Prefix}}/codelab-elements/prettify.js"></script>
+<script src="{{.Prefix}}/codelab-elements/codelab-elements.js"></script>
+<script src="//support.google.com/inapp/api.js"></script>
+<script src="/codelabs/codelab.js"></script>
+
+</body>
+</html>
