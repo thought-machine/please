@@ -1334,13 +1334,13 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, 
 // IsTool returns true if the given build label is a tool used by this target.
 func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 	for _, t := range target.Tools {
-		if t == tool {
+		if t.Label() != nil && *t.Label() == tool {
 			return true
 		}
 	}
 	for _, tools := range target.namedTools {
 		for _, t := range tools {
-			if t == tool {
+			if t.Label() != nil && *t.Label() == tool {
 				return true
 			}
 		}

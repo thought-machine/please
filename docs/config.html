@@ -374,6 +374,10 @@
         to use this define another location to upload your own wheels to.<br/>
         Is overridden by the <code>repo</code> argument to <code>pip_library</code>.</li>
 
+    <li><b>WheelRepo</b><br/>
+        Defines a location for a remote repo that python_wheel rules will download from. See
+        <a href="lexicon.html#python_wheel">python_wheel</a> for more information.
+
       <li><b>UsePyPI</b> (bool)<br/>
         Whether or not to use PyPI for <code>pip_library</code> rules or not. Defaults to <code>True</code>, if you
         disable this you will presumably want to set DefaultPipRepo to use one of your own.<br/>

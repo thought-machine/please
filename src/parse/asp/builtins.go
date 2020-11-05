@@ -797,17 +797,14 @@ func setCommand(s *scope, args []pyObject) pyObject {
 func selectFunc(s *scope, args []pyObject) pyObject {
 	d, _ := asDict(args[0])
 	var def pyObject
-	pkgName := ""
-	if s.pkg != nil {
-		pkgName = s.pkg.Name
-	}
+
 	// This is not really the same as Bazel's order-of-matching rules, but is at least deterministic.
 	keys := d.Keys()
 	for i := len(keys) - 1; i >= 0; i-- {
 		k := keys[i]
 		if k == "//conditions:default" || k == "default" {
 			def = d[k]
-		} else if selectTarget(s, core.ParseBuildLabel(k, pkgName)).HasLabel("config:on") {
+		} else if selectTarget(s, core.ParseBuildLabelContext(k, s.contextPkg)).HasLabel("config:on") {
 			return d[k]
 		}
 	}
