@@ -28,11 +28,8 @@ Duration: 2
 Let's create a new project:
 ```
 $ mkdir example_package && cd example_package
-$ plz init 
+$ plz init --no_prompt 
 ```
-
-Please will prompt you to add pleasings (extra rules) to your repository. There's more information on this 
-[here](https://please.build/pleasings.html). For the sake of this codelab, answer no. 
 
 ### A note about your Please PATH
 Please doesn't use your host system's `PATH` variable. By default, Please uses `/usr/local/bin:/usr/bin:/bin`. If Python 
@@ -59,7 +56,7 @@ Finally, `.plzconfig` contains the project configuration for Please; read the [c
 more information on configuration. 
 
 ## Hello, world!
-Duration: 4
+Duration: 3
 
 Now we have a Please project, it's time to start adding some code to it! Let's create a hello world program:
 
@@ -94,7 +91,7 @@ There are a number of things you can do with a build target such e.g. `plz build
 if the target is a binary, you may run it with `plz run`.
 
 ## Adding modules
-Duration: 5
+Duration: 4
 
 Let's add a `src/geetings` module to our go project: 
 
