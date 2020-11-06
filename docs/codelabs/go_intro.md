@@ -30,11 +30,8 @@ The easiest way to get started is from an existing go module:
 ```
 $ mkdir example_module && cd example_module
 $ go mod init example_module
-$ plz init 
+$ plz init --no_prompt 
 ```
-
-Please will prompt you to add pleasings (extra rules) to your repository. There's more information on this 
-[here](https://please.build/pleasings.html). For the sake of this codelab, answer no. 
 
 ### A note about your Please PATH
 Please doesn't use your host system's `PATH` variable. If where you installed Go isn't in this default path, you will 

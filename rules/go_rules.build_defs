@@ -1257,3 +1257,4 @@ def _replace_test_package(name, output, static, definitions, cgo):
 
             for k, v in _go_library_cmds().items():
                 set_command(lib, k, f'{import_config_cmd} && {v}')
+
