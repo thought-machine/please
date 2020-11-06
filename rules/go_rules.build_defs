@@ -908,6 +908,17 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
     get_roots = []
     provides = {}
     srcs = []
+
+    # True if multiple gets and installs were specified, False otherwise
+    multi_get_install = len(get) > 1 and isinstance(install, list) and len(install) != 0
+
+    # Returns the element in "get" that contains the given package, or None if none of them do
+    def get_for_install(pkg):
+        for g in get:
+            if pkg == g or (pkg + "/").startswith(g + "/"):
+                return g
+        return None
+
     for getone, revision, tag, module_major_version in zip(get, revision, tags, module_major_version):
         get_rule, getroot = _go_get_download(
             name = name,
@@ -927,24 +938,27 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         srcs += [get_rule]
         provides = {'go': go_rule, 'go_src': get_rule}
         installone = get_param_as_list(install, getone)
+
         if not install:
             outs += [getroot]
         else:
             for i in installone:
-                if not i or i == ".":
-                    outs += [getroot + ".a"]
-                elif i == "...":
-                    get_roots += [getroot]
-                    outs += [getroot]
-                elif i.endswith("/..."):
-                    out = getroot + "/" + i.removesuffix("/...")
-                    get_roots += [out]
-                    outs += [out]
-                else:
-                    outs += [f"{getroot}/{i}.a"]
+                installone_get = get_for_install(i)
+                if not multi_get_install or installone_get == getone:
+                    if not i or i == ".":
+                        outs += [getroot + ".a"]
+                    elif i == "...":
+                        get_roots += [getroot]
+                        outs += [getroot]
+                    elif i.endswith("/..."):
+                        out = i.removesuffix("/...") if installone_get else (getroot + "/" + i.removesuffix("/..."))
+                        get_roots += [out]
+                        outs += [out]
+                    else:
+                        outs += [(i + ".a") if installone_get else (getroot + "/" + i + ".a")]
 
         if installone:
-            all_installs += [i if i.startswith(getroot) else (getroot + '/' + i) for i in installone]
+            all_installs += [i if get_for_install(i) else (getroot + '/' + i) for i in installone]
         else:
             all_installs += [getone]
 
