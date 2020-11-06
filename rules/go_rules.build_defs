@@ -927,7 +927,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         srcs += [get_rule]
         provides = {'go': go_rule, 'go_src': get_rule}
         installone = get_param_as_list(install, getone)
-        if not install:
+        if not install or (len(get) > 1 and isinstance(install, list)):
             outs += [getroot]
         else:
             for i in installone:
