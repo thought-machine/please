@@ -116,7 +116,7 @@ bash-4.4$ printenv
 OS=linux
 ARCH=amd64
 LANG=en_GB.UTF-8
-TMP_DIR=<snip>/plz-out/tmp/just_words._build
+TMP_DIR=<snip>/plz-out/tmp/word_count._build
 CMD=wc $SRC > $OUT
 OUT=<snip>/plz-out/tmp/word_count._build/file.wc
 TOOLS=
@@ -126,10 +126,10 @@ CONFIG=opt
 PYTHONHASHSEED=42
 SRC=file.txt
 OUTS=file.wc
-PWD=<snip>/plz-out/tmp/just_words._build
-HOME=<snip>/plz-out/tmp/just_words._build
+PWD=<snip>/plz-out/tmp/word_count._build
+HOME=<snip>/plz-out/tmp/word_count._build
 NAME=word_count
-TMPDIR=<snip>/plz-out/tmp/just_words._build
+TMPDIR=<snip>/plz-out/tmp/word_count._build
 BUILD_CONFIG=opt
 XOS=linux
 XARCH=x86_64
@@ -194,7 +194,7 @@ word_count(
 And check it still works:
 
 ```
-$ plz build :word_count
+$ plz build //:word_count
 Build finished; total time 30ms, incrementality 100.0%. Outputs:
 //:word_count:
   plz-out/gen/word_count.wc
@@ -203,7 +203,7 @@ Build finished; total time 30ms, incrementality 100.0%. Outputs:
 ### subinclude()
 Subinclude is primarily used for including build definitions into your BUILD file. It can be thought of like a 
 python import except it operates on a build target instead. Under the hood, subinclude parses the output of the target 
-and make the top-level declarations available in the current package's scope. 
+and makes the top-level declarations available in the current package's scope. 
 
 The build target is usually a filegroup however this doesn't have to be the case. In fact, the build target can be 
 anything that produces parsable outputs. 
@@ -212,11 +212,11 @@ It's almost always a bad idea to build anything as part of a subinclude. These r
 which can be hard to debug, but more importantly, will block the parser while it waits for that rule to build. Use 
 non-filegroup subincludes under very careful consideration! 
 
-## Introduction to tools
+## Managing tools
 Duration: 7
 
 Right now we're relying on `wc` to be available on the configured path. This is a pretty safe bet however Please 
-provides a powerful mechanism for managing tools:
+provides a powerful mechanism for managing tools, so let's over engineer this:
 
 ### `build/defs/word_count.build_defs`
 ```python
@@ -232,17 +232,19 @@ def word_count(name:str, file:str, wc_tool:str="wc") -> str:
     )
 ```
 
-Here we've configured our build definition to take the word count tool in as a parameter. It's passes to `genrule()` 
-through the tools parameter. Please has set up some more environment variables for us. In this contrived example, this 
-may not seem very useful however Please will perform some important tasks for us:
+Here we've configured our build definition to take the word count tool in as a parameter. This is then passed to 
+`genrule()` via the tools parameter. Please has set up the `$TOOLS_WC` environment variable which we can used to 
+locate our tool. The name of this variable is based on the key in this dictionary. 
+
+In this contrived example, this may not seem very useful however Please will perform some important tasks for us:
 
 - If the tool is a program, Please will check it's available on the path at parse time
 - If the tool is a build rule, Please will build this rule and configure `$TOOLS_WC` so it can be invoked. Whether the 
 tool is on the path or a build rule is transparent to you, the rule's author!
 
 ### Custom word count tool
-Currently, our word count rule doesn't just generate a word count: it includes a character and line count as well. Let's 
-create a true word count tool that does: 
+Currently, our word count rule doesn't just get the word count: it also gets the character and line count as well. I 
+mentioned that these can be build rules so let's create a true word count tool that counts just words: 
 
 ### `tools/wc.sh`
 ```shell script
@@ -295,18 +297,18 @@ Build finished; total time 30ms, incrementality 100.0%. Outputs:
 //:just_words:
   plz-out/gen/just_words.wc
 
-$ cat plz-out/gen/just_words.wc 
-9 file.txt
-
 $ cat plz-out/gen/lines_words_and_chars.wc
 1  9 45 file.txt
+
+$ cat plz-out/gen/just_words.wc 
+9 file.txt
 ```
 
 ## Configuration
 Duration: 6
 
-Specifying the word count tool to use each time can be troublesome. Let's have a look at how we can configure this in 
-our `.plzconfig` instead:
+Right now, we have to specify the new word count tool each time we use our build definition! Let's have a look at how we 
+can configure this in our `.plzconfig` instead:
 
 ### `.plzconfig`
 ```
@@ -334,8 +336,8 @@ CONFIG.setdefault('WORD_COUNT_TOOL', 'wc')
 ```
 
 Here we've set the default value for `wc_tool` to `CONFIG.WORD_COUNT_TOOL`, which will contain our config value from 
-`.plzconfig`. What if that's not set though? That's why we've also set the default configuration value with
-`CONFIG.setdefault('WORD_COUNT_TOOL', 'wc')`.
+`.plzconfig`. What if that's not set though? That's why we also set a sensible default configuration value with
+`CONFIG.setdefault('WORD_COUNT_TOOL', 'wc')`!
 
 
 We then need to update our build rules: 
@@ -366,11 +368,11 @@ Build finished; total time 30ms, incrementality 100.0%. Outputs:
 //:just_words:
   plz-out/gen/just_words.wc
 
-$ cat plz-out/gen/just_words.wc 
-9 file.txt
-
 $ cat plz-out/gen/lines_words_and_chars.wc
 1  9 45 file.txt
+
+$ cat plz-out/gen/just_words.wc 
+9 file.txt
 ```
 
 ## Conclusion
