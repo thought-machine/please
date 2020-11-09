@@ -739,3 +739,60 @@ footer > div {
 .code-lab-start {
     text-align: right;
 }
+
+/* Error page */
+.error {
+    width: 800px;
+    margin: 15em auto;
+    position: relative;
+    border-top: 2em solid #303337;
+    border-radius: 5px;
+    font-size: 1.2em;
+}
+
+.error .window-buttons {
+    margin-top: -1.5em;
+    margin-bottom: 1.5em;
+}
+
+.error .window-buttons > a {
+    width: 1em;
+    height: 1em;
+    border-radius: 1em;
+    float: right;
+    margin-left: 0.2em;
+    margin-right: 0.2em;
+}
+
+.red-button {
+    background-color: red;
+}
+
+.green-button {
+    background-color: green;
+}
+
+.yellow-button {
+    background-color: yellow;
+}
+
+.build-stopped {
+    background-color: red;
+    color: white;
+    font-weight: bold;
+}
+.failed-target {
+    color: red;
+    font-weight: bold;
+}
+
+.error pre {
+    margin: 0;
+    border-radius: 0 0 5px 5px;
+    border: 2px solid #303337;
+    border-top: none;
+}
+
+.error pre a {
+    color: #29abe2;
+}
