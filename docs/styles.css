@@ -825,3 +825,19 @@ p.code-lab-start:after {
 .error pre a {
     color: #29abe2;
 }
+
+.cursor {
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    49% {
+        background-color: transparent;
+    }
+    50% {
+        background-color: white;
+    }
+    100% {
+        background-color: white;
+    }
+}
