@@ -831,6 +831,7 @@ p.code-lab-start:after {
     border-radius: 0 0 5px 5px;
     border: 2px solid #303337;
     border-top: none;
+    white-space: pre-wrap;
 }
 
 .error pre a {
