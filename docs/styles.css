@@ -768,3 +768,88 @@ p.code-lab-start:after {
 .code-lab.codelab-category-advanced h2 {
     color: #fc1452;
 }
+
+/* Error page */
+.terminal-title {
+    height: 2em;
+    background-color: #303337;
+    width: 100%;
+    margin: 0;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 5px 5px 0 0;
+    line-height: 2em;
+}
+.error {
+    width: 800px;
+    margin: 15em auto;
+    position: relative;
+    border-radius: 5px;
+    font-size: 1.2em;
+}
+
+.error .window-buttons {
+    margin-top: 0.5em;
+    float: right;
+}
+
+.error .window-buttons > a {
+    width: 0.7em;
+    height: 0.7em;
+    border-radius: 1em;
+    float: right;
+    margin-left: 0.2em;
+    margin-right: 0.2em;
+    margin-top: 0.15em;
+}
+
+.red-button {
+    background-color: red;
+}
+
+.green-button {
+    background-color: green;
+}
+
+.yellow-button {
+    background-color: yellow;
+}
+
+.build-stopped {
+    background-color: red;
+    color: white;
+    font-weight: bold;
+}
+.failed-target {
+    color: red;
+    font-weight: bold;
+}
+
+.error pre {
+    margin: 0;
+    border-radius: 0 0 5px 5px;
+    border: 2px solid #303337;
+    border-top: none;
+    white-space: pre-wrap;
+}
+
+.error pre a {
+    color: #29abe2;
+}
+
+.cursor {
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    49% {
+        background-color: transparent;
+    }
+    50% {
+        background-color: white;
+    }
+    100% {
+        background-color: white;
+    }
+}

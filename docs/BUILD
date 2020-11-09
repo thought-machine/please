@@ -11,6 +11,7 @@ for src in glob(
         "template.html",
         "lexicon*.html",
         "language.html",
+        "error.html"
     ],
 ):
     deps += [html_template(name = src.replace(".", "_").replace("/", "_"), src = src)]
@@ -67,6 +68,7 @@ filegroup(
         "styles.css",
         "action.js",
         "tabs.js",
+        "error.html",
         "images/thoughtmachine.png",
         "plz-recording.json",
         "//third_party/js:asciinema",
