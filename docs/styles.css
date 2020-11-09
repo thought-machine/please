@@ -785,12 +785,13 @@ p.code-lab-start:after {
 }
 
 .error .window-buttons > a {
-    width: 1em;
-    height: 1em;
+    width: 0.7em;
+    height: 0.7em;
     border-radius: 1em;
     float: right;
     margin-left: 0.2em;
     margin-right: 0.2em;
+    margin-top: 0.15em;
 }
 
 .red-button {
