@@ -770,18 +770,28 @@ p.code-lab-start:after {
 }
 
 /* Error page */
+.terminal-title {
+    height: 2em;
+    background-color: #303337;
+    width: 100%;
+    margin: 0;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 5px 5px 0 0;
+    line-height: 2em;
+}
 .error {
     width: 800px;
     margin: 15em auto;
     position: relative;
-    border-top: 2em solid #303337;
     border-radius: 5px;
     font-size: 1.2em;
 }
 
 .error .window-buttons {
-    margin-top: -1.5em;
-    margin-bottom: 1.5em;
+    margin-top: 0.5em;
+    float: right;
 }
 
 .error .window-buttons > a {
