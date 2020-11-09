@@ -710,7 +710,6 @@ footer > div {
 .code-lab a {
     display: block;
     padding: 1em;
-    border-left: 4px solid #02e68f;
 }
 
 .code-lab h2 {
@@ -736,8 +735,38 @@ footer > div {
     font-size: small;
 }
 
-.code-lab-start {
+p.code-lab-start {
     text-align: right;
+    color: #29abe2;
+}
+
+p.code-lab-start:after {
+    content: " \2192";
+    color: #999999;
+}
+
+.code-lab.codelab-category-beginner a {
+    border-left: 4px solid #02e68f;
+}
+
+.code-lab.codelab-category-intermediate a {
+    border-left: 4px solid #fbe752;
+}
+
+.code-lab.codelab-category-advanced a {
+    border-left: 4px solid #fc1452;
+}
+
+.code-lab.codelab-category-beginner h2 {
+    color: #02e68f;
+}
+
+.code-lab.codelab-category-intermediate h2 {
+    color: #fbe752;
+}
+
+.code-lab.codelab-category-advanced h2 {
+    color: #fc1452;
 }
 
 /* Error page */

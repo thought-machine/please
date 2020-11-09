@@ -1,3 +1,10 @@
+Version 15.8.1
+--------------
+
+    * Revert to old behavior for go_get() when both `get` and `install`
+      are lists #1365
+
+
 Version 15.8.0
 --------------
 
