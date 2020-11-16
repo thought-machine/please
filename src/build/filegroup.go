@@ -42,7 +42,8 @@ type filegroupBuilder struct {
 
 var theFilegroupBuilder *filegroupBuilder
 
-// Build builds a single filegroup file.
+// Build builds a single filegroup file. Returns whether any files are changed or should be if there hadn't been an
+// error.
 func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.BuildTarget, from, to string) (bool, error) {
 	// Verify that the source actually exists. It is otherwise possible to get through here
 	// without in certain circumstances (basically if another filegroup outputs the same file
@@ -67,7 +68,7 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 		return true, err
 	} else if err := fs.EnsureDir(to); err != nil {
 		return true, err
-	} else if err := fs.RecursiveLink(from, to, target.OutMode()); err != nil {
+	} else if err := fs.CopyOrLinkFile(from, to, 0, target.OutMode(), !target.IsBinary, true); err != nil {
 		return true, err
 	}
 	builder.built[to] = true
