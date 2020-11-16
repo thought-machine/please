@@ -74,12 +74,12 @@ def sh_binary(name:str, main:str|list&srcs, out:str="", deps:list=None, data:lis
             '"$TOOL" z -d -n -i . -o "$OUT" --preamble_file "$TMPDIR"/_tmp.txt --strip_prefix ./',
         ])
     else:
-        cmds = 'cp $SRCS "$OUT"'
+        cmds = 'cp "$SRC" "$OUT"'
 
     return build_rule(
         name = name,
         srcs = [main],
-        outs = [out or name + '.sh'],
+        outs = [out or f'{name}.sh'],
         data = data,
         tools = [CONFIG.JARCAT_TOOL],
         cmd = cmds,
@@ -122,7 +122,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list|di
         data=data,
         deps=deps,
         outs=[name + '.sh'],
-        cmd='mv "${SRC}" "${OUT}"',
+        cmd='cp "$SRC" "$OUT"',
         test_cmd=test_cmd,
         visibility=visibility,
         labels=labels,
