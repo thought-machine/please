@@ -226,7 +226,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		if target.IsFilegroup {
 			log.Debug("Building %s...", target.Label)
 			if changed, err := buildFilegroup(state, target); err != nil {
-				return err
+				return fmt.Errorf("build fg err: %w", err)
 			} else if _, err := calculateAndCheckRuleHash(state, target); err != nil {
 				return err
 			} else if changed {
