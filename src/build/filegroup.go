@@ -93,7 +93,7 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 		return true, err
 	} else {
 		// Copy source files when they're binary to avoid nuking their permissions.
-		isSourceFile := !strings.HasPrefix(from, "plz-out")
+		isSourceFile := !strings.HasPrefix(from, "plz-out/")
 		if err := fs.RecursiveCopyOrLinkFile(from, to, target.OutMode(), !(target.IsBinary && isSourceFile), true); err != nil {
 			return true, err
 		}
