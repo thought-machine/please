@@ -44,6 +44,9 @@ type pendingTask struct {
 	Dependent BuildLabel // The target that depended on it (only for parse tasks)
 	Run       int        // The run number of this task (only for tests)
 	Type      taskType
+
+	// This channel will be closed when the task is completed successfully or the error will be sent on failure.
+	NotifyChan chan error
 }
 
 func (t pendingTask) Compare(that queue.Item) int {
@@ -54,6 +57,8 @@ func (t pendingTask) Compare(that queue.Item) int {
 type ParseTask struct {
 	Label, Dependent BuildLabel
 	ForSubinclude    bool
+
+	Notify chan error
 }
 
 // BuildTask is the type for the build task queue
@@ -259,22 +264,27 @@ func (state *BuildState) AddActiveTarget() {
 }
 
 // AddPendingParse adds a task for a pending parse of a build label.
-func (state *BuildState) AddPendingParse(label, dependent BuildLabel, forSubinclude bool) {
+func (state *BuildState) AddPendingParse(label, dependent BuildLabel, forSubinclude bool) chan error {
 	atomic.AddInt64(&state.progress.numActive, 1)
 	atomic.AddInt64(&state.progress.numPending, 1)
+
+	c := make(chan error, 1)
+	var task pendingTask
 	if forSubinclude {
-		state.pendingTasks.Put(pendingTask{Label: label, Dependent: dependent, Type: SubincludeParse})
+		task = pendingTask{Label: label, Dependent: dependent, Type: SubincludeParse, NotifyChan: c}
 	} else {
-		state.pendingTasks.Put(pendingTask{Label: label, Dependent: dependent, Type: Parse})
+		task = pendingTask{Label: label, Dependent: dependent, Type: Parse, NotifyChan: c}
 	}
+	state.pendingTasks.Put(task)
+	return c
 }
 
 // AddPendingBuild adds a task for a pending build of a target.
-func (state *BuildState) AddPendingBuild(label BuildLabel, forSubinclude bool) {
+func (state *BuildState) AddPendingBuild(label BuildLabel, forSubinclude bool) chan error {
 	if forSubinclude {
-		state.addPending(label, SubincludeBuild)
+		return state.addPending(label, SubincludeBuild)
 	} else {
-		state.addPending(label, Build)
+		return state.addPending(label, Build)
 	}
 }
 
@@ -322,7 +332,7 @@ func (state *BuildState) feedQueues(parses ParseTaskQueue, builds BuildTaskQueue
 			close(remoteTests)
 			return
 		case Parse, SubincludeParse:
-			parses <- ParseTask{Label: task.Label, Dependent: task.Dependent, ForSubinclude: task.Type == SubincludeParse}
+			parses <- ParseTask{Label: task.Label, Dependent: task.Dependent, ForSubinclude: task.Type == SubincludeParse, Notify: task.NotifyChan}
 		case Build, SubincludeBuild:
 			atomic.AddInt64(&state.progress.numRunning, 1)
 			if remote() {
@@ -345,8 +355,10 @@ func (state *BuildState) feedQueues(parses ParseTaskQueue, builds BuildTaskQueue
 	}
 }
 
-func (state *BuildState) addPending(label BuildLabel, t taskType) {
-	state.addPendingTask(pendingTask{Label: label, Type: t})
+func (state *BuildState) addPending(label BuildLabel, t taskType) chan error {
+	c := make(chan error)
+	state.addPendingTask(pendingTask{Label: label, Type: t, NotifyChan: c})
+	return c
 }
 
 func (state *BuildState) addPendingTask(task pendingTask) {

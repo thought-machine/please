@@ -3,14 +3,14 @@ package asp
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/manifoldco/promptui"
 	"io"
 	"path"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/manifoldco/promptui"
+	"time"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -290,8 +290,20 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		s.NAssert(s.contextPkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
 	s.NAssert(l.IsAllTargets() || l.IsAllSubpackages(), "Can't pass :all or /... to subinclude()")
-	// Temporarily release the parallelism limiter; this is important to keep us from deadlocking
-	// all available parser threads (easy to happen if they're all waiting on a single target which now can't start)
+
+	// Attempt to build the package of the subinclude first. This addresses #1378
+	if l.Subrepo != "" && l.SubrepoLabel().PackageName != s.contextPkg.Name {
+		//TODO(jpoole): this doesn't quite work for some reason... the targets all get built but we hang here presumably
+		// because the task is hanging waiting for us to continue
+		// <-s.state.AddPendingParse(l.SubrepoLabel(), l, true)
+
+		// This is probably too hacky
+		s.state.AddPendingParse(l.SubrepoLabel(), l, true)
+		for s.state.Graph.Target(l.SubrepoLabel()) == nil {
+			time.Sleep(10)
+		}
+	}
+
 	t := s.WaitForBuiltTargetWithoutLimiter(l, pkgLabel)
 	// This is not quite right, if you subinclude from another subinclude we can basically
 	// lose track of it later on. It's hard to know what better to do at this point though.

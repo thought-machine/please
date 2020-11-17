@@ -286,8 +286,6 @@ func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) 
 }
 
 // This is the builtin subrepo for pleasings.
-// TODO(peterebden): Should really provide a github_archive builtin that knows how to construct
-//                   the URL and strip_prefix etc.
 const pleasings = `
 http_archive(
     name = "pleasings",

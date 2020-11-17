@@ -82,6 +82,7 @@ func doTasks(tid int, state *core.BuildState, parses core.ParseTaskQueue, builds
 			go func() {
 				parse.Parse(tid, state, p.Label, p.Dependent, p.ForSubinclude)
 				state.TaskDone(false)
+				close(p.Notify)
 			}()
 		case l, ok := <-builds:
 			if !ok {
