@@ -39,6 +39,7 @@ func Print(graph *core.BuildGraph, targets []core.BuildLabel, fields, labels []s
 	}
 }
 
+
 // specialFields is a mapping of field name -> any special casing relating to how to print it.
 var specialFields = map[string]func(*printer) (string, bool){
 	"name": func(p *printer) (string, bool) {
@@ -61,10 +62,22 @@ var specialFields = map[string]func(*printer) (string, bool){
 		return p.genericPrint(reflect.ValueOf(p.target.Visibility))
 	},
 	"tools": func(p *printer) (string, bool) {
+		if len(p.target.AllNamedTools()) > 0 {
+			return p.genericPrint(reflect.ValueOf(p.target.AllNamedTools()))
+		}
 		return p.genericPrint(reflect.ValueOf(p.target.AllTools()))
 	},
+	"test_tools": func(p *printer) (string, bool) {
+		if len(p.target.NamedTestTools()) > 0 {
+			return p.genericPrint(reflect.ValueOf(p.target.NamedTestTools()))
+		}
+		return p.genericPrint(reflect.ValueOf(p.target.TestTools()))
+	},
 	"data": func(p *printer) (string, bool) {
-		return p.genericPrint(reflect.ValueOf(p.target.AllData()))
+		if len(p.target.NamedData()) > 0 {
+			return p.genericPrint(reflect.ValueOf(p.target.NamedData()))
+		}
+		return p.genericPrint(reflect.ValueOf(p.target.Data))
 	},
 }
 
