@@ -55,14 +55,13 @@ func isSameFileContent(state *core.BuildState, from, to string) (bool, error) {
 
 	h1, err := state.PathHasher.Hash(from, false, true)
 	if err != nil {
-		return false, fmt.Errorf("from: %v", err)
+		return false, err
 	}
 	h2, err := state.PathHasher.Hash(to, false, true)
 	if err != nil {
-		return bytes.Equal(h1, h2), fmt.Errorf("to: %v", err)
+		return bytes.Equal(h1, h2), err
 	}
 	return bytes.Equal(h1, h2), err
-
 }
 
 // Build builds a single filegroup file. Returns whether any files are changed or should be if there hadn't been an
