@@ -11,7 +11,7 @@ for src in glob(
         "template.html",
         "lexicon*.html",
         "language.html",
-        "error.html"
+        "error.html",
     ],
 ):
     deps += [html_template(name = src.replace(".", "_").replace("/", "_"), src = src)]

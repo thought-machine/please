@@ -7,7 +7,11 @@ for src in glob(["*.md"]):
 
 filegroup(
     name = "codelabs",
-    srcs = deps + [":codelabs_html", "style.css", "codelab.js"],
+    srcs = deps + [
+        ":codelabs_html",
+        "style.css",
+        "codelab.js",
+    ],
     visibility = ["//docs/..."],
 )
 

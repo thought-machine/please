@@ -113,6 +113,13 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 		} else if !state.NeedRun { // Must be plz build or similar, report build outputs.
 			printBuildResults(state, duration)
 		}
+		msgs, totalMessages, actualMessages := cli.CurrentBackend.GetMessageHistory()
+		if actualMessages > 0 && !plainOutput {
+			printf("Messages:\n%s\n", strings.Join(msgs, "\n"))
+			if totalMessages != actualMessages {
+				printf("plus %d more... see plz-out/log/build.log\n", totalMessages-actualMessages)
+			}
+		}
 	}
 }
 
