@@ -45,16 +45,11 @@ var theFilegroupBuilder *filegroupBuilder
 // Build builds a single filegroup file. Returns whether any files are changed or should be if there hadn't been an
 // error.
 func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.BuildTarget, from, to string) (bool, error) {
-	fromInfo, err := os.Lstat(from)
-
 	// Verify that the source actually exists. It is otherwise possible to get through here
 	// without in certain circumstances (basically if another filegroup outputs the same file
 	// from a genrule and has been built already, because we have it in builder.built).
-	if err != nil {
-		if os.IsNotExist(err) {
-			return true, fmt.Errorf("Can't build %s: input %s does not exist", target, from)
-		}
-		return true, err
+	if !fs.PathExists(from) {
+		return true, fmt.Errorf("Can't build %s: input %s does not exist", target, from)
 	}
 	builder.mutex.Lock()
 	defer builder.mutex.Unlock()
@@ -73,7 +68,7 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 		return true, err
 	} else if err := fs.EnsureDir(to); err != nil {
 		return true, err
-	} else if err := fs.CopyOrLinkFile(from, to, fromInfo.Mode(), target.OutMode(), !target.IsBinary, true); err != nil {
+	} else if err := fs.RecursiveCopyOrLinkFile(from, to, target.OutMode(), !target.IsBinary, true); err != nil {
 		return true, err
 	}
 	builder.built[to] = true
