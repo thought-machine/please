@@ -1,3 +1,10 @@
+Version 15.8.3
+--------------
+
+    * Transitive dependencies of subinclude() calls are no longer downloaded
+      if remote execution is enabled.
+
+
 Version 15.8.2
 --------------
 
