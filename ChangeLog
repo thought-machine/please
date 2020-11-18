@@ -1,3 +1,13 @@
+Version 15.8.2
+--------------
+
+    * Stop sh_test() modifying the permissions of it's inputs #1375
+    * Print a summary of log messages after a build #1377
+    * Named tools, test_tools and data are now formatted as a dict
+      instead of a list for `plz query print` #1379
+    * Binary filegroups no longer modify their sources permissions
+      #1376
+
 Version 15.8.1
 --------------
 
