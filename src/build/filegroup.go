@@ -58,9 +58,6 @@ func isSameFileContent(state *core.BuildState, from, to string) (bool, error) {
 		return false, err
 	}
 	h2, err := state.PathHasher.Hash(to, false, true)
-	if err != nil {
-		return bytes.Equal(h1, h2), err
-	}
 	return bytes.Equal(h1, h2), err
 }
 
