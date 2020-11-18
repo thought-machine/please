@@ -28,7 +28,7 @@ func CopyOrLinkFile(from, to string, fromMode, toMode os.FileMode, link, fallbac
 // RecursiveCopy copies either a single file or a directory.
 // 'mode' is the mode of the destination file.
 func RecursiveCopy(from string, to string, mode os.FileMode) error {
-	return recursiveCopyOrLinkFile(from, to, mode, false, false)
+	return RecursiveCopyOrLinkFile(from, to, mode, false, false)
 }
 
 // RecursiveLink hardlinks either a single file or a directory.
@@ -36,14 +36,14 @@ func RecursiveCopy(from string, to string, mode os.FileMode) error {
 // If it can't link then it falls back to a copy.
 // 'mode' is the mode of the destination file.
 func RecursiveLink(from string, to string, mode os.FileMode) error {
-	return recursiveCopyOrLinkFile(from, to, mode, true, true)
+	return RecursiveCopyOrLinkFile(from, to, mode, true, true)
 }
 
-// recursiveCopyOrLinkFile recursively copies or links a file or directory.
+// RecursiveCopyOrLinkFile recursively copies or links a file or directory.
 // 'mode' is the mode of the destination file.
 // If 'link' is true then we'll hardlink files instead of copying them.
 // If 'fallback' is true then we'll fall back to a copy if linking fails.
-func recursiveCopyOrLinkFile(from string, to string, mode os.FileMode, link, fallback bool) error {
+func RecursiveCopyOrLinkFile(from string, to string, mode os.FileMode, link, fallback bool) error {
 	info, err := os.Lstat(from)
 	if err != nil {
 		return err
