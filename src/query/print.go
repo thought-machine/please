@@ -61,10 +61,22 @@ var specialFields = map[string]func(*printer) (string, bool){
 		return p.genericPrint(reflect.ValueOf(p.target.Visibility))
 	},
 	"tools": func(p *printer) (string, bool) {
+		if tools := p.target.AllNamedTools(); len(tools) > 0 {
+			return p.genericPrint(reflect.ValueOf(tools))
+		}
 		return p.genericPrint(reflect.ValueOf(p.target.AllTools()))
 	},
+	"test_tools": func(p *printer) (string, bool) {
+		if tools := p.target.NamedTestTools(); len(tools) > 0 {
+			return p.genericPrint(reflect.ValueOf(tools))
+		}
+		return p.genericPrint(reflect.ValueOf(p.target.TestTools()))
+	},
 	"data": func(p *printer) (string, bool) {
-		return p.genericPrint(reflect.ValueOf(p.target.AllData()))
+		if data := p.target.NamedData(); len(data) > 0 {
+			return p.genericPrint(reflect.ValueOf(data))
+		}
+		return p.genericPrint(reflect.ValueOf(p.target.Data))
 	},
 }
 
