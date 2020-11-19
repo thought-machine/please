@@ -16,7 +16,6 @@ for src in glob(
 ):
     deps += [html_template(name = src.replace(".", "_").replace("/", "_"), src = src)]
 
-
 html_template(
     name = "codelabs_html",
     src = "//docs/codelabs:templated_index",
@@ -54,7 +53,7 @@ genrule(
     name = "language_html",
     srcs = {
         "template": ["template.html"],
-        "html": ["language.html",],
+        "html": ["language.html"],
         "grammar": ["grammar.txt"],
     },
     outs = ["language.html"],
@@ -107,7 +106,7 @@ go_binary(
     visibility = ["//docs/..."],
     deps = [
         "//third_party/go:cli-init",
-    ]
+    ],
 )
 
 filegroup(

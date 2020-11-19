@@ -33,7 +33,6 @@ func golangConfig(dir string, noPrompt bool) string {
 		return ""
 	}
 
-
 	goOnPath, _ := core.LookPath("go", core.DefaultPath)
 	if goOnPath == "" {
 		fmt.Println("Warning: go is not found on the default path. Please configure gotool, or goroot under [go] in your .plzconfig")
