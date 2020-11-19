@@ -17,7 +17,7 @@ func init() {
 }
 
 func TestSequential(t *testing.T) {
-	state, labels1, labels2 := makeState()
+	state, labels1, labels2 := makeState(core.DefaultConfiguration())
 	code := Sequential(state, labels1, nil, true, false, false, "")
 	assert.Equal(t, 0, code)
 	code = Sequential(state, labels2, nil, false, false, false, "")
@@ -25,7 +25,7 @@ func TestSequential(t *testing.T) {
 }
 
 func TestParallel(t *testing.T) {
-	state, labels1, labels2 := makeState()
+	state, labels1, labels2 := makeState(core.DefaultConfiguration())
 	code := Parallel(context.Background(), state, labels1, nil, 5, false, false, false, false, "")
 	assert.Equal(t, 0, code)
 	code = Parallel(context.Background(), state, labels2, nil, 5, true, false, false, false, "")
@@ -33,19 +33,22 @@ func TestParallel(t *testing.T) {
 }
 
 func TestEnvVars(t *testing.T) {
-	os.Setenv("PATH", "/usr/local/bin:/usr/bin:/bin")
 	config := core.DefaultConfiguration()
 	config.Build.Path = []string{"/wibble"}
-	env := environ(config, false)
+	state, lab1, _ := makeState(config)
+
+
+	os.Setenv("PATH", "/usr/local/bin:/usr/bin:/bin")
+	env := environ(state, state.Graph.TargetOrDie(lab1[0]), false)
 	assert.Contains(t, env, "PATH=/usr/local/bin:/usr/bin:/bin")
 	assert.NotContains(t, env, "PATH=/wibble")
-	env = environ(config, true)
+	env = environ(state, state.Graph.TargetOrDie(lab1[0]), true)
 	assert.NotContains(t, env, "PATH=/usr/local/bin:/usr/bin:/bin")
-	assert.Contains(t, env, "PATH=:/wibble")
+	assert.Contains(t, env, "PATH=:/wibble", env)
 }
 
-func makeState() (*core.BuildState, []core.BuildLabel, []core.BuildLabel) {
-	state := core.NewDefaultBuildState()
+func makeState(config *core.Configuration) (*core.BuildState, []core.BuildLabel, []core.BuildLabel) {
+	state := core.NewBuildState(config)
 	target1 := core.NewBuildTarget(core.ParseBuildLabel("//:true", ""))
 	target1.IsBinary = true
 	target1.AddOutput("true")
