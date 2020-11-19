@@ -22,12 +22,18 @@ Duration: 4
 - Testing your code
 - Including third-party libraries 
 
+### what if I get stuck?
+
+The final result of running through this codelab can be found 
+[here](https://github.com/thought-machine/please-codelabs/tree/main/getting_started_python) for reference. If you really 
+get stuck you can find us on [gitter](https://gitter.im/please-build/Lobby)!
+
 ## Initialising your project 
 Duration: 2
 
 Let's create a new project:
 ```
-$ mkdir example_package && cd example_package
+$ mkdir getting_started_python && cd getting_started_python
 $ plz init --no_prompt 
 ```
 
@@ -160,7 +166,7 @@ inputs and outputs. To use this new package in our hello world program, we have 
 ```python
 python_binary(
     name = "main",
-    main = "main.go",
+    main = "main.py",
     # NB: if the package and rule name are the same, you may omit the name i.e. this could be just //src/greetings 
     deps = ["//src/greetings:greetings"], 
 )
@@ -284,7 +290,7 @@ And add numpy as a dependency:
 ```python
 python_library(
     name = "greetings",
-    srcs = ["greetings.go"],
+    srcs = ["greetings.py"],
     visibility = ["//src/..."],
     deps = ["//third_party/python:numpy"],
 )

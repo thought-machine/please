@@ -67,9 +67,8 @@ func InitConfig(dir string, bazelCompatibility bool, noPrompt bool) {
 	if bazelCompatibility {
 		contents += bazelCompatibilityConfig
 	}
-	if !noPrompt {
-		contents += golangConfig(dir)
-	}
+
+	contents += golangConfig(dir, noPrompt)
 
 	if err := ioutil.WriteFile(config, []byte(contents), 0644); err != nil {
 		log.Fatalf("Failed to write file: %s", err)

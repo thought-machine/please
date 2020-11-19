@@ -25,13 +25,19 @@ In doing so you'll:
 - Manage and write custom tools for your build definition 
 - Add configuration for your build definitions 
 
+### what if I get stuck?
+
+The final result of running through this codelab can be found 
+[here](https://github.com/thought-machine/please-codelabs/tree/main/custom_rules) for reference. If you really get stuck
+you can find us on [gitter](https://gitter.im/please-build/Lobby)!
+
 ## genrule()
 Duration: 3
 
 Before we jump into writing custom build definitions, let me introduce you to `genrule()`, the generic build rule. Let's 
 just create a go project and initialise Please in it:  
 ```
-$ mkdir example && cd example
+$ mkdir custom_rules && cd custom_rules
 $ plz init --no_prompt
 ```
 

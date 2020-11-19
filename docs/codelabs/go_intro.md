@@ -22,13 +22,19 @@ Duration: 4
 - Testing your code
 - Including third-party libraries 
 
+### what if I get stuck?
+
+The final result of running through this codelab can be found 
+[here](https://github.com/thought-machine/please-codelabs/tree/main/getting_started_go) for reference. If you really get 
+stuck you can find us on [gitter](https://gitter.im/please-build/Lobby)!
+
 ## Initialising your project 
 Duration: 2
 
 The easiest way to get started is from an existing go module:  
 
 ```
-$ mkdir example_module && cd example_module
+$ mkdir getting_started_go && cd getting_started_go
 $ go mod init example_module
 $ plz init --no_prompt 
 ```

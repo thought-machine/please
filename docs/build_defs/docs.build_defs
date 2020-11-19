@@ -10,11 +10,17 @@ def codelab(name : str, codelab_md: str):
     )
 
 def html_template(name : str, src : str, output : str = ''):
+    cmd = '"$TOOL" --template "$SRCS_TEMPLATE" --in "$SRCS_IN"'
+    if output:
+        cmd = f'{cmd} -f {output}'
     return genrule(
         name = name,
-        srcs = ["//docs:template_html", src],
+        srcs = {
+            "template": ["//docs:template_html"],
+            "in": [src],
+        },
         outs = [output if output else src],
-        cmd = '"$TOOL" $SRCS > "$OUT"',
+        cmd = f'{cmd} > "$OUT"',
         tools = ["//docs:templater"],
         visibility = ["//docs/..."],
     )
