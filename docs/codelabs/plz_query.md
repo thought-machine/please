@@ -156,18 +156,18 @@ $ plz query revdeps --exclude //src/greetings:greetings_test --level=-1 //third_
 Total time: 40ms real, 0s compute.
 ```
 
-As you can see, we excluded the test from earlier so `plz test` didn't run it. We can also exclude this in the query:
+As you can see, we excluded the test from earlier so `plz test` didn't run it. We can also exclude this on the test 
+command:
 ```
-$ plz query revdeps --exclude //src/greetings:greetings_test --level=-1 //third_party/go:_assert-assert#download | plz test -
+$ plz query revdeps --level=-1 //third_party/go:_assert-assert#download | plz test --exclude //src/greetings:greetings_test -
 0 test targets and 0 tests run; 0 passed.
 Total time: 40ms real, 0s compute.
 ```
 
 ### Including based on label
 
-Targets can be labeled in Please. Most of the built in rules apply some basic labels. The language rules apply language 
-labels e.g. the go rules apply the `go` label to their targets. These can be very usful to run all tests for a given 
-language:
+Targets can be labeled in Please. Most of the built in rules apply some basic labels e.g. the go rules apply the `go` 
+label to their targets. These can be very useful to run all tests for a given language:
 
 ```
 $ plz build --include go --exclude //third_party/go/...
@@ -176,7 +176,7 @@ $ plz build --include go --exclude //third_party/go/...
 This will build all Go targets but will only build targets under `//third_party/go/...` if they're a dependency of a 
 target that needs to be built.
 
-You may also add custom label to your targets. Update `srcs/greetings/BUILD` as such:
+You may also add custom labels to your targets. Update `srcs/greetings/BUILD` as such:
 
 ### `src/greetings/BUILD`
 ```python
