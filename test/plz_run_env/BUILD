@@ -12,5 +12,5 @@ sh_binary(
 plz_e2e_test(
     name = "env_test",
     cmd = "plz run //test/plz_run_env:env_printer --env",
-    expect_output_contains = "plz-out/bin/src/please test/plz_run_env/wibble.txt",
+    expect_output_contains = "test/plz_run_env/wibble.txt plz-out/bin/src/please",
 )
