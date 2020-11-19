@@ -182,7 +182,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	return env
 }
 
-func runtimeDataPaths(graph *BuildGraph, t *BuildTarget, data []BuildInput) []string{
+func runtimeDataPaths(graph *BuildGraph, t *BuildTarget, data []BuildInput) []string {
 	paths := make([]string, 0, len(data))
 	for _, in := range data {
 		paths = append(paths, in.FullPaths(graph)...)

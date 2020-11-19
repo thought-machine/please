@@ -2,8 +2,11 @@ subinclude("//build_defs:plz_e2e_test")
 
 sh_binary(
     name = "env_printer",
+    data = [
+        "wibble.txt",
+        "//src:please",
+    ],
     main = "env_printer.sh",
-    data = ["//src:please", "wibble.txt"],
 )
 
 plz_e2e_test(
