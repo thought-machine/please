@@ -109,7 +109,7 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 	args = append(splitCmd, args...)
 	log.Info("Running target %s...", strings.Join(args, " "))
 	output.SetWindowTitle("plz run: " + strings.Join(args, " "))
-	env := environ(state.Config, setenv)
+	env := environ(state, target, setenv)
 	if !fork {
 		if dir != "" {
 			err := syscall.Chdir(dir)
@@ -136,13 +136,13 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 }
 
 // environ returns an appropriate environment for a command.
-func environ(config *core.Configuration, setenv bool) []string {
+func environ(state *core.BuildState, target *core.BuildTarget, setenv bool) []string {
 	env := os.Environ()
 	for _, e := range adRunEnviron {
 		env = addEnv(env, e)
 	}
 	if setenv {
-		for _, e := range core.GeneralBuildEnvironment(config) {
+		for _, e := range core.RunEnvironment(state, target) {
 			env = addEnv(env, e)
 		}
 	}

@@ -182,6 +182,41 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	return env
 }
 
+func runtimeDataPaths(graph *BuildGraph, t *BuildTarget, data []BuildInput) []string{
+	paths := make([]string, 0, len(data))
+	for _, in := range data {
+		paths = append(paths, in.FullPaths(graph)...)
+	}
+	return paths
+}
+
+// RunEnvironment creates the environment variables for a `plz run --env`.
+func RunEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
+	env := buildEnvironment(state, target)
+
+	env = append(env,
+		"TOOLS="+strings.Join(toolPaths(state, target.TestTools(), true), " "),
+	)
+
+	if len(target.testTools) == 1 {
+		env = append(env, "TOOL="+toolPath(state, target.testTools[0], true))
+	}
+	// Named tools as well.
+	for name, tools := range target.namedTestTools {
+		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, true), " "))
+	}
+	if len(target.Data) > 0 {
+		env = append(env, "DATA="+strings.Join(runtimeDataPaths(state.Graph, target, target.AllData()), " "))
+	}
+	if target.namedData != nil {
+		for name, data := range target.namedData {
+			paths := runtimeDataPaths(state.Graph, target, data)
+			env = append(env, "DATA_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
+		}
+	}
+	return env
+}
+
 // StampedBuildEnvironment returns the shell env vars to be passed into exec.Command.
 // Optionally includes a stamp if the target is marked as such.
 func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte, tmpDir string) BuildEnv {
