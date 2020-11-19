@@ -36,9 +36,10 @@
           <p><a href="#">&#x2630; Navigation</a></p>
           <ul>
             <li{{menuItem "quickstart"}}><a href="/quickstart.html">Getting Started</a>
-              {{ if matches .Filename "quickstart.html" "basics.html" "dependencies.html" "quickstart_dropoff.html"}}
+              {{ if matches .Filename "quickstart.html" "basics.html" "dependencies.html" "quickstart_dropoff.html" "codelabs.html"}}
                 <ul>
                   <li{{menuItem "quickstart"}}><a href="/quickstart.html">Quick start</a></li>
+                  <li{{menuItem "codelabs"}}><a href="/codelabs.html">Codelabs</a></li>
                   <li{{menuItem "basics"}}><a href="/basics.html">Basic concepts</a></li>
                   <li{{menuItem "dependencies"}}><a href="/dependencies.html">Third-party dependencies</a></li>
                   <li{{menuItem "quickstart_dropoff"}}><a href="/quickstart_dropoff.html">What's next?</a></li>

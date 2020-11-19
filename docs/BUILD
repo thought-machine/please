@@ -16,6 +16,13 @@ for src in glob(
 ):
     deps += [html_template(name = src.replace(".", "_").replace("/", "_"), src = src)]
 
+
+html_template(
+    name = "codelabs_html",
+    src = "//docs/codelabs:templated_index",
+    output = "codelabs.html",
+)
+
 genrule(
     name = "rules",
     outs = ["rules.json"],
@@ -34,7 +41,7 @@ genrule(
     outs = ["lexicon.html"],
     cmd = [
         '"$TOOLS_LEX" > lexicon.html',
-        '"$TOOLS_TMPL" docs/template.html lexicon.html > tmp.html',
+        '"$TOOLS_TMPL" --template docs/template.html --in lexicon.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],
     tools = {
@@ -46,14 +53,12 @@ genrule(
 genrule(
     name = "language_html",
     srcs = {
-        "html": [
-            "template.html",
-            "language.html",
-        ],
+        "template": ["template.html"],
+        "html": ["language.html",],
         "grammar": ["grammar.txt"],
     },
     outs = ["language.html"],
-    cmd = '"$TOOLS_TEMPLATE" $SRCS_HTML | "$TOOLS_GRAMMAR" > "$OUT"',
+    cmd = '"$TOOLS_TEMPLATE" --template $SRCS_TEMPLATE --in $SRCS_HTML | "$TOOLS_GRAMMAR" > "$OUT"',
     tools = {
         "grammar": [":grammar_templater"],
         "template": [":templater"],
@@ -73,6 +78,7 @@ filegroup(
         "plz-recording.json",
         "//third_party/js:asciinema",
         "favicon",
+        ":codelabs_html",
     ],
 )
 
@@ -89,7 +95,6 @@ tarball(
     name = "deep-tarball",
     srcs = [
         ":docs",
-        "//docs/codelabs",
     ],
     out = "deep-docs.tar.gz",
     flatten = False,
@@ -100,6 +105,9 @@ go_binary(
     name = "templater",
     srcs = ["template.go"],
     visibility = ["//docs/..."],
+    deps = [
+        "//third_party/go:cli-init",
+    ]
 )
 
 filegroup(

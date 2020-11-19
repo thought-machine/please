@@ -8,7 +8,6 @@ for src in glob(["*.md"]):
 filegroup(
     name = "codelabs",
     srcs = deps + [
-        ":codelabs_html",
         "style.css",
         "codelab.js",
     ],
@@ -30,10 +29,5 @@ genrule(
     outs = ["codelabs.html"],
     cmd = "$TOOLS --template $SRCS_TEMPLATE $SRCS_LABS > $OUT",
     tools = [":codelab_templator"],
-)
-
-html_template(
-    name = "codelabs_html",
-    src = ":templated_index",
-    output = "index.html",
+    visibility = ["//docs/..."],
 )
