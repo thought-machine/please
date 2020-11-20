@@ -7,7 +7,8 @@ status: Published
 authors: Jon Poole
 Feedback Link: https://github.com/thought-machine/please
 
-# Getting started with Go
+# Tips and tricks - plz query 
+
 ## Overview 
 Duration: 2
 
