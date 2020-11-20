@@ -558,7 +558,9 @@ func (config *Configuration) Hash() []byte {
 		h.Write([]byte(l))
 	}
 	for _, env := range config.getBuildEnv(false, false) {
-		h.Write([]byte(env))
+		if !strings.HasPrefix(env, "SECRET") {
+			h.Write([]byte(env))
+		}
 	}
 	return h.Sum(nil)
 }
