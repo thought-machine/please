@@ -79,6 +79,7 @@ filegroup(
         "favicon",
         ":codelabs_html",
     ],
+    deps = ["//docs/codelabs"],
 )
 
 #TODO(jpoole): unify these two once we switch to the new website
@@ -94,6 +95,7 @@ tarball(
     name = "deep-tarball",
     srcs = [
         ":docs",
+        "//docs/codelabs",
     ],
     out = "deep-docs.tar.gz",
     flatten = False,
@@ -129,7 +131,7 @@ go_binary(
 sh_cmd(
     name = "view",
     cmd = "sensible-browser http://localhost:8080 && cd plz-out/gen/docs && python3 -m http.server 8080",
-    deps = [
+    data = [
         ":docs",
         ":index_html",
     ],
