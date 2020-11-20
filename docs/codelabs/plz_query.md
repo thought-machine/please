@@ -165,8 +165,8 @@ Total time: 40ms real, 0s compute.
 
 ### Including based on label
 
-Targets can be labeled in Please. Most of the built in rules apply some basic labels. The language rules apply language 
-labels e.g. the go rules apply the `go` label to their targets. These can be very usful to run all tests for a given 
+Targets can be labeled in Please. Most of the built-in rules apply some basic labels. The language rules apply language 
+labels, e.g. the go rules apply the `go` label to their targets. These can be very usful to run all tests for a given 
 language:
 
 ```

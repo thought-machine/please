@@ -4,6 +4,10 @@ set -eu
 
 VERSION=$(cat VERSION)
 
+echo "Releasing docs website"
+tar -xzf /tmp/workspace/deep-docs.tar.gz -C /tmp/workspace && aws s3 sync /tmp/workspace/docs s3://please-docs
+
+
 if aws s3 ls s3://please-releases/linux_amd64/$VERSION; then
   echo "Please $VERSION has already been released, nothing to do."
   exit 0
@@ -27,5 +31,3 @@ else
 fi
 aws s3 cp VERSION s3://please-releases/latest_prerelease_version  --content-type text/plain
 
-echo "Releasing docs website"
-tar -xzf /tmp/workspace/deep-docs.tar.gz -C /tmp/workspace && aws s3 sync /tmp/workspace/docs s3://please-docs
