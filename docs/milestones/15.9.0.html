@@ -1,7 +1,11 @@
-    <h1>Please 16.0.0 is here!</h1>
+    <h1>Please 15.9.0 is here!</h1>
     <p>
         We've been hard at work and we're very excited to share what we've been up to! This is the first
         milestone newsletter so sit tight, it's a big one!
+
+    <p>
+        If you're new to Please, Please is a community focused, bazel-like multi-language build system with a focus on
+        flexibility for mono-repos at scale. Get started <a href="/index.html">here</a>!
 
     <h2>Clustered builds!</h2>
     <p>
@@ -28,19 +32,19 @@
         We're always aiming to make please as easy to use as possible. Configuring a new tool can be a daunting task.
         That's why please now guides you through your first time setup!
     <p>
-        <code>plz init</code> is now much smarter! First of all, it's interactive now! It will prompt you to ask if
-        you want to set up any specific configuration, and guide you through that process.
-    <p>
-        We've started with <a href="#golang-setup">golang</a> however expect to see similar love come to all the major
-        languages: java, python, c and c++.
+        <code>plz init</code> is getting much smarter! We've started with <a href="#golang-setup">golang</a>, detecting
+        a go.mod file and setting the appropriate config options to help you get started as fast as possible. There's
+        also an interactive language setup via `plz init go` to guide you through enabling Go in your project. Expect to
+        see similar love come to all the major languages: Java, Python, C and C++.
 
     <h2>Golang!</h2>
-    <p> Developing Go with please is now easier than ever!
+    <p> Following on with the general trend to make Please as easy as possible to get started with, we've put a lot of
+    work into Go!
     <h3>Go test compatibility</h3>
     <p>
         If you're migrating from <code>go build</code>, or working on a pure go project, it can be jarring that Please
         runs tests from the repo root whereas go runs them from the package directory. To make it easier to migrate
-        existing go projects, and improve compatibility with IDEs and tooling, you can now change this behavior by
+        existing Go projects, and improve compatibility with IDEs and tooling, you can now change this behavior by
         adding the following to your config:
     <pre><code>
     [go]
@@ -63,9 +67,9 @@
     <h3>Speaking of go installations</h3>
     <p>
         Worried about how to manage go installations across all your developers machine, CI workers, all running
-        different operating systems? Then you should try <code>go_toolchain()</code>! This exciting experimental feature
-        will allow you to define your go installation as a build rule! Please will then automatically download the
-        correct distribution for your platform, making your build portable like never before!
+        different operating systems? Then you should try <code>go_toolchain()</code>! Please will then automatically
+        download the correct distribution for your platform, and build the SDK for the target platform if needed, making
+        your build portable like never before!
     <p>
         Simply define your toolchain rule as such:
     <pre><code class="language-plz">
@@ -96,6 +100,11 @@
     </code></pre>
     <p>
         This module will now be available to your go code as <code>"github.com/some/module/v2"</code>.
+
+    <p>
+        We've made <code>go_get()</code> more specific about its outputs. You can now have multiple <code>go_get()</code>
+        rules for the same module that install different packages. This can really help resolve cyclic dependencies
+        which were a real pain before.
 
     <h2>For the rule authors out there!</h2>
     <p>
