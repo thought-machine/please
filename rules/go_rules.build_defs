@@ -877,6 +877,22 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         else:
             error(f"get_param_as_list: unexpected type %s" % type(value))
 
+    # Given a list of proposed outputs for this rule (which may be paths to .a
+    # files or directories), returns outputs that aren't contained within other
+    # outputs - e.g.:
+    #   remove_redundant_outs(["x/y", "x/z.a", "x/p/q/r", "x/p/q"])
+    # returns
+    #   ["x/y", "x/z.a", "x/p/q"]
+    def remove_redundant_outs(outs):
+        new_outs = {r: True for r in outs}
+        for r in new_outs.keys():
+            dirs = r.split("/")
+            for i in range(1, len(dirs)):
+                root = "/".join(dirs[0:i])
+                if new_outs.get(root):
+                    new_outs[r] = False
+        return [r for r in new_outs.keys() if new_outs[r]]
+
     go_rule = f':{name}'
     if isinstance(get, str):
         get = [get]
@@ -911,12 +927,15 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         srcs += [get_rule]
         provides = {'go': go_rule, 'go_src': get_rule}
         installone = get_param_as_list(install, getone)
-        if not install:
+        if not install or (len(get) > 1 and isinstance(install, list)):
             outs += [getroot]
         else:
             for i in installone:
                 if not i or i == ".":
                     outs += [getroot + ".a"]
+                elif i == "...":
+                    get_roots += [getroot]
+                    outs += [getroot]
                 elif i.endswith("/..."):
                     out = getroot + "/" + i.removesuffix("/...")
                     get_roots += [out]
@@ -956,7 +975,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
     if binary:
         outs = ['bin/' + name]
     else:
-        outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in outs]
+        outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in remove_redundant_outs(outs)]
         # Outputs are created one directory down from where we want them.
         # For most it doesn't matter but the top-level one will get lost.
         pkg_get_roots = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{getroot}' for getroot in get_roots]

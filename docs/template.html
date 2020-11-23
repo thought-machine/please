@@ -36,9 +36,10 @@
           <p><a href="#">&#x2630; Navigation</a></p>
           <ul>
             <li{{menuItem "quickstart"}}><a href="/quickstart.html">Getting Started</a>
-              {{ if matches .Filename "quickstart.html" "basics.html" "dependencies.html" "quickstart_dropoff.html"}}
+              {{ if matches .Filename "quickstart.html" "basics.html" "dependencies.html" "quickstart_dropoff.html" "codelabs.html"}}
                 <ul>
                   <li{{menuItem "quickstart"}}><a href="/quickstart.html">Quick start</a></li>
+                  <li{{menuItem "codelabs"}}><a href="/codelabs.html">Codelabs</a></li>
                   <li{{menuItem "basics"}}><a href="/basics.html">Basic concepts</a></li>
                   <li{{menuItem "dependencies"}}><a href="/dependencies.html">Third-party dependencies</a></li>
                   <li{{menuItem "quickstart_dropoff"}}><a href="/quickstart_dropoff.html">What's next?</a></li>
@@ -58,7 +59,8 @@
             <li{{menuItem "lexicon"}}><a href="/lexicon.html">Built in rules &amp; languages</a>
               {{ if eq .Filename "lexicon.html" }}
               <ul>
-                <li><a href="/lexicon.html#builtins">Builtin functions</a></li>
+                <li><a href="/lexicon.html#python-builtins">Python builtins</a></li>
+                <li><a href="/lexicon.html#please-builtins">Please Builtins</a></li>
                 <li><a href="/lexicon.html#cc">C++ rules</a></li>
                 <li><a href="/lexicon.html#go">Go rules</a></li>
                 <li><a href="/lexicon.html#java">Java rules</a></li>

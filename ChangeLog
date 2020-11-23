@@ -1,3 +1,54 @@
+Version 15.8.3
+--------------
+
+    * Transitive dependencies of subinclude() calls are no longer downloaded
+      if remote execution is enabled.
+
+
+Version 15.8.2
+--------------
+
+    * Stop sh_test() modifying the permissions of it's inputs #1375
+    * Print a summary of log messages after a build #1377
+    * Named tools, test_tools and data are now formatted as a dict
+      instead of a list for `plz query print` #1379
+    * Binary filegroups no longer modify their sources permissions
+      #1376
+
+Version 15.8.1
+--------------
+
+    * Revert to old behavior for go_get() when both `get` and `install`
+      are lists #1365
+
+
+Version 15.8.0
+--------------
+
+    * Allow go_get() to specify installs per module #1335
+    * Allow format strings and raw strings to be implicitly
+      concatenated in the build language #1344
+    * Added is_platform() rule which can check the current platform
+      matches the specified cpu and operating system.
+    * Made go_get() specific about its outputs based on the installed
+      packages. This allows multiple go_get() rules install different
+      packages from the same module. This can help resolve cyclic
+      dependencies. #1341 #1352
+    * pip_library() now uses python -m pip instead of pip on the path
+      to avoid problems where pip and python are different versions.
+      #1346
+    * Added exported_deps to genrule() and gentest() which can be used
+      to re-export dependencies to those that depend on these rules.
+      #1345
+    * Made maven_jar() download its sources in a way that is compatible
+      with tooling. This is gated behind the MavenJar feature flag and
+      is due to be released in v16.
+    * Fixed an issue where tools were being copied into build rules
+      when they used entry points #1349
+    * Made go_toolchain() install the standard libraries of the target
+      platform when cross compiling #1350
+
+
 Version 15.7.1
 --------------
 

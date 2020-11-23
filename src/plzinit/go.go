@@ -18,14 +18,20 @@ const goConfig = `
 `
 
 // golangConfig prompts the user and returns the go config to add to the .plzconfig
-func golangConfig(dir string) string {
+func golangConfig(dir string, noPrompt bool) string {
 	goModule, moduleFound := findGoModule(dir)
+	config := goConfig
+
+	if noPrompt {
+		if moduleFound {
+			return config + fmt.Sprintf("importpath = %s\n", goModule)
+		}
+		return ""
+	}
 
 	if !moduleFound && !cli.PromptYN("Would you like to setup Go in this repository", false) {
 		return ""
 	}
-
-	config := goConfig
 
 	goOnPath, _ := core.LookPath("go", core.DefaultPath)
 	if goOnPath == "" {
@@ -51,7 +57,7 @@ func golangConfig(dir string) string {
 		if !moduleFound {
 			fmt.Sprintln("You may also want to `go mod init " + importPath + "` for better IDE integration")
 		}
-		config += fmt.Sprintln("importpath = ", importPath)
+		config += fmt.Sprintf("importpath = %s\n", importPath)
 	} else {
 		config += fmt.Sprintln(";importpath = ...")
 	}

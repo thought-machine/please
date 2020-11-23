@@ -1,3 +1,5 @@
+subinclude("//docs/build_defs")
+
 deps = []
 
 for src in glob(
@@ -9,16 +11,16 @@ for src in glob(
         "template.html",
         "lexicon*.html",
         "language.html",
+        "error.html",
     ],
 ):
-    templated_rule = genrule(
-        name = src.replace(".", "_").replace("/", "_"),
-        srcs = ["template.html", src],
-        outs = [src],
-        cmd = '"$TOOL" $SRCS > "$OUT"',
-        tools = [":templater"],
-    )
-    deps += [templated_rule]
+    deps += [html_template(name = src.replace(".", "_").replace("/", "_"), src = src)]
+
+html_template(
+    name = "codelabs_html",
+    src = "//docs/codelabs:templated_index",
+    output = "codelabs.html",
+)
 
 genrule(
     name = "rules",
@@ -38,7 +40,7 @@ genrule(
     outs = ["lexicon.html"],
     cmd = [
         '"$TOOLS_LEX" > lexicon.html',
-        '"$TOOLS_TMPL" docs/template.html lexicon.html > tmp.html',
+        '"$TOOLS_TMPL" --template docs/template.html --in lexicon.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],
     tools = {
@@ -50,14 +52,12 @@ genrule(
 genrule(
     name = "language_html",
     srcs = {
-        "html": [
-            "template.html",
-            "language.html",
-        ],
+        "template": ["template.html"],
+        "html": ["language.html"],
         "grammar": ["grammar.txt"],
     },
     outs = ["language.html"],
-    cmd = '"$TOOLS_TEMPLATE" $SRCS_HTML | "$TOOLS_GRAMMAR" > "$OUT"',
+    cmd = '"$TOOLS_TEMPLATE" --template $SRCS_TEMPLATE --in $SRCS_HTML | "$TOOLS_GRAMMAR" > "$OUT"',
     tools = {
         "grammar": [":grammar_templater"],
         "template": [":templater"],
@@ -72,11 +72,14 @@ filegroup(
         "styles.css",
         "action.js",
         "tabs.js",
+        "error.html",
         "images/thoughtmachine.png",
         "plz-recording.json",
         "//third_party/js:asciinema",
         "favicon",
+        ":codelabs_html",
     ],
+    deps = ["//docs/codelabs"],
 )
 
 #TODO(jpoole): unify these two once we switch to the new website
@@ -87,9 +90,13 @@ tarball(
     labels = ["hlink:plz-out/pkg"],
 )
 
+# This is used exclusively for the s3 website
 tarball(
     name = "deep-tarball",
-    srcs = [":docs"],
+    srcs = [
+        ":docs",
+        "//docs/codelabs",
+    ],
     out = "deep-docs.tar.gz",
     flatten = False,
     labels = ["hlink:plz-out/pkg"],
@@ -98,6 +105,16 @@ tarball(
 go_binary(
     name = "templater",
     srcs = ["template.go"],
+    visibility = ["//docs/..."],
+    deps = [
+        "//third_party/go:cli-init",
+    ],
+)
+
+filegroup(
+    name = "template_html",
+    srcs = ["template.html"],
+    visibility = ["//docs/..."],
 )
 
 go_binary(
@@ -114,7 +131,7 @@ go_binary(
 sh_cmd(
     name = "view",
     cmd = "sensible-browser http://localhost:8080 && cd plz-out/gen/docs && python3 -m http.server 8080",
-    deps = [
+    data = [
         ":docs",
         ":index_html",
     ],

@@ -34,6 +34,9 @@ func TestAllLinksAreLive(t *testing.T) {
 				for _, attr := range n.Attr {
 					if n.Data == "a" {
 						if attr.Key == "href" && !strings.HasPrefix(attr.Val, "http") && !strings.HasPrefix(attr.Val, "about:") && attr.Val != "#" {
+							if strings.HasPrefix(attr.Val, "/codelabs") {
+								continue
+							}
 							if strings.HasPrefix(attr.Val, "#") {
 								alllinks = append(alllinks, filename+attr.Val)
 							} else {

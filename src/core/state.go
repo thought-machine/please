@@ -749,6 +749,10 @@ func (state *BuildState) ensureDownloaded(target *BuildTarget) {
 
 // QueueTarget adds a single target to the build queue.
 func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceBuild bool) error {
+	return state.queueTarget(label, dependent, rescan, forceBuild, forceBuild)
+}
+
+func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceBuild, neededForSubinclude bool) error {
 	target := state.Graph.Target(label)
 	if target == nil {
 		// If the package isn't loaded yet, we need to queue a parse for it.
@@ -769,7 +773,7 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 	if !target.SyncUpdateState(Inactive, Semiactive) && !rescan && !forceBuild {
 		return nil
 	}
-	target.NeededForSubinclude = target.NeededForSubinclude || forceBuild
+	target.NeededForSubinclude = target.NeededForSubinclude || neededForSubinclude
 	if state.NeedBuild || forceBuild {
 		if target.SyncUpdateState(Semiactive, Active) {
 			state.AddActiveTarget()
@@ -798,14 +802,14 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 		if len(target.Requires) > 0 {
 			if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
 				for _, provided := range depTarget.ProvideFor(target) {
-					if err := state.QueueTarget(provided, label, false, forceBuild); err != nil {
+					if err := state.queueTarget(provided, label, false, forceBuild, false); err != nil {
 						return err
 					}
 				}
 				continue
 			}
 		}
-		if err := state.QueueTarget(dep, label, false, forceBuild); err != nil {
+		if err := state.queueTarget(dep, label, false, forceBuild, false); err != nil {
 			return err
 		}
 	}
