@@ -29,8 +29,8 @@ func GeneralBuildEnvironment(config *Configuration) BuildEnv {
 	return append(env, config.GetBuildEnv()...)
 }
 
-// buildEnvironment returns the basic parts of the build environment.
-func buildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
+// TargetEnvironment returns the basic parts of the build environment.
+func TargetEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	env := append(GeneralBuildEnvironment(state.Config),
 		"PKG="+target.Label.PackageName,
 		"PKG_DIR="+target.Label.PackageDir(),
@@ -59,7 +59,7 @@ func buildEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 // Note that we lie about the location of HOME in order to keep some tools happy.
 // We read this as being slightly more POSIX-compliant than not having it set at all...
 func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) BuildEnv {
-	env := buildEnvironment(state, target)
+	env := TargetEnvironment(state, target)
 	sources := target.AllSourcePaths(state.Graph)
 	outEnv := target.GetTmpOutputAll(target.Outputs())
 	abs := path.IsAbs(tmpDir)
@@ -126,7 +126,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 
 // TestEnvironment creates the environment variables for a test.
 func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) BuildEnv {
-	env := buildEnvironment(state, target)
+	env := TargetEnvironment(state, target)
 	resultsFile := path.Join(testDir, TestResultsFile)
 	abs := path.IsAbs(testDir)
 
@@ -192,7 +192,7 @@ func runtimeDataPaths(graph *BuildGraph, t *BuildTarget, data []BuildInput) []st
 
 // RunEnvironment creates the environment variables for a `plz run --env`.
 func RunEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
-	env := buildEnvironment(state, target)
+	env := TargetEnvironment(state, target)
 
 	env = append(env,
 		"TOOLS="+strings.Join(toolPaths(state, target.TestTools(), true), " "),
