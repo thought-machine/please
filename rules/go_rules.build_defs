@@ -809,6 +809,143 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
         size = size,
     )
 
+def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, outs:list, deps:list, test_only:bool,
+               visibility:list, licences:list):
+    # Now compile it in a separate step.
+    install_cmd = ' '.join(install or [])
+    cmd = [
+        'export GOPATH="$(find \"$TMP_DIR\" \( -name src -o -name pkg \) -exec dirname {} \; | sort | uniq | tr \'\\n\' \':\' | sed \'s/:$//\')" GO111MODULE="off"',
+        '"$TOOLS_GO" install -gcflags "-trimpath \\\"$TMP_DIR\\\"" -asmflags "-trimpath \\\"$TMP_DIR\\\"" ' + install_cmd,
+        ]
+    if CONFIG.GOROOT:
+        cmd = [f'export GOROOT={CONFIG.GOROOT}'] + cmd
+    if package_name():
+        cmd += [
+            # The outputs tend to end up in subdirectories (Go seems to match them to the location the source came from)
+            'rm -rf bin' if binary else 'rm -rf pkg',
+            'mv "$PKG_DIR/bin" .' if binary else 'mv "$PKG_DIR/pkg" .',
+        ]
+
+    if binary:
+        outs = ['bin/' + name]
+    else:
+        outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in outs]
+        # Outputs are created one directory down from where we want them.
+        # For most it doesn't matter but the top-level one will get lost.
+        pkg_get_roots = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{getroot}' for getroot in get_roots]
+        cmd += [f' if [ -f {out}.a ]; then mkdir -p {out} && cp {out}.a {out}; fi' for out in pkg_get_roots]
+    return build_rule(
+        name = name,
+        tag = "a_rule" if not binary else None,
+        outs = outs,
+        deps = deps,
+        srcs = srcs,
+        tools = {
+            'go': [CONFIG.GO_TOOL],
+        },
+        visibility = visibility,
+        building_description = 'Compiling...',
+        cmd = ' && '.join(cmd),
+        binary = binary,
+        requires = ['go', 'go_src'],
+        test_only = test_only,
+        labels = ['link:plz-out/go'],
+        sandbox = False,
+        needs_transitive_deps = True,
+        licences = licences,
+    )
+
+def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None,
+                    licences:list=None, hashes:list=None, labels:list=[],_tag:str=''):
+    cmds = [
+        "export GO111MODULE=on && export TMPDIR=$TMPDIR/tmp && mkdir -p $TMPDIR",
+        "$TOOL mod init dummy", # Create a dummy module
+        # TODO(jpoole): I don't think this is portable beyond modern GNU versions of grep. Might need to switch to sed/awk for this
+        f"export MOD_DIR=$($TOOL mod download -x -modcacherw -json {module}@{version} | grep -Po '\"Dir\": \"\K([^\"]+)')",
+        "cp -r $MOD_DIR $OUT",
+    ]
+
+    return build_rule(
+        name = name,
+        tag = _tag,
+        outs = [f'src/{module}'],
+        tools = [CONFIG.GO_TOOL],
+        building_description = 'Fetching...',
+        cmd = ' && '.join(cmds),
+        requires = ['go'],
+        test_only = test_only,
+        labels = labels + ['link:plz-out/go'],
+        hashes = hashes,
+        sandbox = False,
+        licences = licences,
+        visibility = visibility,
+    )
+
+def go_module(name:str='', module:str='', version:str='', download:str='', deps:list=[], exported_deps:list=None,
+              visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None, licences:list=None):
+    if (module or version) and download:
+        raise ParseError("You have provided both module and version as well as download. Must provided one or the other.")
+
+    if not download and not (module and version):
+        raise ParseError("Either the module and version, or download should be provided")
+
+    install = [f"{module}/{i}" for i in install]
+
+    if not download:
+        download = go_mod_download(
+            name = name,
+            _tag = "get",
+            module = module,
+            version = version,
+            test_only = test_only,
+            visibility = visibility,
+            licences = licences,
+            hashes = hashes
+        )
+
+    a_rule = _go_install(
+        name = name,
+        get_roots = [module],
+        install = install or [module],
+        binary = binary,
+        srcs = [download],
+        outs = [module], # TODO(jpoole) the same thing with the install list as go_get() to determine the outs
+        deps = deps,
+        test_only = test_only,
+        visibility = visibility,
+        licences = licences,
+    )
+
+    if binary:
+        return a_rule
+
+    import_config = build_rule(
+        name=name,
+        tag='import_config',
+        deps = [a_rule],
+        visibility = visibility,
+        test_only = test_only,
+        cmd = _generate_pkg_import_cfg_cmd('"$OUT"', '"$PKG_DIR"', True),
+        outs = [f'{name}.importconfig'],
+    )
+    exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
+
+    return filegroup(
+        name = name,
+        srcs = [a_rule],
+        deps = deps,
+        exported_deps = exported_deps,
+        provides = {
+            "go": f":{name}", # provide the filegroup otherwise exported deps don't work
+            "go_src": download,
+        },
+        visibility = visibility,
+        needs_transitive_deps = True,
+        test_only = test_only,
+        requires = ['go'],
+        binary = binary,
+    )
+
 
 def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
            visibility:list=None, patch:str|list|dict=None, binary:bool=False, test_only:bool&testonly=False,
@@ -952,82 +1089,53 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
     if not get and not install:
         raise ParseError("must provide get or install!")
     else:
-        if srcs == [] and binary == False:
+        if not srcs and not binary:
             # we are going to infer the getroot name from the 1st install dependency
             getroot = install[0][:-4] if install[0].endswith('/...') else install[0]
             # NOTE: for this case in the install list I'm expecting full package names 
             outs += [i[:-4] if i.endswith('/...') else i+".a" for i in install]
-            provides = {'go': go_rule} # I can't find the sources 
+            provides = {'go': go_rule} # I can't find the sources
 
-    # Now compile it in a separate step.
-    cmd = [
-        'export GOPATH="$(find \"$TMP_DIR\" \( -name src -o -name pkg \) -exec dirname {} \; | sort | uniq | tr \'\\n\' \':\' | sed \'s/:$//\')" GO111MODULE="off"',
-        '"$TOOLS_GO" install -gcflags "-trimpath \\\"$TMP_DIR\\\"" -asmflags "-trimpath \\\"$TMP_DIR\\\"" ' + ' '.join(all_installs or install),
-    ]
-    if CONFIG.GOROOT:
-        cmd = [f'export GOROOT={CONFIG.GOROOT}'] + cmd
-    if package_name():
-        cmd += [
-            # The outputs tend to end up in subdirectories (Go seems to match them to the location the source came from)
-            'rm -rf bin' if binary else 'rm -rf pkg',
-            'mv "$PKG_DIR/bin" .' if binary else 'mv "$PKG_DIR/pkg" .',
-        ]
-    if binary:
-        outs = ['bin/' + name]
-    else:
-        outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in remove_redundant_outs(outs)]
-        # Outputs are created one directory down from where we want them.
-        # For most it doesn't matter but the top-level one will get lost.
-        pkg_get_roots = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{getroot}' for getroot in get_roots]
-        cmd += [f' if [ -f {out}.a ]; then mkdir -p {out} && cp {out}.a {out}; fi' for out in pkg_get_roots]
-
-    a_rule = build_rule(
-        name = name,
-        tag = "a_rule" if not binary else None,
+    a_rule = _go_install(
+        name,
+        get_roots=get_roots,
+        install = all_installs or install,
+        binary = binary,
+        srcs = srcs,
         outs = outs,
         deps = deps,
-        srcs = srcs,
-        tools = {
-            'go': [CONFIG.GO_TOOL],
-        },
-        visibility = visibility,
-        building_description = 'Compiling...',
-        cmd = ' && '.join(cmd),
-        binary = binary,
-        requires = ['go', 'go_src'],
         test_only = test_only,
-        labels = ['link:plz-out/go'],
-        sandbox = False,
-        needs_transitive_deps = True,
+        visibility = visibility,
         licences = licences,
     )
 
-    if not binary:
-        import_config = build_rule(
-            name=name,
-            tag='import_config',
-            deps = [a_rule],
-            visibility = visibility,
-            test_only = test_only,
-            cmd = _generate_pkg_import_cfg_cmd('"$OUT"', '"$PKG_DIR"', True),
-            outs = [f'{name}.importconfig'],
-        )
-        exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
-
-        return filegroup(
-            name = name,
-            srcs = [a_rule],
-            deps = deps,
-            exported_deps = exported_deps,
-            provides = provides,
-            visibility = visibility,
-            needs_transitive_deps = True,
-            test_only = test_only,
-            requires = ['go'],
-            binary = binary,
-        )
-    else:
+    if binary:
         return a_rule
+
+    import_config = build_rule(
+        name=name,
+        tag='import_config',
+        deps = [a_rule],
+        visibility = visibility,
+        test_only = test_only,
+        cmd = _generate_pkg_import_cfg_cmd('"$OUT"', '"$PKG_DIR"', True),
+        outs = [f'{name}.importconfig'],
+    )
+    exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
+
+    return filegroup(
+        name = name,
+        srcs = [a_rule],
+        deps = deps,
+        exported_deps = exported_deps,
+        provides = provides,
+        visibility = visibility,
+        needs_transitive_deps = True,
+        test_only = test_only,
+        requires = ['go'],
+        binary = binary,
+    )
+
 
 
 def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:list=[], hashes:list=None,
