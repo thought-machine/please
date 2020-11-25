@@ -1,8 +1,15 @@
-Version 15.8.3
+Version 15.9.0
 --------------
 
     * Transitive dependencies of subinclude() calls are no longer downloaded
       if remote execution is enabled.
+    * Secrets in the [BuildEnv] section no longer contribute to the config hash
+      #1387
+    * Codelabs are now live at https://please.build/codelabs.html
+    * Made $DATA and $TOOLS variables available at runtime when using
+      `plz run --env` #1384
+    * `protoc_binary()` now translates go style os and arch values to the
+       correct format for their releases #1394
 
 
 Version 15.8.2
