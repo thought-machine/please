@@ -130,7 +130,7 @@ func New(state *core.BuildState) *Client {
 		outputs:   map[core.BuildLabel]*pb.Directory{},
 		mdStore:   newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
 		existingBlobs: map[string]struct{}{
-			digest.Empty.Hash: struct{}{},
+			digest.Empty.Hash: {},
 		},
 		fileMetadataCache: filemetadata.NewNoopCache(),
 	}
