@@ -860,8 +860,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     cmds = [
         "export GO111MODULE=on && export TMPDIR=$TMPDIR/tmp && mkdir -p $TMPDIR",
         "$TOOL mod init dummy", # Create a dummy module
-        # TODO(jpoole): I don't think this is portable beyond modern GNU versions of grep. Might need to switch to sed/awk for this
-        f"export MOD_DIR=$($TOOL mod download -x -modcacherw -json {module}@{version} | grep -Po '\"Dir\": \"\K([^\"]+)')",
+        f'export MOD_DIR=$($TOOL mod download -x -modcacherw -json {module}@{version} | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
     ]
 
@@ -902,6 +901,20 @@ def go_module(name:str='', module:str='', version:str='', download:str='', deps:
             licences = licences,
             hashes = hashes
         )
+    outs = []
+    if not binary:
+        if not install:
+            outs = [f"{module}.a"]
+        else:
+            for i in install:
+                if i == module or i == f"{module}/.":
+                    outs += [module + ".a"]
+                elif i == "...":
+                    outs = [module]
+                elif i.endswith("/..."):
+                    outs += [i.removesuffix("/...")]
+                else:
+                    outs += [f"{i}.a"]
 
     a_rule = _go_install(
         name = name,
@@ -909,7 +922,7 @@ def go_module(name:str='', module:str='', version:str='', download:str='', deps:
         install = install or [module],
         binary = binary,
         srcs = [download],
-        outs = [module], # TODO(jpoole) the same thing with the install list as go_get() to determine the outs
+        outs = outs,
         deps = deps,
         test_only = test_only,
         visibility = visibility,
