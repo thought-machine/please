@@ -721,8 +721,7 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 // ShouldDownload returns true if the given target should be downloaded during remote execution.
 func (state *BuildState) ShouldDownload(target *BuildTarget) bool {
 	// Need to download the target if it was originally requested (and the user didn't pass --nodownload).
-	// Also anything needed for subinclude needs to be local.
-	return (state.IsOriginalTarget(target) && state.DownloadOutputs && !state.NeedTests) || target.NeededForSubinclude
+	return state.IsOriginalTarget(target) && state.DownloadOutputs && !state.NeedTests
 }
 
 // ShouldRebuild returns true if we should force a rebuild of this target (i.e. the user
