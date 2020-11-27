@@ -744,7 +744,7 @@ func (target *BuildTarget) CheckTargetOwnsBuildOutputs(state *BuildState) error 
 		return nil
 	}
 
-	for _, output := range target.outputs {
+	for _, output := range target.Outputs() {
 		targetPackage := target.Label.PackageName
 		out := filepath.Join(targetPackage, output)
 
