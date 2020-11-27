@@ -19,6 +19,7 @@ keep = //package:all
 
 [go]
 filtertool = //tools/please_go_filter
+installtool = //tools/please_go_install
 testtool = //tools/please_go_test
 importpath = github.com/thought-machine/please
 

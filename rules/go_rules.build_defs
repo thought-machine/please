@@ -809,6 +809,38 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
         size = size,
     )
 
+def _go_install_module(name:str, module:str, install:list, src:str, outs:list, deps:list, binary:bool, visibility:list,
+                       test_only:bool, licences:list):
+    cmd = [
+        _set_go_env(),
+        _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
+        _aggregate_import_cfg_cmd(),
+        f"source <($TOOLS_GO_INSTALL third_party/go/src {module} importconfig $TOOLS_GO $TOOLS_FILTER pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install) + ")",
+    ]
+
+    return build_rule(
+        name = name,
+        tag = "a_rule",
+        outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in outs],
+        deps = deps,
+        srcs = [src],
+        tools = {
+            'go': [CONFIG.GO_TOOL],
+            'go_install': [CONFIG.GO_INSTALL_TOOL],
+            'filter': [CONFIG.GO_FILTER_TOOL],
+        },
+        visibility = visibility,
+        building_description = 'Compiling...',
+        cmd = ' && '.join(cmd),
+        binary = binary,
+        requires = ['go', 'go_src'],
+        test_only = test_only,
+        labels = ['link:plz-out/go'],
+        sandbox = False,
+        needs_transitive_deps = True,
+        licences = licences,
+    )
+
 def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, outs:list, deps:list, test_only:bool,
                visibility:list, licences:list):
     # Now compile it in a separate step.
@@ -916,12 +948,12 @@ def go_module(name:str='', module:str='', version:str='', download:str='', deps:
                 else:
                     outs += [f"{i}.a"]
 
-    a_rule = _go_install(
+    a_rule = _go_install_module(
         name = name,
-        get_roots = [module],
+        module = module,
         install = install or [module],
         binary = binary,
-        srcs = [download],
+        src = download,
         outs = outs,
         deps = deps,
         test_only = test_only,
