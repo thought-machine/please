@@ -7,19 +7,20 @@
 <div class="index-layout">
     <div>
         <div>
-            <img src="images/triangle_v.png" class="smol r90">
-            <h2><span class="violet">Robust incrementality. Heterogeneous repos.</span></h2>
-            <p>Please has been built from the ground up with correct and reliable model for incremental builds, which
-                can be relied on across languages and technologies. You worry about what to build, Please will worry
-                about when to built it, no matter what languages or technologies your teams choose!</p>
-        </div>
-        <div>
             <img src="images/hexagon_r.png" class="smol">
             <h2><span class="red">Tests behave better in a sandbox.</span></h2>
             <p>Build steps are executed in their own tightly controlled hermetic environment. With only access to files
                 and env variables that they have explicitly been given access to, builds have never been more correct!
-                Please can optionally take this a step further. utilising Linux name-spacing to sandbox the network and
+                Please can optionally take this a step further, utilising Linux name-spacing to sandbox the network and
                 filesystem!</p>
+        </div>
+        <div>
+            <img src="images/triangle_v.png" class="smol r90">
+            <h2><span class="violet">Robust incrementality. Heterogeneous repos.</span></h2>
+            <p>Please has been built from the ground up with correct and reliable model for incremental builds, which
+                can be relied on across languages and technologies. Combined with the tightly controlled build
+                environment, this makes for a fundamentally robust build system. You worry about what to build, Please
+                will worry about when to built it, no matter what languages or technologies your teams choose!</p>
         </div>
     </div>
     <div>
@@ -36,11 +37,11 @@
             <img src="images/square_g.png" class="smol">
             <h2><span class="green">The developer experience you deserve.</span></h2>
             <p>Don't waste time learning a different tooling across your repo. No matter how clever you get, Please
-                provides a uniform and seamless interface across your repo. Build any target and execute any test, all
-                with the same CLI! Take this to the next level by using Please to download your toolchain for you: no
+                provides a uniform and seamless interface across your repo. Build any target, and execute any test, all
+                with the same CLI! Take this to the next level by using Please to download your toolchain for you; no
                 more puppet or ansible. Define aliases for common tasks leveraging Please auto-completions for
                 the ultimate developer experience. Written in Go, Please provides all this power behind a snappy user
-                experience: no waiting for VMs or daemons to start up.
+                experience; no waiting for VMs or daemons to start up.
             </p>
         </div>
     </div>
@@ -56,10 +57,11 @@
         <div>
             <img src="images/triangle_p.png" class="smol">
             <h2><span class="pink">Continuous integration & pre-merge testing.</span></h2>
-            <p>We've developed Please in tandem with our internal integration tools, leveraging the build graph tooling
+            <p>We've developed Please in tandem with our internal integration tools, leveraging the build graph
                 to determine the minimal set of targets that need testing! Integrating with git, query changes between
-                branches to to run on tests that have been affected. Export artifacts with a single command, leaving
-                Please to figure out what needs to be built to do so.</p>
+                branches to run on tests that have been affected. Or export artifacts with a single command, leaving
+                Please to figure out what needs to be built to do so. Combine these two to find the minimal set of
+                artifacts that need re-deploying.</p>
         </div>
     </div>
     <!-- TODO(jpoole): write up about remote execution here once we're a bit happier with it -->
