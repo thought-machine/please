@@ -492,10 +492,7 @@ footer > div {
     text-indent: 0;
     padding-top: 2em;
 }
-.index-layout a:link, .index-layout a:visited {
-    text-transform: uppercase;
-    color: white;
-}
+
 .index-layout p {
     margin-bottom: 5em;
 }
