@@ -1,54 +1,68 @@
+<div class="index-corner">&nbsp;</div>
 
-    <div class="index-corner">&nbsp;</div>
+<p class="index-open white">An extensible build system which <span class="cyan">performs at scale</span>.</p>
 
-    <p class="index-open"><span class="turquoise">Please</span> supports a number of popular
-      languages and can automate nearly any aspect of your build process.
-    </p>
-
-    <div class="index-layout">
-      <div>
+<div class="index-layout">
+    <div>
         <div>
-          <img src="images/triangle_v.png" class="smol r90">
-          <h2><span class="violet">Speed up your builds.</span></h2>
-          <p>Please is designed to parallelise builds & tests to make the most of your CPU.
-	        It's written in Go so it's fast & efficient itself, and it can build just the required
-            parts of your code on each invocation.</p>
+            <img src="images/hexagon_r.png" class="smol">
+            <h2><span class="red">Tests behave better in a sandbox</span></h2>
+            <p>Build steps are executed in their own tightly controlled hermetic environment. With only access to files
+                and env variables that they have explicitly been given access to, builds have never been more correct!
+                Please can optionally take this a step further, utilising Linux name-spacing to sandbox the network and
+                filesystem! No more "works on my machine!"</p>
         </div>
         <div>
-          <img src="images/square_g.png" class="smol">
-          <h2><span class="green">Help your deployment.</span></h2>
-          <p>All your code & dependencies get packed into a single file which can easily be
-	        deployed & run on a server. This helps deploy languages like Python which don't
-            do this naturally.</p>
+            <img src="images/triangle_v.png" class="smol r90">
+            <h2><span class="violet">And run faster with robust caching</span></h2>
+            <p>Please is built from the ground up with correct and reliable model for incremental builds, which
+                can be relied on across languages and technologies. Combined with the tightly controlled build
+                environment, task parallelism, and distributed caching, this makes for a reliable and performant build
+                system at scale. You worry about what to build, Please will worry about when to build it, no matter what
+                languages or technologies your teams choose!</p>
         </div>
-      </div>
-      <div>
-        <div>
-          <img src="images/square_y.png" class="smol r45">
-          <h2><span class="yellow">Unify your build process.</span></h2>
-          <p>Because Please can build many languages already (and you can easily write rules
-	        to teach it about others) you always invoke one tool to build any language or run
-            any test, simplifying your continuous integration and development processes.</p>
-        </div>
-        <div>
-          <img src="images/hexagon_r.png" class="smol">
-          <h2><span class="red">Continuous integration & pre-merge testing.</span></h2>
-          <p>We've developed Please in tandem with our internal integration	tools, so whenever
-            any of our engineers merges a pull request, we invoke it to make sure any affected
-            tests are passing before merging it in. Because Please allows fine-grained dependencies
-            and knows them for every test, we can run just the affected ones to keep this step
-            fast & lightweight.</p>
-        </div>
-      </div>
-      <div>
-        <div>
-          <img src="images/circle_t.png" class="smol">
-          <h2><span class="turquoise">Isolate your tests.</span></h2>
-          <p>Got integration tests that need to spin up servers, write files, and find ports?
-	        No problem, tests can be easily sandboxed to isolate them from the network
-            and each other.</p>
-        </div>
-        <div>
-        </div>
-      </div>
     </div>
+    <div>
+        <div>
+            <img src="images/square_g.png" class="smol">
+            <h2><span class="green">The developer experience you deserve</span></h2>
+            <p>Stop wasting time learning with tooling; Please provides a uniform and seamless interface across your
+                repo. Build any target, and execute any test, all with the same CLI! Please can download itself and
+                your toolchain from a wrapper script: no more puppet or ansible, no more talking to IT to get the next
+                language version. Define aliases for common tasks leveraging Please auto-completions for the ultimate
+                developer experience. Written in Go, Please provides all this power behind a snappy user experience with
+                no runtime dependency.
+            </p>
+        </div>
+        <div>
+            <img src="images/square_y.png" class="smol r45">
+            <h2><span class="yellow">Across any technology you choose</span></h2>
+            <p>There's more to a build system than just compiling code! Please provides a powerful framework for
+                automating every part of your build process. The built-in definitions can help you quickly get started,
+                then expand on them, crafting a truly holistic build process. Generate code, configurations, deployment
+                manifests, or whatever your imagination conceives, while rest assured Please is ensuring correctness
+                and performance no matter what you do.</p>
+        </div>
+
+    </div>
+    <div>
+        <div>
+            <img src="images/circle_t.png" class="smol">
+            <h2><span class="turquoise">Less incantation, more transparency</span></h2>
+            <p>Please isn't magic; it's built on a set of powerful core mechanisms that can be easily understood.
+                By relying on these mechanisms rather than opaque abstractions, configuration is light weight,
+                largely optional, and easily understood. There's no central workspace file that nobody truly owns with
+                pages of configuration and incantation nobody truly understands.</p>
+        </div>
+        <div>
+            <img src="images/triangle_p.png" class="smol">
+            <h2><span class="pink">Designed with continuous integration in mind</span></h2>
+            <p>We've developed Please in tandem with our internal integration tools, so integrating with Please is a
+                dream. Leveraging the build graph and git integrations, determine the minimal set of targets that have
+                been effected between changes. Run the effected tests, then export artifacts with a single command.
+                Leave it to Please to figure out what needs to be built and re-deploy only that which has changed!
+            </p>
+        </div>
+    </div>
+    <!-- TODO(jpoole): write up about remote execution here once we're a bit happier with it -->
+</div>
