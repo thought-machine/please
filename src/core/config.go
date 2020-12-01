@@ -269,6 +269,7 @@ func DefaultConfiguration() *Configuration {
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Display.SystemStats = true
 	config.Display.MaxWorkers = 40
+	config.Display.ColourScheme = "dark"
 	config.Remote.NumExecutors = 20 // kind of arbitrary
 	config.Remote.HomeDir = "~"
 	config.Remote.Secure = true
@@ -359,9 +360,10 @@ type Configuration struct {
 		GitFunctions     bool `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
 	} `help:"The [parse] section in the config contains settings specific to parsing files."`
 	Display struct {
-		UpdateTitle bool `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
-		SystemStats bool `help:"Whether or not to show basic system resource usage in the interactive display. Has no effect without that configured."`
-		MaxWorkers  int  `help:"Maximum number of worker rows to display at any one time."`
+		UpdateTitle  bool   `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
+		SystemStats  bool   `help:"Whether or not to show basic system resource usage in the interactive display. Has no effect without that configured."`
+		MaxWorkers   int    `help:"Maximum number of worker rows to display at any one time."`
+		ColourScheme string `help:"Shell colour scheme mode, dark or light. Defaults to dark"`
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
 	Colours map[string]string `help:"Colour code overrides in interactive output. These correspond to requirements on each target."`
 	Build   struct {
