@@ -245,9 +245,9 @@ def _generate_pkg_import_cfg_cmd(out, pkg_location, handle_basename_eq_dirname=F
     else:
         format_packagefile_directive = 'xargs -I{} echo "packagefile {}=' + pkg_location + '/{}.a"'
 
-    return f'{find_archives} | {remove_pkg_location} | {remove_ext} | {format_packagefile_directive} > {out}'
+    return f'{find_archives} | {remove_pkg_location} | {remove_ext} | {format_packagefile_directive} | sort -u > {out}'
 def _aggregate_import_cfg_cmd():
-    return 'find . -name "*.importconfig" | xargs -I{} cat {} >> importconfig'
+    return 'find . -name "*.importconfig" | sort -u | xargs -I{} cat {} >> importconfig'
 
 def _trim_import_path(pkg):
     parts = pkg.split("/")
