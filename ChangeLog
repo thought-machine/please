@@ -1,3 +1,15 @@
+Version 15.9.2
+--------------
+
+    * Various small fixes and optimisations to remote execution
+      #1401 #1397 #1402 #1403
+    * Address edge case for filegroups so they now check if they're
+      overriding another package #1404
+    * Added option for a light colour scheme that works better for
+      terminals with a light background #1405
+    * Fixed non-deterministic hashes for outputs in go rules #1410
+
+
 Version 15.9.1
 --------------
 
