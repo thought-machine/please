@@ -138,7 +138,7 @@ func main() {
 	}
 	var title string
 	if filepath.Dir(opts.Filename) == "milestones" {
-		title = fmt.Sprintf("Please v%v", strings.TrimSuffix(basename, ".html"))
+		title = fmt.Sprintf("Please v%v", strings.TrimSuffix(filepath.Base(basename), ".html"))
 	} else {
 		t, present := pageTitles[opts.Filename]
 		if !present {

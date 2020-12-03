@@ -1,9 +1,8 @@
-// Package parse implements parsing of the BUILD files via an embedded Python interpreter.
+// Package parse implements handling parse tasks for BUILD files.
 //
-// The actual work here is done by an embedded PyPy instance. Various rules are built in to
-// the binary itself using go-bindata to embed the .py files; these are always available to
-// all programs which is rather nice, but it does mean that must be run before 'go run' etc
-// will work as expected.
+// The actual work to interpret them is done by the //src/parse/asp package; this
+// package handles requests for parsing build targets and triggering them to
+// start building when ready.
 package parse
 
 import (

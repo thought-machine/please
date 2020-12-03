@@ -28,9 +28,9 @@ brew install please
 ```
 
 Then you simply run `plz init` at the root of your project to set up
-a default config and you're good to start adding BUILD files.
-See [the website](http://please.build) for more instructions about
-how to write them.
+a default config and you're good to start adding BUILD files. The best 
+way to get to grips with Please is through the 
+[codelabs](https://please.build/codelabs.html)!
 
 There are various commands available to interact with Please, the
 most obvious & useful ones initially are `plz build` and `plz test`

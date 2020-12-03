@@ -119,17 +119,17 @@ func printMilestoneMessage(pleaseVersion string) {
 		// Left pad the string so it's center aligned
 		paddedString := fmt.Sprintf("%"+fmt.Sprint(padLen)+"s", line)
 
-		fmt.Printf(fmtString, paddedString)
+		fmt.Fprintf(os.Stderr, fmtString, paddedString)
 	}
 
 	if resp.StatusCode == http.StatusOK {
-		fmt.Println(border)
+		fmt.Fprintf(os.Stderr, "%s\n", border)
 		printLn("")
 		printLn("You've successfully updated to Please v%v", pleaseVersion)
 		printLn("This release marks an exciting milestone in Please's development!")
 		printLn("Read all about it here: %v#cli", milestoneURL)
 		printLn("")
-		fmt.Println(border)
+		fmt.Fprintf(os.Stderr, "%s\n", border)
 		return
 	}
 
