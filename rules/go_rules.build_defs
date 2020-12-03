@@ -811,11 +811,12 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
 
 def _go_install_module(name:str, module:str, install:list, src:str, outs:list, deps:list, binary:bool, visibility:list,
                        test_only:bool, licences:list):
+    pkg = package_name()
     cmd = [
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"source <($TOOLS_GO_INSTALL third_party/go/src {module} importconfig $TOOLS_GO $TOOLS_FILTER pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install) + ")",
+        f"source <($TOOLS_GO_INSTALL {pkg}/src {module} importconfig $TOOLS_GO $TOOLS_FILTER pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install) + ")",
     ]
 
     return build_rule(

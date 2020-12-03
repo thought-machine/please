@@ -24,15 +24,13 @@ var opts = struct {
 	GoTool string `short:"g" long:"go" description:"The location of the go binary"`
 }{
 	Usage: `
-please-go-list is shipped with Please and is used to list package dependencies. 
+please-go-install is shipped with Please and is used to build go modules similarly to go install. 
 
-This tool determines the dependencies between packages and output a list in the order they must be compiled in.
-
-Unlike 'go list', this tool doesn't rely on the go path or modules to find its dependencies. Instead it takes in 
+Unlike 'go install', this tool doesn't rely on the go path or modules to find its dependencies. Instead it takes in 
 go import config just like 'go tool compile/link -importcfg'. 
 
-This tool is designed to be output into 'go tool compile' in order to compile a go module downloaded via 
-'go mod download'. 
+This tool determines the dependencies between packages and output a commands in the correct order to compile them. 
+
 `,
 	SrcRoot: os.Args[1],
 	ModuleName: os.Args[2],
