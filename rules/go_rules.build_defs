@@ -812,7 +812,7 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
 def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, outs:list, deps:list, test_only:bool,
                visibility:list, licences:list):
     # Now compile it in a separate step.
-    install_cmd = ' '.join(install or [])
+    install_cmd = ' '.join(install)
     cmd = [
         'export GOPATH="$(find \"$TMP_DIR\" \( -name src -o -name pkg \) -exec dirname {} \; | sort | uniq | tr \'\\n\' \':\' | sed \'s/:$//\')" GO111MODULE="off"',
         '"$TOOLS_GO" install -gcflags "-trimpath \\\"$TMP_DIR\\\"" -asmflags "-trimpath \\\"$TMP_DIR\\\"" ' + install_cmd,
