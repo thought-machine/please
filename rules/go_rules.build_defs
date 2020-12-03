@@ -816,7 +816,7 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
     cmd = [
         'export GOPATH="$(find \"$TMP_DIR\" \( -name src -o -name pkg \) -exec dirname {} \; | sort | uniq | tr \'\\n\' \':\' | sed \'s/:$//\')" GO111MODULE="off"',
         '"$TOOLS_GO" install -gcflags "-trimpath \\\"$TMP_DIR\\\"" -asmflags "-trimpath \\\"$TMP_DIR\\\"" ' + install_cmd,
-        ]
+    ]
     if CONFIG.GOROOT:
         cmd = [f'export GOROOT={CONFIG.GOROOT}'] + cmd
     if package_name():
