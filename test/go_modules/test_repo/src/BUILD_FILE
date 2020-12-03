@@ -1,5 +1,8 @@
 go_test (
-  name = "test_cli_imports",
-  srcs = ["cli_import_test.go"],
-  deps = ["//third_party/go:cli-init"]
+  name = "test_imports",
+  srcs = ["import_test.go"],
+  deps = [
+    "//third_party/go:cli-init",
+    "//third_party/go:zstd",
+  ]
 )

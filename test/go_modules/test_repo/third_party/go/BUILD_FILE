@@ -37,3 +37,9 @@ go_module(
     version = "7b85b097bf7527677d54d3220065e966a0e3b613", # Can still use revisions as versions
     install = ["ssh/terminal"],
 )
+
+go_module(
+    name = "zstd",
+    module = "github.com/DataDog/zstd",
+    version = "v1.4.5",
+)
