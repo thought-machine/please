@@ -4,5 +4,6 @@ go_test (
   deps = [
     "//third_party/go:cli-init",
     "//third_party/go:zstd",
+    "//third_party/go:go-sqlite3",
   ]
 )

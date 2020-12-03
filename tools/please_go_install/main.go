@@ -135,7 +135,8 @@ func (g *pkgGraph) compile(from []string, target string) {
 	}
 
 	var srcs []string
-	cgo := false
+	var cgoSrcs []string
+	anyCGO := false
 	for name, f := range targetPackage.Files {
 		if strings.HasSuffix(name, "_test.go") {
 			continue
@@ -148,21 +149,26 @@ func (g *pkgGraph) compile(from []string, target string) {
 		if !matched {
 			continue
 		}
-
+		cgo := false
 		for _, i := range f.Imports {
 			name := strings.TrimSuffix(strings.TrimPrefix(i.Path.Value, "\""), "\"")
 			if name == "C" {
+				anyCGO = true
 				cgo = true
 			} else {
 				g.compile(from, name)
 			}
 		}
 
-		srcs = append(srcs, name)
+		if cgo {
+			cgoSrcs = append(cgoSrcs, name)
+		} else {
+			srcs = append(srcs, name)
+		}
 	}
 	binary := targetPackage.Name == "main"
-	if cgo {
-		goToolCGOCompile(target, binary, pkgDir, srcs, targetPackage)
+	if anyCGO {
+		goToolCGOCompile(target, binary, pkgDir, srcs, cgoSrcs, targetPackage)
 	} else {
 		goToolCompile(target, binary, srcs, targetPackage) // output the package as ready to be compiled
 	}
@@ -173,7 +179,7 @@ func goToolCompile(target string, binary bool, srcs []string, pkg *ast.Package) 
 	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
 
 	prepOutDir := fmt.Sprintf("mkdir -p %s", filepath.Dir(out))
-	compile := fmt.Sprintf("%s tool compile -importcfg %s -o %s %s", opts.GoTool, opts.ImportConfig, out, strings.Join(srcs, " "))
+	compile := fmt.Sprintf("%s tool compile -pack -complete -importcfg %s -o %s %s", opts.GoTool, opts.ImportConfig, out, strings.Join(srcs, " "))
 	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", pkg.Name, out, opts.ImportConfig)
 
 	fmt.Println(prepOutDir)
@@ -187,28 +193,40 @@ func goToolCompile(target string, binary bool, srcs []string, pkg *ast.Package) 
 
 
 
-func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, pkg *ast.Package) {
+func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, cgoSrcs []string, pkg *ast.Package) {
 	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
 
+	// We need to operate out of the package working directory for the cpp compiler to play ball so trim the package dir
+	// from the source paths.
 	for i := range srcs {
 		srcs[i] = strings.TrimPrefix(strings.TrimPrefix(srcs[i], pkgDir), "/")
+	}
+
+	for i := range cgoSrcs {
+		cgoSrcs[i] = strings.TrimPrefix(strings.TrimPrefix(cgoSrcs[i], pkgDir), "/")
 	}
 
 	prepOutDir := fmt.Sprintf("mkdir -p %s", filepath.Dir(out))
 	linkImportCfg := fmt.Sprintf("ln %s %s", opts.ImportConfig, pkgDir)
 	cdPkgDir := fmt.Sprintf("cd %s", pkgDir)
-	cgo := fmt.Sprintf("%s tool cgo %s", opts.GoTool, strings.Join(srcs, " "))
-	compileGo := fmt.Sprintf("%s tool compile -importcfg %s -o out.a _obj/*.go", opts.GoTool, opts.ImportConfig)
-	compileCGO := fmt.Sprintf("gcc -Wno-error -Wno-unused-parameter -c -I _obj -I . _obj/*.cgo2.c")
-	compileC := fmt.Sprintf("gcc -Wno-error -Wno-unused-parameter -c -I _obj -I . *.c")
+	generateCGO := fmt.Sprintf("%s tool cgo %s", opts.GoTool, strings.Join(cgoSrcs, " "))
+	compileGo := fmt.Sprintf("%s tool compile -pack -importcfg %s -o out.a _obj/*.go", opts.GoTool, opts.ImportConfig)
+	compileCGO := fmt.Sprintf("gcc -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . _obj/_cgo_export.c _obj/*.cgo2.c")
+	compileC := fmt.Sprintf("gcc -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . *.c")
 	mergeArchive := fmt.Sprintf("%s tool pack r out.a *.o ",opts.GoTool)
 	moveArchive := fmt.Sprintf("cd - && mv %s/out.a %s", pkgDir, out)
-	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", pkg.Name, out, opts.ImportConfig)
+	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", pkg.Name, 	out, opts.ImportConfig)
 
 	fmt.Println(prepOutDir)
 	fmt.Println(linkImportCfg)
 	fmt.Println(cdPkgDir)
-	fmt.Println(cgo)
+	fmt.Println(generateCGO)
+
+	// Copy non-cgo srcs to _obj dir
+	for _, src := range srcs {
+		fmt.Println(fmt.Sprintf("ln %s _obj/", src))
+	}
+
 	fmt.Println(compileGo)
 	fmt.Println(compileC)
 	fmt.Println(compileCGO)

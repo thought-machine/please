@@ -1,5 +1,5 @@
 [please]
-location = ~/.please
+location = /home/jpoole/.please
 
 [parse]
 BuildFileName = BUILD_FILE
