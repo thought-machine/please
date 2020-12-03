@@ -412,10 +412,24 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
       deps (list): Any other dependencies
       visibility (list): Visibility of the rule.
     """
+    if CONFIG.HOSTOS == 'darwin':
+        HOSTOS='osx'
+    else:
+        HOSTOS=CONFIG.HOSTOS
+
+    if CONFIG.HOSTARCH == 'amd64':
+        HOSTARCH = 'x86_64'
+    elif CONFIG.HOSTARCH == 'x86':
+        HOSTARCH = 'x86_32'
+    elif CONFIG.HOSTARCH == 'arm64':
+        HOSTARCH = 'aarch_64'
+    else:
+        HOSTARCH = CONFIG.HOSTARCH
+
     download_rule = remote_file(
         name = name,
         _tag = 'download',
-        url = f'https://github.com/google/protobuf/releases/download/v{version}/protoc-{version}-$XOS-$XARCH.zip',
+        url = f'https://github.com/protocolbuffers/protobuf/releases/download/v{version}/protoc-{version}-{HOSTOS}-{HOSTARCH}.zip',
         out = f'protoc-{version}.zip',
         hashes = hashes,
         deps = deps,

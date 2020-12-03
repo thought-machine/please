@@ -69,7 +69,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	// If the user passed --shell then just prepare the directory.
 	if state.PrepareShell {
-		if err := prepareTestDir(state.Graph, target, run); err != nil {
+		if err := prepareTestDir(state, target, run); err != nil {
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to prepare test directory")
 		} else {
 			target.SetState(core.Stopped)
@@ -307,14 +307,17 @@ func pluralise(word string, quantity int) string {
 	return word + "s"
 }
 
-func prepareTestDir(graph *core.BuildGraph, target *core.BuildTarget, run int) error {
+func prepareTestDir(state *core.BuildState, target *core.BuildTarget, run int) error {
 	if err := os.RemoveAll(target.TestDir(run)); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(target.TestDir(run), core.DirPermissions); err != nil {
 		return err
 	}
-	for out := range core.IterRuntimeFiles(graph, target, true, run) {
+	if err := state.EnsureDownloaded(target); err != nil {
+		return err
+	}
+	for out := range core.IterRuntimeFiles(state.Graph, target, true, run) {
 		if err := core.PrepareSourcePair(out); err != nil {
 			return err
 		}
@@ -395,7 +398,7 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 
 // prepareAndRunTest sets up a test directory and runs the test.
 func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget, run int) (stdout []byte, err error) {
-	if err = prepareTestDir(state.Graph, target, run); err != nil {
+	if err = prepareTestDir(state, target, run); err != nil {
 		state.LogBuildError(tid, target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
 		return []byte{}, err
 	}

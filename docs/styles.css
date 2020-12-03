@@ -492,10 +492,7 @@ footer > div {
     text-indent: 0;
     padding-top: 2em;
 }
-.index-layout a:link, .index-layout a:visited {
-    text-transform: uppercase;
-    color: white;
-}
+
 .index-layout p {
     margin-bottom: 5em;
 }
@@ -504,9 +501,11 @@ footer > div {
     width: auto;
 }
 .index-open {
-    color: white;
-    margin: 8em 8em 8em 0;
+    font-family: "Calibre", sans-serif;
+    font-size: xx-large;
+    margin-bottom: 4em;
 }
+
 .index-stripe {
     background-color: #111111;
     padding: 8em;
@@ -515,10 +514,6 @@ footer > div {
 }
 @media (min-width: 800px) {
     .index-stripe { padding: 8em 8em 8em 40%; }
-}
-.index-open {
-    font-family: "Calibre", sans-serif;
-    font-size: large;
 }
 .index-stripe p {
     font-family: "Calibre", sans-serif;

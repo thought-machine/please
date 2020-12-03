@@ -17,6 +17,7 @@ import (
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/retry"
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
@@ -123,12 +124,14 @@ type pendingDownload struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:             state,
-		origState:         state,
-		instance:          state.Config.Remote.Instance,
-		outputs:           map[core.BuildLabel]*pb.Directory{},
-		mdStore:           newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
-		existingBlobs:     map[string]struct{}{},
+		state:     state,
+		origState: state,
+		instance:  state.Config.Remote.Instance,
+		outputs:   map[core.BuildLabel]*pb.Directory{},
+		mdStore:   newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
+		existingBlobs: map[string]struct{}{
+			digest.Empty.Hash: {},
+		},
 		fileMetadataCache: filemetadata.NewNoopCache(),
 	}
 	c.stats = newStatsHandler(c)

@@ -32,6 +32,8 @@ go_test(
         "remote_test.go",
     ],
     data = ["test_data"],
+    # TODO(#1412): find out why this flakes on circle
+    flaky = True,
     deps = [
         ":remote",
         "//src/core",
