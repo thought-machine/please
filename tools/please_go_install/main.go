@@ -13,15 +13,15 @@ import (
 )
 
 var opts = struct {
-	Usage     string
+	Usage string
 
-	SrcRoot            string  				`short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
-	ModuleName			  string 			`short:"n" long:"module_name" description:"The name of the module"`
-	ImportConfig  		  string            `short:"i" long:"importcfg" description:"the import config for the modules dependencies"`
-	Packages              []string          `short:"p" long:"packages" description:"The target packages to list dependencies for" default:"."`
-	Out string
-	FilterTool string `short:"f" long:"please_go_filter" description:"The location of please-go-filter to filter sources"`
-	GoTool string `short:"g" long:"go" description:"The location of the go binary"`
+	SrcRoot      string   `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
+	ModuleName   string   `short:"n" long:"module_name" description:"The name of the module"`
+	ImportConfig string   `short:"i" long:"importcfg" description:"the import config for the modules dependencies"`
+	Packages     []string `short:"p" long:"packages" description:"The target packages to list dependencies for" default:"."`
+	Out          string
+	FilterTool   string `short:"f" long:"please_go_filter" description:"The location of please-go-filter to filter sources"`
+	GoTool       string `short:"g" long:"go" description:"The location of the go binary"`
 }{
 	Usage: `
 please-go-install is shipped with Please and is used to build go modules similarly to go install. 
@@ -32,13 +32,13 @@ go import config just like 'go tool compile/link -importcfg'.
 This tool determines the dependencies between packages and output a commands in the correct order to compile them. 
 
 `,
-	SrcRoot: os.Args[1],
-	ModuleName: os.Args[2],
+	SrcRoot:      os.Args[1],
+	ModuleName:   os.Args[2],
 	ImportConfig: os.Args[3],
-	GoTool: os.Args[4],
-	FilterTool: os.Args[5],
-	Out: os.Args[6],
-	Packages: os.Args[7:],
+	GoTool:       os.Args[4],
+	FilterTool:   os.Args[5],
+	Out:          os.Args[6],
+	Packages:     os.Args[7:],
 }
 
 var fileSet = token.NewFileSet()
@@ -46,7 +46,6 @@ var fileSet = token.NewFileSet()
 type pkgGraph struct {
 	pkgs map[string]bool
 }
-
 
 func main() {
 	pkgs := &pkgGraph{
@@ -67,7 +66,6 @@ func main() {
 			parts := strings.Split(strings.TrimPrefix(line, "packagefile "), "=")
 			pkgs.pkgs[parts[0]] = true
 		}
-
 	}
 	fmt.Println("#!/bin/sh")
 	fmt.Println("set -e")
@@ -79,7 +77,7 @@ func main() {
 					panic(err)
 				}
 				if !info.IsDir() && strings.HasSuffix(info.Name(), ".go") && !strings.HasSuffix(info.Name(), "_test.go") {
-					pkgs.compile([]string{"."},  strings.TrimPrefix(filepath.Dir(path), opts.SrcRoot))
+					pkgs.compile([]string{"."}, strings.TrimPrefix(filepath.Dir(path), opts.SrcRoot))
 				}
 				return nil
 			})
@@ -87,7 +85,7 @@ func main() {
 				panic(err)
 			}
 		} else if target == "." {
-			pkgs.compile([]string{"."},  opts.ModuleName)
+			pkgs.compile([]string{"."}, opts.ModuleName)
 		} else {
 			pkgs.compile([]string{"."}, target)
 		}
@@ -130,7 +128,7 @@ func (g *pkgGraph) compile(from []string, target string) {
 			break
 		}
 	}
-	if targetPackage == nil{
+	if targetPackage == nil {
 		panic(fmt.Sprintf("couldn't find package %s in %s: %v", target, pkgDir, packageASTs))
 	}
 
@@ -191,8 +189,6 @@ func goToolCompile(target string, binary bool, srcs []string, pkg *ast.Package) 
 	}
 }
 
-
-
 func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, cgoSrcs []string, pkg *ast.Package) {
 	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
 
@@ -211,11 +207,11 @@ func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, 
 	cdPkgDir := fmt.Sprintf("cd %s", pkgDir)
 	generateCGO := fmt.Sprintf("%s tool cgo %s", opts.GoTool, strings.Join(cgoSrcs, " "))
 	compileGo := fmt.Sprintf("%s tool compile -pack -importcfg %s -o out.a _obj/*.go", opts.GoTool, opts.ImportConfig)
-	compileCGO := fmt.Sprintf("gcc -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . _obj/_cgo_export.c _obj/*.cgo2.c")
-	compileC := fmt.Sprintf("gcc -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . *.c")
-	mergeArchive := fmt.Sprintf("%s tool pack r out.a *.o ",opts.GoTool)
+	compileCGO := "gcc -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . _obj/_cgo_export.c _obj/*.cgo2.c"
+	compileC := "gcc -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . *.c"
+	mergeArchive := fmt.Sprintf("%s tool pack r out.a *.o ", opts.GoTool)
 	moveArchive := fmt.Sprintf("cd - && mv %s/out.a %s", pkgDir, out)
-	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", pkg.Name, 	out, opts.ImportConfig)
+	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", pkg.Name, out, opts.ImportConfig)
 
 	fmt.Println(prepOutDir)
 	fmt.Println(linkImportCfg)
@@ -224,7 +220,7 @@ func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, 
 
 	// Copy non-cgo srcs to _obj dir
 	for _, src := range srcs {
-		fmt.Println(fmt.Sprintf("ln %s _obj/", src))
+		fmt.Printf("ln %s _obj/\n", src)
 	}
 
 	fmt.Println(compileGo)
