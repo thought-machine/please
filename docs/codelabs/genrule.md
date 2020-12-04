@@ -31,7 +31,7 @@ The final result of running through this codelab can be found
 [here](https://github.com/thought-machine/please-codelabs/tree/main/custom_rules) for reference. If you really get stuck
 you can find us on [gitter](https://gitter.im/please-build/Lobby)!
 
-## `genrule()`
+## genrule()
 Duration: 3
 
 Before we jump into writing custom build definitions, let me introduce you to `genrule()`, the generic build rule. Let's
