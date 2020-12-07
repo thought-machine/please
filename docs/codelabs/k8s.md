@@ -16,9 +16,10 @@ Duration: 1
 - You should be comfortable using the existing build rules.
 - You should be familiar with [Docker](https://docs.docker.com/get-started/) 
   and [Kubernetes](https://kubernetes.io/docs/tutorials/kubernetes-basics/) 
+- This codelab uses minikube which is only available on macOS and linux, not FreeBSD.
 
-This codelab uses Go for the example service however the language used for this service isn't that important. Just make 
-sure you're able to build a binary in whatever your preferred language is.  
+This codelab uses Python for the example service however the language used for this service isn't that important. Just 
+make sure you're able to build a binary in whatever your preferred language is.  
 
 ### What You'll Learn
 This codelab is quite long and tries to give an idea of what a complete build pipeline might look like for a docker and
@@ -36,68 +37,61 @@ The final result of running through this codelab can be found
 you can find us on [gitter](https://gitter.im/please-build/Lobby)!
 
 ## Creating a service
-Duration: 3
+Duration: 5
 
 First up, let create a service to deploy. It's not really important what it does or what language we implement it in. 
-For the sake of this codelabs, we'll make a simple hello world HTTP service in Go.
+For the sake of this codelabs, we'll make a simple hello world HTTP service in Python.
 
 ### Initialising the project
 ```
 $ go mod init github.com/thought-machine/please-codelabs/kubernetes_and_docker
-$ plz init --no_promp
+$ plz init --no_prompt
 ```
 
 ### Create the Go service
-Create a file `hello_service/main.go`:
+Create a file `hello_service/main.py`:
 
-```
-// Package main implements a hello world http service
-package main
+```python
+import http.server
+import socketserver
+from http import HTTPStatus
 
-import "net/http"
 
-// Server implements the hello world HTTP server
-type Server struct { }
+class Handler(http.server.SimpleHTTPRequestHandler):
+	def do_GET(self):
+		self.send_response(HTTPStatus.OK)
+		self.end_headers()
+		self.wfile.write(b'Hello world\n')
 
-// ServeHTTP just responds with Hello, world! on the writer
-func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-    _, err := writer.Write([]byte("Hello world!\n"))
-    if err != nil {
-        panic(err)
-    }
-}
 
-func main() {
-    err := http.ListenAndServe(":8080", new(Server))	
-    if err != nil {
-        panic(err)
-    }
-}
+httpd = socketserver.TCPServer(('', 8000), Handler)
+httpd.serve_forever()
 ```
 
 Then create a `hello_service/BUILD` file like so:
 ```python
-go_binary(
+python_binary(
     name = "hello_service",
-    srcs = ["main.go"],
+    main = "main.py",
     visibility = ["//hello_service/..."],
 )
 ```
 
 And test it works:
+
 ```
 $ plz run //hello_service &
 [1] 28694
 
-$ curl localhost:8080
+$ curl localhost:8000
 Hello, world!
 
-$ pkill hello_service
+$ pkill python3
 [1]+  Terminated              plz run //hello_service
 ```
 
 ## Building a Docker image
-Duration: 7
+Duration: 5
 
 Before we create a docker image for our service, it can be useful to create a base image that all our services share. 
 This can be used this to install language runtimes e.g. a python interpreter. If you're using a language that requires
@@ -111,7 +105,7 @@ RUN apk update && apk add python3
 ```
 
 ### Docker build rules
-Unlike `go_lbrary()` the docker image build rules aren't built in. They are part of the extra rules found in the 
+Unlike `python_lbrary()` the docker image build rules aren't built in. They are part of the extra rules found in the 
 [pleasings](https://github.com/thought-machine/pleasings/tree/master/docker) repository. 
 
 Let's create `common/docker/BUILD` to build our docker image:
@@ -183,9 +177,9 @@ service:
 ```
 FROM //common/docker:base
 
-COPY /hello_service /hello_service
+COPY /hello_service.pex /hello_service.pex
 
-ENTRYPOINT [ "/hello_service" ] 
+ENTRYPOINT [ "/hello_service.pex" ] 
 ```
 
 And then set up some build rules for that in `hello_service/k8s/BUILD`:
@@ -220,6 +214,7 @@ Note, this script takes care of building the base image for us so we don't have 
 
 ## Creating a Kubernetes deployment  
 Duration: 5
+
 Let's create `hello_service/k8s/deployment.yaml` for our service:
 ```yaml
 apiVersion: apps/v1
@@ -240,10 +235,10 @@ spec:
     spec:
       containers:
         - name: main
-          image: //hello-service/k8s:image
+          image: //hello_service/k8s:image
           ports:
-            # This must match the port we start the server on in hello-service/main.go
-            - containerPort: 8080
+            # This must match the port we start the server on in hello-service/main.py
+            - containerPort: 8000
 ```
 
 Let's also create `hello_service/k8s/service.yaml` for good measure:
@@ -257,8 +252,8 @@ spec:
     app: hello
   ports:
     - protocol: TCP
-      port: 8080
-      targetPort: 8080
+      port: 8000
+      targetPort: 8000
 ```
 
 ### Kubernetes rules
@@ -291,7 +286,7 @@ k8s_config(
 
 And check that has done the right thing:
 ```
-$ plz build //hello_service/k8se/k8s/templated_deployment.yaml
+$ plz build //hello_service/k8s
 Build finished; total time 90ms, incrementality 90.9%. Outputs:
 //hello_service/k8s:k8s:
   plz-out/gen/hello_service/k8s/templated_deployment.yaml
@@ -319,8 +314,8 @@ spec:
       - name: main
         image: please-example/image:0d45575ad71adea9861b079e5d56ff0bdc179a1868d06d6b3d102721824c1538
         ports:
-          # This must match the port we start the server on in hello-service/main.go
-          - containerPort: 8080
+          # This must match the port we start the server on in hello-service/main.py
+          - containerPort: 8000
 ```
 
 As you can see, this image matches the image we built earlier! These rules also provide a useful script for pushing 
@@ -339,6 +334,8 @@ kubectl apply -f plz-out/gen/hello_service/k8s/templated_service.yaml
 ```
 
 ## Local testing with minikube
+Duration: 5
+
 Let's tie this all together by deploying our service to minikube! 
 
 ### Setting up minikube
@@ -347,7 +344,7 @@ We can get Please to download minikube for us. Let's create `tools/minikube/BUIL
 ```
 remote_file (
     name = "minikube",
-    url = "https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64",
+    url = f"https://storage.googleapis.com/minikube/releases/latest/minikube-{CONFIG.OS}-amd64",
     binary = True,
 )
 ```
@@ -374,17 +371,19 @@ $ plz run //hello_service/k8s:image_load && plz run //hello_service/k8s:k8s_push
 And check they're working as we expected:
 
 ```
-$ kubectl port-forward service/hello-svc 8080:8080 &
+$ kubectl port-forward service/hello-svc 8000:8000 &
 [1] 25986
 
-$ curl localhost:8080
+$ curl localhost:8000
 Hello world!
 
 $ pkill kubectl 
-[1]+  Terminated              kubectl kubectl port-forward service/hello-svc 8080:8080
+[1]+  Terminated              kubectl kubectl port-forward service/hello-svc 8000:8000
 ```
 
 ## Please deploy
+Duration: 5
+
 Here we have learnt about the provided targets we need to run to get our changes deployed to minikube, however it's a 
 bit of a ritual. Let's look at consolidating this into a single command. Luckily the generated targets are labeled so 
 this is as simple as: 
