@@ -44,7 +44,6 @@ For the sake of this codelabs, we'll make a simple hello world HTTP service in P
 
 ### Initialising the project
 ```
-$ go mod init github.com/thought-machine/please-codelabs/kubernetes_and_docker
 $ plz init --no_prompt
 ```
 
