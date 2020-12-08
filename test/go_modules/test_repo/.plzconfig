@@ -1,0 +1,8 @@
+[please]
+location = ~/.please
+
+[parse]
+BuildFileName = BUILD_FILE
+
+[go]
+importpath =  module_test
