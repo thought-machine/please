@@ -2,9 +2,9 @@ subinclude("//test/build_defs")
 
 please_repo_e2e_test(
     name = "test",
-    plz_command = "plz query alltargets > out.txt",
-    repo = "test_repo",
     expected_output = {
         "out.txt": "//:pleasings\n//dir:pleasings2",
     },
+    plz_command = "plz query alltargets > out.txt",
+    repo = "test_repo",
 )

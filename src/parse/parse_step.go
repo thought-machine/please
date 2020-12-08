@@ -102,10 +102,9 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 			return state.Graph.Subrepo(label.Subrepo), nil
 		}
 		return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
-	} else {
-		// For local subincludes, the subrepo has to already be defined at this point in the BUILD file
-		return nil, fmt.Errorf("Subrepo %v is not defined yet. It must appear before it is used by subinclude()", sl)
 	}
+	// For local subincludes, the subrepo has to already be defined at this point in the BUILD file
+	return nil, fmt.Errorf("Subrepo %v is not defined yet. It must appear before it is used by subinclude()", sl)
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.
