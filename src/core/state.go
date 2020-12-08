@@ -769,7 +769,7 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceB
 		// Package is loaded but target doesn't exist in it. Check again to avoid nasty races.
 		target = state.Graph.Target(label)
 		if target == nil {
-			return fmt.Errorf("Target %s (referenced by %s) doesn't exist", label, dependent)
+			return fmt.Errorf("%v references %v but that target doesn't exist", dependent, label)
 		}
 	}
 	if target.State() >= Active && !rescan && !forceBuild {

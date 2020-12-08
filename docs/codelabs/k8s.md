@@ -1,22 +1,26 @@
 id: k8s
-summary: Kubernetes and Docker  
-description: Learn about using Please to build and deploy Docker images and Kubernetes manifests 
+summary: Kubernetes & Docker  
+description: Take your code to production with Docker, and Kubernetes
 categories: intermediate
 tags: medium
 status: Published
 authors: Jon Poole
 Feedback Link: https://github.com/thought-machine/please
 
-# Kubernetes and Docker
+# Kubernetes & Docker
 ## Overview
 Duration: 1
+
+Building software is more than just compiling code. In this codelab, you'll learn how to take your code to production
+with Please. Reliably build and deploy Docker images using Please to template kubernetes manifests. Automatically 
+download minikube with Please, then create a convenient alias to deploy any changes with a single command.  
 
 ### Prerequisites
 - You must have Please installed: [Install Please](https://please.build/quickstart.html)
 - You should be comfortable using the existing build rules.
 - You should be familiar with [Docker](https://docs.docker.com/get-started/) 
   and [Kubernetes](https://kubernetes.io/docs/tutorials/kubernetes-basics/) 
-- This codelab uses minikube which is only available on macOS and linux, not FreeBSD.
+- You must either have a macOS or Linux computer to run minikube, or otherwise have access to a kubernetes cluster
 
 This codelab uses Python for the example service however the language used for this service isn't that important. Just 
 make sure you're able to build a binary in whatever your preferred language is.  
