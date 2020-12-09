@@ -236,6 +236,8 @@ github.com/hashicorp/memberlist v0.1.3/go.mod h1:ajVTdAv/9Im8oMAAj5G31PhhMCZJV2p
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/jellevandenhooff/dkim v0.0.0-20150330215556-f50fe3d243e1/go.mod h1:E0B/fFc00Y+Rasa88328GlI/XbtyysCtTHZS8h7IrBU=
+github.com/jessevdk/go-flags v1.4.0 h1:4IU2WS7AumrZ/40jfhf4QVDMsQwqA7VEHozFRrGARJA=
+github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024 h1:rBMNdlhTLzJjJSDIjNEXX1Pz3Hmwmz91v+zycvx9PJc=
 github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1:6v2b51hI/fHJwM22ozAgKL4VKDeJcHhJFhtBdhmNjmU=
 github.com/jstemmer/go-junit-report v0.9.1/go.mod h1:Brl9GWCQeLvo8nXZwPNNblvFj/XSXhF0NWZEnDohbsk=
@@ -289,6 +291,10 @@ github.com/peterebden/go-cli-init v1.0.0 h1:HfcOHuyuyvHsaQZApuk44LpRc+EF/MDAI6u5
 github.com/peterebden/go-cli-init v1.0.0/go.mod h1:u3NE4dP66iHWwbq8eqlXRNZqVMMuqJbkPn3MGKht0ME=
 github.com/peterebden/go-cli-init v1.2.0 h1:rQBiOoBenaD8t2L9Ds+KwFm/Pi1fF6UZ3Cy5Zs2MMdA=
 github.com/peterebden/go-cli-init v1.2.0/go.mod h1:sZ1OlmpWqJHtdqnJ4dc9TDl/nzvrJ/pt3cEvrsSfhm8=
+github.com/peterebden/go-cli-init v1.3.1 h1:l90wSJtZey2rOU+CEuGfUJrdn76K3pc/3RGqkfKXgmY=
+github.com/peterebden/go-cli-init v1.3.1/go.mod h1:r5Y+QR+hIBbN/5wpBqyzlUFf5oB7RgMKw0FaXLJj0D0=
+github.com/peterebden/go-cli-init/v3 v3.0.0 h1:OuPbAWsZ+5ChJNTcbWBFgHyuHkkFJCvsTFF9mGQBiK8=
+github.com/peterebden/go-cli-init/v3 v3.0.0/go.mod h1:E8DpXYHJznMKpoeY2KgmQapSXBZEWqQ/WAblwEG7RWo=
 github.com/peterebden/go-sri v1.0.0 h1:Ew88r4WD4H5K/UgsHxzhm0du8iUSH1uRIp2uscYeqe8=
 github.com/peterebden/go-sri v1.0.0/go.mod h1:KIRxtog35NfDWec5LV/iBqqfOEPcMpePZLc7EPE6goQ=
 github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a h1:R4xz7BkSIQOS5CFmaadk2gwwOzy/u2Jvnimf1NHD2LY=
@@ -346,6 +352,10 @@ github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpP
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e h1:T5PdfK/M1xyrHwynxMIVMWLS7f/qHwfslZphxtGnw7s=
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e/go.mod h1:XDKHRm5ThF8YJjx001LtgelzsoaEcvnA7lVWz9EeX3g=
+github.com/thought-machine/go-flags v1.4.0 h1:0y+thpA6suEZcnPV0NldwRBrsyHvNAj/cqPjarfMmuc=
+github.com/thought-machine/go-flags v1.4.0/go.mod h1:Yv0jJ1l0DXAxT1MQfHm+Lk+JTubX+YQALrC+fn9VUxE=
+github.com/thought-machine/go-flags v1.5.0 h1:w0TqJzliGoemL/byvtrHyneTtiWjVDUJxbejnCxg1pw=
+github.com/thought-machine/go-flags v1.5.0/go.mod h1:+r2g8uGwgGM7IGZzmMS97mKBFLDbW6vgFO1jxp0rDmg=
 github.com/tsenart/deadcode v0.0.0-20160724212837-210d2dc333e9/go.mod h1:q+QjxYvZ+fpjMXqs+XEriussHjSYqeXVnAdSV1tkMYk=
 github.com/ulikunitz/xz v0.5.5 h1:pFrO0lVpTBXLpYw+pnLj6TbvHuyjXMfjGeCwSqCVwok=
 github.com/ulikunitz/xz v0.5.5/go.mod h1:2bypXElzHzzJZwzH67Y6wb67pO62Rzfn7BSiF4ABRW8=
@@ -508,6 +518,8 @@ golang.org/x/sys v0.0.0-20200523222454-059865788121/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200803210538-64077c9b5642/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200905004654-be1d3432aa8f h1:Fqb3ao1hUmOR3GkUOg/Y+BadLwykBIzs5q8Ez2SbHyc=
 golang.org/x/sys v0.0.0-20200905004654-be1d3432aa8f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20201207223542-d4d67f95c62d h1:MiWWjyhUzZ+jvhZvloX6ZrUsdEghn8a64Upd8EMHglE=
+golang.org/x/sys v0.0.0-20201207223542-d4d67f95c62d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.0.0-20170915032832-14c0d48ead0c/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=

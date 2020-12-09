@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/peterebden/go-cli-init"
 	"hash/adler32"
 	"io/ioutil"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+
+	"github.com/peterebden/go-cli-init"
 )
 
 var shapes = []string{
@@ -97,8 +98,8 @@ func mustHighlight(contents string) string {
 	})
 }
 
-var opts struct{
-	In string `long:"in" description:"The file to template"`
+var opts struct {
+	In       string `long:"in" description:"The file to template"`
 	Filename string `short:"f" long:"file" description:"The final file name relative to the web root" default:""`
 	Template string `short:"t" long:"template" description:"The golang template to use"`
 }

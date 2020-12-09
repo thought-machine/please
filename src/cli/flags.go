@@ -11,8 +11,8 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/dustin/go-humanize"
+	"github.com/peterebden/go-cli-init/v3"
 	"github.com/thought-machine/go-flags"
-	"github.com/peterebden/go-cli-init"
 )
 
 // GiByte is a re-export for convenience of other things using it.

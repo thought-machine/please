@@ -49,6 +49,7 @@ go_get(
     name = "go-flags",
     get = "github.com/thought-machine/go-flags",
     revision = "c8a37e639bc04a0941f323229b217a3951d391f0",
+    deps = [":xsys"],
 )
 
 go_get(
@@ -426,7 +427,8 @@ go_get(
 go_get(
     name = "cli-init",
     get = "github.com/peterebden/go-cli-init",
-    revision = "v1.3.1",
+    module_major_version = "v3",
+    revision = "v3.0.0",
     deps = [
         ":go-flags",
         ":humanize",
