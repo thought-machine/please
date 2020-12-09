@@ -20,7 +20,6 @@ go_library(
     ) + [
         ":version",
     ],
-    filter_srcs = False,  # Fix to make tags work until we have #532
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",

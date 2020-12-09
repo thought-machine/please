@@ -1,5 +1,3 @@
-// +build please
-
 package core
 
 import (
@@ -20,7 +18,6 @@ func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
 				addSubcommands(cmd, strings.Fields(subcommand), alias.PositionalLabels)
 			}
 			for _, flag := range alias.Flag {
-				// This is unavailable during bootstrap due to being a local modification.
 				cmd.AddOption(getOption(flag))
 			}
 		}
