@@ -19,13 +19,26 @@ import (
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) {
 	if state.Parser == nil {
-		state.Parser = &aspParser{asp: newAspParser(state)}
+		state.Parser = &aspParser{asp: newAspParser(state), preamble: buildPreamble(state)}
 	}
 }
 
 // An aspParser implements the core.Parser interface around our asp package.
 type aspParser struct {
 	asp *asp.Parser
+	preamble string
+}
+
+func buildPreamble(state *core.BuildState) string {
+	subincludes := make([]string, 0, len(state.Config.Parse.PreloadSubincludes))
+	for _, inc := range state.Config.Parse.PreloadSubincludes {
+		subincludes = append(subincludes, fmt.Sprintf("\"%s\"", inc))
+	}
+
+	if len(subincludes) > 0 {
+		return fmt.Sprintf("subinclude(%s)", strings.Join(subincludes, " "))
+	}
+	return ""
 }
 
 // newAspParser returns a asp.Parser object with all the builtins loaded
@@ -62,21 +75,7 @@ func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filenam
 		return p.asp.ParseFile(pkg, filename, "")
 	}
 
-	subincludes := make([]string, 0, len(state.Config.Parse.PreloadSubincludes))
-	for _, inc := range state.Config.Parse.PreloadSubincludes {
-		l := core.ParseBuildLabel(inc, pkg.Label().String())
-		//TODO(jpoole): there seems to be a bug with subincluding from the root of the repo
-		if l.PackageName == pkg.Name || pkg.Name == "" {
-			continue
-		}
-		subincludes = append(subincludes, fmt.Sprintf("\"%s\"", inc))
-	}
-
-	if len(subincludes) > 0 {
-		preamble := fmt.Sprintf("subinclude(%s)", strings.Join(subincludes, " "))
-		return p.asp.ParseFile(pkg, filename, preamble)
-	}
-	return p.asp.ParseFile(pkg, filename, "")
+	return p.asp.ParseFile(pkg, filename, p.preamble)
 }
 
 func (p *aspParser) ParseReader(state *core.BuildState, pkg *core.Package, reader io.ReadSeeker) error {
