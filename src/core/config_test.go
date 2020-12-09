@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jessevdk/go-flags"
+	"github.com/thought-machine/go-flags"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

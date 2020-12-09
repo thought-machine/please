@@ -20,7 +20,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-retryablehttp v0.6.7
-	github.com/jessevdk/go-flags v1.4.0
 	github.com/jstemmer/go-junit-report v0.9.1
 	github.com/karrick/godirwalk v1.7.8
 	github.com/kevinburke/go-bindata v3.13.0+incompatible // indirect

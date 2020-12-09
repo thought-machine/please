@@ -14,7 +14,7 @@ go_module(
 
 go_module(
     name = "go-flags",
-    module = "github.com/jessevdk/go-flags",
+    module = "github.com/thought-machine/go-flags",
     version = "v1.4.0",
 )
 

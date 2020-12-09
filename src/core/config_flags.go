@@ -3,7 +3,7 @@
 package core
 
 import (
-	"github.com/jessevdk/go-flags"
+	"github.com/thought-machine/go-flags"
 
 	"strings"
 )
