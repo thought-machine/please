@@ -48,7 +48,7 @@ go_get(
 go_get(
     name = "go-flags",
     get = "github.com/thought-machine/go-flags",
-    revision = "c8a37e639bc04a0941f323229b217a3951d391f0",
+    revision = "v1.5.0",
     deps = [":xsys"],
 )
 
