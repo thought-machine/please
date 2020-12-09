@@ -607,13 +607,13 @@
 
     <h3 id="alias">[Alias]</h3>
 
-    <p>This section can be used to add custom sub-commands to plz. It can be repeated multiple times
-        to add many aliases. For example, an alias to run <code>//deployment:deployer</code>
+    <p>This section can be used to add custom commands to the plz cli. The section can be repeated multiple
+        times to add many aliases. For example, an alias to run <code>//deployment:deployer</code>
         with the form <code>plz deploy prod --force //my:target</code> would look like this in
         the config:</p>
 
     <pre><code>
-	[alias "deploy"]
+    [alias "deploy"]
     cmd = run //deployment:deployer --
     subcommand = dev
     subcommand = prod
@@ -624,13 +624,14 @@
     </code></pre>
 
     <p>The subcommand, flags, and positionallabels values are optional. They aren't enforced in anyway
-        but provide tab-completion through the standard Please completions. The <code>positionallabels</code>
-        field adds tab-completion for build labels to the alias which can be useful for those that operate
-        on build targets.</p>
+        but instead provide tab-completion through the standard Please completions. The
+        <code>positionallabels</code> field adds tab-completion for build labels to the alias which can
+        be useful for those that operate on build targets.</p>
+
     <p>To enable Please completions, add this line to your <code>.bashrc</code> or <code>.zshrc</code>:</p>
 
     <pre><code>
-        source <(plz --completion_script)
+    source <(plz --completion_script)
     </code></pre>
 
     <p>Aliases for personal use can be added to your local (personal) please configuration i.e.
