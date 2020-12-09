@@ -424,11 +424,10 @@ go_get(
     revision = "a0ae3a11a518fb9559c95ed151ec07865b31980b",
 )
 
-go_get(
+go_module(
     name = "cli-init",
-    get = "github.com/peterebden/go-cli-init",
-    module_major_version = "v3",
-    revision = "v3.0.0",
+    module = "github.com/peterebden/go-cli-init/v3",
+    version = "v3.0.0",
     deps = [
         ":go-flags",
         ":humanize",
