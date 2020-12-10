@@ -207,7 +207,7 @@ func (c *Client) initExec() error {
 		// bit to allow a bit of serialisation overhead etc.
 		c.maxBlobBatchSize = 4000000
 	}
-	if c.shellPath != "" {
+	if c.shellPath == "" {
 		// We have to run everything through a shell since our commands are arbitrary.
 		// Unfortunately we can't just say "bash", we need an absolute path which is
 		// a bit weird since it assumes that our absolute path is the same as the
