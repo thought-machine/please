@@ -18,10 +18,10 @@ var opts = struct {
 	SrcRoot      string   `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
 	ModuleName   string   `short:"n" long:"module_name" description:"The name of the module"`
 	ImportConfig string   `short:"i" long:"importcfg" description:"the import config for the modules dependencies"`
+	GoTool       string `short:"g" long:"go" description:"The location of the go binary"`
+	CCTool string `short:"g" long:"go" description:"The c compiler to use"`
 	Packages     []string `short:"p" long:"packages" description:"The target packages to list dependencies for" default:"."`
 	Out          string
-	FilterTool   string `short:"f" long:"please_go_filter" description:"The location of please-go-filter to filter sources"`
-	GoTool       string `short:"g" long:"go" description:"The location of the go binary"`
 }{
 	Usage: `
 please-go-install is shipped with Please and is used to build go modules similarly to go install. 
@@ -36,7 +36,7 @@ This tool determines the dependencies between packages and output a commands in 
 	ModuleName:   os.Args[2],
 	ImportConfig: os.Args[3],
 	GoTool:       os.Args[4],
-	FilterTool:   os.Args[5],
+	CCTool:       os.Args[5],
 	Out:          os.Args[6],
 	Packages:     os.Args[7:],
 }
@@ -207,8 +207,8 @@ func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, 
 	cdPkgDir := fmt.Sprintf("cd %s", pkgDir)
 	generateCGO := fmt.Sprintf("%s tool cgo %s", opts.GoTool, strings.Join(cgoSrcs, " "))
 	compileGo := fmt.Sprintf("%s tool compile -pack -importcfg %s -o out.a _obj/*.go", opts.GoTool, opts.ImportConfig)
-	compileCGO := "gcc -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . _obj/_cgo_export.c _obj/*.cgo2.c"
-	compileC := "gcc -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . *.c"
+	compileCGO := fmt.Sprintf("%s -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . _obj/_cgo_export.c _obj/*.cgo2.c", opts.CCTool)
+	compileC := fmt.Sprintf("%s -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . *.c", opts.CCTool)
 	mergeArchive := fmt.Sprintf("%s tool pack r out.a *.o ", opts.GoTool)
 	moveArchive := fmt.Sprintf("cd - && mv %s/out.a %s", pkgDir, out)
 	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", pkg.Name, out, opts.ImportConfig)

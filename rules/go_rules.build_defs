@@ -816,7 +816,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"source <($TOOLS_GO_INSTALL {pkg}/src {module} importconfig $TOOLS_GO $TOOLS_FILTER pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install) + ")",
+        f"source <($TOOLS_GO_INSTALL {pkg}/src {module} importconfig $TOOLS_GO $TOOLS_CC pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install) + ")",
     ]
 
     return build_rule(
@@ -828,7 +828,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         tools = {
             'go': [CONFIG.GO_TOOL],
             'go_install': [CONFIG.GO_INSTALL_TOOL],
-            'filter': [CONFIG.GO_FILTER_TOOL],
+            'cc': [CONFIG.CC_TOOL],
         },
         visibility = visibility,
         building_description = 'Compiling...',
