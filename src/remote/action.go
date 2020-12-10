@@ -108,7 +108,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	cmd, err := core.ReplaceSequences(c.state, target, cmd)
 	return &pb.Command{
 		Platform:             c.platform,
-		Arguments:            process.BashCommand(c.bashPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
+		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(target, inputRoot, stamp), target.Sandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
@@ -158,7 +158,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 				},
 			},
 		},
-		Arguments:            process.BashCommand(c.bashPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
+		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(c.state, target, "."), target.TestSandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
