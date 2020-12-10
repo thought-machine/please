@@ -200,7 +200,7 @@ go_test(
 ```
 
 ```
-$ plz query alltargets --unclude=my_label
+$ plz query alltargets --include=my_label
 //src/greetings:greetings
 
 $ plz build --include=my_label
