@@ -25,7 +25,7 @@ func InitParser(state *core.BuildState) {
 
 // An aspParser implements the core.Parser interface around our asp package.
 type aspParser struct {
-	asp *asp.Parser
+	asp      *asp.Parser
 	preamble string
 }
 
