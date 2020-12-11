@@ -809,6 +809,26 @@ def cgo_test(name:str, srcs:list, data:list=None, deps:list=None, visibility:lis
         size = size,
     )
 
+
+def _remove_redundant_outs(outs):
+    """
+      Given a list of proposed outputs for this rule (which may be paths to .a
+      files or directories), returns outputs that aren't contained within other
+
+      outputs - e.g.:
+        remove_redundant_outs(["x/y", "x/z.a", "x/p/q/r", "x/p/q"])
+      returns
+        ["x/y", "x/z.a", "x/p/q"]
+    """
+    new_outs = {r: True for r in outs}
+    for r in new_outs.keys():
+        dirs = r.split("/")
+        for i in range(1, len(dirs)):
+            root = "/".join(dirs[0:i])
+            if new_outs.get(root):
+                new_outs[r] = False
+    return [r for r in new_outs.keys() if new_outs[r]]
+
 def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, outs:list, deps:list, test_only:bool,
                visibility:list, licences:list):
     # Now compile it in a separate step.
@@ -834,10 +854,11 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
         # For most it doesn't matter but the top-level one will get lost.
         pkg_get_roots = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{getroot}' for getroot in get_roots]
         cmd += [f' if [ -f {out}.a ]; then mkdir -p {out} && cp {out}.a {out}; fi' for out in pkg_get_roots]
+
     return build_rule(
         name = name,
         tag = "a_rule" if not binary else None,
-        outs = outs,
+        outs = _remove_redundant_outs(outs),
         deps = deps,
         srcs = srcs,
         tools = {
@@ -1026,22 +1047,6 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
                 error(f"get_param_as_list: unexpected type %s" % type(v))
         else:
             error(f"get_param_as_list: unexpected type %s" % type(value))
-
-    # Given a list of proposed outputs for this rule (which may be paths to .a
-    # files or directories), returns outputs that aren't contained within other
-    # outputs - e.g.:
-    #   remove_redundant_outs(["x/y", "x/z.a", "x/p/q/r", "x/p/q"])
-    # returns
-    #   ["x/y", "x/z.a", "x/p/q"]
-    def remove_redundant_outs(outs):
-        new_outs = {r: True for r in outs}
-        for r in new_outs.keys():
-            dirs = r.split("/")
-            for i in range(1, len(dirs)):
-                root = "/".join(dirs[0:i])
-                if new_outs.get(root):
-                    new_outs[r] = False
-        return [r for r in new_outs.keys() if new_outs[r]]
 
     go_rule = f':{name}'
     if isinstance(get, str):
