@@ -79,8 +79,8 @@ type Client struct {
 	// TODO(peterebden): this will need some modification for cross-compiling support.
 	platform *pb.Platform
 
-	// Cache this for later
-	bashPath string
+	// Path to the shell to use to execute actions in.
+	shellPath string
 
 	// Stats used to report RPC data rates
 	byteRateIn, byteRateOut, totalBytesIn, totalBytesOut int
@@ -133,6 +133,7 @@ func New(state *core.BuildState) *Client {
 			digest.Empty.Hash: {},
 		},
 		fileMetadataCache: filemetadata.NewNoopCache(),
+		shellPath:         state.Config.Remote.Shell,
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
@@ -206,16 +207,18 @@ func (c *Client) initExec() error {
 		// bit to allow a bit of serialisation overhead etc.
 		c.maxBlobBatchSize = 4000000
 	}
-	// We have to run everything through bash since our commands are arbitrary.
-	// Unfortunately we can't just say "bash", we need an absolute path which is
-	// a bit weird since it assumes that our absolute path is the same as the
-	// remote one (which is probably OK on the same OS, but not between say Linux and
-	// FreeBSD where bash is not idiomatically in the same place).
-	bash, err := core.LookBuildPath("bash", c.state.Config)
-	if err != nil {
-		return fmt.Errorf("Failed to set path for bash: %w", err)
+	if c.shellPath == "" {
+		// We have to run everything through a shell since our commands are arbitrary.
+		// Unfortunately we can't just say "bash", we need an absolute path which is
+		// a bit weird since it assumes that our absolute path is the same as the
+		// remote one (which is probably OK on the same OS, but not between say Linux and
+		// FreeBSD where bash is not idiomatically in the same place).
+		bash, err := core.LookBuildPath("bash", c.state.Config)
+		if err != nil {
+			return fmt.Errorf("Failed to set path for bash: %w", err)
+		}
+		c.shellPath = bash
 	}
-	c.bashPath = bash
 	log.Debug("Remote execution client initialised for storage")
 	// Now check if it can do remote execution
 	if resp.ExecutionCapabilities == nil {

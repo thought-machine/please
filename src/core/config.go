@@ -419,6 +419,7 @@ type Configuration struct {
 		Zstd          bool         `help:"Whether to use zstd compression for communication."`
 		VerifyOutputs bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
 		HomeDir       string       `help:"The home directory on the build machine."`
+		Shell         string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
 		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
