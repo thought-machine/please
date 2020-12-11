@@ -18,8 +18,8 @@ var opts = struct {
 	SrcRoot      string   `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
 	ModuleName   string   `short:"n" long:"module_name" description:"The name of the module"`
 	ImportConfig string   `short:"i" long:"importcfg" description:"the import config for the modules dependencies"`
-	GoTool       string `short:"g" long:"go" description:"The location of the go binary"`
-	CCTool string `short:"g" long:"go" description:"The c compiler to use"`
+	GoTool       string   `short:"g" long:"go" description:"The location of the go binary"`
+	CCTool       string   `short:"g" long:"go" description:"The c compiler to use"`
 	Packages     []string `short:"p" long:"packages" description:"The target packages to list dependencies for" default:"."`
 	Out          string
 }{

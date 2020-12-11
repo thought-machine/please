@@ -816,7 +816,9 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"source <($TOOLS_GO_INSTALL {pkg}/src {module} importconfig $TOOLS_GO $TOOLS_CC pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install) + ")",
+        f"export COMPILE_SCRIPT=$($TOOLS_GO_INSTALL {pkg}/src {module} importconfig $TOOLS_GO $TOOLS_CC pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install) + ")",
+        "echo $COMPILE_SCRIPT",
+        f"source <($COMPILE_SCRIPT)",
     ]
 
     return build_rule(
