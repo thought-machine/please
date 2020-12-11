@@ -4,6 +4,8 @@ Version 15.10.0
     * Added go_module() rule that handles vanity imports and
       module major versions better than go_get() #1396
     * Updated pip_library() to work with pip v20.3.x+ #1421
+    * Fix issue with duplicate outs on go_get() causing missing
+      outputs #1437
 
 
 Version 15.9.2
