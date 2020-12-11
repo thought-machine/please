@@ -702,3 +702,9 @@ go_get(
         ":oauth2",
     ],
 )
+
+go_get(
+    name = "zstd2",
+    get = "github.com/DataDog/zstd",
+    revision = "v1.4.5+patch1",
+)

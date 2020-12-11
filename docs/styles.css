@@ -701,7 +701,7 @@ footer > div {
 
 /* codelabs */
 .code-lab {
-    margin: 3em 1em 1em;
+    margin: 3em 1em 15px -15px;
     background-color: #1c1e23;
 }
 

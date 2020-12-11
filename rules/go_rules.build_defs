@@ -829,14 +829,49 @@ def _remove_redundant_outs(outs):
                 new_outs[r] = False
     return [r for r in new_outs.keys() if new_outs[r]]
 
+def _go_install_module(name:str, module:str, install:list, src:str, outs:list, deps:list, binary:bool, visibility:list,
+                       test_only:bool, licences:list, linker_flags:list):
+    pkg = package_name()
+    cmd = [
+        _set_go_env(),
+        _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
+        _aggregate_import_cfg_cmd(),
+        f"$TOOLS_GO_INSTALL {pkg}/src {module} importconfig $TOOLS_GO $TOOLS_CC pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install) + " > install.sh",
+        "cat install.sh",
+        f"source install.sh",
+    ]
+
+    return build_rule(
+        name = name,
+        tag = "a_rule",
+        outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in _remove_redundant_outs(outs)],
+        deps = deps,
+        srcs = [src],
+        tools = {
+            'go': [CONFIG.GO_TOOL],
+            'go_install': [CONFIG.GO_INSTALL_TOOL],
+            'cc': [CONFIG.CC_TOOL],
+        },
+        visibility = visibility,
+        building_description = 'Compiling...',
+        cmd = ' && '.join(cmd),
+        binary = binary,
+        requires = ['go', 'go_src'],
+        test_only = test_only,
+        labels = ['link:plz-out/go'] + [f'cc:ld:{f}' for f in linker_flags],
+        sandbox = False,
+        needs_transitive_deps = True,
+        licences = licences,
+    )
+
 def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, outs:list, deps:list, test_only:bool,
                visibility:list, licences:list):
     # Now compile it in a separate step.
-    install_cmd = ' '.join(install)
+    install_cmd = ' '.join(install or [])
     cmd = [
         'export GOPATH="$(find \"$TMP_DIR\" \( -name src -o -name pkg \) -exec dirname {} \; | sort | uniq | tr \'\\n\' \':\' | sed \'s/:$//\')" GO111MODULE="off"',
         '"$TOOLS_GO" install -gcflags "-trimpath \\\"$TMP_DIR\\\"" -asmflags "-trimpath \\\"$TMP_DIR\\\"" ' + install_cmd,
-    ]
+        ]
     if CONFIG.GOROOT:
         cmd = [f'export GOROOT={CONFIG.GOROOT}'] + cmd
     if package_name():
@@ -879,8 +914,6 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
 def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None,
                     licences:list=None, hashes:list=None, labels:list=[],_tag:str=''):
     cmds = [
-        "export GO111MODULE=on && export TMPDIR=$TMPDIR/tmp && mkdir -p $TMPDIR",
-        "$TOOL mod init dummy", # Create a dummy module
         f'export MOD_DIR=$($TOOL mod download -x -modcacherw -json {module}@{version} | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
     ]
@@ -902,7 +935,8 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     )
 
 def go_module(name:str='', module:str='', version:str='', download:str='', deps:list=[], exported_deps:list=None,
-              visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None, licences:list=None):
+              visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
+              licences:list=None, linker_flags:list=[], please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL):
     if (module or version) and download:
         raise ParseError("You have provided both module and version as well as download. Must provided one or the other.")
 
@@ -937,18 +971,33 @@ def go_module(name:str='', module:str='', version:str='', download:str='', deps:
                 else:
                     outs += [f"{i}.a"]
 
-    a_rule = _go_install(
-        name = name,
-        get_roots = [module],
-        install = install or [module],
-        binary = binary,
-        srcs = [download],
-        outs = outs,
-        deps = deps,
-        test_only = test_only,
-        visibility = visibility,
-        licences = licences,
-    )
+    if please_go_install:
+        a_rule = _go_install_module(
+            name = name,
+            module = module,
+            install = install or [module],
+            binary = binary,
+            src = download,
+            outs = outs,
+            deps = deps,
+            test_only = test_only,
+            visibility = visibility,
+            licences = licences,
+            linker_flags = linker_flags,
+        )
+    else:
+        a_rule = _go_install(
+            name = name,
+            get_roots = [module],
+            install = install or [module],
+            binary = binary,
+            srcs = [download],
+            outs = outs,
+            deps = deps,
+            test_only = test_only,
+            visibility = visibility,
+            licences = licences,
+        )
 
     if binary:
         return a_rule
