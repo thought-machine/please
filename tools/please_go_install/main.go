@@ -203,18 +203,16 @@ func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, 
 	}
 
 	prepOutDir := fmt.Sprintf("mkdir -p %s", filepath.Dir(out))
-	linkImportCfg := fmt.Sprintf("ln %s %s", opts.ImportConfig, pkgDir)
 	cdPkgDir := fmt.Sprintf("cd %s", pkgDir)
 	generateCGO := fmt.Sprintf("%s tool cgo %s", opts.GoTool, strings.Join(cgoSrcs, " "))
-	compileGo := fmt.Sprintf("%s tool compile -pack -importcfg %s -o out.a _obj/*.go", opts.GoTool, opts.ImportConfig)
+	compileGo := fmt.Sprintf("%s tool compile -pack -importcfg $OLDPWD/%s -o out.a _obj/*.go", opts.GoTool, opts.ImportConfig)
 	compileCGO := fmt.Sprintf("%s -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . _obj/_cgo_export.c _obj/*.cgo2.c", opts.CCTool)
 	compileC := fmt.Sprintf("%s -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . *.c", opts.CCTool)
 	mergeArchive := fmt.Sprintf("%s tool pack r out.a *.o ", opts.GoTool)
-	moveArchive := fmt.Sprintf("cd - && mv %s/out.a %s", pkgDir, out)
+	moveArchive := fmt.Sprintf("cd $OLDPWD && mv %s/out.a %s", pkgDir, out)
 	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
 
 	fmt.Println(prepOutDir)
-	fmt.Println(linkImportCfg)
 	fmt.Println(cdPkgDir)
 	fmt.Println(generateCGO)
 
