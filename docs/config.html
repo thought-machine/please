@@ -605,29 +605,37 @@
       i.e. they are upper-cased and hyphens are converted to underscores.</p>
 
 
-    <h3>[Alias]</h3>
+    <h3 id="alias">[Alias]</h3>
 
-    <p>This section lets you define new commands to run at the command line. For example:</p>
+    <p>This section can be used to add custom commands to the plz cli. The section can be repeated multiple
+        times to add many aliases. For example, an alias to run <code>//deployment:deployer</code>
+        with the form <code>plz deploy prod --force //my:target</code> would look like this in
+        the config:</p>
 
     <pre><code>
-	[alias "deploy"]
+    [alias "deploy"]
     cmd = run //deployment:deployer --
     subcommand = dev
     subcommand = prod
     subcommand = real prod
     flag = --force
     flag = -f
+    positionallabels = true
     </code></pre>
 
-    <p>This lets you run say <code>plz deploy //my:target</code>, which turns into a call to
-      <code>plz run //deployment:deployer -- //my:target</code>. This lets you add in lightweight
-      ways of invoking your custom commands (our developers at Thought Machine use these
-      extensively during their normal day-to-day).</p>
+    <p>The subcommand, flags, and positionallabels values are optional. They aren't enforced in anyway
+        but instead provide tab-completion through the standard Please completions. The
+        <code>positionallabels</code> field adds tab-completion for build labels to the alias which can
+        be useful for those that operate on build targets.</p>
 
-    <p>This will tab-complete, taking into account the various sub-commands and flags etc.<br/>
-      Those commands and flags are not enforced though, they are only informational and used
-      for completion.</p>
+    <p>To enable Please completions, add this line to your <code>.bashrc</code> or <code>.zshrc</code>:</p>
 
+    <pre><code>
+    source <(plz --completion_script)
+    </code></pre>
+
+    <p>Aliases for personal use can be added to your local (personal) please configuration i.e.
+        <code>.plzconfig.local</code>.</p>
 
     <h3 id="bazel">[Bazel]</h3>
 

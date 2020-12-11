@@ -1,7 +1,7 @@
 package help
 
 import (
-	"github.com/jessevdk/go-flags"
+	"github.com/thought-machine/go-flags"
 )
 
 // Topic is a help topic that implements completion for flags.

@@ -256,7 +256,7 @@ pip_library(
 
 This will download NumPy for us to use in our project. We use the `package()` built-in function to set the default
 visibility for this package. This can be very useful for third-party rules to avoid having to specify
-`visibility = ["PUBLIC"]` on every `go_get()` invocation.
+`visibility = ["PUBLIC"]` on every `pip_library()` invocation.
 
 NB: The visibility "PUBLIC" is a special case. Typically, items in the visibility list are labels. "PUBLIC" is equivalent
 to `//...`.

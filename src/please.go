@@ -12,7 +12,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/jessevdk/go-flags"
+	"github.com/thought-machine/go-flags"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/assets"
