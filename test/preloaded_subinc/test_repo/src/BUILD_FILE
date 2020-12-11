@@ -1,0 +1,6 @@
+k8s_config(
+    name = "k8s",
+    srcs = [
+        "service.yaml",
+    ],
+)

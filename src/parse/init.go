@@ -19,20 +19,30 @@ import (
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) {
 	if state.Parser == nil {
-		state.Parser = &aspParser{asp: newAspParser(state), preamble: buildPreamble(state)}
+		state.Parser = &aspParser{asp: newAspParser(state)}
 	}
 }
 
 // An aspParser implements the core.Parser interface around our asp package.
 type aspParser struct {
 	asp      *asp.Parser
-	preamble string
 }
 
-func buildPreamble(state *core.BuildState) string {
+func buildPreamble(state *core.BuildState, pkg *core.Package) string {
+	if pkg.Subrepo != nil {
+		// TODO(jpoole): remove this once #1436 has been addressed
+		// Please doesn't respect the subrepo .plzconfig so subincludes will be added
+		// in the subrepo erroneously if we don't return early here
+		return ""
+	}
+
 	subincludes := make([]string, 0, len(state.Config.Parse.PreloadSubincludes))
 	for _, inc := range state.Config.Parse.PreloadSubincludes {
-		subincludes = append(subincludes, fmt.Sprintf("\"%s\"", inc))
+		l := core.ParseBuildLabel(inc, pkg.Name)
+		if l.Subrepo == "" || l.SubrepoLabel().PackageName != pkg.Name {
+			log.Warningf("%v included from %v", l, pkg.Name)
+			subincludes = append(subincludes, fmt.Sprintf("\"%s\"", inc))
+		}
 	}
 
 	if len(subincludes) > 0 {
@@ -75,7 +85,7 @@ func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filenam
 		return p.asp.ParseFile(pkg, filename, "")
 	}
 
-	return p.asp.ParseFile(pkg, filename, p.preamble)
+	return p.asp.ParseFile(pkg, filename, buildPreamble(state, pkg))
 }
 
 func (p *aspParser) ParseReader(state *core.BuildState, pkg *core.Package, reader io.ReadSeeker) error {
