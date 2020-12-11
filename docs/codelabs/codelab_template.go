@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/peterebden/go-cli-init"
 	"html/template"
 	"io/ioutil"
 	"os"
@@ -10,13 +9,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/peterebden/go-cli-init/v3"
 )
 
 // TODO(jpoole): maybe we should just have an order field in the MD?
 var categoryOrder = map[string]int{
-	"beginner": 0,
+	"beginner":     0,
 	"intermediate": 1,
-	"advanced": 2,
+	"advanced":     2,
 }
 
 type codelabList []codelabMD
@@ -51,14 +52,14 @@ func (c codelabList) Swap(i, j int) {
 }
 
 type codelabMD struct {
-	ID string
-	Title string
+	ID          string
+	Title       string
 	Description string
-	Author string
-	Duration int
+	Author      string
+	Duration    int
 	LastUpdated string
-	Category string
-	Status string
+	Category    string
+	Status      string
 }
 
 var opts = struct {
@@ -107,12 +108,18 @@ func getMetadata() codelabList {
 			key, value := strings.TrimSpace(s[0]), strings.TrimSpace(s[1])
 
 			switch key {
-			case "summary": md.Title = value
-			case "description": md.Description = value
-			case "authors": md.Author = value
-			case "id": md.ID = value
-			case "categories": md.Category = value
-			case "status": md.Status = value
+			case "summary":
+				md.Title = value
+			case "description":
+				md.Description = value
+			case "authors":
+				md.Author = value
+			case "id":
+				md.ID = value
+			case "categories":
+				md.Category = value
+			case "status":
+				md.Status = value
 			}
 		}
 

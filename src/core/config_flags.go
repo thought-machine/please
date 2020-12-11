@@ -1,9 +1,7 @@
-// +build please
-
 package core
 
 import (
-	"github.com/jessevdk/go-flags"
+	"github.com/thought-machine/go-flags"
 
 	"strings"
 )
@@ -20,8 +18,12 @@ func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
 				addSubcommands(cmd, strings.Fields(subcommand), alias.PositionalLabels)
 			}
 			for _, flag := range alias.Flag {
-				// This is unavailable during bootstrap due to being a local modification.
-				cmd.AddOption(getOption(flag))
+				var f struct {
+					Data bool
+				}
+				cmd.AddOption(&flags.Option{
+					LongName: strings.TrimLeft(flag, "-"),
+				}, &f.Data)
 			}
 		}
 	}
@@ -51,19 +53,4 @@ func addSubcommand(cmd *flags.Command, subcommand, desc string, positionalLabels
 	}
 	newCmd, _ := cmd.AddCommand(subcommand, desc, desc, data)
 	return newCmd
-}
-
-// getOption creates a new flags.Option.
-// This is a fiddle since it doesn't really expose a direct way of doing this programmatically.
-func getOption(name string) *flags.Option {
-	data := struct {
-		Opt string `long:"option"`
-	}{}
-	p := flags.NewParser(&data, 0)
-	opt := p.FindOptionByLongName("option")
-	opt.LongName = strings.TrimLeft(name, "-")
-	if len(name) == 2 && name[0] == '-' {
-		opt.ShortName = rune(name[1])
-	}
-	return opt
 }
