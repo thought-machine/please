@@ -4,6 +4,7 @@ go_library(
         "init.go",
         "parse_step.go",
         "suggest.go",
+        "internal_package.go",
     ],
     visibility = ["PUBLIC"],
     deps = [

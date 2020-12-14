@@ -250,7 +250,7 @@ func DefaultConfiguration() *Configuration {
 	config.Build.Timeout = cli.Duration(10 * time.Minute)
 	config.Build.Config = "opt"         // Optimised builds by default
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
-	config.Build.PleaseSandboxTool = "please_sandbox"
+	config.Build.PleaseSandboxTool = "//_please:tools|please_sandbox"
 	config.Build.Xattrs = true
 	config.Build.HashFunction = "sha256"
 	config.BuildConfig = map[string]string{}
@@ -277,10 +277,10 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
-	config.Go.TestTool = "please_go_test"
-	config.Go.FilterTool = "please_go_filter"
-	config.Go.InstallTool = "please_go_install"
-	config.Python.PexTool = "please_pex"
+	config.Go.TestTool = "//_please:tools|please_go_test"
+	config.Go.FilterTool = "//_please:tools|please_go_filter"
+	config.Go.InstallTool = "//_please:tools|please_go_install"
+	config.Python.PexTool = "//_please:tools|please_pex"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.TestRunner = "unittest"
 	config.Python.TestRunnerBootstrap = ""
@@ -294,9 +294,9 @@ func DefaultConfiguration() *Configuration {
 	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2", "https://jcenter.bintray.com/"}
 	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
 	config.Java.JlinkTool = "jlink"
-	config.Java.JavacWorker = "javac_worker"
-	config.Java.JarCatTool = "jarcat"
-	config.Java.JUnitRunner = "junit_runner.jar"
+	config.Java.JavacWorker = "//_please:tools|javac_worker"
+	config.Java.JarCatTool = "//_please:tools|jarcat"
+	config.Java.JUnitRunner = "//_please:tools|junit_runner"
 	config.Java.JavaHome = ""
 	config.Cpp.CCTool = "gcc"
 	config.Cpp.CppTool = "g++"

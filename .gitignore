@@ -12,3 +12,5 @@ __pycache__
 *.iml
 /venv
 /out
+
+.DS_Store
