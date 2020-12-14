@@ -153,7 +153,7 @@ func TestOutputDirDoubleStar(t *testing.T) {
 	newTarget := func(withDoubleStar bool) (*core.BuildState, *core.BuildTarget) {
 		// Test modifying a command in the post-build function.
 		state, target := newState("//package1:target8")
-		target.Command = "mkdir OUT_DIR && mkdir OUT_DIR/foo && touch OUT_DIR/foo/file7"
+		target.Command = "mkdir -p OUT_DIR/foo && touch OUT_DIR/foo/file7"
 
 		if withDoubleStar {
 			target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR/**")
