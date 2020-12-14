@@ -153,7 +153,7 @@ func TestOutputDirDoubleStar(t *testing.T) {
 	newTarget := func(withDoubleStar bool) (*core.BuildState, *core.BuildTarget) {
 		// Test modifying a command in the post-build function.
 		state, target := newState("//package1:target8")
-		target.Command = "mkdir -p OUT_DIR/foo && touch OUT_DIR/foo/file7"
+		target.Command = "mkdir -p OUT_DIR/foo && touch OUT_DIR/foo/file7 && chmod 777 OUT_DIR/foo/file7"
 
 		if withDoubleStar {
 			target.OutputDirectories = append(target.OutputDirectories, "OUT_DIR/**")
@@ -176,11 +176,19 @@ func TestOutputDirDoubleStar(t *testing.T) {
 	assert.Len(t, md.OutputDirOuts, 1)
 	assert.Equal(t, "foo", md.OutputDirOuts[0])
 
+	info, err := os.Lstat(filepath.Join(target.OutDir(), "foo/file7"))
+	require.NoError(t, err)
+	assert.Equal(t, info.Mode().Perm().String(), "-rwxrwxrwx")
+
 	state, target = newTarget(true)
 
 	err = buildTarget(1, state, target, false)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"foo/file7"}, target.Outputs())
+
+	info, err = os.Lstat(filepath.Join(target.OutDir(), "foo/file7"))
+	require.NoError(t, err)
+	assert.Equal(t, info.Mode().Perm().String(), "-rwxrwxrwx")
 }
 
 func TestCacheRetrieval(t *testing.T) {
