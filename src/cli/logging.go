@@ -12,10 +12,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/peterebden/go-cli-init"
+	"github.com/peterebden/go-cli-init/v3"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/op/go-logging.v1"
 )
+
+const messageHistoryMaxSize = 100
 
 var log = logging.MustGetLogger("cli")
 
@@ -106,6 +108,8 @@ type LogBackend struct {
 	rows, cols, maxRecords, interactiveRows, maxInteractiveRows, maxLines int
 	output                                                                []string
 	logMessages                                                           *list.List
+	messageHistory                                                        *list.List
+	messageCount                                                          int
 	formatter                                                             logging.Formatter
 	origBackend                                                           logging.Backend
 	passthrough                                                           bool
@@ -121,7 +125,15 @@ func (backend *LogBackend) Log(level logging.Level, calldepth int, rec *logging.
 	}
 	var b bytes.Buffer
 	backend.formatter.Format(calldepth, rec, &b)
-	backend.logMessages.PushBack(strings.TrimSpace(b.String()))
+	msg := strings.TrimSpace(b.String())
+	backend.logMessages.PushBack(msg)
+
+	// Add the messages to the history so we may output them again after the build has finished
+	if backend.messageCount < messageHistoryMaxSize {
+		backend.messageHistory.PushBack(msg)
+	}
+	backend.messageCount++
+
 	backend.RecalcLines()
 	return nil
 }
@@ -147,6 +159,7 @@ func newLogBackend(origBackend logging.Backend) logging.LeveledBackend {
 		interactiveRows: 10,
 		maxRecords:      10,
 		logMessages:     list.New(),
+		messageHistory:  list.New(),
 		formatter:       logFormatter(StdErrIsATerminal),
 		origBackend:     origBackend,
 		passthrough:     true,
@@ -169,6 +182,20 @@ func (backend *LogBackend) calcOutput() []string {
 		ret = append(ret, "Messages:")
 	}
 	return reverse(ret)
+}
+
+// GetMessageHistory returns the history of log messages. The message history is limited to messageHistoryMaxSize so
+// this method returns the total amount of messages logged and the amount actually retained as well.
+func (backend *LogBackend) GetMessageHistory() ([]string, int, int) {
+	ret := make([]string, 0, backend.messageHistory.Len())
+	for e := backend.messageHistory.Front(); e != nil; e = e.Next() {
+		msg := backend.lineWrap(e.Value.(string))
+		ret = append(ret, msg...)
+	}
+	if backend.messageCount > messageHistoryMaxSize {
+		return ret, backend.messageCount, messageHistoryMaxSize
+	}
+	return ret, backend.messageCount, backend.messageCount
 }
 
 // SetPassthrough sets whether we are "passing through" log messages or not, i.e. whether they go straight to

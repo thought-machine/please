@@ -178,7 +178,7 @@ type BuildTarget struct {
 	// copied into its source directory.
 	Tools []BuildInput
 	// Like tools but available to the test_cmd instead
-	testTools []BuildInput
+	testTools []BuildInput `name:"test_tools"`
 	// Named tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"tools"`
 	// Named test tools, similar to named sources.
@@ -857,7 +857,7 @@ func (target *BuildTarget) CheckTargetOwnsBuildOutputs(state *BuildState) error 
 		return nil
 	}
 
-	for _, output := range target.outputs {
+	for _, output := range target.Outputs() {
 		targetPackage := target.Label.PackageName
 		out := filepath.Join(targetPackage, output)
 
@@ -1215,6 +1215,10 @@ func (target *BuildTarget) TestTools() []BuildInput {
 	return target.testTools
 }
 
+func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
+	return target.namedTestTools
+}
+
 // AddDatum adds a new item of data to the target.
 func (target *BuildTarget) AddDatum(datum BuildInput) {
 	target.Data = append(target.Data, datum)
@@ -1387,6 +1391,10 @@ func (target *BuildTarget) AllData() []BuildInput {
 	return ret
 }
 
+func (target *BuildTarget) NamedData() map[string][]BuildInput {
+	return target.namedData
+}
+
 // AllDataPaths returns the paths for all the data of this target.
 func (target *BuildTarget) AllDataPaths(graph *BuildGraph) []string {
 	ret := make([]string, 0, len(target.Data))
@@ -1424,6 +1432,10 @@ func (target *BuildTarget) NamedTools(name string) []BuildInput {
 	return target.namedTools[name]
 }
 
+func (target *BuildTarget) AllNamedTools() map[string][]BuildInput {
+	return target.namedTools
+}
+
 // AddDependency adds a dependency to this target. It deduplicates against any existing deps.
 func (target *BuildTarget) AddDependency(dep BuildLabel) {
 	target.AddMaybeExportedDependency(dep, false, false, false)
@@ -1448,13 +1460,13 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, 
 // IsTool returns true if the given build label is a tool used by this target.
 func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 	for _, t := range target.Tools {
-		if t == tool {
+		if t.Label() != nil && *t.Label() == tool {
 			return true
 		}
 	}
 	for _, tools := range target.namedTools {
 		for _, t := range tools {
-			if t == tool {
+			if t.Label() != nil && *t.Label() == tool {
 				return true
 			}
 		}

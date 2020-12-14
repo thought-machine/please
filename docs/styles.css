@@ -129,7 +129,7 @@ hr {
         flex: 1 4 25%;
     }
     .right {
-        flex: 3 4 75%;
+        flex: 3 4 100%;
     }
 }
 /* Header row */
@@ -198,7 +198,7 @@ hr {
 .idximg1 img {
     transform: rotate(20deg);
     position: absolute;
-    left: 35%;
+    left: 25%;
     width: 300px;
     top: -120px;
     height: auto;
@@ -381,9 +381,14 @@ hr {
 
 /* Main body */
 .body {
-    padding-left: 10%;
-    overflow-x: hidden;
+    padding-left: 30px;
+    max-width: 1200px;
 }
+
+div.index-body {
+    max-width: none;
+}
+
 .body h1 {
     font-family: "Calibre-Thin", sans-serif;
     padding: 5em 0;
@@ -396,7 +401,7 @@ hr {
 .body h2, .body h3, .body h2 a, .body h3 a {
     font-family: "Calibre-Thin", sans-serif;
     color: #02e68f;
-    text-indent: -5%;
+    text-indent: -30px;
     padding: 2em 0 0 0;
     font-weight: normal;
 }
@@ -405,6 +410,9 @@ hr {
 }
 .body h3 {
     font-size: x-large;
+}
+.body h4 {
+    font-size: large;
 }
 .body ul {
     list-style: none;
@@ -479,14 +487,15 @@ footer > div {
     padding: 20px 40px 20px 0;
     color: white;
 }
+
+.index-layout > div > div > p {
+    max-width: 800px;
+}
 .index-layout h2 {
     text-indent: 0;
     padding-top: 2em;
 }
-.index-layout a:link, .index-layout a:visited {
-    text-transform: uppercase;
-    color: white;
-}
+
 .index-layout p {
     margin-bottom: 5em;
 }
@@ -495,9 +504,11 @@ footer > div {
     width: auto;
 }
 .index-open {
-    color: white;
-    margin: 8em 8em 8em 0;
+    font-family: "Calibre", sans-serif;
+    font-size: xx-large;
+    margin-bottom: 4em;
 }
+
 .index-stripe {
     background-color: #111111;
     padding: 8em;
@@ -506,10 +517,6 @@ footer > div {
 }
 @media (min-width: 800px) {
     .index-stripe { padding: 8em 8em 8em 40%; }
-}
-.index-open {
-    font-family: "Calibre", sans-serif;
-    font-size: large;
 }
 .index-stripe p {
     font-family: "Calibre", sans-serif;
@@ -606,4 +613,241 @@ footer > div {
 }
 .fn-str {
     color: #af7dff;
+}
+
+/* Example language selectors */
+.tab-container {
+    padding: 0.5em 0;
+    margin-bottom: 1em;
+}
+
+.tab-container > .tab-contents > .content {
+    display: none;
+    border: 1px solid #02e68f;
+}
+
+.tab-container > .tab-contents > .content > pre {
+    border: none;
+}
+
+.tab-container > .tabs {
+    margin: 0 0 1px; /* 1px for the border around the tabs */
+    height: 2em;
+}
+
+.tab-container > .tabs > .tab {
+    float: left;
+    padding: 0 2em;
+    cursor: pointer;
+    background-color: #272a30;
+    line-height: 2em;
+}
+
+.tab-container > .tabs > :first-child {
+    border-radius: 10px 0 0 0;
+}
+
+.tab-container > .tabs > :last-child {
+    border-radius: 0 10px 0 0;
+}
+
+.tab-container > .tabs > .selected {
+    font-weight: bold;
+    color: white;
+    background-color: #202328;
+    border-bottom: 1px solid #202328;
+    border-top: 1px solid #02e68f;
+    border-right: 1px solid #02e68f;
+    border-left: 1px solid #02e68f;
+}
+
+.tab-container > .tab-contents > .selected {
+    display: block;
+}
+
+.content .content-wrapper {
+    margin: 2em 4em;
+}
+
+/* section guides */
+.section-guide {
+    height: 4em;
+    margin-left: -30px; /* for the title negative indent */
+    margin-top: 4em;
+    background: #1c1e23;
+    padding: 0 2em;
+    border-top: 4px solid #1c9465;
+}
+.section-guide .prev-section, .section-guide .next-section {
+    line-height: 4em;
+}
+
+.prev-section {
+    float: left;
+}
+
+.next-section {
+    text-align: right;
+    float: right;
+}
+
+.prev-section:before {
+    content: "\2190  ";
+}
+
+.next-section:after {
+    content: " \2192";
+}
+
+/* codelabs */
+.code-lab {
+    margin: 3em 1em 15px -15px;
+    background-color: #1c1e23;
+}
+
+.code-lab a {
+    display: block;
+    padding: 1em;
+}
+
+.code-lab h2 {
+    text-indent: 0;
+    margin-top: 0;
+    padding: 0;
+    font-size: x-large;
+}
+
+.code-lab-grid > .code-lab > a {
+    color: #999999;
+}
+
+.code-lab-author {
+    margin-top: 0;
+    font-size: small;
+    text-align: right;
+}
+
+.code-lab-duration {
+    margin-top: 0;
+    float: left;
+    font-size: small;
+}
+
+p.code-lab-start {
+    text-align: right;
+    color: #29abe2;
+}
+
+p.code-lab-start:after {
+    content: " \2192";
+    color: #999999;
+}
+
+.code-lab.codelab-category-beginner a {
+    border-left: 4px solid #02e68f;
+}
+
+.code-lab.codelab-category-intermediate a {
+    border-left: 4px solid #fbe752;
+}
+
+.code-lab.codelab-category-advanced a {
+    border-left: 4px solid #fc1452;
+}
+
+.code-lab.codelab-category-beginner h2 {
+    color: #02e68f;
+}
+
+.code-lab.codelab-category-intermediate h2 {
+    color: #fbe752;
+}
+
+.code-lab.codelab-category-advanced h2 {
+    color: #fc1452;
+}
+
+/* Error page */
+.terminal-title {
+    height: 2em;
+    background-color: #303337;
+    width: 100%;
+    margin: 0;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 5px 5px 0 0;
+    line-height: 2em;
+}
+.error {
+    width: 800px;
+    margin: 15em auto;
+    position: relative;
+    border-radius: 5px;
+    font-size: 1.2em;
+}
+
+.error .window-buttons {
+    margin-top: 0.5em;
+    float: right;
+}
+
+.error .window-buttons > a {
+    width: 0.7em;
+    height: 0.7em;
+    border-radius: 1em;
+    float: right;
+    margin-left: 0.2em;
+    margin-right: 0.2em;
+    margin-top: 0.15em;
+}
+
+.red-button {
+    background-color: red;
+}
+
+.green-button {
+    background-color: green;
+}
+
+.yellow-button {
+    background-color: yellow;
+}
+
+.build-stopped {
+    background-color: red;
+    color: white;
+    font-weight: bold;
+}
+.failed-target {
+    color: red;
+    font-weight: bold;
+}
+
+.error pre {
+    margin: 0;
+    border-radius: 0 0 5px 5px;
+    border: 2px solid #303337;
+    border-top: none;
+    white-space: pre-wrap;
+}
+
+.error pre a {
+    color: #29abe2;
+}
+
+.cursor {
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    49% {
+        background-color: transparent;
+    }
+    50% {
+        background-color: white;
+    }
+    100% {
+        background-color: white;
+    }
 }

@@ -4,18 +4,26 @@ def please_repo_e2e_test(
         plz_command: str,
         repo: str,
         deps: list=[],
-        expected_output: dict,
+        expected_output: dict = {},
         labels: list = [],
 ):
-    test_cmd = " && ".join([
+    test_cmd = [
         "mv $DATA_FREE_BSD_CONFIG $DATA_REPO",
         "cd $DATA_REPO",
-        plz_command.replace("plz", "$TMP_DIR/$DATA_PLEASE -o go.testtool:$TMP_DIR/$DATA_TEST_TOOL -o go.filtertool:$TMP_DIR/$DATA_FILTER_TOOL"),
-    ] + [f"$TMP_DIR/$DATA_CONTENT_CHECKER '{o}' '{c}'" for o, c in expected_output.items()])
+        plz_command.replace("plz ", "$TMP_DIR/$DATA_PLEASE -o java.jarcattool:$TMP_DIR/$DATA_JARCAT_TOOL -o go.testtool:$TMP_DIR/$DATA_TEST_TOOL -o go.installtool:$TMP_DIR/$DATA_INSTALL_TOOL -o go.filtertool:$TMP_DIR/$DATA_FILTER_TOOL "),
+    ]
+
+    if expected_output:
+       test_cmd += [f"$TMP_DIR/$DATA_CONTENT_CHECKER '{o}' '{c}'" for o, c in expected_output.items()]
+
+
+    test_cmd = ' && '.join(test_cmd)
 
     data = {
         "TEST_TOOL": ["//tools/please_go_test"],
+        "JARCAT_TOOL": ["//tools/jarcat"],
         "FILTER_TOOL": ["//tools/please_go_filter"],
+        "INSTALL_TOOL": ["//tools/please_go_install"],
         "REPO": [repo],
         "PLEASE":  ["//src:please"],
         "CONTENT_CHECKER": ["//test/build_defs:content_checker"],

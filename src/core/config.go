@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/google/shlex"
-	"github.com/jessevdk/go-flags"
 	"github.com/peterebden/gcfg"
+	"github.com/thought-machine/go-flags"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
@@ -269,6 +269,7 @@ func DefaultConfiguration() *Configuration {
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
 	config.Display.SystemStats = true
 	config.Display.MaxWorkers = 40
+	config.Display.ColourScheme = "dark"
 	config.Remote.NumExecutors = 20 // kind of arbitrary
 	config.Remote.HomeDir = "~"
 	config.Remote.Secure = true
@@ -278,7 +279,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.CgoCCTool = "gcc"
 	config.Go.TestTool = "please_go_test"
 	config.Go.FilterTool = "please_go_filter"
-	config.Python.PipTool = "pip3"
+	config.Go.InstallTool = "please_go_install"
 	config.Python.PexTool = "please_pex"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.TestRunner = "unittest"
@@ -349,20 +350,22 @@ type Configuration struct {
 		DefaultRepo      string      `help:"Location of the default repository; this is used if plz is invoked when not inside a repo, it changes to that directory then does its thing."`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Parse struct {
-		ExperimentalDir  []string `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
-		BuildFileName    []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+." var:"BUILD_FILE_NAMES"`
-		BlacklistDirs    []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
-		PreloadBuildDefs []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths." example:"build_defs/go_bindata.build_defs"`
-		BuildDefsDir     []string `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
+		ExperimentalDir    []string `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
+		BuildFileName      []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+." var:"BUILD_FILE_NAMES"`
+		BlacklistDirs      []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
+		PreloadBuildDefs   []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths. Use PreloadSubincludes instead." example:"build_defs/go_bindata.build_defs"`
+		PreloadSubincludes []string `help:"Subinclude targets to preload by the parser before loading any BUILD files.\nSubincludes can be slow so it's recommended to use PreloadBuildDefs where possible." example:"///pleasings//python:requirements"`
+		BuildDefsDir       []string `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
 		// TODO(jpoole): Remove this in the v16 release
 		BuiltinPleasings bool `help:"Adds github.com/thought-machine/pleasings as a default subrepo named pleasings. This feature is deprecated and will be removed in the v16 release."`
 		NumThreads       int  `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
 		GitFunctions     bool `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
 	} `help:"The [parse] section in the config contains settings specific to parsing files."`
 	Display struct {
-		UpdateTitle bool `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
-		SystemStats bool `help:"Whether or not to show basic system resource usage in the interactive display. Has no effect without that configured."`
-		MaxWorkers  int  `help:"Maximum number of worker rows to display at any one time."`
+		UpdateTitle  bool   `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
+		SystemStats  bool   `help:"Whether or not to show basic system resource usage in the interactive display. Has no effect without that configured."`
+		MaxWorkers   int    `help:"Maximum number of worker rows to display at any one time."`
+		ColourScheme string `help:"Shell colour scheme mode, dark or light. Defaults to dark"`
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
 	Colours map[string]string `help:"Colour code overrides in interactive output. These correspond to requirements on each target."`
 	Build   struct {
@@ -418,6 +421,7 @@ type Configuration struct {
 		Zstd          bool         `help:"Whether to use zstd compression for communication."`
 		VerifyOutputs bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
 		HomeDir       string       `help:"The home directory on the build machine."`
+		Shell         string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
 		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
@@ -438,6 +442,7 @@ type Configuration struct {
 		ImportPath       string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
 		CgoCCTool        string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`
 		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
+		InstallTool      string `help:"Sets the location of the please_go_install tool that is used to install go modules." var:"GO_INSTALL_TOOL"`
 		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
 		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
 	} `help:"Please has built-in support for compiling Go, and of course is written in Go itself.\nSee the config subfields or the Go rules themselves for more information.\n\nNote that Please is a bit more flexible than Go about directory layout - for example, it is possible to have multiple packages in a directory, but it's not a good idea to push this too far since Go's directory layout is inextricably linked with its import paths."`
@@ -520,7 +525,9 @@ type Configuration struct {
 
 	FeatureFlags struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
+		MavenJar                      bool `help:"Makes maven_jar() download sources with maven compatible jar names, and moves the hashes onto the remote file rule." var:"FF_MAVEN_JAR"`
 		RemovePleasings               bool `help:"Stops please adding the pleasings repo by default. Target release vesrion 16." var:"FF_PLEASINGS"`
+		PleaseGoInstall               bool `help:"Uses please_go_install and import configs instead of 'go install'. This is a WIP but should solve a number of issues with go install." var:"FF_PLEASE_GO_INSTALL"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 }
 
@@ -558,7 +565,9 @@ func (config *Configuration) Hash() []byte {
 		h.Write([]byte(l))
 	}
 	for _, env := range config.getBuildEnv(false, false) {
-		h.Write([]byte(env))
+		if !strings.HasPrefix(env, "SECRET") {
+			h.Write([]byte(env))
+		}
 	}
 	return h.Sum(nil)
 }

@@ -11,10 +11,12 @@
 package build
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/thought-machine/please/src/core"
@@ -42,7 +44,25 @@ type filegroupBuilder struct {
 
 var theFilegroupBuilder *filegroupBuilder
 
-// Build builds a single filegroup file.
+func isSameFileContent(state *core.BuildState, from, to string) (bool, error) {
+	if !fs.PathExists(to) {
+		return false, nil
+	}
+	if from == to || fs.IsSameFile(from, to) {
+		// from and to are the same path (which handles all dirs cases) or the same inode (hardlinks to the same file)
+		return true, nil
+	}
+
+	h1, err := state.PathHasher.Hash(from, false, true)
+	if err != nil {
+		return false, err
+	}
+	h2, err := state.PathHasher.Hash(to, false, true)
+	return bytes.Equal(h1, h2), err
+}
+
+// Build builds a single filegroup file. Returns whether any files are changed or should be if there hadn't been an
+// error.
 func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.BuildTarget, from, to string) (bool, error) {
 	// Verify that the source actually exists. It is otherwise possible to get through here
 	// without in certain circumstances (basically if another filegroup outputs the same file
@@ -55,9 +75,10 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 	if changed, present := builder.built[to]; present {
 		return changed, nil // File's already been built.
 	}
-	if fs.IsSameFile(from, to) {
+	if same, err := isSameFileContent(state, from, to); err != nil {
+		return false, err
+	} else if same {
 		// File exists already and is the same file. Nothing to do.
-		// TODO(peterebden): This should also have a recursive case for when it's a directory...
 		builder.built[to] = false
 		state.PathHasher.MoveHash(from, to, true)
 		return false, nil
@@ -67,8 +88,12 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 		return true, err
 	} else if err := fs.EnsureDir(to); err != nil {
 		return true, err
-	} else if err := fs.RecursiveLink(from, to, target.OutMode()); err != nil {
-		return true, err
+	} else {
+		// Copy source files when they're binary to avoid nuking their permissions.
+		isSourceFile := !strings.HasPrefix(from, "plz-out/")
+		if err := fs.RecursiveCopyOrLinkFile(from, to, target.OutMode(), !(target.IsBinary && isSourceFile), true); err != nil {
+			return true, err
+		}
 	}
 	builder.built[to] = true
 	state.PathHasher.MoveHash(from, to, true)

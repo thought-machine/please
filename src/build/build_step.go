@@ -942,7 +942,7 @@ type linkFunc func(string, string) error
 
 func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix string, f linkFunc) {
 	if labels := target.PrefixedLabels(prefix); len(labels) > 0 {
-		env := core.BuildEnvironment(state, target, path.Join(core.RepoRoot, target.TmpDir()))
+		env := core.TargetEnvironment(state, target)
 		for _, dest := range labels {
 			destDir := path.Join(core.RepoRoot, os.Expand(dest, env.ReplaceEnvironment))
 			srcDir := path.Join(core.RepoRoot, target.OutDir())

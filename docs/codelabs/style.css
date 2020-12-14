@@ -1,0 +1,104 @@
+/* TODO(jpoole): write our own template rather than trying to do this... */
+google-codelab div#main {
+    color: #999999;
+    background: #202328;
+}
+
+#main {
+    font-family: "EssentialPragmataPro", monospace !important;
+}
+
+google-codelab-step div.instructions {
+    color: #999999;
+    background: #202328 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: 1200px !important;
+}
+
+#fabs {
+    margin-left: 0 !important;
+    max-width: 100% !important;
+}
+
+google-codelab #controls {
+    background-color: #1c1e23;
+    border-top: 4px solid #1c9465 !important;
+    border-bottom: 32px solid #202328 !important;
+    padding: 1em !important;
+    max-width: 1200px !important;
+    margin-left: auto;
+    margin-right: auto;
+    bottom: 0;
+
+}
+
+.instructions h1, .instructions h2, .instructions h3 {
+    color: #02e68f !important;
+    text-indent: -30px;
+}
+
+.instructions {
+    padding-left: 30px;
+}
+
+h2 code {
+    margin-left: 30px;
+}
+
+#drawer {
+    background: #202328 !important;
+}
+
+google-codelab #drawer ol li[completed] .step:before {
+    background-color: #1c9465 !important;
+}
+
+google-codelab #drawer ol li a {
+    background: #1c1e23 !important;
+    color: white !important;
+    border-radius: 0px !important;
+    border: 0px !important;
+    border-left: 4px solid !important;
+    border-color: #1c9465 !important;
+    box-shadow: none !important;
+}
+
+#codelab-title {
+    background: #1c1e23 !important;
+    color: white !important;
+    box-shadow: none !important;
+}
+
+#arrow-back {
+    width: auto !important;
+    height: auto !important;
+    margin-right: 1em;
+}
+
+a {
+    color: #29abe2 !important;
+}
+
+#next-step, #previous-step, #done {
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 100%;
+    font-weight: normal;
+    font-family: "EssentialPragmataPro", monospace;
+}
+
+#previous-step:before {
+    content: "\2190  ";
+    color: white;
+}
+
+#next-step:after, #done:after {
+    content: " \2192";
+    color: white;
+}
+
+google-codelab-step code {
+    background-color: #28323f !important;
+    color: white !important;
+}

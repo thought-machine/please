@@ -7,32 +7,130 @@
     <h2>BUILD files</h2>
     <p>Please targets are defined in files named BUILD. These are analogous to Makefiles in that they define
       buildable targets for that directory. Fortunately, they do so in a rather nicer syntax.<br/>
-      We refer to a directory containing a BUILD file as a <em>package</em>.
-    </p>
+      We refer to a directory containing a BUILD file as a <em>package</em>.</p>
+
+    <p>For more information on the format of BUILD files, read the <a href="/language.html">language specification</a>
+        here</p>
 
     <h2>Build targets</h2>
     <p>Each BUILD file can contain a number of <em>build targets</em>. These are units of buildable code
       which can be reused by other build targets. An example is probably worth 1000 words at this point:
-      <pre><code class="language-plz">
-      python_library(
-          name = 'my_library',
-          srcs = ['file1.py', 'file2.py'],
-      )
+    <div class="tab-container">
+        <div class="tabs">
+            <div class="tab" data-tab="py">Python</div>
+            <div class="tab" data-tab="java">Java</div>
+            <div class="tab" data-tab="go">Go</div>
+            <div class="tab" data-tab="c">C</div>
+            <div class="tab" data-tab="cpp">C++</div>
+        </div>
+        <div class="tab-contents">
+            <div class="content" data-tab="py">
+                <pre><code class="language-plz">
+        python_library(
+            name = 'my_library',
+            srcs = ['file1.py', 'file2.py'],
+        )
 
-      python_binary(
-          name = 'my_binary',
-          main = 'my_main.py',
-          deps = [':my_library'],
-      )
+        python_binary(
+            name = 'my_binary',
+            main = 'my_main.py',
+            deps = [':my_library'],
+        )
 
-      python_test(
-          name = 'my_library_test',
-          srcs = ['my_library_test.py'],
-          deps = [':my_library'],
-      )
-      </code></pre>
+        python_test(
+            name = 'my_library_test',
+            srcs = ['my_library_test.py'],
+            deps = [':my_library'],
+        )
+                </code></pre>
+            </div>
+            <div class="content" data-tab="java">
+                <pre><code class="language-plz">
+        java_library(
+            name = 'my_library',
+            srcs = ['File1.java', 'File2.java'],
+        )
+
+        java_binary(
+            name = 'my_binary',
+            main = 'Main.java',
+            deps = [':my_library'],
+        )
+
+        java_test(
+            name = 'my_library_test',
+            srcs = ['MyLibraryTest.java'],
+            deps = [':my_library'],
+        )
+                </code></pre>
+            </div>
+            <div class="content" data-tab="go">
+                <pre><code class="language-plz">
+        go_library(
+            name = 'my_library',
+            srcs = ['file1.go', 'file2.go'],
+        )
+
+        go_binary(
+            name = 'my_binary',
+            main = 'main.go',
+            deps = [':my_library'],
+        )
+
+        go_test(
+            name = 'my_library_test',
+            srcs = ['my_library_test.go'],
+            deps = [':my_library'],
+        )
+                </code></pre>
+            </div>
+            <div class="content" data-tab="cpp">
+                <pre><code class="language-plz">
+        cc_library(
+            name = 'my_library',
+            srcs = ['file1.cpp', 'file2.cpp'],
+            hdrs = ['file1.hpp'],
+        )
+
+        cc_binary(
+            name = 'my_binary',
+            main = 'main.cpp',
+            deps = [':my_library'],
+        )
+
+        cc_test(
+            name = 'my_library_test',
+            srcs = ['my_library_test.cpp'],
+            deps = [':my_library'],
+        )
+                </code></pre>
+            </div>
+            <div class="content" data-tab="c">
+                <pre><code class="language-plz">
+        c_library(
+            name = 'my_library',
+            srcs = ['file1.c', 'file2.c'],
+            hdrs = ['file1.h'],
+        )
+
+        c_binary(
+            name = 'my_binary',
+            main = 'main.c',
+            deps = [':my_library'],
+        )
+
+        c_test(
+            name = 'my_library_test',
+            srcs = ['my_library_test.c'],
+            deps = [':my_library'],
+        )
+                </code></pre>
+            </div>
+        </div>
+    </div>
+
       This snippet defines three build targets; a build target is simply a thing that can be built
-      by Please and typically appear as a single object in the build file (as the
+      by Please and typically appears as a single object in the build file (as the
       <code>python_library</code>, <code>python_binary</code> and <code>python_test</code> are above).
       <ul>
     <li><code>my_library</code> is simply a collection of <code>file1.py</code> and <code>file2.py</code>.<br/>
@@ -114,7 +212,7 @@
       many people. There is a <a href="language.html">complete description</a> of it
       available if you're curious about more details.</p>
 
-    <h2>What now?</h2>
-
-    <p>Jump in and get started! See the <a href="lexicon.html">please lexicon</a> if you want to see the set of built-in
-      build rules for other languages, or other topics depending on what you need to do.</p>
+    <div class="section-guide">
+        <div class="prev-section"><a href="/codelabs.html">Codelabs</a></div>
+        <div class="next-section"><a href="/dependencies.html">Third-party dependencies</a></div>
+    </div>

@@ -1,13 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"hash/adler32"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
+
+	"github.com/peterebden/go-cli-init/v3"
 )
 
 var shapes = []string{
@@ -40,28 +43,28 @@ var rotations = []string{
 }
 
 var pageTitles = map[string]string{
-	"acknowledgements.html": "Acknowledgements",
-	"basics.html":           "Please basics",
-	"build_rules.html":      "Writing additional build rules",
-	"cache.html":            "Please caching system",
-	"commands.html":         "Please commands",
-	"config.html":           "Please config file reference",
-	"cross_compiling.html":  "Cross-compiling",
-	"dependencies.html":     "Third-party dependencies",
-	"error.html":            "plz op...",
-	"faq.html":              "Please FAQ",
-	"index.html":            "Please",
-	"language.html":         "The Please BUILD language",
-	"lexicon.html":          "Please Lexicon",
-	"pleasings.html":        "Extra rules (aka. Pleasings)",
-	"post_build.html":       "Pre- and post-build functions",
-	"remote_builds.html":    "Remote build execution",
-	"require_provide.html":  "Require & Provide",
-	"quickstart.html":       "Please quickstart",
-	"reference.html":        "Reference documentation",
-	"tests.html":            "Testing with Please",
-	"verification.html":     "Hash verification",
-	"workers.html":          "Persistent worker processes",
+	"acknowledgements.html":   "Acknowledgements",
+	"basics.html":             "Please basics",
+	"build_rules.html":        "Writing additional build rules",
+	"cache.html":              "Please caching system",
+	"commands.html":           "Please commands",
+	"config.html":             "Please config file reference",
+	"codelabs.html":           "Codelabs",
+	"cross_compiling.html":    "Cross-compiling",
+	"dependencies.html":       "Third-party dependencies",
+	"quickstart_dropoff.html": "What's next?",
+	"error.html":              "plz op...",
+	"faq.html":                "Please FAQ",
+	"index.html":              "Please",
+	"language.html":           "The Please BUILD language",
+	"lexicon.html":            "Please Lexicon",
+	"pleasings.html":          "Extra rules (aka. Pleasings)",
+	"post_build.html":         "Pre- and post-build functions",
+	"remote_builds.html":      "Remote build execution",
+	"require_provide.html":    "Require & Provide",
+	"quickstart.html":         "Please quickstart",
+	"tests.html":              "Testing with Please",
+	"workers.html":            "Persistent worker processes",
 }
 
 func mustRead(filename string) string {
@@ -95,9 +98,20 @@ func mustHighlight(contents string) string {
 	})
 }
 
+var opts struct {
+	In       string `long:"in" description:"The file to template"`
+	Filename string `short:"f" long:"file" description:"The final file name relative to the web root" default:""`
+	Template string `short:"t" long:"template" description:"The golang template to use"`
+}
+
 func main() {
-	filename := os.Args[2]
-	basename := path.Base(filename)
+	cli.ParseFlagsOrDie("Docs template", &opts)
+
+	if opts.Filename == "" {
+		opts.Filename = strings.TrimPrefix(opts.In, "docs/")
+	}
+
+	basename := strings.TrimPrefix(opts.Filename, "docs/")
 	basenameIndex := int(adler32.Checksum([]byte(basename)))
 	modulo := func(s []string, i int) string { return s[(basenameIndex+i)%len(s)] }
 	random := func(x, min, max int) int { return (x*basenameIndex+min)%(max-min) + min }
@@ -123,25 +137,32 @@ func main() {
 			return false
 		},
 	}
-	title, present := pageTitles[basename]
-	if !present {
-		panic("missing title for " + basename)
+	var title string
+	if filepath.Dir(opts.Filename) == "milestones" {
+		title = fmt.Sprintf("Please v%v", strings.TrimSuffix(filepath.Base(basename), ".html"))
+	} else {
+		t, present := pageTitles[opts.Filename]
+		if !present {
+			panic("missing title for " + opts.Filename)
+		}
+		title = t
 	}
+
 	data := struct {
 		Title, Header, Contents, Filename string
 		SideImages                        []int
 	}{
 		Title:    title,
-		Header:   mustRead(os.Args[1]),
-		Contents: mustHighlight(mustRead(filename)),
-		Filename: basename,
+		Header:   mustRead(opts.Template),
+		Contents: mustHighlight(mustRead(opts.In)),
+		Filename: opts.Filename,
 	}
 	for i := 0; i <= strings.Count(data.Contents, "\n")/150; i++ {
 		// Awkwardly this seems to have to be a slice to range over in the template.
 		data.SideImages = append(data.SideImages, i+1)
 	}
 
-	tmpl := template.Must(template.New("tmpl").Funcs(funcs).Parse(mustRead(os.Args[1])))
+	tmpl := template.Must(template.New("tmpl").Funcs(funcs).Parse(mustRead(opts.Template)))
 	err := tmpl.Execute(os.Stdout, data)
 	if err != nil {
 		panic(err)

@@ -1,0 +1,26 @@
+def codelab(name : str, codelab_md: str):
+    return genrule(
+        name = name,
+        srcs = [codelab_md],
+        deps = ["//docs/build_defs:codelab_template"],
+        cmd = "$TOOLS export -f $(location //docs/build_defs:codelab_template) $SRC",
+        outs = [f"{name}"],
+        tools = ["//third_party/go:claat"],
+        visibility = ["//docs/..."],
+    )
+
+def html_template(name : str, src : str, output : str = ''):
+    cmd = '"$TOOL" --template "$SRCS_TEMPLATE" --in "$SRCS_IN"'
+    if output:
+        cmd = f'{cmd} -f {output}'
+    return genrule(
+        name = name,
+        srcs = {
+            "template": ["//docs:template_html"],
+            "in": [src],
+        },
+        outs = [output if output else src],
+        cmd = f'{cmd} > "$OUT"',
+        tools = ["//docs:templater"],
+        visibility = ["//docs/..."],
+    )

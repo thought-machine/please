@@ -47,9 +47,9 @@ go_get(
 
 go_get(
     name = "go-flags",
-    get = "github.com/jessevdk/go-flags",
-    patch = "flags_subcommand.patch",
-    revision = "v1.4.0",
+    get = "github.com/thought-machine/go-flags",
+    revision = "v1.5.0",
+    deps = [":xsys"],
 )
 
 go_get(
@@ -426,8 +426,9 @@ go_get(
 
 go_get(
     name = "cli-init",
-    get = "github.com/peterebden/go-cli-init",
-    revision = "v1.3.1",
+    get = "github.com/peterebden/go-cli-init/v3",
+    module_major_version = "v3",
+    revision = "v3.0.0",
     deps = [
         ":go-flags",
         ":humanize",
@@ -648,8 +649,8 @@ go_get(
     get = "github.com/mostynb/go-grpc-compression/zstd",
     revision = "v1.1.2",
     deps = [
-        ":zstd",
         ":grpc",
+        ":zstd",
     ],
 )
 
@@ -669,4 +670,47 @@ go_get(
     name = "cmap",
     get = "github.com/OneOfOne/cmap/...",
     revision = "ccaef7657ab896465978ddf580830288b61f9f6e",
+)
+
+go_get(
+    name = "goldmark",
+    get = "github.com/yuin/goldmark/...",
+    revision = "v1.2.1",
+)
+
+go_get(
+    name = "csslex",
+    get = "github.com/x1ddos/csslex/...",
+    revision = "7894d8ab8bfebee68b6c32bacec8f5189b45c67f",
+)
+
+go_get(
+    name = "blackfriday",
+    get = "github.com/russross/blackfriday/...",
+    revision = "v2.0.1",
+    deps = [":sanitized_anchor_name"],
+)
+
+go_get(
+    name = "sanitized_anchor_name",
+    get = "github.com/shurcooL/sanitized_anchor_name",
+)
+
+go_get(
+    name = "claat",
+    binary = True,
+    get = "github.com/googlecodelabs/tools/claat",
+    revision = "v2.2.3",
+    deps = [
+        ":blackfriday",
+        ":csslex",
+        ":goldmark",
+        ":oauth2",
+    ],
+)
+
+go_get(
+    name = "zstd2",
+    get = "github.com/DataDog/zstd",
+    revision = "v1.4.5+patch1",
 )

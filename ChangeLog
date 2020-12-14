@@ -1,3 +1,111 @@
+Version 15.10.0
+--------------
+
+    * Added go_module() rule that handles vanity imports and
+      module major versions better than go_get() #1396
+    * Updated pip_library() to work with pip v20.3.x+ #1421
+    * Fix issue with duplicate outs on go_get() causing missing
+      outputs #1437
+
+
+Version 15.9.2
+--------------
+
+    * Various small fixes and optimisations to remote execution
+      #1401 #1397 #1402 #1403
+    * Address edge case for filegroups so they now check if they're
+      overriding another package #1404
+    * Added option for a light colour scheme that works better for
+      terminals with a light background #1405
+    * Fixed non-deterministic hashes for outputs in go rules #1410
+
+
+Version 15.9.1
+--------------
+
+    * Print milestone message to stderr instead of out
+
+
+Version 15.9.0
+--------------
+
+    * Transitive dependencies of subinclude() calls are no longer downloaded
+      if remote execution is enabled.
+    * Secrets in the [BuildEnv] section no longer contribute to the config hash
+      #1387
+    * Codelabs are now live at https://please.build/codelabs.html
+    * Made $DATA and $TOOLS variables available at runtime when using
+      `plz run --env` #1384
+    * `protoc_binary()` now translates go style os and arch values to the
+       correct format for their releases #1394
+
+
+Version 15.8.2
+--------------
+
+    * Stop sh_test() modifying the permissions of it's inputs #1375
+    * Print a summary of log messages after a build #1377
+    * Named tools, test_tools and data are now formatted as a dict
+      instead of a list for `plz query print` #1379
+    * Binary filegroups no longer modify their sources permissions
+      #1376
+
+Version 15.8.1
+--------------
+
+    * Revert to old behavior for go_get() when both `get` and `install`
+      are lists #1365
+
+
+Version 15.8.0
+--------------
+
+    * Allow go_get() to specify installs per module #1335
+    * Allow format strings and raw strings to be implicitly
+      concatenated in the build language #1344
+    * Added is_platform() rule which can check the current platform
+      matches the specified cpu and operating system.
+    * Made go_get() specific about its outputs based on the installed
+      packages. This allows multiple go_get() rules install different
+      packages from the same module. This can help resolve cyclic
+      dependencies. #1341 #1352
+    * pip_library() now uses python -m pip instead of pip on the path
+      to avoid problems where pip and python are different versions.
+      #1346
+    * Added exported_deps to genrule() and gentest() which can be used
+      to re-export dependencies to those that depend on these rules.
+      #1345
+    * Made maven_jar() download its sources in a way that is compatible
+      with tooling. This is gated behind the MavenJar feature flag and
+      is due to be released in v16.
+    * Fixed an issue where tools were being copied into build rules
+      when they used entry points #1349
+    * Made go_toolchain() install the standard libraries of the target
+      platform when cross compiling #1350
+
+
+Version 15.7.1
+--------------
+
+    * Subincludes now set the config values based on the --arch flag
+      correctly #1324
+
+
+Version 15.7.0
+--------------
+
+    * Glob will now include hidden files when Bazel compat is enabled #1305
+    * Fix some niggles around select() and config_setting() #1324
+    * Improved test output to include real and total time #1309
+    * Fix to cgo_library() to set its import path correctly #1310
+    * Adding multiplication and division to the BUILD language #1314
+    * go_get() now tags download rules based on the whole module name
+      rather than just the github group #1327
+    * go_get() now supports multiple patches #1328 #1333
+    * Fix nil pointer when failing to parse test output for remote execution
+      #1330
+
+
 Version 15.6.0
 --------------
 

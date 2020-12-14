@@ -1,9 +1,8 @@
-// Package parse implements parsing of the BUILD files via an embedded Python interpreter.
+// Package parse implements handling parse tasks for BUILD files.
 //
-// The actual work here is done by an embedded PyPy instance. Various rules are built in to
-// the binary itself using go-bindata to embed the .py files; these are always available to
-// all programs which is rather nice, but it does mean that must be run before 'go run' etc
-// will work as expected.
+// The actual work to interpret them is done by the //src/parse/asp package; this
+// package handles requests for parsing build targets and triggering them to
+// start building when ready.
 package parse
 
 import (
@@ -78,11 +77,18 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	}
 	// We don't have the definition of it at all. Need to parse that first.
 	sl := label.SubrepoLabel()
-	if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, "", label); err != nil {
-		return nil, err
-	} else if !handled {
-		if _, err := parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label); err != nil {
+
+	// Local subincludes are when we subinclude from a subrepo defined in the current package
+	localSubinclude := sl.PackageName == dependent.PackageName
+
+	// If we're including from the same package, we don't want to parse the subrepo package
+	if !localSubinclude {
+		if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, "", label); err != nil {
 			return nil, err
+		} else if !handled {
+			if _, err := parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
@@ -90,11 +96,15 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	} else if subrepo := checkArchSubrepo(state, label.Subrepo); subrepo != nil {
 		return subrepo, nil
 	}
-	// Fix for #577; fallback like above, it might be defined within the subrepo.
-	if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label); handled && err == nil {
-		return state.Graph.Subrepo(label.Subrepo), nil
+	if !localSubinclude {
+		// Fix for #577; fallback like above, it might be defined within the subrepo.
+		if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label); handled && err == nil {
+			return state.Graph.Subrepo(label.Subrepo), nil
+		}
+		return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
 	}
-	return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
+	// For local subincludes, the subrepo has to already be defined at this point in the BUILD file
+	return nil, fmt.Errorf("Subrepo %v is not defined yet. It must appear before it is used by subinclude()", sl)
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.

@@ -730,6 +730,29 @@ func TestBuildTargetOwnBuildOutput(t *testing.T) {
 	})
 }
 
+func TestIsTool(t *testing.T) {
+	target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+
+	noEP := BuildLabel{
+		PackageName: "tools",
+		Name:        "go",
+	}
+
+	withEP := AnnotatedOutputLabel{
+		BuildLabel: BuildLabel{
+			PackageName: "tools",
+			Name:        "java",
+		},
+		Annotation: "javac",
+	}
+
+	target.AddTool(noEP)
+	target.AddTool(withEP)
+
+	assert.True(t, target.IsTool(noEP))
+	assert.True(t, target.IsTool(*withEP.Label()))
+}
+
 func makeTarget1(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {

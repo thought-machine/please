@@ -60,7 +60,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	}
 	word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
 	if !updateCommand {
-		log.Warning("%s to Please version %s (currently %s)", word, config.Please.Version.VersionString(), core.PleaseVersion)
+		log.Warning("%s Please from version %s to %s", word, core.PleaseVersion, config.Please.Version.VersionString())
 	}
 
 	// Must lock here so that the update process doesn't race when running two instances
@@ -119,17 +119,17 @@ func printMilestoneMessage(pleaseVersion string) {
 		// Left pad the string so it's center aligned
 		paddedString := fmt.Sprintf("%"+fmt.Sprint(padLen)+"s", line)
 
-		fmt.Printf(fmtString, paddedString)
+		fmt.Fprintf(os.Stderr, fmtString, paddedString)
 	}
 
 	if resp.StatusCode == http.StatusOK {
-		fmt.Println(border)
+		fmt.Fprintf(os.Stderr, "%s\n", border)
 		printLn("")
 		printLn("You've successfully updated to Please v%v", pleaseVersion)
 		printLn("This release marks an exciting milestone in Please's development!")
 		printLn("Read all about it here: %v#cli", milestoneURL)
 		printLn("")
-		fmt.Println(border)
+		fmt.Fprintf(os.Stderr, "%s\n", border)
 		return
 	}
 

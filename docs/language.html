@@ -19,7 +19,8 @@
       in the context of the currently executing file - for example, if it has defined a function,
       that function is now available in your BUILD file at the top level.</p>
 
-    <p>See <a href="lexicon.html">here</a> for a full description of available builtin rules.</p>
+    <p>See the <a href="/lexicon.html">built in rules &amp; languages</a> for a list of built in rules,
+        as well as any <a href="/pleasings.html">extra rules</a> from the pleasings repo.</p>
 
     <h2>Types</h2>
 
@@ -45,125 +46,9 @@
 
     <h2>Functions</h2>
 
-    <p>The following functions are available as builtins:
-      <ul>
-	    <li><code><span class="fn-name">len</span><span class="fn-p">(</span><span class="fn-arg">x</span><span class="fn-p">)</span></code>
-          - returns the length of <code>x</code></li>
-	    <li><code><span class="fn-name">enumerate</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
-          - returns a list of pairs of the index and object for each item in <code>seq</code></li>
-	    <li><code><span class="fn-name">zip</span><span class="fn-p">(</span><span class="fn-arg">x</span>, <span class="fn-arg">y</span>, <span class="fn-arg">...</span><span class="fn-p">)</span></code>
-          - returns a list in which each element has one item from each argument</li>
-	    <li><code><span class="fn-name">isinstance</span><span class="fn-p">(</span><span class="fn-arg">x</span>, <span class="fn-arg">type</span><span class="fn-p">)</span></code>
-          - returns True if <code>x</code> is of the given type.</li>
-	    <li><code><span class="fn-name">range</span><span class="fn-p">(</span>[<span class="fn-arg">start</span>, ]<span class="fn-arg">stop</span>[, <span class="fn-arg">step</span>]</span><span class="fn-p">)</span></code>
-          - returns a list of integers up to <code>stop</code> (or from <code>start</code> to <code>stop</code>)</li>
-	    <li><code><span class="fn-name">any</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
-          - returns true if any of the items in <code>seq</code> are considered true.</li>
-	    <li><code><span class="fn-name">all</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
-          - returns true if all of the items in <code>seq</code> are considered true.</li>
-	    <li><code><span class="fn-name">sorted</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
-          - returns a copy of the given list with the contents sorted.</li>
-	    <li><code><span class="fn-name">package_name</span><span class="fn-p">(</span><span class="fn-arg"></span><span class="fn-p">)</span></code>
-          - returns the package being currently parsed.</li>
-        <li><code><span class="fn-name">subrepo_name</span><span class="fn-p">(</span><span class="fn-arg"></span><span class="fn-p">)</span></code>
-            - returns the subrepo of the package being currently parsed or the empty string if this is not a subrepo.</li>
-	    <li><code><span class="fn-name">join_path</span><span class="fn-p">(</span><span class="fn-arg">x</span>, <span class="fn-arg">...</span><span class="fn-p">)</span></code>
-          - joins the given path elements using the OS separator. It will intelligently
-      handle repeated or missing separators.</li>
-	    <li><code><span class="fn-name">split_path</span><span class="fn-p">(</span><span class="fn-arg">path</span><span class="fn-p">)</span></code>
-          - splits the given path into the directory and filename.</li>
-	    <li><code><span class="fn-name">splitext</span><span class="fn-p">(</span><span class="fn-arg">filename</span><span class="fn-p">)</span></code>
-          - splits the given filename into base name and extension at the final dot.</li>
-	    <li><code><span class="fn-name">basename</span><span class="fn-p">(</span><span class="fn-arg">path</span><span class="fn-p">)</span></code>
-          - returns the basename of a file</li>
-	    <li><code><span class="fn-name">dirname</span><span class="fn-p">(</span><span class="fn-arg">path</span><span class="fn-p">)</span></code>
-          - returns the directory name of a file.</li>
-	    <li><code><span class="fn-name">breakpoint</span><span class="fn-p">()</span></code>
-          - breaks into an interactive debugger allowing inspection of the current scope.
-          It would be a good idea to run Please with the <code>-p</code> / <code>--plain_output</code>
-          flag if intending to use this.</li>
-      </ul>
-    </p>
-
-    <p>The following are available as member functions of strings:
-      <ul>
-	    <li><code><span class="fn-name">join</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
-          - joins the elements of <code>seq</code> together with this string as a separator.</li>
-	    <li><code><span class="fn-name">split</span><span class="fn-p">(</span><span class="fn-arg">sep</span><span class="fn-p">)</span></code>
-          - splits this string at each occurrence of the given separator.</li>
-	    <li><code><span class="fn-name">replace</span><span class="fn-p">(</span><span class="fn-arg">old</span>, <span class="fn-arg">new</span><span class="fn-p">)</span></code>
-          - returns a copy of this string with all instances of <code>old</code> replaced with <code>new</code>.</li>
-	    <li><code><span class="fn-name">partition</span><span class="fn-p">(</span><span class="fn-arg">sep</span><span class="fn-p">)</span></code>
-          - breaks this string around the first occurrence of <code>sep</code> and returns a 3-tuple of (before, sep, after).</li>
-	    <li><code><span class="fn-name">rpartition</span><span class="fn-p">(</span><span class="fn-arg">sep</span><span class="fn-p">)</span></code>
-          - breaks this string around the last occurrence of <code>sep</code> and returns a 3-tuple of (before, sep, after).</li>
-	    <li><code><span class="fn-name">startswith</span><span class="fn-p">(</span><span class="fn-arg">prefix</span><span class="fn-p">)</span></code>
-          - returns true if this string begins with <code>prefix</code></li>
-	    <li><code><span class="fn-name">endswith</span><span class="fn-p">(</span><span class="fn-arg">suffix</span><span class="fn-p">)</span></code>
-          - returns true if this string ends with <code>suffix</code></li>
-	    <li><code><span class="fn-name">format</span><span class="fn-p">(</span><span class="fn-arg">arg1=val1</span>, <span class="fn-arg">arg2=val2</span>, <span class="fn-arg">...</span>)</span><span class="fn-p">)</span></code>
-          - Replaces named parameters in the string.</li>
-	    <li><code><span class="fn-name">lstrip</span><span class="fn-p">(</span><span class="fn-arg">cutset</span><span class="fn-p">)</span></code>
-          - strips all characters in <code>cutset</code> from the beginning of this string.</li>
-	    <li><code><span class="fn-name">rstrip</span><span class="fn-p">(</span><span class="fn-arg">cutset</span><span class="fn-p">)</span></code>
-          - strips all characters in <code>cutset</code> from the end of this string.</li>
-	    <li><code><span class="fn-name">strip</span><span class="fn-p">(</span><span class="fn-arg">cutset</span><span class="fn-p">)</span></code>
-          - strips all characters in <code>cutset</code> from the beginning & end of this string.</li>
-        <li><code><span class="fn-name">removeprefix</span><span class="fn-p">(</span><span class="fn-arg">prefix</span><span class="fn-p">)</span></code>
-          - strips the exact string <code>prefix</code> from the beginning of this string.</li>
-        <li><code><span class="fn-name">removesuffix</span><span class="fn-p">(</span><span class="fn-arg">suffix</span><span class="fn-p">)</span></code>
-          - strips the exact string <code>suffix</code> from the end of this string.</li>
-	    <li><code><span class="fn-name">find</span><span class="fn-p">(</span><span class="fn-arg">needle</span><span class="fn-p">)</span></code>
-          - returns the index of the first occurrence of <code>needle</code> in this string.</li>
-	    <li><code><span class="fn-name">rfind</span><span class="fn-p">(</span><span class="fn-arg">needle</span><span class="fn-p">)</span></code>
-          - returns the index of the last occurrence of <code>needle</code> in this string.</li>
-	    <li><code><span class="fn-name">count</span><span class="fn-p">(</span><span class="fn-arg">needle</span><span class="fn-p">)</span></code>
-          - returns the number of times <code>needle</code> occurs in this string.</li>
-	    <li><code><span class="fn-name">upper</span><span class="fn-p">()</span></code>
-          - returns a copy of this string converted to uppercase.</li>
-	    <li><code><span class="fn-name">lower</span><span class="fn-p">()</span></code>
-          - returns a copy of this string converted to lowercase.</li>
-      </ul>
-    </p>
-
-    <p>The following are available as member functions of dictionaries:
-      <ul>
-	    <li><code><span class="fn-name">get</span><span class="fn-p">(</span><span class="fn-arg">key</span>[, </span><span class="fn-arg">default</span>]<span class="fn-p">)</span></code>
-          - returns the item with the given key, or the default (<code>None</code> if that is not given).</li>
-	    <li><code><span class="fn-name">setdefault</span><span class="fn-p">(</span><span class="fn-arg">key</span>[, </span><span class="fn-arg">default</span>]<span class="fn-p">)</span></code>
-          - If the given key is in the dict, return its value, otherwise insert it with the given value (<code>None</code> if that is not given).</li>
-	    <li><code><span class="fn-name">keys</span><span class="fn-p">()</span></code>
-          - returns an iterable sequence of the keys of this dictionary, in a consistent order.</li>
-	    <li><code><span class="fn-name">values</span><span class="fn-p">()</span></code>
-          - returns an iterable sequence of the values of this dictionary, in a consistent order.</li>
-	    <li><code><span class="fn-name">items</span><span class="fn-p">()</span></code>
-          - returns an iterable sequence of pairs of the keys and values of this dictionary, in a consistent order.</li>
-	    <li><code><span class="fn-name">copy</span><span class="fn-p">()</span></code>
-          - <span class="red">deprecated</span>, use a comprehension if needed. Returns a shallow copy of this dictionary.</li>
-      </ul>
-    </p>
-
-    <p>Finally, messages can be logged to Please's usual logging mechanism. These
-      may or may not be displayed depending on the <code>-v</code> flag; by default only
-      <code>warning</code> and above are visible.
-      <ul>
-	    <li><code><span class="fn-name">log.debug</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-        - the lowest level of messages, output at this level is very verbose.</li>
-	    <li><code><span class="fn-name">log.info</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-        - Informational messages, typically this is the highest level per-target information is logged at.</li>
-	    <li><code><span class="fn-name">log.notice</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-        - Messages of general interest during the build; it is rare for this to be appropriate from a BUILD file.</li>
-	    <li><code><span class="fn-name">log.warning</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-        - A warning message that something seems wrong, but it may be recoverable.</li>
-	    <li><code><span class="fn-name">log.error</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-          - A message indicating that something has gone wrong and it will not be recoverable.
-          This is usually followed shortly by some kind of failure.</li>
-	    <li><code><span class="fn-name">log.fatal</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-          - Indicates that something has gone catastrophically wrong, and causes the process to exit immediately and unsuccessfully.
-          Usually you are better off using <code>assert</code> or <code>raise</code> to
-          indicate failure, since plz can handle those and annotate with additional output.</li>
-      </ul>
-    </p>
+    The build language has a rich set of builtin functions that largely resemble those provided by python. In
+    addition to these, there are some additional built in functions specific to the Please domain. See the
+    <a href="/lexicon.html#python-builtins">built in functions</a> documentation for more information.
 
     <h2>Style</h2>
 

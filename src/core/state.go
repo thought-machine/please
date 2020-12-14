@@ -659,7 +659,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 			// Ensure we have downloaded its outputs if needed.
 			// This is a bit fiddly but works around the case where we already built it but
 			// didn't download, and now have found we need to.
-			state.ensureDownloaded(t)
+			state.mustEnsureDownloaded(t)
 			return t
 		}
 	}
@@ -677,7 +677,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 		// Something's already registered for this, get on the train
 		<-ch
 		t := state.Graph.Target(l)
-		state.ensureDownloaded(t)
+		state.mustEnsureDownloaded(t)
 		return t
 	}
 	if err := state.QueueTarget(l, dependent, false, true); err != nil {
@@ -717,8 +717,7 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 // ShouldDownload returns true if the given target should be downloaded during remote execution.
 func (state *BuildState) ShouldDownload(target *BuildTarget) bool {
 	// Need to download the target if it was originally requested (and the user didn't pass --nodownload).
-	// Also anything needed for subinclude needs to be local.
-	return (state.IsOriginalTarget(target) && state.DownloadOutputs && !state.NeedTests) || target.NeededForSubinclude
+	return state.IsOriginalTarget(target) && state.DownloadOutputs && !state.NeedTests
 }
 
 // ShouldRebuild returns true if we should force a rebuild of this target (i.e. the user
@@ -732,19 +731,30 @@ func (state *BuildState) WillRunRemotely(target *BuildTarget) bool {
 	return state.RemoteClient != nil && state.Config.NumRemoteExecutors() > 0 && !target.Local
 }
 
-// ensureDownloaded ensures that a target has been downloaded when built remotely.
+// EnsureDownloaded ensures that a target has been downloaded when built remotely.
 // If remote execution is not enabled it has no effect.
-func (state *BuildState) ensureDownloaded(target *BuildTarget) {
+func (state *BuildState) EnsureDownloaded(target *BuildTarget) error {
 	if state.RemoteClient != nil {
 		if err := state.RemoteClient.Download(target); err != nil {
-			// Panicking is a bit crap but the places we are called from do not return an error.
-			panic(fmt.Sprintf("Failed to download outputs for %s: %s", target, err))
+			return fmt.Errorf("Failed to download outputs for %s: %s", target, err)
 		}
+	}
+	return nil
+}
+
+// mustEnsureDownloaded is like EnsureDownloaded but panics on error.
+func (state *BuildState) mustEnsureDownloaded(target *BuildTarget) {
+	if err := state.EnsureDownloaded(target); err != nil {
+		panic(err)
 	}
 }
 
 // QueueTarget adds a single target to the build queue.
 func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceBuild bool) error {
+	return state.queueTarget(label, dependent, rescan, forceBuild, forceBuild)
+}
+
+func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceBuild, neededForSubinclude bool) error {
 	target := state.Graph.Target(label)
 	if target == nil {
 		// If the package isn't loaded yet, we need to queue a parse for it.
@@ -758,11 +768,11 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, rescan, forceB
 			return fmt.Errorf("Target %s (referenced by %s) doesn't exist", label, dependent)
 		}
 	}
-	return state.queueTarget(target, dependent, rescan, forceBuild)
+	return state.queueResolvedTarget(target, dependent, rescan, forceBuild, neededForSubinclude)
 }
 
-// queueTarget is like QueueTarget but once we have a resolved target.
-func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, rescan, forceBuild bool) error {
+// queueResolvedTarget is like queueTarget but once we have a resolved target.
+func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent BuildLabel, rescan, forceBuild, neededForSubinclude bool) error {
 	if target.State() >= Active && !rescan && !forceBuild {
 		return nil // Target is already tagged to be built and likely on the queue.
 	}
@@ -770,7 +780,7 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 	if !target.SyncUpdateState(Inactive, Semiactive) && !rescan && !forceBuild {
 		return nil
 	}
-	target.NeededForSubinclude = target.NeededForSubinclude || forceBuild
+	target.NeededForSubinclude = target.NeededForSubinclude || neededForSubinclude
 	if state.NeedBuild || forceBuild {
 		if target.SyncUpdateState(Semiactive, Active) {
 			if target.IsTest && state.NeedTests {
@@ -785,7 +795,7 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 			}
 			// Actual queuing stuff now happens asynchronously in here.
 			atomic.AddInt64(&state.progress.numPending, 1)
-			go state.queueTargetAsync(target, dependent, rescan, forceBuild)
+			go state.queueTargetAsync(target, dependent, rescan, forceBuild, neededForSubinclude)
 		}
 	} else {
 		for _, dep := range target.DeclaredDependencies() {
@@ -793,14 +803,14 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 			if len(target.Requires) > 0 {
 				if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
 					for _, provided := range depTarget.ProvideFor(target) {
-						if err := state.QueueTarget(provided, target.Label, false, forceBuild); err != nil {
+						if err := state.queueTarget(provided, target.Label, false, forceBuild, neededForSubinclude); err != nil {
 							return err
 						}
 					}
 					continue
 				}
 			}
-			if err := state.QueueTarget(dep, target.Label, false, forceBuild); err != nil {
+			if err := state.queueTarget(dep, target.Label, false, forceBuild, neededForSubinclude); err != nil {
 				return err
 			}
 		}
@@ -809,10 +819,10 @@ func (state *BuildState) queueTarget(target *BuildTarget, dependent BuildLabel, 
 }
 
 // queueTarget enqueues a target's dependencies and the target itself once they are done.
-func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLabel, rescan, forceBuild bool) {
+func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLabel, rescan, forceBuild, forSubinclude bool) {
 	defer state.taskDone(true, false)
 	for _, dep := range target.DeclaredDependencies() {
-		if err := state.QueueTarget(dep, target.Label, rescan, forceBuild); err != nil {
+		if err := state.queueTarget(dep, target.Label, rescan, forceBuild, forSubinclude); err != nil {
 			state.asyncError(dep, err)
 			return
 		}
@@ -826,7 +836,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 	for {
 		deps := target.Dependencies()
 		for _, dep := range deps {
-			if err := state.queueTarget(dep, target.Label, rescan, forceBuild); err != nil {
+			if err := state.queueResolvedTarget(dep, target.Label, rescan, forceBuild, forSubinclude); err != nil {
 				state.asyncError(target.Label, err)
 				return
 			}

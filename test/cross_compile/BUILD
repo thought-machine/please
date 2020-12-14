@@ -63,3 +63,46 @@ plz_e2e_test(
     cmd = "plz test -a linux_x86 //test/cross_compile:location_test",
     labels = ["x86"],
 )
+
+config_setting(
+    name = "linux_x86",
+    values = {
+        "os": "linux",
+        "cpu": "x86",
+    },
+)
+
+genrule(
+    name = "wibble",
+    outs = ["wibble.txt"],
+    cmd = 'echo wibble > "$OUT"',
+)
+
+genrule(
+    name = "wobble",
+    outs = ["wobble.txt"],
+    cmd = 'echo wobble > "$OUT"',
+)
+
+genrule(
+    name = "select",
+    srcs = select({
+        "//test/select:linux_x86": [":wibble"],
+        "default": [":wobble"],
+    }),
+    outs = ["select.txt"],
+    cmd = "cat $SRCS > \"$OUT\"",
+)
+
+sh_test(
+    name = "select_test",
+    src = "select_test.sh",
+    data = [":select"],
+    labels = ["manual"],
+)
+
+plz_e2e_test(
+    name = "select_cross_compile_test",
+    cmd = "plz test -a linux_x86 //test/cross_compile:select_test",
+    labels = ["x86"],
+)
