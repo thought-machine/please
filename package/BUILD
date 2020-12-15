@@ -43,6 +43,14 @@ tarball(
     xzip = True,
 )
 
+tarball(
+  name = "please_tools_tarball",
+  srcs = [":tools"],
+  out = "please_tools_%s.tar.xz" % VERSION,
+  subdir = "please_tools",
+  xzip = True,
+)
+
 genrule(
     name = "please",
     srcs = ["//src:please"],
@@ -66,6 +74,7 @@ filegroup(
     srcs = [
         ":please_tarball",
         ":please_tarball_xz",
+        ":please_tools_tarball",
     ],
     labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
     deps = [
