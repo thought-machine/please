@@ -145,7 +145,7 @@ jobs:
            key: go-freebsd-v1-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Extract plz
-           command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
+           command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.xz
        - run:
            name: Cross-compile
            command: ./please/please build -p --profile ci --arch freebsd_amd64 //package:release_files
