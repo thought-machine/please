@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"text/template"
+	"regexp"
 )
 
 type rules struct {
