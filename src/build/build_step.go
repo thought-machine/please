@@ -563,7 +563,7 @@ func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir core.OutputDi
 			target.AddOutput(f.Name())
 			outs = append(outs, f.Name())
 
-			if err := fs.RecursiveCopy(from, to, target.OutMode()); err != nil {
+			if err := os.Rename(from, to); err != nil {
 				return nil, err
 			}
 		}
@@ -586,13 +586,14 @@ func copyOutDir(target *core.BuildTarget, from string, to string) ([]string, err
 		err := fs.Walk(from, func(name string, isDir bool) error {
 			dest := path.Join(to, name[len(from):])
 			if isDir {
-				return fs.EnsureDir(dest)
+				return os.MkdirAll(dest, fs.DirPermissions)
 			}
 
 			outName := relativeToTmpdir(dest)
 			outs = append(outs, outName)
 			target.AddOutput(outName)
-			return fs.CopyFile(name, dest, target.OutMode())
+
+			return os.Rename(name, dest)
 		})
 		return outs, err
 	}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"text/template"
+	"regexp"
 )
 
 type rules struct {
@@ -27,10 +28,11 @@ func (r *rules) Named(name string) *rule {
 func (r *rules) AddLinks(name, docstring string) string {
 	if strings.Contains(name, "_") { // Don't do it for something generic like "tarball"
 		for k := range r.Functions {
+			var re = regexp.MustCompile("\b("+k+")\b")
 			if name == k {
-				docstring = strings.Replace(docstring, " "+k, " <code>"+k+"</code>", -1)
+				docstring = re.ReplaceAllString(docstring, "<code>$1</code>")
 			} else {
-				docstring = strings.Replace(docstring, " "+k, ` <a href="#`+k+`">`+k+"</a>", -1)
+				docstring = re.ReplaceAllString(docstring, `<a href="#$1">$1</a>`)
 			}
 		}
 	}

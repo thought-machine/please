@@ -1,3 +1,21 @@
+Version 15.11.0
+--------------
+
+    * Added PreloadSubincludes in a similar vein to PreloadBuildDefs
+      which allows the specified target to be subincluded automatically
+      in all packages #1414
+    * Added a new method for installing go modules that avoids a number
+      of issues with using "go build" from within Please. This feature
+      is experimental and can be enabled with the PleaseGoInstall
+      feature flag #1417
+    * Output directories now maintain file permission when moving outputs
+      to plz-out #1441
+    * Fix issues around subincluding from a target defined in the
+      current package #1424
+    * Fix regression in go_get() where it was failing to produce
+      outputs in some circumstances #1437
+
+
 Version 15.10.0
 --------------
 
