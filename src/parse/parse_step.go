@@ -211,9 +211,8 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 			return nil, err
 		}
 	}
-	if state.Config.FeatureFlags.RemovePleasings {
+	if !state.Config.FeatureFlags.RemovePleasings {
 		// TODO(jpoole): delete this code branch in the v16 release
-
 		// If the config setting is on, we "magically" register a default repo called @pleasings.
 		if packageName == "" && subrepo == nil && state.Config.Parse.BuiltinPleasings && pkg.Target("pleasings") == nil {
 			if _, err := state.Parser.(*aspParser).asp.ParseReader(pkg, strings.NewReader(pleasings)); err != nil {

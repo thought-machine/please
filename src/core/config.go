@@ -192,15 +192,17 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		os.Setenv("HTTP_PROXY", config.Build.HTTPProxy.String())
 	}
 
+	// Slightly awkward as we need to load the feature flags to know what the default should be
+	// TODO(jpoole): Move these into DefaultConfiguration() once v16 is released
 	if config.FeatureFlags.PleaseDownloadTools {
-		setDefaultString(&config.Build.PleaseSandboxTool, "//_please:tools|please_sandbox")
-		setDefaultString(&config.Go.TestTool, "//_please:tools|please_go_test")
-		setDefaultString(&config.Go.FilterTool, "//_please:tools|please_go_filter")
-		setDefaultString(&config.Go.InstallTool, "//_please:tools|please_go_install")
-		setDefaultString(&config.Python.PexTool, "//_please:tools|please_pex")
-		setDefaultString(&config.Java.JavacWorker, "//_please:tools|javac_worker")
-		setDefaultString(&config.Java.JarCatTool, "//_please:tools|jarcat")
-		setDefaultString(&config.Java.JUnitRunner, "//_please:tools|junit_runner")
+		setDefaultString(&config.Build.PleaseSandboxTool, "please_sandbox", "//_please:tools|please_sandbox")
+		setDefaultString(&config.Go.TestTool, "please_go_test", "//_please:tools|please_go_test")
+		setDefaultString(&config.Go.FilterTool, "please_go_filter", "//_please:tools|please_go_filter")
+		setDefaultString(&config.Go.InstallTool, "please_go_install", "//_please:tools|please_go_install")
+		setDefaultString(&config.Python.PexTool, "please_pex", "//_please:tools|please_pex")
+		setDefaultString(&config.Java.JavacWorker, "javac_worker", "//_please:tools|javac_worker")
+		setDefaultString(&config.Java.JarCatTool, "jarcat", "//_please:tools|jarcat")
+		setDefaultString(&config.Java.JUnitRunner, "junit_runner.pex", "//_please:tools|junit_runner")
 	}
 
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
@@ -216,9 +218,11 @@ func setDefault(conf *[]string, def ...string) {
 	}
 }
 
-// setDefault sets a slice of strings in the config if the set one is empty.
-func setDefaultString(conf *string, def string) {
-	if *conf == "" {
+// setDefaultString sets the default value on a string. oldDefault contains the strings as set in the default
+// configuration. If after loading config files, this value has changed, the value will be left alone. Otherwise
+// it will be set to def.
+func setDefaultString(conf *string, oldDefault string, def string) {
+	if *conf == oldDefault {
 		*conf = def
 	}
 }
