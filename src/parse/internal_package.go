@@ -14,23 +14,24 @@ const InternalPackageName = "_please"
 const internalPackageTemplateStr = `
 remote_file(
   name = "download",
-  url = f"{{ .DownloadLocation }}/{{ .OS }}_{{ .Arch }}/{{ .PLZVersion }}/please_{{ .PLZVersion }}.tar.xz",
+  url = f"{{ .DownloadLocation }}/{{ .OS }}_{{ .Arch }}/{{ .PLZVersion }}/please_tools_{{ .PLZVersion }}.tar.xz",
 )
 
 genrule(
   name = "tools",
   srcs = [":download"],
   cmd = "tar -xf $SRC",
-  outs = ["please"],
+  outs = ["please_tools"],
   entry_points = {
-    "lang_server": "please/build_langserver",
-    "jarcat": "please/jarcat",
-    "javac_worker": "please/javac_worker",
-    "junit_runner": "please/junit_runner.jar",
-    "please_go_filter": "please/please_go_filter",
-    "please_go_test": "please/please_go_test",
-    "please_pex": "please/please_pex",
-    "please_sandbox": "please/please_sandbox",
+    "lang_server": "please_tools/build_langserver",
+    "jarcat": "please_tools/jarcat",
+    "javac_worker": "please_tools/javac_worker",
+    "junit_runner": "please_tools/junit_runner.jar",
+    "please_go_filter": "please_tools/please_go_filter",
+    "please_go_test": "please_tools/please_go_test",
+    "please_go_install": "please_tools/please_go_install",
+    "please_pex": "please_tools/please_pex",
+    "please_sandbox": "please_tools/please_sandbox",
   },
   visibility = ["PUBLIC"],
   binary = True,

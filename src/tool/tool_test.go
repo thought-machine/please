@@ -11,11 +11,11 @@ import (
 func TestMatchingTools(t *testing.T) {
 	c, err := core.ReadConfigFiles(nil, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"pex": "//_please:tools|please_pex"}, matchingTools(c, "p"))
-	assert.Equal(t, map[string]string{"pex": "//_please:tools|please_pex"}, matchingTools(c, "pex"))
+	assert.Equal(t, map[string]string{"pex": "please_pex"}, matchingTools(c, "p"))
+	assert.Equal(t, map[string]string{"pex": "please_pex"}, matchingTools(c, "pex"))
 	assert.Equal(t, map[string]string{
-		"javacworker": "//_please:tools|javac_worker",
-		"jarcat":      "//_please:tools|jarcat",
+		"javacworker": "javac_worker",
+		"jarcat":      "jarcat",
 	}, matchingTools(c, "ja"))
 }
 

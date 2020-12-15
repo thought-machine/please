@@ -86,3 +86,5 @@ accept = notice
 [featureflags]
 JavaBinaryExecutableByDefault = true
 RemovePleasings = true
+PleaseDownloadTools = true
+PleaseGoInstall = true
