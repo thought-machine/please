@@ -29,11 +29,18 @@ filegroup(
 )
 
 tarball(
-    name = "please_tarball",
+    name = "please_tarball_xz",
     srcs = [":installed_files"],
     out = "please_%s.tar.xz" % VERSION,
     subdir = "please",
     xzip = True,
+)
+
+tarball(
+    name = "please_tarball",
+    srcs = [":installed_files"],
+    out = "please_%s.tar.gz" % VERSION,
+    subdir = "please",
 )
 
 tarball(
@@ -64,6 +71,7 @@ filegroup(
     name = "release_files",
     srcs = [
         ":please_tarball",
+        ":please_tarball_xz",
         ":please_tools_tarball",
         ":jarcat",
         ":please",
