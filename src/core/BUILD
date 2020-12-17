@@ -35,6 +35,7 @@ go_library(
         "//third_party/go:semver",
         "//third_party/go:shlex",
         "//third_party/go:xattr",
+        "//third_party/go:blake3",
     ],
 )
 

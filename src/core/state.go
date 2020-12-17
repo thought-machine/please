@@ -4,6 +4,9 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
+	"hash"
+	"hash/crc32"
+	"hash/crc64"
 	"io"
 	"sort"
 	"sync"
@@ -11,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Workiva/go-datastructures/queue"
+	"lukechampine.com/blake3"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
@@ -885,6 +889,18 @@ func (state *BuildState) DisableXattrs() {
 	state.PathHasher.DisableXattrs()
 }
 
+func newCRC32() hash.Hash {
+	return hash.Hash(crc32.NewIEEE())
+}
+
+func newCRC64() hash.Hash {
+	return hash.Hash(crc64.New(crc64.MakeTable(crc64.ISO)))
+}
+
+func newBlake3() hash.Hash {
+	return blake3.New(256, nil)
+}
+
 // NewBuildState constructs and returns a new BuildState.
 // Everyone should use this rather than attempting to construct it themselves;
 // callers can't initialise all the required private fields.
@@ -898,6 +914,9 @@ func NewBuildState(config *Configuration) *BuildState {
 			// For compatibility reasons the sha1 hasher has no suffix.
 			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, ""),
 			"sha256": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "_sha256"),
+			"crc32": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC32, "_crc32"),
+			"crc64": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC64, "_crc64"),
+			"blake3": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newBlake3, "_blake3"),
 		},
 		ProcessExecutor: process.New(sandboxTool),
 		StartTime:       startTime,
