@@ -48,7 +48,6 @@ if not CONFIG.FF_PLEASINGS:
 
 var internalPackageTemplate = template.New("_please")
 
-
 func GetInternalPackage(config *core.Configuration) (string, error) {
 	t, err := internalPackageTemplate.Parse(internalPackageTemplateStr)
 	if err != nil {
@@ -56,14 +55,14 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 	}
 
 	data := struct {
-		PLZVersion string
-		OS string
-		Arch string
+		PLZVersion       string
+		OS               string
+		Arch             string
 		DownloadLocation string
 	}{
-		PLZVersion: core.PleaseVersion.String(),
-		OS: runtime.GOOS,
-		Arch: runtime.GOARCH,
+		PLZVersion:       core.PleaseVersion.String(),
+		OS:               runtime.GOOS,
+		Arch:             runtime.GOARCH,
 		DownloadLocation: config.Please.DownloadLocation.String(),
 	}
 
