@@ -898,7 +898,8 @@ func newCRC64() hash.Hash {
 }
 
 func newBlake3() hash.Hash {
-	return blake3.New(256, nil)
+	// 32 bytes == 256 bits
+	return blake3.New(32, nil)
 }
 
 // NewBuildState constructs and returns a new BuildState.
