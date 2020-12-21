@@ -24,7 +24,7 @@ type PathHasher struct {
 	root      string
 	xattrName string
 	useXattrs bool
-	algo string
+	algo      string
 }
 
 type pendingHash struct {
@@ -46,7 +46,7 @@ func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, algo stri
 		root:      root,
 		useXattrs: useXattrs,
 		xattrName: "user.plz_hash" + hashSuffix,
-		algo: algo,
+		algo:      algo,
 	}
 }
 
