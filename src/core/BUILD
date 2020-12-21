@@ -26,6 +26,7 @@ go_library(
         "//src/fs",
         "//src/process",
         "//src/scm",
+        "//third_party/go:blake3",
         "//third_party/go:gcfg",
         "//third_party/go:go-flags",
         "//third_party/go:godirwalk",
@@ -35,7 +36,6 @@ go_library(
         "//third_party/go:semver",
         "//third_party/go:shlex",
         "//third_party/go:xattr",
-        "//third_party/go:blake3",
     ],
 )
 

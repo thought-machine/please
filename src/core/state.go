@@ -915,8 +915,8 @@ func NewBuildState(config *Configuration) *BuildState {
 			// For compatibility reasons the sha1 hasher has no suffix.
 			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, ""),
 			"sha256": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "_sha256"),
-			"crc32": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC32, "_crc32"),
-			"crc64": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC64, "_crc64"),
+			"crc32":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC32, "_crc32"),
+			"crc64":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC64, "_crc64"),
 			"blake3": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newBlake3, "_blake3"),
 		},
 		ProcessExecutor: process.New(sandboxTool),

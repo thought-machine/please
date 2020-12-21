@@ -867,7 +867,7 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 	if checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha1"), true) ||
 		checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha1"), false) ||
 		checkRuleHashesOfType(target, hashes, outputs, state.Hasher("crc32"), combine) ||
-		checkRuleHashesOfType(target, hashes, outputs, state.Hasher("crc64"),  combine) ||
+		checkRuleHashesOfType(target, hashes, outputs, state.Hasher("crc64"), combine) ||
 		checkRuleHashesOfType(target, hashes, outputs, state.Hasher("blake3"), combine) ||
 		checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha256"), combine) {
 		return nil

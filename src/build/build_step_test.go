@@ -433,55 +433,55 @@ func TestBuildMetadatafileIsCreated(t *testing.T) {
 
 // Should return the hash of the first item
 func TestSha1SingleHash(t *testing.T) {
-	testCases := []struct{
-		name string
-		algorithm string
+	testCases := []struct {
+		name             string
+		algorithm        string
 		sha1ForceCombine bool
-		fooHash string
-		fooAndBarHash string
-	} {
+		fooHash          string
+		fooAndBarHash    string
+	}{
 		{
-			name: "sha1 no combine",
-			algorithm: "sha1",
+			name:             "sha1 no combine",
+			algorithm:        "sha1",
 			sha1ForceCombine: false,
-			fooHash: "0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
-			fooAndBarHash: "4030c3573bf908b75420818b8c0b041443a3f21e",
+			fooHash:          "0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
+			fooAndBarHash:    "4030c3573bf908b75420818b8c0b041443a3f21e",
 		},
 		{
-			name: "sha1 force combine",
-			algorithm: "sha1",
+			name:             "sha1 force combine",
+			algorithm:        "sha1",
 			sha1ForceCombine: true,
-			fooHash: "a7880a3d0e9799a88cf18ac67cb3ee19a7e43190",
-			fooAndBarHash: "4030c3573bf908b75420818b8c0b041443a3f21e",
+			fooHash:          "a7880a3d0e9799a88cf18ac67cb3ee19a7e43190",
+			fooAndBarHash:    "4030c3573bf908b75420818b8c0b041443a3f21e",
 		},
 		{
-			name: "sha256",
-			algorithm: "sha256",
-			fooHash: "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
+			name:          "sha256",
+			algorithm:     "sha256",
+			fooHash:       "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
 			fooAndBarHash: "50d2e3c6f77d85d62907693deb75af0985012566e1fd37e0c2859b3716bccc85",
 		},
 		{
-			name: "crc32",
-			algorithm: "crc32",
-			fooHash: "8c736521",
+			name:          "crc32",
+			algorithm:     "crc32",
+			fooHash:       "8c736521",
 			fooAndBarHash: "045139db",
 		},
 		{
-			name: "crc64",
-			algorithm: "crc64",
-			fooHash: "3c3c303000000000",
+			name:          "crc64",
+			algorithm:     "crc64",
+			fooHash:       "3c3c303000000000",
 			fooAndBarHash: "1ff602f5b67b13f4",
 		},
 		{
-			name: "blake3",
-			algorithm: "blake3",
-			fooHash: "04e0bb39f30b1a3feb89f536c93be15055482df748674b00d26e5a75777702e9",
+			name:          "blake3",
+			algorithm:     "blake3",
+			fooHash:       "04e0bb39f30b1a3feb89f536c93be15055482df748674b00d26e5a75777702e9",
 			fooAndBarHash: "17d3b6ed7a554870abc95efae5e6255174a53efa40ef1844a21d0d29edac5d68",
 		},
 	}
 
 	for _, test := range testCases {
-		t.Run(test.name + ": foo", func(t *testing.T) {
+		t.Run(test.name+": foo", func(t *testing.T) {
 			state, target := newStateWithHashFunc("//hash_test:hash_test", test.algorithm, test.sha1ForceCombine)
 
 			target.AddOutput("foo.txt")
@@ -490,7 +490,7 @@ func TestSha1SingleHash(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, test.fooHash, hex.EncodeToString(h))
 		})
-		t.Run(test.name + ": foo + bar", func(t *testing.T) {
+		t.Run(test.name+": foo + bar", func(t *testing.T) {
 			state, target := newStateWithHashFunc("//hash_test:hash_test", test.algorithm, test.sha1ForceCombine)
 
 			target.AddOutput("foo.txt")
