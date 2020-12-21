@@ -811,8 +811,13 @@ func (h *targetHasher) SetHash(target *core.BuildTarget, hash []byte) {
 // outputHash calculates the output hash for a target, choosing an appropriate strategy.
 func (h *targetHasher) outputHash(target *core.BuildTarget) ([]byte, error) {
 	outs := target.FullOutputs()
+
+	// We must combine for sha1 for backwards compatibility
+	// TODO(jpoole): remove this special case in v16
 	mustCombine := h.State.Config.Build.HashFunction == "sha1" && !h.State.Config.FeatureFlags.SingleSHA1Hash
-	if len(outs) == 1 && fs.FileExists(outs[0]) && !mustCombine {
+	combine := len(outs) != 1 || mustCombine
+
+	if !combine && fs.FileExists(outs[0]) {
 		return outputHash(target, outs, h.State.PathHasher, nil)
 	}
 	return outputHash(target, outs, h.State.PathHasher, h.State.PathHasher.NewHash)
