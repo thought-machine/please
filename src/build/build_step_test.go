@@ -486,7 +486,7 @@ func TestSha1SingleHash(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		t.Run(test.name+": foo", func(t *testing.T) {
+		t.Run(test.name+" foo", func(t *testing.T) {
 			state, target := newStateWithHashFunc("//hash_test:hash_test", test.algorithm, test.sha1ForceCombine)
 
 			target.AddOutput("foo.txt")
@@ -495,7 +495,7 @@ func TestSha1SingleHash(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, test.fooHash, hex.EncodeToString(h))
 		})
-		t.Run(test.name+": foo + bar", func(t *testing.T) {
+		t.Run(test.name+" foo and bar", func(t *testing.T) {
 			state, target := newStateWithHashFunc("//hash_test:hash_test", test.algorithm, test.sha1ForceCombine)
 
 			target.AddOutput("foo.txt")
