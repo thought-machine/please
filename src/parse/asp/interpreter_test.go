@@ -358,7 +358,7 @@ func TestFStringOptimisation(t *testing.T) {
 	assert.EqualValues(t, s.Lookup("x"), "test")
 	// Check that it's been optimised to something
 	ass := stmts[0].Ident.Action.Assign
-	assert.Nil(t, ass.Val.FString)
+	assert.Nil(t, ass.Val)
 	assert.NotNil(t, ass.Optimised.Constant)
 	assert.EqualValues(t, "test", ass.Optimised.Constant)
 }
