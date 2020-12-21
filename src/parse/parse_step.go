@@ -200,7 +200,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 			if dependent != core.OriginalTarget && exists {
 				return nil, fmt.Errorf("%s depends on %s, but there's no %s file in %s/", dependent, label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			} else if dependent != core.OriginalTarget {
-				return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist asdf: %s", dependent, label, dir, packageName)
+				return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist: %s", dependent, label, dir, packageName)
 			} else if exists {
 				return nil, fmt.Errorf("Can't build %s; there's no %s file in %s/", label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			}
