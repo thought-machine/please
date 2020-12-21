@@ -370,6 +370,11 @@ func TestCheckRuleHashes(t *testing.T) {
 	target.Hashes = []string{"634b027b1b69e1242d40d53e312b3b4ac7710f55be81f289b549446ef6778bee"}
 	err = checkRuleHashes(state, target, b)
 	assert.NoError(t, err)
+
+	// This is the equivalent to blake3 of the file, so should be accepted too
+	target.Hashes = []string{"37d6ae61eb7aba324b4633ef518a5a2e88feac81a0f65a67f9de40b55fe91277"}
+	err = checkRuleHashes(state, target, b)
+	assert.NoError(t, err)
 }
 
 func TestFetchLocalRemoteFile(t *testing.T) {
