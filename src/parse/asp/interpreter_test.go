@@ -351,3 +351,14 @@ func TestDivide(t *testing.T) {
 	assert.EqualValues(t, 7, s.Lookup("j"))
 	assert.EqualValues(t, -2, s.Lookup("k"))
 }
+
+func TestFStringOptimisation(t *testing.T) {
+	s, stmts, err := parseFileToStatements("src/parse/asp/test_data/interpreter/fstring_optimisation.build")
+	require.NoError(t, err)
+	assert.EqualValues(t, s.Lookup("x"), "test")
+	// Check that it's been optimised to something
+	ass := stmts[0].Ident.Action.Assign
+	assert.Nil(t, ass.Val.FString)
+	assert.NotNil(t, ass.Optimised.Constant)
+	assert.EqualValues(t, "test", ass.Optimised.Constant)
+}

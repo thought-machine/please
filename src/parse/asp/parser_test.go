@@ -1,11 +1,11 @@
 package asp
 
 import (
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseBasic(t *testing.T) {
