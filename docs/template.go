@@ -118,16 +118,16 @@ func main() {
 	funcs := template.FuncMap{
 		"isFilenameOption": func(filename string, t string, f string) string {
 			if filename == opts.Filename {
-        return t
+				return t
 			}
-      return f
+			return f
 		},
-    "boolOption": func(value bool, t string, f string) string {
-      if value {
-        return t
-      }
-      return f
-    },
+		"boolOption": func(value bool, t string, f string) string {
+			if value {
+				return t
+			}
+			return f
+		},
 		"shape":        func(i int) string { return modulo(shapes, i) },
 		"colour":       func(i int) string { return modulo(colours, i) },
 		"rotate":       func(i int) string { return modulo(rotations, i) },
