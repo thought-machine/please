@@ -1,252 +1,518 @@
-
-    <h1>FAQ</h1>
-
-    <h3>Can I run it on my computer?</h3>
-
-    <p>If you're running Linux, macOS or FreeBSD, definitely; we actively support those platforms.<br/>
-      Installing Please on either Linux or macOS is as easy as <code>curl https://get.please.build | bash</code>.
-      Further dependencies shouldn't be necessary after that, assuming you have what you need for
-      the languages you want to work on (e.g. you'll need a JDK to use Please for Java).</p>
-
-    <p>To compile it, one only needs Go and Git installed.<br/>
-      On Linux we primarily support Ubuntu; it should work pretty readily on most distros though.<br/>
-      See <a href="https://github.com/thought-machine/please/blob/master/tools/images/ubuntu">tools/images/ubuntu</a>
-      for information and a Dockerfile for setting up a recommended environment.</p>
-
-    <p>For building on FreeBSD, you will need to install Bash as well.<br/>
-      Currently binary downloads aren't available, we hope to make them available in future.</p>
-
-    <p>Windows is unfortunately not supported natively, since it's just too different from the
-      Unix environment Please is designed for. It is possible to run it within
-      <a href="https://docs.microsoft.com/en-us/windows/wsl/install-win10">WSL</a> though.</p>
-
-
-    <h3>What's the licence?</h3>
-
-    <p><a href="http://www.apache.org/licenses/">Apache 2.0</a></p>
-
-
-    <h3>Where can I get more information? / My question isn't answered here</h3>
-
-    <p>Check out the code <a href="https://github.com/thought-machine/please">on GitHub</a>,
-      <a href="https://gitter.im/please-build/Lobby">chat on Gitter</a> or ask in
-      <a href="https://groups.google.com/forum/#!forum/please-build">the discussion group</a>.</p>
-
-
-    <h3>Why use Please instead of go build / Maven / Gradle?</h3>
-
-    <p>Cross-language support is a big advantage; we have four main languages in use at Thought Machine
-      (Javascript, Python, Java and Go) plus several smaller pieces (some C++ and Thrax grammars) and
-      having to invoke different compilers and/or test tools for each one would be extremely tiresome.</p>
-
-    <p>Please can also integrate many different kinds of build steps; for example a code generation
-      step using <code>go generate</code> or <code>protoc</code> can be invoked dynamically without
-      having to check the resulting code into the repository.</p>
-
-    <p>We've tried other tools (notably Gradle and Buck) internally and ultimately decided that
-      we could build something that would either better fit our needs, be considerably faster,
-      or both.</p>
-
-
-    <h3>Why use Please instead of Bazel, Buck or Pants?</h3>
-
-    <p>All four of these systems are quite closely related in the scheme of things, being inspired by
-      (or in Bazel's case, a direct open sourcing of) Google's Blaze.</p>
-
-    <p>Several of us had worked at Google and used Blaze extensively there; we were excited about it being
-      open sourced as Bazel but by then we were already using Please internally. It's a great system but
-      we have slightly different goals, specifically we're aiming Please at being lighter weight and
-      pushing the boundaries of what can be done within the BUILD language. Since Please is written in
-      Go there's no runtime dependency on the JVM.
-    </p>
-
-    <p>We actually used Buck for some months internally before deciding to write Please and before it
-      was capable of building our repo. We preferred it to other options available, but again we're
-      focused on different goals; Please is easier to extend to new languages, has a bunch of features
-      that we specifically wanted (e.g. test sandboxing) and has a stronger focus on BUILD
-      language correctness. Conversely we have much less support for mobile development.</p>
-
-    <p>We're least familiar with Pants; one of our developers briefly tried it and while we liked
-      many aspects we didn't think it was the ideal fit for us at the time.</p>
-
-
-    <h3>What inspired the design of Please?</h3>
-
-    <p>Originally Blaze, since a number of us had used it at Google. More recently we'd used Buck
-      internally so many things superficially resemble that for compatibility reasons
-      (e.g. <code>python_binary</code> instead of <code>py_binary</code> etc).</p>
-
-    <p>Some of the advanced features are based on things we would have liked to do with Blaze, for example
-      being able to defer creation of some build rules until they actually need to be built. This is
-      only really of interest for spectacularly large trees of targets or especially esoteric use
-      cases though.</p>
-
-    <p>Mostly, of course, it was inspired by our fearless leader Paul, specifically the point when
-      he told us "you absolutely cannot write your own build system". After that it was
-      really inevitable...</p>
-
-
-    <h3>Why is it so fast?</h3>
-
-    <p>Firstly, all the rules explicitly declare their dependencies, so Please can aggressively
-      parallelise build rules wherever possible. It can also cache & reuse previous outputs when
-      they haven't changed, and it hashes all input files to make sure it's correct.</p>
-
-    <p>Also BUILD files encourage you to break projects into smaller components, which can then
-      be compiled in parallel. It's still possible to define a project with a single BUILD file
-      in the traditional Java way that one would use in Gradle etc, and this works fine for
-      smaller projects, but for larger ones parallelising the compilation can be a big advantage.</p>
-
-    <p>There are no separate steps inside Please; parsing BUILD files, building targets and running
-      tests can all happen simultaneously, so there's no down time waiting for the last thing to
-      compile before the tests begin. The parsing process is also very fast due to having an
-      in-process Python interpreter.</p>
-
-    <p>It being written in Go and being an entirely native binary means great performance and fast
-      startup times; internally it's also highly parallelised and can take full advantage of the
-      underlying hardware.</p>
-
-    <p>Finally, the rules themselves are optimised in various ways; for example, the construction of
-      the final .jar from a <code>java_binary</code> is an efficient concatenation of other .jar
-      files without any recompression. Similarly the output .pex from a <code>python_binary</code>
-      is built up piecemeal throughout the <code>python_library</code> rules and assembled at the end
-      so we don't have to recompress an entire zip file every time you change one .py file.</p>
-
-
-    <h3>How do you parse the BUILD files? What format are they?</h3>
-
-    <p>The currently-unnamed BUILD language is a restricted subset of Python; see
-      <a href="language.html">here</a> for more details, documentation and a formal grammar.</p>
-
-    <p>This provides a nice balance between an elegant and powerful language, but also one that can
-      be interpreted more easily than Python itself, and that is reasonably familiar to many developers.</p>
-
-    <p>One downside to this is that the BUILD files are a little hard to automatically edit or
-      update compared to a data format like XML, Yaml or JSON. We think this is worth the tradeoff
-      for giving the developer more power and (in our opinion) a significantly nicer format.<br/>
-      A few Please features can help with updating BUILD files:
-      <ul>
-        <li><a href="commands.html#fmt">plz fmt</a> to autoformat your BUILD files</li>
-        <li><a href="commands.html#hash">plz hash --update</a> to automatically update hashes</li>
-        <li><a href="commands.html#gc">plz gc</a> to clean up unused targets</li>
-    </ul></p>
-
-
-    <h3>Okay, but what exactly are you using to parse the files?</h3>
-
-    <p>The built-in parser is an internal pure Go implementation. It's evolved through several implementations
-      over time; ultimately this provides maximum control and performance (because we are not subject to
-      Python's GIL, or cgo calling overhead).</p>
-
-
-    <h3>How does Please build itself? Do I need Please to build Please?</h3>
-
-    <p>Please bootstraps itself using <code>go build</code> to build a temporary version of itself,
-      which is then used to rebuild itself using its own BUILD rules. This requires disabling some
-      features for that bootstrap step (mostly codegen steps), but is definitely worth it since
-      obviously we can't rely on anyone building it already having a version of it installed.</p>
-
-    <p>Fortunately the process is pretty fast since Go is fast to compile.</p>
-
-
-    <h3>Why write it in Go?</h3>
-
-    <p>We excluded most other languages that any of us were familiar with through a process
-      of elimination; JVM languages were ruled out from a concern about startup overhead,
-      we were concerned about Python's threading performance for an inherently parallel system
-      and felt C++ was too fiddly and lacked a strong standard library. Rust was still pre-1.0
-      at the time (although that didn't take long, as it turned out) so we felt it was a bit
-      early to leap into that.</p>
-
-    <p>It also turned out to be a really useful way of learning the language; the project is
-      about the right size to explore it properly and sufficiently self-contained not to
-      affect other parts of our repo until we were sure Go was a language we wanted to do more of.</p>
-
-    <p>We're very happy with the results; the performance of native binaries is excellent,
-      the language was easy to become productive with and has great support for all the things
-      we needed to do with it. Our early concerns (e.g. the classic &quot;no generics!&quot;)
-      turned out to be a lot less problematic than we expected.</p>
-
-    <p>An alternative explanation is that the original high-level design meeting for Please was
-      an impromptu discussion in a pub one Friday evening, where we thought it would be a neat
-      language to try despite none of us having any real experience with it.</p>
-
-
-    <h3>Is this the primary repo, or do you have a secret internal version too?</h3>
-
-    <p>This is the only repository; all development is done here. Initially we had an internally
-      hosted repo but transferred the project to Github in preparation for open sourcing it.
-
-    <p>We've got some build rules in our internal repo that aren't built into Please yet.
-      We intend to open source as we can, but the ones left aren't easy to genericise
-      for various reasons.</p>
-
-    <p>There are some additional rules available at
-      <a href="https://github.com/thought-machine/pleasings">https://github.com/thought-machine/pleasings</a>,
-      which we either do not want to guarantee compatibility for, are still experimental, or are
-      sufficiently esoteric that we don't want the build process for Please to require them.</p>
-
-
-    <h3>How does the versioning scheme work? What are the compatibility guarantees?</h3>
-
-    <p>We are using <a href="http://semver.org">semantic versioning</a> so essentially:
-      <ul>
-        <li>Changes to the major version number mean you might have to make an active change
-          to your BUILD files or project config.</li>
-        <li>Changes to the minor version number indicate additional features that shouldn't
-          require any changes on your part.</li>
-        <li>Changes to the patch version number are bugfixes.</li>
-      </ul>
-    </p>
-
-    <p>These rules apply to the "public parts" of the project; specifically the command-line interface and flags,
-      the config file format and the BUILD file format and builtins are essentially the API
-      and so we take significantly more care about compatibility around those.<br/>
-      The interface to the various sub-tools invoked by Please we consider an implementation
-      detail and those might change more aggressively (although in practice they rarely do).</p>
-
-    <p>Things whose behaviour is not explicitly specified might change with less notice,
-      because of course you shouldn't have been relying on it anyway. This includes the exact
-      hash generation method - if it becomes necessary to change that for a bugfix it may force
-      apparently unnecessary rebuilds after an update. We try to avoid that as much as possible
-      since it's aggravating (for us too!) but since it doesn't affect eventual correctness
-      it can change in minor releases.</p>
-
-    <p>The versions don't apply to the code interfaces themselves, since we don't expect
-      this to see wide use as a library. If some part of it becomes popular in that way we'll
-      likely split it out to a separate repository and version it separately.</p>
-
-
-    <h3>What does it look like when I'm running it?</h3>
-
-    <p>Like this:</p>
-
-    <asciinema-player src="https://please.build/plz-recording.json"></asciinema-player>
-
-    <p>The appearance is somewhat inspired by Buck, although we have put some of our own
-      spin on it as well.</p>
-
-    <h3>What do the colours in the console output mean?</h3>
-
-    <p>They change based on the type of rule that's being built:</p>
-
-    <ul>
-      <li>Yellow: Go</li>
-      <li>Green: Python</li>
-      <li>Red: Java</li>
-      <li>Blue: Javascript</li>
-      <li>Cyan: Parsing a BUILD file</li>
-      <li>Magenta: Third party dependencies</li>
-      <li>White: Anything else.</li>
-    </ul>
-
-    <p>Libraries are normal weight, binaries (including tests) are bold.</p>
-
-    <p>There is absolutely no significance to the choice of colours beyond arbitrary choice
-      when that code was originally written.</p>
-
-
-    <h3>Why's it called Please?</h3>
-
-    <p>Because we liked the idea of sounding polite when typing "plz build", "plz test", etc.<br/>
-      Also we chose the domain name before almost anything else (priorities!).</p>
+<h1 class="title-1">FAQ</h1>
+
+<section class="mt4">
+  <h2 class="title-2">
+    Can I run it on my computer?
+  </h2>
+
+  <p>
+    If you're running Linux, macOS or FreeBSD, definitely; we actively support
+    those platforms.<br />
+    Installing Please on either Linux or macOS is as easy as
+    <code class="code">curl https://get.please.build | bash</code>. Further
+    dependencies shouldn't be necessary after that, assuming you have what you
+    need for the languages you want to work on (e.g. you'll need a JDK to use
+    Please for Java).
+  </p>
+
+  <p>
+    To compile it, one only needs Go and Git installed.<br />
+    On Linux we primarily support Ubuntu; it should work pretty readily on most
+    distros though.<br />
+    See
+    <a
+      class="copy-link"
+      href="https://github.com/thought-machine/please/blob/master/tools/images/ubuntu"
+      target="_blank"
+      rel="noopener"
+      >tools/images/ubuntu</a
+    >
+    for information and a Dockerfile for setting up a recommended environment.
+  </p>
+
+  <p>
+    For building on FreeBSD, you will need to install Bash as well.<br />
+    Currently binary downloads aren't available, we hope to make them available
+    in future.
+  </p>
+
+  <p>
+    Windows is unfortunately not supported natively, since it's just too
+    different from the Unix environment Please is designed for. It is possible
+    to run it within
+    <a
+      class="copy-link"
+      href="https://docs.microsoft.com/en-us/windows/wsl/install-win10"
+      target="_blank"
+      rel="noopener"
+      >WSL</a
+    >
+    though.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">What's the licence?</h2>
+
+  <p>
+    <a
+      class="copy-link"
+      href="http://www.apache.org/licenses/"
+      target="_blank"
+      rel="noopener"
+      >Apache 2.0</a
+    >
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    Where can I get more information? / My question isn't answered here
+  </h2>
+
+  <p>
+    Check out the
+    <a
+      class="copy-link"
+      href="https://github.com/thought-machine/please"
+      target="_blank"
+      rel="noopener"
+      >code on GitHub</a
+    >,
+    <a
+      class="copy-link"
+      href="https://gitter.im/please-build/Lobby"
+      target="_blank"
+      rel="noopener"
+      >chat on Gitter</a
+    >
+    or ask in
+    <a
+      class="copy-link"
+      href="https://groups.google.com/forum/#!forum/please-build"
+      target="_blank"
+      rel="noopener"
+      >the discussion group</a
+    >.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    Why use Please instead of go build / Maven / Gradle?
+  </h2>
+
+  <p>
+    Cross-language support is a big advantage; we have four main languages in
+    use at Thought Machine (Javascript, Python, Java and Go) plus several
+    smaller pieces (some C++ and Thrax grammars) and having to invoke different
+    compilers and/or test tools for each one would be extremely tiresome.
+  </p>
+
+  <p>
+    Please can also integrate many different kinds of build steps; for example a
+    code generation step using <code class="code">go generate</code> or
+    <code class="code">protoc</code> can be invoked dynamically without having
+    to check the resulting code into the repository.
+  </p>
+
+  <p>
+    We've tried other tools (notably Gradle and Buck) internally and ultimately
+    decided that we could build something that would either better fit our
+    needs, be considerably faster, or both.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    Why use Please instead of Bazel, Buck or Pants?
+  </h2>
+
+  <p>
+    All four of these systems are quite closely related in the scheme of things,
+    being inspired by (or in Bazel's case, a direct open sourcing of) Google's
+    Blaze.
+  </p>
+
+  <p>
+    Several of us had worked at Google and used Blaze extensively there; we were
+    excited about it being open sourced as Bazel but by then we were already
+    using Please internally. It's a great system but we have slightly different
+    goals, specifically we're aiming Please at being lighter weight and pushing
+    the boundaries of what can be done within the BUILD language. Since Please
+    is written in Go there's no runtime dependency on the JVM.
+  </p>
+
+  <p>
+    We actually used Buck for some months internally before deciding to write
+    Please and before it was capable of building our repo. We preferred it to
+    other options available, but again we're focused on different goals; Please
+    is easier to extend to new languages, has a bunch of features that we
+    specifically wanted (e.g. test sandboxing) and has a stronger focus on BUILD
+    language correctness. Conversely we have much less support for mobile
+    development.
+  </p>
+
+  <p>
+    We're least familiar with Pants; one of our developers briefly tried it and
+    while we liked many aspects we didn't think it was the ideal fit for us at
+    the time.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    What inspired the design of Please?
+  </h2>
+
+  <p>
+    Originally Blaze, since a number of us had used it at Google. More recently
+    we'd used Buck internally so many things superficially resemble that for
+    compatibility reasons (e.g. <code class="code">python_binary</code> instead
+    of <code class="code">py_binary</code> etc).
+  </p>
+
+  <p>
+    Some of the advanced features are based on things we would have liked to do
+    with Blaze, for example being able to defer creation of some build rules
+    until they actually need to be built. This is only really of interest for
+    spectacularly large trees of targets or especially esoteric use cases
+    though.
+  </p>
+
+  <p>
+    Mostly, of course, it was inspired by our fearless leader Paul, specifically
+    the point when he told us "you absolutely cannot write your own build
+    system". After that it was really inevitable...
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">Why is it so fast?</h2>
+
+  <p>
+    Firstly, all the rules explicitly declare their dependencies, so Please can
+    aggressively parallelise build rules wherever possible. It can also cache
+    &amp; reuse previous outputs when they haven't changed, and it hashes all
+    input files to make sure it's correct.
+  </p>
+
+  <p>
+    Also BUILD files encourage you to break projects into smaller components,
+    which can then be compiled in parallel. It's still possible to define a
+    project with a single BUILD file in the traditional Java way that one would
+    use in Gradle etc, and this works fine for smaller projects, but for larger
+    ones parallelising the compilation can be a big advantage.
+  </p>
+
+  <p>
+    There are no separate steps inside Please; parsing BUILD files, building
+    targets and running tests can all happen simultaneously, so there's no down
+    time waiting for the last thing to compile before the tests begin. The
+    parsing process is also very fast due to having an in-process Python
+    interpreter.
+  </p>
+
+  <p>
+    It being written in Go and being an entirely native binary means great
+    performance and fast startup times; internally it's also highly parallelised
+    and can take full advantage of the underlying hardware.
+  </p>
+
+  <p>
+    Finally, the rules themselves are optimised in various ways; for example,
+    the construction of the final .jar from a
+    <code class="code">java_binary</code> is an efficient concatenation of other
+    .jar files without any recompression. Similarly the output .pex from a
+    <code class="code">python_binary</code> is built up piecemeal throughout the
+    <code class="code">python_library</code> rules and assembled at the end so
+    we don't have to recompress an entire zip file every time you change one .py
+    file.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    How do you parse the BUILD files? What format are they?
+  </h2>
+
+  <p>
+    The currently-unnamed BUILD language is a restricted subset of Python; see
+    <a class="copy-link" href="/language.html">here</a> for more details,
+    documentation and a formal grammar.
+  </p>
+
+  <p>
+    This provides a nice balance between an elegant and powerful language, but
+    also one that can be interpreted more easily than Python itself, and that is
+    reasonably familiar to many developers.
+  </p>
+
+  <p>
+    One downside to this is that the BUILD files are a little hard to
+    automatically edit or update compared to a data format like XML, Yaml or
+    JSON. We think this is worth the tradeoff for giving the developer more
+    power and (in our opinion) a significantly nicer format.<br />
+    A few Please features can help with updating BUILD files:
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        <a class="copy-link" href="/commands.html#fmt">plz fmt</a> to autoformat
+        your BUILD files
+      </span>
+    </li>
+    <li>
+      <span>
+        <a class="copy-link" href="/commands.html#hash">plz hash --update</a>
+        to automatically update hashes
+      </span>
+    </li>
+    <li>
+      <span>
+        <a class="copy-link" href="/commands.html#gc">plz gc</a> to clean up
+        unused targets
+      </span>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    Okay, but what exactly are you using to parse the files?
+  </h2>
+
+  <p>
+    The built-in parser is an internal pure Go implementation. It's evolved
+    through several implementations over time; ultimately this provides maximum
+    control and performance (because we are not subject to Python's GIL, or cgo
+    calling overhead).
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    How does Please build itself? Do I need Please to build Please?
+  </h2>
+
+  <p>
+    Please bootstraps itself using <code class="code">go build</code> to build a
+    temporary version of itself, which is then used to rebuild itself using its
+    own BUILD rules. This requires disabling some features for that bootstrap
+    step (mostly codegen steps), but is definitely worth it since obviously we
+    can't rely on anyone building it already having a version of it installed.
+  </p>
+
+  <p>Fortunately the process is pretty fast since Go is fast to compile.</p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">Why write it in Go?</h2>
+
+  <p>
+    We excluded most other languages that any of us were familiar with through a
+    process of elimination; JVM languages were ruled out from a concern about
+    startup overhead, we were concerned about Python's threading performance for
+    an inherently parallel system and felt C++ was too fiddly and lacked a
+    strong standard library. Rust was still pre-1.0 at the time (although that
+    didn't take long, as it turned out) so we felt it was a bit early to leap
+    into that.
+  </p>
+
+  <p>
+    It also turned out to be a really useful way of learning the language; the
+    project is about the right size to explore it properly and sufficiently
+    self-contained not to affect other parts of our repo until we were sure Go
+    was a language we wanted to do more of.
+  </p>
+
+  <p>
+    We're very happy with the results; the performance of native binaries is
+    excellent, the language was easy to become productive with and has great
+    support for all the things we needed to do with it. Our early concerns (e.g.
+    the classic &quot;no generics!&quot;) turned out to be a lot less
+    problematic than we expected.
+  </p>
+
+  <p>
+    An alternative explanation is that the original high-level design meeting
+    for Please was an impromptu discussion in a pub one Friday evening, where we
+    thought it would be a neat language to try despite none of us having any
+    real experience with it.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    Is this the primary repo, or do you have a secret internal version too?
+  </h2>
+
+  <p>
+    This is the only repository; all development is done here. Initially we had
+    an internally hosted repo but transferred the project to Github in
+    preparation for open sourcing it.
+  </p>
+
+  <p>
+    We've got some build rules in our internal repo that aren't built into
+    Please yet. We intend to open source as we can, but the ones left aren't
+    easy to genericise for various reasons.
+  </p>
+
+  <p>
+    There are some additional rules available at
+    <a
+      class="copy-link"
+      href="https://github.com/thought-machine/pleasings"
+      target="_blank"
+      rel="noopener"
+      >https://github.com/thought-machine/pleasings</a
+    >, which we either do not want to guarantee compatibility for, are still
+    experimental, or are sufficiently esoteric that we don't want the build
+    process for Please to require them.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    How does the versioning scheme work? What are the compatibility guarantees?
+  </h2>
+
+  <p>
+    We are using
+    <a class="copy-link" href="http://semver.org" target="_blank" rel="noopener"
+      >semantic versioning</a
+    >
+    so essentially:
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        Changes to the major version number mean you might have to make an
+        active change to your BUILD files or project config.
+      </span>
+    </li>
+    <li>
+      <span>
+        Changes to the minor version number indicate additional features that
+        shouldn't require any changes on your part.
+      </span>
+    </li>
+    <li>
+      <span>
+        Changes to the patch version number are bugfixes.
+      </span>
+    </li>
+  </ul>
+
+  <p>
+    These rules apply to the "public parts" of the project; specifically the
+    command-line interface and flags, the config file format and the BUILD file
+    format and builtins are essentially the API and so we take significantly
+    more care about compatibility around those.<br />
+    The interface to the various sub-tools invoked by Please we consider an
+    implementation detail and those might change more aggressively (although in
+    practice they rarely do).
+  </p>
+
+  <p>
+    Things whose behaviour is not explicitly specified might change with less
+    notice, because of course you shouldn't have been relying on it anyway. This
+    includes the exact hash generation method - if it becomes necessary to
+    change that for a bugfix it may force apparently unnecessary rebuilds after
+    an update. We try to avoid that as much as possible since it's aggravating
+    (for us too!) but since it doesn't affect eventual correctness it can change
+    in minor releases.
+  </p>
+
+  <p>
+    The versions don't apply to the code interfaces themselves, since we don't
+    expect this to see wide use as a library. If some part of it becomes popular
+    in that way we'll likely split it out to a separate repository and version
+    it separately.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    What does it look like when I'm running it?
+  </h2>
+
+  <p>Like this:</p>
+
+  <asciinema-player
+    src="https://please.build/plz-recording.json"
+  ></asciinema-player>
+
+  <p>
+    The appearance is somewhat inspired by Buck, although we have put some of
+    our own spin on it as well.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    What do the colours in the console output mean?
+  </h2>
+
+  <p>They change based on the type of rule that's being built:</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        Yellow: Go
+      </span>
+    </li>
+    <li>
+      <span>
+        Green: Python
+      </span>
+    </li>
+    <li>
+      <span>
+        Red: Java
+      </span>
+    </li>
+    <li>
+      <span>
+        Blue: Javascript
+      </span>
+    </li>
+    <li>
+      <span>
+        Cyan: Parsing a BUILD file
+      </span>
+    </li>
+    <li>
+      <span>
+        Magenta: Third party dependencies
+      </span>
+    </li>
+    <li>
+      <span>
+        White: Anything else.
+      </span>
+    </li>
+  </ul>
+
+  <p>Libraries are normal weight, binaries (including tests) are bold.</p>
+
+  <p>
+    There is absolutely no significance to the choice of colours beyond
+    arbitrary choice when that code was originally written.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    Why's it called Please?
+  </h2>
+
+  <p>
+    Because we liked the idea of sounding polite when typing "plz build", "plz
+    test", etc.<br />
+    Also we chose the domain name before almost anything else (priorities!).
+  </p>
+</section>

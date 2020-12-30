@@ -1,109 +1,256 @@
-<h1>Third-party dependencies</h1>
+<h1 class="title-1">Third-party dependencies</h1>
 
-<p>Sooner or later, most projects end up needing a dependency on some
-  third-party libraries, and one of the jobs of the build system is to
-  manage those as well. Please is no exception to this, but it bears a
-  little discussion since most systems handle this differently.</p>
+<p>
+  Sooner or later, most projects end up needing a dependency on some third-party
+  libraries, and one of the jobs of the build system is to manage those as well.
+  Please is no exception to this, but it bears a little discussion since most
+  systems handle this differently.
+</p>
 
-<p>In Please, third-party dependencies can be created in any BUILD file
-  and manipulated as any other build rule. We encourage methods of fetching
-  them that are repeatable; typically each language has one that matches
-  up to a common package manager, for example:
-  <div class="tab-container">
-    <div class="tabs">
-      <div class="tab" data-tab="py">Python</div>
-      <div class="tab" data-tab="java">Java</div>
-      <div class="tab" data-tab="go">Go</div>
-      <div class="tab" data-tab="c">C / C++</div>
+<p>
+  In Please, third-party dependencies can be created in any BUILD file and
+  manipulated as any other build rule. We encourage methods of fetching them
+  that are repeatable; typically each language has one that matches up to a
+  common package manager, for example:
+</p>
+
+<section data-widget="tabs">
+  <div class="flex">
+    <ul class="tabs__tablist" role="tablist">
+      <li
+        id="python-dep-tab"
+        class="tabs__tab tabs__tab--selected"
+        data-tab="py"
+        role="tab"
+        aria-controls="python-dep-panel"
+        tabindex="0"
+      >
+        Python
+      </li>
+      <li
+        id="java-dep-tab"
+        class="tabs__tab"
+        data-tab="java"
+        role="tab"
+        aria-controls="java-dep-panel"
+        tabindex="0"
+      >
+        Java
+      </li>
+      <li
+        id="go-dep-tab"
+        class="tabs__tab"
+        data-tab="go"
+        role="tab"
+        aria-controls="go-dep-panel"
+        tabindex="0"
+      >
+        Go
+      </li>
+      <li
+        id="c-dep-tab"
+        class="tabs__tab"
+        data-tab="c"
+        role="tab"
+        aria-controls="c-dep-panel"
+        tabindex="0"
+      >
+        C/C++
+      </li>
+    </ul>
+  </div>
+
+  <div class="tabs__panels">
+    <div
+      id="python-dep-panel"
+      class="f7 tabs__panel tabs__panel--selected"
+      data-panel="py"
+      role="tabpanel"
+      aria-labelledby="python-dep-tab"
+    >
+      <pre>
+        <!-- prettier-ignore -->
+        <code data-lang="plz">
+    pip_library(
+        name = 'my_library',
+        version = "1.0.0",
+    )
+        </code>
+      </pre>
+
+      <!-- prettier-ignore -->
+      <pre class="white">
+    See <a class="copy-link" href="/lexicon.html#pip_library">pip_library()</a> for more information
+      </pre>
     </div>
-    <div class="tab-contents">
-      <div class="content" data-tab="py">
-          <pre><code class="language-plz">
-          pip_library(
-              name = 'my_library',
-              version = "1.0.0",
-          )
-          </code></pre>
-          <pre class="comment">
-          See <a href="/lexicon.html#pip_library">pip_library()</a> for more information
-          </pre>
-      </div>
-      <div class="content" data-tab="java">
-                  <pre><code class="language-plz">
-          maven_jar(
-              name = 'my_library',
-              id = "me:mylibrary:1.0.0",
-          )
-                  </code></pre>
-          <pre class="comment">
-          See <a href="/lexicon.html#maven_jar">maven_jar()</a> for more information
-          </pre>
-      </div>
-      <div class="content" data-tab="go">
-          <pre><code class="language-plz">
-          go_get(
-              name = 'my_library',
-              get = "github.com/me/my_library",
-              version = "1.0.0",
-          )
-          </code></pre>
-          <pre class="comment">
-          See <a href="/lexicon.html#go_get">go_get()</a> for more information
-          </pre>
-      </div>
-      <div class="content" data-tab="c">
-        <div class="content-wrapper">
-            <p>Unfortunately the C/C++ ecosystem lacks a defacto standard third-party repository. Thankfully, the Please
-            build language is powerful and can reliably build nearly any part of your project.
-            See the <a href="/build_rules.html">writing build rules</a> documentation for more information on this.</p>
-        </div>
-      </div>
+
+    <div
+      id="java-dep-panel"
+      class="f7 tabs__panel"
+      data-panel="java"
+      role="tabpanel"
+      aria-labelledby="java-dep-tab"
+    >
+      <pre>
+        <!-- prettier-ignore -->
+        <code data-lang="plz">
+    maven_jar(
+        name = 'my_library',
+        id = "me:mylibrary:1.0.0",
+    )
+        </code>
+      </pre>
+
+      <!-- prettier-ignore -->
+      <pre class="white">
+    See <a class="copy-link" href="/lexicon.html#maven_jar">maven_jar()</a> for more information
+      </pre>
+    </div>
+
+    <div
+      id="go-dep-panel"
+      class="f7 tabs__panel"
+      data-panel="go"
+      role="tabpanel"
+      aria-labelledby="go-dep-tab"
+    >
+      <pre>
+        <!-- prettier-ignore -->
+        <code data-lang="plz">
+    go_get(
+        name = 'my_library',
+        get = "github.com/me/my_library",
+        version = "1.0.0",
+    )
+        </code>
+      </pre>
+
+      <!-- prettier-ignore -->
+      <pre class="white">
+    See <a class="copy-link" href="/lexicon.html#go_get">go_get()</a> for more information
+      </pre>
+    </div>
+
+    <div
+      id="c-dep-panel"
+      class="tabs__panel"
+      data-panel="c"
+      role="tabpanel"
+      aria-labelledby="c-dep-tab"
+    >
+      <p class="ph4 pv3 white">
+        Unfortunately the C/C++ ecosystem lacks a defacto standard third-party
+        repository. Thankfully, the Please build language is powerful and can
+        reliably build nearly any part of your project. See the
+        <a class="copy-link" href="/build_rules.html">writing build rules</a>
+        documentation for more information on this.
+      </p>
     </div>
   </div>
+</section>
+
+<p>
   Each of these require explicit declarations of all their dependencies in the
-  BUILD file; this is how we pin dependencies & guarantee reproducibility.<br/>
+  BUILD file; this is how we pin dependencies &amp; guarantee
+  reproducibility.<br />
   There are one or two alternatives that show slightly different approaches
-  (e.g. <a href="lexicon.html#python_wheel">python_wheel</a> which is more standalone, and
-  <a href="lexicon.html#remote_file">remote_file</a> which is a general tool to
-  download anything (although often more work is required to actually build it)</p>
+  (e.g.
+  <a class="copy-link" href="/lexicon.html#python_wheel">python_wheel</a>
+  which is more standalone, and
+  <a class="copy-link" href="/lexicon.html#remote_file">remote_file</a>
+  which is a general tool to download anything (although often more work is
+  required to actually build it)
+</p>
 
-<p>The typical idiom we use is to place BUILD files under a third_party directory,
-  to make it clear where they're coming from. Commonly we separate them by language
-  for multi-language repos as well.<br/>
-  See <a href="https://github.com/thought-machine/please/tree/master/third_party/go">third_party/go</a>,
-  <a href="https://github.com/thought-machine/please/tree/master/third_party/python">third_party/python</a> and
-  <a href="https://github.com/thought-machine/please/tree/master/third_party/java">third_party/java</a>
-  in Please's repo for some examples of what these look like.</p>
+<p>
+  The typical idiom we use is to place BUILD files under a third_party
+  directory, to make it clear where they're coming from. Commonly we separate
+  them by language for multi-language repos as well.<br />
+  See
+  <a
+    class="copy-link"
+    href="https://github.com/thought-machine/please/tree/master/third_party/go"
+    target="_blank"
+    rel="noopener"
+    >third_party/go</a
+  >,
+  <a
+    class="copy-link"
+    href="https://github.com/thought-machine/please/tree/master/third_party/python"
+    target="_blank"
+    rel="noopener"
+    >third_party/python</a
+  >
+  and
+  <a
+    class="copy-link"
+    href="https://github.com/thought-machine/please/tree/master/third_party/java"
+    target="_blank"
+    rel="noopener"
+    >third_party/java</a
+  >
+  in Please's repo for some examples of what these look like.
+</p>
 
-<p>There's no explicit command to download third-party dependencies (e.g. <code>plz fetch</code> or similar).
-  Dependencies are built as part of the build process along with everything else, so
-  their downloads can be parallelised with compiling other targets.</p>
+<p>
+  There's no explicit command to download third-party dependencies (e.g.
+  <code class="code">plz fetch</code> or similar). Dependencies are built as
+  part of the build process along with everything else, so their downloads can
+  be parallelised with compiling other targets.
+</p>
 
+<section class="mt4">
+  <h2 class="title-2" id="subrepos">
+    Subrepos
+  </h2>
 
-<h2><a name="subrepos">Subrepos</a></h2>
+  <p>
+    Please also supports a concept called "subrepos" which allows fetching
+    arbitrary dependencies and attaching build rules to them. These can be
+    depended on from other build rules and generally used as normal.
+  </p>
 
-<p>Please also supports a concept called "subrepos" which allows fetching arbitrary dependencies
-  and attaching build rules to them. These can be depended on from other build rules and generally
-  used as normal.</p>
+  <p>
+    Subrepos are defined using builtins like
+    <a class="copy-link" href="/lexicon.html#http_archive">http_archive</a>
+    or
+    <a class="copy-link" href="/lexicon.html#github_repo">github_repo</a>. These
+    download a remote file and extract it, and make the contents available to
+    other rules. In most cases you can choose to attach a BUILD file to them,
+    but it can also use an existing one if appropriate.
+  </p>
 
-<p>Subrepos are defined using builtins like <a href="lexicon.html#http_archive">http_archive</a> or
-  <a href="lexicon.html#github_repo">github_repo</a>. These download a remote file and
-  extract it, and make the contents available to other rules. In most cases you can choose to attach a
-  BUILD file to them, but it can also use an existing one if appropriate.</p>
+  <p>
+    For example (as seen
+    <a
+      class="copy-link"
+      href="https://github.com/thought-machine/please/blob/master/third_party/cc/BUILD"
+      target="_blank"
+      rel="noopener"
+      >in the Please repo</a
+    >):
+  </p>
 
-<p>For example (as seen <a href="https://github.com/thought-machine/please/blob/master/third_party/cc/BUILD">in the Please repo</a>):
-  <pre><code class="language-plz">
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
     github_repo(
         name = "gtest",
         bazel_compat = True,
         repo = "google/googletest",
         revision = "release-1.8.1",
     )
-  </code></pre></p>
+    </code>
+  </pre>
 
-<p>Rules within subrepos can be referenced using a triple-slash prefix on rules, anywhere
-  where a build rule would normally be accepted. For example:
-  <pre><code class="language-plz">
+  <p>
+    Rules within subrepos can be referenced using a triple-slash prefix on
+    rules, anywhere where a build rule would normally be accepted. For example:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
     cc_test(
         name = "my_test",
         ...
@@ -111,128 +258,219 @@
             "///third_party/cc/gtest//:gtest_main",
         ],
     )
-  </code></pre>
+    </code>
+  </pre>
 
-<p>Note that the subrepo label (<code>third_party/cc/gtest</code>) includes the package we defined
-  it in earlier. In many ways subrepos mirror the feature in Bazel, but in this case are more
-  flexible since they're not limited to being defined at the repo root. For compatibility,
-  we also accept an <code>@</code> prefix for subrepos instead of <code>///</code>.</p>
+  <p>
+    Note that the subrepo label (<code class="code">third_party/cc/gtest</code>)
+    includes the package we defined it in earlier. In many ways subrepos mirror
+    the feature in Bazel, but in this case are more flexible since they're not
+    limited to being defined at the repo root. For compatibility, we also accept
+    an <code class="code">@</code> prefix for subrepos instead of
+    <code class="code">///</code>.
+  </p>
+</section>
 
-<h2>Comparison to other systems</h2>
+<section class="mt4">
+  <h2 class="title-2">
+    Comparison to other systems
+  </h2>
 
-<p>For users familiar with Bazel, we expect that writing BUILD files won't be
-  challenging, the main difference being that there is no direct equivalent to
-  Bazel's WORKSPACE file. As mentioned above, third-party dependencies can occur
-  wherever you choose to put them in normal BUILD files.</p>
+  <p>
+    For users familiar with Bazel, we expect that writing BUILD files won't be
+    challenging, the main difference being that there is no direct equivalent to
+    Bazel's WORKSPACE file. As mentioned above, third-party dependencies can
+    occur wherever you choose to put them in normal BUILD files.
+  </p>
 
-<p>If you've used Buck before, the model is pretty similar to fetching Maven jars
-  using the bucklet for it. This is not entirely coincidental since we were previously
-  using Buck so initially Please had to mimic the same interface - but we also
-  quite liked it and decided to keep on in the same way.</p>
+  <p>
+    If you've used Buck before, the model is pretty similar to fetching Maven
+    jars using the bucklet for it. This is not entirely coincidental since we
+    were previously using Buck so initially Please had to mimic the same
+    interface - but we also quite liked it and decided to keep on in the same
+    way.
+  </p>
 
-<p>If you're coming from Gradle or Maven, it's a little more alien due to being less language-specific
-  and requiring full transitive dependencies to be specified.<br/>
-  There is an <a href="https://github.com/thought-machine/pleasings/blob/master/java/maven_jars.build_defs">add-on rule</a>
-  which is the closest equivalent; it works by communicating with Maven repositories to
-  find dependencies and generating more BUILD rules for them. This can be a little
-  unreliable though, since the Maven package format is complex, and your dependencies
-  aren't fully within your control and can change between builds - we recommend
-  <a href="lexicon.html#maven_jar">maven_jar</a> instead, but understand it's more work to set up.</p>
+  <p>
+    If you're coming from Gradle or Maven, it's a little more alien due to being
+    less language-specific and requiring full transitive dependencies to be
+    specified.<br />
+    There is an
+    <a
+      class="copy-link"
+      href="https://github.com/thought-machine/pleasings/blob/master/java/maven_jars.build_defs"
+      target="_blank"
+      rel="noopener"
+      >add-on rule</a
+    >
+    which is the closest equivalent; it works by communicating with Maven
+    repositories to find dependencies and generating more BUILD rules for them.
+    This can be a little unreliable though, since the Maven package format is
+    complex, and your dependencies aren't fully within your control and can
+    change between builds - we recommend
+    <a class="copy-link" href="/lexicon.html#maven_jar">maven_jar</a>
+    instead, but understand it's more work to set up.
+  </p>
 
-<p><code>requirements.txt</code> files from Python are not usually especially difficult to
-  translate using <a href="lexicon.html#pip_library">pip_library</a>; again we require listing
-  transitive dependencies explicitly, but this is not normally too onerous for Python.<br/>
-  Since Please needs to know precisely what will be output, the rules can sometimes need a little
-  tweaking when the output names don't correspond to the package names (or often a package outputs
-  a single .py file instead of a directory).</p>
+  <p>
+    <code class="code">requirements.txt</code> files from Python are not usually
+    especially difficult to translate using
+    <a class="copy-link" href="/lexicon.html#pip_library">pip_library</a>; again
+    we require listing transitive dependencies explicitly, but this is not
+    normally too onerous for Python.<br />
+    Since Please needs to know precisely what will be output, the rules can
+    sometimes need a little tweaking when the output names don't correspond to
+    the package names (or often a package outputs a single .py file instead of a
+    directory).
+  </p>
 
-<p><a href="lexicon.html#go_get">go_get</a> works pretty similarly to the usual <code>go get</code>
-  tool, but again only outputs a single package at a time. Writing up the dependencies can be
-  eased by using something like <code>go list -f '{{.Deps}}' &lt;package&gt;</code> to discover
-  all the dependencies for the package in question.</p>
+  <p>
+    <a class="copy-link" href="/lexicon.html#go_get">go_get</a> works pretty
+    similarly to the usual <code class="code">go get</code> tool, but again only
+    outputs a single package at a time. Writing up the dependencies can be eased
+    by using something like
+    <code class="code">go list -f '{{.Deps}}' &lt;package&gt;</code> to discover
+    all the dependencies for the package in question.
+  </p>
+</section>
 
-<h2>Verification</h2>
+<section class="mt4">
+  <h2 class="title-2">Verification</h2>
 
-<p>An important concept of Please is strict validation of inputs and outputs of
-  each build. Third-party dependencies are an important case for this since they allow
-  code you don't totally control into your build.<br/>
-  Please has two explicit mechanisms for controlling this.</p>
+  <p>
+    An important concept of Please is strict validation of inputs and outputs of
+    each build. Third-party dependencies are an important case for this since
+    they allow code you don't totally control into your build.<br />
+    Please has two explicit mechanisms for controlling this.
+  </p>
 
+  <section class="mt4">
+    <h3 class="title-3">Hash verification</h3>
 
-<h3>Hash verification</h3>
+    <p>
+      Please can natively verify hashes of packages. Some of the built-in rules
+      for fetching things from third-party repos have this option, and you can
+      add it to your own genrules. For example, one of the Python libraries we
+      use:
+    </p>
 
-<p>Please can natively verify hashes of packages. Some of the built-in rules for fetching
-  things from third-party repos have this option, and you can add it to your own genrules.
-  For example, one of the Python libraries we use:
-
-<pre><code class="language-plz">
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
     pip_library(
         name = 'six',
         version = '1.9.0',
         outs = ['six.py'],
         hashes = ['sha256: 0c31ab7cf1a2761efa32d9a7e891ddeadc0d8673'],
     )
-  </code></pre>
+      </code>
+    </pre>
 
-This declares that the calculated sha256 hash of the package must match one of the given
-set, and it's a failure if not.
-</p>
+    <p>
+      This declares that the calculated sha256 hash of the package must match
+      one of the given set, and it's a failure if not.
+    </p>
 
-<p>You can find the output hash of a particular target by running
-  <code>plz hash //third_party/python:six</code> which will calculate it for you, and
-  you can enter it in the BUILD file.<br/>
-  If it changes (for example when you update the version) plz can update the BUILD file
-  for you via <code>plz hash --update //third_party/python:six</code>.</p>
+    <p>
+      You can find the output hash of a particular target by running
+      <code class="code">plz hash //third_party/python:six</code> which will
+      calculate it for you, and you can enter it in the BUILD file.<br />
+      If it changes (for example when you update the version) plz can update the
+      BUILD file for you via
+      <code class="code">plz hash --update //third_party/python:six</code>.
+    </p>
 
-<p>The reason for allowing multiple hashes is for rules that generate different outputs
-  on different architectures; this is common for Python libraries which have a compiled
-  component, for example.</p>
+    <p>
+      The reason for allowing multiple hashes is for rules that generate
+      different outputs on different architectures; this is common for Python
+      libraries which have a compiled component, for example.
+    </p>
 
-<p>For testing purposes you can run Please with the <code>--nohash_verification</code>
-  flag which will reduce hash verification failures to a warning message only.</p>
+    <p>
+      For testing purposes you can run Please with the
+      <code class="code">--nohash_verification</code> flag which will reduce
+      hash verification failures to a warning message only.
+    </p>
 
-<p>Note that when using this you must be careful that the outputs of your rule are
-  really deterministic. This is generally true for <code>remote_file</code> calls,
-  but obviously only if the server returns the same thing every time for that URL.
-  Some care should be taken with <code>pip_library</code> since the outputs of a
-  <code>pip install</code> for a package containing binary (not pure Python) modules are
-  not bit-for-bit identical if compiled locally, only if you downloaded a precompiled wheel.
-  Different Python and OS versions can affect it too.</p>
+    <p>
+      Note that when using this you must be careful that the outputs of your
+      rule are really deterministic. This is generally true for
+      <code class="code">remote_file</code> calls, but obviously only if the
+      server returns the same thing every time for that URL. Some care should be
+      taken with <code class="code">pip_library</code> since the outputs of a
+      <code class="code">pip install</code> for a package containing binary (not
+      pure Python) modules are not bit-for-bit identical if compiled locally,
+      only if you downloaded a precompiled wheel. Different Python and OS
+      versions can affect it too.
+    </p>
 
-<p>The <code>sha256:</code> prefix is informative only and indeed any string can occur before
-  the colon. In future we may extend this to allow specifying other hash types.</p>
+    <p>
+      The <code class="code">sha256:</code> prefix is informative only and
+      indeed any string can occur before the colon. In future we may extend this
+      to allow specifying other hash types.
+    </p>
+  </section>
 
+  <section class="mt4">
+    <h3 class="title-3">
+      Licence validation
+    </h3>
 
-<h3>Licence validation</h3>
+    <p>
+      Please can attempt to autodetect licences from some third-party packages
+      and inform you if they're not ones you'd accept. You mark licences in the
+      .plzconfig file like so:
+    </p>
 
-<p>Please can attempt to autodetect licences from some third-party packages and inform you if
-  they're not ones you'd accept. You mark licences in the .plzconfig file like so:
-<pre><code>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code>
     [licences]
     accept = MIT
     accept = BSD
     reject = MS-EULA
-  </code></pre>
-By default, with no <code>[licences]</code> section, Please won't perform any licence
-checking.<br/>
-Once you've added some any package with a licence must have a matching accepted licence
-in the config.</p>
+      </code>
+    </pre>
 
-<p>Currently we can autodetect licences from <code>pip_library</code> and <code>maven_jars</code> rules,
-  you can also set them manually via the <code>licences</code> attribute on a rule.</p>
+    <p>
+      By default, with no <code class="code">[licences]</code> section, Please
+      won't perform any licence checking.<br />
+      Once you've added some any package with a licence must have a matching
+      accepted licence in the config.
+    </p>
 
-<p>It bears mentioning that this is done as a best-effort - since licences and their
-  locations are not standardised in pip (and many other places) we can't always be fully
-  confident about how to match licence names and hence don't try (for example,
-  <code>Apache 2</code>, <code>Apache-2.0</code>,  and
-  <code>The Apache Software License, version 2</code> all refer to the same licence,
-  despite being very different strings, whereas <code>LGPL</code> and <code>AGPL</code>
-  are significantly different licences but only one letter apart).</p>
+    <p>
+      Currently we can autodetect licences from
+      <code class="code">pip_library</code> and
+      <code class="code">maven_jars</code> rules, you can also set them manually
+      via the <code class="code">licences</code> attribute on a rule.
+    </p>
 
-<p>Please also isn't a lawyer and can't provide advice about whether a specific licence is
-  suitable for you or not. Only you can make that decision.</p>
+    <p>
+      It bears mentioning that this is done as a best-effort - since licences
+      and their locations are not standardised in pip (and many other places) we
+      can't always be fully confident about how to match licence names and hence
+      don't try (for example, <code class="code">Apache 2</code>,
+      <code class="code">Apache-2.0</code>, and
+      <code class="code">The Apache Software License, version 2</code> all refer
+      to the same licence, despite being very different strings, whereas
+      <code class="code">LGPL</code> and <code class="code">AGPL</code> are
+      significantly different licences but only one letter apart).
+    </p>
 
-<div class="section-guide">
-  <div class="prev-section"><a href="/basics.html">Please basics</a></div>
-  <div class="next-section"><a href="/quickstart_dropoff.html">What's next?</a></div>
+    <p>
+      Please also isn't a lawyer and can't provide advice about whether a
+      specific licence is suitable for you or not. Only you can make that
+      decision.
+    </p>
+  </section>
+</section>
+
+<div class="pagination">
+  <div class="pagination__previous">
+    <a class="copy-link" href="/basics.html">Please basics</a>
+  </div>
+  <div class="pagination__next">
+    <a class="copy-link" href="/quickstart_dropoff.html">What's next?</a>
+  </div>
 </div>
