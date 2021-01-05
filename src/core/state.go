@@ -226,7 +226,9 @@ type stateProgress struct {
 	pendingTargets     map[BuildLabel]chan struct{}
 	pendingTargetMutex sync.Mutex
 	// Used to track general package parsing requests.
-	pendingPackages     map[packageKey]chan struct{}
+	pendingPackages map[packageKey]chan struct{}
+	// similar to pendingPackages but consumers haven't committed to parsing the package
+	packageWaits        map[packageKey]chan struct{}
 	pendingPackageMutex sync.Mutex
 	// The set of known states
 	allStates []*BuildState
@@ -484,6 +486,9 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 			if ch, present := state.progress.pendingPackages[packageKey{Name: label.PackageName, Subrepo: label.Subrepo}]; present {
 				close(ch) // This signals to anyone waiting that it's done.
 			}
+			if ch, present := state.progress.packageWaits[packageKey{Name: label.PackageName, Subrepo: label.Subrepo}]; present {
+				close(ch) // This signals to anyone waiting that it's done.
+			}
 		}()
 		return // We don't notify anything else on these.
 	}
@@ -649,10 +654,10 @@ func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 	return ret
 }
 
-// WaitForPackage either returns the given package which is already parsed and available,
-// or returns nil if nothing's parsed it already, in which case everything else calling this
-// will wait for the caller to parse it themselves.
-func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
+// SyncParsePackage either returns the given package which is already parsed and available,
+// or returns nil indicating it is ready to be parsed. Everything subsequently calling this
+// will block until the original caller parse it.
+func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 	if p := state.Graph.PackageByLabel(label); p != nil {
 		return p
 	}
@@ -667,6 +672,37 @@ func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
 	state.progress.pendingPackages[key] = make(chan struct{})
 	state.progress.pendingPackageMutex.Unlock()
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
+}
+
+// WaitForPackage is similar to WaitForBuiltTarget however
+func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
+	if p := state.Graph.PackageByLabel(l); p != nil {
+		return p
+	}
+	key := packageKey{Name: l.PackageName, Subrepo: l.Subrepo}
+
+	state.progress.pendingPackageMutex.Lock()
+
+	// If something has promised to parse it, wait for them to do so
+	if ch, present := state.progress.pendingPackages[key]; present {
+		state.progress.pendingPackageMutex.Unlock()
+		<-ch
+		return state.Graph.PackageByLabel(l)
+	}
+
+	// If something has already queued the package to be parsed, wait for them
+	if ch, present := state.progress.packageWaits[key]; present {
+		state.progress.pendingPackageMutex.Unlock()
+		<-ch
+		return state.Graph.PackageByLabel(l)
+	}
+
+	// Otherwise queue the target for parse and recurse
+	state.AddPendingParse(l, dependent, true)
+	state.progress.packageWaits[key] = make(chan struct{})
+	state.progress.pendingPackageMutex.Unlock()
+
+	return state.WaitForPackage(l, dependent)
 }
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
@@ -940,6 +976,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			numPending:      1,
 			pendingTargets:  map[BuildLabel]chan struct{}{},
 			pendingPackages: map[packageKey]chan struct{}{},
+			packageWaits:    map[packageKey]chan struct{}{},
 			success:         true,
 		},
 	}
