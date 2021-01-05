@@ -859,7 +859,6 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         requires = ['go', 'go_src'],
         test_only = test_only,
         labels = ['link:plz-out/go'] + [f'cc:ld:{f}' for f in linker_flags],
-        sandbox = False,
         needs_transitive_deps = True,
         licences = licences,
     )
@@ -906,7 +905,6 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
         requires = ['go', 'go_src'],
         test_only = test_only,
         labels = ['link:plz-out/go'],
-        sandbox = False,
         needs_transitive_deps = True,
         licences = licences,
     )
