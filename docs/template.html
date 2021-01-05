@@ -352,7 +352,7 @@
         </ul>
       </nav>
 
-      <div class="ph3 pb4 w-80-l">
+      <div class="ph3 pb4 w-80-l mw8-l">
         <div class="dn db-l" aria-hidden="true">
           {{ if eq .Filename "index.html" }}
           <div class="h5 relative">
@@ -423,46 +423,51 @@
     </div>
 
     {{ if eq .Filename "index.html" }}
-    <section class="relative ph3 pv5 bg-near-black calibre">
-      <div class="dn db-l" aria-hidden="true">
+    <div class="bg-near-black flex-l">
+      <div class="relative dn db-l w-20-l" aria-hidden="true">
         <img
           class="absolute"
           style="height: 4rem; top: 6rem; left: -1rem;"
           alt=""
           src="/images/hexagon_r.png"
         />
-        <img
-          class="absolute"
-          style="height: 12em; transform: rotate(160deg); top: -1rem; left: 15%;"
-          alt=""
-          src="/images/triangle_g.png"
-        />
-        <img
-          class="absolute"
-          style="height: 8em; right: 20%; bottom: -2rem;"
-          alt=""
-          src="/images/circle_y.png"
-        />
       </div>
 
-      <h2 class="mb4 silver f3 normal tc">
-        <span class="white">Want Please?</span> Get started:
-      </h2>
-      <p class="f3 tc">
-        <a
-          class="pv3 dib w-100 mw5 white no-underline ba bw1 b--turquoise br-pill"
-          href="/quickstart.html"
-          >Yes Please</a
-        >
-      </p>
-    </section>
+      <section class="relative ph3 pv5 calibre tc w-80-l mw8-l">
+        <div class="dn db-l" aria-hidden="true">
+          <img
+            class="absolute"
+            style="height: 12em; transform: rotate(160deg); top: -1rem; left: -10%;"
+            alt=""
+            src="/images/triangle_g.png"
+          />
+          <img
+            class="absolute"
+            style="height: 8em; right: 5%; bottom: -2rem;"
+            alt=""
+            src="/images/circle_y.png"
+          />
+        </div>
+
+        <h2 class="mb4 silver f3 normal">
+          <span class="white">Want Please?</span> Get started:
+        </h2>
+        <p class="f3">
+          <a
+            class="pv3 dib w-100 mw5 white no-underline ba bw1 b--turquoise br-pill"
+            href="/quickstart.html"
+            >Yes Please</a
+          >
+        </p>
+      </section>
+    </div>
     {{ end }}
 
-    <footer class="pt5 flex flex-wrap">
+    <footer class="pt5 flex">
       <div class="dn db-l ph3-l pb4-l w-20-l" aria-hidden="true">
         <img alt="" src="/images/lockup2.png" />
       </div>
-      <div class="ph3 flex-l w-80-l">
+      <div class="ph3 flex-l w-80-l mw8-l">
         <div class="pb4 w-50-l">
           <a href="/index.html"
             ><img

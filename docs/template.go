@@ -163,7 +163,7 @@ func main() {
 		Contents: mustHighlight(mustRead(opts.In)),
 		Filename: opts.Filename,
 	}
-	for i := 0; i <= strings.Count(data.Contents, "\n")/300; i++ {
+	for i := 0; i < strings.Count(data.Contents, "\n")/200; i++ {
 		// Awkwardly this seems to have to be a slice to range over in the template.
 		data.SideImages = append(data.SideImages, i+1)
 	}
