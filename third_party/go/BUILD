@@ -708,3 +708,12 @@ go_get(
     get = "github.com/DataDog/zstd",
     revision = "v1.4.5+patch1",
 )
+
+go_module(
+    name = "wasmer",
+    module = "github.com/wasmerio/wasmer-go",
+    install = ["wasmer"],
+    licences = ["MIT"],
+    version = "v1.0.0-beta1",
+    please_go_install = True,
+)

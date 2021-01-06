@@ -45,7 +45,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	// If we get here then it falls to us to parse this package.
 	state.LogBuildResult(tid, label, core.PackageParsing, "Parsing...")
 
-	subrepo, err := checkSubrepo(tid, state, label, dependent)
+	subrepo, err := checkSubrepo(tid, state, label, dependent, forSubinclude)
 	if err != nil {
 		return err
 	} else if subrepo != nil && subrepo.Target != nil {
@@ -69,7 +69,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
-func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLabel) (*core.Subrepo, error) {
+func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
 	if label.Subrepo == "" {
 		return nil, nil
 	} else if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
@@ -79,7 +79,7 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	sl := label.SubrepoLabel()
 
 	// Local subincludes are when we subinclude from a subrepo defined in the current package
-	localSubinclude := sl.PackageName == dependent.PackageName
+	localSubinclude := sl.PackageName == dependent.PackageName && forSubinclude
 
 	// If we're including from the same package, we don't want to parse the subrepo package
 	if !localSubinclude {
