@@ -745,6 +745,8 @@ func (s *scope) Constant(expr *Expression) pyObject {
 			}
 		}
 		return s.interpretValueExpression(expr.Val)
+	} else if expr.Val.FString != nil && len(expr.Val.FString.Vars) == 0 {
+		return pyString(expr.Val.FString.Suffix)
 	}
 	// N.B. dicts are not optimised to constants currently because they are mutable (because Go maps have
 	//      pointer semantics). It might be nice to be able to do that later but it is probably not critical -

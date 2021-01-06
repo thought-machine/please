@@ -710,10 +710,14 @@ go_get(
 )
 
 go_module(
-    name = "wasmer",
-    module = "github.com/wasmerio/wasmer-go",
-    install = ["wasmer"],
-    licences = ["MIT"],
-    version = "v1.0.0-beta1",
-    please_go_install = True,
+    name = "blake3",
+    module = "lukechampine.com/blake3",
+    version = "v1.1.4",
+    deps = [":cpuid"],
+)
+
+go_module(
+    name = "cpuid",
+    module = "github.com/klauspost/cpuid",
+    version = "v1.3.1",
 )

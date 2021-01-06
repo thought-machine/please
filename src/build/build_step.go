@@ -3,8 +3,6 @@ package build
 
 import (
 	"bytes"
-	"crypto/sha1"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -813,8 +811,13 @@ func (h *targetHasher) SetHash(target *core.BuildTarget, hash []byte) {
 // outputHash calculates the output hash for a target, choosing an appropriate strategy.
 func (h *targetHasher) outputHash(target *core.BuildTarget) ([]byte, error) {
 	outs := target.FullOutputs()
-	// For compatibility, leave this on the default for SHA1 hashing.
-	if len(outs) == 1 && fs.FileExists(outs[0]) && h.State.Config.Build.HashFunction != "sha1" {
+
+	// We must combine for sha1 for backwards compatibility
+	// TODO(jpoole): remove this special case in v16
+	mustCombine := h.State.Config.Build.HashFunction == "sha1" && !h.State.Config.FeatureFlags.SingleSHA1Hash
+	combine := len(outs) != 1 || mustCombine
+
+	if !combine && fs.FileExists(outs[0]) {
 		return outputHash(target, outs, h.State.PathHasher, nil)
 	}
 	return outputHash(target, outs, h.State.PathHasher, h.State.PathHasher.NewHash)
@@ -850,10 +853,6 @@ func outputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHashe
 
 // Verify the hash of output files for a rule match the ones set on it.
 func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []byte) error {
-	// TODO(peterebden): can we genericise all of this to lean on the hashers we're getting
-	//                   from the state rather than so much hardcoding?
-	const sha1Len = 2 * sha1.Size // x2 because of hex-encoding
-	const sha256Len = 2 * sha256.Size
 	if len(target.Hashes) == 0 {
 		return nil // nothing to check
 	}
@@ -867,18 +866,25 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 			return nil
 		}
 	}
-	if checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha1"), sha1.New, sha1Len) ||
-		(len(outputs) == 1 && checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha1"), nil, sha1Len)) ||
-		(len(outputs) != 1 && checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha256"), sha256.New, sha256Len)) ||
-		(len(outputs) == 1 && checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha256"), nil, sha256Len)) {
+	combine := len(outputs) != 1
+	validHashes, valid := checkRuleHashesOfType(target, hashes, outputs, state.OutputHashCheckers(), combine)
+	if valid {
 		return nil
 	}
-	if len(target.Hashes) == 1 {
-		return fmt.Errorf("Bad output hash for rule %s: was %s but expected %s",
-			target.Label, hashStr, target.Hashes[0])
+
+	// TODO(jpoole): remove this special case for sha1 once v16 is released
+	if !state.Config.FeatureFlags.SingleSHA1Hash {
+		// Always allow both the combined and non-combined sha1 hash for backwards compatibility
+		if _, valid := checkRuleHashesOfType(target, hashes, outputs, []*fs.PathHasher{state.Hasher("sha1")}, !combine); valid {
+			return nil
+		}
 	}
-	return fmt.Errorf("Bad output hash for rule %s: was %s but expected one of [%s]",
-		target.Label, hashStr, strings.Join(target.Hashes, ", "))
+	if len(target.Hashes) == 1 {
+		return fmt.Errorf("Bad output hash for rule %s, expected %s, but was: \n\t%s",
+			target.Label, target.Hashes[0], strings.Join(validHashes, "\n\t"))
+	}
+	return fmt.Errorf("Bad output hash for rule %s, expected on of: \n\t%s\nbut was \n\t%s",
+		target.Label, strings.Join(target.Hashes, "\n\t"), strings.Join(validHashes, "\n\t"))
 }
 
 // checkRuleHashesOfType checks any hashes on this rule of a single type.
@@ -886,16 +892,28 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 // where a target has a single output so as not to double-hash it.
 // It is a bit fiddly, but is organised this way to avoid calculating hashes of
 // unused types unnecessarily since that could get quite expensive.
-func checkRuleHashesOfType(target *core.BuildTarget, hashes, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash, size int) bool {
-	for _, h := range hashes {
-		if len(h) == size { // Check if the hash is of the right algorithm
-			bhash, _ := outputHash(target, outputs, hasher, combine)
-			if hex.EncodeToString(bhash) == h {
-				return true
+func checkRuleHashesOfType(target *core.BuildTarget, hashes, outputs []string, hashers []*fs.PathHasher, combine bool) ([]string, bool) {
+	validHashes := make([]string, len(hashers))
+
+	for i, hasher := range hashers {
+		var combiner func() hash.Hash
+		if combine {
+			combiner = hasher.NewHash
+		}
+		bhash, _ := outputHash(target, outputs, hasher, combiner)
+		hashString := hex.EncodeToString(bhash)
+		validHashes[i] = fmt.Sprintf("%s: %s", hasher.AlgoName(), hashString)
+
+		for _, h := range hashes {
+			if len(h) == hasher.Size()*2 { // Check if the hash is of the right algorithm; 2x because of hex encoding
+				if hashString == h {
+					return nil, true
+				}
 			}
 		}
 	}
-	return false
+
+	return validHashes, false
 }
 
 // Runs the post-build function for a target.
