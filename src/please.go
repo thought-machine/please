@@ -434,6 +434,11 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 
+			// This is a bit strange as normally if you run a binary for another platform, this will fail. In some cases
+			// this can be quite useful though e.g. to compile a binary for a target arch, then run an .sh script to
+			// push that to docker.
+			opts.Run.Args.Target.Subrepo = opts.BuildFlags.Arch.String()
+
 			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, dir)
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
@@ -834,7 +839,6 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		output.MonitorState(ctx, state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
-
 	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, opts.BuildFlags.Arch)
 	cancel()
 	wg.Wait()
