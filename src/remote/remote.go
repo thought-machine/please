@@ -587,7 +587,6 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 // reallyExecute is like execute but after the initial cache check etc.
 // The action & sources must have already been uploaded.
 func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest bool) (*core.BuildMetadata, *pb.ActionResult, error) {
-
 	executing := false
 	updateProgress := func(metadata *pb.ExecuteOperationMetadata) {
 		if c.state.Config.Remote.DisplayURL != "" {
