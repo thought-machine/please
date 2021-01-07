@@ -129,7 +129,7 @@ func IsPackage(buildFileNames []string, name string) bool {
 	return false
 }
 
-// Try to gracefuly rename the file as the os.Rename does not work accross
+// Try to gracefully rename the file as the os.Rename does not work across
 // filesystems and on most Linux systems /tmp is mounted as tmpfs
 func renameFile(from, to string) (err error) {
 	err = os.Rename(from, to)
