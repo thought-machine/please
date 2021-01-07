@@ -6,6 +6,7 @@ go_library(
         "//src/core",
         "//src/output",
         "//src/process",
+        "//src/cli",
         "//third_party/go:errgroup",
         "//third_party/go:logging",
     ],
