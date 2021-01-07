@@ -587,6 +587,39 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 // reallyExecute is like execute but after the initial cache check etc.
 // The action & sources must have already been uploaded.
 func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+
+	executing := false
+	updateProgress := func(metadata *pb.ExecuteOperationMetadata) {
+		if c.state.Config.Remote.DisplayURL != "" {
+			log.Debug("Remote progress for %s: %s%s", target.Label, metadata.Stage, c.actionURL(metadata.ActionDigest, true))
+		}
+		if target.State() <= core.Built {
+			switch metadata.Stage {
+			case pb.ExecutionStage_CACHE_CHECK:
+				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
+			case pb.ExecutionStage_QUEUED:
+				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Queued")
+			case pb.ExecutionStage_EXECUTING:
+				executing = true
+				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Building...")
+			case pb.ExecutionStage_COMPLETED:
+				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Completed")
+			}
+		} else {
+			switch metadata.Stage {
+			case pb.ExecutionStage_CACHE_CHECK:
+				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Checking cache...")
+			case pb.ExecutionStage_QUEUED:
+				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Queued")
+			case pb.ExecutionStage_EXECUTING:
+				executing = true
+				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
+			case pb.ExecutionStage_COMPLETED:
+				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Completed")
+			}
+		}
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() {
@@ -595,10 +628,14 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 			case <-ctx.Done():
 				return
 			case <-time.After(1 * time.Minute):
+				description := "queued"
+				if executing {
+					description = "executing"
+				}
 				if i == 1 {
-					log.Notice("%s still executing after 1 minute", target)
+					log.Notice("%s still %s after 1 minute", target, description)
 				} else {
-					log.Notice("%s still executing after %d minutes", target, i)
+					log.Notice("%s still %s after %d minutes", target, description, i)
 				}
 			}
 		}
@@ -608,9 +645,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		InstanceName:    c.instance,
 		ActionDigest:    digest,
 		SkipCacheLookup: true, // We've already done it above.
-	}, func(metadata *pb.ExecuteOperationMetadata) {
-		c.updateProgress(tid, target, metadata)
-	})
+	}, updateProgress)
 	if err != nil {
 		// Handle timing issues if we try to resume an execution as it fails. If we get a
 		// "not found" we might find that it's already been completed and we can't resume.
@@ -715,36 +750,6 @@ func logResponseTimings(target *core.BuildTarget, ar *pb.ActionResult) {
 		inputFetchStartTime := toTime(ar.ExecutionMetadata.InputFetchStartTimestamp)
 		inputFetchEndTime := toTime(ar.ExecutionMetadata.InputFetchCompletedTimestamp)
 		log.Debug("Completed remote build action for %s; input fetch %s, build time %s", target, inputFetchEndTime.Sub(inputFetchStartTime), endTime.Sub(startTime))
-	}
-}
-
-// updateProgress updates the progress of a target based on its metadata.
-func (c *Client) updateProgress(tid int, target *core.BuildTarget, metadata *pb.ExecuteOperationMetadata) {
-	if c.state.Config.Remote.DisplayURL != "" {
-		log.Debug("Remote progress for %s: %s%s", target.Label, metadata.Stage, c.actionURL(metadata.ActionDigest, true))
-	}
-	if target.State() <= core.Built {
-		switch metadata.Stage {
-		case pb.ExecutionStage_CACHE_CHECK:
-			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
-		case pb.ExecutionStage_QUEUED:
-			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Queued")
-		case pb.ExecutionStage_EXECUTING:
-			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Building...")
-		case pb.ExecutionStage_COMPLETED:
-			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Completed")
-		}
-	} else {
-		switch metadata.Stage {
-		case pb.ExecutionStage_CACHE_CHECK:
-			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Checking cache...")
-		case pb.ExecutionStage_QUEUED:
-			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Queued")
-		case pb.ExecutionStage_EXECUTING:
-			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
-		case pb.ExecutionStage_COMPLETED:
-			c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Completed")
-		}
 	}
 }
 
