@@ -55,7 +55,7 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLa
 // Sequential runs a series of targets sequentially.
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
-func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string, quiet, remote, env bool, dir string,  arch cli.Arch) int {
+func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string, quiet, remote, env bool, dir string, arch cli.Arch) int {
 	for _, label := range labels {
 		log.Notice("Running %s", label)
 		if err := run(context.Background(), state, label, args, true, quiet, remote, env, false, dir, arch); err != nil {
