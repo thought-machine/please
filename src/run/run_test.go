@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"github.com/thought-machine/please/src/cli"
 	"os"
 	"testing"
 
@@ -18,17 +19,17 @@ func init() {
 
 func TestSequential(t *testing.T) {
 	state, labels1, labels2 := makeState(core.DefaultConfiguration())
-	code := Sequential(state, labels1, nil, true, false, false, "")
+	code := Sequential(state, labels1, nil, true, false, false, "", cli.Arch{})
 	assert.Equal(t, 0, code)
-	code = Sequential(state, labels2, nil, false, false, false, "")
+	code = Sequential(state, labels2, nil, false, false, false, "", cli.Arch{})
 	assert.Equal(t, 1, code)
 }
 
 func TestParallel(t *testing.T) {
 	state, labels1, labels2 := makeState(core.DefaultConfiguration())
-	code := Parallel(context.Background(), state, labels1, nil, 5, false, false, false, false, "")
+	code := Parallel(context.Background(), state, labels1, nil, 5, false, false, false, false, "", cli.Arch{})
 	assert.Equal(t, 0, code)
-	code = Parallel(context.Background(), state, labels2, nil, 5, true, false, false, false, "")
+	code = Parallel(context.Background(), state, labels2, nil, 5, true, false, false, false, "", cli.Arch{})
 	assert.Equal(t, 1, code)
 }
 
