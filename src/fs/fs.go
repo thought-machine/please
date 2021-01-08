@@ -134,7 +134,7 @@ func IsPackage(buildFileNames []string, name string) bool {
 func renameFile(from, to string) (err error) {
 	err = os.Rename(from, to)
 	if err == nil {
-		return err
+		return nil
 	}
 	err = copyFile(from, to)
 	if err != nil {
@@ -165,11 +165,6 @@ func copyFile(from, to string) (err error) {
 	}()
 
 	_, err = io.Copy(out, in)
-	if err != nil {
-		return err
-	}
-
-	err = out.Sync()
 	if err != nil {
 		return err
 	}
