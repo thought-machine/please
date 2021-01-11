@@ -3,6 +3,7 @@ package asp
 import (
 	"fmt"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -100,6 +101,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 			} else {
 				err = fmt.Errorf("%s", r)
 			}
+			log.Debug("%v", debug.Stack())
 		}
 	}()
 	return s.interpretStatements(statements), nil // Would have panicked if there was an error
