@@ -374,7 +374,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     if install_subdirectory:
      target += '/' + outs[0]
 
-    pip_tool = CONFIG.PIP_TOOL or '$TOOLS_PYTHON -m pip'
+    pip_tool = "$TOOLS_PIP" if CONFIG.PIP_TOOL else '$TOOLS_PYTHON -m pip'
 
     pip_cmd = (
         f'mkdir {pip_target_dir} && '

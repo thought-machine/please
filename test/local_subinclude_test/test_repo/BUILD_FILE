@@ -1,2 +1,6 @@
-# TODO(jpoole): figure out why pleasings aren't available at this point...
-# subinclude("///pleasings//k8s")
+subinclude("///dir/pleasings2//go")
+
+gotestsum_test(
+    name = "gotest",
+    race = True,
+)

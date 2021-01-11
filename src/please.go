@@ -434,7 +434,7 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 
-			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, dir)
+			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, dir, opts.BuildFlags.Arch)
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
@@ -445,7 +445,7 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 
-			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalLabels(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir))
+			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalLabels(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir, opts.BuildFlags.Arch))
 		}
 		return 1
 	},
@@ -456,7 +456,7 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 
-			os.Exit(run.Sequential(state, state.ExpandOriginalLabels(), opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir))
+			os.Exit(run.Sequential(state, state.ExpandOriginalLabels(), opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir, opts.BuildFlags.Arch))
 		}
 		return 1
 	},
@@ -834,7 +834,6 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		output.MonitorState(ctx, state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
-
 	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, opts.BuildFlags.Arch)
 	cancel()
 	wg.Wait()
