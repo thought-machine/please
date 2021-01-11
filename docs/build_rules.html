@@ -1,367 +1,763 @@
-<h1>Writing build rules</h1>
+<h1 class="title-1">Writing build rules</h1>
 
-<p>Please is designed to support interleaving custom build commands as first-class
-  citizens in the system. This describes some of the concepts to bear in mind when
-  writing rules of your own.</p>
+<p>
+  Please is designed to support interleaving custom build commands as
+  first-class citizens in the system. This describes some of the concepts to
+  bear in mind when writing rules of your own.
+</p>
 
-<p>The documentation for <a href="lexicon.html#genrule">genrule()</a> and
-  <a href="lexicon.html#gentest">gentest()</a> may be of use as well, as that explains the
-  available arguments and what they do.</p>
+<p>
+  The documentation for
+  <a class="copy-link" href="/lexicon.html#genrule">genrule()</a> and
+  <a class="copy-link" href="/lexicon.html#gentest">gentest()</a> may be of use
+  as well, as that explains the available arguments and what they do.
+</p>
 
-<h2 id="example">Word count example</h2>
-<p>Here is an example of a build rule. It takes in <code>example/file.txt</code> from the
-  source tree and counts the number of words within:</p>
+<section class="mt4">
+  <h2 class="title-2" id="example">
+    Word count example
+  </h2>
 
-  <pre><code class="language-plz">
+  <p>
+    Here is an example of a build rule. It takes in
+    <code class="code">example/file.txt</code> from the source tree and counts
+    the number of words within:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
     # //example:word_count
     genrule(
       name = "word_count",
       srcs = ["file.txt"],
       outs = ["file.wordcount"],
-      cmd = "wc $SRCS > $OUT",
+      cmd = "wc $SRCS &gt; $OUT",
     )
-    </code></pre>
+    </code>
+  </pre>
 
-<p>Please sets up <code>$SRCS</code> and <code>$OUT</code> based on the parameters we passed
-  to <code>genrule()</code>, then executes our command. When this rule builds, it will output
-  <code>plz-out/gen/example/file.wordcount</code>. For more information on how this works, see
-  the sources and outputs sections below.</p>
+  <p>
+    Please sets up <code class="code">$SRCS</code> and
+    <code class="code">$OUT</code> based on the parameters we passed to
+    <code class="code">genrule()</code>, then executes our command. When this
+    rule builds, it will output
+    <code class="code">plz-out/gen/example/file.wordcount</code>. For more
+    information on how this works, see the sources and outputs sections below.
+  </p>
+</section>
 
-<h2 id="tmp-dir">Build location</h2>
+<section class="mt4">
+  <h2 class="title-2" id="tmp-dir">
+    Build location
+  </h2>
 
-<p>A core concept of Please is to try to isolate execution so we have a good concept of
-  correctness for each action. To this end each rule builds in its own temporary directory
-    (under <code>plz-out/tmp</code>) containing only files defined as inputs to the rule.</p>
+  <p>
+    A core concept of Please is to try to isolate execution so we have a good
+    concept of correctness for each action. To this end each rule builds in its
+    own temporary directory (under <code class="code">plz-out/tmp</code>)
+    containing only files defined as inputs to the rule.
+  </p>
 
-<p>This means that you can't access any other files in your source tree from within the rule.
-  If you want to have a look at what it looks like in there, <code>plz build --shell</code>
-  will prepare a target for building and open up a shell into the directory, where you can
-  look around and try running commands by hand.</p>
+  <p>
+    This means that you can't access any other files in your source tree from
+    within the rule. If you want to have a look at what it looks like in there,
+    <code class="code">plz build --shell</code> will prepare a target for
+    building and open up a shell into the directory, where you can look around
+    and try running commands by hand.
+  </p>
 
-<p>Some aspects of this environment are different to normal - for example rules are given a
-  small, deterministic set of environment variables. They shouldn't need to read anything
-  outside this directory or not described by those variables. See the
-  <a href="#pass-env">Passing environment variables</a> section of this page for more
-  information on passing variables from the host machine to the rule.</p>
+  <p>
+    Some aspects of this environment are different to normal - for example rules
+    are given a small, deterministic set of environment variables. They
+    shouldn't need to read anything outside this directory or not described by
+    those variables. See the
+    <a class="copy-link" href="#pass-env">Passing environment variables</a>
+    section of this page for more information on passing variables from the host
+    machine to the rule.
+  </p>
+</section>
 
+<section class="mt4">
+  <h2 class="title-2" id="srcs">Sources</h2>
 
-<h2 id="srcs">Sources</h2>
+  <p>
+    Sources are the inputs to your rule - typically source code, but like any
+    other inputs, they can also be build labels. This is defined in the
+    <code class="code">srcs</code> argument.
+  </p>
 
-<p>Sources are the inputs to your rule - typically source code, but like any other inputs, they can also be build
-  labels. This is defined in the <code>srcs</code> argument.</p>
+  <p>
+    All sources are linked into the build directory - for performance reasons
+    they aren't copied so you shouldn't modify them in-place.
+  </p>
 
-<p>All sources are linked into the build directory - for performance reasons they aren't copied
-  so you shouldn't modify them in-place.</p>
+  <p>
+    Sources can be both files and directories, however it can be useful to use
+    globs for sources e.g. to include all files with a given extension. See the
+    <a class="copy-link" href="/lexicon.html#please-builtins">built ins</a>
+    for more information on this.
+  </p>
 
-<p>Sources can be both files and directories, however it can be useful to use globs for sources e.g. to include all
-  files with a given extension. See the <a href="/lexicon.html#please-builtins">built ins</a> for more information on
-  this.</p>
+  <p>
+    Sources can be referred through the
+    <code class="code">$SRCS</code> environment variable. If there's only one,
+    <code class="code">$SRC</code> will be defined too.<br />
+    Sources can also be named, e.g.
+  </p>
 
-<p>Sources can be referred through the <code>$SRCS</code> environment variable. If there's only
-  one, <code>$SRC</code> will be defined too.<br/>
-  Sources can also be named, e.g.
-  <pre><code class="language-plz">
-      srcs = {
-          'srcs': ['my_source.py'],
-          'resources': ['something.txt'],
-      },
-  </code></pre>
-  In that case they can be accessed separately through <code>$SRCS_SRCS</code> and
-  <code>$SRCS_RESOURCES</code>.
-</p>
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    srcs = {
+        'srcs': ['my_source.py'],
+        'resources': ['something.txt'],
+    },
+    </code>
+  </pre>
 
-<h2 id="outs">Outputs</h2>
-<p>Rules must define their outputs explicitly. Only these files will be saved to plz-out and
-  made available to other rules.</p>
-<p>The output location within plz-out depends on whether the rule is marked as binary. Binary
-    rules output to <code>plz-out/bin/...</code> and non-binary rules output to
-    <code>plz-out/gen/...</code>.</p>
-<p>Like sources, outputs can be both files and directories. The simplest way to define outputs
-  on a rule is as a list:</p>
-  <pre><code class="language-plz">
-      outs = [
-        "path/to/a/directory",
-        "foo.a",
-      ],
-  </code></pre>
-<p>The <code>$OUT</code> and <code>$OUTS</code> variables will be set much like <a href="#srcs">sources</a>.
-</p>
+  <p>
+    In that case they can be accessed separately through
+    <code class="code">$SRCS_SRCS</code> and
+    <code class="code">$SRCS_RESOURCES</code>.
+  </p>
+</section>
 
-<h3 id="named-outs">Named outputs</h3>
-<p>Much like sources, <code>outs</code> can also be a dictionary. In this case, the outputs are
-    considered named outputs:</p>
-  <pre><code class="language-plz">
-      genrule(
-          name = "my_rule",
-          ...
-          outs = {
-              'src': ['src'],
-              'lib': ['lib'],
-          },
-      )
-  </code></pre>
-<p>The variables <code>$OUTS_SRC</code> and <code>$OUTS_LIB</code> will be set. These outputs can then
-  be depended on individually from other rules:</p>
-  <pre><code class="language-plz">
-      genrule(
-          ...
-          srcs = [":my_rule|srcs"],
-          deps = ["my_rule|libs"],
-          ...
-      )
-  </code></pre>
+<section class="mt4">
+  <h2 class="title-2" id="outs">Outputs</h2>
 
-<h3 id="out-dirs">Output directories</h3>
-<p>Sometimes it can be hard to reason about the exact outputs of a rule before actually building it.
-  Output directories allow you to specify a folder; anything that ends up in that folder will become
-  an output of the rule. The folder's path will not constitute part of the output path of the file.</p>
+  <p>
+    Rules must define their outputs explicitly. Only these files will be saved
+    to plz-out and made available to other rules.
+  </p>
 
-<p>Imagine we're generating code. The code generation tool parses some sources and based on the symbols
-  it finds, produces a set of outputs e.g. mock generation:</p>
+  <p>
+    The output location within plz-out depends on whether the rule is marked as
+    binary. Binary rules output to <code class="code">plz-out/bin/...</code> and
+    non-binary rules output to <code class="code">plz-out/gen/...</code>.
+  </p>
 
-  <pre><code class="language-plz">
-      genrule(
-          name = "mocks",
-          srcs = ["interfaces.go"],
-          tools = {
-              "mockgen": ["mockgen"],
-          },
-          cmd = "$TOOLS_MOCKGEN ... $SRCS -o $OUT"
-          outs = ???,
-      )
-  </code></pre>
-<p>It's difficult to know ahead of time which files mockgen is going to generate. It's dependent on
-  the source code within <code>interfaces.go</code>. We can use output directories for this:</p>
-  <pre><code class="language-plz">
-      genrule(
-          name = "mocks",
-          srcs = ["interfaces.go"],
-          tools = {
-              "mockgen": ["mockgen"],
-          },
-          cmd = "mkdir _out && $TOOLS_MOCKGEN ... $SRCS -o _out"
-          output_dirs = ["_out"],
-      )
-  </code></pre>
-<p>If mockgen generates <code>foo_mocks.go</code> and <code>bar/bar_mocks.go</code>, these will
-  become outputs of the rules as if they were defines as part of the <code>outs</code> list:</p>
-  <pre><code class="language-plz">
-        Build finished; total time 230ms, incrementality 100.0%. Outputs:
-        //:mocks:
-          plz-out/gen/foo_mocks.go
-          plz-out/gen/bar
-  </code></pre>
-<p>If instead of the folder <code>plz-out/gen/bar</code>, it's preferable to have the output as
-  <code>plz-out/gen/bar/bar_mocks.go</code>, you may add <code>**</code> to the output directory:</p>
-  <pre><code class="language-plz">
-      genrule(
-          ...
-          output_dirs = ["_out/**"],
-      )
-  </code></pre>
-<p>This can be useful when these files are going to end up as <code>$SRCS</code> in another rule.
-  Some tools don't deal well with directories e.g. <code>javac</code> in <code>java_library()</code></p>
+  <p>
+    Like sources, outputs can be both files and directories. The simplest way to
+    define outputs on a rule is as a list:
+  </p>
 
-<h2 id="deps">Dependencies</h2>
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    outs = [
+      "path/to/a/directory",
+      "foo.a",
+    ],
+    </code>
+  </pre>
 
-<p>Dependencies are other things you need in order to build - e.g. other code that your rule depends
-  on.</p>
-<p>These are also linked into the build directory, so the difference between sources and dependencies
-  can seem arbitrary, but for some internal functions it's an important distinction to know how
-  rules see the things they'll consume.</p>
-<p>For example, the go compiler expects you to explicitly pass your sources (e.g.
-  <code>go tool compile foo.go bar.go</code>), however it discovers its dependencies through
-  configuration (e.g. by looking at the GOPATH).</p>
+  <p>
+    The <code class="code">$OUT</code> and
+    <code class="code">$OUTS</code> variables will be set much like
+    <a class="copy-link" href="#srcs">sources</a>.
+  </p>
 
-<p>As such, dependencies don't have any corresponding environment variables associated with them.</p>
+  <section class="mt4">
+    <h3 class="title-3" id="named-outs">
+      Named outputs
+    </h3>
 
-<h2 id="tools">Tools</h2>
+    <p>
+      Much like sources, <code class="code">outs</code> can also be a
+      dictionary. In this case, the outputs are considered named outputs:
+    </p>
 
-<p>Tools are the things that a rule uses to build with. They can refer either to other rules
-  within the repo, or system-level binaries, for example:</p>
-  <pre><code class="language-plz">
-      tools = [
-          'curl',
-          '//path/to:tool',
-      ],
-  </code></pre>
-  <p>In this example, <code>curl</code> is resolved on the system using the <code>PATH</code>
-  variable defined in your <a href="config.html#build">.plzconfig file</a>. <code>//path/to:tool</code>
-  will be built first and used from its output location.</p>
-  <p>NB: For <code>gentest()</code>, there's also <code>test_tools</code> which behaves exactly the same,
-    except is made available to <code>test_cmd</code> instead.</p>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+    genrule(
+        name = "my_rule",
+        ...
+        outs = {
+            'src': ['src'],
+            'lib': ['lib'],
+        },
+    )
+      </code>
+    </pre>
 
-<p>Tools are not copied into the build directory, you can access them using the <code>$TOOL</code>
-  or <code>$TOOLS</code> environment variables. They can also be named in a similar manner to
-  <a href="#srcs">sources</a>.</p>
+    <p>
+      The variables <code class="code">$OUTS_SRC</code> and
+      <code class="code">$OUTS_LIB</code> will be set. These outputs can then be
+      depended on individually from other rules:
+    </p>
 
-<p>Note that since tools aren't copied, they can be a source of nondeterminism if you make use of
-  other outputs that happen to be located near them. In order to ensure correctness you should
-  make sure that you only run the tool itself and don't access neighbouring outputs.</p>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+    genrule(
+        ...
+        srcs = [":my_rule|srcs"],
+        deps = ["my_rule|libs"],
+        ...
+    )
+      </code>
+    </pre>
+  </section>
 
-<p>The distinction between tools and other sources or dependencies is very important when
-  using Please to <a href="cross_compiling.html">cross-compile</a> to a different target
-  architecture. Tools will always be used from the host architecture (since they must be
-  executed locally) whereas other dependencies will be for the target.</p>
+  <section class="mt4">
+    <h3 class="title-3" id="out-dirs">
+      Output directories
+    </h3>
 
+    <p>
+      Sometimes it can be hard to reason about the exact outputs of a rule
+      before actually building it. Output directories allow you to specify a
+      folder; anything that ends up in that folder will become an output of the
+      rule. The folder's path will not constitute part of the output path of the
+      file.
+    </p>
 
-<h2 id="cmd">Commands</h2>
+    <p>
+      Imagine we're generating code. The code generation tool parses some
+      sources and based on the symbols it finds, produces a set of outputs e.g.
+      mock generation:
+    </p>
 
-<p>The command that you run is of course the core part of the rule. It can be passed to
-  <code>genrule</code> in three formats:
-  <ul>
-    <li>As a string; the simplest format, since there's only one command that's run.</li>
-    <li>As a list, it's a sequence of commands run one after another if the preceding ones are
-      successful (i.e. it's effectively shorthand for <code>' && '.join(cmd)</code></li>
-    <li>As a dict, the keys correspond to the build config to run and the values
-      are the command to run in that config. The typical use case here is <code>opt</code> vs.
-      <code>dbg</code> but arbitrary names can be given and specified with <code>plz build -c name</code>.</li>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+    genrule(
+        name = "mocks",
+        srcs = ["interfaces.go"],
+        tools = {
+            "mockgen": ["mockgen"],
+        },
+        cmd = "$TOOLS_MOCKGEN ... $SRCS -o $OUT"
+        outs = ???,
+    )
+      </code>
+    </pre>
+
+    <p>
+      It's difficult to know ahead of time which files mockgen is going to
+      generate. It's dependent on the source code within
+      <code class="code">interfaces.go</code>. We can use output directories for
+      this:
+    </p>
+
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+    genrule(
+        name = "mocks",
+        srcs = ["interfaces.go"],
+        tools = {
+            "mockgen": ["mockgen"],
+        },
+        cmd = "mkdir _out &amp;&amp; $TOOLS_MOCKGEN ... $SRCS -o _out"
+        output_dirs = ["_out"],
+    )
+     </code>
+    </pre>
+
+    <p>
+      If mockgen generates <code class="code">foo_mocks.go</code> and
+      <code class="code">bar/bar_mocks.go</code>, these will become outputs of
+      the rules as if they were defines as part of the
+      <code class="code">outs</code> list:
+    </p>
+
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+    Build finished; total time 230ms, incrementality 100.0%. Outputs:
+    //:mocks:
+      plz-out/gen/foo_mocks.go
+      plz-out/gen/bar
+      </code>
+    </pre>
+
+    <p>
+      If instead of the folder <code class="code">plz-out/gen/bar</code>, it's
+      preferable to have the output as
+      <code class="code">plz-out/gen/bar/bar_mocks.go</code>, you may add
+      <code class="code">**</code> to the output directory:
+    </p>
+
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+    genrule(
+        ...
+        output_dirs = ["_out/**"],
+    )
+      </code>
+    </pre>
+
+    <p>
+      This can be useful when these files are going to end up as
+      <code class="code">$SRCS</code> in another rule. Some tools don't deal
+      well with directories e.g. <code class="code">javac</code> in
+      <code class="code">java_library()</code>
+    </p>
+  </section>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2" id="deps">
+    Dependencies
+  </h2>
+
+  <p>
+    Dependencies are other things you need in order to build - e.g. other code
+    that your rule depends on.
+  </p>
+
+  <p>
+    These are also linked into the build directory, so the difference between
+    sources and dependencies can seem arbitrary, but for some internal functions
+    it's an important distinction to know how rules see the things they'll
+    consume.
+  </p>
+
+  <p>
+    For example, the go compiler expects you to explicitly pass your sources
+    (e.g. <code class="code">go tool compile foo.go bar.go</code>), however it
+    discovers its dependencies through configuration (e.g. by looking at the
+    GOPATH).
+  </p>
+
+  <p>
+    As such, dependencies don't have any corresponding environment variables
+    associated with them.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2" id="tools">Tools</h2>
+
+  <p>
+    Tools are the things that a rule uses to build with. They can refer either
+    to other rules within the repo, or system-level binaries, for example:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    tools = [
+        'curl',
+        '//path/to:tool',
+    ],
+    </code>
+  </pre>
+
+  <p>
+    In this example, <code class="code">curl</code> is resolved on the system
+    using the <code class="code">PATH</code> variable defined in your
+    <a class="copy-link" href="/config.html#build">.plzconfig file</a>.
+    <code class="code">//path/to:tool</code> will be built first and used from
+    its output location.
+  </p>
+
+  <p>
+    NB: For <code class="code">gentest()</code>, there's also
+    <code class="code">test_tools</code> which behaves exactly the same, except
+    is made available to <code class="code">test_cmd</code> instead.
+  </p>
+
+  <p>
+    Tools are not copied into the build directory, you can access them using the
+    <code class="code">$TOOL</code> or
+    <code class="code">$TOOLS</code> environment variables. They can also be
+    named in a similar manner to <a class="copy-link" href="#srcs">sources</a>.
+  </p>
+
+  <p>
+    Note that since tools aren't copied, they can be a source of nondeterminism
+    if you make use of other outputs that happen to be located near them. In
+    order to ensure correctness you should make sure that you only run the tool
+    itself and don't access neighbouring outputs.
+  </p>
+
+  <p>
+    The distinction between tools and other sources or dependencies is very
+    important when using Please to
+    <a class="copy-link" href="/cross_compiling.html">cross-compile</a>
+    to a different target architecture. Tools will always be used from the host
+    architecture (since they must be executed locally) whereas other
+    dependencies will be for the target.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2" id="cmd">Commands</h2>
+
+  <p>
+    The command that you run is of course the core part of the rule. It can be
+    passed to <code class="code">genrule</code> in three formats:
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        As a string; the simplest format, since there's only one command that's
+        run.
+      </span>
+    </li>
+    <li>
+      <span>
+        As a list, it's a sequence of commands run one after another if the
+        preceding ones are successful (i.e. it's effectively shorthand for
+        <code class="code">' &amp;&amp; '.join(cmd)</code>
+      </span>
+    </li>
+    <li>
+      <span>
+        As a dict, the keys correspond to the build config to run and the values
+        are the command to run in that config. The typical use case here is
+        <code class="code">opt</code> vs. <code class="code">dbg</code> but
+        arbitrary names can be given and specified with
+        <code class="code">plz build -c name</code>.
+      </span>
+    </li>
   </ul>
-</p>
 
-<p>There are various special sequence replacements that the rule is subject to:
-  <ul>
-    <li><code>$(location //path/to:target)</code> expands to the location of the given build rule,
-      which must have a single output only.</li>
-    <li><code>$(locations //path/to:target)</code> expands to the locations of the outputs of the
-      given build rule, which can have any number of outputs.</li>
-    <li><code>$(dir //path/to:target)</code> expands to the directory containing the outputs of the
-      given label</li>
-    <li><code>$(out_dir //path/to:target)</code> expands to the directory containing the outputs of the
-      given label with the preceding plz-out/{gen|bin}</li>
-    <li><code>$(exe //path/to:target)</code> expands to a command to run the output of the given
-      target. The rule must be marked as binary.</li>
-    <li><code>$(out_exe //path/to:target)</code> expands to a command to run the output of the given
-      target with the precdeing plz-out/{gen|bin}. The rule must be marked as binary.</li>
-    <li><code>$(out_location //path_to:target)</code> expands to the output of the given build rule,
-      with the preceding plz-out/{gen|bin}<br/>
-      Consider carefully when to use this though; it is not normally useful.</li>
-    <li><code>$(out_locations //path_to:target)</code> expands to the locations of the outputs of the
-      given build rule, with the preceding plz-out/{gen|bin}. The rule can have any number of outputs.</li>
-    <li><code>$(hash //path/to:target)</code> expands to a hash of the outputs of that target.<br/>
-      This can be useful to uniquely fingerprint the given rule.</li>
-    <li><code>$(worker //path/to:target)</code> invokes the given target as a
-      <a href="workers.html">persistent worker</a>. See the linked page for more details on
-      how to use them.</li>
+  <p>
+    There are various special sequence replacements that the rule is subject to:
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        <code class="code">$(location //path/to:target)</code> expands to the
+        location of the given build rule, which must have a single output only.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">$(locations //path/to:target)</code> expands to the
+        locations of the outputs of the given build rule, which can have any
+        number of outputs.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">$(dir //path/to:target)</code> expands to the
+        directory containing the outputs of the given label
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">$(out_dir //path/to:target)</code> expands to the
+        directory containing the outputs of the given label with the preceding
+        plz-out/{gen|bin}
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">$(exe //path/to:target)</code> expands to a command
+        to run the output of the given target. The rule must be marked as
+        binary.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">$(out_exe //path/to:target)</code> expands to a
+        command to run the output of the given target with the precdeing
+        plz-out/{gen|bin}. The rule must be marked as binary.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">$(out_location //path_to:target)</code> expands to
+        the output of the given build rule, with the preceding
+        plz-out/{gen|bin}<br />
+        Consider carefully when to use this though; it is not normally useful.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">$(out_locations //path_to:target)</code> expands to
+        the locations of the outputs of the given build rule, with the preceding
+        plz-out/{gen|bin}. The rule can have any number of outputs.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">$(hash //path/to:target)</code> expands to a hash of
+        the outputs of that target.<br />
+        This can be useful to uniquely fingerprint the given rule.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">$(worker //path/to:target)</code> invokes the given
+        target as a
+        <a class="copy-link" href="/workers.html">persistent worker</a>. See the
+        linked page for more details on how to use them.
+      </span>
+    </li>
   </ul>
-</p>
+</section>
 
-<h2 id="build-env">Build environment</h2>
-<p>Please executes the build command in isolation. Typically, this means that rules cannot
-  access files and environment variables that have not explcitly been made available to that
-  rule.</p>
-<p>The following environment variables are set by please before executing your command:</p>
-<ul>
-  <li><code>ARCH</code>: architecture of the system, eg. amd64</li>
-  <li><code>OS</code>: current operating system (linux, darwin, etc).</li>
-  <li><code>PATH</code>: usual PATH environment variable as defined in your .plzconfig</li>
-  <li><code>TMP_DIR</code>: the temporary directory you're compiling within.</li>
-  <li><code>HOME</code>: also set to the temporary directory you're compiling within.</li>
-  <li><code>NAME</code>: the name of the rule.
-  <li><code>SRCS</code>: the sources of your rule</li>
-  <li><code>OUTS</code>: the outputs of your rule</li>
-  <li><code>PKG</code>: the path to the package containing this rule</li>
-  <li><code>PKG_DIR</code>: Similar to <code>PKG</code> but always contains a path (specifically <code>.</code>
-    if the rule is in the root of the repo).</li>
-  <li><code>NAME</code>: the name of this build rule</li>
-  <li><code>OUT</code>: the output of this rule. Only present when there is only one output.</li>
-  <li><code>SRC</code>: the source of this rule. Only present when there is only one source.</li>
-  <li><code>SRCS_&lt;suffix&gt;</code>: Present when you've defined named sources on a rule. Each group
-    creates one of these these variables with paths to those sources.</li>
-  <li><code>TOOLS</code>: Any tools defined on the rule.</li>
-  <li><code>TOOL</code>: Available on any rule that defines a single tool only.</li>
-  <li><code>SECRETS</code>: If any secrets are defined on the rule, these are the paths to them.</li>
-</ul>
+<section class="mt4">
+  <h2 class="title-2" id="build-env">
+    Build environment
+  </h2>
 
-<h3 id="pass-env">Passing environment variables</h3>
-<p>By default, no environment variables from the host machine are available to rules. To make a
-  variable available to the rule, set the <code>pass_env</code> parameter on <code>genrule()</code>
-  and <code>gentest()</code>.</p>
+  <p>
+    Please executes the build command in isolation. Typically, this means that
+    rules cannot access files and environment variables that have not explcitly
+    been made available to that rule.
+  </p>
 
-<p>These variables will be made available to both <code>cmd</code> and <code>test_cmd</code>. They
-  will also contribute to the rule hash, so if they change, the rule will be re-built and tested as
-  appropriate.</p>
+  <p>
+    The following environment variables are set by please before executing your
+    command:
+  </p>
 
-<p>NB: It's also possible to set environment variables to be passed globally to all rules in
-  <code>.plzconfig</code>. See the <a href="/config.html#build">build</a> section in the config
-  documentation for more information.</p>
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        <code class="code">ARCH</code>: architecture of the system, eg. amd64
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">OS</code>: current operating system (linux, darwin,
+        etc).
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">PATH</code>: usual PATH environment variable as
+        defined in your .plzconfig
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">TMP_DIR</code>: the temporary directory you're
+        compiling within.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">HOME</code>: also set to the temporary directory
+        you're compiling within.
+      </span>
+    </li>
+    <li>
+      <span><code class="code">NAME</code>: the name of the rule.</span>
+    </li>
+    <li>
+      <span><code class="code">SRCS</code>: the sources of your rule</span>
+    </li>
+    <li>
+      <span><code class="code">OUTS</code>: the outputs of your rule</span>
+    </li>
+    <li>
+      <span>
+        <code class="code">PKG</code>: the path to the package containing this
+        rule
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">PKG_DIR</code>: Similar to
+        <code class="code">PKG</code> but always contains a path (specifically
+        <code class="code">.</code> if the rule is in the root of the repo).
+      </span>
+    </li>
+    <li>
+      <span><code class="code">NAME</code>: the name of this build rule</span>
+    </li>
+    <li>
+      <span>
+        <code class="code">OUT</code>: the output of this rule. Only present
+        when there is only one output.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">SRC</code>: the source of this rule. Only present
+        when there is only one source.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">SRCS_&lt;suffix&gt;</code>: Present when you've
+        defined named sources on a rule. Each group creates one of these these
+        variables with paths to those sources.
+      </span>
+    </li>
+    <li>
+      <span
+        ><code class="code">TOOLS</code>: Any tools defined on the rule.</span
+      >
+    </li>
+    <li>
+      <span>
+        <code class="code">TOOL</code>: Available on any rule that defines a
+        single tool only.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">SECRETS</code>: If any secrets are defined on the
+        rule, these are the paths to them.
+      </span>
+    </li>
+  </ul>
 
-<h3 id="secrets">Secrets</h3>
+  <section class="mt4">
+    <h3 class="title-3" id="pass-env">
+      Passing environment variables
+    </h3>
 
-<p>Rules can define a list of secrets that they want access to. These are all absolute paths
-  (beginning with <code>/</code> or <code>~</code> and aren't copied to the build directory;
-  instead they can be located using the environment variable <code>$SECRETS</code>.<br/>
-  They're useful for things like signing or access keys that you don't want to check into
-  version control but still might be necessary for building some rules.</p>
+    <p>
+      By default, no environment variables from the host machine are available
+      to rules. To make a variable available to the rule, set the
+      <code class="code">pass_env</code> parameter on
+      <code class="code">genrule()</code> and
+      <code class="code">gentest()</code>.
+    </p>
 
-<p>These don't contribute to the key used to retrieve outputs from the cache; this
-  means it's possible for one machine to build a target with the secret and then
-  share the output with others.</p>
+    <p>
+      These variables will be made available to both
+      <code class="code">cmd</code> and <code class="code">test_cmd</code>. They
+      will also contribute to the rule hash, so if they change, the rule will be
+      re-built and tested as appropriate.
+    </p>
 
+    <p>
+      NB: It's also possible to set environment variables to be passed globally
+      to all rules in <code class="code">.plzconfig</code>. See the
+      <a class="copy-link" href="/config.html#build">build</a> section in the
+      config documentation for more information.
+    </p>
+  </section>
 
+  <section class="mt4">
+    <h3 class="title-3" id="secrets">
+      Secrets
+    </h3>
 
-<h2 id="entry-points">Entry points</h2>
+    <p>
+      Rules can define a list of secrets that they want access to. These are all
+      absolute paths (beginning with <code class="code">/</code> or
+      <code class="code">~</code> and aren't copied to the build directory;
+      instead they can be located using the environment variable
+      <code class="code">$SECRETS</code>.<br />
+      They're useful for things like signing or access keys that you don't want
+      to check into version control but still might be necessary for building
+      some rules.
+    </p>
 
-<p>Some tools require resources to run. For example SDKs commonly have their compiler
-  (and/or runtime) in a directory next to the SDK libraries. It can be hard to write
-  a rule to execute this binary in this context. This is because binary rules have a
-  single output whereas here we require the whole folder.</p>
+    <p>
+      These don't contribute to the key used to retrieve outputs from the cache;
+      this means it's possible for one machine to build a target with the secret
+      and then share the output with others.
+    </p>
+  </section>
+</section>
 
-<p> For example the java JDK has the following structure:</p>
-  <pre><code>
-      .../jdk
-      |-- bin
-      |   |-- java
-      |   |-- javac
-      |   |-- ...
-      |-- lib
-      |   |-- ...
-      ...
-  </code></pre>
+<section class="mt4">
+  <h2 class="title-2" id="entry-points">
+    Entry points
+  </h2>
 
-<p>Using entry points, javac and java can be defined as such:</p>
-  <pre><code class="language-plz">
-      genrule(
-          name = "jdk",
-          cmd = "unzip jdk.zip -o $OUT"
-          outs = ["out"],
-          entry_points = {
-            "java": "jdk/bin/java",
-            "javac": "jdk/bin/javac",
-          },
-      )
-  </code></pre>
+  <p>
+    Some tools require resources to run. For example SDKs commonly have their
+    compiler (and/or runtime) in a directory next to the SDK libraries. It can
+    be hard to write a rule to execute this binary in this context. This is
+    because binary rules have a single output whereas here we require the whole
+    folder.
+  </p>
 
-<p>These entry points can then be used as tools by other rules, follwing a similar syntax to named
-  outputs: </p>
-  <pre><code class="language-plz">
-      genrule(
-          name = "java_lib",
-          cmd = "$TOOLS_JAVAC ...",
-          tools = {
-            "javac": ":jdk|javac",
-          },
-      )
-  </code></pre>
+  <p>For example the java JDK has the following structure:</p>
 
-<h2>Tests</h2>
-<p>As well as <code>genrule()</code>, there's also <a href="/lexicon.html#gentest">gentest()</a> which defines tests.
-Test rules are very similar to other build rules in that they have a build step. This build step usually produces a
-test binary which is then executed in the test step as defined by <code>test_cmd</code>:
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code>
+    .../jdk
+    |-- bin
+    |   |-- java
+    |   |-- javac
+    |   |-- ...
+    |-- lib
+    |   |-- ...
+    ...
+    </code>
+  </pre>
 
-  <pre><code class="language-plz">
-      gentest(
-          name = "some_test",
-          ...
-          cmd = "$TOOLS $SRCS -o $OUT", # compiles a binary that we can later run
-          tools = [CONFIG.SOME_COMPILER], # Some sort of compiler e.g. gcc
-          outs = ["test"],
-          test_cmd = "$TEST > $RESULTS_FILE", # Execute the test. $TEST is set to the output of cmd
-      )
-  </code></pre>
+  <p>Using entry points, javac and java can be defined as such:</p>
 
-<p>In this example, this rule will generate <code>test</code>, a binary containing our compiled tests. We then execute
-this in test_cmd. The test output is piped to <code>test.results</code> as defined by the <code>$RESULTS_FILE</code>
-variable.</p>
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    genrule(
+        name = "jdk",
+        cmd = "unzip jdk.zip -o $OUT"
+        outs = ["out"],
+        entry_points = {
+          "java": "jdk/bin/java",
+          "javac": "jdk/bin/javac",
+        },
+    )
+    </code>
+  </pre>
 
-<p>For more information on testing in general, see <a href="/tests.html">Testing with Please</a>.</p>
+  <p>
+    These entry points can then be used as tools by other rules, follwing a
+    similar syntax to named outputs:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    genrule(
+        name = "java_lib",
+        cmd = "$TOOLS_JAVAC ...",
+        tools = {
+          "javac": ":jdk|javac",
+        },
+    )
+    </code>
+  </pre>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">Tests</h2>
+
+  <p>
+    As well as <code class="code">genrule()</code>, there's also
+    <a class="copy-link" href="/lexicon.html#gentest">gentest()</a>
+    which defines tests. Test rules are very similar to other build rules in
+    that they have a build step. This build step usually produces a test binary
+    which is then executed in the test step as defined by
+    <code class="code">test_cmd</code>:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    gentest(
+        name = "some_test",
+        ...
+        cmd = "$TOOLS $SRCS -o $OUT", # compiles a binary that we can later run
+        tools = [CONFIG.SOME_COMPILER], # Some sort of compiler e.g. gcc
+        outs = ["test"],
+        test_cmd = "$TEST &gt; $RESULTS_FILE", # Execute the test. $TEST is set to the output of cmd
+    )
+    </code>
+  </pre>
+
+  <p>
+    In this example, this rule will generate <code class="code">test</code>, a
+    binary containing our compiled tests. We then execute this in test_cmd. The
+    test output is piped to <code class="code">test.results</code> as defined by
+    the <code class="code">$RESULTS_FILE</code> variable.
+  </p>
+
+  <p>
+    For more information on testing in general, see
+    <a class="copy-link" href="/tests.html">Testing with Please</a>.
+  </p>
+</section>

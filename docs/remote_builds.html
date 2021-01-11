@@ -1,42 +1,108 @@
-<h1>Remote build execution</h1>
+<h1 class="title-1">Remote build execution</h1>
 
-<p class="experimental">This feature is still experimental; some aspects may not work fully
-  or at all just yet. Proceed with caution!</p>
+<p class="red">
+  This feature is still experimental; some aspects may not work fully or at all
+  just yet. Proceed with caution!
+</p>
 
-<p>From v15 onwards, Please has the ability to submit build actions to remote executors.<br/>
-  By default work is still executed on your local machine, but this means parallelism is
-  fundamentally limited by the available local compute capacity; larger teams may want to
-  improve overall speed with access to a larger pool of compute capacity. There are also
-  a number of other considerable benefits such as being able to share artifacts globally
-  between all executions (essentially ensuring each build action only happens once) and
-  executing them in a more controlled environment.</p>
+<p>
+  From v15 onwards, Please has the ability to submit build actions to remote
+  executors.<br />
+  By default work is still executed on your local machine, but this means
+  parallelism is fundamentally limited by the available local compute capacity;
+  larger teams may want to improve overall speed with access to a larger pool of
+  compute capacity. There are also a number of other considerable benefits such
+  as being able to share artifacts globally between all executions (essentially
+  ensuring each build action only happens once) and executing them in a more
+  controlled environment.
+</p>
 
-<p>Please makes use of the <a href="https://github.com/bazelbuild/remote-apis">Remote Execution API</a>
-  to distribute work. This is a generic <a href="https://grpc.io">gRPC-based</a> API with
-  a number of options for the server-side; see
-  <a href="https://github.com/bazelbuild/remote-apis/blob/master/README.md">their documentation</a>
-  for some more information.</p>
+<p>
+  Please makes use of the
+  <a
+    class="copy-link"
+    href="https://github.com/bazelbuild/remote-apis"
+    target="_blank"
+    rel="noopener"
+    >Remote Execution API</a
+  >
+  to distribute work. This is a generic
+  <a class="copy-link" href="https://grpc.io" target="_blank" rel="noopener"
+    >gRPC-based</a
+  >
+  API with a number of options for the server-side; see
+  <a
+    class="copy-link"
+    href="https://github.com/bazelbuild/remote-apis/blob/master/README.md"
+    target="_blank"
+    rel="noopener"
+    >their documentation</a
+  >
+  for some more information.
+</p>
 
-<p>The API is fairly involved and there are some requirements that the server must fulfil
-  to work with plz. Setting it up can be a reasonable amount of work.<br/>
+<p>
+  The API is fairly involved and there are some requirements that the server
+  must fulfil to work with plz. Setting it up can be a reasonable amount of
+  work.<br />
   A few things you might want to keep in mind are:
-  <ul>
-    <li>Please requires version 2.1 of the Remote Execution API (for the
-      <a href="https://github.com/bazelbuild/remote-apis/pull/96">non-specific output path</a>
-      field). At time of writing relatively few servers identify as this, but
-      we hope they'll upgrade soon.</li>
-    <li>Whatever tools you use off the system also have to be available on the server; if your
-      build rule invokes <code>go</code> you have to have that on the PATH on the remote.<br/>
-      This isn't needed if you use tools as other build rules though.</li>
-    <li>You have to have plz installed on the agent to access the tools it comes with. You might
-      need to customise the <code>remote.homedir</code> property to find it.</li>
-    <li>One of the remote servers will need to implement the
-      <a href="https://github.com/bazelbuild/remote-apis/blob/master/build/bazel/remote/asset/v1/remote_asset.proto">Remote Asset API</a>.
-      This can be a different endpoint from the others but will be needed for any
-      <code>remote_file</code> rules to work.</li>
-  </ul>
-  We're actively working on a nmber of things to make the above easier and expect it to
-  evolve quite a bit over the next few versions.</p>
+</p>
 
-<p>Come and chat to us <a href="https://gitter.im/please-build/Lobby">on Gitter</a> if you're
-  interested in setting up Please for remote execution and would like some tips!</p>
+<ul class="bulleted-list">
+  <li>
+    <span>
+      Please requires version 2.1 of the Remote Execution API (for the
+      <a
+        class="copy-link"
+        href="https://github.com/bazelbuild/remote-apis/pull/96"
+        >non-specific output path</a
+      >
+      field). At time of writing relatively few servers identify as this, but we
+      hope they'll upgrade soon.</span
+    >
+  </li>
+  <li>
+    <span
+      >Whatever tools you use off the system also have to be available on the
+      server; if your build rule invokes <code class="code">go</code> you have
+      to have that on the PATH on the remote.<br />
+      This isn't needed if you use tools as other build rules though.</span
+    >
+  </li>
+  <li>
+    <span>
+      You have to have plz installed on the agent to access the tools it comes
+      with. You might need to customise the
+      <code class="code">remote.homedir</code> property to find it.</span
+    >
+  </li>
+  <li>
+    <span>
+      One of the remote servers will need to implement the
+      <a
+        class="copy-link"
+        href="https://github.com/bazelbuild/remote-apis/blob/master/build/bazel/remote/asset/v1/remote_asset.proto"
+        >Remote Asset API</a
+      >. This can be a different endpoint from the others but will be needed for
+      any <code class="code">remote_file</code> rules to work.</span
+    >
+  </li>
+</ul>
+
+<p>
+  We're actively working on a nmber of things to make the above easier and
+  expect it to evolve quite a bit over the next few versions.
+</p>
+
+<p>
+  Come and chat to us on
+  <a
+    class="copy-link"
+    href="https://gitter.im/please-build/Lobby"
+    target="_blank"
+    rel="noopener"
+    >Gitter</a
+  >
+  if you're interested in setting up Please for remote execution and would like
+  some tips!
+</p>

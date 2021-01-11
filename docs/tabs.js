@@ -1,25 +1,47 @@
-function switchTab(event) {
-    const tab = event.target;
-    const lang = tab.dataset.tab;
-    const examples = tab.closest(".tab-container");
+(() => {
+  const setupTabsWidgets = () => {
+    const switchTab = (event) => {
+      event.preventDefault();
 
-    examples.querySelector('.tabs .selected').classList.remove("selected");
-    tab.classList.add("selected");
+      const tabElement = event.target;
+      const tabValue = tabElement.dataset.tab;
+      const widget = tabElement.closest('[data-widget="tabs"]');
 
-    examples.querySelector('.tab-contents > .content.selected').classList.remove("selected");
-    examples.querySelector(`.tab-contents > .content[data-tab="${lang}"]`).classList.add("selected");
-}
+      widget
+        .querySelector(".tabs__tab--selected")
+        .classList.remove("tabs__tab--selected");
+      tabElement.classList.add("tabs__tab--selected");
 
-document.addEventListener("DOMContentLoaded", function(event) {
-    document.querySelectorAll(".tabs > .tab").forEach(tab => {
-        tab.onclick = switchTab;
+      widget
+        .querySelector(".tabs__panel--selected")
+        .classList.remove("tabs__panel--selected");
+      widget
+        .querySelector(`[data-panel="${tabValue}"]`)
+        .classList.add("tabs__panel--selected");
+    };
+
+    document.querySelectorAll('[data-widget="tabs"]').forEach((tabsWidget) => {
+      tabsWidget.querySelectorAll('[role="tab"]').forEach((tabElement) => {
+        tabElement.onclick = switchTab;
+        tabElement.onkeydown = (event) => {
+          if (event.code === "Enter" || event.code === "Space") {
+            switchTab(event);
+          }
+        };
+      });
+
+      const firstTabElement = tabsWidget.querySelector('[role="tab"]');
+      const firstTabValue = firstTabElement.dataset.tab;
+
+      firstTabElement.classList.add("tabs__tab--selected");
+
+      tabsWidget
+        .querySelector(`[data-panel="${firstTabValue}"]`)
+        .classList.add("tabs__panel--selected");
     });
+  };
 
-    document.querySelectorAll(".tabs > .tab:first-child").forEach(tab => {
-        tab.classList.add("selected");
-    });
-
-    document.querySelectorAll(".tab-contents > .content:first-child").forEach(content => {
-        content.classList.add("selected");
-    });
-});
+  document.addEventListener("DOMContentLoaded", () => {
+    setupTabsWidgets();
+  });
+})();
