@@ -52,22 +52,20 @@
     class="silver bg-raisin-black essential-pragmata-pro f5 lh-copy nested-list-reset"
   >
     <header class="pa3 flex items-start justify-between">
-      <a class="flex" href="/index.html"
-        ><img alt="please.build" src="/images/please_build_p.png"
-      /></a>
-      <button
-        id="menu-button"
-        class="white bg-transparent b--none f3 pointer dn-l"
-        aria-haspopup="true"
-        aria-controls="menu-list"
-      >
-        ☰
-      </button>
+      {{ if ne .Filename "index.html"}}
+        <a class="flex no-underline f2-ns f3 white calibre" href="/index.html"
+          >please.<span class="violet">build</span></a
+        >
+        <button
+                id="menu-button"
+                class="white bg-transparent b--none f3 pointer dn-l"
+                aria-haspopup="true"
+                aria-controls="menu-list"
+        >
+          ☰
+        </button>
+      {{ end }}
     </header>
-
-    <a class="skip-to-content" href="#main-content">Skip to content</a>
-
-
     {{ if ne .Filename "index.html" }}
       <div class="flex-l">
         <nav id="menu-list" class="dn ph3 pb4 db-l w-20-l">
@@ -397,11 +395,9 @@
       </div>
       <div class="ph3 flex-l w-80-l mw8-l">
         <div class="pb4 w-50-l">
-          <a href="/index.html"
-            ><img
-              alt="please.build"
-              src="/images/please_build_t.png"
-          /></a>
+          <a class="flex no-underline f2-ns f3 white calibre" href="/index.html"
+            >please.<span class="turquoise">build</span></a
+          >
           <ul>
             <li>
               <a

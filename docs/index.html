@@ -1,8 +1,8 @@
-<div class="flex-l mb6">
-  <div class="center mw9 w-100">
+<div id="main-content" role="main">
+  <div class="center mw9 w-100 pb5-l">
     <div class="ph3 pb4">
       <div class="">
-        <div class="dn db-l" aria-hidden="true">
+        <div class="dn db-l mt4" aria-hidden="true">
           <div class="h5 relative">
             <img
                     class="absolute"
@@ -36,124 +36,119 @@
             />
           </div>
         </div>
-        <div id="main-content" role="main">
           <p class="calibre white normal f3 tc mt6-ns mt6">
             <span class="violet">Please</span> is a cross-language build system with an
             emphasis on high performance, extensibility and correctness.
           </p>
-          <div class="flex-ns w-70-l center mt2">
+          <div class="flex-ns w-70-l center mt2 cf">
             <div class="fl w-33-ns w-100 pr2 mt2 h3">
-              <a class="turquoise no-underline tc db pa2 ba" href="quickstart.html">Install Please</a>
+              <a class="white bg-green no-underline tc db pa2 ba b--green" href="quickstart.html">1. Install Please</a>
             </div>
             <div class="fl w-33-ns w-100 pr2 mt2 h3">
-              <a class="turquoise no-underline tc db pa2 ba" href="/codelabs.html">Do the codelabs</a>
+              <a class="turquoise no-underline tc db pa2 ba" href="/codelabs.html">2. Do the codelabs</a>
             </div>
             <div class="fl w-33-ns w-100 pr2 mt2 h3">
-              <a class="turquoise no-underline tc db pa2 ba" href="/config.html">Read the docs</a>
+              <a class="turquoise no-underline tc db pa2 ba" href="/config.html">3. Read the docs</a>
             </div>
           </div>
-        </div>
       </div>
     </div>
   </div>
-</div>
-<div class="flex-l dn db-ns bg-dark-gray pb6 mt6">
-  <div class="w-100 mw9 center">
-    <h1 class="turquoise f2 center tc" id="why">Why Please?</h1>
-    <div class="flex flex-column flex-row-l flex-wrap-l mt5">
-      <section class="pt5 pl4-l w-25-l pa2">
-        <div class="mw7">
-          <img class="h4" alt="" src="images/hexagon_r.png" />
+  <div class="dn db-l bg-dark-gray pb6 pt4">
+    <div class="w-100 mw9 center">
+      <h1 class="turquoise f2 center tc" id="why">Why Please?</h1>
+      <div class="flex flex-column flex-row-l flex-wrap-l mt5">
+        <section class="pt5 pl4-l w-25-l pa2">
+          <div class="mw7">
+            <img class="h4" alt="" src="images/hexagon_r.png" />
 
-          <h2 class="calibre-thin red normal">
-            Build isolation
-          </h2>
-          <p class="white">
-            Build steps are executed in their own tightly controlled hermetic
-            environment. With access to only files and env variables that they have
-            explicitly been given access to, builds have never been more correct!
-          </p>
-        </div>
-      </section>
+            <h2 class="calibre-thin red normal">
+              Build isolation
+            </h2>
+            <p class="white">
+              Build steps are executed in their own tightly controlled hermetic
+              environment. With access to only files and env variables that they have
+              explicitly been given access to, builds have never been more correct!
+            </p>
+          </div>
+        </section>
 
-      <section class="pt5 w-25-l pa2">
-        <div class="mw7">
-          <img class="h4 rotate-90" alt="" src="images/triangle_v.png" />
+        <section class="pt5 w-25-l pa2">
+          <div class="mw7">
+            <img class="h4 rotate-90" alt="" src="images/triangle_v.png" />
 
-          <h2 class="calibre-thin violet normal">
-            Blazing fast
-          </h2>
-          <p class="white">
-            Built from the ground up with incrementallity in mind, Please only builds what it needs to.
-            Combined task parallelism, distributed caching, this makes for an amazingly performant
-            build system at scale.
-          </p>
-        </div>
-      </section>
+            <h2 class="calibre-thin violet normal">
+              Blazing fast
+            </h2>
+            <p class="white">
+              Built from the ground up with incrementallity in mind, Please only builds what it needs to.
+              Combined task parallelism, distributed caching, this makes for an amazingly performant
+              build system at scale.
+            </p>
+          </div>
+        </section>
 
-      <section class="pt5 w-25-l pa2">
-        <div class="mw7">
-          <img class="h4" alt="" src="images/square_g.png" />
+        <section class="pt5 w-25-l pa2">
+          <div class="mw7">
+            <img class="h4" alt="" src="images/square_g.png" />
+            <h2 class="calibre-thin green normal">
+              Feels amazing to use
+            </h2>
+            <p class="white">
+              Build and test any target, all with the same familiar CLI!
+              Please can even manage and download your toolchain. Define aliases for
+              common tasks leveraging Please auto-completions for the ultimate developer experience.
+            </p>
+          </div>
+        </section>
 
-          <h2 class="calibre-thin green normal">
-            Feels amazing to use
-          </h2>
-          <p class="white">
-            Build and test any target, all with the same familiar CLI!
-            Please can even manage and download your toolchain. Define aliases for
-            common tasks leveraging Please auto-completions for the ultimate developer experience.
-          </p>
-        </div>
-      </section>
+        <section class="pt5 pr4-l w-25-l pa2">
+          <div class="mw7">
+            <img class="h4" alt="" src="images/circle_t.png" />
 
-      <section class="pt5 pr4-l w-25-l pa2">
-        <div class="mw7">
-          <img class="h4" alt="" src="images/circle_t.png" />
-
-          <h2 class="calibre-thin turquoise normal">
-            For any technology
-          </h2>
-          <p class="white">
-            With a powerful framework for automating every part of your build process, get started quickly with the
-            built-in definitions, then expand on them crafting a truly holistic build process.
-          </p>
-        </div>
-      </section>
+            <h2 class="calibre-thin turquoise normal">
+              For any technology
+            </h2>
+            <p class="white">
+              With a powerful framework for automating every part of your build process, get started quickly with the
+              built-in definitions, then expand on them crafting a truly holistic build process.
+            </p>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
+  <div class="bg-near-black">
+    <section class="relative ph3 pv5 calibre tc mw9 w-100 center">
+      <div class="relative dn db-l w-20-l" aria-hidden="true">
+        <img
+                class="absolute"
+                style="height: 4rem; top: 6rem; left: -1rem;"
+                alt=""
+                src="/images/hexagon_r.png"
+        />
+      </div>
+      <div class="dn db-l" aria-hidden="true">
+        <img
+                class="absolute"
+                style="height: 12em; transform: rotate(160deg); top: -1rem; left: 20%;"
+                alt=""
+                src="/images/triangle_g.png"
+        />
+        <img
+                class="absolute"
+                style="height: 8em; right: 5%; bottom: -2rem;"
+                alt=""
+                src="/images/circle_y.png"
+        />
+      </div>
+      <h2 class="mb4 silver f3 normal">
+        <span class="white">Want Please?</span> Get started:
+      </h2>
+      <p class="f3">
+        <a class="pv3 dib w-100 mw5 white no-underline ba bw1 b--turquoise br-pill" href="/quickstart.html"
+        >Yes Please</a>
+      </p>
+    </section>
+  </div>
 </div>
-<div class="dn db-ns bg-near-black">
-  <section class="relative ph3 pv5 calibre tc mw9 w-100 center">
-    <div class="relative dn db-l w-20-l" aria-hidden="true">
-      <img
-              class="absolute"
-              style="height: 4rem; top: 6rem; left: -1rem;"
-              alt=""
-              src="/images/hexagon_r.png"
-      />
-    </div>
-    <div class="dn db-l" aria-hidden="true">
-      <img
-              class="absolute"
-              style="height: 12em; transform: rotate(160deg); top: -1rem; left: 20%;"
-              alt=""
-              src="/images/triangle_g.png"
-      />
-      <img
-              class="absolute"
-              style="height: 8em; right: 5%; bottom: -2rem;"
-              alt=""
-              src="/images/circle_y.png"
-      />
-    </div>
-
-    <h2 class="mb4 silver f3 normal">
-      <span class="white">Want Please?</span> Get started:
-    </h2>
-    <p class="f3">
-      <a class="pv3 dib w-100 mw5 white no-underline ba bw1 b--turquoise br-pill" href="/quickstart.html"
-      >Yes Please</a>
-    </p>
-  </section>
-</div>
-
