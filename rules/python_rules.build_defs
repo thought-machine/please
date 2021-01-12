@@ -386,13 +386,13 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     # It seems like most things have been resolved (Oct 2019ish) however a lot of python installs are probably not
     # updated yet. Essentially the "user" default will be turned off when --target is passed. Right now, it complains
     # that --prefix (and therefore --target) are incompatible with --user. See https://github.com/pypa/pip/pull/7002
-    if CONFIG.HOSTOS == 'darwin':
+    if CONFIG.HOSTOS == 'darwin' and not CONFIG.DISABLE_VENDOR_FLAGS:
         # Fix for Homebrew which fails with a superficially similar issue.
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
         # but that prevents downloading binary wheels. This is more fiddly but seems to work.
         # Unfortunately it does *not* work similarly on the Debian problem :(
         pip_cmd = 'echo "[install]\nprefix=" > setup.cfg; ' + pip_cmd
-    if CONFIG.OS == 'linux':
+    if CONFIG.OS == 'linux' and not CONFIG.DISABLE_VENDOR_FLAGS:
         # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
         # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
         # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...

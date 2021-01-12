@@ -82,9 +82,7 @@
 <p>Comma-separating on the same line won't generally work.</p>
 
 <section class="mt4">
-  <h2 id="please" class="title-2">
-    [Please]
-  </h2>
+  <h2 id="please" class="title-2">[Please]</h2>
 
   <ul class="bulleted-list">
     <li>
@@ -275,9 +273,7 @@
 </section>
 
 <section class="mt4">
-  <h2 id="display" class="title-2">
-    [Display]
-  </h2>
+  <h2 id="display" class="title-2">[Display]</h2>
 
   <p>
     Contains options relating to display output. These have no impact on build
@@ -444,9 +440,7 @@
 </section>
 
 <section class="mt4">
-  <h2 id="build-env" class="title-2">
-    [BuildEnv]
-  </h2>
+  <h2 id="build-env" class="title-2">[BuildEnv]</h2>
 
   <p>
     A set of extra environment variables to define for build rules. For example:
@@ -468,9 +462,7 @@
 </section>
 
 <section class="mt4">
-  <h2 id="remote" class="title-2">
-    [Remote]
-  </h2>
+  <h2 id="remote" class="title-2">[Remote]</h2>
 
   <p class="red">
     This whole section is still experimental; some settings may not work fully
@@ -876,9 +868,7 @@
 </section>
 
 <section class="mt4">
-  <h2 id="python" class="title-2">
-    [Python]
-  </h2>
+  <h2 id="python" class="title-2">[Python]</h2>
 
   <p>Properties that affect how the various Python build rules work.</p>
 
@@ -1006,6 +996,21 @@
             >{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl</code
           >
           along with a few common variants.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          DisableVendorFlags <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          Disables injection of vendor specific flags for <code class="code">pip</code> while using
+          <code class="code">pip_library</code>. The option can be useful if you are using
+          something like <code class="code">Pyenv</code>, and the passing of additional 
+          flags or configuration that are vendor specific, e.g. <code class="code">--system</code>,
+          breaks your build.
         </p>
       </div>
     </li>
@@ -1440,9 +1445,7 @@
 </section>
 
 <section class="mt4">
-  <h2 id="licences" class="title-2">
-    [Licences]
-  </h2>
+  <h2 id="licences" class="title-2">[Licences]</h2>
 
   <p>
     Please has a limited ability to detect licences from third-party code. We
@@ -1488,9 +1491,7 @@
 </section>
 
 <section class="mt4">
-  <h2 id="build-config" class="title-2">
-    [Buildconfig]
-  </h2>
+  <h2 id="build-config" class="title-2">[Buildconfig]</h2>
 
   <p>
     This section lets you define arbitrary key-value pairs that can be consumed
