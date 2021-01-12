@@ -461,7 +461,11 @@ ul.bulleted-list > li > * {
 }
 
 @media screen and (min-width: 60em) {
-  .please-build {
+  h1.please-build {
     font-size: 800%;
   }
+}
+
+.please-build {
+  font-size: 350%;
 }
