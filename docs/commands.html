@@ -1,412 +1,1011 @@
-
-    <h1>Please commands</h1>
-
-    <p>Please has a rich command line interface that can be used to build and test
-      you code; interrogate the build graph; and much more!</p>
-
-    <h2>Tab completion</h2>
-
-    <p>To get the most our of the Please command line interface, it is highly
-      recommended that you enable tab-completion. Please has a sophisticated
-      mechanism that is aware of your build graph, all the commands and flags, and
-      any <a href="/config.html#alias">aliases</a> you may have configured. To enable
-      Please completions, add this line to your <code>.bashrc</code> or
-      <code>.zshrc</code>:</p>
-
-    <pre><code>
-        source <(plz --completion_script)
-    </code></pre>
-
-    <h2>Common flags</h2>
-
-    <p>These flags are common to all (or nearly all) operations.</p>
-
-    <h3>Options controlling what to build & how to build it:</h3>
-
-    <p>
-      <ul>
-        <li><code>-c, --config</code><br/>
-          The build config to use. The effect this has depends on the language; typically
-          it allows swapping between a debug or an optimised build.<br/>
-          The default is <code>opt</code> to build optimised code; <code>dbg</code> is accepted
-          for C++ and Go to build code with debugging symbols.<br/>
-          This has no effect on Python or Java rules.</li>
-
-        <li><code>-r, --repo_root</code><br/>
-          Sets the location of the repo root to use. Normally plz assumes it is within the repo
-          somewhere and locates the root itself, this forces it to a specific location.</li>
-
-        <li><code>-n, --num_threads</code><br/>
-          Sets the number of parallel workers to use while building. The default is the number
-          of logical CPUs of the current machine plus two.</li>
-
-        <li><code>-i, --include</code><br/>
-          Labels of targets to include when selecting multiple targets with <code>:all</code>
-          or <code>/...</code>. These apply to labels which can be set on individual targets;
-          a number of them are predefined, most notably for each language (<code>go</code>,
-          <code>python</code>, <code>java</code>, <code>cc</code>, etc).<br/>
-          Only targets with this label will be built.</li>
-
-        <li><code>-e, --exclude</code><br/>
-          The inverse of <code>--include</code>; labels of targets to exclude when
-          selecting multiple targets with <code>:all</code> or <code>/...</code>.<br/>
-          Takes priority over <code>--include</code>.<br/>
-          You can also pass build expressions to <code>--exclude</code> to exclude targets
-          as well as by label.</li>
-
-        <li><code>-a, --arch</code><br/>
-          Architecture to compile for. By default Please will build for the host architecture,
-          but has some support for targeting others. See <a href="cross_compiling.html">the
-          cross-compiling docs</a> for more information.</li>
-
-        <li><code>-o, --override</code><br/>
-          Allows overriding individual config settings on a temporary basis; for example
-          <code>-o python.testrunner:pytest</code>. See the <a href="config.html">config
-          reference</a> for more information on what can be overridden.</li>
-
-        <li><code>--profile</code><br/>
-          Defines a profile of config file to load from the repo. For example,
-          <code>--profile ci</code> will load <code>.plzconfig.ci</code>. This can be useful to
-          canonicalise certain settings for non-common or scripted configurations.</li>
-      </ul>
-    </p>
-
-    <h3>Options controlling output & logging:</h3>
-
-    <p>
-      <ul>
-        <li><code>-v, --verbosity</code><br/>
-          Sets the amount of output logged from plz; a number between 0 and 4.<br/>
-          Each number shows all messages at the given level and above:
-          <ol>
-            <li>Error</li>
-            <li>Warning</li>
-            <li>Notice</li>
-            <li>Info</li>
-            <li>Debug</li>
-          </ol>
-          The default is 1, for warnings and errors only. If level 4 is requested then it
-          will suppress interactive output.
-        </li>
-
-        <li><code>--log_file</code><br/>
-          Writes all logs out into the given file.</li>
-
-        <li><code>--log_file_level</code><br/>
-          Level of logging to write to the file. Defaults to 2 (notice, warning and error).</li>
-
-        <li><code>--interactive_output</code><br/>
-          Forces plz to show interactive output on stderr. By default it autodetects based on
-          whether stderr appears to be an interactive terminal or not, but this flag can be
-          used to force it on in cases where it might get it wrong.</li>
-
-        <li><code>-p, --plain_output</code><br/>
-          Forces plz not to show interactive output on stderr. Can be useful in cases where it
-          might obscure other messages or where the output isn't capable of interpreting the
-          escape codes correctly.</li>
-
-        <li><code>--colour</code><br/>
-          Forces coloured output from logging & shell output. Again, this is autodetected by
-          default, but this can be used in cases where it would normally detect false but it
-          will later be consumed by something that understands the codes (e.g. CI systems like
-          Teamcity or Jenkins).</li>
-
-        <li><code>--nocolour</code><br/>
-          Inverse of above, forces colourless output from logging & the shell.</li>
-
-        <li><code>--trace_file</code><br/>
-          File to write Chrome tracing output into.<br/>
-          This is a JSON format that contains the actions taken by plz during the build and
-          their timings. You can load the file up in <a href="about:tracing">about:tracing</a>
-          and use that to see which parts of your build were slow.</li>
-
-        <li><code>--version</code><br/>
-          Prints the version of the tool and exits immediately.</li>
-
-        <li><code>--show_all_output</code><br/>
-          Prints all output of each building process as they run. Implies <code>--plain_output</code>.</li>
-
-        <li><code>--completion_script</code><br/>
-          Prints the bash / zsh completion script to stdout. This can be used in a <code>.bashrc</code>
-        or <code>.zshrc</code>, e.g. <code>source <(plz --completion_script)</code>.</li>
-      </ul>
-
-    <h3>Options that enable / disable certain features:</h3>
-
-    <ul>
-      <li><code>--noupdate</code><br/>
-        Disables Please attempting to auto-update itself.</li>
-
-      <li><code>--nocache</code><br/>
-        Disables caches.<br/>
-        Note that this does not disable incrementality, so targets that don't need rebuilding
-        still won't be.</li>
-
-      <li><code>--nohash_verification</code><br/>
-        Turns hash verification errors into non-fatal warnings.<br/>
-        Obviously this is only for local development & testing, not for 'production' use.</li>
-
-      <li><code>--nolock</code><br/>
-        Don't attempt to lock the repo exclusively while building.<br/>
-        Use with care - if two instances of plz start building the same targets simultaneously
-        they will likely fail with very strange errors.</li>
-
-      <li><code>--keep_workdirs</code><br/>
-        Don't clean directories in plz-out/tmp after successfully building targets.<br/>
-        They're always left in cases where targets fail.</li>
-    </ul>
-
-    <h2><a name="build">plz build</a></h2>
-
-    <p>This is the most common and obvious command; it builds one or more targets
-      and all their dependencies. A plain <code>plz build</code> attempts to build
-      everything, but more usually you can tell it to build a particular target
-      or targets by passing them on the command line afterwards. For example:<br/>
-
-      <code>plz build //src/core:core</code> builds just the one target.<br/>
-      <code>plz build //src/core:all</code> builds every target in
-          <code>src/core/BUILD</code>.<br/>
-      <code>plz build //src/...</code> builds every target in <code>src</code>
-      and all subdirectories.</p>
-
-    <h2><a name="test">plz test</a></h2>
-
-    <p>This is also a very commonly used command, it builds one or more targets and
-      then runs their tests. Which tests to run are specified by positional arguments
-      as described for <code>plz build</code>.</p>
-
-    <p>After successful completion a combined test output file will be written to
-      <code>plz-out/log/test_results.xml</code> in something approximating xUnit
-      XML format.</p>
-
-    <p>It takes a few special flags:
-      <ul>
-        <li><code>--num_runs</code><br/>
-	  Determines how many times to run each test. The default is 1, but can be
-	  more for tests marked as flaky.</li>
-	<li><code>--failing_tests_ok</code><br/>
-	  The return value is 0 regardless of whether any tests fail or not. It will
-	  only be nonzero if they fail to build completely.<br/>
-	  This is not commonly used, it's mostly useful for CI automation which will
-	  parse the results file to determine ultimate success / failure.</li>
-	<li><code>--test_results_file</code><br/>
-	  Specifies the location to write the combined test results to.</li>
-	<li><code>-d, --debug</code><br/>
-	  Turns on interactive debug mode for this test. You can only specify one test
-	  with this flag, because it attaches an interactive debugger to catch failures.<br/>
-	  It only works for some test types, currently python (with pytest as the test runner),
-	  C and C++.<br/>
-	  It implies <code>-c dbg</code> unless that flag is explicitly passed.</li>
-      </ul>
-    </p>
-
-    <h2><a name="cover">plz cover</a></h2>
-
-    <p>Very similar to <code>plz test</code>, but also instruments tests for coverage
-      and collects results. Tests normally run significantly slower in this mode
-      (the exact amount depends on the language).</p>
-
-    <p>Coverage isn't available for C++ tests at present.</p>
-
-    <p>All the same flags from <code>plz test</code> apply here as well. In addition
-      there are several more:
-      <ul>
-	<li><code>--no_coverage_report</code><br/>
-	  Suppresses the coverage report output to the shell.</li>
-	<li><code>--line_coverage_report</code><br/>
-	  Produces a line-by-line coverage display for all source files.</li>
-	<li><code>--include_all_files</code><br/>
-	  Includes any transitively dependent source files in the coverage report
-	  (the default is just files from relevant packages).</li>
-	<li><code>--include_file</code><br/>
-	  Files to include in the coverage report (the flag can be passed more
-	  than once for multiple).</li>
-	<li><code>--coverage_results_file</code><br/>
-	  Similar to <code>--test_results_file</code>, determines where to write
-	  the aggregated coverage results to.</li>
-	<li><code>-d, --debug</code><br/>
-	  Turns on interactive debug mode for this test. You can only specify one test
-	  with this flag, because it attaches an interactive debugger to catch failures.<br/>
-	  It only works for some test types, currently python (with pytest as the test runner),
-	  C and C++.<br/>
-	  It implies <code>-c dbg</code> unless that flag is explicitly passed.</li>
-      </ul>
-    </p>
-
-    <h2><a name="run">plz run</a></h2>
-
-    <p>This is essentially shorthand for calling <code>plz build</code> and then
-      running the result of whatever target was built. It's often handy for iterating
-      on a single target such that one command builds and reruns it.</p>
-
-    <p>Because of the way the target is run after, you have to provide exactly one
-      target to this command. The target must be marked as <code>binary</code> in its
-      rule definition (this is implicit for the various builtin <code>_binary</code>
-      rules such as <code>go_binary</code> etc).</p>
-
-    <p>If you want to pass flags to the target rather than plz itself, you must pass
-      them last on the command line, after a <code>--</code>. This tells Please not
-      to attempt to parse them as its own flags.</p>
-
-    <p>There are two optional subcommands <code>sequential</code> and <code>parallel</code>
-      which allow running multiple targets in one go. As the names suggest, they run targets
-      either one after the other or all in parallel.<br/>
-      In either case, the semantics are a little different to running a single target; arguments
-      must be passed one by one via the <code>-a</code> flag, and while stdout / stderr are
-      connected to the current terminal, stdin is not connected (because it'd not be clear
-      which process would consume it).</p>
-
-    <h2><a name="watch">plz watch</a></h2>
-
-    <p>Watches a set of targets for changes. Whenever any one of their source files (or that
-      of any dependency) is changed, the targets will be rebuilt. If any of them are tests, then
-      they will be run as well.</p>
-
-    <p>Optionally you can pass the <code>--run</code> flag if you'd like the targets to be run
-      (using <code>plz run</code>) instead of just built / tested.</p>
-
-    <h2><a name="query">plz query</a></h2>
-
-    <p>This allows you to introspect various aspects of the build graph. There are
-      a number of subcommands identifying what you want to query for:
-      <ul>
-        <li><code>alltargets</code>: Lists all targets in the graph</li>
-        <li><code>changes</code>: Queries changed targets versus a revision or from a set of files</li>
-        <li><code>completions</code>: Prints possible completions for a string.</li>
-        <li><code>deps</code>: Queries the dependencies of a target.</li>
-        <li><code>graph</code>: Prints a JSON representation of the build graph.</li>
-        <li><code>input</code>: Prints all transitive inputs of a target.</li>
-        <li><code>output</code>: Prints all outputs of a target.</li>
-        <li><code>print</code>: Prints a representation of a single target</li>
-        <li><code>reverseDeps</code>: Queries all the reverse dependencies of a target.</li>
-        <li><code>somepath</code>: Queries for a path between two targets</li>
-        <li><code>rules</code>: Prints out a machine-parseable description of all currently known build rules.</li>
-      </ul>
-    </p>
-
-    <p>Note that this is not the same as the query language accepted by Bazel and Buck,
-      if you're familiar with those; generally this is lighter weight but less flexible
-      and powerful. We haven't ruled out adding that in the future
-      but have no concrete plans to do so at present.</p>
-
-  <h2><a name="clean">plz clean</a></h2>
-
-    <p>Cleans up output build artifacts and caches.</p>
-
-    <p>This is not normally necessary since generally incrementality detection will ensure
-      that targets are rebuilt if needed. It's possible though for particularly determined
-      rules to do something they shouldn't in which case this might be needed, or
-      (inconceivable though it is) a bug might exist that led to incorrect artifacts being
-      cached.</p>
-
-    <p>If given no arguments this cleans the entire plz-out directory and the directory
-      cache, if configured. It returns immediately with the actual removal proceeding in
-      the background; you can invoke other plz commands freely while that continues.<br/>
-      You can pass the <code>--nobackground</code> flag if you'd prefer to wait though.</p>
-
-    <p>If it's given targets to clean, it will need to perform a parse to work out what
-      to clean, and will not return until those targets have been cleaned.</p>
-
-    <p>The <code>--nocache</code> flag works like all other commands here, but bears
-      mentioning since it will prevent artifacts from being removed from the cache
-      (by default they're cleaned from there too).</p>
-
-  <h2><a name="hash">plz hash</a></h2>
-
-    <p>This command calculates the hash of outputs for one or more targets. These can
-      then be passed in the <code>hash</code> or <code>hashes</code> attributes of
-      those targets to verify their output is as expected - this is useful for
-      fetching third-party dependencies to ensure they are not changing between builds.</p>
-
-    <p>The relevant targets will be built in order to calculate the hash, but if they fail
-      because it doesn't match the one recorded in the BUILD file plz will still exit
-      successfully (although the output files will still not be created).</p>
-
-    <p>One can of course achieve the same effect via running <code>plz build</code> and
-      reading the actual hash when it fails, but this way is generally considered nicer.</p>
-
-    <p>The <code>--update</code> flag will cause Please to rewrite the BUILD file with
-      any changed hashes that it can find.</p>
-
-  <h2><a name="fmt">plz fmt</a></h2>
-
-    <p>a.k.a. <code>plz format</code></p>
-
-    <p>Auto-formats existing BUILD files. You can either provide a list of files to reformat
-      or, if none are given, it will discover all BUILD files in the repository.</p>
-
-    <p>The <code>-w</code> flag rewrites existing files in-place; if not passed the
-      formatted version will be printed to stdout.</p>
-
-    <p>The implementation is currently based on a lightly modified version of
-      <a href="https://github.com/bazelbuild/buildtools">buildifier</a> which supports nearly
-      a superset of the same dialect, but lacks one or two features such as type annotations.<br/>
-      These are relatively rarely used in BUILD files though.</p>
-
-  <h2><a name="init">plz init</a></h2>
-
-    <p>Creates an initial (and pretty empty) <code>.plzconfig</code> file in the current
-      directory (or, if the <code>--dir</code> flag is passed, somewhere else).</p>
-
-    <p>You'll be warned before overwriting an existing file.</p>
-
-    <p>It will also create a wrapper script, <code>pleasew</code> which runs plz if found
-      on the local machine, and otherwise attempts to download a copy. This can be handy
-      for users who don't have it installed already.</p>
-
-    <p>There is a <code>--bazel_compat</code> flag which initialises the config file for
-      Bazel compatibility mode. This changes behaviour in various ways to make it easier
-      to begin building an existing Bazel project - although more complex projects will
-      still likely find things that don't translate easily.</p>
-
-  <h2><a name="update">plz update</a></h2>
-
-    <p>Updates plz to the appropriate version. This is quite tightly governed by the
-      <code>.plzconfig</code> file:
-      <ul>
-	<li>If <code>selfupdate</code> is true, then it's not normally necessary to run this
-	  since any invocation of plz will update before running. It will still behave as
-  	  normal though if invoked explicitly.</li>
-	<li>If the <code>version</code> property is set then it will attempt to download
-	  exactly that version, and fail if it can't for some reason.</li>
-	<li>Otherwise it will try to find the latest available version and update to that.</li>
-	<li>The <code>downloadlocation</code> property determines where it tries to download
-	  from; by default it's the central plz site, but you could set this to a server of
-	  your own if you'd rather be more independent.</li>
-      </ul>
-    </p>
-
-  <h2><a name="gc">plz gc</a></h2>
-
-  <p>Runs a basic "garbage collection" step, which attempts to identify targets that
-    aren't in use. This is still fairly experimental since the definition of "not used"
-    isn't always very clear (for example, ideally simply having a test on a library that
-    isn't otherwise used would not be enough to keep both of those). Because of this it
-    suggests a set of targets that it's pretty sure aren't used at all, and a secondary
-    set that it's less sure on.</p>
-
-  <p>Right now the name is a bit misleading since it finds but doesn't collect the garbage;
-    ideally it'd be able to rewrite the BUILD files itself. Deleting sources is a little
-    trickier since you'd often want to couple that with a VC operation (i.e. <code>git rm</code>)
-    and by design plz is unaware of the VCS in use.</p>
-
-  <p>There are a few flags controlling it:
-    <ul>
-	  <li><code>-c</code>, <code>--conservative</code><br/>
-	    Uses a more conservative algorithm (specifically any tests will keep their targets).</li>
-	  <li><code>-t</code>, <code>--targets_only</code><br/>
-	    Only prints the targets to be removed (not sources). Useful to pipe them into another program.</li>
-	  <li><code>-t</code>, <code>--srcs_only</code><br/>
-	    Only prints the sources to be removed (not targets). Useful to pipe them into another program.</li>
-    </ul>
+<h1 class="title-1">Please commands</h1>
+
+<p>
+  Please has a rich command line interface that can be used to build and test
+  you code; interrogate the build graph; and much more!
+</p>
+
+<section class="mt4">
+  <h2 class="title-2">Tab completion</h2>
+
+  <p>
+    To get the most our of the Please command line interface, it is highly
+    recommended that you enable tab-completion. Please has a sophisticated
+    mechanism that is aware of your build graph, all the commands and flags, and
+    any <a class="copy-link" href="/config.html#alias">aliases</a> you may have
+    configured. To enable Please completions, add this line to your
+    <code class="code">.bashrc</code> or <code class="code">.zshrc</code>:
   </p>
 
-  <h2><a name="help">plz help</a></h2>
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code>
+    source &lt;(plz --completion_script)
+    </code>
+  </pre>
+</section>
 
-  <p>Displays help about a particular facet of Please. It knows about built-in build rules, config
-    settings and a few other things. Mostly this is useful as an instant reference; you can run
-    <code>plz help topics</code> to get a list of all the topics that it knows about.</p>
+<section class="mt4">
+  <h2 class="title-2">Common flags</h2>
 
-  <h2><a name="op">plz op</a></h2>
+  <p>These flags are common to all (or nearly all) operations.</p>
 
-    <p>Re-runs whatever the previous command was.</p>
+  <section class="mt4">
+    <h3 class="title-3">
+      Options controlling what to build & how to build it:
+    </h3>
+
+    <ul class="bulleted-list">
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">-c, --config</code>
+          </h4>
+
+          <p>
+            The build config to use. The effect this has depends on the
+            language; typically it allows swapping between a debug or an
+            optimised build.<br />
+            The default is
+            <code class="code">opt</code> to build optimised code;
+            <code class="code">dbg</code> is accepted for C++ and Go to build
+            code with debugging symbols.<br />
+            This has no effect on Python or Java rules.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">-r, --repo_root</code>
+          </h4>
+
+          <p>
+            Sets the location of the repo root to use. Normally plz assumes it
+            is within the repo somewhere and locates the root itself, this
+            forces it to a specific location.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">-n, --num_threads</code>
+          </h4>
+
+          <p>
+            Sets the number of parallel workers to use while building. The
+            default is the number of logical CPUs of the current machine plus
+            two.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">-i, --include</code>
+          </h4>
+
+          <p>
+            Labels of targets to include when selecting multiple targets with
+            <code class="code">:all</code> or <code class="code">/...</code>.
+            These apply to labels which can be set on individual targets; a
+            number of them are predefined, most notably for each language (<code
+              class="code"
+              >go</code
+            >, <code class="code">python</code>, <code class="code">java</code>,
+            <code class="code">cc</code>, etc).<br />
+            Only targets with this label will be built.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">-e, --exclude</code>
+          </h4>
+
+          <p>
+            The inverse of
+            <code class="code">--include</code>; labels of targets to exclude
+            when selecting multiple targets with
+            <code class="code">:all</code> or
+            <code class="code">/...</code>.<br />
+            Takes priority over
+            <code class="code">--include</code>.<br />
+            You can also pass build expressions to
+            <code class="code">--exclude</code>
+            to exclude targets as well as by label.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">-a, --arch</code>
+          </h4>
+
+          <p>
+            Architecture to compile for. By default Please will build for the
+            host architecture, but has some support for targeting others. See
+            <a class="copy-link" href="/cross_compiling.html"
+              >the cross-compiling docs</a
+            >
+            for more information.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">-o, --override</code>
+          </h4>
+
+          <p>
+            Allows overriding individual config settings on a temporary basis;
+            for example
+            <code class="code">-o python.testrunner:pytest</code>. See the
+            <a class="copy-link" href="/config.html">config reference</a>
+            for more information on what can be overridden.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--profile</code>
+          </h4>
+
+          <p>
+            Defines a profile of config file to load from the repo. For example,
+            <code class="code">--profile ci</code>
+            will load
+            <code class="code">.plzconfig.ci</code>. This can be useful to
+            canonicalise certain settings for non-common or scripted
+            configurations.
+          </p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="mt4">
+    <h3 class="title-3">
+      Options controlling output & logging:
+    </h3>
+
+    <ul class="bulleted-list">
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">-v, --verbosity</code>
+          </h4>
+
+          <p>
+            Sets the amount of output logged from plz; a number between 0 and
+            4.<br />
+            Each number shows all messages at the given level and above:
+          </p>
+
+          <ol>
+            <li>0. Error</li>
+            <li>1. Warning</li>
+            <li>2. Notice</li>
+            <li>3. Info</li>
+            <li>4. Debug</li>
+          </ol>
+
+          <p>
+            The default is 1, for warnings and errors only. If level 4 is
+            requested then it will suppress interactive output.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--log_file</code>
+          </h4>
+
+          <p>Writes all logs out into the given file.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--log_file_level</code>
+          </h4>
+
+          <p>
+            Level of logging to write to the file. Defaults to 2 (notice,
+            warning and error).
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--interactive_output</code>
+          </h4>
+
+          <p>
+            Forces plz to show interactive output on stderr. By default it
+            autodetects based on whether stderr appears to be an interactive
+            terminal or not, but this flag can be used to force it on in cases
+            where it might get it wrong.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">-p, --plain_output</code>
+          </h4>
+
+          <p>
+            Forces plz not to show interactive output on stderr. Can be useful
+            in cases where it might obscure other messages or where the output
+            isn't capable of interpreting the escape codes correctly.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--colour</code>
+          </h4>
+
+          <p>
+            Forces coloured output from logging &amp; shell output. Again, this
+            is autodetected by default, but this can be used in cases where it
+            would normally detect false but it will later be consumed by
+            something that understands the codes (e.g. CI systems like Teamcity
+            or Jenkins).
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--nocolour</code>
+          </h4>
+
+          <p>
+            Inverse of above, forces colourless output from logging &amp; the
+            shell.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--trace_file</code>
+          </h4>
+
+          <p>
+            File to write Chrome tracing output into.<br />
+            This is a JSON format that contains the actions taken by plz during
+            the build and their timings. You can load the file up in
+            <a
+              class="copy-link"
+              href="about:tracing"
+              target="_blank"
+              rel="noopener"
+              >about:tracing</a
+            >
+            and use that to see which parts of your build were slow.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--version</code>
+          </h4>
+
+          <p>Prints the version of the tool and exits immediately.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--show_all_output</code>
+          </h4>
+
+          <p>
+            Prints all output of each building process as they run. Implies
+            <code class="code">--plain_output</code>.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--completion_script</code>
+          </h4>
+
+          <p>
+            Prints the bash / zsh completion script to stdout. This can be used
+            in a
+            <code class="code">.bashrc</code> or
+            <code class="code">.zshrc</code>, e.g.
+            <code class="code">source &lt;(plz --completion_script)</code>.
+          </p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="mt4">
+    <h3 class="title-3">
+      Options that enable / disable certain features:
+    </h3>
+
+    <ul class="bulleted-list">
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--noupdate</code>
+          </h4>
+
+          <p>Disables Please attempting to auto-update itself.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--nocache</code>
+          </h4>
+
+          <p>
+            Disables caches.<br />
+            Note that this does not disable incrementality, so targets that
+            don't need rebuilding still won't be.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--nohash_verification</code>
+          </h4>
+
+          <p>
+            Turns hash verification errors into non-fatal warnings.<br />
+            Obviously this is only for local development &amp; testing, not for
+            'production' use.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--nolock</code>
+          </h4>
+
+          <p>
+            Don't attempt to lock the repo exclusively while building.<br />
+            Use with care - if two instances of plz start building the same
+            targets simultaneously they will likely fail with very strange
+            errors.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4 class="mt1 f6 lh-title">
+            <code class="code">--keep_workdirs</code>
+          </h4>
+
+          <p>
+            Don't clean directories in plz-out/tmp after successfully building
+            targets.<br />
+            They're always left in cases where targets fail.
+          </p>
+        </div>
+      </li>
+    </ul>
+  </section>
+</section>
+
+<section class="mt4">
+  <h2 id="build" class="title-2">
+    plz build
+  </h2>
+
+  <p>
+    This is the most common and obvious command; it builds one or more targets
+    and all their dependencies. A plain
+    <code class="code">plz build</code> attempts to build everything, but more
+    usually you can tell it to build a particular target or targets by passing
+    them on the command line afterwards. For example:
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span
+        ><code class="code">plz build //src/core:core</code> builds just the one
+        target.</span
+      >
+    </li>
+    <li>
+      <span
+        ><code class="code">plz build //src/core:all</code> builds every target
+        in.</span
+      >
+    </li>
+    <li>
+      <span><code class="code">src/core/BUILD</code>.</span>
+    </li>
+    <li>
+      <span
+        ><code class="code">plz build //src/...</code> builds every target in
+        <code class="code">src</code> and all subdirectories.</span
+      >
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="test" class="title-2">plz test</h2>
+
+  <p>
+    This is also a very commonly used command, it builds one or more targets and
+    then runs their tests. Which tests to run are specified by positional
+    arguments as described for
+    <code class="code">plz build</code>.
+  </p>
+
+  <p>
+    After successful completion a combined test output file will be written to
+    <code class="code">plz-out/log/test_results.xml</code>
+    in something approximating xUnit XML format.
+  </p>
+
+  <p>It takes a few special flags:</p>
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">--num_runs</code>
+        </h3>
+
+        <p>
+          Determines how many times to run each test. The default is 1, but can
+          be more for tests marked as flaky.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">--failing_tests_ok</code>
+        </h3>
+
+        <p>
+          The return value is 0 regardless of whether any tests fail or not. It
+          will only be nonzero if they fail to build completely.<br />
+          This is not commonly used, it's mostly useful for CI automation which
+          will parse the results file to determine ultimate success / failure.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">--test_results_file</code>
+        </h3>
+
+        <p>Specifies the location to write the combined test results to.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">-d, --debug</code>
+        </h3>
+
+        <p>
+          Turns on interactive debug mode for this test. You can only specify
+          one test with this flag, because it attaches an interactive debugger
+          to catch failures.<br />
+          It only works for some test types, currently python (with pytest as
+          the test runner), C and C++.<br />
+          It implies
+          <code class="code">-c dbg</code> unless that flag is explicitly
+          passed.
+        </p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="cover" class="title-2">
+    plz cover
+  </h2>
+
+  <p>
+    Very similar to
+    <code class="code">plz test</code>, but also instruments tests for coverage
+    and collects results. Tests normally run significantly slower in this mode
+    (the exact amount depends on the language).
+  </p>
+
+  <p>Coverage isn't available for C++ tests at present.</p>
+
+  <p>
+    All the same flags from
+    <code class="code">plz test</code> apply here as well. In addition there are
+    several more:
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">--no_coverage_report</code>
+        </h3>
+
+        <p>Suppresses the coverage report output to the shell.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">--line_coverage_report</code>
+        </h3>
+
+        <p>Produces a line-by-line coverage display for all source files.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">--include_all_files</code>
+        </h3>
+
+        <p>
+          Includes any transitively dependent source files in the coverage
+          report (the default is just files from relevant packages).
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">--include_file</code>
+        </h3>
+
+        <p>
+          Files to include in the coverage report (the flag can be passed more
+          than once for multiple).
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">--coverage_results_file</code>
+        </h3>
+
+        <p>
+          Similar to
+          <code class="code">--test_results_file</code>, determines where to
+          write the aggregated coverage results to.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">-d, --debug</code>
+        </h3>
+
+        <p>
+          Turns on interactive debug mode for this test. You can only specify
+          one test with this flag, because it attaches an interactive debugger
+          to catch failures.<br />
+          It only works for some test types, currently python (with pytest as
+          the test runner), C and C++.<br />
+          It implies
+          <code class="code">-c dbg</code> unless that flag is explicitly
+          passed.
+        </p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="run" class="title-2">plz run</h2>
+
+  <p>
+    This is essentially shorthand for calling
+    <code class="code">plz build</code> and then running the result of whatever
+    target was built. It's often handy for iterating on a single target such
+    that one command builds and reruns it.
+  </p>
+
+  <p>
+    Because of the way the target is run after, you have to provide exactly one
+    target to this command. The target must be marked as
+    <code class="code">binary</code> in its rule definition (this is implicit
+    for the various builtin <code class="code">_binary</code> rules such as
+    <code class="code">go_binary</code> etc).
+  </p>
+
+  <p>
+    If you want to pass flags to the target rather than plz itself, you must
+    pass them last on the command line, after a
+    <code class="code">--</code>. This tells Please not to attempt to parse them
+    as its own flags.
+  </p>
+
+  <p>
+    There are two optional subcommands
+    <code class="code">sequential</code> and
+    <code class="code">parallel</code> which allow running multiple targets in
+    one go. As the names suggest, they run targets either one after the other or
+    all in parallel.<br />
+    In either case, the semantics are a little different to running a single
+    target; arguments must be passed one by one via the
+    <code class="code">-a</code> flag, and while stdout / stderr are connected
+    to the current terminal, stdin is not connected (because it'd not be clear
+    which process would consume it).
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 id="watch" class="title-2">
+    plz watch
+  </h2>
+
+  <p>
+    Watches a set of targets for changes. Whenever any one of their source files
+    (or that of any dependency) is changed, the targets will be rebuilt. If any
+    of them are tests, then they will be run as well.
+  </p>
+
+  <p>
+    Optionally you can pass the
+    <code class="code">--run</code> flag if you'd like the targets to be run
+    (using <code class="code">plz run</code>) instead of just built / tested.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 id="query" class="title-2">
+    plz query
+  </h2>
+
+  <p>
+    This allows you to introspect various aspects of the build graph. There are
+    a number of subcommands identifying what you want to query for:
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span
+        ><code class="code">alltargets</code>: Lists all targets in the
+        graph.</span
+      >
+    </li>
+    <li>
+      <span
+        ><code class="code">changes</code>: Queries changed targets versus a
+        revision or from a set of files.</span
+      >
+    </li>
+    <li>
+      <span
+        ><code class="code">completions</code>: Prints possible completions for
+        a string.</span
+      >
+    </li>
+    <li>
+      <span
+        ><code class="code">deps</code>: Queries the dependencies of a
+        target.</span
+      >
+    </li>
+    <li>
+      <span
+        ><code class="code">graph</code>: Prints a JSON representation of the
+        build graph.</span
+      >
+    </li>
+    <li>
+      <span
+        ><code class="code">input</code>: Prints all transitive inputs of a
+        target.</span
+      >
+    </li>
+    <li>
+      <span
+        ><code class="code">output</code>: Prints all outputs of a target.</span
+      >
+    </li>
+    <li>
+      <span
+        ><code class="code">print</code>: Prints a representation of a single
+        target.</span
+      >
+    </li>
+    <li>
+      <span
+        ><code class="code">reverseDeps</code>: Queries all the reverse
+        dependencies of a target.</span
+      >
+    </li>
+    <li>
+      <span
+        ><code class="code">somepath</code>: Queries for a path between two
+        targets.</span
+      >
+    </li>
+    <li>
+      <span
+        ><code class="code">rules</code>: Prints out a machine-parseable
+        description of all currently known build rules.</span
+      >
+    </li>
+  </ul>
+
+  <p>
+    Note that this is not the same as the query language accepted by Bazel and
+    Buck, if you're familiar with those; generally this is lighter weight but
+    less flexible and powerful. We haven't ruled out adding that in the future
+    but have no concrete plans to do so at present.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 id="clean" class="title-2">
+    plz clean
+  </h2>
+
+  <p>Cleans up output build artifacts and caches.</p>
+
+  <p>
+    This is not normally necessary since generally incrementality detection will
+    ensure that targets are rebuilt if needed. It's possible though for
+    particularly determined rules to do something they shouldn't in which case
+    this might be needed, or (inconceivable though it is) a bug might exist that
+    led to incorrect artifacts being cached.
+  </p>
+
+  <p>
+    If given no arguments this cleans the entire plz-out directory and the
+    directory cache, if configured. It returns immediately with the actual
+    removal proceeding in the background; you can invoke other plz commands
+    freely while that continues.<br />
+    You can pass the
+    <code class="code">--nobackground</code> flag if you'd prefer to wait
+    though.
+  </p>
+
+  <p>
+    If it's given targets to clean, it will need to perform a parse to work out
+    what to clean, and will not return until those targets have been cleaned.
+  </p>
+
+  <p>
+    The <code class="code">--nocache</code> flag works like all other commands
+    here, but bears mentioning since it will prevent artifacts from being
+    removed from the cache (by default they're cleaned from there too).
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 id="hash" class="title-2">plz hash</h2>
+
+  <p>
+    This command calculates the hash of outputs for one or more targets. These
+    can then be passed in the
+    <code class="code">hash</code> or
+    <code class="code">hashes</code> attributes of those targets to verify their
+    output is as expected - this is useful for fetching third-party dependencies
+    to ensure they are not changing between builds.
+  </p>
+
+  <p>
+    The relevant targets will be built in order to calculate the hash, but if
+    they fail because it doesn't match the one recorded in the BUILD file plz
+    will still exit successfully (although the output files will still not be
+    created).
+  </p>
+
+  <p>
+    One can of course achieve the same effect via running
+    <code class="code">plz build</code> and reading the actual hash when it
+    fails, but this way is generally considered nicer.
+  </p>
+
+  <p>
+    The <code class="code">--update</code> flag will cause Please to rewrite the
+    BUILD file with any changed hashes that it can find.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 id="fmt" class="title-2">plz fmt</h2>
+
+  <p>a.k.a. <code class="code">plz format</code></p>
+
+  <p>
+    Auto-formats existing BUILD files. You can either provide a list of files to
+    reformat or, if none are given, it will discover all BUILD files in the
+    repository.
+  </p>
+
+  <p>
+    The <code class="code">-w</code> flag rewrites existing files in-place; if
+    not passed the formatted version will be printed to stdout.
+  </p>
+
+  <p>
+    The implementation is currently based on a lightly modified version of
+    <a
+      class="copy-link"
+      href="https://github.com/bazelbuild/buildtools"
+      target="_blank"
+      rel="noopener"
+      >buildifier</a
+    >
+    which supports nearly a superset of the same dialect, but lacks one or two
+    features such as type annotations.<br />
+    These are relatively rarely used in BUILD files though.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 id="init" class="title-2">plz init</h2>
+
+  <p>
+    Creates an initial (and pretty empty)
+    <code class="code">.plzconfig</code> file in the current directory (or, if
+    the <code class="code">--dir</code> flag is passed, somewhere else).
+  </p>
+
+  <p>You'll be warned before overwriting an existing file.</p>
+
+  <p>
+    It will also create a wrapper script,
+    <code class="code">pleasew</code> which runs plz if found on the local
+    machine, and otherwise attempts to download a copy. This can be handy for
+    users who don't have it installed already.
+  </p>
+
+  <p>
+    There is a
+    <code class="code">--bazel_compat</code> flag which initialises the config
+    file for Bazel compatibility mode. This changes behaviour in various ways to
+    make it easier to begin building an existing Bazel project - although more
+    complex projects will still likely find things that don't translate easily.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 id="update" class="title-2">
+    plz update
+  </h2>
+
+  <p>
+    Updates plz to the appropriate version. This is quite tightly governed by
+    the
+    <code class="code">.plzconfig</code> file:
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span
+        >If <code class="code">selfupdate</code> is true, then it's not normally
+        necessary to run this since any invocation of plz will update before
+        running. It will still behave as normal though if invoked
+        explicitly.</span
+      >
+    </li>
+    <li>
+      <span
+        >If the <code class="code">version</code> property is set then it will
+        attempt to download exactly that version, and fail if it can't for some
+        reason.
+      </span>
+    </li>
+    <li>
+      <span
+        >Otherwise it will try to find the latest available version and update
+        to that.</span
+      >
+    </li>
+    <li>
+      <span
+        >The <code class="code">downloadlocation</code> property determines
+        where it tries to download from; by default it's the central plz site,
+        but you could set this to a server of your own if you'd rather be more
+        independent.</span
+      >
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="gc" class="title-2">plz gc</h2>
+
+  <p>
+    Runs a basic "garbage collection" step, which attempts to identify targets
+    that aren't in use. This is still fairly experimental since the definition
+    of "not used" isn't always very clear (for example, ideally simply having a
+    test on a library that isn't otherwise used would not be enough to keep both
+    of those). Because of this it suggests a set of targets that it's pretty
+    sure aren't used at all, and a secondary set that it's less sure on.
+  </p>
+
+  <p>
+    Right now the name is a bit misleading since it finds but doesn't collect
+    the garbage; ideally it'd be able to rewrite the BUILD files itself.
+    Deleting sources is a little trickier since you'd often want to couple that
+    with a VC operation (i.e.<code class="code">git rm</code>) and by design plz
+    is unaware of the VCS in use.
+  </p>
+
+  <p>There are a few flags controlling it:</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">-c, --conservative</code>
+        </h3>
+
+        <p>
+          Uses a more conservative algorithm (specifically any tests will keep
+          their targets).
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">-t, --targets_only</code>
+        </h3>
+
+        <p>
+          Only prints the targets to be removed (not sources). Useful to pipe
+          them into another program.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">-t, --srcs_only</code>
+        </h3>
+
+        <p>
+          Only prints the sources to be removed (not targets). Useful to pipe
+          them into another program.
+        </p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="help" class="title-2">plz help</h2>
+
+  <p>
+    Displays help about a particular facet of Please. It knows about built-in
+    build rules, config settings and a few other things. Mostly this is useful
+    as an instant reference; you can run
+    <code class="code">plz help topics</code> to get a list of all the topics
+    that it knows about.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 id="op" class="title-2">plz op</h2>
+
+  <p>Re-runs whatever the previous command was.</p>
+</section>

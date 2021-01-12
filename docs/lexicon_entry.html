@@ -1,6 +1,11 @@
-    <h3><a name="{{ .Name }}">{{ range .Aliases }}<a name="{{ . }}"></a>{{ end }}{{ .Name }}{{ if .Aliases }} / {{ join .Aliases " / " }}{{ end }}</a></h3>
+<!-- prettier-ignore -->
+<section class="mt4">
+  <h3 class="title-3" id="{{ .Name }}">
+    {{ range .Aliases }}<a id="{{ . }}"></a>{{ end }}{{ .Name }}{{ if .Aliases }} / {{ join .Aliases " / " }}{{ end }}
+  </h3>
 
-    <p><pre class="rule"><code>{{ .Name }}(
+  <code class="code-signature">
+    {{ .Name }}(
       {{- range $i, $arg := .Args -}}
           {{- if gt $i 0 }}, {{ end -}}
           {{- if not $arg.Required -}}
@@ -8,18 +13,20 @@
           {{- else -}}
             {{- $arg.Name -}}
           {{- end -}}
-      {{- end }})</code></pre></p>
+      {{- end }})
+  </code>
 
-    <p>{{ newlines .Name .Comment }}</p>
+  <p>{{ newlines .Name .Comment }}</p>
 
-    <table>
+  <div class="overflow-x-auto">
+    <table class="table">
       <thead>
-      <tr>
-	    <th>Argument</th>
-        <th>Required</th>
-        <th>Type</th>
-        <th></th>
-      </tr>
+        <tr>
+          <th>Argument</th>
+          <th>Required</th>
+          <th>Type</th>
+          <th></th>
+        </tr>
       </thead>
       <tbody>
       {{ range .Args }}
@@ -32,3 +39,5 @@
       {{ end }}
       </tbody>
     </table>
+  </div>
+</section>

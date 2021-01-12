@@ -37,7 +37,7 @@ func Parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 
 func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) error {
 	// See if something else has parsed this package first.
-	pkg := state.WaitForPackage(label)
+	pkg := state.SyncParsePackage(label)
 	if pkg != nil {
 		// Does exist, all we need to do is toggle on this target
 		return activateTarget(tid, state, pkg, label, dependent, forSubinclude)
@@ -104,7 +104,7 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 		return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
 	}
 	// For local subincludes, the subrepo has to already be defined at this point in the BUILD file
-	return nil, fmt.Errorf("Subrepo %v is not defined yet. It must appear before it is used by subinclude()", sl)
+	return nil, fmt.Errorf("%s -> %s", dependent, label)
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.

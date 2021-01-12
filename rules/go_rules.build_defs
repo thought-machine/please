@@ -276,7 +276,7 @@ def _get_import_path(import_path):
     pkg = package_name()
 
     if CONFIG.GO_IMPORT_PATH:
-        return f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
+        return f'{CONFIG.GO_IMPORT_PATH}/{pkg}' if pkg else CONFIG.GO_IMPORT_PATH
 
     return pkg
 
@@ -1124,7 +1124,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
             licences = licences,
             module_major_version = module_major_version,
         )
-            
+
         get_roots += [getroot]
         srcs += [get_rule]
         provides = {'go': go_rule, 'go_src': get_rule}
@@ -1150,14 +1150,14 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         else:
             all_installs += [getone]
 
-    # in case of installing packages using other package sources 
+    # in case of installing packages using other package sources
     if not get and not install:
         raise ParseError("must provide get or install!")
     else:
         if not srcs and not binary:
             # we are going to infer the getroot name from the 1st install dependency
             getroot = install[0][:-4] if install[0].endswith('/...') else install[0]
-            # NOTE: for this case in the install list I'm expecting full package names 
+            # NOTE: for this case in the install list I'm expecting full package names
             outs += [i[:-4] if i.endswith('/...') else i+".a" for i in install]
             provides = {'go': go_rule} # I can't find the sources
 
@@ -1420,7 +1420,8 @@ def _replace_test_package(name, output, static, definitions, cgo):
             pkg_name = line[9:]
             pkg_dir = package_name()
 
-            import_path = f'{CONFIG.GO_IMPORT_PATH}/{pkg_dir}/{pkg_name}' if CONFIG.GO_IMPORT_PATH else f'{pkg_dir}/{pkg_name}'
+            import_dir = _get_import_path(None)
+            import_path = f'{import_dir}/{pkg_name}'
             import_path = _trim_import_path(import_path)
             import_config_cmd = f'rm -f $PKG_DIR/{pkg_name}.importconfig && echo packagefile {import_path}=$PKG_DIR/{new_name}.a > {pkg_name}.importconfig'
 

@@ -33,13 +33,13 @@ var colours = []string{
 }
 
 var rotations = []string{
-	"rotate1",
-	"rotate2",
-	"rotate3",
-	"rotate4",
-	"rotate5",
-	"rotate6",
-	"rotate7",
+	"rotate-45",
+	"rotate-90",
+	"rotate-135",
+	"rotate-180",
+	"rotate-225",
+	"rotate-270",
+	"rotate-315",
 }
 
 var pageTitles = map[string]string{
@@ -77,8 +77,8 @@ func mustRead(filename string) string {
 
 // mustHighlight implements some quick-and-dirty syntax highlighting for code snippets.
 func mustHighlight(contents string) string {
-	return regexp.MustCompile(`(?sU)<pre><code class="language-plz">.*</code></pre>`).ReplaceAllStringFunc(contents, func(match string) string {
-		const prefix = `<pre><code class="language-plz">`
+	return regexp.MustCompile(`(?sU)<code data-lang="plz">.*</code>`).ReplaceAllStringFunc(contents, func(match string) string {
+		const prefix = `<code data-lang="plz">`
 		match = match[len(prefix):]
 		match = regexp.MustCompile(`(?U)".*"`).ReplaceAllStringFunc(match, func(s string) string {
 			return `<span class="fn-str">"` + s[1:len(s)-1] + `"</span>`
@@ -116,11 +116,17 @@ func main() {
 	modulo := func(s []string, i int) string { return s[(basenameIndex+i)%len(s)] }
 	random := func(x, min, max int) int { return (x*basenameIndex+min)%(max-min) + min }
 	funcs := template.FuncMap{
-		"menuItem": func(s string) string {
-			if basename[:len(basename)-5] == s {
-				return ` class="selected"`
+		"isFilenameOption": func(filename string, t string, f string) string {
+			if filename == opts.Filename {
+				return t
 			}
-			return ""
+			return f
+		},
+		"boolOption": func(value bool, t string, f string) string {
+			if value {
+				return t
+			}
+			return f
 		},
 		"shape":        func(i int) string { return modulo(shapes, i) },
 		"colour":       func(i int) string { return modulo(colours, i) },
@@ -157,7 +163,7 @@ func main() {
 		Contents: mustHighlight(mustRead(opts.In)),
 		Filename: opts.Filename,
 	}
-	for i := 0; i <= strings.Count(data.Contents, "\n")/150; i++ {
+	for i := 0; i < strings.Count(data.Contents, "\n")/200; i++ {
 		// Awkwardly this seems to have to be a slice to range over in the template.
 		data.SideImages = append(data.SideImages, i+1)
 	}

@@ -69,6 +69,7 @@ filegroup(
     srcs = glob(["images/*.png"]) + deps + [
         ":language_html",
         ":lexicon_html",
+        "tachyons-4.12.0.min.css",
         "styles.css",
         "action.js",
         "tabs.js",

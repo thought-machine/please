@@ -5,3 +5,8 @@ github_repo(
 )
 
 subinclude("///dir/pleasings2//go")
+
+gotestsum_test(
+    name = "gotest",
+    race = True,
+)
