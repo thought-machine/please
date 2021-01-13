@@ -138,6 +138,15 @@ sh_cmd(
     ],
 )
 
+sh_cmd(
+    name = "server",
+    cmd = "cd plz-out/gen/docs && python3 -m http.server 8080",
+    data = [
+        ":docs",
+        ":index_html",
+    ],
+)
+
 go_test(
     name = "docs_test",
     srcs = ["docs_test.go"],

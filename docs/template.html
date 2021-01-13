@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <meta charset="UTF-8">
 
-<html lang="en">
+<html lang="en" {{ if eq .Filename "index.html" }} class="smooth-scroll" {{ end }}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -51,8 +51,8 @@
   <body
     class="silver bg-raisin-black essential-pragmata-pro f5 lh-copy nested-list-reset"
   >
-    <header class="pa3 flex items-start justify-between">
-      {{ if ne .Filename "index.html"}}
+    {{ if ne .Filename "index.html"}}
+      <header>
         <a class="flex no-underline f2-ns f3 white calibre" href="/index.html"
           >please<span class="violet">.build</span></a
         >
@@ -64,8 +64,9 @@
         >
           ☰
         </button>
-      {{ end }}
-    </header>
+      </header>
+    {{ end }}
+    <a class="skip-to-content" href="#main-content">Skip to content</a>
     {{ if ne .Filename "index.html" }}
       <div class="flex-l">
         <nav id="menu-list" class="dn ph3 pb4 db-l w-20-l">
