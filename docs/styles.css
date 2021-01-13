@@ -72,6 +72,10 @@ but as a result they're not checked into Git.
   --yellow: #ffe752;
 }
 
+.smooth-scroll {
+    scroll-behavior: smooth;
+}
+
 pre {
   margin: 0;
 }
