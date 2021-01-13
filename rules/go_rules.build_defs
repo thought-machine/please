@@ -88,6 +88,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
                      to name.
     """
     package = package or name
+    package = out.removesuffix(".a") if out else package
     out = out or package + '.a'
     link_labels = []
     src_labels = []
