@@ -1215,6 +1215,16 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:list=[], has
     subdir = 'src/' + getroot
     revision = revision or 'master'
 
+    if repo.startswith('/'):
+        return build_rule(
+            name = name,
+            tag = tag,
+            system_srcs = [repo],
+            outs = [subdir],
+            cmd = 'cp -r "$SRCS" "$OUTS"',
+            test_only = test_only,
+        ), getroot
+
     # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
     # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
     if repo.startswith('github.com'):
