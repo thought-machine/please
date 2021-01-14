@@ -18,5 +18,5 @@ please_repo_e2e_test(
     name = "please_go_install_cross_compile_test",
     plz_command = f"plz -o featureflags.PleaseGoInstall:true -o go.cgoenabled:1 -o go.gotool:'//tools/go:toolchain|go' build --arch {target} //third_party/go:all",
     repo = "test_repo",
-    labels = ["no_cirrus"],
+    labels = ["no_cirrus", "no-musl"],
 )
