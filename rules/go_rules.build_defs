@@ -41,7 +41,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     # If we're targeting another platform, build the std lib for that. We can't use CONFIG.OS as this is always set to
     # the host OS for tools.
     if CONFIG.TARGET_OS != CONFIG.HOSTOS or CONFIG.TARGET_ARCH != CONFIG.HOSTARCH:
-        cmd += f' && (export GOOS={CONFIG.TARGET_OS} && export GOARCH={CONFIG.TARGET_ARCH} && $OUT/bin/go install std)'
+        cmd += f' && (export CGO_ENABLED=1 && export CC=$TOOLS_CC && export GOOS={CONFIG.TARGET_OS} && export GOARCH={CONFIG.TARGET_ARCH} && $OUT/bin/go install std)'
 
     #TODO(jpoole): Add the option to compile these with -race for the race detector as well. This need to be plumbed
     # through to the go_library rules as well though.
@@ -53,6 +53,9 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         entry_points = {
             'go': f'{name}/bin/go',
             'gofmt': f'{name}/bin/gofmt',
+        },
+        tools = {
+          "CC": [CONFIG.CC_TOOL],
         },
         binary = True,
         visibility = visibility,
@@ -1309,7 +1312,7 @@ def _set_go_env():
         go_root = f'$(dirname $(dirname $TOOLS_GO))'
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
-    return f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
+    return f'export CGO_ENABLED=1 && export GOPATH=$TMP_DIR && export GOROOT={go_root}'
 
 def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False):
     """Returns the commands to run for building a Go library."""
