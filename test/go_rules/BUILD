@@ -78,16 +78,15 @@ gentest(
     test_cmd = "$DATA | tee $RESULTS_FILE",
 )
 
-
 go_library(
-  name = "package_test_lib",
-  srcs = ["package_lib.go"],
-  package = "package_lib",
+    name = "package_test_lib",
+    srcs = ["package_lib.go"],
+    package = "package_lib",
 )
 
 go_test(
-  name = "package_test",
-  srcs = ["package_test.go"],
-  external = True,
-  deps = [":package_test_lib"],
+    name = "package_test",
+    srcs = ["package_test.go"],
+    external = True,
+    deps = [":package_test_lib"],
 )
