@@ -41,6 +41,7 @@ go_module(
 go_module(
     name = "zstd",
     module = "github.com/DataDog/zstd",
+    install = ["."],
     version = "v1.4.5",
 )
 

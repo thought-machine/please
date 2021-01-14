@@ -943,7 +943,7 @@ def go_module(name:str='', module:str='', version:str='', download:str='', deps:
     if not download and not (module and version):
         raise ParseError("Either the module and version, or download should be provided")
 
-    install = [f"{module}/{i}" for i in install]
+    install = [f"{module}/{i}" if i != "." else module for i in install]
 
     if not download:
         download = go_mod_download(

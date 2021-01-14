@@ -84,8 +84,6 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-		} else if target == "." {
-			pkgs.compile([]string{"."}, opts.ModuleName)
 		} else {
 			pkgs.compile([]string{"."}, target)
 		}
