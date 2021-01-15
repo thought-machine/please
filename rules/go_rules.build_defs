@@ -934,14 +934,14 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         visibility = visibility,
     )
 
-def go_module(name:str='', module:str='', version:str='', download:str='', deps:list=[], exported_deps:list=None,
+def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=None,
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
               licences:list=None, linker_flags:list=[], please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL):
-    if (module or version) and download:
-        raise ParseError("You have provided both module and version as well as download. Must provided one or the other.")
+    if version and download:
+        raise ParseError("You have provided both version and download. Must provided one or the other.")
 
-    if not download and not (module and version):
-        raise ParseError("Either the module and version, or download should be provided")
+    if not download and not version:
+        raise ParseError("Either version or download should be provided")
 
     install = [f"{module}/{i}" if i != "." else module for i in install]
 
