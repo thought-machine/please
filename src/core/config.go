@@ -277,7 +277,6 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
-	config.Go.CgoEnabled = "0"
 	config.Go.TestTool = "please_go_test"
 	config.Go.FilterTool = "please_go_filter"
 	config.Go.InstallTool = "please_go_install"
