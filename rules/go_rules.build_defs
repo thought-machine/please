@@ -1315,7 +1315,7 @@ def _set_go_env():
         go_root = f'$(dirname $(dirname $TOOLS_GO))'
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
-    return f'export CGO_ENABLED=1 && export GOPATH=$TMP_DIR && export GOROOT={go_root}'
+    return f'export CGO_ENABLED={CONFIG.CGO_ENABLED} && export GOPATH=$TMP_DIR && export GOROOT={go_root}'
 
 def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False):
     """Returns the commands to run for building a Go library."""
