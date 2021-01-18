@@ -442,6 +442,7 @@ type Configuration struct {
 		GoPath           string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
 		ImportPath       string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
 		CgoCCTool        string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`
+		CgoEnabled       string `help:"Sets the CGO_ENABLED which controls whether the cgo build flag is set during cross compilation." var:"CGO_ENABLED"`
 		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
 		InstallTool      string `help:"Sets the location of the please_go_install tool that is used to install go modules." var:"GO_INSTALL_TOOL"`
 		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`

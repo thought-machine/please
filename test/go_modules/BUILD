@@ -1,13 +1,22 @@
 subinclude("//test/build_defs")
 
 please_repo_e2e_test(
-    name = "go_modules_test",
+    name = "go_install_test",
     plz_command = "plz test",
     repo = "test_repo",
 )
 
 please_repo_e2e_test(
-    name = "go_modules_test_please_go_install",
-    plz_command = "plz -o featureflags.PleaseGoInstall:true --show_all_output test",
+    name = "please_go_install_test",
+    plz_command = "plz -o featureflags.PleaseGoInstall:true test",
     repo = "test_repo",
+)
+
+target = "darwin_amd64" if CONFIG.OS == "linux_amd64" else "linux_amd64"
+
+please_repo_e2e_test(
+    name = "please_go_install_cross_compile_test",
+    plz_command = f"plz -o featureflags.PleaseGoInstall:true -o go.cgoenabled:1 -o go.gotool:'//tools/go:toolchain|go' build --arch {target} //third_party/go:all",
+    repo = "test_repo",
+    labels = ["no_cirrus", "no-musl"],
 )
