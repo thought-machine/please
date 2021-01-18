@@ -1057,7 +1057,10 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
       get (str): Target to get (eg. "github.com/gorilla/mux"). Can also be a list of multiple in
                  which case they are fetched separately and compiled together, which can be useful
                  for avoiding issues with circular dependencies.
-      repo (str): Location of a Git repository to fetch from.
+      repo (str): Location of a Git repository to fetch from if different from get. To enable vendoring, this can also
+                  be a build rule. The build rule must produce a single output in the format `src/{module}`
+                  e.g. src/golang.org/x/net. This can also be an absolute path to the repo on disk
+                  e.g. /home/you/git/xnet.
       deps (list): Dependencies
       exported_deps (list): Dependencies to make available to anything using this rule.
       visibility (list): Visibility specification
@@ -1220,6 +1223,21 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:list=[], has
     getroot = get[:-4] if get.endswith('/...') else get
     subdir = 'src/' + getroot
     revision = revision or 'master'
+
+    # if the repo is a build rule, just return that assuming it outputs in the correct format
+    if repo.startswith("//") or repo.startswith(":"):
+        return repo, getroot
+
+    # Allow overriding with locally cloned repos
+    if repo.startswith('/'):
+        return build_rule(
+            name = name,
+            tag = tag,
+            system_srcs = [repo],
+            outs = [subdir],
+            cmd = 'cp -r "$SRCS" "$OUTS"',
+            test_only = test_only,
+        ), getroot
 
     # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
     # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
