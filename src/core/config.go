@@ -320,6 +320,7 @@ func DefaultConfiguration() *Configuration {
 	// We're using the most common names for these; typically gRPC installs the builtin plugins
 	// as grpc_python_plugin etc.
 	config.Proto.ProtocGoPlugin = "protoc-gen-go"
+	config.Proto.GrpcGoPlugin = "protoc-gen-go-grpc"
 	config.Proto.GrpcPythonPlugin = "grpc_python_plugin"
 	config.Proto.GrpcJavaPlugin = "protoc-gen-grpc-java"
 	config.Proto.GrpcCCPlugin = "grpc_cpp_plugin"
@@ -499,6 +500,7 @@ type Configuration struct {
 		ProtocGoPlugin   string   `help:"The binary passed to protoc as a plugin to generate Go code. Defaults to protoc-gen-go.\nWe've found this easier to manage with a go_get rule instead though, so you can also pass a build label here. See the Please repo for an example." var:"PROTOC_GO_PLUGIN"`
 		GrpcPythonPlugin string   `help:"The plugin invoked to compile Python code for grpc_library.\nDefaults to protoc-gen-grpc-python." var:"GRPC_PYTHON_PLUGIN"`
 		GrpcJavaPlugin   string   `help:"The plugin invoked to compile Java code for grpc_library.\nDefaults to protoc-gen-grpc-java." var:"GRPC_JAVA_PLUGIN"`
+		GrpcGoPlugin     string   `help:"The plugin invoked to compile Go code for grpc_library.\nDefaults to protoc-gen-go-grpc." var:"GRPC_GO_PLUGIN"`
 		GrpcCCPlugin     string   `help:"The plugin invoked to compile C++ code for grpc_library.\nDefaults to grpc_cpp_plugin." var:"GRPC_CC_PLUGIN"`
 		Language         []string `help:"Sets the default set of languages that proto rules are built for.\nChosen from the set of {cc, java, go, py}.\nDefaults to all of them!" var:"PROTO_LANGUAGES"`
 		PythonDep        string   `help:"An in-repo dependency that's applied to any Python proto libraries." var:"PROTO_PYTHON_DEP"`
