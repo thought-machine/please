@@ -210,7 +210,6 @@ func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, 
 	moveArchive := fmt.Sprintf("cd $OLDPWD && mv %s/out.a %s", pkgDir, out)
 	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
 
-
 	fmt.Println(prepOutDir)
 	fmt.Println(cdPkgDir)
 	fmt.Println(generateCGO)
