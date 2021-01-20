@@ -208,6 +208,8 @@ func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, 
 	compileC := fmt.Sprintf("%s -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . *.c", opts.CCTool)
 	mergeArchive := fmt.Sprintf("%s tool pack r out.a *.o ", opts.GoTool)
 	moveArchive := fmt.Sprintf("cd $OLDPWD && mv %s/out.a %s", pkgDir, out)
+	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
+
 
 	fmt.Println(prepOutDir)
 	fmt.Println(cdPkgDir)
@@ -223,6 +225,7 @@ func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, 
 	fmt.Println(compileCGO)
 	fmt.Println(mergeArchive)
 	fmt.Println(moveArchive)
+	fmt.Println(updateImportCfg)
 
 	if binary {
 		goToolLink(out)
