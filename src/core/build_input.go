@@ -253,6 +253,24 @@ func MustParseNamedOutputLabel(target string, pkg *Package) BuildInput {
 	return ParseBuildLabelContext(target, pkg)
 }
 
+// UnmarshalFlag unmarshals a build label from a command line flag. Implementation of flags.Unmarshaler interface.
+func (label *AnnotatedOutputLabel) UnmarshalFlag(value string) error {
+	annotation := ""
+	if strings.Count(value, "|") == 1 {
+		parts := strings.Split(value, "|")
+		value = parts[0]
+		annotation = parts[1]
+	}
+
+	l := &BuildLabel{}
+	if err := l.UnmarshalFlag(value); err != nil {
+		return err
+	}
+	label.BuildLabel = *l
+	label.Annotation = annotation
+	return nil
+}
+
 // A URLLabel represents a remote input that's defined by a URL.
 type URLLabel string
 
