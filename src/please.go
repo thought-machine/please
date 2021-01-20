@@ -160,14 +160,15 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
-		Env      bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
-		Rebuild  bool `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
-		InWD     bool `long:"in_wd" description:"When running locally, stay in the original working directory."`
-		Parallel struct {
+		Env        bool   `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
+		Rebuild    bool   `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
+		InWD       bool   `long:"in_wd" description:"When running locally, stay in the original working directory."`
+		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
+		Parallel   struct {
 			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
-				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
+				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
 			Args   cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
 			Detach bool          `long:"detach" description:"Detach from the parent process when all children have spawned"`
@@ -175,13 +176,13 @@ var opts struct {
 		Sequential struct {
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
-				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
+				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
 			Args cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
 		} `command:"sequential" description:"Runs a sequence of targets sequentially."`
 		Args struct {
-			Target core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
-			Args   cli.Filepaths   `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
+			Target core.AnnotatedOutputLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
+			Args   cli.Filepaths             `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
 		} `positional-args:"true"`
 		Remote bool `long:"remote" description:"Send targets to be executed remotely."`
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
@@ -428,10 +429,14 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"run": func() int {
-		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false, false); success {
+		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
 			if opts.Run.InWD {
 				dir = originalWorkingDirectory
+			}
+
+			if opts.Run.EntryPoint != "" {
+				opts.Run.Args.Target.Annotation = opts.Run.EntryPoint
 			}
 
 			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, dir, opts.BuildFlags.Arch)
@@ -439,24 +444,24 @@ var buildFunctions = map[string]func() int{
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
 	"parallel": func() int {
-		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false, false); success {
+		if success, state := runBuild(unannotateLabels(opts.Run.Parallel.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
 
-			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalLabels(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir, opts.BuildFlags.Arch))
+			os.Exit(run.Parallel(context.Background(), state, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir, opts.BuildFlags.Arch))
 		}
 		return 1
 	},
 	"sequential": func() int {
-		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false, false); success {
+		if success, state := runBuild(unannotateLabels(opts.Run.Sequential.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
 
-			os.Exit(run.Sequential(state, state.ExpandOriginalLabels(), opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir, opts.BuildFlags.Arch))
+			os.Exit(run.Sequential(state, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir, opts.BuildFlags.Arch))
 		}
 		return 1
 	},
@@ -1028,6 +1033,14 @@ func initBuild(args []string) string {
 		}()
 	}
 	return command
+}
+
+func unannotateLabels(als []core.AnnotatedOutputLabel) []core.BuildLabel {
+	labels := make([]core.BuildLabel, len(als))
+	for i, al := range als {
+		labels[i] = al.BuildLabel
+	}
+	return labels
 }
 
 // toExitCode returns an integer process exit code based on the outcome of a build.
