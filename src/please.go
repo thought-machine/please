@@ -160,11 +160,11 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
-		Env      bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
-		Rebuild  bool `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
-		InWD     bool `long:"in_wd" description:"When running locally, stay in the original working directory."`
-		EntryPoint     string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
-		Parallel struct {
+		Env        bool   `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
+		Rebuild    bool   `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
+		InWD       bool   `long:"in_wd" description:"When running locally, stay in the original working directory."`
+		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
+		Parallel   struct {
 			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
@@ -175,14 +175,14 @@ var opts struct {
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
-			PositionalArgs struct{
+			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
 			Args cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
 		} `command:"sequential" description:"Runs a sequence of targets sequentially."`
 		Args struct {
 			Target core.AnnotatedOutputLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
-			Args   cli.Filepaths   `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
+			Args   cli.Filepaths             `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
 		} `positional-args:"true"`
 		Remote bool `long:"remote" description:"Send targets to be executed remotely."`
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
