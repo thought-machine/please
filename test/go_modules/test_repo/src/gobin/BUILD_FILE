@@ -1,0 +1,5 @@
+go_test(
+    name = "gobin_test",
+    srcs = ["gobin_test.go"],
+    deps = ["//src/gobin/assets"],
+)

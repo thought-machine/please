@@ -12,7 +12,7 @@ go_library(
         "//third_party/go:logging",
         "//third_party/go:promptui",
         "//third_party/go:semver",
-        "//third_party/go:terminal",
+        "//third_party/go:xcrypto",
     ],
 )
 
