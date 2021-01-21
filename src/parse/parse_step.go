@@ -199,7 +199,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 			if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
 				return nil, err
 			}
-		} else if packageName != "" && !state.Config.FeatureFlags.RemovePleasings {
+		} else if packageName != "" || state.Config.FeatureFlags.RemovePleasings {
 			exists := core.PathExists(dir)
 			// Handle quite a few cases to provide more obvious error messages.
 			if dependent != core.OriginalTarget && exists {
