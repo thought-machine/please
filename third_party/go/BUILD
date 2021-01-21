@@ -717,4 +717,5 @@ go_module(
     name = "cpuid",
     module = "github.com/klauspost/cpuid",
     version = "v1.3.1",
+    please_go_install = False, # TODO(jpoole): asm sources are not supported yet
 )
