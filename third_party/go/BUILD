@@ -711,6 +711,7 @@ go_module(
     module = "lukechampine.com/blake3",
     version = "v1.1.4",
     deps = [":cpuid"],
+    please_go_install = False, # TODO(jpoole): asm sources are not supported yet
 )
 
 go_module(
