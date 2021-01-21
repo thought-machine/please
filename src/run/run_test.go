@@ -39,15 +39,15 @@ func TestEnvVars(t *testing.T) {
 	state, lab1, _ := makeState(config)
 
 	os.Setenv("PATH", "/usr/local/bin:/usr/bin:/bin")
-	env := environ(state, state.Graph.TargetOrDie(lab1[0]), false)
+	env := environ(state, state.Graph.TargetOrDie(lab1[0].BuildLabel), false)
 	assert.Contains(t, env, "PATH=/usr/local/bin:/usr/bin:/bin")
 	assert.NotContains(t, env, "PATH=/wibble")
-	env = environ(state, state.Graph.TargetOrDie(lab1[0]), true)
+	env = environ(state, state.Graph.TargetOrDie(lab1[0].BuildLabel), true)
 	assert.NotContains(t, env, "PATH=/usr/local/bin:/usr/bin:/bin")
 	assert.Contains(t, env, "PATH=:/wibble", env)
 }
 
-func makeState(config *core.Configuration) (*core.BuildState, []core.BuildLabel, []core.BuildLabel) {
+func makeState(config *core.Configuration) (*core.BuildState, []core.AnnotatedOutputLabel, []core.AnnotatedOutputLabel) {
 	state := core.NewBuildState(config)
 	target1 := core.NewBuildTarget(core.ParseBuildLabel("//:true", ""))
 	target1.IsBinary = true
@@ -57,5 +57,15 @@ func makeState(config *core.Configuration) (*core.BuildState, []core.BuildLabel,
 	target2.IsBinary = true
 	target2.AddOutput("false")
 	state.Graph.AddTarget(target2)
-	return state, []core.BuildLabel{target1.Label}, []core.BuildLabel{target1.Label, target2.Label}
+	return state, annotate([]core.BuildLabel{target1.Label}), annotate([]core.BuildLabel{target1.Label, target2.Label})
+}
+
+func annotate(labels []core.BuildLabel) []core.AnnotatedOutputLabel {
+	ls := make([]core.AnnotatedOutputLabel, len(labels))
+	for i, l := range labels {
+		ls[i] = core.AnnotatedOutputLabel{
+			BuildLabel: l,
+		}
+	}
+	return ls
 }

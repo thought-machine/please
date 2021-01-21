@@ -51,3 +51,12 @@ go_module(
     version = "v1.10.0",
     linker_flags = ["-ldl"],
 )
+
+go_module(
+    name = "go-bindata",
+    binary = True,
+    module = "github.com/kevinburke/go-bindata",
+    install = ["go-bindata"],
+    strip = ["testdata"],
+    version = "v3.21.0",
+)
