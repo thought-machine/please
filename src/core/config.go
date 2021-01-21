@@ -192,6 +192,19 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		os.Setenv("HTTP_PROXY", config.Build.HTTPProxy.String())
 	}
 
+	// Slightly awkward as we need to load the feature flags to know what the default should be
+	// TODO(jpoole): Move these into DefaultConfiguration() once v16 is released
+	if config.FeatureFlags.PleaseDownloadTools {
+		setDefaultString(&config.Build.PleaseSandboxTool, "please_sandbox", "//_please:tools|please_sandbox")
+		setDefaultString(&config.Go.TestTool, "please_go_test", "//_please:tools|please_go_test")
+		setDefaultString(&config.Go.FilterTool, "please_go_filter", "//_please:tools|please_go_filter")
+		setDefaultString(&config.Go.InstallTool, "please_go_install", "//_please:tools|please_go_install")
+		setDefaultString(&config.Python.PexTool, "please_pex", "//_please:tools|please_pex")
+		setDefaultString(&config.Java.JavacWorker, "javac_worker", "//_please:tools|javac_worker")
+		setDefaultString(&config.Java.JarCatTool, "jarcat", "//_please:tools|jarcat")
+		setDefaultString(&config.Java.JUnitRunner, "junit_runner.pex", "//_please:tools|junit_runner")
+	}
+
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,
@@ -201,6 +214,15 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 // setDefault sets a slice of strings in the config if the set one is empty.
 func setDefault(conf *[]string, def ...string) {
 	if len(*conf) == 0 {
+		*conf = def
+	}
+}
+
+// setDefaultString sets the default value on a string. oldDefault contains the strings as set in the default
+// configuration. If after loading config files, this value has changed, the value will be left alone. Otherwise
+// it will be set to def.
+func setDefaultString(conf *string, oldDefault string, def string) {
+	if *conf == oldDefault {
 		*conf = def
 	}
 }
@@ -250,7 +272,6 @@ func DefaultConfiguration() *Configuration {
 	config.Build.Timeout = cli.Duration(10 * time.Minute)
 	config.Build.Config = "opt"         // Optimised builds by default
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
-	config.Build.PleaseSandboxTool = "please_sandbox"
 	config.Build.Xattrs = true
 	config.Build.HashFunction = "sha256"
 	config.BuildConfig = map[string]string{}
@@ -277,10 +298,6 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
-	config.Go.TestTool = "please_go_test"
-	config.Go.FilterTool = "please_go_filter"
-	config.Go.InstallTool = "please_go_install"
-	config.Python.PexTool = "please_pex"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.DisableVendorFlags = false
 	config.Python.TestRunner = "unittest"
@@ -295,9 +312,6 @@ func DefaultConfiguration() *Configuration {
 	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2", "https://jcenter.bintray.com/"}
 	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
 	config.Java.JlinkTool = "jlink"
-	config.Java.JavacWorker = "javac_worker"
-	config.Java.JarCatTool = "jarcat"
-	config.Java.JUnitRunner = "junit_runner.jar"
 	config.Java.JavaHome = ""
 	config.Cpp.CCTool = "gcc"
 	config.Cpp.CppTool = "g++"
@@ -332,6 +346,17 @@ func DefaultConfiguration() *Configuration {
 	config.Proto.GoGrpcDep = "//third_party/go:grpc"
 	config.Remote.Timeout = cli.Duration(2 * time.Minute)
 	config.Bazel.Compatibility = usingBazelWorkspace
+
+	// Please tools
+	config.Build.PleaseSandboxTool = "please_sandbox"
+	config.Go.TestTool = "please_go_test"
+	config.Go.FilterTool = "please_go_filter"
+	config.Go.InstallTool = "please_go_install"
+	config.Python.PexTool = "please_pex"
+	config.Java.JavacWorker = "javac_worker"
+	config.Java.JarCatTool = "jarcat"
+	config.Java.JUnitRunner = "junit_runner.jar"
+
 	return &config
 }
 
@@ -532,6 +557,7 @@ type Configuration struct {
 		RemovePleasings               bool `help:"Stops please adding the pleasings repo by default. Target release vesrion 16." var:"FF_PLEASINGS"`
 		PleaseGoInstall               bool `help:"Uses please_go_install and import configs instead of 'go install'. This is a WIP but should solve a number of issues with go install." var:"FF_PLEASE_GO_INSTALL"`
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
+		PleaseDownloadTools           bool `help:"Please will download its tools from get.please.build instead of looking on the path"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 }
 

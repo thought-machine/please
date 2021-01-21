@@ -2,6 +2,7 @@ go_library(
     name = "parse",
     srcs = [
         "init.go",
+        "internal_package.go",
         "parse_step.go",
         "suggest.go",
     ],

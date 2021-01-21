@@ -6,11 +6,16 @@ def please_repo_e2e_test(
         deps: list=[],
         expected_output: dict = {},
         labels: list = [],
+        set_tool_config: bool = True,
 ):
+    if set_tool_config:
+        plz_command = plz_command.replace("plz ", "$TMP_DIR/$DATA_PLEASE -o java.jarcattool:$TMP_DIR/$DATA_JARCAT_TOOL -o go.testtool:$TMP_DIR/$DATA_TEST_TOOL -o go.installtool:$TMP_DIR/$DATA_INSTALL_TOOL -o go.filtertool:$TMP_DIR/$DATA_FILTER_TOOL ")
+    else:
+        plz_command = plz_command.replace("plz ", "$TMP_DIR/$DATA_PLEASE ")
     test_cmd = [
         "mv $DATA_FREE_BSD_CONFIG $DATA_REPO",
         "cd $DATA_REPO",
-        plz_command.replace("plz ", "$TMP_DIR/$DATA_PLEASE -o java.jarcattool:$TMP_DIR/$DATA_JARCAT_TOOL -o go.testtool:$TMP_DIR/$DATA_TEST_TOOL -o go.installtool:$TMP_DIR/$DATA_INSTALL_TOOL -o go.filtertool:$TMP_DIR/$DATA_FILTER_TOOL "),
+         plz_command,
     ]
 
     if expected_output:
