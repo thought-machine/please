@@ -32,7 +32,7 @@ go_module(
 
 go_module(
     name = "gcfg",
-    install = ["..."],
+    install = [".", "..."],
     module = "github.com/peterebden/gcfg",
     version = "v1.3.0",
     deps = [
@@ -698,12 +698,6 @@ go_get(
         ":goldmark",
         ":oauth2",
     ],
-)
-
-go_get(
-    name = "zstd2",
-    get = "github.com/DataDog/zstd",
-    revision = "v1.4.5+patch1",
 )
 
 go_module(
