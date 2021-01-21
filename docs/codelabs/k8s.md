@@ -33,7 +33,7 @@ kubernetes based project. You'll learn:
 ### What if I get stuck?
 
 The final result of running through this codelab can be found
-[here](https://github.com/thought-machine/please-codelabs/tree/main/k8s) for reference. If you really get stuck
+[here](https://github.com/thought-machine/please-codelabs/tree/main/kubernetes_and_docker) for reference. If you really get stuck
 you can find us on [gitter](https://gitter.im/please-build/Lobby)!
 
 ## Creating a service
