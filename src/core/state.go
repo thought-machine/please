@@ -4,6 +4,9 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
+	"hash"
+	"hash/crc32"
+	"hash/crc64"
 	"io"
 	"sort"
 	"sync"
@@ -11,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Workiva/go-datastructures/queue"
+	"lukechampine.com/blake3"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
@@ -222,7 +226,9 @@ type stateProgress struct {
 	pendingTargets     map[BuildLabel]chan struct{}
 	pendingTargetMutex sync.Mutex
 	// Used to track general package parsing requests.
-	pendingPackages     map[packageKey]chan struct{}
+	pendingPackages map[packageKey]chan struct{}
+	// similar to pendingPackages but consumers haven't committed to parsing the package
+	packageWaits        map[packageKey]chan struct{}
 	pendingPackageMutex sync.Mutex
 	// The set of known states
 	allStates []*BuildState
@@ -463,6 +469,12 @@ func (state *BuildState) Hasher(name string) *fs.PathHasher {
 	return hasher
 }
 
+// OutputHashCheckers returns the subset of hash algos that are appropriate for checking the hashes argument on
+// build rules
+func (state *BuildState) OutputHashCheckers() []*fs.PathHasher {
+	return []*fs.PathHasher{state.Hasher("sha1"), state.Hasher("sha256"), state.Hasher("blake3")}
+}
+
 // LogBuildResult logs the result of a target either building or parsing.
 func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
 	if status == PackageParsed {
@@ -472,6 +484,9 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 			defer state.progress.pendingPackageMutex.Unlock()
 
 			if ch, present := state.progress.pendingPackages[packageKey{Name: label.PackageName, Subrepo: label.Subrepo}]; present {
+				close(ch) // This signals to anyone waiting that it's done.
+			}
+			if ch, present := state.progress.packageWaits[packageKey{Name: label.PackageName, Subrepo: label.Subrepo}]; present {
 				close(ch) // This signals to anyone waiting that it's done.
 			}
 		}()
@@ -639,10 +654,10 @@ func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 	return ret
 }
 
-// WaitForPackage either returns the given package which is already parsed and available,
-// or returns nil if nothing's parsed it already, in which case everything else calling this
-// will wait for the caller to parse it themselves.
-func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
+// SyncParsePackage either returns the given package which is already parsed and available,
+// or returns nil indicating it is ready to be parsed. Everything subsequently calling this
+// will block until the original caller parse it.
+func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 	if p := state.Graph.PackageByLabel(label); p != nil {
 		return p
 	}
@@ -657,6 +672,37 @@ func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
 	state.progress.pendingPackages[key] = make(chan struct{})
 	state.progress.pendingPackageMutex.Unlock()
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
+}
+
+// WaitForPackage is similar to WaitForBuiltTarget however
+func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
+	if p := state.Graph.PackageByLabel(l); p != nil {
+		return p
+	}
+	key := packageKey{Name: l.PackageName, Subrepo: l.Subrepo}
+
+	state.progress.pendingPackageMutex.Lock()
+
+	// If something has promised to parse it, wait for them to do so
+	if ch, present := state.progress.pendingPackages[key]; present {
+		state.progress.pendingPackageMutex.Unlock()
+		<-ch
+		return state.Graph.PackageByLabel(l)
+	}
+
+	// If something has already queued the package to be parsed, wait for them
+	if ch, present := state.progress.packageWaits[key]; present {
+		state.progress.pendingPackageMutex.Unlock()
+		<-ch
+		return state.Graph.PackageByLabel(l)
+	}
+
+	// Otherwise queue the target for parse and recurse
+	state.AddPendingParse(l, dependent, true)
+	state.progress.packageWaits[key] = make(chan struct{})
+	state.progress.pendingPackageMutex.Unlock()
+
+	return state.WaitForPackage(l, dependent)
 }
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
@@ -885,6 +931,19 @@ func (state *BuildState) DisableXattrs() {
 	state.PathHasher.DisableXattrs()
 }
 
+func newCRC32() hash.Hash {
+	return hash.Hash(crc32.NewIEEE())
+}
+
+func newCRC64() hash.Hash {
+	return hash.Hash(crc64.New(crc64.MakeTable(crc64.ISO)))
+}
+
+func newBlake3() hash.Hash {
+	// 32 bytes == 256 bits
+	return blake3.New(32, nil)
+}
+
 // NewBuildState constructs and returns a new BuildState.
 // Everyone should use this rather than attempting to construct it themselves;
 // callers can't initialise all the required private fields.
@@ -896,8 +955,11 @@ func NewBuildState(config *Configuration) *BuildState {
 		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
 		hashers: map[string]*fs.PathHasher{
 			// For compatibility reasons the sha1 hasher has no suffix.
-			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, ""),
-			"sha256": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "_sha256"),
+			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, "sha1"),
+			"sha256": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "sha256"),
+			"crc32":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC32, "crc32"),
+			"crc64":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC64, "crc64"),
+			"blake3": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newBlake3, "blake3"),
 		},
 		ProcessExecutor: process.New(sandboxTool),
 		StartTime:       startTime,
@@ -914,6 +976,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			numPending:      1,
 			pendingTargets:  map[BuildLabel]chan struct{}{},
 			pendingPackages: map[packageKey]chan struct{}{},
+			packageWaits:    map[packageKey]chan struct{}{},
 			success:         true,
 		},
 	}

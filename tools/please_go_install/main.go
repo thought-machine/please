@@ -77,17 +77,15 @@ func main() {
 					panic(err)
 				}
 				if !info.IsDir() && strings.HasSuffix(info.Name(), ".go") && !strings.HasSuffix(info.Name(), "_test.go") {
-					pkgs.compile([]string{"."}, strings.TrimPrefix(filepath.Dir(path), opts.SrcRoot))
+					pkgs.compile([]string{}, strings.TrimPrefix(filepath.Dir(path), opts.SrcRoot))
 				}
 				return nil
 			})
 			if err != nil {
 				panic(err)
 			}
-		} else if target == "." {
-			pkgs.compile([]string{"."}, opts.ModuleName)
 		} else {
-			pkgs.compile([]string{"."}, target)
+			pkgs.compile([]string{}, target)
 		}
 	}
 }
@@ -166,19 +164,19 @@ func (g *pkgGraph) compile(from []string, target string) {
 	}
 	binary := targetPackage.Name == "main"
 	if anyCGO {
-		goToolCGOCompile(target, binary, pkgDir, srcs, cgoSrcs, targetPackage)
+		goToolCGOCompile(target, binary, pkgDir, srcs, cgoSrcs)
 	} else {
-		goToolCompile(target, binary, srcs, targetPackage) // output the package as ready to be compiled
+		goToolCompile(target, binary, srcs) // output the package as ready to be compiled
 	}
 	g.pkgs[target] = true
 }
 
-func goToolCompile(target string, binary bool, srcs []string, pkg *ast.Package) {
+func goToolCompile(target string, binary bool, srcs []string) {
 	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
 
 	prepOutDir := fmt.Sprintf("mkdir -p %s", filepath.Dir(out))
 	compile := fmt.Sprintf("%s tool compile -pack -complete -importcfg %s -o %s %s", opts.GoTool, opts.ImportConfig, out, strings.Join(srcs, " "))
-	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", pkg.Name, out, opts.ImportConfig)
+	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
 
 	fmt.Println(prepOutDir)
 	fmt.Println(compile)
@@ -189,7 +187,7 @@ func goToolCompile(target string, binary bool, srcs []string, pkg *ast.Package) 
 	}
 }
 
-func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, cgoSrcs []string, pkg *ast.Package) {
+func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, cgoSrcs []string) {
 	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
 
 	// We need to operate out of the package working directory for the cpp compiler to play ball so trim the package dir
@@ -234,6 +232,9 @@ func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, 
 }
 
 func goToolLink(archive string) {
-	link := fmt.Sprintf("%s tool link -importcfg %s -o %s %s", opts.GoTool, opts.ImportConfig, strings.TrimSuffix(archive, ".a"), archive)
+	filename := strings.TrimSuffix(filepath.Base(archive), ".a")
+	out := filepath.Join(opts.Out, "bin", filename)
+	link := fmt.Sprintf("%s tool link -importcfg %s -o %s %s", opts.GoTool, opts.ImportConfig, out, archive)
+	fmt.Printf("mkdir -p %s\n", filepath.Dir(out))
 	fmt.Println(link)
 }

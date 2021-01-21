@@ -1,23 +1,35 @@
-<h1>Codelabs</h1>
-<p>These guided tutorials are designed to be easy to follow and get you starting with Please! If you prefer a more
-reference based introduction to Please, continue to <a href="/basics.html">Please basics</a>.</p>
+<h1 class="title-1">Codelabs</h1>
 
-<div class="code-lab-grid">
-    {{range .}}
-        <div class="code-lab codelab-category-{{.Category}}">
-            <a href="/codelabs/{{.ID}}">
-                <p class="code-lab-duration">Duration {{.Duration}} mins</p>
-                <p class="code-lab-author">by {{.Author}}</p>
-                <h2>{{.Title}}</h2>
-                <p>{{.Description}}</p>
-                <p class="code-lab-start">Get started</p>
-            </a>
-        </div>
-    {{end}}
-</div>
+<p>
+  These guided tutorials are designed to be easy to follow and get you starting
+  with Please! If you prefer a more reference based introduction to Please,
+  continue to <a class="copy-link" href="/basics.html">Please basics</a>.
+</p>
 
+{{range .}}
+<a class="silver no-underline" href="/codelabs/{{.ID}}">
+  <section class="mt4 pa3 bg-eerie-black bl bw2 codelab-category-{{.Category}}">
+    <div class="flex justify-between f7">
+      <span>Duration {{.Duration}} mins</span>
+      <span>by {{.Author}}</span>
+    </div>
 
-<div class="section-guide">
-    <div class="prev-section"><a href="/quickstart.html">Getting started</a></div>
-    <div class="next-section"><a href="/basics.html">Please basics</a></div>
+    <h2 class="calibre normal f4 lh-title">{{.Title}}</h2>
+
+    <p>{{.Description}}</p>
+
+    <p class="mv0 after-rw-arrow tr">
+      <span class="mr2 cyan">Get started</span>
+    </p>
+  </section>
+</a>
+{{end}}
+
+<div class="pagination">
+  <div class="pagination__previous">
+    <a class="copy-link" href="/quickstart.html">Getting started</a>
+  </div>
+  <div class="pagination__next">
+    <a class="copy-link" href="/basics.html">Please basics</a>
+  </div>
 </div>

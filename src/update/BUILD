@@ -13,8 +13,8 @@ go_library(
         "//src/utils",
         "//third_party/go:go-retryablehttp",
         "//third_party/go:logging",
-        "//third_party/go:openpgp",
         "//third_party/go:semver",
+        "//third_party/go:xcrypto",
         "//third_party/go:xz",
     ],
 )

@@ -24,6 +24,7 @@ type PathHasher struct {
 	root      string
 	xattrName string
 	useXattrs bool
+	algo      string
 }
 
 type pendingHash struct {
@@ -33,7 +34,11 @@ type pendingHash struct {
 }
 
 // NewPathHasher returns a new PathHasher based on the given root directory.
-func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, hashSuffix string) *PathHasher {
+func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, algo string) *PathHasher {
+	var hashSuffix string
+	if algo != "sha1" {
+		hashSuffix = fmt.Sprintf("_%s", algo)
+	}
 	return &PathHasher{
 		new:       hash,
 		memo:      map[string][]byte{},
@@ -41,6 +46,7 @@ func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, hashSuffi
 		root:      root,
 		useXattrs: useXattrs,
 		xattrName: "user.plz_hash" + hashSuffix,
+		algo:      algo,
 	}
 }
 
@@ -57,6 +63,11 @@ func (hasher *PathHasher) NewHash() hash.Hash {
 // DisableXattrs turns off xattr support, which bypasses using them to record file hashes.
 func (hasher *PathHasher) DisableXattrs() {
 	hasher.useXattrs = false
+}
+
+// AlgoName returns the name of the algorithm. Used to aid with better error messages.
+func (hasher *PathHasher) AlgoName() string {
+	return hasher.algo
 }
 
 // Hash hashes a single path.

@@ -1,144 +1,289 @@
+<h1 class="title-1">The BUILD language</h1>
 
-    <h1>The BUILD language</h1>
+<p>
+  Please's BUILD files typically contain a series of build rule declarations.
+  These are invocations of builtins like
+  <code class="code">java_binary</code> which create new BUILD targets.
+</p>
 
-    <p>Please's BUILD files typically contain a series of build rule declarations. These are
-      invocations of builtins like <code>java_binary</code> which create new BUILD targets.</p>
+<p>
+  However, you can do much more with it; it is a fully capable programming
+  language with which it's possible to script the creation of build targets in
+  elaborate ways. See <a class="copy-link" href="#grammar">below</a> for a
+  formal description of the grammar; it is a subset of Python so should be
+  fairly familiar.
+</p>
 
-    <p>However, you can do much more with it; it is a fully capable programming language with which
-      it's possible to script the creation of build targets in elaborate ways. See
-      <a href="#grammar">below</a> for a formal description of the grammar; it is a subset of
-      Python so should be fairly familiar.</p>
+<p>
+  You can do most things that one might expect in such a language;
+  <code class="code">for</code> and <code class="code">if</code> statements,
+  define functions, create lists and dicts, etc. Conventionally we keep complex
+  logic in build_defs files but at present there is no difference in accepted
+  syntax between the two.
+</p>
 
-    <p>You can do most things that one might expect in such a language; <code>for</code> and
-      <code>if</code> statements, define functions, create lists and dicts, etc. Conventionally
-      we keep complex logic in build_defs files but at present there is no difference in accepted
-      syntax between the two.</p>
+<p>
+  One obviously needs a mechanism to import new code; in Please that is
+  <a class="copy-link" href="/lexicon.html#subinclude">subinclude</a>. This
+  function takes the output of a build rule elsewhere in the repo and makes it
+  available in the context of the currently executing file - for example, if it
+  has defined a function, that function is now available in your BUILD file at
+  the top level.
+</p>
 
-    <p>One obviously needs a mechanism to import new code; in Please that is <a href="lexicon.html#subinclude">subinclude</a>.
-      This function takes the output of a build rule elsewhere in the repo and makes it available
-      in the context of the currently executing file - for example, if it has defined a function,
-      that function is now available in your BUILD file at the top level.</p>
+<p>
+  See the
+  <a class="copy-link" href="/lexicon.html">built in rules &amp; languages</a>
+  for a list of built in rules, as well as any
+  <a class="copy-link" href="/pleasings.html">extra rules</a> from the pleasings
+  repo.
+</p>
 
-    <p>See the <a href="/lexicon.html">built in rules &amp; languages</a> for a list of built in rules,
-        as well as any <a href="/pleasings.html">extra rules</a> from the pleasings repo.</p>
+<section class="mt4">
+  <h2 class="title-2">Types</h2>
 
-    <h2>Types</h2>
+  <p>The set of builtin types are again fairly familiar:</p>
 
-    <p>The set of builtin types are again fairly familiar:
-      <ul>
-	<li><b>Integers</b> (all integers are 64-bit signed integers)</li>
-	<li><b>Strings</b></li>
-	<li><b>Lists</b></li>
-	<li><b>Dictionaries</b></li>
-	<li><b>Functions</b></li>
-    <li><b>Booleans</b> (named <code>True</code> and <code>False</code>)</li>
-      </ul>
-    </p>
+  <ul class="bulleted-list">
+    <li>
+      <span
+        ><strong>Integers</strong> (all integers are 64-bit signed
+        integers)</span
+      >
+    </li>
+    <li>
+      <span><strong>Strings</strong></span>
+    </li>
+    <li>
+      <span><strong>Lists</strong></span>
+    </li>
+    <li>
+      <span><strong>Dictionaries</strong></span>
+    </li>
+    <li>
+      <span><strong>Functions</strong></span>
+    </li>
+    <li>
+      <span>
+        <strong>Booleans</strong> (named <code class="code">True</code> and
+        <code class="code">False</code>)</span
+      >
+    </li>
+  </ul>
 
-    <p>There are no floating-point numbers or class types. In some cases lists and dicts can be
-      "frozen" to prohibit modification when they may be shared between files; that's done implicitly
-      by the runtime when appropriate.</p>
+  <p>
+    There are no floating-point numbers or class types. In some cases lists and
+    dicts can be "frozen" to prohibit modification when they may be shared
+    between files; that's done implicitly by the runtime when appropriate.
+  </p>
 
-    <p>Dictionaries are somewhat restricted in function; they may only be keyed by strings and cannot
-      be iterated directly - i.e. one must use <code>keys()</code>, <code>values()</code> or
-      <code>items()</code>. The results of all these functions are always consistently ordered.<br/>
-      They support <a href="https://www.python.org/dev/peps/pep-0584">PEP-584</a> style unions (although not the |= form).</p>
+  <p>
+    Dictionaries are somewhat restricted in function; they may only be keyed by
+    strings and cannot be iterated directly - i.e. one must use
+    <code class="code">keys()</code>, <code class="code">values()</code> or
+    <code class="code">items()</code>. The results of all these functions are
+    always consistently ordered.<br />
+    They support
+    <a
+      class="copy-link"
+      href="https://www.python.org/dev/peps/pep-0584"
+      target="_blank"
+      rel="noopener"
+      >PEP-584</a
+    >
+    style unions (although not the |= form).
+  </p>
+</section>
 
-    <h2>Functions</h2>
+<section class="mt4">
+  <h2 class="title-2">Functions</h2>
 
-    The build language has a rich set of builtin functions that largely resemble those provided by python. In
-    addition to these, there are some additional built in functions specific to the Please domain. See the
-    <a href="/lexicon.html#python-builtins">built in functions</a> documentation for more information.
+  <p>
+    The build language has a rich set of builtin functions that largely resemble
+    those provided by python. In addition to these, there are some additional
+    built in functions specific to the Please domain. See the
+    <a class="copy-link" href="/lexicon.html#python-builtins"
+      >built in functions</a
+    >
+    documentation for more information.
+  </p>
+</section>
 
-    <h2>Style</h2>
+<section class="mt4">
+  <h2 class="title-2">Style</h2>
 
-    <p>We normally write BUILD files in an idiom which doesn't quite match standard Python styles.
-      The justification is that these are mostly just inherited from working on Blaze, but a
-      brief explanation follows after an example:</p>
+  <p>
+    We normally write BUILD files in an idiom which doesn't quite match standard
+    Python styles. The justification is that these are mostly just inherited
+    from working on Blaze, but a brief explanation follows after an example:
+  </p>
 
-    <pre><code class="language-plz">
-      # Taken from //src/core/BUILD in the Please repo
-      go_library(
-          name = "core",
-          srcs = glob(["*.go"], exclude=["*_test.go", "version.go"]) + [":version"],
-          visibility = ["PUBLIC"],
-          deps = [
-              "//third_party/go:gcfg",
-              "//third_party/go:logging",
-              "//third_party/go:queue",
-          ]
-      )
-    </code></pre>
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    # Taken from //src/core/BUILD in the Please repo
+    go_library(
+        name = "core",
+        srcs = glob(["*.go"], exclude=["*_test.go", "version.go"]) + [":version"],
+        visibility = ["PUBLIC"],
+        deps = [
+            "//third_party/go:gcfg",
+            "//third_party/go:logging",
+            "//third_party/go:queue",
+        ]
+    )
+    </code>
+  </pre>
 
-    <p><b>All arguments to build rules are passed as keywords.</b> This is pretty important
-      since (1) nobody will be able to read your BUILD file otherwise and (2) we don't guarantee
-      not to change the order of arguments when we insert new ones. Fortunately Please will
-      check this for you at runtime.</p>
+  <p>
+    <strong>All arguments to build rules are passed as keywords.</strong> This
+    is pretty important since (1) nobody will be able to read your BUILD file
+    otherwise and (2) we don't guarantee not to change the order of arguments
+    when we insert new ones. Fortunately Please will check this for you at
+    runtime.
+  </p>
 
-    <p>Arguments to functions like <code>glob()</code> and <code>subinclude()</code> are not
-      necessarily passed as keywords.</p>
+  <p>
+    Arguments to functions like <code class="code">glob()</code> and
+    <code class="code">subinclude()</code> are not necessarily passed as
+    keywords.
+  </p>
 
-    <p>We put spaces around the <code>=</code> for each argument to the build rule - we think it's
-      easier to read this way.</p>
+  <p>
+    We put spaces around the <code class="code">=</code> for each argument to
+    the build rule - we think it's easier to read this way.
+  </p>
 
-    <p>Either single or double quotes work, as usual, but don't mix both in one file. We usually
-      prefer double because that's what Buildifier (see below) prefers.</p>
+  <p>
+    Either single or double quotes work, as usual, but don't mix both in one
+    file. We usually prefer double because that's what Buildifier (see below)
+    prefers.
+  </p>
 
-    <p>Lists either go all on one line:
-      <pre><code class="language-plz">
-      ["*_test.go", "version.go"]
-      </code></pre>
-      or are broken across multiple lines like so:
-      <pre><code class="language-plz">
-      [
-          "//third_party/go:gcfg",
-          "//third_party/go:logging",
-          "//third_party/go:queue",
-      ]
-      </code></pre>
-    </p>
+  <p>Lists either go all on one line:</p>
 
-    <p>Indentation is normally four spaces. Tabs will be rejected by the parser.<br/>
-      Dealing with indentation in a whitespace-significant language is tricky enough without
-      introducing tabs to complicate the situation as well.</p>
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    ["*_test.go", "version.go"]
+    </code>
+  </pre>
 
-    <p>We generally try to order lists lexicographically where it does not matter (for example
-      <code>deps</code> or <code>visibility</code>).</p>
+  <p>or are broken across multiple lines like so:</p>
 
-    <p>If you'd like an autoformatter for BUILD files, Google's
-      <a href="https://github.com/bazelbuild/buildifier">Buildifier</a> is very good & fast.
-      We use it both internally & on the Please repo.</p>
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    [
+        "//third_party/go:gcfg",
+        "//third_party/go:logging",
+        "//third_party/go:queue",
+    ]
+    </code>
+  </pre>
 
-    <h2><a name="grammar">Grammar</a></h2>
+  <p>
+    Indentation is normally four spaces. Tabs will be rejected by the parser.<br />
+    Dealing with indentation in a whitespace-significant language is tricky
+    enough without introducing tabs to complicate the situation as well.
+  </p>
 
-    <p>The grammar is defined as (more or less) the following in EBNF, where <code>Ident</code>,
-      <code>String</code>, <code>Int</code> and <code>EOL</code> are token types emitted by the lexer.</p>
+  <p>
+    We generally try to order lists lexicographically where it does not matter
+    (for example <code class="code">deps</code> or
+    <code class="code">visibility</code>).
+  </p>
 
-    <pre><code>{{ .Grammar }}</code></pre>
+  <p>
+    If you'd like an autoformatter for BUILD files, Google's
+    <a
+      class="copy-link"
+      href="https://github.com/bazelbuild/buildifier"
+      target="_blank"
+      rel="noopener"
+      >Buildifier</a
+    >
+    is very good &amp; fast. We use it both internally &amp; on the Please repo.
+  </p>
+</section>
 
-    <p>As mentioned above, this is similar to Python but lacks the <code>import</code>, <code>try</code>,
-      <code>except</code>, <code>finally</code>, <code>class</code>, <code>global</code>,
-      <code>nonlocal</code>, <code>while</code> and <code>async</code> keywords. The implementation
-      disallows using these as identifiers nonetheless since some tools might
-      attempt to operate on the file using Python's <code>ast</code> module for convenience, which would not
-      be possible if those keywords are used.<br/>
-      As a result, while <code>raise</code> and <code>assert</code> <b>are</b> supported, it's
-      not possible to catch and handle the resulting exceptions. These hence function only to
-      signal an error condition which results in immediate termination.<br/>
-      Note that <code>assert</code> is never optimised out, as it can be in Python.</p>
+<section class="mt4">
+  <h2 id="grammar" class="title-2">
+    Grammar
+  </h2>
 
-    <p>A more limited set of operators than in Python are available. The provided set are
-      considered sufficient for use in BUILD files.</p>
+  <p>
+    The grammar is defined as (more or less) the following in EBNF, where
+    <code class="code">Ident</code>, <code class="code">String</code>,
+    <code class="code">Int</code> and <code class="code">EOL</code> are token
+    types emitted by the lexer.
+  </p>
 
-    <p>Function annotations similar to <a href="https://www.python.org/dev/peps/pep-3107">PEP-3107</a>
-      / <a href="https://www.python.org/dev/peps/pep-0484">PEP-484</a> are available, although
-      they have first-class meaning as type hints. The arguments are annotated with the expected
-      type or types (separated by <code>|</code>) and when called the type of the argument will
-      be verified to match. This makes it easier to give useful feedback to users if they
-      make mistakes in their BUILD files (e.g. passing a string where a list is required).</p>
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code class="ph4 pv3">{{ .Grammar }}</code>
+  </pre>
 
-    <p>User-defined varargs and kwargs functions are not supported.</p>
+  <p>
+    As mentioned above, this is similar to Python but lacks the
+    <code class="code">import</code>, <code class="code">try</code>,
+    <code class="code">except</code>, <code class="code">finally</code>,
+    <code class="code">class</code>, <code class="code">global</code>,
+    <code class="code">nonlocal</code>, <code class="code">while</code> and
+    <code class="code">async</code> keywords. The implementation disallows using
+    these as identifiers nonetheless since some tools might attempt to operate
+    on the file using Python's <code class="code">ast</code> module for
+    convenience, which would not be possible if those keywords are used.<br />
+    As a result, while <code class="code">raise</code> and
+    <code class="code">assert</code> <strong>are</strong> supported, it's not
+    possible to catch and handle the resulting exceptions. These hence function
+    only to signal an error condition which results in immediate termination.<br />
+    Note that <code class="code">assert</code> is never optimised out, as it can
+    be in Python.
+  </p>
 
-    <p><a href="https://www.python.org/dev/peps/pep-0498">PEP-498</a> style "f-string" interpolation
-      is available, but it is deliberately much more limited than in Python; it can only interpolate variable
-      names rather than arbitrary expressions.</p>
+  <p>
+    A more limited set of operators than in Python are available. The provided
+    set are considered sufficient for use in BUILD files.
+  </p>
+
+  <p>
+    Function annotations similar to
+    <a
+      class="copy-link"
+      href="https://www.python.org/dev/peps/pep-3107"
+      target="_blank"
+      rel="noopener"
+      >PEP-3107</a
+    >
+    /
+    <a
+      class="copy-link"
+      href="https://www.python.org/dev/peps/pep-0484"
+      target="_blank"
+      rel="noopener"
+      >PEP-484</a
+    >
+    are available, although they have first-class meaning as type hints. The
+    arguments are annotated with the expected type or types (separated by
+    <code class="code">|</code>) and when called the type of the argument will
+    be verified to match. This makes it easier to give useful feedback to users
+    if they make mistakes in their BUILD files (e.g. passing a string where a
+    list is required).
+  </p>
+
+  <p>User-defined varargs and kwargs functions are not supported.</p>
+
+  <p>
+    <a
+      class="copy-link"
+      href="https://www.python.org/dev/peps/pep-0498"
+      target="_blank"
+      rel="noopener"
+      >PEP-498</a
+    >
+    style "f-string" interpolation is available, but it is deliberately much
+    more limited than in Python; it can only interpolate variable names rather
+    than arbitrary expressions.
+  </p>
+</section>

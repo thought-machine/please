@@ -1,3 +1,24 @@
+Version 15.12.0
+--------------
+
+    * Added additional hash functions: crc_32, crc_64 and blake3 #1447
+    * Fixed issue where the pip tool couldn't be a build target #1452
+    * go_get() now sandboxed the compilation step when please is
+      configured to sandbox builds #1462
+    * Fixed issue around `plz run` for binary targets within a
+      subrepo #1465
+    * Fixed issue with `plz run --arch` where it would complain
+      the target was not found in the build graph #1468
+    * Fixed issue with moving outputs when /tmp is mounted under
+      a different filesystem #1466
+    * Fixed issue with subinclude() locking up when including from
+      a subrepo #1464
+    * Fixed issue around Go rules when operating in the root please
+      package #1456
+    * Added config option for pip to disable the debian --system flag
+      as this is no longer there for newer Debian installs #1470
+
+
 Version 15.11.0
 --------------
 

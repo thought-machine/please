@@ -3,6 +3,7 @@ go_library(
     srcs = ["run_step.go"],
     visibility = ["PUBLIC"],
     deps = [
+        "//src/cli",
         "//src/core",
         "//src/output",
         "//src/process",

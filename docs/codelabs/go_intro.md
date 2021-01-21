@@ -119,7 +119,7 @@ if the target is a binary, you may run it with `plz run`.
 ## Adding packages
 Duration: 5
 
-Let's add a `src/geetings` package to our Go project:
+Let's add a `src/greetings` package to our Go project:
 
 ### `src/greetings/greetings.go`
 ```go

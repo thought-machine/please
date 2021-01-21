@@ -41,6 +41,7 @@ go_module(
 go_module(
     name = "zstd",
     module = "github.com/DataDog/zstd",
+    install = ["."],
     version = "v1.4.5",
 )
 
@@ -49,4 +50,13 @@ go_module(
     module = "github.com/mattn/go-sqlite3",
     version = "v1.10.0",
     linker_flags = ["-ldl"],
+)
+
+go_module(
+    name = "go-bindata",
+    binary = True,
+    module = "github.com/kevinburke/go-bindata",
+    install = ["go-bindata"],
+    strip = ["testdata"],
+    version = "v3.21.0",
 )

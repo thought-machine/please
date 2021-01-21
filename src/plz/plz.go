@@ -117,7 +117,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		for _, target := range preTargets {
 			if target.IsAllTargets() {
 				log.Debug("Waiting for pre-target %s...", target)
-				state.WaitForPackage(target)
+				state.SyncParsePackage(target)
 				log.Debug("Pre-target %s parsed, continuing...", target)
 			}
 		}
