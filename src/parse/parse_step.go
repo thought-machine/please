@@ -194,7 +194,12 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 		}
 	} else {
 		filename, dir := buildFileName(state, label.PackageName, subrepo)
-		if filename == "" {
+		if filename != "" {
+			pkg.Filename = filename
+			if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
+				return nil, err
+			}
+		} else if packageName != "" || state.Config.FeatureFlags.RemovePleasings {
 			exists := core.PathExists(dir)
 			// Handle quite a few cases to provide more obvious error messages.
 			if dependent != core.OriginalTarget && exists {
@@ -205,10 +210,6 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 				return nil, fmt.Errorf("Can't build %s; there's no %s file in %s/", label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			}
 			return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, dir)
-		}
-		pkg.Filename = filename
-		if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
-			return nil, err
 		}
 	}
 	if !state.Config.FeatureFlags.RemovePleasings {
