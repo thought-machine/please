@@ -32,7 +32,6 @@ jarcattool = @//tools/jarcat
 [proto]
 protoctool = //third_party/proto:protoc
 protocgoplugin = //third_party/go:protoc-gen-go
-grpcgoplugin = //third_party/go:protoc-gen-go-grpc
 language = go
 
 [alias "autofix"]

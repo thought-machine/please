@@ -1,5 +1,4 @@
 package(
-    FF_GO_GRPC_PROTOGEN = True,
     GRPC_GO_PLUGIN = "//third_party/go:protoc-gen-go-grpc",
 )
 

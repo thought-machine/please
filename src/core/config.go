@@ -334,7 +334,6 @@ func DefaultConfiguration() *Configuration {
 	// We're using the most common names for these; typically gRPC installs the builtin plugins
 	// as grpc_python_plugin etc.
 	config.Proto.ProtocGoPlugin = "protoc-gen-go"
-	config.Proto.GrpcGoPlugin = "protoc-gen-go-grpc"
 	config.Proto.GrpcPythonPlugin = "grpc_python_plugin"
 	config.Proto.GrpcJavaPlugin = "protoc-gen-grpc-java"
 	config.Proto.GrpcCCPlugin = "grpc_cpp_plugin"
@@ -560,7 +559,6 @@ type Configuration struct {
 		PleaseGoInstall               bool `help:"Uses please_go_install and import configs instead of 'go install'. This is a WIP but should solve a number of issues with go install." var:"FF_PLEASE_GO_INSTALL"`
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
 		PleaseDownloadTools           bool `help:"Please will download its tools from get.please.build instead of looking on the path"`
-		GoGRPCProtoGen                bool `help:"Use the new protoc-gen-go-grpc protoc plugin for gRPC code generation." var:"FF_GO_GRPC_PROTOGEN"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 }
 
