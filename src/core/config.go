@@ -533,6 +533,7 @@ type Configuration struct {
 		RemovePleasings               bool `help:"Stops please adding the pleasings repo by default. Target release vesrion 16." var:"FF_PLEASINGS"`
 		PleaseGoInstall               bool `help:"Uses please_go_install and import configs instead of 'go install'. This is a WIP but should solve a number of issues with go install." var:"FF_PLEASE_GO_INSTALL"`
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
+		GoGRPCProtoGen                bool `help:"Use the new protoc-gen-go-grpc protoc plugin for gRPC code generation." var:"FF_GO_GRPC_PROTOGEN"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 }
 
