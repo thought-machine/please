@@ -168,14 +168,14 @@ go_get(
 
 go_get(
     name = "protobuf",
+    exported_deps = [
+        ":protobuf-go",
+    ],
     get = "github.com/golang/protobuf/...",
     revision = "v1.4.3",
     strip = [
         "proto/proto3_proto",
         "conformance",
-    ],
-    deps = [
-        ":protobuf-go",
     ],
 )
 
