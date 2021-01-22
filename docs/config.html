@@ -842,6 +842,19 @@
     </li>
     <li>
       <div>
+        <h3 class="mt1 f6 lh-title">CgoEnabled</h3>
+
+        <p>
+          Sets CGO_ENABLED to "1" which is used by go tooling to toggle various
+          cgo related features including setting the cgo build flag. Defaults to
+          not being set, which will revert to the go default behavior. This is mostly
+          relevant when cross-compiling. See
+          <a href="https://golang.org/cmd/cgo/">cgo</a> for more information.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
         <h3 class="mt1 f6 lh-title">FilterTool</h3>
 
         <p>

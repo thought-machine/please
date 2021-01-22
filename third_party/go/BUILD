@@ -3,37 +3,47 @@ package(default_visibility = ["PUBLIC"])
 # This is needed to break a circular dependency.
 package(jarcat_tool = "//:jarcat_unzip")
 
-go_get(
+go_module(
     name = "logging",
-    get = "gopkg.in/op/go-logging.v1",
-    revision = "b2cb9fa56473e98db8caba80237377e83fe44db5",
+    module = "gopkg.in/op/go-logging.v1",
+    version = "b2cb9fa56473e98db8caba80237377e83fe44db5",
 )
 
-go_get(
-    name = "terminal",
-    get = "golang.org/x/crypto/ssh/terminal",
-    revision = "7b85b097bf7527677d54d3220065e966a0e3b613",
+go_module(
+    name = "xcrypto",
+    install = [
+        "ssh/terminal",
+        "cast5",
+
+        # TODO(jpoole): consider if requiring this to be explicit is a good idea or if we should do the
+        # `openpgp/openpgp.a` "hack" here
+        "openpgp/...",
+        "openpgp",
+    ],
+    module = "golang.org/x/crypto",
+    version = "7b85b097bf7527677d54d3220065e966a0e3b613",
 )
 
-go_get(
+go_module(
     name = "warnings",
-    get = "gopkg.in/warnings.v0",
-    revision = "v0.1.2",
+    module = "gopkg.in/warnings.v0",
+    version = "v0.1.2",
 )
 
-go_get(
+go_module(
     name = "gcfg",
-    get = "github.com/peterebden/gcfg/...",
-    revision = "v1.3.0",
+    install = ["..."],
+    module = "github.com/peterebden/gcfg",
+    version = "v1.3.0",
     deps = [
         ":warnings",
     ],
 )
 
-go_get(
+go_module(
     name = "xattr",
-    get = "github.com/pkg/xattr",
-    revision = "v0.4.1",
+    module = "github.com/pkg/xattr",
+    version = "v0.4.1",
     deps = [":xsys"],
 )
 
@@ -63,8 +73,8 @@ go_get(
     get = "golang.org/x/net/...",
     revision = "136a25c244d3019482a795d728110278d6ba09a4",
     deps = [
-        ":terminal",
         ":text",
+        ":xcrypto",
     ],
 )
 
@@ -352,19 +362,6 @@ go_get(
 )
 
 go_get(
-    name = "openpgp",
-    get = "golang.org/x/crypto/openpgp/...",
-    revision = "077efaa604f994162e3307fafe5954640763fc08",
-    deps = [":cast5"],
-)
-
-go_get(
-    name = "cast5",
-    get = "golang.org/x/crypto/cast5",
-    revision = "077efaa604f994162e3307fafe5954640763fc08",
-)
-
-go_get(
     name = "go-fuzz-build",
     binary = True,
     get = [],
@@ -464,7 +461,7 @@ go_get(
         ":go-flags",
         ":humanize",
         ":logging",
-        ":terminal",
+        ":xcrypto",
     ],
 )
 

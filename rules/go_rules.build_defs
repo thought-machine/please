@@ -37,11 +37,14 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     )
 
     cmd = 'tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*'
-
     # If we're targeting another platform, build the std lib for that. We can't use CONFIG.OS as this is always set to
     # the host OS for tools.
     if CONFIG.TARGET_OS != CONFIG.HOSTOS or CONFIG.TARGET_ARCH != CONFIG.HOSTARCH:
-        cmd += f' && (export GOOS={CONFIG.TARGET_OS} && export GOARCH={CONFIG.TARGET_ARCH} && $OUT/bin/go install std)'
+        if CONFIG.CGO_ENABLED == "1":
+            cgo_vars = f"export CGO_ENABLED={CONFIG.CGO_ENABLED} && export CC=$TOOLS_CC && "
+        else:
+            cgo_vars = ""
+        cmd += f' && ({cgo_vars}export GOOS={CONFIG.TARGET_OS} && export GOARCH={CONFIG.TARGET_ARCH} && $OUT/bin/go install std)'
 
     #TODO(jpoole): Add the option to compile these with -race for the race detector as well. This need to be plumbed
     # through to the go_library rules as well though.
@@ -54,6 +57,9 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
             'go': f'{name}/bin/go',
             'gofmt': f'{name}/bin/gofmt',
         },
+        tools = {
+          "CC": [CONFIG.CGO_CC_TOOL],
+        } if CONFIG.CGO_ENABLED == "1" else {},
         binary = True,
         visibility = visibility,
     )
@@ -843,10 +849,15 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         f"source install.sh",
     ]
 
+    if binary:
+        outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/bin/{name}']
+    else:
+        outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in _remove_redundant_outs(outs)]
+
     return build_rule(
         name = name,
-        tag = "a_rule",
-        outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in _remove_redundant_outs(outs)],
+        tag = "a_rule" if not binary else None,
+        outs = outs,
         deps = deps,
         srcs = [src],
         tools = {
@@ -911,12 +922,12 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
         licences = licences,
     )
 
-def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None,
+def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None, strip:list=[],
                     licences:list=None, hashes:list=None, labels:list=[],_tag:str=''):
     cmds = [
         f'export MOD_DIR=$($TOOL mod download -x -modcacherw -json {module}@{version} | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
-    ]
+    ] + [f'rm -rf src/{module}/{s}' for s in strip]
 
     return build_rule(
         name = name,
@@ -936,7 +947,8 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=None,
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
-              licences:list=None, linker_flags:list=[], please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL):
+              licences:list=None, linker_flags:list=[], please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL,
+              strip:list=[]):
     if version and download:
         raise ParseError("You have provided both version and download. Must provided one or the other.")
 
@@ -954,7 +966,8 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             test_only = test_only,
             visibility = visibility,
             licences = licences,
-            hashes = hashes
+            hashes = hashes,
+            strip = strip,
         )
     outs = []
     if not binary:
@@ -1051,7 +1064,10 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
       get (str): Target to get (eg. "github.com/gorilla/mux"). Can also be a list of multiple in
                  which case they are fetched separately and compiled together, which can be useful
                  for avoiding issues with circular dependencies.
-      repo (str): Location of a Git repository to fetch from.
+      repo (str): Location of a Git repository to fetch from if different from get. To enable vendoring, this can also
+                  be a build rule. The build rule must produce a single output in the format `src/{module}`
+                  e.g. src/golang.org/x/net. This can also be an absolute path to the repo on disk
+                  e.g. /home/you/git/xnet.
       deps (list): Dependencies
       exported_deps (list): Dependencies to make available to anything using this rule.
       visibility (list): Visibility specification
@@ -1215,6 +1231,21 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:list=[], has
     subdir = 'src/' + getroot
     revision = revision or 'master'
 
+    # if the repo is a build rule, just return that assuming it outputs in the correct format
+    if repo.startswith("//") or repo.startswith(":"):
+        return repo, getroot
+
+    # Allow overriding with locally cloned repos
+    if repo.startswith('/'):
+        return build_rule(
+            name = name,
+            tag = tag,
+            system_srcs = [repo],
+            outs = [subdir],
+            cmd = 'cp -r "$SRCS" "$OUTS"',
+            test_only = test_only,
+        ), getroot
+
     # Some special optimisation for github, which lets us download zipfiles at a particular sha instead of
     # cloning the whole repo. Obviously that is a lot faster than cloning entire repos.
     if repo.startswith('github.com'):
@@ -1309,7 +1340,10 @@ def _set_go_env():
         go_root = f'$(dirname $(dirname $TOOLS_GO))'
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
-    return f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
+    cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
+    if CONFIG.CGO_ENABLED:
+        return f'export CGO_ENABLED={CONFIG.CGO_ENABLED} && {cmd}'
+    return cmd
 
 def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False):
     """Returns the commands to run for building a Go library."""

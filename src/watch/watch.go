@@ -171,6 +171,12 @@ func build(ctx context.Context, state *core.BuildState, labels []core.BuildLabel
 	callback(ns, labels)
 	if state.NeedRun {
 		// Don't wait for this, its lifetime will be controlled by the context.
-		go run.Parallel(ctx, state, labels, nil, state.Config.Please.NumThreads, false, false, false, false, "", cli.Arch{})
+		als := make([]core.AnnotatedOutputLabel, len(labels))
+		for i, l := range labels {
+			als[i] = core.AnnotatedOutputLabel{
+				BuildLabel: l,
+			}
+		}
+		go run.Parallel(ctx, state, als, nil, state.Config.Please.NumThreads, false, false, false, false, "", cli.Arch{})
 	}
 }

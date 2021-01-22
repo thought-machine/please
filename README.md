@@ -177,10 +177,6 @@ tie into the Please tab-completions. Not only can flags and arguments be
 completed, but they can also leverage the build graph to complete labels enabling you 
 to truly craft your developer experience the way you want it.
 
-We're also relatively small and welcoming community with few stakeholders. If you're having a
-problem, or want something changes, it's easy to interact with us and work something out. 
-The best place to start is on gitter (link at the top), come say hi!
-
 Building Please
 ===============
 
