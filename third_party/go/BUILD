@@ -104,7 +104,10 @@ go_get(
 
 go_get(
     name = "grpc",
-    exported_deps = [":net"],
+    exported_deps = [
+        ":net",
+        ":protobuf-go",
+    ],
     get = "google.golang.org/grpc",
     install = [
         "",
@@ -165,12 +168,30 @@ go_get(
 
 go_get(
     name = "protobuf",
+    exported_deps = [
+        ":protobuf-go",
+    ],
     get = "github.com/golang/protobuf/...",
-    revision = "v1.3.2",
+    revision = "v1.4.3",
     strip = [
         "proto/proto3_proto",
         "conformance",
     ],
+)
+
+go_get(
+    name = "protobuf-go",
+    get = "google.golang.org/protobuf/...",
+    revision = "v1.25.0",
+    deps = [
+        ":cmp",
+    ],
+)
+
+go_get(
+    name = "xerrors",
+    get = "golang.org/x/xerrors/...",
+    revision = "5ec99f83aff198f5fbd629d6c8d8eb38a04218ca",
 )
 
 go_get(
@@ -180,6 +201,16 @@ go_get(
     install = ["github.com/golang/protobuf/protoc-gen-go"],
     deps = [
         ":protobuf",
+    ],
+)
+
+go_get(
+    name = "protoc-gen-go-grpc",
+    binary = True,
+    get = [],
+    install = ["google.golang.org/grpc/cmd/protoc-gen-go-grpc"],
+    deps = [
+        ":grpc",
     ],
 )
 

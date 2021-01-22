@@ -141,7 +141,7 @@ def _go_path_mapping(grpc):
 
 
 def proto_language(language:str, extensions:list|dict=None, func:function, use_file_names:bool=True, protoc_flags:list=[],
-                   tools:list=[], deps:list=[], pre_build:function=None, proto_language:str='', provides:list=[]):
+                   tools: list | dict = None, deps:list=[], pre_build:function=None, proto_language:str='', provides:list=[]):
     """Returns the definition of how to build a particular language for proto_library or grpc_library.
 
     Args:
@@ -338,8 +338,21 @@ def grpc_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out=paths=source_relative:"$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"'],
-            tools = [CONFIG.PROTOC_GO_PLUGIN],
+            protoc_flags=[
+                '--grpc-go_out="$OUT_DIR"',
+                '--go_out="$OUT_DIR"',
+                '--plugin=protoc-gen-go="`which $TOOLS_GO`"',
+                '--plugin=protoc-gen-grpc-go="`which $TOOLS_GRPC_GO`"',
+            ] if CONFIG.GRPC_GO_PLUGIN else [
+                '--go_out="$OUT_DIR"',
+                '--plugin=protoc-gen-go="`which $TOOLS_GO`"',
+            ],
+            tools = {
+                'go': [CONFIG.PROTOC_GO_PLUGIN],
+                'grpc_go': [CONFIG.GRPC_GO_PLUGIN],
+            } if CONFIG.GRPC_GO_PLUGIN else [
+                CONFIG.PROTOC_GO_PLUGIN,
+            ],
             deps = [CONFIG.PROTO_GO_DEP, CONFIG.GRPC_GO_DEP],
             pre_build = _go_path_mapping(True),
             provides=['srcs'],
@@ -362,7 +375,13 @@ def grpc_languages():
 
 
 def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre_build, labels, test_only, visibility):
-    tools = {language: plugin['tools'], 'protoc': [CONFIG.PROTOC_TOOL]}
+    tools = {'protoc': [CONFIG.PROTOC_TOOL]}
+    plugin_tools = plugin['tools']
+    if isinstance(plugin_tools, dict):
+        for name, value in plugin_tools.items():
+            tools[name] = value
+    else:
+        tools[language] = plugin_tools
 
     flags = [' '.join(plugin['protoc_flags'])]
 

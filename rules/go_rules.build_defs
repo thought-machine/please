@@ -945,7 +945,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         visibility = visibility,
     )
 
-def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=None,
+def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
               licences:list=None, linker_flags:list=[], please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL,
               strip:list=[]):
@@ -992,7 +992,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             binary = binary,
             src = download,
             outs = outs,
-            deps = deps,
+            deps = deps + exported_deps,
             test_only = test_only,
             visibility = visibility,
             licences = licences,
@@ -1006,7 +1006,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             binary = binary,
             srcs = [download],
             outs = outs,
-            deps = deps,
+            deps = deps + exported_deps,
             test_only = test_only,
             visibility = visibility,
             licences = licences,
@@ -1043,7 +1043,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     )
 
 
-def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=None,
+def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list=[],
            visibility:list=None, patch:str|list|dict=None, binary:bool=False, test_only:bool&testonly=False,
            install:list|dict=None, revision:str|list=None, strip:list|dict=None, hashes:list=None,
            extra_outs:list=[], licences:list=None, module_major_version:str|list=''):
@@ -1186,7 +1186,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         binary = binary,
         srcs = srcs,
         outs = outs,
-        deps = deps,
+        deps = deps + exported_deps,
         test_only = test_only,
         visibility = visibility,
         licences = licences,
