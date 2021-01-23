@@ -395,10 +395,15 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
         cmd += ' ${SRCS}'
 
     cmd = f'(export OUT_DIR=$TMP_DIR/{language_out_dir} && {cmd})'
+    cmd += f' && (mv -f {language_out_dir}/${{PKG_DIR}}/* {out_dir}; true)'
 
-    cmd += f' && (mv -f {language_out_dir}/${{PKG_DIR}}/* {out_dir}; true) && (mv -f {language_out_dir}/* {out_dir}; true)'
+    if language_out_dir == 'go':
+        # Uses find+xargs+mv to flatten the paths and move the *.pb.go files.
+        cmd += f' && (find {language_out_dir} -name "*.pb.go" | xargs -i mv -f {{} {out_dir}; true)'
+    else:
+        cmd += f'&& (mv -f {language_out_dir}/* {out_dir}; true)'
 
-    cmd = f'mkdir out_dir && mkdir {language_out_dir} && {cmd}'
+    cmd = f'mkdir {out_dir} && mkdir {language_out_dir} && {cmd}'
 
     # protoc_flags are applied transitively to dependent rules via labels.
     labels += ['protoc:' + flag for flag in protoc_flags]
