@@ -2,7 +2,6 @@ package run
 
 import (
 	"context"
-	"github.com/thought-machine/please/src/cli"
 	"os"
 	"testing"
 
