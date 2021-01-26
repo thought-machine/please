@@ -24,15 +24,15 @@ import (
 var log = logging.MustGetLogger("run")
 
 // Run implements the running part of 'plz run'.
-func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, remote, env bool, dir string, arch cli.Arch) {
-	run(context.Background(), state, label, args, false, false, remote, env, false, dir, arch)
+func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, remote, env bool, dir string) {
+	run(state, label, args, false, false, remote, env, false, dir)
 }
 
 // Parallel runs a series of targets in parallel.
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
 // The given context can be used to control the lifetime of the subprocesses.
-func Parallel(ctx context.Context, state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, quiet, remote, env, detach bool, dir string, arch cli.Arch) int {
+func Parallel(ctx context.Context, state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, quiet, remote, env, detach bool, dir string) int {
 	limiter := make(chan struct{}, numTasks)
 	var g errgroup.Group
 	for _, label := range labels {
@@ -40,7 +40,7 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 		g.Go(func() error {
 			limiter <- struct{}{}
 			defer func() { <-limiter }()
-			return run(ctx, state, label, args, true, quiet, remote, env, detach, dir, arch)
+			return run(state, label, args, true, quiet, remote, env, detach, dir)
 		})
 	}
 	if err := g.Wait(); err != nil {
@@ -55,10 +55,10 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 // Sequential runs a series of targets sequentially.
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
-func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, quiet, remote, env bool, dir string, arch cli.Arch) int {
+func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, quiet, remote, env bool, dir string) int {
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		if err := run(context.Background(), state, label, args, true, quiet, remote, env, false, dir, arch); err != nil {
+		if err := run(state, label, args, true, quiet, remote, env, false, dir); err != nil {
 			log.Error("%s", err)
 			return err.(*exitError).code
 		}
@@ -70,12 +70,12 @@ func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args
 // If fork is true then we fork to run the target and return any error from the subprocesses.
 // If it's false this function never returns (because we either win or die; it's like
 // Game of Thrones except rather less glamorous).
-func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutputLabel, args []string, fork, quiet, remote, setenv, detach bool, dir string, arch cli.Arch) error {
+func run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, fork, quiet, remote, setenv, detach bool, dir string) error {
 	// This is a bit strange as normally if you run a binary for another platform, this will fail. In some cases
 	// this can be quite useful though e.g. to compile a binary for a target arch, then run an .sh script to
 	// push that to docker.
-	if arch.OS != "" && label.Subrepo == "" {
-		label.Subrepo = arch.String()
+	if state.TargetArch != cli.HostArch() {
+		label.Subrepo = state.TargetArch.String()
 	}
 
 	target := state.Graph.TargetOrDie(label.BuildLabel)

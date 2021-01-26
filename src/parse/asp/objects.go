@@ -891,7 +891,7 @@ func newConfig(state *core.BuildState) *pyConfig {
 		c["FEATURES"] = pyList{}
 	}
 
-	arch := config.Build.Arch
+	arch := state.Arch
 
 	c["OS"] = pyString(arch.OS)
 	c["ARCH"] = pyString(arch.Arch)
@@ -899,13 +899,8 @@ func newConfig(state *core.BuildState) *pyConfig {
 	c["HOSTARCH"] = pyString(arch.HostArch())
 	c["GOOS"] = pyString(arch.OS)
 	c["GOARCH"] = pyString(arch.GoArch())
-
-	targetArch := arch
-	if state.OriginalArch.OS != "" {
-		targetArch = state.OriginalArch
-	}
-	c["TARGET_OS"] = pyString(targetArch.OS)
-	c["TARGET_ARCH"] = pyString(targetArch.Arch)
+	c["TARGET_OS"] = pyString(state.TargetArch.OS)
+	c["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
 
 	return &pyConfig{base: c}
 }

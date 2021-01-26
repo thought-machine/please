@@ -47,7 +47,7 @@ For the sake of this codelabs, we'll make a simple hello world HTTP service in P
 $ plz init --no_prompt
 ```
 
-### Create the Go service
+### Creating a Python service
 Create a file `hello_service/main.py`:
 
 ```python
