@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"os"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -261,13 +260,6 @@ func TestBuildPathWithPathEnv(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, config.Build.Path, strings.Split(os.Getenv("PATH"), ":"))
-}
-
-func xos() string {
-	if runtime.GOOS == "darwin" {
-		return "osx"
-	}
-	return runtime.GOOS
 }
 
 func TestUpdateArgsWithAliases(t *testing.T) {

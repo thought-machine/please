@@ -622,7 +622,7 @@ func (config *Configuration) Path() []string {
 }
 
 func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) []string {
-	var env []string
+	env := []string{}
 
 	// from the BuildEnv config keyword
 	for k, v := range config.BuildEnv {
