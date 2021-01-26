@@ -17,21 +17,30 @@ type BuildEnv []string
 
 // GeneralBuildEnvironment creates the shell env vars used for a command, not based
 // on any specific target etc.
-func GeneralBuildEnvironment(config *Configuration) BuildEnv {
-	// TODO(peterebden): why is this not just config.GetBuildEnv()?
+func GeneralBuildEnvironment(state *BuildState) BuildEnv {
 	env := BuildEnv{
 		// Need this for certain tools, for example sass
-		"LANG=" + config.Build.Lang,
+		"LANG=" + state.Config.Build.Lang,
+		// Need to know these for certain rules.
+		"ARCH=" + state.Arch.Arch,
+		"OS=" + state.Arch.OS,
+		// These are slightly modified forms that are more convenient for some things.
+		"XARCH=" + state.Arch.XArch(),
+		"XOS=" + state.Arch.XOS(),
+		// It's easier to just make these available for Go-based rules.
+		"GOARCH=" + state.Arch.GoArch(),
+		"GOOS=" + state.Arch.OS,
 	}
-	if config.Cpp.PkgConfigPath != "" {
-		env = append(env, "PKG_CONFIG_PATH="+config.Cpp.PkgConfigPath)
+	if state.Config.Cpp.PkgConfigPath != "" {
+		env = append(env, "PKG_CONFIG_PATH="+state.Config.Cpp.PkgConfigPath)
 	}
-	return append(env, config.GetBuildEnv()...)
+
+	return append(env, state.Config.GetBuildEnv()...)
 }
 
 // TargetEnvironment returns the basic parts of the build environment.
 func TargetEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
-	env := append(GeneralBuildEnvironment(state.Config),
+	env := append(GeneralBuildEnvironment(state),
 		"PKG="+target.Label.PackageName,
 		"PKG_DIR="+target.Label.PackageDir(),
 		"NAME="+target.Label.Name,

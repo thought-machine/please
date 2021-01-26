@@ -622,17 +622,7 @@ func (config *Configuration) Path() []string {
 }
 
 func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) []string {
-	env := []string{
-		// Need to know these for certain rules.
-		"ARCH=" + config.Build.Arch.Arch,
-		"OS=" + config.Build.Arch.OS,
-		// These are slightly modified forms that are more convenient for some things.
-		"XARCH=" + config.Build.Arch.XArch(),
-		"XOS=" + config.Build.Arch.XOS(),
-		// It's easier to just make these available for Go-based rules.
-		"GOARCH=" + config.Build.Arch.GoArch(),
-		"GOOS=" + config.Build.Arch.OS,
-	}
+	var env []string
 
 	// from the BuildEnv config keyword
 	for k, v := range config.BuildEnv {
