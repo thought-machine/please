@@ -3,10 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"go/ast"
 	"go/build"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,7 +17,7 @@ var opts = struct {
 	ImportConfig string   `short:"i" long:"importcfg" description:"the import config for the modules dependencies"`
 	GoTool       string   `short:"g" long:"go" description:"The location of the go binary"`
 	CCTool       string   `short:"g" long:"go" description:"The c compiler to use"`
-	Packages     []string `short:"p" long:"packages" description:"The target packages to list dependencies for" default:"."`
+	Packages     []string `short:"p" long:"packages" description:"The target packages to list dependencies for"`
 	Out          string
 }{
 	Usage: `
@@ -41,8 +38,6 @@ This tool determines the dependencies between packages and output a commands in 
 	Packages:     os.Args[7:],
 }
 
-var fileSet = token.NewFileSet()
-
 type pkgGraph struct {
 	pkgs map[string]bool
 }
@@ -51,6 +46,7 @@ func main() {
 	pkgs := &pkgGraph{
 		pkgs: map[string]bool{
 			"unsafe": true, // Not sure how many other packages like this I need to handle
+			"C":      true, // Pseudo-package for cgo symbols
 		},
 	}
 
@@ -108,114 +104,70 @@ func (g *pkgGraph) compile(from []string, target string) {
 	from = checkCycle(from, target)
 
 	pkgDir := filepath.Join(opts.SrcRoot, target)
-
 	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
 	if _, err := os.Lstat(pkgDir); os.IsNotExist(err) {
 		pkgDir = filepath.Dir(pkgDir)
 	}
 
-	packageASTs, err := parser.ParseDir(fileSet, pkgDir, nil, 0)
+	// TODO(jpoole): is import vendor the correct thing to do here?
+	pkg, err := build.ImportDir(pkgDir, build.ImportComment)
 	if err != nil {
 		panic(err)
 	}
 
-	var targetPackage *ast.Package
-	for k, v := range packageASTs {
-		if !strings.HasSuffix(k, "_test") {
-			targetPackage = v
-			break
-		}
-	}
-	if targetPackage == nil {
-		panic(fmt.Sprintf("couldn't find package %s in %s: %v", target, pkgDir, packageASTs))
+	for _, i := range pkg.Imports {
+		g.compile(from, i)
 	}
 
-	var srcs []string
-	var cgoSrcs []string
-	anyCGO := false
-	for name, f := range targetPackage.Files {
-		if strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-
-		matched, err := build.Default.MatchFile(filepath.Dir(name), filepath.Base(name))
-		if err != nil {
-			panic(err)
-		}
-		if !matched {
-			continue
-		}
-		cgo := false
-		for _, i := range f.Imports {
-			name := strings.TrimSuffix(strings.TrimPrefix(i.Path.Value, "\""), "\"")
-			if name == "C" {
-				anyCGO = true
-				cgo = true
-			} else {
-				g.compile(from, name)
-			}
-		}
-
-		if cgo {
-			cgoSrcs = append(cgoSrcs, name)
-		} else {
-			srcs = append(srcs, name)
-		}
-	}
-	binary := targetPackage.Name == "main"
-	if anyCGO {
-		goToolCGOCompile(target, binary, pkgDir, srcs, cgoSrcs)
+	if len(pkg.CgoFiles) > 0 {
+		goToolCGOCompile(target, pkg)
 	} else {
-		goToolCompile(target, binary, srcs) // output the package as ready to be compiled
+		goToolCompile(target, pkg) // output the package as ready to be compiled
 	}
 	g.pkgs[target] = true
 }
 
-func goToolCompile(target string, binary bool, srcs []string) {
+func goToolCompile(target string, pkg *build.Package) {
+	fullSrcPaths := make([]string, len(pkg.GoFiles))
+	for i, src := range pkg.GoFiles {
+		fullSrcPaths[i] = filepath.Join(pkg.Dir, src)
+	}
 	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
 
 	prepOutDir := fmt.Sprintf("mkdir -p %s", filepath.Dir(out))
-	compile := fmt.Sprintf("%s tool compile -pack -complete -importcfg %s -o %s %s", opts.GoTool, opts.ImportConfig, out, strings.Join(srcs, " "))
+	compile := fmt.Sprintf("%s tool compile -pack -complete -importcfg %s -o %s %s", opts.GoTool, opts.ImportConfig, out, strings.Join(fullSrcPaths, " "))
 	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
 
 	fmt.Println(prepOutDir)
 	fmt.Println(compile)
 	fmt.Println(updateImportCfg)
 
-	if binary {
+	if pkg.IsCommand() {
 		goToolLink(out)
 	}
 }
 
-func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, cgoSrcs []string) {
+func goToolCGOCompile(target string, pkg *build.Package) {
 	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
 
-	// We need to operate out of the package working directory for the cpp compiler to play ball so trim the package dir
-	// from the source paths.
-	for i := range srcs {
-		srcs[i] = strings.TrimPrefix(strings.TrimPrefix(srcs[i], pkgDir), "/")
-	}
-
-	for i := range cgoSrcs {
-		cgoSrcs[i] = strings.TrimPrefix(strings.TrimPrefix(cgoSrcs[i], pkgDir), "/")
-	}
-
 	prepOutDir := fmt.Sprintf("mkdir -p %s", filepath.Dir(out))
-	cdPkgDir := fmt.Sprintf("cd %s", pkgDir)
-	generateCGO := fmt.Sprintf("%s tool cgo %s", opts.GoTool, strings.Join(cgoSrcs, " "))
+	cdPkgDir := fmt.Sprintf("cd %s", pkg.Dir)
+	generateCGO := fmt.Sprintf("%s tool cgo %s", opts.GoTool, strings.Join(pkg.CgoFiles, " "))
 	compileGo := fmt.Sprintf("%s tool compile -pack -importcfg $OLDPWD/%s -o out.a _obj/*.go", opts.GoTool, opts.ImportConfig)
+	// TODO(jpoole): We can use pkg to determine the correct cgo flags to pass to the compiler here
 	compileCGO := fmt.Sprintf("%s -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . _obj/_cgo_export.c _obj/*.cgo2.c", opts.CCTool)
 	compileC := fmt.Sprintf("%s -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . *.c", opts.CCTool)
 	mergeArchive := fmt.Sprintf("%s tool pack r out.a *.o ", opts.GoTool)
-	moveArchive := fmt.Sprintf("cd $OLDPWD && mv %s/out.a %s", pkgDir, out)
+	moveArchive := fmt.Sprintf("cd $OLDPWD && mv %s/out.a %s", pkg.Dir, out) //TODO(jpoole): can we just output this in the right place to begin with?
 	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
 
 	fmt.Println(prepOutDir)
 	fmt.Println(cdPkgDir)
 	fmt.Println(generateCGO)
 
+	// TODO(jpoole): we should probably create our own work dir rather than creating _obj in the pkg dir
 	// Copy non-cgo srcs to _obj dir
-	for _, src := range srcs {
+	for _, src := range pkg.GoFiles {
 		fmt.Printf("ln %s _obj/\n", src)
 	}
 
@@ -226,7 +178,7 @@ func goToolCGOCompile(target string, binary bool, pkgDir string, srcs []string, 
 	fmt.Println(moveArchive)
 	fmt.Println(updateImportCfg)
 
-	if binary {
+	if pkg.IsCommand() {
 		goToolLink(out)
 	}
 }
