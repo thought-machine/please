@@ -200,17 +200,11 @@ func TestBuildEnvSection(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/buildenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
-		"ARCH=" + runtime.GOARCH,
 		"BAR_BAR=first",
 		"FOO_BAR=second",
-		"GOARCH=" + runtime.GOARCH,
-		"GOOS=" + runtime.GOOS,
-		"OS=" + runtime.GOOS,
 		"PATH=" + os.Getenv("TMP_DIR") + ":/usr/local/bin:/usr/bin:/bin",
-		"XARCH=x86_64",
-		"XOS=" + xos(),
 	}
-	assert.Equal(t, expected, config.GetBuildEnv())
+	assert.ElementsMatch(t, expected, config.GetBuildEnv())
 }
 
 func TestPassEnv(t *testing.T) {
@@ -221,17 +215,11 @@ func TestPassEnv(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
-		"ARCH=" + runtime.GOARCH,
 		"BAR=second",
 		"FOO=first",
-		"GOARCH=" + runtime.GOARCH,
-		"GOOS=" + runtime.GOOS,
-		"OS=" + runtime.GOOS,
 		"PATH=" + os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
-		"XARCH=x86_64",
-		"XOS=" + xos(),
 	}
-	assert.Equal(t, expected, config.GetBuildEnv())
+	assert.ElementsMatch(t, expected, config.GetBuildEnv())
 }
 
 func TestPassUnsafeEnv(t *testing.T) {
@@ -242,17 +230,11 @@ func TestPassUnsafeEnv(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
-		"ARCH=" + runtime.GOARCH,
 		"BAR=second",
 		"FOO=first",
-		"GOARCH=" + runtime.GOARCH,
-		"GOOS=" + runtime.GOOS,
-		"OS=" + runtime.GOOS,
 		"PATH=" + os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
-		"XARCH=x86_64",
-		"XOS=" + xos(),
 	}
-	assert.Equal(t, expected, config.GetBuildEnv())
+	assert.ElementsMatch(t, expected, config.GetBuildEnv())
 }
 
 func TestPassUnsafeEnvExcludedFromHash(t *testing.T) {
