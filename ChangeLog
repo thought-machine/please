@@ -1,3 +1,10 @@
+Version 15.14.0
+--------------
+
+    * Please now respects the Arch config value and loads that platforms
+      .plzconfig correctly #1504
+
+
 Version 15.13.0
 --------------
 
