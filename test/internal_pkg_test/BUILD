@@ -6,6 +6,7 @@ please_repo_e2e_test(
         "out.txt": "jarcat: //_please:tools|jarcat",
     },
     plz_command = "plz build //src:unzip && plz query print -f tools //src:unzip > out.txt",
+    labels = ["manual"],
     repo = "test_repo",
     set_tool_config = False,
 )
