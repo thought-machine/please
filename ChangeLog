@@ -1,3 +1,17 @@
+Version 15.13.0
+--------------
+
+    * Added package field to go_library() to override the package name
+      for when it differs from the rule name #1478
+    * Various go_module() fixes and changes #1481 #1483 #1482 #1490 #1505
+    * Implemented entry points for plz run #1491
+    * Allow the repo arg of go_get() to be a build rule to enable vendoring
+      #1487
+    * Please now downloads tools rather than requiring them as part of the
+      distribution when the PleaseDownloadTools feature flag is set #1442
+    * Support for the new go grpc protoc plugin #1488
+
+
 Version 15.12.0
 --------------
 
