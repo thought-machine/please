@@ -68,7 +68,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 // RunHost is a convenience function that uses the host architecture, the given state's
 // configuration and no pre targets. It is otherwise identical to Run.
 func RunHost(targets []core.BuildLabel, state *core.BuildState) {
-	Run(targets, nil, state, state.Config, cli.Arch{})
+	Run(targets, nil, state, state.Config, cli.HostArch())
 }
 
 func doTasks(tid int, state *core.BuildState, parses core.ParseTaskQueue, builds core.BuildTaskQueue, tests core.TestTaskQueue, remote bool) {
@@ -139,7 +139,7 @@ func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addT
 }
 
 func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool, arch cli.Arch) {
-	if arch.Arch != "" {
+	if arch != cli.HostArch() {
 		target.Subrepo = arch.String()
 	}
 	if target.IsAllSubpackages() {

@@ -156,8 +156,12 @@ type BuildState struct {
 	Include, Exclude []string
 	// Actual targets to exclude from discovery
 	ExcludeTargets []BuildLabel
-	// The original architecture that the user requested to build for.
-	OriginalArch cli.Arch
+	// The original architecture that the user requested to build for. Either the host arch, --arch, or the arch in the
+	// .plzconfig
+	TargetArch cli.Arch
+	// The architecture this state is for. This might change as we re-parse packages for different architectures e.g.
+	// for tools that run on the host vs. outputs that are compiled for the target arch above.
+	Arch cli.Arch
 	// True if we require rule hashes to be correctly verified (usually the case).
 	VerifyHashes bool
 	// Aggregated coverage for this run
@@ -888,7 +892,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// This is slightly wrong in that other things (e.g. user-specified command line overrides) should
 	// in fact take priority over this, but that's a lot more fiddly to get right.
 	s := state.ForConfig(".plzconfig_" + arch.String())
-	s.Config.Build.Arch = arch
+	s.Arch = arch
 	return s
 }
 
@@ -897,7 +901,7 @@ func (state *BuildState) findArch(arch cli.Arch) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	for _, s := range state.progress.allStates {
-		if s.Config.Build.Arch == arch {
+		if s.Arch == arch {
 			return s
 		}
 	}
@@ -968,7 +972,8 @@ func NewBuildState(config *Configuration) *BuildState {
 		NeedBuild:       true,
 		XattrsSupported: config.Build.Xattrs,
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
-		OriginalArch:    cli.HostArch(),
+		TargetArch:      config.Build.Arch,
+		Arch:            cli.HostArch(),
 		Stats:           &SystemStats{},
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.

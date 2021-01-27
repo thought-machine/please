@@ -395,7 +395,7 @@ type Configuration struct {
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
 	Colours map[string]string `help:"Colour code overrides in interactive output. These correspond to requirements on each target."`
 	Build   struct {
-		Arch              cli.Arch     `help:"Architecture to compile for. Defaults to the host architecture."`
+		Arch              cli.Arch     `help:"The target architecture to compile for. Defaults to the host architecture."`
 		Timeout           cli.Duration `help:"Default timeout for build actions. Default is ten minutes."`
 		Path              []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
 		Config            string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
@@ -623,17 +623,7 @@ func (config *Configuration) Path() []string {
 }
 
 func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) []string {
-	env := []string{
-		// Need to know these for certain rules.
-		"ARCH=" + config.Build.Arch.Arch,
-		"OS=" + config.Build.Arch.OS,
-		// These are slightly modified forms that are more convenient for some things.
-		"XARCH=" + config.Build.Arch.XArch(),
-		"XOS=" + config.Build.Arch.XOS(),
-		// It's easier to just make these available for Go-based rules.
-		"GOARCH=" + config.Build.Arch.GoArch(),
-		"GOOS=" + config.Build.Arch.OS,
-	}
+	env := []string{}
 
 	// from the BuildEnv config keyword
 	for k, v := range config.BuildEnv {

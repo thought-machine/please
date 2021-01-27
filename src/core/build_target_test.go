@@ -503,7 +503,7 @@ func TestAllLocalSources(t *testing.T) {
 }
 
 func TestAllURLs(t *testing.T) {
-	config := DefaultConfiguration()
+	state := NewDefaultBuildState()
 	target := makeTarget1("//src/core:remote1", "")
 	target.IsRemoteFile = true
 	target.AddSource(URLLabel("https://github.com/thought-machine/please"))
@@ -511,7 +511,7 @@ func TestAllURLs(t *testing.T) {
 	assert.Equal(t, []string{
 		"https://github.com/thought-machine/please",
 		"https://github.com/thought-machine/pleasings",
-	}, target.AllURLs(config))
+	}, target.AllURLs(state))
 }
 
 func TestCheckSecrets(t *testing.T) {

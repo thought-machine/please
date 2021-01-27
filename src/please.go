@@ -439,7 +439,7 @@ var buildFunctions = map[string]func() int{
 				opts.Run.Args.Target.Annotation = opts.Run.EntryPoint
 			}
 
-			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, dir, opts.BuildFlags.Arch)
+			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, dir)
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
@@ -450,7 +450,7 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 
-			os.Exit(run.Parallel(context.Background(), state, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir, opts.BuildFlags.Arch))
+			os.Exit(run.Parallel(context.Background(), state, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir))
 		}
 		return 1
 	},
@@ -461,7 +461,7 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 
-			os.Exit(run.Sequential(state, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir, opts.BuildFlags.Arch))
+			os.Exit(run.Sequential(state, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir))
 		}
 		return 1
 	},
@@ -805,7 +805,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.DownloadOutputs = (!opts.Build.NoDownload && !opts.Run.Remote && len(targets) > 0 && (!targets[0].IsAllSubpackages() || len(opts.BuildFlags.Include) > 0)) || opts.Build.Download
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if opts.BuildFlags.Arch.OS != "" {
-		state.OriginalArch = opts.BuildFlags.Arch
+		state.TargetArch = opts.BuildFlags.Arch
 	}
 
 	if state.DebugTests && len(targets) != 1 {
@@ -839,7 +839,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		output.MonitorState(ctx, state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
-	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, opts.BuildFlags.Arch)
+	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
 	cancel()
 	wg.Wait()
 }

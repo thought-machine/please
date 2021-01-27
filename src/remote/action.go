@@ -94,7 +94,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		// not include the environment variables since we don't communicate those to the remote server).
 		return &pb.Command{
 			Arguments: []string{
-				"fetch", strings.Join(target.AllURLs(c.state.Config), " "), "verify", strings.Join(target.Hashes, " "),
+				"fetch", strings.Join(target.AllURLs(c.state), " "), "verify", strings.Join(target.Hashes, " "),
 			},
 			OutputFiles:       files,
 			OutputDirectories: dirs,
@@ -119,7 +119,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 // stampedBuildEnvironment returns a build environment, optionally with a stamp if stamp is true.
 func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb.Directory, stamp bool) []string {
 	if target.IsFilegroup {
-		return core.GeneralBuildEnvironment(c.state.Config) // filegroups don't need a full build environment
+		return core.GeneralBuildEnvironment(c.state) // filegroups don't need a full build environment
 	} else if !stamp {
 		return core.BuildEnvironment(c.state, target, ".")
 	}
@@ -175,7 +175,7 @@ func (c *Client) buildRunCommand(target *core.BuildTarget) (*pb.Command, error) 
 	return &pb.Command{
 		Platform:             c.platform,
 		Arguments:            outs,
-		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(c.state.Config), false),
+		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(c.state), false),
 	}, nil
 }
 
