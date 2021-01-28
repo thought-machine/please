@@ -7,18 +7,22 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/thought-machine/go-flags"
 )
 
 var opts = struct {
 	Usage string
 
-	SrcRoot      string   `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
-	ModuleName   string   `short:"n" long:"module_name" description:"The name of the module"`
-	ImportConfig string   `short:"i" long:"importcfg" description:"the import config for the modules dependencies"`
-	GoTool       string   `short:"g" long:"go" description:"The location of the go binary"`
-	CCTool       string   `short:"g" long:"go" description:"The c compiler to use"`
-	Packages     []string `short:"p" long:"packages" description:"The target packages to list dependencies for"`
-	Out          string
+	SrcRoot      string `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
+	ModuleName   string `short:"n" long:"module_name" description:"The name of the module"`
+	ImportConfig string `short:"i" long:"importcfg" description:"the import config for the modules dependencies"`
+	GoTool       string `short:"g" long:"go_tool" description:"The location of the go binary"`
+	CCTool       string `short:"c" long:"cc_tool" description:"The c compiler to use"`
+	Out          string `short:"o" long:"out" description:"The output directory to put compiled artifacts in"`
+	Args         struct {
+		Packages []string `positional-arg-name:"packages" description:"The packages to compile"`
+	} `positional-args:"true" required:"true"`
 }{
 	Usage: `
 please-go-install is shipped with Please and is used to build go modules similarly to go install. 
@@ -29,13 +33,6 @@ go import config just like 'go tool compile/link -importcfg'.
 This tool determines the dependencies between packages and output a commands in the correct order to compile them. 
 
 `,
-	SrcRoot:      os.Args[1],
-	ModuleName:   os.Args[2],
-	ImportConfig: os.Args[3],
-	GoTool:       os.Args[4],
-	CCTool:       os.Args[5],
-	Out:          os.Args[6],
-	Packages:     os.Args[7:],
 }
 
 type pkgGraph struct {
@@ -43,6 +40,11 @@ type pkgGraph struct {
 }
 
 func main() {
+	_, err := flags.Parse(&opts)
+	if err != nil {
+		panic(err)
+	}
+
 	pkgs := &pkgGraph{
 		pkgs: map[string]bool{
 			"unsafe": true, // Not sure how many other packages like this I need to handle
@@ -65,7 +67,7 @@ func main() {
 	}
 	fmt.Println("#!/bin/sh")
 	fmt.Println("set -e")
-	for _, target := range opts.Packages {
+	for _, target := range opts.Args.Packages {
 		if strings.HasSuffix(target, "/...") {
 			root := strings.TrimSuffix(target, "/...")
 			err := filepath.Walk(filepath.Join(opts.SrcRoot, root), func(path string, info os.FileInfo, err error) error {
