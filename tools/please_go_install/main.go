@@ -14,16 +14,15 @@ import (
 var opts = struct {
 	Usage string
 
-	SrcRoot      string   `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
-	ModuleName   string   `short:"n" long:"module_name" description:"The name of the module"`
-	ImportConfig string   `short:"i" long:"importcfg" description:"the import config for the modules dependencies"`
-	GoTool       string   `short:"g" long:"go_tool" description:"The location of the go binary"`
-	CCTool       string   `short:"c" long:"cc_tool" description:"The c compiler to use"`
-	Out          string   `short:"o" long:"out" description:"The output directory to put compiled artifacts in"`
-	Args struct {
+	SrcRoot      string `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
+	ModuleName   string `short:"n" long:"module_name" description:"The name of the module"`
+	ImportConfig string `short:"i" long:"importcfg" description:"the import config for the modules dependencies"`
+	GoTool       string `short:"g" long:"go_tool" description:"The location of the go binary"`
+	CCTool       string `short:"c" long:"cc_tool" description:"The c compiler to use"`
+	Out          string `short:"o" long:"out" description:"The output directory to put compiled artifacts in"`
+	Args         struct {
 		Packages []string `positional-arg-name:"packages" description:"The packages to compile"`
 	} `positional-args:"true" required:"true"`
-	
 }{
 	Usage: `
 please-go-install is shipped with Please and is used to build go modules similarly to go install. 
