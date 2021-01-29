@@ -151,6 +151,8 @@ func printCompileCommands(target string, pkg *build.Package) {
 	if len(pkg.CgoFiles) > 0 {
 		tc.cgo(pkg.Dir, workDir, pkg.CgoFiles)
 		tc.cCompile(workDir, pkg.CFiles, pkg.CgoFiles)
+		// TODO(jpoole): actually figure out what we need to pack
+		fmt.Printf("rm -rf %s/_cgo_.o\n", workDir)
 	}
 
 	tc.goCompile(workDir, opts.ImportConfig, out, pkg.GoFiles, pkg.CgoFiles)
@@ -159,62 +161,6 @@ func printCompileCommands(target string, pkg *build.Package) {
 		fmt.Println(mergeArchive)
 	}
 
-	fmt.Println(updateImportCfg)
-
-	if pkg.IsCommand() {
-		goToolLink(out)
-	}
-}
-
-func goToolCompile(target string, pkg *build.Package) {
-	fullSrcPaths := make([]string, len(pkg.GoFiles))
-	for i, src := range pkg.GoFiles {
-		fullSrcPaths[i] = filepath.Join(pkg.Dir, src)
-	}
-	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
-
-	prepOutDir := fmt.Sprintf("mkdir -p %s", filepath.Dir(out))
-	compile := fmt.Sprintf("%s tool compile -pack -complete -importcfg %s -o %s %s", opts.GoTool, opts.ImportConfig, out, strings.Join(fullSrcPaths, " "))
-	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
-
-	fmt.Println(prepOutDir)
-	fmt.Println(compile)
-	fmt.Println(updateImportCfg)
-
-	if pkg.IsCommand() {
-		goToolLink(out)
-	}
-}
-
-func goToolCGOCompile(target string, pkg *build.Package) {
-	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
-
-	prepOutDir := fmt.Sprintf("mkdir -p %s", filepath.Dir(out))
-	cdPkgDir := fmt.Sprintf("cd %s", pkg.Dir)
-	generateCGO := fmt.Sprintf("%s tool cgo %s", opts.GoTool, strings.Join(pkg.CgoFiles, " "))
-	compileGo := fmt.Sprintf("%s tool compile -pack -importcfg $OLDPWD/%s -o out.a _obj/*.go", opts.GoTool, opts.ImportConfig)
-	// TODO(jpoole): We can use pkg to determine the correct cgo flags to pass to the compiler here
-	compileCGO := fmt.Sprintf("%s -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . _obj/_cgo_export.c _obj/*.cgo2.c", opts.CCTool)
-	compileC := fmt.Sprintf("%s -Wno-error -ldl -Wno-unused-parameter -c -I _obj -I . *.c", opts.CCTool)
-	mergeArchive := fmt.Sprintf("%s tool pack r out.a *.o ", opts.GoTool)
-	moveArchive := fmt.Sprintf("cd $OLDPWD && mv %s/out.a %s", pkg.Dir, out) //TODO(jpoole): can we just output this in the right place to begin with?
-	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
-
-	fmt.Println(prepOutDir)
-	fmt.Println(cdPkgDir)
-	fmt.Println(generateCGO)
-
-	// TODO(jpoole): we should probably create our own work dir rather than creating _obj in the pkg dir
-	// Copy non-cgo srcs to _obj dir
-	for _, src := range pkg.GoFiles {
-		fmt.Printf("ln %s _obj/\n", src)
-	}
-
-	fmt.Println(compileGo)
-	fmt.Println(compileC)
-	fmt.Println(compileCGO)
-	fmt.Println(mergeArchive)
-	fmt.Println(moveArchive)
 	fmt.Println(updateImportCfg)
 
 	if pkg.IsCommand() {

@@ -32,11 +32,11 @@ func (tc *toolchain) cgo(sourceDir string, objectDir string, cgoFiles []string) 
 // goCompile will compile the go sources and the generated .cgo2.go sources for the cgo files
 func (tc *toolchain) goCompile(dir, importcfg, out string, goFiles, cgoFiles []string) {
 	files := goFiles
-	for _, cgo := range cgoFiles {
-		files  = append(files, strings.TrimSuffix(cgo, ".go") + ".cgo1.go")
-	}
 	if len(cgoFiles) > 0 {
 		files = append(files, "_cgo_gotypes.go")
+		for _, cgo := range cgoFiles {
+			files  = append(files, strings.TrimSuffix(cgo, ".go") + ".cgo1.go")
+		}
 	}
 	fmt.Printf("%s tool compile -pack -importcfg %s -o %s %s\n", tc.goTool, importcfg, out, fullPaths(files, dir))
 }
