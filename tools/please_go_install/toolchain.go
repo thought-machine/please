@@ -7,7 +7,6 @@ import (
 )
 
 type toolchain struct {
-
 	ccTool string
 	goTool string
 }
@@ -21,7 +20,7 @@ func fullPaths(ps []string, dir string) string {
 }
 
 func paths(ps []string) string {
-	return strings.Join(ps, " ") 
+	return strings.Join(ps, " ")
 }
 
 // cgo invokes go tool cgo to generate cgo sources and objects into the target directory
@@ -35,7 +34,7 @@ func (tc *toolchain) goCompile(dir, importcfg, out string, goFiles, cgoFiles []s
 	if len(cgoFiles) > 0 {
 		files = append(files, "_cgo_gotypes.go")
 		for _, cgo := range cgoFiles {
-			files  = append(files, strings.TrimSuffix(cgo, ".go") + ".cgo1.go")
+			files = append(files, strings.TrimSuffix(cgo, ".go")+".cgo1.go")
 		}
 	}
 	fmt.Printf("%s tool compile -pack -importcfg %s -o %s %s\n", tc.goTool, importcfg, out, fullPaths(files, dir))
@@ -44,8 +43,7 @@ func (tc *toolchain) goCompile(dir, importcfg, out string, goFiles, cgoFiles []s
 func (tc *toolchain) cCompile(dir string, cFiles, cgoFiles []string) {
 	files := cFiles
 	for _, cgo := range cgoFiles {
-		files = append(files, strings.TrimSuffix(cgo, ".go") + ".cgo2.c")
+		files = append(files, strings.TrimSuffix(cgo, ".go")+".cgo2.c")
 	}
 	fmt.Printf("(cd %s; %s -Wno-error -ldl -Wno-unused-parameter -c -I . _cgo_export.c %s)\n", dir, tc.ccTool, paths(files))
 }
-

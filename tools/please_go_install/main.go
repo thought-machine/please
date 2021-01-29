@@ -140,7 +140,6 @@ func printCompileCommands(target string, pkg *build.Package) {
 
 	allSrcs := append(append(pkg.CFiles, pkg.GoFiles...), pkg.HFiles...)
 	fmt.Printf("cp %s %s\n", fullPaths(allSrcs, pkg.Dir), workDir)
-	
 
 	fmt.Printf("mkdir -p %s\n", filepath.Dir(out))
 
