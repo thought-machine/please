@@ -121,56 +121,42 @@ func (g *pkgGraph) compile(from []string, target string) {
 		g.compile(from, i)
 	}
 
-	printCompileCommands(target, pkg)
+	compilePackage(target, pkg)
 	g.pkgs[target] = true
 }
 
-func printCompileCommands(target string, pkg *build.Package) {
+func compilePackage(target string, pkg *build.Package) {
 	tc := &toolchain{
 		ccTool: opts.CCTool,
 		goTool: opts.GoTool,
 	}
+	allSrcs := append(append(pkg.CFiles, pkg.GoFiles...), pkg.HFiles...)
 
 	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
-
-	// If there are cgo or asm files, we should work out of a temp directory so we have somewhere to store
-	// the generated sources and object files.
 	workDir := fmt.Sprintf("_build/%s", target)
+
 	fmt.Printf("mkdir -p %s\n", workDir)
-
-	allSrcs := append(append(pkg.CFiles, pkg.GoFiles...), pkg.HFiles...)
-	fmt.Printf("cp %s %s\n", fullPaths(allSrcs, pkg.Dir), workDir)
-
 	fmt.Printf("mkdir -p %s\n", filepath.Dir(out))
-
-	updateImportCfg := fmt.Sprintf("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
-
-	mergeArchive := fmt.Sprintf("%s tool pack r %s %s/*.o ", opts.GoTool, out, workDir)
+	fmt.Printf("ln %s %s\n", fullPaths(allSrcs, pkg.Dir), workDir)
 
 	if len(pkg.CgoFiles) > 0 {
 		tc.cgo(pkg.Dir, workDir, pkg.CgoFiles)
 		tc.cCompile(workDir, pkg.CFiles, pkg.CgoFiles)
-		// TODO(jpoole): actually figure out what we need to pack
-		fmt.Printf("rm -rf %s/_cgo_.o\n", workDir)
 	}
 
 	tc.goCompile(workDir, opts.ImportConfig, out, pkg.GoFiles, pkg.CgoFiles)
+	tc.pack(workDir, out, pkg.CFiles, pkg.CgoFiles)
 
-	if len(pkg.CgoFiles) > 0 {
-		fmt.Println(mergeArchive)
-	}
-
-	fmt.Println(updateImportCfg)
+	fmt.Printf("echo \"packagefile %s=%s\" >> %s\n", target, out, opts.ImportConfig)
 
 	if pkg.IsCommand() {
-		goToolLink(out)
+		filename := strings.TrimSuffix(filepath.Base(out), ".a")
+		binName := filepath.Join(opts.Out, "bin", filename)
+
+		// TODO(jpoole): This could probably be done in some sort of init phase
+		fmt.Printf("mkdir -p %s\n", filepath.Dir(binName))
+		tc.link(out, binName)
 	}
 }
 
-func goToolLink(archive string) {
-	filename := strings.TrimSuffix(filepath.Base(archive), ".a")
-	out := filepath.Join(opts.Out, "bin", filename)
-	link := fmt.Sprintf("%s tool link -importcfg %s -o %s %s", opts.GoTool, opts.ImportConfig, out, archive)
-	fmt.Printf("mkdir -p %s\n", filepath.Dir(out))
-	fmt.Println(link)
-}
+
