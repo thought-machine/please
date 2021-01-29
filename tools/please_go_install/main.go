@@ -158,5 +158,3 @@ func compilePackage(target string, pkg *build.Package) {
 		tc.link(out, binName)
 	}
 }
-
-

@@ -52,15 +52,15 @@ func (tc *toolchain) cCompile(dir string, cFiles, cgoFiles []string) {
 func (tc *toolchain) pack(dir, out string, cFiles, cgoFiles []string) {
 	objs := []string{"_cgo_export.o"}
 	for _, o := range cFiles {
-		objs = append(objs, strings.TrimSuffix(o, ".c") + ".o")
+		objs = append(objs, strings.TrimSuffix(o, ".c")+".o")
 	}
 
 	for _, o := range cgoFiles {
-		objs = append(objs, strings.TrimSuffix(o, ".go") + ".cgo2.o")
+		objs = append(objs, strings.TrimSuffix(o, ".go")+".cgo2.o")
 	}
 
 	if len(objs) == 1 {
-		return 
+		return
 	}
 
 	fmt.Printf("%s tool pack r %s %s\n", tc.goTool, out, fullPaths(objs, dir))
