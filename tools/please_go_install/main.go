@@ -23,6 +23,9 @@ var opts = struct {
 	Args         struct {
 		Packages []string `positional-arg-name:"packages" description:"The packages to compile"`
 	} `positional-args:"true" required:"true"`
+	GOROOT string `env:"GOROOT"`
+	GOOS   string `env:"GOOS"`
+	GOARCH string `env:"GOARCH"`
 }{
 	Usage: `
 please-go-install is shipped with Please and is used to build go modules similarly to go install. 
@@ -155,7 +158,16 @@ func compilePackage(target string, pkg *build.Package) {
 		objFiles = append(objFiles, cObjFiles...)
 	}
 
-	tc.goCompile(workDir, opts.ImportConfig, out, goFiles)
+	if len(pkg.SFiles) > 0 {
+		asmH, symabis := tc.symabis(pkg.Dir, workDir, target, pkg.SFiles)
+
+		tc.goAsmCompile(workDir, opts.ImportConfig, out, goFiles, asmH, symabis)
+
+		asmObjFiles := tc.asm(pkg.Dir, workDir, target, pkg.SFiles)
+		objFiles = append(objFiles, asmObjFiles...)
+	} else {
+		tc.goCompile(workDir, opts.ImportConfig, out, goFiles)
+	}
 
 	if len(objFiles) > 0 {
 		tc.pack(workDir, out, objFiles)
