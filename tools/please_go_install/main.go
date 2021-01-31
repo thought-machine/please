@@ -140,18 +140,26 @@ func compilePackage(target string, pkg *build.Package) {
 	fmt.Printf("ln %s %s\n", fullPaths(allSrcs, pkg.Dir), workDir)
 
 	goFiles := pkg.GoFiles
-	cFiles := pkg.CFiles
+
+	var objFiles []string
 
 	if len(pkg.CgoFiles) > 0 {
-		cgoGoFiles, cgoCFiles := tc.cgo(pkg.Dir, workDir, pkg.CgoFiles)
+		cFiles := pkg.CFiles
+
+		cgoGoFiles, cgoCFiles, cgoObjFiles := tc.cgo(pkg.Dir, workDir, pkg.CgoFiles)
 		goFiles = append(goFiles, cgoGoFiles...)
 		cFiles = append(cFiles, cgoCFiles...)
+		objFiles = append(objFiles, cgoObjFiles...)
 
-		tc.cCompile(workDir, cFiles)
+		cObjFiles := tc.cCompile(workDir, cFiles)
+		objFiles = append(objFiles, cObjFiles...)
 	}
 
 	tc.goCompile(workDir, opts.ImportConfig, out, goFiles)
-	tc.pack(workDir, out, cFiles, pkg.CgoFiles)
+
+	if len(objFiles) > 0 {
+		tc.pack(workDir, out, objFiles)
+	}
 
 	fmt.Printf("echo \"packagefile %s=%s\" >> %s\n", target, out, opts.ImportConfig)
 
