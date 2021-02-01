@@ -149,12 +149,11 @@ func compilePackage(target string, pkg *build.Package) {
 	if len(pkg.CgoFiles) > 0 {
 		cFiles := pkg.CFiles
 
-		cgoGoFiles, cgoCFiles, cgoObjFiles := tc.cgo(pkg.Dir, workDir, pkg.CgoFiles)
+		cgoGoFiles, cgoCFiles := tc.cgo(pkg.Dir, workDir, pkg.CgoFiles)
 		goFiles = append(goFiles, cgoGoFiles...)
 		cFiles = append(cFiles, cgoCFiles...)
-		objFiles = append(objFiles, cgoObjFiles...)
 
-		cObjFiles := tc.cCompile(workDir, cFiles)
+		cObjFiles := tc.cCompile(workDir, cFiles, pkg.CgoCFLAGS)
 		objFiles = append(objFiles, cObjFiles...)
 	}
 
