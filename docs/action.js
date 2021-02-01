@@ -96,10 +96,7 @@
               winner = hash;
             }
           }
-
-          // Update URL hash and hightlight link
           if (winner) {
-            window.location.hash = winner;
             menuLinksWithAvailableTargets[winner].style.color = "white";
           }
         },
