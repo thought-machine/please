@@ -139,13 +139,35 @@ func compilePackage(target string, pkg *build.Package) {
 	fmt.Printf("mkdir -p %s\n", filepath.Dir(out))
 	fmt.Printf("ln %s %s\n", fullPaths(allSrcs, pkg.Dir), workDir)
 
+	goFiles := pkg.GoFiles
+
+	var objFiles []string
+
 	if len(pkg.CgoFiles) > 0 {
-		tc.cgo(pkg.Dir, workDir, pkg.CgoFiles)
-		tc.cCompile(workDir, pkg.CFiles, pkg.CgoFiles)
+		cFiles := pkg.CFiles
+
+		cgoGoFiles, cgoCFiles := tc.cgo(pkg.Dir, workDir, pkg.CgoFiles)
+		goFiles = append(goFiles, cgoGoFiles...)
+		cFiles = append(cFiles, cgoCFiles...)
+
+		cObjFiles := tc.cCompile(workDir, cFiles, pkg.CgoCFLAGS)
+		objFiles = append(objFiles, cObjFiles...)
 	}
 
-	tc.goCompile(workDir, opts.ImportConfig, out, pkg.GoFiles, pkg.CgoFiles)
-	tc.pack(workDir, out, pkg.CFiles, pkg.CgoFiles)
+	if len(pkg.SFiles) > 0 {
+		asmH, symabis := tc.symabis(pkg.Dir, workDir, pkg.SFiles)
+
+		tc.goAsmCompile(workDir, opts.ImportConfig, out, goFiles, asmH, symabis)
+
+		asmObjFiles := tc.asm(pkg.Dir, workDir, pkg.SFiles)
+		objFiles = append(objFiles, asmObjFiles...)
+	} else {
+		tc.goCompile(workDir, opts.ImportConfig, out, goFiles)
+	}
+
+	if len(objFiles) > 0 {
+		tc.pack(workDir, out, objFiles)
+	}
 
 	fmt.Printf("echo \"packagefile %s=%s\" >> %s\n", target, out, opts.ImportConfig)
 
