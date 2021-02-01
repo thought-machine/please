@@ -54,7 +54,7 @@ func (tc *toolchain) cCompile(dir string, cFiles []string, cFlags []string) []st
 	objFiles := make([]string, len(cFiles))
 
 	for i, cFile := range cFiles {
-		objFiles[i] = strings.TrimSuffix(cFile, ".c")+".o"
+		objFiles[i] = strings.TrimSuffix(cFile, ".c") + ".o"
 	}
 
 	fmt.Printf("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I . _cgo_export.c %s)\n", dir, tc.ccTool, strings.Join(cFlags, " "), paths(cFiles))
@@ -87,11 +87,11 @@ func (tc *toolchain) symabis(sourceDir, objectDir string, asmFiles []string) (st
 
 // asm will compile the asm files and return the objects that are generated
 func (tc *toolchain) asm(sourceDir, objectDir string, asmFiles []string) []string {
-	var objFiles []string
+	objFiles := make([]string, len(asmFiles))
 
-	for _, asmFile := range asmFiles {
+	for i, asmFile := range asmFiles {
 		objFile := strings.TrimSuffix(asmFile, ".s") + ".o"
-		objFiles = append(objFiles, objFile)
+		objFiles[i] = objFile
 
 		fmt.Printf("(cd %s; %s tool asm -I . -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -o $OLDPWD/%s/%s %s)\n", sourceDir, opts.GoTool, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, objectDir, objFile, asmFile)
 	}
