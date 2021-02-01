@@ -97,8 +97,23 @@ func validateBuildTargetBeforeBuild(state *core.BuildState, target *core.BuildTa
 	return nil
 }
 
+func findFilegroupSourcesWithTmpDir(target *core.BuildTarget) []core.BuildLabel {
+	srcs := make([]core.BuildLabel, 0, len(target.Sources))
+	for _, src := range target.Sources {
+		if src.Label() != nil {
+			srcs = append(srcs, *src.Label())
+		}
+	}
+	return srcs
+}
+
 func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) error {
 	if target.IsFilegroup {
+		potentialTargets := findFilegroupSourcesWithTmpDir(target)
+		if len(potentialTargets) > 0 {
+			return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories... Perhaps you meant one of its srcs: %v", target.Label, potentialTargets)
+		}
+
 		return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
 	}
 	// Ensure we have downloaded any previous dependencies if that's relevant.
