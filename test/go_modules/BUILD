@@ -20,6 +20,6 @@ please_repo_e2e_test(
         "no_cirrus",
         "no-musl",
     ],
-    plz_command = f"plz -o featureflags.PleaseGoInstall:true -o go.cgoenabled:1 -o go.gotool:'//tools/go:toolchain|go' build --arch {target} //third_party/go:all",
+    plz_command = f"plz -o featureflags.PleaseGoInstall:true -o go.cgoenabled:1 -o go.gotool:'//tools/go:toolchain|go' build --arch {target} //third_party/go:zstd",
     repo = "test_repo",
 )
