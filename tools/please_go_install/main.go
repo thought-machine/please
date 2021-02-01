@@ -150,7 +150,7 @@ func compilePackage(target string, pkg *build.Package) {
 		goFiles = append(goFiles, cgoGoFiles...)
 		cFiles = append(cFiles, cgoCFiles...)
 
-		cObjFiles := tc.cCompile(workDir, cFiles, pkg.CgoCFLAGS)
+		cObjFiles := tc.cCompile(workDir, cFiles, append(pkg.CgoCFLAGS))
 		objFiles = append(objFiles, cObjFiles...)
 	}
 
