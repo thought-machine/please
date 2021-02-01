@@ -60,3 +60,9 @@ go_module(
     strip = ["testdata"],
     version = "v3.21.0",
 )
+
+go_module(
+    name = "snappy",
+    module = "github.com/golang/snappy",
+    version = "v0.0.2",
+)
