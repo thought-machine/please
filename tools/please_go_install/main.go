@@ -57,6 +57,7 @@ func main() {
 		if err != nil {
 			panic(fmt.Sprint("failed to open import config: " + err.Error()))
 		}
+		defer f.Close()
 
 		importCfg := bufio.NewScanner(f)
 		for importCfg.Scan() {
