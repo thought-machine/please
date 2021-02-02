@@ -844,7 +844,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"$TOOLS_GO_INSTALL --src_root={pkg}/src --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install) + " > install.sh",
+        f"$TOOLS_GO_INSTALL --src_root=$(location {src}) --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install) + " > install.sh",
         "cat install.sh",
         f"source install.sh",
     ]
@@ -923,7 +923,8 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
     )
 
 def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None, strip:list=[],
-                    licences:list=None, hashes:list=None, labels:list=[],_tag:str=''):
+                    licences:list=None, hashes:list=None, labels:list=[], _tag:str='',
+                    please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL):
     cmds = [
         f'export MOD_DIR=$($TOOL mod download -x -modcacherw -json {module}@{version} | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
@@ -932,7 +933,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     return build_rule(
         name = name,
         tag = _tag,
-        outs = [f'src/{module}'],
+        outs = [name] if please_go_install else [f'src/{module}'],
         tools = [CONFIG.GO_TOOL],
         building_description = 'Fetching...',
         cmd = ' && '.join(cmds),
@@ -968,6 +969,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             licences = licences,
             hashes = hashes,
             strip = strip,
+            please_go_install=please_go_install,
         )
     outs = []
     if not binary:
