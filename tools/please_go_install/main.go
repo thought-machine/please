@@ -45,27 +45,8 @@ func main() {
 		panic(err)
 	}
 
-	pkgs := &pkgGraph{
-		pkgs: map[string]bool{
-			"unsafe": true, // Not sure how many other packages like this I need to handle
-			"C":      true, // Pseudo-package for cgo symbols
-		},
-	}
+	pkgs := parseImportConfig()
 
-	if opts.ImportConfig != "" {
-		f, err := os.Open(opts.ImportConfig)
-		if err != nil {
-			panic(fmt.Sprint("failed to open import config: " + err.Error()))
-		}
-		defer f.Close()
-
-		importCfg := bufio.NewScanner(f)
-		for importCfg.Scan() {
-			line := importCfg.Text()
-			parts := strings.Split(strings.TrimPrefix(line, "packagefile "), "=")
-			pkgs.pkgs[parts[0]] = true
-		}
-	}
 	fmt.Println("#!/bin/sh")
 	fmt.Println("set -e")
 	for _, target := range opts.Args.Packages {
@@ -87,6 +68,31 @@ func main() {
 			pkgs.compile([]string{}, target)
 		}
 	}
+}
+
+func parseImportConfig() *pkgGraph {
+	pkgs := &pkgGraph{
+		pkgs: map[string]bool{
+			"unsafe": true, // Not sure how many other packages like this I need to handle
+			"C":      true, // Pseudo-package for cgo symbols
+		},
+	}
+
+	if opts.ImportConfig != "" {
+		f, err := os.Open(opts.ImportConfig)
+		if err != nil {
+			panic(fmt.Sprint("failed to open import config: " + err.Error()))
+		}
+		defer f.Close()
+
+		importCfg := bufio.NewScanner(f)
+		for importCfg.Scan() {
+			line := importCfg.Text()
+			parts := strings.Split(strings.TrimPrefix(line, "packagefile "), "=")
+			pkgs.pkgs[parts[0]] = true
+		}
+	}
+	return pkgs
 }
 
 func checkCycle(path []string, next string) []string {
