@@ -70,6 +70,12 @@ func main() {
 	}
 }
 
+// pkgDir returns the file path to the given target package
+func pkgDir(target string) string {
+	p := strings.TrimPrefix(target, opts.ModuleName)
+	return filepath.Join(opts.SrcRoot, p)
+}
+
 func parseImportConfig() *pkgGraph {
 	pkgs := &pkgGraph{
 		pkgs: map[string]bool{
@@ -112,7 +118,7 @@ func (g *pkgGraph) compile(from []string, target string) {
 
 	from = checkCycle(from, target)
 
-	pkgDir := filepath.Join(opts.SrcRoot, target)
+	pkgDir := pkgDir(target)
 	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
 	if _, err := os.Lstat(pkgDir); os.IsNotExist(err) {
 		pkgDir = filepath.Dir(pkgDir)
