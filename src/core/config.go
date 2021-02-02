@@ -28,6 +28,9 @@ import (
 // OsArch is the os/arch pair, like linux_amd64 etc.
 const OsArch = runtime.GOOS + "_" + runtime.GOARCH
 
+// ConfigName is the base name for config files.
+const ConfigName string = "plzconfig"
+
 // ConfigFileName is the file name for the typical repo config - this is normally checked in
 const ConfigFileName string = ".plzconfig"
 
@@ -70,15 +73,42 @@ func ReadDefaultConfigFiles(profiles []string) (*Configuration, error) {
 	return ReadConfigFiles(defaultConfigFiles(), profiles)
 }
 
+// defaultGlobalConfigFiles returns the set of global default config file names.
+func defaultGlobalConfigFiles() []string {
+	configFiles := []string{
+		MachineConfigFileName,
+	}
+
+	if xdgConfigDirs := os.Getenv("XDG_CONFIG_DIRS"); xdgConfigDirs != "" {
+		for _, p := range strings.Split(xdgConfigDirs, ":") {
+			if !strings.HasPrefix(p, "/") {
+				continue
+			}
+
+			configFiles = append(configFiles, filepath.Join(p, ConfigName))
+		}
+	}
+
+	// Note: according to the XDG Base Directory Specification,
+	// this path should only be checked if XDG_CONFIG_HOME env var is not set,
+	// but it should be kept here for backward compatibility purposes.
+	configFiles = append(configFiles, fs.ExpandHomePath(UserConfigFileName))
+
+	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" && strings.HasPrefix(xdgConfigHome, "/") {
+		configFiles = append(configFiles, filepath.Join(xdgConfigHome, ConfigName))
+	}
+
+	return configFiles
+}
+
 // defaultConfigFiles returns the set of default config file names.
 func defaultConfigFiles() []string {
-	return []string{
-		MachineConfigFileName,
-		fs.ExpandHomePath(UserConfigFileName),
+	return append(
+		defaultGlobalConfigFiles(),
 		path.Join(RepoRoot, ConfigFileName),
 		path.Join(RepoRoot, ArchConfigFileName),
 		path.Join(RepoRoot, LocalConfigFileName),
-	}
+	)
 }
 
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
