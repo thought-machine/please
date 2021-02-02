@@ -77,12 +77,22 @@ func ReadDefaultConfigFiles(profiles []string) (*Configuration, error) {
 func defaultGlobalConfigFiles() []string {
 	configFiles := []string{
 		MachineConfigFileName,
-
-		// Note: according to the XDG Base Directory Specification,
-		// this path should only be checked if XDG_CONFIG_HOME env var is not set,
-		// but it should be kept here for backward compatibility purposes.
-		fs.ExpandHomePath(UserConfigFileName),
 	}
+
+	if xdgConfigDirs := os.Getenv("XDG_CONFIG_DIRS"); xdgConfigDirs != "" {
+		for _, p := range strings.Split(xdgConfigDirs, ":") {
+			if !strings.HasPrefix(p, "/") {
+				continue
+			}
+
+			configFiles = append(configFiles, filepath.Join(p, ConfigName))
+		}
+	}
+
+	// Note: according to the XDG Base Directory Specification,
+	// this path should only be checked if XDG_CONFIG_HOME env var is not set,
+	// but it should be kept here for backward compatibility purposes.
+	configFiles = append(configFiles, fs.ExpandHomePath(UserConfigFileName))
 
 	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" && strings.HasPrefix(xdgConfigHome, "/") {
 		configFiles = append(configFiles, filepath.Join(xdgConfigHome, ConfigName))
