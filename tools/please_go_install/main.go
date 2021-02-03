@@ -49,26 +49,7 @@ func main() {
 		panic(err)
 	}
 
-	pkgs := &pkgGraph{
-		pkgs: map[string]bool{
-			"unsafe": true, // Not sure how many other packages like this I need to handle
-			"C":      true, // Pseudo-package for cgo symbols
-		},
-	}
-
-	if opts.ImportConfig != "" {
-		f, err := os.Open(opts.ImportConfig)
-		if err != nil {
-			panic(fmt.Sprint("failed to open import config: " + err.Error()))
-		}
-
-		importCfg := bufio.NewScanner(f)
-		for importCfg.Scan() {
-			line := importCfg.Text()
-			parts := strings.Split(strings.TrimPrefix(line, "packagefile "), "=")
-			pkgs.pkgs[parts[0]] = true
-		}
-	}
+	pkgs := parseImportConfig()
 
 	for _, target := range opts.Args.Packages {
 		if strings.HasSuffix(target, "/...") {
@@ -91,6 +72,37 @@ func main() {
 	}
 }
 
+// pkgDir returns the file path to the given target package
+func pkgDir(target string) string {
+	p := strings.TrimPrefix(target, opts.ModuleName)
+	return filepath.Join(opts.SrcRoot, p)
+}
+
+func parseImportConfig() *pkgGraph {
+	pkgs := &pkgGraph{
+		pkgs: map[string]bool{
+			"unsafe": true, // Not sure how many other packages like this I need to handle
+			"C":      true, // Pseudo-package for cgo symbols
+		},
+	}
+
+	if opts.ImportConfig != "" {
+		f, err := os.Open(opts.ImportConfig)
+		if err != nil {
+			panic(fmt.Sprint("failed to open import config: " + err.Error()))
+		}
+		defer f.Close()
+
+		importCfg := bufio.NewScanner(f)
+		for importCfg.Scan() {
+			line := importCfg.Text()
+			parts := strings.Split(strings.TrimPrefix(line, "packagefile "), "=")
+			pkgs.pkgs[parts[0]] = true
+		}
+	}
+	return pkgs
+}
+
 func checkCycle(path []string, next string) ([]string, error) {
 	for i, p := range path {
 		if p == next {
@@ -111,7 +123,7 @@ func (g *pkgGraph) compile(from []string, target string) {
 		log.Fatal(err)
 	}
 
-	pkgDir := filepath.Join(opts.SrcRoot, target)
+	pkgDir := pkgDir(target)
 	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
 	if _, err := os.Lstat(pkgDir); os.IsNotExist(err) {
 		pkgDir = filepath.Dir(pkgDir)

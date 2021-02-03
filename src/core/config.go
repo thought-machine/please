@@ -28,6 +28,9 @@ import (
 // OsArch is the os/arch pair, like linux_amd64 etc.
 const OsArch = runtime.GOOS + "_" + runtime.GOARCH
 
+// ConfigName is the base name for config files.
+const ConfigName string = "plzconfig"
+
 // ConfigFileName is the file name for the typical repo config - this is normally checked in
 const ConfigFileName string = ".plzconfig"
 
@@ -70,15 +73,42 @@ func ReadDefaultConfigFiles(profiles []string) (*Configuration, error) {
 	return ReadConfigFiles(defaultConfigFiles(), profiles)
 }
 
+// defaultGlobalConfigFiles returns the set of global default config file names.
+func defaultGlobalConfigFiles() []string {
+	configFiles := []string{
+		MachineConfigFileName,
+	}
+
+	if xdgConfigDirs := os.Getenv("XDG_CONFIG_DIRS"); xdgConfigDirs != "" {
+		for _, p := range strings.Split(xdgConfigDirs, ":") {
+			if !strings.HasPrefix(p, "/") {
+				continue
+			}
+
+			configFiles = append(configFiles, filepath.Join(p, ConfigName))
+		}
+	}
+
+	// Note: according to the XDG Base Directory Specification,
+	// this path should only be checked if XDG_CONFIG_HOME env var is not set,
+	// but it should be kept here for backward compatibility purposes.
+	configFiles = append(configFiles, fs.ExpandHomePath(UserConfigFileName))
+
+	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" && strings.HasPrefix(xdgConfigHome, "/") {
+		configFiles = append(configFiles, filepath.Join(xdgConfigHome, ConfigName))
+	}
+
+	return configFiles
+}
+
 // defaultConfigFiles returns the set of default config file names.
 func defaultConfigFiles() []string {
-	return []string{
-		MachineConfigFileName,
-		fs.ExpandHomePath(UserConfigFileName),
+	return append(
+		defaultGlobalConfigFiles(),
 		path.Join(RepoRoot, ConfigFileName),
 		path.Join(RepoRoot, ArchConfigFileName),
 		path.Join(RepoRoot, LocalConfigFileName),
-	}
+	)
 }
 
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
@@ -519,6 +549,7 @@ type Configuration struct {
 		Coverage           bool       `help:"If true (the default), coverage will be available for C and C++ build rules.\nThis is still a little experimental but should work for GCC. Right now it does not work for Clang (it likely will in Clang 4.0 which will likely support --fprofile-dir) and so this can be useful to disable it.\nIt's also useful in some cases for CI systems etc if you'd prefer to avoid the overhead, since the tests have to be compiled with extra instrumentation and without optimisation." var:"CPP_COVERAGE"`
 		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"///pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`
 		ClangModules       bool       `help:"Uses Clang-style arguments for compiling cc_module rules. If disabled gcc-style arguments will be used instead. Experimental, expected to be removed at some point once module compilation methods are more consistent." var:"CC_MODULES_CLANG"`
+		DsymTool           string     `help:"Set this to dsymutil or equivalent on macOS to use this tool to generate xcode symbol information for debug builds." var:"DSYM_TOOL"`
 	} `help:"Please has built-in support for compiling C and C++ code. We don't support every possible nuance of compilation for these languages, but aim to provide something fairly straightforward.\nTypically there is little problem compiling & linking against system libraries although Please has no insight into those libraries and when they change, so cannot rebuild targets appropriately.\n\nThe C and C++ rules are very similar and simply take a different set of tools and flags to facilitate side-by-side usage."`
 	Proto struct {
 		ProtocTool       string   `help:"The binary invoked to compile .proto files. Defaults to protoc." var:"PROTOC_TOOL"`

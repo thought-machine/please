@@ -541,6 +541,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
         tools=tools,
         pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs),
         test_only=test_only,
+        optional_outs = [f"{name}.dSYM"] if CONFIG.DSYM_TOOL else [],
     )
 
 
@@ -713,6 +714,9 @@ def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False,
         'dbg': f'"$TOOL" -o "$OUT" {dbg_flags} {extra_flags}',
         'opt': f'"$TOOL" -o "$OUT" {opt_flags} {extra_flags}',
     }
+    if CONFIG.DSYM_TOOL:
+        dbg = cmds['dbg']
+        cmds['dbg'] = f'{dbg} && {CONFIG.DSYM_TOOL} $OUT'
     if CONFIG.CPP_COVERAGE:
         cmds['cover'] = f'"$TOOL" -o "$OUT" {dbg_flags} {extra_flags} {_COVERAGE_FLAGS} -lgcov'
     return cmds, [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else
