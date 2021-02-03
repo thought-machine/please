@@ -20,7 +20,8 @@ var opts = struct {
 
 	SrcRoot      string `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
 	ModuleName   string `short:"n" long:"module_name" description:"The name of the module"`
-	ImportConfig string `short:"i" long:"importcfg" description:"the import config for the modules dependencies"`
+	ImportConfig string `short:"i" long:"importcfg" description:"The import config for the modules dependencies"`
+	LDFlags      string `short:"l" long:"ld_flags" description:"The file to write linker flags to" default:"LD_FLAGS"`
 	GoTool       string `short:"g" long:"go_tool" description:"The location of the go binary"`
 	CCTool       string `short:"c" long:"cc_tool" description:"The c compiler to use"`
 	Out          string `short:"o" long:"out" description:"The output directory to put compiled artifacts in"`
@@ -49,6 +50,13 @@ func main() {
 		panic(err)
 	}
 
+	tc := &toolchain.Toolchain{
+		CcTool: opts.CCTool,
+		GoTool: opts.GoTool,
+		Exec:   &exec.OsExecutor{Stdout: os.Stdout, Stderr: os.Stderr},
+	}
+
+	initBuildEnv(tc)
 	pkgs := parseImportConfig()
 
 	for _, target := range opts.Args.Packages {
@@ -59,7 +67,7 @@ func main() {
 					panic(err)
 				}
 				if !info.IsDir() && strings.HasSuffix(info.Name(), ".go") && !strings.HasSuffix(info.Name(), "_test.go") {
-					pkgs.compile([]string{}, strings.TrimPrefix(filepath.Dir(path), opts.SrcRoot))
+					pkgs.compile(tc, []string{}, strings.TrimPrefix(filepath.Dir(path), opts.SrcRoot))
 				}
 				return nil
 			})
@@ -67,9 +75,14 @@ func main() {
 				panic(err)
 			}
 		} else {
-			pkgs.compile([]string{}, target)
+			pkgs.compile(tc, []string{}, target)
 		}
 	}
+}
+
+func initBuildEnv(tc *toolchain.Toolchain) {
+	tc.Exec.Exec("mkdir -p %s\n", filepath.Join(opts.Out, "bin"))
+	tc.Exec.Exec("touch %s", opts.LDFlags)
 }
 
 // pkgDir returns the file path to the given target package
@@ -113,7 +126,7 @@ func checkCycle(path []string, next string) ([]string, error) {
 	return append(path, next), nil
 }
 
-func (g *pkgGraph) compile(from []string, target string) {
+func (g *pkgGraph) compile(tc *toolchain.Toolchain, from []string, target string) {
 	if done := g.pkgs[target]; done {
 		return
 	}
@@ -136,22 +149,17 @@ func (g *pkgGraph) compile(from []string, target string) {
 	}
 
 	for _, i := range pkg.Imports {
-		g.compile(from, i)
+		g.compile(tc, from, i)
 	}
 
-	err = compilePackage(target, pkg)
+	err = compilePackage(tc, target, pkg)
 	if err != nil {
 		log.Fatal(err)
 	}
 	g.pkgs[target] = true
 }
 
-func compilePackage(target string, pkg *build.Package) error {
-	tc := &toolchain.Toolchain{
-		CcTool: opts.CCTool,
-		GoTool: opts.GoTool,
-		Exec:   &exec.OsExecutor{Stdout: os.Stdout, Stderr: os.Stderr},
-	}
+func compilePackage(tc *toolchain.Toolchain, target string, pkg *build.Package) error {
 	allSrcs := append(append(pkg.CFiles, pkg.GoFiles...), pkg.HFiles...)
 
 	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
@@ -192,13 +200,12 @@ func compilePackage(target string, pkg *build.Package) error {
 	}
 
 	tc.Exec.Exec("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
+	tc.Exec.Exec("echo -n \"%s\" >> %s", strings.Join(pkg.CgoLDFLAGS, " "), opts.LDFlags)
 
 	if pkg.IsCommand() {
 		filename := strings.TrimSuffix(filepath.Base(out), ".a")
 		binName := filepath.Join(opts.Out, "bin", filename)
 
-		// TODO(jpoole): This could probably be done in some sort of init phase
-		tc.Exec.Exec("mkdir -p %s\n", filepath.Dir(binName))
 		tc.Link(out, binName, opts.ImportConfig)
 	}
 	return nil

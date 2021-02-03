@@ -49,7 +49,6 @@ go_module(
     name = "go-sqlite3",
     module = "github.com/mattn/go-sqlite3",
     version = "v1.10.0",
-    linker_flags = ["-ldl"],
 )
 
 go_module(

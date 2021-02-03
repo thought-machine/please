@@ -46,6 +46,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "subrepo_name", subrepoName)
 	setNativeCode(s, "canonicalise", canonicalise)
 	setNativeCode(s, "get_labels", getLabels)
+	setNativeCode(s, "add_label", addLabel)
 	setNativeCode(s, "add_dep", addDep)
 	setNativeCode(s, "add_out", addOut)
 	setNativeCode(s, "add_licence", addLicence)
@@ -678,6 +679,23 @@ func getLabels(s *scope, args []pyObject) pyObject {
 	}
 	target := getTargetPost(s, name)
 	return getLabelsInternal(target, prefix, core.Building, all)
+}
+
+// addLabel adds a set of labels to the named rule
+func addLabel(s *scope, args []pyObject) pyObject {
+	name := string(args[0].(pyString))
+
+	var target *core.BuildTarget
+	if core.LooksLikeABuildLabel(name) {
+		label := core.ParseBuildLabel(name, s.pkg.Name)
+		target = s.state.Graph.TargetOrDie(label)
+	} else {
+		target = getTargetPost(s, name)
+	}
+
+	target.AddLabel(args[1].String())
+
+	return None
 }
 
 func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all bool) pyObject {

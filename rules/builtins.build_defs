@@ -222,6 +222,8 @@ def get_labels(name:str, prefix:str, all:bool=False) -> list:
     pass
 def has_label(name:str, prefix:str, all:bool=False) -> bool:
     return len(get_labels(name, prefix, all)) > 0
+def add_label(name:str, label:str):
+    pass
 def add_dep(target:str, dep:str, exported:bool=False):
     pass
 def add_exported_dep(target:str, dep:str):

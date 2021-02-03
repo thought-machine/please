@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 )
 
@@ -21,7 +22,7 @@ type OsExecutor struct {
 // Exec runs the command
 func (e *OsExecutor) Exec(cmdStr string, args ...interface{}) {
 	cmdStr = fmt.Sprintf(cmdStr, args...)
-	fmt.Printf("please_go_install -> %v\n", cmdStr)
+	fmt.Fprintf(os.Stderr, "please_go_install -> %v\n", cmdStr)
 
 	cmd := exec.Command("bash", "-e", "-c", cmdStr)
 	cmd.Stdout = e.Stdout
