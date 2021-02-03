@@ -4,11 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"go/build"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/thought-machine/go-flags"
+
+	"github.com/thought-machine/please/tools/please_go_install/exec"
+	"github.com/thought-machine/please/tools/please_go_install/toolchain"
 )
 
 var opts = struct {
@@ -47,8 +51,6 @@ func main() {
 
 	pkgs := parseImportConfig()
 
-	fmt.Println("#!/bin/sh")
-	fmt.Println("set -e")
 	for _, target := range opts.Args.Packages {
 		if strings.HasSuffix(target, "/...") {
 			root := strings.TrimSuffix(target, "/...")
@@ -101,14 +103,14 @@ func parseImportConfig() *pkgGraph {
 	return pkgs
 }
 
-func checkCycle(path []string, next string) []string {
+func checkCycle(path []string, next string) ([]string, error) {
 	for i, p := range path {
 		if p == next {
-			panic(fmt.Sprintf("Package cycle detected: \n%s", strings.Join(append(path[i:], next), "\n ->")))
+			return nil, fmt.Errorf("package cycle detected: \n%s", strings.Join(append(path[i:], next), "\n ->"))
 		}
 	}
 
-	return append(path, next)
+	return append(path, next), nil
 }
 
 func (g *pkgGraph) compile(from []string, target string) {
@@ -116,7 +118,10 @@ func (g *pkgGraph) compile(from []string, target string) {
 		return
 	}
 
-	from = checkCycle(from, target)
+	from, err := checkCycle(from, target)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	pkgDir := pkgDir(target)
 	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
@@ -127,30 +132,34 @@ func (g *pkgGraph) compile(from []string, target string) {
 	// TODO(jpoole): is import vendor the correct thing to do here?
 	pkg, err := build.ImportDir(pkgDir, build.ImportComment)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	for _, i := range pkg.Imports {
 		g.compile(from, i)
 	}
 
-	compilePackage(target, pkg)
+	err = compilePackage(target, pkg)
+	if err != nil {
+		log.Fatal(err)
+	}
 	g.pkgs[target] = true
 }
 
-func compilePackage(target string, pkg *build.Package) {
-	tc := &toolchain{
-		ccTool: opts.CCTool,
-		goTool: opts.GoTool,
+func compilePackage(target string, pkg *build.Package) error {
+	tc := &toolchain.Toolchain{
+		CcTool: opts.CCTool,
+		GoTool: opts.GoTool,
+		Exec:   &exec.OsExecutor{Stdout: os.Stdout, Stderr: os.Stderr},
 	}
 	allSrcs := append(append(pkg.CFiles, pkg.GoFiles...), pkg.HFiles...)
 
 	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
 	workDir := fmt.Sprintf("_build/%s", target)
 
-	fmt.Printf("mkdir -p %s\n", workDir)
-	fmt.Printf("mkdir -p %s\n", filepath.Dir(out))
-	fmt.Printf("ln %s %s\n", fullPaths(allSrcs, pkg.Dir), workDir)
+	tc.Exec.Exec("mkdir -p %s", workDir)
+	tc.Exec.Exec("mkdir -p %s", filepath.Dir(out))
+	tc.Exec.Exec("ln %s %s", toolchain.FullPaths(allSrcs, pkg.Dir), workDir)
 
 	goFiles := pkg.GoFiles
 
@@ -159,37 +168,38 @@ func compilePackage(target string, pkg *build.Package) {
 	if len(pkg.CgoFiles) > 0 {
 		cFiles := pkg.CFiles
 
-		cgoGoFiles, cgoCFiles := tc.cgo(pkg.Dir, workDir, pkg.CgoFiles)
+		cgoGoFiles, cgoCFiles := tc.CGO(pkg.Dir, workDir, pkg.CgoFiles)
 		goFiles = append(goFiles, cgoGoFiles...)
 		cFiles = append(cFiles, cgoCFiles...)
 
-		cObjFiles := tc.cCompile(workDir, cFiles, pkg.CgoCFLAGS)
+		cObjFiles := tc.CCompile(workDir, cFiles, pkg.CgoCFLAGS)
 		objFiles = append(objFiles, cObjFiles...)
 	}
 
 	if len(pkg.SFiles) > 0 {
-		asmH, symabis := tc.symabis(pkg.Dir, workDir, pkg.SFiles)
+		asmH, symabis := tc.Symabis(pkg.Dir, workDir, pkg.SFiles)
 
-		tc.goAsmCompile(workDir, opts.ImportConfig, out, goFiles, asmH, symabis)
+		tc.GoAsmCompile(workDir, opts.ImportConfig, out, goFiles, asmH, symabis)
 
-		asmObjFiles := tc.asm(pkg.Dir, workDir, pkg.SFiles)
+		asmObjFiles := tc.Asm(pkg.Dir, workDir, pkg.SFiles)
 		objFiles = append(objFiles, asmObjFiles...)
 	} else {
-		tc.goCompile(workDir, opts.ImportConfig, out, goFiles)
+		tc.GoCompile(workDir, opts.ImportConfig, out, goFiles)
 	}
 
 	if len(objFiles) > 0 {
-		tc.pack(workDir, out, objFiles)
+		tc.Pack(workDir, out, objFiles)
 	}
 
-	fmt.Printf("echo \"packagefile %s=%s\" >> %s\n", target, out, opts.ImportConfig)
+	tc.Exec.Exec("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
 
 	if pkg.IsCommand() {
 		filename := strings.TrimSuffix(filepath.Base(out), ".a")
 		binName := filepath.Join(opts.Out, "bin", filename)
 
 		// TODO(jpoole): This could probably be done in some sort of init phase
-		fmt.Printf("mkdir -p %s\n", filepath.Dir(binName))
-		tc.link(out, binName)
+		tc.Exec.Exec("mkdir -p %s\n", filepath.Dir(binName))
+		tc.Link(out, binName, opts.ImportConfig)
 	}
+	return nil
 }
