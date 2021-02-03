@@ -66,3 +66,18 @@ go_module(
     module = "github.com/golang/snappy",
     version = "v0.0.2",
 )
+
+go_module(
+    name = "sys",
+    module = "golang.org/x/sys",
+    version = "v0.0.0-20200930185726-fdedc70b468f",
+    install = ["unix", "internal/unsafeheader"],
+)
+
+go_module(
+    name = "term",
+    module = "github.com/moby/term",
+    version = "v0.0.0-20200312100748-672ec06f55cd",
+    install = ["."],
+    deps = [":sys"],
+)

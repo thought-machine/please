@@ -6,5 +6,6 @@ go_test (
     "//third_party/go:zstd",
     "//third_party/go:go-sqlite3",
     "//third_party/go:snappy",
+    "//third_party/go:term",
   ]
 )
