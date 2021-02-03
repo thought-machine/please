@@ -844,9 +844,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"$TOOLS_GO_INSTALL --src_root={pkg}/src --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install) + " > install.sh",
-        "cat install.sh",
-        f"source install.sh",
+        f"$TOOLS_GO_INSTALL --src_root={pkg}/src --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
     ]
 
     if binary:
