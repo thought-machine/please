@@ -61,13 +61,19 @@ func main() {
 
 	for _, target := range opts.Args.Packages {
 		if strings.HasSuffix(target, "/...") {
-			root := strings.TrimSuffix(target, "/...")
-			err := filepath.Walk(filepath.Join(opts.SrcRoot, root), func(path string, info os.FileInfo, err error) error {
+			importRoot := strings.TrimSuffix(target, "/...")
+			pkgRoot := pkgDir(importRoot)
+			err := filepath.Walk(pkgRoot, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
 					panic(err)
 				}
-				if !info.IsDir() && strings.HasSuffix(info.Name(), ".go") && !strings.HasSuffix(info.Name(), "_test.go") {
-					pkgs.compile(tc, []string{}, strings.TrimPrefix(filepath.Dir(path), opts.SrcRoot))
+				if !info.IsDir() {
+					if matched, err := build.Default.MatchFile(filepath.Dir(path), filepath.Base(path)); err == nil && matched {
+						relativePackage := filepath.Dir(strings.TrimPrefix(path, pkgRoot))
+						pkgs.compile(tc, []string{}, filepath.Join(importRoot, relativePackage))
+					} else if err != nil {
+						return err
+					}
 				}
 				return nil
 			})
@@ -130,6 +136,7 @@ func (g *pkgGraph) compile(tc *toolchain.Toolchain, from []string, target string
 	if done := g.pkgs[target]; done {
 		return
 	}
+	fmt.Fprintf(os.Stderr, "Compiling package %s from %v\n", target, from)
 
 	from, err := checkCycle(from, target)
 	if err != nil {
@@ -161,6 +168,9 @@ func (g *pkgGraph) compile(tc *toolchain.Toolchain, from []string, target string
 
 func compilePackage(tc *toolchain.Toolchain, target string, pkg *build.Package) error {
 	allSrcs := append(append(pkg.CFiles, pkg.GoFiles...), pkg.HFiles...)
+	if len(allSrcs) == 0 {
+		return nil
+	}
 
 	out := fmt.Sprintf("%s/%s.a", opts.Out, target)
 	workDir := fmt.Sprintf("_build/%s", target)
@@ -200,7 +210,9 @@ func compilePackage(tc *toolchain.Toolchain, target string, pkg *build.Package) 
 	}
 
 	tc.Exec.Exec("echo \"packagefile %s=%s\" >> %s", target, out, opts.ImportConfig)
-	tc.Exec.Exec("echo -n \"%s\" >> %s", strings.Join(pkg.CgoLDFLAGS, " "), opts.LDFlags)
+	if len(pkg.CgoLDFLAGS) > 0 {
+		tc.Exec.Exec("echo -n \"%s\" >> %s", strings.Join(pkg.CgoLDFLAGS, " "), opts.LDFlags)
+	}
 
 	if pkg.IsCommand() {
 		filename := strings.TrimSuffix(filepath.Base(out), ".a")

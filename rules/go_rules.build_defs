@@ -929,12 +929,12 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
     )
 
 def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None, strip:list=[],
-                    licences:list=None, hashes:list=None, labels:list=[], _tag:str='',
+                    licences:list=None, hashes:list=None, labels:list=[], _tag:str='', deps:list=[],
                     please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL):
     cmds = [
         f'export MOD_DIR=$($TOOL mod download -x -modcacherw -json {module}@{version} | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
-    ] + [f'rm -rf src/{module}/{s}' for s in strip]
+    ] + [f'rm -rf $OUT/{s}' for s in strip]
 
     return build_rule(
         name = name,
@@ -943,13 +943,14 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         tools = [CONFIG.GO_TOOL],
         building_description = 'Fetching...',
         cmd = ' && '.join(cmds),
-        requires = ['go'],
+        requires = ['go_src'],
         test_only = test_only,
         labels = labels + ['link:plz-out/go'],
         hashes = hashes,
         sandbox = False,
         licences = licences,
         visibility = visibility,
+        deps = deps,
     )
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
@@ -970,6 +971,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             _tag = "get",
             module = module,
             version = version,
+            deps = deps,
             test_only = test_only,
             visibility = visibility,
             licences = licences,
