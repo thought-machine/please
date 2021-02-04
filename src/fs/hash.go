@@ -185,7 +185,7 @@ func (hasher *PathHasher) hash(path string, store, read bool) ([]byte, error) {
 					return err
 				}
 				if filepath.IsAbs(deref) {
-					log.Warning("Symlink %s has an absolute target %s, that will likely be broken later")
+					log.Warning("Symlink %s has an absolute target %s, that will likely be broken later", p, deref)
 				}
 				// Deliberately do not attempt to read it. We will read the contents later since
 				// it is a link within the temp dir anyway, and if it's a link to a directory
