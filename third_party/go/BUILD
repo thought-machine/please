@@ -234,6 +234,7 @@ go_module(
     download = ":protobuf_download",
     install = ["protoc-gen-go"],
     module = "github.com/golang/protobuf",
+    deps = [":protobuf-go"],
 )
 
 go_module(
