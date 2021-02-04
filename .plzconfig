@@ -87,3 +87,4 @@ accept = notice
 JavaBinaryExecutableByDefault = true
 RemovePleasings = true
 PleaseDownloadTools = true
+PleaseGoInstall = true
