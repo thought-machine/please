@@ -36,12 +36,12 @@ go_test(
     deps = [
         ":remote",
         "//src/core",
+        "//third_party/go:genproto_api",
+        "//third_party/go:genproto_rpc",
         "//third_party/go:grpc",
         "//third_party/go:protobuf",
         "//third_party/go:remote-apis",
         "//third_party/go:sri",
         "//third_party/go:testify",
-        "//third_party/go:genproto_api",
-        "//third_party/go:genproto_rpc",
     ],
 )

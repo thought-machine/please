@@ -1,5 +1,5 @@
 #TODO(jpoole): once bugs are fixed, make this use the please_go_install in ~/.please
-package(FF_PLEASE_GO_INSTALL=False)
+package(FF_PLEASE_GO_INSTALL = False)
 
 go_module(
     name = "go-flags",
@@ -10,8 +10,8 @@ go_module(
 
 go_module(
     name = "xsys",
-    module = "golang.org/x/sys",
     install = ["..."],
+    module = "golang.org/x/sys",
     version = "765f4ea38db36397e827c4153018aa272eed7835",
 )
 
