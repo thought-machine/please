@@ -50,11 +50,11 @@ const milestoneURL = "https://please.build/milestones"
 // updateCommand indicates whether an update is specifically requested (due to e.g. `plz update`)
 // forceUpdate indicates whether the user passed --force on the command line, in which case we
 // will always update even if the version exists.
-func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify bool, progress bool) {
+func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify, progress, prerelease bool) {
 	httpClient = retryablehttp.NewClient()
 	httpClient.Logger = &utils.HTTPLogWrapper{Logger: log}
 
-	if !shouldUpdate(config, updatesEnabled, updateCommand) && !forceUpdate {
+	if !shouldUpdate(config, updatesEnabled, updateCommand, prerelease) && !forceUpdate {
 		clean(config, updateCommand)
 		return
 	}
@@ -141,7 +141,7 @@ func printMilestoneMessage(pleaseVersion string) {
 }
 
 // shouldUpdate determines whether we should run an update or not. It returns true iff one is required.
-func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool) bool {
+func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, prerelease bool) bool {
 	if config.Please.Version.Semver() == core.PleaseVersion {
 		return false // Version matches, nothing to do here.
 	} else if config.Please.Version.IsGTE && config.Please.Version.LessThan(core.PleaseVersion) {
@@ -149,7 +149,7 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool
 			return false // Version specified is >= and we are above it, nothing to do unless it's `plz update`
 		}
 		// Find the latest available version. Update if it's newer than the current one.
-		config.Please.Version = *findLatestVersion(config.Please.DownloadLocation.String())
+		config.Please.Version = findLatestVersion(config.Please.DownloadLocation.String(), prerelease)
 		return config.Please.Version.Semver() != core.PleaseVersion
 	} else if (!updatesEnabled || !config.Please.SelfUpdate) && !updateCommand {
 		// Update is required but has been skipped (--noupdate or whatever)
@@ -171,8 +171,8 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand bool
 			config.Please.Version.Set(core.PleaseVersion.String())
 			return false
 		}
-		config.Please.Version = *findLatestVersion(config.Please.DownloadLocation.String())
-		return shouldUpdate(config, updatesEnabled, updateCommand)
+		config.Please.Version = findLatestVersion(config.Please.DownloadLocation.String(), prerelease)
+		return shouldUpdate(config, updatesEnabled, updateCommand, prerelease)
 	}
 	return true
 }
@@ -326,15 +326,18 @@ func cleanDir(newDir string) {
 }
 
 // findLatestVersion attempts to find the latest available version of plz.
-func findLatestVersion(downloadLocation string) *cli.Version {
+func findLatestVersion(downloadLocation string, prerelease bool) cli.Version {
 	url := strings.TrimRight(downloadLocation, "/") + "/latest_version"
+	if prerelease {
+		url = strings.TrimRight(downloadLocation, "/") + "/latest_prerelease_version"
+	}
 	response := mustDownload(url, false)
 	defer response.Close()
 	data, err := ioutil.ReadAll(response)
 	if err != nil {
 		log.Fatalf("Failed to find latest plz version: %s", err)
 	}
-	return cli.MustNewVersion(strings.TrimSpace(string(data)))
+	return *cli.MustNewVersion(strings.TrimSpace(string(data)))
 }
 
 // describe returns a word describing the process we're about to do ("update", "downgrading", etc)
