@@ -934,7 +934,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     cmds = [
         f'export MOD_DIR=$($TOOL mod download -x -modcacherw -json {module}@{version} | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
-    ] + [f'rm -rf src/{module}/{s}' for s in strip]
+    ] + [f'rm -rf $OUT/{s}' for s in strip]
 
     return build_rule(
         name = name,

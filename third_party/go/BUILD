@@ -548,7 +548,7 @@ go_get(
 
 go_get(
     name = "cmp",
-    get = "github.com/google/go-cmp/cmp",
+    get = "github.com/google/go-cmp/cmp/...",
     revision = "b1c9c4891a6525d98001fea424c8926c6d77bb56",
 )
 
