@@ -202,10 +202,11 @@ var opts struct {
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
 
 	Update struct {
-		Force    bool        `long:"force" description:"Forces a re-download of the new version."`
-		NoVerify bool        `long:"noverify" description:"Skips signature verification of downloaded version"`
-		Latest   bool        `long:"latest" description:"Update to latest available version (overrides config)."`
-		Version  cli.Version `long:"version" description:"Updates to a particular version (overrides config)."`
+		Force            bool        `long:"force" description:"Forces a re-download of the new version."`
+		NoVerify         bool        `long:"noverify" description:"Skips signature verification of downloaded version"`
+		Latest           bool        `long:"latest" description:"Update to latest available version (overrides config)."`
+		LatestPrerelease bool        `long:"latest_prerelease" description:"Update to latest available prerelease version (overrides config)."`
+		Version          cli.Version `long:"version" description:"Updates to a particular version (overrides config)."`
 	} `command:"update" description:"Checks for an update and updates if needed."`
 
 	Op struct {
@@ -931,12 +932,12 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	}
 	config := readConfig(forceUpdate)
 	// Now apply any flags that override this
-	if opts.Update.Latest {
+	if opts.Update.Latest || opts.Update.LatestPrerelease {
 		config.Please.Version.Unset()
 	} else if opts.Update.Version.IsSet {
 		config.Please.Version = opts.Update.Version
 	}
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput)
+	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
 	return config
 }
 
