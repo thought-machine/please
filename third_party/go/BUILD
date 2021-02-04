@@ -124,8 +124,8 @@ go_module(
         "binarylog/...",
         "codes",
         "connectivity",
-        "credentials/...",
         "credentials",
+        "credentials/oauth",
         "encoding",
         "encoding/gzip",
         "encoding/proto",
@@ -146,13 +146,14 @@ go_module(
         "tap",
     ],
     module = "google.golang.org/grpc",
-    version = "v1.31.1",
+    version = "v1.34.0",
     deps = [
         ":cmp",
         ":genproto_rpc",
         ":oauth2",
         ":protobuf",
         ":xsys",
+        ":uuid",
     ],
 )
 
