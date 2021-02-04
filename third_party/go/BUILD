@@ -813,3 +813,8 @@ go_module(
     module = "github.com/klauspost/cpuid",
     version = "v1.3.1",
 )
+
+go_toolchain(
+    name = "toolchain",
+    version = "1.15.7",
+)
