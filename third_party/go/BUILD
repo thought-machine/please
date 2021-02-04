@@ -47,80 +47,85 @@ go_module(
     deps = [":xsys"],
 )
 
-go_get(
+go_module(
     name = "go-bindata",
     binary = True,
-    get = "github.com/kevinburke/go-bindata/...",
-    revision = "v3.21.0",
+    install = ["go-bindata"],
+    module = "github.com/kevinburke/go-bindata",
     strip = ["testdata"],
+    version = "v3.21.0",
 )
 
-go_get(
+go_module(
     name = "go-flags",
-    get = "github.com/thought-machine/go-flags",
-    revision = "v1.5.0",
+    module = "github.com/thought-machine/go-flags",
+    version = "v1.5.0",
     deps = [":xsys"],
 )
 
-go_get(
+go_module(
     name = "humanize",
-    get = "github.com/dustin/go-humanize",
-    revision = "8929fe90cee4b2cb9deb468b51fb34eba64d1bf0",
+    module = "github.com/dustin/go-humanize",
+    version = "8929fe90cee4b2cb9deb468b51fb34eba64d1bf0",
 )
 
-go_get(
+go_module(
     name = "net",
-    get = "golang.org/x/net/...",
-    revision = "136a25c244d3019482a795d728110278d6ba09a4",
+    install = ["..."],
+    module = "golang.org/x/net",
+    version = "136a25c244d3019482a795d728110278d6ba09a4",
     deps = [
         ":text",
         ":xcrypto",
     ],
 )
 
-go_get(
+go_module(
     name = "tools",
-    get = "golang.org/x/tools",
     install = [
         "cover",
     ],
-    revision = "2ae76fd1560b622911f444c1e66b70a857e1de67",
+    module = "golang.org/x/tools",
+    version = "2ae76fd1560b622911f444c1e66b70a857e1de67",
 )
 
-go_get(
+go_module(
     name = "text",
-    get = "golang.org/x/text/...",
-    revision = "4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1",
+    install = ["..."],
+    module = "golang.org/x/text",
+    version = "4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1",
     deps = [
         ":tools",
     ],
 )
 
-go_get(
+go_module(
     name = "cover",
-    get = "github.com/peterebden/tools/cover",
-    revision = "b2a0db951d2a49fe30dfd9a5f4aad49df75fc12f",
+    install = ["cover"],
+    module = "github.com/peterebden/tools",
+    version = "b2a0db951d2a49fe30dfd9a5f4aad49df75fc12f",
 )
 
-go_get(
+go_module(
     name = "grpc",
     exported_deps = [
         ":net",
         ":protobuf-go",
     ],
-    get = "google.golang.org/grpc",
     install = [
-        "",
+        ".",
         "attributes",
         "backoff",
         "balancer",
         "balancer/base",
         "balancer/grpclb/...",
+        "balancer/grpclb",
         "balancer/roundrobin",
         "binarylog/...",
         "codes",
         "connectivity",
         "credentials/...",
+        "credentials",
         "encoding",
         "encoding/gzip",
         "encoding/proto",
@@ -128,6 +133,7 @@ go_get(
         "health",
         "health/grpc_health_v1",
         "internal/...",
+        "internal",
         "keepalive",
         "metadata",
         "peer",
@@ -139,78 +145,105 @@ go_get(
         "status",
         "tap",
     ],
-    repo = "github.com/grpc/grpc-go",
-    revision = "v1.31.1",
+    module = "google.golang.org/grpc",
+    version = "v1.31.1",
     deps = [
         ":cmp",
+        ":genproto_rpc",
         ":oauth2",
         ":protobuf",
-        ":rpccode",
-        ":rpcstatus",
         ":xsys",
     ],
 )
 
-#TODO: build from the actual proto.
-go_get(
-    name = "rpcstatus",
-    get = "google.golang.org/genproto/googleapis/rpc/status",
-    revision = "2b5a72b8730b0b16380010cfe5286c42108d88e7",
-    deps = [":protobuf"],
+go_mod_download(
+    name = "genproto_download",
+    module = "google.golang.org/genproto",
+    version = "2b5a72b8730b0b16380010cfe5286c42108d88e7",
 )
 
-go_get(
-    name = "rpccode",
-    get = "google.golang.org/genproto/googleapis/rpc/code",
-    revision = "2b5a72b8730b0b16380010cfe5286c42108d88e7",
-    deps = [":protobuf"],
+# genproto stuff for grpc to resolve cyclic deps
+go_module(
+    name = "genproto_rpc",
+    download = ":genproto_download",
+    install = [
+        "googleapis/rpc/...",
+    ],
+    module = "google.golang.org/genproto",
+    deps = [
+        ":protobuf",
+    ],
 )
 
-go_get(
+go_module(
+    name = "genproto_api",
+    download = ":genproto_download",
+    install = [
+        "googleapis/api/annotations",
+        "googleapis/longrunning",
+        "googleapis/bytestream",
+    ],
+    module = "google.golang.org/genproto",
+    deps = [
+        ":grpc",
+        ":net",
+        ":protobuf",
+    ],
+)
+
+go_mod_download(
+    name = "protobuf_download",
+    module = "github.com/golang/protobuf",
+    version = "v1.4.3",
+)
+
+go_module(
     name = "protobuf",
+    download = ":protobuf_download",
     exported_deps = [
         ":protobuf-go",
     ],
-    get = "github.com/golang/protobuf/...",
-    revision = "v1.4.3",
+    install = ["..."],
+    module = "github.com/golang/protobuf",
     strip = [
         "proto/proto3_proto",
         "conformance",
     ],
 )
 
-go_get(
+go_module(
     name = "protobuf-go",
-    get = "google.golang.org/protobuf/...",
-    revision = "v1.25.0",
+    install = ["..."],
+    module = "google.golang.org/protobuf",
+    version = "v1.25.0",
     deps = [
         ":cmp",
     ],
 )
 
-go_get(
+go_module(
     name = "xerrors",
-    get = "golang.org/x/xerrors/...",
-    revision = "5ec99f83aff198f5fbd629d6c8d8eb38a04218ca",
+    install = ["..."],
+    module = "golang.org/x/xerrors",
+    version = "5ec99f83aff198f5fbd629d6c8d8eb38a04218ca",
 )
 
-go_get(
+go_module(
     name = "protoc-gen-go",
     binary = True,
-    get = [],
-    install = ["github.com/golang/protobuf/protoc-gen-go"],
-    deps = [
-        ":protobuf",
-    ],
+    download = ":protobuf_download",
+    install = ["protoc-gen-go"],
+    module = "github.com/golang/protobuf",
 )
 
-go_get(
+go_module(
     name = "protoc-gen-go-grpc",
     binary = True,
-    get = [],
-    install = ["google.golang.org/grpc/cmd/protoc-gen-go-grpc"],
+    module = "google.golang.org/grpc/cmd/protoc-gen-go-grpc",
+    version = "v1.1.0",
     deps = [
         ":grpc",
+        ":protobuf",
     ],
 )
 
@@ -488,11 +521,9 @@ go_get(
     get = "github.com/bazelbuild/remote-apis/build/...",
     revision = "2846a67ac8feb5001e9f704b66f5acc1e90f1ade",
     deps = [
-        ":annotations",
+        ":genproto_api",
         ":grpc",
-        ":longrunning",
         ":protobuf",
-        ":rpcstatus",
     ],
 )
 
@@ -502,19 +533,16 @@ go_get(
     repo = "github.com/peterebden/remote-apis-sdks",
     revision = "271eb5b72e7dca1dda1d4dee87d99a17194cf146",
     deps = [
-        ":annotations",
-        ":bytestream",
         ":cmp",
         ":errgroup",
         ":errors",
+        ":genproto_api",
         ":glog",
         ":grpc",
-        ":longrunning",
         ":oauth2",
         ":pborman_uuid",
         ":protobuf",
         ":remote-apis",
-        ":rpcstatus",
     ],
 )
 
@@ -552,40 +580,6 @@ go_get(
     deps = [
         ":cloud-metadata",
         "//third_party/go:net",
-    ],
-)
-
-# TODO(peterebden): Splitting up this & the other bits of genproto is a bit of
-#                   a hack. Replace once we have a better way of describing Go modules.
-go_get(
-    name = "annotations",
-    get = "google.golang.org/genproto/googleapis/api/annotations",
-    revision = "3bdd9d9f5532d75d09efb230bd767d265245cfe5",
-    deps = [
-        ":grpc",
-        ":protobuf",
-    ],
-)
-
-go_get(
-    name = "longrunning",
-    get = "google.golang.org/genproto/googleapis/longrunning",
-    revision = "3bdd9d9f5532d75d09efb230bd767d265245cfe5",
-    deps = [
-        ":annotations",
-        ":grpc",
-        ":protobuf",
-    ],
-)
-
-go_get(
-    name = "bytestream",
-    get = "google.golang.org/genproto/googleapis/bytestream",
-    revision = "3bdd9d9f5532d75d09efb230bd767d265245cfe5",
-    deps = [
-        ":annotations",
-        ":grpc",
-        ":protobuf",
     ],
 )
 
