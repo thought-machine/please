@@ -3,6 +3,6 @@ genrule(
     out = "foo.txt",
     cmd = "echo $FOO > $OUT",
     env = {
-        "FOO": "foo",
+        "FOO": "foo bar",
     },
 )
