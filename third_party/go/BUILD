@@ -32,7 +32,7 @@ go_module(
 
 go_module(
     name = "gcfg",
-    install = ["..."],
+    install = [".", "..."],
     module = "github.com/peterebden/gcfg",
     version = "v1.3.0",
     deps = [
@@ -84,6 +84,9 @@ go_module(
     name = "tools",
     install = [
         "cover",
+        "go/loader",
+        "go/buildutil",
+        "go/ast/astutil",
     ],
     module = "golang.org/x/tools",
     version = "2ae76fd1560b622911f444c1e66b70a857e1de67",
@@ -91,7 +94,13 @@ go_module(
 
 go_module(
     name = "text",
-    install = ["..."],
+    install = [
+        "secure/...",
+        "unicode/...",
+        "transform",
+        "encoding",
+        "encoding/...",
+    ],
     module = "golang.org/x/text",
     version = "4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1",
     deps = [
@@ -152,8 +161,8 @@ go_module(
         ":genproto_rpc",
         ":oauth2",
         ":protobuf",
-        ":xsys",
         ":uuid",
+        ":xsys",
     ],
 )
 
@@ -257,16 +266,15 @@ go_get(
     revision = "ecdeabc65495df2dec95d7c4a4c3e021903035e5",
 )
 
-go_get(
+go_module(
     name = "testify",
-    get = "github.com/stretchr/testify",
     install = [
         "assert",
         "require",
-        "vendor/...",
     ],
     licences = ["MIT"],
-    revision = "v1.4.0",
+    module = "github.com/stretchr/testify",
+    version = "v1.4.0",
     deps = [
         ":difflib",
         ":objx",
@@ -275,67 +283,70 @@ go_get(
     ],
 )
 
-go_get(
+go_module(
     name = "difflib",
-    get = "github.com/pmezard/go-difflib/...",
+    install = ["difflib"],
     licences = ["BSD 3-Clause"],
-    revision = "792786c7400a136282c1664665ae0a8db921c6c2",
+    module = "github.com/pmezard/go-difflib",
+    version = "792786c7400a136282c1664665ae0a8db921c6c2",
 )
 
-go_get(
+go_module(
     name = "objx",
-    get = "github.com/stretchr/objx",
     licences = ["MIT"],
-    revision = "1a9d0bb9f541897e62256577b352fdbc1fb4fd94",
+    module = "github.com/stretchr/objx",
+    version = "1a9d0bb9f541897e62256577b352fdbc1fb4fd94",
 )
 
-go_get(
+go_module(
     name = "yaml.v2",
-    get = "gopkg.in/yaml.v2",
     licences = ["Apache 2.0"],
-    revision = "v2.2.4",
+    module = "gopkg.in/yaml.v2",
+    version = "v2.2.4",
 )
 
-go_get(
+go_module(
     name = "go-isatty",
-    get = "github.com/mattn/go-isatty",
-    revision = "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c",
+    module = "github.com/mattn/go-isatty",
+    version = "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c",
 )
 
-go_get(
+go_module(
     name = "levenshtein",
-    get = "github.com/texttheater/golang-levenshtein/levenshtein",
-    revision = "14026fface0cb806188c85e792a93d625dc37d0f",
+    install = ["levenshtein"],
+    module = "github.com/texttheater/golang-levenshtein",
+    version = "14026fface0cb806188c85e792a93d625dc37d0f",
 )
 
-go_get(
+go_module(
     name = "queue",
-    get = "github.com/Workiva/go-datastructures/queue",
-    revision = "064f3ea06ab2337e6eaf42052392d14f779e91cb",
+    install = ["queue"],
+    module = "github.com/Workiva/go-datastructures",
+    version = "064f3ea06ab2337e6eaf42052392d14f779e91cb",
 )
 
-go_get(
+go_module(
     name = "fsnotify",
-    get = "github.com/fsnotify/fsnotify",
-    revision = "a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb",
+    module = "github.com/fsnotify/fsnotify",
+    version = "a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb",
     deps = [":xsys"],
 )
 
-go_get(
+go_module(
     name = "concurrent-map",
-    get = "github.com/streamrail/concurrent-map",
-    revision = "5fc745307dc80a1883243b978f7e7c0fd5ce7206",
+    module = "github.com/streamrail/concurrent-map",
+    version = "5fc745307dc80a1883243b978f7e7c0fd5ce7206",
 )
 
-go_get(
+go_module(
     name = "grpc-middleware",
-    get = "github.com/grpc-ecosystem/go-grpc-middleware",
     install = [
         "retry",
         "util/metautils",
         "util/backoffutils",
     ],
-    revision = "fa8fef87dcecac0bda02d36abb3c790ab9e0030b",
+    module = "github.com/grpc-ecosystem/go-grpc-middleware",
+    version = "fa8fef87dcecac0bda02d36abb3c790ab9e0030b",
     deps = [
         ":grpc",
         ":net",
@@ -343,155 +354,185 @@ go_get(
     ],
 )
 
-go_get(
+go_module(
     name = "shlex",
-    get = "github.com/google/shlex",
-    revision = "6f45313302b9c56850fc17f99e40caebce98c716",
+    module = "github.com/google/shlex",
+    version = "6f45313302b9c56850fc17f99e40caebce98c716",
 )
 
-go_get(
+go_module(
     name = "semver",
-    get = "github.com/coreos/go-semver/semver",
-    revision = "8ab6407b697782a06568d4b7f1db25550ec2e4c6",
+    install = ["semver"],
+    module = "github.com/coreos/go-semver",
+    version = "8ab6407b697782a06568d4b7f1db25550ec2e4c6",
 )
 
-go_get(
+go_module(
     name = "go-multierror",
-    get = "github.com/hashicorp/go-multierror",
-    install = [
-        "",
-        "vendor/github.com/hashicorp/errwrap",
-    ],
-    revision = "b7773ae218740a7be65057fc60b366a49b538a44",
+    module = "github.com/hashicorp/go-multierror",
+    version = "b7773ae218740a7be65057fc60b366a49b538a44",
+    deps = [":errwrap"],
 )
 
-go_get(
+go_module(
+    name = "errwrap",
+    module = "github.com/hashicorp/errwrap",
+    version = "7554cd9344cec97297fa6649b055a8c98c2a1e55",
+)
+
+go_module(
     name = "atime",
-    get = "github.com/djherbis/atime",
-    revision = "89517e96e10b93292169a79fd4523807bdc5d5fa",
+    module = "github.com/djherbis/atime",
+    version = "89517e96e10b93292169a79fd4523807bdc5d5fa",
 )
 
-go_get(
+go_module(
     name = "errgroup",
-    get = "golang.org/x/sync/errgroup",
-    revision = "457c5828408160d6a47e17645169cf8fa20218c4",
+    install = ["errgroup"],
+    module = "golang.org/x/sync",
+    version = "457c5828408160d6a47e17645169cf8fa20218c4",
     deps = [":net"],
 )
 
-go_get(
+go_module(
     name = "psutil",
-    get = "github.com/shirou/gopsutil",
     install = [
         "cpu",
         "internal/common",
         "mem",
     ],
-    revision = "v2.17.09",
+    module = "github.com/shirou/gopsutil",
+    version = "v2.17.09",
     deps = [":xsys"],
 )
 
-go_get(
+go_module(
     name = "xsys",
-    get = "golang.org/x/sys/...",
-    revision = "765f4ea38db36397e827c4153018aa272eed7835",
+    install = ["..."],
+    module = "golang.org/x/sys",
+    version = "765f4ea38db36397e827c4153018aa272eed7835",
 )
 
-go_get(
+go_mod_download(
+    name = "go-fuzz-download",
+    module = "github.com/dvyukov/go-fuzz",
+    version = "445b00a1141b27425541ee8d7dc2f524faf202a9",
+)
+
+go_module(
     name = "go-fuzz-build",
     binary = True,
-    get = [],
-    install = ["github.com/dvyukov/go-fuzz/go-fuzz-build"],
-    deps = [":go-fuzz-dep"],
+    download = ":go-fuzz-download",
+    install = ["go-fuzz-build"],
+    module = "github.com/dvyukov/go-fuzz",
 )
 
-go_get(
+go_module(
     name = "go-fuzz",
-    binary = True,
-    get = [],
-    install = ["github.com/dvyukov/go-fuzz/go-fuzz"],
-    deps = [":go-fuzz-dep"],
-)
-
-go_get(
-    name = "go-fuzz-dep",
-    get = "github.com/dvyukov/go-fuzz",
+    download = ":go-fuzz-download",
     install = [
+        "go-fuzz",
         "go-fuzz-dep",
         "go-fuzz-defs",
     ],
-    revision = "445b00a1141b27425541ee8d7dc2f524faf202a9",
+    module = "github.com/dvyukov/go-fuzz",
+    please_go_install = True,
+    deps = [
+        ":go-bindata-assetfs",
+        ":writerset",
+    ],
 )
 
-go_get(
+go_module(
+    name = "writerset",
+    module = "github.com/stephens2424/writerset",
+    version = "v1.0.2",
+)
+
+go_module(
+    name = "go-bindata-assetfs",
+    module = "github.com/elazarl/go-bindata-assetfs",
+    version = "v1.0.1",
+)
+
+go_module(
     name = "godirwalk",
-    get = "github.com/karrick/godirwalk",
-    revision = "v1.7.0",
+    module = "github.com/karrick/godirwalk",
     strip = [
         "examples",
         "testdata",
         "vendor",
     ],
+    version = "v1.7.0",
     deps = [":errors"],
 )
 
-go_get(
+go_module(
     name = "errors",
-    get = "github.com/pkg/errors",
-    revision = "30136e27e2ac8d167177e8a583aa4c3fea5be833",
+    module = "github.com/pkg/errors",
+    version = "30136e27e2ac8d167177e8a583aa4c3fea5be833",
 )
 
-go_get(
+go_module(
     name = "gogo-protobuf",
-    get = "github.com/gogo/protobuf",
     install = ["proto"],
-    revision = "v0.4",
+    module = "github.com/gogo/protobuf",
+    version = "v1.3.2",
 )
 
-go_get(
+go_module(
     name = "skylark",
-    get = "go.starlark.net/syntax",
-    revision = "88a10930eb75e9ec92aea441058f24a11184bb2f",
+    install = ["syntax"],
+    module = "go.starlark.net",
+    version = "v0.0.0-20210126161401-bc864be25151",
 )
 
-go_get(
+go_mod_download(
+    name = "buildtools_download",
+    module = "github.com/peterebden/buildtools",
+    please_go_install = True,
+    version = "f7a36c689cc9e038956d51005332c67ade7aa9c6",
+)
+
+go_module(
     name = "buildtools",
-    get = "github.com/bazelbuild/buildtools/...",
-    repo = "github.com/peterebden/buildtools",
-    revision = "f7a36c689cc9e038956d51005332c67ade7aa9c6",
+    download = ":buildtools_download",
+    install = ["..."],
+    module = "github.com/bazelbuild/buildtools",
+    please_go_install = True,
     deps = [
         ":protobuf",
         ":skylark",
     ],
 )
 
-go_get(
+go_module(
     name = "jsonrpc2",
-    get = "github.com/sourcegraph/jsonrpc2",
-    revision = "549eb959f029d014d623104d40ab966d159a92de",
+    module = "github.com/sourcegraph/jsonrpc2",
+    version = "549eb959f029d014d623104d40ab966d159a92de",
 )
 
-go_get(
+go_module(
     name = "xz",
-    get = "github.com/ulikunitz/xz",
     install = [
-        "",
+        ".",
         "lzma",
         "internal/...",
     ],
-    revision = "v0.5.6",
+    module = "github.com/ulikunitz/xz",
+    version = "v0.5.6",
 )
 
-go_get(
+go_module(
     name = "ar",
-    get = "github.com/peterebden/ar",
-    revision = "a0ae3a11a518fb9559c95ed151ec07865b31980b",
+    module = "github.com/peterebden/ar",
+    version = "a0ae3a11a518fb9559c95ed151ec07865b31980b",
 )
 
-go_get(
+go_module(
     name = "cli-init",
-    get = "github.com/peterebden/go-cli-init/v3",
-    module_major_version = "v3",
-    revision = "v3.0.0",
+    module = "github.com/peterebden/go-cli-init/v3",
+    version = "v3.0.0",
     deps = [
         ":go-flags",
         ":humanize",
@@ -500,28 +541,29 @@ go_get(
     ],
 )
 
-go_get(
+go_module(
     name = "diff",
-    get = "github.com/sourcegraph/go-diff/diff",
-    revision = "v0.5.1",
+    install = ["diff"],
+    module = "github.com/sourcegraph/go-diff",
+    version = "v0.5.1",
     deps = [
         ":gogo-protobuf",
         ":sqs-pbtypes",
     ],
 )
 
-go_get(
+go_module(
     name = "sqs-pbtypes",
-    get = "sourcegraph.com/sqs/pbtypes",
-    repo = "github.com/sqs/pbtypes",
-    revision = "v1.0.0",
+    module = "sourcegraph.com/sqs/pbtypes",
+    version = "v1.0.0",
     deps = [":gogo-protobuf"],
 )
 
-go_get(
+go_module(
     name = "remote-apis",
-    get = "github.com/bazelbuild/remote-apis/build/...",
-    revision = "2846a67ac8feb5001e9f704b66f5acc1e90f1ade",
+    install = ["build/..."],
+    module = "github.com/bazelbuild/remote-apis",
+    version = "2846a67ac8feb5001e9f704b66f5acc1e90f1ade",
     deps = [
         ":genproto_api",
         ":grpc",
@@ -529,11 +571,19 @@ go_get(
     ],
 )
 
-go_get(
+go_mod_download(
+    name = "remote-apis-sdks-download",
+    module = "github.com/peterebden/remote-apis-sdks",
+    please_go_install = True,
+    version = "271eb5b72e7dca1dda1d4dee87d99a17194cf146",
+)
+
+go_module(
     name = "remote-apis-sdks",
-    get = "github.com/bazelbuild/remote-apis-sdks/go/...",
-    repo = "github.com/peterebden/remote-apis-sdks",
-    revision = "271eb5b72e7dca1dda1d4dee87d99a17194cf146",
+    download = ":remote-apis-sdks-download",
+    install = ["go/..."],
+    module = "github.com/bazelbuild/remote-apis-sdks",
+    please_go_install = True,
     deps = [
         ":cmp",
         ":errgroup",
@@ -548,10 +598,14 @@ go_get(
     ],
 )
 
-go_get(
+go_module(
     name = "cmp",
-    get = "github.com/google/go-cmp/cmp/...",
-    revision = "b1c9c4891a6525d98001fea424c8926c6d77bb56",
+    install = [
+        "cmp",
+        "cmp/...",
+    ],
+    module = "github.com/google/go-cmp",
+    version = "b1c9c4891a6525d98001fea424c8926c6d77bb56",
 )
 
 go_get(
@@ -561,23 +615,24 @@ go_get(
     revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
 )
 
-go_get(
+go_module(
     name = "cloud-metadata",
-    get = "cloud.google.com/go/compute/metadata",
-    revision = "v0.40.0",
+    install = ["compute/metadata"],
+    module = "cloud.google.com/go",
+    version = "v0.40.0",
 )
 
-go_get(
+go_module(
     name = "oauth2",
-    get = "golang.org/x/oauth2",
     install = [
-        "",
+        ".",
         "google",
         "internal",
         "jws",
         "jwt",
     ],
-    revision = "d668ce993890a79bda886613ee587a69dd5da7a6",
+    module = "golang.org/x/oauth2",
+    version = "d668ce993890a79bda886613ee587a69dd5da7a6",
     visibility = ["//third_party/go/..."],
     deps = [
         ":cloud-metadata",
@@ -585,45 +640,50 @@ go_get(
     ],
 )
 
-go_get(
+go_module(
     name = "uuid",
-    get = "github.com/google/uuid",
-    revision = "v1.1.1",
+    module = "github.com/google/uuid",
+    version = "v1.1.1",
 )
 
-go_get(
+go_module(
     name = "pborman_uuid",
-    get = "github.com/pborman/uuid",
-    revision = "v1.2.0",
+    module = "github.com/pborman/uuid",
+    version = "v1.2.0",
     deps = [":uuid"],
 )
 
-go_get(
+go_module(
     name = "lsp",
-    get = "github.com/sourcegraph/go-lsp",
-    revision = "0c7d621186c1c8684f3d97868f6970b326609cc7",
+    module = "github.com/sourcegraph/go-lsp",
+    version = "0c7d621186c1c8684f3d97868f6970b326609cc7",
 )
 
-go_get(
+go_module(
     name = "promptui",
-    get = "github.com/manifoldco/promptui/...",
-    revision = "v0.7.0",
+    install = [".", "..."],
+    module = "github.com/manifoldco/promptui",
+    version = "v0.7.0",
     deps = [
         ":ansiterm",
         ":readline",
     ],
 )
 
-go_get(
+go_module(
     name = "readline",
-    get = "github.com/chzyer/readline",
-    revision = "2972be24d48e78746da79ba8e24e8b488c9880de",
+    module = "github.com/chzyer/readline",
+    version = "2972be24d48e78746da79ba8e24e8b488c9880de",
 )
 
-go_get(
+go_module(
     name = "ansiterm",
-    get = "github.com/juju/ansiterm/...",
-    revision = "720a0952cc2ac777afc295d9861263e2a4cf96a1",
+    install = [
+        ".",
+        "...",
+    ],
+    module = "github.com/juju/ansiterm",
+    version = "720a0952cc2ac777afc295d9861263e2a4cf96a1",
     deps = [
         ":colorable",
         ":go-isatty",
@@ -631,106 +691,114 @@ go_get(
     ],
 )
 
-go_get(
+go_module(
     name = "vtclean",
-    get = "github.com/lunixbochs/vtclean",
-    revision = "v1.0.0",
+    module = "github.com/lunixbochs/vtclean",
+    version = "v1.0.0",
 )
 
-go_get(
+go_module(
     name = "colorable",
-    get = "github.com/mattn/go-colorable",
-    revision = "v0.1.2",
+    module = "github.com/mattn/go-colorable",
+    version = "v0.1.2",
     deps = [
         ":go-isatty",
     ],
 )
 
-go_get(
+go_module(
     name = "sri",
-    get = "github.com/peterebden/go-sri",
-    revision = "v1.0.0",
+    module = "github.com/peterebden/go-sri",
     test_only = True,
+    version = "v1.0.0",
 )
 
-go_get(
+go_module(
     name = "go-cleanhttp",
-    get = "github.com/hashicorp/go-cleanhttp",
-    revision = "v0.5.1",
+    module = "github.com/hashicorp/go-cleanhttp",
+    version = "v0.5.1",
 )
 
-go_get(
+go_module(
     name = "go-retryablehttp",
-    get = "github.com/hashicorp/go-retryablehttp",
-    revision = "v0.6.7",
+    module = "github.com/hashicorp/go-retryablehttp",
+    version = "v0.6.7",
     deps = [
         ":go-cleanhttp",
     ],
 )
 
-go_get(
+go_module(
     name = "go-grpc-compression",
-    get = "github.com/mostynb/go-grpc-compression/zstd",
-    revision = "v1.1.2",
+    install = ["zstd"],
+    module = "github.com/mostynb/go-grpc-compression",
+    version = "v1.1.6",
     deps = [
         ":grpc",
         ":zstd",
     ],
 )
 
-go_get(
+go_module(
     name = "zstd",
-    get = "github.com/klauspost/compress",
     install = [
         "fse",
         "huff0",
         "snappy",
+        "zstd",
         "zstd/...",
     ],
-    revision = "v1.11.0",
+    module = "github.com/klauspost/compress",
+    version = "v1.11.0",
 )
 
-go_get(
+go_module(
     name = "goldmark",
-    get = "github.com/yuin/goldmark/...",
-    revision = "v1.2.1",
+    install = [
+        "...",
+        ".",
+    ],
+    module = "github.com/yuin/goldmark",
+    version = "v1.2.1",
 )
 
-go_get(
+go_module(
     name = "csslex",
-    get = "github.com/x1ddos/csslex/...",
-    revision = "7894d8ab8bfebee68b6c32bacec8f5189b45c67f",
+    module = "github.com/x1ddos/csslex",
+    version = "7894d8ab8bfebee68b6c32bacec8f5189b45c67f",
 )
 
-go_get(
+go_module(
     name = "blackfriday",
-    get = "github.com/russross/blackfriday/...",
-    revision = "v2.0.1",
+    module = "gopkg.in/russross/blackfriday.v2",
+    version = "v2.0.1",
     deps = [":sanitized_anchor_name"],
 )
 
-go_get(
+go_module(
     name = "sanitized_anchor_name",
-    get = "github.com/shurcooL/sanitized_anchor_name",
+    module = "github.com/shurcooL/sanitized_anchor_name",
+    version = "v1.0.0",
 )
 
-go_get(
+genrule(
+    name = "claat_download",
+    out = "claat_download",
+    cmd = "git clone https://github.com/googlecodelabs/tools $OUT && cd $OUT && git checkout -q v2.2.4",
+)
+
+go_module(
     name = "claat",
     binary = True,
-    get = "github.com/googlecodelabs/tools/claat",
-    revision = "v2.2.3",
+    download = ":claat_download",
+    install = ["claat"],
+    module = "github.com/googlecodelabs/tools",
     deps = [
         ":blackfriday",
         ":csslex",
         ":goldmark",
         ":oauth2",
     ],
-)
-
-go_get(
-    name = "zstd2",
-    get = "github.com/DataDog/zstd",
-    revision = "v1.4.5+patch1",
 )
 
 go_module(
@@ -744,4 +812,9 @@ go_module(
     name = "cpuid",
     module = "github.com/klauspost/cpuid",
     version = "v1.3.1",
+)
+
+go_toolchain(
+    name = "toolchain",
+    version = "1.15.7",
 )

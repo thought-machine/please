@@ -1,2 +1,5 @@
 [proto]
 protoctool = protoc
+
+[go]
+GoTool = go

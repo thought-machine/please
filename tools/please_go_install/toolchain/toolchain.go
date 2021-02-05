@@ -71,8 +71,8 @@ func (tc *Toolchain) Pack(dir, archive string, objFiles []string) {
 }
 
 // Link will link the archive into an executable
-func (tc *Toolchain) Link(archive, out, importcfg string) {
-	tc.Exec.Exec("%s tool link -importcfg %s -o %s %s", tc.GoTool, importcfg, out, archive)
+func (tc *Toolchain) Link(archive, out, importcfg, flags string) {
+	tc.Exec.Exec("%s tool link -extld %s -extldflags \"$(cat %s)\" -importcfg %s -o %s %s", tc.GoTool, tc.CcTool, flags, importcfg, out, archive)
 }
 
 // Symabis will generate the asm header as well as the abi symbol file for the provided asm files.

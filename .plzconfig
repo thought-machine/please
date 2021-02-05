@@ -19,6 +19,7 @@ filtertool = //tools/please_go_filter
 installtool = //tools/please_go_install
 testtool = //tools/please_go_test
 importpath = github.com/thought-machine/please
+gotool = //third_party/go:toolchain|go
 
 [cpp]
 defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
@@ -87,3 +88,4 @@ accept = notice
 JavaBinaryExecutableByDefault = true
 RemovePleasings = true
 PleaseDownloadTools = true
+PleaseGoInstall = true

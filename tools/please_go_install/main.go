@@ -152,7 +152,12 @@ func (g *pkgGraph) compile(tc *toolchain.Toolchain, from []string, target string
 	// TODO(jpoole): is import vendor the correct thing to do here?
 	pkg, err := build.ImportDir(pkgDir, build.ImportComment)
 	if err != nil {
-		log.Fatal(err)
+		switch err.(type) {
+		case *build.NoGoError:
+			return
+		default:
+			log.Fatalf("failed to parse package dir: %v", err)
+		}
 	}
 
 	for _, i := range pkg.Imports {
@@ -168,7 +173,7 @@ func (g *pkgGraph) compile(tc *toolchain.Toolchain, from []string, target string
 
 func compilePackage(tc *toolchain.Toolchain, target string, pkg *build.Package) error {
 	allSrcs := append(append(pkg.CFiles, pkg.GoFiles...), pkg.HFiles...)
-	if len(allSrcs) == 0 {
+	if len(pkg.GoFiles)+len(pkg.CgoFiles) == 0 {
 		return nil
 	}
 
@@ -218,7 +223,7 @@ func compilePackage(tc *toolchain.Toolchain, target string, pkg *build.Package) 
 		filename := strings.TrimSuffix(filepath.Base(out), ".a")
 		binName := filepath.Join(opts.Out, "bin", filename)
 
-		tc.Link(out, binName, opts.ImportConfig)
+		tc.Link(out, binName, opts.ImportConfig, opts.LDFlags)
 	}
 	return nil
 }
