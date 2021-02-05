@@ -62,6 +62,7 @@ const (
 	configBuildRuleArgIdx
 	exitOnErrorArgIdx
 	entryPointsArgIdx
+	envArgIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -224,6 +225,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 		t.Visibility = append(t.Visibility, parseVisibility(s, str))
 	})
 	addEntryPoints(s, args[entryPointsArgIdx], t)
+	addEnv(s, args[envArgIdx], t)
 	addMaybeNamedSecret(s, "secrets", args[secretsBuildRuleArgIdx], t.AddSecret, t.AddNamedSecret, t, true)
 	addProvides(s, "provides", args[providesBuildRuleArgIdx], t)
 	if f := callbackFunction(s, "pre_build", args[preBuildBuildRuleArgIdx], 1, "argument"); f != nil {
@@ -248,6 +250,21 @@ func addEntryPoints(s *scope, arg pyObject, target *core.BuildTarget) {
 	}
 
 	target.EntryPoints = entryPoints
+}
+
+// addEnv adds entry points to a target
+func addEnv(s *scope, arg pyObject, target *core.BuildTarget) {
+	envPy, ok := asDict(arg)
+	s.Assert(ok, "env must be a dict")
+
+	env := make(map[string]string, len(envPy))
+	for name, val := range envPy {
+		v, ok := val.(pyString)
+		s.Assert(ok, "Values of env must be strings, found %v at key %v", val.Type(), name)
+		env[name] = string(v)
+	}
+
+	target.Env = env
 }
 
 // addMaybeNamed adds inputs to a target, possibly in named groups.

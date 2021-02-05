@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path"
 	"runtime"
@@ -60,6 +61,10 @@ func TargetEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 		for _, e := range *target.PassEnv {
 			env = append(env, e+"="+os.Getenv(e))
 		}
+	}
+
+	for k, v := range target.Env {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 	return env
 }

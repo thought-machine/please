@@ -1,0 +1,8 @@
+genrule(
+    name = "env_test",
+    out = "foo.txt",
+    cmd = "echo $FOO > $OUT",
+    env = {
+        "FOO": "foo",
+    },
+)
