@@ -84,6 +84,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	// the front of the command. It'd be nicer if there were a better way though...
 	var commandPrefix = "export TMP_DIR=\"`pwd`\" && export HOME=$TMP_DIR && "
 
+	// Similarly, we need to export these so that things like $TMP_DIR get expanded correctly.
 	for k, v := range target.Env {
 		commandPrefix += fmt.Sprintf("export %s=\"%s\" && ", k, v)
 	}
