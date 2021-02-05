@@ -62,10 +62,6 @@ func TargetEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 			env = append(env, e+"="+os.Getenv(e))
 		}
 	}
-
-	for k, v := range target.Env {
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
-	}
 	return env
 }
 
@@ -134,6 +130,14 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		// your genrule is not a good sign.
 		env = append(env, "GENDIR="+path.Join(RepoRoot, GenDir))
 		env = append(env, "BINDIR="+path.Join(RepoRoot, BinDir))
+	}
+	for k, v := range target.Env {
+		for _, kv := range env {
+			i := strings.Index(kv, "=")
+			key, value := kv[:i], kv[(i+1):]
+			v = strings.ReplaceAll(v, "$"+key, value)
+		}
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 	return env
 }

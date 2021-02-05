@@ -1,8 +1,9 @@
 genrule(
     name = "env_test",
-    out = "foo.txt",
-    cmd = "echo $FOO > $OUT",
+    outs = ["foo.txt", "bar.txt"],
+    cmd = "echo $FOO > foo.txt && echo $BAR > bar.txt",
     env = {
         "FOO": "foo bar",
+        "BAR": "$OUTS",
     },
 )
