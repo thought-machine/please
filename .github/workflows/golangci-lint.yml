@@ -9,7 +9,8 @@ on:
 jobs:
   golangci:
     name: lint
-    runs-on: ubuntu-latest
+    # TODO(jpoole): set this back to ubuntu-latest once https://github.com/actions/virtual-environments/issues/1816 lands
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: golangci-lint
