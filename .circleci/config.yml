@@ -24,7 +24,7 @@ jobs:
            path: plz-out/results
        - run:
            name: Package
-           command: ./plz-out/bin/src/please build //package:all -p
+           command: ./plz-out/bin/src/please build //package:all -p --profile ci --profile alpine
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
