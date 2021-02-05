@@ -203,6 +203,8 @@ type BuildTarget struct {
 	RuleMetadata interface{} `name:"config"`
 	// EntryPoints represent named binaries within the rules output that can be targeted via //package:rule|entry_point_name
 	EntryPoints map[string]string `name:"entry_points"`
+	// Env are any custom environment variables to set for this build target
+	Env map[string]string `name:"env"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't

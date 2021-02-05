@@ -32,7 +32,10 @@ go_module(
 
 go_module(
     name = "gcfg",
-    install = [".", "..."],
+    install = [
+        ".",
+        "...",
+    ],
     module = "github.com/peterebden/gcfg",
     version = "v1.3.0",
     deps = [
@@ -661,7 +664,10 @@ go_module(
 
 go_module(
     name = "promptui",
-    install = [".", "..."],
+    install = [
+        ".",
+        "...",
+    ],
     module = "github.com/manifoldco/promptui",
     version = "v0.7.0",
     deps = [
