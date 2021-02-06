@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/google/shlex"
-	"github.com/jessevdk/go-flags"
 	"github.com/peterebden/gcfg"
+	"github.com/thought-machine/go-flags"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
@@ -27,6 +27,9 @@ import (
 
 // OsArch is the os/arch pair, like linux_amd64 etc.
 const OsArch = runtime.GOOS + "_" + runtime.GOARCH
+
+// ConfigName is the base name for config files.
+const ConfigName string = "plzconfig"
 
 // ConfigFileName is the file name for the typical repo config - this is normally checked in
 const ConfigFileName string = ".plzconfig"
@@ -70,15 +73,42 @@ func ReadDefaultConfigFiles(profiles []string) (*Configuration, error) {
 	return ReadConfigFiles(defaultConfigFiles(), profiles)
 }
 
+// defaultGlobalConfigFiles returns the set of global default config file names.
+func defaultGlobalConfigFiles() []string {
+	configFiles := []string{
+		MachineConfigFileName,
+	}
+
+	if xdgConfigDirs := os.Getenv("XDG_CONFIG_DIRS"); xdgConfigDirs != "" {
+		for _, p := range strings.Split(xdgConfigDirs, ":") {
+			if !strings.HasPrefix(p, "/") {
+				continue
+			}
+
+			configFiles = append(configFiles, filepath.Join(p, ConfigName))
+		}
+	}
+
+	// Note: according to the XDG Base Directory Specification,
+	// this path should only be checked if XDG_CONFIG_HOME env var is not set,
+	// but it should be kept here for backward compatibility purposes.
+	configFiles = append(configFiles, fs.ExpandHomePath(UserConfigFileName))
+
+	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" && strings.HasPrefix(xdgConfigHome, "/") {
+		configFiles = append(configFiles, filepath.Join(xdgConfigHome, ConfigName))
+	}
+
+	return configFiles
+}
+
 // defaultConfigFiles returns the set of default config file names.
 func defaultConfigFiles() []string {
-	return []string{
-		MachineConfigFileName,
-		fs.ExpandHomePath(UserConfigFileName),
+	return append(
+		defaultGlobalConfigFiles(),
 		path.Join(RepoRoot, ConfigFileName),
 		path.Join(RepoRoot, ArchConfigFileName),
 		path.Join(RepoRoot, LocalConfigFileName),
-	}
+	)
 }
 
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
@@ -192,6 +222,19 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		os.Setenv("HTTP_PROXY", config.Build.HTTPProxy.String())
 	}
 
+	// Slightly awkward as we need to load the feature flags to know what the default should be
+	// TODO(jpoole): Move these into DefaultConfiguration() once v16 is released
+	if config.FeatureFlags.PleaseDownloadTools {
+		setDefaultString(&config.Build.PleaseSandboxTool, "please_sandbox", "//_please:tools|please_sandbox")
+		setDefaultString(&config.Go.TestTool, "please_go_test", "//_please:tools|please_go_test")
+		setDefaultString(&config.Go.FilterTool, "please_go_filter", "//_please:tools|please_go_filter")
+		setDefaultString(&config.Go.InstallTool, "please_go_install", "//_please:tools|please_go_install")
+		setDefaultString(&config.Python.PexTool, "please_pex", "//_please:tools|please_pex")
+		setDefaultString(&config.Java.JavacWorker, "javac_worker", "//_please:tools|javac_worker")
+		setDefaultString(&config.Java.JarCatTool, "jarcat", "//_please:tools|jarcat")
+		setDefaultString(&config.Java.JUnitRunner, "junit_runner.pex", "//_please:tools|junit_runner")
+	}
+
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,
@@ -201,6 +244,15 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 // setDefault sets a slice of strings in the config if the set one is empty.
 func setDefault(conf *[]string, def ...string) {
 	if len(*conf) == 0 {
+		*conf = def
+	}
+}
+
+// setDefaultString sets the default value on a string. oldDefault contains the strings as set in the default
+// configuration. If after loading config files, this value has changed, the value will be left alone. Otherwise
+// it will be set to def.
+func setDefaultString(conf *string, oldDefault string, def string) {
+	if *conf == oldDefault {
 		*conf = def
 	}
 }
@@ -250,7 +302,6 @@ func DefaultConfiguration() *Configuration {
 	config.Build.Timeout = cli.Duration(10 * time.Minute)
 	config.Build.Config = "opt"         // Optimised builds by default
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
-	config.Build.PleaseSandboxTool = "please_sandbox"
 	config.Build.Xattrs = true
 	config.Build.HashFunction = "sha256"
 	config.BuildConfig = map[string]string{}
@@ -277,10 +328,8 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
-	config.Go.TestTool = "please_go_test"
-	config.Go.FilterTool = "please_go_filter"
-	config.Python.PexTool = "please_pex"
 	config.Python.DefaultInterpreter = "python3"
+	config.Python.DisableVendorFlags = false
 	config.Python.TestRunner = "unittest"
 	config.Python.TestRunnerBootstrap = ""
 	config.Python.UsePyPI = true
@@ -293,9 +342,6 @@ func DefaultConfiguration() *Configuration {
 	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2", "https://jcenter.bintray.com/"}
 	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
 	config.Java.JlinkTool = "jlink"
-	config.Java.JavacWorker = "javac_worker"
-	config.Java.JarCatTool = "jarcat"
-	config.Java.JUnitRunner = "junit_runner.jar"
 	config.Java.JavaHome = ""
 	config.Cpp.CCTool = "gcc"
 	config.Cpp.CppTool = "g++"
@@ -330,6 +376,17 @@ func DefaultConfiguration() *Configuration {
 	config.Proto.GoGrpcDep = "//third_party/go:grpc"
 	config.Remote.Timeout = cli.Duration(2 * time.Minute)
 	config.Bazel.Compatibility = usingBazelWorkspace
+
+	// Please tools
+	config.Build.PleaseSandboxTool = "please_sandbox"
+	config.Go.TestTool = "please_go_test"
+	config.Go.FilterTool = "please_go_filter"
+	config.Go.InstallTool = "please_go_install"
+	config.Python.PexTool = "please_pex"
+	config.Java.JavacWorker = "javac_worker"
+	config.Java.JarCatTool = "jarcat"
+	config.Java.JUnitRunner = "junit_runner.jar"
+
 	return &config
 }
 
@@ -349,11 +406,12 @@ type Configuration struct {
 		DefaultRepo      string      `help:"Location of the default repository; this is used if plz is invoked when not inside a repo, it changes to that directory then does its thing."`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Parse struct {
-		ExperimentalDir  []string `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
-		BuildFileName    []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+." var:"BUILD_FILE_NAMES"`
-		BlacklistDirs    []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
-		PreloadBuildDefs []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths." example:"build_defs/go_bindata.build_defs"`
-		BuildDefsDir     []string `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
+		ExperimentalDir    []string `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
+		BuildFileName      []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+." var:"BUILD_FILE_NAMES"`
+		BlacklistDirs      []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
+		PreloadBuildDefs   []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths. Use PreloadSubincludes instead." example:"build_defs/go_bindata.build_defs"`
+		PreloadSubincludes []string `help:"Subinclude targets to preload by the parser before loading any BUILD files.\nSubincludes can be slow so it's recommended to use PreloadBuildDefs where possible." example:"///pleasings//python:requirements"`
+		BuildDefsDir       []string `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
 		// TODO(jpoole): Remove this in the v16 release
 		BuiltinPleasings bool `help:"Adds github.com/thought-machine/pleasings as a default subrepo named pleasings. This feature is deprecated and will be removed in the v16 release."`
 		NumThreads       int  `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
@@ -367,7 +425,7 @@ type Configuration struct {
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
 	Colours map[string]string `help:"Colour code overrides in interactive output. These correspond to requirements on each target."`
 	Build   struct {
-		Arch              cli.Arch     `help:"Architecture to compile for. Defaults to the host architecture."`
+		Arch              cli.Arch     `help:"The target architecture to compile for. Defaults to the host architecture."`
 		Timeout           cli.Duration `help:"Default timeout for build actions. Default is ten minutes."`
 		Path              []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
 		Config            string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
@@ -419,6 +477,7 @@ type Configuration struct {
 		Zstd          bool         `help:"Whether to use zstd compression for communication."`
 		VerifyOutputs bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
 		HomeDir       string       `help:"The home directory on the build machine."`
+		Shell         string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
 		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
@@ -438,7 +497,9 @@ type Configuration struct {
 		GoPath           string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
 		ImportPath       string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
 		CgoCCTool        string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`
+		CgoEnabled       string `help:"Sets the CGO_ENABLED which controls whether the cgo build flag is set during cross compilation." var:"CGO_ENABLED"`
 		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
+		InstallTool      string `help:"Sets the location of the please_go_install tool that is used to install go modules." var:"GO_INSTALL_TOOL"`
 		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
 		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
 	} `help:"Please has built-in support for compiling Go, and of course is written in Go itself.\nSee the config subfields or the Go rules themselves for more information.\n\nNote that Please is a bit more flexible than Go about directory layout - for example, it is possible to have multiple packages in a directory, but it's not a good idea to push this too far since Go's directory layout is inextricably linked with its import paths."`
@@ -455,6 +516,7 @@ type Configuration struct {
 		UsePyPI             bool    `help:"Whether or not to use PyPI for pip_library rules or not. Defaults to true, if you disable this you will presumably want to set DefaultPipRepo to use one of your own.\nIs overridden by the use_pypi argument to pip_library." var:"USE_PYPI"`
 		WheelNameScheme     string  `help:"Defines a custom templatized wheel naming scheme. Templatized variables should be surrounded in curly braces, and the available options are: url_base, package_name, and version. The default search pattern is '{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl' along with a few common variants." var:"PYTHON_WHEEL_NAME_SCHEME"`
 		InterpreterOptions  string  `help:"Options to pass to the python interpeter, when writing shebangs for pex executables." var:"PYTHON_INTERPRETER_OPTIONS"`
+		DisableVendorFlags  bool    `help:"Disables injection of vendor specific flags for pip while using pip_library. The option can be useful if you are using something like Pyenv, and the passing of additional flags or configuration that are vendor specific, e.g. --system, breaks your build." var:"DISABLE_VENDOR_FLAGS"`
 	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty."`
 	Java struct {
 		JavacTool          string    `help:"Defines the tool used for the Java compiler. Defaults to javac." var:"JAVAC_TOOL"`
@@ -487,12 +549,14 @@ type Configuration struct {
 		Coverage           bool       `help:"If true (the default), coverage will be available for C and C++ build rules.\nThis is still a little experimental but should work for GCC. Right now it does not work for Clang (it likely will in Clang 4.0 which will likely support --fprofile-dir) and so this can be useful to disable it.\nIt's also useful in some cases for CI systems etc if you'd prefer to avoid the overhead, since the tests have to be compiled with extra instrumentation and without optimisation." var:"CPP_COVERAGE"`
 		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"///pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`
 		ClangModules       bool       `help:"Uses Clang-style arguments for compiling cc_module rules. If disabled gcc-style arguments will be used instead. Experimental, expected to be removed at some point once module compilation methods are more consistent." var:"CC_MODULES_CLANG"`
+		DsymTool           string     `help:"Set this to dsymutil or equivalent on macOS to use this tool to generate xcode symbol information for debug builds." var:"DSYM_TOOL"`
 	} `help:"Please has built-in support for compiling C and C++ code. We don't support every possible nuance of compilation for these languages, but aim to provide something fairly straightforward.\nTypically there is little problem compiling & linking against system libraries although Please has no insight into those libraries and when they change, so cannot rebuild targets appropriately.\n\nThe C and C++ rules are very similar and simply take a different set of tools and flags to facilitate side-by-side usage."`
 	Proto struct {
 		ProtocTool       string   `help:"The binary invoked to compile .proto files. Defaults to protoc." var:"PROTOC_TOOL"`
 		ProtocGoPlugin   string   `help:"The binary passed to protoc as a plugin to generate Go code. Defaults to protoc-gen-go.\nWe've found this easier to manage with a go_get rule instead though, so you can also pass a build label here. See the Please repo for an example." var:"PROTOC_GO_PLUGIN"`
 		GrpcPythonPlugin string   `help:"The plugin invoked to compile Python code for grpc_library.\nDefaults to protoc-gen-grpc-python." var:"GRPC_PYTHON_PLUGIN"`
 		GrpcJavaPlugin   string   `help:"The plugin invoked to compile Java code for grpc_library.\nDefaults to protoc-gen-grpc-java." var:"GRPC_JAVA_PLUGIN"`
+		GrpcGoPlugin     string   `help:"The plugin invoked to compile Go code for grpc_library.\nIf not set, then the protoc plugin will be used instead." var:"GRPC_GO_PLUGIN"`
 		GrpcCCPlugin     string   `help:"The plugin invoked to compile C++ code for grpc_library.\nDefaults to grpc_cpp_plugin." var:"GRPC_CC_PLUGIN"`
 		Language         []string `help:"Sets the default set of languages that proto rules are built for.\nChosen from the set of {cc, java, go, py}.\nDefaults to all of them!" var:"PROTO_LANGUAGES"`
 		PythonDep        string   `help:"An in-repo dependency that's applied to any Python proto libraries." var:"PROTO_PYTHON_DEP"`
@@ -523,6 +587,9 @@ type Configuration struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
 		MavenJar                      bool `help:"Makes maven_jar() download sources with maven compatible jar names, and moves the hashes onto the remote file rule." var:"FF_MAVEN_JAR"`
 		RemovePleasings               bool `help:"Stops please adding the pleasings repo by default. Target release vesrion 16." var:"FF_PLEASINGS"`
+		PleaseGoInstall               bool `help:"Uses please_go_install and import configs instead of 'go install'. This is a WIP but should solve a number of issues with go install." var:"FF_PLEASE_GO_INSTALL"`
+		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
+		PleaseDownloadTools           bool `help:"Please will download its tools from get.please.build instead of looking on the path"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 }
 
@@ -587,17 +654,7 @@ func (config *Configuration) Path() []string {
 }
 
 func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) []string {
-	env := []string{
-		// Need to know these for certain rules.
-		"ARCH=" + config.Build.Arch.Arch,
-		"OS=" + config.Build.Arch.OS,
-		// These are slightly modified forms that are more convenient for some things.
-		"XARCH=" + config.Build.Arch.XArch(),
-		"XOS=" + config.Build.Arch.XOS(),
-		// It's easier to just make these available for Go-based rules.
-		"GOARCH=" + config.Build.Arch.GoArch(),
-		"GOOS=" + config.Build.Arch.OS,
-	}
+	env := []string{}
 
 	// from the BuildEnv config keyword
 	for k, v := range config.BuildEnv {

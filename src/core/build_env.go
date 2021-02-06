@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path"
 	"runtime"
@@ -17,21 +18,30 @@ type BuildEnv []string
 
 // GeneralBuildEnvironment creates the shell env vars used for a command, not based
 // on any specific target etc.
-func GeneralBuildEnvironment(config *Configuration) BuildEnv {
-	// TODO(peterebden): why is this not just config.GetBuildEnv()?
+func GeneralBuildEnvironment(state *BuildState) BuildEnv {
 	env := BuildEnv{
 		// Need this for certain tools, for example sass
-		"LANG=" + config.Build.Lang,
+		"LANG=" + state.Config.Build.Lang,
+		// Need to know these for certain rules.
+		"ARCH=" + state.Arch.Arch,
+		"OS=" + state.Arch.OS,
+		// These are slightly modified forms that are more convenient for some things.
+		"XARCH=" + state.Arch.XArch(),
+		"XOS=" + state.Arch.XOS(),
+		// It's easier to just make these available for Go-based rules.
+		"GOARCH=" + state.Arch.GoArch(),
+		"GOOS=" + state.Arch.OS,
 	}
-	if config.Cpp.PkgConfigPath != "" {
-		env = append(env, "PKG_CONFIG_PATH="+config.Cpp.PkgConfigPath)
+	if state.Config.Cpp.PkgConfigPath != "" {
+		env = append(env, "PKG_CONFIG_PATH="+state.Config.Cpp.PkgConfigPath)
 	}
-	return append(env, config.GetBuildEnv()...)
+
+	return append(env, state.Config.GetBuildEnv()...)
 }
 
 // TargetEnvironment returns the basic parts of the build environment.
 func TargetEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
-	env := append(GeneralBuildEnvironment(state.Config),
+	env := append(GeneralBuildEnvironment(state),
 		"PKG="+target.Label.PackageName,
 		"PKG_DIR="+target.Label.PackageDir(),
 		"NAME="+target.Label.Name,
@@ -120,6 +130,14 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		// your genrule is not a good sign.
 		env = append(env, "GENDIR="+path.Join(RepoRoot, GenDir))
 		env = append(env, "BINDIR="+path.Join(RepoRoot, BinDir))
+	}
+	for k, v := range target.Env {
+		for _, kv := range env {
+			i := strings.Index(kv, "=")
+			key, value := kv[:i], kv[(i+1):]
+			v = strings.ReplaceAll(v, "$"+key, value)
+		}
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 	return env
 }

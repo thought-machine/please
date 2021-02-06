@@ -203,6 +203,8 @@ type BuildTarget struct {
 	RuleMetadata interface{} `name:"config"`
 	// EntryPoints represent named binaries within the rules output that can be targeted via //package:rule|entry_point_name
 	EntryPoints map[string]string `name:"entry_points"`
+	// Env are any custom environment variables to set for this build target
+	Env map[string]string `name:"env"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -440,8 +442,8 @@ func (target *BuildTarget) allSourcePaths(graph *BuildGraph, full buildPathsFunc
 // AllURLs returns all the URLs for this target.
 // This should only be called if the target is a remote file.
 // The URLs will have any embedded environment variables expanded according to the given config.
-func (target *BuildTarget) AllURLs(config *Configuration) []string {
-	env := GeneralBuildEnvironment(config)
+func (target *BuildTarget) AllURLs(state *BuildState) []string {
+	env := GeneralBuildEnvironment(state)
 	ret := make([]string, len(target.Sources))
 	for i, s := range target.Sources {
 		ret[i] = os.Expand(string(s.(URLLabel)), env.ReplaceEnvironment)

@@ -1,6 +1,3 @@
-[please]
-DownloadLocation = https://preview-get.please.build
-
 [python]
 ; We use the in-repo please_pex tool to build other pexes within this repo.
 ; Other projects using Please wouldn't normally need to do anything like this.
@@ -19,8 +16,10 @@ keep = //package:all
 
 [go]
 filtertool = //tools/please_go_filter
+installtool = //tools/please_go_install
 testtool = //tools/please_go_test
 importpath = github.com/thought-machine/please
+gotool = //third_party/go:toolchain|go
 
 [cpp]
 defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
@@ -88,3 +87,5 @@ accept = notice
 [featureflags]
 JavaBinaryExecutableByDefault = true
 RemovePleasings = true
+PleaseDownloadTools = true
+PleaseGoInstall = true

@@ -20,13 +20,13 @@ go_library(
     ) + [
         ":version",
     ],
-    filter_srcs = False,  # Fix to make tags work until we have #532
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
         "//src/fs",
         "//src/process",
         "//src/scm",
+        "//third_party/go:blake3",
         "//third_party/go:gcfg",
         "//third_party/go:go-flags",
         "//third_party/go:godirwalk",

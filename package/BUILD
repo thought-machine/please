@@ -9,6 +9,7 @@ filegroup(
         "//tools/java:javac_worker",
         "//tools/java:junit_runner",
         "//tools/please_go_filter",
+        "//tools/please_go_install",
         "//tools/please_go_test",
         "//tools/please_pex",
         "//tools/sandbox:please_sandbox",
@@ -28,6 +29,14 @@ filegroup(
 )
 
 tarball(
+    name = "please_tarball_xz",
+    srcs = [":installed_files"],
+    out = "please_%s.tar.xz" % VERSION,
+    subdir = "please",
+    xzip = True,
+)
+
+tarball(
     name = "please_tarball",
     srcs = [":installed_files"],
     out = "please_%s.tar.gz" % VERSION,
@@ -35,10 +44,10 @@ tarball(
 )
 
 tarball(
-    name = "please_tarball_xz",
-    srcs = [":installed_files"],
-    out = "please_%s.tar.xz" % VERSION,
-    subdir = "please",
+    name = "please_tools_tarball",
+    srcs = [":tools"],
+    out = "please_tools_%s.tar.xz" % VERSION,
+    subdir = "please_tools",
     xzip = True,
 )
 
@@ -48,7 +57,6 @@ genrule(
     outs = ["please_" + VERSION],
     binary = True,
     cmd = "cp $SRC $OUT",
-    labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
 )
 
 genrule(
@@ -57,20 +65,18 @@ genrule(
     outs = ["jarcat_" + VERSION],
     binary = True,
     cmd = "cp $SRC $OUT",
-    labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
 )
 
 filegroup(
     name = "release_files",
     srcs = [
-        ":please_tarball",
-        ":please_tarball_xz",
-    ],
-    labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
-    deps = [
         ":jarcat",
         ":please",
+        ":please_tarball",
+        ":please_tarball_xz",
+        ":please_tools_tarball",
     ],
+    labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
 )
 
 filegroup(

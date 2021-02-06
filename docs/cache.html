@@ -1,45 +1,100 @@
+<h1 class="title-1">Please cache</h1>
 
-    <h1>Please cache</h1>
+<p>
+  In various places in these docs you might find reference to caches. Please can
+  make use of several caches to speed up its performance which are described
+  here.
+</p>
 
-    <p>In various places in these docs you might find reference to caches. Please can make use of several caches to
-       speed up its performance which are described here.</p>
-    <p>Not that caches are different from the output in <code>plz-out</code>. Even without caching, please will
-       still reuse built artifacts from <code>plz-out</code> for incremental builds. Please has strict caching and
-       incrementality behavior. With that said, you can still force a rebuild or a test rerun, use the
-       <code>--rebuild</code> and <code>--rerun</code> flags respectively.</p>
-    <p>In all cases artifacts are only stored in the cache after a successful build or test run.</p>
+<p>
+  Not that caches are different from the output in
+  <code class="code">plz-out</code>. Even without caching, please will still
+  reuse built artifacts from <code class="code">plz-out</code> for incremental
+  builds. Please has strict caching and incrementality behavior. With that said,
+  you can still force a rebuild or a test rerun, use the
+  <code class="code">--rebuild</code> and
+  <code class="code">--rerun</code> flags respectively.
+</p>
 
-    <h2>The directory cache</h2>
+<p>
+  In all cases artifacts are only stored in the cache after a successful build
+  or test run.
+</p>
 
-    <p>This is the simplest kind of cache; it's on by default and simply is a directory tree
-      (by default <code>~/.cache/please</code> or <code>~/Library/Caches/please</code>)
-      containing various versions of built artifacts. The main advantage of this is that it allows
-      extremely fast rebuilds when swapping between different versions of code
-      (notably git branches).</p>
+<section class="mt4">
+  <h2 class="title-2">The directory cache</h2>
 
-    <p>Note that the dir cache is <b>not</b> threadsafe or locked in any way beyond plz's normal
-      repo lock, so sharing the same directory between multiple projects is probably a Bad Idea.</p>
+  <p>
+    This is the simplest kind of cache; it's on by default and simply is a
+    directory tree (by default <code class="code">~/.cache/please</code> or
+    <code class="code">~/Library/Caches/please</code>) containing various
+    versions of built artifacts. The main advantage of this is that it allows
+    extremely fast rebuilds when swapping between different versions of code
+    (notably git branches).
+  </p>
 
-    <h2>The HTTP cache</h2>
+  <p>
+    Note that the dir cache is <b>not</b> threadsafe or locked in any way beyond
+    plz's normal repo lock, so sharing the same directory between multiple
+    projects is probably a Bad Idea.
+  </p>
+</section>
 
-    <p>This is a more advanced cache which, as one would expect, can run on a centralised machine
-      to share artifacts between multiple clients. It has a simple API based on PUT and GET to
-      store and retrieve opaque blobs.</p>
+<section class="mt4">
+  <h2 class="title-2">The HTTP cache</h2>
 
-    <p>It is simply configured by setting the <code>httpurl</code> property in the
-      <a href="config.html#cache">cache section of the config</a>. There are a couple more settings
-      to configure it for readonly mode and to set timeouts etc.</p>
+  <p>
+    This is a more advanced cache which, as one would expect, can run on a
+    centralised machine to share artifacts between multiple clients. It has a
+    simple API based on PUT and GET to store and retrieve opaque blobs.
+  </p>
 
-    <p>Since the API is simple there are many existing servers that can be configured for a
-      backend; one option is nginx using its
-      <a href="http://nginx.org/en/docs/http/ngx_http_dav_module.html">webDAV</a> module.<br/>
-      Alternatively some CI services (for example <a href="https://cirrus-ci.org">Cirrus</a>)
-      may offer a compatible cache out of the box.</p>
+  <p>
+    It is simply configured by setting the
+    <code class="code">httpurl</code> property in the
+    <a class="copy-link" href="/config.html#cache"
+      >cache section of the config</a
+    >. There are a couple more settings to configure it for readonly mode and to
+    set timeouts etc.
+  </p>
 
-    <p>Thanks to Diana Costea who implemented the original version of this as part of her internship
-      with us, and prodded us into getting on and actually deploying it for our CI servers.</p>
+  <p>
+    Since the API is simple there are many existing servers that can be
+    configured for a backend; one option is nginx using its
+    <a
+      class="copy-link"
+      href="http://nginx.org/en/docs/http/ngx_http_dav_module.html"
+      target="_blank"
+      rel="noopener"
+      >webDAV</a
+    >
+    module.<br />
+    Alternatively some CI services (for example
+    <a
+      class="copy-link"
+      href="https://cirrus-ci.org"
+      target="_blank"
+      rel="noopener"
+      >Cirrus</a
+    >) may offer a compatible cache out of the box.
+  </p>
 
-    <p>A reference implementation of the http cache can be found
-      <a href="https://github.com/thought-machine/please/tree/master/tools/http_cache">here</a> however it should be
-      possible to use any off the shelf http server with a little configuration, as described above.</p>
+  <p>
+    Thanks to Diana Costea who implemented the original version of this as part
+    of her internship with us, and prodded us into getting on and actually
+    deploying it for our CI servers.
+  </p>
 
+  <p>
+    A reference implementation of the http cache can be found
+    <a
+      class="copy-link"
+      href="https://github.com/thought-machine/please/tree/master/tools/http_cache"
+      target="_blank"
+      rel="noopener"
+      >here</a
+    >
+    however it should be possible to use any off the shelf http server with a
+    little configuration, as described above.
+  </p>
+</section>

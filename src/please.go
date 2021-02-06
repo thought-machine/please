@@ -12,7 +12,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/jessevdk/go-flags"
+	"github.com/thought-machine/go-flags"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/assets"
@@ -160,14 +160,15 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Run struct {
-		Env      bool `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
-		Rebuild  bool `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
-		InWD     bool `long:"in_wd" description:"When running locally, stay in the original working directory."`
-		Parallel struct {
+		Env        bool   `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
+		Rebuild    bool   `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
+		InWD       bool   `long:"in_wd" description:"When running locally, stay in the original working directory."`
+		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
+		Parallel   struct {
 			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
-				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
+				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
 			Args   cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
 			Detach bool          `long:"detach" description:"Detach from the parent process when all children have spawned"`
@@ -175,13 +176,13 @@ var opts struct {
 		Sequential struct {
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			PositionalArgs struct {
-				Targets []core.BuildLabel `positional-arg-name:"target" description:"Targets to run"`
+				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
 			Args cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
 		} `command:"sequential" description:"Runs a sequence of targets sequentially."`
 		Args struct {
-			Target core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
-			Args   cli.Filepaths   `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
+			Target core.AnnotatedOutputLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
+			Args   cli.Filepaths             `positional-arg-name:"arguments" description:"Arguments to pass to target when running (to pass flags to the target, put -- before them)"`
 		} `positional-args:"true"`
 		Remote bool `long:"remote" description:"Send targets to be executed remotely."`
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
@@ -201,10 +202,11 @@ var opts struct {
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
 
 	Update struct {
-		Force    bool        `long:"force" description:"Forces a re-download of the new version."`
-		NoVerify bool        `long:"noverify" description:"Skips signature verification of downloaded version"`
-		Latest   bool        `long:"latest" description:"Update to latest available version (overrides config)."`
-		Version  cli.Version `long:"version" description:"Updates to a particular version (overrides config)."`
+		Force            bool        `long:"force" description:"Forces a re-download of the new version."`
+		NoVerify         bool        `long:"noverify" description:"Skips signature verification of downloaded version"`
+		Latest           bool        `long:"latest" description:"Update to latest available version (overrides config)."`
+		LatestPrerelease bool        `long:"latest_prerelease" description:"Update to latest available prerelease version (overrides config)."`
+		Version          cli.Version `long:"version" description:"Updates to a particular version (overrides config)."`
 	} `command:"update" description:"Checks for an update and updates if needed."`
 
 	Op struct {
@@ -428,10 +430,14 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"run": func() int {
-		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target}, true, false, false); success {
+		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
 			if opts.Run.InWD {
 				dir = originalWorkingDirectory
+			}
+
+			if opts.Run.EntryPoint != "" {
+				opts.Run.Args.Target.Annotation = opts.Run.EntryPoint
 			}
 
 			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, dir)
@@ -439,24 +445,24 @@ var buildFunctions = map[string]func() int{
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
 	"parallel": func() int {
-		if success, state := runBuild(opts.Run.Parallel.PositionalArgs.Targets, true, false, false); success {
+		if success, state := runBuild(unannotateLabels(opts.Run.Parallel.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
 
-			os.Exit(run.Parallel(context.Background(), state, state.ExpandOriginalLabels(), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir))
+			os.Exit(run.Parallel(context.Background(), state, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir))
 		}
 		return 1
 	},
 	"sequential": func() int {
-		if success, state := runBuild(opts.Run.Sequential.PositionalArgs.Targets, true, false, false); success {
+		if success, state := runBuild(unannotateLabels(opts.Run.Sequential.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
 
-			os.Exit(run.Sequential(state, state.ExpandOriginalLabels(), opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir))
+			os.Exit(run.Sequential(state, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir))
 		}
 		return 1
 	},
@@ -800,7 +806,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.DownloadOutputs = (!opts.Build.NoDownload && !opts.Run.Remote && len(targets) > 0 && (!targets[0].IsAllSubpackages() || len(opts.BuildFlags.Include) > 0)) || opts.Build.Download
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if opts.BuildFlags.Arch.OS != "" {
-		state.OriginalArch = opts.BuildFlags.Arch
+		state.TargetArch = opts.BuildFlags.Arch
 	}
 
 	if state.DebugTests && len(targets) != 1 {
@@ -834,8 +840,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		output.MonitorState(ctx, state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
-
-	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, opts.BuildFlags.Arch)
+	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
 	cancel()
 	wg.Wait()
 }
@@ -927,12 +932,12 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	}
 	config := readConfig(forceUpdate)
 	// Now apply any flags that override this
-	if opts.Update.Latest {
+	if opts.Update.Latest || opts.Update.LatestPrerelease {
 		config.Please.Version.Unset()
 	} else if opts.Update.Version.IsSet {
 		config.Please.Version = opts.Update.Version
 	}
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput)
+	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
 	return config
 }
 
@@ -1029,6 +1034,14 @@ func initBuild(args []string) string {
 		}()
 	}
 	return command
+}
+
+func unannotateLabels(als []core.AnnotatedOutputLabel) []core.BuildLabel {
+	labels := make([]core.BuildLabel, len(als))
+	for i, al := range als {
+		labels[i] = al.BuildLabel
+	}
+	return labels
 }
 
 // toExitCode returns an integer process exit code based on the outcome of a build.

@@ -1,53 +1,81 @@
+<h1 class="title-1">Extra rules (aka. Pleasings)</h1>
 
-    <h1>Extra rules (aka. Pleasings)</h1>
+<p>
+  Please comes with built-in rules for Go, Python, Java, C++, Protocol Buffers
+  and a few other bits &amp; pieces. While it's nice to have a bunch of
+  capabilities by default, it's obviously not practical for every language to be
+  part of the core repo, and indeed part of the original design was to make it
+  easy to add support for new languages without having to update the core code.
+</p>
 
-    <p>Please comes with built-in rules for Go, Python, Java, C++, Protocol Buffers
-      and a few other bits & pieces. While it's nice to have a bunch of capabilities by
-      default, it's obviously not practical for every language to be part of the core repo,
-      and indeed part of the original design was to make it easy to add support for new
-      languages without having to update the core code.
-    </p>
+<p>
+  We collect support for additional languages in
+  <a
+    class="copy-link"
+    href="https://github.com/thought-machine/pleasings"
+    target="_blank"
+    rel="noopener"
+    >a separate repo</a
+  >. These are somewhat pithily named Pleasings and have rules for various new
+  languages that are either still pretty early stage and unstable (the rules,
+  not the language :) ) or sufficiently esoteric that having them part of the
+  core seems inappropriate.
+</p>
 
-    <p>We collect support for additional languages in
-      <a href="https://github.com/thought-machine/pleasings">a separate repo</a>.
-      These are somewhat pithily named Pleasings and have rules for various new languages that are
-      either still pretty early stage and unstable (the rules, not the language :) ) or
-      sufficiently esoteric that having them part of the core seems inappropriate.
-    </p>
+<section class="mt4">
+  <h2 class="title-2">
+    Loading additional rules
+  </h2>
 
-    <h2>Loading additional rules</h2>
+  <p>
+    The simplest and most lightweight way to load new rules is to do it directly
+    with <code class="code">subinclude</code>, like so:
+  </p>
 
-    <p>The simplest and most lightweight way to load new rules is to do it directly with
-      <code>subinclude</code>, like so:</p>
-
-    <pre><code class="language-plz">
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
     subinclude('@pleasings//rust')
 
     rust_library(
         name = 'my_rust_lib',
         srcs = ['mine.rs'],
     )
-    </code></pre>
+    </code>
+  </pre>
 
-    <p>Some rules may have extra requirements, for example some single package in which you have
-      to set up a one-off set of targets. The individual rules will document what's required.</p>
+  <p>
+    Some rules may have extra requirements, for example some single package in
+    which you have to set up a one-off set of targets. The individual rules will
+    document what's required.
+  </p>
+</section>
 
-    <h2>The more repeatable solution</h2>
+<section class="mt4">
+  <h2 class="title-2">
+    The more repeatable solution
+  </h2>
 
-    <p>As noted the above solution is nice and lightweight, and Please will take care of
-      deduplicating & caching the download from github, so it works fairly well for straightforward
-      cases. But there are times when you might want more control, like pinning to a particular
-      version so you're not broken by any incompatible changes, or hash verifying the downloaded
-      rules so you know you're always getting what you expect.
-    </p>
+  <p>
+    As noted the above solution is nice and lightweight, and Please will take
+    care of deduplicating &amp; caching the download from github, so it works
+    fairly well for straightforward cases. But there are times when you might
+    want more control, like pinning to a particular version so you're not broken
+    by any incompatible changes, or hash verifying the downloaded rules so you
+    know you're always getting what you expect.
+  </p>
 
-    <p>The idiomatic way of achieving this is to set up one centralised package to do the
-      download more carefully and subinclude from there. Conventionally we use
-      <code>//build_defs</code> but of course this package can be anywhere. You'd set up
-      <code>//build_defs/BUILD</code> as follows:
-    </p>
+  <p>
+    The idiomatic way of achieving this is to set up one centralised package to
+    do the download more carefully and subinclude from there. Conventionally we
+    use <code class="code">//build_defs</code> but of course this package can be
+    anywhere. You'd set up <code class="code">//build_defs/BUILD</code> as
+    follows:
+  </p>
 
-    <pre><code class="language-plz">
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
     package(default_visibility = ['PUBLIC'])
 
     remote_file(
@@ -57,20 +85,27 @@
             'bbfa10e522cfc870bfcbfbae6b899b770b54031a',
         ],
     )
-    </code></pre>
+    </code>
+  </pre>
 
-    <p>Then from any other package in your repo you could write the following:</p>
+  <p>Then from any other package in your repo you could write the following:</p>
 
-    <pre><code class="language-plz">
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
     subinclude('//build_defs:rust')
 
     rust_library(
         name = 'my_rust_lib',
         srcs = ['mine.rs'],
     )
-    </code></pre>
+    </code>
+  </pre>
 
-    <p>This has the advantage of a shorter call to <code>subinclude</code> in each package,
-      but more seriously states the expected revision & hash in a centralised location so
-      your build always uses the same upstream version of the rules to compile it.
-    </p>
+  <p>
+    This has the advantage of a shorter call to
+    <code class="code">subinclude</code> in each package, but more seriously
+    states the expected revision &amp; hash in a centralised location so your
+    build always uses the same upstream version of the rules to compile it.
+  </p>
+</section>

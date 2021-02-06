@@ -6,3 +6,6 @@ protoctool = protoc
 [cpp]
 cctool = cc
 cpptool = c++
+
+[go]
+CgoCCTool = cc

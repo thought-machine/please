@@ -7,7 +7,8 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
             sandbox:bool=None, needs_transitive_deps:bool=False, output_is_complete:bool=True,
             test_only:bool&testonly=False, secrets:list|dict=None, requires:list=None, provides:dict=None,
             pre_build:function=None, post_build:function=None, tools:list|dict=None, pass_env:list=None,
-            local:bool=False, output_dirs:list=[], exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}):
+            local:bool=False, output_dirs:list=[], exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={},
+            env:dict={}):
     """A general build rule which allows the user to specify a command.
 
     Args:
@@ -103,6 +104,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
                      executed in a shell with -e).
       entry_points (dict): A subset of outputs of this rule that can be used as entry points by other rules.
                            Entry points can be referenced though the `//path/to:rule|entry-point` syntax.
+      env (dict): Any additional environment variables to set for this build rule.
     """
     if out and outs:
         raise TypeError('Can\'t specify both "out" and "outs".')
@@ -135,6 +137,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         output_dirs = output_dirs,
         exit_on_error = exit_on_error,
         entry_points = entry_points,
+        env=env,
     )
 
 
@@ -359,7 +362,8 @@ def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
 def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:bool=False,
                 visibility:list=None, licences:list=None, test_only:bool&testonly=False,
                 labels:list=[], deps:list=None, exported_deps:list=None,
-                extract:bool=False, strip_prefix:str='', _tag:str='',exported_files=[]):
+                extract:bool=False, strip_prefix:str='', _tag:str='',exported_files=[],
+                entry_points:dict={}):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -428,6 +432,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
             building_description = 'Extracting...',
             deps = deps,
             exported_deps = exported_deps,
+            entry_points = entry_points,
         )
 
     urls = [url] if isinstance(url, str) else url
@@ -448,6 +453,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         test_only = test_only,
         labels = labels,
         sandbox = False,
+        entry_points = entry_points,
     )
 
 

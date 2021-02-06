@@ -24,7 +24,7 @@ jobs:
            path: plz-out/results
        - run:
            name: Package
-           command: ./plz-out/bin/src/please build //package:all -p
+           command: ./plz-out/bin/src/please build //package:all -p --profile ci --profile alpine
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -245,7 +245,7 @@ jobs:
            path: plz-out/results
        - store_artifacts:
            path: plz-out/log
-
+   # Releases to github and homebrew
    release:
      docker:
        - image: thoughtmachine/please_docs:20200930
@@ -257,7 +257,7 @@ jobs:
              - "cc:57:b9:67:31:65:a6:70:8c:e3:e7:90:ca:e6:a6:41"
        - run: /tmp/workspace/gen_release.pex --signer /tmp/workspace/release_signer /tmp/workspace/*_amd64/*
 
-   # TODO(jpoole): rename this release once we switch web hosting
+   # Releases the docs and the binaries to s3 for please.build and get.please.build
    release-s3:
      docker:
        - image: thoughtmachine/please_docs:20200930
@@ -267,19 +267,6 @@ jobs:
            at: /tmp/workspace
        - run: ./.circleci/release_s3.sh
 
-   docs:
-     docker:
-       - image: thoughtmachine/please_docs:20200930
-     steps:
-       - attach_workspace:
-           at: /tmp/site
-       - add_ssh_keys:
-           fingerprints:
-             - "cc:57:b9:67:31:65:a6:70:8c:e3:e7:90:ca:e6:a6:41"
-       - run:
-           name: Upload docs
-           working_directory: /tmp/site
-           command: tar -xzf docs.tar.gz && sftp -oStrictHostKeyChecking=no -b /root/sftp.txt 3472291@sftp.dc2.gpaas.net
 workflows:
   version: 2
   build-all:
@@ -322,12 +309,6 @@ workflows:
             - build-darwin
             - test-rex
             - test-http-cache
-          filters:
-            branches:
-              only: master
-      - docs:
-          requires:
-            - build-linux
           filters:
             branches:
               only: master

@@ -12,7 +12,7 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', srcs:list|dict=N
                licences:list=CONFIG.DEFAULT_LICENCES, test_outputs:list=None, system_srcs:list=None, stamp:bool=False,
                tag:str='', optional_outs:list=None, progress:bool=False, size:str=None, _urls:list=None,
                internal_deps:list=None, pass_env:list=None, local:bool=False, output_dirs:list=[], metadata=None,
-               exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}):
+               exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}, env:dict={}):
     pass
 
 
@@ -222,6 +222,8 @@ def get_labels(name:str, prefix:str, all:bool=False) -> list:
     pass
 def has_label(name:str, prefix:str, all:bool=False) -> bool:
     return len(get_labels(name, prefix, all)) > 0
+def add_label(name:str, label:str):
+    pass
 def add_dep(target:str, dep:str, exported:bool=False):
     pass
 def add_exported_dep(target:str, dep:str):

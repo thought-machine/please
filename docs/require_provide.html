@@ -1,38 +1,69 @@
-<h1>Require / Provide</h1>
+<h1 class="title-1">Require / Provide</h1>
 
-<p>This is a generalised mechanism for rules to provide specialised dependencies to other
-  rules. The most obvious example is <code>proto_library</code>, which generates code for
-  multiple languages, usually only one of which is actually needed by each dependency</p>
+<p>
+  This is a generalised mechanism for rules to provide specialised dependencies
+  to other rules. The most obvious example is
+  <code class="code">proto_library</code>, which generates code for multiple
+  languages, usually only one of which is actually needed by each dependency
+</p>
 
-<p>We could break it up into multiple parts explicitly, but ideally we want to maintain
-  the illusion that there's one rule by the name given in the BUILD file and have all other
-  rules depend only on that. However it's pretty suboptimal to have your
-  <code>python_library</code> have to wait for the C++ and Java generated code to compile.</p>
+<p>
+  We could break it up into multiple parts explicitly, but ideally we want to
+  maintain the illusion that there's one rule by the name given in the BUILD
+  file and have all other rules depend only on that. However it's pretty
+  suboptimal to have your <code class="code">python_library</code> have to wait
+  for the C++ and Java generated code to compile.
+</p>
 
-<p>This is solved by the <code>proto_library</code> rule declaring the following property:
-    <pre><code class="language-plz">
+<p>
+  This is solved by the <code class="code">proto_library</code> rule declaring
+  the following property:
+</p>
+
+<pre class="code-container">
+  <!-- prettier-ignore -->
+  <code data-lang="plz">
     provides = {
         'py': ':python_dependency',
         'java': ':java_dependency',
         'cc': ':cc_dependency',
     }
-    </code></pre>
-  And then the <code>python_library</code> rule is annotated with
-    <pre><code class="language-plz">
+  </code>
+</pre>
+
+<p>
+  And then the <code class="code">python_library</code> rule is annotated with
+</p>
+
+<pre class="code-container">
+  <!-- prettier-ignore -->
+  <code data-lang="plz">
     requires = ['py'],
-    </code></pre>
-  Individually neither has any effect, but when a rule with a particular <code>require</code>
-  depends on another with a matching <code>provide</code>, its dependency is matched directly
-  to the one specified by the providing rule. This means that it can skip other dependencies
-  that it doesn't care about and be matched only to the ones it does.</p>
+  </code>
+</pre>
 
-<p>The consequence of this - skipping the actual declared dependency - can be a bit
-  nonobvious so should be invoked sparingly. Typically the rule declaring
-  <code>provides</code> should be a no-op collecting rule such as <code>filegroup</code>
-  and the various provided rules shouldn't normally be needed together. Different languages
-  are the most common example here (and indeed this feature was nearly named
-  <code>language</code> at one point).</p>
+<p>
+  Individually neither has any effect, but when a rule with a particular
+  <code class="code">require</code> depends on another with a matching
+  <code class="code">provide</code>, its dependency is matched directly to the
+  one specified by the providing rule. This means that it can skip other
+  dependencies that it doesn't care about and be matched only to the ones it
+  does.
+</p>
 
-<p>The <code>requires</code> stanza is also responsible for colouring the interactive build
-  output. Currently the available colours are hardcoded but one of these days they might
-  become configurable.</p>
+<p>
+  The consequence of this - skipping the actual declared dependency - can be a
+  bit nonobvious so should be invoked sparingly. Typically the rule declaring
+  <code class="code">provides</code> should be a no-op collecting rule such as
+  <code class="code">filegroup</code>
+  and the various provided rules shouldn't normally be needed together.
+  Different languages are the most common example here (and indeed this feature
+  was nearly named
+  <code class="code">language</code> at one point).
+</p>
+
+<p>
+  The <code class="code">requires</code> stanza is also responsible for
+  colouring the interactive build output. Currently the available colours are
+  hardcoded but one of these days they might become configurable.
+</p>

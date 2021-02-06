@@ -82,7 +82,13 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 	// We can't predict what variables like this should be so we sneakily bung something on
 	// the front of the command. It'd be nicer if there were a better way though...
-	var commandPrefix = "export TMP_DIR=\"`pwd`\" && "
+	var commandPrefix = "export TMP_DIR=\"`pwd`\" && export HOME=$TMP_DIR && "
+
+	// Similarly, we need to export these so that things like $TMP_DIR get expanded correctly.
+	for k, v := range target.Env {
+		commandPrefix += fmt.Sprintf("export %s=\"%s\" && ", k, v)
+	}
+
 	// TODO(peterebden): Remove this nonsense once API v2.1 is released.
 	files, dirs := outputs(target)
 	if len(target.Outputs()) == 1 { // $OUT is relative when running remotely; make it absolute
@@ -94,7 +100,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		// not include the environment variables since we don't communicate those to the remote server).
 		return &pb.Command{
 			Arguments: []string{
-				"fetch", strings.Join(target.AllURLs(c.state.Config), " "), "verify", strings.Join(target.Hashes, " "),
+				"fetch", strings.Join(target.AllURLs(c.state), " "), "verify", strings.Join(target.Hashes, " "),
 			},
 			OutputFiles:       files,
 			OutputDirectories: dirs,
@@ -108,7 +114,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	cmd, err := core.ReplaceSequences(c.state, target, cmd)
 	return &pb.Command{
 		Platform:             c.platform,
-		Arguments:            process.BashCommand(c.bashPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
+		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(target, inputRoot, stamp), target.Sandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
@@ -119,7 +125,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 // stampedBuildEnvironment returns a build environment, optionally with a stamp if stamp is true.
 func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb.Directory, stamp bool) []string {
 	if target.IsFilegroup {
-		return core.GeneralBuildEnvironment(c.state.Config) // filegroups don't need a full build environment
+		return core.GeneralBuildEnvironment(c.state) // filegroups don't need a full build environment
 	} else if !stamp {
 		return core.BuildEnvironment(c.state, target, ".")
 	}
@@ -158,7 +164,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 				},
 			},
 		},
-		Arguments:            process.BashCommand(c.bashPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
+		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(c.state, target, "."), target.TestSandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
@@ -175,7 +181,7 @@ func (c *Client) buildRunCommand(target *core.BuildTarget) (*pb.Command, error) 
 	return &pb.Command{
 		Platform:             c.platform,
 		Arguments:            outs,
-		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(c.state.Config), false),
+		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(c.state), false),
 	}, nil
 }
 

@@ -28,6 +28,28 @@ type aspParser struct {
 	asp *asp.Parser
 }
 
+func buildPreamble(state *core.BuildState, pkg *core.Package) string {
+	if pkg.Subrepo != nil {
+		// TODO(jpoole): remove this once #1436 has been addressed
+		// Please doesn't respect the subrepo .plzconfig so subincludes will be added
+		// in the subrepo erroneously if we don't return early here
+		return ""
+	}
+
+	subincludes := make([]string, 0, len(state.Config.Parse.PreloadSubincludes))
+	for _, inc := range state.Config.Parse.PreloadSubincludes {
+		l := core.ParseBuildLabel(inc, pkg.Name)
+		if l.Subrepo == "" || l.SubrepoLabel().PackageName != pkg.Name {
+			subincludes = append(subincludes, fmt.Sprintf("\"%s\"", inc))
+		}
+	}
+
+	if len(subincludes) > 0 {
+		return fmt.Sprintf("subinclude(%s)", strings.Join(subincludes, " "))
+	}
+	return ""
+}
+
 // newAspParser returns a asp.Parser object with all the builtins loaded
 func newAspParser(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
@@ -58,7 +80,11 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 }
 
 func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
-	return p.asp.ParseFile(pkg, filename)
+	if pkg.Name == "" {
+		return p.asp.ParseFile(pkg, filename, "")
+	}
+
+	return p.asp.ParseFile(pkg, filename, buildPreamble(state, pkg))
 }
 
 func (p *aspParser) ParseReader(state *core.BuildState, pkg *core.Package, reader io.ReadSeeker) error {
@@ -82,7 +108,7 @@ func (p *aspParser) RunPostBuildFunction(threadID int, state *core.BuildState, t
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(tid, target.Label, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
-	pkg := state.WaitForPackage(target.Label)
+	pkg := state.SyncParsePackage(target.Label)
 	changed, err := pkg.EnterBuildCallback(f)
 	if err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)

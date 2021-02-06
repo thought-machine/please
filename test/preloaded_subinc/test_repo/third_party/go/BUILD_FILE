@@ -1,0 +1,39 @@
+package(default_visibility = ["PUBLIC"])
+
+go_module(
+    name = "cli-init",
+    module = "github.com/peterebden/go-cli-init/v2", # Handles module major versions correctly
+    version = "v2.0.1",
+    deps = [
+        ":go-flags",
+        ":humanize",
+        ":logging",
+        ":terminal",
+    ],
+)
+
+go_module(
+    name = "go-flags",
+    module = "github.com/jessevdk/go-flags",
+    version = "v1.4.0",
+)
+
+go_module(
+    name = "humanize",
+    module = "github.com/dustin/go-humanize",
+    version = "v1.0.0",
+)
+
+# Can interop with go_get() rules
+go_get(
+    name = "logging",
+    get = "gopkg.in/op/go-logging.v1", # Handles vanity imports nicely
+    revision = "b2cb9fa56473e98db8caba80237377e83fe44db5",
+)
+
+go_module(
+    name = "terminal",
+    module = "golang.org/x/crypto",
+    version = "7b85b097bf7527677d54d3220065e966a0e3b613", # Can still use revisions as versions
+    install = ["ssh/terminal"],
+)

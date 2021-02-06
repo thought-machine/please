@@ -1,218 +1,424 @@
+<h1 class="title-1">Please basics</h1>
 
-    <h1>Please basics</h1>
+<p>
+  If you're familiar with Blaze / Bazel, Buck or Pants you will probably find
+  Please very familiar. Otherwise, don't worry, it's not very complicated...
+</p>
 
-    <p>If you're familiar with Blaze / Bazel, Buck or Pants you will probably find Please very familiar.
-      Otherwise, don't worry, it's not very complicated...</p>
+<section class="mt4">
+  <h2 class="title-2">BUILD files</h2>
 
-    <h2>BUILD files</h2>
-    <p>Please targets are defined in files named BUILD. These are analogous to Makefiles in that they define
-      buildable targets for that directory. Fortunately, they do so in a rather nicer syntax.<br/>
-      We refer to a directory containing a BUILD file as a <em>package</em>.</p>
+  <p>
+    Please targets are defined in files named BUILD. These are analogous to
+    Makefiles in that they define buildable targets for that directory.
+    Fortunately, they do so in a rather nicer syntax.<br />
+    We refer to a directory containing a BUILD file as a <em>package</em>.
+  </p>
 
-    <p>For more information on the format of BUILD files, read the <a href="/language.html">language specification</a>
-        here</p>
+  <p>
+    For more information on the format of BUILD files, read the
+    <a class="copy-link" href="/language.html">language specification</a>
+    here.
+  </p>
+</section>
 
-    <h2>Build targets</h2>
-    <p>Each BUILD file can contain a number of <em>build targets</em>. These are units of buildable code
-      which can be reused by other build targets. An example is probably worth 1000 words at this point:
-    <div class="tab-container">
-        <div class="tabs">
-            <div class="tab" data-tab="py">Python</div>
-            <div class="tab" data-tab="java">Java</div>
-            <div class="tab" data-tab="go">Go</div>
-            <div class="tab" data-tab="c">C</div>
-            <div class="tab" data-tab="cpp">C++</div>
-        </div>
-        <div class="tab-contents">
-            <div class="content" data-tab="py">
-                <pre><code class="language-plz">
-        python_library(
-            name = 'my_library',
-            srcs = ['file1.py', 'file2.py'],
-        )
+<section class="mt4">
+  <h2 class="title-2">Build targets</h2>
 
-        python_binary(
-            name = 'my_binary',
-            main = 'my_main.py',
-            deps = [':my_library'],
-        )
+  <p>
+    Each BUILD file can contain a number of <em>build targets</em>. These are
+    units of buildable code which can be reused by other build targets. An
+    example is probably worth 1000 words at this point:
+  </p>
 
-        python_test(
-            name = 'my_library_test',
-            srcs = ['my_library_test.py'],
-            deps = [':my_library'],
-        )
-                </code></pre>
-            </div>
-            <div class="content" data-tab="java">
-                <pre><code class="language-plz">
-        java_library(
-            name = 'my_library',
-            srcs = ['File1.java', 'File2.java'],
-        )
-
-        java_binary(
-            name = 'my_binary',
-            main = 'Main.java',
-            deps = [':my_library'],
-        )
-
-        java_test(
-            name = 'my_library_test',
-            srcs = ['MyLibraryTest.java'],
-            deps = [':my_library'],
-        )
-                </code></pre>
-            </div>
-            <div class="content" data-tab="go">
-                <pre><code class="language-plz">
-        go_library(
-            name = 'my_library',
-            srcs = ['file1.go', 'file2.go'],
-        )
-
-        go_binary(
-            name = 'my_binary',
-            main = 'main.go',
-            deps = [':my_library'],
-        )
-
-        go_test(
-            name = 'my_library_test',
-            srcs = ['my_library_test.go'],
-            deps = [':my_library'],
-        )
-                </code></pre>
-            </div>
-            <div class="content" data-tab="cpp">
-                <pre><code class="language-plz">
-        cc_library(
-            name = 'my_library',
-            srcs = ['file1.cpp', 'file2.cpp'],
-            hdrs = ['file1.hpp'],
-        )
-
-        cc_binary(
-            name = 'my_binary',
-            main = 'main.cpp',
-            deps = [':my_library'],
-        )
-
-        cc_test(
-            name = 'my_library_test',
-            srcs = ['my_library_test.cpp'],
-            deps = [':my_library'],
-        )
-                </code></pre>
-            </div>
-            <div class="content" data-tab="c">
-                <pre><code class="language-plz">
-        c_library(
-            name = 'my_library',
-            srcs = ['file1.c', 'file2.c'],
-            hdrs = ['file1.h'],
-        )
-
-        c_binary(
-            name = 'my_binary',
-            main = 'main.c',
-            deps = [':my_library'],
-        )
-
-        c_test(
-            name = 'my_library_test',
-            srcs = ['my_library_test.c'],
-            deps = [':my_library'],
-        )
-                </code></pre>
-            </div>
-        </div>
+  <div data-widget="tabs">
+    <div class="flex">
+      <ul class="tabs__tablist" role="tablist">
+        <li
+          id="python-targets-tab"
+          class="tabs__tab tabs__tab--selected"
+          data-tab="py"
+          role="tab"
+          aria-controls="python-targets-panel"
+          tabindex="0"
+        >
+          Python
+        </li>
+        <li
+          id="java-targets-tab"
+          class="tabs__tab"
+          data-tab="java"
+          role="tab"
+          aria-controls="java-targets-panel"
+          tabindex="0"
+        >
+          Java
+        </li>
+        <li
+          id="go-targets-tab"
+          class="tabs__tab"
+          data-tab="go"
+          role="tab"
+          aria-controls="go-targets-panel"
+          tabindex="0"
+        >
+          Go
+        </li>
+        <li
+          id="c-targets-tab"
+          class="tabs__tab"
+          data-tab="c"
+          role="tab"
+          aria-controls="c-targets-panel"
+          tabindex="0"
+        >
+          C
+        </li>
+        <li
+          id="cpp-targets-tab"
+          class="tabs__tab"
+          data-tab="cpp"
+          role="tab"
+          aria-controls="cpp-targets-panel"
+          tabindex="0"
+        >
+          C++
+        </li>
+      </ul>
     </div>
 
-      This snippet defines three build targets; a build target is simply a thing that can be built
-      by Please and typically appears as a single object in the build file (as the
-      <code>python_library</code>, <code>python_binary</code> and <code>python_test</code> are above).
-      <ul>
-    <li><code>my_library</code> is simply a collection of <code>file1.py</code> and <code>file2.py</code>.<br/>
-      For some languages these might be compiled, for Python of course they're simply made available for other rules.</li>
-    <li><code>my_binary</code> creates a deployable Python binary with an entry point in <code>my_main.py</code>.<br/>
-      It also defines a <em>dependency</em> on <code>my_library</code> since it will use it internally.</li>
-    <li><code>my_library_test</code> defines a test on <code>my_library</code>. Tests are run by Please and their results
-      are aggregated.</li>
-      </ul>
-      This illustrates the core points of Please; every rule clearly defines its inputs - its own sources and its dependencies -
-      and since these are known Please can be aggressive about parallelising, caching and reusing build artifacts.
-    </p>
+    <div class="tabs__panels">
+      <pre
+        id="python-targets-panel"
+        class="f7 tabs__panel tabs__panel--selected"
+        data-panel="py"
+        role="tabpanel"
+        aria-labelledby="python-targets-tab"
+      >
+        <!-- prettier-ignore -->
+        <code data-lang="plz">
+    python_library(
+        name = 'my_library',
+        srcs = ['file1.py', 'file2.py'],
+    )
 
-    <h2>Okay, great, so how do I actually use them?</h2>
+    python_binary(
+        name = 'my_binary',
+        main = 'my_main.py',
+        deps = [':my_library'],
+    )
 
-    <p>Let's assume the build rules given above are defined in a file in your repo named package/BUILD. You can do the following:
-      <ul>
-    <li><code>plz build //package:my_library</code> builds the library. This isn't drastically useful on its own, of course...</li>
-    <li><code>plz build //package:my_binary</code> builds the binary and all needed libraries that it depends on. That produces a single output file which you could copy
-      to another machine.</li>
-    <li><code>plz run //package:my_binary</code> builds and runs the binary immediately.</li>
-    <li><code>plz test //package:my_library_test</code> builds and runs the test and shows you the results.</li>
-      </ul>
-    </p>
+    python_test(
+        name = 'my_library_test',
+        srcs = ['my_library_test.py'],
+        deps = [':my_library'],
+    )
+        </code>
+      </pre>
 
-    <h2>Build labels</h2>
+      <pre
+        id="java-targets-panel"
+        class="f7 tabs__panel"
+        data-panel="java"
+        role="tabpanel"
+        aria-labelledby="java-targets-tab"
+      >
+        <!-- prettier-ignore -->
+        <code data-lang="plz">
+    java_library(
+        name = 'my_library',
+        srcs = ['File1.java', 'File2.java'],
+    )
 
-    <p>That brings us to the topic of <em>build labels</em>, which are identifiers of build targets. As you've just seen,
-      these are of the form <code>//package:target</code>, where <code>package</code> is the path from the repo root to that package,
-      and <code>target</code> is the name of the target within that package.<br/>
-      This is the most common form to identify targets absolutely, but there is also a convenient shorthand where we omit
-      the part before the colon (as you saw earlier as well) to refer to a target within the current package.</p>
+    java_binary(
+        name = 'my_binary',
+        main = 'Main.java',
+        deps = [':my_library'],
+    )
 
-    <p>The convention is to use <code>lower_case_with_underscores</code> for both package names and target names.<br/>
-      This is not just for looks; in many languages (eg. Python) the file path appears within the source files,
-      and so it's important to choose something that's a valid lexical identifier.</p>
+    java_test(
+        name = 'my_library_test',
+        srcs = ['MyLibraryTest.java'],
+        deps = [':my_library'],
+    )
+        </code>
+      </pre>
 
-    <p>There are also some special pseudo-labels:
-      <ul>
-        <li><code>//mypackage:all</code> refers to all targets in 'mypackage'.</li>
-        <li><code>//mypackage/...</code> refers to all targets in 'mypackage' and anywhere beneath it in the filesystem.</li>
-      </ul>
-      Build targets can't use these as dependencies; these are primarily for using on the command
-      line or in the visibility specification for a target.
-    </p>
+      <pre
+        id="go-targets-panel"
+        class="f7 tabs__panel"
+        data-panel="go"
+        role="tabpanel"
+        aria-labelledby="go-targets-tab"
+      >
+        <!-- prettier-ignore -->
+        <code data-lang="plz">
+    go_library(
+        name = 'my_library',
+        srcs = ['file1.go', 'file2.go'],
+    )
 
-    <h2>The BUILD file format</h2>
+    go_binary(
+        name = 'my_binary',
+        main = 'main.go',
+        deps = [':my_library'],
+    )
 
-    <p>You may have noticed that the invocations in BUILD files look a bit like function calls.
-      This is not coincidence; it is not just a declarative language, it's also a scripting
-      language that allows you to programmatically create targets. For example, let's say
-      you want to translate your documentation to a bunch of languages:
-      <pre><code class="language-plz">
-      for language in ['en_NZ', 'en_GB', 'it_IT', 'es_MX', 'el_GR']:
-          lang_docs = genrule(
-              name = 'txt_documentation_' + language,
-              srcs = ['docs.txt'],
-              outs = [f'docs_{language}.txt'],
-              tools = ['//tools:translate_tool'],
-              cmd = f'$TOOL -i $SRC --language {language} > "$OUT"',
-          )
+    go_test(
+        name = 'my_library_test',
+        srcs = ['my_library_test.go'],
+        deps = [':my_library'],
+    )
+        </code>
+      </pre>
 
-          genrule(
-              name = 'documentation_' + language,
-              srcs = [lang_docs],
-              outs = [f'docs_{language}.html'],
-              tools = ['//tools:html_doc_tool'],
-              cmd = '$TOOL --src $SRC --out "$OUT"',
-              visibility = ['PUBLIC'],
-          )
-      </code></pre>
+      <pre
+        id="c-targets-panel"
+        class="f7 tabs__panel"
+        data-panel="c"
+        role="tabpanel"
+        aria-labelledby="c-targets-tab"
+      >
+        <!-- prettier-ignore -->
+        <code data-lang="plz">
+    c_library(
+        name = 'my_library',
+        srcs = ['file1.c', 'file2.c'],
+        hdrs = ['file1.h'],
+    )
 
-      Obviously this would be a bit repetitive if you redefined the rules separately for each language. Instead, we can take
-      advantage of the build language to genericise them across languages; for each language we translate it and then
-      format it as HTML.
-    </p>
+    c_binary(
+        name = 'my_binary',
+        main = 'main.c',
+        deps = [':my_library'],
+    )
 
-    <p>The language itself shares some similarity to Python so it should feel familiar to
-      many people. There is a <a href="language.html">complete description</a> of it
-      available if you're curious about more details.</p>
+    c_test(
+        name = 'my_library_test',
+        srcs = ['my_library_test.c'],
+        deps = [':my_library'],
+    )
+        </code>
+      </pre>
 
-    <div class="section-guide">
-        <div class="prev-section"><a href="/codelabs.html">Codelabs</a></div>
-        <div class="next-section"><a href="/dependencies.html">Third-party dependencies</a></div>
+      <pre
+        id="cpp-targets-panel"
+        class="f7 tabs__panel"
+        data-panel="cpp"
+        role="tabpanel"
+        aria-labelledby="cpp-targets-tab"
+      >
+        <!-- prettier-ignore -->
+        <code data-lang="plz">
+    cc_library(
+        name = 'my_library',
+        srcs = ['file1.cpp', 'file2.cpp'],
+        hdrs = ['file1.hpp'],
+    )
+
+    cc_binary(
+        name = 'my_binary',
+        main = 'main.cpp',
+        deps = [':my_library'],
+    )
+
+    cc_test(
+        name = 'my_library_test',
+        srcs = ['my_library_test.cpp'],
+        deps = [':my_library'],
+    )
+        </code>
+      </pre>
     </div>
+  </div>
+
+  <p>
+    This snippet defines three build targets; a build target is simply a thing
+    that can be built by Please and typically appears as a single object in the
+    build file (as the
+    <code class="code">python_library</code>,
+    <code class="code">python_binary</code> and
+    <code class="code">python_test</code> are above).
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        <code class="code">my_library</code> is simply a collection of
+        <code class="code">file1.py</code> and
+        <code class="code">file2.py</code>.<br />
+        For some languages these might be compiled, for Python of course they're
+        simply made available for other rules.</span
+      >
+    </li>
+    <li>
+      <span>
+        <code class="code">my_binary</code> creates a deployable Python binary
+        with an entry point in <code class="code">my_main.py</code>.<br />
+        It also defines a <em>dependency</em> on
+        <code class="code">my_library</code> since it will use it
+        internally.</span
+      >
+    </li>
+    <li>
+      <span>
+        <code class="code">my_library_test</code> defines a test on
+        <code class="code">my_library</code>. Tests are run by Please and their
+        results are aggregated.</span
+      >
+    </li>
+  </ul>
+
+  <p>
+    This illustrates the core points of Please; every rule clearly defines its
+    inputs - its own sources and its dependencies - and since these are known
+    Please can be aggressive about parallelising, caching and reusing build
+    artifacts.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    Okay, great, so how do I actually use them?
+  </h2>
+
+  <p>
+    Let's assume the build rules given above are defined in a file in your repo
+    named package/BUILD. You can do the following:
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        <code class="code">plz build //package:my_library</code> builds the
+        library. This isn't drastically useful on its own, of course...</span
+      >
+    </li>
+    <li>
+      <span>
+        <code class="code">plz build //package:my_binary</code> builds the
+        binary and all needed libraries that it depends on. That produces a
+        single output file which you could copy to another machine.</span
+      >
+    </li>
+    <li>
+      <span>
+        <code class="code">plz run //package:my_binary</code> builds and runs
+        the binary immediately.</span
+      >
+    </li>
+    <li>
+      <span>
+        <code class="code">plz test //package:my_library_test</code> builds and
+        runs the test and shows you the results.</span
+      >
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">Build labels</h2>
+
+  <p>
+    That brings us to the topic of <em>build labels</em>, which are identifiers
+    of build targets. As you've just seen, these are of the form
+    <code class="code">//package:target</code>, where
+    <code class="code">package</code> is the path from the repo root to that
+    package, and <code class="code">target</code> is the name of the target
+    within that package.<br />
+    This is the most common form to identify targets absolutely, but there is
+    also a convenient shorthand where we omit the part before the colon (as you
+    saw earlier as well) to refer to a target within the current package.
+  </p>
+
+  <p>
+    The convention is to use
+    <code class="code">lower_case_with_underscores</code> for both package names
+    and target names.<br />
+    This is not just for looks; in many languages (eg. Python) the file path
+    appears within the source files, and so it's important to choose something
+    that's a valid lexical identifier.
+  </p>
+
+  <p>There are also some special pseudo-labels:</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        <code class="code">//mypackage:all</code> refers to all targets in
+        'mypackage'.</span
+      >
+    </li>
+    <li>
+      <span>
+        <code class="code">//mypackage/...</code> refers to all targets in
+        'mypackage' and anywhere beneath it in the filesystem.</span
+      >
+    </li>
+  </ul>
+
+  <p>
+    Build targets can't use these as dependencies; these are primarily for using
+    on the command line or in the visibility specification for a target.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    The BUILD file format
+  </h2>
+
+  <p>
+    You may have noticed that the invocations in BUILD files look a bit like
+    function calls. This is not coincidence; it is not just a declarative
+    language, it's also a scripting language that allows you to programmatically
+    create targets. For example, let's say you want to translate your
+    documentation to a bunch of languages:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    for language in ['en_NZ', 'en_GB', 'it_IT', 'es_MX', 'el_GR']:
+        lang_docs = genrule(
+            name = 'txt_documentation_' + language,
+            srcs = ['docs.txt'],
+            outs = [f'docs_{language}.txt'],
+            tools = ['//tools:translate_tool'],
+            cmd = f'$TOOL -i $SRC --language {language} &gt; "$OUT"',
+        )
+
+        genrule(
+            name = 'documentation_' + language,
+            srcs = [lang_docs],
+            outs = [f'docs_{language}.html'],
+            tools = ['//tools:html_doc_tool'],
+            cmd = '$TOOL --src $SRC --out "$OUT"',
+            visibility = ['PUBLIC'],
+        )
+    </code>
+  </pre>
+
+  <p>
+    Obviously this would be a bit repetitive if you redefined the rules
+    separately for each language. Instead, we can take advantage of the build
+    language to genericise them across languages; for each language we translate
+    it and then format it as HTML.
+  </p>
+
+  <p>
+    The language itself shares some similarity to Python so it should feel
+    familiar to many people. There is a
+    <a class="copy-link" href="/language.html">complete description</a>
+    of it available if you're curious about more details.
+  </p>
+</section>
+
+<div class="pagination">
+  <div class="pagination__previous">
+    <a class="copy-link" href="/codelabs.html">Codelabs</a>
+  </div>
+  <div class="pagination__next">
+    <a class="copy-link" href="/dependencies.html">Third-party dependencies</a>
+  </div>
+</div>

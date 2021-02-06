@@ -14,6 +14,6 @@ genrule(
         "//rules",
         "//src/core",
         "//src/parse/asp",
-        "//third_party/go:go-fuzz-dep",
+        "//third_party/go:go-fuzz",
     ],
 )

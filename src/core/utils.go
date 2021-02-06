@@ -54,7 +54,7 @@ func MustFindRepoRoot() string {
 	}
 	// Check the config for a default repo location. Of course, we have to load system-level config
 	// in order to do that...
-	config, err := ReadConfigFiles([]string{MachineConfigFileName, fs.ExpandHomePath(UserConfigFileName)}, nil)
+	config, err := ReadConfigFiles(defaultGlobalConfigFiles(), nil)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	}

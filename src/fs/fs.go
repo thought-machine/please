@@ -86,9 +86,6 @@ func CopyFile(from string, to string, mode os.FileMode) error {
 // WriteFile writes data from a reader to the file named 'to', with an attempt to perform
 // a copy & rename to avoid chaos if anything goes wrong partway.
 func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
-	if err := os.RemoveAll(to); err != nil {
-		return err
-	}
 	dir, file := path.Split(to)
 	if dir != "" {
 		if err := os.MkdirAll(dir, DirPermissions); err != nil {
@@ -113,7 +110,7 @@ func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
 		return err
 	}
 	// And move it to its final destination.
-	return os.Rename(tempFile.Name(), to)
+	return renameFile(tempFile.Name(), to)
 }
 
 // IsDirectory checks if a given path is a directory
@@ -130,4 +127,56 @@ func IsPackage(buildFileNames []string, name string) bool {
 		}
 	}
 	return false
+}
+
+// Try to gracefully rename the file as the os.Rename does not work across
+// filesystems and on most Linux systems /tmp is mounted as tmpfs
+func renameFile(from, to string) (err error) {
+	err = os.Rename(from, to)
+	if err == nil {
+		return nil
+	}
+	err = copyFile(from, to)
+	if err != nil {
+		return err
+	}
+	err = os.RemoveAll(from)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func copyFile(from, to string) (err error) {
+	in, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(to)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if e := out.Close(); e != nil {
+			err = e
+		}
+	}()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return err
+	}
+
+	si, err := os.Stat(from)
+	if err != nil {
+		return err
+	}
+	err = os.Chmod(to, si.Mode())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

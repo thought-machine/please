@@ -1,9 +1,77 @@
+Version 15.15.0
+--------------
+
+
+Version 15.14.0
+--------------
+
+    * Please now respects the Arch config value and loads that platforms
+      .plzconfig correctly #1504
+    * Various improvements to go_modules() #1510 #1484 #1520
+    * Please will now for config in $XDG_CONFIG_DIRS #1518
+
+
+Version 15.13.0
+--------------
+
+    * Added package field to go_library() to override the package name
+      for when it differs from the rule name #1478
+    * Various go_module() fixes and changes #1481 #1483 #1482 #1490 #1505
+    * Implemented entry points for plz run #1491
+    * Allow the repo arg of go_get() to be a build rule to enable vendoring
+      #1487
+    * Please now downloads tools rather than requiring them as part of the
+      distribution when the PleaseDownloadTools feature flag is set #1442
+    * Support for the new go grpc protoc plugin #1488
+
+
+Version 15.12.0
+--------------
+
+    * Added additional hash functions: crc_32, crc_64 and blake3 #1447
+    * Fixed issue where the pip tool couldn't be a build target #1452
+    * go_get() now sandboxed the compilation step when please is
+      configured to sandbox builds #1462
+    * Fixed issue around `plz run` for binary targets within a
+      subrepo #1465
+    * Fixed issue with `plz run --arch` where it would complain
+      the target was not found in the build graph #1468
+    * Fixed issue with moving outputs when /tmp is mounted under
+      a different filesystem #1466
+    * Fixed issue with subinclude() locking up when including from
+      a subrepo #1464
+    * Fixed issue around Go rules when operating in the root please
+      package #1456
+    * Added config option for pip to disable the debian --system flag
+      as this is no longer there for newer Debian installs #1470
+
+
+Version 15.11.0
+--------------
+
+    * Added PreloadSubincludes in a similar vein to PreloadBuildDefs
+      which allows the specified target to be subincluded automatically
+      in all packages #1414
+    * Added a new method for installing go modules that avoids a number
+      of issues with using "go build" from within Please. This feature
+      is experimental and can be enabled with the PleaseGoInstall
+      feature flag #1417
+    * Output directories now maintain file permission when moving outputs
+      to plz-out #1441
+    * Fix issues around subincluding from a target defined in the
+      current package #1424
+    * Fix regression in go_get() where it was failing to produce
+      outputs in some circumstances #1437
+
+
 Version 15.10.0
 --------------
 
     * Added go_module() rule that handles vanity imports and
       module major versions better than go_get() #1396
     * Updated pip_library() to work with pip v20.3.x+ #1421
+    * Fix issue with duplicate outs on go_get() causing missing
+      outputs #1437
 
 
 Version 15.9.2
