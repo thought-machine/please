@@ -14,6 +14,93 @@ a target which has only had small changes.
 """
 
 
+def python_toolchain(name:str, python_version:str, extra_conda_packages:str = "", micromamba_version:str = 'latest', visibility:list = ['PUBLIC']): 
+    """Downloads python from anaconda repositories using micromamba and exposes :<name>|python and :<name>|pip as entrypoints.
+
+    Args:
+        name(str): Name of the rule
+        python_version(str): python version that will be installed in conda format 
+        extra_conda_packages(str): a string with package[=version] space delimited
+        micromamba_version(str): micromamba version that we are going to use.
+        visibility(list): rule visibility
+
+    """
+    if CONFIG.HOSTOS == "darwin":
+        xhostos = "osx"
+        python_config_dir = f"config-{python_version}-darwin"
+        python_dl = "dylib"
+    else: 
+        xhostos = CONFIG.HOSTOS
+        python_config_dir = f"config-{python_version}-x86_64-linux-gnu"
+        python_dl = "so"
+
+    if CONFIG.HOSTARCH == "amd64": 
+        xarch = "64"
+    else:
+        xarch = CONFIG.HOSTARCH
+
+    micromamba = build_rule(
+        name = name,
+        tag = 'micromamba',
+        srcs = [remote_file(
+            name = name,
+            _tag = "download_micromamba",
+            url = f"https://micromamba.snakepit.net/api/micromamba/{xhostos}-{xarch}/{micromamba_version}",
+        )],
+        outs = ["bin/micromamba"],
+        binary = True,
+        cmd = "tar xf $SRCS",
+        visibility = visibility,
+    )
+
+    toolchain = build_rule(
+        name = name,
+        tag = 'toolchain',
+        outs = [f"{name}_toolchain"],
+        cmd = " && ".join([
+            "touch .bashrc", "touch .bash_profile",
+            "export _CE_CONDA=''",
+            f"$TOOLS_MICROMAMBA shell init -s bash -p $(pwd)/{name}_toolchain",
+            "source .bashrc",
+            "source .bash_profile",
+            "micromamba activate",
+            f"micromamba install -y python={python_version} {extra_conda_packages} -c conda-forge",
+            "find . -xtype l -exec rm \"{}\" \\;" if xhostos == "linux" else "echo",
+            #f"ln -sf {name}/lib/python{python_version}/{python_config_dir} {name}/lib/python{python_version}/config-{python_version}",
+            #f"ln -sf {name}/lib/libpython{python_version}.{python_dl} {name}/lib/python{python_version}/config-{python_version}/libpython{python_version}.a",
+        ]),
+        tools = {
+            "micromamba": [micromamba],
+        },
+        visibility = visibility,
+    )
+
+    return build_rule(
+        name = name, 
+        binary = True,
+        visibility = visibility,
+        tools = {
+            "toolchain": [toolchain]
+        },
+        outs = [name],
+        cmd = ' && '.join([
+            f'mkdir -p {name}/bin',
+            'set +H',
+            f'echo "#!/usr/bin/env bash" > {name}/bin/python',
+            f'echo "export PATH=$TOOLS_TOOLCHAIN/bin:$PATH" >> {name}/bin/python',
+            f'echo "export PYTHONHOME=$TOOLS_TOOLCHAIN" >> {name}/bin/python',
+            f'echo "exec $TOOLS_TOOLCHAIN/bin/python \\"\\\\$@\\"" >> {name}/bin/python',
+            f'echo "#!$TOOLS_TOOLCHAIN/bin/python" >  {name}/bin/pip',
+            f'cat $TOOLS_TOOLCHAIN/bin/pip | grep -v "^#" >> {name}/bin/pip',
+        ]),
+        entry_points  = {
+            'python': f'{name}/bin/python',
+            'pip': f'{name}/bin/pip'
+        }
+
+    )
+
+
 def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visibility:list=None,
                    test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[], interpreter:str=None,
                    strip:bool=False):
@@ -129,9 +216,8 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
                      determine something appropriate for the given interpreter.
       labels (list): Labels to apply to this rule.
     """
-    shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe --interpreter_options="%s" --stamp="$STAMP"' % (
-        shebang, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_INTERPRETER_OPTIONS)
+    cmd = '$TOOLS_PEX -s "$TOOLS_INTERPRETER" -m "%s" --zip_safe --interpreter_options="%s" --stamp="$STAMP"' % (
+        CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
 
@@ -237,10 +323,10 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
       test_runner (str): Specify which Python test runner to use for these tests. One of
                          `unittest`, `pytest`, or a custom test runner entry point.
     """
-    interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
+    # interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     test_runner = test_runner or CONFIG.PYTHON_TEST_RUNNER
-    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$STAMP"' % (
-        interpreter, CONFIG.PYTHON_MODULE_DIR, test_runner,
+    cmd = '$TOOLS_PEX -t -s "$TOOLS_INTERPRETER" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$STAMP"' % (
+        CONFIG.PYTHON_MODULE_DIR, test_runner,
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
@@ -283,7 +369,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         name='_%s#lib' % name,
         srcs=srcs,
         resources=resources,
-        interpreter=interpreter,
+        interpreter=interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER,
         deps=deps,
         test_only=True,
         visibility=visibility,
@@ -374,7 +460,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     if install_subdirectory:
      target += '/' + outs[0]
 
-    pip_tool = CONFIG.PIP_TOOL or '$TOOLS_PYTHON -m pip'
+    pip_tool = "$TOOLS_PIP" if CONFIG.PIP_TOOL else '$TOOLS_PYTHON -m pip'
 
     pip_cmd = (
         f'mkdir {pip_target_dir} && '
@@ -386,13 +472,13 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     # It seems like most things have been resolved (Oct 2019ish) however a lot of python installs are probably not
     # updated yet. Essentially the "user" default will be turned off when --target is passed. Right now, it complains
     # that --prefix (and therefore --target) are incompatible with --user. See https://github.com/pypa/pip/pull/7002
-    if CONFIG.HOSTOS == 'darwin':
+    if CONFIG.HOSTOS == 'darwin' and not CONFIG.DISABLE_VENDOR_FLAGS:
         # Fix for Homebrew which fails with a superficially similar issue.
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
         # but that prevents downloading binary wheels. This is more fiddly but seems to work.
         # Unfortunately it does *not* work similarly on the Debian problem :(
         pip_cmd = 'echo "[install]\nprefix=" > setup.cfg; ' + pip_cmd
-    if CONFIG.OS == 'linux':
+    if CONFIG.OS == 'linux' and not CONFIG.DISABLE_VENDOR_FLAGS:
         # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
         # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
         # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
