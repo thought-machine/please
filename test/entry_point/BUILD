@@ -26,3 +26,12 @@ please_repo_e2e_test(
     plz_command = 'plz run "//tools:my_tool|printer" > wibble.txt',
     repo = "test_repo",
 )
+
+please_repo_e2e_test(
+    name = "command_expansion_test",
+    expected_output = {
+        "wibble.txt": "wibble",
+    },
+    plz_command = 'plz run //foo:foo_cmd',
+    repo = "test_repo",
+)
