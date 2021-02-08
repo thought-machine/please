@@ -4,3 +4,9 @@ build_rule(
   outs = ["wibble.txt"],
   tools = ["//tools:my_tool|printer"]
 )
+
+sh_cmd(
+    name = "foo_cmd",
+    cmd = "$(out_exe //tools:my_tool|printer) > wibble.txt",
+    data = ["//tools:my_tool"],
+)
