@@ -453,7 +453,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
 
 
 def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[], data:list=None,
-              visibility:list=None, test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
+              visibility:list=None, labels:list=[], test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
               filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False):
     """Compiles a Go binary.
 
@@ -465,6 +465,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
       deps (list): Dependencies
       data (list): Runtime dependencies of this rule.
       visibility (list): Visibility specification
+      labels (list): Labels for this rule.
       test_only (bool): If True, is only visible to test rules.
       static (bool): If True, passes flags to the linker to try to force fully static linking.
                      (specifically `-linkmode external -extldflags static`).
@@ -486,6 +487,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
         filter_srcs=filter_srcs,
         asm_srcs=asm_srcs,
         deps=deps,
+        labels=labels,
         test_only=test_only,
         _link_private = True,
         _link_extra = False,
@@ -506,6 +508,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
         test_only=test_only,
         tools=tools,
         visibility=visibility,
+        labels=labels,
         requires=['go'],
         pre_build=_collect_linker_flags(static),
         stamp = stamp,
