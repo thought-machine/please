@@ -367,6 +367,11 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
 	} `command:"query" description:"Queries information about the build graph"`
+	Codegen struct {
+		Args   struct {
+			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
+		} `positional-args:"true"`
+	} `command:"codegen" description:"Builds all code generation targets in the repository and prints the generated files."`
 }
 
 // Definitions of what we do for each command.
@@ -717,6 +722,16 @@ var buildFunctions = map[string]func() int{
 	"pleasew": func() int {
 		plzinit.InitWrapperScript()
 		return 0
+	},
+	"codegen": func() int {
+		opts.BuildFlags.Include = append(opts.BuildFlags.Include, "codegen")
+
+		//TODO(jpoole): this prints outputs twice and probably doesn't need to
+		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
+			query.Print(state.Graph, state.ExpandLabels(core.WholeGraph), []string{}, []string{"gitignore:"})
+			return 0
+		}
+		return 1
 	},
 }
 

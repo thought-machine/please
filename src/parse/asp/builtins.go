@@ -49,6 +49,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "add_label", addLabel)
 	setNativeCode(s, "add_dep", addDep)
 	setNativeCode(s, "add_out", addOut)
+	setNativeCode(s, "get_outs", getOuts)
 	setNativeCode(s, "add_licence", addLicence)
 	setNativeCode(s, "get_licences", getLicences)
 	setNativeCode(s, "get_command", getCommand)
@@ -772,6 +773,26 @@ func addOut(s *scope, args []pyObject) pyObject {
 		s.pkg.MustRegisterOutput(out, target)
 	}
 	return None
+}
+
+// getOuts gets the outputs of a target
+func getOuts(s *scope, args []pyObject) pyObject {
+	name := args[0].String()
+
+	var target *core.BuildTarget
+	if core.LooksLikeABuildLabel(name) {
+		label := core.ParseBuildLabel(name, s.pkg.Name)
+		target = s.state.Graph.TargetOrDie(label)
+	} else {
+		target = getTargetPost(s, name)
+	}
+
+	outs := target.Outputs()
+	ret := make(pyList, len(outs))
+	for i, out := range outs {
+		ret[i] = pyString(out)
+	}
+	return ret
 }
 
 // addLicence adds a licence to a target.
