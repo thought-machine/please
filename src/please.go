@@ -467,7 +467,7 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 
-			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
+			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Sequential.PositionalArgs.Targets)
 			os.Exit(run.Sequential(state, ls, opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir))
 		}
 		return 1
