@@ -608,8 +608,33 @@ func (state *BuildState) ExpandOriginalLabels() BuildLabels {
 	return state.ExpandLabels(targets)
 }
 
-// ExpandOriginalAnnotatedLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
-// from the set of original labels.
+func annotateLabels(labels []BuildLabel) []AnnotatedOutputLabel {
+	ret := make([]AnnotatedOutputLabel, len(labels))
+	for i, l := range labels {
+		ret[i] = AnnotatedOutputLabel{BuildLabel: l}
+	}
+	return ret
+}
+
+func readingStdinAnnotated(labels []AnnotatedOutputLabel) bool {
+	for _, l := range labels {
+		if l.BuildLabel == BuildLabelStdin {
+			return true
+		}
+	}
+	return false
+}
+
+// ExpandOriginalMaybeAnnotatedLabels works the same as ExpandOriginalLabels, however requires that the possitional args
+// be passed to it.
+func (state *BuildState) ExpandOriginalMaybeAnnotatedLabels(args []AnnotatedOutputLabel) []AnnotatedOutputLabel {
+	if readingStdinAnnotated(args) {
+		args = annotateLabels(state.ExpandOriginalLabels())
+	}
+	return state.ExpandMaybeAnnotatedLabels(args)
+}
+
+// ExpandMaybeAnnotatedLabels is the same as ExpandOriginalLabels except for annotated labels
 func (state *BuildState) ExpandMaybeAnnotatedLabels(labels []AnnotatedOutputLabel) []AnnotatedOutputLabel {
 	ret := make([]AnnotatedOutputLabel, 0, len(labels))
 	for _, l := range labels {
