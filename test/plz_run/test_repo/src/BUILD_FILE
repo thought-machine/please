@@ -1,0 +1,18 @@
+sh_binary(
+    name = "env_printer",
+    data = [
+        "wibble.txt",
+        ":wibble",
+    ],
+    main = "env_printer.sh",
+)
+
+sh_cmd(
+    name = "wibble",
+    cmd = "echo wibble",
+)
+
+sh_cmd(
+    name = "wobble",
+    cmd = "sleep 0.1 && echo wobble",
+)
