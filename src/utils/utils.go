@@ -82,6 +82,24 @@ func ReadingStdin(labels []core.BuildLabel) bool {
 	return false
 }
 
+// ReadingStdin returns true if any of the given build labels are reading from stdin.
+func ReadingStdinAnnnotated(labels []core.AnnotatedOutputLabel) bool {
+	for _, l := range labels {
+		if l.BuildLabel == core.BuildLabelStdin {
+			return true
+		}
+	}
+	return false
+}
+
+func AnnotateLabels(labels []core.BuildLabel) []core.AnnotatedOutputLabel {
+	ret := make([]core.AnnotatedOutputLabel, len(labels))
+	for i, l := range labels {
+		ret[i] = core.AnnotatedOutputLabel{BuildLabel: l}
+	}
+	return ret
+}
+
 // ReadStdinLabels reads any of the given labels from stdin, if any of them indicate it
 // (i.e. if ReadingStdin(labels) is true, otherwise it just returns them.
 func ReadStdinLabels(labels []core.BuildLabel) []core.BuildLabel {

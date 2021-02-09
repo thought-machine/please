@@ -608,6 +608,23 @@ func (state *BuildState) ExpandOriginalLabels() BuildLabels {
 	return state.ExpandLabels(targets)
 }
 
+// ExpandOriginalAnnotatedLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
+// from the set of original labels.
+func (state *BuildState) ExpandMaybeAnnotatedLabels(labels []AnnotatedOutputLabel) []AnnotatedOutputLabel {
+	ret := make([]AnnotatedOutputLabel, 0, len(labels))
+	for _, l := range labels {
+		if l.Annotation != "" {
+			ret = append(ret, l)
+		} else {
+			for _, l := range state.ExpandLabels([]BuildLabel{l.BuildLabel}) {
+				ret = append(ret, AnnotatedOutputLabel{BuildLabel: l})
+			}
+		}
+	}
+
+	return ret
+}
+
 // ExpandLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets) from a set of labels.
 func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
 	ret := BuildLabels{}

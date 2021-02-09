@@ -440,7 +440,17 @@ var buildFunctions = map[string]func() int{
 				opts.Run.Args.Target.Annotation = opts.Run.EntryPoint
 			}
 
-			run.Run(state, opts.Run.Args.Target, opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, dir)
+			annotatedOutputLabels := []core.AnnotatedOutputLabel{opts.Run.Args.Target}
+			if utils.ReadingStdinAnnnotated(annotatedOutputLabels) {
+				annotatedOutputLabels = utils.AnnotateLabels(state.ExpandOriginalLabels())
+			}
+
+			annotatedOutputLabels = state.ExpandMaybeAnnotatedLabels(annotatedOutputLabels)
+			if len(annotatedOutputLabels) != 1 {
+				log.Fatalf("%v expanded to too many targets: %v", opts.Run.Args.Target, annotatedOutputLabels)
+			}
+
+			run.Run(state, annotatedOutputLabels[0], opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, dir)
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
@@ -451,7 +461,12 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 
-			os.Exit(run.Parallel(context.Background(), state, opts.Run.Parallel.PositionalArgs.Targets, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir))
+			annotatedOutputLabels := opts.Run.Parallel.PositionalArgs.Targets
+			if utils.ReadingStdinAnnnotated(annotatedOutputLabels) {
+				annotatedOutputLabels = utils.AnnotateLabels(state.ExpandOriginalLabels())
+			}
+
+			os.Exit(run.Parallel(context.Background(), state, state.ExpandMaybeAnnotatedLabels(annotatedOutputLabels), opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir))
 		}
 		return 1
 	},
@@ -462,7 +477,12 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 
-			os.Exit(run.Sequential(state, opts.Run.Sequential.PositionalArgs.Targets, opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir))
+			annotatedOutputLabels := opts.Run.Sequential.PositionalArgs.Targets
+			if utils.ReadingStdinAnnnotated(annotatedOutputLabels) {
+				annotatedOutputLabels = utils.AnnotateLabels(state.ExpandOriginalLabels())
+			}
+
+			os.Exit(run.Sequential(state, state.ExpandMaybeAnnotatedLabels(annotatedOutputLabels), opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir))
 		}
 		return 1
 	},
