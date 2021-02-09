@@ -9,7 +9,6 @@ please_repo_e2e_test(
     repo = "test_repo",
 )
 
-
 please_repo_e2e_test(
     name = "std_in_test",
     expected_output = {
