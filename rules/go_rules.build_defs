@@ -939,9 +939,10 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
                     please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL):
     """Downloads a third-party Go module using `go mod download`
 
-    This can be used is typically used in conjunction with go_module() to resolve cyclic dependencies. This rule
+    This rule is typically used in conjunction with go_module() to resolve cyclic dependencies between modules. This rule
     can be passed to go_module() via the download param which enables multiple go_module() rules to compile parts of the
-    whole module.
+    whole module. It can also be useful to download from a fork of a module where the import path doesn't match the
+    repo path.
 
     Args:
       name (str): Name of the rule
@@ -950,9 +951,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
       deps (list): Dependencies
       visibility (list): Visibility specification
       test_only (bool): If true this rule will only be visible to tests.
-      strip (list | dict): List of paths to strip from the target after downloading but before building it.
-                           If the dict form is used, each key should correspond to a target in 'get', with
-                           the value defining the paths to strip from that target.
+      strip (list ): List of paths to strip from the target after downloading but before building it.
       hashes (list): List of hashes to verify the downloaded sources against.
       licences (list): Licences this rule is subject to.
       please_go_install (bool): Whether this module is going to be consumed by please_go_install. When set, this rule
@@ -998,10 +997,10 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
       name (str): Name of the rule
       module (str): The module to compile
       version (str): The version of the module.
-      download (str): Can be provided instead of version to manage downloading the module separately. Usually this will
+      download (str): Can be provided instead of version to manage downloading the module separately. This must be a
+                      rule that has a single output containing the go sources of the module.  Usually this will
                       be a go_mod_download() rule however it doesn't have to be. This can be used for a number of
-                      purposes. It enables parts of the module to be compiled separately to resolve cyclic dependencies,
-                      but it can also be used to use a fork of the module or to vendor the module.
+                      purposes but primarily it is for resolving cyclic dependencies between modules.
       deps (list): Dependencies
       exported_deps (list): Dependencies to make available to anything using this rule.
       visibility (list): Visibility specification
@@ -1011,9 +1010,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
                              correspond to a target in 'get', with the value defining the list of packages
                              to install for that target. Specify the empty string as an element in the list
                              to install a target's root package.
-      strip (list | dict): List of paths to strip from the target after downloading but before building it.
-                           If the dict form is used, each key should correspond to a target in 'get', with
-                           the value defining the paths to strip from that target.
+      strip (list ): List of paths to strip from the target after downloading but before building it.
       hashes (list): List of hashes to verify the downloaded sources against.
       licences (list): Licences this rule is subject to.
       linker_flags (list): Any additional linker flags to apply. Linker flags defined in the module itself will
