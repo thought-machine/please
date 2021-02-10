@@ -67,3 +67,10 @@ func TestParseNamedOutputLabelRelativeSubrepo(t *testing.T) {
 	assert.Equal(t, "target1", label.Name)
 	assert.Equal(t, "test_x86", label.Subrepo)
 }
+
+func TestStringifyAnnotatedOutputLabel(t *testing.T) {
+	l := AnnotatedOutputLabel{BuildLabel: BuildLabel{PackageName: "src/core", Name: "build_input_test"}}
+	assert.Equal(t, "//src/core:build_input_test", l.String())
+	l.Annotation = "thing"
+	assert.Equal(t, "//src/core:build_input_test|thing", l.String())
+}

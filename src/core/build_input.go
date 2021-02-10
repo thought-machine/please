@@ -239,6 +239,9 @@ func (label AnnotatedOutputLabel) nonOutputLabel() *BuildLabel {
 
 // String returns a string representation of this input.
 func (label AnnotatedOutputLabel) String() string {
+	if label.Annotation == "" {
+		return label.BuildLabel.String()
+	}
 	return label.BuildLabel.String() + "|" + label.Annotation
 }
 
