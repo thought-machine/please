@@ -603,9 +603,14 @@ def is_platform(os:str|list=CONFIG.OS, arch:str|list=CONFIG.ARCH, host_os:str|li
 
     return CONFIG.OS in os and CONFIG.ARCH in arch and CONFIG.HOSTOS in host_os and CONFIG.HOSTARCH in host_arch
 
-def link_generated_outs(name, output):
-    if CONFIG.LINK_GEN_SOURCES:
-        pkg = package_name()
-        add_label(name, f"link:{pkg}")
-        for out in get_outs(name):
-            add_label(name, f"gitignore:/{pkg}/{out}")
+def link_generated_outs(gen_srcs=CONFIG.LINK_GEN_SOURCES):
+    def _func(name, outs):
+        if gen_srcs:
+            pkg = package_name()
+            add_label(name, f"link:{pkg}")
+            for out in get_outs(name):
+                add_label(name, f"gitignore:{pkg}/{out}")
+        else:
+            warning("link srcs was false for " + package_name())
+
+    return _func

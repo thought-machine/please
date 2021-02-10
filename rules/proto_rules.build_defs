@@ -416,7 +416,7 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
         needs_transitive_deps = True,
         test_only = test_only,
         visibility = visibility,
-        post_build = link_generated_outs,
+        post_build = link_generated_outs(),
     )
 
 def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
