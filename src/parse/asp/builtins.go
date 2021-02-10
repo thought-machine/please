@@ -191,7 +191,6 @@ func pkg(s *scope, args []pyObject) pyObject {
 		k = strings.ToUpper(k)
 		s.Assert(s.config.Get(k, nil) != nil, "error calling package(): %s is not a known config value", k)
 		s.config.IndexAssign(pyString(k), v)
-		log.Warningf("Assigned %s to %s in %v", k, v, s.pkg.Name)
 	}
 	return None
 }

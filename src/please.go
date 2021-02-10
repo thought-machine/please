@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/thought-machine/please/src/codegen"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -368,6 +369,7 @@ var opts struct {
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
 	} `command:"query" description:"Queries information about the build graph"`
 	Codegen struct {
+		Gitignore string `long:"update_gitignore" description:"The gitignore file to write the generated sources to"`
 		Args   struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 		} `positional-args:"true"`
@@ -726,16 +728,13 @@ var buildFunctions = map[string]func() int{
 	"codegen": func() int {
 		opts.BuildFlags.Include = append(opts.BuildFlags.Include, "codegen")
 
-		// TODO(jpoole): write a specialised thing instead of hijacking query print. The final outputs needs to be:
-		//   1) Only print outs for the targets that are specified in opts.Codegen.Args.Targets
-		//   2) Stops the build from printing the output fo the built targets. We only want to print in the parse phase.
-		//	 3) We need some way to trim the path so `plz codegen --relative=some/package //some/package/...` will
-		//	    generate filepaths like `proto/service.pb.go` rather than `/some/package/proto/service.pb.go` so we can
-		//		use the paths in `some/package/.gitignore`
-		//   We probably don't need the gitignore: flag to be honest. This can just print the outputs of the specified
-		//   targets
 		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
-			query.Print(state.Graph, state.ExpandLabels(core.WholeGraph), []string{}, []string{"gitignore:"})
+			if opts.Codegen.Gitignore != "" {
+				err := codegen.UpdateGitignore(state.Graph, state.ExpandLabels(core.WholeGraph), opts.Codegen.Gitignore)
+				if err != nil {
+					log.Fatalf("failed to update gitignore: %v", err)
+				}
+			}
 			return 0
 		}
 		return 1
