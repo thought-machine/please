@@ -1,9 +1,5 @@
 module github.com/thought-machine/please
 
-replace (
-    github.com/bazelbuild/remote-apis-sdks => github.com/peterebden/remote-apis-sdks master
-)
-
 require (
 	github.com/DataDog/zstd v1.4.5
 	github.com/Songmu/prompter v0.0.0-20181014095714-d227c68538bd // indirect

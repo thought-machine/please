@@ -20,8 +20,8 @@ func (s *stub) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo
 	return nil
 }
 
-func (s *stub) IgnoreFile(name string) error {
-	return fmt.Errorf("Don't know how to mark %s as ignored", name)
+func (s *stub) IgnoreFiles(string, []string) error {
+	return fmt.Errorf("Don't know how to mark files as ignored. Unsupported SCM.")
 }
 
 func (s *stub) Remove(names []string) error {

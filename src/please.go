@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/thought-machine/please/src/codegen"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/pprof"
 	"strings"
 	"sync"
@@ -26,6 +26,7 @@ import (
 	"github.com/thought-machine/please/src/format"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/gc"
+	"github.com/thought-machine/please/src/generate"
 	"github.com/thought-machine/please/src/hashes"
 	"github.com/thought-machine/please/src/help"
 	"github.com/thought-machine/please/src/output"
@@ -100,7 +101,7 @@ var opts struct {
 		Rebuild    bool     `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
 		NoDownload bool     `long:"nodownload" hidden:"true" description:"Don't download outputs after building. Only applies when using remote build execution."`
 		Download   bool     `long:"download" hidden:"true" description:"Force download of all outputs regardless of original target spec. Only applies when using remote build execution."`
-		Args       struct { // Inner nesting is necessary to make positional-args work :(
+		Args       struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
@@ -370,10 +371,10 @@ var opts struct {
 	} `command:"query" description:"Queries information about the build graph"`
 	Codegen struct {
 		Gitignore string `long:"update_gitignore" description:"The gitignore file to write the generated sources to"`
-		Args   struct {
+		Args      struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 		} `positional-args:"true"`
-	} `command:"codegen" description:"Builds all code generation targets in the repository and prints the generated files."`
+	} `command:"generate" description:"Builds all code generation targets in the repository and prints the generated files."`
 }
 
 // Definitions of what we do for each command.
@@ -725,12 +726,19 @@ var buildFunctions = map[string]func() int{
 		plzinit.InitWrapperScript()
 		return 0
 	},
-	"codegen": func() int {
+	"generate": func() int {
 		opts.BuildFlags.Include = append(opts.BuildFlags.Include, "codegen")
+
+		if opts.Codegen.Gitignore != "" && len(opts.Codegen.Args.Targets) == 0 {
+			opts.Codegen.Args.Targets = append(opts.Codegen.Args.Targets, core.BuildLabel{
+				PackageName: filepath.Dir(opts.Codegen.Gitignore),
+				Name:        "...",
+			})
+		}
 
 		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
 			if opts.Codegen.Gitignore != "" {
-				err := codegen.UpdateGitignore(state.Graph, state.ExpandLabels(core.WholeGraph), opts.Codegen.Gitignore)
+				err := generate.UpdateGitignore(state.Graph, state.ExpandLabels(core.WholeGraph), opts.Codegen.Gitignore)
 				if err != nil {
 					log.Fatalf("failed to update gitignore: %v", err)
 				}

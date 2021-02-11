@@ -1,8 +1,9 @@
 go_library(
-    name = "codegen",
-    srcs = ["codegen.go"],
+    name = "generate",
+    srcs = ["generate.go"],
     visibility = ["//src/..."],
     deps = [
         "//src/core",
+        "//src/scm",
     ],
 )
