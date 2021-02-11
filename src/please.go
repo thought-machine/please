@@ -735,16 +735,29 @@ var buildFunctions = map[string]func() int{
 	"generate": func() int {
 		opts.BuildFlags.Include = append(opts.BuildFlags.Include, "codegen")
 
-		if opts.Codegen.Gitignore != "" && len(opts.Codegen.Args.Targets) == 0 {
-			opts.Codegen.Args.Targets = append(opts.Codegen.Args.Targets, core.BuildLabel{
-				PackageName: filepath.Dir(opts.Codegen.Gitignore),
+		if opts.Codegen.Gitignore != "" {
+			pkg := filepath.Dir(opts.Codegen.Gitignore)
+			if pkg == "." {
+				pkg = ""
+			}
+			target := core.BuildLabel{
+				PackageName: pkg,
 				Name:        "...",
-			})
+			}
+
+			if len(opts.Codegen.Args.Targets) != 0 {
+				log.Warning("You've provided targets, and a gitignore to update. Ignoring the provided targets and building %v", target)
+			}
+
+			opts.Codegen.Args.Targets = []core.BuildLabel{target}
 		}
 
 		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
 			if opts.Codegen.Gitignore != "" {
-				err := generate.UpdateGitignore(state.Graph, state.ExpandLabels(core.WholeGraph), opts.Codegen.Gitignore)
+				if !state.Config.Build.LinkGeneratedSources {
+					log.Warning("You're updating a .gitignore with generated sources but Please isn't configured to link generated sources. See `plz help LinkGeneratedSources` for more information. ")
+				}
+				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Codegen.Gitignore)
 				if err != nil {
 					log.Fatalf("failed to update gitignore: %v", err)
 				}
