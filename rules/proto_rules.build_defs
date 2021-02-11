@@ -402,6 +402,9 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
 
     # protoc_flags are applied transitively to dependent rules via labels.
     labels += ['protoc:' + flag for flag in protoc_flags] + ["codegen"]
+    if CONFIG.LINK_GEN_OUTS:
+        labels += ["link:" + package_name()]
+
     return build_rule(
         name = name,
         tag = f'protoc_{language}',
@@ -416,7 +419,6 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
         needs_transitive_deps = True,
         test_only = test_only,
         visibility = visibility,
-        post_build = link_generated_outs(),
     )
 
 def protoc_binary(name, version, hashes=None, deps=None, visibility=None):

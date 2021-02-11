@@ -2,6 +2,5 @@ genrule(
     name = "foo",
     outs = ["foo.gen"],
     cmd = "echo wibble > $OUT",
-    labels = ["codegen"],
-    post_build = link_generated_outs(),
+    labels = ["codegen",  "link:" + package_name()],
 )
