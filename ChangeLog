@@ -1,5 +1,20 @@
 Version 15.15.0
 --------------
+    * Added support for .dSYM debug symbols on macOS #1522
+    * go_module() will now collect linker flags automatically when
+      the PleaseGoInstall feature flag is enabled #1525
+    * Fix various issues with install wildcards for please_go_install
+      #1524
+    * Fix error message for absolute symlinks in src files #1530
+    * Implemented `plz update --latest_prerelease_version` #1531
+    * Added `env` field to genrule() to set arbitrary env variables
+      #1536
+    * Fix regression with golang protobuf imports #1539
+    * Implement entry points on labels for command expansion e.g.
+      $(out_exe //some:tool|entry-point) #1545
+    * Added labels to go_binary() #1542
+    * Fix regression for `plz run` and subcommands where it no longer ran
+      targets from stdin #1548
 
 
 Version 15.14.0

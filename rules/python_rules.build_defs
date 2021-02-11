@@ -425,7 +425,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         tools = tools,
         sandbox = False,
     )
-    
+
     # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
     cmd = f'$TOOLS_JARCAT z --suffix="" --exclude_suffix=whl --include_other -i . -r $PKG/{name}:$PKG'
     if not licences:
@@ -481,10 +481,11 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
       visibility (list): Visibility declaration.
       deps (list): Dependencies of this rule.
       name_scheme (str): The templatized wheel naming scheme (available template variables
-                         are `url_base`, `package_name`, and `version`).
+                         are `url_base`, `package_name`, `initial`, and `version`).
       strip (list): Files to strip after install. Note that these are done at any level.
     """
     package_name = package_name or name.replace('-', '_')
+    initial = package_name[0]
     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
     if not url_base:
         raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly '
@@ -493,23 +494,25 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     if name_scheme:
         urls += [name_scheme.format(url_base=url_base,
                                     package_name=package_name,
+                                    initial=initial,
                                     version=version)]
     elif CONFIG.PYTHON_WHEEL_NAME_SCHEME:
-        urls += [CONFIG.PYTHON_WHEEL_NAME_SCHEME.format(url_base=url_base,
-                                                        package_name=package_name,
-                                                        version=version)]
+        urls += [scheme.format(url_base=url_base, package_name=package_name, initial=initial, version=version)
+                 for scheme in CONFIG.PYTHON_WHEEL_NAME_SCHEME]
     else:
         # Populate urls using a reasonable set of possible wheel naming schemes.
         # Look for an arch-specific wheel first; in some cases there can be both (e.g. protobuf
         # has optional arch-specific bits) and we prefer the one with the cool stuff.
         urls += ['{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
                                                                                     package_name=package_name,
+                                                                                    initial=initial,
                                                                                     version=version),
                  '{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                    package_name=package_name,
+                                                                                    package_name=package_name,                                                                                   initial=initial,
                                                                                     version=version),
                  '{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
                                                                   package_name=package_name,
+                                                                  initial=initial,
                                                                   version=version)]
 
     file_rule = remote_file(

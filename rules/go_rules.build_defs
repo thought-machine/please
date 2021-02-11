@@ -937,6 +937,28 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
 def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None, strip:list=[],
                     licences:list=None, hashes:list=None, labels:list=[], _tag:str='', deps:list=[],
                     please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL):
+    """Downloads a third-party Go module using `go mod download`
+
+    This rule is typically used in conjunction with go_module() to resolve cyclic dependencies between modules. This rule
+    can be passed to go_module() via the download param which enables multiple go_module() rules to compile parts of the
+    whole module. It can also be useful to download from a fork of a module where the import path doesn't match the
+    repo path.
+
+    Args:
+      name (str): Name of the rule
+      module (str): The module to download
+      version (str): The version of the module.
+      deps (list): Dependencies
+      visibility (list): Visibility specification
+      test_only (bool): If true this rule will only be visible to tests.
+      strip (list ): List of paths to strip from the target after downloading but before building it.
+      hashes (list): List of hashes to verify the downloaded sources against.
+      licences (list): Licences this rule is subject to.
+      labels (list): Labels to apply to this rule.
+      please_go_install (bool): Whether this module is going to be consumed by please_go_install. When set, this rule
+                                will output into a folder based on it's name completely avoiding issues with multiple
+                                rules outputting into the same location.
+    """
     cmds = [
         f'export MOD_DIR=$($TOOL mod download -x -modcacherw -json {module}@{version} | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
@@ -963,6 +985,43 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
               licences:list=None, linker_flags:list=[], please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL,
               strip:list=[], env:dict={}):
+    """Defines a dependency on a third-party Go module.
+
+    Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
+    You will need to add those as separate rules; `go list -f '{{.Deps}}' <package>` can be
+    useful to discover what they should be.
+
+    This rule is different to go_get() in that it is go module aware. It handles vanity imports and major versions
+    correctly so is the recommended approach.
+
+    Args:
+      name (str): Name of the rule
+      module (str): The module to compile
+      version (str): The version of the module.
+      download (str): Can be provided instead of version to manage downloading the module separately. This must be a
+                      rule that has a single output containing the go sources of the module.  Usually this will
+                      be a go_mod_download() rule however it doesn't have to be. This can be used for a number of
+                      purposes but primarily it is for resolving cyclic dependencies between modules.
+      deps (list): Dependencies
+      exported_deps (list): Dependencies to make available to anything using this rule.
+      visibility (list): Visibility specification
+      binary (bool): True if the output of the rule is a binary.
+      test_only (bool): If true this rule will only be visible to tests.
+      install (list | dict): Only install listed (sub)packages. If the dict form is used, each key should
+                             correspond to a target in 'get', with the value defining the list of packages
+                             to install for that target. Specify the empty string as an element in the list
+                             to install a target's root package.
+      strip (list ): List of paths to strip from the target after downloading but before building it.
+      hashes (list): List of hashes to verify the downloaded sources against.
+      licences (list): Licences this rule is subject to.
+      linker_flags (list): Any additional linker flags to apply. Linker flags defined in the module itself will
+                           automatically be collected so this is typically not necessary.
+      env (dict): Any env variables to set during build time. This can be useful to set CGO_CFLAGS etc. to control
+                  aspects of compilation.
+      please_go_install (bool): Whether to use please_go_install instead of  `go install` to compile the module. This
+                                feature is still maturing however avoids a number of issues with relying on `go install`
+                                and will become the default in a future release.
+    """
     if version and download:
         raise ParseError("You have provided both version and download. Must provided one or the other.")
 
@@ -1110,6 +1169,8 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
                                   a major version release, the import path may no longer match the repository structure.
                                   This rule allows us to map the source path in the repo github.com/some/repo/main.go to
                                   the actual source path github.com/some/repo/v2/main.go.
+      env (dict): Any env variables to set during build time. This can be useful to set CGO_CFLAGS etc. to control
+                  aspects of compilation.
     """
     def get_param_as_list(value, key):
         if not value:
