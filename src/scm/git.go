@@ -123,7 +123,7 @@ func readUserEntries(file string) ([]string, error) {
 	var userEntires []string
 	for scanner.Scan() {
 		line := scanner.Text()
-		if line == pleaseDoNotEdit {
+		if strings.TrimSpace(line) == pleaseDoNotEdit {
 			return userEntires, nil
 		}
 		userEntires = append(userEntires, line)
