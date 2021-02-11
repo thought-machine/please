@@ -402,7 +402,7 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
 
     # protoc_flags are applied transitively to dependent rules via labels.
     labels += ['protoc:' + flag for flag in protoc_flags] + ["codegen"]
-    if CONFIG.LINK_GEN_OUTS:
+    if CONFIG.LINK_GEN_SOURCES:
         labels += ["link:" + package_name()]
 
     return build_rule(

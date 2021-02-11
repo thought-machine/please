@@ -20,7 +20,7 @@ func UpdateGitignore(graph *core.BuildGraph, labels []core.BuildLabel, gitignore
 				relativePkg := t.Label.PackageName
 				if pkg != "." {
 					if strings.HasPrefix(t.Label.PackageName, pkg) {
-						relativePkg = strings.TrimPrefix(t.Label.PackageName, pkg)
+						relativePkg = strings.TrimPrefix(strings.TrimPrefix(t.Label.PackageName, pkg), "/")
 					} else {
 						// Don't add files that are not under this package to the .gitignore
 						continue

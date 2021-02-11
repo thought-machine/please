@@ -15,6 +15,12 @@ user_entries = [
 all_generated_files = [
     "src/foo.gen",
     "src/bar/bar.gen",
+    "src/bar/baz/baz.gen",
+]
+
+bar_generated_files = [
+    "bar.gen",
+    "baz/baz.gen",
 ]
 
 init_cmd = "git init && " + " && ".join([f"echo {entry} >> .gitignore" for entry in user_entries])
@@ -33,9 +39,9 @@ please_repo_e2e_test(
 please_repo_e2e_test(
     name = "generate_bar_test",
     expected_output = {
-        "src/bar/.gitignore": f"{do_not_edit_warning}\nbar.gen",
+        "src/bar/.gitignore": f"{do_not_edit_warning}\n" + "\n".join(bar_generated_files),
         "src/bar/bar.gen": "wobble",
     },
-    plz_command = f"{init_cmd} && plz generate --update_gitignore src/bar/.gitignore",
+    plz_command = f"git init && plz generate --update_gitignore src/bar/.gitignore",
     repo = "test_repo",
 )
