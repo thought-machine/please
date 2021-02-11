@@ -17,15 +17,4 @@ __pycache__
 # For local testing
 .local
 
-# Entries below this point are managed by Please (DO NOT EDIT)
-plz-out
-.plzconfig.local
-rules/generate.sh
-src/assets/generate.sh
-test/go_rules/cover-test/test-proto.pb.go
-test/proto_rules/flags.pb.go
-test/proto_rules/js_test_pb.js
-test/proto_rules/test_pb2.py
-test/proto_rules/go_grpc_ff/proto/service.pb.go
-test/proto_rules/go_grpc_ff/proto/service_grpc.pb.go
-test/python_rules/test_pb2.py
+
