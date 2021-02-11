@@ -954,6 +954,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
       strip (list ): List of paths to strip from the target after downloading but before building it.
       hashes (list): List of hashes to verify the downloaded sources against.
       licences (list): Licences this rule is subject to.
+      labels (list): Labels to apply to this rule.
       please_go_install (bool): Whether this module is going to be consumed by please_go_install. When set, this rule
                                 will output into a folder based on it's name completely avoiding issues with multiple
                                 rules outputting into the same location.
