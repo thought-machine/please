@@ -96,11 +96,11 @@ var opts struct {
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
 
 	Build struct {
-		Prepare    bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
-		Shell      bool     `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
-		Rebuild    bool     `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
-		NoDownload bool     `long:"nodownload" hidden:"true" description:"Don't download outputs after building. Only applies when using remote build execution."`
-		Download   bool     `long:"download" hidden:"true" description:"Force download of all outputs regardless of original target spec. Only applies when using remote build execution."`
+		Prepare    bool `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
+		Shell      bool `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
+		Rebuild    bool `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
+		NoDownload bool `long:"nodownload" hidden:"true" description:"Don't download outputs after building. Only applies when using remote build execution."`
+		Download   bool `long:"download" hidden:"true" description:"Force download of all outputs regardless of original target spec. Only applies when using remote build execution."`
 		Args       struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`

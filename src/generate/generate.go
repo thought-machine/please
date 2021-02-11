@@ -21,7 +21,6 @@ func UpdateGitignore(graph *core.BuildGraph, labels []core.BuildLabel, gitignore
 					relativePkg = strings.TrimPrefix(t.Label.PackageName, pkg)
 				}
 				files = append(files, filepath.Join(relativePkg, out))
-
 			}
 		}
 	}

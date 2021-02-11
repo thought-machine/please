@@ -108,6 +108,7 @@ func (g *git) fixGitRelativePath(worktreePath, relativeTo string) string {
 }
 
 const pleaseDoNotEdit = "# Entries below this point are managed by Please (DO NOT EDIT)"
+
 var defaultIgnoredFiles = []string{"plz-out", ".plzconfig.local"}
 
 func readUserEntries(file string) ([]string, error) {
