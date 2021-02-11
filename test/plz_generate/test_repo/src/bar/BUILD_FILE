@@ -2,5 +2,5 @@ genrule(
     name = "bar",
     outs = ["bar.gen"],
     cmd = "echo wobble > $OUT",
-    labels = ["codegen",  "link:" + package_name()],
+    labels = ["codegen"],
 )
