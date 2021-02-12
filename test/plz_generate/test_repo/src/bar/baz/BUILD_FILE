@@ -1,0 +1,6 @@
+genrule(
+    name = "baz",
+    outs = ["baz.gen"],
+    cmd = "echo wabble > $OUT",
+    labels = ["codegen",  "link:" + package_name()],
+)

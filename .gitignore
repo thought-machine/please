@@ -14,3 +14,7 @@ __pycache__
 /out
 
 .DS_Store
+# For local testing
+.local
+
+

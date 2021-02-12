@@ -1,0 +1,5 @@
+[Parse]
+BuildFileName = BUILD_FILE
+
+[build]
+LinkGeneratedSources = true

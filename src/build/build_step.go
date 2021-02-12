@@ -975,6 +975,14 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 func buildLinks(state *core.BuildState, target *core.BuildTarget) {
 	buildLinksOfType(state, target, "link:", os.Symlink)
 	buildLinksOfType(state, target, "hlink:", os.Link)
+
+	if state.Config.Build.LinkGeneratedSources && target.HasLabel("codegen") {
+		for _, out := range target.Outputs() {
+			destDir := path.Join(core.RepoRoot, target.Label.PackageDir())
+			srcDir := path.Join(core.RepoRoot, target.OutDir())
+			linkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), os.Symlink)
+		}
+	}
 }
 
 type linkFunc func(string, string) error

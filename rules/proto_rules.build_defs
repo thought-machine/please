@@ -401,7 +401,7 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
     cmd = f'mkdir out_dir && mkdir {language_out_dir} && {cmd}'
 
     # protoc_flags are applied transitively to dependent rules via labels.
-    labels += ['protoc:' + flag for flag in protoc_flags]
+    labels += ['protoc:' + flag for flag in protoc_flags] + ["codegen"]
     return build_rule(
         name = name,
         tag = f'protoc_{language}',

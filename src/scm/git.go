@@ -3,8 +3,8 @@
 package scm
 
 import (
+	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -107,17 +107,66 @@ func (g *git) fixGitRelativePath(worktreePath, relativeTo string) string {
 	return p
 }
 
-func (g *git) IgnoreFile(name string) error {
-	gitignore := path.Join(g.repoRoot, ".gitignore")
-	b, err := ioutil.ReadFile(gitignore)
-	if err != nil && !os.IsNotExist(err) { // Not an error for this not to exist.
+const pleaseDoNotEdit = "# Entries below this point are managed by Please (DO NOT EDIT)"
+
+var defaultIgnoredFiles = []string{"plz-out", ".plzconfig.local"}
+
+func readUserEntries(file string) ([]string, error) {
+	f, err := os.Open(file)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+
+	var userEntires []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.TrimSpace(line) == pleaseDoNotEdit {
+			return userEntires, nil
+		}
+		userEntires = append(userEntires, line)
+	}
+	return userEntires, nil
+}
+
+func (g *git) IgnoreFiles(gitignore string, files []string) error {
+	// If we're generating the ignore in the root of the project, we should ignore some Please stuff too
+	if gitignore == ".gitignore" {
+		files = append(defaultIgnoredFiles, files...)
+	}
+
+	p := filepath.Join(g.repoRoot, gitignore)
+
+	userEntries, err := readUserEntries(p)
+	if err != nil {
 		return err
 	}
-	if len(b) > 0 { // Don't append an initial newline if at the start of the file.
-		b = append(b, '\n')
+
+	lines := userEntries
+	if len(lines) != 0 && lines[len(lines)-1] != "" {
+		lines = append(lines, "")
 	}
-	b = append(b, []byte("# Please output directory and local configuration\nplz-out\n.plzconfig.local\n")...)
-	return ioutil.WriteFile(gitignore, b, 0644)
+	lines = append(lines, pleaseDoNotEdit)
+	lines = append(lines, files...)
+
+	if err := os.RemoveAll(p); err != nil && err != os.ErrNotExist {
+		return err
+	}
+
+	file, err := os.Create(p)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	for _, line := range lines {
+		if _, err := fmt.Fprintln(file, line); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (g *git) Remove(names []string) error {

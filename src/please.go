@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/pprof"
 	"strings"
 	"sync"
@@ -25,6 +26,7 @@ import (
 	"github.com/thought-machine/please/src/format"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/gc"
+	"github.com/thought-machine/please/src/generate"
 	"github.com/thought-machine/please/src/hashes"
 	"github.com/thought-machine/please/src/help"
 	"github.com/thought-machine/please/src/output"
@@ -94,12 +96,12 @@ var opts struct {
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
 
 	Build struct {
-		Prepare    bool     `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
-		Shell      bool     `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
-		Rebuild    bool     `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
-		NoDownload bool     `long:"nodownload" hidden:"true" description:"Don't download outputs after building. Only applies when using remote build execution."`
-		Download   bool     `long:"download" hidden:"true" description:"Force download of all outputs regardless of original target spec. Only applies when using remote build execution."`
-		Args       struct { // Inner nesting is necessary to make positional-args work :(
+		Prepare    bool `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
+		Shell      bool `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
+		Rebuild    bool `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
+		NoDownload bool `long:"nodownload" hidden:"true" description:"Don't download outputs after building. Only applies when using remote build execution."`
+		Download   bool `long:"download" hidden:"true" description:"Force download of all outputs regardless of original target spec. Only applies when using remote build execution."`
+		Args       struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
 	} `command:"build" description:"Builds one or more targets"`
@@ -367,6 +369,12 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
 	} `command:"query" description:"Queries information about the build graph"`
+	Codegen struct {
+		Gitignore string `long:"update_gitignore" description:"The gitignore file to write the generated sources to"`
+		Args      struct {
+			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
+		} `positional-args:"true"`
+	} `command:"generate" description:"Builds all code generation targets in the repository and prints the generated files."`
 }
 
 // Definitions of what we do for each command.
@@ -723,6 +731,40 @@ var buildFunctions = map[string]func() int{
 	"pleasew": func() int {
 		plzinit.InitWrapperScript()
 		return 0
+	},
+	"generate": func() int {
+		opts.BuildFlags.Include = append(opts.BuildFlags.Include, "codegen")
+
+		if opts.Codegen.Gitignore != "" {
+			pkg := filepath.Dir(opts.Codegen.Gitignore)
+			if pkg == "." {
+				pkg = ""
+			}
+			target := core.BuildLabel{
+				PackageName: pkg,
+				Name:        "...",
+			}
+
+			if len(opts.Codegen.Args.Targets) != 0 {
+				log.Warning("You've provided targets, and a gitignore to update. Ignoring the provided targets and building %v", target)
+			}
+
+			opts.Codegen.Args.Targets = []core.BuildLabel{target}
+		}
+
+		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
+			if opts.Codegen.Gitignore != "" {
+				if !state.Config.Build.LinkGeneratedSources {
+					log.Warning("You're updating a .gitignore with generated sources but Please isn't configured to link generated sources. See `plz help LinkGeneratedSources` for more information. ")
+				}
+				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Codegen.Gitignore)
+				if err != nil {
+					log.Fatalf("failed to update gitignore: %v", err)
+				}
+			}
+			return 0
+		}
+		return 1
 	},
 }
 

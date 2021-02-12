@@ -230,6 +230,8 @@ def add_exported_dep(target:str, dep:str):
     add_dep(target, dep, True)
 def add_out(target:str, name:str, out:str=''):
     pass
+def get_outs(target:str):
+    pass
 def add_licence(target:str, licence:str):
     pass
 def get_licences(target:str):

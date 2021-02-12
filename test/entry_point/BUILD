@@ -32,6 +32,6 @@ please_repo_e2e_test(
     expected_output = {
         "wibble.txt": "wibble",
     },
-    plz_command = 'plz run //foo:foo_cmd',
+    plz_command = "plz run //foo:foo_cmd",
     repo = "test_repo",
 )
