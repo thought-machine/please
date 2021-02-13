@@ -269,6 +269,17 @@
         </p>
       </div>
     </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          PreloadSubincludes <span class="normal">(repeated string)</span>
+        </h3>
+        <p>
+          Subinclude targets to preload by the parser before loading any BUILD files.<br/>
+          Subincludes can be slow so it's recommended to use PreloadBuildDefs where possible.
+        </p>
+      </div>
+    </li>
   </ul>
 </section>
 
@@ -1034,7 +1045,7 @@
         <p>
           Disables injection of vendor specific flags for <code class="code">pip</code> while using
           <code class="code">pip_library</code>. The option can be useful if you are using
-          something like <code class="code">Pyenv</code>, and the passing of additional 
+          something like <code class="code">Pyenv</code>, and the passing of additional
           flags or configuration that are vendor specific, e.g. <code class="code">--system</code>,
           breaks your build.
         </p>
