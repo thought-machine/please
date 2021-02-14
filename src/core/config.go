@@ -474,8 +474,6 @@ type Configuration struct {
 		TokenFile     string       `help:"A file containing a token that is attached to outgoing RPCs to authenticate them. This is somewhat bespoke; we are still investigating further options for authentication."`
 		Timeout       cli.Duration `help:"Timeout for connections made to the remote server."`
 		Secure        bool         `help:"Whether to use TLS for communication or not."`
-		Gzip          bool         `help:"Deprecated, has no effect."`
-		Zstd          bool         `help:"Deprecated, has no effect."`
 		VerifyOutputs bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
 		HomeDir       string       `help:"The home directory on the build machine."`
 		Shell         string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
