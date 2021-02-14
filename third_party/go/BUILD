@@ -735,30 +735,6 @@ go_module(
 )
 
 go_module(
-    name = "go-grpc-compression",
-    install = ["zstd"],
-    module = "github.com/mostynb/go-grpc-compression",
-    version = "v1.1.6",
-    deps = [
-        ":grpc",
-        ":zstd",
-    ],
-)
-
-go_module(
-    name = "zstd",
-    install = [
-        "fse",
-        "huff0",
-        "snappy",
-        "zstd",
-        "zstd/...",
-    ],
-    module = "github.com/klauspost/compress",
-    version = "v1.11.0",
-)
-
-go_module(
     name = "goldmark",
     install = [
         "...",
