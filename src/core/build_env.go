@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -31,6 +32,7 @@ func GeneralBuildEnvironment(state *BuildState) BuildEnv {
 		// It's easier to just make these available for Go-based rules.
 		"GOARCH=" + state.Arch.GoArch(),
 		"GOOS=" + state.Arch.OS,
+		"GLOBAL_DIR=" + filepath.Join(RepoRoot, GlobalDir),
 	}
 	if state.Config.Cpp.PkgConfigPath != "" {
 		env = append(env, "PKG_CONFIG_PATH="+state.Config.Cpp.PkgConfigPath)

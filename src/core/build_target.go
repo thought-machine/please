@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -11,10 +10,16 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/thought-machine/please/src/fs"
 )
 
 // OutDir is the root output directory for everything.
 const OutDir string = "plz-out"
+
+// GlobalDir is the root of the global directory which exists without any
+// build targets.
+const GlobalDir string = "plz-out/global"
 
 // TmpDir is the root of the temporary directory for building targets & running tests.
 const TmpDir string = "plz-out/tmp"
