@@ -75,10 +75,11 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 
 // buildCommand builds the command for a single target.
 func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest, isRun, stamp bool) (*pb.Command, error) {
+	state := c.state.ForTarget(target)
 	if isTest {
-		return c.buildTestCommand(target)
+		return c.buildTestCommand(state, target)
 	} else if isRun {
-		return c.buildRunCommand(target)
+		return c.buildRunCommand(state, target)
 	}
 	// We can't predict what variables like this should be so we sneakily bung something on
 	// the front of the command. It'd be nicer if there were a better way though...
@@ -100,22 +101,22 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		// not include the environment variables since we don't communicate those to the remote server).
 		return &pb.Command{
 			Arguments: []string{
-				"fetch", strings.Join(target.AllURLs(c.state), " "), "verify", strings.Join(target.Hashes, " "),
+				"fetch", strings.Join(target.AllURLs(state), " "), "verify", strings.Join(target.Hashes, " "),
 			},
 			OutputFiles:       files,
 			OutputDirectories: dirs,
 			OutputPaths:       append(files, dirs...),
 		}, nil
 	}
-	cmd := target.GetCommand(c.state)
+	cmd := target.GetCommand(state)
 	if cmd == "" {
 		cmd = "true"
 	}
-	cmd, err := core.ReplaceSequences(c.state, target, cmd)
+	cmd, err := core.ReplaceSequences(state, target, cmd)
 	return &pb.Command{
 		Platform:             c.platform,
-		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(target, inputRoot, stamp), target.Sandbox),
+		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
+		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp), target.Sandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
@@ -123,24 +124,24 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 }
 
 // stampedBuildEnvironment returns a build environment, optionally with a stamp if stamp is true.
-func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb.Directory, stamp bool) []string {
+func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.BuildTarget, inputRoot *pb.Directory, stamp bool) []string {
 	if target.IsFilegroup {
-		return core.GeneralBuildEnvironment(c.state) // filegroups don't need a full build environment
+		return core.GeneralBuildEnvironment(state) // filegroups don't need a full build environment
 	} else if !stamp {
-		return core.BuildEnvironment(c.state, target, ".")
+		return core.BuildEnvironment(state, target, ".")
 	}
 	// We generate the stamp ourselves from the input root.
 	// TODO(peterebden): it should include the target properties too...
 	hash := c.sum(mustMarshal(inputRoot))
-	return core.StampedBuildEnvironment(c.state, target, hash, ".")
+	return core.StampedBuildEnvironment(state, target, hash, ".")
 }
 
 // buildTestCommand builds a command for a target when testing.
-func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error) {
+func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarget) (*pb.Command, error) {
 	// TODO(peterebden): Remove all this nonsense once API v2.1 is released.
 	files := target.TestOutputs
 	dirs := []string{}
-	if target.NeedCoverage(c.state) {
+	if target.NeedCoverage(state) {
 		files = append(files, core.CoverageFile)
 	}
 	if !target.NoTestOutput {
@@ -151,9 +152,9 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 		}
 	}
 	const commandPrefix = "export TMP_DIR=\"`pwd`\" TEST_DIR=\"`pwd`\" && "
-	cmd, err := core.ReplaceTestSequences(c.state, target, target.GetTestCommand(c.state))
-	if len(c.state.TestArgs) != 0 {
-		cmd += " " + strings.Join(c.state.TestArgs, " ")
+	cmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
+	if len(state.TestArgs) != 0 {
+		cmd += " " + strings.Join(state.TestArgs, " ")
 	}
 	return &pb.Command{
 		Platform: &pb.Platform{
@@ -164,8 +165,8 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 				},
 			},
 		},
-		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(c.state, target, "."), target.TestSandbox),
+		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
+		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, "."), target.TestSandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
@@ -173,7 +174,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 }
 
 // buildRunCommand builds the command to run a target remotely.
-func (c *Client) buildRunCommand(target *core.BuildTarget) (*pb.Command, error) {
+func (c *Client) buildRunCommand(state *core.BuildState, target *core.BuildTarget) (*pb.Command, error) {
 	outs := target.Outputs()
 	if len(outs) == 0 {
 		return nil, fmt.Errorf("Target %s has no outputs, it can't be run with `plz run`", target)
@@ -181,7 +182,7 @@ func (c *Client) buildRunCommand(target *core.BuildTarget) (*pb.Command, error) 
 	return &pb.Command{
 		Platform:             c.platform,
 		Arguments:            outs,
-		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(c.state), false),
+		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(state), false),
 	}, nil
 }
 
