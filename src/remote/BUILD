@@ -13,7 +13,6 @@ go_library(
         "//third_party/go:errgroup",
         "//third_party/go:genproto_api",
         "//third_party/go:genproto_rpc",
-        "//third_party/go:go-grpc-compression",
         "//third_party/go:grpc",
         "//third_party/go:grpc-middleware",
         "//third_party/go:logging",
