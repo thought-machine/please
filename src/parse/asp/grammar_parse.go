@@ -737,7 +737,7 @@ func (p *parser) findBrace(s string) int {
 	last := ' '
 	for i, c := range s {
 		if c == '{' && last != '{' && last != '$' {
-			if i < len(s) && s[i+1] == '{' {
+			if i + 1 < len(s) && s[i+1] == '{' {
 				last = c
 				continue
 			}
