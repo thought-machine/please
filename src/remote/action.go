@@ -73,9 +73,20 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 	return command, actionDigest, nil
 }
 
+// stateForTarget returns an appropriate state for the current target.
+// TODO(peterebden): This is very much a limitation of the current setup; there is a complex interaction between how we set
+//                   HOME and how we get the correct state object for cross-compiling.
+//                   When we release v16 and make this the default we should be able to significantly simplify this.
+func (c *Client) stateForTarget(target *core.BuildTarget) *core.BuildState {
+	if !c.state.Config.FeatureFlags.PleaseDownloadTools {
+		return c.state
+	}
+	return c.state.ForTarget(target)
+}
+
 // buildCommand builds the command for a single target.
 func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest, isRun, stamp bool) (*pb.Command, error) {
-	state := c.state.ForTarget(target)
+	state := c.stateForTarget(target)
 	if isTest {
 		return c.buildTestCommand(state, target)
 	} else if isRun {
