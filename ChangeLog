@@ -1,3 +1,18 @@
+Version 15.16.0
+--------------
+    * Generated code can now be linked back into the repo. Any target
+      with the `codegen` label will be symlinked into the source tree.
+      The proto rules have been updated accordingly. A `.gitignore` can
+      be generated via `plz generate --update_gitignore .gitignore`. This
+      can help dramatically with integrating IDEs and other tools #1551
+    * The `--rerun` flag now works with remote execution #1566
+    * Cross compilation now works with remote execution #1564
+    * Removed the RPC level compression for remote execution #1559
+    * The wheel naming scheme can now be repeated to support multiple
+      formats #1439
+    * Fix `index out of bounds` in format strings for BUILD files #1565
+
+
 Version 15.15.0
 --------------
     * Added support for .dSYM debug symbols on macOS #1522
