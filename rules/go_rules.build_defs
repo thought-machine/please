@@ -304,7 +304,7 @@ def _get_import_path(import_path):
 
     return pkg
 
-def cgo_library(name:str, srcs:list=[], go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
+def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 out:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
                 subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, import_path:str=''):
     """Generates a Go library which can be reused by other rules.
@@ -323,6 +323,7 @@ def cgo_library(name:str, srcs:list=[], go_srcs:list=[], c_srcs:list=[], hdrs:li
       name (str): Name of the rule.
       srcs (list): Go source files to compile that have 'import "C"' declarations in them.
       go_srcs (list): Any Go source files that do *not* have 'import "C"' declarations.
+      resources (list): Files to embed in the library using //go:embed directives.
       c_srcs (list): Any C source files to include.
       hdrs (list): Any C header files to include.
       out (str): Name of output file. Defaults to name + '.a'.
@@ -344,6 +345,7 @@ def cgo_library(name:str, srcs:list=[], go_srcs:list=[], c_srcs:list=[], hdrs:li
         return go_library(
             name = name,
             srcs = go_srcs,
+            resources = resources,
             out = out,
             deps = deps,
             import_path = import_path,
@@ -401,6 +403,7 @@ def cgo_library(name:str, srcs:list=[], go_srcs:list=[], c_srcs:list=[], hdrs:li
     go_rule = go_library(
         name = f'_{name}#go',
         srcs = [cgo_rule + '|go'] + go_srcs,
+        resources = resources,
         test_only = test_only,
         complete = False,
         deps = deps,
@@ -468,7 +471,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
     )
 
 
-def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[], data:list=None,
+def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out:str=None, deps:list=[], data:list=None,
               visibility:list=None, labels:list=[], test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
               filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False):
     """Compiles a Go binary.
@@ -476,6 +479,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files, one of which contains the main function.
+      resources (list): Files to embed in the library using //go:embed directives.
       asm_srcs (list): Assembly source files.
       out (str): Name of the output file to create. Defaults to the same as `name`.
       deps (list): Dependencies
@@ -500,6 +504,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
     lib = go_library(
         name=f'_{name}#lib',
         srcs=srcs or [name + '.go'],
+        resources = resources,
         filter_srcs=filter_srcs,
         asm_srcs=asm_srcs,
         deps=deps,
@@ -531,7 +536,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
     )
 
 
-def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='', visibility:list=None,
+def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:list=[], worker:str='', visibility:list=None,
             flags:str='', sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=[],
             labels:list&features&tags=[], size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC,
@@ -541,6 +546,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files to compile.
+      resources (list): Files to embed in the library using //go:embed directives.
       data (list): Runtime data files for the test.
       deps (list): Dependencies
       worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
@@ -571,6 +577,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
     lib_rule = go_library(
         name = '_%s#lib' % name,
         srcs = srcs,
+        resources = resources,
         out = name + ('_lib.a' if cgo else '.a'),
         deps = deps,
         labels = labels,
