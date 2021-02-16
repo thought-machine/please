@@ -797,3 +797,11 @@ func TestFStringImplicitStringConcat(t *testing.T) {
 	assert.Equal(t, "multiple", fString.Vars[0].Var)
 	assert.Equal(t, " lines \\n", fString.Suffix)
 }
+
+// F strings should report a sensible error when the {} aren't complete
+func TestFStringIncompleteError(t *testing.T) {
+	str := "s = f'some {' '.join([])}'"
+	_, err := newParser().parseAndHandleErrors(strings.NewReader(str))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Unterminated brace in fstring")
+}
