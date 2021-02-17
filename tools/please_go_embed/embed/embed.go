@@ -9,15 +9,15 @@ import (
 	"strings"
 )
 
-// EmbedCfg is the structure of a Go embedcfg file.
-type EmbedCfg struct {
+// Cfg is the structure of a Go embedcfg file.
+type Cfg struct {
 	Patterns map[string][]string
 	Files    map[string]string
 }
 
 // Parse parses the given files and returns the embed information in them.
-func Parse(gofiles []string) (*EmbedCfg, error) {
-	cfg := &EmbedCfg{
+func Parse(gofiles []string) (*Cfg, error) {
+	cfg := &Cfg{
 		Patterns: map[string][]string{},
 		Files:    map[string]string{},
 	}
@@ -34,7 +34,7 @@ func Parse(gofiles []string) (*EmbedCfg, error) {
 			}
 			cfg.Patterns[pattern] = paths
 			for _, path := range paths {
-				cfg.Files[path] = path  // Go seems to use an absolute path here... hope it's not necessary?
+				cfg.Files[path] = path // Go seems to use an absolute path here... hope it's not necessary?
 			}
 		}
 	}

@@ -10,8 +10,8 @@ func TestParseEmbed(t *testing.T) {
 	cfg, err := Parse([]string{"tools/please_go_embed/embed/test_data/test.go"})
 	assert.NoError(t, err)
 	assert.Equal(t, map[string][]string{
-		"hello.txt": []string{"hello.txt"},
-		"files/*.txt": []string{"files/test.txt"},
+		"hello.txt":   {"hello.txt"},
+		"files/*.txt": {"files/test.txt"},
 	}, cfg.Patterns)
 	assert.Equal(t, map[string]string{
 		"hello.txt":      "hello.txt",
