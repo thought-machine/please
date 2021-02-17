@@ -878,7 +878,7 @@ func newConfig(state *core.BuildState) *pyConfig {
 	}
 	// Arbitrary build config stuff
 	for k, v := range config.BuildConfig {
-		c[strings.Replace(strings.ToUpper(k), "-", "_", -1)] = pyString(v)
+		c[strings.ReplaceAll(strings.ToUpper(k), "-", "_")] = pyString(v)
 	}
 	// Settings specific to package() which aren't in the config, but it's easier to
 	// just put them in now.

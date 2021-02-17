@@ -114,13 +114,13 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
 		secrets := "SECRETS=" + fs.ExpandHomePath(strings.Join(target.Secrets, ":"))
-		secrets = strings.Replace(secrets, ":", " ", -1)
+		secrets = strings.ReplaceAll(secrets, ":", " ")
 		env = append(env, secrets)
 	}
 	// NamedSecrets, if they declared any.
 	for name, secrets := range target.NamedSecrets {
 		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + fs.ExpandHomePath(strings.Join(secrets, ":"))
-		secrets = strings.Replace(secrets, ":", " ", -1)
+		secrets = strings.ReplaceAll(secrets, ":", " ")
 		env = append(env, secrets)
 	}
 	if state.Config.Bazel.Compatibility {

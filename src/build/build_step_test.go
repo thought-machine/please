@@ -314,7 +314,6 @@ func TestLicenceEnforcement(t *testing.T) {
 
 func TestFileGroupBinDir(t *testing.T) {
 	state, target := newState("//package1:bindir")
-	//target.AddOutput("test_data")
 	target.AddSource(core.FileLabel{File: "package2", Package: target.Label.PackageName})
 	target.IsBinary = true
 	target.IsFilegroup = true

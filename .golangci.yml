@@ -7,6 +7,7 @@ issues:
     - ifElseChain  # Generally don't agree.
     - appendAssign
     - halp  # Make misspell be quiet about this.
+    - exitAfterDefer # Potentially useful but not in any cases it fires right now.
   exclude-rules:
     - path: _test\.go
       linters:
