@@ -464,7 +464,7 @@ func parseTestOutput(stdout string, stderr string, runError error, duration time
 					},
 				}
 			}
-			//No output and no execution error and output expected - SYNTHETIC ERROR - Missing Results
+			// No output and no execution error and output expected - SYNTHETIC ERROR - Missing Results
 			return failSuite("Test failed to produce output results file", "MissingResults", "")
 		}
 		return failSuite("Test failed", "TestFailed", runError.Error())

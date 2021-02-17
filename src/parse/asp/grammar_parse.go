@@ -562,7 +562,6 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 }
 
 func (p *parser) parseIdentExpr() *IdentExpr {
-	//var endPos Position
 	identTok := p.next(Ident)
 	ie := &IdentExpr{
 		Name: identTok.Value,
@@ -715,7 +714,7 @@ func (p *parser) parseFString() *FString {
 	tok.Pos.Column++ // track position in case of error
 	for idx := p.findBrace(s); idx != -1; idx = p.findBrace(s) {
 		v := &f.Vars[p.newElement(&f.Vars)]
-		v.Prefix = strings.ReplaceAll(strings.Replace(s[:idx], "{{", "{", -1), "}}", "}")
+		v.Prefix = strings.ReplaceAll(strings.ReplaceAll(s[:idx], "{{", "{"), "}}", "}")
 		s = s[idx+1:]
 		tok.Pos.Column += idx + 1
 		idx = strings.IndexByte(s, '}')
@@ -728,7 +727,7 @@ func (p *parser) parseFString() *FString {
 		s = s[idx+1:]
 		tok.Pos.Column += idx + 1
 	}
-	f.Suffix = strings.ReplaceAll(strings.Replace(s, "{{", "{", -1), "}}", "}")
+	f.Suffix = strings.ReplaceAll(strings.ReplaceAll(s, "{{", "{"), "}}", "}")
 
 	return f
 }

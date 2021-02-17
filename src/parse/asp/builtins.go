@@ -464,7 +464,7 @@ func strFormat(s *scope, args []pyObject) pyObject {
 	for k, v := range s.locals {
 		self = strings.ReplaceAll(self, "{"+k+"}", v.String())
 	}
-	return pyString(strings.ReplaceAll(strings.Replace(self, "{{", "{", -1), "}}", "}"))
+	return pyString(strings.ReplaceAll(strings.ReplaceAll(self, "{{", "{"), "}}", "}"))
 }
 
 func strCount(s *scope, args []pyObject) pyObject {

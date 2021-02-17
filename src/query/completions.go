@@ -93,7 +93,7 @@ func Completions(graph *core.BuildGraph, labels []core.BuildLabel, binary, test,
 				count++
 			}
 		}
-		if !binary && ((label.Name != "" && strings.HasPrefix("all", label.Name)) || (label.Name == "" && count > 1)) {
+		if !binary && ((label.Name != "" && strings.HasPrefix("all", label.Name)) || (label.Name == "" && count > 1)) { //nolint:gocritic
 			fmt.Printf("//%s:all\n", label.PackageName)
 		}
 	}

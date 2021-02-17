@@ -132,7 +132,7 @@ func TestForStatement(t *testing.T) {
 	assert.Equal(t, "LANGUAGES", statements[1].For.Expr.Val.Ident.Name)
 	assert.Equal(t, 2, len(statements[1].For.Statements))
 
-	//Test for Endpos
+	// Test for Endpos
 	assert.Equal(t, 2, statements[0].EndPos.Column)
 	assert.Equal(t, 4, statements[0].EndPos.Line)
 	assert.Equal(t, 6, statements[1].EndPos.Column)
@@ -163,7 +163,7 @@ func TestOperators(t *testing.T) {
 	assert.Equal(t, 1, len(call.Arguments[0].Value.Val.List.Values))
 	assert.Equal(t, "\"*.go\"", call.Arguments[0].Value.Val.List.Values[0].Val.String)
 
-	//Test for Endpos
+	// Test for Endpos
 	assert.Equal(t, 2, statements[0].EndPos.Column)
 	assert.Equal(t, 4, statements[0].EndPos.Line)
 }
@@ -217,7 +217,7 @@ func TestIndexing(t *testing.T) {
 	assert.Equal(t, "", statements[5].Ident.Action.Assign.Val.Slices[0].Colon)
 	assert.Nil(t, statements[5].Ident.Action.Assign.Val.Slices[0].End)
 
-	//Test for Endpos
+	// Test for Endpos
 	assert.Equal(t, 11, statements[0].EndPos.Column)
 	assert.Equal(t, 1, statements[0].EndPos.Line)
 	assert.Equal(t, 9, statements[1].EndPos.Column)
@@ -245,7 +245,7 @@ func TestIfStatement(t *testing.T) {
 	assert.Equal(t, 1, len(ifs.Statements))
 	assert.Equal(t, "genrule", ifs.Statements[0].Ident.Name)
 
-	//Test for Endpos
+	// Test for Endpos
 	assert.Equal(t, 6, statements[0].EndPos.Column)
 	assert.Equal(t, 4, statements[0].EndPos.Line)
 }
@@ -267,7 +267,7 @@ func TestDoubleUnindent(t *testing.T) {
 	assert.Equal(t, 1, len(for2.Statements))
 	assert.Equal(t, "genrule", for2.Statements[0].Ident.Name)
 
-	//Test for Endpos
+	// Test for Endpos
 	assert.Equal(t, 10, statements[0].EndPos.Column)
 	assert.Equal(t, 5, statements[0].EndPos.Line)
 }
@@ -491,9 +491,9 @@ func TestMultilineStringQuotes(t *testing.T) {
 "`
 	assert.Equal(t, expected, statements[0].Ident.Action.Assign.Val.String)
 
-	//TODO(BNM): It would be nice if we can get the actual EndPos for the multiline
-	//assert.Equal(t, 4, statements[0].EndPos.Column)
-	//assert.Equal(t, 3, statements[0].EndPos.Line)
+	// TODO(BNM): It would be nice if we can get the actual EndPos for the multiline
+	// assert.Equal(t, 4, statements[0].EndPos.Column)
+	// assert.Equal(t, 3, statements[0].EndPos.Line)
 }
 
 func TestExample0(t *testing.T) {

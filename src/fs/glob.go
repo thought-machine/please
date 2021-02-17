@@ -31,7 +31,7 @@ func (r regexGlob) Match(name string) (bool, error) {
 }
 
 // This converts the string pattern into a matcher. A matcher can either be one of our homebrew compiled regexs that
-//support ** or a matcher that uses the built in filesystem.Match functionality.
+// support ** or a matcher that uses the built in filesystem.Match functionality.
 func patternToMatcher(root, pattern string) (matcher, error) {
 	fullPattern := filepath.Join(root, pattern)
 

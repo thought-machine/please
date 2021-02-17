@@ -228,7 +228,7 @@ func replaceSequenceLabel(state *BuildState, target *BuildTarget, label BuildLab
 	if label == target.Label { // targets can always use themselves.
 		return checkAndReplaceSequence(state, target, target, ep, in, runnable, multiple, dir, outPrefix, hash, test, allOutputs, false)
 	}
-	//TODO(jpoole): This doesn't handle tools when cross compiling. ///freebsd_amd64//tools:tool
+	// TODO(jpoole): This doesn't handle tools when cross compiling. ///freebsd_amd64//tools:tool
 	// will not match the tool //tools:tool
 	deps := target.DependenciesFor(label)
 	if len(deps) == 0 {
