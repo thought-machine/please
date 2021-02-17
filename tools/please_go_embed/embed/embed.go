@@ -33,8 +33,8 @@ func Parse(gofiles []string) (*Cfg, error) {
 				return nil, err
 			}
 			cfg.Patterns[pattern] = paths
-			for _, path := range paths {
-				cfg.Files[path] = path // Go seems to use an absolute path here... hope it's not necessary?
+			for _, p := range paths {
+				cfg.Files[p] = path.Join(dir, p)
 			}
 		}
 	}
