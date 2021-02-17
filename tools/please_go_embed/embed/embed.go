@@ -2,9 +2,10 @@
 package embed
 
 import (
+	"go/build"
 	"path"
 	"path/filepath"
-	"go/build"
+	"strings"
 )
 
 // EmbedCfg is the structure of a Go embedcfg file.
@@ -26,7 +27,7 @@ func Parse(gofiles []string) (*EmbedCfg, error) {
 		}
 		// We munge all patterns together at this point, if a file is in our input sources we want to know about it regardless.
 		for _, pattern := range append(append(pkg.EmbedPatterns, pkg.TestEmbedPatterns...), pkg.XTestEmbedPatterns...) {
-			paths, err := filepath.Glob(pattern)
+			paths, err := relglob(dir, pattern)
 			if err != nil {
 				return nil, err
 			}
@@ -49,4 +50,12 @@ func dirs(files []string) []string {
 		}
 	}
 	return dirs
+}
+
+func relglob(dir, pattern string) ([]string, error) {
+	paths, err := filepath.Glob(path.Join(dir, pattern))
+	for i, p := range paths {
+		paths[i] = strings.TrimLeft(strings.TrimPrefix(p, dir), string(filepath.Separator))
+	}
+	return paths, err
 }
