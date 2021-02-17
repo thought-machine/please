@@ -21,4 +21,3 @@ jobs:
         with:
           version: v1.37
           args: src/... tools/...
-          skip-go-installation: true
