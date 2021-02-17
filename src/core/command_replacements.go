@@ -156,20 +156,20 @@ func replaceSequencesInternal(state *BuildState, target *BuildTarget, command st
 	if state.Config.Bazel.Compatibility {
 		// Bazel allows several obscure Make-style variable expansions.
 		// Our replacement here is not very principled but should work better than not doing it at all.
-		cmd = strings.Replace(cmd, "$<", "$SRCS", -1)
-		cmd = strings.Replace(cmd, "$(<)", "$SRCS", -1)
-		cmd = strings.Replace(cmd, "$@D", "$TMP_DIR", -1)
-		cmd = strings.Replace(cmd, "$(@D)", "$TMP_DIR", -1)
-		cmd = strings.Replace(cmd, "$@", "$OUTS", -1)
-		cmd = strings.Replace(cmd, "$(@)", "$OUTS", -1)
+		cmd = strings.ReplaceAll(cmd, "$<", "$SRCS")
+		cmd = strings.ReplaceAll(cmd, "$(<)", "$SRCS")
+		cmd = strings.ReplaceAll(cmd, "$@D", "$TMP_DIR")
+		cmd = strings.ReplaceAll(cmd, "$(@D)", "$TMP_DIR")
+		cmd = strings.ReplaceAll(cmd, "$@", "$OUTS")
+		cmd = strings.ReplaceAll(cmd, "$(@)", "$OUTS")
 		// It also seemingly allows you to get away with this syntax, which means something
 		// fairly different in Bash, but never mind.
-		cmd = strings.Replace(cmd, "$(SRCS)", "$SRCS", -1)
-		cmd = strings.Replace(cmd, "$(OUTS)", "$OUTS", -1)
+		cmd = strings.ReplaceAll(cmd, "$(SRCS)", "$SRCS")
+		cmd = strings.ReplaceAll(cmd, "$(OUTS)", "$OUTS")
 	}
 	// We would ideally check for this when doing matches above, but not easy in
 	// Go since its regular expressions are actually regular and principled.
-	return strings.Replace(cmd, "\\$", "$", -1), nil
+	return strings.ReplaceAll(cmd, "\\$", "$"), nil
 }
 
 func splitEntryPoint(label string) (string, string) {

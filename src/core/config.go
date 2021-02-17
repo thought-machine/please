@@ -657,7 +657,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 
 	// from the BuildEnv config keyword
 	for k, v := range config.BuildEnv {
-		pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
+		pair := strings.ReplaceAll(strings.ToUpper(k), "-", "_") + "=" + v
 		env = append(env, pair)
 	}
 	// from the user's environment based on the PassUnsafeEnv config keyword

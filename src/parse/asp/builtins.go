@@ -384,7 +384,7 @@ func strReplace(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyString)
 	old := args[1].(pyString)
 	new := args[2].(pyString)
-	return pyString(strings.Replace(string(self), string(old), string(new), -1))
+	return pyString(strings.ReplaceAll(string(self), string(old), string(new)))
 }
 
 func strPartition(s *scope, args []pyObject) pyObject {
@@ -462,9 +462,9 @@ func strRFind(s *scope, args []pyObject) pyObject {
 func strFormat(s *scope, args []pyObject) pyObject {
 	self := string(args[0].(pyString))
 	for k, v := range s.locals {
-		self = strings.Replace(self, "{"+k+"}", v.String(), -1)
+		self = strings.ReplaceAll(self, "{"+k+"}", v.String())
 	}
-	return pyString(strings.Replace(strings.Replace(self, "{{", "{", -1), "}}", "}", -1))
+	return pyString(strings.ReplaceAll(strings.Replace(self, "{{", "{", -1), "}}", "}"))
 }
 
 func strCount(s *scope, args []pyObject) pyObject {

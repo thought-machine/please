@@ -48,12 +48,12 @@ func patternToMatcher(root, pattern string) (matcher, error) {
 
 func toRegexString(pattern string) string {
 	pattern = "^" + pattern + "$"
-	pattern = strings.Replace(pattern, "+", "\\+", -1)         // escape +
-	pattern = strings.Replace(pattern, ".", "\\.", -1)         // escape .
-	pattern = strings.Replace(pattern, "?", ".", -1)           // match ? as any single char
-	pattern = strings.Replace(pattern, "*", "[^/]*", -1)       // handle single (all) * components
-	pattern = strings.Replace(pattern, "[^/]*[^/]*", ".*", -1) // handle ** components
-	pattern = strings.Replace(pattern, "/.*/", "/(.*/)?", -1)  // Allow ** to match zero directories
+	pattern = strings.ReplaceAll(pattern, "+", "\\+")         // escape +
+	pattern = strings.ReplaceAll(pattern, ".", "\\.")         // escape .
+	pattern = strings.ReplaceAll(pattern, "?", ".")           // match ? as any single char
+	pattern = strings.ReplaceAll(pattern, "*", "[^/]*")       // handle single (all) * components
+	pattern = strings.ReplaceAll(pattern, "[^/]*[^/]*", ".*") // handle ** components
+	pattern = strings.ReplaceAll(pattern, "/.*/", "/(.*/)?")  // Allow ** to match zero directories
 	return pattern
 }
 

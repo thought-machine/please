@@ -147,7 +147,7 @@ func (pw *Writer) Write(out, moduleDir string) error {
 
 	// Always write pex_main.py, with some templating.
 	b := MustAsset("pex_main.py")
-	b = bytes.Replace(b, []byte("__MODULE_DIR__"), []byte(strings.Replace(moduleDir, ".", "/", -1)), 1)
+	b = bytes.Replace(b, []byte("__MODULE_DIR__"), []byte(strings.ReplaceAll(moduleDir, ".", "/")), 1)
 	b = bytes.Replace(b, []byte("__ENTRY_POINT__"), []byte(pw.realEntryPoint), 1)
 	b = bytes.Replace(b, []byte("__ZIP_SAFE__"), []byte(pythonBool(pw.zipSafe)), 1)
 	b = bytes.Replace(b, []byte("__PEX_STAMP__"), []byte(pw.pexStamp), 1)
@@ -176,5 +176,5 @@ func pythonBool(b bool) string { //nolint:unused
 // toPythonPath converts a normal path to a Python import path.
 func toPythonPath(p string) string {
 	ext := path.Ext(p)
-	return strings.Replace(p[:len(p)-len(ext)], "/", ".", -1)
+	return strings.ReplaceAll(p[:len(p)-len(ext)], "/", ".")
 }

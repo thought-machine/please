@@ -223,7 +223,7 @@ func main() {
 {{if not .Benchmark}}
     testVar := _gostdlib_os.Getenv("TESTS")
     if testVar != "" {
-		testVar = _gostdlib_strings.Replace(testVar, " ", "|", -1)
+		testVar = _gostdlib_strings.ReplaceAll(testVar, " ", "|")
 		args = append(args, "-test.run", testVar)
     }
     _gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
