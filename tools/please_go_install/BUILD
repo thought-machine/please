@@ -1,25 +1,36 @@
-#TODO(jpoole): once bugs are fixed, make this use the please_go_install in ~/.please
-package(FF_PLEASE_GO_INSTALL = False)
-
-go_module(
-    name = "go-flags",
+go_mod_download(
+    name = "go_flags_srcs",
     module = "github.com/thought-machine/go-flags",
     version = "v1.5.0",
-    deps = [":xsys"],
+    please_go_install = False,
 )
 
-go_module(
-    name = "xsys",
-    install = ["..."],
+go_mod_download(
+    name = "xsys_srcs",
     module = "golang.org/x/sys",
     version = "765f4ea38db36397e827c4153018aa272eed7835",
+    please_go_install = False,
+)
+
+go_get(
+    name = "go-flags",
+    get = [],
+    install = [
+        "github.com/thought-machine/go-flags",
+        "golang.org/x/sys/...",
+    ],
+    deps = [
+        ":go_flags_srcs",
+        ":xsys_srcs",
+    ],
 )
 
 go_binary(
     name = "please_go_install",
     srcs = [
-        "main.go",
+        "please_go_install.go",
     ],
+    labels = ["link:plz-out/please"],
     visibility = ["PUBLIC"],
     deps = [
         ":go-flags",
