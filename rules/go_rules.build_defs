@@ -959,8 +959,10 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
                                 will output into a folder based on it's name completely avoiding issues with multiple
                                 rules outputting into the same location.
     """
+    # TODO(jpoole): write a proper please_go tool for this
     cmds = [
-        f'export MOD_DIR=$($TOOL mod download -x -modcacherw -json {module}@{version} | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
+        f'$TOOL mod download -x -modcacherw -json {module}@{version} | tee mod.json',
+        'export MOD_DIR=$(cat mod.json | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
     ] + [f'rm -rf $OUT/{s}' for s in strip]
 
