@@ -229,6 +229,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		setDefaultString(&config.Go.TestTool, "please_go_test", "//_please:tools|please_go_test")
 		setDefaultString(&config.Go.FilterTool, "please_go_filter", "//_please:tools|please_go_filter")
 		setDefaultString(&config.Go.InstallTool, "please_go_install", "//_please:tools|please_go_install")
+		setDefaultString(&config.Go.EmbedTool, "please_go_embed", "//_please:tools|please_go_embed")
 		setDefaultString(&config.Python.PexTool, "please_pex", "//_please:tools|please_pex")
 		setDefaultString(&config.Java.JavacWorker, "javac_worker", "//_please:tools|javac_worker")
 		setDefaultString(&config.Java.JarCatTool, "jarcat", "//_please:tools|jarcat")
@@ -382,6 +383,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.TestTool = "please_go_test"
 	config.Go.FilterTool = "please_go_filter"
 	config.Go.InstallTool = "please_go_install"
+	config.Go.EmbedTool = "please_go_embed"
 	config.Python.PexTool = "please_pex"
 	config.Java.JavacWorker = "javac_worker"
 	config.Java.JarCatTool = "jarcat"
