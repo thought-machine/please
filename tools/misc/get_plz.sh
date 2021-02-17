@@ -39,10 +39,10 @@ if ! hash plz 2>/dev/null; then
         ln -s ~/.please/plz ~/.local/bin/plz
     elif [ -f ~/.profile ]; then
         echo 'export PATH="${PATH}:${HOME}/.please/bin"' >> ~/.profile
-        echo "Added Please to path. You may need to run 'source ~/.profile' to pick up the new PATH."
+        echo "Added Please to path. Run 'source ~/.profile' to pick up the new PATH in this terminal session."
     else
-        echo "Unsure how to add to PATH, not modifying anything. If desired add '~/.please/bin' to your PATH"
-        echo "or, install please system-wide with 'sudo cp ~/.please/bin/* /usr/bin' or similar"
+        echo "Unsure how to add to PATH, not modifying anything. If desired, add '~/.please/bin' to your PATH"
+        echo "or install please system-wide with 'sudo cp ~/.please/bin/* /usr/bin' or similar"
     fi
 fi
 
