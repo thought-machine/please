@@ -119,7 +119,11 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         embedcfg = build_rule(
             name = name,
             tag = 'embedcfg',
-            cmd = '$TOOL $SRCS > $OUT',
+            cmd = '$TOOL $SRCS_GO > $OUT',
+            srcs = {
+                'go': srcs,
+                'res': resources,
+            },
             outs = [f'{package}.embedcfg'],
             tools = [CONFIG.GO_EMBED_TOOL],
             test_only = test_only,
@@ -219,6 +223,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
     srcs = {
         'go': srcs,
         'embed': [embedcfg],
+        'res': resources,
         'abi': [_abi],
     }
     if _abi:
