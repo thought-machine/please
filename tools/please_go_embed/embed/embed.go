@@ -2,6 +2,7 @@
 package embed
 
 import (
+	"fmt"
 	"go/build"
 	"path"
 	"path/filepath"
@@ -54,6 +55,9 @@ func dirs(files []string) []string {
 
 func relglob(dir, pattern string) ([]string, error) {
 	paths, err := filepath.Glob(path.Join(dir, pattern))
+	if err == nil && len(paths) == 0 {
+		return nil, fmt.Errorf("pattern %s: no matching paths found", pattern)
+	}
 	for i, p := range paths {
 		paths[i] = strings.TrimLeft(strings.TrimPrefix(p, dir), string(filepath.Separator))
 	}
