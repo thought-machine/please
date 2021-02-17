@@ -13,8 +13,8 @@ func TestParseEmbed(t *testing.T) {
 		"hello.txt": []string{"hello.txt"},
 		"files/*.txt": []string{"files/test.txt"},
 	}, cfg.Patterns)
-	assert.Equal(t, map[string][]string{
+	assert.Equal(t, map[string]string{
 		"hello.txt":      "hello.txt",
 		"files/test.txt": "files/test.txt",
-	})
+	}, cfg.Files)
 }
