@@ -29,7 +29,9 @@ for x in `ls "$DIR"`; do
     ln -sf "${DIR}/${x}" "$LOCATION"
 done
 ln -sf "${LOCATION}/please" "${LOCATION}/plz"
-mkdir "${LOCATION}/bin" && curl http://get.please.build/pleasew -s --output "${LOCATION}/bin/plz"
+mkdir "${LOCATION}/bin"
+curl https://get.please.build/pleasew -s --output "${LOCATION}/bin/plz"
+chmod +x "${LOCATION}/bin/plz"
 
 echo
 
