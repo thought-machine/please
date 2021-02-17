@@ -19,6 +19,6 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v2.4
+          version: v1.37
           args: src/... tools/...
           skip-go-installation: true
