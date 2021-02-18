@@ -198,7 +198,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 
 	if config.Please.Location == "" {
 		// Determine the location based off where we're running from.
-		if exec, err := os.Executable(); err != nil {
+		if exec, err := fs.Executable(); err != nil {
 			log.Warning("Can't determine current executable: %s", err)
 			config.Please.Location = "~/.please"
 		} else if strings.HasPrefix(exec, fs.ExpandHomePath("~/.please")) {
