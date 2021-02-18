@@ -1,28 +1,17 @@
-go_mod_download(
-    name = "go_flags_srcs",
+package(go_install_tool = "please_go_install")
+
+go_module(
+    name = "go-flags",
     module = "github.com/thought-machine/go-flags",
     version = "v1.5.0",
-    please_go_install = False,
+    deps = [":xsys"],
 )
 
-go_mod_download(
-    name = "xsys_srcs",
+go_module(
+    name = "xsys",
+    install = ["..."],
     module = "golang.org/x/sys",
     version = "765f4ea38db36397e827c4153018aa272eed7835",
-    please_go_install = False,
-)
-
-go_get(
-    name = "go-flags",
-    get = [],
-    install = [
-        "github.com/thought-machine/go-flags",
-        "golang.org/x/sys/...",
-    ],
-    deps = [
-        ":go_flags_srcs",
-        ":xsys_srcs",
-    ],
 )
 
 go_binary(

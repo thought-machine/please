@@ -444,7 +444,6 @@ go_module(
         "go-fuzz-defs",
     ],
     module = "github.com/dvyukov/go-fuzz",
-    please_go_install = True,
     deps = [
         ":go-bindata-assetfs",
         ":writerset",
@@ -498,7 +497,6 @@ go_module(
 go_mod_download(
     name = "buildtools_download",
     module = "github.com/peterebden/buildtools",
-    please_go_install = True,
     version = "f7a36c689cc9e038956d51005332c67ade7aa9c6",
 )
 
@@ -507,7 +505,6 @@ go_module(
     download = ":buildtools_download",
     install = ["..."],
     module = "github.com/bazelbuild/buildtools",
-    please_go_install = True,
     deps = [
         ":protobuf",
         ":skylark",
@@ -582,7 +579,6 @@ go_module(
 go_mod_download(
     name = "remote-apis-sdks-download",
     module = "github.com/peterebden/remote-apis-sdks",
-    please_go_install = True,
     version = "271eb5b72e7dca1dda1d4dee87d99a17194cf146",
 )
 
@@ -591,7 +587,6 @@ go_module(
     download = ":remote-apis-sdks-download",
     install = ["go/..."],
     module = "github.com/bazelbuild/remote-apis-sdks",
-    please_go_install = True,
     deps = [
         ":cmp",
         ":errgroup",
