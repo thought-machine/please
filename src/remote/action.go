@@ -412,7 +412,7 @@ func outputsForActionResult(ar *pb.ActionResult) map[string]bool {
 		ret[o.Path] = true
 	}
 
-	//TODO(jpoole): remove these two after REAPI 2.1
+	// TODO(jpoole): remove these two after REAPI 2.1
 	for _, o := range ar.OutputFileSymlinks {
 		ret[o.Path] = true
 	}

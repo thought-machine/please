@@ -316,7 +316,7 @@ func (cache *dirCache) getFullPath(target *core.BuildTarget, key []byte, extra, 
 	if !cache.Compress {
 		extra = ""
 	} else {
-		extra = strings.Replace(extra, "/", "_", -1)
+		extra = strings.ReplaceAll(extra, "/", "_")
 	}
 	// NB. Is very important to use a padded encoding here so lengths are consistent when cleaning.
 	return path.Join(cache.Dir, target.Label.PackageName, target.Label.Name, base64.URLEncoding.EncodeToString(key)) + extra + suffix + cache.Suffix

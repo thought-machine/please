@@ -65,7 +65,7 @@ func main() {
 	tmpl, err := template.New("lexicon.html").Funcs(template.FuncMap{
 		"join": strings.Join,
 		"newlines": func(name, docstring string) string {
-			return r.AddLinks(name, strings.Replace(htmltemplate.HTMLEscapeString(docstring), "\n", "<br/>", -1))
+			return r.AddLinks(name, strings.ReplaceAll(htmltemplate.HTMLEscapeString(docstring), "\n", "<br/>"))
 		},
 	}).ParseFiles("docs/lexicon.html", "docs/lexicon_entry.html")
 	must(err)

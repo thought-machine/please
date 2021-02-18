@@ -31,7 +31,7 @@ func (r regexGlob) Match(name string) (bool, error) {
 }
 
 // This converts the string pattern into a matcher. A matcher can either be one of our homebrew compiled regexs that
-//support ** or a matcher that uses the built in filesystem.Match functionality.
+// support ** or a matcher that uses the built in filesystem.Match functionality.
 func patternToMatcher(root, pattern string) (matcher, error) {
 	fullPattern := filepath.Join(root, pattern)
 
@@ -48,12 +48,12 @@ func patternToMatcher(root, pattern string) (matcher, error) {
 
 func toRegexString(pattern string) string {
 	pattern = "^" + pattern + "$"
-	pattern = strings.Replace(pattern, "+", "\\+", -1)         // escape +
-	pattern = strings.Replace(pattern, ".", "\\.", -1)         // escape .
-	pattern = strings.Replace(pattern, "?", ".", -1)           // match ? as any single char
-	pattern = strings.Replace(pattern, "*", "[^/]*", -1)       // handle single (all) * components
-	pattern = strings.Replace(pattern, "[^/]*[^/]*", ".*", -1) // handle ** components
-	pattern = strings.Replace(pattern, "/.*/", "/(.*/)?", -1)  // Allow ** to match zero directories
+	pattern = strings.ReplaceAll(pattern, "+", "\\+")         // escape +
+	pattern = strings.ReplaceAll(pattern, ".", "\\.")         // escape .
+	pattern = strings.ReplaceAll(pattern, "?", ".")           // match ? as any single char
+	pattern = strings.ReplaceAll(pattern, "*", "[^/]*")       // handle single (all) * components
+	pattern = strings.ReplaceAll(pattern, "[^/]*[^/]*", ".*") // handle ** components
+	pattern = strings.ReplaceAll(pattern, "/.*/", "/(.*/)?")  // Allow ** to match zero directories
 	return pattern
 }
 

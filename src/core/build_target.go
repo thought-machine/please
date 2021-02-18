@@ -405,7 +405,7 @@ func (target *BuildTarget) StartTestSuite() {
 	// If the results haven't been set yet, set them
 	if target.Results.Name == "" {
 		target.Results = TestSuite{
-			Package:   strings.Replace(target.Label.PackageName, "/", ".", -1),
+			Package:   strings.ReplaceAll(target.Label.PackageName, "/", "."),
 			Name:      target.Label.Name,
 			Timestamp: time.Now().Format(time.RFC3339),
 		}

@@ -3,6 +3,11 @@ package(default_visibility = ["PUBLIC"])
 # This is needed to break a circular dependency.
 package(jarcat_tool = "//:jarcat_unzip")
 
+go_toolchain(
+    name = "toolchain",
+    version = "1.16",
+)
+
 go_module(
     name = "logging",
     module = "gopkg.in/op/go-logging.v1",
@@ -794,9 +799,4 @@ go_module(
     name = "cpuid",
     module = "github.com/klauspost/cpuid",
     version = "v1.3.1",
-)
-
-go_toolchain(
-    name = "toolchain",
-    version = "1.15.7",
 )

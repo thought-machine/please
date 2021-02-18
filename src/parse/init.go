@@ -137,7 +137,7 @@ func createBazelSubrepo(state *core.BuildState) {
 	}
 	filenames, _ := bazel.AssetDir("")
 	for _, filename := range filenames {
-		if err := ioutil.WriteFile(path.Join(dir, strings.Replace(filename, ".build_defs", ".bzl", -1)), bazel.MustAsset(filename), 0644); err != nil {
+		if err := ioutil.WriteFile(path.Join(dir, strings.ReplaceAll(filename, ".build_defs", ".bzl")), bazel.MustAsset(filename), 0644); err != nil {
 			log.Fatalf("%s", err)
 		}
 	}

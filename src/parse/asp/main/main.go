@@ -46,8 +46,6 @@ func parseFile(pkg *core.Package, p *asp.Parser, filename string) error {
 		if opts.DumpAst {
 			config := spew.NewDefaultConfig()
 			config.DisablePointerAddresses = true
-			//config.DisableTypes = true
-			//config.OmitEmpty = true
 			config.Indent = "  "
 			os.Stdout.Write([]byte(cleanup(config.Sdump(stmts))))
 		}

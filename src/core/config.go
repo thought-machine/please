@@ -229,6 +229,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		setDefaultString(&config.Go.TestTool, "please_go_test", "//_please:tools|please_go_test")
 		setDefaultString(&config.Go.FilterTool, "please_go_filter", "//_please:tools|please_go_filter")
 		setDefaultString(&config.Go.InstallTool, "please_go_install", "//_please:tools|please_go_install")
+		setDefaultString(&config.Go.EmbedTool, "please_go_embed", "//_please:tools|please_go_embed")
 		setDefaultString(&config.Python.PexTool, "please_pex", "//_please:tools|please_pex")
 		setDefaultString(&config.Java.JavacWorker, "javac_worker", "//_please:tools|javac_worker")
 		setDefaultString(&config.Java.JarCatTool, "jarcat", "//_please:tools|jarcat")
@@ -382,6 +383,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.TestTool = "please_go_test"
 	config.Go.FilterTool = "please_go_filter"
 	config.Go.InstallTool = "please_go_install"
+	config.Go.EmbedTool = "please_go_embed"
 	config.Python.PexTool = "please_pex"
 	config.Java.JavacWorker = "javac_worker"
 	config.Java.JarCatTool = "jarcat"
@@ -499,6 +501,7 @@ type Configuration struct {
 		CgoEnabled       string `help:"Sets the CGO_ENABLED which controls whether the cgo build flag is set during cross compilation." var:"CGO_ENABLED"`
 		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
 		InstallTool      string `help:"Sets the location of the please_go_install tool that is used to install go modules." var:"GO_INSTALL_TOOL"`
+		EmbedTool        string `help:"Sets the location of the please_go_embed tool that is used to parse //go:embed directives." var:"GO_EMBED_TOOL"`
 		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
 		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
 	} `help:"Please has built-in support for compiling Go, and of course is written in Go itself.\nSee the config subfields or the Go rules themselves for more information.\n\nNote that Please is a bit more flexible than Go about directory layout - for example, it is possible to have multiple packages in a directory, but it's not a good idea to push this too far since Go's directory layout is inextricably linked with its import paths."`
@@ -657,7 +660,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 
 	// from the BuildEnv config keyword
 	for k, v := range config.BuildEnv {
-		pair := strings.Replace(strings.ToUpper(k), "-", "_", -1) + "=" + v
+		pair := strings.ReplaceAll(strings.ToUpper(k), "-", "_") + "=" + v
 		env = append(env, pair)
 	}
 	// from the user's environment based on the PassUnsafeEnv config keyword
