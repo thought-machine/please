@@ -311,4 +311,6 @@ workflows:
             - test-http-cache
           filters:
             branches:
-              only: master
+              only:
+                - master
+                - v15
