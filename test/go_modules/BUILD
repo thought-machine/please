@@ -4,6 +4,9 @@ please_repo_e2e_test(
     name = "go_install_test",
     plz_command = "plz test",
     repo = "test_repo",
+    labels = [
+        "no-musl",
+    ],
 )
 
 please_repo_e2e_test(
