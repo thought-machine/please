@@ -2,9 +2,12 @@ package parse
 
 import (
 	"bytes"
-	"github.com/thought-machine/please/src/core"
 	"runtime"
 	"text/template"
+
+	"github.com/coreos/go-semver/semver"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 const InternalPackageName = "_please"
@@ -30,6 +33,9 @@ genrule(
     "please_go_filter": "please_tools/please_go_filter",
     "please_go_test": "please_tools/please_go_test",
     "please_go_install": "please_tools/please_go_install",
+{{ if .HasEmbedTool }}
+    "please_go_embed": "please_tools/please_go_embed",
+{{ end }}
     "please_pex": "please_tools/please_pex",
     "please_sandbox": "please_tools/please_sandbox",
   },
@@ -59,11 +65,13 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 		OS               string
 		Arch             string
 		DownloadLocation string
+		HasEmbedTool     bool
 	}{
 		PLZVersion:       core.PleaseVersion.String(),
 		OS:               runtime.GOOS,
 		Arch:             runtime.GOARCH,
 		DownloadLocation: config.Please.DownloadLocation.String(),
+		HasEmbedTool:     !core.PleaseVersion.LessThan(semver.Version{Major: 15, Minor: 16, Patch: 999}),
 	}
 
 	var buf bytes.Buffer

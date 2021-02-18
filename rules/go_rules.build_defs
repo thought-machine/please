@@ -65,16 +65,17 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     )
 
 
-def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
+def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
-               filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=False,
+               filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
                _generate_import_config:bool=True, import_path:str='', labels:list=[], package:str=None):
     """Generates a Go library which can be reused by other rules.
 
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files to compile.
+      resources (list): Files to embed in the library using //go:embed directives.
       asm_srcs (list): Source files to assemble with `go tool assemble`.
       hdrs (list): Header files needed for assembly. Has no effect if asm_srcs is not given.
       out (str): Name of the output library to compile (defaults to name suffixed with .a)
@@ -114,6 +115,25 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     else:
         exported_deps = []
 
+    if resources:
+        embedcfg = build_rule(
+            name = name,
+            tag = 'embedcfg',
+            cmd = '$TOOL $PKG_DIR/*.go > $OUT' if _all_srcs else '$TOOL $SRCS_GO > $OUT',
+            srcs = {
+                'go': srcs,
+                'res': resources,
+            },
+            deps = deps if _all_srcs else None,
+            outs = [f'{package}.embedcfg'],
+            requires = ['go_src'],
+            tools = [CONFIG.GO_EMBED_TOOL],
+            test_only = test_only,
+            labels = labels,
+        )
+    else:
+        embedcfg = None
+
     if _link_private or not private:
         src_labels = ['link:plz-out/go/src/${PKG}', 'go_src']
         if not private:
@@ -141,6 +161,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         lib_rule = go_library(
             name = f'_{name}#lib',
             srcs = srcs,
+            resources = resources,
             deps = deps,
             test_only = test_only,
             complete = False,
@@ -201,14 +222,16 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
     if filter_srcs:
         tools['filter'] = [CONFIG.GO_FILTER_TOOL]
 
+    srcs = {
+        'go': srcs,
+        'embed': [embedcfg],
+        'res': resources,
+        'abi': [_abi],
+    }
     if _abi:
         outs = {
             'o': [out],
             'h': [name + '.h'],
-        }
-        srcs = {
-            'go': srcs,
-            'abi': [_abi],
         }
     else:
         outs = [out]
@@ -219,7 +242,7 @@ def go_library(name:str, srcs:list, asm_srcs:list=None, hdrs:list=None, out:str=
         deps=deps,
         internal_deps = [src_rule],
         outs=outs,
-        cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi),
+        cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),
         visibility=visibility,
         building_description="Compiling...",
         requires=['go', 'go_src'] if _all_srcs else ['go'],
@@ -288,7 +311,7 @@ def _get_import_path(import_path):
 
     return pkg
 
-def cgo_library(name:str, srcs:list=[], go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
+def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 out:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
                 subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, import_path:str=''):
     """Generates a Go library which can be reused by other rules.
@@ -307,6 +330,7 @@ def cgo_library(name:str, srcs:list=[], go_srcs:list=[], c_srcs:list=[], hdrs:li
       name (str): Name of the rule.
       srcs (list): Go source files to compile that have 'import "C"' declarations in them.
       go_srcs (list): Any Go source files that do *not* have 'import "C"' declarations.
+      resources (list): Files to embed in the library using //go:embed directives.
       c_srcs (list): Any C source files to include.
       hdrs (list): Any C header files to include.
       out (str): Name of output file. Defaults to name + '.a'.
@@ -328,6 +352,7 @@ def cgo_library(name:str, srcs:list=[], go_srcs:list=[], c_srcs:list=[], hdrs:li
         return go_library(
             name = name,
             srcs = go_srcs,
+            resources = resources,
             out = out,
             deps = deps,
             import_path = import_path,
@@ -385,6 +410,7 @@ def cgo_library(name:str, srcs:list=[], go_srcs:list=[], c_srcs:list=[], hdrs:li
     go_rule = go_library(
         name = f'_{name}#go',
         srcs = [cgo_rule + '|go'] + go_srcs,
+        resources = resources,
         test_only = test_only,
         complete = False,
         deps = deps,
@@ -452,7 +478,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
     )
 
 
-def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=[], data:list=None,
+def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out:str=None, deps:list=[], data:list=None,
               visibility:list=None, labels:list=[], test_only:bool&testonly=False, static:bool=CONFIG.GO_DEFAULT_STATIC,
               filter_srcs:bool=True, definitions:str|list|dict=None, stamp:bool=False):
     """Compiles a Go binary.
@@ -460,6 +486,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files, one of which contains the main function.
+      resources (list): Files to embed in the library using //go:embed directives.
       asm_srcs (list): Assembly source files.
       out (str): Name of the output file to create. Defaults to the same as `name`.
       deps (list): Dependencies
@@ -484,6 +511,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
     lib = go_library(
         name=f'_{name}#lib',
         srcs=srcs or [name + '.go'],
+        resources = resources,
         filter_srcs=filter_srcs,
         asm_srcs=asm_srcs,
         deps=deps,
@@ -515,7 +543,7 @@ def go_binary(name:str, srcs:list=[], asm_srcs:list=[], out:str=None, deps:list=
     )
 
 
-def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='', visibility:list=None,
+def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:list=[], worker:str='', visibility:list=None,
             flags:str='', sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=[],
             labels:list&features&tags=[], size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC,
@@ -525,6 +553,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
     Args:
       name (str): Name of the rule.
       srcs (list): Go source files to compile.
+      resources (list): Files to embed in the library using //go:embed directives.
       data (list): Runtime data files for the test.
       deps (list): Dependencies
       worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
@@ -555,6 +584,7 @@ def go_test(name:str, srcs:list, data:list|dict=None, deps:list=[], worker:str='
     lib_rule = go_library(
         name = '_%s#lib' % name,
         srcs = srcs,
+        resources = resources,
         out = name + ('_lib.a' if cgo else '.a'),
         deps = deps,
         labels = labels,
@@ -1427,25 +1457,27 @@ def _set_go_env():
         return f'export CGO_ENABLED={CONFIG.CGO_ENABLED} && {cmd}'
     return cmd
 
-def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False):
+
+def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None):
     """Returns the commands to run for building a Go library."""
-    filter_cmd = 'export SRCS="$(\"${TOOLS_FILTER}\" ${SRCS})"; ' if filter_srcs else ''
+    filter_cmd = 'export SRCS_GO="$(\"${TOOLS_FILTER}\" ${SRCS_GO})"; ' if filter_srcs else ''
     # Invokes the Go compiler.
     complete_flag = '-complete ' if complete else ''
+    embed_flag = ' -embedcfg $SRCS_EMBED' if embedcfg else ''
     out_cmd = ' -o "$OUTS_O" -symabis $SRCS_ABI -asmhdr "$OUTS_H"' if abi else ' -o "$OUT"'
-    compile_cmd = f'"$TOOLS_GO" tool compile -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag} -pack {out_cmd}'
+    compile_cmd = f'"$TOOLS_GO" tool compile -importcfg importconfig -trimpath "$TMP_DIR" {complete_flag}{embed_flag} -pack {out_cmd}'
     # Annotates files for coverage.
-    cover_cmd = 'for SRC in $SRCS; do BN=$(basename $SRC); "$TOOLS_GO" tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
+    cover_cmd = 'for SRC in $SRCS_GO; do BN=$(basename $SRC); "$TOOLS_GO" tool cover -mode=set -var=GoCover_${BN//[.-]/_} $SRC > _tmp.go && mv -f _tmp.go $SRC; done'
 
     gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
-    prefix = ('export SRCS="$PKG_DIR/*.go"; ' + gen_import_cfg) if all_srcs else gen_import_cfg
+    prefix = ('export SRCS_GO="$PKG_DIR/*.go"; ' + gen_import_cfg) if all_srcs else gen_import_cfg
     cmds = {
-        'dbg': f'{prefix}; {filter_cmd}{compile_cmd} -N -l $SRCS',
-        'opt': f'{prefix}; {filter_cmd}{compile_cmd} $SRCS',
+        'dbg': f'{prefix}; {filter_cmd}{compile_cmd} -N -l $SRCS_GO',
+        'opt': f'{prefix}; {filter_cmd}{compile_cmd} $SRCS_GO',
     }
     if cover:
-        cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd} $SRCS'
+        cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd} $SRCS_GO'
     return cmds
 
 

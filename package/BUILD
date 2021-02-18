@@ -8,6 +8,7 @@ filegroup(
         "//tools/jarcat",
         "//tools/java:javac_worker",
         "//tools/java:junit_runner",
+        "//tools/please_go_embed",
         "//tools/please_go_filter",
         "//tools/please_go_install",
         "//tools/please_go_test",

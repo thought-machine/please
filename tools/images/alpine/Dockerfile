@@ -1,4 +1,4 @@
-FROM golang:1.15-alpine
+FROM golang:1.16-alpine
 MAINTAINER peter.ebden@gmail.com
 
 RUN apk update && apk add --no-cache git patch gcc g++ libc-dev bash libgcc xz protoc perl-utils
