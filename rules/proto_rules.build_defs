@@ -256,7 +256,7 @@ def proto_languages():
             func = lambda name, srcs, deps, test_only: go_library(
                 name = name,
                 srcs = srcs,
-                out = _parent_rule(name) + '.a',
+                package = _parent_rule(name),
                 deps = deps,
                 test_only = test_only,
             ),
@@ -334,7 +334,7 @@ def grpc_languages():
             func = lambda name, srcs, deps, test_only: go_library(
                 name = name,
                 srcs = srcs,
-                out = _parent_rule(name) + '.a',
+                package = _parent_rule(name),
                 deps = deps,
                 test_only = test_only,
             ),
