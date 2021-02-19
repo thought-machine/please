@@ -78,9 +78,6 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 //                   HOME and how we get the correct state object for cross-compiling.
 //                   When we release v16 and make this the default we should be able to significantly simplify this.
 func (c *Client) stateForTarget(target *core.BuildTarget) *core.BuildState {
-	if !c.state.Config.FeatureFlags.PleaseDownloadTools {
-		return c.state
-	}
 	return c.state.ForTarget(target)
 }
 
