@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '^1.16'
+      - name: delete-excluded-dirs
+        run: "rm -rf tools/please_go_install/test_data"
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
