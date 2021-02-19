@@ -1,6 +1,7 @@
 run:
   skip-dirs:
     - test_data
+    - tools/please_go_install/test_data
 
 issues:
   exclude:

@@ -1,15 +1,15 @@
 go_mod_download(
     name = "go_flags_srcs",
     module = "github.com/thought-machine/go-flags",
-    version = "v1.5.0",
     please_go_install = False,
+    version = "v1.5.0",
 )
 
 go_mod_download(
     name = "xsys_srcs",
     module = "golang.org/x/sys",
-    version = "765f4ea38db36397e827c4153018aa272eed7835",
     please_go_install = False,
+    version = "765f4ea38db36397e827c4153018aa272eed7835",
 )
 
 go_get(
