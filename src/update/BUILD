@@ -23,8 +23,8 @@ go_test(
     name = "update_test",
     srcs = ["update_test.go"],
     data = [
-        ":test_tarball",
         ":test_please",
+        ":test_tarball",
         "//src:please",
     ],
     labels = ["xz"],
@@ -58,8 +58,8 @@ tarball(
 genrule(
     name = "test_please",
     srcs = ["//src/update/test:please"],
-    cmd = "cp $SRC $OUT",
     out = "please_test",
     binary = True,
+    cmd = "cp $SRC $OUT",
     test_only = True,
 )
