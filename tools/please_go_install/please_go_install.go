@@ -88,10 +88,8 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-		} else {
-			if err := pkgs.compile(tc, []string{}, target); err != nil {
-				log.Fatalf("Failed to compile %v: %v", target, err)
-			}
+		} else if err := pkgs.compile(tc, []string{}, target); err != nil {
+			log.Fatalf("Failed to compile %v: %v", target, err)
 		}
 	}
 }

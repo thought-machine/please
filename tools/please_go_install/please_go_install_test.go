@@ -14,7 +14,6 @@ import (
 	"github.com/thought-machine/please/src/fs"
 )
 
-
 func TestMissingImport(t *testing.T) {
 	cmd := compile("missing_import")
 
