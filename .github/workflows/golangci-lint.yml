@@ -16,6 +16,10 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '^1.16'
+      - name: delete-excluded-dirs
+        # This directory is deliberately broken to test the compile warnings we get. We can't exclude this in the normal
+        # way: https://github.com/golangci/golangci-lint/issues/301
+        run: "rm -rf tools/please_go_install/test_data"
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
