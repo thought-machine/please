@@ -59,7 +59,7 @@ const (
 	passEnvBuildRuleArgIdx
 	localBuildRuleArgIdx
 	outDirsBuildRuleArgIdx
-	configBuildRuleArgIdx
+	_
 	exitOnErrorArgIdx
 	entryPointsArgIdx
 	envArgIdx
