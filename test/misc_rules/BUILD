@@ -43,3 +43,10 @@ genrule(
     ],
     cmd = "echo \"test\" > test1.txt && ln -s test1.txt test2.txt",
 )
+
+# Test to set string to tools 
+genrule(
+    name = "test_string_tools",
+    tools = "test",
+    cmd = "echo String tools",
+)
