@@ -44,9 +44,25 @@ genrule(
     cmd = "echo \"test\" > test1.txt && ln -s test1.txt test2.txt",
 )
 
-# Test to set string to tools 
+# Test to set string to tools argument
 genrule(
-    name = "test_string_tools",
-    tools = "test",
-    cmd = "echo String tools",
+    name = "tools_string",
+    tools = "bash",
+    cmd = "$TOOL -c \"echo 'String tools' > tools_string.txt\"",
+    outs = [
+        "tools_string.txt",
+    ],
+)
+
+# Test to set string to test_tools argument
+gentest(
+    name = "test_tools_string",
+    tools = "bash",
+    no_test_output = True,
+    test_tools = "bash",
+    cmd = "$TOOL -c \"echo 'test string tools' > test_tools_strings.txt\"",
+    outs = [
+        "test_tools_strings.txt",
+    ],
+    test_cmd = "[ \"`cat $TEST`\" == \"test string tools\" ]"
 )
