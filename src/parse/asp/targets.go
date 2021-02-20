@@ -282,13 +282,21 @@ func addMaybeNamed(s *scope, name string, obj pyObject, anon func(core.BuildInpu
 		s.Assert(named != nil, "%s cannot be given as a dict", name)
 		for k, v := range d {
 			if v != None {
-				l, ok := asList(v)
-				s.Assert(ok, "Values of %s must be lists of strings", name)
-				for _, li := range l {
-					if bi := parseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
+				if l, ok := asList(v); ok {
+					for _, li := range l {
+						if bi := parseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
+							named(k, bi)
+						}
+					}
+					continue
+				}
+				if str, ok := asString(v); ok {
+					if bi := parseBuildInput(s, str, name, systemAllowed, tool); bi != nil {
 						named(k, bi)
 					}
+					continue
 				}
+				s.Assert(ok, "Values of %s must be a string or lists of strings", name)
 			}
 		}
 	} else if obj != None {

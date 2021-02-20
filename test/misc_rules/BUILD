@@ -57,10 +57,12 @@ genrule(
 # Test to set string to test_tools argument
 gentest(
     name = "test_tools_string",
-    tools = "bash",
+    tools = {
+        "SHELL": "bash",
+    },
     no_test_output = True,
     test_tools = "bash",
-    cmd = "$TOOL -c \"echo 'test string tools' > test_tools_strings.txt\"",
+    cmd = "$SHELL -c \"echo 'test string tools' > test_tools_strings.txt\"",
     outs = [
         "test_tools_strings.txt",
     ],
