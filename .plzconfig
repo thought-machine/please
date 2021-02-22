@@ -52,9 +52,12 @@ cmd = run //:bootstrap -- --skip_tests
 desc = Installs Please into ~/.please
 cmd = run //:install --
 
+[alias "go"]
+cmd = run //third_party/go:toolchain --entry_point go --
+
 [alias "plz"]
 desc = Builds & runs the version of plz within this repo.
-cmd = run //src:please --
+cmd = run //package:installed_files --entry_point=please --
 subcommand = test
 subcommand = build
 positionallabels = true
@@ -89,4 +92,3 @@ accept = notice
 JavaBinaryExecutableByDefault = true
 RemovePleasings = true
 PleaseDownloadTools = true
-PleaseGoInstall = true

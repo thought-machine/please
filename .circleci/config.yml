@@ -24,7 +24,7 @@ jobs:
            path: plz-out/results
        - run:
            name: Package
-           command: ./plz-out/bin/src/please build //package:all -p --profile ci --profile alpine
+           command: plz-out/please/plz build //package:all -p --profile ci --profile alpine
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -69,7 +69,7 @@ jobs:
            path: plz-out/results
        - run:
            name: Package
-           command: ./plz-out/bin/src/please build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball -p
+           command: plz-out/please/plz build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -99,7 +99,7 @@ jobs:
        - image: thoughtmachine/please_ubuntu_alt:20200812
      resource_class: large
      environment:
-       PLZ_ARGS: "-p --profile ci-alt"
+       PLZ_ARGS: "-p -c cover --profile ci-alt"
        PLZ_COVER: "cover --nocoverage_report"
      steps:
        - checkout
@@ -186,7 +186,7 @@ jobs:
            path: plz-out/log
        - run:
            name: Package
-           command: ./plz-out/bin/src/please build //package:release_files -p
+           command: plz-out/please/plz build //package:release_files -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:

@@ -966,7 +966,7 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
 
 def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None, strip:list=[],
                     licences:list=None, hashes:list=None, labels:list=[], _tag:str='', deps:list=[],
-                    please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL):
+                    go_path_compatibility:bool=False):
     """Downloads a third-party Go module using `go mod download`
 
     This rule is typically used in conjunction with go_module() to resolve cyclic dependencies between modules. This rule
@@ -985,9 +985,10 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
       hashes (list): List of hashes to verify the downloaded sources against.
       licences (list): Licences this rule is subject to.
       labels (list): Labels to apply to this rule.
-      please_go_install (bool): Whether this module is going to be consumed by please_go_install. When set, this rule
-                                will output into a folder based on it's name completely avoiding issues with multiple
-                                rules outputting into the same location.
+      go_path_compatibility (bool): Whether this rule's outputs have to be a valid GOPATH i.e. output into
+                             src/example.com/author/module. This can be useful when used with go_get(). When false, this
+                             rule's outputs will be based on the name parameter, guaranteeing uniqueness, but is then
+                             only compatible with go_module() rules. Defaults to false.
     """
     # TODO(jpoole): write a proper please_go tool for this
     cmds = [
@@ -999,13 +1000,15 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     return build_rule(
         name = name,
         tag = _tag,
-        outs = [name] if please_go_install else [f'src/{module}'],
+        outs = [name] if not go_path_compatibility else [f'src/{module}'],
         tools = [CONFIG.GO_TOOL],
         building_description = 'Fetching...',
         cmd = ' && '.join(cmds),
         requires = ['go_src'],
         test_only = test_only,
-        labels = labels + ['link:plz-out/go'],
+        # TODO(jpoole): We probably want to somehow link this to the correct place but Please doesn't really facilitate
+        #  that right now.
+        labels = labels + ['link:plz-out/go'] if go_path_compatibility else [],
         hashes = hashes,
         sandbox = False,
         licences = licences,
@@ -1015,8 +1018,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
-              licences:list=None, linker_flags:list=[], please_go_install:bool=CONFIG.FF_PLEASE_GO_INSTALL,
-              strip:list=[], env:dict={}):
+              licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}):
     """Defines a dependency on a third-party Go module.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -1050,9 +1052,6 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
                            automatically be collected so this is typically not necessary.
       env (dict): Any env variables to set during build time. This can be useful to set CGO_CFLAGS etc. to control
                   aspects of compilation.
-      please_go_install (bool): Whether to use please_go_install instead of  `go install` to compile the module. This
-                                feature is still maturing however avoids a number of issues with relying on `go install`
-                                and will become the default in a future release.
     """
     if version and download:
         raise ParseError("You have provided both version and download. Must provided one or the other.")
@@ -1074,7 +1073,6 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             licences = licences,
             hashes = hashes,
             strip = strip,
-            please_go_install=please_go_install,
         )
     outs = []
     if not binary:
@@ -1091,35 +1089,20 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
                 else:
                     outs += [f"{i}.a"]
 
-    if please_go_install:
-        a_rule = _go_install_module(
-            name = name,
-            module = module,
-            install = install or [module],
-            binary = binary,
-            src = download,
-            outs = outs,
-            deps = deps + exported_deps,
-            test_only = test_only,
-            visibility = visibility,
-            licences = licences,
-            linker_flags = linker_flags,
-            env = env,
-        )
-    else:
-        a_rule = _go_install(
-            name = name,
-            get_roots = [module],
-            install = install or [module],
-            binary = binary,
-            srcs = [download],
-            outs = outs,
-            deps = deps + exported_deps,
-            test_only = test_only,
-            visibility = visibility,
-            licences = licences,
-            env = env,
-        )
+    a_rule = _go_install_module(
+        name = name,
+        module = module,
+        install = install or [module],
+        binary = binary,
+        src = download,
+        outs = outs,
+        deps = deps + exported_deps,
+        test_only = test_only,
+        visibility = visibility,
+        licences = licences,
+        linker_flags = linker_flags,
+        env = env,
+    )
 
     if binary:
         return a_rule

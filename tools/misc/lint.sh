@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eu
 
-[ -f "plz-out/bin/src/please" ] && PLZ="plz-out/bin/src/please" || PLZ="./pleasew"
+[ -f "plz-out/please/plz" ] && PLZ="plz-out/please/plz" || PLZ="./pleasew"
 
 
 go list -f '{{.Dir}}' ./src/... ./tools/...  | fgrep -v test_data | xargs \
