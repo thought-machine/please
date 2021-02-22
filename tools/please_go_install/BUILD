@@ -27,3 +27,16 @@ go_binary(
         "//tools/please_go_install/toolchain",
     ],
 )
+
+go_test(
+    name = "please_go_install_test",
+    srcs = ["please_go_install_test.go"],
+    data = {
+        "pleaes_go_install": [":please_go_install"],
+        "test_data": ["test_data"],
+    },
+    deps = [
+        "//src/fs",
+        "//third_party/go:testify",
+    ],
+)

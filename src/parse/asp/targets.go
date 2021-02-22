@@ -207,8 +207,8 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	} else {
 		addMaybeNamed(s, "srcs", args[srcsBuildRuleArgIdx], t.AddSource, t.AddNamedSource, false, false)
 	}
-	addMaybeNamed(s, "tools", args[toolsBuildRuleArgIdx], t.AddTool, t.AddNamedTool, true, true)
-	addMaybeNamed(s, "test_tools", args[testToolsBuildRuleArgIdx], t.AddTestTool, t.AddNamedTestTool, true, true)
+	addMaybeNamedOrString(s, "tools", args[toolsBuildRuleArgIdx], t.AddTool, t.AddNamedTool, true, true)
+	addMaybeNamedOrString(s, "test_tools", args[testToolsBuildRuleArgIdx], t.AddTestTool, t.AddNamedTestTool, true, true)
 	addMaybeNamed(s, "system_srcs", args[systemSrcsBuildRuleArgIdx], t.AddSource, nil, true, false)
 	addMaybeNamed(s, "data", args[dataBuildRuleArgIdx], t.AddDatum, t.AddNamedDatum, false, false)
 	addMaybeNamedOutput(s, "outs", args[outsBuildRuleArgIdx], t.AddOutput, t.AddNamedOutput, t, false)
@@ -282,18 +282,40 @@ func addMaybeNamed(s *scope, name string, obj pyObject, anon func(core.BuildInpu
 		s.Assert(named != nil, "%s cannot be given as a dict", name)
 		for k, v := range d {
 			if v != None {
-				l, ok := asList(v)
-				s.Assert(ok, "Values of %s must be lists of strings", name)
-				for _, li := range l {
-					if bi := parseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
+				if l, ok := asList(v); ok {
+					for _, li := range l {
+						if bi := parseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
+							named(k, bi)
+						}
+					}
+					continue
+				}
+				if str, ok := asString(v); ok {
+					if bi := parseBuildInput(s, str, name, systemAllowed, tool); bi != nil {
 						named(k, bi)
 					}
+					continue
 				}
+				s.Assert(ok, "Values of %s must be a string or lists of strings", name)
 			}
 		}
 	} else if obj != None {
 		s.Assert(false, "Argument %s must be a list or dict, not %s", name, obj.Type())
 	}
+}
+
+// addMaybeNamedOrString adds inputs to a target, possibly in named groups.
+func addMaybeNamedOrString(s *scope, name string, obj pyObject, anon func(core.BuildInput), named func(string, core.BuildInput), systemAllowed, tool bool) {
+	if obj == nil {
+		return
+	}
+	if str, ok := asString(obj); ok {
+		if bi := parseBuildInput(s, str, name, systemAllowed, tool); bi != nil {
+			anon(bi)
+		}
+		return
+	}
+	addMaybeNamed(s, name, obj, anon, named, systemAllowed, tool)
 }
 
 // addMaybeNamedOutput adds outputs to a target, possibly in a named group
@@ -557,4 +579,12 @@ func asDict(obj pyObject) (pyDict, bool) {
 		return d.pyDict, true
 	}
 	return nil, false
+}
+
+// asString converts an object to a pyString
+func asString(obj pyObject) (pyString, bool) {
+	if s, ok := obj.(pyString); ok {
+		return s, true
+	}
+	return "", false
 }
