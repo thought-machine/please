@@ -640,7 +640,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		}
 	}()
 
-	resp, err := c.client.ExecuteAndWaitProgress(context.Background(), &pb.ExecuteRequest{
+	resp, err := c.client.ExecuteAndWaitProgress(c.contextWithMetadata(target), &pb.ExecuteRequest{
 		InstanceName:    c.instance,
 		ActionDigest:    digest,
 		SkipCacheLookup: true, // We've already done it above.
