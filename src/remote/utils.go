@@ -567,11 +567,11 @@ func (cred tokenCredProvider) RequireTransportSecurity() bool {
 
 // contextWithMetadata returns a context with metadata corresponding to the given build target.
 func (c *Client) contextWithMetadata(target *core.BuildTarget) context.Context {
-	const key = "build.bazel.remote.execution.v2.requestmetadata-bin"  // as defined by the proto
+	const key = "build.bazel.remote.execution.v2.requestmetadata-bin" // as defined by the proto
 	b, _ := proto.Marshal(&pb.RequestMetadata{
 		ActionId:                target.Label.String(),
 		CorrelatedInvocationsId: c.state.Config.Remote.BuildID,
-		ToolDetails:             &pb.ToolDetails{
+		ToolDetails: &pb.ToolDetails{
 			ToolName:    "please",
 			ToolVersion: core.PleaseVersion.String(),
 		},
