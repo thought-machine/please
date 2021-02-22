@@ -222,18 +222,6 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		os.Setenv("HTTP_PROXY", config.Build.HTTPProxy.String())
 	}
 
-	if config.Build.UseToolsFromPath {
-		setDefaultString(&config.Build.PleaseSandboxTool, "please_sandbox", "//_please:tools|please_sandbox")
-		setDefaultString(&config.Go.TestTool, "please_go_test", "//_please:tools|please_go_test")
-		setDefaultString(&config.Go.FilterTool, "please_go_filter", "//_please:tools|please_go_filter")
-		setDefaultString(&config.Go.InstallTool, "please_go_install", "//_please:tools|please_go_install")
-		setDefaultString(&config.Go.EmbedTool, "please_go_embed", "//_please:tools|please_go_embed")
-		setDefaultString(&config.Python.PexTool, "please_pex", "//_please:tools|please_pex")
-		setDefaultString(&config.Java.JavacWorker, "javac_worker", "//_please:tools|javac_worker")
-		setDefaultString(&config.Java.JarCatTool, "jarcat", "//_please:tools|jarcat")
-		setDefaultString(&config.Java.JUnitRunner, "junit_runner.pex", "//_please:tools|junit_runner")
-	}
-
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,
@@ -243,15 +231,6 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 // setDefault sets a slice of strings in the config if the set one is empty.
 func setDefault(conf *[]string, def ...string) {
 	if len(*conf) == 0 {
-		*conf = def
-	}
-}
-
-// setDefaultString sets the default value on a string. oldDefault contains the strings as set in the default
-// configuration. If after loading config files, this value has changed, the value will be left alone. Otherwise
-// it will be set to def.
-func setDefaultString(conf *string, oldDefault string, def string) {
-	if *conf == oldDefault {
 		*conf = def
 	}
 }
@@ -377,15 +356,15 @@ func DefaultConfiguration() *Configuration {
 	config.Bazel.Compatibility = usingBazelWorkspace
 
 	// Please tools
-	config.Build.PleaseSandboxTool = "please_sandbox"
-	config.Go.TestTool = "please_go_test"
-	config.Go.FilterTool = "please_go_filter"
-	config.Go.InstallTool = "please_go_install"
-	config.Go.EmbedTool = "please_go_embed"
-	config.Python.PexTool = "please_pex"
-	config.Java.JavacWorker = "javac_worker"
-	config.Java.JarCatTool = "jarcat"
-	config.Java.JUnitRunner = "junit_runner.jar"
+	config.Build.PleaseSandboxTool = "//_please:tools|please_sandbox"
+	config.Go.TestTool = "//_please:tools|please_go_test"
+	config.Go.FilterTool = "//_please:tools|please_go_filter"
+	config.Go.InstallTool = "//_please:tools|please_go_install"
+	config.Go.EmbedTool = "//_please:tools|please_go_embed"
+	config.Python.PexTool = "//_please:tools|please_pex"
+	config.Java.JavacWorker = "//_please:tools|javac_worker"
+	config.Java.JarCatTool = "//_please:tools|jarcat"
+	config.Java.JUnitRunner = "//_please:tools|junit_runner"
 
 	return &config
 }
@@ -441,7 +420,6 @@ type Configuration struct {
 		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256"`
 		ExitOnError          bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
 		LinkGeneratedSources bool         `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. Defaults to false." var:"LINK_GEN_SOURCES"`
-		UseToolsFromPath     bool         `help:"If set, Please will use Please will look for its tools in it's executables directory, and on the path, rather than downloading them. Defaults to False."`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
