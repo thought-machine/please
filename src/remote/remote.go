@@ -580,6 +580,8 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 		return c.buildFilegroup(target, command, digest)
 	} else if target.IsRemoteFile {
 		return c.fetchRemoteFile(tid, target, digest)
+	} else if target.IsTextFile {
+		return c.buildTextFile(target, command, digest)
 	}
 	return c.reallyExecute(tid, target, command, digest, needStdout, isTest)
 }
@@ -811,17 +813,17 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 
 // buildFilegroup "builds" a single filegroup target.
 func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
-	b, err := c.uploadInputDir(nil, target, false) // We don't need to actually upload the inputs here, that is already done.
+	inputDir, err := c.uploadInputDir(nil, target, false) // We don't need to actually upload the inputs here, that is already done.
 	if err != nil {
 		return nil, nil, err
 	}
 	ar := &pb.ActionResult{}
 	if err := c.uploadBlobs(func(ch chan<- *chunker.Chunker) error {
 		defer close(ch)
-		b.Root(ch)
+		inputDir.Build(ch)
 		for _, out := range command.OutputPaths {
-			if d, f := b.Node(path.Join(target.Label.PackageName, out)); d != nil {
-				chomk, _ := chunker.NewFromProto(b.Tree(path.Join(target.Label.PackageName, out)), int(c.client.ChunkMaxSize))
+			if d, f := inputDir.Node(path.Join(target.Label.PackageName, out)); d != nil {
+				chomk, _ := chunker.NewFromProto(inputDir.Tree(path.Join(target.Label.PackageName, out)), int(c.client.ChunkMaxSize))
 				ch <- chomk
 				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
 					Path:       out,
@@ -838,6 +840,34 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 				return fmt.Errorf("Missing output from filegroup: %s", out)
 			}
 		}
+		return nil
+	}); err != nil {
+		return nil, nil, err
+	}
+	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
+		InstanceName: c.instance,
+		ActionDigest: actionDigest,
+		ActionResult: ar,
+	}); err != nil {
+		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
+	}
+	return &core.BuildMetadata{}, ar, nil
+}
+
+// buildTextFile "builds" uploads a text file to the CAS
+func (c *Client) buildTextFile(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
+	ar := &pb.ActionResult{}
+	if err := c.uploadBlobs(func(ch chan<- *chunker.Chunker) error {
+		defer close(ch)
+		if len(command.OutputPaths) != 1 {
+			return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(command.OutputPaths))
+		}
+		fileChunk := chunker.NewFromBlob([]byte(target.FileContent), int(c.client.ChunkMaxSize))
+		ch <- fileChunk
+		ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
+			Path: command.OutputPaths[0],
+			Digest: fileChunk.Digest().ToProto(),
+		})
 		return nil
 	}); err != nil {
 		return nil, nil, err

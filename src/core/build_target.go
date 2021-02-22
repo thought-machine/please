@@ -133,6 +133,8 @@ type BuildTarget struct {
 	IsFilegroup bool `print:"false"`
 	// Marks the target as a remote_file.
 	IsRemoteFile bool `print:"false"`
+	//Marks the target as a text_file.
+	IsTextFile bool `print:"false"`
 	// Marks that the target was added in a post-build function.
 	AddedPostBuild bool `print:"false"`
 	// If true, the interactive progress display will try to infer the target's progress
@@ -205,6 +207,8 @@ type BuildTarget struct {
 	EntryPoints map[string]string `name:"entry_points"`
 	// Env are any custom environment variables to set for this build target
 	Env map[string]string `name:"env"`
+	// The content of text_file() rules
+	FileContent string `name:"content"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
