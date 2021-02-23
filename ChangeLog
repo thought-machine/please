@@ -1,3 +1,14 @@
+Version 15.17.0
+--------------
+    * Installing please will now add the wrapper script to the path
+      instead of a symlink to the active Please binary. This avoids
+      lots of issues with deleting older Please versions, and in general
+      is just more robust #1573
+    * Better error reporting from go_module() and go_mod_download()
+      #1574 and #1569
+    * Support for go v1.16 file embedding #1571
+
+
 Version 15.16.0
 --------------
     * Generated code can now be linked back into the repo. Any target
