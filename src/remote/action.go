@@ -14,7 +14,6 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/tree"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/ptypes"
 
@@ -488,7 +487,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 
 // uploadLocalTarget uploads the outputs of a target that was built locally.
 func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
-	m, ar, err := tree.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), int(c.client.ChunkMaxSize), filemetadata.NewNoopCache())
+	m, ar, err := c.client.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), int(c.client.ChunkMaxSize), filemetadata.NewNoopCache())
 	if err != nil {
 		return err
 	}

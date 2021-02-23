@@ -17,7 +17,6 @@ import (
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
-	treesdk "github.com/bazelbuild/remote-apis-sdks/go/pkg/tree"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/proto"
@@ -77,7 +76,7 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 		}
 
 		if outDir := maybeGetOutDir(d.Path, target.OutputDirectories); outDir != "" {
-			files, dirs, err := getOutputsForOutDir(target, outDir, tree)
+			files, dirs, err := c.getOutputsForOutDir(target, outDir, tree)
 			if err != nil {
 				return err
 			}
@@ -102,12 +101,12 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	return nil
 }
 
-func getOutputsForOutDir(target *core.BuildTarget, outDir core.OutputDirectory, tree *pb.Tree) ([]*pb.FileNode, []*pb.DirectoryNode, error) {
+func (c *Client) getOutputsForOutDir(target *core.BuildTarget, outDir core.OutputDirectory, tree *pb.Tree) ([]*pb.FileNode, []*pb.DirectoryNode, error) {
 	files := make([]*pb.FileNode, 0, len(tree.Root.Files))
 	dirs := make([]*pb.DirectoryNode, 0, len(tree.Root.Directories))
 
 	if outDir.ShouldAddFiles() {
-		outs, err := treesdk.FlattenTree(tree, "")
+		outs, err := c.client.FlattenTree(tree, "")
 		if err != nil {
 			return nil, nil, err
 		}

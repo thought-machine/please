@@ -7,8 +7,8 @@ require (
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/alecthomas/units v0.0.0-20201120081800-1786d5ef83d4 // indirect
 	github.com/bazelbuild/buildtools v0.0.0-20190228125936-4bcdbd1064fc
-	github.com/bazelbuild/remote-apis v0.0.0-20200904140912-1aeb39973178
-	github.com/bazelbuild/remote-apis-sdks v0.0.0-20200921162846-81a3a82fc300
+	github.com/bazelbuild/remote-apis v0.0.0-20201113154229-1e9ccef3705c
+	github.com/bazelbuild/remote-apis-sdks v0.0.0-20210219194604-fdb5dae38ca8
 	github.com/bmatcuk/doublestar v1.3.0 // indirect
 	github.com/coreos/go-semver v0.2.0
 	github.com/davecgh/go-spew v1.1.1
