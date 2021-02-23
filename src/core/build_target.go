@@ -133,7 +133,7 @@ type BuildTarget struct {
 	IsFilegroup bool `print:"false"`
 	// Marks the target as a remote_file.
 	IsRemoteFile bool `print:"false"`
-	//Marks the target as a text_file.
+	// Marks the target as a text_file.
 	IsTextFile bool `print:"false"`
 	// Marks that the target was added in a post-build function.
 	AddedPostBuild bool `print:"false"`
