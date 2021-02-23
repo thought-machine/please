@@ -1,4 +1,4 @@
-subinclude("//build_defs:plz_e2e_test")
+subinclude("//test/build_defs")
 
 # Test for a panic provoked by a python_library using a proto_library as a resource.
 proto_library(
