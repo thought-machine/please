@@ -177,7 +177,7 @@ func (c *Client) initExec() error {
 		NoSecurity:         !c.state.Config.Remote.Secure,
 		TransportCredsOnly: c.state.Config.Remote.Secure,
 		DialOpts:           dialOpts,
-	}, client.UseBatchOps(true), client.RetryTransient(), client.RPCTimeouts(client.DefaultRPCTimeouts))
+	}, client.UseBatchOps(true), &client.TreeSymlinkOpts{Preserved: true}, client.RetryTransient(), client.RPCTimeouts(client.DefaultRPCTimeouts))
 	if err != nil {
 		return err
 	}
