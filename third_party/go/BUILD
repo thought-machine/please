@@ -110,7 +110,7 @@ go_module(
         "encoding/...",
     ],
     module = "golang.org/x/text",
-    version = "4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1",
+    version = "v0.3.5",
     deps = [
         ":tools",
     ],
