@@ -865,7 +865,7 @@ func (c *Client) buildTextFile(target *core.BuildTarget, command *pb.Command, ac
 		fileChunk := chunker.NewFromBlob([]byte(target.FileContent), int(c.client.ChunkMaxSize))
 		ch <- fileChunk
 		ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-			Path: command.OutputPaths[0],
+			Path:   command.OutputPaths[0],
 			Digest: fileChunk.Digest().ToProto(),
 		})
 		return nil

@@ -20,3 +20,5 @@ plz run parallel -p -v notice --colour --detach //test/remote:run_elan //test/re
 plz build --profile ci_remote -p -v notice --colour //src:please
 # Check we can actually run some tests
 plz test --profile ci_remote -p -v notice --colour //src/core:all
+# And run any tests we deem to be pertinent to remote execution
+plz test --profile ci_remote -p -v notice --colour -i rex
