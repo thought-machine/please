@@ -68,6 +68,7 @@ github.com/bazelbuild/remote-apis v0.0.0-20200127100703-2846a67ac8fe h1:psm84nne
 github.com/bazelbuild/remote-apis v0.0.0-20200127100703-2846a67ac8fe/go.mod h1:9Y+1FnaNUGVV6wKE0Jdh+mguqDUsyd9uUqokalrC7DQ=
 github.com/bazelbuild/remote-apis v0.0.0-20200904140912-1aeb39973178 h1:qDZ7lr7knlTckZgbKwWD1PHTY6WYe5V+DqILuzpMHPY=
 github.com/bazelbuild/remote-apis v0.0.0-20200904140912-1aeb39973178/go.mod h1:9Y+1FnaNUGVV6wKE0Jdh+mguqDUsyd9uUqokalrC7DQ=
+github.com/bazelbuild/remote-apis v0.0.0-20201113154229-1e9ccef3705c h1:rk6YYsIbLDZ/frDYZPANInvCUqAEjPitjRSyWTcsjiA=
 github.com/bazelbuild/remote-apis v0.0.0-20201113154229-1e9ccef3705c/go.mod h1:9Y+1FnaNUGVV6wKE0Jdh+mguqDUsyd9uUqokalrC7DQ=
 github.com/bazelbuild/remote-apis-sdks v0.0.0-20191119014045-9f0428c343a9 h1:KU66ZTme1RxNuBPyseaHmSHZKQMM52yrCDhGhMCqOUU=
 github.com/bazelbuild/remote-apis-sdks v0.0.0-20191119014045-9f0428c343a9/go.mod h1:qgVeF5etXayzvt6OKXzeSg9Y0QDXfeH9H4EWKo/MNLM=
@@ -272,6 +273,7 @@ github.com/kevinburke/go-bindata v3.13.0+incompatible/go.mod h1:/pEEZ72flUW2p0yi
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.10.11 h1:K9z59aO18Aywg2b/WSgBaUX99mHy2BES18Cr5lBKZHk=
 github.com/klauspost/compress v1.10.11/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
+github.com/klauspost/compress v1.11.6 h1:EgWPCW6O3n1D5n99Zq3xXBt9uCwRGvpwGOusOLNBRSQ=
 github.com/klauspost/compress v1.11.6/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
 github.com/klauspost/cpuid v1.3.1 h1:5JNjFYYQrZeKRJ0734q51WCEEn2huer72Dc7K+R/b6s=
 github.com/klauspost/cpuid v1.3.1/go.mod h1:bYW4mA6ZgKPob1/Dlai2LviZJO7KGI3uoWLd42rAQw4=
@@ -299,6 +301,7 @@ github.com/miekg/dns v1.0.14 h1:9jZdLNd/P4+SfEJ0TNyxYpsK8N4GtfylBLqtbYN1sbA=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
 github.com/mostynb/go-grpc-compression v1.1.2 h1:emrImHjSPW/H4aarNxuiPG1uN1WgIlVdR3M0LH5HH5E=
 github.com/mostynb/go-grpc-compression v1.1.2/go.mod h1:pdfSJ8XayqYFTIn9b5dKM2gKCHYRgnvG9UJ2/pLOl7E=
+github.com/mostynb/zstdpool-syncpool v0.0.3 h1:G1+LWTHSedQUaiW7V7wiGdufKk3Xyyot/6vjBDeugFs=
 github.com/mostynb/zstdpool-syncpool v0.0.3/go.mod h1:lC4L6zTmUc7cUKGiMn6aOuHmxzkL4mzpTg4wxpLBbuk=
 github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d/go.mod h1:o96djdrsSGy3AWPyBgZMAGfxZNfgntdJG+11KU4QvbU=
 github.com/nicksnyder/go-i18n v1.10.1 h1:isfg77E/aCD7+0lD/D00ebR2MV5vgeQ276WYyDaCRQc=
