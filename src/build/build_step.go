@@ -479,7 +479,7 @@ func buildTextFile(target *core.BuildTarget) error {
 		return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(outs))
 	}
 	outFile := filepath.Join(target.TmpDir(), outs[0])
-	return os.WriteFile(outFile, []byte(target.FileContent), target.OutMode())
+	return ioutil.WriteFile(outFile, []byte(target.FileContent), target.OutMode())
 }
 
 // prepareOutputDirectories creates any directories the target has declared it will output into as a nicety
