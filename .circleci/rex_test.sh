@@ -21,4 +21,4 @@ plz build -o build.passenv:PATH --profile ci_remote -p -v notice --colour //src:
 # Check we can actually run some tests
 plz test -o build.passenv:PATH --profile ci_remote -p -v notice --colour //src/core:all
 # And run any tests we deem to be pertinent to remote execution
-plz test --profile ci_remote -p -v notice --colour -i rex
+plz test -o build.passenv:PATH --profile ci_remote -p -v notice --colour -i rex
