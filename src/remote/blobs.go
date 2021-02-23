@@ -30,7 +30,7 @@ func (c *Client) uploadIfMissing(ctx context.Context, chomks ...*chunker.Chunker
 	filtered := c.filterChunks(chomks)
 	if len(filtered) == 0 {
 		return nil
-	} else if _, err := c.client.UploadIfMissing(ctx, filtered...); err != nil {
+	} else if _, _, err := c.client.UploadIfMissing(ctx, filtered...); err != nil {
 		return err
 	}
 	c.existingBlobMutex.Lock()
