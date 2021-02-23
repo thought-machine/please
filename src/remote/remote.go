@@ -15,11 +15,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/retry"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
@@ -170,13 +170,14 @@ func (c *Client) initExec() error {
 	if err != nil {
 		return err
 	}
+	client.DefaultRPCTimeouts["default"] = time.Duration(c.state.Config.Remote.Timeout)
 	client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
 		Service:            c.state.Config.Remote.URL,
 		CASService:         c.state.Config.Remote.CASURL,
 		NoSecurity:         !c.state.Config.Remote.Secure,
 		TransportCredsOnly: c.state.Config.Remote.Secure,
 		DialOpts:           dialOpts,
-	}, client.UseBatchOps(true), client.RetryTransient(), client.RPCTimeout(c.state.Config.Remote.Timeout))
+	}, client.UseBatchOps(true), client.RetryTransient(), client.RPCTimeouts(client.DefaultRPCTimeouts))
 	if err != nil {
 		return err
 	}
@@ -426,12 +427,13 @@ func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar 
 func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult, target *core.BuildTarget) error {
 	// We can download straight into the out dir if there are no outdirs to worry about
 	if len(target.OutputDirectories) == 0 {
-		return c.client.DownloadActionOutputs(ctx, ar, target.OutDir(), c.fileMetadataCache)
+		_, err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir(), c.fileMetadataCache)
+		return err
 	}
 
 	defer os.RemoveAll(target.TmpDir())
 
-	if err := c.client.DownloadActionOutputs(ctx, ar, target.TmpDir(), c.fileMetadataCache); err != nil {
+	if _, err := c.client.DownloadActionOutputs(ctx, ar, target.TmpDir(), c.fileMetadataCache); err != nil {
 		return err
 	}
 
@@ -509,7 +511,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget, run int) (metadata *cor
 	metadata, ar, err := c.execute(tid, target, command, digest, true, false)
 
 	if ar != nil {
-		dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run), c.fileMetadataCache)
+		_, dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run), c.fileMetadataCache)
 		if dlErr != nil {
 			log.Warningf("%v: failed to download test outputs: %v", target.Label, dlErr)
 		}
@@ -818,16 +820,16 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 		return nil, nil, err
 	}
 	ar := &pb.ActionResult{}
-	if err := c.uploadBlobs(func(ch chan<- *chunker.Chunker) error {
+	if err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
 		defer close(ch)
 		inputDir.Build(ch)
 		for _, out := range command.OutputPaths {
 			if d, f := inputDir.Node(path.Join(target.Label.PackageName, out)); d != nil {
-				chomk, _ := chunker.NewFromProto(inputDir.Tree(path.Join(target.Label.PackageName, out)), int(c.client.ChunkMaxSize))
-				ch <- chomk
+				entry, digest := c.protoEntry(b.Tree(path.Join(target.Label.PackageName, out)))
+				ch <- entry
 				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
 					Path:       out,
-					TreeDigest: chomk.Digest().ToProto(),
+					TreeDigest: digest,
 				})
 			} else if f != nil {
 				ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
