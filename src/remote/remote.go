@@ -825,7 +825,7 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 		inputDir.Build(ch)
 		for _, out := range command.OutputPaths {
 			if d, f := inputDir.Node(path.Join(target.Label.PackageName, out)); d != nil {
-				entry, digest := c.protoEntry(b.Tree(path.Join(target.Label.PackageName, out)))
+				entry, digest := c.protoEntry(inputDir.Tree(path.Join(target.Label.PackageName, out)))
 				ch <- entry
 				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
 					Path:       out,
@@ -859,16 +859,16 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 // buildTextFile "builds" uploads a text file to the CAS
 func (c *Client) buildTextFile(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
 	ar := &pb.ActionResult{}
-	if err := c.uploadBlobs(func(ch chan<- *chunker.Chunker) error {
+	if err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
 		defer close(ch)
 		if len(command.OutputPaths) != 1 {
 			return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(command.OutputPaths))
 		}
-		fileChunk := chunker.NewFromBlob([]byte(target.FileContent), int(c.client.ChunkMaxSize))
-		ch <- fileChunk
+		entry := uploadinfo.EntryFromBlob([]byte(target.FileContent))
+		ch <- entry
 		ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
 			Path:   command.OutputPaths[0],
-			Digest: fileChunk.Digest().ToProto(),
+			Digest: entry.Digest.ToProto(),
 		})
 		return nil
 	}); err != nil {
