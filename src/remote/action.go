@@ -273,14 +273,14 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 	}
 	if !isTest && target.Stamp {
 		stamp := core.StampFile(target)
-		chomk, digest := c.blobEntry(stamp)
+		entry := uploadinfo.EntryFromBlob(stamp)
 		if ch != nil {
-			ch <- chomk
+			ch <- entry
 		}
 		d := b.Dir(".")
 		d.Files = append(d.Files, &pb.FileNode{
 			Name:   target.StampFileName(),
-			Digest: digest,
+			Digest: entry.Digest.ToProto(),
 		})
 	}
 	return b, nil
@@ -543,10 +543,5 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 
 func (c *Client) protoEntry(msg proto.Message) (*uploadinfo.Entry, *pb.Digest) {
 	entry, _ := uploadinfo.EntryFromProto(msg)
-	return entry, entry.Digest.ToProto()
-}
-
-func (c *Client) blobEntry(b []byte) (*uploadinfo.Entry, *pb.Digest) {
-	entry := uploadinfo.EntryFromBlob(b)
 	return entry, entry.Digest.ToProto()
 }
