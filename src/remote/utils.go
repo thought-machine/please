@@ -407,10 +407,12 @@ func (b *dirBuilder) dir(dir, child string) *pb.Directory {
 	return d
 }
 
-// Root returns the root directory, calculates the digests of all others and uploads them
-// if the given channel is not nil.
-func (b *dirBuilder) Root(ch chan<- *chunker.Chunker) *pb.Directory {
-	b.dfs(".", ch)
+// Build "builds" the directory. It calculate the digests of all the items in the directory tree, and returns the root
+// directory. If ch is non-nil, it will upload the directory protos to ch. Build doesn't upload any of the actual files
+// in the directory tree, just the protos.
+func (b *dirBuilder) Build(ch chan<- *chunker.Chunker) *pb.Directory {
+	// Upload the directory structure
+	b.walk(".", ch)
 	return b.root
 }
 
@@ -432,7 +434,7 @@ func (b *dirBuilder) Node(name string) (*pb.DirectoryNode, *pb.FileNode) {
 }
 
 // Tree returns the tree rooted at a given directory name.
-// It does not calculate digests or upload, so call Root beforehand if that is needed.
+// It does not calculate digests or upload, so call Build beforehand if that is needed.
 func (b *dirBuilder) Tree(root string) *pb.Tree {
 	d := b.dir(root, "")
 	tree := &pb.Tree{Root: d}
@@ -448,11 +450,13 @@ func (b *dirBuilder) tree(tree *pb.Tree, root string, dir *pb.Directory) {
 	}
 }
 
-func (b *dirBuilder) dfs(name string, ch chan<- *chunker.Chunker) *pb.Digest {
+// Walk walks the directory tree calculating the digest. If ch is non-nil, it will also upload the direcory protos.
+// Walk does not upload the actual files in the tree, just the tree structure.
+func (b *dirBuilder) walk(name string, ch chan<- *chunker.Chunker) *pb.Digest {
 	dir := b.dirs[name]
 	for _, d := range dir.Directories {
 		if d.Digest == nil { // It's not nil if we're reusing outputs from an earlier call.
-			d.Digest = b.dfs(path.Join(name, d.Name), ch)
+			d.Digest = b.walk(path.Join(name, d.Name), ch)
 		}
 	}
 	// The protocol requires that these are sorted into lexicographic order. Not all servers

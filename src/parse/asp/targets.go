@@ -63,6 +63,7 @@ const (
 	exitOnErrorArgIdx
 	entryPointsArgIdx
 	envArgIdx
+	fileContentArgIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -98,6 +99,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.TestOnly = test || isTruthy(testOnlyBuildRuleArgIdx)
 	target.ShowProgress = isTruthy(progressBuildRuleArgIdx)
 	target.IsRemoteFile = isTruthy(urlsBuildRuleArgIdx)
+	target.IsTextFile = isTruthy(fileContentArgIdx)
 	target.Local = isTruthy(localBuildRuleArgIdx)
 	target.ExitOnError = isTruthy(exitOnErrorArgIdx)
 	target.RuleMetadata = args[configBuildRuleArgIdx]
@@ -204,6 +206,8 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 		for _, url := range args[urlsBuildRuleArgIdx].(pyList) {
 			t.AddSource(core.URLLabel(url.(pyString)))
 		}
+	} else if t.IsTextFile {
+		t.FileContent = args[fileContentArgIdx].(pyString).String()
 	} else {
 		addMaybeNamed(s, "srcs", args[srcsBuildRuleArgIdx], t.AddSource, t.AddNamedSource, false, false)
 	}

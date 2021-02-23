@@ -206,9 +206,11 @@ func (c *Client) uploadInputs(ch chan<- *chunker.Chunker, target *core.BuildTarg
 	if err != nil {
 		return nil, err
 	}
-	return b.Root(ch), nil
+	return b.Build(ch), nil
 }
 
+// uploadInputDir uploads the inputs to the build rule. It returns an un-finalised directory builder representing the
+// directory structure of the input dir. The caller is expected to finalise this by calling Build().
 func (c *Client) uploadInputDir(ch chan<- *chunker.Chunker, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
 	b := newDirBuilder(c)
 	for input := range c.iterInputs(target, isTest, target.IsFilegroup) {
