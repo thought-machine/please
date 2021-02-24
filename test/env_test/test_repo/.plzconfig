@@ -1,5 +1,2 @@
-[please]
-location = ~/.please
-
 [parse]
 BuildFileName = BUILD_FILE

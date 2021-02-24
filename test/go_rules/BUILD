@@ -1,5 +1,5 @@
 # Test on the builtin go rules
-subinclude("//build_defs:plz_e2e_test")
+subinclude("//test/build_defs")
 
 go_library(
     name = "go_rules_test_lib",

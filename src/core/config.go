@@ -198,7 +198,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 
 	if config.Please.Location == "" {
 		// Determine the location based off where we're running from.
-		if exec, err := os.Executable(); err != nil {
+		if exec, err := fs.Executable(); err != nil {
 			log.Warning("Can't determine current executable: %s", err)
 			config.Please.Location = "~/.please"
 		} else if strings.HasPrefix(exec, fs.ExpandHomePath("~/.please")) {
@@ -481,6 +481,7 @@ type Configuration struct {
 		Shell         string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
 		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
+		BuildID       string       `help:"ID of the build action that's being run, to attach to remote requests."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
@@ -498,7 +499,7 @@ type Configuration struct {
 		GoPath           string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
 		ImportPath       string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
 		CgoCCTool        string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`
-		CgoEnabled       string `help:"Sets the CGO_ENABLED which controls whether the cgo build flag is set during cross compilation." var:"CGO_ENABLED"`
+		CgoEnabled       string `help:"Sets the CGO_ENABLED which controls whether the cgo build flag is set during cross compilation. Defaults to '0' (disabled)" var:"CGO_ENABLED"`
 		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
 		InstallTool      string `help:"Sets the location of the please_go_install tool that is used to install go modules." var:"GO_INSTALL_TOOL"`
 		EmbedTool        string `help:"Sets the location of the please_go_embed tool that is used to parse //go:embed directives." var:"GO_EMBED_TOOL"`
@@ -589,7 +590,6 @@ type Configuration struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
 		MavenJar                      bool `help:"Makes maven_jar() download sources with maven compatible jar names, and moves the hashes onto the remote file rule." var:"FF_MAVEN_JAR"`
 		RemovePleasings               bool `help:"Stops please adding the pleasings repo by default. Target release vesrion 16." var:"FF_PLEASINGS"`
-		PleaseGoInstall               bool `help:"Uses please_go_install and import configs instead of 'go install'. This is a WIP but should solve a number of issues with go install." var:"FF_PLEASE_GO_INSTALL"`
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
 		PleaseDownloadTools           bool `help:"Please will download its tools from get.please.build instead of looking on the path"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
