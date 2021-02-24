@@ -2,20 +2,15 @@ package plzinit
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/fs"
 )
 
 func InitPleasings(location string, printOnly bool, revision string) error {
-	if !printOnly && fs.FileExists(location) {
-		if !cli.PromptYN(fmt.Sprintf("It looks like a build file already exists at %v. You may use --print to print the rule and add it manually instead. Override BUILD", location), false) {
-			return nil
-		}
+	if revision == "" {
+		revision = "master"
 	}
 
 	if printOnly {
@@ -30,9 +25,13 @@ func InitPleasings(location string, printOnly bool, revision string) error {
 		}
 	}
 
-	// TODO(jpoole): We could probably parse the file, update/append the rule, and re-serialise that rather than nuking it
-	if err := os.RemoveAll(location); err != nil {
+	// TODO(jpoole): We could probably parse the file to update/append the rule
+	f, err := os.OpenFile(location, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(location, []byte(fmt.Sprintf(pleasingsSubrepoTemplate, revision)), 0644)
+	defer f.Close()
+
+	_, err = fmt.Fprintf(f, pleasingsSubrepoTemplate, revision)
+	return err
 }

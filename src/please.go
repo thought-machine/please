@@ -540,11 +540,6 @@ var buildFunctions = map[string]func() int{
 		fmt.Println("For more information visit https://github.com/thought-machine/pleasings")
 		fmt.Println()
 
-		if cli.PromptYN("Would you like to add pleasings to your project? You may also do this later with `plz init pleasings` if you wish.", true) {
-			if err := plzinit.InitPleasings("BUILD", false, "master"); err != nil {
-				log.Fatalf("failed to initialise pleasings in this repository: %v", err)
-			}
-		}
 		return 0
 	},
 	"config": func() int {
