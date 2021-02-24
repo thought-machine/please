@@ -28,6 +28,22 @@
   </h2>
 
   <p>
+    To start using pleasings, you will need to add the pleasings repo to your build graph. To do this, add the pleasings
+    <a class="copy-link" href="/dependencies.html#subrepos">subrepo</a> to a BUILD file in your repo root:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    github_repo(
+        name = "pleasings",
+        repo = "thought-machine/pleasings",
+        revision = "master",
+    )
+    </code>
+  </pre>
+
+  <p>
     The simplest and most lightweight way to load new rules is to do it directly
     with <code class="code">subinclude</code>, like so:
   </p>

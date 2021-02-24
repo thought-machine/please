@@ -295,7 +295,6 @@ func DefaultConfiguration() *Configuration {
 	config.Please.NumOldVersions = 10
 	config.Please.NumThreads = runtime.NumCPU() + 2
 	config.Parse.NumThreads = config.Please.NumThreads
-	config.Parse.BuiltinPleasings = true
 	config.Parse.GitFunctions = true
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
 	config.Build.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
@@ -354,13 +353,6 @@ func DefaultConfiguration() *Configuration {
 	config.Cpp.DefaultDbgCppflags = "--std=c++11 -g3 -pipe -DDEBUG -Wall -Werror"
 	config.Cpp.Coverage = true
 	config.Cpp.ClangModules = true
-	// At some point in the future it might make sense to remove UnitTest++ as the default
-	// test runner - but for now it's still the default for compatibility.
-	config.Cpp.TestMain = BuildLabel{
-		Subrepo:     "pleasings",
-		PackageName: "cc",
-		Name:        "unittest_main",
-	}
 	config.Proto.ProtocTool = "protoc"
 	// We're using the most common names for these; typically gRPC installs the builtin plugins
 	// as grpc_python_plugin etc.
@@ -414,8 +406,6 @@ type Configuration struct {
 		PreloadBuildDefs   []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths. Use PreloadSubincludes instead." example:"build_defs/go_bindata.build_defs"`
 		PreloadSubincludes []string `help:"Subinclude targets to preload by the parser before loading any BUILD files.\nSubincludes can be slow so it's recommended to use PreloadBuildDefs where possible." example:"///pleasings//python:requirements"`
 		BuildDefsDir       []string `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
-		// TODO(jpoole): Remove this in the v16 release
-		BuiltinPleasings bool `help:"Adds github.com/thought-machine/pleasings as a default subrepo named pleasings. This feature is deprecated and will be removed in the v16 release."`
 		NumThreads       int  `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
 		GitFunctions     bool `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
 	} `help:"The [parse] section in the config contains settings specific to parsing files."`
@@ -589,7 +579,6 @@ type Configuration struct {
 	FeatureFlags struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
 		MavenJar                      bool `help:"Makes maven_jar() download sources with maven compatible jar names, and moves the hashes onto the remote file rule." var:"FF_MAVEN_JAR"`
-		RemovePleasings               bool `help:"Stops please adding the pleasings repo by default. Target release vesrion 16." var:"FF_PLEASINGS"`
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
 		PleaseDownloadTools           bool `help:"Please will download its tools from get.please.build instead of looking on the path"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`

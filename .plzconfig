@@ -7,7 +7,6 @@ moduledir = third_party.python
 [parse]
 ; Make this generally available
 preloadbuilddefs = build_defs/go_bindata.build_defs
-builtinpleasings = false
 
 [gc]
 keep = //test/...
@@ -90,5 +89,4 @@ accept = notice
 
 [featureflags]
 JavaBinaryExecutableByDefault = true
-RemovePleasings = true
 PleaseDownloadTools = true
