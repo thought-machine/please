@@ -406,8 +406,8 @@ type Configuration struct {
 		PreloadBuildDefs   []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths. Use PreloadSubincludes instead." example:"build_defs/go_bindata.build_defs"`
 		PreloadSubincludes []string `help:"Subinclude targets to preload by the parser before loading any BUILD files.\nSubincludes can be slow so it's recommended to use PreloadBuildDefs where possible." example:"///pleasings//python:requirements"`
 		BuildDefsDir       []string `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
-		NumThreads       int  `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
-		GitFunctions     bool `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
+		NumThreads         int      `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
+		GitFunctions       bool     `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
 	} `help:"The [parse] section in the config contains settings specific to parsing files."`
 	Display struct {
 		UpdateTitle  bool   `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
@@ -540,7 +540,7 @@ type Configuration struct {
 		DefaultLdflags     string     `help:"Linker flags passed to all C++ rules.\nBy default this is empty." var:"DEFAULT_LDFLAGS"`
 		PkgConfigPath      string     `help:"Custom PKG_CONFIG_PATH for pkg-config.\nBy default this is empty." var:"PKG_CONFIG_PATH"`
 		Coverage           bool       `help:"If true (the default), coverage will be available for C and C++ build rules.\nThis is still a little experimental but should work for GCC. Right now it does not work for Clang (it likely will in Clang 4.0 which will likely support --fprofile-dir) and so this can be useful to disable it.\nIt's also useful in some cases for CI systems etc if you'd prefer to avoid the overhead, since the tests have to be compiled with extra instrumentation and without optimisation." var:"CPP_COVERAGE"`
-		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"///pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`
+		TestMain           string `help:"The build target to use for the default main for C++ test rules." example:"///pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`
 		ClangModules       bool       `help:"Uses Clang-style arguments for compiling cc_module rules. If disabled gcc-style arguments will be used instead. Experimental, expected to be removed at some point once module compilation methods are more consistent." var:"CC_MODULES_CLANG"`
 		DsymTool           string     `help:"Set this to dsymutil or equivalent on macOS to use this tool to generate xcode symbol information for debug builds." var:"DSYM_TOOL"`
 	} `help:"Please has built-in support for compiling C and C++ code. We don't support every possible nuance of compilation for these languages, but aim to provide something fairly straightforward.\nTypically there is little problem compiling & linking against system libraries although Please has no insight into those libraries and when they change, so cannot rebuild targets appropriately.\n\nThe C and C++ rules are very similar and simply take a different set of tools and flags to facilitate side-by-side usage."`

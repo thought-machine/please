@@ -44,3 +44,9 @@ sh_cmd(
     name = "autofix",
     cmd = "plz fmt -w && gofmt -s -w src tools test && plz run parallel --include codegen",
 )
+
+github_repo(
+  name = "pleasings",
+  repo = "thought-machine/pleasings",
+  revision = "v1.0.0",
+)
