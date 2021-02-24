@@ -1,5 +1,5 @@
 # Test on the builtin go rules
-subinclude("//build_defs:plz_e2e_test")
+subinclude("//test/build_defs")
 
 go_library(
     name = "go_rules_test_lib",
@@ -55,7 +55,7 @@ go_test(
 go_library(
     name = "test_main_lib",
     srcs = ["main_test.go"],
-    out = "whatever.a",
+    package = "whatever",
     test_only = True,
 )
 

@@ -25,7 +25,11 @@ filegroup(
         "//src:please",
     ],
     binary = True,
-    visibility = ["//:install"],
+    entry_points = {
+        "please": "please",
+    },
+    labels = ["link:plz-out/please"],
+    visibility = ["PUBLIC"],
 )
 
 tarball(
