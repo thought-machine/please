@@ -65,7 +65,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     )
 
 
-def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdrs:list=None, out:str=None, deps:list=[],
+def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdrs:list=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
@@ -78,7 +78,6 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
       resources (list): Files to embed in the library using //go:embed directives.
       asm_srcs (list): Source files to assemble with `go tool assemble`.
       hdrs (list): Header files needed for assembly. Has no effect if asm_srcs is not given.
-      out (str): Name of the output library to compile (defaults to name suffixed with .a)
       deps (list): Dependencies
       visibility (list): Visibility specification
       test_only (bool): If True, is only visible to test rules.
@@ -95,8 +94,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
                      to name.
     """
     package = package or name
-    package = out.removesuffix(".a") if out else package
-    out = out or package + '.a'
+    out = package + '.a'
     link_labels = []
     src_labels = []
     private = out.startswith('_')
@@ -312,7 +310,7 @@ def _get_import_path(import_path):
     return pkg
 
 def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
-                out:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
+                package:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
                 subdir:str='', deps:list=[], visibility:list=None, test_only:bool&testonly=False, import_path:str=''):
     """Generates a Go library which can be reused by other rules.
 
@@ -353,7 +351,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
             name = name,
             srcs = go_srcs,
             resources = resources,
-            out = out,
+            package = package,
             deps = deps,
             import_path = import_path,
             visibility = visibility,
@@ -417,7 +415,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
         _generate_import_config=False,
     )
 
-    output = out.removesuffix(".a") if out else name
+    output = package if package else name
     import_config = build_rule(
         name=name,
         tag='import_config',
@@ -435,7 +433,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
         visibility = visibility,
         test_only = test_only,
         linker_flags = linker_flags,
-        out = out,
+        package = package,
         labels = ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
         provides = {
             'go': ':' + name,
@@ -448,7 +446,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
 
 
 def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, tag='',
-                   linker_flags:list=[], deps=None, exported_deps=None, provides=None, out=None, labels:list=[]):
+                   linker_flags:list=[], deps=None, exported_deps=None, provides=None, package=None, labels:list=[]):
     """Defines a rule to merge a cgo object into a Go library."""
     if o_rule:
         cmd = 'cp $SRCS_A "$OUT" && chmod +w "$OUT" && "$TOOLS_AR" x $SRCS_O && "$TOOLS_GO" tool pack r "$OUT" *.o'
@@ -462,7 +460,7 @@ def _merge_cgo_obj(name, a_rule, o_rule=None, visibility=None, test_only=False, 
             'a': [a_rule],
             'o': [o_rule] if o_rule else [],
         },
-        outs = [out or name + '.a'],
+        outs = [(package or name) + '.a'],
         cmd = cmd,
         tools = {
             'go': [CONFIG.GO_TOOL],
@@ -585,7 +583,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         name = '_%s#lib' % name,
         srcs = srcs,
         resources = resources,
-        out = name + ('_lib.a' if cgo else '.a'),
+        package = name + ('_lib' if cgo else ''),
         deps = deps,
         labels = labels,
         test_only = True,
@@ -700,7 +698,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
     lib_rule = go_library(
         name = '_%s#lib' % name,
         srcs = srcs,
-        out = name + ('_lib.a' if cgo else '.a'),
+        package = name + ('_lib' if cgo else ''),
         deps = deps,
         filter_srcs = filter_srcs,
         _all_srcs = not external,
