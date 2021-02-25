@@ -30,12 +30,12 @@ var opts = struct {
 	} `positional-args:"true" required:"true"`
 }{
 	Usage: `
-please-go-install is shipped with Please and is used to build go modules similarly to go install. 
+please-go-install is shipped with Please and is used to build go modules similarly to go install.
 
-Unlike 'go install', this tool doesn't rely on the go path or modules to find its dependencies. Instead it takes in 
-go import config just like 'go tool compile/link -importcfg'. 
+Unlike 'go install', this tool doesn't rely on the go path or modules to find its dependencies. Instead it takes in
+go import config just like 'go tool compile/link -importcfg'.
 
-This tool determines the dependencies between packages and output a commands in the correct order to compile them. 
+This tool determines the dependencies between packages and output a commands in the correct order to compile them.
 
 `,
 }
@@ -72,6 +72,9 @@ func main() {
 				}
 				if !info.IsDir() {
 					relativePackage := filepath.Dir(strings.TrimPrefix(path, pkgRoot))
+					if strings.HasSuffix(relativePackage, "/testdata") {
+						return nil  // Dirs named testdata are deemed not to contain buildable Go code.
+					}
 					if err := pkgs.compile(tc, []string{}, filepath.Join(importRoot, relativePackage)); err != nil {
 						switch err.(type) {
 						case *build.NoGoError:
