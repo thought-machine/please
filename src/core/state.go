@@ -972,7 +972,6 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 
 // DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
 func (state *BuildState) DownloadInputsIfNeeded(tid int, target *BuildTarget, runtime bool) error {
-
 	if state.RemoteClient != nil {
 		state.LogBuildResult(tid, target.Label, TargetBuilding, "Downloading inputs...")
 		for input := range state.IterInputs(target, runtime) {
