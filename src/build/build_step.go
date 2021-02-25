@@ -460,6 +460,9 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	if target.IsRemoteFile {
 		return nil, fetchRemoteFile(state, target)
 	}
+	if target.IsTextFile {
+		return nil, buildTextFile(target)
+	}
 	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()))
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
 	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, command, target.Sandbox)
@@ -467,6 +470,16 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
 	return out, nil
+}
+
+// buildTextFile runs the build action for text_fule() rules
+func buildTextFile(target *core.BuildTarget) error {
+	outs := target.Outputs()
+	if len(outs) != 1 {
+		return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(outs))
+	}
+	outFile := filepath.Join(target.TmpDir(), outs[0])
+	return ioutil.WriteFile(outFile, []byte(target.FileContent), target.OutMode())
 }
 
 // prepareOutputDirectories creates any directories the target has declared it will output into as a nicety

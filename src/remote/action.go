@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/tree"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 
 	"github.com/thought-machine/please/src/core"
@@ -27,27 +27,27 @@ import (
 func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb.Command, *pb.Digest, error) {
 	var command *pb.Command
 	var digest *pb.Digest
-	err := c.uploadBlobs(func(ch chan<- *chunker.Chunker) error {
+	err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
 		defer close(ch)
 		inputRoot, err := c.uploadInputs(ch, target, isTest || isRun)
 		if err != nil {
 			return err
 		}
-		inputRootChunker, _ := chunker.NewFromProto(inputRoot, int(c.client.ChunkMaxSize))
-		ch <- inputRootChunker
+		inputRootEntry, inputRootDigest := c.protoEntry(inputRoot)
+		ch <- inputRootEntry
 		command, err = c.buildCommand(target, inputRoot, isTest, isRun, target.Stamp)
 		if err != nil {
 			return err
 		}
-		commandChunker, _ := chunker.NewFromProto(command, int(c.client.ChunkMaxSize))
-		ch <- commandChunker
-		actionChunker, _ := chunker.NewFromProto(&pb.Action{
-			CommandDigest:   commandChunker.Digest().ToProto(),
-			InputRootDigest: inputRootChunker.Digest().ToProto(),
+		commandEntry, commandDigest := c.protoEntry(command)
+		ch <- commandEntry
+		actionEntry, actionDigest := c.protoEntry(&pb.Action{
+			CommandDigest:   commandDigest,
+			InputRootDigest: inputRootDigest,
 			Timeout:         ptypes.DurationProto(timeout(target, isTest)),
-		}, int(c.client.ChunkMaxSize))
-		ch <- actionChunker
-		digest = actionChunker.Digest().ToProto()
+		})
+		ch <- actionEntry
+		digest = actionDigest
 		return nil
 	})
 	return command, digest, err
@@ -198,7 +198,7 @@ func (c *Client) buildRunCommand(state *core.BuildState, target *core.BuildTarge
 }
 
 // uploadInputs finds and uploads a set of inputs from a target.
-func (c *Client) uploadInputs(ch chan<- *chunker.Chunker, target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
+func (c *Client) uploadInputs(ch chan<- *uploadinfo.Entry, target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
 	if target.IsRemoteFile {
 		return &pb.Directory{}, nil
 	}
@@ -206,10 +206,12 @@ func (c *Client) uploadInputs(ch chan<- *chunker.Chunker, target *core.BuildTarg
 	if err != nil {
 		return nil, err
 	}
-	return b.Root(ch), nil
+	return b.Build(ch), nil
 }
 
-func (c *Client) uploadInputDir(ch chan<- *chunker.Chunker, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
+// uploadInputDir uploads the inputs to the build rule. It returns an un-finalised directory builder representing the
+// directory structure of the input dir. The caller is expected to finalise this by calling Build().
+func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
 	b := newDirBuilder(c)
 	for input := range c.iterInputs(target, isTest, target.IsFilegroup) {
 		if l := input.Label(); l != nil {
@@ -271,14 +273,14 @@ func (c *Client) uploadInputDir(ch chan<- *chunker.Chunker, target *core.BuildTa
 	}
 	if !isTest && target.Stamp {
 		stamp := core.StampFile(target)
-		chomk := chunker.NewFromBlob(stamp, int(c.client.ChunkMaxSize))
+		entry := uploadinfo.EntryFromBlob(stamp)
 		if ch != nil {
-			ch <- chomk
+			ch <- entry
 		}
 		d := b.Dir(".")
 		d.Files = append(d.Files, &pb.FileNode{
 			Name:   target.StampFileName(),
-			Digest: chomk.Digest().ToProto(),
+			Digest: entry.Digest.ToProto(),
 		})
 	}
 	return b, nil
@@ -287,7 +289,7 @@ func (c *Client) uploadInputDir(ch chan<- *chunker.Chunker, target *core.BuildTa
 // addChildDirs adds a set of child directories to a builder.
 func (c *Client) addChildDirs(b *dirBuilder, name string, dg *pb.Digest) error {
 	dir := &pb.Directory{}
-	if err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir); err != nil {
+	if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir); err != nil {
 		return err
 	}
 	d := b.Dir(name)
@@ -303,7 +305,7 @@ func (c *Client) addChildDirs(b *dirBuilder, name string, dg *pb.Digest) error {
 }
 
 // uploadInput finds and uploads a single input.
-func (c *Client) uploadInput(b *dirBuilder, ch chan<- *chunker.Chunker, input core.BuildInput) error {
+func (c *Client) uploadInput(b *dirBuilder, ch chan<- *uploadinfo.Entry, input core.BuildInput) error {
 	if _, ok := input.(core.SystemPathLabel); ok {
 		return nil // Don't need to upload things off the system (the remote is expected to have them)
 	}
@@ -346,7 +348,7 @@ func (c *Client) uploadInput(b *dirBuilder, ch chan<- *chunker.Chunker, input co
 				IsExecutable: info.Mode()&0100 != 0,
 			})
 			if ch != nil {
-				ch <- chunker.NewFromFile(name, digest.NewFromProtoUnvalidated(dg), int(c.client.ChunkMaxSize))
+				ch <- uploadinfo.EntryFromFile(digest.NewFromProtoUnvalidated(dg), name)
 			}
 			return nil
 		}); err != nil {
@@ -383,14 +385,14 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		Stderr: ar.StderrRaw,
 	}
 	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
-		b, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StdoutDigest))
+		b, _, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StdoutDigest))
 		if err != nil {
 			return metadata, err
 		}
 		metadata.Stdout = b
 	}
 	if needStderr && len(metadata.Stderr) == 0 && ar.StderrDigest != nil {
-		b, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StderrDigest))
+		b, _, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StderrDigest))
 		if err != nil {
 			return metadata, err
 		}
@@ -486,15 +488,15 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 
 // uploadLocalTarget uploads the outputs of a target that was built locally.
 func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
-	m, ar, err := tree.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), int(c.client.ChunkMaxSize), filemetadata.NewNoopCache())
+	m, ar, err := c.client.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), filemetadata.NewNoopCache())
 	if err != nil {
 		return err
 	}
-	chomks := make([]*chunker.Chunker, 0, len(m))
-	for _, c := range m {
-		chomks = append(chomks, c)
+	entries := make([]*uploadinfo.Entry, 0, len(m))
+	for _, entry := range m {
+		entries = append(entries, entry)
 	}
-	if err := c.uploadIfMissing(context.Background(), chomks...); err != nil {
+	if err := c.uploadIfMissing(context.Background(), entries); err != nil {
 		return err
 	}
 	return c.setOutputs(target, ar)
@@ -537,4 +539,9 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 		}
 	}
 	return vars
+}
+
+func (c *Client) protoEntry(msg proto.Message) (*uploadinfo.Entry, *pb.Digest) {
+	entry, _ := uploadinfo.EntryFromProto(msg)
+	return entry, entry.Digest.ToProto()
 }
