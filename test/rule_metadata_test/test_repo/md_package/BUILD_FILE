@@ -1,1 +1,0 @@
-build_rule(name="metadata_rule", metadata={"output_file": "wibble.txt"})
