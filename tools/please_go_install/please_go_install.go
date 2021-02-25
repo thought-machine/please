@@ -72,9 +72,6 @@ func main() {
 				}
 				if !info.IsDir() {
 					relativePackage := filepath.Dir(strings.TrimPrefix(path, pkgRoot))
-					if strings.HasSuffix(relativePackage, "/testdata") {
-						return nil  // Dirs named testdata are deemed not to contain buildable Go code.
-					}
 					if err := pkgs.compile(tc, []string{}, filepath.Join(importRoot, relativePackage)); err != nil {
 						switch err.(type) {
 						case *build.NoGoError:
@@ -85,6 +82,8 @@ func main() {
 							return err
 						}
 					}
+				} else if info.Name() == "testdata" {
+					return filepath.SkipDir // Dirs named testdata are deemed not to contain buildable Go code.
 				}
 				return nil
 			})
