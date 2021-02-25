@@ -970,6 +970,44 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 	return s
 }
 
+// DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
+func (state *BuildState) DownloadInputsIfNeeded(tid int, target *BuildTarget, runtime bool) error {
+
+	if state.RemoteClient != nil {
+		state.LogBuildResult(tid, target.Label, TargetBuilding, "Downloading inputs...")
+		for input := range state.IterInputs(target, runtime) {
+			if l := input.Label(); l != nil {
+				dep := state.Graph.TargetOrDie(*l)
+				if s := dep.State(); s == BuiltRemotely || s == ReusedRemotely {
+					if err := state.RemoteClient.Download(dep); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// IterInputs returns a channel that iterates all the input files needed for a target.
+func (state *BuildState) IterInputs(target *BuildTarget, test bool) <-chan BuildInput {
+	if !test {
+		return IterInputs(state.Graph, target, true, target.IsFilegroup)
+	}
+	ch := make(chan BuildInput)
+	go func() {
+		ch <- target.Label
+		for _, datum := range target.AllData() {
+			ch <- datum
+		}
+		for _, datum := range target.TestTools() {
+			ch <- datum
+		}
+		close(ch)
+	}()
+	return ch
+}
+
 // DisableXattrs disables xattr support for this build. This is done for filesystems that
 // don't support it.
 func (state *BuildState) DisableXattrs() {
