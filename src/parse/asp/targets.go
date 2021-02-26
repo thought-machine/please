@@ -59,7 +59,7 @@ const (
 	passEnvBuildRuleArgIdx
 	localBuildRuleArgIdx
 	outDirsBuildRuleArgIdx
-	configBuildRuleArgIdx
+	_
 	exitOnErrorArgIdx
 	entryPointsArgIdx
 	envArgIdx
@@ -102,7 +102,6 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.IsTextFile = isTruthy(fileContentArgIdx)
 	target.Local = isTruthy(localBuildRuleArgIdx)
 	target.ExitOnError = isTruthy(exitOnErrorArgIdx)
-	target.RuleMetadata = args[configBuildRuleArgIdx]
 	for _, o := range asStringList(s, args[outDirsBuildRuleArgIdx], "output_dirs") {
 		target.AddOutputDirectory(o)
 	}

@@ -201,8 +201,6 @@ type BuildTarget struct {
 	// output for the rule. For example if an output directory "foo" contains "bar.txt" the rule will have the output
 	// "bar.txt"
 	OutputDirectories []OutputDirectory `name:"output_dirs"`
-	// RuleMetadata is the metadata attached to this build rule. It can be accessed through the "get_rule_metadata" BIF.
-	RuleMetadata interface{} `name:"config"`
 	// EntryPoints represent named binaries within the rules output that can be targeted via //package:rule|entry_point_name
 	EntryPoints map[string]string `name:"entry_points"`
 	// Env are any custom environment variables to set for this build target

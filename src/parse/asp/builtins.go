@@ -56,7 +56,6 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
 	setNativeCode(s, "breakpoint", breakpoint)
-	setNativeCode(s, "get_rule_metadata", getRuleMetadata)
 	stringMethods = map[string]*pyFunc{
 		"join":         setNativeCode(s, "join", strJoin),
 		"split":        setNativeCode(s, "split", strSplit),
@@ -225,27 +224,6 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	}
 	s.SetAll(s.interpreter.Subinclude(filename, l, s.contextPkg), false)
 	return None
-}
-
-const (
-	getConfigRuleConfigNameIndex = iota
-)
-
-func getRuleMetadata(s *scope, args []pyObject) pyObject {
-	name := args[getConfigRuleConfigNameIndex].(pyString).String()
-	label := core.ParseBuildLabelContext(name, s.pkg)
-
-	t := s.state.Graph.Target(label)
-
-	if t == nil {
-		if label.Subrepo == s.pkg.SubrepoName && label.PackageName == s.pkg.Name {
-			// This is a get_rule_metadata in the same package, check the target exists.
-			log.Fatalf("Target %s is not defined in this package yet; it has to be defined before the get_rule_metadata() call", name)
-		}
-
-		t = s.WaitForBuiltTargetWithoutLimiter(label, core.NewBuildLabel(s.pkg.Name, "all"))
-	}
-	return t.RuleMetadata.(pyObject)
 }
 
 func (s *scope) WaitForBuiltTargetWithoutLimiter(l, dependent core.BuildLabel) *core.BuildTarget {

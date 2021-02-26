@@ -15,9 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
-	treesdk "github.com/bazelbuild/remote-apis-sdks/go/pkg/tree"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/proto"
@@ -72,12 +71,12 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	}
 	for _, d := range ar.OutputDirectories {
 		tree := &pb.Tree{}
-		if err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
+		if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 
 		if outDir := maybeGetOutDir(d.Path, target.OutputDirectories); outDir != "" {
-			files, dirs, err := getOutputsForOutDir(target, outDir, tree)
+			files, dirs, err := c.getOutputsForOutDir(target, outDir, tree)
 			if err != nil {
 				return err
 			}
@@ -102,12 +101,12 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	return nil
 }
 
-func getOutputsForOutDir(target *core.BuildTarget, outDir core.OutputDirectory, tree *pb.Tree) ([]*pb.FileNode, []*pb.DirectoryNode, error) {
+func (c *Client) getOutputsForOutDir(target *core.BuildTarget, outDir core.OutputDirectory, tree *pb.Tree) ([]*pb.FileNode, []*pb.DirectoryNode, error) {
 	files := make([]*pb.FileNode, 0, len(tree.Root.Files))
 	dirs := make([]*pb.DirectoryNode, 0, len(tree.Root.Directories))
 
 	if outDir.ShouldAddFiles() {
-		outs, err := treesdk.FlattenTree(tree, "")
+		outs, err := c.client.FlattenTree(tree, "")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -410,7 +409,7 @@ func (b *dirBuilder) dir(dir, child string) *pb.Directory {
 // Build "builds" the directory. It calculate the digests of all the items in the directory tree, and returns the root
 // directory. If ch is non-nil, it will upload the directory protos to ch. Build doesn't upload any of the actual files
 // in the directory tree, just the protos.
-func (b *dirBuilder) Build(ch chan<- *chunker.Chunker) *pb.Directory {
+func (b *dirBuilder) Build(ch chan<- *uploadinfo.Entry) *pb.Directory {
 	// Upload the directory structure
 	b.walk(".", ch)
 	return b.root
@@ -452,7 +451,7 @@ func (b *dirBuilder) tree(tree *pb.Tree, root string, dir *pb.Directory) {
 
 // Walk walks the directory tree calculating the digest. If ch is non-nil, it will also upload the direcory protos.
 // Walk does not upload the actual files in the tree, just the tree structure.
-func (b *dirBuilder) walk(name string, ch chan<- *chunker.Chunker) *pb.Digest {
+func (b *dirBuilder) walk(name string, ch chan<- *uploadinfo.Entry) *pb.Digest {
 	dir := b.dirs[name]
 	for _, d := range dir.Directories {
 		if d.Digest == nil { // It's not nil if we're reusing outputs from an earlier call.
@@ -464,11 +463,11 @@ func (b *dirBuilder) walk(name string, ch chan<- *chunker.Chunker) *pb.Digest {
 	sort.Slice(dir.Files, func(i, j int) bool { return dir.Files[i].Name < dir.Files[j].Name })
 	sort.Slice(dir.Directories, func(i, j int) bool { return dir.Directories[i].Name < dir.Directories[j].Name })
 	sort.Slice(dir.Symlinks, func(i, j int) bool { return dir.Symlinks[i].Name < dir.Symlinks[j].Name })
-	chomk, _ := chunker.NewFromProto(dir, chunker.DefaultChunkSize)
+	entry, _ := uploadinfo.EntryFromProto(dir)
 	if ch != nil {
-		ch <- chomk
+		ch <- entry
 	}
-	return chomk.Digest().ToProto()
+	return entry.Digest.ToProto()
 }
 
 // convertPlatform converts the platform entries from the config into a Platform proto.

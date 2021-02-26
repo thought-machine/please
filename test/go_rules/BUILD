@@ -55,7 +55,7 @@ go_test(
 go_library(
     name = "test_main_lib",
     srcs = ["main_test.go"],
-    out = "whatever.a",
+    package = "whatever",
     test_only = True,
 )
 
