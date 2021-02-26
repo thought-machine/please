@@ -28,8 +28,18 @@
   </h2>
 
   <p>
-    The simplest and most lightweight way to load new rules is to do it directly
-    with <code class="code">subinclude</code>, like so:
+    To start using pleasings, you will need to add the pleasings repo to your project:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
+    $ plz init pleasings --revision=vX.X.X
+    </code>
+  </pre>
+
+  <p>
+    Then you may use build rules from the pleasings like so:
   </p>
 
   <pre class="code-container">
@@ -49,6 +59,18 @@
     which you have to set up a one-off set of targets. The individual rules will
     document what's required.
   </p>
+
+  <p>
+    To avoid adding the <code>subinclude()</code> to every BUILD file, you can add that target to the
+    list of automatically included targets in your <code>.plzconfig</code>:
+  </p>
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code>
+    [Parse]
+    PreloadSubincludes = @pleasings//rust
+    </code>
+  </pre>
 </section>
 
 <section class="mt4">

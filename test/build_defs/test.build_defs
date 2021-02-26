@@ -1,4 +1,4 @@
-
+# Runs e2e tests against please in a specified repo
 def please_repo_e2e_test(
         name: str,
         plz_command: str,
@@ -6,12 +6,9 @@ def please_repo_e2e_test(
         deps: list=[],
         expected_output: dict = {},
         labels: list = [],
-        set_tool_config: bool = True,
 ):
-    if set_tool_config:
-        plz_command = plz_command.replace("plz ", "$TMP_DIR/$DATA_PLEASE -o java.jarcattool:$TMP_DIR/$DATA_JARCAT_TOOL -o go.testtool:$TMP_DIR/$DATA_TEST_TOOL -o go.installtool:$TMP_DIR/$DATA_INSTALL_TOOL -o go.filtertool:$TMP_DIR/$DATA_FILTER_TOOL ")
-    else:
-        plz_command = plz_command.replace("plz ", "$TMP_DIR/$DATA_PLEASE ")
+
+    plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
     test_cmd = [
         "mv $DATA_FREE_BSD_CONFIG $DATA_REPO",
         "cd $DATA_REPO",
@@ -19,28 +16,86 @@ def please_repo_e2e_test(
     ]
 
     if expected_output:
-       test_cmd += [f"$TMP_DIR/$DATA_CONTENT_CHECKER '{o}' '{c}'" for o, c in expected_output.items()]
+       test_cmd += [f"$TOOLS_CONTENT_CHECKER '{o}' '{c}'" for o, c in expected_output.items()]
 
 
     test_cmd = ' && '.join(test_cmd)
 
     data = {
-        "TEST_TOOL": ["//tools/please_go_test"],
-        "JARCAT_TOOL": ["//tools/jarcat"],
-        "FILTER_TOOL": ["//tools/please_go_filter"],
-        "INSTALL_TOOL": ["//tools/please_go_install"],
         "REPO": [repo],
-        "PLEASE":  ["//src:please"],
+        "FREE_BSD_CONFIG": ["//test/build_defs:freebsd_config"],
+    }
+
+    tools = {
+        "PLEASE": ["//package:installed_files|please"],
         "CONTENT_CHECKER": ["//test/build_defs:content_checker"],
-        "FREE_BSD_CONFIG": ["//test/build_defs:freebsd_config"]
     }
 
     return build_rule(
         name = name,
         test_cmd = test_cmd,
+        test_tools = tools,
         deps = deps,
         data = data,
         test = True,
         no_test_output = True,
         labels = labels + ["plz_e2e_test", "e2e"],
+    )
+
+# Like please_repo_e2e_test, this runs end-to-end tests on Please itself but in the actual please repo.
+def plz_e2e_test(name:str, cmd:str, pre_cmd:str=None, expected_output:str=None,
+                 expected_failure:bool=False, expect_output_contains:str=None,
+                 expect_output_doesnt_contain:str=None, deps:list=None, data:list=[],
+                 labels:list=None, sandbox:bool=None, completion:bool=False,
+                 expect_file_exists:str=None, expect_file_doesnt_exist:str=None):
+    # Please isn't really designed to work this way (running a test against the entire source repo)
+    # but we can make it do it and it's a convenient way of testing the tool itself.
+
+    def _e2e_test_cmd(cmd):
+        args = '$PLZ_ARGS'
+        if package_name().startswith('test/parse'):
+            args += ' -o parse.buildfilename:BUILD,BUILD.plz,BUILD.test '
+        cmd = cmd.replace('plz ', f'$TOOLS --nolock {args} -o cache.dirclean:false --log_file plz-out/log/{name}.log ')
+        if expected_failure:
+            test_cmd = '%s 2>&1 | tee output; if [ $? -eq 0 ]; then exit 1; fi; ' % cmd
+        else:
+            test_cmd = '%s 2>&1 | tee output && ' % cmd
+        if expected_output and expect_output_contains:
+            raise ValueError('Can only pass one of expected_output and expect_output_contains')
+        elif expected_output:
+            test_cmd += 'diff -au output $(location %s)' % expected_output
+        elif expect_output_contains:
+            test_cmd += 'if ! grep -q "%s" output; then cat output; exit 1; fi' % expect_output_contains
+        elif expect_output_doesnt_contain:
+            test_cmd += 'if grep -q "%s" output; then cat output; exit 1; fi' % expect_output_doesnt_contain
+        elif expect_file_exists:
+            test_cmd += 'if [ ! -f %s ]; then cat output; exit 1; fi' % expect_file_exists
+        elif expect_file_doesnt_exist:
+            test_cmd += 'if [ -f %s ]; then cat output; exit 1; fi' % expect_file_doesnt_exist
+        else:
+            test_cmd += 'true'
+        if completion:
+            test_cmd = "export GO_FLAGS_COMPLETION=1; " + test_cmd
+        if pre_cmd:
+            test_cmd = pre_cmd + ' && ' + test_cmd
+        return test_cmd
+
+    if expected_output:
+        data += [expected_output]
+    gentest(
+        name = name,
+        test_cmd = {
+            'opt': _e2e_test_cmd(cmd),
+            'dbg': _e2e_test_cmd(cmd.replace('plz ', 'plz -c dbg ')),
+            'cover': _e2e_test_cmd(cmd.replace('plz ', 'plz -c cover ')),
+        },
+        data = data,
+        deps = deps,
+        test_tools = ["//package:installed_files|please"],
+        labels = ['e2e'] + (labels or []),
+        no_test_output = True,
+        sandbox = False,
+        local = True,
+        pass_env = ["PLZ_ARGS"],
+        exit_on_error = False,
     )

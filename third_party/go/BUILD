@@ -110,7 +110,7 @@ go_module(
         "encoding/...",
     ],
     module = "golang.org/x/text",
-    version = "4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1",
+    version = "v0.3.5",
     deps = [
         ":tools",
     ],
@@ -396,9 +396,12 @@ go_module(
 
 go_module(
     name = "errgroup",
-    install = ["errgroup"],
+    install = [
+        "errgroup",
+        "semaphore",
+    ],
     module = "golang.org/x/sync",
-    version = "457c5828408160d6a47e17645169cf8fa20218c4",
+    version = "036812b2e83c0ddf193dd5a34e034151da389d09",
     deps = [":net"],
 )
 
@@ -444,7 +447,6 @@ go_module(
         "go-fuzz-defs",
     ],
     module = "github.com/dvyukov/go-fuzz",
-    please_go_install = True,
     deps = [
         ":go-bindata-assetfs",
         ":writerset",
@@ -498,7 +500,6 @@ go_module(
 go_mod_download(
     name = "buildtools_download",
     module = "github.com/peterebden/buildtools",
-    please_go_install = True,
     version = "f7a36c689cc9e038956d51005332c67ade7aa9c6",
 )
 
@@ -507,7 +508,6 @@ go_module(
     download = ":buildtools_download",
     install = ["..."],
     module = "github.com/bazelbuild/buildtools",
-    please_go_install = True,
     deps = [
         ":protobuf",
         ":skylark",
@@ -571,7 +571,7 @@ go_module(
     name = "remote-apis",
     install = ["build/..."],
     module = "github.com/bazelbuild/remote-apis",
-    version = "2846a67ac8feb5001e9f704b66f5acc1e90f1ade",
+    version = "9e72daff42c941baaf43a4c370e2607a984c58a7",
     deps = [
         ":genproto_api",
         ":grpc",
@@ -579,19 +579,11 @@ go_module(
     ],
 )
 
-go_mod_download(
-    name = "remote-apis-sdks-download",
-    module = "github.com/peterebden/remote-apis-sdks",
-    please_go_install = True,
-    version = "271eb5b72e7dca1dda1d4dee87d99a17194cf146",
-)
-
 go_module(
     name = "remote-apis-sdks",
-    download = ":remote-apis-sdks-download",
     install = ["go/..."],
     module = "github.com/bazelbuild/remote-apis-sdks",
-    please_go_install = True,
+    version = "fdb5dae38ca890ae7311dc0d320e2d327df10485",
     deps = [
         ":cmp",
         ":errgroup",
@@ -603,6 +595,8 @@ go_module(
         ":pborman_uuid",
         ":protobuf",
         ":remote-apis",
+        ":zstd",
+        ":zstdpool",
     ],
 )
 
@@ -799,4 +793,26 @@ go_module(
     name = "cpuid",
     module = "github.com/klauspost/cpuid",
     version = "v1.3.1",
+)
+
+go_module(
+    name = "zstd",
+    install = [
+        "fse",
+        "huff0",
+        "zstd",
+        "zstd/...",
+        "snappy",
+    ],
+    module = "github.com/klauspost/compress",
+    version = "v1.11.7",
+)
+
+go_module(
+    name = "zstdpool",
+    module = "github.com/mostynb/zstdpool-syncpool",
+    version = "v0.0.3",
+    deps = [
+        ":zstd",
+    ],
 )

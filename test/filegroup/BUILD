@@ -1,4 +1,4 @@
-subinclude("//build_defs:plz_e2e_test")
+subinclude("//test/build_defs")
 
 genrule(
     name = "gen",

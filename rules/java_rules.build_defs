@@ -513,7 +513,7 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
 # This function is exposed as java_toolchain unless Bazel compatibility is enabled in which case it is exposed as
 # please_java_toolchain. This is to avoid namespace conflicts with Bazel's java_toolchain rule. 
 def _java_toolchain(name : str, jdk_url : str|dict='', jdk:str='', visibility:list = ["PUBLIC"], hashes = []) -> str:
-    """Downloads the JDK and sets up build rule metadata so the language rules can use the toolchain"""
+    """Downloads the JDK so language rules can use the toolchain"""
     if jdk_url and jdk:
         raise ParseError("Either jdk or jdk_url should be provided but not both")
 

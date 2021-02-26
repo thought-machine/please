@@ -30,12 +30,12 @@ var opts = struct {
 	} `positional-args:"true" required:"true"`
 }{
 	Usage: `
-please-go-install is shipped with Please and is used to build go modules similarly to go install. 
+please-go-install is shipped with Please and is used to build go modules similarly to go install.
 
-Unlike 'go install', this tool doesn't rely on the go path or modules to find its dependencies. Instead it takes in 
-go import config just like 'go tool compile/link -importcfg'. 
+Unlike 'go install', this tool doesn't rely on the go path or modules to find its dependencies. Instead it takes in
+go import config just like 'go tool compile/link -importcfg'.
 
-This tool determines the dependencies between packages and output a commands in the correct order to compile them. 
+This tool determines the dependencies between packages and output a commands in the correct order to compile them.
 
 `,
 }
@@ -60,6 +60,9 @@ func main() {
 	pkgs := parseImportConfig()
 
 	for _, target := range opts.Args.Packages {
+		if !strings.HasPrefix(target, opts.ModuleName) {
+			target = filepath.Join(opts.ModuleName, target)
+		}
 		if strings.HasSuffix(target, "/...") {
 			importRoot := strings.TrimSuffix(target, "/...")
 			pkgRoot := pkgDir(importRoot)
@@ -68,20 +71,27 @@ func main() {
 					panic(err)
 				}
 				if !info.IsDir() {
-					if matched, err := build.Default.MatchFile(filepath.Dir(path), filepath.Base(path)); err == nil && matched {
-						relativePackage := filepath.Dir(strings.TrimPrefix(path, pkgRoot))
-						pkgs.compile(tc, []string{}, filepath.Join(importRoot, relativePackage))
-					} else if err != nil {
-						return err
+					relativePackage := filepath.Dir(strings.TrimPrefix(path, pkgRoot))
+					if err := pkgs.compile(tc, []string{}, filepath.Join(importRoot, relativePackage)); err != nil {
+						switch err.(type) {
+						case *build.NoGoError:
+							// We might walk into a dir that has no .go files for the current arch. This shouldn't
+							// be an error so we just eat this
+							return nil
+						default:
+							return err
+						}
 					}
+				} else if info.Name() == "testdata" {
+					return filepath.SkipDir // Dirs named testdata are deemed not to contain buildable Go code.
 				}
 				return nil
 			})
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
-		} else {
-			pkgs.compile(tc, []string{}, target)
+		} else if err := pkgs.compile(tc, []string{}, target); err != nil {
+			log.Fatalf("Failed to compile %v: %v", target, err)
 		}
 	}
 }
@@ -132,15 +142,15 @@ func checkCycle(path []string, next string) ([]string, error) {
 	return append(path, next), nil
 }
 
-func (g *pkgGraph) compile(tc *toolchain.Toolchain, from []string, target string) {
+func (g *pkgGraph) compile(tc *toolchain.Toolchain, from []string, target string) error {
 	if done := g.pkgs[target]; done {
-		return
+		return nil
 	}
 	fmt.Fprintf(os.Stderr, "Compiling package %s from %v\n", target, from)
 
 	from, err := checkCycle(from, target)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	pkgDir := pkgDir(target)
@@ -152,23 +162,26 @@ func (g *pkgGraph) compile(tc *toolchain.Toolchain, from []string, target string
 	// TODO(jpoole): is import vendor the correct thing to do here?
 	pkg, err := build.ImportDir(pkgDir, build.ImportComment)
 	if err != nil {
-		switch err.(type) {
-		case *build.NoGoError:
-			return
-		default:
-			log.Fatalf("failed to parse package dir: %v", err)
-		}
+		return err
 	}
 
 	for _, i := range pkg.Imports {
-		g.compile(tc, from, i)
+		err := g.compile(tc, from, i)
+		if err != nil {
+			if strings.Contains(err.Error(), "cannot find package") {
+				// Go will fail to find this import and provide a much better message than we can
+				continue
+			}
+			return err
+		}
 	}
 
 	err = compilePackage(tc, target, pkg)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	g.pkgs[target] = true
+	return nil
 }
 
 func compilePackage(tc *toolchain.Toolchain, target string, pkg *build.Package) error {

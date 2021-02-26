@@ -199,7 +199,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 			if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
 				return nil, err
 			}
-		} else if packageName != "" || state.Config.FeatureFlags.RemovePleasings {
+		} else {
 			exists := core.PathExists(dir)
 			// Handle quite a few cases to provide more obvious error messages.
 			if dependent != core.OriginalTarget && exists {
@@ -210,15 +210,6 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 				return nil, fmt.Errorf("Can't build %s; there's no %s file in %s/", label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			}
 			return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, dir)
-		}
-	}
-	if !state.Config.FeatureFlags.RemovePleasings {
-		// TODO(jpoole): delete this code branch in the v16 release
-		// If the config setting is on, we "magically" register a default repo called @pleasings.
-		if packageName == "" && subrepo == nil && state.Config.Parse.BuiltinPleasings && pkg.Target("pleasings") == nil {
-			if _, err := state.Parser.(*aspParser).asp.ParseReader(pkg, strings.NewReader(pleasings)); err != nil {
-				log.Fatalf("Failed to load pleasings: %s", err) // This shouldn't happen, of course.
-			}
 		}
 	}
 
@@ -267,17 +258,6 @@ func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) 
 	}
 	return nil
 }
-
-// This is the builtin subrepo for pleasings.
-// TODO(peterebden): Should really provide a github_archive builtin that knows how to construct
-//                   the URL and strip_prefix etc.
-const pleasings = `
-http_archive(
-    name = "pleasings",
-    strip_prefix = "pleasings-master",
-    urls = ["https://github.com/thought-machine/pleasings/archive/master.zip"],
-)
-`
 
 // exportFile adds a single-file export target. This is primarily used for Bazel compat.
 func exportFile(state *core.BuildState, pkg *core.Package, label core.BuildLabel) {
