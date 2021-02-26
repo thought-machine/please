@@ -14,7 +14,6 @@ go_module(
     version = "765f4ea38db36397e827c4153018aa272eed7835",
 )
 
-
 go_binary(
     name = "please_go_install",
     srcs = [
