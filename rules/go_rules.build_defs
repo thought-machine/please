@@ -899,7 +899,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         building_description = 'Compiling...',
         cmd = ' && '.join(cmd),
         binary = binary,
-        requires = ['go', 'go_src'],
+        requires = ['go'],
         test_only = test_only,
         labels = ['link:plz-out/go'] + [f'cc:ld:{f}' for f in linker_flags],
         needs_transitive_deps = True,
