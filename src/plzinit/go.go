@@ -29,7 +29,7 @@ func golangConfig(dir string, noPrompt bool) string {
 		return ""
 	}
 
-	if !moduleFound && !cli.PromptYN("Would you like to setup Go in this repository", false) {
+	if !moduleFound {
 		return ""
 	}
 

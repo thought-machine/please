@@ -42,14 +42,6 @@ genrule(
   visibility = ["PUBLIC"],
   binary = True,
 )
-
-# TODO(jpoole): Delete this check in v16
-if not CONFIG.FF_PLEASINGS:
-  http_archive(
-    name = "pleasings",
-    strip_prefix = "pleasings-master",
-    urls = ["https://github.com/thought-machine/pleasings/archive/master.zip"],
-  )
 `
 
 var internalPackageTemplate = template.New("_please")
