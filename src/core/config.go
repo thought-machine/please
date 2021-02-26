@@ -222,20 +222,6 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		os.Setenv("HTTP_PROXY", config.Build.HTTPProxy.String())
 	}
 
-	// Slightly awkward as we need to load the feature flags to know what the default should be
-	// TODO(jpoole): Move these into DefaultConfiguration() once v16 is released
-	if config.FeatureFlags.PleaseDownloadTools {
-		setDefaultString(&config.Build.PleaseSandboxTool, "please_sandbox", "//_please:tools|please_sandbox")
-		setDefaultString(&config.Go.TestTool, "please_go_test", "//_please:tools|please_go_test")
-		setDefaultString(&config.Go.FilterTool, "please_go_filter", "//_please:tools|please_go_filter")
-		setDefaultString(&config.Go.InstallTool, "please_go_install", "//_please:tools|please_go_install")
-		setDefaultString(&config.Go.EmbedTool, "please_go_embed", "//_please:tools|please_go_embed")
-		setDefaultString(&config.Python.PexTool, "please_pex", "//_please:tools|please_pex")
-		setDefaultString(&config.Java.JavacWorker, "javac_worker", "//_please:tools|javac_worker")
-		setDefaultString(&config.Java.JarCatTool, "jarcat", "//_please:tools|jarcat")
-		setDefaultString(&config.Java.JUnitRunner, "junit_runner.pex", "//_please:tools|junit_runner")
-	}
-
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,
@@ -245,15 +231,6 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 // setDefault sets a slice of strings in the config if the set one is empty.
 func setDefault(conf *[]string, def ...string) {
 	if len(*conf) == 0 {
-		*conf = def
-	}
-}
-
-// setDefaultString sets the default value on a string. oldDefault contains the strings as set in the default
-// configuration. If after loading config files, this value has changed, the value will be left alone. Otherwise
-// it will be set to def.
-func setDefaultString(conf *string, oldDefault string, def string) {
-	if *conf == oldDefault {
 		*conf = def
 	}
 }
@@ -371,15 +348,15 @@ func DefaultConfiguration() *Configuration {
 	config.Bazel.Compatibility = usingBazelWorkspace
 
 	// Please tools
-	config.Build.PleaseSandboxTool = "please_sandbox"
-	config.Go.TestTool = "please_go_test"
-	config.Go.FilterTool = "please_go_filter"
-	config.Go.InstallTool = "please_go_install"
-	config.Go.EmbedTool = "please_go_embed"
-	config.Python.PexTool = "please_pex"
-	config.Java.JavacWorker = "javac_worker"
-	config.Java.JarCatTool = "jarcat"
-	config.Java.JUnitRunner = "junit_runner.jar"
+	config.Build.PleaseSandboxTool = "//_please:tools|please_sandbox"
+	config.Go.TestTool = "//_please:tools|please_go_test"
+	config.Go.FilterTool = "//_please:tools|please_go_filter"
+	config.Go.InstallTool = "//_please:tools|please_go_install"
+	config.Go.EmbedTool = "//_please:tools|please_go_embed"
+	config.Python.PexTool = "//_please:tools|please_pex"
+	config.Java.JavacWorker = "//_please:tools|javac_worker"
+	config.Java.JarCatTool = "//_please:tools|jarcat"
+	config.Java.JUnitRunner = "//_please:tools|junit_runner"
 
 	return &config
 }
@@ -580,7 +557,6 @@ type Configuration struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
 		MavenJar                      bool `help:"Makes maven_jar() download sources with maven compatible jar names, and moves the hashes onto the remote file rule." var:"FF_MAVEN_JAR"`
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
-		PleaseDownloadTools           bool `help:"Please will download its tools from get.please.build instead of looking on the path"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 }
 

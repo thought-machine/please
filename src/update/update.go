@@ -16,13 +16,13 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/thought-machine/please/src/utils"
-	"github.com/ulikunitz/xz"
 	"gopkg.in/op/go-logging.v1"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -219,12 +219,12 @@ func downloadPlease(config *core.Configuration, verify bool, progress bool) {
 	}
 
 	url := strings.TrimSuffix(config.Please.DownloadLocation.String(), "/")
-	ext := "gz"
-	if shouldUseXZ(config.Please.Version) {
-		ext = "xz"
+	ext := ""
+	if shouldDownloadFullDist(config.Please.Version) {
+		ext = ".tar.gz"
 	}
 	v := config.Please.Version.VersionString()
-	url = fmt.Sprintf("%s/%s_%s/%s/please_%s.tar.%s", url, runtime.GOOS, runtime.GOARCH, v, v, ext)
+	url = fmt.Sprintf("%s/%s_%s/%s/please_%s%s", url, runtime.GOOS, runtime.GOARCH, v, v, ext)
 	rc := mustDownload(url, progress)
 	defer mustClose(rc)
 	var r io.Reader = bufio.NewReader(rc)
@@ -241,19 +241,30 @@ func downloadPlease(config *core.Configuration, verify bool, progress bool) {
 		log.Warning("Signature verification disabled for %s", url)
 	}
 
-	if shouldUseXZ(config.Please.Version) {
-		xzr, err := xz.NewReader(r)
-		if err != nil {
-			panic(fmt.Sprintf("%s isn't a valid xzip file: %s", url, err))
-		}
-		copyTarFile(xzr, newDir, url)
-	} else {
+	if shouldDownloadFullDist(config.Please.Version) {
 		gzreader, err := gzip.NewReader(r)
 		if err != nil {
 			panic(fmt.Sprintf("%s isn't a valid gzip file: %s", url, err))
 		}
 		defer mustClose(gzreader)
 		copyTarFile(gzreader, newDir, url)
+	} else {
+		copyFile(r, newDir)
+	}
+}
+
+func copyFile(r io.Reader, newDir string) {
+	if err := os.MkdirAll(newDir, fs.DirPermissions); err != nil {
+		panic(err)
+	}
+	f, err := os.OpenFile(filepath.Join(newDir, "please"), os.O_RDWR|os.O_CREATE, 0555)
+	if err != nil {
+		panic(err)
+	}
+
+	defer f.Close()
+	if _, err := io.Copy(f, r); err != nil {
+		panic(err)
 	}
 }
 
@@ -408,11 +419,13 @@ func filterArgs(forceUpdate bool, args []string) []string {
 	return ret
 }
 
-// shouldUseXZ returns true if attempting to download the given version should use xzip compression.
-func shouldUseXZ(version cli.Version) bool {
-	return !version.LessThan(semver.Version{
-		Major:      13,
-		Minor:      2,
+// shouldDownloadFullDist returns true if for that version of Please we need to download the tar
+// with please and it's tools
+func shouldDownloadFullDist(version cli.Version) bool {
+	downloadToolsVersion := semver.Version{
+		Major:      16,
+		Minor:      0,
 		PreRelease: "0", // Less than any valid prerelease string, e.g. alpha1
-	})
+	}
+	return version.LessThan(downloadToolsVersion)
 }

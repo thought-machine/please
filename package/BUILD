@@ -1,6 +1,5 @@
 subinclude("//build_defs:version")
 
-# This is the master list of files that get installed.
 filegroup(
     name = "tools",
     srcs = [
