@@ -39,7 +39,6 @@ func newClientInstance(name string) *Client {
 	config.Build.HashFunction = "sha256"
 	config.Remote.NumExecutors = 1
 	config.Remote.Instance = name
-	config.Remote.HomeDir = "~/.please"
 	config.Remote.Secure = false
 	state := core.NewBuildState(config)
 	state.Config.Remote.URL = "127.0.0.1:9987"
