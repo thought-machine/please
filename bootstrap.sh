@@ -14,7 +14,7 @@ PLZ_ARGS="${PLZ_ARGS:-}"
 
 # Now invoke Go to run Please to build itself.
 notice "Bootstrapping please..."
-go build -o plz-out/bootstrap/please_go_install tools/please_go_install/please_go_install.go
+go build -o plz-out/bootstrap/please_go tools/please_go/please_go.go
 go run src/please.go $PLZ_ARGS --log_file plz-out/log/bootstrap_build.log -o please.location:"$(pwd)/plz-out/bootstrap" export outputs -o plz-out/please //package:installed_files
 cp -f plz-out/please/please plz-out/please/plz
 

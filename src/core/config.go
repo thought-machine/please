@@ -351,7 +351,7 @@ func DefaultConfiguration() *Configuration {
 	config.Build.PleaseSandboxTool = "//_please:tools|please_sandbox"
 	config.Go.TestTool = "//_please:tools|please_go_test"
 	config.Go.FilterTool = "//_please:tools|please_go_filter"
-	config.Go.InstallTool = "//_please:tools|please_go_install"
+	config.Go.GoTool = "//_please:tools|please_go"
 	config.Go.EmbedTool = "//_please:tools|please_go_embed"
 	config.Python.PexTool = "//_please:tools|please_pex"
 	config.Java.JavacWorker = "//_please:tools|javac_worker"
@@ -468,7 +468,7 @@ type Configuration struct {
 		CgoCCTool        string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`
 		CgoEnabled       string `help:"Sets the CGO_ENABLED which controls whether the cgo build flag is set during cross compilation. Defaults to '0' (disabled)" var:"CGO_ENABLED"`
 		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
-		InstallTool      string `help:"Sets the location of the please_go_install tool that is used to install go modules." var:"GO_INSTALL_TOOL"`
+		PleaseGoTool     string `help:"Sets the location of the please_go tool that is used to compile and test go code." var:"PLEASE_GO_TOOL"`
 		EmbedTool        string `help:"Sets the location of the please_go_embed tool that is used to parse //go:embed directives." var:"GO_EMBED_TOOL"`
 		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
 		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`

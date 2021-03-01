@@ -15,7 +15,7 @@ keep = //package:all
 
 [go]
 filtertool = //tools/please_go_filter
-installtool = //tools/please_go_install
+pleasegotool = //tools/please_go
 testtool = //tools/please_go_test
 embedtool = //tools/please_go_embed
 importpath = github.com/thought-machine/please
