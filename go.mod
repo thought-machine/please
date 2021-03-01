@@ -50,4 +50,4 @@ require (
 	lukechampine.com/blake3 v1.1.4
 )
 
-go 1.13
+go 1.16
