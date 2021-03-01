@@ -351,7 +351,7 @@ func DefaultConfiguration() *Configuration {
 	config.Build.PleaseSandboxTool = "//_please:tools|please_sandbox"
 	config.Go.TestTool = "//_please:tools|please_go_test"
 	config.Go.FilterTool = "//_please:tools|please_go_filter"
-	config.Go.GoTool = "//_please:tools|please_go"
+	config.Go.PleaseGoTool = "//_please:tools|please_go"
 	config.Go.EmbedTool = "//_please:tools|please_go_embed"
 	config.Python.PexTool = "//_please:tools|please_pex"
 	config.Java.JavacWorker = "//_please:tools|javac_worker"
