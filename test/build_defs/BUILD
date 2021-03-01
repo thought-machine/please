@@ -12,11 +12,6 @@ filegroup(
 )
 
 filegroup(
-    name = "freebsd_config",
-    srcs = [".plzconfig_freebsd_amd64"],
-)
-
-filegroup(
-    name = "e2e_config",
-    srcs = [".plzconfig.e2e"],
+    name = "base_config",
+    srcs = [".plzconfig_freebsd_amd64", ".plzconfig.e2e"],
 )

@@ -1,7 +1,6 @@
 ; Don't download tools. Tests should use the tools from this repo.
 [build]
 PleaseSandboxTool = please_sandbox
-BuildFileName = BUILD_FILE
 
 [go]
 PleaseGoTool = please_go
@@ -16,3 +15,7 @@ PexTool = please_pex
 JavacWorker = javac_worker
 JarCatTool = jarcat
 JUnitRunner = junit_runner.jar
+
+; Set this so we don't pick up the test BUILD files in the main repo
+[parse]
+BuildFileName = BUILD_FILE

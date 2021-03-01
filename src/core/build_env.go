@@ -62,14 +62,6 @@ func TargetEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 			env = append(env, e+"="+os.Getenv(e))
 		}
 	}
-	for k, v := range target.Env {
-		for _, kv := range env {
-			i := strings.Index(kv, "=")
-			key, value := kv[:i], kv[(i+1):]
-			v = strings.ReplaceAll(v, "$"+key, value)
-		}
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
-	}
 	return env
 }
 
@@ -139,6 +131,22 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		env = append(env, "GENDIR="+path.Join(RepoRoot, GenDir))
 		env = append(env, "BINDIR="+path.Join(RepoRoot, BinDir))
 	}
+
+	return withUserProvidedEnv(target, env)
+}
+
+// userEnv adds the env variables passed to the build rule to the build env
+// Sadly this can't be done as part of TargetEnv() target env as this requires the other
+// env vars are set so they can be substituted.
+func withUserProvidedEnv(target *BuildTarget, env BuildEnv) BuildEnv {
+	for k, v := range target.Env {
+		for _, kv := range env {
+			i := strings.Index(kv, "=")
+			key, value := kv[:i], kv[(i+1):]
+			v = strings.ReplaceAll(v, "$"+key, value)
+		}
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
 	return env
 }
 
@@ -197,7 +205,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	if state.DebugTests {
 		env = append(env, "DEBUG=true")
 	}
-	return env
+	return withUserProvidedEnv(target, env)
 }
 
 func runtimeDataPaths(graph *BuildGraph, t *BuildTarget, data []BuildInput) []string {
@@ -232,7 +240,7 @@ func RunEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 			env = append(env, "DATA_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
 		}
 	}
-	return env
+	return withUserProvidedEnv(target, env)
 }
 
 // StampedBuildEnvironment returns the shell env vars to be passed into exec.Command.
