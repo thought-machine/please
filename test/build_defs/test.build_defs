@@ -10,7 +10,7 @@ def please_repo_e2e_test(
 
     plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
     test_cmd = [
-        "mv $DATA_FREE_BSD_CONFIG $DATA_REPO",
+        "mv $DATA_BASE_CONFIG $DATA_REPO",
         "cd $DATA_REPO",
          plz_command,
     ]
@@ -23,7 +23,7 @@ def please_repo_e2e_test(
 
     data = {
         "REPO": [repo],
-        "FREE_BSD_CONFIG": ["//test/build_defs:freebsd_config"],
+        "BASE_CONFIG": ["//test/build_defs:base_config"],
     }
 
     tools = {
@@ -38,6 +38,9 @@ def please_repo_e2e_test(
         deps = deps,
         data = data,
         test = True,
+        env = {
+            "PLZ_CONFIG_PROFILE": "e2e",
+        },
         no_test_output = True,
         labels = labels + ["plz_e2e_test", "e2e"],
     )

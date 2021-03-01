@@ -1,0 +1,21 @@
+; Don't download tools. Tests should use the tools from this repo.
+[build]
+PleaseSandboxTool = please_sandbox
+
+[go]
+PleaseGoTool = please_go
+FilterTool = please_go_filter
+TestTool = please_go_test
+EmbedTool= please_go_embed
+
+[Python]
+PexTool = please_pex
+
+[Java]
+JavacWorker = javac_worker
+JarCatTool = jarcat
+JUnitRunner = junit_runner.jar
+
+; Set this so we don't pick up the test BUILD files in the main repo
+[parse]
+BuildFileName = BUILD_FILE

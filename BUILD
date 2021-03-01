@@ -46,7 +46,7 @@ sh_cmd(
 )
 
 github_repo(
-  name = "pleasings",
-  repo = "thought-machine/pleasings",
-  revision = "v1.0.0",
+    name = "pleasings",
+    repo = "thought-machine/pleasings",
+    revision = "v1.0.0",
 )
