@@ -14,12 +14,12 @@ var opts = struct {
 
 	PleaseGoInstall struct {
 		SrcRoot      string `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
-		ModuleName   string `short:"n" long:"module_name" description:"The name of the module"`
-		ImportConfig string `short:"i" long:"importcfg" description:"The import config for the modules dependencies"`
+		ModuleName   string `short:"n" long:"module_name" description:"The name of the module" required:"true"`
+		ImportConfig string `short:"i" long:"importcfg" description:"The import config for the modules dependencies" required:"true"`
 		LDFlags      string `short:"l" long:"ld_flags" description:"The file to write linker flags to" default:"LD_FLAGS"`
-		GoTool       string `short:"g" long:"go_tool" description:"The location of the go binary"`
+		GoTool       string `short:"g" long:"go_tool" description:"The location of the go binary" default:"go"`
 		CCTool       string `short:"c" long:"cc_tool" description:"The c compiler to use"`
-		Out          string `short:"o" long:"out" description:"The output directory to put compiled artifacts in"`
+		Out          string `short:"o" long:"out" description:"The output directory to put compiled artifacts in" required:"true"`
 		Args         struct {
 			Packages []string `positional-arg-name:"packages" description:"The packages to compile"`
 		} `positional-args:"true" required:"true"`
