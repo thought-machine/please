@@ -141,8 +141,6 @@ func IterSources(graph *BuildGraph, target *BuildTarget, includeTools bool) <-ch
 	return ch
 }
 
-
-
 // IterInputs iterates all the inputs for a target.
 func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnly bool) <-chan BuildInput {
 	ch := make(chan BuildInput)
