@@ -6,7 +6,6 @@ import (
 	"go/doc"
 	"go/parser"
 	"go/token"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -71,7 +70,7 @@ func parseTestSources(sources []string) (testDescr, error) {
 	for _, source := range sources {
 		f, err := parser.ParseFile(token.NewFileSet(), source, nil, parser.ParseComments)
 		if err != nil {
-			log.Printf("Error parsing %s: %s", source, err)
+			fmt.Fprintf(os.Stderr, "Error parsing %s: %s\n", source, err)
 			return descr, err
 		}
 		descr.Package = f.Name.Name
