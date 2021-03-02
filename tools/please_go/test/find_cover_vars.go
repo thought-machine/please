@@ -93,7 +93,7 @@ func contains(needle string, haystack []string) bool {
 }
 
 func coverVar(dir, importPath, v string) CoverVar {
-	fmt.Printf("Found cover variable: %s %s %s", dir, importPath, v)
+	fmt.Fprintf(os.Stderr, "Found cover variable: %s %s %s\n", dir, importPath, v)
 	f := path.Join(dir, strings.TrimPrefix(v, "GoCover_"))
 	if strings.HasSuffix(f, "_go") {
 		f = f[:len(f)-3] + ".go"
