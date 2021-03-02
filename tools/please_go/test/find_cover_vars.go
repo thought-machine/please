@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"io/fs"
 	"io/ioutil"
+	"log"
 	"path"
 	"path/filepath"
 	"strings"
@@ -71,7 +72,7 @@ func findCoverVars(filepath, importPath string, srcs []string) ([]CoverVar, erro
 	for _, info := range fi {
 		name := info.Name()
 		if name != file && strings.HasSuffix(name, ".a") {
-			fmt.Printf("multiple .a files in %s, can't determine coverage variables accurately\n", dir)
+			log.Printf("multiple .a files in %s, can't determine coverage variables accurately", dir)
 			return nil, nil
 		} else if strings.HasSuffix(name, ".go") && !info.IsDir() && !contains(path.Join(dir, name), srcs) {
 			if ok, err := build.Default.MatchFile(dir, name); ok && err == nil {
@@ -93,7 +94,7 @@ func contains(needle string, haystack []string) bool {
 }
 
 func coverVar(dir, importPath, v string) CoverVar {
-	fmt.Printf("Found cover variable: %s %s %s\n", dir, importPath, v)
+	fmt.Printf("Found cover variable: %s %s %s", dir, importPath, v)
 	f := path.Join(dir, strings.TrimPrefix(v, "GoCover_"))
 	if strings.HasSuffix(f, "_go") {
 		f = f[:len(f)-3] + ".go"

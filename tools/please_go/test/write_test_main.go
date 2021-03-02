@@ -49,7 +49,7 @@ func WriteTestMain(pkgDir, importPath string, sources []string, output string, c
 	}
 	defer f.Close()
 	// This might be consumed by other things.
-	fmt.Printf("Package: %s\n", testDescr.Package)
+	log.Printf("Package: %s", testDescr.Package)
 	return testMainTmpl.Execute(f, testDescr)
 }
 
@@ -71,7 +71,7 @@ func parseTestSources(sources []string) (testDescr, error) {
 	for _, source := range sources {
 		f, err := parser.ParseFile(token.NewFileSet(), source, nil, parser.ParseComments)
 		if err != nil {
-			log.Fatalf("Error parsing %s: %s", source, err)
+			log.Printf("Error parsing %s: %s", source, err)
 			return descr, err
 		}
 		descr.Package = f.Name.Name
