@@ -4,9 +4,9 @@ package test
 import (
 	"fmt"
 	"go/build"
-	"io/fs"
 	"io/ioutil"
 	"log"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -36,7 +36,7 @@ func FindCoverVars(dir, importPath string, exclude, srcs []string) ([]CoverVar, 
 	}
 	ret := []CoverVar{}
 
-	err := filepath.Walk(dir, func(name string, info fs.FileInfo, err error) error {
+	err := filepath.Walk(dir, func(name string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
