@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/thought-machine/please/tools/please_go/test"
 	"log"
 	"os"
 
@@ -24,6 +25,17 @@ var opts = struct {
 			Packages []string `positional-arg-name:"packages" description:"The packages to compile"`
 		} `positional-args:"true" required:"true"`
 	} `command:"install" alias:"i" description:"Compile a go module similarly to 'go install'"`
+	Test struct {
+		Dir        string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
+		Exclude    []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
+		Output     string   `short:"o" long:"output" description:"Output filename" required:"true"`
+		Package    string   `short:"p" long:"package" description:"Package containing this test" env:"PKG_DIR"`
+		ImportPath string   `short:"i" long:"import_path" description:"Full import path to the package"`
+		Benchmark  bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
+		Args       struct {
+			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
+		} `positional-args:"true" required:"true"`
+	} `command:"testmain" alias:"t" description:"Generates a go main package to run the tests in a package."`
 }{
 	Usage: `
 please-go is used by the go build rules to compile and test go modules and packages. 
@@ -47,6 +59,18 @@ var subCommands = map[string]func() int{
 		if err := pleaseGoInstall.Install(opts.PleaseGoInstall.Args.Packages); err != nil {
 			log.Fatal(err)
 		}
+		return 0
+	},
+	"testmain": func() int {
+		test.PleaseGoTest(
+			opts.Test.Dir,
+			opts.Test.ImportPath,
+			opts.Test.Package,
+			opts.Test.Output,
+			opts.Test.Args.Sources,
+			opts.Test.Exclude,
+			opts.Test.Benchmark,
+		)
 		return 0
 	},
 }

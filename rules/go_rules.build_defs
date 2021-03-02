@@ -774,7 +774,7 @@ def go_test_main(name:str, srcs:list, test_only:bool=False,
       visibility: Visibility of the rule.
       labels: Any labels to apply to this rule.
     """
-    cmd = f'"$TOOLS" --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
+    cmd = f'"$TOOLS" testmain --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
     if benchmark:
         cmd = f'{cmd} --benchmark'
     cmds = {
@@ -795,7 +795,7 @@ def go_test_main(name:str, srcs:list, test_only:bool=False,
         needs_transitive_deps = True,  # Need all dependencies to template coverage variables
         requires = ['go', 'go_src'],
         test_only = test_only,
-        tools = [CONFIG.GO_TEST_TOOL],
+        tools = [CONFIG.PLEASE_GO_TOOL],
         post_build = _post_build,
         visibility = visibility,
         labels = labels,

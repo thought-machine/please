@@ -41,5 +41,6 @@ go_binary(
     deps = [
         ":flags",
         "//tools/please_go/install",
+        "//tools/please_go/test",
     ],
 )

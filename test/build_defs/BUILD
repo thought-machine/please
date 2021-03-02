@@ -13,5 +13,8 @@ filegroup(
 
 filegroup(
     name = "base_config",
-    srcs = [".plzconfig_freebsd_amd64", ".plzconfig.e2e"],
+    srcs = [
+        ".plzconfig.e2e",
+        ".plzconfig_freebsd_amd64",
+    ],
 )
