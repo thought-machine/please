@@ -141,12 +141,22 @@ func IterSources(graph *BuildGraph, target *BuildTarget, includeTools bool) <-ch
 	return ch
 }
 
+
+
 // IterInputs iterates all the inputs for a target.
 func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnly bool) <-chan BuildInput {
 	ch := make(chan BuildInput)
-	done := map[BuildLabel]bool{}
-	var inner func(dependency *BuildTarget)
-	inner = func(dependency *BuildTarget) {
+
+	copyDone := func(done map[BuildLabel]bool) map[BuildLabel]bool {
+		newDone := make(map[BuildLabel]bool, len(done))
+		for k, v := range done {
+			newDone[k] = v
+		}
+		return newDone
+	}
+
+	var inner func(dependency *BuildTarget, done map[BuildLabel]bool)
+	inner = func(dependency *BuildTarget, done map[BuildLabel]bool) {
 		if dependency != target {
 			ch <- dependency.Label
 		}
@@ -161,7 +171,7 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnl
 			for _, dep := range dependency.BuildDependencies() {
 				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
 					if !done[dep2] && !dependency.IsTool(dep2) {
-						inner(graph.TargetOrDie(dep2))
+						inner(graph.TargetOrDie(dep2), copyDone(done))
 					}
 				}
 			}
@@ -169,7 +179,7 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnl
 			for _, dep := range dependency.ExportedDependencies() {
 				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep) {
 					if !done[dep2] {
-						inner(graph.TargetOrDie(dep2))
+						inner(graph.TargetOrDie(dep2), copyDone(done))
 					}
 				}
 			}
@@ -187,7 +197,7 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnl
 			}
 		}
 		if !sourcesOnly {
-			inner(target)
+			inner(target, map[BuildLabel]bool{})
 		}
 		close(ch)
 	}()
