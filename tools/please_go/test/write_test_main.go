@@ -49,7 +49,7 @@ func WriteTestMain(pkgDir, importPath string, sources []string, output string, c
 	}
 	defer f.Close()
 	// This might be consumed by other things.
-	log.Printf("Package: %s", testDescr.Package)
+	fmt.Printf("Package: %s\n", testDescr.Package)
 	return testMainTmpl.Execute(f, testDescr)
 }
 
