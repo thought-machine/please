@@ -11,7 +11,6 @@ import (
 	"strings"
 )
 
-
 // A CoverVar is just a combination of package path and variable name
 // for one of the templated-in coverage variables.
 type CoverVar struct {

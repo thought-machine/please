@@ -4,8 +4,8 @@ go_library(
     name = "test",
     srcs = [
         "find_cover_vars.go",
-        "write_test_main.go",
         "gotest.go",
+        "write_test_main.go",
     ],
     visibility = ["//tools/please_go/..."],
 )

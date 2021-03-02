@@ -2,6 +2,7 @@ package test
 
 import "log"
 
+// PleaseGoTest will generate the test main for the provided sources
 func PleaseGoTest(dir, importPath, pkg, output string, sources, exclude []string, isBenchmark bool) {
 	coverVars, err := FindCoverVars(dir, importPath, exclude, sources)
 	if err != nil {
