@@ -113,7 +113,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         deps += [filegroup(
             name = name,
             tag = "package_srcs",
-            exported_deps = [dep for dep in deps if dep.startswith(":")],
+            exported_deps = [dep for dep in deps if canonicalise(dep).startswith("//" + package_name() + ":")],
             requires = ["go_src"],
         )]
 
