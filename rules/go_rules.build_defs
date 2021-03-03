@@ -21,7 +21,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
                      but not both.
       hashes (list): A list of possible hashes for the downloaded archive. Optional.
       visibility (list): Visibility specification. Defaults to public.
-      architectures (dict): Any additional architectures to install in go architecture format e.g. linux_amd64. This
+      architectures (list): Any additional architectures to install in go architecture format e.g. linux_amd64. This
                             rule will automatically install the arch provided through --arch. This is only useful if you
                             want to manually cross-compile parts of the repo but not others.
     """
