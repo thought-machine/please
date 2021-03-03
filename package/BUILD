@@ -10,7 +10,6 @@ filegroup(
         "//tools/please_go",
         "//tools/please_go_embed",
         "//tools/please_go_filter",
-        "//tools/please_go_test",
         "//tools/please_pex",
         "//tools/sandbox:please_sandbox",
     ],

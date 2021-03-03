@@ -31,7 +31,6 @@ genrule(
     "javac_worker": "please_tools/javac_worker",
     "junit_runner": "please_tools/junit_runner.jar",
     "please_go_filter": "please_tools/please_go_filter",
-    "please_go_test": "please_tools/please_go_test",
     "please_go": "please_tools/please_go",
 {{ if .HasEmbedTool }}
     "please_go_embed": "please_tools/please_go_embed",

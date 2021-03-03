@@ -349,7 +349,6 @@ func DefaultConfiguration() *Configuration {
 
 	// Please tools
 	config.Build.PleaseSandboxTool = "//_please:tools|please_sandbox"
-	config.Go.TestTool = "//_please:tools|please_go_test"
 	config.Go.FilterTool = "//_please:tools|please_go_filter"
 	config.Go.PleaseGoTool = "//_please:tools|please_go"
 	config.Go.EmbedTool = "//_please:tools|please_go_embed"
@@ -462,7 +461,6 @@ type Configuration struct {
 	Go struct {
 		GoTool           string `help:"The binary to use to invoke Go & its subtools with." var:"GO_TOOL"`
 		GoRoot           string `help:"If set, will set the GOROOT environment variable appropriately during build actions." var:"GOROOT"`
-		TestTool         string `help:"Sets the location of the please_go_test tool that is used to template the test main for go_test rules." var:"GO_TEST_TOOL"`
 		GoPath           string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
 		ImportPath       string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
 		CgoCCTool        string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`

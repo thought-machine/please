@@ -5,7 +5,6 @@ PleaseSandboxTool = please_sandbox
 [go]
 PleaseGoTool = please_go
 FilterTool = please_go_filter
-TestTool = please_go_test
 EmbedTool= please_go_embed
 
 [Python]
