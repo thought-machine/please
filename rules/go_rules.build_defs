@@ -3,7 +3,8 @@
 Go has a strong built-in concept of packages so it's probably a good idea to match Please
 rules to Go packages.
 """
-def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"]):
+def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"],
+                 architectures:list=[]):
     """
     Downloads Go and exposes :<name>|go and :<name>|gofmt as entry points. To use this rule add the
     following to your .plzconfig:
@@ -20,6 +21,9 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
                      but not both.
       hashes (list): A list of possible hashes for the downloaded archive. Optional.
       visibility (list): Visibility specification. Defaults to public.
+      architectures (dict): Any additional architectures to install in go architecture format e.g. linux_amd64. This
+                            rule will automatically install the arch provided through --arch. This is only useful if you
+                            want to manually cross-compile parts of the repo but not others.
     """
     if url and version:
         raise ParseError("Either version or url should be provided but not both")
@@ -40,11 +44,14 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     # If we're targeting another platform, build the std lib for that. We can't use CONFIG.OS as this is always set to
     # the host OS for tools.
     if CONFIG.TARGET_OS != CONFIG.HOSTOS or CONFIG.TARGET_ARCH != CONFIG.HOSTARCH:
-        if CONFIG.CGO_ENABLED == "1":
-            cgo_vars = f"export CGO_ENABLED={CONFIG.CGO_ENABLED} && export CC=$TOOLS_CC && "
-        else:
-            cgo_vars = ""
-        cmd += f' && ({cgo_vars}export GOOS={CONFIG.TARGET_OS} && export GOARCH={CONFIG.TARGET_ARCH} && $OUT/bin/go install std)'
+        architectures += [f'{CONFIG.TARGET_OS}_{CONFIG.TARGET_ARCH}']
+
+    if architectures and CONFIG.CGO_ENABLED == "1":
+        cmd += f" && export CGO_ENABLED={CONFIG.CGO_ENABLED} && export CC=$TOOLS_CC"
+
+    for arch in architectures:
+        goos, _, goarch = arch.partition("_")
+        cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install std)'
 
     #TODO(jpoole): Add the option to compile these with -race for the race detector as well. This need to be plumbed
     # through to the go_library rules as well though.
