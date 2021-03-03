@@ -350,6 +350,7 @@ var opts struct {
 		Changes struct {
 			Since            string `short:"s" long:"since" default:"origin/master" description:"Revision to compare against"`
 			IncludeDependees string `long:"include_dependees" default:"none" choice:"none" choice:"direct" choice:"transitive" description:"Include direct or transitive dependees of changed targets."`
+			Level            int    `long:"level" default:"0" description:"Levels of the dependencies of changed targets."`
 			Inexact          bool   `long:"inexact" description:"Calculate changes more quickly and without doing any SCM checkouts, but may miss some targets."`
 			In               string `long:"in" description:"Calculate changes contained within given scm spec (commit range/sha/ref/etc). Implies --inexact."`
 			Args             struct {
@@ -659,12 +660,24 @@ var buildFunctions = map[string]func() int{
 	"changes": func() int {
 		// query changes always excludes 'manual' targets.
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
-
+		level := opts.Query.Changes.Level // -2 means unset -1 means all transitive
 		transitive := opts.Query.Changes.IncludeDependees == "transitive"
-		direct := opts.Query.Changes.IncludeDependees == "direct" || transitive
+		direct := opts.Query.Changes.IncludeDependees == "direct"
+		if transitive || direct && level != -2 {
+			log.Warning("Both level and include_dependees are set using level")
+		}
+		switch {
+		//transitive subsumes direct so asses transitive first
+		case transitive && (level == -2):
+			level = -1
+		case direct && (level == -2):
+			level = 1
+		case (level == -2):
+			level = 0
+		}
 		runInexact := func(files []string) int {
 			return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-				for _, target := range query.Changes(state, files, direct, transitive) {
+				for _, target := range query.Changes(state, files, level) {
 					fmt.Println(target.String())
 				}
 			})
@@ -695,7 +708,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return 1
 		}
-		for _, target := range query.DiffGraphs(before, after, files, direct, transitive) {
+		for _, target := range query.DiffGraphs(before, after, files, level) {
 			fmt.Println(target.String())
 		}
 		return 0
