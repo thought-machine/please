@@ -663,11 +663,11 @@ var buildFunctions = map[string]func() int{
 		level := opts.Query.Changes.Level // -2 means unset -1 means all transitive
 		transitive := opts.Query.Changes.IncludeDependees == "transitive"
 		direct := opts.Query.Changes.IncludeDependees == "direct"
-		if transitive || direct && level != -2 {
-			log.Warning("Both level and include_dependees are set using level")
+		if (transitive || direct) && level != -2 {
+			log.Warning("Both level and include_dependees are set. Using the value from level")
 		}
 		switch {
-		//transitive subsumes direct so asses transitive first
+		// transitive subsumes direct so asses transitive first
 		case transitive && (level == -2):
 			level = -1
 		case direct && (level == -2):
