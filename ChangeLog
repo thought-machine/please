@@ -1,3 +1,8 @@
+Version 15.17.1
+--------------
+    * Backported fix from v16 for go_module() to stop it pulling in sources
+      of transitive deps during the install phase #1606
+
 Version 15.17.0
 --------------
     * Installing please will now add the wrapper script to the path
