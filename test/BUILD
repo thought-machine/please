@@ -214,14 +214,20 @@ plz_e2e_test(
 # Tests for query changes.
 plz_e2e_test(
     name = "query_affected_tests_test",
-    cmd = "plz query changes --include_dependees=transitive --include test test/affectedtests_test.go",
+    cmd = "plz query changes --level=-1 --include test test/affectedtests_test.go",
     expected_output = "query_affectedtests_test.txt",
 )
 
 plz_e2e_test(
     name = "query_affected_tests_stdin_test",
-    cmd = "echo test/affectedtests_test.go | plz query changes --include_dependees=transitive --include test -",
+    cmd = "echo test/affectedtests_test.go | plz query changes --level=-1 --include test -",
     expected_output = "query_affectedtests_test.txt",
+)
+
+plz_e2e_test(
+    name = "query_affected_tests_dependees_test",
+    cmd = "plz query changes --include_dependees=transitive --include test test/affectedtests_test.go",
+    expect_output_contains = "//test:affectedtests_test",
 )
 
 go_test(
