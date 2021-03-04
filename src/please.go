@@ -349,8 +349,8 @@ var opts struct {
 		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 		Changes struct {
 			Since            string `short:"s" long:"since" default:"origin/master" description:"Revision to compare against"`
-			IncludeDependees string `long:"include_dependees" default:"none" choice:"none" choice:"direct" choice:"transitive" description:"Include direct or transitive dependees of changed targets."`
-			Level            int    `long:"level" default:"0" description:"Levels of the dependencies of changed targets (-1 for unlimited)."`
+			IncludeDependees string `long:"include_dependees" default:"none" choice:"none" choice:"direct" choice:"transitive" description:"Deprecated: use level 1 for direct and -1 for transitive. Include direct or transitive dependees of changed targets."`
+			Level            int    `long:"level" default:"-2" description:"Levels of the dependencies of changed targets (-1 for unlimited)." default-mask:"0"`
 			Inexact          bool   `long:"inexact" description:"Calculate changes more quickly and without doing any SCM checkouts, but may miss some targets."`
 			In               string `long:"in" description:"Calculate changes contained within given scm spec (commit range/sha/ref/etc). Implies --inexact."`
 			Args             struct {
@@ -663,6 +663,9 @@ var buildFunctions = map[string]func() int{
 		level := opts.Query.Changes.Level // -2 means unset -1 means all transitive
 		transitive := opts.Query.Changes.IncludeDependees == "transitive"
 		direct := opts.Query.Changes.IncludeDependees == "direct"
+		if transitive || direct {
+			log.Warning("include_dependees is deprectated. Please use level instead")
+		}
 		if (transitive || direct) && level != -2 {
 			log.Warning("Both level and include_dependees are set. Using the value from level")
 		}
