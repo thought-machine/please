@@ -803,7 +803,6 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 	return interactiveOutput || (!plainOutput && cli.StdErrIsATerminal && verbosity < 4)
 }
 
-
 // Please starts & runs the main build process through to its completion.
 func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
