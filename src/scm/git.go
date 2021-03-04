@@ -174,7 +174,7 @@ func (g *git) Remove(names []string) error {
 	cmd := exec.Command("git", append([]string{"rm", "-q"}, names...)...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("git rm failed: %s\nOutput:\n%s%s", err, string(out))
+		return fmt.Errorf("git rm failed: %s\nOutput:\n%s", err, string(out))
 	}
 	return nil
 }
