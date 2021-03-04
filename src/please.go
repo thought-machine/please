@@ -77,7 +77,6 @@ var opts struct {
 
 	FeatureFlags struct {
 		NoUpdate           bool    `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
-		NoCache            bool    `long:"nocache" description:"Deprecated, use plz build --rebuild or plz test --rerun flags instead."`
 		NoHashVerification bool    `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
 		NoLock             bool    `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool    `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
@@ -486,13 +485,13 @@ var buildFunctions = map[string]func() int{
 			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
 				// Clean everything, doesn't require parsing at all.
 				state := core.NewBuildState(config)
-				clean.Clean(config, newCache(state), !opts.Clean.NoBackground)
+				clean.Clean(config, cache.NewCache(state), !opts.Clean.NoBackground)
 				return 0
 			}
 			opts.Clean.Args.Targets = core.WholeGraph
 		}
 		if success, state := runBuild(opts.Clean.Args.Targets, false, false, false); success {
-			clean.Targets(state, state.ExpandOriginalLabels(), !opts.FeatureFlags.NoCache)
+			clean.Targets(state, state.ExpandOriginalLabels())
 			return 0
 		}
 		return 1
@@ -804,15 +803,6 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 	return interactiveOutput || (!plainOutput && cli.StdErrIsATerminal && verbosity < 4)
 }
 
-// newCache constructs a new cache based on the current config / flags.
-func newCache(state *core.BuildState) core.Cache {
-	if opts.FeatureFlags.NoCache {
-		log.Warning("--nocache is deprecated, use plz build --rebuild or plz test --rerun instead")
-		log.Warning("See https://github.com/thought-machine/please/issues/1212 for more information")
-		return nil
-	}
-	return cache.NewCache(state)
-}
 
 // Please starts & runs the main build process through to its completion.
 func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
@@ -872,7 +862,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
-	state.Cache = newCache(state)
+	state.Cache = cache.NewCache(state)
 
 	// Run the display
 	state.Results() // important this is called now, don't ask...
