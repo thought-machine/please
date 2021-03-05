@@ -234,7 +234,7 @@ int contain(char* argv[], bool net, bool mount) {
 
 // On non-Linux systems contain simply execs a subprocess.
 // It's not really expected to be used there, this is simply to make it compile.
-int contain(char* argv[]) {
+int contain(char* argv[], bool net, bool mount) {
   return execvp(argv[0], argv);
 }
 
