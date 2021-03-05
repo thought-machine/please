@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     if (argc < 2) {
         fputs("please_sandbox implements sandboxing for Please.\n", stderr);
         fputs("It takes no flags, it simply executes the command given as arguments.\n", stderr);
-        fputs("Usage: tm_sandbox command args...\n", stderr);
+        fputs("Usage: please_sandbox command args...\n", stderr);
         return 1;
     }
     return contain(&argv[1], true, true);

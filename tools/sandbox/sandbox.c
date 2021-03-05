@@ -213,7 +213,7 @@ int contain(char* argv[], bool net, bool mount) {
   if (pid == -1) {
     perror("clone");
     fputs("Your user doesn't seem to have enough permissions to call clone(2).\n", stderr);
-    fputs("tm_sandbox requires support for user namespaces (usually >= Linux 3.10)\n", stderr);
+    fputs("please_sandbox requires support for user namespaces (usually >= Linux 3.10)\n", stderr);
     return 1;
   }
   // We're the parent process; wait on the child and exit with its status.
