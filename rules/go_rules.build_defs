@@ -115,6 +115,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             tag = "package_srcs",
             exported_deps = [dep for dep in deps if canonicalise(dep).startswith("//" + package_name() + ":")],
             requires = ["go_src"],
+            test_only = test_only,
         )]
 
     if _generate_import_config:
