@@ -51,7 +51,6 @@ type Client struct {
 	fetchClient fpb.FetchClient
 	initOnce    sync.Once
 	state       *core.BuildState
-	origState   *core.BuildState
 	err         error // for initialisation
 	instance    string
 
@@ -124,11 +123,10 @@ type pendingDownload struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:     state,
-		origState: state,
-		instance:  state.Config.Remote.Instance,
-		outputs:   map[core.BuildLabel]*pb.Directory{},
-		mdStore:   newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
+		state:    state,
+		instance: state.Config.Remote.Instance,
+		outputs:  map[core.BuildLabel]*pb.Directory{},
+		mdStore:  newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
 		existingBlobs: map[string]struct{}{
 			digest.Empty.Hash: {},
 		},
@@ -164,8 +162,6 @@ func (c *Client) init() {
 // initExec initialiases the remote execution client.
 func (c *Client) initExec() error {
 	// Create a copy of the state where we can modify the config
-	c.state = c.state.ForConfig()
-	c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
 	dialOpts, err := c.dialOpts()
 	if err != nil {
 		return err
@@ -297,7 +293,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 		return metadata, c.wrapActionErr(err, digest)
 	}
 
-	if c.origState.ShouldDownload(target) {
+	if c.state.ShouldDownload(target) {
 		if !c.outputsExist(target, digest) {
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
 			if err := c.download(target, func() error {

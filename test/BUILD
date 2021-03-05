@@ -144,20 +144,6 @@ filegroup(
     srcs = ["//src:please"],
 )
 
-# Test running a test with no-cache
-plz_e2e_test(
-    name = "test_nocache_test",
-    cmd = "plz test --nocache //test:nocache_test",
-)
-
-gentest(
-    name = "nocache_test",
-    labels = ["manual"],
-    no_test_output = True,
-    test_cmd = "true",
-    deps = ["//src:please"],
-)
-
 # Simulates a code generating rule to test the require / provide mechanism.
 plz_e2e_test(
     name = "require_provide_test",
@@ -228,14 +214,20 @@ plz_e2e_test(
 # Tests for query changes.
 plz_e2e_test(
     name = "query_affected_tests_test",
-    cmd = "plz query changes --include_dependees=transitive --include test test/affectedtests_test.go",
+    cmd = "plz query changes --level=-1 --include test test/affectedtests_test.go",
     expected_output = "query_affectedtests_test.txt",
 )
 
 plz_e2e_test(
     name = "query_affected_tests_stdin_test",
-    cmd = "echo test/affectedtests_test.go | plz query changes --include_dependees=transitive --include test -",
+    cmd = "echo test/affectedtests_test.go | plz query changes --level=-1 --include test -",
     expected_output = "query_affectedtests_test.txt",
+)
+
+plz_e2e_test(
+    name = "query_affected_tests_dependees_test",
+    cmd = "plz query changes --include_dependees=transitive --include test test/affectedtests_test.go",
+    expect_output_contains = "//test:affectedtests_test",
 )
 
 go_test(

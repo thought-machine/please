@@ -62,7 +62,6 @@ func Run(config *core.Configuration, tool Tool, args []string) {
 // matchingTools returns a set of matching tools for a string prefix.
 func matchingTools(config *core.Configuration, prefix string) map[string]string {
 	knownTools := map[string]string{
-		"gotest":      config.Go.TestTool,
 		"jarcat":      config.Java.JarCatTool,
 		"javacworker": config.Java.JavacWorker,
 		"junitrunner": config.Java.JUnitRunner,

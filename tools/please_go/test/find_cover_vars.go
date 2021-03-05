@@ -1,19 +1,15 @@
 // Package gotest contains utilities used by plz_go_test.
-package gotest
+package test
 
 import (
+	"fmt"
 	"go/build"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
-
-	"gopkg.in/op/go-logging.v1"
-
-	"github.com/thought-machine/please/src/fs"
 )
-
-var log = logging.MustGetLogger("buildgo")
 
 // A CoverVar is just a combination of package path and variable name
 // for one of the templated-in coverage variables.
@@ -39,9 +35,12 @@ func FindCoverVars(dir, importPath string, exclude, srcs []string) ([]CoverVar, 
 	}
 	ret := []CoverVar{}
 
-	err := fs.Walk(dir, func(name string, isDir bool) error {
+	err := filepath.Walk(dir, func(name string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if _, present := excludeMap[name]; present {
-			if isDir {
+			if info.IsDir() {
 				return filepath.SkipDir
 			}
 		} else if strings.HasSuffix(name, ".a") && !strings.ContainsRune(path.Base(name), '#') {
@@ -72,7 +71,7 @@ func findCoverVars(filepath, importPath string, srcs []string) ([]CoverVar, erro
 	for _, info := range fi {
 		name := info.Name()
 		if name != file && strings.HasSuffix(name, ".a") {
-			log.Warning("multiple .a files in %s, can't determine coverage variables accurately", dir)
+			fmt.Fprintf(os.Stderr, "multiple .a files in %s, can't determine coverage variables accurately\n", dir)
 			return nil, nil
 		} else if strings.HasSuffix(name, ".go") && !info.IsDir() && !contains(path.Join(dir, name), srcs) {
 			if ok, err := build.Default.MatchFile(dir, name); ok && err == nil {
@@ -94,7 +93,7 @@ func contains(needle string, haystack []string) bool {
 }
 
 func coverVar(dir, importPath, v string) CoverVar {
-	log.Info("Found cover variable: %s %s %s", dir, importPath, v)
+	fmt.Fprintf(os.Stderr, "Found cover variable: %s %s %s\n", dir, importPath, v)
 	f := path.Join(dir, strings.TrimPrefix(v, "GoCover_"))
 	if strings.HasSuffix(f, "_go") {
 		f = f[:len(f)-3] + ".go"

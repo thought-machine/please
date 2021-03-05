@@ -77,7 +77,6 @@ var opts struct {
 
 	FeatureFlags struct {
 		NoUpdate           bool    `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
-		NoCache            bool    `long:"nocache" description:"Deprecated, use plz build --rebuild or plz test --rerun flags instead."`
 		NoHashVerification bool    `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
 		NoLock             bool    `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool    `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
@@ -349,7 +348,8 @@ var opts struct {
 		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 		Changes struct {
 			Since            string `short:"s" long:"since" default:"origin/master" description:"Revision to compare against"`
-			IncludeDependees string `long:"include_dependees" default:"none" choice:"none" choice:"direct" choice:"transitive" description:"Include direct or transitive dependees of changed targets."`
+			IncludeDependees string `long:"include_dependees" default:"none" choice:"none" choice:"direct" choice:"transitive" description:"Deprecated: use level 1 for direct and -1 for transitive. Include direct or transitive dependees of changed targets."`
+			Level            int    `long:"level" default:"-2" description:"Levels of the dependencies of changed targets (-1 for unlimited)." default-mask:"0"`
 			Inexact          bool   `long:"inexact" description:"Calculate changes more quickly and without doing any SCM checkouts, but may miss some targets."`
 			In               string `long:"in" description:"Calculate changes contained within given scm spec (commit range/sha/ref/etc). Implies --inexact."`
 			Args             struct {
@@ -486,13 +486,13 @@ var buildFunctions = map[string]func() int{
 			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
 				// Clean everything, doesn't require parsing at all.
 				state := core.NewBuildState(config)
-				clean.Clean(config, newCache(state), !opts.Clean.NoBackground)
+				clean.Clean(config, cache.NewCache(state), !opts.Clean.NoBackground)
 				return 0
 			}
 			opts.Clean.Args.Targets = core.WholeGraph
 		}
 		if success, state := runBuild(opts.Clean.Args.Targets, false, false, false); success {
-			clean.Targets(state, state.ExpandOriginalLabels(), !opts.FeatureFlags.NoCache)
+			clean.Targets(state, state.ExpandOriginalLabels())
 			return 0
 		}
 		return 1
@@ -659,12 +659,27 @@ var buildFunctions = map[string]func() int{
 	"changes": func() int {
 		// query changes always excludes 'manual' targets.
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
-
+		level := opts.Query.Changes.Level // -2 means unset -1 means all transitive
 		transitive := opts.Query.Changes.IncludeDependees == "transitive"
-		direct := opts.Query.Changes.IncludeDependees == "direct" || transitive
+		direct := opts.Query.Changes.IncludeDependees == "direct"
+		if transitive || direct {
+			log.Warning("include_dependees is deprectated. Please use level instead")
+		}
+		if (transitive || direct) && level != -2 {
+			log.Warning("Both level and include_dependees are set. Using the value from level")
+		}
+		switch {
+		// transitive subsumes direct so asses transitive first
+		case transitive && (level == -2):
+			level = -1
+		case direct && (level == -2):
+			level = 1
+		case (level == -2):
+			level = 0
+		}
 		runInexact := func(files []string) int {
 			return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-				for _, target := range query.Changes(state, files, direct, transitive) {
+				for _, target := range query.Changes(state, files, level) {
 					fmt.Println(target.String())
 				}
 			})
@@ -695,7 +710,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return 1
 		}
-		for _, target := range query.DiffGraphs(before, after, files, direct, transitive) {
+		for _, target := range query.DiffGraphs(before, after, files, level) {
 			fmt.Println(target.String())
 		}
 		return 0
@@ -804,16 +819,6 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 	return interactiveOutput || (!plainOutput && cli.StdErrIsATerminal && verbosity < 4)
 }
 
-// newCache constructs a new cache based on the current config / flags.
-func newCache(state *core.BuildState) core.Cache {
-	if opts.FeatureFlags.NoCache {
-		log.Warning("--nocache is deprecated, use plz build --rebuild or plz test --rerun instead")
-		log.Warning("See https://github.com/thought-machine/please/issues/1212 for more information")
-		return nil
-	}
-	return cache.NewCache(state)
-}
-
 // Please starts & runs the main build process through to its completion.
 func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
@@ -872,7 +877,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
-	state.Cache = newCache(state)
+	state.Cache = cache.NewCache(state)
 
 	// Run the display
 	state.Results() // important this is called now, don't ask...

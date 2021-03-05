@@ -1,14 +1,13 @@
+package(please_go_tool = "please_go")
+
 go_library(
-    name = "gotest",
+    name = "test",
     srcs = [
         "find_cover_vars.go",
+        "gotest.go",
         "write_test_main.go",
     ],
-    visibility = ["//tools/please_go_test:all"],
-    deps = [
-        "//src/fs",
-        "//third_party/go:logging",
-    ],
+    visibility = ["//tools/please_go/..."],
 )
 
 go_test(
@@ -22,7 +21,7 @@ go_test(
         ":test_excluded_archive",
     ],
     deps = [
-        ":gotest",
+        ":test",
         "//third_party/go:testify",
     ],
 )
@@ -40,7 +39,7 @@ go_test(
     srcs = ["write_test_main_test.go"],
     data = glob(["test_data/**/*.go"]),
     deps = [
-        ":gotest",
+        ":test",
         "//third_party/go:testify",
     ],
 )

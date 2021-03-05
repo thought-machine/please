@@ -299,7 +299,6 @@ func DefaultConfiguration() *Configuration {
 	config.Display.MaxWorkers = 40
 	config.Display.ColourScheme = "dark"
 	config.Remote.NumExecutors = 20 // kind of arbitrary
-	config.Remote.HomeDir = "~"
 	config.Remote.Secure = true
 	config.Remote.VerifyOutputs = true
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
@@ -349,7 +348,6 @@ func DefaultConfiguration() *Configuration {
 
 	// Please tools
 	config.Build.PleaseSandboxTool = "//_please:tools|please_sandbox"
-	config.Go.TestTool = "//_please:tools|please_go_test"
 	config.Go.FilterTool = "//_please:tools|please_go_filter"
 	config.Go.PleaseGoTool = "//_please:tools|please_go"
 	config.Go.EmbedTool = "//_please:tools|please_go_embed"
@@ -444,7 +442,6 @@ type Configuration struct {
 		Timeout       cli.Duration `help:"Timeout for connections made to the remote server."`
 		Secure        bool         `help:"Whether to use TLS for communication or not."`
 		VerifyOutputs bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
-		HomeDir       string       `help:"The home directory on the build machine."`
 		Shell         string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
 		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
@@ -462,7 +459,6 @@ type Configuration struct {
 	Go struct {
 		GoTool           string `help:"The binary to use to invoke Go & its subtools with." var:"GO_TOOL"`
 		GoRoot           string `help:"If set, will set the GOROOT environment variable appropriately during build actions." var:"GOROOT"`
-		TestTool         string `help:"Sets the location of the please_go_test tool that is used to template the test main for go_test rules." var:"GO_TEST_TOOL"`
 		GoPath           string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
 		ImportPath       string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
 		CgoCCTool        string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`

@@ -1,4 +1,4 @@
-package gotest
+package test
 
 import (
 	"go/parser"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestParseTestSources(t *testing.T) {
-	descr, err := parseTestSources([]string{"tools/please_go_test/gotest/test_data/test/example_test.go"})
+	descr, err := parseTestSources([]string{"tools/please_go/test/test_data/test/example_test.go"})
 	assert.NoError(t, err)
 	assert.Equal(t, "buildgo", descr.Package)
 	assert.Equal(t, "", descr.Main)
@@ -25,7 +25,7 @@ func TestParseTestSources(t *testing.T) {
 }
 
 func TestParseTestSourcesWithMain(t *testing.T) {
-	descr, err := parseTestSources([]string{"tools/please_go_test/gotest/test_data/main/example_test_main.go"})
+	descr, err := parseTestSources([]string{"tools/please_go/test/test_data/main/example_test_main.go"})
 	assert.NoError(t, err)
 	assert.Equal(t, "parse", descr.Package)
 	assert.Equal(t, "TestMain", descr.Main)
@@ -48,9 +48,9 @@ func TestParseTestSourcesFailsGracefully(t *testing.T) {
 
 func TestWriteTestMain(t *testing.T) {
 	err := WriteTestMain(
-		"tools/please_go_test/gotest/test_data",
+		"tools/please_go/test/test_data",
 		"",
-		[]string{"tools/please_go_test/gotest/test_data/test/example_test.go"},
+		[]string{"tools/please_go/test/test_data/test/example_test.go"},
 		"test.go",
 		false,
 		[]CoverVar{},
@@ -66,16 +66,16 @@ func TestWriteTestMain(t *testing.T) {
 
 func TestWriteTestMainWithCoverage(t *testing.T) {
 	err := WriteTestMain(
-		"tools/please_go_test/gotest/test_data",
+		"tools/please_go/test/test_data",
 		"",
-		[]string{"tools/please_go_test/gotest/test_data/test/example_test.go"},
+		[]string{"tools/please_go/test/test_data/test/example_test.go"},
 		"test.go",
 		true,
 		[]CoverVar{{
-			Dir:        "tools/please_go_test/gotest/test_data",
+			Dir:        "tools/please_go/test/test_data",
 			ImportPath: "core",
 			Var:        "GoCover_lock_go",
-			File:       "tools/please_go_test/gotest/test_data/lock.go",
+			File:       "tools/please_go/test/test_data/lock.go",
 		}},
 		false,
 	)
@@ -89,9 +89,9 @@ func TestWriteTestMainWithCoverage(t *testing.T) {
 
 func TestWriteTestMainWithBenchmark(t *testing.T) {
 	err := WriteTestMain(
-		"tools/please_go_test/gotest/test_data",
+		"tools/please_go/test/test_data",
 		"",
-		[]string{"tools/please_go_test/gotest/test_data/bench/example_benchmark_test.go"},
+		[]string{"tools/please_go/test/test_data/bench/example_benchmark_test.go"},
 		"test.go",
 		true,
 		[]CoverVar{},
