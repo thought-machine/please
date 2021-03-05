@@ -2,4 +2,8 @@
 protoctool = protoc
 
 [go]
+defaultstatic = true
 GoTool = go
+
+[buildconfig]
+static-sandbox = true
