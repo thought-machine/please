@@ -1,6 +1,6 @@
 ; Don't download tools. Tests should use the tools from this repo.
-[build]
-PleaseSandboxTool = please_sandbox
+[sandbox]
+Tool = please_sandbox
 
 [go]
 PleaseGoTool = please_go

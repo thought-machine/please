@@ -995,7 +995,7 @@ func newBlake3() hash.Hash {
 // callers can't initialise all the required private fields.
 func NewBuildState(config *Configuration) *BuildState {
 	// Deliberately ignore the error here so we don't require the sandbox tool until it's needed.
-	sandboxTool, _ := LookBuildPath(config.Build.PleaseSandboxTool, config)
+	sandboxTool, _ := LookBuildPath(config.Sandbox.Tool, config)
 	state := &BuildState{
 		Graph:        NewGraph(),
 		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
