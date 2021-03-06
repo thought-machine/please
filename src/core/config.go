@@ -224,15 +224,15 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 
 	// Deal with the various sandbox settings that are moving.
 	if config.Build.Sandbox {
-		log.Warning("build.sandbox in config is deprecated, use sandbox.build instead");
+		log.Warning("build.sandbox in config is deprecated, use sandbox.build instead")
 		config.Sandbox.Build = true
 	}
 	if config.Test.Sandbox {
-		log.Warning("test.sandbox in config is deprecated, use sandbox.test instead");
+		log.Warning("test.sandbox in config is deprecated, use sandbox.test instead")
 		config.Sandbox.Test = true
 	}
 	if config.Build.PleaseSandboxTool != "" {
-		log.Warning("build.pleasesandboxtool in config is deprecated, use sandbox.tool instead");
+		log.Warning("build.pleasesandboxtool in config is deprecated, use sandbox.tool instead")
 		config.Sandbox.Tool = config.Build.PleaseSandboxTool
 	}
 
@@ -440,15 +440,15 @@ type Configuration struct {
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
 		Timeout         cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
-		Sandbox              bool         `help:"Deprecated, use sandbox.test instead."`
+		Sandbox         bool         `help:"Deprecated, use sandbox.test instead."`
 		DisableCoverage []string     `help:"Disables coverage for tests that have any of these labels spcified."`
 		Upload          cli.URL      `help:"URL to upload test results to (in XML format)"`
 	} `help:"A config section describing settings related to testing in general."`
 	Sandbox struct {
-		Tool string `help:"The location of the tool to use for sandboxing (typically please_sandbox)."`
-		Dir  []string `help:"Directories to hide within the sandbox"`
-		Build bool `help:"True to sandbox individual build actions, which isolates them from network access and some aspects of the filesystem. Currently only works on Linux." var:"BUILD_SANDBOX"`
-		Test bool `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
+		Tool  string   `help:"The location of the tool to use for sandboxing (typically please_sandbox)."`
+		Dir   []string `help:"Directories to hide within the sandbox"`
+		Build bool     `help:"True to sandbox individual build actions, which isolates them from network access and some aspects of the filesystem. Currently only works on Linux." var:"BUILD_SANDBOX"`
+		Test  bool     `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
 	} `help:"A config section describing settings relating to sandboxing of build actions."`
 	Remote struct {
 		URL           string       `help:"URL for the remote server."`

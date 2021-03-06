@@ -124,7 +124,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		env = append(env, secrets)
 	}
 	if target.Sandbox && len(state.Config.Sandbox.Dir) > 0 {
-		env = append(env, "SANDBOX_DIRS=" + strings.Join(state.Config.Sandbox.Dir, ","))
+		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
 	}
 	if state.Config.Bazel.Compatibility {
 		// Obviously this is only a subset of the variables Bazel would expose, but there's
@@ -209,7 +209,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		env = append(env, "DEBUG=true")
 	}
 	if target.TestSandbox && len(state.Config.Sandbox.Dir) > 0 {
-		env = append(env, "SANDBOX_DIRS=" + strings.Join(state.Config.Sandbox.Dir, ","))
+		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
 	}
 	return withUserProvidedEnv(target, env)
 }
