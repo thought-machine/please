@@ -202,7 +202,7 @@ func (c *Client) uploadInputs(ch chan<- *uploadinfo.Entry, target *core.BuildTar
 // directory structure of the input dir. The caller is expected to finalise this by calling Build().
 func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
 	b := newDirBuilder(c)
-	for input := range c.iterInputs(target, isTest, target.IsFilegroup) {
+	for input := range c.state.IterInputs(target, isTest) {
 		if l := input.Label(); l != nil {
 			o := c.targetOutputs(*l)
 			if o == nil {
@@ -345,25 +345,6 @@ func (c *Client) uploadInput(b *dirBuilder, ch chan<- *uploadinfo.Entry, input c
 		}
 	}
 	return nil
-}
-
-// iterInputs yields all the input files needed for a target.
-func (c *Client) iterInputs(target *core.BuildTarget, isTest, isFilegroup bool) <-chan core.BuildInput {
-	if !isTest {
-		return core.IterInputs(c.state.Graph, target, true, isFilegroup)
-	}
-	ch := make(chan core.BuildInput)
-	go func() {
-		ch <- target.Label
-		for _, datum := range target.AllData() {
-			ch <- datum
-		}
-		for _, datum := range target.TestTools() {
-			ch <- datum
-		}
-		close(ch)
-	}()
-	return ch
 }
 
 // buildMetadata converts an ActionResult into one of our BuildMetadata protos.
