@@ -8,8 +8,8 @@ import (
 
 	"github.com/peterebden/go-cli-init/v4/flags"
 
-	"github.com/thought-machine/please/tools/please_go/test"
 	"github.com/thought-machine/please/tools/please_go/install"
+	"github.com/thought-machine/please/tools/please_go/test"
 )
 
 var opts = struct {
