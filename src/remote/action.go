@@ -102,7 +102,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 			Arguments: []string{
 				"fetch", strings.Join(target.AllURLs(state), " "), "verify", strings.Join(target.Hashes, " "),
 			},
-			OutputPaths:       outs,
+			OutputPaths: outs,
 		}, nil
 	}
 	cmd := target.GetCommand(state)
