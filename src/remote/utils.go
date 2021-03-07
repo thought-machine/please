@@ -334,28 +334,6 @@ func timeout(target *core.BuildTarget, test bool) time.Duration {
 	return target.BuildTimeout
 }
 
-// outputs returns the outputs of a target, split arbitrarily and inaccurately
-// into files and directories.
-// After some discussion we are hoping that servers are permissive about this if
-// we get it wrong; we prefer to make an effort though as a minor nicety.
-func outputs(target *core.BuildTarget) (files, dirs []string) {
-	outs := target.Outputs()
-	files = make([]string, 0, len(outs))
-	for _, out := range outs {
-		out = target.GetTmpOutput(out)
-		if !strings.ContainsRune(path.Base(out), '.') && !strings.HasSuffix(out, "file") && !target.IsBinary {
-			dirs = append(dirs, out)
-		} else {
-			files = append(files, out)
-		}
-	}
-
-	for _, out := range target.OutputDirectories {
-		dirs = append(dirs, out.Dir())
-	}
-	return files, dirs
-}
-
 // A dirBuilder is for helping build up a tree of Directory protos.
 //
 // This is pretty awkward; we need to recursively build a whole set of directories
