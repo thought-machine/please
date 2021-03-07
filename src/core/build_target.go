@@ -606,6 +606,19 @@ func (target *BuildTarget) FullOutputs() []string {
 	return outs
 }
 
+// AllOutputs returns a slice of all the outputs of this rule, including any output directories.
+// Outs are passed through GetTmpOutput as appropriate.
+func (target *BuildTarget) AllOutputs() []string {
+	outs := target.Outputs()
+	for i, out := range outs {
+		outs[i] = target.GetTmpOutput(out)
+	}
+	for _, out := range target.OutputDirectories {
+		outs = append(outs, out.Dir())
+	}
+	return outs
+}
+
 // NamedOutputs returns a slice of all the outputs of this rule with a given name.
 // If the name is not declared by this rule it panics.
 func (target *BuildTarget) NamedOutputs(name string) []string {
