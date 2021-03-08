@@ -108,6 +108,26 @@ int mount_tmp() {
         perror("setenv");
         return 1;
     }
+    // If SANDBOX_DIRS is set, we expect a comma-separated list of directories to mount a tmpfs over in order to hide them.
+    // If one or more directories don't exist, that is OK, but any other error is fatal.
+    char* dirs = getenv("SANDBOX_DIRS");
+    if (dirs != NULL) {
+      char *token = strtok(dirs, ",");
+      while(token) {
+        if (mount("tmpfs", token, "tmpfs", flags | MS_RDONLY, NULL) != 0) {
+          if (errno == ENOTDIR) {
+            // This isn't fatal, it's OK for them not to exist (in that case we just have nothing to sandbox).
+            fprintf(stderr, "Not mounting over %s since it isn't a directory\n", token);
+          } else {
+            perror("mount tmpfs");
+            return 1;
+          }
+        }
+        token = strtok(NULL, ",");
+      }
+      // Remove the env var; downstream things don't need to know what these were.
+      unsetenv("SANDBOX_DIRS");
+    }
     if (!dir) {
         fputs("TMP_DIR not set, will not bind-mount to /tmp/plz_sandbox\n", stderr);
         return 0;
@@ -130,26 +150,6 @@ int mount_tmp() {
     if (mount("none", "/", NULL, MS_REMOUNT | MS_RDONLY | MS_BIND, NULL) != 0) {
         perror("remount ro");
         return 1;
-    }
-    // If SANDBOX_DIRS is set, we expect a comma-separated list of directories to mount a tmpfs over in order to hide them.
-    // If one or more directories don't exist, that is OK, but any other error is fatal.
-    char* dirs = getenv("SANDBOX_DIRS");
-    if (dirs != NULL) {
-      char *token = strtok(dirs, ",");
-      while(token) {
-        if (mount("tmpfs", token, "tmpfs", flags, NULL) != 0) {
-          if (errno == ENOTDIR) {
-            // This isn't fatal, it's OK for them not to exist (in that case we just have nothing to sandbox).
-            fprintf(stderr, "Not mounting over %s since it isn't a directory\n", token);
-          } else {
-            perror("mount tmpfs");
-            return 1;
-          }
-        }
-        token = strtok(NULL, ",");
-      }
-      // Remove the env var; downstream things don't need to know what these were.
-      unsetenv("SANDBOX_DIRS");
     }
     return chdir(d);
 }
