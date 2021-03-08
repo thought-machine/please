@@ -429,7 +429,7 @@
         </h3>
 
         <p>
-          Activates sandboxing for individual build actions, which isolates them
+          Activates sandboxing for build actions, which isolates them
           from network access, IPC and some aspects of the filesystem. Currently
           only works on Linux. Defaults to <code class="code">False</code>.<br />
           <span class="red">Deprecated from v16: use <a href="#sandbox">sandbox.build</a> instead.
@@ -496,7 +496,7 @@
 
         <p>
           The binary to use for sandboxing build/test actions. Typically this
-          is <code>please_sandbox</code>.<br />
+          is <code>please_sandbox</code>, which currently only does anything on Linux.<br />
           It receives the program to execute and all its arguments in its <code>argv</code>,
           it is expected to do whatever it needs to then <code>exec</code> the real action.
         </p>
@@ -509,7 +509,7 @@
         </h3>
 
         <p>
-          Activates sandboxing for individual build actions, which isolates them
+          Activates sandboxing for build actions, which isolates them
           from network access, IPC and the repo-local filesystem. Currently
           only works on Linux. Defaults to <code class="code">False</code>.
         </p>
@@ -522,7 +522,7 @@
         </h3>
 
         <p>
-          Activates sandboxing for individual test actions, which isolates them
+          Activates sandboxing for test actions, which isolates them
           from network access, IPC and the repo-local filesystem. Currently
           only works on Linux. Defaults to <code class="code">False</code>.
         </p>
@@ -744,7 +744,7 @@
         </h3>
 
         <p>
-          Activates sandboxing for individual tests, which isolates them from
+          Activates sandboxing for tests, which isolates them from
           network access, IPC and some aspects of the filesystem. Currently only
           works on Linux. Defaults to <code class="code">False</code>.
           <span class="red">Deprecated from v16: use <a href="#sandbox">sandbox.test</a> instead.
