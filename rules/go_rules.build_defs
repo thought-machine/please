@@ -953,7 +953,7 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
         ]
 
     if binary:
-        if CONFIG.OS == CONFIG.HOSTOS and CONFIG.OS == CONFIG.HOSTARCH:
+        if CONFIG.OS == CONFIG.HOSTOS and CONFIG.ARCH == CONFIG.HOSTARCH:
             outs = [f'bin/{name}']
         else:
             outs = [f'bin/{CONFIG.GOOS}_{CONFIG.GOARCH}/{name}']
