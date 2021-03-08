@@ -90,9 +90,8 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		commandPrefix += fmt.Sprintf("export %s=\"%s\" && ", k, v)
 	}
 
-	// TODO(peterebden): Remove this nonsense once API v2.1 is released.
-	files, dirs := outputs(target)
-	if len(target.Outputs()) == 1 { // $OUT is relative when running remotely; make it absolute
+	outs := target.AllOutputs()
+	if len(outs) == 1 { // $OUT is relative when running remotely; make it absolute
 		commandPrefix += `export OUT="$TMP_DIR/$OUT" && `
 	}
 	if target.IsRemoteFile {
@@ -103,9 +102,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 			Arguments: []string{
 				"fetch", strings.Join(target.AllURLs(state), " "), "verify", strings.Join(target.Hashes, " "),
 			},
-			OutputFiles:       files,
-			OutputDirectories: dirs,
-			OutputPaths:       append(files, dirs...),
+			OutputPaths: outs,
 		}, nil
 	}
 	cmd := target.GetCommand(state)
@@ -117,9 +114,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		Platform:             c.platform,
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp), target.Sandbox),
-		OutputFiles:          files,
-		OutputDirectories:    dirs,
-		OutputPaths:          append(files, dirs...),
+		OutputPaths:          outs,
 	}, err
 }
 
