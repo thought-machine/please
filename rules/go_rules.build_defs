@@ -69,6 +69,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         } if CONFIG.CGO_ENABLED == "1" else {},
         binary = True,
         visibility = visibility,
+        building_description = "Installing...",
     )
 
 
@@ -952,7 +953,11 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
         ]
 
     if binary:
-        outs = ['bin/' + name]
+        if CONFIG.OS == CONFIG.HOSTOS and CONFIG.OS == CONFIG.HOSTARCH:
+            outs = [f'bin/{name}']
+        else:
+            outs = [f'bin/{CONFIG.GOOS}_{CONFIG.GOARCH}/{name}']
+
     else:
         outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in outs]
         # Outputs are created one directory down from where we want them.
