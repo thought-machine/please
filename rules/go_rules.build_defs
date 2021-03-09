@@ -254,6 +254,10 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
     else:
         outs = [out]
 
+
+    package_path = _get_import_path(import_path)
+    if not package_path.endswith(package):
+        package_path = f"{package_path}/{package}"
     return build_rule(
         name=name,
         srcs=srcs,
@@ -265,7 +269,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         building_description="Compiling...",
         requires=['go'],
         provides={'go': ':' + name, 'go_src': src_rule},
-        labels = labels+link_labels,
+        labels = labels+link_labels + [f"go_package:{package_path}"] if _generate_import_config else [],
         test_only=test_only,
         tools=tools,
         needs_transitive_deps=_needs_transitive_deps,
@@ -325,7 +329,7 @@ def _get_import_path(import_path):
     pkg = package_name()
 
     if CONFIG.GO_IMPORT_PATH:
-        return f'{CONFIG.GO_IMPORT_PATH}/{pkg}' if pkg else CONFIG.GO_IMPORT_PATH
+        return f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
 
     return pkg
 
@@ -1149,6 +1153,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             "go": f":{name}", # provide the filegroup otherwise exported deps don't work
             "go_src": download,
         },
+        labels = [f"go_package:{i}" for i in install],
         visibility = visibility,
         needs_transitive_deps = True,
         test_only = test_only,
@@ -1244,6 +1249,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
     get_roots = []
     provides = {}
     srcs = []
+    packages = []
     for getone, revision, tag, module_major_version in zip(get, revision, tags, module_major_version):
         get_rule, getroot = _go_get_download(
             name = name,
@@ -1265,19 +1271,24 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         installone = get_param_as_list(install, getone)
         if not install or (len(get) > 1 and isinstance(install, list)):
             outs += [getroot]
+            packages += [f"{getroot}/..."]
         else:
             for i in installone:
                 if not i or i == ".":
                     outs += [getroot + ".a"]
+                    packages += [getroot]
                 elif i == "...":
                     get_roots += [getroot]
                     outs += [getroot]
+                    packages += [f"{getroot}/..."]
                 elif i.endswith("/..."):
                     out = getroot + "/" + i.removesuffix("/...")
                     get_roots += [out]
                     outs += [out]
+                    packages += [f"{out}/..."]
                 else:
                     outs += [f"{getroot}/{i}.a"]
+                    packages += [f"{getroot}/{i}"]
 
         if installone:
             all_installs += [i if i.startswith(getroot) else (getroot + '/' + i) for i in installone]
@@ -1334,6 +1345,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         test_only = test_only,
         requires = ['go'],
         binary = binary,
+        labels = [f"go_package:{p}" for p in packages],
     )
 
 
