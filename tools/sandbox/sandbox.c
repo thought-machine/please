@@ -82,9 +82,28 @@ int map_ids(int out_id, const char* path) {
     return 0;
 }
 
+// exec_name returns the name of the new binary to exec() as.
+// old_name is the current name; if it's within old_dir it will be re-prefixed to new_dir.
+char* exec_name(char* old_name, const char* old_dir, const char* new_dir) {
+  const int new_dir_len = strlen(new_dir);
+  const int old_dir_len = strlen(old_dir);
+  const int old_name_len = strlen(old_name);
+  if (strncmp(old_dir, old_name, old_dir_len) != 0) {  // is old_name prefixed with old_dir
+    return old_name;
+  }
+  const int new_len = new_dir_len + old_name_len - old_dir_len + 1;
+  char* new_name = malloc(new_len + 1);
+  strcpy(new_name, new_dir);
+  strcpy(new_name + new_dir_len, old_name + old_dir_len);
+  new_name[new_len] = 0;
+  return new_name;
+}
+
 // mount_tmp mounts a tmpfs on /tmp for the tests to muck about in and
 // bind mounts the test directory to /tmp/plz_sandbox.
-int mount_tmp() {
+// If the given string pointer (the argv[0] of the new process) is within the old temp dir
+// then it will be replaced with a new version pointing into the new sandbox dir.
+int mount_tmp(char** argv0) {
     // Don't mount on /tmp if our tmp dir is under there, otherwise we won't be able to see it.
     const char* dir = getenv("TMP_DIR");
     const char* d = "/tmp/plz_sandbox";
@@ -151,6 +170,7 @@ int mount_tmp() {
         perror("remount ro");
         return 1;
     }
+    *argv0 = exec_name(*argv0, dir, d);
     return chdir(d);
 }
 
@@ -192,7 +212,7 @@ int contain_child(void* p) {
     return 1;
   }
   if (arg->mount) {
-    if (mount_tmp() != 0) {
+    if (mount_tmp(&arg->argv[0]) != 0) {
       return 1;
     }
     if (mount_proc() != 0) {
