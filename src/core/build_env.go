@@ -86,7 +86,12 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	)
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
-		env = append(env, "OUT="+path.Join(tmpDir, outEnv[0]))
+		// TODO(peterebden): This is a bit grungy, we should move towards OUT being relative.
+		if target.Sandbox {
+			env = append(env, "OUT="+path.Join(SandboxDir, outEnv[0]))
+		} else {
+			env = append(env, "OUT="+path.Join(tmpDir, outEnv[0]))
+		}
 	}
 	// The SRC variable is only available on rules that have a single source file.
 	if len(sources) == 1 {
