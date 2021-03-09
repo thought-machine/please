@@ -39,10 +39,10 @@ var opts = struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
 	} `command:"testmain" alias:"t" description:"Generates a go main package to run the tests in a package."`
-	GoDeps struct{
-		PlzTool string `long:"plz_tool" description:"The please tool to use" default:"plz"`
+	GoDeps struct {
+		PlzTool string   `long:"plz_tool" description:"The please tool to use" default:"plz"`
 		Targets []string `long:"targets" description:"Parts of the graph to consider. Is passed to plz query graph."`
-		Args       struct {
+		Args    struct {
 			Imports []string `positional-arg-name:"sources" description:"Imports to resolve"`
 		} `positional-args:"true" required:"true"`
 	} `command:"godeps"`

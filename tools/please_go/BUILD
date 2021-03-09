@@ -40,8 +40,8 @@ go_binary(
     visibility = ["PUBLIC"],
     deps = [
         ":flags",
+        "//tools/please_go/godeps",
         "//tools/please_go/install",
         "//tools/please_go/test",
-        "//tools/please_go/godeps",
     ],
 )

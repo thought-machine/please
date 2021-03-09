@@ -9,28 +9,28 @@ import (
 	"strings"
 )
 
-type Target struct {
-	Labels []string `json:"labels"`
-	X map[string]interface{} `json:"-"` // Rest of the fields should go here.
+type target struct {
+	Labels []string               `json:"labels"`
+	X      map[string]interface{} `json:"-"` // Rest of the fields should go here.
 }
 
-type Package struct {
-	Targets map[string]*Target `json:"targets"`
+type pkg struct {
+	Targets map[string]*target `json:"targets"`
 }
 
-type Graph struct {
-	Pkgs map[string]*Package `json:"packages"`
+type graph struct {
+	Pkgs map[string]*pkg `json:"packages"`
 }
 
-
+// Resolver can resolve go imports to Please build targets
 type Resolver interface {
 	Resolve(importPath string) (string, error)
 }
 
 type trie struct {
 	// TODO(jpoole): this could be quite large. Consider sync.Map and making this split workers per package.
-	nodes map[string]*trie
-	target string
+	nodes    map[string]*trie
+	target   string
 	matchAll bool
 }
 
@@ -69,13 +69,14 @@ func (t *trie) find(soFar []string, path []string) (string, error) {
 	node, ok := t.nodes[path[0]]
 	if !ok {
 		soFarStr := strings.Join(soFar, "/")
-		pathStr :=  strings.Join(append(soFar, path...), "/")
+		pathStr := strings.Join(append(soFar, path...), "/")
 		return "", fmt.Errorf("cant resolve %s in graph, %s doesn't contain %s", pathStr, soFarStr, path[0])
 	}
 
 	return node.find(append(soFar, path[0]), path[1:])
 }
 
+// Resolve will resolve an import path to a please target
 func (t *trie) Resolve(importPath string) (string, error) {
 	return t.find([]string{}, strings.Split(importPath, "/"))
 }
@@ -90,18 +91,16 @@ func GoDeps(plz string, targets, imports []string) {
 	for _, i := range imports {
 		target, err := resolver.Resolve(i)
 		if err != nil {
-			//TODO(jpoole): handle this
 			log.Fatal(err)
 		}
 		fmt.Printf("%s %s\n", i, target)
 	}
 }
 
-
 // BuildResolver build a resolver from the build graph. For performance, it might be desired to only process part of the
-// build graph. For this reason, you can pass wildcard build labels to targets e.g. //src/..., otherwise the whole graph
+// build graph. For this reason, you can pass wildcard build labels to targets, otherwise the whole graph
 // is processed
-func BuildResolver(plz string, targets []string) (*trie, error) {
+func BuildResolver(plz string, targets []string) (Resolver, error) {
 	cmd := exec.Command(plz, append([]string{"query", "graph"}, targets...)...)
 	stdOut := &bytes.Buffer{}
 	cmd.Stdout = stdOut
@@ -111,7 +110,7 @@ func BuildResolver(plz string, targets []string) (*trie, error) {
 		return nil, fmt.Errorf("error building import mapping: %w\nOutput: %s", err, stdOut.String())
 	}
 
-	graph := new(Graph)
+	graph := new(graph)
 	if err := json.Unmarshal(stdOut.Bytes(), &graph); err != nil {
 		panic(err)
 	}
@@ -123,7 +122,7 @@ func BuildResolver(plz string, targets []string) (*trie, error) {
 	return t, nil
 }
 
-func (pkg *Graph) goPackages() map[string]string {
+func (pkg *graph) goPackages() map[string]string {
 	ret := make(map[string]string)
 	for name, pkg := range pkg.Pkgs {
 		for t, pkg := range pkg.goPackages(name) {
@@ -133,7 +132,7 @@ func (pkg *Graph) goPackages() map[string]string {
 	return ret
 }
 
-func (pkg *Package) goPackages(name string) map[string]string {
+func (pkg *pkg) goPackages(name string) map[string]string {
 	ret := make(map[string]string)
 	for targetName, t := range pkg.Targets {
 		for _, l := range t.Labels {
