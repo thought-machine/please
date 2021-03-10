@@ -80,7 +80,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
         )
         deps += [zip_rule]
     elif strip:
-        raise ParseError("Can't pass strip=True to a python_library with no srcs")
+        fail("Can't pass strip=True to a python_library with no srcs")
 
     return filegroup(
         name=name,
@@ -488,8 +488,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     initial = package_name[0]
     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
     if not url_base:
-        raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly '
-                         'to python_wheel')
+        fail('python.wheel_repo is not set in the config, must pass repo explicitly to python_wheel')
     urls = []
     if name_scheme:
         urls += [name_scheme.format(url_base=url_base,
