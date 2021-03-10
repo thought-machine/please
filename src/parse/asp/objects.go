@@ -658,7 +658,7 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 // For performance reasons these are done differently - rather then receiving a pointer to a scope
 // they receive their arguments as a slice, in which unpassed arguments are nil.
 func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
-	args := make([]pyObject, len(f.args))
+	args := make([]pyObject, f.numCallArgs(c))
 	offset := 0
 	if f.self != nil {
 		args[0] = f.self
@@ -691,6 +691,18 @@ func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
 	return f.nativeCode(s, args)
 }
 
+// numCallArgs returns the number of arguments we're going to need for a call to this function.
+func (f *pyFunc) numCallArgs(c *Call) int {
+	n := len(f.args)
+	if len(c.Arguments) > n && (f.varargs || f.kwargs) {
+		n = len(c.Arguments)
+		if f.self != nil {
+			n++
+		}
+	}
+	return n
+}
+
 // defaultArg returns the default value for an argument, whether it's constant or not.
 func (f *pyFunc) defaultArg(s *scope, i int, arg string) pyObject {
 	if f.constants[i] != nil {
@@ -721,8 +733,10 @@ func (f *pyFunc) Member(obj pyObject) pyObject {
 // validateType validates that this argument matches the given type
 func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 	val := s.interpretExpression(expr)
-	if f.types[i] == nil {
-		return val
+	if i >= len(f.types) && (f.varargs || f.kwargs) {
+		return val // function is varargs so we have no type signature for this
+	} else if f.types[i] == nil {
+		return val // not varargs but we just don't have a type signature, so take it as it is
 	} else if val == None {
 		if f.constants[i] == nil && (f.defaults == nil || f.defaults[i] == nil) {
 			return val
