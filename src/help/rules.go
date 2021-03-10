@@ -78,6 +78,13 @@ func addAllFunctions(m map[string]*asp.Statement, stmts []*asp.Statement, builti
 		if f := stmt.FuncDef; f != nil && !f.IsPrivate && f.Docstring != "" {
 			f.Docstring = strings.TrimSpace(strings.Trim(f.Docstring, `"`))
 			f.IsBuiltin = builtin
+			args := make([]asp.Argument, 0, len(f.Arguments))
+			for _, arg := range f.Arguments {
+				if !arg.IsPrivate {
+					args = append(args, arg)
+				}
+			}
+			f.Arguments = args
 			m[f.Name] = stmt
 		}
 	}
