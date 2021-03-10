@@ -8,6 +8,7 @@ import (
 
 	"github.com/peterebden/go-cli-init/v4/flags"
 
+	"github.com/thought-machine/please/tools/please_go/godeps"
 	"github.com/thought-machine/please/tools/please_go/install"
 	"github.com/thought-machine/please/tools/please_go/test"
 )
@@ -38,6 +39,13 @@ var opts = struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
 	} `command:"testmain" alias:"t" description:"Generates a go main package to run the tests in a package."`
+	GoDeps struct {
+		PlzTool string   `long:"plz_tool" description:"The please tool to use" default:"plz"`
+		Targets []string `long:"targets" description:"Parts of the graph to consider. Is passed to plz query graph."`
+		Args    struct {
+			Imports []string `positional-arg-name:"sources" description:"Imports to resolve"`
+		} `positional-args:"true" required:"true"`
+	} `command:"godeps"`
 }{
 	Usage: `
 please-go is used by the go build rules to compile and test go modules and packages.
@@ -73,6 +81,10 @@ var subCommands = map[string]func() int{
 			opts.Test.Exclude,
 			opts.Test.Benchmark,
 		)
+		return 0
+	},
+	"godeps": func() int {
+		godeps.GoDeps(opts.GoDeps.PlzTool, opts.GoDeps.Targets, opts.GoDeps.Args.Imports)
 		return 0
 	},
 }
