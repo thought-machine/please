@@ -210,11 +210,15 @@ def dirname(p:str) -> str:
     return before
 
 
-# Exception types.
-# There is no actual Exception, but str() is similar enough here.
-ParseError = str
-ConfigError = str
-ValueError = str
+def _deprecated_exception(msg):
+    log.warning('Builtin exception types are deprecated, please use fail() instead. ' +
+                'See https://github.com/thought-machine/please/issues/1598 for more information.')
+    return str(msg)
+
+# These are deprecated and will be removed in v17.
+ParseError = _deprecated_exception
+ConfigError = _deprecated_exception
+ValueError = _deprecated_exception
 
 
 # Post-build callback functions.
