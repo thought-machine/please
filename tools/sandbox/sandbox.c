@@ -82,23 +82,6 @@ int map_ids(int out_id, const char* path) {
     return 0;
 }
 
-// exec_name returns the name of the new binary to exec() as.
-// old_name is the current name; if it's within old_dir it will be re-prefixed to new_dir.
-char* exec_name(const char* old_name, const char* old_dir, const char* new_dir) {
-  const int new_dir_len = strlen(new_dir);
-  const int old_dir_len = strlen(old_dir);
-  const int old_name_len = strlen(old_name);
-  if (strncmp(old_dir, old_name, old_dir_len) != 0) {  // is old_name prefixed with old_dir
-    return (char*)old_name;  // Dodgy cast but we know we don't alter it again later.
-  }
-  const int new_len = new_dir_len + old_name_len - old_dir_len + 1;
-  char* new_name = malloc(new_len + 1);
-  strcpy(new_name, new_dir);
-  strcpy(new_name + new_dir_len, old_name + old_dir_len);
-  new_name[new_len] = 0;
-  return new_name;
-}
-
 // mount_tmp mounts a tmpfs on /tmp for the tests to muck about in and
 // bind mounts the test directory to /tmp/plz_sandbox.
 // If the given string pointer (the argv[0] of the new process) is within the old temp dir
@@ -280,3 +263,20 @@ int contain(char* argv[], bool net, bool mount) {
 }
 
 #endif  // __linux__
+
+// exec_name returns the name of the new binary to exec() as.
+// old_name is the current name; if it's within old_dir it will be re-prefixed to new_dir.
+char* exec_name(const char* old_name, const char* old_dir, const char* new_dir) {
+  const int new_dir_len = strlen(new_dir);
+  const int old_dir_len = strlen(old_dir);
+  const int old_name_len = strlen(old_name);
+  if (strncmp(old_dir, old_name, old_dir_len) != 0) {  // is old_name prefixed with old_dir
+    return (char*)old_name;  // Dodgy cast but we know we don't alter it again later.
+  }
+  const int new_len = new_dir_len + old_name_len - old_dir_len + 1;
+  char* new_name = malloc(new_len + 1);
+  strcpy(new_name, new_dir);
+  strcpy(new_name + new_dir_len, old_name + old_dir_len);
+  new_name[new_len] = 0;
+  return new_name;
+}
