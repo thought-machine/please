@@ -26,7 +26,7 @@ func TestCanGlobFileAtRootWithDoubleStar(t *testing.T) {
 }
 
 func TestCanGlobDirectories(t *testing.T) {
-	files, err := glob("src/fs", "test_data/*", nil,  false)
+	files, err := glob("src/fs", "test_data/*", nil, false)
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []string{
 		"src/fs/test_data/test_subfolder++",
