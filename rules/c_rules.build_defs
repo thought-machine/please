@@ -187,7 +187,7 @@ def c_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_f
 
 def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compiler_flags:list&cflags&copts=[],
              linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, pkg_config_libs:list=[],
-             pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False):
+             pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, includes:list=[], defines:list=[]):
     """Builds a binary from a collection of C rules.
 
     Args:
@@ -202,6 +202,10 @@ def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compile
       visibility (list): Visibility declaration for this rule.
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
+      includes (list): List of include directories to be added to the compiler's path.
+      defines (list | dict): List of tokens to define in the preprocessor.
+                             Alternatively can be a dict of name -> value to define, in which case
+                             values are surrounded by quotes.
       test_only (bool): If True, this rule can only be used by tests.
       static (bool): If True, the binary will be linked statically.
     """
@@ -217,6 +221,8 @@ def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compile
         linker_flags = linker_flags,
         pkg_config_libs = pkg_config_libs,
         pkg_config_cflags = pkg_config_cflags,
+        includes = includes,
+        defines = defines,
         static = static,
         _c = True,
     )
