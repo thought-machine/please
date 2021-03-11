@@ -70,12 +70,12 @@ func Glob(buildFileNames []string, rootPath string, includes, excludes []string,
 
 // A Globber is used to implement Glob. You can persist one for use to save repeated filesystem calls, but
 // it isn't safe for use in concurrent goroutines.
-type Globber struct{
+type Globber struct {
 	buildFileNames []string
 	walkedDirs     map[string]walkedDir
 }
 
-type walkedDir struct{
+type walkedDir struct {
 	fileNames, subPackages []string
 }
 
@@ -83,7 +83,7 @@ type walkedDir struct{
 func NewGlobber(buildFileNames []string) *Globber {
 	return &Globber{
 		buildFileNames: buildFileNames,
-		walkedDirs: map[string]walkedDir{},
+		walkedDirs:     map[string]walkedDir{},
 	}
 }
 
