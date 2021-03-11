@@ -658,7 +658,7 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 // For performance reasons these are done differently - rather then receiving a pointer to a scope
 // they receive their arguments as a slice, in which unpassed arguments are nil.
 func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
-	args := make([]pyObject, f.numCallArgs(c))
+	args := make([]pyObject, len(f.args))
 	offset := 0
 	if f.self != nil {
 		args[0] = f.self
@@ -678,7 +678,11 @@ func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
 			args = append(args, s.interpretExpression(&a.Value))
 		} else {
 			s.NAssert(f.kwargsonly, "Function %s can only be called with keyword arguments", f.name)
-			args[i+offset] = f.validateType(s, i+offset, &a.Value)
+			if i+offset >= len(args) {
+				args = append(args, f.validateType(s, i+offset, &a.Value))
+			} else {
+				args[i+offset] = f.validateType(s, i+offset, &a.Value)
+			}
 		}
 	}
 
@@ -689,18 +693,6 @@ func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
 		}
 	}
 	return f.nativeCode(s, args)
-}
-
-// numCallArgs returns the number of arguments we're going to need for a call to this function.
-func (f *pyFunc) numCallArgs(c *Call) int {
-	n := len(f.args)
-	if len(c.Arguments) > n && (f.varargs || f.kwargs) {
-		n = len(c.Arguments)
-		if f.self != nil {
-			n++
-		}
-	}
-	return n
 }
 
 // defaultArg returns the default value for an argument, whether it's constant or not.

@@ -442,6 +442,9 @@ func strFormat(s *scope, args []pyObject) pyObject {
 	for k, v := range s.locals {
 		self = strings.ReplaceAll(self, "{"+k+"}", v.String())
 	}
+	for _, arg := range args[1:] {
+		self = strings.Replace(self, "{}", arg.String(), 1)
+	}
 	return pyString(strings.ReplaceAll(strings.ReplaceAll(self, "{{", "{"), "}}", "}"))
 }
 
