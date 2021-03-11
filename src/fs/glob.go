@@ -65,6 +65,29 @@ func IsGlob(pattern string) bool {
 // Glob implements matching using Go's built-in filepath.Glob, but extends it to support
 // Ant-style patterns using **.
 func Glob(buildFileNames []string, rootPath string, includes, excludes []string, includeHidden bool) []string {
+	return NewGlobber(buildFileNames).Glob(rootPath, includes, excludes, includeHidden)
+}
+
+// A Globber is used to implement Glob. You can persist one for use to save repeated filesystem calls, but
+// it isn't safe for use in concurrent goroutines.
+type Globber struct{
+	buildFileNames []string
+	walkedDirs     map[string]walkedDir
+}
+
+type walkedDir struct{
+	fileNames, subPackages []string
+}
+
+// NewGlobber creates a new Globber. You should call this rather than creating one directly (or use Glob() if you don't care).
+func NewGlobber(buildFileNames []string) *Globber {
+	return &Globber{
+		buildFileNames: buildFileNames,
+		walkedDirs: map[string]walkedDir{},
+	}
+}
+
+func (globber *Globber) Glob(rootPath string, includes, excludes []string, includeHidden bool) []string {
 	if rootPath == "" {
 		rootPath = "."
 	}
@@ -73,7 +96,7 @@ func Glob(buildFileNames []string, rootPath string, includes, excludes []string,
 	for _, include := range includes {
 		mustBeValidGlobString(include)
 
-		matches, err := glob(rootPath, include, excludes, buildFileNames, includeHidden)
+		matches, err := globber.glob(rootPath, include, excludes, includeHidden)
 		if err != nil {
 			panic(fmt.Errorf("error globbing files with %v: %v", include, err))
 		}
@@ -85,38 +108,27 @@ func Glob(buildFileNames []string, rootPath string, includes, excludes []string,
 	return filenames
 }
 
-func glob(rootPath string, glob string, excludes []string, buildFileNames []string, includeHidden bool) ([]string, error) {
+func (globber *Globber) glob(rootPath string, glob string, excludes []string, includeHidden bool) ([]string, error) {
 	p, err := patternToMatcher(rootPath, glob)
 	if err != nil {
 		return nil, err
 	}
-
-	var globMatches []string
-	var subPackages []string
-	err = Walk(rootPath, func(name string, isDir bool) error {
-		if isBuildFile(buildFileNames, name) {
-			packageName := filepath.Dir(name)
-			if packageName != rootPath {
-				subPackages = append(subPackages, packageName)
-				return filepath.SkipDir
-			}
-		}
-		match, err := p.Match(name)
-		if err != nil {
-			return err
-		}
-		if match {
-			globMatches = append(globMatches, name)
-		}
-		return nil
-	})
+	walkedDir, err := globber.walkDir(rootPath)
 	if err != nil {
 		return nil, err
+	}
+	var globMatches []string
+	for _, name := range walkedDir.fileNames {
+		if match, err := p.Match(name); err != nil {
+			return nil, err
+		} else if match {
+			globMatches = append(globMatches, name)
+		}
 	}
 
 	matches := make([]string, 0, len(globMatches))
 	for _, m := range globMatches {
-		if isInDirectories(m, subPackages) {
+		if isInDirectories(m, walkedDir.subPackages) {
 			continue
 		}
 		if !includeHidden && isHidden(m) {
@@ -134,6 +146,28 @@ func glob(rootPath string, glob string, excludes []string, buildFileNames []stri
 		matches = append(matches, m)
 	}
 	return matches, nil
+}
+
+func (globber *Globber) walkDir(rootPath string) (walkedDir, error) {
+	if dir, present := globber.walkedDirs[rootPath]; present {
+		return dir, nil
+	}
+	dir := walkedDir{}
+	if err := Walk(rootPath, func(name string, isDir bool) error {
+		if isBuildFile(globber.buildFileNames, name) {
+			packageName := filepath.Dir(name)
+			if packageName != rootPath {
+				dir.subPackages = append(dir.subPackages, packageName)
+				return filepath.SkipDir
+			}
+		}
+		dir.fileNames = append(dir.fileNames, name)
+		return nil
+	}); err != nil {
+		return dir, err
+	}
+	globber.walkedDirs[rootPath] = dir
+	return dir, nil
 }
 
 func mustBeValidGlobString(glob string) {

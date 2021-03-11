@@ -480,7 +480,10 @@ func glob(s *scope, args []pyObject) pyObject {
 	exclude := asStringList(s, args[1], "exclude")
 	hidden := args[2].IsTruthy()
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
-	return fromStringList(fs.Glob(s.state.Config.Parse.BuildFileName, s.pkg.SourceRoot(), include, exclude, hidden))
+	if s.globber == nil {
+		s.globber = fs.NewGlobber(s.state.Config.Parse.BuildFileName)
+	}
+	return fromStringList(s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden))
 }
 
 func asStringList(s *scope, arg pyObject, name string) []string {
