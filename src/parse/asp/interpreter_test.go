@@ -367,4 +367,5 @@ func TestFormat(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/format.build")
 	assert.NoError(t, err)
 	assert.EqualValues(t, `LLVM_NATIVE_ARCH=\"x86\"`, s.Lookup("arch"))
+	assert.EqualValues(t, `ARCH="linux_amd64"`, s.Lookup("arch2"))
 }
