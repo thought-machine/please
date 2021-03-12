@@ -434,6 +434,9 @@ go_module(
     name = "numcpus",
     module = "github.com/tklauser/numcpus",
     version = "v0.2.1",
+    deps = [
+        ":xsys",
+    ],
 )
 
 go_module(
