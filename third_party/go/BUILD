@@ -413,8 +413,27 @@ go_module(
         "mem",
     ],
     module = "github.com/shirou/gopsutil",
-    version = "v2.17.09",
-    deps = [":xsys"],
+    version = "v3.21.2",
+    deps = [
+        ":sysconf",
+        ":xsys",
+    ],
+)
+
+go_module(
+    name = "sysconf",
+    module = "github.com/tklauser/go-sysconf",
+    version = "v0.3.4",
+    deps = [
+        ":numcpus",
+        ":xsys",
+    ],
+)
+
+go_module(
+    name = "numcpus",
+    module = "github.com/tklauser/numcpus",
+    version = "v0.2.1",
 )
 
 go_module(
