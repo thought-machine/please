@@ -19,3 +19,11 @@ c_binary(
     visibility = ["PUBLIC"],
     deps = [":sandbox"],
 )
+
+cc_test(
+    name = "sandbox_test",
+    srcs = ["sandbox_test.cc"],
+    deps = [
+        ":sandbox",
+    ],
+)
