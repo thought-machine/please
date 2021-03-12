@@ -90,9 +90,8 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		commandPrefix += fmt.Sprintf("export %s=\"%s\" && ", k, v)
 	}
 
-	// TODO(peterebden): Remove this nonsense once API v2.1 is released.
-	files, dirs := outputs(target)
-	if len(target.Outputs()) == 1 { // $OUT is relative when running remotely; make it absolute
+	outs := target.AllOutputs()
+	if len(outs) == 1 { // $OUT is relative when running remotely; make it absolute
 		commandPrefix += `export OUT="$TMP_DIR/$OUT" && `
 	}
 	if target.IsRemoteFile {
@@ -103,9 +102,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 			Arguments: []string{
 				"fetch", strings.Join(target.AllURLs(state), " "), "verify", strings.Join(target.Hashes, " "),
 			},
-			OutputFiles:       files,
-			OutputDirectories: dirs,
-			OutputPaths:       append(files, dirs...),
+			OutputPaths: outs,
 		}, nil
 	}
 	cmd := target.GetCommand(state)
@@ -117,9 +114,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		Platform:             c.platform,
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp), target.Sandbox),
-		OutputFiles:          files,
-		OutputDirectories:    dirs,
-		OutputPaths:          append(files, dirs...),
+		OutputPaths:          outs,
 	}, err
 }
 
@@ -202,7 +197,7 @@ func (c *Client) uploadInputs(ch chan<- *uploadinfo.Entry, target *core.BuildTar
 // directory structure of the input dir. The caller is expected to finalise this by calling Build().
 func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
 	b := newDirBuilder(c)
-	for input := range c.iterInputs(target, isTest, target.IsFilegroup) {
+	for input := range c.state.IterInputs(target, isTest) {
 		if l := input.Label(); l != nil {
 			o := c.targetOutputs(*l)
 			if o == nil {
@@ -345,25 +340,6 @@ func (c *Client) uploadInput(b *dirBuilder, ch chan<- *uploadinfo.Entry, input c
 		}
 	}
 	return nil
-}
-
-// iterInputs yields all the input files needed for a target.
-func (c *Client) iterInputs(target *core.BuildTarget, isTest, isFilegroup bool) <-chan core.BuildInput {
-	if !isTest {
-		return core.IterInputs(c.state.Graph, target, true, isFilegroup)
-	}
-	ch := make(chan core.BuildInput)
-	go func() {
-		ch <- target.Label
-		for _, datum := range target.AllData() {
-			ch <- datum
-		}
-		for _, datum := range target.TestTools() {
-			ch <- datum
-		}
-		close(ch)
-	}()
-	return ch
 }
 
 // buildMetadata converts an ActionResult into one of our BuildMetadata protos.

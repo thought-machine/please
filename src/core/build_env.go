@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -86,7 +87,12 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	)
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
-		env = append(env, "OUT="+path.Join(tmpDir, outEnv[0]))
+		// TODO(peterebden): This is a bit grungy, we should move towards OUT being relative.
+		if target.Sandbox && filepath.IsAbs(tmpDir) {
+			env = append(env, "OUT="+path.Join(SandboxDir, outEnv[0]))
+		} else {
+			env = append(env, "OUT="+path.Join(tmpDir, outEnv[0]))
+		}
 	}
 	// The SRC variable is only available on rules that have a single source file.
 	if len(sources) == 1 {
@@ -122,6 +128,9 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + fs.ExpandHomePath(strings.Join(secrets, ":"))
 		secrets = strings.ReplaceAll(secrets, ":", " ")
 		env = append(env, secrets)
+	}
+	if target.Sandbox && len(state.Config.Sandbox.Dir) > 0 {
+		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
 	}
 	if state.Config.Bazel.Compatibility {
 		// Obviously this is only a subset of the variables Bazel would expose, but there's
@@ -204,6 +213,9 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	}
 	if state.DebugTests {
 		env = append(env, "DEBUG=true")
+	}
+	if target.TestSandbox && len(state.Config.Sandbox.Dir) > 0 {
+		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
 	}
 	return withUserProvidedEnv(target, env)
 }

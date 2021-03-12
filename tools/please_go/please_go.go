@@ -1,13 +1,16 @@
 package main
 
 import (
-	"github.com/thought-machine/please/tools/please_go/test"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/peterebden/go-cli-init/v4/flags"
 
+	"github.com/thought-machine/please/tools/please_go/godeps"
 	"github.com/thought-machine/please/tools/please_go/install"
+	"github.com/thought-machine/please/tools/please_go/test"
 )
 
 var opts = struct {
@@ -36,9 +39,16 @@ var opts = struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
 	} `command:"testmain" alias:"t" description:"Generates a go main package to run the tests in a package."`
+	GoDeps struct {
+		PlzTool string   `long:"plz_tool" description:"The please tool to use" default:"plz"`
+		Targets []string `long:"targets" description:"Parts of the graph to consider. Is passed to plz query graph."`
+		Args    struct {
+			Imports []string `positional-arg-name:"sources" description:"Imports to resolve"`
+		} `positional-args:"true" required:"true"`
+	} `command:"godeps"`
 }{
 	Usage: `
-please-go is used by the go build rules to compile and test go modules and packages. 
+please-go is used by the go build rules to compile and test go modules and packages.
 
 Unlike 'go build', this tool doesn't rely on the go path or modules to find packages. Instead it takes in
 a go import config just like 'go tool compile/link -importcfg'.
@@ -52,8 +62,8 @@ var subCommands = map[string]func() int{
 			opts.PleaseGoInstall.ModuleName,
 			opts.PleaseGoInstall.ImportConfig,
 			opts.PleaseGoInstall.LDFlags,
-			opts.PleaseGoInstall.GoTool,
-			opts.PleaseGoInstall.CCTool,
+			mustResolvePath(opts.PleaseGoInstall.GoTool),
+			mustResolvePath(opts.PleaseGoInstall.CCTool),
 			opts.PleaseGoInstall.Out,
 		)
 		if err := pleaseGoInstall.Install(opts.PleaseGoInstall.Args.Packages); err != nil {
@@ -73,9 +83,28 @@ var subCommands = map[string]func() int{
 		)
 		return 0
 	},
+	"godeps": func() int {
+		godeps.GoDeps(opts.GoDeps.PlzTool, opts.GoDeps.Targets, opts.GoDeps.Args.Imports)
+		return 0
+	},
 }
 
 func main() {
 	command := flags.ParseFlagsOrDie("please-go", &opts)
 	os.Exit(subCommands[command]())
+}
+
+// mustResolvePath converts a relative path to absolute if it has any separators in it.
+func mustResolvePath(in string) string {
+	if in == "" {
+		return in
+	}
+	if !filepath.IsAbs(in) && strings.ContainsRune(in, filepath.Separator) {
+		abs, err := filepath.Abs(in)
+		if err != nil {
+			log.Fatalf("Failed to make %s absolute: %s", in, err)
+		}
+		return abs
+	}
+	return in
 }

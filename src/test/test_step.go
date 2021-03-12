@@ -69,12 +69,16 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	// If the user passed --shell then just prepare the directory.
 	if state.PrepareShell {
+		if err := state.DownloadInputsIfNeeded(tid, target, true); err != nil {
+			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to download test inputs")
+			return
+		}
 		if err := prepareTestDir(state, target, run); err != nil {
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to prepare test directory")
-		} else {
-			target.SetState(core.Stopped)
-			state.LogBuildResult(tid, label, core.TargetTestStopped, "Test stopped")
+			return
 		}
+		target.SetState(core.Stopped)
+		state.LogBuildResult(tid, label, core.TargetTestStopped, "Test stopped")
 		return
 	}
 

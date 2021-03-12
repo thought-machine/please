@@ -429,9 +429,10 @@
         </h3>
 
         <p>
-          Activates sandboxing for individual build actions, which isolates them
+          Activates sandboxing for build actions, which isolates them
           from network access, IPC and some aspects of the filesystem. Currently
-          only works on Linux. Defaults to <code class="code">False</code>.
+          only works on Linux. Defaults to <code class="code">False</code>.<br />
+          <span class="red">Deprecated from v16: use <a href="#sandbox">sandbox.build</a> instead.
         </p>
       </div>
     </li>
@@ -482,6 +483,65 @@
     passing secrets into custom rules; any variables containing SECRET or
     PASSWORD won't be logged.
   </p>
+</section>
+
+<section class="mt4">
+  <h2 id="sandbox" class="title-2">[Sandbox]</h2>
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          Tool
+        </h3>
+
+        <p>
+          The binary to use for sandboxing build/test actions. Typically this
+          is <code>please_sandbox</code>, which currently only does anything on Linux.<br />
+          It receives the program to execute and all its arguments in its <code>argv</code>,
+          it is expected to do whatever it needs to then <code>exec</code> the real action.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          Build <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          Activates sandboxing for build actions, which isolates them
+          from network access, IPC and the repo-local filesystem. Currently
+          only works on Linux. Defaults to <code class="code">False</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          Test <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          Activates sandboxing for test actions, which isolates them
+          from network access, IPC and the repo-local filesystem. Currently
+          only works on Linux. Defaults to <code class="code">False</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          Dir <span class="normal">(repeated string)</span>
+        </h3>
+
+        <p>
+          Directories that the sandbox tool should mask (it's unspecified how, although mounting an
+          empty filesystem over the top is the current implementation).<br />
+          These are passed to the tool itself in the <code>SANDBOX_DIRS</code> env var as a comma-separated list.
+        </p>
+      </div>
+    </li>
+  </ul>
 </section>
 
 <section class="mt4">
@@ -684,9 +744,10 @@
         </h3>
 
         <p>
-          Activates sandboxing for individual tests, which isolates them from
+          Activates sandboxing for tests, which isolates them from
           network access, IPC and some aspects of the filesystem. Currently only
           works on Linux. Defaults to <code class="code">False</code>.
+          <span class="red">Deprecated from v16: use <a href="#sandbox">sandbox.test</a> instead.
         </p>
       </div>
     </li>
