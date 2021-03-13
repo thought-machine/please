@@ -3,7 +3,7 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_alpine:20210217
+       - image: thoughtmachine/please_alpine:20210313
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
@@ -48,7 +48,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20200812
+       - image: thoughtmachine/please_ubuntu:20210313
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
@@ -96,7 +96,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu_alt:20200812
+       - image: thoughtmachine/please_ubuntu_alt:20210313
      resource_class: large
      environment:
        PLZ_ARGS: "-p -c cover --profile ci-alt"
