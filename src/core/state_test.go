@@ -125,7 +125,7 @@ func TestComparePendingTasks(t *testing.T) {
 
 func TestAddDepsToTarget(t *testing.T) {
 	state := NewDefaultBuildState()
-	_, builds, _, _, _ := state.TaskQueues()
+	_, builds, _, _, _ := state.TaskQueues() //nolint:dogsled
 	pkg := NewPackage("src/core")
 	target1 := addTargetDeps(state, pkg, "//src/core:target1", "//src/core:target2")
 	target2 := addTargetDeps(state, pkg, "//src/core:target2")
@@ -139,7 +139,6 @@ func TestAddDepsToTarget(t *testing.T) {
 	target2.FinishBuild()
 	task = <-builds
 	assert.Equal(t, target3.Label, task)
-
 }
 
 func addTarget(state *BuildState, name string, labels ...string) {

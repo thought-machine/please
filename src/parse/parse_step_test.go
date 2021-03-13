@@ -11,7 +11,7 @@ import (
 
 const tid = 1
 
-//TODO(jpoole): Use brain to figure out what we're actually waiting for here instead of just sleeping 100ms
+// TODO(jpoole): Use brain to figure out what we're actually waiting for here instead of just sleeping 100ms
 func TestAddDepSimple(t *testing.T) {
 	// Simple case with only one package parsed and one target added
 	state := makeState(true, false)

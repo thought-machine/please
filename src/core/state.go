@@ -223,7 +223,6 @@ type BuildState struct {
 type stateProgress struct {
 	// Used to count the number of currently active/pending targets
 	numActive  int64
-	numAsync   int64
 	numPending int64
 	numRunning int64
 	numDone    int64
