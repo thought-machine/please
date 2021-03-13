@@ -1466,7 +1466,7 @@ def _set_go_env():
         go_root = CONFIG.GOROOT
     elif CONFIG.GO_TOOL.startswith(":") or CONFIG.GO_TOOL.startswith("//"):
         label, _, _ = CONFIG.GO_TOOL.rpartition('|')
-        go_root = f'$(realpath $(dirname $(dirname $TOOLS_GO)))'
+        go_root = f'$($TOOLS_GO env GOROOT)'
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
     cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
