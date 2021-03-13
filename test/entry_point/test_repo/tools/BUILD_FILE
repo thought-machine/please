@@ -6,6 +6,7 @@ build_rule(
     cmd = "mkdir $OUT && echo wibble > $OUT/file.txt && mv $(location :file_printer) $OUT",
     outs = ["my_tool"],
     visibility = ["PUBLIC"],
+    binary = True,
     entry_points = {
       "printer": "my_tool/file_printer",
     }

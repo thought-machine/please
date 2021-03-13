@@ -3,8 +3,6 @@ package build
 
 import (
 	"bytes"
-	"crypto/sha1"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -94,12 +92,27 @@ func validateBuildTargetBeforeBuild(state *core.BuildState, target *core.BuildTa
 	return nil
 }
 
+func findFilegroupSourcesWithTmpDir(target *core.BuildTarget) []core.BuildLabel {
+	srcs := make([]core.BuildLabel, 0, len(target.Sources))
+	for _, src := range target.Sources {
+		if src.Label() != nil {
+			srcs = append(srcs, *src.Label())
+		}
+	}
+	return srcs
+}
+
 func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) error {
 	if target.IsFilegroup {
+		potentialTargets := findFilegroupSourcesWithTmpDir(target)
+		if len(potentialTargets) > 0 {
+			return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories... Perhaps you meant one of its srcs: %v", target.Label, potentialTargets)
+		}
+
 		return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
 	}
 	// Ensure we have downloaded any previous dependencies if that's relevant.
-	if err := downloadInputsIfNeeded(tid, state, target); err != nil {
+	if err := state.DownloadInputsIfNeeded(tid, target, false); err != nil {
 		return err
 	}
 	if err := prepareDirectories(target); err != nil {
@@ -175,7 +188,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 	} else {
 		// Ensure we have downloaded any previous dependencies if that's relevant.
-		if err := downloadInputsIfNeeded(tid, state, target); err != nil {
+		if err := state.DownloadInputsIfNeeded(tid, target, false); err != nil {
 			return err
 		}
 
@@ -442,6 +455,9 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	if target.IsRemoteFile {
 		return nil, fetchRemoteFile(state, target)
 	}
+	if target.IsTextFile {
+		return nil, buildTextFile(target)
+	}
 	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()))
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
 	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, command, target.Sandbox)
@@ -449,6 +465,16 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
 	return out, nil
+}
+
+// buildTextFile runs the build action for text_fule() rules
+func buildTextFile(target *core.BuildTarget) error {
+	outs := target.Outputs()
+	if len(outs) != 1 {
+		return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(outs))
+	}
+	outFile := filepath.Join(target.TmpDir(), outs[0])
+	return ioutil.WriteFile(outFile, []byte(target.FileContent), target.OutMode())
 }
 
 // prepareOutputDirectories creates any directories the target has declared it will output into as a nicety
@@ -558,7 +584,7 @@ func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir core.OutputDi
 			target.AddOutput(f.Name())
 			outs = append(outs, f.Name())
 
-			if err := fs.RecursiveCopy(from, to, target.OutMode()); err != nil {
+			if err := os.Rename(from, to); err != nil {
 				return nil, err
 			}
 		}
@@ -581,13 +607,14 @@ func copyOutDir(target *core.BuildTarget, from string, to string) ([]string, err
 		err := fs.Walk(from, func(name string, isDir bool) error {
 			dest := path.Join(to, name[len(from):])
 			if isDir {
-				return fs.EnsureDir(dest)
+				return os.MkdirAll(dest, fs.DirPermissions)
 			}
 
 			outName := relativeToTmpdir(dest)
 			outs = append(outs, outName)
 			target.AddOutput(outName)
-			return fs.CopyFile(name, dest, target.OutMode())
+
+			return os.Rename(name, dest)
 		})
 		return outs, err
 	}
@@ -709,24 +736,6 @@ func checkForStaleOutput(filename string, err error) bool {
 	return false
 }
 
-// downloadInputs downloads all the inputs for this target if we are building remotely.
-func downloadInputsIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) error {
-	if state.RemoteClient != nil {
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading inputs...")
-		for input := range core.IterInputs(state.Graph, target, true, false) {
-			if l := input.Label(); l != nil {
-				dep := state.Graph.TargetOrDie(*l)
-				if s := dep.State(); s == core.BuiltRemotely || s == core.ReusedRemotely {
-					if err := state.RemoteClient.Download(dep); err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
-
 // calculateAndCheckRuleHash checks the output hash for a rule.
 func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	hash, err := state.TargetHasher.OutputHash(target)
@@ -807,8 +816,13 @@ func (h *targetHasher) SetHash(target *core.BuildTarget, hash []byte) {
 // outputHash calculates the output hash for a target, choosing an appropriate strategy.
 func (h *targetHasher) outputHash(target *core.BuildTarget) ([]byte, error) {
 	outs := target.FullOutputs()
-	// For compatibility, leave this on the default for SHA1 hashing.
-	if len(outs) == 1 && fs.FileExists(outs[0]) && h.State.Config.Build.HashFunction != "sha1" {
+
+	// We must combine for sha1 for backwards compatibility
+	// TODO(jpoole): remove this special case in v16
+	mustCombine := h.State.Config.Build.HashFunction == "sha1" && !h.State.Config.FeatureFlags.SingleSHA1Hash
+	combine := len(outs) != 1 || mustCombine
+
+	if !combine && fs.FileExists(outs[0]) {
 		return outputHash(target, outs, h.State.PathHasher, nil)
 	}
 	return outputHash(target, outs, h.State.PathHasher, h.State.PathHasher.NewHash)
@@ -844,10 +858,6 @@ func outputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHashe
 
 // Verify the hash of output files for a rule match the ones set on it.
 func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []byte) error {
-	// TODO(peterebden): can we genericise all of this to lean on the hashers we're getting
-	//                   from the state rather than so much hardcoding?
-	const sha1Len = 2 * sha1.Size // x2 because of hex-encoding
-	const sha256Len = 2 * sha256.Size
 	if len(target.Hashes) == 0 {
 		return nil // nothing to check
 	}
@@ -861,18 +871,25 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 			return nil
 		}
 	}
-	if checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha1"), sha1.New, sha1Len) ||
-		(len(outputs) == 1 && checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha1"), nil, sha1Len)) ||
-		(len(outputs) != 1 && checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha256"), sha256.New, sha256Len)) ||
-		(len(outputs) == 1 && checkRuleHashesOfType(target, hashes, outputs, state.Hasher("sha256"), nil, sha256Len)) {
+	combine := len(outputs) != 1
+	validHashes, valid := checkRuleHashesOfType(target, hashes, outputs, state.OutputHashCheckers(), combine)
+	if valid {
 		return nil
 	}
-	if len(target.Hashes) == 1 {
-		return fmt.Errorf("Bad output hash for rule %s: was %s but expected %s",
-			target.Label, hashStr, target.Hashes[0])
+
+	// TODO(jpoole): remove this special case for sha1 once v16 is released
+	if !state.Config.FeatureFlags.SingleSHA1Hash {
+		// Always allow both the combined and non-combined sha1 hash for backwards compatibility
+		if _, valid := checkRuleHashesOfType(target, hashes, outputs, []*fs.PathHasher{state.Hasher("sha1")}, !combine); valid {
+			return nil
+		}
 	}
-	return fmt.Errorf("Bad output hash for rule %s: was %s but expected one of [%s]",
-		target.Label, hashStr, strings.Join(target.Hashes, ", "))
+	if len(target.Hashes) == 1 {
+		return fmt.Errorf("Bad output hash for rule %s, expected %s, but was: \n\t%s",
+			target.Label, target.Hashes[0], strings.Join(validHashes, "\n\t"))
+	}
+	return fmt.Errorf("Bad output hash for rule %s, expected on of: \n\t%s\nbut was \n\t%s",
+		target.Label, strings.Join(target.Hashes, "\n\t"), strings.Join(validHashes, "\n\t"))
 }
 
 // checkRuleHashesOfType checks any hashes on this rule of a single type.
@@ -880,16 +897,28 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 // where a target has a single output so as not to double-hash it.
 // It is a bit fiddly, but is organised this way to avoid calculating hashes of
 // unused types unnecessarily since that could get quite expensive.
-func checkRuleHashesOfType(target *core.BuildTarget, hashes, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash, size int) bool {
-	for _, h := range hashes {
-		if len(h) == size { // Check if the hash is of the right algorithm
-			bhash, _ := outputHash(target, outputs, hasher, combine)
-			if hex.EncodeToString(bhash) == h {
-				return true
+func checkRuleHashesOfType(target *core.BuildTarget, hashes, outputs []string, hashers []*fs.PathHasher, combine bool) ([]string, bool) {
+	validHashes := make([]string, len(hashers))
+
+	for i, hasher := range hashers {
+		var combiner func() hash.Hash
+		if combine {
+			combiner = hasher.NewHash
+		}
+		bhash, _ := outputHash(target, outputs, hasher, combiner)
+		hashString := hex.EncodeToString(bhash)
+		validHashes[i] = fmt.Sprintf("%s: %s", hasher.AlgoName(), hashString)
+
+		for _, h := range hashes {
+			if len(h) == hasher.Size()*2 { // Check if the hash is of the right algorithm; 2x because of hex encoding
+				if hashString == h {
+					return nil, true
+				}
 			}
 		}
 	}
-	return false
+
+	return validHashes, false
 }
 
 // Runs the post-build function for a target.
@@ -936,6 +965,14 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 func buildLinks(state *core.BuildState, target *core.BuildTarget) {
 	buildLinksOfType(state, target, "link:", os.Symlink)
 	buildLinksOfType(state, target, "hlink:", os.Link)
+
+	if state.Config.Build.LinkGeneratedSources && target.HasLabel("codegen") {
+		for _, out := range target.Outputs() {
+			destDir := path.Join(core.RepoRoot, target.Label.PackageDir())
+			srcDir := path.Join(core.RepoRoot, target.OutDir())
+			linkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), os.Symlink)
+		}
+	}
 }
 
 type linkFunc func(string, string) error

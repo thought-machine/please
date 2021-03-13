@@ -197,6 +197,14 @@ func TestFullOutputs(t *testing.T) {
 	assert.Equal(t, []string{"plz-out/gen/src/core/file1.go", "plz-out/gen/src/core/file2.go"}, target.FullOutputs())
 }
 
+func TestAllOutputs(t *testing.T) {
+	target := makeTarget1("//please:please", "PUBLIC")
+	target.AddOutput("please")
+	target.AddOutput("plz")
+	target.AddOutputDirectory("dir")
+	assert.Equal(t, []string{"please.out", "plz", "dir"}, target.AllOutputs())
+}
+
 func TestProvideFor(t *testing.T) {
 	// target1 is provided directly since they have a simple dependency
 	target1 := makeTarget1("//src/core:target1", "PUBLIC")
@@ -503,7 +511,7 @@ func TestAllLocalSources(t *testing.T) {
 }
 
 func TestAllURLs(t *testing.T) {
-	config := DefaultConfiguration()
+	state := NewDefaultBuildState()
 	target := makeTarget1("//src/core:remote1", "")
 	target.IsRemoteFile = true
 	target.AddSource(URLLabel("https://github.com/thought-machine/please"))
@@ -511,7 +519,7 @@ func TestAllURLs(t *testing.T) {
 	assert.Equal(t, []string{
 		"https://github.com/thought-machine/please",
 		"https://github.com/thought-machine/pleasings",
-	}, target.AllURLs(config))
+	}, target.AllURLs(state))
 }
 
 func TestCheckSecrets(t *testing.T) {

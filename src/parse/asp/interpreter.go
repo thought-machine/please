@@ -3,10 +3,12 @@ package asp
 import (
 	"fmt"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"sync"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // An interpreter holds the package-independent state about our parsing process.
@@ -100,6 +102,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 			} else {
 				err = fmt.Errorf("%s", r)
 			}
+			log.Debug("%s", debug.Stack())
 		}
 	}()
 	return s.interpretStatements(statements), nil // Would have panicked if there was an error
@@ -193,6 +196,7 @@ type scope struct {
 	parent      *scope
 	locals      pyDict
 	config      *pyConfig
+	globber     *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 
@@ -745,6 +749,8 @@ func (s *scope) Constant(expr *Expression) pyObject {
 			}
 		}
 		return s.interpretValueExpression(expr.Val)
+	} else if expr.Val.FString != nil && len(expr.Val.FString.Vars) == 0 {
+		return pyString(expr.Val.FString.Suffix)
 	}
 	// N.B. dicts are not optimised to constants currently because they are mutable (because Go maps have
 	//      pointer semantics). It might be nice to be able to do that later but it is probably not critical -

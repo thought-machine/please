@@ -13,6 +13,7 @@ go_binary(
         "//src/format",
         "//src/fs",
         "//src/gc",
+        "//src/generate",
         "//src/hashes",
         "//src/help",
         "//src/output",

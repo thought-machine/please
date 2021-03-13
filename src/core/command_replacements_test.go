@@ -4,6 +4,7 @@ package core
 
 import (
 	"encoding/base64"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"path"
@@ -270,6 +271,20 @@ func TestCrossCompileReplacement(t *testing.T) {
 
 	expected := "ln -s path/to/target2.py ${OUT}"
 	assert.Equal(t, expected, replaceSequences(state, target1))
+}
+
+func TestEntryPoints(t *testing.T) {
+	target := NewBuildTarget(ParseBuildLabel("//tools:foo", ""))
+	target.EntryPoints = map[string]string{"some_ep": "bin/some_ep"}
+	target.IsBinary = true
+	target.AddOutput("bin/some_ep")
+	graph := NewGraph()
+	graph.AddTarget(target)
+
+	cmd, err := ReplaceSequences(state, target, "$(out_exe //tools:foo|some_ep)")
+	require.NoError(t, err)
+
+	require.Equal(t, "plz-out/bin/tools/bin/some_ep", cmd)
 }
 
 func makeTarget2(name string, command string, dep *BuildTarget) *BuildTarget {

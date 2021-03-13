@@ -1,139 +1,249 @@
-<h1>Testing with Please</h1>
+<h1 class="title-1">Testing with Please</h1>
 
-<p>Tests in Please are run using <code>plz test</code> (or <code>plz cover</code> if you
-  want to extract coverage information).</p>
+<p>
+  Tests in Please are run using <code class="code">plz test</code> (or
+  <code class="code">plz cover</code> if you want to extract coverage
+  information).
+</p>
 
-<p>The documentation for <a href="lexicon.html#gentest">gentest()</a> may be of use as well, as that explains the
-  available arguments and what they do.</p>
+<p>
+  The documentation for
+  <a class="copy-link" href="/lexicon.html#gentest">gentest()</a> may be of use
+  as well, as that explains the available arguments and what they do.
+</p>
 
-<h2>Specifying what to test</h2>
+<section class="mt4">
+  <h2 class="title-2">
+    Specifying what to test
+  </h2>
 
-<p>The most obvious way of running tests is to pass a build label to <code>plz test</code>,
-  for example <code>plz test //src/core/...</code> to test all tests under a particular
-  package.</p>
+  <p>
+    The most obvious way of running tests is to pass a build label to
+    <code class="code">plz test</code>, for example
+    <code class="code">plz test //src/core/...</code> to test all tests under a
+    particular package.
+  </p>
 
-<p>Labels are also particularly useful for tests; Please accepts <code>--include</code> and
-  <code>--exclude</code> flags which filter to a subset of what it was asked to run. These
-  are marked onto the build rules like so:
-    <pre><code class="language-plz">
+  <p>
+    Labels are also particularly useful for tests; Please accepts
+    <code class="code">--include</code> and
+    <code class="code">--exclude</code> flags which filter to a subset of what
+    it was asked to run. These are marked onto the build rules like so:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
     go_test(
         name = 'my_test',
         srcs = ['my_test.go'],
         labels = ['slow', 'integration'],
     )
-    </code></pre>
-  You can then invoke Please like <code>plz test --exclude slow</code> to run all tests
-  except those labelled as "slow".</p>
+    </code>
+  </pre>
 
-<p>There is one special label, <code>manual</code> which always excludes tests from
-  autodetection, so they will only be run if identified specifically. This is often
-  useful to disable tests from general usage if needed (for example, if a test starts
-  failing, you can disable it while investigating).</p>
+  <p>
+    You can then invoke Please like
+    <code class="code">plz test --exclude slow</code> to run all tests except
+    those labelled as "slow".
+  </p>
 
+  <p>
+    There is one special label, <code class="code">manual</code> which always
+    excludes tests from autodetection, so they will only be run if identified
+    specifically. This is often useful to disable tests from general usage if
+    needed (for example, if a test starts failing, you can disable it while
+    investigating).
+  </p>
+</section>
 
-<h2>Success and failure</h2>
+<section class="mt4">
+  <h2 class="title-2">
+    Success and failure
+  </h2>
 
-<p>Please expects two things from tests:</p>
-  <ul>
-    <li>That the test exits with code 0 if successful, or nonzero if unsuccessful</li>
-    <li>That it writes its results into a file or directory defined by the env var
-      <code>RESULTS_FILE</code> (unless the test has <code>no_test_output = True</code>,
-      in which case it is evaluated only on its exit code).</li>
+  <p>Please expects two things from tests:</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        That the test exits with code 0 if successful, or nonzero if
+        unsuccessful
+      </span>
+    </li>
+    <li>
+      <span>
+        That it writes its results into a file or directory defined by the env
+        var <code class="code">RESULTS_FILE</code> (unless the test has
+        <code class="code">no_test_output = True</code>, in which case it is
+        evaluated only on its exit code).
+      </span>
+    </li>
   </ul>
-  <p>All tests are considered to end in a binary state where they are either successful or
-  unsuccessful, so tests with variable output such as load tests are not a good fit for
-  this system.</p>
+
+  <p>
+    All tests are considered to end in a binary state where they are either
+    successful or unsuccessful, so tests with variable output such as load tests
+    are not a good fit for this system.
+  </p>
+
   <p>Result files are expected to either be golang style test output:</p>
-  <pre><code>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code>
     === RUN   Hello
     --- PASS: Hello (0.00s)
     === RUN   Salutations
     --- PASS: Salutations (0.00s)
-  </code></pre>
-  <p>Or the junit/ant style xml test output:</p>
-  <pre><code>
-    &lt;testsuites time="0">
-      &lt;testsuite name="hello" tests="2" package="hello.test" time="0">
-          &lt;testcase name="Hello" classname="test" time="0">
-            &lt;system-err>Hello!&lt;/system-err>
-          &lt;/testcase>
-          &lt;testcase name="Salutations" classname="test" time="0">
-            &lt;system-err>Salutations!&lt;/system-err>
-          &lt;/testcase>
-      &lt;/testsuite>
-    &lt;/testsuites>
-  </code></pre>
-  <p>There's no official format for this XML structure, however we try and be compatible with Maven's surefire
-    reports.</p>
+    </code>
+  </pre>
 
-<p>Tests can also be marked as <em>flaky</em> which causes them to be automatically re-run
-  several times until they pass. They are considered to pass if any one run passes.<br/>
-  This is set as follows:
-    <pre><code class="language-plz">
+  <p>Or the junit/ant style xml test output:</p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code>
+    &lt;testsuites time="0"&gt;
+      &lt;testsuite name="hello" tests="2" package="hello.test" time="0"&gt;
+          &lt;testcase name="Hello" classname="test" time="0"&gt;
+            &lt;system-err&gt;Hello!&lt;/system-err&gt;
+          &lt;/testcase&gt;
+          &lt;testcase name="Salutations" classname="test" time="0"&gt;
+            &lt;system-err&gt;Salutations!&lt;/system-err&gt;
+          &lt;/testcase&gt;
+      &lt;/testsuite&gt;
+    &lt;/testsuites&gt;
+    </code>
+  </pre>
+
+  <p>
+    There's no official format for this XML structure, however we try and be
+    compatible with Maven's surefire reports.
+  </p>
+
+  <p>
+    Tests can also be marked as <em>flaky</em> which causes them to be
+    automatically re-run several times until they pass. They are considered to
+    pass if any one run passes.<br />
+    This is set as follows:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
     go_test(
         name = 'my_test',
         srcs = ['my_test.go'],
         flaky = True,
     )
-    </code></pre>
-  By default they are run up to three times, you can alter this on a per-test basis by
-  passing an integer instead of a boolean.<br/>
-  You should try to avoid marking tests as flaky though; in most cases flakiness indicates
-  poor design within the test which can usually be mitigated (for example by adding locking or
-  synchronisation instead of sleeping, etc). Flaky tests are a burden on other team members
-  since they take extra time & resources to run, and there is always a risk that they will
-  still fail - for example, if your test fails 50% of the time, you can expect that one in
-  sixteen runs will fail four consecutive times which will still result in an overall failure.
-</p>
+    </code>
+  </pre>
 
+  <p>
+    By default they are run up to three times, you can alter this on a per-test
+    basis by passing an integer instead of a boolean.<br />
+    You should try to avoid marking tests as flaky though; in most cases
+    flakiness indicates poor design within the test which can usually be
+    mitigated (for example by adding locking or synchronisation instead of
+    sleeping, etc). Flaky tests are a burden on other team members since they
+    take extra time &amp; resources to run, and there is always a risk that they
+    will still fail - for example, if your test fails 50% of the time, you can
+    expect that one in sixteen runs will fail four consecutive times which will
+    still result in an overall failure.
+  </p>
+</section>
 
-<h2>Hermeticity and reproducibility</h2>
+<section class="mt4">
+  <h2 class="title-2">
+    Hermeticity and reproducibility
+  </h2>
 
-<p>An important concept of testing that Please tries to help with is that tests should
-  be <em>hermetic</em>; that is they should be isolated from local state that might cause
-  them to unexpectedly fail. This is important to avoid nasty surprises later (for example,
-  finding out that your test only passes if some other resources happen to have been built
-  first, or that it fails arbitrarily if run in parallel while others are running too).</p>
+  <p>
+    An important concept of testing that Please tries to help with is that tests
+    should be <em>hermetic</em>; that is they should be isolated from local
+    state that might cause them to unexpectedly fail. This is important to avoid
+    nasty surprises later (for example, finding out that your test only passes
+    if some other resources happen to have been built first, or that it fails
+    arbitrarily if run in parallel while others are running too).
+  </p>
 
-<p>In order to help ensure this, Please runs each test in isolation from others. They
-  are each run within their own temporary directory which contains only the test itself
-  and files it's declared that it will need.<br/>
-  Most of the usual attributes of a build rule that refer to files are only available at
-  build time (e.g. <code>srcs</code>, <code>tools</code>, <code>deps</code> etc). Instead
-  files that are needed at test runtime should be specified as <code>data</code>. These
-  will appear within the test directory with their full repo path.</p>
+  <p>
+    In order to help ensure this, Please runs each test in isolation from
+    others. They are each run within their own temporary directory which
+    contains only the test itself and files it's declared that it will need.<br />
+    Most of the usual attributes of a build rule that refer to files are only
+    available at build time (e.g. <code class="code">srcs</code>,
+    <code class="code">tools</code>, <code class="code">deps</code> etc).
+    Instead files that are needed at test runtime should be specified as
+    <code class="code">data</code>. These will appear within the test directory
+    with their full repo path.
+  </p>
 
-<p>On Linux, tests can also be sandboxed, either by setting
-  <pre><code class="language-plz">
+  <p>On Linux, tests can also be sandboxed, either by setting</p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code data-lang="plz">
     sandbox = True,
-  </code></pre>
-  on the test rule in question, or by setting it globally in the config:
-  <pre><code>
+    </code>
+  </pre>
+
+  <p>on the test rule in question, or by setting it globally in the config:</p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code>
     [test]
     sandbox = on
-  </code></pre>
-  This uses kernel namespaces to segregate it from other processes:
-  <ul>
-    <li>Networking: only a loopback interface will be available. Tests can use this to start
-      servers and ports opened will not be visible to the rest of the system, so clashes are
-      impossible. Tests therefore can't access external network resources.</li>
-    <li>Filesystem: each test gets its own in-memory filesystem mounted on <code>/tmp</code>,
-      so they can't accidentally overwrite each other's files. The temporary directory is
-      also mounted under here to prevent tests from walking up to parent directories to
-      find files they haven't declared.</li>
-    <li>It will also be in a new IPC namespace so it can't use SysV IPC to communicate with
-      other processes.</li>
+    </code>
+  </pre>
+
+  <p>This uses kernel namespaces to segregate it from other processes:</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        Networking: only a loopback interface will be available. Tests can use
+        this to start servers and ports opened will not be visible to the rest
+        of the system, so clashes are impossible. Tests therefore can't access
+        external network resources.
+      </span>
+    </li>
+    <li>
+      <span>
+        Filesystem: each test gets its own in-memory filesystem mounted on
+        <code class="code">/tmp</code>, so they can't accidentally overwrite
+        each other's files. The temporary directory is also mounted under here
+        to prevent tests from walking up to parent directories to find files
+        they haven't declared.
+      </span>
+    </li>
+    <li>
+      <span>
+        It will also be in a new IPC namespace so it can't use SysV IPC to
+        communicate with other processes.
+      </span>
+    </li>
   </ul>
-  In general the networking separation is the most useful since it means tests do not have
-  to worry about finding unused ports or handling clashes.<br />
-  These features require having unprivileged user namespace support in the kernel, which
-  should usually be the case from version 3.10 onwards (which is the vast majority of
-  systems today).
-</p>
 
-<p>On other platforms, we distribute the same binary alongside Please to simplify
-  configuration, but it currently has no effect.</p>
+  <p>
+    In general the networking separation is the most useful since it means tests
+    do not have to worry about finding unused ports or handling clashes.<br />
+    These features require having unprivileged user namespace support in the
+    kernel, which should usually be the case from version 3.10 onwards (which is
+    the vast majority of systems today).
+  </p>
 
-<p>If you want to explore what the sandbox is doing, you can use
-  <code>plz tool sandbox bash</code> to get a shell within it; you'll observe that commands
-  like <code>ping</code> and <code>curl</code> no longer work.</p>
+  <p>
+    On other platforms, we distribute the same binary alongside Please to
+    simplify configuration, but it currently has no effect.
+  </p>
+
+  <p>
+    If you want to explore what the sandbox is doing, you can use
+    <code class="code">plz tool sandbox bash</code> to get a shell within it;
+    you'll observe that commands like <code class="code">ping</code> and
+    <code class="code">curl</code> no longer work.
+  </p>
+</section>

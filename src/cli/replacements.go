@@ -41,7 +41,7 @@ func Fprintf(w io.Writer, msg string, args ...interface{}) {
 		if !ShowColouredOutput {
 			v = ""
 		}
-		msg = strings.Replace(msg, fmt.Sprintf("${%s}", k), v, -1)
+		msg = strings.ReplaceAll(msg, fmt.Sprintf("${%s}", k), v)
 	}
 	fmt.Fprintf(w, msg, args...)
 }

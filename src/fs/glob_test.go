@@ -12,8 +12,12 @@ import (
 
 var buildFileNames = []string{"TEST_BUILD", "BUILD"}
 
+func glob(rootPath string, glob string, excludes []string, includeHidden bool) ([]string, error) {
+	return NewGlobber(buildFileNames).glob(rootPath, glob, excludes, includeHidden)
+}
+
 func TestCanGlobFileAtRootWithDoubleStar(t *testing.T) {
-	files, err := glob("src/fs/test_data/test_subfolder1", "**/*.txt", nil, buildFileNames, false)
+	files, err := glob("src/fs/test_data/test_subfolder1", "**/*.txt", nil, false)
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []string{
 		"src/fs/test_data/test_subfolder1/a.txt",
@@ -22,7 +26,7 @@ func TestCanGlobFileAtRootWithDoubleStar(t *testing.T) {
 }
 
 func TestCanGlobDirectories(t *testing.T) {
-	files, err := glob("src/fs", "test_data/*", nil, buildFileNames, false)
+	files, err := glob("src/fs", "test_data/*", nil, false)
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []string{
 		"src/fs/test_data/test_subfolder++",
@@ -42,7 +46,7 @@ func TestIsGlob(t *testing.T) {
 }
 
 func TestGlobRanges(t *testing.T) {
-	files, err := glob("src/fs/test_data", "test_subfolder3/[a-z]est.py", nil, buildFileNames, false)
+	files, err := glob("src/fs/test_data", "test_subfolder3/[a-z]est.py", nil, false)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{
 		"src/fs/test_data/test_subfolder3/test.py",
@@ -51,7 +55,7 @@ func TestGlobRanges(t *testing.T) {
 }
 
 func TestGlobQuestion(t *testing.T) {
-	files, err := glob("src/fs/test_data", "test_subfolder3/?est.py", nil, buildFileNames, false)
+	files, err := glob("src/fs/test_data", "test_subfolder3/?est.py", nil, false)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{
 		"src/fs/test_data/test_subfolder3/test.py",
@@ -61,7 +65,7 @@ func TestGlobQuestion(t *testing.T) {
 }
 
 func TestGlobPlusPlusInDirName(t *testing.T) {
-	files, err := glob("src/fs/test_data/test_subfolder++", "**/*.txt", nil, buildFileNames, false)
+	files, err := glob("src/fs/test_data/test_subfolder++", "**/*.txt", nil, false)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"src/fs/test_data/test_subfolder++/test.txt"}, files)
 }

@@ -23,7 +23,7 @@ aws s3 sync /tmp/workspace/freebsd_amd64 s3://please-releases/freebsd_amd64/$VER
 
 aws s3 cp tools/misc/get_plz.sh s3://please-releases/get_plz.sh --content-type text/x-shellscript
 
-if [[ "$VERSION" == *"beta"* ]] || [[ "$VERSION" == *"alpha"* ]]; then
+if [[ "$VERSION" == *"beta"* ]] || [[ "$VERSION" == *"alpha"* ]] || [[ "$VERSION" == *"prerelease"* ]]; then
   echo "$VERSION is a prerelease, only setting latest_prerelease_version"
 else
   echo "$VERSION is not a prerelease, setting latest_version and latest_prerelease_version"

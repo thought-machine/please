@@ -4,6 +4,9 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
+	"hash"
+	"hash/crc32"
+	"hash/crc64"
 	"io"
 	"sort"
 	"sync"
@@ -12,6 +15,7 @@ import (
 
 	"github.com/OneOfOne/cmap"
 	"github.com/Workiva/go-datastructures/queue"
+	"lukechampine.com/blake3"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
@@ -153,8 +157,12 @@ type BuildState struct {
 	Include, Exclude []string
 	// Actual targets to exclude from discovery
 	ExcludeTargets []BuildLabel
-	// The original architecture that the user requested to build for.
-	OriginalArch cli.Arch
+	// The original architecture that the user requested to build for. Either the host arch, --arch, or the arch in the
+	// .plzconfig
+	TargetArch cli.Arch
+	// The architecture this state is for. This might change as we re-parse packages for different architectures e.g.
+	// for tools that run on the host vs. outputs that are compiled for the target arch above.
+	Arch cli.Arch
 	// True if we require rule hashes to be correctly verified (usually the case).
 	VerifyHashes bool
 	// Aggregated coverage for this run
@@ -225,6 +233,8 @@ type stateProgress struct {
 	pendingTargets *cmap.CMap
 	// Used to track general package parsing requests. Keyed by a packageKey struct.
 	pendingPackages *cmap.CMap
+	// similar to pendingPackages but consumers haven't committed to parsing the package
+	packageWaits *cmap.CMap
 	// The set of known states
 	allStates []*BuildState
 	// Targets that we were originally requested to build
@@ -472,11 +482,20 @@ func (state *BuildState) Hasher(name string) *fs.PathHasher {
 	return hasher
 }
 
+// OutputHashCheckers returns the subset of hash algos that are appropriate for checking the hashes argument on
+// build rules
+func (state *BuildState) OutputHashCheckers() []*fs.PathHasher {
+	return []*fs.PathHasher{state.Hasher("sha1"), state.Hasher("sha256"), state.Hasher("blake3")}
+}
+
 // LogBuildResult logs the result of a target either building or parsing.
 func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
 	if status == PackageParsed {
 		// We may have parse tasks waiting for this package to exist, check for them.
 		if ch, present := state.progress.pendingPackages.GetOK(packageKey{Name: label.PackageName, Subrepo: label.Subrepo}); present {
+			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
+		}
+		if ch, present := state.progress.packageWaits.GetOK(packageKey{Name: label.PackageName, Subrepo: label.Subrepo}); present {
 			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
 		}
 		return // We don't notify anything else on these.
@@ -581,6 +600,48 @@ func (state *BuildState) ExpandOriginalLabels() BuildLabels {
 	return state.ExpandLabels(targets)
 }
 
+func annotateLabels(labels []BuildLabel) []AnnotatedOutputLabel {
+	ret := make([]AnnotatedOutputLabel, len(labels))
+	for i, l := range labels {
+		ret[i] = AnnotatedOutputLabel{BuildLabel: l}
+	}
+	return ret
+}
+
+func readingStdinAnnotated(labels []AnnotatedOutputLabel) bool {
+	for _, l := range labels {
+		if l.BuildLabel == BuildLabelStdin {
+			return true
+		}
+	}
+	return false
+}
+
+// ExpandOriginalMaybeAnnotatedLabels works the same as ExpandOriginalLabels, however requires that the possitional args
+// be passed to it.
+func (state *BuildState) ExpandOriginalMaybeAnnotatedLabels(args []AnnotatedOutputLabel) []AnnotatedOutputLabel {
+	if readingStdinAnnotated(args) {
+		args = annotateLabels(state.ExpandOriginalLabels())
+	}
+	return state.ExpandMaybeAnnotatedLabels(args)
+}
+
+// ExpandMaybeAnnotatedLabels is the same as ExpandOriginalLabels except for annotated labels
+func (state *BuildState) ExpandMaybeAnnotatedLabels(labels []AnnotatedOutputLabel) []AnnotatedOutputLabel {
+	ret := make([]AnnotatedOutputLabel, 0, len(labels))
+	for _, l := range labels {
+		if l.Annotation != "" {
+			ret = append(ret, l)
+		} else {
+			for _, l := range state.ExpandLabels([]BuildLabel{l.BuildLabel}) {
+				ret = append(ret, AnnotatedOutputLabel{BuildLabel: l})
+			}
+		}
+	}
+
+	return ret
+}
+
 // ExpandLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets) from a set of labels.
 func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
 	ret := BuildLabels{}
@@ -631,10 +692,10 @@ func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 	return ret
 }
 
-// WaitForPackage either returns the given package which is already parsed and available,
-// or returns nil if nothing's parsed it already, in which case everything else calling this
-// will wait for the caller to parse it themselves.
-func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
+// SyncParsePackage either returns the given package which is already parsed and available,
+// or returns nil indicating it is ready to be parsed. Everything subsequently calling this
+// will block until the original caller parse it.
+func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 	if p := state.Graph.PackageByLabel(label); p != nil {
 		return p
 	}
@@ -650,6 +711,32 @@ func (state *BuildState) WaitForPackage(label BuildLabel) *Package {
 		<-ch
 	}
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
+}
+
+// WaitForPackage is similar to WaitForBuiltTarget however
+func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
+	if p := state.Graph.PackageByLabel(l); p != nil {
+		return p
+	}
+	key := packageKey{Name: l.PackageName, Subrepo: l.Subrepo}
+
+	// If something has promised to parse it, wait for them to do so
+	if ch, present := state.progress.pendingPackages.GetOK(key); present {
+		<-ch.(chan struct{})
+		return state.Graph.PackageByLabel(l)
+	}
+
+	// If something has already queued the package to be parsed, wait for them
+	if ch, present := state.progress.packageWaits.GetOK(key); present {
+		<-ch.(chan struct{})
+		return state.Graph.PackageByLabel(l)
+	}
+
+	// Otherwise queue the target for parse and recurse
+	state.AddPendingParse(l, dependent, true)
+	state.progress.packageWaits.Set(key, make(chan struct{}))
+
+	return state.WaitForPackage(l, dependent)
 }
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
@@ -887,7 +974,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// This is slightly wrong in that other things (e.g. user-specified command line overrides) should
 	// in fact take priority over this, but that's a lot more fiddly to get right.
 	s := state.ForConfig(".plzconfig_" + arch.String())
-	s.Config.Build.Arch = arch
+	s.Arch = arch
 	return s
 }
 
@@ -896,7 +983,7 @@ func (state *BuildState) findArch(arch cli.Arch) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	for _, s := range state.progress.allStates {
-		if s.Config.Build.Arch == arch {
+		if s.Arch == arch {
 			return s
 		}
 	}
@@ -923,6 +1010,43 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 	return s
 }
 
+// DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
+func (state *BuildState) DownloadInputsIfNeeded(tid int, target *BuildTarget, runtime bool) error {
+	if state.RemoteClient != nil {
+		state.LogBuildResult(tid, target.Label, TargetBuilding, "Downloading inputs...")
+		for input := range state.IterInputs(target, runtime) {
+			if l := input.Label(); l != nil {
+				dep := state.Graph.TargetOrDie(*l)
+				if s := dep.State(); s == BuiltRemotely || s == ReusedRemotely {
+					if err := state.RemoteClient.Download(dep); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// IterInputs returns a channel that iterates all the input files needed for a target.
+func (state *BuildState) IterInputs(target *BuildTarget, test bool) <-chan BuildInput {
+	if !test {
+		return IterInputs(state.Graph, target, true, target.IsFilegroup)
+	}
+	ch := make(chan BuildInput)
+	go func() {
+		ch <- target.Label
+		for _, datum := range target.AllData() {
+			ch <- datum
+		}
+		for _, datum := range target.TestTools() {
+			ch <- datum
+		}
+		close(ch)
+	}()
+	return ch
+}
+
 // DisableXattrs disables xattr support for this build. This is done for filesystems that
 // don't support it.
 func (state *BuildState) DisableXattrs() {
@@ -930,19 +1054,35 @@ func (state *BuildState) DisableXattrs() {
 	state.PathHasher.DisableXattrs()
 }
 
+func newCRC32() hash.Hash {
+	return hash.Hash(crc32.NewIEEE())
+}
+
+func newCRC64() hash.Hash {
+	return hash.Hash(crc64.New(crc64.MakeTable(crc64.ISO)))
+}
+
+func newBlake3() hash.Hash {
+	// 32 bytes == 256 bits
+	return blake3.New(32, nil)
+}
+
 // NewBuildState constructs and returns a new BuildState.
 // Everyone should use this rather than attempting to construct it themselves;
 // callers can't initialise all the required private fields.
 func NewBuildState(config *Configuration) *BuildState {
 	// Deliberately ignore the error here so we don't require the sandbox tool until it's needed.
-	sandboxTool, _ := LookBuildPath(config.Build.PleaseSandboxTool, config)
+	sandboxTool, _ := LookBuildPath(config.Sandbox.Tool, config)
 	state := &BuildState{
 		Graph:        NewGraph(),
 		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
 		hashers: map[string]*fs.PathHasher{
 			// For compatibility reasons the sha1 hasher has no suffix.
-			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, ""),
-			"sha256": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "_sha256"),
+			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, "sha1"),
+			"sha256": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "sha256"),
+			"crc32":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC32, "crc32"),
+			"crc64":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC64, "crc64"),
+			"blake3": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newBlake3, "blake3"),
 		},
 		ProcessExecutor: process.New(sandboxTool),
 		StartTime:       startTime,
@@ -951,7 +1091,8 @@ func NewBuildState(config *Configuration) *BuildState {
 		NeedBuild:       true,
 		XattrsSupported: config.Build.Xattrs,
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
-		OriginalArch:    cli.HostArch(),
+		TargetArch:      config.Build.Arch,
+		Arch:            cli.HostArch(),
 		Stats:           &SystemStats{},
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
@@ -959,6 +1100,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			numPending:      1,
 			pendingPackages: cmap.New(),
 			pendingTargets:  cmap.New(),
+			packageWaits:    cmap.New(),
 			success:         true,
 		},
 	}

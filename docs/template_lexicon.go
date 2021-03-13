@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"text/template"
+	"regexp"
 )
 
 type rules struct {
@@ -27,10 +28,11 @@ func (r *rules) Named(name string) *rule {
 func (r *rules) AddLinks(name, docstring string) string {
 	if strings.Contains(name, "_") { // Don't do it for something generic like "tarball"
 		for k := range r.Functions {
+			var re = regexp.MustCompile("\b("+k+")\b")
 			if name == k {
-				docstring = strings.Replace(docstring, " "+k, " <code>"+k+"</code>", -1)
+				docstring = re.ReplaceAllString(docstring, "<code>$1</code>")
 			} else {
-				docstring = strings.Replace(docstring, " "+k, ` <a href="#`+k+`">`+k+"</a>", -1)
+				docstring = re.ReplaceAllString(docstring, `<a href="#$1">$1</a>`)
 			}
 		}
 	}
@@ -63,7 +65,7 @@ func main() {
 	tmpl, err := template.New("lexicon.html").Funcs(template.FuncMap{
 		"join": strings.Join,
 		"newlines": func(name, docstring string) string {
-			return r.AddLinks(name, strings.Replace(htmltemplate.HTMLEscapeString(docstring), "\n", "<br/>", -1))
+			return r.AddLinks(name, strings.ReplaceAll(htmltemplate.HTMLEscapeString(docstring), "\n", "<br/>"))
 		},
 	}).ParseFiles("docs/lexicon.html", "docs/lexicon_entry.html")
 	must(err)

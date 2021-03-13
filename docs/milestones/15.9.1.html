@@ -1,95 +1,224 @@
-    <h1>Please 15.9.1 is here!</h1>
-    <p>
-        We've been hard at work and we're very excited to share what we've been up to! This is the first
-        milestone newsletter so sit tight, it's a big one!
+<h1 class="title-1">Please 15.9.1 is here!</h1>
+
+<p>
+  We've been hard at work and we're very excited to share what we've been up to!
+  This is the first milestone newsletter so sit tight, it's a big one!
+</p>
+
+<p>
+  If you're new to Please, Please is a community driven, bazel-like
+  multi-language build system with a focus on flexibility for mono-repos at
+  scale. Get started <a class="copy-link" href="/index.html">here</a>!
+</p>
+
+<section class="mt4">
+  <h2 class="title-2">
+    Clustered builds!
+  </h2>
+
+  <p>
+    Please now supports clustered builds through the
+    <a
+      class="copy-link"
+      href="https://github.com/bazelbuild/remote-apis"
+      target="_blank"
+      rel="noopener"
+      >REAPI (Remote Execution API)</a
+    >
+    which will enable superior scalability and incrementality. More information
+    on this can be found
+    <a class="copy-link" href="/remote_builds.html">here</a>.
+  </p>
+
+  <p>
+    Improving interoperability with existing build servers is an ongoing piece
+    of work, however if you're trying to set up remote execution for your
+    project, we'd love to hear from you. Come on over to our
+    <a
+      class="copy-link"
+      href="https://gitter.im/please-build/Lobby"
+      target="_blank"
+      rel="noopener"
+      >gitter</a
+    >
+    and say hi!
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    More platforms!
+  </h2>
+
+  <p>
+    Please is now available on more platforms than ever! FreeBSD joins ranks
+    alongside Linux and macOS as the third platform to receive binary releases.
+    The linux binary now also runs on MUSL based linux distributions.
+  </p>
+
+  <p>
+    We're scoping out support or Windows; come over to our
+    <a
+      class="copy-link"
+      href="https://gitter.im/please-build/Lobby"
+      target="_blank"
+      rel="noopener"
+      >gitter</a
+    >
+    if you'd like to help! See
+    <a
+      class="copy-link"
+      href="https://github.com/thought-machine/please/issues/1284"
+      target="_blank"
+      rel="noopener"
+      >#1284</a
+    >
+    for more information.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    First time setup
+  </h2>
+
+  <p>
+    We're always aiming to make please as easy to use as possible. Configuring a
+    new tool can be a daunting task. That's why please now guides you through
+    your first time setup!
+  </p>
+
+  <p>
+    <code class="code">plz init</code> is getting much smarter! We've started
+    with <a class="copy-link" href="#golang-setup">golang</a>, detecting a
+    go.mod file and setting the appropriate config options to help you get
+    started as fast as possible. There's also an interactive language setup via
+    `plz init go` to guide you through enabling Go in your project. Expect to
+    see similar love come to all the major languages: Java, Python, C and C++.
+  </p>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2">
+    Golang!
+  </h2>
+
+  <p>
+    Following on with the general trend to make Please as easy as possible to
+    get started with, we've put a lot of work into Go!
+  </p>
+
+  <section class="mt4">
+    <h3 class="title-3">
+      Go test compatibility
+    </h3>
 
     <p>
-        If you're new to Please, Please is a community driven, bazel-like multi-language build system with a focus on
-        flexibility for mono-repos at scale. Get started <a href="/index.html">here</a>!
+      If you're migrating from <code class="code">go build</code>, or working on
+      a pure go project, it can be jarring that Please runs tests from the repo
+      root whereas go runs them from the package directory. To make it easier to
+      migrate existing Go projects, and improve compatibility with IDEs and
+      tooling, you can now change this behavior by adding the following to your
+      config:
+    </p>
 
-    <h2>Clustered builds!</h2>
-    <p>
-        Please now supports clustered builds through the
-        <a href="https://github.com/bazelbuild/remote-apis">REAPI (Remote Execution API)</a> which will enable superior
-        scalability and incrementality. More information on this can be found <a href="/remote_builds.html">here</a>.
-
-    <p>
-        Improving interoperability with existing build servers is an ongoing piece of work, however if you're trying to
-        set up remote execution for your project, we'd love to hear from you. Come on over to our
-        <a href="https://gitter.im/please-build/Lobby">gitter</a> and say hi!
-
-    <h2>More platforms!</h2>
-    <p>
-        Please is now available on more platforms than ever! FreeBSD joins ranks alongside Linux and macOS as the third
-        platform to receive binary releases. The linux binary now also runs on MUSL based linux distributions.
-    <p>
-        We're scoping out support or Windows; come over to our <a href="https://gitter.im/please-build/Lobby">gitter</a>
-        if you'd like to help! See <a href="https://github.com/thought-machine/please/issues/1284">#1284</a> for more
-        information.
-
-    <h2>First time setup</h2>
-    <p>
-        We're always aiming to make please as easy to use as possible. Configuring a new tool can be a daunting task.
-        That's why please now guides you through your first time setup!
-    <p>
-        <code>plz init</code> is getting much smarter! We've started with <a href="#golang-setup">golang</a>, detecting
-        a go.mod file and setting the appropriate config options to help you get started as fast as possible. There's
-        also an interactive language setup via `plz init go` to guide you through enabling Go in your project. Expect to
-        see similar love come to all the major languages: Java, Python, C and C++.
-
-    <h2>Golang!</h2>
-    <p> Following on with the general trend to make Please as easy as possible to get started with, we've put a lot of
-    work into Go!
-    <h3>Go test compatibility</h3>
-    <p>
-        If you're migrating from <code>go build</code>, or working on a pure go project, it can be jarring that Please
-        runs tests from the repo root whereas go runs them from the package directory. To make it easier to migrate
-        existing Go projects, and improve compatibility with IDEs and tooling, you can now change this behavior by
-        adding the following to your config:
-    <pre><code>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code>
     [go]
     GoTestRootCompat = true
-    </code></pre>
+      </code>
+    </pre>
+
     <p>
-        This will make Please run tests from the package directory just like <code>go test</code> would!
-    <h3 id="golang-setup">Project setup</h3>
+      This will make Please run tests from the package directory just like
+      <code class="code">go test</code> would!
+    </p>
+  </section>
+
+  <section class="mt4">
+    <h3 class="title-3" id="golang-setup">
+      Project setup
+    </h3>
+
     <p>
-        As I mentioned, Golang is the first language to get the <code>plz init</code> treatment! If you're migrating
-        from an existing go project, <code>plz init</code> will detect any go.mod file and set up your import path in
-        <code>.plzconfig</code> automatically!
+      As I mentioned, Golang is the first language to get the
+      <code class="code">plz init</code> treatment! If you're migrating from an
+      existing go project, <code class="code">plz init</code> will detect any
+      go.mod file and set up your import path in
+      <code class="code">.plzconfig</code> automatically!
+    </p>
+
     <p>
-        Please will also if your go installation is not available in the path you have please configured to look in!
-        This was a common pitfall for a lot of first timers with please.
+      Please will also if your go installation is not available in the path you
+      have please configured to look in! This was a common pitfall for a lot of
+      first timers with please.
+    </p>
+
     <p>
-        We've also simplified configuration of go in please! Simply set <code>GoTool</code> or <code>GoRoot</code> in
-        your .plzconfig and you're away! No need to set both! Please will now figure out GoRoot or GoTool from based on
-        whichever you configured!
-    <h3>Speaking of go installations</h3>
+      We've also simplified configuration of go in please! Simply set
+      <code class="code">GoTool</code> or <code class="code">GoRoot</code> in
+      your .plzconfig and you're away! No need to set both! Please will now
+      figure out GoRoot or GoTool from based on whichever you configured!
+    </p>
+  </section>
+
+  <section class="mt4">
+    <h3 class="title-3">
+      Speaking of go installations
+    </h3>
+
     <p>
-        Worried about how to manage go installations across all your developers machine, CI workers, all running
-        different operating systems? Then you should try <code>go_toolchain()</code>! Please will then automatically
-        download the correct distribution for your platform, and build the SDK for the target platform if needed, making
-        your build portable like never before!
+      Worried about how to manage go installations across all your developers
+      machine, CI workers, all running different operating systems? Then you
+      should try <code class="code">go_toolchain()</code>! Please will then
+      automatically download the correct distribution for your platform, and
+      build the SDK for the target platform if needed, making your build
+      portable like never before!
+    </p>
+
     <p>
-        Simply define your toolchain rule as such:
-    <pre><code class="language-plz">
+      Simply define your toolchain rule as such:
+    </p>
+
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
     # //tools/go:toolchain
     go_toolchain(
         name = "toolchain",
         version = "1.15.2",
     )
-    </code></pre>
+      </code>
+    </pre>
+
     <p>
-        And then add the following to your <code>.plzconfig</code>:
-    <pre><code>
+      And then add the following to your <code class="code">.plzconfig</code>:
+    </p>
+
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code>
     [go]
     GoTool = //tools/go:toolchain|go
-    </code></pre>
-    <h3>Go get v2 modules</h3>
+      </code>
+    </pre>
+  </section>
+
+  <section class="mt4">
+    <h3 class="title-3">
+      Go get v2 modules
+    </h3>
+
     <p>
-        You can now specify the module major version in <code>go_get()</code>. This allows Please to download and
-        install a go module and correctly handle the new import path. For example:
-    <pre><code class="language-plz">
+      You can now specify the module major version in
+      <code class="code">go_get()</code>. This allows Please to download and
+      install a go module and correctly handle the new import path. For example:
+    </p>
+
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
     go_get(
         name = "some-module",
         get = "github.com/some/module/v2",
@@ -97,52 +226,96 @@
         module_major_version = "v2",
         ...
     )
-    </code></pre>
-    <p>
-        This module will now be available to your go code as <code>"github.com/some/module/v2"</code>.
+      </code>
+    </pre>
 
     <p>
-        We've made <code>go_get()</code> more specific about its outputs. You can now have multiple <code>go_get()</code>
-        rules for the same module that install different packages. This can really help resolve cyclic dependencies
-        which were a real pain before.
+      This module will now be available to your go code as
+      <code class="code">"github.com/some/module/v2"</code>.
+    </p>
 
-    <h2>For the rule authors out there!</h2>
     <p>
-        There have been some huge improvements to the build language over the recent releases aimed at addressing some
-        common pain points when writing build rules.
+      We've made <code class="code">go_get()</code> more specific about its
+      outputs. You can now have multiple
+      <code class="code">go_get()</code> rules for the same module that install
+      different packages. This can really help resolve cyclic dependencies which
+      were a real pain before.
+    </p>
+  </section>
+</section>
 
-    <h3>Output directories</h3>
+<section class="mt4">
+  <h2 class="title-2">
+    For the rule authors out there!
+  </h2>
+
+  <p>
+    There have been some huge improvements to the build language over the recent
+    releases aimed at addressing some common pain points when writing build
+    rules.
+  </p>
+
+  <section class="mt4">
+    <h3 class="title-3">
+      Output directories
+    </h3>
+
     <p>
-        Traditionally dealing with rules where the outputs are difficult to know beforehand has been a major pain point.
-        This problem cropped up commonly in code generation, downloading remote files, or just when a rule has a lot of
-        flat outputs. The old hat approach to this is to <code>find . -name *.go</code> or the like and add these
-        outputs via a post build function. Yuck!
+      Traditionally dealing with rules where the outputs are difficult to know
+      beforehand has been a major pain point. This problem cropped up commonly
+      in code generation, downloading remote files, or just when a rule has a
+      lot of flat outputs. The old hat approach to this is to
+      <code class="code">find . -name *.go</code> or the like and add these
+      outputs via a post build function. Yuck!
+    </p>
+
     <p>
-        Output directories aim to solve this problem by specifying a directory as the output root of your rule. Any
-        files that end up in here are outputted as if they were in the package directory. In the build language, this
-        looks a little something like:
-    <pre><code class="language-plz">
+      Output directories aim to solve this problem by specifying a directory as
+      the output root of your rule. Any files that end up in here are outputted
+      as if they were in the package directory. In the build language, this
+      looks a little something like:
+    </p>
+
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
     build_rule(
         name = "gen",
         ...
-        cmd = "mkdir _out && $TOOL generate $SRCS -o _out",
+        cmd = "mkdir _out &amp;&amp; $TOOL generate $SRCS -o _out",
         output_dirs = ["_out"],
         ...
     )
-    </code></pre>
+      </code>
+    </pre>
 
-    <p>For more information on output directories, check out the documentation
-        <a href="/build_rules.html#out-dirs">here</a>!</p>
+    <p>
+      For more information on output directories, check out the documentation
+      <a class="copy-link" href="/build_rules.html#out-dirs">here</a>!
+    </p>
+  </section>
 
-    <h3>Entry points</h3>
+  <section class="mt4">
+    <h3 class="title-3">
+      Entry points
+    </h3>
+
     <p>
-        Another major pain-point in Please has been tooling that expect some resources to be in place in order to run.
-        For example, javac expects to be run from within a jdk installation folder so it can dynamically link to its
-        libraries.
+      Another major pain-point in Please has been tooling that expect some
+      resources to be in place in order to run. For example, javac expects to be
+      run from within a jdk installation folder so it can dynamically link to
+      its libraries.
+    </p>
+
     <p>
-        Entry points address this problem by allowing you to name a subset of the output files of a rule as entry
-        points. These can then be referenced with an annotated build rule later on:
-    <pre><code class="language-plz">
+      Entry points address this problem by allowing you to name a subset of the
+      output files of a rule as entry points. These can then be referenced with
+      an annotated build rule later on:
+    </p>
+
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
     build_rule(
         name = "jdk",
         ...
@@ -164,15 +337,50 @@
         },
         ...
     )
-    </code></pre>
-    <p>See <a href="/build_rules.html#entry-points">entry points</a> for more information.</p>
-    <h3>New built in functions and command replacements</h3>
+      </code>
+    </pre>
+
     <p>
-        The're have been a number of small additions to the build language in the recent releases:
-    <ul>
-        <li>Added <code>removeprefix(...)</code> and <code>removesuffix(...)</code> string utils to the build language.</li>
-        <li>Added <code>subrepo_name(...)</code> which will return you the subrepo name of the current package. This
-            is extremely useful for setting default configuration for third party subrepos.</li>
-        <li>Added <code>$(out_dir ...)</code> and <code>$(out_locations ...)</code> command expansions. See more
-            <a href="/build_rules.html">here</a>. </li>
+      See
+      <a class="copy-link" href="/build_rules.html#entry-points"
+        >entry points</a
+      >
+      for more information.
+    </p>
+  </section>
+
+  <section class="mt4">
+    <h3 class="title-3">
+      New built in functions and command replacements
+    </h3>
+
+    <p>
+      The're have been a number of small additions to the build language in the
+      recent releases:
+    </p>
+
+    <ul class="bulleted-list">
+      <li>
+        <span>
+          Added <code class="code">removeprefix(...)</code> and
+          <code class="code">removesuffix(...)</code> string utils to the build
+          language.
+        </span>
+      </li>
+      <li>
+        <span>
+          Added <code class="code">subrepo_name(...)</code> which will return
+          you the subrepo name of the current package. This is extremely useful
+          for setting default configuration for third party subrepos.
+        </span>
+      </li>
+      <li>
+        <span>
+          Added <code class="code">$(out_dir ...)</code> and
+          <code class="code">$(out_locations ...)</code> command expansions. See
+          more <a class="copy-link" href="/build_rules.html">here</a>.
+        </span>
+      </li>
     </ul>
+  </section>
+</section>

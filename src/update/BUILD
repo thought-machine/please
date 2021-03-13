@@ -13,8 +13,8 @@ go_library(
         "//src/utils",
         "//third_party/go:go-retryablehttp",
         "//third_party/go:logging",
-        "//third_party/go:openpgp",
         "//third_party/go:semver",
+        "//third_party/go:xcrypto",
         "//third_party/go:xz",
     ],
 )
@@ -23,8 +23,8 @@ go_test(
     name = "update_test",
     srcs = ["update_test.go"],
     data = [
+        ":test_please",
         ":test_tarball",
-        ":test_tarball_xz",
         "//src:please",
     ],
     labels = ["xz"],
@@ -55,11 +55,11 @@ tarball(
     test_only = True,
 )
 
-tarball(
-    name = "test_tarball_xz",
+genrule(
+    name = "test_please",
     srcs = ["//src/update/test:please"],
-    out = "please_test.tar.xz",
-    subdir = "please",
+    out = "please_test",
+    binary = True,
+    cmd = "cp $SRC $OUT",
     test_only = True,
-    xzip = True,
 )

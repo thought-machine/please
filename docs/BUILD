@@ -69,6 +69,7 @@ filegroup(
     srcs = glob(["images/*.png"]) + deps + [
         ":language_html",
         ":lexicon_html",
+        "tachyons-4.12.0.min.css",
         "styles.css",
         "action.js",
         "tabs.js",
@@ -131,6 +132,15 @@ go_binary(
 sh_cmd(
     name = "view",
     cmd = "sensible-browser http://localhost:8080 && cd plz-out/gen/docs && python3 -m http.server 8080",
+    data = [
+        ":docs",
+        ":index_html",
+    ],
+)
+
+sh_cmd(
+    name = "server",
+    cmd = "cd plz-out/gen/docs && python3 -m http.server 8080",
     data = [
         ":docs",
         ":index_html",

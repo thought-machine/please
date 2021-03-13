@@ -17,6 +17,6 @@ func ExpandHomePath(path string) string {
 // ExpandHomePathTo expands all prefixes of ~ without a user specifier to the given string.
 func ExpandHomePathTo(path, to string) string {
 	return homeRex.ReplaceAllStringFunc(path, func(subpath string) string {
-		return strings.Replace(subpath, "~", to, -1)
+		return strings.ReplaceAll(subpath, "~", to)
 	})
 }

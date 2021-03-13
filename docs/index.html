@@ -1,65 +1,151 @@
-<div class="index-corner">&nbsp;</div>
-
-<p class="index-open white">An extensible build system which <span class="cyan">performs at scale</span>.</p>
-
-<div class="index-layout">
-    <div>
-        <div>
-            <img src="images/hexagon_r.png" class="smol">
-            <h2><span class="red">Tests behave better in a sandbox</span></h2>
-            <p>Build steps are executed in their own tightly controlled hermetic environment. With access to only files
-                and env variables that they have explicitly been given access to, builds have never been more correct!
-                Please can take this a step further, utilising
-                <a href="https://en.wikipedia.org/wiki/Linux_namespaces">Linux namespaces</a> to sandbox the network
-                and filesystem!</p>
-        </div>
-        <div>
-            <img src="images/triangle_v.png" class="smol r90">
-            <h2><span class="violet">And run faster with robust caching</span></h2>
-            <p>Built from the ground up with correct and reliable model for incremental builds, Please only builds what
-                it needs to. Combined with the tightly controlled build environment, task parallelism, and distributed
-                caching, this makes for a reliable and performant build system at scale. You worry about what to build,
-                Please will worry about when, or indeed, if to build it!</p>
-        </div>
+<div id="main-content" role="main">
+  <div class="center mw9 w-100 pb7-l min-vh-100">
+    <div class="dn db-l mt4" aria-hidden="true">
+      <div class="h5 relative">
+        <img
+                class="absolute"
+                style="height: 16rem; transform: rotate(20deg); top: -12em; left: 3%;"
+                alt=""
+                src="/images/triangle_c.png"
+        />
+        <img
+                class="absolute"
+                style="height: 7em; transform: rotate(120deg); bottom: 5rem; left: 30%;"
+                alt=""
+                src="/images/circle_y.png"
+        />
+        <img
+                class="absolute"
+                style="height: 4rem; transform: rotate(-30deg); top: -5rem; right: 30%;"
+                alt=""
+                src="/images/square_g.png"
+        />
+        <img
+                class="absolute"
+                style="height: 7rem; transform: rotate(-80deg); top: -5rem; right: 5%;"
+                alt=""
+                src="/images/pentagon_r.png"
+        />
+      </div>
     </div>
-    <div>
-        <div>
-            <img src="images/square_g.png" class="smol">
-            <h2><span class="green">The developer experience you deserve</span></h2>
-            <p>Build any target, or execute any test, all with the same familiar CLI! Please can even manage your
-                toolchain; no more talking to IT to update to the next language version. Define aliases for common tasks
-                leveraging Please auto-completions for the ultimate developer experience. Written in Go, Please provides
-                all this power behind a snappy user experience with no runtime dependency.
+    <div class="calibre white center tc">
+        <h1 class="normal please-build mt0">please<span class="violet">.build</span></h1>
+        <h2 class="f3 f2-l">Build things your way</h2>
+        <p class="white normal f4">
+            <span class="violet">Please</span> is a cross-language build system with an
+            emphasis on high performance, extensibility and correctness
+        </p>
+    </div>
+    <div class="w-70-l center cf mt5-l">
+      <div class="fl w-25-l w-100 pr2 mt2 h3">
+        <a class="turquoise db no-underline tc pa2 ba center mw5" href="#why">1. Why Please?</a>
+      </div>
+      <div class="fl w-25-l w-100 pr2 mt2 h3">
+        <a class="turquoise db no-underline tc pa2 ba center mw5" href="quickstart.html">2. Install Please</a>
+      </div>
+      <div class="fl w-25-l w-100 pr2 mt2 h3">
+        <a class="turquoise db no-underline tc pa2 ba center mw5" href="/codelabs.html">3. Do the codelabs</a>
+      </div>
+      <div class="fl w-25-l w-100 pr2 mt2 h3">
+        <a class="turquoise db no-underline tc pa2 ba center mw5" href="/config.html">4. Read the docs</a>
+      </div>
+    </div>
+  </div>
+  <div id="why" class="bg-dark-gray pb6 pt4">
+    <div class="w-100 mw9 center tc">
+      <h1 class="calibre turquoise f1">Why Please?</h1>
+      <div class="flex flex-column flex-row-l flex-wrap-l mt5">
+        <section class="pt5 pl4-l w-25-l pa2">
+          <div class="mw7">
+            <img class="h3" alt="" src="images/hexagon_r.png" />
+
+            <h2 class="calibre red normal f2 mt3">
+              Build isolation
+            </h2>
+            <p class="white">
+              Build steps are executed in their own tightly controlled hermetic
+              environment. With access only to files and env variables that have been
+              made explicitly available, builds have never been more correct!
             </p>
-        </div>
-        <div>
-            <img src="images/square_y.png" class="smol r45">
-            <h2><span class="yellow">Across any technology you choose</span></h2>
-            <p>With a powerful framework for automating every part of your build process, get started quickly with the
-                built-in definitions, then expand on them crafting a truly holistic build process. Generate code,
-                configurations, deployment manifests, or whatever your imagination conceives, while rest assured Please
-                is handling correctness and performance no matter what you do.</p>
-        </div>
+          </div>
+        </section>
 
-    </div>
-    <div>
-        <div>
-            <img src="images/circle_t.png" class="smol">
-            <h2><span class="turquoise">Less incantation, more transparency</span></h2>
-            <p>Please isn't magic; it's built on a set of powerful core mechanisms that can be easily understood.
-                By relying on these mechanisms rather than opaque abstractions, configuration is light weight,
-                largely optional, and easily understood. There's no central workspace file that nobody truly owns with
-                pages of configuration and incantation nobody truly understands.</p>
-        </div>
-        <div>
-            <img src="images/triangle_p.png" class="smol">
-            <h2><span class="pink">Designed with continuous integration in mind</span></h2>
-            <p>We've developed Please in tandem with our internal integration tools, so integrating with Please is a
-                dream. Leveraging the build graph and git integrations, determine the minimal set of targets that have
-                been effected between changes. Run the effected tests, then export artifacts with a single command.
-                Leave it to Please to figure out what needs to be built and re-deploy only that which has changed!
+        <section class="pt5 w-25-l pa2">
+          <div class="mw7">
+            <img class="h3 rotate-90" alt="" src="images/triangle_v.png" />
+
+            <h2 class="calibre violet normal f2 mt3">
+              Blazing fast
+            </h2>
+            <p class="white">
+              Built from the ground up with incrementallity in mind, Please only builds what it needs.
+              Combined with task parallelism and distributed caching, this makes for an amazingly
+              performant build system at scale.
             </p>
-        </div>
+          </div>
+        </section>
+
+        <section class="pt5 w-25-l pa2">
+          <div class="mw7">
+            <img class="h3" alt="" src="images/square_g.png" />
+            <h2 class="calibre green normal f2 mt3">
+              Feels amazing to use
+            </h2>
+            <p class="white">
+              Build and test any target, all with the same familiar CLI!
+              Please can even manage and download your toolchain. Define aliases for
+              common tasks leveraging Please auto-completions for the ultimate developer experience.
+            </p>
+          </div>
+        </section>
+
+        <section class="pt5 pr4-l w-25-l pa2">
+          <div class="mw7">
+            <img class="h3" alt="" src="images/circle_t.png" />
+
+            <h2 class="calibre turquoise normal f2 mt3">
+              For any technology
+            </h2>
+            <p class="white">
+              With a powerful framework for automating every part of your build process, get started quickly with the
+              built-in definitions, then expand on them crafting a truly holistic build process.
+            </p>
+          </div>
+        </section>
+      </div>
     </div>
-    <!-- TODO(jpoole): write up about remote execution here once we're a bit happier with it -->
+  </div>
+  <div class="bg-near-black">
+    <section class="relative ph3 pv5 calibre tc mw9 w-100 center">
+      <div class="relative dn db-l w-20-l" aria-hidden="true">
+        <img
+                class="absolute"
+                style="height: 4rem; top: 6rem; left: -1rem;"
+                alt=""
+                src="/images/hexagon_r.png"
+        />
+      </div>
+      <div class="dn db-l" aria-hidden="true">
+        <img
+                class="absolute"
+                style="height: 12em; transform: rotate(160deg); top: -1rem; left: 20%;"
+                alt=""
+                src="/images/triangle_g.png"
+        />
+        <img
+                class="absolute"
+                style="height: 8em; right: 5%; bottom: -2rem;"
+                alt=""
+                src="/images/circle_y.png"
+        />
+      </div>
+      <h2 class="mb4 silver f3 normal">
+        <span class="white">Want Please?</span> Get started:
+      </h2>
+      <p class="f3">
+        <a class="pv3 dib w-100 mw5 white no-underline ba bw1 b--turquoise br-pill" href="/quickstart.html"
+        >Yes Please</a>
+      </p>
+    </section>
+  </div>
 </div>

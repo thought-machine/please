@@ -1,5 +1,5 @@
 # Test on the builtin go rules
-subinclude("//build_defs:plz_e2e_test")
+subinclude("//test/build_defs")
 
 go_library(
     name = "go_rules_test_lib",
@@ -55,7 +55,7 @@ go_test(
 go_library(
     name = "test_main_lib",
     srcs = ["main_test.go"],
-    out = "whatever.a",
+    package = "whatever",
     test_only = True,
 )
 
@@ -76,4 +76,17 @@ gentest(
     name = "test_main_test",
     data = [":test_main_bin"],
     test_cmd = "$DATA | tee $RESULTS_FILE",
+)
+
+go_library(
+    name = "package_test_lib",
+    srcs = ["package_lib.go"],
+    package = "package_lib",
+)
+
+go_test(
+    name = "package_test",
+    srcs = ["package_test.go"],
+    external = True,
+    deps = [":package_test_lib"],
 )

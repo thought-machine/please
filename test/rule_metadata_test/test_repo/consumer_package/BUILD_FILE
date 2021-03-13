@@ -1,5 +1,0 @@
-genrule(
-    name="wibble", 
-    outs=[get_rule_metadata("//md_package:metadata_rule").output_file],
-    cmd = "echo wibble wibble wibble > $OUT",
-)

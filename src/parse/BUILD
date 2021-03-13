@@ -2,6 +2,7 @@ go_library(
     name = "parse",
     srcs = [
         "init.go",
+        "internal_package.go",
         "parse_step.go",
         "suggest.go",
     ],
@@ -16,6 +17,7 @@ go_library(
         "//src/utils",
         "//src/worker",
         "//third_party/go:logging",
+        "//third_party/go:semver",
     ],
 )
 

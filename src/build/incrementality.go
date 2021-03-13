@@ -244,6 +244,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	hashBool(h, target.OutputIsComplete)
 	hashBool(h, target.Stamp)
 	hashBool(h, target.IsFilegroup)
+	hashBool(h, target.IsTextFile)
 	hashBool(h, target.IsRemoteFile)
 	hashBool(h, target.Local)
 	hashOptionalBool(h, target.ExitOnError)
@@ -278,12 +279,15 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 		h.Write([]byte(o))
 	}
 
-	hashEntryPoints(h, target.EntryPoints)
+	hashMap(h, target.EntryPoints)
+	hashMap(h, target.Env)
+
+	h.Write([]byte(target.FileContent))
 
 	return h.Sum(nil)
 }
 
-func hashEntryPoints(writer hash.Hash, eps map[string]string) {
+func hashMap(writer hash.Hash, eps map[string]string) {
 	keys := make([]string, len(eps))
 	for ep := range eps {
 		keys = append(keys, ep)

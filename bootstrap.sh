@@ -13,15 +13,21 @@ function warn {
 PLZ_ARGS="${PLZ_ARGS:-}"
 
 # Now invoke Go to run Please to build itself.
-notice "Building Please..."
-go run src/please.go $PLZ_ARGS build //src:please --log_file plz-out/log/bootstrap_build.log
-# Use it to build the rest of the tools that come with it.
-notice "Building the tools..."
-plz-out/bin/src/please $PLZ_ARGS build //package:installed_files --log_file plz-out/log/tools_build.log
+notice "Bootstrapping please..."
+go build -o plz-out/bootstrap/please_go tools/please_go/please_go.go
+go run src/please.go $PLZ_ARGS --log_file plz-out/log/bootstrap_build.log -o please.location:"$(pwd)/plz-out/bootstrap" export outputs -o plz-out/please //package:installed_files
+cp -f plz-out/please/please plz-out/please/plz
+
+echo "Please has been installed under plz-out/please"
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
+    echo "Skipping tests... done."
     exit 0
 fi
+
+# We need to build the tools again because please.location has changed, so the e2e test would fail
+notice "Building the tools..."
+plz-out/please/plz $PLZ_ARGS build //package:installed_files --log_file plz-out/log/tools_build.log
 
 # Run the tests to make sure they still work
 notice "Running tests..."
@@ -40,6 +46,7 @@ if [ "`uname`" = "Darwin" ]; then
         fi
     fi
 fi
+
 eval `go env`
 if [ "$GOOS" != "linux" ] ; then
     warn "cc_module tests disabled due to not being on Linux"
@@ -84,9 +91,9 @@ if [ ! -d "/usr/lib/gcc/x86_64-linux-gnu/${GCCVER%.*.*}/32" ] && [ ! -d "/usr/li
     EXCLUDES="${EXCLUDES} --exclude=x86"
 fi
 
-plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --exclude=e2e --log_file plz-out/log/test_build.log --log_file_level 4 --trace_file plz-out/log/trace.json $@
+plz-out/please/plz $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --exclude=e2e --log_file plz-out/log/test_build.log --log_file_level 4 --trace_file plz-out/log/trace.json $@
 
 # We run the end-to-end tests separately to ensure things don't fight with one another; they are
 # finicky about some things due to running plz recursively and disabling the lock.
 notice "Running end-to-end tests..."
-plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e2e --log_file plz-out/log/e2e_build.log --log_file_level 4 $@
+plz-out/please/plz $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e2e --log_file plz-out/log/e2e_build.log --log_file_level 4 $@

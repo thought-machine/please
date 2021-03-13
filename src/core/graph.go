@@ -115,7 +115,7 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 		if label.Subrepo == "pleasings" {
 			if _, ok := graph.subrepos.GetOK("pleasings"); !ok {
 				log.Warning("You've tried to use the pleasings sub-repo. This is no longer included automatically.")
-				log.Warning("Use `plz init pleasings` to add the pleasings repo to your project.")
+				log.Warning("Use `plz init pleasings --revision=vX.X.X` to add the pleasings repo to your project.")
 			}
 		}
 		log.Fatalf("Target %s not found in build graph\n", label)

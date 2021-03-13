@@ -351,3 +351,21 @@ func TestDivide(t *testing.T) {
 	assert.EqualValues(t, 7, s.Lookup("j"))
 	assert.EqualValues(t, -2, s.Lookup("k"))
 }
+
+func TestFStringOptimisation(t *testing.T) {
+	s, stmts, err := parseFileToStatements("src/parse/asp/test_data/interpreter/fstring_optimisation.build")
+	require.NoError(t, err)
+	assert.EqualValues(t, s.Lookup("x"), "test")
+	// Check that it's been optimised to something
+	assign := stmts[0].Ident.Action.Assign
+	assert.Nil(t, assign.Val)
+	assert.NotNil(t, assign.Optimised.Constant)
+	assert.EqualValues(t, "test", assign.Optimised.Constant)
+}
+
+func TestFormat(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/format.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, `LLVM_NATIVE_ARCH=\"x86\"`, s.Lookup("arch"))
+	assert.EqualValues(t, `ARCH="linux_amd64"`, s.Lookup("arch2"))
+}

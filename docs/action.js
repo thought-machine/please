@@ -1,91 +1,114 @@
-document.addEventListener('DOMContentLoaded', function() {
-    var elems = document.querySelectorAll('a[name]');
-    var elemMap = {}, menuItems = {};
-    for (var i = 0; i < elems.length; ++i) {
-        elemMap[elems[i].name] = elems[i];
+(() => {
+  const setupMenu = () => {
+    const menuButtonNode = document.querySelector("#menu-button");
+    const menuListNode = document.querySelector("#menu-list");
+
+    menuButtonNode.addEventListener("click", () => {
+      if (menuListNode.classList.contains("dn")) {
+        menuListNode.classList.remove("dn");
+      } else {
+        menuListNode.classList.add("dn");
+      }
+    });
+  };
+
+  const fadeNavGraphicOnScroll = () => {
+    const img = document.querySelector("#nav-graphic");
+
+    if (img) {
+      const fade = () => {
+        img.style.opacity = Math.max(400 - window.scrollY, 100.0) / 400.0;
+      };
+
+      // Initial trigger
+      fade();
+
+      window.addEventListener("scroll", fade, { passive: true });
     }
-    var menuElems = document.querySelectorAll('.menu .selected a');
-    var found = false;
-    for (var i = 0; i < menuElems.length; ++i) {
-        var href = menuElems[i].href;
-        var hash = href.indexOf('#');
-        if (hash != -1) {
-            var name = href.substr(hash + 1);
-            if (name in elemMap) {
-                menuItems[name] = menuElems[i];
-                found = true;
-            }
-        }
+  };
+
+  const angle = (el) => {
+    const t = window.getComputedStyle(el).getPropertyValue("transform");
+    if (t === "none") {
+      return 0;
     }
 
-    var angle = function(el) {
-        var tr = window.getComputedStyle(el, null).getPropertyValue("transform");
-        if (tr === "none") {
-            return 0;
-        }
-        var values = tr.split('(')[1];
-        values = values.split(')')[0];
-        values = values.split(',');
-        var a = values[0];
-        var b = values[1];
-        var c = values[2];
-        var d = values[3];
-        return Math.round(Math.atan2(b, a) * (180/Math.PI));
-    }
+    const tValues = t.substring(t.indexOf("(") + 1, t.indexOf(")"));
+    const [a, b] = tValues.split(",");
 
-    var pics = document.querySelectorAll('.menu-graphic img, .sideimg img');
-    var rots = new Array(pics.length);
-    for (var i = 0; i < pics.length; ++i) {
-        rots[i] = angle(pics[i]);
-    }
+    return Math.round(Math.atan2(b, a) * (180 / Math.PI));
+  };
 
-    var fadeImg = function() {
-        var img = document.querySelector('.menu-graphic img');
-        if (img) {
-            img.style.opacity = Math.max(400 - window.scrollY, 100.0) / 400.0;
-        }
-    }
+  const rotateOnScroll = (selector) => {
+    const els = document.querySelectorAll(selector);
+    const rots = Array.from(els, (el) => angle(el));
 
-    window.addEventListener('scroll', function(e) {
-        if (found) {
-            var maxY = 0;
-            var winner = "";
-            for (var key in menuItems) {
-                var y = elemMap[key].offsetTop;
-                if (y < window.scrollY + window.innerHeight/2 && y > maxY) {
-                    maxY = y;
-                    winner = key;
-                }
-                menuItems[key].className = "";
-            }
-            if (winner) {
-                menuItems[winner].className = "selected";
-            }
-        }
-        var rot = window.scrollY / 100;
-        for (var i = 0; i < pics.length; ++i) {
-            pics[i].style.transform = 'rotate(' + (rot + rots[i]) + 'deg)';
-        }
-        fadeImg();
+    window.addEventListener(
+      "scroll",
+      () => {
+        const rot = window.scrollY / 100;
+
+        els.forEach((el, index) => {
+          el.style.transform = `rotate(${rot + rots[index]}deg)`;
+        });
+      },
+      { passive: true }
+    );
+  };
+
+  const setupSpyScroll = () => {
+    const targets = document.querySelectorAll(
+      "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id], a[id]"
+    );
+
+    const idToTargetMapping = {};
+    targets.forEach((target) => {
+      idToTargetMapping[target.id] = target;
     });
 
-    var toggleMenu = function() {
-        var elem = document.querySelector('nav > ul');
-        if (elem.classList.contains('hide')) {
-            elem.classList.remove('hide');
-        } else {
-            elem.classList.add('hide');
+    const sameCurrentPageMenuLinks = document.querySelectorAll(
+      `#menu-list a[href^="${window.location.pathname}"]`
+    );
+    const menuLinksWithAvailableTargets = {};
+    sameCurrentPageMenuLinks.forEach((menuLink) => {
+      if (menuLink.href.includes("#")) {
+        const hash = menuLink.href.substring(menuLink.href.indexOf("#") + 1);
+        if (hash in idToTargetMapping) {
+          menuLinksWithAvailableTargets[hash] = menuLink;
         }
-    };
-
-    document.querySelector('nav > p a').addEventListener('click', function(e) {
-        toggleMenu();
-        e.preventDefault();
-        return false;
+      }
     });
 
-    if (window.innerWidth < 800) {
-        toggleMenu();
+    if (Object.keys(menuLinksWithAvailableTargets).length > 0) {
+      window.addEventListener(
+        "scroll",
+        () => {
+          let maxY = 0;
+          let winner;
+
+          for (const hash in menuLinksWithAvailableTargets) {
+            // Clear previously set value
+            menuLinksWithAvailableTargets[hash].style.color = "";
+
+            const y = idToTargetMapping[hash].offsetTop;
+            if (y < window.scrollY + window.innerHeight / 2 && y > maxY) {
+              maxY = y;
+              winner = hash;
+            }
+          }
+          if (winner) {
+            menuLinksWithAvailableTargets[winner].style.color = "white";
+          }
+        },
+        { passive: true }
+      );
     }
-    fadeImg();
-}, false);
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    fadeNavGraphicOnScroll();
+    setupMenu();
+    rotateOnScroll("#nav-graphic, #side-images img");
+    setupSpyScroll();
+  });
+})();

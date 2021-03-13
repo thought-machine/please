@@ -1,690 +1,1500 @@
-    <h1>The Lexicon of Please</h1>
+<h1 class="title-1">The Lexicon of Please</h1>
 
-    <p>This is the reference for the complete set of builtin rules & functions.</p>
+<p>
+  This is the reference for the complete set of builtin rules &amp; functions.
+</p>
 
-    <ul>
-      <li><a href="#python-builtins">Python style builtins</a></li>
-      <li><a href="#please-builtins">Please builtins</a></li>
-      <li><a href="#cc">C and C++ rules</a></li>
-      <li><a href="#go">Go rules</a></li>
-      <li><a href="#java">Java rules</a></li>
-      <li><a href="#misc">Miscellaneous rules</a></li>
-      <li><a href="#proto">Protocol buffer rules</a></li>
-      <li><a href="#python">Python rules</a></li>
-      <li><a href="#sh">Shell rules</a></li>
-      <li><a href="#subrepo">Subrepo rules</a></li>
-    </ul>
+<ul class="bulleted-list">
+  <li>
+    <span>
+      <a class="copy-link" href="#python-builtins">Python style builtins</a>
+    </span>
+  </li>
+  <li>
+    <span>
+      <a class="copy-link" href="#please-builtins">Please builtins</a>
+    </span>
+  </li>
+  <li>
+    <span>
+      <a class="copy-link" href="#cc">C and C++ rules</a>
+    </span>
+  </li>
+  <li>
+    <span>
+      <a class="copy-link" href="#go">Go rules</a>
+    </span>
+  </li>
+  <li>
+    <span>
+      <a class="copy-link" href="#java">Java rules</a>
+    </span>
+  </li>
+  <li>
+    <span>
+      <a class="copy-link" href="#misc">Miscellaneous rules</a>
+    </span>
+  </li>
+  <li>
+    <span>
+      <a class="copy-link" href="#proto">Protocol buffer rules</a>
+    </span>
+  </li>
+  <li>
+    <span>
+      <a class="copy-link" href="#python">Python rules</a>
+    </span>
+  </li>
+  <li>
+    <span>
+      <a class="copy-link" href="#sh">Shell rules</a>
+    </span>
+  </li>
+  <li>
+    <span>
+      <a class="copy-link" href="#subrepo">Subrepo rules</a>
+    </span>
+  </li>
+</ul>
 
-    <h2><a name="python-builtins">Python builtins</a></h2>
+<section class="mt4">
+  <h2 class="title-2" id="python-builtins">
+    Python style builtins
+  </h2>
 
-    <p>The build language largely resembles Python. As such, following python inpired functions are available as builtins:</p>
-    <ul>
-        <li><code><span class="fn-name">len</span><span class="fn-p">(</span><span class="fn-arg">x</span><span class="fn-p">)</span></code>
-            - returns the length of <code>x</code></li>
-        <li><code><span class="fn-name">enumerate</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
-            - returns a list of pairs of the index and object for each item in <code>seq</code></li>
-        <li><code><span class="fn-name">zip</span><span class="fn-p">(</span><span class="fn-arg">x</span>, <span class="fn-arg">y</span>, <span class="fn-arg">...</span><span class="fn-p">)</span></code>
-            - returns a list in which each element has one item from each argument</li>
-        <li><code><span class="fn-name">isinstance</span><span class="fn-p">(</span><span class="fn-arg">x</span>, <span class="fn-arg">type</span><span class="fn-p">)</span></code>
-            - returns True if <code>x</code> is of the given type.</li>
-        <li><code><span class="fn-name">range</span><span class="fn-p">(</span>[<span class="fn-arg">start</span>, ]<span class="fn-arg">stop</span>[, <span class="fn-arg">step</span>]</span><span class="fn-p">)</span></code>
-            - returns a list of integers up to <code>stop</code> (or from <code>start</code> to <code>stop</code>)</li>
-        <li><code><span class="fn-name">any</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
-            - returns true if any of the items in <code>seq</code> are considered true.</li>
-        <li><code><span class="fn-name">all</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
-            - returns true if all of the items in <code>seq</code> are considered true.</li>
-        <li><code><span class="fn-name">sorted</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
-            - returns a copy of the given list with the contents sorted.</li>
-        <li><code><span class="fn-name">package_name</span><span class="fn-p">(</span><span class="fn-arg"></span><span class="fn-p">)</span></code>
-            - returns the package being currently parsed.</li>
-        <li><code><span class="fn-name">subrepo_name</span><span class="fn-p">(</span><span class="fn-arg"></span><span class="fn-p">)</span></code>
-            - returns the subrepo of the package being currently parsed or the empty string if this is not a subrepo.</li>
-        <li><code><span class="fn-name">join_path</span><span class="fn-p">(</span><span class="fn-arg">x</span>, <span class="fn-arg">...</span><span class="fn-p">)</span></code>
-            - joins the given path elements using the OS separator. It will intelligently
-            handle repeated or missing separators.</li>
-        <li><code><span class="fn-name">split_path</span><span class="fn-p">(</span><span class="fn-arg">path</span><span class="fn-p">)</span></code>
-            - splits the given path into the directory and filename.</li>
-        <li><code><span class="fn-name">splitext</span><span class="fn-p">(</span><span class="fn-arg">filename</span><span class="fn-p">)</span></code>
-            - splits the given filename into base name and extension at the final dot.</li>
-        <li><code><span class="fn-name">basename</span><span class="fn-p">(</span><span class="fn-arg">path</span><span class="fn-p">)</span></code>
-            - returns the basename of a file</li>
-        <li><code><span class="fn-name">dirname</span><span class="fn-p">(</span><span class="fn-arg">path</span><span class="fn-p">)</span></code>
-            - returns the directory name of a file.</li>
-        <li><code><span class="fn-name">breakpoint</span><span class="fn-p">()</span></code>
-            - breaks into an interactive debugger allowing inspection of the current scope.
-            It would be a good idea to run Please with the <code>-p</code> / <code>--plain_output</code>
-            flag if intending to use this.</li>
-    </ul>
-    <h3>Strings</h3>
+  <p>
+    The build language largely resembles Python. As such, following python
+    inspired functions are available as builtins:
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">len</span><span class="fn-p">(</span
+          ><span class="fn-arg">x</span><span class="fn-p">)</span></code
+        >
+        - returns the length of <code class="code">x</code>.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">enumerate</span><span class="fn-p">(</span
+          ><span class="fn-arg">seq</span><span class="fn-p">)</span></code
+        >
+        - returns a list of pairs of the index and object for each item in
+        <code class="code">seq</code>.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">zip</span><span class="fn-p">(</span
+          ><span class="fn-arg">x</span>, <span class="fn-arg">y</span>,
+          <span class="fn-arg">...</span><span class="fn-p">)</span></code
+        >
+        - returns a list in which each element has one item from each argument.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">isinstance</span><span class="fn-p">(</span
+          ><span class="fn-arg">x</span>, <span class="fn-arg">type</span
+          ><span class="fn-p">)</span></code
+        >
+        - returns True if <code class="code">x</code> is of the given type.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">range</span><span class="fn-p">(</span>[<span
+            class="fn-arg"
+            >start</span
+          >, ]<span class="fn-arg">stop</span>[,
+          <span class="fn-arg">step</span>]<span class="fn-p">)</span></code
+        >
+        - returns a list of integers up to <code class="code">stop</code> (or
+        from <code class="code">start</code> to <code class="code">stop</code>).
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">any</span><span class="fn-p">(</span
+          ><span class="fn-arg">seq</span><span class="fn-p">)</span></code
+        >
+        - returns true if any of the items in <code class="code">seq</code> are
+        considered true.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">all</span><span class="fn-p">(</span
+          ><span class="fn-arg">seq</span><span class="fn-p">)</span></code
+        >
+        - returns true if all of the items in <code class="code">seq</code> are
+        considered true.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">sorted</span><span class="fn-p">(</span
+          ><span class="fn-arg">seq</span><span class="fn-p">)</span></code
+        >
+        - returns a copy of the given list with the contents sorted.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">package_name</span><span class="fn-p">(</span
+          ><span class="fn-arg"></span><span class="fn-p">)</span></code
+        >
+        - returns the package being currently parsed.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">subrepo_name</span><span class="fn-p">(</span
+          ><span class="fn-arg"></span><span class="fn-p">)</span></code
+        >
+        - returns the subrepo of the package being currently parsed or the empty
+        string if this is not a subrepo.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">join_path</span><span class="fn-p">(</span
+          ><span class="fn-arg">x</span>, <span class="fn-arg">...</span
+          ><span class="fn-p">)</span></code
+        >
+        - joins the given path elements using the OS separator. It will
+        intelligently handle repeated or missing separators.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">split_path</span><span class="fn-p">(</span
+          ><span class="fn-arg">path</span><span class="fn-p">)</span></code
+        >
+        - splits the given path into the directory and filename.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">splitext</span><span class="fn-p">(</span
+          ><span class="fn-arg">filename</span><span class="fn-p">)</span></code
+        >
+        - splits the given filename into base name and extension at the final
+        dot.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">basename</span><span class="fn-p">(</span
+          ><span class="fn-arg">path</span><span class="fn-p">)</span></code
+        >
+        - returns the basename of a file.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">dirname</span><span class="fn-p">(</span
+          ><span class="fn-arg">path</span><span class="fn-p">)</span></code
+        >
+        - returns the directory name of a file.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">breakpoint</span
+          ><span class="fn-p">()</span></code
+        >
+        - breaks into an interactive debugger allowing inspection of the current
+        scope. It would be a good idea to run Please with the
+        <code class="code">-p</code> /
+        <code class="code">--plain_output</code> flag if intending to use this.
+      </span>
+    </li>
+  </ul>
+
+  <section class="mt4">
+    <h3 class="title-3">
+      Strings
+    </h3>
+
     <p>The following are available as member functions of strings:</p>
-    <ul>
-        <li><code><span class="fn-name">join</span><span class="fn-p">(</span><span class="fn-arg">seq</span><span class="fn-p">)</span></code>
-            - joins the elements of <code>seq</code> together with this string as a separator.</li>
-        <li><code><span class="fn-name">split</span><span class="fn-p">(</span><span class="fn-arg">sep</span><span class="fn-p">)</span></code>
-            - splits this string at each occurrence of the given separator.</li>
-        <li><code><span class="fn-name">replace</span><span class="fn-p">(</span><span class="fn-arg">old</span>, <span class="fn-arg">new</span><span class="fn-p">)</span></code>
-            - returns a copy of this string with all instances of <code>old</code> replaced with <code>new</code>.</li>
-        <li><code><span class="fn-name">partition</span><span class="fn-p">(</span><span class="fn-arg">sep</span><span class="fn-p">)</span></code>
-            - breaks this string around the first occurrence of <code>sep</code> and returns a 3-tuple of (before, sep, after).</li>
-        <li><code><span class="fn-name">rpartition</span><span class="fn-p">(</span><span class="fn-arg">sep</span><span class="fn-p">)</span></code>
-            - breaks this string around the last occurrence of <code>sep</code> and returns a 3-tuple of (before, sep, after).</li>
-        <li><code><span class="fn-name">startswith</span><span class="fn-p">(</span><span class="fn-arg">prefix</span><span class="fn-p">)</span></code>
-            - returns true if this string begins with <code>prefix</code></li>
-        <li><code><span class="fn-name">endswith</span><span class="fn-p">(</span><span class="fn-arg">suffix</span><span class="fn-p">)</span></code>
-            - returns true if this string ends with <code>suffix</code></li>
-        <li><code><span class="fn-name">format</span><span class="fn-p">(</span><span class="fn-arg">arg1=val1</span>, <span class="fn-arg">arg2=val2</span>, <span class="fn-arg">...</span>)</span><span class="fn-p">)</span></code>
-            - Replaces named parameters in the string.</li>
-        <li><code><span class="fn-name">lstrip</span><span class="fn-p">(</span><span class="fn-arg">cutset</span><span class="fn-p">)</span></code>
-            - strips all characters in <code>cutset</code> from the beginning of this string.</li>
-        <li><code><span class="fn-name">rstrip</span><span class="fn-p">(</span><span class="fn-arg">cutset</span><span class="fn-p">)</span></code>
-            - strips all characters in <code>cutset</code> from the end of this string.</li>
-        <li><code><span class="fn-name">strip</span><span class="fn-p">(</span><span class="fn-arg">cutset</span><span class="fn-p">)</span></code>
-            - strips all characters in <code>cutset</code> from the beginning & end of this string.</li>
-        <li><code><span class="fn-name">removeprefix</span><span class="fn-p">(</span><span class="fn-arg">prefix</span><span class="fn-p">)</span></code>
-            - strips the exact string <code>prefix</code> from the beginning of this string.</li>
-        <li><code><span class="fn-name">removesuffix</span><span class="fn-p">(</span><span class="fn-arg">suffix</span><span class="fn-p">)</span></code>
-            - strips the exact string <code>suffix</code> from the end of this string.</li>
-        <li><code><span class="fn-name">find</span><span class="fn-p">(</span><span class="fn-arg">needle</span><span class="fn-p">)</span></code>
-            - returns the index of the first occurrence of <code>needle</code> in this string.</li>
-        <li><code><span class="fn-name">rfind</span><span class="fn-p">(</span><span class="fn-arg">needle</span><span class="fn-p">)</span></code>
-            - returns the index of the last occurrence of <code>needle</code> in this string.</li>
-        <li><code><span class="fn-name">count</span><span class="fn-p">(</span><span class="fn-arg">needle</span><span class="fn-p">)</span></code>
-            - returns the number of times <code>needle</code> occurs in this string.</li>
-        <li><code><span class="fn-name">upper</span><span class="fn-p">()</span></code>
-            - returns a copy of this string converted to uppercase.</li>
-        <li><code><span class="fn-name">lower</span><span class="fn-p">()</span></code>
-            - returns a copy of this string converted to lowercase.</li>
-    </ul>
 
-    <h3>Dictionaries</h3>
+    <ul class="bulleted-list">
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">join</span><span class="fn-p">(</span
+            ><span class="fn-arg">seq</span><span class="fn-p">)</span></code
+          >
+          - joins the elements of <code class="code">seq</code> together with
+          this string as a separator.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">split</span><span class="fn-p">(</span
+            ><span class="fn-arg">sep</span><span class="fn-p">)</span></code
+          >
+          - splits this string at each occurrence of the given separator.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">replace</span><span class="fn-p">(</span
+            ><span class="fn-arg">old</span>, <span class="fn-arg">new</span
+            ><span class="fn-p">)</span></code
+          >
+          - returns a copy of this string with all instances of
+          <code class="code">old</code> replaced with
+          <code class="code">new</code>.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">partition</span><span class="fn-p">(</span
+            ><span class="fn-arg">sep</span><span class="fn-p">)</span></code
+          >
+          - breaks this string around the first occurrence of
+          <code class="code">sep</code> and returns a 3-tuple of (before, sep,
+          after).
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">rpartition</span><span class="fn-p">(</span
+            ><span class="fn-arg">sep</span><span class="fn-p">)</span></code
+          >
+          - breaks this string around the last occurrence of
+          <code class="code">sep</code> and returns a 3-tuple of (before, sep,
+          after).
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">startswith</span><span class="fn-p">(</span
+            ><span class="fn-arg">prefix</span><span class="fn-p">)</span></code
+          >
+          - returns true if this string begins with
+          <code class="code">prefix</code>
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">endswith</span><span class="fn-p">(</span
+            ><span class="fn-arg">suffix</span><span class="fn-p">)</span></code
+          >
+          - returns true if this string ends with
+          <code class="code">suffix</code>
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">format</span><span class="fn-p">(</span
+            ><span class="fn-arg">arg1=val1</span>,
+            <span class="fn-arg">arg2=val2</span>,
+            <span class="fn-arg">...</span><span class="fn-p">)</span></code
+          >
+          - Replaces named parameters in the string.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">lstrip</span><span class="fn-p">(</span
+            ><span class="fn-arg">cutset</span><span class="fn-p">)</span></code
+          >
+          - strips all characters in <code class="code">cutset</code> from the
+          beginning of this string.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">rstrip</span><span class="fn-p">(</span
+            ><span class="fn-arg">cutset</span><span class="fn-p">)</span></code
+          >
+          - strips all characters in <code class="code">cutset</code> from the
+          end of this string.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">strip</span><span class="fn-p">(</span
+            ><span class="fn-arg">cutset</span><span class="fn-p">)</span></code
+          >
+          - strips all characters in <code class="code">cutset</code> from the
+          beginning &amp; end of this string.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">removeprefix</span><span class="fn-p">(</span
+            ><span class="fn-arg">prefix</span><span class="fn-p">)</span></code
+          >
+          - strips the exact string <code class="code">prefix</code> from the
+          beginning of this string.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">removesuffix</span><span class="fn-p">(</span
+            ><span class="fn-arg">suffix</span><span class="fn-p">)</span></code
+          >
+          - strips the exact string <code class="code">suffix</code> from the
+          end of this string.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">find</span><span class="fn-p">(</span
+            ><span class="fn-arg">needle</span><span class="fn-p">)</span></code
+          >
+          - returns the index of the first occurrence of
+          <code class="code">needle</code> in this string.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">rfind</span><span class="fn-p">(</span
+            ><span class="fn-arg">needle</span><span class="fn-p">)</span></code
+          >
+          - returns the index of the last occurrence of
+          <code class="code">needle</code> in this string.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">count</span><span class="fn-p">(</span
+            ><span class="fn-arg">needle</span><span class="fn-p">)</span></code
+          >
+          - returns the number of times <code class="code">needle</code> occurs
+          in this string.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">upper</span
+            ><span class="fn-p">()</span></code
+          >
+          - returns a copy of this string converted to uppercase.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">lower</span
+            ><span class="fn-p">()</span></code
+          >
+          - returns a copy of this string converted to lowercase.
+        </span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="mt4">
+    <h3 class="title-3">
+      Dictionaries
+    </h3>
+
     <p>The following are available as member functions of dictionaries:</p>
-    <ul>
-        <li><code><span class="fn-name">get</span><span class="fn-p">(</span><span class="fn-arg">key</span>[, </span><span class="fn-arg">default</span>]<span class="fn-p">)</span></code>
-            - returns the item with the given key, or the default (<code>None</code> if that is not given).</li>
-        <li><code><span class="fn-name">setdefault</span><span class="fn-p">(</span><span class="fn-arg">key</span>[, </span><span class="fn-arg">default</span>]<span class="fn-p">)</span></code>
-            - If the given key is in the dict, return its value, otherwise insert it with the given value (<code>None</code> if that is not given).</li>
-        <li><code><span class="fn-name">keys</span><span class="fn-p">()</span></code>
-            - returns an iterable sequence of the keys of this dictionary, in a consistent order.</li>
-        <li><code><span class="fn-name">values</span><span class="fn-p">()</span></code>
-            - returns an iterable sequence of the values of this dictionary, in a consistent order.</li>
-        <li><code><span class="fn-name">items</span><span class="fn-p">()</span></code>
-            - returns an iterable sequence of pairs of the keys and values of this dictionary, in a consistent order.</li>
-        <li><code><span class="fn-name">copy</span><span class="fn-p">()</span></code>
-            - <span class="red">deprecated</span>, use a comprehension if needed. Returns a shallow copy of this dictionary.</li>
+
+    <ul class="bulleted-list">
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">get</span><span class="fn-p">(</span
+            ><span class="fn-arg">key</span>[,
+            <span class="fn-arg">default</span>]<span class="fn-p"
+              >)</span
+            ></code
+          >
+          - returns the item with the given key, or the default (<code
+            class="code"
+            >None</code
+          >
+          if that is not given).
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">setdefault</span><span class="fn-p">(</span
+            ><span class="fn-arg">key</span>[,
+            <span class="fn-arg">default</span>]<span class="fn-p"
+              >)</span
+            ></code
+          >
+          - If the given key is in the dict, return its value, otherwise insert
+          it with the given value (<code class="code">None</code> if that is not
+          given).
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">keys</span><span class="fn-p">()</span></code
+          >
+          - returns an iterable sequence of the keys of this dictionary, in a
+          consistent order.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">values</span
+            ><span class="fn-p">()</span></code
+          >
+          - returns an iterable sequence of the values of this dictionary, in a
+          consistent order.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">items</span
+            ><span class="fn-p">()</span></code
+          >
+          - returns an iterable sequence of pairs of the keys and values of this
+          dictionary, in a consistent order.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">copy</span><span class="fn-p">()</span></code
+          >
+          - <span class="red">deprecated</span>, use a comprehension if needed.
+          Returns a shallow copy of this dictionary.
+        </span>
+      </li>
     </ul>
+  </section>
+</section>
 
-    <h2 id="please-builtins">Please builtins</h2>
-    <p>In addition to the python builtins, Please also has a rich set of its own functions.</p>
+<section class="mt4">
+  <h2 class="title-2" id="please-builtins">
+    Please builtins
+  </h2>
 
-    <h3>log</h3>
-    <p>Messages can be logged to Please's usual logging mechanism. These
-        may or may not be displayed depending on the <code>-v</code> flag; by default only
-        <code>warning</code> and above are visible.</p>
-    <ul>
-        <li><code><span class="fn-name">log.debug</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-            - the lowest level of messages, output at this level is very verbose.</li>
-        <li><code><span class="fn-name">log.info</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-            - Informational messages, typically this is the highest level per-target information is logged at.</li>
-        <li><code><span class="fn-name">log.notice</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-            - Messages of general interest during the build; it is rare for this to be appropriate from a BUILD file.</li>
-        <li><code><span class="fn-name">log.warning</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-            - A warning message that something seems wrong, but it may be recoverable.</li>
-        <li><code><span class="fn-name">log.error</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-            - A message indicating that something has gone wrong and it will not be recoverable.
-            This is usually followed shortly by some kind of failure.</li>
-        <li><code><span class="fn-name">log.fatal</span><span class="fn-p">(</span><span class="fn-arg">msg</span>[, <span class="fn-arg">args...</span>]<span class="fn-p">)</span></code>
-            - Indicates that something has gone catastrophically wrong, and causes the process to exit immediately and unsuccessfully.
-            Usually you are better off using <code>assert</code> or <code>raise</code> to
-            indicate failure, since plz can handle those and annotate with additional output.</li>
+  <p>
+    In addition to the python builtins, Please also has a rich set of its own
+    functions.
+  </p>
+
+  <section class="mt4">
+    <h3 class="title-3">
+      log
+    </h3>
+
+    <p>
+      Messages can be logged to Please's usual logging mechanism. These may or
+      may not be displayed depending on the <code class="code">-v</code> flag;
+      by default only <code class="code">warning</code> and above are visible.
+    </p>
+
+    <ul class="bulleted-list">
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">log.debug</span><span class="fn-p">(</span
+            ><span class="fn-arg">msg</span>[,
+            <span class="fn-arg">args...</span>]<span class="fn-p"
+              >)</span
+            ></code
+          >
+          - the lowest level of messages, output at this level is very verbose.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">log.info</span><span class="fn-p">(</span
+            ><span class="fn-arg">msg</span>[,
+            <span class="fn-arg">args...</span>]<span class="fn-p"
+              >)</span
+            ></code
+          >
+          - Informational messages, typically this is the highest level
+          per-target information is logged at.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">log.notice</span><span class="fn-p">(</span
+            ><span class="fn-arg">msg</span>[,
+            <span class="fn-arg">args...</span>]<span class="fn-p"
+              >)</span
+            ></code
+          >
+          - Messages of general interest during the build; it is rare for this
+          to be appropriate from a BUILD file.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">log.warning</span><span class="fn-p">(</span
+            ><span class="fn-arg">msg</span>[,
+            <span class="fn-arg">args...</span>]<span class="fn-p"
+              >)</span
+            ></code
+          >
+          - A warning message that something seems wrong, but it may be
+          recoverable.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">log.error</span><span class="fn-p">(</span
+            ><span class="fn-arg">msg</span>[,
+            <span class="fn-arg">args...</span>]<span class="fn-p"
+              >)</span
+            ></code
+          >
+          - A message indicating that something has gone wrong and it will not
+          be recoverable. This is usually followed shortly by some kind of
+          failure.
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code"
+            ><span class="fn-name">log.fatal</span><span class="fn-p">(</span
+            ><span class="fn-arg">msg</span>[,
+            <span class="fn-arg">args...</span>]<span class="fn-p"
+              >)</span
+            ></code
+          >
+          - Indicates that something has gone catastrophically wrong, and causes
+          the process to exit immediately and unsuccessfully. Usually you are
+          better off using <code class="code">assert</code> or
+          <code class="code">raise</code> to indicate failure, since plz can
+          handle those and annotate with additional output.
+        </span>
+      </li>
     </ul>
+  </section>
 
+  <section class="mt4">
+    <h3 class="title-3" id="subinclude">
+      subinclude
+    </h3>
 
-    <h3><a name="subinclude">subinclude</a></h3>
-
-    <p><pre class="rule"><code>subinclude(target)</code></pre></p>
+    <code class="code-signature">subinclude(target)</code>
 
     <p>Includes the output of a build target as extra rules in this one.</p>
 
-    <p>This is the closest equivalent to <code>import</code> in the BUILD language. It behaves
-      somewhat differently though in that the contents of the subincluded file are added to the
-      globals of the current module so can be called directly.</p>
-
-    <p>The target that you attempt to subinclude is simply a normal build target, with the
-      restriction that it must have exactly one output. The simplest form of this is a single-file
-      <a href="#filegroup">filegroup</a> or <a href="#export_file">export_file</a> rule, but
-      it is possible to have more complex rules generating your BUILD definitions.</p>
-
-    <p>For example:
-
-      <pre><code class="language-plz">
-      subinclude('//build_defs:my_build_rules')
-      </code></pre>
+    <p>
+      This is the closest equivalent to <code class="code">import</code> in the
+      BUILD language. It behaves somewhat differently though in that the
+      contents of the subincluded file are added to the globals of the current
+      module so can be called directly.
     </p>
 
-    <h3><a name="glob">glob</a></h3>
+    <p>
+      The target that you attempt to subinclude is simply a normal build target,
+      with the restriction that it must have exactly one output. The simplest
+      form of this is a single-file
+      <a class="copy-link" href="#filegroup">filegroup</a> or
+      <a class="copy-link" href="#export_file">export_file</a> rule, but it is
+      possible to have more complex rules generating your BUILD definitions.
+    </p>
 
-    <p><pre class="rule"><code>glob(include, exclude=None, hidden=False)</code></pre></p>
+    <p>For example:</p>
 
-    <p>Matches all filenames by a pattern, in a manner reminiscent of shell-style pattern
-      expansion or Python's builtin <a href="https://docs.python.org/3/library/glob.html">glob</a>
-      module.</p>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+    subinclude('//build_defs:my_build_rules')
+      </code>
+    </pre>
+  </section>
 
-    <p>Note that the expansion patterns accepted are <code>*</code> to match an arbitrary
-      number of non-separator characters (i.e. not <code>/</code>), <code>**</code> to
-      match any number of <b>complete</b> path components, ? to match a single character,
-      and [class] to match a class of character e.g. [a-z], [^0-9], or [abc]. <br/>
-      These are often referred to as &quot;Ant-style&quot; patterns since Ant introduced them.</p>
+  <section class="mt4">
+    <h3 class="title-3" id="glob">
+      glob
+    </h3>
 
-    <p>Glob exclude patterns can be evaluated relative to the matched file or the package root. If the
-      exclude pattern does not contain a path separator, it is considered relative and will be
-      evaluated against the file name of the match only, otherwise it will be evaluated from the
-      directory of the build file. This means that <code>glob(["**/*.go"], exclude = ["*_test.go"])</code>
-      will exclude all files ending in &quot;test.go&quot;.</p>
+    <code class="code-signature"
+      >glob(include, exclude=None, hidden=False)</code
+    >
 
-    <p>Hidden files (those starting with a <code>.</code>) are not matched by any patterns
-      unless you pass <code>hidden=True</code>.</p>
+    <p>
+      Matches all filenames by a pattern, in a manner reminiscent of shell-style
+      pattern expansion or Python's builtin
+      <a
+        class="copy-link"
+        href="https://docs.python.org/3/library/glob.html"
+        target="_blank"
+        rel="noopener"
+        >glob</a
+      >
+      module.
+    </p>
 
-    <p>It bears noting that you cannot glob generated files, only source files. Also glob will not
-      descend into any directories that contain a BUILD file; this maintains an invariant that
-      each file is owned by exactly one package (or potentially none, but then Please doesn't know
-      or care about them). If you want to pull in files from another package, export them there
-      using a <a href="#filegroup"><code>filegroup</code></a> and depend on that in the package
-      you want it.</p>
+    <p>
+      Note that the expansion patterns accepted are
+      <code class="code">*</code> to match an arbitrary number of non-separator
+      characters (i.e. not <code class="code">/</code>),
+      <code class="code">**</code> to match any number of
+      <strong>complete</strong> path components, ? to match a single character,
+      and [class] to match a class of character e.g. [a-z], [^0-9], or [abc].
+      <br />
+      These are often referred to as &quot;Ant-style&quot; patterns since Ant
+      introduced them.
+    </p>
 
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
+    <p>
+      Glob exclude patterns can be evaluated relative to the matched file or the
+      package root. If the exclude pattern does not contain a path separator, it
+      is considered relative and will be evaluated against the file name of the
+      match only, otherwise it will be evaluated from the directory of the build
+      file. This means that
+      <code class="code">glob(["**/*.go"], exclude = ["*_test.go"])</code> will
+      exclude all files ending in &quot;test.go&quot;.
+    </p>
 
-      <tr>
-	<td>include</td>
-	<td></td>
-	<td>list</td>
-	<td>List of paths to include. Each is globbed separately.</td>
-      </tr>
+    <p>
+      Hidden files (those starting with a <code class="code">.</code>) are not
+      matched by any patterns unless you pass
+      <code class="code">hidden=True</code>.
+    </p>
 
-      <tr>
-	<td>exclude</td>
-	<td>None</td>
-	<td>list</td>
-	<td>List of glob patterns to exclude from anything matched by <code>includes</code>.
-      </tr>
+    <p>
+      It bears noting that you cannot glob generated files, only source files.
+      Also glob will not descend into any directories that contain a BUILD file;
+      this maintains an invariant that each file is owned by exactly one package
+      (or potentially none, but then Please doesn't know or care about them). If
+      you want to pull in files from another package, export them there using a
+      <a class="copy-link" href="#filegroup"
+        ><code class="code">filegroup</code></a
+      >
+      and depend on that in the package you want it.
+    </p>
 
-      <tr>
-	<td>hidden</td>
-	<td>False</td>
-	<td>bool</td>
-	<td>Set to True to include hidden files / folders.</td>
-      </tr>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Argument</th>
+            <th>Default</th>
+            <th>Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>include</td>
+            <td></td>
+            <td>list</td>
+            <td>List of paths to include. Each is globbed separately.</td>
+          </tr>
+          <tr>
+            <td>exclude</td>
+            <td>None</td>
+            <td>list</td>
+            <td>
+              List of glob patterns to exclude from anything matched by
+              <code class="code">includes</code>.
+            </td>
+          </tr>
+          <tr>
+            <td>hidden</td>
+            <td>False</td>
+            <td>bool</td>
+            <td>Set to True to include hidden files / folders.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-      </tbody>
-    </table>
+  <section class="mt4">
+    <h3 class="title-3" id="get_labels">
+      get_labels
+    </h3>
 
-    <h3><a name="get_labels">get_labels</a></h3>
+    <code class="code-signature">get_labels(target, prefix, all=False)</code>
 
-    <p><pre class="rule"><code>get_labels(target, prefix, all=False)</code></pre></p>
+    <p>
+      Gets the unique set of labels for a rule and all its transitive
+      dependencies.
+    </p>
 
-    <p>Gets the unique set of labels for a rule and all its transitive dependencies.</p>
+    <p>
+      Two formats are accepted for target: the first is a string containing just
+      the target name, which is resolved in the current package. This
+      facilitates calling them from a pre-build function, which is in fact the
+      only time it's safe to call this way.<br />
+      The other is a full build target, which should be a transitive dependency
+      of the target whose pre/post build function you're in. If the target isn't
+      built when you ask for the labels the build will terminate.<br />
+      In either case this is only safe to call from a pre / post-build function
+      and should never be called at initial parse time, because at that point
+      you generally don't have the full set of labels available yet.
+    </p>
 
-    <p>Two formats are accepted for target: the first is a string containing just the target name,
-      which is resolved in the current package. This facilitates calling them from a pre-build
-      function, which is in fact the only time it's safe to call this way.<br/>
-      The other is a full build target, which should be a transitive dependency of the target
-      whose pre/post build function you're in. If the target isn't built when you ask for the
-      labels the build will terminate.<br/>
-      In either case this is only safe to call from a pre / post-build function and should
-      never be called at initial parse time, because at that point you generally don't have
-      the full set of labels available yet.</p>
+    <p>
+      Uses for this are normally fairly language-specific. The clearest example
+      is maybe the builtin Python rules, where
+      <code class="code">python_binary</code> and
+      <code class="code">python_test</code> use this to identify if any of their
+      dependencies have marked them as not being zip-safe.
+    </p>
 
-    <p>Uses for this are normally fairly language-specific. The clearest example is maybe the
-      builtin Python rules, where <code>python_binary</code> and <code>python_test</code> use
-      this to identify if any of their dependencies have marked them as not being zip-safe.</p>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Argument</th>
+            <th>Default</th>
+            <th>Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>target</td>
+            <td></td>
+            <td>str</td>
+            <td>Label of the target to get labels for.</td>
+          </tr>
+          <tr>
+            <td>prefix</td>
+            <td>None</td>
+            <td>str</td>
+            <td>
+              Filters the returned labels to only ones starting with this
+              prefix.
+            </td>
+          </tr>
+          <tr>
+            <td>all</td>
+            <td>False</td>
+            <td>bool</td>
+            <td>
+              Returns labels from all dependencies, even past those marked as
+              <code class="code">output_is_complete</code>.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
+  <section class="mt4">
+    <h3 class="title-3" id="has_label">
+      has_label
+    </h3>
 
-      <tr>
-	<td>target</td>
-	<td></td>
-	<td>str</td>
-	<td>Label of the target to get labels for.</td>
-      </tr>
+    <code class="code-signature">has_label(target, prefix)</code>
 
-      <tr>
-	<td>prefix</td>
-	<td>None</td>
-	<td>str</td>
-	<td>Filters the returned labels to only ones starting with this prefix.</td>
-      </tr>
+    <p>
+      Returns True if the target has any matching label that would be returned
+      by get_labels.
+    </p>
 
-      <tr>
-	<td>all</td>
-	<td>False</td>
-	<td>bool</td>
-	<td>Returns labels from all dependencies, even past those marked as <code>output_is_complete</code>.</td>
-      </tr>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Argument</th>
+            <th>Default</th>
+            <th>Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>target</td>
+            <td></td>
+            <td>str</td>
+            <td>Label of the target to get labels for.</td>
+          </tr>
+          <tr>
+            <td>prefix</td>
+            <td>None</td>
+            <td>str</td>
+            <td>Checks only labels that start with this prefix.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-      </tbody>
-    </table>
+  <section class="mt4">
+    <h3 class="title-3" id="add_licence">
+      add_licence
+    </h3>
 
-    <h3><a name="has_label">has_label</a></h3>
+    <code class="code-signature">add_licence(target, licence)</code>
 
-    <p><pre class="rule"><code>has_label(target, prefix)</code></pre></p>
+    <p>
+      Adds a new licence to a target. The assumption (as usual) is that if
+      multiple are added, they are options, so any one can be accepted.
+    </p>
 
-    <p>Returns True if the target has any matching label that would be returned by get_labels.</p>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Argument</th>
+            <th>Default</th>
+            <th>Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>target</td>
+            <td></td>
+            <td>str</td>
+            <td>Label of the target to add the licence to.</td>
+          </tr>
+          <tr>
+            <td>licence</td>
+            <td></td>
+            <td>str</td>
+            <td>Name of the licence to add.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
+  <section class="mt4">
+    <h3 class="title-3" id="get_licences">
+      get_licences
+    </h3>
 
-      <tr>
-	<td>target</td>
-	<td></td>
-	<td>str</td>
-	<td>Label of the target to get labels for.</td>
-      </tr>
+    <code class="code-signature">get_licences(target)</code>
 
-      <tr>
-	<td>prefix</td>
-	<td>None</td>
-	<td>str</td>
-	<td>Checks only labels that start with this prefix.</td>
-      </tr>
+    <p>
+      Returns all the licences that are currently known to apply to a target.
+    </p>
 
-      </tbody>
-    </table>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Argument</th>
+            <th>Default</th>
+            <th>Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>target</td>
+            <td></td>
+            <td>str</td>
+            <td>Label of the target to get licences for.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-    <h3><a name="add_licence">add_licence</a></h3>
+  <section class="mt4">
+    <h3 class="title-3" id="package">
+      package
+    </h3>
 
-    <p><pre class="rule"><code>add_licence(target, licence)</code></pre></p>
+    <code class="code-signature">package(...)</code>
 
-    <p>Adds a new licence to a target. The assumption (as usual) is that if multiple are added,
-      they are options, so any one can be accepted.</p>
+    <p>
+      Defines settings affecting the current package - for example, default
+      visibility.
+    </p>
 
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
+    <p>
+      With this you can override any current value in
+      <code class="code">CONFIG</code> by name for all subsequent targets in the
+      current package. Only existing values can be replaced.
+    </p>
 
-      <tr>
-	<td>target</td>
-	<td></td>
-	<td>str</td>
-	<td>Label of the target to add the licence to.</td>
-      </tr>
+    <p>
+      There are also a couple of special values which aren't normally in
+      <code class="code">CONFIG</code>:
+      <code class="code">default_licences</code> and
+      <code class="code">default_visibility</code>. As the names suggest these
+      set defaults for those attributes for all following targets that don't set
+      them.
+    </p>
 
-      <tr>
-	<td>licence</td>
-	<td></td>
-	<td>str</td>
-	<td>Name of the licence to add.</td>
-      </tr>
+    <p>
+      This function must be called <strong>before</strong> any targets are
+      defined.
+    </p>
+  </section>
 
-      </tbody>
-    </table>
+  <section class="mt4">
+    <h3 class="title-3" id="log">
+      log
+    </h3>
 
-    <h3><a name="get_licences">get_licences</a></h3>
+    <code class="code-signature">log.warning(message, [args...])</code>
 
-    <p><pre class="rule"><code>get_licences(target)</code></pre></p>
+    <p>
+      Logs an arbitrary message at some given level. The available levels, from
+      most quiet to most severe, are:
+    </p>
 
-    <p>Returns all the licences that are currently known to apply to a target.</p>
+    <ul class="bulleted-list">
+      <li>
+        <span>
+          <code class="code">log.debug</code>
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code">log.info</code>
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code">log.notice</code>
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code">log.warning</code>
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code">log.error</code>
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code">log.fatal</code>
+        </span>
+      </li>
+    </ul>
 
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
+    <p>
+      These correspond to Please's built in messages and are controlled as usual
+      by the
+      <code class="code">-v</code> command-line argument.
+    </p>
 
-      <tr>
-	<td>target</td>
-	<td></td>
-	<td>str</td>
-	<td>Label of the target to get licences for.</td>
-      </tr>
+    <p>
+      As the name suggests, <code class="code">log.fatal</code> immediately
+      terminates the program with a fatal error. The others have no side effect
+      other than showing the message.
+    </p>
 
-      </tbody>
-    </table>
+    <p>
+      The message and arguments together are interpolated like Python's normal
+      string interpolation, similar to the builtin
+      <code class="code">logging</code> package.
+    </p>
+  </section>
 
-    <h3><a name="package">package</a></h3>
+  <section class="mt4">
+    <h3 class="title-3" id="decompose">
+      decompose
+    </h3>
 
-    <p><pre class="rule"><code>package(...)</code></pre></p>
-
-    <p>Defines settings affecting the current package - for example, default visibility.</p>
-
-    <p>With this you can override any current value in <code>CONFIG</code> by name for all
-      subsequent targets in the current package. Only existing values can be replaced.</p>
-
-    <p>There are also a couple of special values which aren't normally in <code>CONFIG</code>:
-      <code>default_licences</code> and <code>default_visibility</code>. As the names suggest
-      these set defaults for those attributes for all following targets that don't set them.</p>
-
-    <p>This function must be called <b>before</b> any targets are defined.</p>
-
-    <h3><a name="log">log</a></h3>
-
-    <p><pre class="rule"><code>log.warning(message, [args...])</code></pre></p>
-
-    <p>Logs an arbitrary message at some given level. The available levels, from most quiet
-      to most severe, are:
-      <ul>
-        <li><code>log.debug</code></li>
-        <li><code>log.info</code></li>
-        <li><code>log.notice</code></li>
-        <li><code>log.warning</code></li>
-        <li><code>log.error</code></li>
-        <li><code>log.fatal</code></li>
-      </ul>
-      These correspond to Please's built in messages and are controlled as usual by the
-      <code>-v</code> command-line argument.</p>
-
-    <p>As the name suggests, <code>log.fatal</code> immediately terminates the program with
-      a fatal error. The others have no side effect other than showing the message.</p>
-
-    <p>The message and arguments together are interpolated like Python's normal string
-      interpolation, similar to the builtin <code>logging</code> package.</p>
-
-    <h3><a name="decompose">decompose</a></h3>
-
-    <p><pre class="rule"><code>decompose(label)</code></pre></p>
+    <code class="code-signature">decompose(label)</code>
 
     <p>Decomposes a build label into the package and name parts.</p>
 
-    <p>Consider carefully when you should use this - command replacements may be more appropriate.<br/>
-      Most rules should be able to accept labels without having to know anything about their structure.</p>
+    <p>
+      Consider carefully when you should use this - command replacements may be
+      more appropriate.<br />
+      Most rules should be able to accept labels without having to know anything
+      about their structure.
+    </p>
 
-    <p>The input label can be given in either relative or absolute form. It will fail with an error
-      if it's not a structurally valid label.</p>
+    <p>
+      The input label can be given in either relative or absolute form. It will
+      fail with an error if it's not a structurally valid label.
+    </p>
+  </section>
 
-    <h3><a name="canonicalise">canonicalise</a></h3>
+  <section class="mt4">
+    <h3 class="title-3" id="canonicalise">
+      canonicalise
+    </h3>
 
-    <p><pre class="rule"><code>canonicalise(label)</code></pre></p>
+    <code class="code-signature">canonicalise(label)</code>
 
     <p>Converts the given build label to its full form.</p>
 
-    <p>For example:
-      <ul>
-        <li><code>//package:target</code> -> <code>//package:target</code></li>
-        <li><code>//package</code> -> <code>//package:package</code></li>
-        <li><code>:target</code> -> <code>//current_package:target</code></li>
-      </ul>
+    <p>For example:</p>
+
+    <ul class="bulleted-list">
+      <li>
+        <span
+          ><code class="code">//package:target</code> -&gt;
+          <code class="code">//package:target</code>
+        </span>
+      </li>
+      <li>
+        <span
+          ><code class="code">//package</code> -&gt;
+          <code class="code">//package:package</code>
+        </span>
+      </li>
+      <li>
+        <span
+          ><code class="code">:target</code> -&gt;
+          <code class="code">//current_package:target</code>
+        </span>
+      </li>
+    </ul>
+  </section>
+</section>
+
+<section class="mt4">
+  <h2 class="title-2" id="cc">
+    C and C++ rules
+  </h2>
+
+  <p>Rules to build C and C++ targets.</p>
+
+  <p>
+    The process of building C or C++ code is fairly complex so while these rules
+    do their best to keep things reasonably simple, there's a lot of scope for
+    things going wrong.
+  </p>
+
+  <p>
+    There is very little difference between the <code class="code">c_</code> and
+    <code class="code">cc_</code> variants of each rule, in nearly all cases
+    they simply use different tools and flags in the
+    <a class="copy-link" href="/config.html#cpp">relevant config section</a>.
+  </p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "c_library" }}
+  {{ template "lexicon_entry.html" .Named "c_static_library" }}
+  {{ template "lexicon_entry.html" .Named "c_shared_object" }}
+  {{ template "lexicon_entry.html" .Named "c_binary" }}
+  {{ template "lexicon_entry.html" .Named "c_test" }}
+</section>
+
+<section class="mt4">
+  <h2 class="title-2" id="go">
+    Go rules
+  </h2>
+
+  <p>Rules to build Go code.</p>
+
+  <p>
+    Go has a strong built-in concept of packages so while it's not 100% required
+    to strictly keep to 1 package per dir as in classic Go, it's still probably
+    a good idea to match Please rules to Go packages.
+  </p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "go_toolchain" }}
+  {{ template "lexicon_entry.html" .Named "go_library" }}
+  {{ template "lexicon_entry.html" .Named "cgo_library" }}
+  {{ template "lexicon_entry.html" .Named "go_binary" }}
+  {{ template "lexicon_entry.html" .Named "go_test" }}
+  {{ template "lexicon_entry.html" .Named "cgo_test" }}
+  {{ template "lexicon_entry.html" .Named "go_test_main" }}
+  {{ template "lexicon_entry.html" .Named "go_module" }}
+  {{ template "lexicon_entry.html" .Named "go_mod_download" }}
+  {{ template "lexicon_entry.html" .Named "go_get" }}
+</section>
+
+<section class="mt4">
+  <h2 class="title-2" id="java">
+    Java rules
+  </h2>
+
+  <p>Built-in rules to compile Java code.</p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "java_library" }}
+  {{ template "lexicon_entry.html" .Named "java_module" }}
+  {{ template "lexicon_entry.html" .Named "java_binary" }}
+  {{ template "lexicon_entry.html" .Named "java_runtime_image" }}
+  {{ template "lexicon_entry.html" .Named "java_test" }}
+  {{ template "lexicon_entry.html" .Named "maven_jar" }}
+  {{ template "lexicon_entry.html" .Named "java_toolchain" }}
+</section>
+
+<section class="mt4">
+  <h2 class="title-2" id="misc">
+    Misc rules
+  </h2>
+
+  <p>Miscellaneous rules that aren't language-specific.</p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "genrule" }}
+  {{ template "lexicon_entry.html" .Named "gentest" }}
+  {{ template "lexicon_entry.html" .Named "export_file" }}
+  {{ template "lexicon_entry.html" .Named "filegroup" }}
+  {{ template "lexicon_entry.html" .Named "hash_filegroup" }}
+  {{ template "lexicon_entry.html" .Named "system_library" }}
+  {{ template "lexicon_entry.html" .Named "remote_file" }}
+  {{ template "lexicon_entry.html" .Named "tarball" }}
+
+  <section class="mt4">
+    <h3 class="title-3" id="git_branch">
+      git_branch
+    </h3>
+
+    <code class="code-signature"
+      >git_branch(<span class="optional">short:bool=True</span>)</code
+    >
+
+    <p>
+      Calls <code class="code">git symbolic-ref -q HEAD</code> and returns the
+      corresponding git branch. If <code class="code">short</code> is false,
+      show the full symbolic ref for a branch.
     </p>
 
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Argument</th>
+            <th>Default</th>
+            <th>Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>short</td>
+            <td>True</td>
+            <td>bool</td>
+            <td>Uses the shortened symbolic ref for a branch.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-    <h2><a name="cc">C and C++ rules</a></h2>
+  <section class="mt4">
+    <h3 class="title-3" id="git_commit">
+      git_commit
+    </h3>
 
-    <p>Rules to build C and C++ targets.</p>
-    <p>The process of building C or C++ code is fairly complex so while these rules do their best
-      to keep things reasonably simple, there's a lot of scope for things going wrong.</p>
-    <p>There is very little difference between the <code>c_</code> and <code>cc_</code> variants
-      of each rule, in nearly all cases they simply use different tools and flags in the
-      <a href="config.html#cpp">relevant config section</a>.</p>
+    <code class="code-signature">git_commit()</code>
 
-    {{ template "lexicon_entry.html" .Named "c_library" }}
-    {{ template "lexicon_entry.html" .Named "c_static_library" }}
-    {{ template "lexicon_entry.html" .Named "c_shared_object" }}
-    {{ template "lexicon_entry.html" .Named "c_binary" }}
-    {{ template "lexicon_entry.html" .Named "c_test" }}
+    <p>
+      Calls <code class="code">git rev-parse HEAD</code> and returns the
+      corresponding git commit SHA. To return a shortened commit use
+      <code class="code">git_commit()[0:8]</code>.
+    </p>
+  </section>
 
+  <section class="mt4">
+    <h3 class="title-3" id="git_show">
+      git_show
+    </h3>
 
-    <h2><a name="go">Go rules</a></h2>
+    <code class="code-signature"
+      >git_show(<span class="optional">format:str</span>)</code
+    >
 
-    <p>Rules to build Go code.</p>
-    <p>Go has a strong built-in concept of packages so while it's not 100% required to strictly
-      keep to 1 package per dir as in classic Go, it's still probably a good idea to match Please
-      rules to Go packages.</p>
-
-    {{ template "lexicon_entry.html" .Named "go_toolchain" }}
-    {{ template "lexicon_entry.html" .Named "go_library" }}
-    {{ template "lexicon_entry.html" .Named "cgo_library" }}
-    {{ template "lexicon_entry.html" .Named "go_binary" }}
-    {{ template "lexicon_entry.html" .Named "go_test" }}
-    {{ template "lexicon_entry.html" .Named "cgo_test" }}
-    {{ template "lexicon_entry.html" .Named "go_test_main" }}
-    {{ template "lexicon_entry.html" .Named "go_get" }}
-
-
-    <h2><a name="java">Java rules</a></h2>
-
-    <p>Built-in rules to compile Java code.</p>
-
-    {{ template "lexicon_entry.html" .Named "java_library" }}
-    {{ template "lexicon_entry.html" .Named "java_module" }}
-    {{ template "lexicon_entry.html" .Named "java_binary" }}
-    {{ template "lexicon_entry.html" .Named "java_runtime_image" }}
-    {{ template "lexicon_entry.html" .Named "java_test" }}
-    {{ template "lexicon_entry.html" .Named "maven_jar" }}
-    {{ template "lexicon_entry.html" .Named "java_toolchain" }}
-
-
-    <h2><a name="misc">Misc rules</a></h2>
-
-    <p>Miscellaneous rules that aren't language-specific.</p>
-
-    {{ template "lexicon_entry.html" .Named "genrule" }}
-    {{ template "lexicon_entry.html" .Named "gentest" }}
-    {{ template "lexicon_entry.html" .Named "export_file" }}
-    {{ template "lexicon_entry.html" .Named "filegroup" }}
-    {{ template "lexicon_entry.html" .Named "hash_filegroup" }}
-    {{ template "lexicon_entry.html" .Named "system_library" }}
-    {{ template "lexicon_entry.html" .Named "remote_file" }}
-    {{ template "lexicon_entry.html" .Named "tarball" }}
-
-    <h3><a name="git_branch">git_branch</a></h3>
-
-    <p><pre class="rule"><code>git_branch(<span class="optional">short:bool=True</span>)</code></pre></p>
-
-    <p>Calls <code>git symbolic-ref -q HEAD</code> and returns the
-      corresponding git branch.  If <code>short</code> is false, show the full
-      symbolic ref for a branch.</p>
-
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
-
-      <tr>
-	<td>short</td>
-	<td>True</td>
-	<td>bool</td>
-	<td>Uses the shortened symbolic ref for a branch.</td>
-      </tr>
-
-      </tbody>
-    </table>
-
-    <h3><a name="git_commit">git_commit</a></h3>
-
-    <p><pre class="rule"><code>git_commit()</code></pre></p>
-
-    <p>Calls <code>git rev-parse HEAD</code> and returns the corresponding git
-      commit SHA.  To return a shortened commit
-      use <code>git_commit()[0:8]</code>.</p>
-
-    <h3><a name="git_show">git_show</a></h3>
-
-    <p><pre class="rule"><code>git_show(<span class="optional">format:str</span>)</code></pre></p>
-
-    <p>Calls <code>git show -s --format={format}</code> and returns the
-      result.  <code>format</code> is limited to a subset of values accepted
-      by <code>git show</code>.</p>
-
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
-
-      <tr>
-	<td>format</td>
-	<td></td>
-	<td>str</td>
-	<td>String format passed to <code>git show</code>.</td>
-      </tr>
-
-      </tbody>
-    </table>
-
-    <p>Supported format verbs are limited to:
-      <ul>
-        <li><code>%H</code> commit hash</li>
-        <li><code>%T</code> tree hash</li>
-        <li><code>%P</code> parent hashes</li>
-        <li><code>%an</code> author name</li>
-        <li><code>%ae</code> author email</li>
-        <li><code>%at</code> author date, UNIX timestamp</li>
-        <li><code>%cn</code> committer name</li>
-        <li><code>%ce</code> committer email</li>
-        <li><code>%ct</code> committer date, UNIX timestamp</li>
-        <li><code>%D</code> ref names</li>
-        <li><code>%e</code> encoding</li>
-        <li><code>%s</code> subject of commit message</li>
-        <li><code>%f</code> sanitized subject line, suitable for a filename</li>
-        <li><code>%b</code> body of commit message</li>
-        <li><code>%B</code> raw body (unwrapped subject and body)</li>
-        <li><code>%N</code> commit notes</li>
-        <li><code>%GG</code> raw verification message from GPG for a signed commit</li>
-        <li><code>%G?</code> show "G" for a good (valid) signature, "B" for a bad signature, "U" for a good signature with unknown validity, "X" for a good signature that has expired, "Y" for a good signature made by an expired key, "R" for a good signature made by a revoked key, "E" if the signature cannot be checked (e.g. missing key) and "N" for no signature</li>
-        <li><code>%GS</code> show the name of the signer for a signed commit</li>
-        <li><code>%GK</code> show the key used to sign a signed commit</li>
-        <li><code>%n</code> newline</li>
-        <li><code>%%</code> a raw %</li>
-      </ul>
+    <p>
+      Calls <code class="code">git show -s --format={format}</code> and returns
+      the result. <code class="code">format</code> is limited to a subset of
+      values accepted by <code class="code">git show</code>.
     </p>
 
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Argument</th>
+            <th>Default</th>
+            <th>Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>format</td>
+            <td></td>
+            <td>str</td>
+            <td>String format passed to <code class="code">git show</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-    <h3><a name="git_state">git_state</a></h3>
+    <p>Supported format verbs are limited to:</p>
 
-    <p><pre class="rule"><code>git_state(<span class="optional">clean_label:str="clean", dirty_label:str="dirty"</span>)</code></pre></p>
+    <ul class="bulleted-list">
+      <li>
+        <span><code class="code">%H</code> commit hash </span>
+      </li>
+      <li>
+        <span><code class="code">%T</code> tree hash </span>
+      </li>
+      <li>
+        <span><code class="code">%P</code> parent hashes </span>
+      </li>
+      <li>
+        <span><code class="code">%an</code> author name </span>
+      </li>
+      <li>
+        <span><code class="code">%ae</code> author email </span>
+      </li>
+      <li>
+        <span><code class="code">%at</code> author date, UNIX timestamp </span>
+      </li>
+      <li>
+        <span><code class="code">%cn</code> committer name </span>
+      </li>
+      <li>
+        <span><code class="code">%ce</code> committer email </span>
+      </li>
+      <li>
+        <span
+          ><code class="code">%ct</code> committer date, UNIX timestamp
+        </span>
+      </li>
+      <li>
+        <span><code class="code">%D</code> ref names </span>
+      </li>
+      <li>
+        <span><code class="code">%e</code> encoding </span>
+      </li>
+      <li>
+        <span><code class="code">%s</code> subject of commit message </span>
+      </li>
+      <li>
+        <span
+          ><code class="code">%f</code> sanitized subject line, suitable for a
+          filename
+        </span>
+      </li>
+      <li>
+        <span><code class="code">%b</code> body of commit message </span>
+      </li>
+      <li>
+        <span
+          ><code class="code">%B</code> raw body (unwrapped subject and body)
+        </span>
+      </li>
+      <li>
+        <span><code class="code">%N</code> commit notes </span>
+      </li>
+      <li>
+        <span>
+          <code class="code">%GG</code> raw verification message from GPG for a
+          signed commit
+        </span>
+      </li>
+      <li>
+        <span>
+          <code class="code">%G?</code> show "G" for a good (valid) signature,
+          "B" for a bad signature, "U" for a good signature with unknown
+          validity, "X" for a good signature that has expired, "Y" for a good
+          signature made by an expired key, "R" for a good signature made by a
+          revoked key, "E" if the signature cannot be checked (e.g. missing key)
+          and "N" for no signature
+        </span>
+      </li>
+      <li>
+        <span
+          ><code class="code">%GS</code> show the name of the signer for a
+          signed commit
+        </span>
+      </li>
+      <li>
+        <span
+          ><code class="code">%GK</code> show the key used to sign a signed
+          commit
+        </span>
+      </li>
+      <li>
+        <span><code class="code">%n</code> newline </span>
+      </li>
+      <li>
+        <span><code class="code">%%</code> a raw % </span>
+      </li>
+    </ul>
+  </section>
 
-    <p>Calls <code>git status --porcelain</code> and returns the
-      corresponding string.  If the repository is clean, the string set
-      in <code>clean_label</code> is returned.  If the repository is dirty, the
-      string set in <code>dirty_label</code> is returned.</p>
+  <section class="mt4">
+    <h3 class="title-3" id="git_state">
+      git_state
+    </h3>
 
-    <table>
-      <thead>
-      <tr>
-	<th>Argument</th>
-	<th>Default</th>
-	<th>Type</th>
-	<th></th>
-      </tr>
-      </thead>
-      <tbody>
+    <code class="code-signature"
+      >git_state(<span class="optional"
+        >clean_label:str="clean", dirty_label:str="dirty"</span
+      >)</code
+    >
 
-      <tr>
-	<td>clean_label</td>
-	<td>clean</td>
-	<td>str</td>
-	<td>String returned if the repository is clean.</td>
-      </tr>
+    <p>
+      Calls <code class="code">git status --porcelain</code> and returns the
+      corresponding string. If the repository is clean, the string set in
+      <code class="code">clean_label</code> is returned. If the repository is
+      dirty, the string set in <code class="code">dirty_label</code> is
+      returned.
+    </p>
 
-      <tr>
-	<td>dirty_label</td>
-	<td>dirty</td>
-	<td>str</td>
-	<td>String returned if the repository is dirty.</td>
-      </tr>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Argument</th>
+            <th>Default</th>
+            <th>Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>clean_label</td>
+            <td>clean</td>
+            <td>str</td>
+            <td>String returned if the repository is clean.</td>
+          </tr>
 
-      </tbody>
-    </table>
+          <tr>
+            <td>dirty_label</td>
+            <td>dirty</td>
+            <td>str</td>
+            <td>String returned if the repository is dirty.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
 
+<section class="mt4">
+  <h2 class="title-2" id="proto">
+    Proto rules
+  </h2>
 
-    <h2><a name="proto">Proto rules</a></h2>
+  <p>Build rules for compiling protocol buffers &amp; gRPC service stubs.</p>
 
-    <p>Build rules for compiling protocol buffers & gRPC service stubs.</p>
-    <p>Note that these are some of the most complex of our built-in build rules,
-      because of their cross-language nature. Each proto_library rule declares a set of
-      sub-rules to run protoc & the appropriate java_library, go_library rules etc. Users
-      shouldn't worry about those sub-rules and just declare a dependency directly on
-      the proto_library rule to get its appropriate outputs.</p>
+  <p>
+    Note that these are some of the most complex of our built-in build rules,
+    because of their cross-language nature. Each proto_library rule declares a
+    set of sub-rules to run protoc &amp; the appropriate java_library,
+    go_library rules etc. Users shouldn't worry about those sub-rules and just
+    declare a dependency directly on the proto_library rule to get its
+    appropriate outputs.
+  </p>
 
-    {{ template "lexicon_entry.html" .Named "proto_library" }}
-    {{ template "lexicon_entry.html" .Named "grpc_library" }}
-    {{ template "lexicon_entry.html" .Named "proto_language" }}
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "proto_library" }}
+  {{ template "lexicon_entry.html" .Named "grpc_library" }}
+  {{ template "lexicon_entry.html" .Named "proto_language" }}
+</section>
 
+<section class="mt4">
+  <h2 class="title-2" id="python">
+    Python rules
+  </h2>
 
-    <h2><a name="python">Python rules</a></h2>
+  <p>Rules to build Python code.</p>
 
-    <p>Rules to build Python code.</p>
-    <p>The output artifacts for Python rules are .zip files similar to
-      <a href="https://github.com/pantsbuild/pex">.pex</a> files (and are suffixed as such).</p>
-    <p>This combines all the in-repo dependencies into a single file that can be deployed and run
-      on any system that has a suitable Python interpreter. Please optimises this process to
-      improve incrementality and includes some hooks to make running from a zipfile as transparent
-      as possible; nonetheless certain file-based operations may not work since there is not a
-      real file system available. If necessary various Python rules can be annotated with
-      <code>zip_safe</code> to control this; if a binary is zip-unsafe it will extract itself before
-      running.</p>
+  <p>
+    The output artifacts for Python rules are .zip files similar to
+    <a
+      class="copy-link"
+      href="https://github.com/pantsbuild/pex"
+      target="_blank"
+      rel="noopener"
+      >.pex</a
+    >
+    files (and are suffixed as such).
+  </p>
 
-    {{ template "lexicon_entry.html" .Named "python_library" }}
-    {{ template "lexicon_entry.html" .Named "python_binary" }}
-    {{ template "lexicon_entry.html" .Named "python_test" }}
-    {{ template "lexicon_entry.html" .Named "pip_library" }}
-    {{ template "lexicon_entry.html" .Named "python_wheel" }}
+  <p>
+    This combines all the in-repo dependencies into a single file that can be
+    deployed and run on any system that has a suitable Python interpreter.
+    Please optimises this process to improve incrementality and includes some
+    hooks to make running from a zipfile as transparent as possible; nonetheless
+    certain file-based operations may not work since there is not a real file
+    system available. If necessary various Python rules can be annotated with
+    <code class="code">zip_safe</code> to control this; if a binary is
+    zip-unsafe it will extract itself before running.
+  </p>
 
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "python_library" }}
+  {{ template "lexicon_entry.html" .Named "python_binary" }}
+  {{ template "lexicon_entry.html" .Named "python_test" }}
+  {{ template "lexicon_entry.html" .Named "pip_library" }}
+  {{ template "lexicon_entry.html" .Named "python_wheel" }}
+</section>
 
-    <h2><a name="sh">Shell rules</a></h2>
+<section class="mt4">
+  <h2 class="title-2" id="sh">
+    Shell rules
+  </h2>
 
-    <p>Rules to 'build' shell scripts.</p>
-    <p>Note that these do pretty much nothing beyond collecting the files. In future we might
-      implement something more advanced (ala .sar files or whatever).</p>
+  <p>Rules to 'build' shell scripts.</p>
 
-    {{ template "lexicon_entry.html" .Named "sh_library" }}
-    {{ template "lexicon_entry.html" .Named "sh_binary" }}
-    {{ template "lexicon_entry.html" .Named "sh_cmd" }}
-    {{ template "lexicon_entry.html" .Named "sh_test" }}
+  <p>
+    Note that these do pretty much nothing beyond collecting the files. In
+    future we might implement something more advanced (ala .sar files or
+    whatever).
+  </p>
 
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "sh_library" }}
+  {{ template "lexicon_entry.html" .Named "sh_binary" }}
+  {{ template "lexicon_entry.html" .Named "sh_cmd" }}
+  {{ template "lexicon_entry.html" .Named "sh_test" }}
+</section>
 
-    <h2><a name="subrepo">Subrepo rules</a></h2>
+<section class="mt4">
+  <h2 class="title-2" id="subrepo">
+    Subrepo rules
+  </h2>
 
-    <p>Rules for defining subrepos. See <a href="dependencies.html#subrepos">the docs</a> for more information
-      on subrepos in general.</p>
+  <p>
+    Rules for defining subrepos. See
+    <a class="copy-link" href="/dependencies.html#subrepos">the docs</a>
+    for more information on subrepos in general.
+  </p>
 
-    {{ template "lexicon_entry.html" .Named "http_archive" }}
-    {{ template "lexicon_entry.html" .Named "new_http_archive" }}
-    {{ template "lexicon_entry.html" .Named "github_repo" }}
-    {{ template "lexicon_entry.html" .Named "arch" }}
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "http_archive" }}
+  {{ template "lexicon_entry.html" .Named "new_http_archive" }}
+  {{ template "lexicon_entry.html" .Named "github_repo" }}
+  {{ template "lexicon_entry.html" .Named "arch" }}
+</section>

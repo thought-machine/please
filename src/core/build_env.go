@@ -2,8 +2,10 @@ package core
 
 import (
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -17,21 +19,30 @@ type BuildEnv []string
 
 // GeneralBuildEnvironment creates the shell env vars used for a command, not based
 // on any specific target etc.
-func GeneralBuildEnvironment(config *Configuration) BuildEnv {
-	// TODO(peterebden): why is this not just config.GetBuildEnv()?
+func GeneralBuildEnvironment(state *BuildState) BuildEnv {
 	env := BuildEnv{
 		// Need this for certain tools, for example sass
-		"LANG=" + config.Build.Lang,
+		"LANG=" + state.Config.Build.Lang,
+		// Need to know these for certain rules.
+		"ARCH=" + state.Arch.Arch,
+		"OS=" + state.Arch.OS,
+		// These are slightly modified forms that are more convenient for some things.
+		"XARCH=" + state.Arch.XArch(),
+		"XOS=" + state.Arch.XOS(),
+		// It's easier to just make these available for Go-based rules.
+		"GOARCH=" + state.Arch.GoArch(),
+		"GOOS=" + state.Arch.OS,
 	}
-	if config.Cpp.PkgConfigPath != "" {
-		env = append(env, "PKG_CONFIG_PATH="+config.Cpp.PkgConfigPath)
+	if state.Config.Cpp.PkgConfigPath != "" {
+		env = append(env, "PKG_CONFIG_PATH="+state.Config.Cpp.PkgConfigPath)
 	}
-	return append(env, config.GetBuildEnv()...)
+
+	return append(env, state.Config.GetBuildEnv()...)
 }
 
 // TargetEnvironment returns the basic parts of the build environment.
 func TargetEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
-	env := append(GeneralBuildEnvironment(state.Config),
+	env := append(GeneralBuildEnvironment(state),
 		"PKG="+target.Label.PackageName,
 		"PKG_DIR="+target.Label.PackageDir(),
 		"NAME="+target.Label.Name,
@@ -76,7 +87,12 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	)
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
-		env = append(env, "OUT="+path.Join(tmpDir, outEnv[0]))
+		// TODO(peterebden): This is a bit grungy, we should move towards OUT being relative.
+		if target.Sandbox && filepath.IsAbs(tmpDir) {
+			env = append(env, "OUT="+path.Join(SandboxDir, outEnv[0]))
+		} else {
+			env = append(env, "OUT="+path.Join(tmpDir, outEnv[0]))
+		}
 	}
 	// The SRC variable is only available on rules that have a single source file.
 	if len(sources) == 1 {
@@ -104,14 +120,17 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
 		secrets := "SECRETS=" + fs.ExpandHomePath(strings.Join(target.Secrets, ":"))
-		secrets = strings.Replace(secrets, ":", " ", -1)
+		secrets = strings.ReplaceAll(secrets, ":", " ")
 		env = append(env, secrets)
 	}
 	// NamedSecrets, if they declared any.
 	for name, secrets := range target.NamedSecrets {
 		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + fs.ExpandHomePath(strings.Join(secrets, ":"))
-		secrets = strings.Replace(secrets, ":", " ", -1)
+		secrets = strings.ReplaceAll(secrets, ":", " ")
 		env = append(env, secrets)
+	}
+	if target.Sandbox && len(state.Config.Sandbox.Dir) > 0 {
+		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
 	}
 	if state.Config.Bazel.Compatibility {
 		// Obviously this is only a subset of the variables Bazel would expose, but there's
@@ -120,6 +139,22 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		// your genrule is not a good sign.
 		env = append(env, "GENDIR="+path.Join(RepoRoot, GenDir))
 		env = append(env, "BINDIR="+path.Join(RepoRoot, BinDir))
+	}
+
+	return withUserProvidedEnv(target, env)
+}
+
+// userEnv adds the env variables passed to the build rule to the build env
+// Sadly this can't be done as part of TargetEnv() target env as this requires the other
+// env vars are set so they can be substituted.
+func withUserProvidedEnv(target *BuildTarget, env BuildEnv) BuildEnv {
+	for k, v := range target.Env {
+		for _, kv := range env {
+			i := strings.Index(kv, "=")
+			key, value := kv[:i], kv[(i+1):]
+			v = strings.ReplaceAll(v, "$"+key, value)
+		}
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 	return env
 }
@@ -179,7 +214,10 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	if state.DebugTests {
 		env = append(env, "DEBUG=true")
 	}
-	return env
+	if target.TestSandbox && len(state.Config.Sandbox.Dir) > 0 {
+		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
+	}
+	return withUserProvidedEnv(target, env)
 }
 
 func runtimeDataPaths(graph *BuildGraph, t *BuildTarget, data []BuildInput) []string {
@@ -214,7 +252,7 @@ func RunEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 			env = append(env, "DATA_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
 		}
 	}
-	return env
+	return withUserProvidedEnv(target, env)
 }
 
 // StampedBuildEnvironment returns the shell env vars to be passed into exec.Command.

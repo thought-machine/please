@@ -31,7 +31,7 @@ func CompletionLabels(config *core.Configuration, args []string, repoRoot string
 	}
 	// Bash completion sometimes produces \: instead of just : (see issue #18).
 	// We silently fix that here since we've not yet worked out how to fix Bash itself :(
-	args[0] = strings.Replace(args[0], "\\:", ":", -1)
+	args[0] = strings.ReplaceAll(args[0], "\\:", ":")
 	if strings.HasSuffix(args[0], ":") {
 		// Have to special-case this because it won't be a valid label.
 		labels := core.ParseBuildLabels([]string{args[0] + "all"})
@@ -93,7 +93,7 @@ func Completions(graph *core.BuildGraph, labels []core.BuildLabel, binary, test,
 				count++
 			}
 		}
-		if !binary && ((label.Name != "" && strings.HasPrefix("all", label.Name)) || (label.Name == "" && count > 1)) {
+		if !binary && ((label.Name != "" && strings.HasPrefix("all", label.Name)) || (label.Name == "" && count > 1)) { //nolint:gocritic
 			fmt.Printf("//%s:all\n", label.PackageName)
 		}
 	}

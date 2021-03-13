@@ -374,7 +374,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     if install_subdirectory:
      target += '/' + outs[0]
 
-    pip_tool = CONFIG.PIP_TOOL or '$TOOLS_PYTHON -m pip'
+    pip_tool = "$TOOLS_PIP" if CONFIG.PIP_TOOL else '$TOOLS_PYTHON -m pip'
 
     pip_cmd = (
         f'mkdir {pip_target_dir} && '
@@ -386,13 +386,13 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
     # It seems like most things have been resolved (Oct 2019ish) however a lot of python installs are probably not
     # updated yet. Essentially the "user" default will be turned off when --target is passed. Right now, it complains
     # that --prefix (and therefore --target) are incompatible with --user. See https://github.com/pypa/pip/pull/7002
-    if CONFIG.HOSTOS == 'darwin':
+    if CONFIG.HOSTOS == 'darwin' and not CONFIG.DISABLE_VENDOR_FLAGS:
         # Fix for Homebrew which fails with a superficially similar issue.
         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
         # but that prevents downloading binary wheels. This is more fiddly but seems to work.
         # Unfortunately it does *not* work similarly on the Debian problem :(
         pip_cmd = 'echo "[install]\nprefix=" > setup.cfg; ' + pip_cmd
-    if CONFIG.OS == 'linux':
+    if CONFIG.OS == 'linux' and not CONFIG.DISABLE_VENDOR_FLAGS:
         # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
         # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
         # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
@@ -425,7 +425,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         tools = tools,
         sandbox = False,
     )
-    
+
     # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
     cmd = f'$TOOLS_JARCAT z --suffix="" --exclude_suffix=whl --include_other -i . -r $PKG/{name}:$PKG'
     if not licences:
@@ -481,10 +481,11 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
       visibility (list): Visibility declaration.
       deps (list): Dependencies of this rule.
       name_scheme (str): The templatized wheel naming scheme (available template variables
-                         are `url_base`, `package_name`, and `version`).
+                         are `url_base`, `package_name`, `initial`, and `version`).
       strip (list): Files to strip after install. Note that these are done at any level.
     """
     package_name = package_name or name.replace('-', '_')
+    initial = package_name[0]
     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
     if not url_base:
         raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly '
@@ -493,23 +494,25 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     if name_scheme:
         urls += [name_scheme.format(url_base=url_base,
                                     package_name=package_name,
+                                    initial=initial,
                                     version=version)]
     elif CONFIG.PYTHON_WHEEL_NAME_SCHEME:
-        urls += [CONFIG.PYTHON_WHEEL_NAME_SCHEME.format(url_base=url_base,
-                                                        package_name=package_name,
-                                                        version=version)]
+        urls += [scheme.format(url_base=url_base, package_name=package_name, initial=initial, version=version)
+                 for scheme in CONFIG.PYTHON_WHEEL_NAME_SCHEME]
     else:
         # Populate urls using a reasonable set of possible wheel naming schemes.
         # Look for an arch-specific wheel first; in some cases there can be both (e.g. protobuf
         # has optional arch-specific bits) and we prefer the one with the cool stuff.
         urls += ['{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
                                                                                     package_name=package_name,
+                                                                                    initial=initial,
                                                                                     version=version),
                  '{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                    package_name=package_name,
+                                                                                    package_name=package_name,                                                                                   initial=initial,
                                                                                     version=version),
                  '{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
                                                                   package_name=package_name,
+                                                                  initial=initial,
                                                                   version=version)]
 
     file_rule = remote_file(

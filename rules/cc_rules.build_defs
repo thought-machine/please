@@ -482,7 +482,7 @@ def cc_module(name:str, srcs:list=[], hdrs:list=[], interfaces:list=[], private_
 
 def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
               compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-              deps:list=[], visibility:list=None, pkg_config_libs:list=[],
+              deps:list=[], visibility:list=None, pkg_config_libs:list=[], includes:list=[], defines:list=[],
               pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, _c=False,
               linkstatic:bool=False):
     """Builds a binary from a collection of C++ rules.
@@ -499,6 +499,10 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
       visibility (list): Visibility declaration for this rule.
       pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
+      includes (list): List of include directories to be added to the compiler's path.
+      defines (list | dict): List of tokens to define in the preprocessor.
+                             Alternatively can be a dict of name -> value to define, in which case
+                             values are surrounded by quotes.
       test_only (bool): If True, this rule can only be used by tests.
       static (bool): If True, the binary will be linked statically.
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
@@ -510,7 +514,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
         linker_flags += [CONFIG.DEFAULT_LDFLAGS]
     if static:
         linker_flags += ['-static']
-    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs)
+    cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, static=static)
     if srcs:
         if static:
             compiler_flags += ['-static -static-libgcc']
@@ -522,6 +526,8 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
             deps=deps,
             pkg_config_libs=pkg_config_libs,
             pkg_config_cflags=pkg_config_cflags,
+            includes=includes,
+            defines=defines,
             compiler_flags=compiler_flags,
             test_only=test_only,
             _c=_c,
@@ -541,6 +547,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
         tools=tools,
         pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs),
         test_only=test_only,
+        optional_outs = [f"{name}.dSYM"] if CONFIG.DSYM_TOOL else [],
     )
 
 
@@ -659,7 +666,7 @@ def _build_flags(compiler_flags:list, pkg_config_libs:list, pkg_config_cflags:li
     return ' '.join(compiler_flags) + ' ' + pkg_config_cmd
 
 
-def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, alwayslink='', c=False, dbg=False):
+def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, alwayslink='', c=False, dbg=False, static=False):
     """Builds flags that we'll pass to the linker invocation."""
     pkg_config_cmd = ' '.join([f'`pkg-config --libs {x}`' for x in pkg_config_libs])
 
@@ -682,6 +689,8 @@ def _binary_build_flags(linker_flags:list, pkg_config_libs:list, shared=False, a
     linker_flags = ' '.join([linker_prefix + f for f in linker_flags])
     if not CONFIG.LINK_WITH_LD_TOOL:
         linker_flags += ' ' + _default_cflags(c, dbg)
+        if static:
+            linker_flags += ' -static'
     return ' '.join([objs, linker_flags, pkg_config_cmd])
 
 
@@ -705,14 +714,17 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, extra_f
     }
 
 
-def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False, alwayslink=''):
+def _binary_cmds(c, linker_flags, pkg_config_libs, extra_flags='', shared=False, alwayslink='', static=False):
     """Returns the commands needed for a cc_binary, cc_test or cc_shared_object rule."""
-    dbg_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=True)
-    opt_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=False)
+    dbg_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=True, static=static)
+    opt_flags = _binary_build_flags(linker_flags, pkg_config_libs, shared, alwayslink, c=c, dbg=False, static=static)
     cmds = {
         'dbg': f'"$TOOL" -o "$OUT" {dbg_flags} {extra_flags}',
         'opt': f'"$TOOL" -o "$OUT" {opt_flags} {extra_flags}',
     }
+    if CONFIG.DSYM_TOOL:
+        dbg = cmds['dbg']
+        cmds['dbg'] = f'{dbg} && {CONFIG.DSYM_TOOL} $OUT'
     if CONFIG.CPP_COVERAGE:
         cmds['cover'] = f'"$TOOL" -o "$OUT" {dbg_flags} {extra_flags} {_COVERAGE_FLAGS} -lgcov'
     return cmds, [CONFIG.LD_TOOL if CONFIG.LINK_WITH_LD_TOOL else

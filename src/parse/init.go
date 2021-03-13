@@ -108,7 +108,7 @@ func (p *aspParser) RunPostBuildFunction(threadID int, state *core.BuildState, t
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(tid, target.Label, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
-	pkg := state.WaitForPackage(target.Label)
+	pkg := state.SyncParsePackage(target.Label)
 	changed, err := pkg.EnterBuildCallback(f)
 	if err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)
@@ -137,7 +137,7 @@ func createBazelSubrepo(state *core.BuildState) {
 	}
 	filenames, _ := bazel.AssetDir("")
 	for _, filename := range filenames {
-		if err := ioutil.WriteFile(path.Join(dir, strings.Replace(filename, ".build_defs", ".bzl", -1)), bazel.MustAsset(filename), 0644); err != nil {
+		if err := ioutil.WriteFile(path.Join(dir, strings.ReplaceAll(filename, ".build_defs", ".bzl")), bazel.MustAsset(filename), 0644); err != nil {
 			log.Fatalf("%s", err)
 		}
 	}

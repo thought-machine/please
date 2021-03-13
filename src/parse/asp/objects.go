@@ -678,7 +678,11 @@ func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
 			args = append(args, s.interpretExpression(&a.Value))
 		} else {
 			s.NAssert(f.kwargsonly, "Function %s can only be called with keyword arguments", f.name)
-			args[i+offset] = f.validateType(s, i+offset, &a.Value)
+			if i+offset >= len(args) {
+				args = append(args, f.validateType(s, i+offset, &a.Value))
+			} else {
+				args[i+offset] = f.validateType(s, i+offset, &a.Value)
+			}
 		}
 	}
 
@@ -721,8 +725,10 @@ func (f *pyFunc) Member(obj pyObject) pyObject {
 // validateType validates that this argument matches the given type
 func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 	val := s.interpretExpression(expr)
-	if f.types[i] == nil {
-		return val
+	if i >= len(f.types) && (f.varargs || f.kwargs) {
+		return val // function is varargs so we have no type signature for this
+	} else if f.types[i] == nil {
+		return val // not varargs but we just don't have a type signature, so take it as it is
 	} else if val == None {
 		if f.constants[i] == nil && (f.defaults == nil || f.defaults[i] == nil) {
 			return val
@@ -878,7 +884,7 @@ func newConfig(state *core.BuildState) *pyConfig {
 	}
 	// Arbitrary build config stuff
 	for k, v := range config.BuildConfig {
-		c[strings.Replace(strings.ToUpper(k), "-", "_", -1)] = pyString(v)
+		c[strings.ReplaceAll(strings.ToUpper(k), "-", "_")] = pyString(v)
 	}
 	// Settings specific to package() which aren't in the config, but it's easier to
 	// just put them in now.
@@ -891,7 +897,7 @@ func newConfig(state *core.BuildState) *pyConfig {
 		c["FEATURES"] = pyList{}
 	}
 
-	arch := config.Build.Arch
+	arch := state.Arch
 
 	c["OS"] = pyString(arch.OS)
 	c["ARCH"] = pyString(arch.Arch)
@@ -899,13 +905,9 @@ func newConfig(state *core.BuildState) *pyConfig {
 	c["HOSTARCH"] = pyString(arch.HostArch())
 	c["GOOS"] = pyString(arch.OS)
 	c["GOARCH"] = pyString(arch.GoArch())
-
-	targetArch := arch
-	if state.OriginalArch.OS != "" {
-		targetArch = state.OriginalArch
-	}
-	c["TARGET_OS"] = pyString(targetArch.OS)
-	c["TARGET_ARCH"] = pyString(targetArch.Arch)
+	c["TARGET_OS"] = pyString(state.TargetArch.OS)
+	c["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
+	c["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 
 	return &pyConfig{base: c}
 }
