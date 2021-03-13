@@ -76,7 +76,60 @@ type Globber struct {
 }
 
 type walkedDir struct {
-	fileNames, subPackages []string
+	subPackages []string
+	files       fileTree
+}
+
+// A fileTree is a model of a sub-tree of files, optimised for fast walking down into it.
+type fileTree struct {
+	files    []string
+	children map[string]*fileTree
+}
+
+// Add adds a new entry to this filetree
+func (ft *fileTree) Add(name string) {
+	ft.add(splitPath(name))
+}
+
+// AllPrefixed returns all files in this tree with the given prefix.
+func (ft *fileTree) AllPrefixed(prefix []string) []string {
+	if len(prefix) == 0 {
+		return ft.files
+	}
+	child, present := ft.children[prefix[0]]
+	if !present {
+		return nil
+	}
+	files := child.AllPrefixed(prefix[1:])
+	ret := make([]string, len(files))
+	for i, name := range files {
+		ret[i] = path.Join(prefix[0], name)
+	}
+	return ret
+}
+
+func (ft *fileTree) add(parts []string) {
+	if len(parts) == 1 {
+		ft.files = append(ft.files, parts[0])
+		return
+	}
+	newFileTree := func(parts []string) *fileTree {
+		ft := &fileTree{}
+		ft.add(parts)
+		return ft
+	}
+	if ft.children == nil {
+		ft.children = map[string]*fileTree{parts[0]: newFileTree(parts[1:])}
+	} else if child, present := ft.children[parts[0]]; present {
+		child.add(parts[1:])
+	} else {
+		ft.children[parts[0]] = newFileTree(parts[1:])
+	}
+}
+
+// splitPath splits a path into a set of components.
+func splitPath(path string) []string {
+	return strings.Split(path, string(filepath.Separator))
 }
 
 // NewGlobber creates a new Globber. You should call this rather than creating one directly (or use Glob() if you don't care).
@@ -117,8 +170,11 @@ func (globber *Globber) glob(rootPath string, glob string, excludes []string, in
 	if err != nil {
 		return nil, err
 	}
+	prefix := globber.globPrefix(glob)
+	prefix = append(splitPath(rootPath), prefix...)
+
 	var globMatches []string
-	for _, name := range walkedDir.fileNames {
+	for _, name := range walkedDir.files.AllPrefixed(prefix) {
 		if match, err := p.Match(name); err != nil {
 			return nil, err
 		} else if match {
@@ -165,13 +221,26 @@ func (globber *Globber) walkDir(rootPath string) (walkedDir, error) {
 		if name == "plz-out" && rootPath == "." {
 			return filepath.SkipDir
 		}
-		dir.fileNames = append(dir.fileNames, name)
+		dir.files.Add(name)
 		return nil
 	}); err != nil {
 		return dir, err
 	}
 	globber.walkedDirs[rootPath] = dir
 	return dir, nil
+}
+
+// globPrefix extracts the fixed prefix part from a glob expression.
+// i.e. "src/fs/**/*.go" -> ["src", "fs"], ["**", "/*.go"]
+func (globber *Globber) globPrefix(expression string) []string {
+	parts := splitPath(expression)
+	for i, part := range parts {
+		if strings.ContainsAny(part, "*?[") {
+			return parts[:i]
+		}
+	}
+	// If we get here, the entire expression was fixed; leave the last item off which saves some craziness later.
+	return parts[:len(parts)-1]
 }
 
 func mustBeValidGlobString(glob string) {
