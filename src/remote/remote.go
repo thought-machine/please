@@ -166,14 +166,21 @@ func (c *Client) initExec() error {
 	if err != nil {
 		return err
 	}
-	client.DefaultRPCTimeouts["default"] = time.Duration(c.state.Config.Remote.Timeout)
 	client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
 		Service:            c.state.Config.Remote.URL,
 		CASService:         c.state.Config.Remote.CASURL,
 		NoSecurity:         !c.state.Config.Remote.Secure,
 		TransportCredsOnly: c.state.Config.Remote.Secure,
 		DialOpts:           dialOpts,
-	}, client.UseBatchOps(true), &client.TreeSymlinkOpts{Preserved: true}, client.RetryTransient(), client.RPCTimeouts(client.DefaultRPCTimeouts))
+	}, client.UseBatchOps(true), &client.TreeSymlinkOpts{Preserved: true}, client.RetryTransient(), client.RPCTimeouts(map[string]time.Duration{
+		"default":          time.Duration(c.state.Config.Remote.Timeout),
+		"GetCapabilities":  5 * time.Second,
+		"BatchUpdateBlobs": time.Minute,
+		"BatchReadBlobs":   time.Minute,
+		"GetTree":          time.Minute,
+		"Execute":          0,
+		"WaitExecution":    0,
+	}))
 	if err != nil {
 		return err
 	}
