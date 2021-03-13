@@ -1,0 +1,2 @@
+arch = "LLVM_NATIVE_ARCH=\\\"{}\\\"".format('x86')
+arch2 = "ARCH=\"{}_{}\"".format('linux', 'amd64')
