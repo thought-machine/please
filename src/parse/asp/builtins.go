@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/manifoldco/promptui"
+	fsglob "github.com/thought-machine/please/src/fs/glob"
 	"io"
 	"path"
 	"reflect"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/fs"
 )
 
 // A few sneaky globals for when we don't have a scope handy
@@ -484,9 +484,13 @@ func glob(s *scope, args []pyObject) pyObject {
 	hidden := args[2].IsTruthy()
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
 	if s.globber == nil {
-		s.globber = fs.NewGlobber(s.state.Config.Parse.BuildFileName)
+		s.globber = fsglob.New(s.state.Config.Parse.BuildFileName)
 	}
-	return fromStringList(s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden))
+	matches, err := s.globber.Glob(s.pkg.SourceRoot(), hidden, include, exclude)
+	if err != nil {
+		log.Fatalf("failed to glob: %v", err)
+	}
+	return fromStringList(matches)
 }
 
 func asStringList(s *scope, arg pyObject, name string) []string {

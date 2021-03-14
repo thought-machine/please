@@ -6,6 +6,7 @@ go_library(
     ),
     visibility = ["PUBLIC"],
     deps = [
+        "//src/fs/glob",
         "//third_party/go:godirwalk",
         "//third_party/go:logging",
         "//third_party/go:xattr",

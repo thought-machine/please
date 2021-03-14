@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/fs"
+	fsglob "github.com/thought-machine/please/src/fs/glob"
 )
 
 // An interpreter holds the package-independent state about our parsing process.
@@ -196,7 +196,7 @@ type scope struct {
 	parent      *scope
 	locals      pyDict
 	config      *pyConfig
-	globber     *fs.Globber
+	globber     *fsglob.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 

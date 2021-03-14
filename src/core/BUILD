@@ -24,6 +24,7 @@ go_library(
     deps = [
         "//src/cli",
         "//src/fs",
+        "//src/fs/glob",
         "//src/process",
         "//src/scm",
         "//third_party/go:blake3",

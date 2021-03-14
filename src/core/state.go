@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
+	"github.com/thought-machine/please/src/fs/glob"
 	"hash"
 	"hash/crc32"
 	"hash/crc64"
@@ -803,7 +804,7 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 			pkg.MustRegisterOutput(out, target)
 		}
 		for _, out := range target.TestOutputs {
-			if !fs.IsGlob(out) {
+			if !glob.IsGlob(out) {
 				pkg.MustRegisterOutput(out, target)
 			}
 		}

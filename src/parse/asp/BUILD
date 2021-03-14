@@ -11,7 +11,7 @@ go_library(
     deps = [
         "//src/cli",
         "//src/core",
-        "//src/fs",
+        "//src/fs/glob",
         "//third_party/go:logging",
         "//third_party/go:promptui",
     ],
