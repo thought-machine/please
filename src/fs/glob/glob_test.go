@@ -28,7 +28,58 @@ func TestIsGlob(t *testing.T) {
 	assert.False(t, IsGlob("ab/c.txt"))
 }
 
-func TestCompilePattern(t *testing.T) {
+func TestExcludePattern(t *testing.T) {
+	testCases := []struct {
+		testName      string
+		matchName     string
+		include string
+		exclude       string
+		shouldExclude bool
+	}{
+		{
+			testName:      "relative match",
+			matchName:     "folder/test.txt",
+			include: 	   "folder/*.txt",
+			exclude:       "test.txt",
+			shouldExclude: true,
+		},
+		{
+			testName:      "relative non-match",
+			matchName:     "folder/test.txt",
+			include: 	   "folder/*.txt",
+			exclude:       "test.py",
+			shouldExclude: false,
+		},
+		{
+			testName:      "exact match",
+			matchName:     "folder/test.txt",
+			exclude:       "folder/test.txt",
+			include:       "folder/*.txt",
+			shouldExclude: true,
+		},
+		{
+			testName:      "exact no match",
+			matchName:     "folder/test.txt",
+			exclude:       "folder/test.py",
+			include:       "folder/*.txt",
+			shouldExclude: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.testName, func(t *testing.T) {
+			m := &matcher{
+				includes: toPatterns([]string{testCase.include}, false),
+				excludes: toPatterns([]string{testCase.exclude}, true),
+			}
+
+			matched := evalPattern(m, strings.Split(testCase.matchName, "/"))
+			assert.Equal(t, !matched, testCase.shouldExclude, fmt.Sprintf("%s should excude match %s", testCase.exclude, testCase.matchName))
+		})
+	}
+}
+
+func TestIncludePattern(t *testing.T) {
 	testCases := []struct {
 		name          string
 		pattern       string
