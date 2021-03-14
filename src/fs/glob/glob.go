@@ -83,7 +83,7 @@ func (p *pattern) match(name string) (bool, *pattern) {
 	return false, nil
 }
 
-func (g *Globber) match(m *matcher, name string) (bool, *matcher) {
+func (m *matcher) match(name string) (bool, *matcher) {
 	nextMatcher := new(matcher)
 
 	incMatch := false
@@ -251,7 +251,7 @@ func (g *Globber) globEntries(root, path string, includeHidden bool, matcher *ma
 
 		matchPath := filepath.Join(path, entry.Name())
 		entryPath := filepath.Join(root, matchPath)
-		doesMatch, newMatcher := g.match(matcher, entry.Name())
+		doesMatch, newMatcher := matcher.match(entry.Name())
 		if doesMatch {
 			if entry.IsDir() {
 				if isPkg, err := g.isPackage(entryPath); err != nil {
