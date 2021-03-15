@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
@@ -27,16 +26,16 @@ type pattern struct {
 }
 
 type globPart struct {
-	literal      string
-	regex        *regexp.Regexp
+	pattern      string
 	isDoubleStar bool
 }
 
 func (part *globPart) match(name string) bool {
-	if part.regex != nil {
-		return part.regex.MatchString(name)
+	matched, err := filepath.Match(part.pattern, name)
+	if err != nil {
+		panic(err)
 	}
-	return part.literal == name
+	return matched
 }
 
 // New createa a new globber
@@ -58,10 +57,6 @@ func (p *pattern) match(name string) (bool, *pattern) {
 		next = nil
 	}
 
-	// If the part is a literal match for that name, easy
-	if part.literal == name {
-		return lastPart, next
-	}
 	// ** can match multiple dirs so we return this pattern again plus a pattern matching the next part
 	if part.isDoubleStar {
 		nextMatches := false
@@ -155,12 +150,7 @@ func compileGlobPart(part string) *globPart {
 	if part == "**" {
 		return &globPart{isDoubleStar: true}
 	}
-	if IsGlob(part) {
-		return &globPart{
-			regex: regexp.MustCompile(toRegexString(part)),
-		}
-	}
-	return &globPart{literal: part}
+	return &globPart{pattern: part}
 }
 
 func (g *Globber) isBuildFile(name string) bool {
