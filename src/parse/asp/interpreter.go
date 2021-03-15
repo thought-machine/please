@@ -351,7 +351,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		} else if stmt.Raise != nil {
 			s.Error(s.interpretExpression(stmt.Raise).String())
 		} else if stmt.Literal != nil {
-			// Do nothing, literal statements are likely docstrings and don't require any action.
+			s.interpretExpression(stmt.Literal)
 		} else if stmt.Continue {
 			// This is definitely awkward since we need to control a for loop that's happening in a function outside this scope.
 			return continueIteration
