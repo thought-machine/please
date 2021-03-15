@@ -86,17 +86,6 @@ func (p *pattern) match(name string) (bool, *pattern) {
 func (m *matcher) match(name string) (bool, *matcher) {
 	nextMatcher := new(matcher)
 
-	incMatch := false
-	for _, inc := range m.includes {
-		match, patterns := inc.match(name)
-		if patterns != nil {
-			nextMatcher.includes = append(nextMatcher.includes, patterns)
-		}
-		if match {
-			incMatch = true
-		}
-	}
-
 	for _, excl := range m.excludes {
 		match, patterns := excl.match(name)
 		if patterns != nil {
@@ -107,7 +96,17 @@ func (m *matcher) match(name string) (bool, *matcher) {
 		}
 	}
 
-	return incMatch, nextMatcher
+	for _, inc := range m.includes {
+		match, patterns := inc.match(name)
+		if patterns != nil {
+			nextMatcher.includes = append(nextMatcher.includes, patterns)
+		}
+		if match {
+			return true, nil
+		}
+	}
+
+	return false, nextMatcher
 }
 
 func toRegexString(pattern string) string {
