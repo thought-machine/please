@@ -93,7 +93,7 @@ func (ft *fileTree) Add(name string) {
 
 // AllPrefixed returns all files in this tree with the given prefix.
 func (ft *fileTree) AllPrefixed(prefix []string) []string {
-	if len(prefix) == 0 {
+	if len(prefix) == 0 || (len(prefix) == 1 && prefix[0] == ".") {
 		ret := ft.files[:]
 		for name, child := range ft.children {
 			for _, file := range child.AllPrefixed(nil) {
