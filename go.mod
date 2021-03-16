@@ -1,7 +1,6 @@
 module github.com/thought-machine/please
 
 require (
-	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/alecthomas/units v0.0.0-20201120081800-1786d5ef83d4 // indirect
 	github.com/bazelbuild/buildtools v0.0.0-20190228125936-4bcdbd1064fc
@@ -12,7 +11,6 @@ require (
 	github.com/djherbis/atime v1.0.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fsnotify/fsnotify v1.4.7
-	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/gogo/protobuf v1.2.0 // indirect
 	github.com/golang/protobuf v1.4.2
 	github.com/google/shlex v0.0.0-20181106134648-c34317bd91bf
@@ -36,10 +34,9 @@ require (
 	github.com/sourcegraph/go-lsp v0.0.0-20181119182933-0c7d621186c1
 	github.com/sourcegraph/jsonrpc2 v0.0.0-20190106185902-35a74f039c6a
 	github.com/streamrail/concurrent-map v0.0.0-20160823150647-8bf1e9bacbf6
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.6.1
 	github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e
 	github.com/thought-machine/go-flags v1.5.0
-	github.com/tklauser/go-sysconf v0.3.4 // indirect
 	github.com/ulikunitz/xz v0.5.6
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73
