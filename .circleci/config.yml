@@ -321,6 +321,7 @@ workflows:
           requires:
             - build-alpine
             - build-freebsd
+            - build-darwin-arm64
             - build-linux
             - build-linux-alt
             - build-darwin
