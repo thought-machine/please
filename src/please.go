@@ -1058,7 +1058,7 @@ func initBuild(args []string) string {
 		}
 		os.Exit(buildFunctions[command]())
 	} else if opts.OutputFlags.CompletionScript {
-		fmt.Printf("%s\n", assets.MustAsset("plz_complete.sh"))
+		fmt.Printf("%s\n", string(assets.PlzComplete))
 		os.Exit(0)
 	}
 	// Read the config now

@@ -1,35 +1,22 @@
 go_library(
     name = "assets",
-    srcs = [":bindata"],
+    srcs = ["assets.go"],
+    resources = [":resources"],
     visibility = ["//src/..."],
 )
 
-go_bindata(
-    name = "bindata",
-    srcs = [":bindata_files"],
+go_test(
+    name = "assets_test",
+    srcs = ["assets_test.go"],
+    # Has to be external (or provide the same resources as above)
+    external = True,
+    deps = [":assets"],
 )
 
-# If you update this, you must also update bindata.go,
 filegroup(
-    name = "bindata_files",
+    name = "resources",
     srcs = [
         "//:pleasew",
         "//tools/misc:completion_script",
     ],
-)
-
-sh_cmd(
-    name = "generate",
-    cmd = "cp $(out_location :bindata) src/assets/bindata.go",
-    data = [":bindata"],
-    labels = ["codegen"],
-)
-
-sh_test(
-    name = "up_to_date_test",
-    src = "up_to_date_test.sh",
-    data = {
-        "BIN_DATA": [":bindata"],
-        "GENERATED": ["bindata.go"],
-    },
 )
