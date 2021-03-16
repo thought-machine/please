@@ -32,7 +32,7 @@ type Statement struct {
 	For     *ForStatement
 	If      *IfStatement
 	Return  *ReturnStatement
-	Raise   *Expression  // Deprecated
+	Raise   *Expression // Deprecated
 	Assert  *struct {
 		Expr    *Expression
 		Message *Expression
