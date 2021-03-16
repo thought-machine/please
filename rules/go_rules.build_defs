@@ -1469,7 +1469,7 @@ def _set_go_env():
         # the wrong thing (essentially os.Executable, which go uses to define GOROOT, returns
         # the most recent hardlink to the file). We can work around this way although it's
         # not very nice (we don't do this globally because OSX doesn't have realpath).
-        go_root = f'$(realpath $(dirname $(dirname $TOOLS_GO)))'
+        go_root = f'$(dirname $(dirname $(realpath $TOOLS_GO)))'
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
     cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
