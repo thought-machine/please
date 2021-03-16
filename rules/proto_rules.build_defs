@@ -388,7 +388,7 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
     out_dir = "out_dir"
     language_out_dir = plugin['language']
 
-    cmd = f'$TOOLS_PROTOC ' + ' '.join(flags)
+    cmd = f'$TOOLS_PROTOC -I. ' + ' '.join(flags)
     if root_dir:
         cmd = f'cd {root_dir}; {cmd} ${{SRCS//{root_dir}\\//}} && cd "$TMP_DIR"'
     else:
@@ -418,7 +418,7 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
         visibility = visibility,
     )
 
-def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
+def protoc_binary(name, url:str|dict = '', version:str = '', hashes=None, deps=None, visibility=None):
     """Downloads a precompiled protoc binary.
 
     You will obviously need to choose a version that is available on Github - there aren't
@@ -426,11 +426,18 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
 
     Args:
       name (str): Name of the rule
-      version (str): Version of protoc to download (e.g. '3.4.0').
+      url (str | dict): The URL used to download protoc. Can be a single string or a dictionary mapping
+                        HOSTOS-HOSTARCH to URLs i.e. linux-amd64: 'https://...'. Either provide url or version, but not both.
+      version (str): The version of protoc to download (e.g. '3.4.0'). Protoc will be downloaded from https://github.com/protocolbuffers/protobuf/releases/downaload/...
+                     and the rule will use the current platforms OS and ARCH setting. Either provide url or version,
+                     but not both.
       hashes (list): Hashes to verify the download against.
       deps (list): Any other dependencies
       visibility (list): Visibility of the rule.
     """
+    if url and version:
+        fail("Either version or url should be provided but not both")
+
     if CONFIG.HOSTOS == 'darwin':
         HOSTOS='osx'
     else:
@@ -445,11 +452,15 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
     else:
         HOSTARCH = CONFIG.HOSTARCH
 
-    download_rule = remote_file(
+    if version:
+        protoc_url = f'https://github.com/protocolbuffers/protobuf/releases/download/v{version}/protoc-{version}-{HOSTOS}-{HOSTARCH}.zip'
+    else:
+        protoc_url = url if isinstance(url, str) else url[f'{HOSTOS}-{HOSTARCH}']
+
+    download = remote_file(
         name = name,
         _tag = 'download',
-        url = f'https://github.com/protocolbuffers/protobuf/releases/download/v{version}/protoc-{version}-{HOSTOS}-{HOSTARCH}.zip',
-        out = f'protoc-{version}.zip',
+        url = protoc_url,
         hashes = hashes,
         deps = deps,
     )
@@ -457,7 +468,7 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
     wkt = build_rule(
         name = name,
         tag = 'wkt',
-        srcs = [download_rule],
+        srcs = [download],
         outs = ['google'],
         tools = [CONFIG.JARCAT_TOOL],
         cmd = '$TOOL x $SRCS --strip_prefix include',
@@ -468,7 +479,7 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
     )
     return genrule(
         name = name,
-        srcs = [download_rule],
+        srcs = [download],
         outs = ['protoc'],
         tools = [CONFIG.JARCAT_TOOL],
         binary = True,
