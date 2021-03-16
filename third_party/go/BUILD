@@ -287,7 +287,7 @@ go_module(
         ":difflib",
         ":objx",
         ":spew",
-        ":yaml.v2",
+        ":yaml",
     ],
 )
 
@@ -307,7 +307,7 @@ go_module(
 )
 
 go_module(
-    name = "yaml.v2",
+    name = "yaml",
     licences = ["Apache 2.0"],
     module = "gopkg.in/yaml.v2",
     version = "v2.2.4",
