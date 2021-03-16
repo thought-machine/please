@@ -402,7 +402,7 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
 
     # If the protoc tool is a build rule, depend on it as it's probably a protoc_binary() which provides the well known
     # types
-    if CONFIG.PROTOC_TOOL.startswith("//"):
+    if CONFIG.PROTOC_TOOL.startswith("//") or CONFIG.PROTOC_TOOL.startswith(":"):
         deps += [CONFIG.PROTOC_TOOL]
 
     # protoc_flags are applied transitively to dependent rules via labels.
