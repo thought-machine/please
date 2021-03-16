@@ -20,7 +20,7 @@ type PleaseGoInstall struct {
 	importConfig string
 	ldFlags      string
 	outDir       string
-	trimPath string
+	trimPath     string
 
 	tc *toolchain.Toolchain
 
@@ -35,7 +35,7 @@ func New(srcRoot, moduleName, importConfig, ldFlags, goTool, ccTool, out, trimPa
 		importConfig: importConfig,
 		ldFlags:      ldFlags,
 		outDir:       out,
-		trimPath: trimPath,
+		trimPath:     trimPath,
 
 		tc: &toolchain.Toolchain{
 			CcTool: ccTool,
