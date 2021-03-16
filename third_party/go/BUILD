@@ -282,7 +282,7 @@ go_module(
     ],
     licences = ["MIT"],
     module = "github.com/stretchr/testify",
-    version = "v1.4.0",
+    version = "v1.6.1",
     deps = [
         ":difflib",
         ":objx",
@@ -309,8 +309,8 @@ go_module(
 go_module(
     name = "yaml",
     licences = ["Apache 2.0"],
-    module = "gopkg.in/yaml.v2",
-    version = "v2.2.4",
+    module = "gopkg.in/yaml.v3",
+    version = "v3.0.0-20200313102051-9f266ea9e77c",
 )
 
 go_module(
