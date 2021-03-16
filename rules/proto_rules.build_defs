@@ -390,7 +390,7 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
 
     cmd = f'$TOOLS_PROTOC ' + ' '.join(flags)
     if root_dir:
-        cmd = f'cd {root_dir}; {cmd} ${{SRCS//{root_dir}\\//}} && cd "$TMP_DIR"'
+        cmd = f'cd {root_dir}; {cmd} -I. ${{SRCS//{root_dir}\\//}} && cd "$TMP_DIR"'
     else:
         cmd += ' ${SRCS}'
 
