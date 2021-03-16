@@ -46,13 +46,19 @@ func (tc *Toolchain) CGO(sourceDir string, objectDir string, cgoFiles []string) 
 }
 
 // GoCompile will compile the go sources and the generated .cgo1.go sources for the CGO files (if any)
-func (tc *Toolchain) GoCompile(dir, importcfg, out string, goFiles []string) error {
-	return tc.Exec.Exec("%s tool compile -pack -importcfg %s -o %s %s", tc.GoTool, importcfg, out, FullPaths(goFiles, dir))
+func (tc *Toolchain) GoCompile(dir, importcfg, out, trimpath string, goFiles []string) error {
+	if trimpath != "" {
+		trimpath = fmt.Sprintf("-trimpath %s", trimpath)
+	}
+	return tc.Exec.Exec("%s tool compile -pack %s -importcfg %s -o %s %s", tc.GoTool, trimpath, importcfg, out, FullPaths(goFiles, dir))
 }
 
 // GoAsmCompile will compile the go sources linking to the the abi symbols generated from symabis()
-func (tc *Toolchain) GoAsmCompile(dir, importcfg, out string, goFiles []string, asmH, symabys string) error {
-	return tc.Exec.Exec("%s tool compile -pack -importcfg %s -asmhdr %s -symabis %s -o %s %s", tc.GoTool, importcfg, asmH, symabys, out, FullPaths(goFiles, dir))
+func (tc *Toolchain) GoAsmCompile(dir, importcfg, out, trimpath string, goFiles []string, asmH, symabys string) error {
+	if trimpath != "" {
+		trimpath = fmt.Sprintf("-trimpath %s", trimpath)
+	}
+	return tc.Exec.Exec("%s tool compile -pack %s -importcfg %s -asmhdr %s -symabis %s -o %s %s", tc.GoTool, trimpath, importcfg, asmH, symabys, out, FullPaths(goFiles, dir))
 }
 
 // CCompile will compile c sources and return the object files that will be generated
@@ -91,14 +97,17 @@ func (tc *Toolchain) Symabis(sourceDir, objectDir string, asmFiles []string) (st
 }
 
 // Asm will compile the asm files and return the objects that are generated
-func (tc *Toolchain) Asm(sourceDir, objectDir string, asmFiles []string) ([]string, error) {
+func (tc *Toolchain) Asm(sourceDir, objectDir, trimpath string, asmFiles []string) ([]string, error) {
 	objFiles := make([]string, len(asmFiles))
+	if trimpath != "" {
+		trimpath = fmt.Sprintf("-trimpath %s", trimpath)
+	}
 
 	for i, asmFile := range asmFiles {
 		objFile := strings.TrimSuffix(asmFile, ".s") + ".o"
 		objFiles[i] = objFile
 
-		err := tc.Exec.Exec("(cd %s; %s tool asm -I . -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -o $OLDPWD/%s/%s %s)", sourceDir, tc.GoTool, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, objectDir, objFile, asmFile)
+		err := tc.Exec.Exec("(cd %s; %s tool asm %s -I . -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -o $OLDPWD/%s/%s %s)", sourceDir, tc.GoTool, trimpath, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, objectDir, objFile, asmFile)
 		if err != nil {
 			return nil, err
 		}

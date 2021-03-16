@@ -898,7 +898,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"$TOOLS_PLEASE_GO install --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
+        f"$TOOLS_PLEASE_GO install --trim_path $TMP_DIR --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
         "cat LD_FLAGS",
     ]
 

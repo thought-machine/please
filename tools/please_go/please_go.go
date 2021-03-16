@@ -24,6 +24,7 @@ var opts = struct {
 		GoTool       string `short:"g" long:"go_tool" description:"The location of the go binary" default:"go"`
 		CCTool       string `short:"c" long:"cc_tool" description:"The c compiler to use"`
 		Out          string `short:"o" long:"out" description:"The output directory to put compiled artifacts in" required:"true"`
+		TrimPath     string `short:"t" long:"trim_path" description:"Removes prefix from recorded source file paths."`
 		Args         struct {
 			Packages []string `positional-arg-name:"packages" description:"The packages to compile"`
 		} `positional-args:"true" required:"true"`
@@ -65,6 +66,7 @@ var subCommands = map[string]func() int{
 			mustResolvePath(opts.PleaseGoInstall.GoTool),
 			mustResolvePath(opts.PleaseGoInstall.CCTool),
 			opts.PleaseGoInstall.Out,
+			opts.PleaseGoInstall.TrimPath,
 		)
 		if err := pleaseGoInstall.Install(opts.PleaseGoInstall.Args.Packages); err != nil {
 			log.Fatal(err)
