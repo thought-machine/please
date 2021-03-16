@@ -55,11 +55,11 @@ func WriteTestMain(pkgDir, importPath string, sources []string, output string, c
 // extraImportPaths returns the set of extra import paths that are needed.
 func extraImportPaths(pkg, pkgDir, importPath string, coverVars []CoverVar) []string {
 	pkgDir = collapseFinalDir(path.Join(pkgDir, pkg), importPath)
-	ret := []string{fmt.Sprintf("%s \"%s\"", pkg, path.Join(importPath, pkgDir))}
+	ret := []string{fmt.Sprintf("%s \"%s\"", pkg, collapseFinalDir(path.Join(importPath, pkgDir), importPath))}
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)
 		coverVars[i].ImportName = name
-		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, path.Join(importPath, v.ImportPath)))
+		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, collapseFinalDir(path.Join(importPath, v.ImportPath), v.ImportPath)))
 	}
 	return ret
 }

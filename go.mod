@@ -48,7 +48,7 @@ require (
 	google.golang.org/grpc v1.31.1
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20191105091915-95d230a53780 // indirect
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
-	lukechampine.com/blake3 v1.1.4
+	lukechampine.com/blake3 v1.1.5
 )
 
-go 1.13
+go 1.16

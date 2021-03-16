@@ -21,7 +21,12 @@ func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*
 	state := core.NewDefaultBuildState()
 	state.Config.BuildConfig = map[string]string{"parser-engine": "python27"}
 	parser := NewParser(state)
-	parser.MustLoadBuiltins("builtins.build_defs", nil, rules.MustAsset("builtins.build_defs.gob"))
+
+	src, err := rules.ReadAsset("builtins.build_defs")
+	if err != nil {
+		panic(err)
+	}
+	parser.MustLoadBuiltins("builtins.build_defs", src)
 	statements, err := parser.parse(filename)
 	if err != nil {
 		panic(err)

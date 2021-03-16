@@ -62,7 +62,7 @@ func (h *Handler) findDefinition(name string) lsp.Location {
 				return lsp.Location{}
 			}
 			dest := path.Join(dir, "please", f.Pos.Filename)
-			if data, err := rules.Asset(f.Pos.Filename); err != nil {
+			if data, err := rules.ReadAsset(f.Pos.Filename); err != nil {
 				log.Warning("Failed to extract builtin rules for %s: %s", name, err)
 				return lsp.Location{}
 			} else if err := ioutil.WriteFile(dest, data, 0644); err != nil {
