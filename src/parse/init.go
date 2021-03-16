@@ -54,19 +54,16 @@ func buildPreamble(state *core.BuildState, pkg *core.Package) string {
 func newAspParser(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
 	log.Debug("Loading built-in build rules...")
-	dir, _ := rules.AssetDir("")
+	dir, _ := rules.AllAssets()
 	sort.Strings(dir)
 	for _, filename := range dir {
-		if strings.HasSuffix(filename, ".gob") {
-			srcFile := strings.TrimSuffix(filename, ".gob")
-			src, _ := rules.Asset(srcFile)
-			p.MustLoadBuiltins("rules/"+srcFile, src, rules.MustAsset(filename))
-		}
+		src, _ := rules.ReadAsset(filename)
+		p.MustLoadBuiltins(filename, src)
 	}
 
 	for _, preload := range state.Config.Parse.PreloadBuildDefs {
 		log.Debug("Preloading build defs from %s...", preload)
-		p.MustLoadBuiltins(preload, nil, nil)
+		p.MustLoadBuiltins(preload, nil)
 	}
 
 	if state.Config.Bazel.Compatibility {
