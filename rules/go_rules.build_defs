@@ -1464,9 +1464,12 @@ def _go_github_repo_cmd(name, get, repo, revision, module_major_version):
 def _set_go_env():
     if CONFIG.GOROOT:
         go_root = CONFIG.GOROOT
-    elif CONFIG.GO_TOOL.startswith(":") or CONFIG.GO_TOOL.startswith("//"):
-        label, _, _ = CONFIG.GO_TOOL.rpartition('|')
-        go_root = f'$(dirname $(dirname $TOOLS_GO))'
+    elif CONFIG.HOSTOS == 'freebsd':
+        # FreeBSD has some very strange semantics around hardlinks that lead to it finding
+        # the wrong thing (essentially os.Executable, which go uses to define GOROOT, returns
+        # the most recent hardlink to the file). We can work around this way although it's
+        # not very nice (we don't do this globally because OSX doesn't have realpath).
+        go_root = f'$(dirname $(dirname $(realpath $TOOLS_GO)))'
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
     cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'

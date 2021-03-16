@@ -91,7 +91,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 
 	outs := target.AllOutputs()
-	if len(outs) == 1 { // $OUT is relative when running remotely; make it absolute
+	if len(target.Outputs()) == 1 { // $OUT is relative when running remotely; make it absolute
 		commandPrefix += `export OUT="$TMP_DIR/$OUT" && `
 	}
 	if target.IsRemoteFile {
