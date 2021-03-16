@@ -807,7 +807,7 @@ go_module(
 go_module(
     name = "blake3",
     module = "lukechampine.com/blake3",
-    version = "v1.1.4",
+    version = "v1.1.5",
     deps = [":cpuid"],
 )
 
