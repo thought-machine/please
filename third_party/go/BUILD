@@ -412,7 +412,7 @@ go_module(
         "internal/common",
         "mem",
     ],
-    module = "github.com/shirou/gopsutil",
+    module = "github.com/shirou/gopsutil/v3",
     version = "v3.21.2",
     deps = [
         ":sysconf",
