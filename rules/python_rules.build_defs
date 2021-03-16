@@ -130,8 +130,9 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
       labels (list): Labels to apply to this rule.
     """
     shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    cmd = '$TOOLS_PEX -s "%s" -m "%s" --zip_safe --interpreter_options="%s" --stamp="$STAMP"' % (
-        shebang, CONFIG.PYTHON_MODULE_DIR, CONFIG.PYTHON_INTERPRETER_OPTIONS)
+    zipsafe_flag = '--zip_safe' if zip_safe else ''
+    cmd = '$TOOLS_PEX -s "%s" -m "%s" %s --interpreter_options="%s" --stamp="$STAMP"' % (
+        shebang, CONFIG.PYTHON_MODULE_DIR, zipsafe_flag, CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
 
