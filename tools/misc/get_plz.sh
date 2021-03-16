@@ -46,7 +46,7 @@ if ! hash plz 2>/dev/null; then
         echo "If desired, add this line to your ~/.profile or equivalent:"
         echo "    'PATH=\${PATH}:~/.please/bin'"
         echo "or install please system-wide with"
-        echo "    'sudo cp ~/.please/bin/* /usr/lcoal/bin'"
+        echo "    'sudo cp ~/.please/bin/* /usr/local/bin'"
     fi
 fi
 
