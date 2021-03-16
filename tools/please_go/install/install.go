@@ -20,6 +20,7 @@ type PleaseGoInstall struct {
 	importConfig string
 	ldFlags      string
 	outDir       string
+	trimPath string
 
 	tc *toolchain.Toolchain
 
@@ -27,13 +28,14 @@ type PleaseGoInstall struct {
 }
 
 // New creates a new PleaseGoInstall
-func New(srcRoot, moduleName, importConfig, ldFlags, goTool, ccTool, out string) *PleaseGoInstall {
+func New(srcRoot, moduleName, importConfig, ldFlags, goTool, ccTool, out, trimPath string) *PleaseGoInstall {
 	return &PleaseGoInstall{
 		srcRoot:      srcRoot,
 		moduleName:   moduleName,
 		importConfig: importConfig,
 		ldFlags:      ldFlags,
 		outDir:       out,
+		trimPath: trimPath,
 
 		tc: &toolchain.Toolchain{
 			CcTool: ccTool,
@@ -238,18 +240,18 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			return err
 		}
 
-		if err := install.tc.GoAsmCompile(workDir, install.importConfig, out, goFiles, asmH, symabis); err != nil {
+		if err := install.tc.GoAsmCompile(workDir, install.importConfig, out, install.trimPath, goFiles, asmH, symabis); err != nil {
 			return err
 		}
 
-		asmObjFiles, err := install.tc.Asm(pkg.Dir, workDir, pkg.SFiles)
+		asmObjFiles, err := install.tc.Asm(pkg.Dir, workDir, install.trimPath, pkg.SFiles)
 		if err != nil {
 			return err
 		}
 
 		objFiles = append(objFiles, asmObjFiles...)
 	} else {
-		err := install.tc.GoCompile(workDir, install.importConfig, out, goFiles)
+		err := install.tc.GoCompile(workDir, install.importConfig, out, install.trimPath, goFiles)
 		if err != nil {
 			return err
 		}
