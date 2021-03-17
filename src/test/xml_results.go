@@ -438,6 +438,7 @@ func SerialiseResultsToXML(target *core.BuildTarget, indent bool) []byte {
 // uploadResults uploads test results to a remote server.
 func uploadResults(target *core.BuildTarget, url string, gzipped bool) error {
 	b := SerialiseResultsToXML(target, true)
+	enc := ""
 	var r io.Reader = bytes.NewReader(b)
 	if gzipped {
 		var buf bytes.Buffer
@@ -448,13 +449,14 @@ func uploadResults(target *core.BuildTarget, url string, gzipped bool) error {
 			return fmt.Errorf("Failed to flush gzip writer: %s", err)
 		}
 		r = &buf
+		enc = "gzip"
 	}
 	req, err := http.NewRequest(http.MethodPost, url, r)
 	if err != nil {
 		return fmt.Errorf("Failed to create HTTP request: %s", err)
 	}
 	req.Header["Content-Type"] = []string{"application/xml"}
-	req.Header["Content-Encoding"] = []string{"gzip"}
+	req.Header["Content-Encoding"] = []string{enc}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("Failed to upload test results: %s", err)
