@@ -135,7 +135,7 @@ def _go_path_mapping(grpc):
     def _map_go_paths(rule_name):
         mapping = ',M'.join(get_labels(rule_name, 'proto:go-map:'))
         cmd = get_command(rule_name)
-        new_cmd = cmd.replace('--go_out=paths=source_relative:', f'--go_out=paths=source_relative,{grpc_plugin}M{mapping}:')
+        new_cmd = cmd.replace('--go_out=', f'--go_out={grpc_plugin}M{mapping}:')
         set_command(rule_name, new_cmd)
     return _map_go_paths
 
@@ -260,7 +260,7 @@ def proto_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out=paths=source_relative:"$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"'],
+            protoc_flags = ['--go_out="$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP],
             pre_build = _go_path_mapping(False),
@@ -339,12 +339,12 @@ def grpc_languages():
                 test_only = test_only,
             ),
             protoc_flags=[
-                '--grpc-go_out="$OUT_DIR"',
+                '--go-grpc_out="$OUT_DIR"',
                 '--go_out="$OUT_DIR"',
                 '--plugin=protoc-gen-go="`which $TOOLS_GO`"',
-                '--plugin=protoc-gen-grpc-go="`which $TOOLS_GRPC_GO`"',
+                '--plugin=protoc-gen-go-grpc="`which $TOOLS_GRPC_GO`"',
             ] if CONFIG.GRPC_GO_PLUGIN else [
-                '--go_out=paths=source_relative:"$OUT_DIR"',
+                '--go_out="$OUT_DIR"',
                 '--plugin=protoc-gen-go="`which $TOOLS_GO`"',
             ],
             tools = {
@@ -354,7 +354,8 @@ def grpc_languages():
                 CONFIG.PROTOC_GO_PLUGIN,
             ],
             deps = [CONFIG.PROTO_GO_DEP, CONFIG.GRPC_GO_DEP],
-            pre_build = _go_path_mapping(True),
+            # if we're using the old unified protoc plugin, tell it to generate grpc
+            pre_build = _go_path_mapping(not CONFIG.GRPC_GO_PLUGIN),
             provides=['srcs'],
         ),
         # We don't really support grpc-js right now, so this is the same as proto-js.
@@ -390,13 +391,16 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
 
     cmd = f'$TOOLS_PROTOC -I. ' + ' '.join(flags)
     if root_dir:
-        cmd = f'cd {root_dir}; {cmd} ${{SRCS//{root_dir}\\//}} && cd "$TMP_DIR"'
+        escaped_root_dir = root_dir.replace("/", "\/")
+        cmd = f'cd {root_dir}; {cmd} ${{SRCS//{escaped_root_dir}\\//}} && cd "$TMP_DIR"'
     else:
         cmd += ' ${SRCS}'
 
     cmd = f'(export OUT_DIR=$TMP_DIR/{language_out_dir} && {cmd})'
 
-    cmd += f' && (mv -f {language_out_dir}/${{PKG_DIR}}/* {out_dir}; true) && (mv -f {language_out_dir}/* {out_dir}; true)'
+    pkg_dir = package_name().removeprefix(root_dir).removeprefix("/")
+
+    cmd += f' && (mv -f {language_out_dir}/{pkg_dir}/* {out_dir}; true) && (mv -f {language_out_dir}/* {out_dir}; true)'
 
     cmd = f'mkdir out_dir && mkdir {language_out_dir} && {cmd}'
 
