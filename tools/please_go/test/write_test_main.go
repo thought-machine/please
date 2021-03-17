@@ -54,8 +54,18 @@ func WriteTestMain(pkgDir, importPath string, sources []string, output string, c
 
 // extraImportPaths returns the set of extra import paths that are needed.
 func extraImportPaths(pkg, pkgDir, importPath string, coverVars []CoverVar) []string {
+	isRoot := pkgDir == ""
 	pkgDir = collapseFinalDir(path.Join(pkgDir, pkg), importPath)
-	ret := []string{fmt.Sprintf("%s \"%s\"", pkg, collapseFinalDir(path.Join(importPath, pkgDir), importPath))}
+
+	var ret []string
+	// If we're in the root of the repo, and the import path matches the root package, collapse that as we import it via
+	// the module name
+	if isRoot && strings.HasSuffix(importPath, pkg) {
+		ret = []string{fmt.Sprintf("%s \"%s\"", pkg, importPath)}
+	} else {
+		ret = []string{fmt.Sprintf("%s \"%s\"", pkg, path.Join(importPath, pkgDir))}
+	}
+
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)
 		coverVars[i].ImportName = name
