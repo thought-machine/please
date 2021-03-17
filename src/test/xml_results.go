@@ -436,14 +436,18 @@ func SerialiseResultsToXML(target *core.BuildTarget, indent bool) []byte {
 }
 
 // uploadResults uploads test results to a remote server.
-func uploadResults(target *core.BuildTarget, url string, compress bool) error {
+func uploadResults(target *core.BuildTarget, url string, gzipped bool) error {
 	b := SerialiseResultsToXML(target, true)
-	r := bytes.NewReader(b)
-	if compress {
-		var err error
-		if r, err = gzip.NewReader(r); err != nil {
+	var r io.Reader = bytes.NewReader(b)
+	if gzipped {
+		var buf bytes.Buffer
+		zw := gzip.NewWriter(&buf)
+		if _, err := io.Copy(zw, r); err != nil {
 			return fmt.Errorf("Failed to gzip test results: %s", err)
+		} else if err = zw.Close(); err != nil {
+			return fmt.Errorf("Failed to flush gzip writer: %s", err)
 		}
+		r = &buf
 	}
 	req, err := http.NewRequest(http.MethodPost, url, r)
 	if err != nil {

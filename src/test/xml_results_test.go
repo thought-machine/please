@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"compress/gzip"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -70,7 +71,51 @@ func TestUpload(t *testing.T) {
 	}
 	target.IsTest = true
 
-	err := uploadResults(target, s.URL+"/results")
+	err := uploadResults(target, s.URL+"/results", false)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte(expected), results["/results"])
+}
+
+func TestUploadGzipped(t *testing.T) {
+	results := map[string][]byte{}
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		body, err := gzip.NewReader(r.Body)
+		assert.NoError(t, err)
+		b, err := ioutil.ReadAll(body)
+		assert.NoError(t, err)
+		results[r.URL.Path] = b
+	}))
+	target := core.NewBuildTarget(core.ParseBuildLabel("//src/core:lock_test", ""))
+	duration := 500 * time.Millisecond
+	target.Results = core.TestSuite{
+		Package:  "src.core",
+		Name:     "lock_test",
+		Duration: 1 * time.Second,
+		TestCases: core.TestCases{
+			{
+				ClassName: "src.core.lock_test",
+				Name:      "TestAcquireRepoLock",
+				Executions: []core.TestExecution{
+					{
+						Duration: &duration,
+					},
+				},
+			},
+			{
+				ClassName: "src.core.lock_test",
+				Name:      "TestReadLastOperation",
+				Executions: []core.TestExecution{
+					{
+						Duration: &duration,
+					},
+				},
+			},
+		},
+	}
+	target.IsTest = true
+
+	err := uploadResults(target, s.URL+"/results", true)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte(expected), results["/results"])
 }
