@@ -341,8 +341,6 @@ def grpc_languages():
             protoc_flags=[
                 '--go-grpc_out="$OUT_DIR"',
                 '--go_out="$OUT_DIR"',
-                '--go_opt=paths=source_relative',
-                '--go-grpc_opt=paths=source_relative',
                 '--plugin=protoc-gen-go="`which $TOOLS_GO`"',
                 '--plugin=protoc-gen-go-grpc="`which $TOOLS_GRPC_GO`"',
             ] if CONFIG.GRPC_GO_PLUGIN else [
