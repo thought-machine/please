@@ -57,8 +57,7 @@ func extraImportPaths(pkg, pkgDir, importPath string, coverVars []CoverVar) []st
 	isRoot := pkgDir == ""
 	pkgDir = collapseFinalDir(path.Join(pkgDir, pkg), importPath)
 
-	// TODO(jpoole): figure out why the linter loves this pre-alloc approach so much
-	ret := make([]string, 0, 1)
+	ret := make([]string, 0, len(coverVars)+1)
 	// If we're in the root of the repo, and the import path matches the root package, collapse that as we import it via
 	// the module name
 	if isRoot && strings.HasSuffix(importPath, pkg) {
