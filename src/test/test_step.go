@@ -42,7 +42,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, r
 		runsAllCompleted := target.CompleteRun(state)
 		if runsAllCompleted && state.Config.Test.Upload != "" {
 			if numUploadFailures < maxUploadFailures {
-				if err := uploadResults(target, state.Config.Test.Upload.String()); err != nil {
+				if err := uploadResults(target, state.Config.Test.Upload.String(), state.Config.Test.Gzip); err != nil {
 					log.Warning("%s", err)
 					if atomic.AddInt64(&numUploadFailures, 1) >= maxUploadFailures {
 						log.Error("Failed to upload test results %d times, giving up", maxUploadFailures)

@@ -4,6 +4,7 @@ package test
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
@@ -13,8 +14,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/thought-machine/please/src/core"
 	"io"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 func looksLikeJUnitXMLTestResults(b []byte) bool {
@@ -434,9 +436,22 @@ func SerialiseResultsToXML(target *core.BuildTarget, indent bool) []byte {
 }
 
 // uploadResults uploads test results to a remote server.
-func uploadResults(target *core.BuildTarget, url string) error {
+func uploadResults(target *core.BuildTarget, url string, compress bool) error {
 	b := SerialiseResultsToXML(target, true)
-	resp, err := http.Post(url, "application/xml", bytes.NewReader(b))
+	r := bytes.NewReader(b)
+	if compress {
+		var err error
+		if r, err = gzip.NewReader(r); err != nil {
+			return fmt.Errorf("Failed to gzip test results: %s", err)
+		}
+	}
+	req, err := http.NewRequest(http.MethodPost, url, r)
+	if err != nil {
+		return fmt.Errorf("Failed to create HTTP request: %s", err)
+	}
+	req.Header["Content-Type"] = []string{"application/xml"}
+	req.Header["Content-Encoding"] = []string{"gzip"}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("Failed to upload test results: %s", err)
 	}

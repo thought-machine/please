@@ -443,6 +443,7 @@ type Configuration struct {
 		Sandbox         bool         `help:"Deprecated, use sandbox.test instead."`
 		DisableCoverage []string     `help:"Disables coverage for tests that have any of these labels spcified."`
 		Upload          cli.URL      `help:"URL to upload test results to (in XML format)"`
+		Gzip            bool         `help:"True to upload the test results gzipped."`
 	} `help:"A config section describing settings related to testing in general."`
 	Sandbox struct {
 		Tool  string   `help:"The location of the tool to use for sandboxing (typically please_sandbox)."`
