@@ -177,7 +177,7 @@ go_module(
 go_mod_download(
     name = "genproto_download",
     module = "google.golang.org/genproto",
-    version = "2b5a72b8730b0b16380010cfe5286c42108d88e7",
+    version = "v0.0.0-20210315173758-2651cd453018",
 )
 
 # genproto stuff for grpc to resolve cyclic deps
