@@ -135,6 +135,8 @@ type BuildTarget struct {
 	IsRemoteFile bool `print:"false"`
 	// Marks the target as a text_file.
 	IsTextFile bool `print:"false"`
+	// Whether we should run the text file content through please command expansions e.g. $(location )
+	ExpandFileContent bool `print:"false"`
 	// Marks that the target was added in a post-build function.
 	AddedPostBuild bool `print:"false"`
 	// If true, the interactive progress display will try to infer the target's progress
@@ -1547,6 +1549,14 @@ func (target *BuildTarget) BuildCouldModifyTarget() bool {
 // AddOutputDirectory adds an output directory to the target
 func (target *BuildTarget) AddOutputDirectory(dir string) {
 	target.OutputDirectories = append(target.OutputDirectories, OutputDirectory(dir))
+}
+
+// GetFileContent returns the file content, expanding it if it needs to
+func (target *BuildTarget) GetFileContent(state *BuildState) (string, error) {
+	if target.ExpandFileContent {
+		return ReplaceSequences(state, target, target.FileContent)
+	}
+	return target.FileContent, nil
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

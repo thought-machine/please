@@ -245,6 +245,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	hashBool(h, target.Stamp)
 	hashBool(h, target.IsFilegroup)
 	hashBool(h, target.IsTextFile)
+	hashBool(h, target.ExpandFileContent)
 	hashBool(h, target.IsRemoteFile)
 	hashBool(h, target.Local)
 	hashOptionalBool(h, target.ExitOnError)

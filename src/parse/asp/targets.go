@@ -64,6 +64,7 @@ const (
 	entryPointsArgIdx
 	envArgIdx
 	fileContentArgIdx
+	expandFileContentArgIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -100,6 +101,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.ShowProgress = isTruthy(progressBuildRuleArgIdx)
 	target.IsRemoteFile = isTruthy(urlsBuildRuleArgIdx)
 	target.IsTextFile = isTruthy(fileContentArgIdx)
+	target.ExpandFileContent = isTruthy(expandFileContentArgIdx)
 	target.Local = isTruthy(localBuildRuleArgIdx)
 	target.ExitOnError = isTruthy(exitOnErrorArgIdx)
 	for _, o := range asStringList(s, args[outDirsBuildRuleArgIdx], "output_dirs") {
