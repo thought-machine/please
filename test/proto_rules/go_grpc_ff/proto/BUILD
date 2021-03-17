@@ -6,8 +6,8 @@ package(
 # This is different from //third_party/go:protoc-gen-go which is the old unified grpc and proto plugin
 go_module(
     name = "protoc-gen-go",
-    install = ["cmd/protoc-gen-go"],
     binary = True,
+    install = ["cmd/protoc-gen-go"],
     module = "google.golang.org/protobuf",
     version = "v1.25.0",
     deps = [
