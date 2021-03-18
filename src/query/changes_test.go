@@ -70,10 +70,10 @@ func TestDiffGraphsIncludeTransitive(t *testing.T) {
 	s2 := core.NewDefaultBuildState()
 	t1 := addTarget(s1, "//src/core:core", nil, "src/core/core.go")
 	t2 := addTarget(s1, "//src/query:changes", t1, "src/query/changes.go")
-	t3 := addTarget(s1, "//src/query:changes_test", t2, "src/query/changes_test.go")
+	addTarget(s1, "//src/query:changes_test", t2, "src/query/changes_test.go")
 	t1 = addTarget(s2, "//src/core:core", nil, "src/core/core_changed.go")
 	t2 = addTarget(s2, "//src/query:changes", t1, "src/query/changes.go")
-	t3 = addTarget(s2, "//src/query:changes_test", t2, "src/query/changes_test.go")
+	t3 := addTarget(s2, "//src/query:changes_test", t2, "src/query/changes_test.go")
 	assert.EqualValues(t, []core.BuildLabel{t1.Label, t2.Label, t3.Label}, DiffGraphs(s1, s2, nil, -1))
 }
 
