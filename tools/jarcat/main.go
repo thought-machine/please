@@ -66,6 +66,7 @@ var opts = struct {
 		Suffix                []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
 		ExcludeSuffix         []string          `short:"e" long:"exclude_suffix" description:"Suffix of files to exclude"`
 		ExcludeJavaPrefixes   bool              `short:"j" long:"exclude_java_prefixes" description:"Use default Java exclusions"`
+		ExcludeTools          []string          `long:"exclude_tools" env:"TOOLS" env-delim:" " description:"Tools to exclude from the generated zipfile"`
 		ExcludeInternalPrefix []string          `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
 		IncludeInternalPrefix []string          `short:"t" long:"include_internal_prefix" description:"Prefix of files to include"`
 		StripPrefix           string            `long:"strip_prefix" description:"Prefix to strip off file names"`
@@ -190,7 +191,7 @@ func main() {
 	f := zip.NewFile(filename, opts.Zip.Strict)
 	f.RenameDirs = opts.Zip.RenameDirs
 	f.Include = opts.Zip.IncludeInternalPrefix
-	f.Exclude = opts.Zip.ExcludeInternalPrefix
+	f.Exclude = append(opts.Zip.ExcludeInternalPrefix, opts.Zip.ExcludeTools...)
 	f.StripPrefix = opts.Zip.StripPrefix
 	f.Suffix = opts.Zip.Suffix
 	f.ExcludeSuffix = opts.Zip.ExcludeSuffix
