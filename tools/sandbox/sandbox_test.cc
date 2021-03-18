@@ -23,4 +23,16 @@ TEST(SameDir) {
   CHECK_EQUAL("/tmp/plz_sandbox/test.bin", exec_name("/tmp/plz_sandbox/test.bin", "/tmp/plz_sandbox", "/tmp/plz_sandbox"));
 }
 
+TEST(RelPath) {
+  CHECK_EQUAL("/tmp/plz_sandbox/test.bin", exec_name("./test.bin", "/work/plz-out/tmp/target.build", "/tmp/plz_sandbox"));
+}
+
+TEST(RelPathDot) {
+  CHECK_EQUAL("/tmp/plz_sandbox/test.bin", exec_name("test.bin", "/work/plz-out/tmp/target.build", "/tmp/plz_sandbox"));
+}
+
+TEST(RelPathDotDir) {
+  CHECK_EQUAL("/tmp/plz_sandbox/test.bin", exec_name("test.bin", ".", "/tmp/plz_sandbox"));
+}
+
 }
