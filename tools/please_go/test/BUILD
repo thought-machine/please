@@ -18,7 +18,6 @@ go_test(
         "test_data/binary/lock.go",
         "test_data/core.a",
         "test_data/lock.go",
-        "test_data/github.com",
         ":test_excluded_archive",
     ],
     deps = [
