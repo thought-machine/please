@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"unicode"
@@ -54,7 +55,8 @@ func WriteTestMain(pkgDir, importPath string, sources []string, output string, c
 
 // extraImportPaths returns the set of extra import paths that are needed.
 func extraImportPaths(pkg, pkgDir, importPath string, coverVars []CoverVar) []string {
-	isRoot := pkgDir == ""
+	isRoot := pkgDir == "" || pkgDir == "."
+
 	pkgDir = collapseFinalDir(path.Join(pkgDir, pkg), importPath)
 
 	ret := make([]string, 0, len(coverVars)+1)
@@ -69,7 +71,13 @@ func extraImportPaths(pkg, pkgDir, importPath string, coverVars []CoverVar) []st
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)
 		coverVars[i].ImportName = name
-		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, path.Join(importPath, v.ImportPath)))
+
+		// Same thing as above: import the module's root package via the module name if they're the same name
+		if (v.Dir == "." || v.Dir == "") && v.ImportPath == filepath.Base(importPath) {
+			ret = append(ret, fmt.Sprintf("%s \"%s\"", name, importPath))
+		} else {
+			ret = append(ret, fmt.Sprintf("%s \"%s\"", name, path.Join(importPath, v.ImportPath)))
+		}
 	}
 	return ret
 }

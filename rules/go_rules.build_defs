@@ -317,6 +317,9 @@ def _write_import_config_cmd(name, import_path):
     pkg = package_name()
     import_path = _get_import_path(import_path)
 
+    if not pkg:
+        return f"echo packagefile {import_path}=$PKG_DIR/{name}.a >> $OUT"
+
     cmd = f'echo packagefile {import_path}/{name}=$PKG_DIR/{name}.a > $OUT'
     if pkg.endswith(name):
         cmd = f'{cmd} && echo packagefile {import_path}=$PKG_DIR/{name}.a >> $OUT'
@@ -329,7 +332,10 @@ def _get_import_path(import_path):
     pkg = package_name()
 
     if CONFIG.GO_IMPORT_PATH:
-        return f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
+        if pkg:
+            return f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
+        else:
+            return CONFIG.GO_IMPORT_PATH
 
     return pkg
 
