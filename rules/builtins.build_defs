@@ -96,9 +96,9 @@ def int(s:str) -> int:
 def str(s) -> str:
     pass
 def list(l):
-    raise 'list is not callable'
+    fail('list is not callable')
 def dict(d):
-    raise 'dict is not callable'
+    fail('dict is not callable')
 
 
 def glob(include:list, exclude:list&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY) -> list:
@@ -153,13 +153,13 @@ def copy(self:dict) -> dict:
 
 
 def git_branch(short:bool=True) -> str:
-    raise 'Disabled in config'
+    fail('Disabled in config')
 def git_commit() -> str:
-    raise 'Disabled in config'
+    fail('Disabled in config')
 def git_show(fmt:str) -> str:
-    raise 'Disabled in config'
+    fail('Disabled in config')
 def git_state(clean_label:str="clean", dirty_label:str="dirty") -> str:
-    raise 'Disabled in config'
+    fail('Disabled in config')
 
 def debug(args):
     pass
@@ -210,11 +210,15 @@ def dirname(p:str) -> str:
     return before
 
 
-# Exception types.
-# There is no actual Exception, but str() is similar enough here.
-ParseError = str
-ConfigError = str
-ValueError = str
+def _deprecated_exception(msg):
+    log.warning('Builtin exception types are deprecated, please use fail() instead. ' +
+                'See https://github.com/thought-machine/please/issues/1598 for more information.')
+    return str(msg)
+
+# These are deprecated and will be removed in v17.
+ParseError = _deprecated_exception
+ConfigError = _deprecated_exception
+ValueError = _deprecated_exception
 
 
 # Post-build callback functions.
@@ -258,4 +262,3 @@ def json(value) -> str:
 def breakpoint():
     """Breaks into an interactive debugging session."""
     pass
-

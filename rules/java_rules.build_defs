@@ -35,7 +35,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             resources_cmd = '$(for SRC in $SRCS_RESOURCES; do mkdir -p $(dirname "_tmp/$SRC");cp "$SRC" "_tmp/$SRC"; done)'
 
     if srcs and src_dir:
-        raise ParseError('You cannot pass both srcs and src_dir to java_library')
+        fail('You cannot pass both srcs and src_dir to java_library')
     if srcs or src_dir:
         if javac_flags:
             # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
@@ -196,11 +196,11 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
       jlink_args (str): Arguments to pass to the JVM in the run script.
     """
     if not CONFIG.JAVA_HOME:
-        raise Exception('Java home needs to be set to link java runtime images against jmods.')
+        fail('Java home needs to be set to link java runtime images against jmods.')
     if not CONFIG.JLINK_TOOL:
-        raise Exception('A jlink tool is required to build java runtime images.')
+        fail('A jlink tool is required to build java runtime images.')
     if not modules:
-        raise Exception('You cannot assemble a java runtime image without specifying any modules.')
+        fail('You cannot assemble a java runtime image without specifying any modules.')
     out = out or name
     depflags = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
     modules = ','.join(modules)
@@ -240,7 +240,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
       toolchain (str): A label identifying a java_toolchain rule which will be used to build this java binary.
     """
     if main_class and manifest:
-        raise ParseError("Can't pass both main_class and manifest to java_binary")
+        fail("Can't pass both main_class and manifest to java_binary")
     if srcs:
         lib_rule = java_library(
             name = f'_{name}#lib',
@@ -386,7 +386,7 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
                      e.g. logback-core-1.1.3-tests.jar and logback-core-1.1.3-test-sources.jar
     """
     if hash and hashes:
-        raise ParseError('You can pass only one of hash or hashes to maven_jar')
+        fail('You can pass only one of hash or hashes to maven_jar')
 
     hashes = hashes if hashes else [hash] if hash else None
 
@@ -495,7 +495,7 @@ def _parse_maven_artifact(id, sources=True, licences=None):
     elif len(parts) == 3:
         group, artifact, version = parts
     else:
-        raise ParseError(f'Unknown artifact format: {id} (should be group:artifact:version)')
+        fail(f'Unknown artifact format: {id} (should be group:artifact:version)')
     return group, artifact, version, sources, licences
 
 
@@ -515,13 +515,13 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
 def _java_toolchain(name : str, jdk_url : str|dict='', jdk:str='', visibility:list = ["PUBLIC"], hashes = []) -> str:
     """Downloads the JDK so language rules can use the toolchain"""
     if jdk_url and jdk:
-        raise ParseError("Either jdk or jdk_url should be provided but not both")
+        fail("Either jdk or jdk_url should be provided but not both")
 
     if not jdk:
         jdk_url = jdk_url if isinstance(jdk_url, str) else jdk_url.get(CONFIG.OS)
 
         if not jdk_url:
-            raise ParseError(f"No jdk_url defined for platform {CONFIG.OS}")
+            fail(f"No jdk_url defined for platform {CONFIG.OS}")
 
         jdk = remote_file(
             name=f"_{name}#download",

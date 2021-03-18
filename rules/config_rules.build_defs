@@ -63,7 +63,7 @@ def _config_on(name, value):
     elif name == 'os':
         return CONFIG.OS == value.lower()
     else:
-        raise ParseError('Unknown config_setting key %s' % name)
+        fail('Unknown config_setting key %s' % name)
 
 
 # We name CPUs as Go does, but support some additional aliases to match Bazel.
