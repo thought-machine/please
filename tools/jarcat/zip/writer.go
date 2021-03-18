@@ -222,6 +222,12 @@ func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
 	if samePaths(path, f.filename) {
 		return nil
 	} else if !isDir {
+		for _, excl := range f.Exclude {
+			if path == excl {
+				log.Debug("Excluding %s", path)
+				return nil
+			}
+		}
 		if !f.matchesSuffix(path, f.ExcludeSuffix) {
 			if f.matchesSuffix(path, f.Suffix) {
 				log.Debug("Adding zip file %s", path)
