@@ -264,6 +264,22 @@ int contain(char* argv[], bool net, bool mount) {
 
 #endif  // __linux__
 
+// path_cat returns the concatenation of two paths.
+char* path_cat(const char* a, const char* b) {
+  // Clean a leading ./ off the beginning of the second one.
+  if (b[0] == '.' && b[1] == '/') {
+    b += 2;
+  }
+  const int a_len = strlen(a);
+  const int b_len = strlen(b);
+  char* cat = malloc(a_len + b_len + 2);
+  strcpy(cat, a);
+  cat[a_len] = '/';
+  strcpy(cat + a_len + 1, b);
+  cat[a_len + b_len + 1] = 0;
+  return cat;
+}
+
 // exec_name returns the name of the new binary to exec() as.
 // old_name is the current name; if it's within old_dir it will be re-prefixed to new_dir.
 char* exec_name(const char* old_name, const char* old_dir, const char* new_dir) {
@@ -271,6 +287,9 @@ char* exec_name(const char* old_name, const char* old_dir, const char* new_dir) 
   const int old_dir_len = strlen(old_dir);
   const int old_name_len = strlen(old_name);
   if (strncmp(old_dir, old_name, old_dir_len) != 0) {  // is old_name prefixed with old_dir
+    if (old_name[0] != '/') {  // is old_name a relative path
+      return path_cat(new_dir, old_name);
+    }
     return (char*)old_name;  // Dodgy cast but we know we don't alter it again later.
   }
   const int new_len = new_dir_len + old_name_len - old_dir_len + 1;
