@@ -398,6 +398,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
 
         remote_rule = remote_file(
             name = name,
+            out = f"{name}_download",
             _tag = _tag + 'download',
             url = url,
             hashes = hashes,

@@ -1,39 +1,20 @@
-# TODO(peterebden): Use the following once we fix #1098
-# remote_file(
-#     name = "golangci-lint",
-#     out = "golangci-lint",
-#     binary = True,
-#     extract = True,
-#     hashes = [
-#         "98b1eb7c74766079e1deebc3388c13db9bfa9fa0769046d786cf8d1553d7d68b",
-#         "56b36d1b0a976caf2f49c06e4429aa6021ef0aba13a2e823e063b0605e1dd492",
-#         "6a7c31abca3f51714e5ea1f0aae5dc78d72e7d57d07f02b1a1778219d5648e21",
-#     ],
-#     strip_prefix = "golangci-lint-1.29.0-${OS}-${ARCH}",
-#     url = "https://github.com/golangci/golangci-lint/releases/download/v1.29.0/golangci-lint-1.29.0-%s-%s.tar.gz" % (
-#         CONFIG.OS,
-#         CONFIG.ARCH,
-#     ),
-# )
+VERSION = "1.38.0"
 
 remote_file(
-    name = "golangci-lint_download",
+    name = "golangci-lint",
+    binary = True,
+    exported_files = ["golangci-lint-%s-${OS}-${ARCH}/golangci-lint" % VERSION],
+    extract = True,
     hashes = [
-        "98b1eb7c74766079e1deebc3388c13db9bfa9fa0769046d786cf8d1553d7d68b",
-        "56b36d1b0a976caf2f49c06e4429aa6021ef0aba13a2e823e063b0605e1dd492",
-        "6a7c31abca3f51714e5ea1f0aae5dc78d72e7d57d07f02b1a1778219d5648e21",
+        "sha256: 9748c2697a65d2962106e74db6db6e3acc9066ec5ff0b81f47d803479e7b4994",  # darwin_arm64
+        "sha256: a9b5eb572ce55ae900a3935640fa5e199729e784a6f058e8077a9a2126e00857",  # darwin_amd64
+        "sha256: 97be8342ac9870bee003904bd8de25c0f3169c6b6238a013d6d6862efa5af992",  # linux_amd64
+        "sha256: a05d18756522b2803ab53d49f5da074c298b69546691338809dbd16c7a4840fd",  # freebsd_amd64
     ],
-    url = "https://github.com/golangci/golangci-lint/releases/download/v1.29.0/golangci-lint-1.29.0-%s-%s.tar.gz" % (
+    url = "https://github.com/golangci/golangci-lint/releases/download/v%s/golangci-lint-%s-%s-%s.tar.gz" % (
+        VERSION,
+        VERSION,
         CONFIG.OS,
         CONFIG.ARCH,
     ),
-)
-
-genrule(
-    name = "golangci-lint",
-    srcs = [":golangci-lint_download"],
-    outs = ["golangci-lint"],
-    binary = True,
-    cmd = "$TOOL x $SRCS --strip_prefix golangci-lint-1.29.0-${OS}-${ARCH}",
-    tools = [CONFIG.JARCAT_TOOL],
 )
