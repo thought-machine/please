@@ -555,8 +555,7 @@ func toXMLTestCase(result core.TestCase) jUnitXMLTest {
 	skip := result.Skip()
 	if success != nil {
 		// We passed but we might have had flakes
-		testcase.Stderr = success.Stderr
-		testcase.Stdout = success.Stdout
+		// We don't set Stdout or Stderr for successes
 		testcase.Time = success.Duration.Seconds()
 		for _, execution := range failures {
 			testcase.FlakyFailure = append(testcase.FlakyFailure, jUnitXMLFlaky{
