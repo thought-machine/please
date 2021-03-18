@@ -69,7 +69,7 @@ func extraImportPaths(pkg, pkgDir, importPath string, coverVars []CoverVar) []st
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)
 		coverVars[i].ImportName = name
-		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, collapseFinalDir(path.Join(importPath, v.ImportPath), v.ImportPath)))
+		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, path.Join(importPath, v.ImportPath)))
 	}
 	return ret
 }
