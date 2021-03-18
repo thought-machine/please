@@ -42,34 +42,7 @@ func TestUpload(t *testing.T) {
 		assert.NoError(t, err)
 		results[r.URL.Path] = b
 	}))
-	target := core.NewBuildTarget(core.ParseBuildLabel("//src/core:lock_test", ""))
-	duration := 500 * time.Millisecond
-	target.Results = core.TestSuite{
-		Package:  "src.core",
-		Name:     "lock_test",
-		Duration: 1 * time.Second,
-		TestCases: core.TestCases{
-			{
-				ClassName: "src.core.lock_test",
-				Name:      "TestAcquireRepoLock",
-				Executions: []core.TestExecution{
-					{
-						Duration: &duration,
-					},
-				},
-			},
-			{
-				ClassName: "src.core.lock_test",
-				Name:      "TestReadLastOperation",
-				Executions: []core.TestExecution{
-					{
-						Duration: &duration,
-					},
-				},
-			},
-		},
-	}
-	target.IsTest = true
+	target := xmlTestScenario()
 
 	err := uploadResults(target, s.URL+"/results", false)
 	assert.NoError(t, err)
@@ -86,6 +59,15 @@ func TestUploadGzipped(t *testing.T) {
 		assert.NoError(t, err)
 		results[r.URL.Path] = b
 	}))
+
+	target := xmlTestScenario()
+
+	err := uploadResults(target, s.URL+"/results", true)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte(expected), results["/results"])
+}
+
+func xmlTestScenario() *core.BuildTarget {
 	target := core.NewBuildTarget(core.ParseBuildLabel("//src/core:lock_test", ""))
 	duration := 500 * time.Millisecond
 	target.Results = core.TestSuite{
@@ -99,6 +81,23 @@ func TestUploadGzipped(t *testing.T) {
 				Executions: []core.TestExecution{
 					{
 						Duration: &duration,
+						Failure:  &core.TestResultFailure{},
+						Stdout:   "failure out",
+					},
+					{
+						Duration: &duration,
+						Stdout:   "success out",
+					},
+				},
+			},
+			{
+				ClassName: "src.core.lock_test",
+				Name:      "TestReadLastOperationFailure",
+				Executions: []core.TestExecution{
+					{
+						Duration: &duration,
+						Failure:  &core.TestResultFailure{},
+						Stdout:   "failure out",
 					},
 				},
 			},
@@ -108,22 +107,28 @@ func TestUploadGzipped(t *testing.T) {
 				Executions: []core.TestExecution{
 					{
 						Duration: &duration,
+						Stdout:   "out",
 					},
 				},
 			},
 		},
 	}
 	target.IsTest = true
-
-	err := uploadResults(target, s.URL+"/results", true)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte(expected), results["/results"])
+	return target
 }
 
 const expected = `<testsuites name="//src/core:lock_test" time="1">
-    <testsuite name="lock_test" tests="2" package="src.core" time="1">
+    <testsuite name="lock_test" tests="3" failures="1" package="src.core" time="1">
         <properties></properties>
-        <testcase name="TestAcquireRepoLock" classname="src.core.lock_test" time="0.5"></testcase>
+        <testcase name="TestAcquireRepoLock" classname="src.core.lock_test" time="0.5">
+            <flakyFailure type="">
+                <system-out>failure out</system-out>
+            </flakyFailure>
+        </testcase>
+        <testcase name="TestReadLastOperationFailure" classname="src.core.lock_test" time="0.5">
+            <failure type=""></failure>
+            <system-out>failure out</system-out>
+        </testcase>
         <testcase name="TestReadLastOperation" classname="src.core.lock_test" time="0.5"></testcase>
     </testsuite>
 </testsuites>`
