@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -191,7 +192,7 @@ func main() {
 	f := zip.NewFile(filename, opts.Zip.Strict)
 	f.RenameDirs = opts.Zip.RenameDirs
 	f.Include = opts.Zip.IncludeInternalPrefix
-	f.Exclude = append(opts.Zip.ExcludeInternalPrefix, opts.Zip.ExcludeTools...)
+	f.Exclude = opts.Zip.ExcludeInternalPrefix
 	f.StripPrefix = opts.Zip.StripPrefix
 	f.Suffix = opts.Zip.Suffix
 	f.ExcludeSuffix = opts.Zip.ExcludeSuffix
@@ -202,6 +203,19 @@ func main() {
 	f.DirEntries = !opts.Zip.NoDirEntries
 	f.Align = opts.Zip.Align
 	f.Prefix = opts.Zip.Prefix
+
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to determine working directory: %s", err)
+	}
+	for _, excl := range opts.Zip.ExcludeTools {
+		f.Exclude = append(f.Exclude, excl)
+		if filepath.IsAbs(excl) {
+			if rel, err := filepath.Rel(wd, excl); err == nil {
+				f.Exclude = append(f.Exclude, rel)
+			}
+		}
+	}
 
 	if opts.Zip.PreambleFrom != "" {
 		opts.Zip.Preamble = mustReadPreamble(opts.Zip.PreambleFrom)
