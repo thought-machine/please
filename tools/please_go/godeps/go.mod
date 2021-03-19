@@ -1,0 +1,1 @@
+module githum.com/thought-machine/please/tools/please_go/godeps
