@@ -216,6 +216,8 @@ func main() {
 			}
 		}
 	}
+	// Never descend into the _please dir
+	f.Exclude = append(f.Exclude, "_please")
 
 	if opts.Zip.PreambleFrom != "" {
 		opts.Zip.Preamble = mustReadPreamble(opts.Zip.PreambleFrom)
