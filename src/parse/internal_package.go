@@ -5,8 +5,6 @@ import (
 	"runtime"
 	"text/template"
 
-	"github.com/coreos/go-semver/semver"
-
 	"github.com/thought-machine/please/src/core"
 )
 
@@ -16,31 +14,29 @@ const InternalPackageName = "_please"
 // TODO(jpoole): make langserver configurable
 const internalPackageTemplateStr = `
 remote_file(
-  name = "download",
-  url = f"{{ .DownloadLocation }}/{{ .OS }}_{{ .Arch }}/{{ .PLZVersion }}/please_tools_{{ .PLZVersion }}.tar.xz",
+    name = "download",
+    url = f"{{ .DownloadLocation }}/{{ .OS }}_{{ .Arch }}/{{ .PLZVersion }}/please_tools_{{ .PLZVersion }}.tar.xz",
 )
 
+# Can't use extract = True, as that would depend on :jarcat
 genrule(
-  name = "tools",
+  name = "please_tools",
   srcs = [":download"],
   cmd = "tar -xf $SRC",
   outs = ["please_tools"],
-  entry_points = {
-    "lang_server": "please_tools/build_langserver",
-    "jarcat": "please_tools/jarcat",
-    "javac_worker": "please_tools/javac_worker",
-    "junit_runner": "please_tools/junit_runner.jar",
-    "please_go_filter": "please_tools/please_go_filter",
-    "please_go": "please_tools/please_go",
-{{ if .HasEmbedTool }}
-    "please_go_embed": "please_tools/please_go_embed",
-{{ end }}
-    "please_pex": "please_tools/please_pex",
-    "please_sandbox": "please_tools/please_sandbox",
-  },
-  visibility = ["PUBLIC"],
-  binary = True,
 )
+
+{{ range $tool := .Tools }}
+genrule(
+    name = "{{$tool}}".removesuffix(".jar"),
+    cmd = f"mv $SRC/{{$tool}} $OUT",
+    srcs = [":please_tools"],
+    outs = ["{{$tool}}".removesuffix(".jar")],
+    visibility = ["PUBLIC"],
+    binary = True,
+)
+{{ end }}
+
 `
 
 var internalPackageTemplate = template.New("_please")
@@ -56,13 +52,23 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 		OS               string
 		Arch             string
 		DownloadLocation string
-		HasEmbedTool     bool
+		Tools []string
 	}{
 		PLZVersion:       core.PleaseVersion.String(),
 		OS:               runtime.GOOS,
 		Arch:             runtime.GOARCH,
 		DownloadLocation: config.Please.DownloadLocation.String(),
-		HasEmbedTool:     !core.PleaseVersion.LessThan(semver.Version{Major: 15, Minor: 16, Patch: 999}),
+		Tools: []string{
+			"build_langserver",
+			"jarcat",
+			"javac_worker",
+			"junit_runner.jar",
+			"please_go",
+			"please_go_embed",
+			"please_go_filter",
+			"please_pex",
+			"please_sandbox",
+		},
 	}
 
 	var buf bytes.Buffer

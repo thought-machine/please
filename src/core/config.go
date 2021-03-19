@@ -361,14 +361,14 @@ func DefaultConfiguration() *Configuration {
 	config.Bazel.Compatibility = usingBazelWorkspace
 
 	// Please tools
-	config.Sandbox.Tool = "//_please:tools|please_sandbox"
-	config.Go.FilterTool = "//_please:tools|please_go_filter"
-	config.Go.PleaseGoTool = "//_please:tools|please_go"
-	config.Go.EmbedTool = "//_please:tools|please_go_embed"
-	config.Python.PexTool = "//_please:tools|please_pex"
-	config.Java.JavacWorker = "//_please:tools|javac_worker"
-	config.Java.JarCatTool = "//_please:tools|jarcat"
-	config.Java.JUnitRunner = "//_please:tools|junit_runner"
+	config.Sandbox.Tool = "//_please:please_sandbox"
+	config.Go.FilterTool = "//_please:please_go_filter"
+	config.Go.PleaseGoTool = "//_please:please_go"
+	config.Go.EmbedTool = "//_please:please_go_embed"
+	config.Python.PexTool = "//_please:please_pex"
+	config.Java.JavacWorker = "//_please:javac_worker"
+	config.Java.JarCatTool = "//_please:jarcat"
+	config.Java.JUnitRunner = "//_please:junit_runner"
 
 	return &config
 }
