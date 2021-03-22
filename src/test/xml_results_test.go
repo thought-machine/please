@@ -14,7 +14,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-func TestParseJUnitXMLResults_oneSuccessfulTest(t *testing.T) {
+func TestParseJUnitXMLResultsOneSuccessfulTest(t *testing.T) {
 	sample := bytes.NewBufferString("<testcase name=\"case\" time=\"0.5\"></testcase>").Bytes()
 	testSuites, err := parseJUnitXMLTestResults(sample)
 	if err != nil {
@@ -44,9 +44,13 @@ func TestUpload(t *testing.T) {
 	}))
 	target := xmlTestScenario()
 
-	err := uploadResults(target, s.URL+"/results", false)
+	err := uploadResults(target, s.URL+"/results", false, false)
 	assert.NoError(t, err)
-	assert.Equal(t, []byte(expected), results["/results"])
+	assert.Equal(t, expected, string(results["/results"]))
+
+	err = uploadResults(target, s.URL+"/results_success_output", false, true)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedWithSuccessOutput, string(results["/results_success_output"]))
 }
 
 func TestUploadGzipped(t *testing.T) {
@@ -62,7 +66,7 @@ func TestUploadGzipped(t *testing.T) {
 
 	target := xmlTestScenario()
 
-	err := uploadResults(target, s.URL+"/results", true)
+	err := uploadResults(target, s.URL+"/results", true, false)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte(expected), results["/results"])
 }
@@ -130,5 +134,24 @@ const expected = `<testsuites name="//src/core:lock_test" time="1">
             <system-out>failure out</system-out>
         </testcase>
         <testcase name="TestReadLastOperation" classname="src.core.lock_test" time="0.5"></testcase>
+    </testsuite>
+</testsuites>`
+
+const expectedWithSuccessOutput = `<testsuites name="//src/core:lock_test" time="1">
+    <testsuite name="lock_test" tests="3" failures="1" package="src.core" time="1">
+        <properties></properties>
+        <testcase name="TestAcquireRepoLock" classname="src.core.lock_test" time="0.5">
+            <flakyFailure type="">
+                <system-out>failure out</system-out>
+            </flakyFailure>
+            <system-out>success out</system-out>
+        </testcase>
+        <testcase name="TestReadLastOperationFailure" classname="src.core.lock_test" time="0.5">
+            <failure type=""></failure>
+            <system-out>failure out</system-out>
+        </testcase>
+        <testcase name="TestReadLastOperation" classname="src.core.lock_test" time="0.5">
+            <system-out>out</system-out>
+        </testcase>
     </testsuite>
 </testsuites>`

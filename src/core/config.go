@@ -439,11 +439,12 @@ type Configuration struct {
 		HTTPRetry                  int          `help:"The maximum number of retries before a request will give up, if a request is retryable"`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
-		Timeout         cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
-		Sandbox         bool         `help:"Deprecated, use sandbox.test instead."`
-		DisableCoverage []string     `help:"Disables coverage for tests that have any of these labels spcified."`
-		Upload          cli.URL      `help:"URL to upload test results to (in XML format)"`
-		UploadGzipped   bool         `help:"True to upload the test results gzipped."`
+		Timeout                  cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
+		Sandbox                  bool         `help:"Deprecated, use sandbox.test instead."`
+		DisableCoverage          []string     `help:"Disables coverage for tests that have any of these labels spcified."`
+		Upload                   cli.URL      `help:"URL to upload test results to (in XML format)"`
+		UploadGzipped            bool         `help:"True to upload the test results gzipped."`
+		StoreTestOutputOnSuccess bool         `help:"True to store stdout and stderr in the test results for successful tests."`
 	} `help:"A config section describing settings related to testing in general."`
 	Sandbox struct {
 		Tool  string   `help:"The location of the tool to use for sandboxing (typically please_sandbox)."`
