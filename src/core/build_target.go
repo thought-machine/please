@@ -575,7 +575,7 @@ func (target *BuildTarget) Outputs() []string {
 					ret = append(ret, dep.NamedOutputs(namedLabel.Annotation)...)
 				}
 			} else if label := src.nonOutputLabel(); label == nil {
-				ret = append(ret, src.LocalPaths(nil)[0])
+				ret = append(ret, strings.TrimRight(src.LocalPaths(nil)[0], "/"))
 			} else {
 				for _, dep := range target.DependenciesFor(*label) {
 					ret = append(ret, dep.Outputs()...)
