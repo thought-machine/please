@@ -807,7 +807,7 @@ func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
 	success, state := runBuild(targets, true, true, false)
 	test.CopySurefireXMLFilesToDir(state, string(surefireDir))
-	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
+	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile), state.Config.Test.StoreTestOutputOnSuccess)
 	return success, state
 }
 
