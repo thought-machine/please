@@ -62,14 +62,11 @@ func isWhitelisted(err error) bool {
 func Fuzz(data []byte) int {
 	// This lot is copied from src/parse/init.go to load all the builtins.
 	p := asp.NewParser(core.NewDefaultBuildState())
-	dir, _ := rules.AssetDir("")
+	dir, _ := rules.AllAssets()
 	sort.Strings(dir)
 	for _, filename := range dir {
-		if strings.HasSuffix(filename, ".gob") {
-			srcFile := strings.TrimSuffix(filename, ".gob")
-			src, _ := rules.Asset(srcFile)
-			p.MustLoadBuiltins("rules/"+srcFile, src, rules.MustAsset(filename))
-		}
+		src, _ := rules.ReadAsset(filename)
+		p.MustLoadBuiltins(filename, src)
 	}
 
 	pkg := core.NewPackage("fuzz")

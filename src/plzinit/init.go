@@ -116,7 +116,7 @@ func readConfig(filename string) []byte {
 
 // InitWrapperScript initialises the pleasew script.
 func InitWrapperScript() {
-	data := assets.MustAsset(wrapperScriptName)
+	data := assets.Pleasew
 	if err := ioutil.WriteFile(wrapperScriptName, data, 0755); err != nil {
 		log.Fatalf("Failed to write file: %s", err)
 	}

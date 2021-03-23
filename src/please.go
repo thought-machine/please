@@ -809,7 +809,7 @@ func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
 	success, state := runBuild(targets, true, true, false)
 	test.CopySurefireXMLFilesToDir(state, string(surefireDir))
-	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
+	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile), state.Config.Test.StoreTestOutputOnSuccess)
 	return success, state
 }
 
@@ -1060,7 +1060,7 @@ func initBuild(args []string) string {
 		}
 		os.Exit(buildFunctions[command]())
 	} else if opts.OutputFlags.CompletionScript {
-		fmt.Printf("%s\n", assets.MustAsset("plz_complete.sh"))
+		fmt.Printf("%s\n", string(assets.PlzComplete))
 		os.Exit(0)
 	}
 	// Read the config now

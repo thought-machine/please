@@ -720,6 +720,7 @@ func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.Bu
 // Panics if the target is not in the current package or has already been built.
 func getTargetPost(s *scope, name string) *core.BuildTarget {
 	target := s.pkg.Target(name)
+	//nolint:staticcheck
 	s.Assert(target != nil, "Unknown build target %s in %s", name, s.pkg.Name)
 	// It'd be cheating to try to modify targets that're already built.
 	// Prohibit this because it'd likely end up with nasty race conditions.

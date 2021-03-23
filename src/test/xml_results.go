@@ -4,6 +4,7 @@ package test
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
@@ -13,8 +14,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/thought-machine/please/src/core"
 	"io"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 func looksLikeJUnitXMLTestResults(b []byte) bool {
@@ -409,21 +411,21 @@ type unitTestXMLFailure struct {
 }
 
 // WriteResultsToFileOrDie writes test results out to a file in xUnit format. Dies on any errors.
-func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string) {
+func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string, storeOutputOnSuccess bool) {
 	if err := os.MkdirAll(path.Dir(filename), core.DirPermissions); err != nil {
 		log.Fatalf("Failed to create directory for test output")
-	} else if err = ioutil.WriteFile(filename, mustSerialiseResults(graph), 0644); err != nil {
+	} else if err = ioutil.WriteFile(filename, mustSerialiseResults(graph, storeOutputOnSuccess), 0644); err != nil {
 		log.Fatalf("Failed to write XML to %s: %s", filename, err)
 	}
 }
 
 // SerialiseResultsToXML serialises some test results to the "standard" XML format.
-func SerialiseResultsToXML(target *core.BuildTarget, indent bool) []byte {
+func SerialiseResultsToXML(target *core.BuildTarget, indent, storeOutputOnSuccess bool) []byte {
 	s := ""
 	if indent {
 		s = "    "
 	}
-	suite := toXMLTestSuite(&target.Results)
+	suite := toXMLTestSuite(&target.Results, storeOutputOnSuccess)
 	suites := &jUnitXMLTestSuites{
 		Name:       target.Label.String(),
 		TestSuites: []*jUnitXMLTestSuite{suite},
@@ -434,9 +436,28 @@ func SerialiseResultsToXML(target *core.BuildTarget, indent bool) []byte {
 }
 
 // uploadResults uploads test results to a remote server.
-func uploadResults(target *core.BuildTarget, url string) error {
-	b := SerialiseResultsToXML(target, true)
-	resp, err := http.Post(url, "application/xml", bytes.NewReader(b))
+func uploadResults(target *core.BuildTarget, url string, gzipped, storeOutputOnSuccess bool) error {
+	b := SerialiseResultsToXML(target, true, storeOutputOnSuccess)
+	enc := ""
+	var r io.Reader = bytes.NewReader(b)
+	if gzipped {
+		var buf bytes.Buffer
+		zw := gzip.NewWriter(&buf)
+		if _, err := io.Copy(zw, r); err != nil {
+			return fmt.Errorf("Failed to gzip test results: %s", err)
+		} else if err = zw.Close(); err != nil {
+			return fmt.Errorf("Failed to flush gzip writer: %s", err)
+		}
+		r = &buf
+		enc = "gzip"
+	}
+	req, err := http.NewRequest(http.MethodPost, url, r)
+	if err != nil {
+		return fmt.Errorf("Failed to create HTTP request: %s", err)
+	}
+	req.Header["Content-Type"] = []string{"application/xml"}
+	req.Header["Content-Encoding"] = []string{enc}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("Failed to upload test results: %s", err)
 	}
@@ -448,7 +469,7 @@ func uploadResults(target *core.BuildTarget, url string) error {
 }
 
 // mustSerialiseResults serialises all test results into XML.
-func mustSerialiseResults(graph *core.BuildGraph) []byte {
+func mustSerialiseResults(graph *core.BuildGraph, storeOutputOnSuccess bool) []byte {
 	xmlTestResults := jUnitXMLTestSuites{}
 	xmlTestResults.XMLName.Local = "testsuites"
 
@@ -458,7 +479,7 @@ func mustSerialiseResults(graph *core.BuildGraph) []byte {
 		if target.IsTest {
 			testSuite := &target.Results
 			if len(testSuite.TestCases) > 0 {
-				xmlTestSuite := toXMLTestSuite(testSuite)
+				xmlTestSuite := toXMLTestSuite(testSuite, storeOutputOnSuccess)
 				name := testSuite.JavaStyleName()
 				if suite, present := xmlSuites[name]; present {
 					suite.Tests += xmlTestSuite.Tests
@@ -501,7 +522,7 @@ func toXMLProperties(props map[string]string, cached bool) jUnitXMLProperties {
 	return out
 }
 
-func toXMLTestSuite(testSuite *core.TestSuite) *jUnitXMLTestSuite {
+func toXMLTestSuite(testSuite *core.TestSuite, storeOutputOnSuccess bool) *jUnitXMLTestSuite {
 	xmlTestSuite := &jUnitXMLTestSuite{
 		Name:       testSuite.Name,
 		Package:    testSuite.Package,
@@ -514,7 +535,7 @@ func toXMLTestSuite(testSuite *core.TestSuite) *jUnitXMLTestSuite {
 		Properties: toXMLProperties(testSuite.Properties, testSuite.Cached),
 	}
 	for _, testCase := range testSuite.TestCases {
-		xmlTest := toXMLTestCase(testCase)
+		xmlTest := toXMLTestCase(testCase, storeOutputOnSuccess)
 		if xmlTest.ClassName == "" {
 			xmlTest.ClassName = testSuite.JavaStyleName()
 		}
@@ -523,7 +544,7 @@ func toXMLTestSuite(testSuite *core.TestSuite) *jUnitXMLTestSuite {
 	return xmlTestSuite
 }
 
-func toXMLTestCase(result core.TestCase) jUnitXMLTest {
+func toXMLTestCase(result core.TestCase, storeOutputOnSuccess bool) jUnitXMLTest {
 	testcase := jUnitXMLTest{
 		ClassName: result.ClassName,
 		Name:      result.Name,
@@ -534,9 +555,13 @@ func toXMLTestCase(result core.TestCase) jUnitXMLTest {
 	skip := result.Skip()
 	if success != nil {
 		// We passed but we might have had flakes
-		testcase.Stderr = success.Stderr
-		testcase.Stdout = success.Stdout
 		testcase.Time = success.Duration.Seconds()
+
+		if storeOutputOnSuccess {
+			testcase.Stderr = success.Stderr
+			testcase.Stdout = success.Stdout
+		}
+
 		for _, execution := range failures {
 			testcase.FlakyFailure = append(testcase.FlakyFailure, jUnitXMLFlaky{
 				Message:   execution.Failure.Message,

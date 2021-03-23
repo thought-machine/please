@@ -91,7 +91,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 
 	outs := target.AllOutputs()
-	if len(outs) == 1 { // $OUT is relative when running remotely; make it absolute
+	if len(target.Outputs()) == 1 { // $OUT is relative when running remotely; make it absolute
 		commandPrefix += `export OUT="$TMP_DIR/$OUT" && `
 	}
 	if target.IsRemoteFile {
@@ -146,7 +146,10 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 			files = append(files, core.TestResultsFile)
 		}
 	}
-	const commandPrefix = "export TMP_DIR=\"`pwd`\" TEST_DIR=\"`pwd`\" && "
+	commandPrefix := "export TMP_DIR=\"`pwd`\" TEST_DIR=\"`pwd`\" && "
+	if outs := target.Outputs(); len(outs) > 0 {
+		commandPrefix += `export TEST="$TEST_DIR/` + outs[0] + `" && `
+	}
 	cmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
 	if len(state.TestArgs) != 0 {
 		cmd += " " + strings.Join(state.TestArgs, " ")

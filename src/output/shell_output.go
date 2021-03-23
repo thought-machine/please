@@ -205,7 +205,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		}
 	}
 	if streamTestResults && (result.Status == core.TargetTested || result.Status == core.TargetTestFailed) {
-		os.Stdout.Write(test.SerialiseResultsToXML(target, false))
+		os.Stdout.Write(test.SerialiseResultsToXML(target, false, state.Config.Test.StoreTestOutputOnSuccess))
 		os.Stdout.Write([]byte{'\n'})
 	}
 }

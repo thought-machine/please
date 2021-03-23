@@ -64,9 +64,12 @@ func TestExecuteBuild(t *testing.T) {
 
 type postBuildFunction func(*core.BuildTarget, string) error //nolint:unused
 
+//nolint:unused
 func (f postBuildFunction) Call(target *core.BuildTarget, output string) error {
 	return f(target, output)
 }
+
+//nolint:unused
 func (f postBuildFunction) String() string { return "" }
 
 func TestExecutePostBuildFunction(t *testing.T) {

@@ -26,7 +26,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
                             want to manually cross-compile parts of the repo but not others.
     """
     if url and version:
-        raise ParseError("Either version or url should be provided but not both")
+        fail("Either version or url should be provided but not both")
 
     if version:
         sdk_url = f'https://golang.org/dl/go{version}.{CONFIG.HOSTOS}-{CONFIG.HOSTARCH}.tar.gz'
@@ -317,10 +317,13 @@ def _write_import_config_cmd(name, import_path):
     pkg = package_name()
     import_path = _get_import_path(import_path)
 
-    cmd = f'echo packagefile {import_path}/{name}=$PKG_DIR/{name}.a > $OUT'
+    if not pkg:
+        return f"echo packagefile {import_path}=$PKG_DIR/{name}.a >> $OUT"
+
     if pkg.endswith(name):
-        cmd = f'{cmd} && echo packagefile {import_path}=$PKG_DIR/{name}.a >> $OUT'
-    return cmd
+        return f'echo packagefile {import_path}=$PKG_DIR/{name}.a >> $OUT'
+    else:
+        return f'echo packagefile {import_path}/{name}=$PKG_DIR/{name}.a > $OUT'
 
 def _get_import_path(import_path):
     if import_path:
@@ -329,7 +332,10 @@ def _get_import_path(import_path):
     pkg = package_name()
 
     if CONFIG.GO_IMPORT_PATH:
-        return f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
+        if pkg:
+            return f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
+        else:
+            return CONFIG.GO_IMPORT_PATH
 
     return pkg
 
@@ -898,7 +904,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"$TOOLS_PLEASE_GO install --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
+        f"$TOOLS_PLEASE_GO install --trim_path $TMP_DIR --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
         "cat LD_FLAGS",
     ]
 
@@ -1080,10 +1086,10 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
                   aspects of compilation.
     """
     if version and download:
-        raise ParseError("You have provided both version and download. Must provided one or the other.")
+        fail("You have provided both version and download. Must provided one or the other.")
 
     if not download and not version:
-        raise ParseError("Either version or download should be provided")
+        fail("Either version or download should be provided")
 
     install = [f"{module}/{i}" if i != "." else module for i in install]
 
@@ -1297,7 +1303,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
 
     # in case of installing packages using other package sources
     if not get and not install:
-        raise ParseError("must provide get or install!")
+        fail("must provide get or install!")
     else:
         if not srcs and not binary:
             # we are going to infer the getroot name from the 1st install dependency
@@ -1464,9 +1470,12 @@ def _go_github_repo_cmd(name, get, repo, revision, module_major_version):
 def _set_go_env():
     if CONFIG.GOROOT:
         go_root = CONFIG.GOROOT
-    elif CONFIG.GO_TOOL.startswith(":") or CONFIG.GO_TOOL.startswith("//"):
-        label, _, _ = CONFIG.GO_TOOL.rpartition('|')
-        go_root = f'$(dirname $(dirname $TOOLS_GO))'
+    elif CONFIG.HOSTOS == 'freebsd':
+        # FreeBSD has some very strange semantics around hardlinks that lead to it finding
+        # the wrong thing (essentially os.Executable, which go uses to define GOROOT, returns
+        # the most recent hardlink to the file). We can work around this way although it's
+        # not very nice (we don't do this globally because OSX doesn't have realpath).
+        go_root = f'$(dirname $(dirname $(realpath $TOOLS_GO)))'
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
     cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
@@ -1546,7 +1555,7 @@ def _go_import_path_cmd(import_path):
     if not import_path:
         return ''
     elif import_path.startswith('/'):
-        raise ConfigError('GO_IMPORT_PATH cannot start with a /')
+        fail('GO_IMPORT_PATH cannot start with a /')
     elif '/' in import_path:
         return ' && mkdir -p %s && ln -s "$TMP_DIR" %s' % (dirname(import_path), import_path)
     else:
@@ -1578,7 +1587,7 @@ def _replace_test_package(name, output, static, definitions, cgo):
     built for this test which has the actual test functions in it.
     """
     if not name.endswith('#main') or not name.startswith('_'):
-        raise ValueError('unexpected rule name: ' + name)
+        fail('unexpected rule name: ' + name)
     lib = name[:-5] + '#main_lib'
     new_name = name[1:-5]
     for line in output:

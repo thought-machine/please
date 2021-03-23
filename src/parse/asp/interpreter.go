@@ -48,11 +48,11 @@ func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements 
 	// Gentle hack - attach the native code once we have loaded the correct file.
 	// Needs to be after this file is loaded but before any of the others that will
 	// use functions from it.
-	if filename == "builtins.build_defs" || filename == "rules/builtins.build_defs" {
+	if filename == "builtins.build_defs" {
 		defer registerBuiltins(s)
-	} else if filename == "misc_rules.build_defs" || filename == "rules/misc_rules.build_defs" {
+	} else if filename == "misc_rules.build_defs" {
 		defer registerSubincludePackage(s)
-	} else if filename == "config_rules.build_defs" || filename == "rules/config_rules.build_defs" {
+	} else if filename == "config_rules.build_defs" {
 		defer setNativeCode(s, "select", selectFunc)
 	}
 	defer i.scope.SetAll(s.Freeze(), true)
@@ -349,9 +349,10 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 				}
 			}
 		} else if stmt.Raise != nil {
+			log.Warning("The raise keyword is deprecated, please use fail() instead. See https://github.com/thought-machine/please/issues/1598 for more information.")
 			s.Error(s.interpretExpression(stmt.Raise).String())
 		} else if stmt.Literal != nil {
-			// Do nothing, literal statements are likely docstrings and don't require any action.
+			s.interpretExpression(stmt.Literal)
 		} else if stmt.Continue {
 			// This is definitely awkward since we need to control a for loop that's happening in a function outside this scope.
 			return continueIteration

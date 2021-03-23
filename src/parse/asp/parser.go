@@ -61,14 +61,8 @@ func newParser() *Parser {
 // LoadBuiltins instructs the parser to load rules from this file as built-ins.
 // Optionally the file contents can be supplied directly.
 // Also optionally a previously parsed form (acquired from ParseToFile) can be supplied.
-func (p *Parser) LoadBuiltins(filename string, contents, encoded []byte) error {
+func (p *Parser) LoadBuiltins(filename string, contents []byte) error {
 	var statements []*Statement
-	if len(encoded) != 0 {
-		decoder := gob.NewDecoder(bytes.NewReader(encoded))
-		if err := decoder.Decode(&statements); err != nil {
-			log.Fatalf("Failed to decode pre-parsed rules: %s", err)
-		}
-	}
 	if len(contents) != 0 {
 		p.builtins[filename] = contents
 	}
@@ -80,8 +74,8 @@ func (p *Parser) LoadBuiltins(filename string, contents, encoded []byte) error {
 }
 
 // MustLoadBuiltins calls LoadBuiltins, and dies on any errors.
-func (p *Parser) MustLoadBuiltins(filename string, contents, encoded []byte) {
-	if err := p.LoadBuiltins(filename, contents, encoded); err != nil {
+func (p *Parser) MustLoadBuiltins(filename string, contents []byte) {
+	if err := p.LoadBuiltins(filename, contents); err != nil {
 		log.Fatalf("Error loading builtin rules: %s", err)
 	}
 }

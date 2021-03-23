@@ -177,7 +177,7 @@ go_module(
 go_mod_download(
     name = "genproto_download",
     module = "google.golang.org/genproto",
-    version = "2b5a72b8730b0b16380010cfe5286c42108d88e7",
+    version = "v0.0.0-20210315173758-2651cd453018",
 )
 
 # genproto stuff for grpc to resolve cyclic deps
@@ -282,12 +282,12 @@ go_module(
     ],
     licences = ["MIT"],
     module = "github.com/stretchr/testify",
-    version = "v1.4.0",
+    version = "v1.6.1",
     deps = [
         ":difflib",
         ":objx",
         ":spew",
-        ":yaml.v2",
+        ":yaml",
     ],
 )
 
@@ -307,10 +307,10 @@ go_module(
 )
 
 go_module(
-    name = "yaml.v2",
+    name = "yaml",
     licences = ["Apache 2.0"],
-    module = "gopkg.in/yaml.v2",
-    version = "v2.2.4",
+    module = "gopkg.in/yaml.v3",
+    version = "v3.0.0-20200313102051-9f266ea9e77c",
 )
 
 go_module(
@@ -412,7 +412,7 @@ go_module(
         "internal/common",
         "mem",
     ],
-    module = "github.com/shirou/gopsutil",
+    module = "github.com/shirou/gopsutil/v3",
     version = "v3.21.2",
     deps = [
         ":sysconf",
@@ -817,7 +817,7 @@ go_module(
 go_module(
     name = "blake3",
     module = "lukechampine.com/blake3",
-    version = "v1.1.4",
+    version = "v1.1.5",
     deps = [":cpuid"],
 )
 

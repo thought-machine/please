@@ -11,11 +11,11 @@ package update
 import (
 	"archive/tar"
 	"bufio"
-	"compress/gzip"
 	"fmt"
 	"github.com/coreos/go-semver/semver"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/thought-machine/please/src/utils"
+	"github.com/ulikunitz/xz"
 	"gopkg.in/op/go-logging.v1"
 	"io"
 	"io/ioutil"
@@ -221,7 +221,7 @@ func downloadPlease(config *core.Configuration, verify bool, progress bool) {
 	url := strings.TrimSuffix(config.Please.DownloadLocation.String(), "/")
 	ext := ""
 	if shouldDownloadFullDist(config.Please.Version) {
-		ext = ".tar.gz"
+		ext = ".tar.xz"
 	}
 	v := config.Please.Version.VersionString()
 	url = fmt.Sprintf("%s/%s_%s/%s/please_%s%s", url, runtime.GOOS, runtime.GOARCH, v, v, ext)
@@ -242,12 +242,11 @@ func downloadPlease(config *core.Configuration, verify bool, progress bool) {
 	}
 
 	if shouldDownloadFullDist(config.Please.Version) {
-		gzreader, err := gzip.NewReader(r)
+		xzr, err := xz.NewReader(r)
 		if err != nil {
-			panic(fmt.Sprintf("%s isn't a valid gzip file: %s", url, err))
+			panic(fmt.Sprintf("%s isn't a valid xzip file: %s", url, err))
 		}
-		defer mustClose(gzreader)
-		copyTarFile(gzreader, newDir, url)
+		copyTarFile(xzr, newDir, url)
 	} else {
 		copyFile(r, newDir)
 	}

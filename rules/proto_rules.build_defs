@@ -135,7 +135,7 @@ def _go_path_mapping(grpc):
     def _map_go_paths(rule_name):
         mapping = ',M'.join(get_labels(rule_name, 'proto:go-map:'))
         cmd = get_command(rule_name)
-        new_cmd = cmd.replace('--go_out=paths=source_relative:', f'--go_out=paths=source_relative,{grpc_plugin}M{mapping}:')
+        new_cmd = cmd.replace('--go_out=', f'--go_out={grpc_plugin}M{mapping}:')
         set_command(rule_name, new_cmd)
     return _map_go_paths
 
@@ -260,7 +260,7 @@ def proto_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out=paths=source_relative:"$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"'],
+            protoc_flags = ['--go_out="$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP],
             pre_build = _go_path_mapping(False),
@@ -339,12 +339,12 @@ def grpc_languages():
                 test_only = test_only,
             ),
             protoc_flags=[
-                '--grpc-go_out="$OUT_DIR"',
+                '--go-grpc_out="$OUT_DIR"',
                 '--go_out="$OUT_DIR"',
                 '--plugin=protoc-gen-go="`which $TOOLS_GO`"',
-                '--plugin=protoc-gen-grpc-go="`which $TOOLS_GRPC_GO`"',
+                '--plugin=protoc-gen-go-grpc="`which $TOOLS_GRPC_GO`"',
             ] if CONFIG.GRPC_GO_PLUGIN else [
-                '--go_out=paths=source_relative:"$OUT_DIR"',
+                '--go_out="$OUT_DIR"',
                 '--plugin=protoc-gen-go="`which $TOOLS_GO`"',
             ],
             tools = {
@@ -354,7 +354,8 @@ def grpc_languages():
                 CONFIG.PROTOC_GO_PLUGIN,
             ],
             deps = [CONFIG.PROTO_GO_DEP, CONFIG.GRPC_GO_DEP],
-            pre_build = _go_path_mapping(True),
+            # if we're using the old unified protoc plugin, tell it to generate grpc
+            pre_build = _go_path_mapping(not CONFIG.GRPC_GO_PLUGIN),
             provides=['srcs'],
         ),
         # We don't really support grpc-js right now, so this is the same as proto-js.
@@ -388,17 +389,25 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
     out_dir = "out_dir"
     language_out_dir = plugin['language']
 
-    cmd = f'$TOOLS_PROTOC ' + ' '.join(flags)
+    cmd = f'$TOOLS_PROTOC -I. ' + ' '.join(flags)
     if root_dir:
-        cmd = f'cd {root_dir}; {cmd} ${{SRCS//{root_dir}\\//}} && cd "$TMP_DIR"'
+        escaped_root_dir = root_dir.replace("/", "\/")
+        cmd = f'cd {root_dir}; {cmd} ${{SRCS//{escaped_root_dir}\\//}} && cd "$TMP_DIR"'
     else:
         cmd += ' ${SRCS}'
 
     cmd = f'(export OUT_DIR=$TMP_DIR/{language_out_dir} && {cmd})'
 
-    cmd += f' && (mv -f {language_out_dir}/${{PKG_DIR}}/* {out_dir}; true) && (mv -f {language_out_dir}/* {out_dir}; true)'
+    pkg_dir = package_name().removeprefix(root_dir).removeprefix("/")
+
+    cmd += f' && (mv -f {language_out_dir}/{pkg_dir}/* {out_dir}; true) && (mv -f {language_out_dir}/* {out_dir}; true)'
 
     cmd = f'mkdir out_dir && mkdir {language_out_dir} && {cmd}'
+
+    # If the protoc tool is a build rule, depend on it as it's probably a protoc_binary() which provides the well known
+    # types
+    if CONFIG.PROTOC_TOOL.startswith("//") or CONFIG.PROTOC_TOOL.startswith(":"):
+        deps += [CONFIG.PROTOC_TOOL]
 
     # protoc_flags are applied transitively to dependent rules via labels.
     labels += ['protoc:' + flag for flag in protoc_flags] + ["codegen"]
@@ -418,7 +427,7 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
         visibility = visibility,
     )
 
-def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
+def protoc_binary(name, url:str|dict = '', version:str = '', hashes=None, deps=None, visibility=None):
     """Downloads a precompiled protoc binary.
 
     You will obviously need to choose a version that is available on Github - there aren't
@@ -426,11 +435,18 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
 
     Args:
       name (str): Name of the rule
-      version (str): Version of protoc to download (e.g. '3.4.0').
+      url (str | dict): The URL used to download protoc. Can be a single string or a dictionary mapping
+                        HOSTOS-HOSTARCH to URLs i.e. linux-amd64: 'https://...'. Either provide url or version, but not both.
+      version (str): The version of protoc to download (e.g. '3.4.0'). Protoc will be downloaded from https://github.com/protocolbuffers/protobuf/releases/downaload/...
+                     and the rule will use the current platforms OS and ARCH setting. Either provide url or version,
+                     but not both.
       hashes (list): Hashes to verify the download against.
       deps (list): Any other dependencies
       visibility (list): Visibility of the rule.
     """
+    if url and version:
+        fail("Either version or url should be provided but not both")
+
     if CONFIG.HOSTOS == 'darwin':
         HOSTOS='osx'
     else:
@@ -445,11 +461,15 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
     else:
         HOSTARCH = CONFIG.HOSTARCH
 
-    download_rule = remote_file(
+    if version:
+        protoc_url = f'https://github.com/protocolbuffers/protobuf/releases/download/v{version}/protoc-{version}-{HOSTOS}-{HOSTARCH}.zip'
+    else:
+        protoc_url = url if isinstance(url, str) else url[f'{HOSTOS}-{HOSTARCH}']
+
+    download = remote_file(
         name = name,
         _tag = 'download',
-        url = f'https://github.com/protocolbuffers/protobuf/releases/download/v{version}/protoc-{version}-{HOSTOS}-{HOSTARCH}.zip',
-        out = f'protoc-{version}.zip',
+        url = protoc_url,
         hashes = hashes,
         deps = deps,
     )
@@ -457,7 +477,7 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
     wkt = build_rule(
         name = name,
         tag = 'wkt',
-        srcs = [download_rule],
+        srcs = [download],
         outs = ['google'],
         tools = [CONFIG.JARCAT_TOOL],
         cmd = '$TOOL x $SRCS --strip_prefix include',
@@ -468,7 +488,7 @@ def protoc_binary(name, version, hashes=None, deps=None, visibility=None):
     )
     return genrule(
         name = name,
-        srcs = [download_rule],
+        srcs = [download],
         outs = ['protoc'],
         tools = [CONFIG.JARCAT_TOOL],
         binary = True,

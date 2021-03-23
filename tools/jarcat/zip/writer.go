@@ -219,6 +219,15 @@ func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
 			return fs.WalkMode(resolved, f.walk)
 		}
 	}
+	for _, excl := range f.Exclude {
+		if path == excl {
+			log.Debug("Excluding %s", path)
+			if isDir {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+	}
 	if samePaths(path, f.filename) {
 		return nil
 	} else if !isDir {
