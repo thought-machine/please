@@ -130,7 +130,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
       labels (list): Labels to apply to this rule.
     """
     shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    zipsafe_flag = '--zip_safe' if zip_safe else ''
+    zipsafe_flag = '' if zip_safe is False else '--zip_safe'
     cmd = '$TOOLS_PEX -s "%s" -m "%s" %s --interpreter_options="%s" --stamp="$STAMP"' % (
         shebang, CONFIG.PYTHON_MODULE_DIR, zipsafe_flag, CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
@@ -156,7 +156,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         outs=[f'.{name}_main.pex.zip'],  # just call it .zip so everything has the same extension
         cmd=cmd,
         requires=['py', 'pex'],
-        pre_build=_handle_zip_safe,
+        pre_build=_handle_zip_safe if zip_safe is None else None,
         deps=deps,
         needs_transitive_deps=True,  # Needed so we can find anything with zip_safe=False on it.
         output_is_complete=True,
