@@ -205,8 +205,6 @@ type BuildTarget struct {
 	EntryPoints map[string]string `name:"entry_points"`
 	// Used to arbitrate concurrent access to dependencies
 	mutex sync.RWMutex `print:"false"`
-	// Used to notify once all dependencies are registered.
-	dependenciesRegistered chan struct{} `print:"false"`
 	// Used to notify once this target has built successfully.
 	finishedBuilding chan struct{} `print:"false"`
 	// Env are any custom environment variables to set for this build target
@@ -333,7 +331,6 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 		Label:                  label,
 		state:                  int32(Inactive),
 		BuildingDescription:    DefaultBuildingDescription,
-		dependenciesRegistered: make(chan struct{}),
 		finishedBuilding:       make(chan struct{}),
 	}
 }
@@ -566,52 +563,6 @@ func (target *BuildTarget) dependenciesFor(label BuildLabel) []*BuildTarget {
 	return nil
 }
 
-// registerDependencies runs through all the target's dependencies and waits for them to be added to the build graph.
-func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
-	for target.reallyRegisterDependencies(graph) {}
-	close(target.dependenciesRegistered)
-}
-
-// reallyRegisterDependencies does the work of registerDependencies and returns true if something changed.
-func (target *BuildTarget) reallyRegisterDependencies(graph *BuildGraph) bool {
-	// TODO(peterebden): can we do something with the mutex here? I don't *think* it's a problem
-	//                   but would be nice if the race detector could verify that.
-	changed := false
-	for i := range target.dependencies {
-		info := &target.dependencies[i]
-		if info.resolved {
-			continue
-		}
-		t := graph.WaitForDependency(info.declared)
-		if t == nil {
-			continue // This doesn't exist; that will get handled later.
-		}
-		changed = true
-		if deps := t.ProvideFor(target); len(deps) == 1 && deps[0].Label() != nil && *deps[0].Label() == t.Label {
-			graph.cycleDetector.AddDependency(target.Label, t.Label)
-			info.deps = []*BuildTarget{t} // small optimisation to save looking this thing up again in the common case
-		} else {
-			for _, l := range deps {
-				graph.cycleDetector.AddDependency(target.Label, l)
-				t := graph.WaitForDependency(l)
-				if t == nil {
-					continue
-				}
-				info.deps = append(info.deps, t)
-			}
-		}
-		info.resolved = true
-	}
-	return changed
-}
-
-// reregisterDependencies redoes the work for registerDependencies after a target has had more added.
-func (target *BuildTarget) reregisterDependencies(graph *BuildGraph) error {
-	target.dependenciesRegistered = make(chan struct{})
-	go target.registerDependencies(graph)
-	return target.WaitForResolvedDependencies()
-}
-
 // FinishBuild marks this target as having built.
 func (target *BuildTarget) FinishBuild() {
 	close(target.finishedBuilding)
@@ -806,35 +757,6 @@ func (target *BuildTarget) UnbuiltDeps() []string {
 		}
 	}
 	return ret
-}
-
-// AllDependenciesResolved returns true once all the dependencies of a target have been
-// parsed and resolved to real targets.
-func (target *BuildTarget) AllDependenciesResolved() bool {
-	return len(target.UnresolvedDependencies()) == 0
-}
-
-// UnresolvedDependencies returns the list of dependencies for this target that aren't resolved yet.
-func (target *BuildTarget) UnresolvedDependencies() BuildLabels {
-	var ret []BuildLabel
-	target.mutex.RLock()
-	defer target.mutex.RUnlock()
-	for _, deps := range target.dependencies {
-		if !deps.resolved {
-			ret = append(ret, deps.declared)
-		}
-	}
-	return ret
-}
-
-// WaitForResolvedDependencies blocks until all the dependencies are resolved, or we know they cannot be.
-// It returns an error if they cannot be successfully resolved.
-func (target *BuildTarget) WaitForResolvedDependencies() error {
-	<-target.dependenciesRegistered
-	if !target.AllDependenciesResolved() {
-		return fmt.Errorf("Failed to resolve some dependencies for %s: %s", target, target.UnresolvedDependencies())
-	}
-	return nil
 }
 
 // CanSee returns true if target can see the given dependency, or false if not.
