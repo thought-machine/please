@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -11,6 +10,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"golang.org/x/sync/errgroup"
+
+	"github.com/thought-machine/please/src/fs"
 )
 
 // OutDir is the root output directory for everything.
@@ -458,6 +461,54 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 	return ret
 }
 
+// resolveDependencies matches up all declared dependencies to the actual build targets.
+// TODO(peterebden,tatskaari): Work out if we really want to have this and how the suite of *Dependencies functions
+//                             below should behave (preferably nicely).
+func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
+	var g errgroup.Group
+	target.mutex.RLock()
+	for i := range target.dependencies {
+		dep := &target.dependencies[i]
+		if len(dep.deps) > 0 {
+			continue  // already done
+		}
+		g.Go(func() error {
+			if err := target.resolveOneDependency(graph, dep); err != nil {
+				return err
+			}
+			for _, d := range dep.deps {
+				if err := callback(d); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	}
+	target.mutex.RUnlock()
+	return g.Wait()
+}
+
+func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo) error {
+	t := graph.WaitForTarget(dep.declared)
+	if t == nil {
+		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
+	}
+	labels := t.ProvideFor(target)
+	// Small optimisation to avoid re-looking-up the same target again.
+	if len(labels) == 1 && labels[0] == t.Label {
+		dep.deps = []*BuildTarget{t}
+		return nil
+	}
+	for _, l := range labels {
+		t := graph.WaitForTarget(l)
+		if t == nil {
+			return fmt.Errorf("Couldn't find provided dependency %s", l)
+		}
+		dep.deps = append(dep.deps, t)
+	}
+	return nil
+}
+
 // DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).
 func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 	target.mutex.RLock()
@@ -721,42 +772,6 @@ func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f b
 		return ret
 	}
 	return f(source, graph)
-}
-
-// AllDepsBuilt returns true if all the dependencies of a target are built.
-func (target *BuildTarget) AllDepsBuilt() bool {
-	target.mutex.RLock()
-	defer target.mutex.RUnlock()
-	for _, deps := range target.dependencies {
-		if !deps.resolved {
-			return false
-		}
-		for _, dep := range deps.deps {
-			if dep.State() < Built {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-// UnbuiltDeps returns the dependencies of this target that have not yet built.
-func (target *BuildTarget) UnbuiltDeps() []string {
-	target.mutex.RLock()
-	defer target.mutex.RUnlock()
-	ret := []string{}
-	for _, deps := range target.dependencies {
-		if !deps.resolved {
-			ret = append(ret, deps.declared.String()+" (unresolved)")
-		} else {
-			for _, dep := range deps.deps {
-				if dep.State() < Built {
-					ret = append(ret, dep.Label.String())
-				}
-			}
-		}
-	}
-	return ret
 }
 
 // CanSee returns true if target can see the given dependency, or false if not.

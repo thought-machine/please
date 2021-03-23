@@ -27,35 +27,6 @@ func TestTarget(t *testing.T) {
 	assert.Equal(t, 0, len(graph.AllTargets()))
 }
 
-func TestAllDepsBuilt(t *testing.T) {
-	graph := NewGraph()
-	target1 := makeTarget3("//src/core:target1")
-	target2 := makeTarget3("//src/core:target2", target1)
-	graph.AddTarget(target1)
-	graph.AddTarget(target2)
-	target2.WaitForResolvedDependencies()
-	assert.True(t, target1.AllDepsBuilt(), "Should be true because it has no dependencies")
-	assert.False(t, target2.AllDepsBuilt(), "Should be false because target1 isn't built yet")
-	target1.SyncUpdateState(Inactive, Building)
-	assert.False(t, target2.AllDepsBuilt(), "Should be false because target1 is building now")
-	target1.SyncUpdateState(Building, Built)
-	assert.True(t, target2.AllDepsBuilt(), "Should be true now target1 is built.")
-}
-
-func TestAllDepsResolved(t *testing.T) {
-	graph := NewGraph()
-	target1 := makeTarget3("//src/core:target1")
-	target2 := makeTarget3("//src/core:target2")
-	target2.AddDependency(target1.Label)
-	graph.AddTarget(target2)
-	assert.False(t, target2.AllDependenciesResolved(), "Haven't added a proper dep for target2 yet.")
-	graph.AddTarget(target1)
-	assert.NoError(t, target1.WaitForResolvedDependencies())
-	assert.NoError(t, target2.WaitForResolvedDependencies())
-	assert.True(t, target1.AllDependenciesResolved(), "Has no dependencies so they're all resolved")
-	assert.True(t, target2.AllDependenciesResolved(), "Should be resolved now we've added target1.")
-}
-
 func TestDependentTargets(t *testing.T) {
 	graph := NewGraph()
 	target1 := makeTarget3("//src/core:target1")

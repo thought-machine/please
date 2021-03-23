@@ -913,28 +913,16 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 			return
 		}
 	}
-	done := map[BuildLabel]struct{}{}
 	for {
-		var waiting []*BuildTarget
-		for _, dep := range target.DeclaredDependencies() {
-			if _, present := done[dep]; present {
-				continue
-			}
-			deps, err := state.allDependencies(target, dep)
-			if err != nil {
-				state.asyncError(target.Label, err)
-				return
-			}
-			// Queue all the targets
-			for _, t := range deps {
-				if err := state.queueResolvedTarget(t, target.Label, rescan, forceBuild, forSubinclude); err != nil {
-					state.asyncError(target.Label, err)
-					return
-				}
-			}
-			waiting = append(waiting, deps...)
+		called := false
+		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
+			called = true
+			return state.queueResolvedTarget(t, target.Label, rescan, forceBuild, forSubinclude)
+		}); err != nil {
+			state.asyncError(target.Label, err)
+			return
 		}
-		if len(waiting) == 0 {
+		if !called {
 			// We are now ready to go, we have nothing to wait for.
 			if target.SyncUpdateState(Active, Pending) {
 				state.addPendingBuild(target.Label, dependent.IsAllTargets())
@@ -942,32 +930,10 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 			return
 		}
 		// Wait for these targets to actually build.
-		for _, t := range waiting {
+		for _, t := range target.Dependencies() {
 			t.WaitForBuild()
 		}
 	}
-}
-
-// allDependencies returns all the dependencies for a single target.
-func (state *BuildState) allDependencies(target *BuildTarget, dep BuildLabel) ([]*BuildTarget, error) {
-	t := state.Graph.WaitForTarget(dep)
-	if t == nil {
-		return nil, fmt.Errorf("Couldn't find dependency %s", dep)
-	}
-	labels := t.ProvideFor(target)
-	// Small optimisation to avoid re-looking-up the same target again.
-	if len(labels) == 1 && labels[0] == t.Label {
-		return []*BuildTarget{t}, nil
-	}
-	ret := make([]*BuildTarget, len(labels))
-	for i, l := range labels {
-		t := state.Graph.WaitForTarget(l)
-		if t == nil {
-			return nil, fmt.Errorf("Couldn't find provided dependency %s", l)
-		}
-		ret[i] = t
-	}
-	return ret, nil
 }
 
 // asyncError reports an error that's happened in an asynchronous function.
