@@ -259,6 +259,13 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 			}
 		}
 
+		for _, tool := range target.TestTools() {
+			fullPaths := tool.FullPaths(graph)
+			for i, dataPath := range tool.Paths(graph) {
+				pushOut(fullPaths[i], dataPath)
+			}
+		}
+
 		close(ch)
 	}()
 	return ch

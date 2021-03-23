@@ -2,6 +2,7 @@ Version 15.17.1
 --------------
     * Backported fix from v16 for go_module() to stop it pulling in sources
       of transitive deps during the install phase #1606
+    * Fix runtime hash to include test_tools
 
 Version 15.17.0
 --------------
