@@ -10,6 +10,7 @@ import (
 )
 
 func TestFindGraphCycle(t *testing.T) {
+	t.Skip("Graph cycle detection has moved to an async method in the graph itself.")
 	graph := core.NewGraph()
 	graph.AddTarget(makeTarget("//src/output:target1", "//src/output:target2", "//src/output:target3", "//src/core:target2"))
 	graph.AddTarget(makeTarget("//src/output:target2", "//src/output:target3", "//src/core:target1"))
