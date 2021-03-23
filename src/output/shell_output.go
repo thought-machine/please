@@ -742,38 +742,6 @@ func colouriseError(err error) error {
 // errorMessageRe is a regex to find lines that look like they're specifying a file.
 var errorMessageRe = regexp.MustCompile(`^([^ ]+\.[^: /]+):([0-9]+):(?:([0-9]+):)? *(?:([a-z-_ ]+):)? (.*)$`)
 
-// Attempts to detect cycles in the build graph. Returns an empty slice if none is found,
-// otherwise returns a slice of labels describing the cycle.
-func findGraphCycle(graph *core.BuildGraph, target *core.BuildTarget) []*core.BuildTarget {
-	index := func(haystack []*core.BuildTarget, needle *core.BuildTarget) int {
-		for i, straw := range haystack {
-			if straw == needle {
-				return i
-			}
-		}
-		return -1
-	}
-
-	done := map[core.BuildLabel]bool{}
-	var detectCycle func(*core.BuildTarget, []*core.BuildTarget) []*core.BuildTarget
-	detectCycle = func(target *core.BuildTarget, deps []*core.BuildTarget) []*core.BuildTarget {
-		if i := index(deps, target); i != -1 {
-			return deps[i:]
-		} else if done[target.Label] {
-			return nil
-		}
-		done[target.Label] = true
-		deps = append(deps, target)
-		for _, dep := range target.Dependencies() {
-			if cycle := detectCycle(dep, deps); len(cycle) > 0 {
-				return cycle
-			}
-		}
-		return nil
-	}
-	return detectCycle(target, nil)
-}
-
 // unbuiltTargetsMessage returns a message for any targets that are supposed to build but haven't yet.
 func unbuiltTargetsMessage(graph *core.BuildGraph) string {
 	msg := ""
