@@ -568,9 +568,15 @@ func (target *BuildTarget) dependenciesFor(label BuildLabel) []*BuildTarget {
 
 // registerDependencies runs through all the target's dependencies and waits for them to be added to the build graph.
 func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
+	for target.reallyRegisterDependencies(graph) {}
+	close(target.dependenciesRegistered)
+}
+
+// reallyRegisterDependencies does the work of registerDependencies and returns true if something changed.
+func (target *BuildTarget) reallyRegisterDependencies(graph *BuildGraph) bool {
 	// TODO(peterebden): can we do something with the mutex here? I don't *think* it's a problem
 	//                   but would be nice if the race detector could verify that.
-
+	changed := false
 	for i := range target.dependencies {
 		info := &target.dependencies[i]
 		if info.resolved {
@@ -580,6 +586,7 @@ func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
 		if t == nil {
 			continue // This doesn't exist; that will get handled later.
 		}
+		changed = true
 		if deps := t.ProvideFor(target); len(deps) == 1 && deps[0].Label() != nil && *deps[0].Label() == t.Label {
 			graph.cycleDetector.AddDependency(target.Label, t.Label)
 			info.deps = []*BuildTarget{t} // small optimisation to save looking this thing up again in the common case
@@ -595,7 +602,7 @@ func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
 		}
 		info.resolved = true
 	}
-	close(target.dependenciesRegistered)
+	return changed
 }
 
 // reregisterDependencies redoes the work for registerDependencies after a target has had more added.
