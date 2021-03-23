@@ -581,6 +581,7 @@ func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
 			continue // This doesn't exist; that will get handled later.
 		}
 		if deps := t.ProvideFor(target); len(deps) == 1 && deps[0].Label() != nil && *deps[0].Label() == t.Label {
+			graph.cycleDetector.AddDependency(target.Label, t.Label)
 			info.deps = []*BuildTarget{t} // small optimisation to save looking this thing up again in the common case
 		} else {
 			for _, l := range deps {
