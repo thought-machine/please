@@ -1,6 +1,7 @@
 package query
 
 import (
+	"encoding/csv"
 	"fmt"
 	"io"
 	"os"
@@ -16,27 +17,33 @@ import (
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
 func Print(graph *core.BuildGraph, targets []core.BuildLabel, fields, labels []string) {
+	w := csv.NewWriter(os.Stdout)
+
 	for _, target := range targets {
 		t := graph.TargetOrDie(target)
-		if len(labels) > 0 {
-			for _, prefix := range labels {
-				for _, label := range t.Labels {
-					if strings.HasPrefix(label, prefix) {
-						fmt.Printf("%s\n", strings.TrimPrefix(label, prefix))
-					}
-				}
-			}
+
+		if len(fields) == 0 && len(labels) == 0 {
+			fmt.Fprintf(os.Stdout, "# %s:\n", target)
+			newPrinter(os.Stdout, t, 0).PrintTarget()
 			continue
 		}
-		if len(fields) == 0 {
-			fmt.Fprintf(os.Stdout, "# %s:\n", target)
+
+		record := make([]string, 0, len(fields) + len(labels))
+
+		for _, prefix := range labels {
+			for _, label := range t.Labels {
+				if strings.HasPrefix(label, prefix) {
+					record = append(record, strings.TrimPrefix(label, prefix))
+				}
+			}
 		}
-		if len(fields) > 0 {
-			newPrinter(os.Stdout, t, 0).PrintFields(fields)
-		} else {
-			newPrinter(os.Stdout, t, 0).PrintTarget()
+		if len(record) > 0 || len(labels) == 0 {
+			record = append(newPrinter(nil, t, 0).formatFields(fields), record...)
+			w.Write(record)
 		}
 	}
+
+	w.Flush()
 }
 
 // specialFields is a mapping of field name -> any special casing relating to how to print it.
@@ -143,19 +150,22 @@ func (p *printer) PrintTarget() {
 	p.printf(")\n\n")
 }
 
-// PrintFields prints a subset of fields of a build target.
-func (p *printer) PrintFields(fields []string) bool {
+// formatFields prints a subset of fields of a build target.
+func (p *printer) formatFields(fields []string) []string {
+	records := make([]string, 0, len(fields))
+
 	v := reflect.ValueOf(p.target).Elem()
 	for _, field := range fields {
+		if field == "build_label" {
+			records = append(records, p.target.Label.String())
+			continue
+		}
 		f := p.findField(field)
 		if contents, shouldPrint := p.shouldPrintField(f, v.FieldByIndex(f.Index)); shouldPrint {
-			if !strings.HasSuffix(contents, "\n") {
-				contents += "\n"
-			}
-			p.printf("%s", contents)
+			records = append(records, contents)
 		}
 	}
-	return p.error
+	return records
 }
 
 // findField returns the field which would print with the given name.
