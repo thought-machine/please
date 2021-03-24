@@ -98,7 +98,7 @@ func addTarget(state *core.BuildState, label string, dep *core.BuildTarget, sour
 		t.AddDependency(dep.Label)
 	}
 	state.Graph.AddTarget(t)
-	if err := t.WaitForResolvedDependencies(); err != nil {
+	if err := t.ResolveDependencies(state.Graph); err != nil {
 		log.Fatalf("Failed to resolve dependency %s -> %s: %s", t, dep, err)
 	}
 	pkg := state.Graph.PackageByLabel(t.Label)

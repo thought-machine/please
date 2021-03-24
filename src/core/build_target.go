@@ -464,6 +464,7 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 // resolveDependencies matches up all declared dependencies to the actual build targets.
 // TODO(peterebden,tatskaari): Work out if we really want to have this and how the suite of *Dependencies functions
 //                             below should behave (preferably nicely).
+// TODO(tatskaari): Work out if we can use a channel instead of a callback.
 func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
 	var g errgroup.Group
 	target.mutex.RLock()
@@ -507,6 +508,12 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 		dep.deps = append(dep.deps, t)
 	}
 	return nil
+}
+
+// MustResolveDependencies is exposed only for testing purposes.
+// TODO(peterebden, tatskaari): See if we can get rid of this.
+func (target *BuildTarget) ResolveDependencies(graph *BuildGraph) error {
+	return target.resolveDependencies(graph, func(*BuildTarget) error { return nil })
 }
 
 // DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).
