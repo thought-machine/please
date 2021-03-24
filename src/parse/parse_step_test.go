@@ -97,7 +97,6 @@ func TestAddDepRescan(t *testing.T) {
 	state.Graph.AddTarget(target4)
 	target1 := state.Graph.TargetOrDie(buildLabel("//package1:target1"))
 	target1.AddDependency(buildLabel("//package1:target4"))
-	target1.WaitForResolvedDependencies()
 
 	// Fake test: calling this now should have no effect because rescan is not true.
 	state.QueueTarget(buildLabel("//package1:target1"), core.OriginalTarget, false, false)
@@ -110,7 +109,6 @@ func TestAddDepRescan(t *testing.T) {
 
 	assertPendingBuilds(t, state, "//package1:target4")
 	assertPendingParses(t, state)
-	assert.True(t, target1.AllDependenciesResolved())
 }
 
 func TestAddParseDepDeferred(t *testing.T) {
