@@ -331,10 +331,10 @@ func (s BuildTargetState) String() string {
 // NewBuildTarget constructs & returns a new BuildTarget.
 func NewBuildTarget(label BuildLabel) *BuildTarget {
 	return &BuildTarget{
-		Label:                  label,
-		state:                  int32(Inactive),
-		BuildingDescription:    DefaultBuildingDescription,
-		finishedBuilding:       make(chan struct{}),
+		Label:               label,
+		state:               int32(Inactive),
+		BuildingDescription: DefaultBuildingDescription,
+		finishedBuilding:    make(chan struct{}),
 	}
 }
 
@@ -471,7 +471,7 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 	for i := range target.dependencies {
 		dep := &target.dependencies[i]
 		if len(dep.deps) > 0 {
-			continue  // already done
+			continue // already done
 		}
 		g.Go(func() error {
 			if err := target.resolveOneDependency(graph, dep); err != nil {
