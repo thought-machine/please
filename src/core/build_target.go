@@ -503,7 +503,7 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 	for _, l := range labels {
 		t := graph.WaitForTarget(l)
 		if t == nil {
-			return fmt.Errorf("Couldn't find provided dependency %s", l)
+			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, t)
 		}
 		dep.deps = append(dep.deps, t)
 	}
