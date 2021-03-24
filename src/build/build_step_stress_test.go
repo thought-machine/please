@@ -89,7 +89,6 @@ func postBuild(target *core.BuildTarget, out string) error {
 	// This mimics what interpreter.go does.
 	t := state.Graph.TargetOrDie(parent)
 	t.AddDependency(newTarget.Label)
-	t.WaitForResolvedDependencies()
 	return nil
 }
 
