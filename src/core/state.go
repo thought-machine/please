@@ -881,14 +881,14 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 			}
 			// Actual queuing stuff now happens asynchronously in here.
 			atomic.AddInt64(&state.progress.numPending, 1)
-			go state.queueTargetAsync(target, dependent, rescan, forceBuild, neededForSubinclude)
+			go state.queueTargetAsync(target, dependent, rescan, forceBuild, neededForSubinclude, state.NeedBuild || forceBuild)
 		}
 	}
 	return nil
 }
 
 // queueTarget enqueues a target's dependencies and the target itself once they are done.
-func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLabel, rescan, forceBuild, forSubinclude bool) {
+func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLabel, rescan, forceBuild, forSubinclude, building bool) {
 	defer state.taskDone(true, false)
 	for _, dep := range target.DeclaredDependencies() {
 		if err := state.queueTarget(dep, target.Label, rescan, forceBuild, forSubinclude); err != nil {
@@ -907,14 +907,16 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 		}
 		if !called {
 			// We are now ready to go, we have nothing to wait for.
-			if target.SyncUpdateState(Active, Pending) {
+			if building && target.SyncUpdateState(Active, Pending) {
 				state.addPendingBuild(target.Label, dependent.IsAllTargets())
 			}
 			return
 		}
 		// Wait for these targets to actually build.
-		for _, t := range target.Dependencies() {
-			t.WaitForBuild()
+		if building {
+			for _, t := range target.Dependencies() {
+				t.WaitForBuild()
+			}
 		}
 	}
 }
