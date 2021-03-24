@@ -3,7 +3,7 @@ package query
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"os"
 	"path"
 	"sync"
 
@@ -15,13 +15,15 @@ import (
 func Graph(state *core.BuildState, targets []core.BuildLabel) {
 	log.Notice("Generating graph...")
 	g := makeJSONGraph(state, targets)
-	log.Notice("Marshalling...")
-	b, err := json.MarshalIndent(g, "", "    ")
-	if err != nil {
+
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "    ")
+	encoder.SetEscapeHTML(false)
+
+	log.Notice("Encoding...")
+	if err := encoder.Encode(g); err != nil {
 		log.Fatalf("Failed to serialise JSON: %s\n", err)
 	}
-	log.Notice("Writing...")
-	fmt.Println(string(b))
 	log.Notice("Done")
 }
 
