@@ -126,7 +126,7 @@ func TestPrintFields(t *testing.T) {
 	target.AddLabel("go")
 	target.AddLabel("test")
 	s := testPrintFields(target, []string{"labels"})
-	assert.Equal(t, "go\ntest\n", s)
+	assert.Equal(t, "go\ntest\n", s[0])
 }
 
 func testPrint(target *core.BuildTarget) string {
@@ -135,10 +135,9 @@ func testPrint(target *core.BuildTarget) string {
 	return buf.String()
 }
 
-func testPrintFields(target *core.BuildTarget, fields []string) string {
+func testPrintFields(target *core.BuildTarget, fields []string) []string {
 	var buf bytes.Buffer
-	newPrinter(&buf, target, 0).PrintFields(fields)
-	return buf.String()
+	return newPrinter(&buf, target, 0).formatFields(fields)
 }
 
 func src(in string) core.BuildInput {

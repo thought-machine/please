@@ -1,6 +1,8 @@
 package query
 
 import (
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -15,27 +17,85 @@ import (
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
-func Print(graph *core.BuildGraph, targets []core.BuildLabel, fields, labels []string) {
+func Print(state *core.BuildState, targets []core.BuildLabel, format string, fields, labels []string) {
+	if format == "json" {
+		printJSON(state, targets)
+		return
+	}
+
+	graph := state.Graph
+
 	for _, target := range targets {
 		t := graph.TargetOrDie(target)
-		if len(labels) > 0 {
-			for _, prefix := range labels {
-				for _, label := range t.Labels {
-					if strings.HasPrefix(label, prefix) {
-						fmt.Printf("%s\n", strings.TrimPrefix(label, prefix))
-					}
-				}
-			}
+
+		if len(fields) == 0 && len(labels) == 0 {
+			fmt.Fprintf(os.Stdout, "# %s:\n", target)
+			newPrinter(os.Stdout, t, 0).PrintTarget()
 			continue
 		}
-		if len(fields) == 0 {
-			fmt.Fprintf(os.Stdout, "# %s:\n", target)
+
+		trimmedLabels := make([]string, 0, len(labels))
+		for _, prefix := range labels {
+			for _, label := range t.Labels {
+				if strings.HasPrefix(label, prefix) {
+					trimmedLabels = append(trimmedLabels, strings.TrimPrefix(label, prefix))
+				}
+			}
 		}
-		if len(fields) > 0 {
-			newPrinter(os.Stdout, t, 0).PrintFields(fields)
+		// If we didn't match any of the labels, don't print this target
+		if len(trimmedLabels) == 0 {
+			continue
+		}
+
+		if format == "csv" {
+			printCSV(t, fields, trimmedLabels)
+		} else if format == "json" {
+
 		} else {
-			newPrinter(os.Stdout, t, 0).PrintTarget()
+			printPlain(t, fields, trimmedLabels)
 		}
+	}
+
+	if format == "json" {
+		fmt.Println("}")
+	}
+}
+
+func printJSON(state *core.BuildState, targets []core.BuildLabel) {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "    ")
+
+	ts := make([]JSONTarget, 0, len(targets))
+	for _, target := range targets {
+		t := makeJSONTarget(state, state.Graph.TargetOrDie(target))
+		t.Name = target.Name
+		t.BuildLabel = target.Label().String()
+		ts = append(ts, t)
+	}
+
+	if len(ts) == 1 {
+		if err := encoder.Encode(ts[0]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	if err := encoder.Encode(ts); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func printPlain(target *core.BuildTarget, fields, labels []string) {
+	newPrinter(os.Stdout, target, 0).printFields(fields)
+	fmt.Println(strings.Join(labels, "\n"))
+}
+
+func printCSV(target *core.BuildTarget, fields, labels []string) {
+	w := csv.NewWriter(os.Stdout)
+	defer w.Flush()
+
+	if err := w.Write(append(newPrinter(nil, target, 0).formatFields(fields), labels...)); err != nil {
+		panic(err)
 	}
 }
 
@@ -143,17 +203,31 @@ func (p *printer) PrintTarget() {
 	p.printf(")\n\n")
 }
 
-// PrintFields prints a subset of fields of a build target.
-func (p *printer) PrintFields(fields []string) bool {
+// formatFields prints a subset of fields of a build target.
+func (p *printer) formatFields(fields []string) []string {
+	records := make([]string, 0, len(fields))
+
 	v := reflect.ValueOf(p.target).Elem()
 	for _, field := range fields {
+		if field == "build_label" {
+			records = append(records, p.target.Label.String())
+			continue
+		}
 		f := p.findField(field)
 		if contents, shouldPrint := p.shouldPrintField(f, v.FieldByIndex(f.Index)); shouldPrint {
-			if !strings.HasSuffix(contents, "\n") {
-				contents += "\n"
-			}
-			p.printf("%s", contents)
+			records = append(records, contents)
 		}
+	}
+	return records
+}
+
+// printFields prints a subset of fields of a build target.
+func (p *printer) printFields(fields []string) bool {
+	for _, field := range p.formatFields(fields) {
+		if !strings.HasSuffix(field, "\n") {
+			field += "\n"
+		}
+		p.printf("%s", field)
 	}
 	return p.error
 }
