@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -11,6 +10,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"golang.org/x/sync/errgroup"
+
+	"github.com/thought-machine/please/src/fs"
 )
 
 // OutDir is the root output directory for everything.
@@ -205,8 +208,6 @@ type BuildTarget struct {
 	EntryPoints map[string]string `name:"entry_points"`
 	// Used to arbitrate concurrent access to dependencies
 	mutex sync.RWMutex `print:"false"`
-	// Used to notify once all dependencies are registered.
-	dependenciesRegistered chan struct{} `print:"false"`
 	// Used to notify once this target has built successfully.
 	finishedBuilding chan struct{} `print:"false"`
 	// Env are any custom environment variables to set for this build target
@@ -330,11 +331,10 @@ func (s BuildTargetState) String() string {
 // NewBuildTarget constructs & returns a new BuildTarget.
 func NewBuildTarget(label BuildLabel) *BuildTarget {
 	return &BuildTarget{
-		Label:                  label,
-		state:                  int32(Inactive),
-		BuildingDescription:    DefaultBuildingDescription,
-		dependenciesRegistered: make(chan struct{}),
-		finishedBuilding:       make(chan struct{}),
+		Label:               label,
+		state:               int32(Inactive),
+		BuildingDescription: DefaultBuildingDescription,
+		finishedBuilding:    make(chan struct{}),
 	}
 }
 
@@ -461,6 +461,61 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 	return ret
 }
 
+// resolveDependencies matches up all declared dependencies to the actual build targets.
+// TODO(peterebden,tatskaari): Work out if we really want to have this and how the suite of *Dependencies functions
+//                             below should behave (preferably nicely).
+// TODO(tatskaari): Work out if we can use a channel instead of a callback.
+func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
+	var g errgroup.Group
+	target.mutex.RLock()
+	for i := range target.dependencies {
+		dep := &target.dependencies[i]
+		if len(dep.deps) > 0 {
+			continue // already done
+		}
+		g.Go(func() error {
+			if err := target.resolveOneDependency(graph, dep); err != nil {
+				return err
+			}
+			for _, d := range dep.deps {
+				if err := callback(d); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	}
+	target.mutex.RUnlock()
+	return g.Wait()
+}
+
+func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo) error {
+	t := graph.WaitForTarget(dep.declared)
+	if t == nil {
+		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
+	}
+	labels := t.ProvideFor(target)
+	// Small optimisation to avoid re-looking-up the same target again.
+	if len(labels) == 1 && labels[0] == t.Label {
+		dep.deps = []*BuildTarget{t}
+		return nil
+	}
+	for _, l := range labels {
+		t := graph.WaitForTarget(l)
+		if t == nil {
+			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, t)
+		}
+		dep.deps = append(dep.deps, t)
+	}
+	return nil
+}
+
+// MustResolveDependencies is exposed only for testing purposes.
+// TODO(peterebden, tatskaari): See if we can get rid of this.
+func (target *BuildTarget) ResolveDependencies(graph *BuildGraph) error {
+	return target.resolveDependencies(graph, func(*BuildTarget) error { return nil })
+}
+
 // DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).
 func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 	target.mutex.RLock()
@@ -564,45 +619,6 @@ func (target *BuildTarget) dependenciesFor(label BuildLabel) []*BuildTarget {
 		return target.dependenciesFor(label)
 	}
 	return nil
-}
-
-// registerDependencies runs through all the target's dependencies and waits for them to be added to the build graph.
-func (target *BuildTarget) registerDependencies(graph *BuildGraph) {
-	// TODO(peterebden): can we do something with the mutex here? I don't *think* it's a problem
-	//                   but would be nice if the race detector could verify that.
-
-	for i := range target.dependencies {
-		info := &target.dependencies[i]
-		if info.resolved {
-			continue
-		}
-		t := graph.WaitForDependency(info.declared)
-		if t == nil {
-			continue // This doesn't exist; that will get handled later.
-		}
-		if deps := t.ProvideFor(target); len(deps) == 1 && deps[0].Label() != nil && *deps[0].Label() == t.Label {
-			graph.cycleDetector.AddDependency(target.Label, t.Label)
-			info.deps = []*BuildTarget{t} // small optimisation to save looking this thing up again in the common case
-		} else {
-			for _, l := range deps {
-				graph.cycleDetector.AddDependency(target.Label, l)
-				t := graph.WaitForDependency(l)
-				if t == nil {
-					continue
-				}
-				info.deps = append(info.deps, t)
-			}
-		}
-		info.resolved = true
-	}
-	close(target.dependenciesRegistered)
-}
-
-// reregisterDependencies redoes the work for registerDependencies after a target has had more added.
-func (target *BuildTarget) reregisterDependencies(graph *BuildGraph) error {
-	target.dependenciesRegistered = make(chan struct{})
-	go target.registerDependencies(graph)
-	return target.WaitForResolvedDependencies()
 }
 
 // FinishBuild marks this target as having built.
@@ -763,71 +779,6 @@ func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f b
 		return ret
 	}
 	return f(source, graph)
-}
-
-// AllDepsBuilt returns true if all the dependencies of a target are built.
-func (target *BuildTarget) AllDepsBuilt() bool {
-	target.mutex.RLock()
-	defer target.mutex.RUnlock()
-	for _, deps := range target.dependencies {
-		if !deps.resolved {
-			return false
-		}
-		for _, dep := range deps.deps {
-			if dep.State() < Built {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-// UnbuiltDeps returns the dependencies of this target that have not yet built.
-func (target *BuildTarget) UnbuiltDeps() []string {
-	target.mutex.RLock()
-	defer target.mutex.RUnlock()
-	ret := []string{}
-	for _, deps := range target.dependencies {
-		if !deps.resolved {
-			ret = append(ret, deps.declared.String()+" (unresolved)")
-		} else {
-			for _, dep := range deps.deps {
-				if dep.State() < Built {
-					ret = append(ret, dep.Label.String())
-				}
-			}
-		}
-	}
-	return ret
-}
-
-// AllDependenciesResolved returns true once all the dependencies of a target have been
-// parsed and resolved to real targets.
-func (target *BuildTarget) AllDependenciesResolved() bool {
-	return len(target.UnresolvedDependencies()) == 0
-}
-
-// UnresolvedDependencies returns the list of dependencies for this target that aren't resolved yet.
-func (target *BuildTarget) UnresolvedDependencies() BuildLabels {
-	var ret []BuildLabel
-	target.mutex.RLock()
-	defer target.mutex.RUnlock()
-	for _, deps := range target.dependencies {
-		if !deps.resolved {
-			ret = append(ret, deps.declared)
-		}
-	}
-	return ret
-}
-
-// WaitForResolvedDependencies blocks until all the dependencies are resolved, or we know they cannot be.
-// It returns an error if they cannot be successfully resolved.
-func (target *BuildTarget) WaitForResolvedDependencies() error {
-	<-target.dependenciesRegistered
-	if !target.AllDependenciesResolved() {
-		return fmt.Errorf("Failed to resolve some dependencies for %s: %s", target, target.UnresolvedDependencies())
-	}
-	return nil
 }
 
 // CanSee returns true if target can see the given dependency, or false if not.

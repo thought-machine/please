@@ -913,36 +913,26 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 			return
 		}
 	}
-	// TODO(peterebden): This is slightly inefficient in that we wait for all dependencies to resolve before
-	//                   queuing up the actual build actions. Would be better to do both at once.
-	if err := target.WaitForResolvedDependencies(); err != nil {
-		state.asyncError(target.Label, err)
-		return
-	}
 	for {
-		deps := target.Dependencies()
-		for _, dep := range deps {
-			if err := state.queueResolvedTarget(dep, target.Label, rescan, forceBuild, forSubinclude); err != nil {
-				state.asyncError(target.Label, err)
-				return
-			}
-		}
-		// Now wait for each of them to finish building
-		for _, dep := range deps {
-			dep.WaitForBuild()
-		}
-		if target.AllDependenciesResolved() {
-			break
-		}
-		// If we're here it got modified by a post-build function, need to wait for it.
-		if err := target.reregisterDependencies(state.Graph); err != nil {
+		called := false
+		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
+			called = true
+			return state.queueResolvedTarget(t, target.Label, rescan, forceBuild, forSubinclude)
+		}); err != nil {
 			state.asyncError(target.Label, err)
 			return
 		}
-	}
-
-	if target.SyncUpdateState(Active, Pending) {
-		state.addPendingBuild(target.Label, dependent.IsAllTargets())
+		if !called {
+			// We are now ready to go, we have nothing to wait for.
+			if target.SyncUpdateState(Active, Pending) {
+				state.addPendingBuild(target.Label, dependent.IsAllTargets())
+			}
+			return
+		}
+		// Wait for these targets to actually build.
+		for _, t := range target.Dependencies() {
+			t.WaitForBuild()
+		}
 	}
 }
 

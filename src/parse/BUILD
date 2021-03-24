@@ -29,7 +29,6 @@ go_test(
         "//src/core",
         "//third_party/go:testify",
     ],
-    flaky = 5,
 )
 
 go_test(

@@ -79,7 +79,6 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 		}
 		return target
 	})
-	go target.registerDependencies(graph)
 	// Notify anything that called WaitForTarget
 	close(graph.pendingTargets.GetTargetChannel(target.Label))
 	return target
@@ -123,9 +122,9 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 	return target
 }
 
-// WaitForDependency returns the given target, waiting for it to be added if it isn't yet.
+// WaitForTarget returns the given target, waiting for it to be added if it isn't yet.
 // It returns nil if the target finally turns out not to exist.
-func (graph *BuildGraph) WaitForDependency(label BuildLabel) *BuildTarget {
+func (graph *BuildGraph) WaitForTarget(label BuildLabel) *BuildTarget {
 	if t := graph.Target(label); t != nil {
 		return t
 	} else if graph.PackageByLabel(label) != nil {

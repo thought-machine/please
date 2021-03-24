@@ -298,8 +298,8 @@ func makeTarget2(name string, command string, dep *BuildTarget) *BuildTarget {
 		graph.AddTarget(target)
 		graph.AddTarget(dep)
 		target.AddDependency(dep.Label)
-		if err := target.WaitForResolvedDependencies(); err != nil {
-			log.Fatalf("Failed to resolve dependency %s -> %s: %s", target, dep, err)
+		if err := target.ResolveDependencies(graph); err != nil {
+			log.Fatalf("Failed to resolve some dependencies for %s: %s", target, err)
 		}
 	}
 	return target

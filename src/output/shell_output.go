@@ -747,11 +747,7 @@ func unbuiltTargetsMessage(graph *core.BuildGraph) string {
 	msg := ""
 	for _, target := range graph.AllTargets() {
 		if target.State() == core.Active {
-			if target.AllDepsBuilt() {
-				msg += fmt.Sprintf("  %s (all deps have built)\n", target.Label)
-			} else {
-				msg += fmt.Sprintf("  %s (waiting for %s)\n", target.Label, strings.Join(target.UnbuiltDeps(), ", "))
-			}
+			msg += fmt.Sprintf("  %s", target.Label)
 		} else if target.State() == core.Pending {
 			msg += fmt.Sprintf("  %s (pending build)\n", target.Label)
 		}
