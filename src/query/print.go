@@ -14,7 +14,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-var formats  = map[string]struct{} {
+var formats = map[string]struct{}{
 	"json":  {},
 	"plain": {},
 	"csv":   {},
