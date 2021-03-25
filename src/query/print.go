@@ -14,12 +14,27 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+var formats  = map[string]struct{} {
+	"json":  {},
+	"plain": {},
+	"csv":   {},
+	"":      {},
+}
+
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
 func Print(state *core.BuildState, targets []core.BuildLabel, format string, fields, labels []string) {
+	printTo(os.Stdout, state, targets, format, fields, labels)
+}
+
+func printTo(out io.Writer, state *core.BuildState, targets []core.BuildLabel, format string, fields, labels []string) {
+	if _, ok := formats[format]; !ok {
+		log.Fatalf("Invalid format: %s", format)
+	}
+
 	if format == "json" {
-		printJSON(state, targets)
+		printJSON(out, state, targets, labels)
 		return
 	}
 
@@ -29,8 +44,8 @@ func Print(state *core.BuildState, targets []core.BuildLabel, format string, fie
 		t := graph.TargetOrDie(target)
 
 		if len(fields) == 0 && len(labels) == 0 {
-			fmt.Fprintf(os.Stdout, "# %s:\n", target)
-			newPrinter(os.Stdout, t, 0).PrintTarget()
+			fmt.Fprintf(out, "# %s:\n", target)
+			newPrinter(out, t, 0).PrintTarget()
 			continue
 		}
 
@@ -43,34 +58,44 @@ func Print(state *core.BuildState, targets []core.BuildLabel, format string, fie
 			}
 		}
 		// If we didn't match any of the labels, don't print this target
-		if len(trimmedLabels) == 0 {
+		if len(labels) != 0 && len(trimmedLabels) == 0 {
 			continue
 		}
 
 		if format == "csv" {
-			printCSV(t, fields, trimmedLabels)
-		} else if format == "json" {
-
+			printCSV(out, t, fields, trimmedLabels)
 		} else {
-			printPlain(t, fields, trimmedLabels)
+			printPlain(out, t, fields, trimmedLabels)
 		}
-	}
-
-	if format == "json" {
-		fmt.Println("}")
 	}
 }
 
-func printJSON(state *core.BuildState, targets []core.BuildLabel) {
-	encoder := json.NewEncoder(os.Stdout)
+func printJSON(out io.Writer, state *core.BuildState, targets []core.BuildLabel, labels []string) {
+	encoder := json.NewEncoder(out)
 	encoder.SetIndent("", "    ")
 
 	ts := make([]JSONTarget, 0, len(targets))
 	for _, target := range targets {
-		t := makeJSONTarget(state, state.Graph.TargetOrDie(target))
-		t.Name = target.Name
-		t.BuildLabel = target.Label().String()
-		ts = append(ts, t)
+		t := state.Graph.TargetOrDie(target)
+
+		hasLabel := len(labels) == 0
+		for _, prefix := range labels {
+			for _, label := range t.Labels {
+				if strings.HasPrefix(label, prefix) {
+					hasLabel = true
+					break
+				}
+			}
+			if hasLabel {
+				break
+			}
+		}
+		if hasLabel {
+			t := makeJSONTarget(state, t)
+			t.Name = target.Name
+			t.BuildLabel = target.Label().String()
+			ts = append(ts, t)
+		}
 	}
 
 	if len(ts) == 1 {
@@ -85,13 +110,15 @@ func printJSON(state *core.BuildState, targets []core.BuildLabel) {
 	}
 }
 
-func printPlain(target *core.BuildTarget, fields, labels []string) {
-	newPrinter(os.Stdout, target, 0).printFields(fields)
-	fmt.Println(strings.Join(labels, "\n"))
+func printPlain(out io.Writer, target *core.BuildTarget, fields, labels []string) {
+	newPrinter(out, target, 0).printFields(fields)
+	if len(labels) > 0 {
+		fmt.Fprintln(out, strings.Join(labels, "\n"))
+	}
 }
 
-func printCSV(target *core.BuildTarget, fields, labels []string) {
-	w := csv.NewWriter(os.Stdout)
+func printCSV(out io.Writer, target *core.BuildTarget, fields, labels []string) {
+	w := csv.NewWriter(out)
 	defer w.Flush()
 
 	if err := w.Write(append(newPrinter(nil, target, 0).formatFields(fields), labels...)); err != nil {

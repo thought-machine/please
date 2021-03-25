@@ -97,6 +97,55 @@ func TestTestOutput(t *testing.T) {
 	assert.Equal(t, expected, s)
 }
 
+func TestFormats(t *testing.T) {
+	state := core.NewDefaultBuildState()
+	pkg := core.NewPackage("foo")
+	l1 := core.NewBuildLabel("foo", "foo")
+	l2 := core.NewBuildLabel("foo", "bar")
+	target := core.NewBuildTarget(l1)
+	target.AddSource(core.NewFileLabel("foo.go", pkg))
+	target.AddLabel("go_package:module.com/bar/foo")
+	state.AddTarget(pkg, target)
+	state.AddTarget(pkg, core.NewBuildTarget(l2))
+
+	t.Run("empty", func(t *testing.T) {
+		out := new(bytes.Buffer)
+		printTo(out, state, []core.BuildLabel{l1, l2}, "", []string{"build_label", "srcs", "name"}, []string{"go_package:"})
+		assert.Equal(t, "//foo:foo\nfoo.go\n'foo'\nmodule.com/bar/foo\n", out.String())
+	})
+	t.Run("plain", func(t *testing.T) {
+		out := new(bytes.Buffer)
+		printTo(out, state, []core.BuildLabel{l1, l2}, "plain", []string{"build_label", "srcs", "name"}, []string{"go_package:"})
+		assert.Equal(t, "//foo:foo\nfoo.go\n'foo'\nmodule.com/bar/foo\n", out.String())
+	})
+	t.Run("csv", func(t *testing.T) {
+		out := new(bytes.Buffer)
+		printTo(out, state, []core.BuildLabel{l1, l2}, "csv", []string{"build_label", "srcs", "name"}, []string{"go_package:"})
+		assert.Equal(t, "//foo:foo,foo.go,'foo',module.com/bar/foo\n", out.String())
+	})
+	t.Run("json", func(t *testing.T) {
+		expectedJSON := `{
+    "name": "foo",
+    "build_label": "//foo:foo",
+    "inputs": [
+        "foo/foo.go"
+    ],
+    "srcs": [
+        "foo/foo.go"
+    ],
+    "labels": [
+        "go_package:module.com/bar/foo"
+    ],
+    "hash": "2cqEuSPFExDJX8WpP51R0NYZgfFCsLuNFnsrTHm1tGrkk8h2PxbbAw"
+}
+`
+
+		out := new(bytes.Buffer)
+		printTo(out, state, []core.BuildLabel{l1, l2}, "json", []string{"build_label", "srcs", "name"}, []string{"go_package:"})
+		assert.Equal(t, expectedJSON, out.String())
+	})
+}
+
 type postBuildFunction struct{}
 
 func (f postBuildFunction) Call(target *core.BuildTarget, output string) error { return nil }
