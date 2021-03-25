@@ -2,7 +2,6 @@ package query
 
 import (
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -15,7 +14,6 @@ import (
 )
 
 var formats = map[string]struct{}{
-	"json":  {},
 	"plain": {},
 	"csv":   {},
 	"":      {},
@@ -31,11 +29,6 @@ func Print(state *core.BuildState, targets []core.BuildLabel, format string, fie
 func printTo(out io.Writer, state *core.BuildState, targets []core.BuildLabel, format string, fields, labels []string) {
 	if _, ok := formats[format]; !ok {
 		log.Fatalf("Invalid format: %s", format)
-	}
-
-	if format == "json" {
-		printJSON(out, state, targets, labels)
-		return
 	}
 
 	graph := state.Graph
@@ -67,46 +60,6 @@ func printTo(out io.Writer, state *core.BuildState, targets []core.BuildLabel, f
 		} else {
 			printPlain(out, t, fields, trimmedLabels)
 		}
-	}
-}
-
-func printJSON(out io.Writer, state *core.BuildState, targets []core.BuildLabel, labels []string) {
-	encoder := json.NewEncoder(out)
-	encoder.SetIndent("", "    ")
-
-	ts := make([]JSONTarget, 0, len(targets))
-	for _, target := range targets {
-		t := state.Graph.TargetOrDie(target)
-
-		hasLabel := len(labels) == 0
-		for _, prefix := range labels {
-			for _, label := range t.Labels {
-				if strings.HasPrefix(label, prefix) {
-					hasLabel = true
-					break
-				}
-			}
-			if hasLabel {
-				break
-			}
-		}
-		if hasLabel {
-			t := makeJSONTarget(state, t)
-			t.Name = target.Name
-			t.BuildLabel = target.Label().String()
-			ts = append(ts, t)
-		}
-	}
-
-	if len(ts) == 1 {
-		if err := encoder.Encode(ts[0]); err != nil {
-			log.Fatal(err)
-		}
-		return
-	}
-
-	if err := encoder.Encode(ts); err != nil {
-		log.Fatal(err)
 	}
 }
 
