@@ -588,7 +588,13 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	} else if target.IsTextFile {
 		return c.buildTextFile(target, command, digest)
 	}
-	return c.reallyExecute(tid, target, command, digest, needStdout, isTest, (c.state.ForceRerun && isTest) || (!isTest && c.state.ForceRebuild))
+
+	// We should skip the cache lookup (and override any existing action result) if we --rebuild, or --rerun and this is
+	// one fo the targets we're testing or building.
+	skipCacheLookup := (isTest && c.state.ForceRerun) || (!isTest && c.state.ForceRebuild)
+	skipCacheLookup = skipCacheLookup && c.state.IsOriginalTarget(target)
+
+	return c.reallyExecute(tid, target, command, digest, needStdout, isTest, skipCacheLookup)
 }
 
 // reallyExecute is like execute but after the initial cache check etc.
