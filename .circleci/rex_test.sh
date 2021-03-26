@@ -16,6 +16,9 @@ export PATH="$DIR:$PATH"
 # Start the servers in the background
 plz run parallel -p -v notice --colour --detach -o build.passenv:PATH //test/remote:run_elan //test/remote:run_zeal //test/remote:run_mettle
 
+# Give the servers a chance to start up.
+sleep 3
+
 # Test we can rebuild plz itself.
 plz build -o build.passenv:PATH --profile ci_remote -p -v notice --colour //src:please
 # Check we can actually run some tests
