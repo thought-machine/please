@@ -9,20 +9,20 @@ import (
 
 // ReverseDeps finds all transitive targets that depend on the set of input labels.
 func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hidden bool) {
-	for _, target := range getRevDepTransitiveLabels(state, labels, map[core.BuildLabel]struct{}{}, level) {
+	for _, target := range getRevDepTransitiveLabels(state, labels, map[core.BuildLabel]int{}, level) {
 		if hidden || target.Name[0] != '_' {
 			fmt.Printf("%s\n", target)
 		}
 	}
 }
 
-func getRevDepTransitiveLabels(state *core.BuildState, labels []core.BuildLabel, done map[core.BuildLabel]struct{}, level int) core.BuildLabels {
+func getRevDepTransitiveLabels(state *core.BuildState, labels []core.BuildLabel, done map[core.BuildLabel]int, level int) core.BuildLabels {
 	if level == 0 {
 		return nil
 	}
 	for _, l := range getRevDepsLabels(state, labels) {
-		if _, present := done[l]; !present {
-			done[l] = struct{}{}
+		if doneLevel, present := done[l]; !present || doneLevel > level {
+			done[l] = level
 			getRevDepTransitiveLabels(state, []core.BuildLabel{l}, done, level-1)
 		}
 	}
