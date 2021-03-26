@@ -55,13 +55,13 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 			}
 		}
 	}
+	var revdeps []core.BuildLabel
 	if level != 0 {
-		changed2 := make(map[*core.BuildTarget]struct{}, len(changed))
-		done := map[*core.BuildTarget]struct{}{}
-		for target := range changed {
-			addRevdeps(state, done, changed2, target, level)
+		labels := make([]core.BuildLabel, 0,  len(changed))
+		for l, _ := range changed {
+			labels = append(labels, l.Label)
 		}
-		changed = changed2
+		revdeps = getRevDepTransitiveLabels(state, labels, map[core.BuildLabel]struct{}{}, level)
 	}
 	labels := make(core.BuildLabels, 0, len(changed))
 	for target := range changed {
@@ -70,7 +70,7 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 		}
 	}
 	sort.Sort(labels)
-	return labels
+	return append(labels, revdeps...)
 }
 
 // targetChanged returns true if the given two targets are not equivalent.
@@ -108,19 +108,4 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) (hash []byte, 
 		}
 	}
 	return h.Sum(nil), nil
-}
-
-// addRevdeps walks back up the reverse dependencies of a target, marking them all changed.
-func addRevdeps(state *core.BuildState, done, changed map[*core.BuildTarget]struct{}, target *core.BuildTarget, level int) {
-	if _, present := done[target]; !present {
-		done[target] = struct{}{}
-		if state.ShouldInclude(target) {
-			changed[target] = struct{}{}
-		}
-		if level != 0 {
-			for _, revdep := range state.Graph.ReverseDependencies(target) {
-				addRevdeps(state, done, changed, revdep, level-1)
-			}
-		}
-	}
 }
