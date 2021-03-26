@@ -654,8 +654,8 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 	}()
 
 	resp, err := c.client.ExecuteAndWaitProgress(c.contextWithMetadata(target), &pb.ExecuteRequest{
-		InstanceName: c.instance,
-		ActionDigest: digest,
+		InstanceName:    c.instance,
+		ActionDigest:    digest,
 		SkipCacheLookup: skipCacheLookup,
 	}, updateProgress)
 	if err != nil {
