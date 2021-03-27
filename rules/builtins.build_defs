@@ -262,3 +262,6 @@ def json(value) -> str:
 def breakpoint():
     """Breaks into an interactive debugging session."""
     pass
+
+def semver_check(version:str, constraint:str) -> bool:
+    pass

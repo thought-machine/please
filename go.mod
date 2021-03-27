@@ -1,6 +1,7 @@
 module github.com/thought-machine/please
 
 require (
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/alecthomas/units v0.0.0-20201120081800-1786d5ef83d4 // indirect
 	github.com/bazelbuild/buildtools v0.0.0-20190228125936-4bcdbd1064fc

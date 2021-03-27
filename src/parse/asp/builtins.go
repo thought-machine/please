@@ -3,13 +3,15 @@ package asp
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/manifoldco/promptui"
 	"io"
 	"path"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	"github.com/manifoldco/promptui"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -56,6 +58,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
 	setNativeCode(s, "breakpoint", breakpoint)
+	setNativeCode(s, "semver_check", semverCheck)
 	stringMethods = map[string]*pyFunc{
 		"join":         setNativeCode(s, "join", strJoin),
 		"split":        setNativeCode(s, "split", strSplit),
@@ -956,4 +959,22 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 	}
 	fmt.Printf("Debugger exited, continuing...\n")
 	return None
+}
+
+func semverCheck(s *scope, args []pyObject) pyObject {
+	v, err := semver.NewVersion(string(args[0].(pyString)))
+	if err != nil {
+		s.Error("failed to parse version: %v", err)
+
+		return newPyBool(false)
+	}
+
+	c, err := semver.NewConstraint(string(args[1].(pyString)))
+	if err != nil {
+		s.Error("failed to parse constraint: %v", err)
+
+		return newPyBool(false)
+	}
+
+	return newPyBool(c.Check(v))
 }
