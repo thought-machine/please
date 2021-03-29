@@ -39,16 +39,6 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     lang_plugins = sorted(languages.items())
     plugins = [plugin for _, plugin in lang_plugins]
 
-    # TODO(pebers): genericise this bit?
-    if 'go' in languages:
-        base_path = get_base_path()
-        diff_pkg = basename(base_path) != name
-        if CONFIG.GO_IMPORT_PATH:
-            base_path = join_path(CONFIG.GO_IMPORT_PATH, base_path)
-        labels += [f'proto:go-map: {base_path}/{src}={base_path}/{name}' for src in srcs
-                   if not src.startswith(':') and not src.startswith('/') and
-                   (src != (name + '.proto') or len(srcs) > 1 or diff_pkg)]
-
     # Plugins can declare their own pre-build functions. If there are any, we need to apply them all in sequence.
     pre_build_functions = [plugin['pre_build'] for plugin in plugins if plugin['pre_build']]
     pre_build_functions += [_collect_transitive_labels]
@@ -127,17 +117,6 @@ def grpc_library(name:str, srcs:list, deps:list=None, visibility:list=None, lang
         root_dir = root_dir,
         protoc_flags = protoc_flags,
     )
-
-
-def _go_path_mapping(grpc):
-    """Used to update the Go path mapping; by default it doesn't really import in the way we want."""
-    grpc_plugin = 'plugins=grpc,' if grpc else ''
-    def _map_go_paths(rule_name):
-        mapping = ',M'.join(get_labels(rule_name, 'proto:go-map:'))
-        cmd = get_command(rule_name)
-        new_cmd = cmd.replace('--go_out=', f'--go_out={grpc_plugin}M{mapping}:')
-        set_command(rule_name, new_cmd)
-    return _map_go_paths
 
 
 def proto_language(language:str, extensions:list|dict=None, func:function, use_file_names:bool=True, protoc_flags:list=[],
@@ -263,7 +242,6 @@ def proto_languages():
             protoc_flags = ['--go_out="$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"', '--go_opt=paths=source_relative'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP],
-            pre_build = _go_path_mapping(False),
             provides=["srcs"],
         ),
         'js': proto_language(
@@ -358,7 +336,6 @@ def grpc_languages():
             ],
             deps = [CONFIG.PROTO_GO_DEP, CONFIG.GRPC_GO_DEP],
             # if we're using the old unified protoc plugin, tell it to generate grpc
-            pre_build = _go_path_mapping(not CONFIG.GRPC_GO_PLUGIN),
             provides=['srcs'],
         ),
         # We don't really support grpc-js right now, so this is the same as proto-js.
