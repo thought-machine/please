@@ -55,22 +55,27 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 			}
 		}
 	}
-	var revdeps []core.BuildLabel
-	if level != 0 {
-		labels := make([]core.BuildLabel, 0,  len(changed))
-		for l, _ := range changed {
-			labels = append(labels, l.Label)
-		}
-		revdeps = getRevDepTransitiveLabels(state, labels, map[core.BuildLabel]int{}, level)
-	}
 	labels := make(core.BuildLabels, 0, len(changed))
 	for target := range changed {
-		if state.ShouldInclude(target) {
-			labels = append(labels, target.Label)
+		labels = append(labels, target.Label)
+	}
+	if level != 0 {
+		revdeps := map[core.BuildLabel]int{}
+		getRevDepTransitiveLabels(state, labels, revdeps, level)
+
+		for dep, _ := range revdeps {
+			labels = append(labels, dep)
 		}
 	}
-	sort.Sort(labels)
-	return append(labels, revdeps...)
+
+	ls := make(core.BuildLabels, 0, len(labels))
+	for _, l := range labels {
+		if state.ShouldInclude(state.Graph.TargetOrDie(l)) {
+			ls = append(ls, l)
+		}
+	}
+	sort.Sort(ls)
+	return ls
 }
 
 // targetChanged returns true if the given two targets are not equivalent.

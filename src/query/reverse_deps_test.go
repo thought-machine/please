@@ -29,10 +29,21 @@ func TestReverseDeps(t *testing.T) {
 	pkg.AddTarget(leaf)
 	graph.AddPackage(pkg)
 
-	labels := getRevDepTransitiveLabels(state, []core.BuildLabel{branch.Label}, map[core.BuildLabel]int{}, -1)
+	labels := revDepsLabels(state, []core.BuildLabel{branch.Label}, -1)
 	assert.Equal(t, core.BuildLabels{leaf.Label}, labels)
-	labels = getRevDepTransitiveLabels(state, []core.BuildLabel{root.Label}, map[core.BuildLabel]int{}, -1)
+	labels = revDepsLabels(state, []core.BuildLabel{root.Label}, -1)
 	assert.Equal(t, core.BuildLabels{branch.Label, leaf.Label}, labels)
-	labels = getRevDepTransitiveLabels(state, []core.BuildLabel{root.Label}, map[core.BuildLabel]int{}, 1)
+	labels = revDepsLabels(state, []core.BuildLabel{root.Label}, 1)
 	assert.Equal(t, core.BuildLabels{branch.Label}, labels)
+}
+
+func revDepsLabels(state *core.BuildState, labels []core.BuildLabel, levelsToGo int) core.BuildLabels {
+	ls := map[core.BuildLabel]int{}
+	getRevDepTransitiveLabels(state, labels, ls, levelsToGo)
+
+	ret := make([]core.BuildLabel, 0, len(ls))
+	for l, _ := range ls {
+		ret = append(ret, l)
+	}
+	return ret
 }

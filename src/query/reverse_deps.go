@@ -2,28 +2,30 @@ package query
 
 import (
 	"fmt"
-	"sort"
-
 	"github.com/thought-machine/please/src/core"
 )
 
 // ReverseDeps finds all transitive targets that depend on the set of input labels.
 func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hidden bool) {
-	for _, target := range getRevDepTransitiveLabels(state, labels, map[core.BuildLabel]int{}, level) {
+	targets := make(map[core.BuildLabel]int, 100)
+	getRevDepTransitiveLabels(state, labels, targets, level)
+	for target, _ := range targets {
 		if hidden || target.Name[0] != '_' {
 			fmt.Printf("%s\n", target)
 		}
 	}
 }
 
-func getRevDepTransitiveLabels(state *core.BuildState, labels []core.BuildLabel, done map[core.BuildLabel]int, level int) core.BuildLabels {
-	if level == 0 {
-		return nil
+func getRevDepTransitiveLabels(state *core.BuildState, labels []core.BuildLabel, done map[core.BuildLabel]int, levelsToGo int) {
+	if levelsToGo == 0 {
+		return
 	}
 	for _, l := range getRevDepsLabels(state, labels) {
-		if doneLevel, present := done[l]; !present || doneLevel > level {
-			done[l] = level
-			getRevDepTransitiveLabels(state, []core.BuildLabel{l}, done, level-1)
+		// The level starts high and is decremented, so if we saw this target was a lower level, that means we need to
+		// reprocess it with more levels to go.
+		if doneLevel, present := done[l]; !present || levelsToGo > doneLevel {
+			done[l] = levelsToGo
+			getRevDepTransitiveLabels(state, []core.BuildLabel{l}, done, levelsToGo-1)
 		}
 	}
 	ret := core.BuildLabels{}
@@ -32,8 +34,6 @@ func getRevDepTransitiveLabels(state *core.BuildState, labels []core.BuildLabel,
 			ret = append(ret, label)
 		}
 	}
-	sort.Sort(ret)
-	return ret
 }
 
 // getRevDepsLabels returns a slice of build labels that are the reverse dependencies of the build labels being passed in
@@ -70,7 +70,5 @@ func getRevDepsLabels(state *core.BuildState, labels []core.BuildLabel) core.Bui
 	for target := range uniqueTargets {
 		targets = append(targets, target.Label)
 	}
-	sort.Sort(targets)
-
 	return targets
 }
