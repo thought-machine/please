@@ -374,6 +374,8 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	metadata, ar, err := c.execute(tid, target, command, stampedDigest, false, needStdout)
 	if target.Stamp && err == nil {
 		// Store results under unstamped digest too.
+		// TODO(peterebden): Think about the best way to do this; this is the only place we update action results,
+		//                   can we come up with a different approach such that we don't?
 		c.locallyCacheResults(target, unstampedDigest, metadata, ar)
 		c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 			InstanceName: c.instance,
@@ -557,6 +559,10 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 // maybeRetrieveResults is like retrieveResults but only retrieves if we aren't forcing a rebuild of the target
 // (i.e. not if we're doing plz build --rebuild or plz test --rerun).
 func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult) {
+	// The various 'special' rule types don't get cached as normal build actions.
+	if target.IsFilegroup || target.IsRemoteFile || target.IsTextFile {
+		return nil, nil
+	}
 	if !c.state.ShouldRebuild(target) && !(c.state.NeedTests && isTest && c.state.ForceRerun) {
 		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking remote...")
 		if metadata, ar := c.retrieveResults(target, command, digest, needStdout, isTest); metadata != nil {
@@ -796,7 +802,6 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 		return nil, nil, fmt.Errorf("Failed to download file: %s", err)
 	}
 	c.state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Downloaded.")
-	// If we get here, the blob exists in the CAS. Create an ActionResult corresponding to it.
 	outs := target.Outputs()
 	ar := &pb.ActionResult{
 		OutputFiles: []*pb.OutputFile{{
@@ -804,13 +809,6 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 			Digest:       resp.BlobDigest,
 			IsExecutable: target.IsBinary,
 		}},
-	}
-	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
-		InstanceName: c.instance,
-		ActionDigest: actionDigest,
-		ActionResult: ar,
-	}); err != nil {
-		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
 	}
 	return &core.BuildMetadata{}, ar, nil
 }
@@ -848,13 +846,6 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 	}); err != nil {
 		return nil, nil, err
 	}
-	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
-		InstanceName: c.instance,
-		ActionDigest: actionDigest,
-		ActionResult: ar,
-	}); err != nil {
-		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
-	}
 	return &core.BuildMetadata{}, ar, nil
 }
 
@@ -875,13 +866,6 @@ func (c *Client) buildTextFile(target *core.BuildTarget, command *pb.Command, ac
 		return nil
 	}); err != nil {
 		return nil, nil, err
-	}
-	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
-		InstanceName: c.instance,
-		ActionDigest: actionDigest,
-		ActionResult: ar,
-	}); err != nil {
-		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
 	}
 	return &core.BuildMetadata{}, ar, nil
 }
