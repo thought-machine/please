@@ -25,7 +25,6 @@ filegroup(
 filegroup(
     name = "target4",
     labels = ["leaf"],
-    deps = [":target1"],
 )
 
 plz_e2e_test(
@@ -51,6 +50,6 @@ plz_e2e_test(
 # 3 -> 2 -> 4 (but 4 is at level 2 here so should be included)
 plz_e2e_test(
     name = "query_revdeps_multiple_paths_test",
-    cmd = "plz query revdeps --level=2 //test/revdeps:target3",
+    cmd = "plz query revdeps --level=2 //test/revdeps:target4",
     expected_output = "query_revdeps_multiple_paths_test.txt",
 )
