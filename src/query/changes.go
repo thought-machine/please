@@ -63,7 +63,7 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 		revdeps := map[core.BuildLabel]int{}
 		getRevDepTransitiveLabels(state, labels, revdeps, level)
 
-		for dep, _ := range revdeps {
+		for dep := range revdeps {
 			labels = append(labels, dep)
 		}
 	}

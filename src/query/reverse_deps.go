@@ -12,8 +12,8 @@ func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hi
 	getRevDepTransitiveLabels(state, labels, targets, level)
 
 	ls := make(core.BuildLabels, 0, len(targets))
-	for target, _ := range targets {
-		if hidden || target.Name[0] != '_' && state.ShouldInclude(state.Graph.TargetOrDie(target)){
+	for target := range targets {
+		if hidden || target.Name[0] != '_' && state.ShouldInclude(state.Graph.TargetOrDie(target)) {
 			ls = append(ls, target)
 		}
 	}
