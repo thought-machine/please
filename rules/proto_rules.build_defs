@@ -39,7 +39,8 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     lang_plugins = sorted(languages.items())
     plugins = [plugin for _, plugin in lang_plugins]
 
-    # TODO(jpoole): Perhaps we can set this
+    # TODO(jpoole): Remove this once we drop support for the old unified grpc+proto plugin. We should be able to set
+    #   `option go_package = ...; on the proto and rely on import configs after that.
     if 'go' in languages:
         base_path = get_base_path()
         diff_pkg = basename(base_path) != name
@@ -70,7 +71,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
             tag_name = f'{language}_{p}'
             current_package = package_name()
             # TODO(jpoole): the provide stuff didn't really work because the mapping isn't always straight forward
-            # We probably need to make this a map
+            #   We probably need to make this a map
             if p == 'srcs' and language == 'go':
                 provides['go_src'] = f'//{current_package}:_{name}#go_srcs'
             else:
