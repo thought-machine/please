@@ -3,16 +3,24 @@ package query
 import (
 	"fmt"
 	"github.com/thought-machine/please/src/core"
+	"sort"
 )
 
 // ReverseDeps finds all transitive targets that depend on the set of input labels.
 func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hidden bool) {
 	targets := make(map[core.BuildLabel]int, 100)
 	getRevDepTransitiveLabels(state, labels, targets, level)
+
+	ls := make(core.BuildLabels, 0, len(targets))
 	for target, _ := range targets {
 		if hidden || target.Name[0] != '_' && state.ShouldInclude(state.Graph.TargetOrDie(target)){
-			fmt.Printf("%s\n", target)
+			ls = append(ls, target)
 		}
+	}
+	sort.Sort(ls)
+
+	for _, l := range ls {
+		fmt.Println(l.String())
 	}
 }
 

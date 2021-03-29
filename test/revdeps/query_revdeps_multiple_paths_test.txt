@@ -1,0 +1,4 @@
+//test/revdeps:target1
+//test/revdeps:target2
+//test/revdeps:target3
+//test/revdeps:target4
