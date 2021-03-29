@@ -45,9 +45,9 @@ plz_e2e_test(
     expected_output = "query_revdeps_single_level_test.txt",
 )
 
-# Test that we always include 4 when querying deps at level 2
-# 3 -> 2 -> 1 -> 4 (4 is at level 3 here so would be excluded)
-# 3 -> 2 -> 4 (but 4 is at level 2 here so should be included)
+# Test that we always include 3 when querying deps at level 2
+# 3 -> 2 -> 1 -> 4 (3 is 3 levels deep here so would be excluded)
+# 3 -> 2 -> 4 (but is at level 2 here so should be included)
 plz_e2e_test(
     name = "query_revdeps_multiple_paths_test",
     cmd = "plz query revdeps --level=2 //test/revdeps:target4",

@@ -2,8 +2,9 @@ package query
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/core"
 	"sort"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 // ReverseDeps finds all transitive targets that depend on the set of input labels.
