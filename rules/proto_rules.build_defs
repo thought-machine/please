@@ -260,7 +260,7 @@ def proto_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out="$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"'],
+            protoc_flags = ['--go_out="$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"', '--go_opt=paths=source_relative'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP],
             pre_build = _go_path_mapping(False),
@@ -343,9 +343,12 @@ def grpc_languages():
                 '--go_out="$OUT_DIR"',
                 '--plugin=protoc-gen-go="`which $TOOLS_GO`"',
                 '--plugin=protoc-gen-go-grpc="`which $TOOLS_GRPC_GO`"',
+                '--go_opt=paths=source_relative',
+                '--go-grpc_opt=paths=source_relative',
             ] if CONFIG.GRPC_GO_PLUGIN else [
                 '--go_out="$OUT_DIR"',
                 '--plugin=protoc-gen-go="`which $TOOLS_GO`"',
+                '--go_opt=paths=source_relative',
             ],
             tools = {
                 'go': [CONFIG.PROTOC_GO_PLUGIN],
