@@ -838,3 +838,9 @@ go_module(
         ":zstd",
     ],
 )
+
+go_module(
+    name = "semver2",
+    module = "github.com/Masterminds/semver/v3",
+    version = "v3.1.1",
+)
