@@ -359,8 +359,8 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
     tools = {'protoc': [CONFIG.PROTOC_TOOL]}
     plugin_tools = plugin['tools']
     if isinstance(plugin_tools, dict):
-        for name, value in plugin_tools.items():
-            tools[name] = value
+        for tool_name, tool in plugin_tools.items():
+            tools[tool_name] = tool
     else:
         tools[language] = plugin_tools
 
