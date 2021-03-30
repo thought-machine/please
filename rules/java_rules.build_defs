@@ -422,6 +422,7 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
         exported_deps = deps,  # easiest to assume these are always exported.
         test_only = test_only,
         binary = binary,
+        hashes = hashes,
     )
     provides = {'java': bin_rule}
     srcs = [bin_rule]
@@ -437,7 +438,6 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
             url = urls,
             out = filename,
             labels = ['maven-sources'],
-            hashes = hashes,
             licences = licences,
             test_only = test_only,
         )
