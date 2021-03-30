@@ -40,6 +40,7 @@ func newClientInstance(name string) *Client {
 	config.Remote.NumExecutors = 1
 	config.Remote.Instance = name
 	config.Remote.Secure = false
+	config.Remote.VerifyOutputs = false
 	state := core.NewBuildState(config)
 	state.Config.Remote.URL = "127.0.0.1:9987"
 	state.Config.Remote.AssetURL = state.Config.Remote.URL

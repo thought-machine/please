@@ -465,7 +465,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	if missing, err := c.client.MissingBlobs(context.Background(), digests); err != nil {
 		return fmt.Errorf("Failed to verify action result outputs: %s", err)
 	} else if len(missing) != 0 {
-		return fmt.Errorf("Action result missing %d blobs", len(missing))
+		return fmt.Errorf("Action result missing %d blobs: %s", len(missing), missing)
 	}
 	log.Debug("Verified action result for %s in %s", target, time.Since(start))
 	return nil
