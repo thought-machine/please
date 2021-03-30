@@ -357,8 +357,8 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
     )
 
 
-def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:list=None, deps:list=None,
-              visibility:list=None, filename:str=None, sources:bool=True, licences:list=None,
+def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:list=None, sources_hashes:list|str=None,
+              deps:list=None, visibility:list=None, filename:str=None, sources:bool=True, licences:list=None,
               native:bool=False, artifact_type:str=None, test_only:bool&testonly=False,
               binary:bool=False, classifier:str='', classifier_sources_override:str=''):
     """Fetches a single Java dependency from Maven.
@@ -368,7 +368,8 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
       id (str): Maven id of the artifact (eg. org.junit:junit:4.1.0)
       repository (str | list): Maven repositories to fetch deps from.
       hash (str): Hash for produced rule.
-      hashes (list): List of hashes for produced rule.
+      hashes (list): List of hashes downloaded classes jar.
+      sources_hashes (list): List of hashes for the downloaded sources jar.
       deps (list): Labels of dependencies, as usual.
       visibility (list): Visibility label.
       filename (str): Filename we attempt to download. Defaults to standard Maven name.
@@ -440,6 +441,7 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
             labels = ['maven-sources'],
             licences = licences,
             test_only = test_only,
+            hashes = sources_hashes,
         )
         srcs += [src_rule]
 
