@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp"
 )
 
 // SignFile creates a detached ASCII-armoured signature for the given file.
