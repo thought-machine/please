@@ -426,6 +426,19 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 		}
 	}
 
+	for _, out := range ar.OutputDirectories {
+		tree := &pb.Tree{}
+		if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(out.TreeDigest), tree); err != nil {
+			return err
+		}
+		for _, dir := range append(tree.Children, tree.Root) {
+			if _, err := c.client.WriteProto(context.Background(), dir); err != nil {
+				return err
+			}
+		}
+	}
+
+
 	if !verifyRemoteBlobsExist {
 		return nil
 	}
