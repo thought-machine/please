@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/stretchr/testify/assert"
 )
 
 const (

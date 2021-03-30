@@ -10,8 +10,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/thought-machine/please/src/cli"
 	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/thought-machine/please/src/cli"
 )
 
 // identity is the signing identity of this key.
