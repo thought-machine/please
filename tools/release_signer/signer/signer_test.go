@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/openpgp"
 )
 
 const (
@@ -30,7 +30,7 @@ func verifyFile(signed, signature, keyring string) bool {
 	must(err)
 	entities, err := openpgp.ReadArmoredKeyRing(f3)
 	must(err)
-	_, err = openpgp.CheckArmoredDetachedSignature(entities, f1, f2)
+	_, err = openpgp.CheckArmoredDetachedSignature(entities, f1, f2, nil)
 	return err == nil
 }
 

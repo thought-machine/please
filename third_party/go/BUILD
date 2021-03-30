@@ -19,14 +19,31 @@ go_module(
     install = [
         "ssh/terminal",
         "cast5",
-
-        # TODO(jpoole): consider if requiring this to be explicit is a good idea or if we should do the
-        # `openpgp/openpgp.a` "hack" here
-        "openpgp/...",
-        "openpgp",
     ],
     module = "golang.org/x/crypto",
     version = "7b85b097bf7527677d54d3220065e966a0e3b613",
+)
+
+go_module(
+    name = "go-crypto",
+    module = "github.com/ProtonMail/go-crypto",
+    install = [
+        "bitcurves",
+        "brainpool",
+        "cast5",
+        "curve25519",
+        "eax",
+        "ed25519",
+        "internal/byteutil",
+        "internal/randutil",
+        "internal/syscall/...",
+        "ocb",
+        "openpgp",
+        "openpgp/...",
+        "rand",
+        "rsa",
+    ],
+    version = "3900d675f39ba9686203d137886d74fad620ae87",
 )
 
 go_module(
