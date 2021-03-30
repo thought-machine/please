@@ -2,7 +2,7 @@ package(default_visibility = ["PUBLIC"])
 
 maven_jar(
     name = "junit",
-    hash = "9f43fea92033ad82bcad2ae44cec5c82abc9d6ee4b095cab921d11ead98bf2ff",
+    hash = "59721f0805e223d84b90677887d9ff567dc534d7c502ca903c0c2b17f05c116a",
     id = "junit:junit:4.12",
     deps = [
         ":hamcrest",
@@ -11,13 +11,13 @@ maven_jar(
 
 maven_jar(
     name = "hamcrest",
-    hash = "c53535c3d25b5bf0b00a324a5583c7dd2fed0fa6d1bbc622e2dec460c24faab3",
+    hash = "4877670629ab96f34f5f90ab283125fcd9acb7e683e66319a68be6eb2cca60de",
     id = "org.hamcrest:hamcrest-all:1.3",
 )
 
 maven_jar(
     name = "gson",
-    hash = "32821f053a181c3568ceeeff571e54de9f68e1bca99f92e37cf966a5583b8637",
+    hash = "53bc5fe7644db908e6071d6c8b59059acadce7fc14217933d7251994e8673104",
     id = "com.google.code.gson:gson:2.8.4",
 )
 
@@ -26,7 +26,7 @@ maven_jar(
 # As a result the versions are no longer directly connected to the ones in this repo.
 maven_jar(
     name = "junit_runner",
-    hashes = ["59f642a5fc6addc429ec4cac1364fa1d45000525f43fbc2fbef35cf585cbadeb"],
+    hashes = ["2b4af73adbba86f8c8a16def4d369682ba7de83147cfac09da549aba1ddf5f80"],
     id = "build.please:junit-runner:13.4.0",
     deps = [
         ":hamcrest",
@@ -37,13 +37,13 @@ maven_jar(
 
 maven_jar(
     name = "jacoco_shaded",
-    hashes = ["8739c76e681f900923b900c9df0ef75cf421d39cabb54650c4b9ad19b6a76d85"],
+    hashes = ["9927bc9184d434c8ed0ed7ba46257df36e31dbd6bd224845d7a02d9e0894da4c"],
     id = "build.please:jacoco-shaded:0.8.4",
 )
 
 maven_jar(
     name = "javac_worker",
-    hashes = ["3c49d7a4965aaf17fa409416df38b0ead2a0535d9a7e4dd75329557ef63ec964"],
+    hashes = ["63010a359fbac75beeac5f15f25b0fd489f1af8f7673ff8d170cc062eb1c699f"],
     id = "build.please:javac-worker:13.4.0",
     deps = [":gson"],
 )
