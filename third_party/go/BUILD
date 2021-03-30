@@ -36,7 +36,7 @@ go_module(
         "ed25519",
         "internal/byteutil",
         "internal/randutil",
-        "internal/syscall/unix",
+        "internal/syscall/...",
         "ocb",
         "openpgp",
         "openpgp/...",
