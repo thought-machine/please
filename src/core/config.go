@@ -315,6 +315,7 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.NumExecutors = 20 // kind of arbitrary
 	config.Remote.Secure = true
 	config.Remote.VerifyOutputs = true
+	config.Remote.UploadDirs = true
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
@@ -465,6 +466,7 @@ type Configuration struct {
 		Timeout              cli.Duration `help:"Timeout for connections made to the remote server."`
 		Secure               bool         `help:"Whether to use TLS for communication or not."`
 		VerifyOutputs        bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
+		UploadDirs           bool         `help:"Uploads individual directory blobs after build actions. This might not be necessary with some servers, but if you aren't sure, you should leave it on."`
 		Shell                string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
 		Platform             []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 		CacheDuration        cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`

@@ -3,7 +3,7 @@ go_library(
     srcs = ["signer.go"],
     visibility = ["//tools/release_signer"],
     deps = [
-        "//third_party/go:xcrypto",
+        "//third_party/go:go-crypto",
     ],
 )
 
@@ -14,6 +14,6 @@ go_test(
     deps = [
         ":signer",
         "//third_party/go:testify",
-        "//third_party/go:xcrypto",
+        "//third_party/go:go-crypto",
     ],
 )

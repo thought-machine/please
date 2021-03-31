@@ -741,7 +741,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 			return nil, nil, err
 		}
 		log.Debug("Completed remote build action for %s", target)
-		if err := c.verifyActionResult(target, command, digest, response.Result, false, isTest); err != nil {
+		if err := c.verifyActionResult(target, command, digest, response.Result, c.state.Config.Remote.VerifyOutputs && !isTest, isTest); err != nil {
 			return metadata, response.Result, err
 		}
 		c.locallyCacheResults(target, digest, metadata, response.Result)
