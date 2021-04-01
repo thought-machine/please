@@ -316,6 +316,9 @@ func TestDirectoryMetadataStore(t *testing.T) {
 	assert.True(t, os.IsNotExist(err))
 }
 
+func TestTargetPlatform(t *testing.T) {
+}
+
 // Store is a small hack that stores a target's outputs for testing only.
 func (c *Client) Store(target *core.BuildTarget) error {
 	if err := c.CheckInitialised(); err != nil {

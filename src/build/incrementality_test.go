@@ -57,6 +57,7 @@ var KnownFields = map[string]bool{
 	"ExitOnError":                 true,
 	"EntryPoints":                 true,
 	"Env":                         true,
+	"Platform":                    true,
 
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,

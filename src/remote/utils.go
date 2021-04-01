@@ -464,6 +464,18 @@ func convertPlatform(config *core.Configuration) *pb.Platform {
 	return platform
 }
 
+// targetPlatform returns the platform properties for a target, including any global ones.
+func (c *Client) targetPlatform(target *core.BuildTarget) *pb.Platform {
+	if target.Platform == nil {
+		return c.platform
+	}
+	platform := &pb.Platform{Properties: c.platform.Properties}
+	for k, v := range target.Platform {
+		c.platform.Properties = append(c.platform.Properties, &pb.Platform_Property{Name: k, Value: v})
+	}
+	return platform
+}
+
 // removeOutputs removes all outputs for a target.
 func removeOutputs(target *core.BuildTarget) error {
 	outDir := target.OutDir()

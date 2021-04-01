@@ -111,7 +111,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 	cmd, err := core.ReplaceSequences(state, target, cmd)
 	return &pb.Command{
-		Platform:             c.platform,
+		Platform:             c.targetPlatform(target),
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp), target.Sandbox),
 		OutputPaths:          outs,
