@@ -53,6 +53,19 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     pre_build_functions = [plugin['pre_build'] for plugin in plugins if plugin['pre_build']]
     pre_build_functions += [_collect_transitive_labels]
     pre_build = lambda rule: [fn(rule) for fn in pre_build_functions]
+
+    # If the protoc tool is a build rule, depend on it as it's probably a protoc_binary() which provides the well known
+    # types
+    if CONFIG.PROTOC_TOOL.startswith("//") or CONFIG.PROTOC_TOOL.startswith(":"):
+        # Extract the wkt into another rule as we already depend on the main rule as a tool.
+        deps += [filegroup(
+            name = name,
+            tag = "protoc_wkt",
+            exported_deps = [CONFIG.PROTOC_TOOL],
+            test_only = test_only,
+            requires = ["proto"],
+        )]
+
     protoc_rules = {lang: _protoc_rule(name, srcs, deps, lang, plugin, protoc_flags, root_dir, pre_build, labels, test_only,
                                        visibility) for lang, plugin in lang_plugins}
 
@@ -404,11 +417,6 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
 
     cmd = f'mkdir out_dir && mkdir {language_out_dir} && {cmd}'
 
-    # If the protoc tool is a build rule, depend on it as it's probably a protoc_binary() which provides the well known
-    # types
-    if CONFIG.PROTOC_TOOL.startswith("//") or CONFIG.PROTOC_TOOL.startswith(":"):
-        deps += [CONFIG.PROTOC_TOOL]
-
     # protoc_flags are applied transitively to dependent rules via labels.
     labels += ['protoc:' + flag for flag in protoc_flags] + ["codegen"]
     return build_rule(
@@ -483,7 +491,6 @@ def protoc_binary(name, url:str|dict = '', version:str = '', hashes=None, deps=N
         cmd = '$TOOL x $SRCS --strip_prefix include',
         labels = [
             'protoc:-I"$TMP_DIR"/' + package_name(),
-            'protoc:-I"$TMP_DIR"',
         ],
     )
     return genrule(
