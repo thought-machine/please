@@ -26,7 +26,6 @@ go_module(
 
 go_module(
     name = "go-crypto",
-    module = "github.com/ProtonMail/go-crypto",
     install = [
         "bitcurves",
         "brainpool",
@@ -43,6 +42,7 @@ go_module(
         "rand",
         "rsa",
     ],
+    module = "github.com/ProtonMail/go-crypto",
     version = "3900d675f39ba9686203d137886d74fad620ae87",
 )
 
