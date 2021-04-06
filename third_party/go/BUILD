@@ -347,7 +347,7 @@ go_module(
     name = "queue",
     install = ["queue"],
     module = "github.com/Workiva/go-datastructures",
-    version = "064f3ea06ab2337e6eaf42052392d14f779e91cb",
+    version = "v1.0.53",
 )
 
 go_module(
