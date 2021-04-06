@@ -13,21 +13,9 @@ func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hi
 	targets := FindRevdeps(state, labels, hidden, level)
 	ls := make(core.BuildLabels, 0, len(targets))
 
-	done := make(map[core.BuildLabel]struct{}, len(targets))
 	for target := range targets {
 		if state.ShouldInclude(target) {
-			label := target.Label
-			// Resolve targets to their parent unless including hidden targets
-			if parent := target.Parent(state.Graph); !hidden && parent != nil {
-				label = parent.Label
-			}
-
-			// Exclude duplicates where we had many children of the same target
-			if _, present := done[label]; present {
-				continue
-			}
-			done[label] = struct{}{}
-			ls = append(ls, label)
+			ls = append(ls, target.Label)
 		}
 	}
 	sort.Sort(ls)
@@ -43,14 +31,17 @@ type node struct {
 	depth  int
 }
 
-// openSet represents the queue of nodes we need to process in the graph
+// openSet represents the queue of nodes we need to process in the graph. There are no duplicates in this set and the
+// queue will be ordered low to high by depth.
+//
+// NB: We don't need to explicitly order this. Paths either cost 1 or 0, but all 0 cost paths are equivalent e.g. paths
+// :lib1 -> :_lib1#foo -> :lib2, lib1 -> :_lib1#foo -> :_lib1#bar -> :lib2, and :lib1 -> lib2 all have a cost of 1 and
+// will result in :lib1 and :lib2 as outputs. It doesn't matter which is explored to generate the output.
 type openSet struct {
 	items *list.List
 
-	// depths contains a map of labels and the depth we processed them at.
-	// This is used to efficiently push nodes to the queue when we revisit them
-	// at a lower depth
-	depths map[core.BuildLabel]int
+	// done contains a map of targets we've already processed.
+	done map[core.BuildLabel]struct{}
 }
 
 // Push implements pushing a node onto the queue of nodes to process. It will only add the node if we need to to process
@@ -58,8 +49,8 @@ type openSet struct {
 func (os *openSet) Push(n *node) {
 	// Add the node to the open set of nodes to process if we've not seen it before or we saw it as a deeper level
 	// and need to reprocess
-	if depth, present := os.depths[n.target.Label]; !present || depth > n.depth {
-		os.depths[n.target.Label] = n.depth
+	if _, present := os.done[n.target.Label]; !present {
+		os.done[n.target.Label] = struct {}{}
 		os.items.PushBack(n)
 	}
 }
@@ -103,15 +94,14 @@ func newRevdeps(graph *core.BuildGraph, hidden bool, maxDepth int) *revdeps {
 		subincludes: subincludes,
 		os: &openSet{
 			items:  list.New(),
-			depths: map[core.BuildLabel]int{},
+			done: map[core.BuildLabel]struct{}{},
 		},
 		hidden:   hidden,
 		maxDepth: maxDepth,
 	}
 }
 
-// FindRevdeps will return a list of build targets that are reverse dependencies of the provided labels. This may
-// include duplicate targets.
+// FindRevdeps will return a set of build targets that are reverse dependencies of the provided labels.
 func FindRevdeps(state *core.BuildState, targets core.BuildLabels, hidden bool, depth int) map[*core.BuildTarget]struct{} {
 	r := newRevdeps(state.Graph, hidden, depth)
 	// Initialise the open set with the original targets
