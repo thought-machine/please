@@ -191,6 +191,8 @@ type BuildState struct {
 	// True if we only need to parse the initial package (i.e. don't search downwards
 	// through deps) - for example when doing `plz query print`.
 	ParsePackageOnly bool
+	// True if the parse request is for the whole graph.
+	ParsingWholeGraph bool
 	// True if this build is triggered by watching for changes
 	Watch bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
@@ -867,7 +869,7 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 		return nil
 	}
 	target.NeededForSubinclude = target.NeededForSubinclude || neededForSubinclude
-	if state.NeedBuild || forceBuild {
+	if state.NeedBuild || forceBuild || (!state.ParsingWholeGraph && state.IsOriginalTarget(target)) {
 		if target.SyncUpdateState(Semiactive, Active) {
 			if target.IsTest && state.NeedTests {
 				if state.TestSequentially {
