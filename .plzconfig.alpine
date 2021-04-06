@@ -1,6 +1,6 @@
 [proto]
 protoctool = protoc
-protoc_flag = -I/usr/local/include
+protocflag = -I/usr/local/include
 
 [go]
 defaultstatic = true
