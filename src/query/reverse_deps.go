@@ -32,7 +32,7 @@ type node struct {
 }
 
 // openSet represents the queue of nodes we need to process in the graph. There are no duplicates in this set and the
-// queue will be ordered low to high by depth.
+// queue will be ordered low to high by depth i.e. in the order they must be processed
 //
 // NB: We don't need to explicitly order this. Paths either cost 1 or 0, but all 0 cost paths are equivalent e.g. paths
 // :lib1 -> :_lib1#foo -> :lib2, lib1 -> :_lib1#foo -> :_lib1#bar -> :lib2, and :lib1 -> lib2 all have a cost of 1 and
@@ -44,17 +44,15 @@ type openSet struct {
 	done map[core.BuildLabel]struct{}
 }
 
-// Push implements pushing a node onto the queue of nodes to process. It will only add the node if we need to to process
-// it because either it 1) hasn't been seen before, or 2) has been seen but at a lower level
+// Push implements pushing a node onto the queue of nodes to process, deduplicating nodes we've seen before.
 func (os *openSet) Push(n *node) {
-	// Add the node to the open set of nodes to process if we've not seen it before or we saw it as a deeper level
-	// and need to reprocess
 	if _, present := os.done[n.target.Label]; !present {
 		os.done[n.target.Label] = struct {}{}
 		os.items.PushBack(n)
 	}
 }
 
+// Pop fetches the next node off the queue for us to process
 func (os *openSet) Pop() *node {
 	next := os.items.Front()
 	if next == nil {
