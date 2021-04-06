@@ -16,7 +16,7 @@ func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) error {
 		for _, l2 := range expandAllTargets(graph, to) {
 			if path := s.SomePath(graph.TargetOrDie(l1), graph.TargetOrDie(l2)); len(path) != 0 {
 				fmt.Println("Found path:")
-				for _, l := range filterPath(path) {
+				for _, l := range path {
 					fmt.Printf("  %s\n", l)
 				}
 				return nil

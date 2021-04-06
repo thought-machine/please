@@ -354,6 +354,11 @@ func (label BuildLabel) Parent() BuildLabel {
 	return label
 }
 
+// IsHidden return whether the target is an intermediate target created by the build definition.
+func (label BuildLabel) IsHidden() bool {
+	return label.Name[0] == '_'
+}
+
 // HasParent returns true if the build label has a parent that's not itself.
 func (label BuildLabel) HasParent() bool {
 	return label.Parent() != label

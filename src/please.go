@@ -674,7 +674,7 @@ var buildFunctions = map[string]func() int{
 			level = -1
 		case direct && (level == -2):
 			level = 1
-		case (level == -2):
+		case level == -2:
 			level = 0
 		}
 		runInexact := func(files []string) int {

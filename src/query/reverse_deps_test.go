@@ -37,13 +37,12 @@ func TestReverseDeps(t *testing.T) {
 	assert.ElementsMatch(t, core.BuildLabels{branch.Label}, labels)
 }
 
-func revDepsLabels(state *core.BuildState, labels []core.BuildLabel, levelsToGo int) core.BuildLabels {
-	ls := map[core.BuildLabel]int{}
-	getRevDepTransitiveLabels(state, labels, ls, levelsToGo)
+func revDepsLabels(state *core.BuildState, labels []core.BuildLabel, depth int) core.BuildLabels {
+	ts := FindRevdeps(state, labels, false, depth)
 
-	ret := make([]core.BuildLabel, 0, len(ls))
-	for l := range ls {
-		ret = append(ret, l)
+	ret := make([]core.BuildLabel, 0, len(ts))
+	for t := range ts {
+		ret = append(ret, t.Label)
 	}
 	return ret
 }

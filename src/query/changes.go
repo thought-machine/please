@@ -59,14 +59,17 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 	for target := range changed {
 		labels = append(labels, target.Label)
 	}
-	if level != 0 {
-		revdeps := map[core.BuildLabel]int{}
-		getRevDepTransitiveLabels(state, labels, revdeps, level)
 
+	if level != 0 {
+		revdeps := FindRevdeps(state, labels, true, level)
 		for dep := range revdeps {
-			labels = append(labels, dep)
+			if _, present := changed[dep]; !present {
+				labels = append(labels, dep.Label)
+			}
 		}
 	}
+
+
 
 	ls := make(core.BuildLabels, 0, len(labels))
 	for _, l := range labels {
