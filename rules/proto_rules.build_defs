@@ -384,7 +384,7 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
     else:
         tools[language] = plugin_tools
 
-    flags = [' '.join(plugin['protoc_flags'])]
+    flags = [' '.join(plugin['protoc_flags'])] + CONFIG.PROTOC_FLAGS
 
     out_dir = "out_dir"
     language_out_dir = plugin['language']
