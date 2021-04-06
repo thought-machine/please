@@ -31,14 +31,12 @@ type taskType int
 // The values here are fiddled to make Compare work easily.
 // Essentially we prioritise on the higher bits only and use the lower ones to make
 // the values unique.
-// Subinclude tasks order first, but we're happy for all build / parse / test tasks
+// Subinclude tasks order first, but we're happy for all build / test tasks
 // to be treated equivalently.
 const (
 	Kill            taskType = 0x0000 | 0 //nolint:staticcheck
 	SubincludeBuild          = 0x1000 | 1
-	SubincludeParse          = 0x2000 | 2
 	Build                    = 0x4000 | 3
-	Parse                    = 0x4000 | 4
 	Test                     = 0x4000 | 5
 	Stop                     = 0x8000 | 6
 	priorityMask             = ^0x00FF
