@@ -900,6 +900,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 		called := false
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
 			called = true
+			state.Graph.cycleDetector.AddDependency(target.Label, t.Label)
 			return state.queueResolvedTarget(t, target.Label, rescan, forceBuild, forSubinclude)
 		}); err != nil {
 			state.asyncError(target.Label, err)
