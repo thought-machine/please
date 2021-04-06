@@ -883,6 +883,23 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 			atomic.AddInt64(&state.progress.numPending, 1)
 			go state.queueTargetAsync(target, dependent, rescan, forceBuild, neededForSubinclude, state.NeedBuild || forceBuild)
 		}
+	} else {
+		for _, dep := range target.DeclaredDependencies() {
+			// Check the require/provide stuff; we may need to add a different target.
+			if len(target.Requires) > 0 {
+				if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
+					for _, provided := range depTarget.ProvideFor(target) {
+						if err := state.queueTarget(provided, target.Label, false, forceBuild, neededForSubinclude); err != nil {
+							return err
+						}
+					}
+					continue
+				}
+			}
+			if err := state.queueTarget(dep, target.Label, false, forceBuild, neededForSubinclude); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
