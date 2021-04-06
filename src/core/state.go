@@ -124,6 +124,8 @@ type BuildState struct {
 	Graph *BuildGraph
 	// Stream of pending tasks
 	pendingTasks *queue.PriorityQueue
+	// Stream of pending parse asks
+	pendingParses chan ParseTask
 	// Stream of results from the build
 	results chan *BuildResult
 	// Timestamp that the build is considered to start at.
@@ -268,15 +270,13 @@ func (state *BuildState) addActiveTargets(n int) {
 	atomic.AddInt64(&state.progress.numActive, int64(n))
 }
 
-// AddPendingParse adds a task for a pending parse of a build label.
-func (state *BuildState) AddPendingParse(label, dependent BuildLabel, forSubinclude bool) {
+// addPendingParse adds a task for a pending parse of a build label.
+func (state *BuildState) addPendingParse(label, dependent BuildLabel, forSubinclude bool) {
 	atomic.AddInt64(&state.progress.numActive, 1)
 	atomic.AddInt64(&state.progress.numPending, 1)
-	if forSubinclude {
-		state.pendingTasks.Put(pendingTask{Label: label, Dependent: dependent, Type: SubincludeParse})
-	} else {
-		state.pendingTasks.Put(pendingTask{Label: label, Dependent: dependent, Type: Parse})
-	}
+	go func() {
+		state.pendingParses <- ParseTask{Label: label, Dependent: dependent, ForSubinclude: forSubinclude}
+	}()
 }
 
 // addPendingBuild adds a task for a pending build of a target.
@@ -302,13 +302,12 @@ func (state *BuildState) AddPendingTest(label BuildLabel, run int) {
 // TaskQueues returns a set of channels to listen on for tasks of various types.
 // This should only be called once per state (otherwise you will not get a full set of tasks).
 func (state *BuildState) TaskQueues() (parses ParseTaskQueue, builds BuildTaskQueue, tests TestTaskQueue, remoteBuilds BuildTaskQueue, remoteTests TestTaskQueue) {
-	p := make(chan ParseTask, 100)
 	b := make(chan BuildTask, 100)
 	t := make(chan TestTask, 100)
 	rb := make(chan BuildLabel, 100)
 	rt := make(chan TestTask, 100)
-	go state.feedQueues(p, b, t, rb, rt)
-	return p, b, t, rb, rt
+	go state.feedQueues(state.pendingParses, b, t, rb, rt)
+	return state.pendingParses, b, t, rb, rt
 }
 
 // feedQueues feeds the build queues created in TaskQueues.
@@ -331,8 +330,6 @@ func (state *BuildState) feedQueues(parses ParseTaskQueue, builds BuildTaskQueue
 			close(remoteBuilds)
 			close(remoteTests)
 			return
-		case Parse, SubincludeParse:
-			parses <- ParseTask{Label: task.Label, Dependent: task.Dependent, ForSubinclude: task.Type == SubincludeParse}
 		case Build, SubincludeBuild:
 			atomic.AddInt64(&state.progress.numRunning, 1)
 			if remote() {
@@ -469,7 +466,7 @@ func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 		state.progress.originalTargets = append(state.progress.originalTargets, label)
 		state.progress.originalTargetMutex.Unlock()
 	}
-	state.AddPendingParse(label, OriginalTarget, false)
+	state.addPendingParse(label, OriginalTarget, false)
 }
 
 // Hasher returns a PathHasher for the given function (e.g. "SHA1").
@@ -732,7 +729,7 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
 	}
 
 	// Otherwise queue the target for parse and recurse
-	state.AddPendingParse(l, dependent, true)
+	state.addPendingParse(l, dependent, true)
 	state.progress.packageWaits.Set(key, make(chan struct{}))
 
 	return state.WaitForPackage(l, dependent)
@@ -845,7 +842,7 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceB
 	if target == nil {
 		// If the package isn't loaded yet, we need to queue a parse for it.
 		if state.Graph.PackageByLabel(label) == nil {
-			state.AddPendingParse(label, dependent, forceBuild)
+			state.addPendingParse(label, dependent, forceBuild)
 			return nil
 		}
 		// Package is loaded but target doesn't exist in it. Check again to avoid nasty races.
@@ -1055,8 +1052,9 @@ func NewBuildState(config *Configuration) *BuildState {
 	// Deliberately ignore the error here so we don't require the sandbox tool until it's needed.
 	sandboxTool, _ := LookBuildPath(config.Sandbox.Tool, config)
 	state := &BuildState{
-		Graph:        NewGraph(),
-		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
+		Graph:         NewGraph(),
+		pendingTasks:  queue.NewPriorityQueue(10000, true), // big hint, why not
+		pendingParses: make(chan ParseTask, 10000),
 		hashers: map[string]*fs.PathHasher{
 			// For compatibility reasons the sha1 hasher has no suffix.
 			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, "sha1"),
