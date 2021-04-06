@@ -10,11 +10,12 @@ import (
 // Useful for a "why on earth do I depend on this thing" type query.
 func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) error {
 	s := somepath{
-		memo: map[core.BuildLabel]map[core.BuildLabel]struct{}{},
+		graph: graph,
+		memo:  map[core.BuildLabel]map[core.BuildLabel]struct{}{},
 	}
 	for _, l1 := range expandAllTargets(graph, from) {
 		for _, l2 := range expandAllTargets(graph, to) {
-			if path := s.SomePath(graph.TargetOrDie(l1), graph.TargetOrDie(l2)); len(path) != 0 {
+			if path := s.SomePath(l1, l2); len(path) != 0 {
 				fmt.Println("Found path:")
 				for _, l := range filterPath(path) {
 					fmt.Printf("  %s\n", l)
@@ -45,10 +46,11 @@ func expandAllTargets(graph *core.BuildGraph, labels []core.BuildLabel) []core.B
 }
 
 type somepath struct {
-	memo map[core.BuildLabel]map[core.BuildLabel]struct{}
+	graph *core.BuildGraph
+	memo  map[core.BuildLabel]map[core.BuildLabel]struct{}
 }
 
-func (s *somepath) SomePath(target1, target2 *core.BuildTarget) []core.BuildLabel {
+func (s *somepath) SomePath(target1, target2 core.BuildLabel) []core.BuildLabel {
 	// Have to try this both ways around since we don't know which is a dependency of the other.
 	if path := s.somePath(target1, target2); len(path) != 0 {
 		return path
@@ -56,24 +58,28 @@ func (s *somepath) SomePath(target1, target2 *core.BuildTarget) []core.BuildLabe
 	return s.somePath(target2, target1)
 }
 
-func (s *somepath) somePath(target1, target2 *core.BuildTarget) []core.BuildLabel {
-	m, present := s.memo[target2.Label]
+func (s *somepath) somePath(target1, target2 core.BuildLabel) []core.BuildLabel {
+	m, present := s.memo[target2]
 	if !present {
 		m = map[core.BuildLabel]struct{}{}
-		s.memo[target2.Label] = m
+		s.memo[target2] = m
 	}
-	return somePath(target1, target2, m)
+	return somePath(s.graph, s.graph.TargetOrDie(target1), s.graph.TargetOrDie(target2), m)
 }
 
-func somePath(target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
+func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
 	if target1.Label == target2.Label {
 		return []core.BuildLabel{target1.Label}
 	} else if _, present := seen[target1.Label]; present {
 		return nil
 	}
-	for _, dep := range target1.Dependencies() {
-		if path := somePath(dep, target2, seen); len(path) != 0 {
-			return append([]core.BuildLabel{target1.Label}, path...)
+	for _, dep := range target1.DeclaredDependencies() {
+		if t := graph.Target(dep); t != nil {
+			for _, l := range t.ProvideFor(target1) {
+				if path := somePath(graph, graph.TargetOrDie(l), target2, seen); len(path) != 0 {
+					return append([]core.BuildLabel{target1.Label}, path...)
+				}
+			}
 		}
 	}
 	seen[target1.Label] = struct{}{}
