@@ -1,0 +1,4 @@
+c1 = semver_check("v1.5.0", ">=1.4.0")
+c2 = semver_check("v1.3.0", ">=1.4.0")
+c3 = semver_check("v1.0.5", "~1.0.0")
+c4 = semver_check("v1.1.0", "^1.0.0")

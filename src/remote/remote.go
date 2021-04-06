@@ -588,12 +588,18 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	} else if target.IsTextFile {
 		return c.buildTextFile(target, command, digest)
 	}
-	return c.reallyExecute(tid, target, command, digest, needStdout, isTest)
+
+	// We should skip the cache lookup (and override any existing action result) if we --rebuild, or --rerun and this is
+	// one fo the targets we're testing or building.
+	skipCacheLookup := (isTest && c.state.ForceRerun) || (!isTest && c.state.ForceRebuild)
+	skipCacheLookup = skipCacheLookup && c.state.IsOriginalTarget(target)
+
+	return c.reallyExecute(tid, target, command, digest, needStdout, isTest, skipCacheLookup)
 }
 
 // reallyExecute is like execute but after the initial cache check etc.
 // The action & sources must have already been uploaded.
-func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest, skipCacheLookup bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	executing := false
 	updateProgress := func(metadata *pb.ExecuteOperationMetadata) {
 		if c.state.Config.Remote.DisplayURL != "" {
@@ -648,8 +654,9 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 	}()
 
 	resp, err := c.client.ExecuteAndWaitProgress(c.contextWithMetadata(target), &pb.ExecuteRequest{
-		InstanceName: c.instance,
-		ActionDigest: digest,
+		InstanceName:    c.instance,
+		ActionDigest:    digest,
+		SkipCacheLookup: skipCacheLookup,
 	}, updateProgress)
 	if err != nil {
 		// Handle timing issues if we try to resume an execution as it fails. If we get a
@@ -734,7 +741,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 			return nil, nil, err
 		}
 		log.Debug("Completed remote build action for %s", target)
-		if err := c.verifyActionResult(target, command, digest, response.Result, false, isTest); err != nil {
+		if err := c.verifyActionResult(target, command, digest, response.Result, c.state.Config.Remote.VerifyOutputs && !isTest, isTest); err != nil {
 			return metadata, response.Result, err
 		}
 		c.locallyCacheResults(target, digest, metadata, response.Result)
@@ -781,7 +788,7 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 		Timeout:      ptypes.DurationProto(target.BuildTimeout),
 		Uris:         urls,
 	}
-	if !c.state.NeedHashesOnly || !c.state.IsOriginalTargetOrParent(target) {
+	if c.state.VerifyHashes && (!c.state.NeedHashesOnly || !c.state.IsOriginalTargetOrParent(target)) {
 		if sri := subresourceIntegrity(target); sri != "" {
 			req.Qualifiers = []*fpb.Qualifier{{
 				Name:  "checksum.sri",

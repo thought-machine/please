@@ -122,8 +122,6 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.BuildTarget, inputRoot *pb.Directory, stamp bool) []string {
 	if target.IsFilegroup {
 		return core.GeneralBuildEnvironment(state) // filegroups don't need a full build environment
-	} else if !stamp {
-		return core.BuildEnvironment(state, target, ".")
 	}
 	// We generate the stamp ourselves from the input root.
 	// TODO(peterebden): it should include the target properties too...
@@ -428,6 +426,25 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 		}
 	}
 
+	if c.state.Config.Remote.UploadDirs {
+		entries := []*uploadinfo.Entry{}
+		for _, out := range ar.OutputDirectories {
+			tree := &pb.Tree{}
+			if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(out.TreeDigest), tree); err != nil {
+				return err
+			}
+			entry, _ := uploadinfo.EntryFromProto(tree.Root)
+			entries = append(entries, entry)
+			for _, child := range tree.Children {
+				entry, _ := uploadinfo.EntryFromProto(child)
+				entries = append(entries, entry)
+			}
+		}
+		if _, _, err := c.client.UploadIfMissing(context.Background(), entries...); err != nil {
+			return fmt.Errorf("Failed to upload directory protos: %s", err)
+		}
+	}
+
 	if !verifyRemoteBlobsExist {
 		return nil
 	}
@@ -448,7 +465,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	if missing, err := c.client.MissingBlobs(context.Background(), digests); err != nil {
 		return fmt.Errorf("Failed to verify action result outputs: %s", err)
 	} else if len(missing) != 0 {
-		return fmt.Errorf("Action result missing %d blobs", len(missing))
+		return fmt.Errorf("Action result missing %d blobs: %s", len(missing), missing)
 	}
 	log.Debug("Verified action result for %s in %s", target, time.Since(start))
 	return nil

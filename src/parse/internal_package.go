@@ -31,7 +31,7 @@ genrule(
     name = "{{$tool}}".removesuffix(".jar"),
     cmd = f"mv $SRC/{{$tool}} $OUT",
     srcs = [":please_tools"],
-    outs = ["{{$tool}}".removesuffix(".jar")],
+    outs = ["{{$tool}}"],
     visibility = ["PUBLIC"],
     binary = True,
 )

@@ -665,7 +665,7 @@ var buildFunctions = map[string]func() int{
 		transitive := opts.Query.Changes.IncludeDependees == "transitive"
 		direct := opts.Query.Changes.IncludeDependees == "direct"
 		if transitive || direct {
-			log.Warning("include_dependees is deprectated. Please use level instead")
+			log.Warning("include_dependees is deprecated. Please use level instead")
 		}
 		if (transitive || direct) && level != -2 {
 			log.Warning("Both level and include_dependees are set. Using the value from level")
