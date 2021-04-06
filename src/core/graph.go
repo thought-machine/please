@@ -29,7 +29,7 @@ type BuildGraph struct {
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.CMap
 	// Reverse dependencies
-	revdeps     map[*BuildTarget][]*BuildTarget
+	revdeps     map[BuildLabel][]*BuildTarget
 	revdepsOnce sync.Once
 	// checks for cycles in the graph asynchronously
 	cycleDetector *cycleDetector
@@ -244,14 +244,14 @@ func NewGraph() *BuildGraph {
 //      only be used for queries.
 func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
 	graph.revdepsOnce.Do(func() {
-		graph.revdeps = map[*BuildTarget][]*BuildTarget{}
+		graph.revdeps = map[BuildLabel][]*BuildTarget{}
 		for _, t := range graph.AllTargets() {
-			for _, d := range t.Dependencies() {
+			for _, d := range t.DeclaredDependencies() {
 				graph.revdeps[d] = append(graph.revdeps[d], t)
 			}
 		}
 	})
-	return graph.revdeps[target]
+	return graph.revdeps[target.Label]
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.
