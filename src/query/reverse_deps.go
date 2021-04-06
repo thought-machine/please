@@ -82,7 +82,7 @@ type revdeps struct {
 	os *openSet
 
 	// hidden is whether to count hidden targets towards the depth budget
-	hidden   bool
+	hidden bool
 
 	// maxDepth is the depth budget for the search. -1 means unlimited.
 	maxDepth int

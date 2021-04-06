@@ -69,8 +69,6 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 		}
 	}
 
-
-
 	ls := make(core.BuildLabels, 0, len(labels))
 	for _, l := range labels {
 		if state.ShouldInclude(state.Graph.TargetOrDie(l)) {
