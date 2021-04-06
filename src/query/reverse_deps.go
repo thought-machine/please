@@ -47,7 +47,7 @@ type openSet struct {
 // Push implements pushing a node onto the queue of nodes to process, deduplicating nodes we've seen before.
 func (os *openSet) Push(n *node) {
 	if _, present := os.done[n.target.Label]; !present {
-		os.done[n.target.Label] = struct {}{}
+		os.done[n.target.Label] = struct{}{}
 		os.items.PushBack(n)
 	}
 }
@@ -91,8 +91,8 @@ func newRevdeps(graph *core.BuildGraph, hidden bool, maxDepth int) *revdeps {
 	return &revdeps{
 		subincludes: subincludes,
 		os: &openSet{
-			items:  list.New(),
-			done: map[core.BuildLabel]struct{}{},
+			items: list.New(),
+			done:  map[core.BuildLabel]struct{}{},
 		},
 		hidden:   hidden,
 		maxDepth: maxDepth,
