@@ -191,6 +191,7 @@ type stateProgress struct {
 	numDone    int64
 	mutex      sync.Mutex
 	closeOnce  sync.Once
+	resultOnce sync.Once
 	// Used to track subinclude() calls that block until targets are built. Keyed by their label.
 	pendingTargets *cmap.CMap
 	// Used to track general package parsing requests. Keyed by a packageKey struct.
@@ -305,18 +306,20 @@ func (state *BuildState) taskDone(wasSynthetic bool) {
 
 // Stop stops the worker queues after any current tasks are done.
 func (state *BuildState) Stop() {
-	close(state.pendingParses)
-	close(state.pendingBuilds)
-	close(state.pendingRemoteBuilds)
-	close(state.pendingTests)
-	close(state.pendingRemoteTests)
+	state.progress.closeOnce.Do(func() {
+		close(state.pendingParses)
+		close(state.pendingBuilds)
+		close(state.pendingRemoteBuilds)
+		close(state.pendingTests)
+		close(state.pendingRemoteTests)
+	})
 	state.CloseResults()
 }
 
 // CloseResults closes the result channels.
 func (state *BuildState) CloseResults() {
 	if state.results != nil {
-		state.progress.closeOnce.Do(func() {
+		state.progress.resultOnce.Do(func() {
 			close(state.results)
 		})
 	}
