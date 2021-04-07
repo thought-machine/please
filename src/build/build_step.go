@@ -61,10 +61,10 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 	target.FinishBuild()
 	if target.IsTest && state.NeedTests && state.IsOriginalTarget(target) {
 		if state.TestSequentially {
-			state.AddPendingTest(target.Label, 1)
+			state.AddPendingTest(target, 1)
 		} else {
 			for runNum := 1; runNum <= state.NumTestRuns; runNum++ {
-				state.AddPendingTest(target.Label, runNum)
+				state.AddPendingTest(target, runNum)
 			}
 		}
 	}

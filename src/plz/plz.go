@@ -38,20 +38,31 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, preTargets, targets, arch)
 
-	parses, builds, tests, remoteBuilds, remoteTests := state.TaskQueues()
+	parses, builds, remoteBuilds, tests, remoteTests := state.TaskQueues()
 
 	// Start up all the build workers
 	var wg sync.WaitGroup
-	wg.Add(config.Please.NumThreads + config.NumRemoteExecutors())
+	wg.Add(1 + config.Please.NumThreads + config.NumRemoteExecutors())
+	go func() {
+		// All parses happen async on separate goroutines so we don't have to worry about them blocking.
+		// They manage concurrency control themselves.
+		for task := range parses {
+			go func() {
+				parse.Parse(0, state, task.Label, task.Dependent, task.ForSubinclude)
+				state.TaskDone()
+			}()
+		}
+		wg.Done()
+	}()
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go func(tid int) {
-			doTasks(tid, state, parses, builds, tests, false)
+			doTasks(tid, state, builds, tests, false)
 			wg.Done()
 		}(i)
 	}
 	for i := 0; i < config.NumRemoteExecutors(); i++ {
 		go func(tid int) {
-			doTasks(tid, state, nil, remoteBuilds, remoteTests, true)
+			doTasks(tid, state, remoteBuilds, remoteTests, true)
 			wg.Done()
 		}(config.Please.NumThreads + i)
 	}
@@ -73,32 +84,23 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 	Run(targets, nil, state, state.Config, cli.HostArch())
 }
 
-func doTasks(tid int, state *core.BuildState, parses core.ParseTaskQueue, builds core.BuildTaskQueue, tests core.TestTaskQueue, remote bool) {
-	for parses != nil || builds != nil || tests != nil {
+func doTasks(tid int, state *core.BuildState, builds <-chan core.BuildTask, tests <-chan core.TestTask, remote bool) {
+	for builds != nil || tests != nil {
 		select {
-		case p, ok := <-parses:
-			if !ok {
-				parses = nil
-				break
-			}
-			go func() {
-				parse.Parse(tid, state, p.Label, p.Dependent, p.ForSubinclude)
-				state.TaskDone(false)
-			}()
 		case l, ok := <-builds:
 			if !ok {
 				builds = nil
 				break
 			}
 			build.Build(tid, state, l, remote)
-			state.TaskDone(true)
+			state.TaskDone()
 		case testTask, ok := <-tests:
 			if !ok {
 				tests = nil
 				break
 			}
 			test.Test(tid, state, testTask.Label, remote, testTask.Run)
-			state.TaskDone(true)
+			state.TaskDone()
 		}
 	}
 }
@@ -131,7 +133,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 	}
 	findOriginalTaskSet(state, targets, true, arch)
 	log.Debug("Original target scan complete")
-	state.TaskDone(true) // initial target adding counts as one.
+	state.TaskDone() // initial target adding counts as one.
 }
 
 func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addToList bool, arch cli.Arch) {
