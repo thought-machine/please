@@ -74,7 +74,7 @@ func TestDiffGraphsIncludeTransitive(t *testing.T) {
 	t1 = addTarget(s2, "//src/core:core", nil, "src/core/core_changed.go")
 	t2 = addTarget(s2, "//src/query:changes", t1, "src/query/changes.go")
 	t3 := addTarget(s2, "//src/query:changes_test", t2, "src/query/changes_test.go")
-	assert.EqualValues(t, []core.BuildLabel{t1.Label, t2.Label, t3.Label}, DiffGraphs(s1, s2, nil, -1))
+	assert.EqualValues(t, core.BuildLabels{t1.Label, t2.Label, t3.Label}, DiffGraphs(s1, s2, nil, -1))
 }
 
 func TestChangesIncludesDataDirs(t *testing.T) {

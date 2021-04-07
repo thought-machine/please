@@ -1,0 +1,18 @@
+# creates a filegroup with two hidden intermediate rules
+def two_intermediate(name:str, deps:list):
+    one = filegroup(
+        name = name,
+        tag = "one",
+        deps = deps,
+    )
+
+    two = filegroup(
+        name = name,
+        tag = "two",
+        deps = [one],
+    )
+
+    return filegroup(
+        name = name,
+        deps = [two],
+    )

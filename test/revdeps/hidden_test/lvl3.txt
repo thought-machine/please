@@ -1,0 +1,3 @@
+//test/revdeps/hidden_test:lvl1
+//test/revdeps/hidden_test:lvl2
+//test/revdeps/hidden_test:lvl3
