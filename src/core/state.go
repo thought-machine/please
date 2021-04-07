@@ -253,18 +253,25 @@ func (state *BuildState) addPendingBuild(target *BuildTarget) {
 }
 
 // AddPendingTest adds a task for a pending test of a target.
-func (state *BuildState) AddPendingTest(target *BuildTarget, run int) {
-	if state.NeedTests {
-		atomic.AddInt64(&state.progress.numPending, 1)
-		task := TestTask{Label: target.Label, Run: run}
-		go func() {
-			if state.anyRemote && !target.Local {
-				state.pendingRemoteTests <- task
-			} else {
-				state.pendingTests <- task
-			}
-		}()
+func (state *BuildState) AddPendingTest(target *BuildTarget) {
+	if state.TestSequentially {
+		state.addPendingTest(target, 1)
+	} else {
+		state.addPendingTest(target, state.NumTestRuns)
 	}
+}
+
+func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
+	atomic.AddInt64(&state.progress.numPending, int64(numRuns))
+	go func() {
+		ch := state.pendingTests
+		if state.anyRemote && !target.Local {
+			ch = state.pendingRemoteTests
+		}
+		for run := 1; run <= numRuns; run++ {
+			ch <- TestTask{Label: target.Label, Run: run}
+		}
+	}()
 }
 
 // TaskQueues returns a set of channels to listen on for tasks of various types.
@@ -273,7 +280,7 @@ func (state *BuildState) TaskQueues() (parses <-chan ParseTask, builds, remoteBu
 }
 
 // TaskDone indicates that a single task is finished. Should be called after one is finished with
-// a task returned from NextTask(), or from a call to ExtraTask().
+// a task returned from NextTask().
 func (state *BuildState) TaskDone() {
 	state.taskDone(false)
 }
