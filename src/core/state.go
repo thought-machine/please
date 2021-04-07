@@ -236,6 +236,9 @@ func (state *BuildState) addPendingParse(label, dependent BuildLabel, forSubincl
 	atomic.AddInt64(&state.progress.numActive, 1)
 	atomic.AddInt64(&state.progress.numPending, 1)
 	go func() {
+		defer func() {
+			recover()  // Prevent death on 'send on closed channel'
+		}()
 		state.pendingParses <- ParseTask{Label: label, Dependent: dependent, ForSubinclude: forSubinclude}
 	}()
 }
@@ -244,6 +247,9 @@ func (state *BuildState) addPendingParse(label, dependent BuildLabel, forSubincl
 func (state *BuildState) addPendingBuild(target *BuildTarget) {
 	atomic.AddInt64(&state.progress.numPending, 1)
 	go func() {
+		defer func() {
+			recover()  // Prevent death on 'send on closed channel'
+		}()
 		if state.anyRemote && !target.Local {
 			state.pendingRemoteBuilds <- target.Label
 		} else {
@@ -264,6 +270,9 @@ func (state *BuildState) AddPendingTest(target *BuildTarget) {
 func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
 	atomic.AddInt64(&state.progress.numPending, int64(numRuns))
 	go func() {
+		defer func() {
+			recover()  // Prevent death on 'send on closed channel'
+		}()
 		ch := state.pendingTests
 		if state.anyRemote && !target.Local {
 			ch = state.pendingRemoteTests
