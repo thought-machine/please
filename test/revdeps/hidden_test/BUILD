@@ -1,24 +1,11 @@
 subinclude("//test/build_defs")
 
-# creates a filegroup with two hidden intermediate rules
-def two_intermediate(name:str, deps:list):
-    one = filegroup(
-        name = name,
-        tag = "one",
-        deps = deps,
-    )
+filegroup(
+    name = "two_intermediate",
+    srcs = ["two_intermediate.build_defs"],
+)
 
-    two = filegroup(
-        name = name,
-        tag = "two",
-        deps = [one],
-    )
-
-    return filegroup(
-        name = name,
-        deps = [two],
-    )
-
+subinclude(":two_intermediate")
 
 two_intermediate(
     name = "lvl0",

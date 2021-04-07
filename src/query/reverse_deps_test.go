@@ -34,7 +34,6 @@ func TestReverseDeps(t *testing.T) {
 	assert.ElementsMatch(t, core.BuildLabels{branch.Label}, labels)
 }
 
-
 func TestReverseDepsWithHidden(t *testing.T) {
 	state := core.NewDefaultBuildState()
 	graph := state.Graph
@@ -66,7 +65,6 @@ func TestReverseDepsWithHidden(t *testing.T) {
 	labels = revDepsLabels(state, []core.BuildLabel{bar.Label}, true, 3)
 	assert.ElementsMatch(t, core.BuildLabels{fooInter1.Label, fooInter2.Label, foo.Label}, labels)
 }
-
 
 func revDepsLabels(state *core.BuildState, labels []core.BuildLabel, hidden bool, depth int) core.BuildLabels {
 	ts := FindRevdeps(state, labels, hidden, depth)
