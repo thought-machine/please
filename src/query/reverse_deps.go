@@ -112,11 +112,29 @@ func FindRevdeps(state *core.BuildState, targets core.BuildLabels, hidden bool, 
 	return r.findRevdeps(state)
 }
 
+func isSameTarget(graph *core.BuildGraph, lhs, rhs *core.BuildTarget) bool {
+	if lhs == rhs {
+		return true
+	}
+
+	// Otherwise check they belong to the same non-hidden rule
+	if lhs.Label.IsHidden() {
+		lhs = lhs.Parent(graph)
+	}
+	if rhs.Label.IsHidden() {
+		rhs = rhs.Parent(graph)
+	}
+	return lhs == rhs && lhs != nil
+}
+
 func (r *revdeps) findRevdeps(state *core.BuildState) map[*core.BuildTarget]struct{} {
 	// 1000 is chosen pretty much arbitrarily here
 	ret := make(map[*core.BuildTarget]struct{}, 1000)
 	for next := r.os.Pop(); next != nil; next = r.os.Pop() {
 		ts := state.Graph.ReverseDependencies(next.target)
+
+		nextLabel := fmt.Sprintf("%v -> %v", next.target, ts)
+		_ = nextLabel
 
 		for _, p := range r.subincludes[next.target.Label] {
 			ts = append(ts, p.AllTargets()...)
@@ -124,18 +142,17 @@ func (r *revdeps) findRevdeps(state *core.BuildState) map[*core.BuildTarget]stru
 
 		for _, t := range ts {
 			depth := next.depth
-			parent := t.Parent(state.Graph)
 
 			// The label shouldn't count towards the depth if it's a child of the last label
-			if r.hidden || parent == nil || parent != next.target {
+			if r.hidden || !isSameTarget(state.Graph, next.target, t) {
 				depth++
 			}
 
-			// We can skip adding to the open set if the depth of the next non-child label pushes us over the budget
-			// but we must make sure to add child labels at the current depth.
-			if (next.depth+1) <= r.maxDepth || r.maxDepth == -1 {
+			if next.depth < r.maxDepth || r.maxDepth == -1 {
 				if r.hidden || !t.Label.IsHidden() {
 					ret[t] = struct{}{}
+				} else if parent := t.Parent(state.Graph); parent != nil {
+					ret[parent] = struct{}{}
 				}
 
 				r.os.Push(&node{
