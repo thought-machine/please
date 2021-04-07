@@ -83,9 +83,9 @@ type TargetHasher interface {
 type BuildState struct {
 	Graph *BuildGraph
 	// Streams of pending tasks
-	pendingParses chan ParseTask
+	pendingParses                      chan ParseTask
 	pendingBuilds, pendingRemoteBuilds chan BuildTask
-	pendingTests, pendingRemoteTests chan TestTask
+	pendingTests, pendingRemoteTests   chan TestTask
 	// Stream of results from the build
 	results chan *BuildResult
 	// Timestamp that the build is considered to start at.
@@ -238,7 +238,7 @@ func (state *BuildState) addPendingParse(label, dependent BuildLabel, forSubincl
 	atomic.AddInt64(&state.progress.numPending, 1)
 	go func() {
 		defer func() {
-			recover()  // Prevent death on 'send on closed channel'
+			recover() // Prevent death on 'send on closed channel'
 		}()
 		state.pendingParses <- ParseTask{Label: label, Dependent: dependent, ForSubinclude: forSubinclude}
 	}()
@@ -249,7 +249,7 @@ func (state *BuildState) addPendingBuild(target *BuildTarget) {
 	atomic.AddInt64(&state.progress.numPending, 1)
 	go func() {
 		defer func() {
-			recover()  // Prevent death on 'send on closed channel'
+			recover() // Prevent death on 'send on closed channel'
 		}()
 		if state.anyRemote && !target.Local {
 			state.pendingRemoteBuilds <- target.Label
@@ -272,7 +272,7 @@ func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
 	atomic.AddInt64(&state.progress.numPending, int64(numRuns))
 	go func() {
 		defer func() {
-			recover()  // Prevent death on 'send on closed channel'
+			recover() // Prevent death on 'send on closed channel'
 		}()
 		ch := state.pendingTests
 		if state.anyRemote && !target.Local {
@@ -978,12 +978,12 @@ func NewBuildState(config *Configuration) *BuildState {
 	// Deliberately ignore the error here so we don't require the sandbox tool until it's needed.
 	sandboxTool, _ := LookBuildPath(config.Sandbox.Tool, config)
 	state := &BuildState{
-		Graph:         NewGraph(),
-		pendingParses: make(chan ParseTask, 10000),
-		pendingBuilds: make(chan BuildTask, 1000),
+		Graph:               NewGraph(),
+		pendingParses:       make(chan ParseTask, 10000),
+		pendingBuilds:       make(chan BuildTask, 1000),
 		pendingRemoteBuilds: make(chan BuildTask, 1000),
-		pendingTests: make(chan TestTask, 1000),
-		pendingRemoteTests: make(chan TestTask, 1000),
+		pendingTests:        make(chan TestTask, 1000),
+		pendingRemoteTests:  make(chan TestTask, 1000),
 		hashers: map[string]*fs.PathHasher{
 			// For compatibility reasons the sha1 hasher has no suffix.
 			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, "sha1"),
