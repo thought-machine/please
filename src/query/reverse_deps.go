@@ -133,9 +133,6 @@ func (r *revdeps) findRevdeps(state *core.BuildState) map[*core.BuildTarget]stru
 	for next := r.os.Pop(); next != nil; next = r.os.Pop() {
 		ts := state.Graph.ReverseDependencies(next.target)
 
-		nextLabel := fmt.Sprintf("%v -> %v", next.target, ts)
-		_ = nextLabel
-
 		for _, p := range r.subincludes[next.target.Label] {
 			ts = append(ts, p.AllTargets()...)
 		}
