@@ -47,10 +47,10 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		// All parses happen async on separate goroutines so we don't have to worry about them blocking.
 		// They manage concurrency control themselves.
 		for task := range parses {
-			go func() {
+			go func(task core.ParseTask) {
 				parse.Parse(0, state, task.Label, task.Dependent, task.ForSubinclude)
 				state.TaskDone()
-			}()
+			}(task)
 		}
 		wg.Done()
 	}()
