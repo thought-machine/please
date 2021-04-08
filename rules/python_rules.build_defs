@@ -323,9 +323,9 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     )
 
 
-def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
+def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
                 test_only:bool&testonly=False, deps:list=[], post_install_commands:list=None,
-                install_subdirectory:bool=False, repo:str=None, use_pypi:bool=None, patch:str|list=None,
+                install_subdirectory:str=None, repo:str=None, use_pypi:bool=None, patch:str|list=None,
                 visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None,
                 strip:list=[]):
     """Provides a build rule for third-party dependencies to be installed by pip.
@@ -371,7 +371,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
 
     target = f"{pip_target_dir}/{name}"
     if install_subdirectory:
-     target += '/' + outs[0]
+     target += '/' + install_subdirectory
 
     pip_tool = "$TOOLS_PIP" if CONFIG.PIP_TOOL else '$TOOLS_PYTHON -m pip'
 
