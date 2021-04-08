@@ -429,7 +429,7 @@ var buildFunctions = map[string]func() int{
 
 		if opts.Cover.LineCoverageReport {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile.AsStrings())
-		} else if !opts.Cover.NoCoverageReport {
+		} else if !opts.Cover.NoCoverageReport && !opts.Cover.Shell {
 			output.PrintCoverage(state, opts.Cover.IncludeFile.AsStrings())
 		}
 		if opts.Cover.Incremental {
