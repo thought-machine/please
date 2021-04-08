@@ -138,8 +138,8 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list|di
     )
 
 
-def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, data:list=None, out:str="", shell:str='/bin/sh',
-           labels:list&features&tags=[], deps:list=None, visibility:list=None, expand_env_vars:bool=True,
+def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=[], data:list=[], out:str="", shell:str='/bin/sh',
+           labels:list&features&tags=[], deps:list=[], visibility:list=[], expand_env_vars:bool=True,
            test_only:bool=False):
     """Generates a runnable shell script from a command.
 
@@ -172,10 +172,9 @@ def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, data:list=None, out
         return text_file(
             name = name,
             out = out or name + '.sh',
-            srcs = srcs,
             data = data,
             labels = labels + ["sh_cmd"],
-            deps = deps,
+            deps = deps + srcs, # There's no difference between these two as we're not expanding env vars as below
             visibility = visibility,
             binary = True,
             test_only = test_only,
