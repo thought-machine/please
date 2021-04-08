@@ -24,7 +24,6 @@ var KnownFields = map[string]bool{
 	"IsTest":                      true,
 	"IsFilegroup":                 true,
 	"IsTextFile":                  true,
-	"ExpandFileContent":           true,
 	"FileContent":                 true,
 	"IsRemoteFile":                true,
 	"Command":                     true,

@@ -8,7 +8,6 @@ text_file(
 text_file(
     name = "expand_file",
     content = "$(location :file)",
-    expand_content = True,
     deps = [":file"],
 )
 
