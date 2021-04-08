@@ -139,7 +139,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list|di
 
 
 def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, data:list=None, out:str="", shell:str='/bin/sh',
-           labels:list&features&tags=[], deps:list=None, visibility:list=None,
+           labels:list&features&tags=[], deps:list=None, visibility:list=None, expand_env_vars:bool=True,
            test_only:bool=False):
     """Generates a runnable shell script from a command.
 
@@ -152,8 +152,9 @@ def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, data:list=None, out
     Args:
       name (str): Name of the rule.
       cmd (str | dict): Command to write into the output script file. The commands are subject to
-                        shell expansion during build time, so if that is to be avoided the variables
-                        have to be escaped with \\\\\\$, i.e. \\\\\\${@}.
+                        shell expansion during build time by default. If that is to be avoided, set expand_env_vars to
+                        False, or escape the variables with \\\\\\$, i.e. \\\\\\${@}.
+      expand_env_vars (bool): Whether to expand
       srcs (list | dict): Source files. Can be consumed as env variables by the generated command (but are not
                           written into the output in any other way).
       data (list): Runtime data for this rule.
@@ -167,16 +168,30 @@ def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, data:list=None, out
     """
     cmd = ' && '.join(cmd) if isinstance(cmd, list) else cmd
     cmd = cmd[CONFIG.BUILD_CONFIG] if isinstance(cmd, dict) else cmd
+    if not expand_env_vars:
+        return text_file(
+            name = name,
+            out = out or name + '.sh',
+            srcs = srcs,
+            data = data,
+            labels = labels + ["sh_cmd"],
+            deps = deps,
+            visibility = visibility,
+            binary = True,
+            test_only = test_only,
+            content = f"#!{shell}\n{cmd}\n",
+        )
 
-    return text_file(
+    cmd = f'{{ cat > "$OUT" << EOF\n#!{shell}\n{cmd}\nEOF\n}}'
+    return build_rule(
         name = name,
-        out = out or name + '.sh',
+        outs = [out or name + '.sh'],
         srcs = srcs,
         data = data,
-        labels = labels + ["sh_cmd"],
+        cmd = cmd,
+        labels = labels,
         deps = deps,
         visibility = visibility,
         binary = True,
         test_only = test_only,
-        content = f"#!{shell}\n{cmd}\n",
     )
