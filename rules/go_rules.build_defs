@@ -1107,19 +1107,24 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             strip = strip,
         )
     outs = []
+
+    # Gets the expected archive name given a target package
+    def archive_name(i):
+        base = basename(i)
+        return f"{i}/{base}.a"
     if not binary:
         if not install:
-            outs = [f"{module}.a"]
+            outs = [archive_name(module)]
         else:
             for i in install:
                 if i == module or i == f"{module}/.":
-                    outs += [module + ".a"]
+                    outs = [archive_name(module)]
                 elif i == "...":
                     outs = [module]
                 elif i.endswith("/..."):
                     outs += [i.removesuffix("/...")]
                 else:
-                    outs += [f"{i}.a"]
+                    outs += [archive_name(i)]
 
     a_rule = _go_install_module(
         name = name,
