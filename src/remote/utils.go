@@ -201,9 +201,7 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		if metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
 			if err := proto.Unmarshal(metadata.RemoteAction, ar); err == nil {
-				if err := c.setOutputs(target, ar); err == nil {
-					return metadata, ar
-				}
+				return metadata, ar
 			}
 		}
 	}
