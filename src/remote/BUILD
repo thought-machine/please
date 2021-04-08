@@ -21,6 +21,7 @@ go_library(
         "//third_party/go:remote-apis-sdks",
         "//third_party/go:uuid",
         "//third_party/go:prometheus",
+        "//third_party/go:prometheus_common",
     ],
 )
 

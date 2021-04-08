@@ -454,23 +454,22 @@ type Configuration struct {
 		Test  bool     `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
 	} `help:"A config section describing settings relating to sandboxing of build actions."`
 	Remote struct {
-		URL                  string       `help:"URL for the remote server."`
-		CASURL               string       `help:"URL for the CAS service, if it is different to the main one."`
-		AssetURL             string       `help:"URL for the remote asset server, if it is different to the main one."`
-		NumExecutors         int          `help:"Maximum number of remote executors to use simultaneously."`
-		Instance             string       `help:"Remote instance name to request; depending on the server this may be required."`
-		Name                 string       `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
-		DisplayURL           string       `help:"A URL to browse the remote server with (e.g. using buildbarn-browser). Only used when printing hashes."`
-		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`
-		TokenFile            string       `help:"A file containing a token that is attached to outgoing RPCs to authenticate them. This is somewhat bespoke; we are still investigating further options for authentication."`
-		Timeout              cli.Duration `help:"Timeout for connections made to the remote server."`
-		Secure               bool         `help:"Whether to use TLS for communication or not."`
-		VerifyOutputs        bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
-		UploadDirs           bool         `help:"Uploads individual directory blobs after build actions. This might not be necessary with some servers, but if you aren't sure, you should leave it on."`
-		Shell                string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
-		Platform             []string     `help:"Platform properties to request from remote workers, in the format key=value."`
-		CacheDuration        cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
-		BuildID              string       `help:"ID of the build action that's being run, to attach to remote requests."`
+		URL           string       `help:"URL for the remote server."`
+		CASURL        string       `help:"URL for the CAS service, if it is different to the main one."`
+		AssetURL      string       `help:"URL for the remote asset server, if it is different to the main one."`
+		NumExecutors  int          `help:"Maximum number of remote executors to use simultaneously."`
+		Instance      string       `help:"Remote instance name to request; depending on the server this may be required."`
+		Name          string       `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
+		DisplayURL    string       `help:"A URL to browse the remote server with (e.g. using buildbarn-browser). Only used when printing hashes."`
+		TokenFile     string       `help:"A file containing a token that is attached to outgoing RPCs to authenticate them. This is somewhat bespoke; we are still investigating further options for authentication."`
+		Timeout       cli.Duration `help:"Timeout for connections made to the remote server."`
+		Secure        bool         `help:"Whether to use TLS for communication or not."`
+		VerifyOutputs bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
+		UploadDirs    bool         `help:"Uploads individual directory blobs after build actions. This might not be necessary with some servers, but if you aren't sure, you should leave it on."`
+		Shell         string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
+		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`
+		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
+		BuildID       string       `help:"ID of the build action that's being run, to attach to remote requests."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
@@ -578,6 +577,9 @@ type Configuration struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
+	Metrics struct {
+		PrometheusGatewayURL string `help:"The gateway URL to push prometheus updates to."`
+	} `help:"Settings for collecting metrics."`
 }
 
 // An Alias represents aliases in the config.

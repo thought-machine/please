@@ -22,8 +22,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/push"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -36,24 +34,6 @@ import (
 
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"
-
-func (c *Client) pushTreeDigestDownloadError() {
-	if c.state.Config.Remote.PrometheusGatewayURL == "" {
-		log.Infof("No Prometheus pushgateway URL to push Digest Download error to")
-		return
-	}
-	downloadErrorCounter := prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "please",
-		Name:      "tree_digest_download_eof_error",
-	})
-	if err := push.New(
-		c.state.Config.Remote.PrometheusGatewayURL, "tree_digest_download",
-	).Collector(downloadErrorCounter).Push(); err != nil {
-		log.Warningf("Error pushing to Prometheus pushgateway: %s", err)
-		return
-	}
-	log.Infof("Incremented error counter via pushgateway")
-}
 
 // sum calculates a checksum for a byte slice.
 func (c *Client) sum(b []byte) []byte {
@@ -92,7 +72,7 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	for _, d := range ar.OutputDirectories {
 		tree := &pb.Tree{}
 		if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
-			c.pushTreeDigestDownloadError()
+			c.downloadErrorCounterInc()
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 

@@ -31,6 +31,7 @@ require (
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
 	github.com/pkg/xattr v0.4.0
 	github.com/prometheus/client_golang v1.10.0
+	github.com/prometheus/common v0.18.0
 	github.com/shirou/gopsutil/v3 v3.21.2
 	github.com/sourcegraph/go-diff v0.5.1
 	github.com/sourcegraph/go-lsp v0.0.0-20181119182933-0c7d621186c1
