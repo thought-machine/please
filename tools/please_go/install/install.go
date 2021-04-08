@@ -206,7 +206,7 @@ func (install *PleaseGoInstall) prepWorkdir(pkg *build.Package, workDir, out str
 // We can get away with this because we don't compile tests so there must be exactly one package per directory.
 func outPath(outDir, target string) string {
 	dirName := filepath.Base(target)
-	return filepath.Join(outDir, filepath.Dir(target), dirName, dirName + ".a")
+	return filepath.Join(outDir, filepath.Dir(target), dirName, dirName+".a")
 }
 
 func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package) error {
