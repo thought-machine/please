@@ -773,6 +773,23 @@
           results in XML format.
         </p>
       </div>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          UploadGzipped <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          True to use gzip compression when uploading test results. Disabled by default.
+        </p>
+      </div>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          StoreTestOutputOnSuccess <span class="normal">(bool)</span>
+        </h3>
+        <p>
+          True to store the standard output and standard error of successful test cases. Disabled by default.
+        </p>
+      </div>
     </li>
   </ul>
 </section>
@@ -1424,6 +1441,18 @@
         <p>
           The binary invoked to compile .proto files. Defaults to
           <code class="code">protoc</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">ProtocFlag</h3>
+
+        <p>
+          Flags to pass to all protoc invocations. This can be used to set the location of well known types. It is
+          recommended to use <code>protoc_binary</code> which will manage the well known types for you, however you may
+          set this to <code class="code">-I/usr/local/include</code> or similar to use the well known
+          types from the host machine.
         </p>
       </div>
     </li>

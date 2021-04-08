@@ -349,6 +349,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 				}
 			}
 		} else if stmt.Raise != nil {
+			log.Warning("The raise keyword is deprecated, please use fail() instead. See https://github.com/thought-machine/please/issues/1598 for more information.")
 			s.Error(s.interpretExpression(stmt.Raise).String())
 		} else if stmt.Literal != nil {
 			s.interpretExpression(stmt.Literal)

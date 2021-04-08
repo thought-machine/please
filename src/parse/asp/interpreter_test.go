@@ -374,3 +374,24 @@ func TestFormat(t *testing.T) {
 	assert.EqualValues(t, `LLVM_NATIVE_ARCH=\"x86\"`, s.Lookup("arch"))
 	assert.EqualValues(t, `ARCH="linux_amd64"`, s.Lookup("arch2"))
 }
+
+func TestSemver(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		s, err := parseFile("src/parse/asp/test_data/interpreter/semver.build")
+		assert.NoError(t, err)
+		assert.EqualValues(t, pyBool(true), s.Lookup("c1"))
+		assert.EqualValues(t, pyBool(false), s.Lookup("c2"))
+		assert.EqualValues(t, pyBool(true), s.Lookup("c3"))
+		assert.EqualValues(t, pyBool(true), s.Lookup("c4"))
+	})
+
+	t.Run("InvalidVersion", func(t *testing.T) {
+		_, err := parseFile("src/parse/asp/test_data/interpreter/semver_invalid_version.build")
+		assert.Error(t, err)
+	})
+
+	t.Run("InvalidConstraint", func(t *testing.T) {
+		_, err := parseFile("src/parse/asp/test_data/interpreter/semver_invalid_constraint.build")
+		assert.Error(t, err)
+	})
+}

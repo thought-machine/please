@@ -259,13 +259,14 @@ func RunEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 // Optionally includes a stamp if the target is marked as such.
 func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte, tmpDir string) BuildEnv {
 	env := BuildEnvironment(state, target, tmpDir)
+	encStamp := base64.RawURLEncoding.EncodeToString(stamp)
 	if target.Stamp {
 		stampEnvOnce.Do(initStampEnv)
 		env = append(env, stampEnv...)
 		env = append(env, "STAMP_FILE="+target.StampFileName())
-		return append(env, "STAMP="+base64.RawURLEncoding.EncodeToString(stamp))
+		env = append(env, "STAMP="+encStamp)
 	}
-	return env
+	return append(env, "RULE_HASH="+encStamp)
 }
 
 // stampEnv is the generic (i.e. non-target-specific) environment variables we pass to a

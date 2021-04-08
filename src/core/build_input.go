@@ -106,6 +106,7 @@ func (label SubrepoFileLabel) String() string {
 
 // NewFileLabel returns either a FileLabel or SubrepoFileLabel as appropriate.
 func NewFileLabel(src string, pkg *Package) BuildInput {
+	src = strings.TrimRight(src, "/")
 	if pkg.Subrepo != nil {
 		return SubrepoFileLabel{
 			File:        src,

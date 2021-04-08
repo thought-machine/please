@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"unicode"
@@ -54,12 +55,29 @@ func WriteTestMain(pkgDir, importPath string, sources []string, output string, c
 
 // extraImportPaths returns the set of extra import paths that are needed.
 func extraImportPaths(pkg, pkgDir, importPath string, coverVars []CoverVar) []string {
+	isRoot := pkgDir == "" || pkgDir == "."
+
 	pkgDir = collapseFinalDir(path.Join(pkgDir, pkg), importPath)
-	ret := []string{fmt.Sprintf("%s \"%s\"", pkg, collapseFinalDir(path.Join(importPath, pkgDir), importPath))}
+
+	ret := make([]string, 0, len(coverVars)+1)
+	// If we're in the root of the repo, and the import path matches the root package, collapse that as we import it via
+	// the module name
+	if isRoot && strings.HasSuffix(importPath, pkg) {
+		ret = append(ret, fmt.Sprintf("%s \"%s\"", pkg, importPath))
+	} else {
+		ret = append(ret, fmt.Sprintf("%s \"%s\"", pkg, path.Join(importPath, pkgDir)))
+	}
+
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)
 		coverVars[i].ImportName = name
-		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, collapseFinalDir(path.Join(importPath, v.ImportPath), v.ImportPath)))
+
+		// Same thing as above: import the module's root package via the module name if they're the same name
+		if (v.Dir == "." || v.Dir == "") && v.ImportPath == filepath.Base(importPath) {
+			ret = append(ret, fmt.Sprintf("%s \"%s\"", name, importPath))
+		} else {
+			ret = append(ret, fmt.Sprintf("%s \"%s\"", name, path.Join(importPath, v.ImportPath)))
+		}
 	}
 	return ret
 }

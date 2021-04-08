@@ -663,7 +663,7 @@ var buildFunctions = map[string]func() int{
 		transitive := opts.Query.Changes.IncludeDependees == "transitive"
 		direct := opts.Query.Changes.IncludeDependees == "direct"
 		if transitive || direct {
-			log.Warning("include_dependees is deprectated. Please use level instead")
+			log.Warning("include_dependees is deprecated. Please use level instead")
 		}
 		if (transitive || direct) && level != -2 {
 			log.Warning("Both level and include_dependees are set. Using the value from level")
@@ -674,7 +674,7 @@ var buildFunctions = map[string]func() int{
 			level = -1
 		case direct && (level == -2):
 			level = 1
-		case (level == -2):
+		case level == -2:
 			level = 0
 		}
 		runInexact := func(files []string) int {
@@ -807,7 +807,7 @@ func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
 	success, state := runBuild(targets, true, true, false)
 	test.CopySurefireXMLFilesToDir(state, string(surefireDir))
-	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile))
+	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile), state.Config.Test.StoreTestOutputOnSuccess)
 	return success, state
 }
 

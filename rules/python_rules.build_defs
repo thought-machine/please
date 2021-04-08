@@ -80,7 +80,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
         )
         deps += [zip_rule]
     elif strip:
-        raise ParseError("Can't pass strip=True to a python_library with no srcs")
+        fail("Can't pass strip=True to a python_library with no srcs")
 
     return filegroup(
         name=name,
@@ -130,8 +130,8 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
       labels (list): Labels to apply to this rule.
     """
     shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
-    zipsafe_flag = '--zip_safe' if zip_safe else ''
-    cmd = '$TOOLS_PEX -s "%s" -m "%s" %s --interpreter_options="%s" --stamp="$STAMP"' % (
+    zipsafe_flag = '' if zip_safe is False else '--zip_safe'
+    cmd = '$TOOLS_PEX -s "%s" -m "%s" %s --interpreter_options="%s" --stamp="$RULE_HASH"' % (
         shebang, CONFIG.PYTHON_MODULE_DIR, zipsafe_flag, CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
@@ -156,7 +156,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         outs=[f'.{name}_main.pex.zip'],  # just call it .zip so everything has the same extension
         cmd=cmd,
         requires=['py', 'pex'],
-        pre_build=_handle_zip_safe,
+        pre_build=_handle_zip_safe if zip_safe is None else None,
         deps=deps,
         needs_transitive_deps=True,  # Needed so we can find anything with zip_safe=False on it.
         output_is_complete=True,
@@ -165,7 +165,6 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
             'pex': [CONFIG.PEX_TOOL],
         },
         test_only=test_only,
-        stamp=True,  # Used to derive a unique cache-directory for zip-unsafe binaries.
     )
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
@@ -240,7 +239,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     """
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     test_runner = test_runner or CONFIG.PYTHON_TEST_RUNNER
-    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$STAMP"' % (
+    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$RULE_HASH"' % (
         interpreter, CONFIG.PYTHON_MODULE_DIR, test_runner,
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
@@ -274,7 +273,6 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
             'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
             'pex': [CONFIG.PEX_TOOL],
         },
-        stamp = True,
         labels = labels,
     )
 
@@ -489,8 +487,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     initial = package_name[0]
     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
     if not url_base:
-        raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly '
-                         'to python_wheel')
+        fail('python.wheel_repo is not set in the config, must pass repo explicitly to python_wheel')
     urls = []
     if name_scheme:
         urls += [name_scheme.format(url_base=url_base,

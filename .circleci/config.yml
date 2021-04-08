@@ -3,7 +3,7 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_alpine:20210313
+       - image: thoughtmachine/please_alpine:20210406
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
@@ -243,7 +243,7 @@ jobs:
        - attach_workspace:
            at: /tmp/workspace
        - restore_cache:
-           key: elan-v3-{{ checksum "third_party/go/BUILD" }}
+           key: elan-v4-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Test Remote Execution
            command: ./.circleci/rex_test.sh
@@ -252,7 +252,7 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: elan-v3-{{ checksum "third_party/go/BUILD" }}
+           key: elan-v4-{{ checksum "third_party/go/BUILD" }}
            paths: [ "plz-out/elan" ]
 
    test-http-cache:

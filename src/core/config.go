@@ -315,6 +315,7 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.NumExecutors = 20 // kind of arbitrary
 	config.Remote.Secure = true
 	config.Remote.VerifyOutputs = true
+	config.Remote.UploadDirs = true
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
@@ -361,14 +362,14 @@ func DefaultConfiguration() *Configuration {
 	config.Bazel.Compatibility = usingBazelWorkspace
 
 	// Please tools
-	config.Sandbox.Tool = "//_please:tools|please_sandbox"
-	config.Go.FilterTool = "//_please:tools|please_go_filter"
-	config.Go.PleaseGoTool = "//_please:tools|please_go"
-	config.Go.EmbedTool = "//_please:tools|please_go_embed"
-	config.Python.PexTool = "//_please:tools|please_pex"
-	config.Java.JavacWorker = "//_please:tools|javac_worker"
-	config.Java.JarCatTool = "//_please:tools|jarcat"
-	config.Java.JUnitRunner = "//_please:tools|junit_runner"
+	config.Sandbox.Tool = "//_please:please_sandbox"
+	config.Go.FilterTool = "//_please:please_go_filter"
+	config.Go.PleaseGoTool = "//_please:please_go"
+	config.Go.EmbedTool = "//_please:please_go_embed"
+	config.Python.PexTool = "//_please:please_pex"
+	config.Java.JavacWorker = "//_please:javac_worker"
+	config.Java.JarCatTool = "//_please:jarcat"
+	config.Java.JUnitRunner = "//_please:junit_runner"
 
 	return &config
 }
@@ -439,10 +440,12 @@ type Configuration struct {
 		HTTPRetry                  int          `help:"The maximum number of retries before a request will give up, if a request is retryable"`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
-		Timeout         cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
-		Sandbox         bool         `help:"Deprecated, use sandbox.test instead."`
-		DisableCoverage []string     `help:"Disables coverage for tests that have any of these labels spcified."`
-		Upload          cli.URL      `help:"URL to upload test results to (in XML format)"`
+		Timeout                  cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
+		Sandbox                  bool         `help:"Deprecated, use sandbox.test instead."`
+		DisableCoverage          []string     `help:"Disables coverage for tests that have any of these labels spcified."`
+		Upload                   cli.URL      `help:"URL to upload test results to (in XML format)"`
+		UploadGzipped            bool         `help:"True to upload the test results gzipped."`
+		StoreTestOutputOnSuccess bool         `help:"True to store stdout and stderr in the test results for successful tests."`
 	} `help:"A config section describing settings related to testing in general."`
 	Sandbox struct {
 		Tool  string   `help:"The location of the tool to use for sandboxing (typically please_sandbox)."`
@@ -462,6 +465,7 @@ type Configuration struct {
 		Timeout       cli.Duration `help:"Timeout for connections made to the remote server."`
 		Secure        bool         `help:"Whether to use TLS for communication or not."`
 		VerifyOutputs bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
+		UploadDirs    bool         `help:"Uploads individual directory blobs after build actions. This might not be necessary with some servers, but if you aren't sure, you should leave it on."`
 		Shell         string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
 		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
@@ -552,6 +556,7 @@ type Configuration struct {
 		PythonGrpcDep    string   `help:"An in-repo dependency that's applied to any Python gRPC libraries." var:"GRPC_PYTHON_DEP"`
 		JavaGrpcDep      string   `help:"An in-repo dependency that's applied to any Java gRPC libraries." var:"GRPC_JAVA_DEP"`
 		GoGrpcDep        string   `help:"An in-repo dependency that's applied to any Go gRPC libraries." var:"GRPC_GO_DEP"`
+		ProtocFlag       []string `help:"Flags to pass to protoc i.e. the location of well known types. Can be repeated." var:"PROTOC_FLAGS"`
 	} `help:"Please has built-in support for compiling protocol buffers, which are a form of codegen to define common data types which can be serialised and communicated between different languages.\nSee https://developers.google.com/protocol-buffers/ for more information.\n\nThere is also support for gRPC, which is an implementation of protobuf's RPC framework. See http://www.grpc.io/ for more information.\n\nNote that you must have the protocol buffers compiler (and gRPC plugins, if needed) installed on your machine to make use of these rules."`
 	Licences struct {
 		Accept []string `help:"Licences that are accepted in this repository.\nWhen this is empty licences are ignored. As soon as it's set any licence detected or assigned must be accepted explicitly here.\nThere's no fuzzy matching, so some package managers (especially PyPI and Maven, but shockingly not npm which rather nicely uses SPDX) will generate a lot of slightly different spellings of the same thing, which will all have to be accepted here. We'd rather that than trying to 'cleverly' match them which might result in matching the wrong thing."`
@@ -571,7 +576,6 @@ type Configuration struct {
 
 	FeatureFlags struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
-		MavenJar                      bool `help:"Makes maven_jar() download sources with maven compatible jar names, and moves the hashes onto the remote file rule." var:"FF_MAVEN_JAR"`
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 }
