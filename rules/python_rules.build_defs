@@ -353,9 +353,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
 
     package_name = package_name or name
     package_name = f'{package_name}=={version}'
-    outs = outs or [name]
     post_install_commands = post_install_commands or []
-    post_build = None
     use_pypi = CONFIG.USE_PYPI if use_pypi is None else use_pypi
     index_flag = '' if use_pypi else '--no-index'
     pip_flags = pip_flags or CONFIG.PIP_FLAGS
@@ -371,7 +369,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
 
     target = f"{pip_target_dir}/{name}"
     if install_subdirectory:
-     target += '/' + install_subdirectory
+        target += '/' + install_subdirectory
 
     pip_tool = "$TOOLS_PIP" if CONFIG.PIP_TOOL else '$TOOLS_PYTHON -m pip'
 
