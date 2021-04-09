@@ -10,6 +10,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/process",
+        "//src/metrics",
         "//third_party/go:errgroup",
         "//third_party/go:genproto_api",
         "//third_party/go:genproto_rpc",
@@ -20,8 +21,6 @@ go_library(
         "//third_party/go:remote-apis",
         "//third_party/go:remote-apis-sdks",
         "//third_party/go:uuid",
-        "//third_party/go:prometheus",
-        "//third_party/go:prometheus_common",
     ],
 )
 
