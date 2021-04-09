@@ -36,7 +36,6 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/metrics"
 )
 
 var log = logging.MustGetLogger("remote")
@@ -95,7 +94,6 @@ type Client struct {
 	// existingBlobs is used to track the set of existing blobs remotely.
 	existingBlobs     map[string]struct{}
 	existingBlobMutex sync.Mutex
-	metrics           *metrics.RemoteMetrics
 }
 
 type actionDigestMap struct {
@@ -134,7 +132,6 @@ func New(state *core.BuildState) *Client {
 		},
 		fileMetadataCache: filemetadata.NewNoopCache(),
 		shellPath:         state.Config.Remote.Shell,
-		metrics:           metrics.NewRemoteMetrics(),
 	}
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
