@@ -861,3 +861,77 @@ go_module(
     module = "github.com/Masterminds/semver/v3",
     version = "v3.1.1",
 )
+
+go_module(
+    name = "prometheus",
+    install = [
+        "prometheus",
+        "prometheus/internal",
+        "prometheus/push",
+    ],
+    licences = ["Apache 2.0"],
+    module = "github.com/prometheus/client_golang",
+    version = "v1.0.0",
+    deps = [
+        ":prometheus_common",
+        ":prometheus_model",
+        ":prometheus_procfs",
+        ":quantile",
+    ],
+)
+
+go_module(
+    name = "prometheus_model",
+    install = [
+        "go",
+    ],
+    licences = ["Apache 2.0"],
+    module = "github.com/prometheus/client_model",
+    version = "v0.2.0",
+    deps = [":protobuf"],
+)
+
+go_module(
+    name = "prometheus_common",
+    install = [
+        "model",
+        "expfmt",
+        "internal/bitbucket.org/ww/goautoneg",
+    ],
+    module = "github.com/prometheus/common",
+    version = "v0.19.0",
+    deps = [
+        ":pbutil",
+        ":prometheus_model",
+    ],
+)
+
+go_module(
+    name = "prometheus_procfs",
+    install = [
+        ".",
+        "internal/util",
+        "internal/fs",
+    ],
+    module = "github.com/prometheus/procfs",
+    version = "v0.6.0",
+    deps = [
+        ":xsys",
+        ":errgroup",
+    ],
+)
+
+go_module(
+    name = "pbutil",
+    install = ["pbutil"],
+    module = "github.com/matttproud/golang_protobuf_extensions",
+    version = "v1.0.1",
+    deps = [":protobuf"],
+)
+
+go_module(
+    name = "quantile",
+    install = ["quantile"],
+    module = "github.com/beorn7/perks",
+    version = "v1.0.1",
+)
