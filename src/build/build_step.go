@@ -299,6 +299,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return err
 		}
 
+		// Add optional outputs to target metadata
+		metadata.OptionalOutputs = make([]string, 0)
+		for _, output := range fs.Glob(state.Config.Parse.BuildFileName, target.TmpDir(), target.OptionalOutputs, nil, true) {
+			log.Debug("Add discovered optional output to metadata %s", output)
+			metadata.OptionalOutputs = append(metadata.OptionalOutputs, output)
+		}
+
 		metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(target)
 		if err != nil {
 			return err
@@ -437,7 +444,12 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 	// Attempt to retrieve any optional outputs
 	state.Cache.Retrieve(target, cacheKey, target.OptionalOutputs)
 
-	if retrieveFromCache(state.Cache, target, cacheKey, target.Outputs()) != nil {
+	if md := retrieveFromCache(state.Cache, target, cacheKey, target.Outputs()); md != nil {
+		// Retrieve additional optional outputs from metatada
+		if len(md.OptionalOutputs) > 0 {
+			state.Cache.Retrieve(target, cacheKey, md.OptionalOutputs)
+		}
+
 		log.Debug("Retrieved artifacts for %s from cache", target.Label)
 		checkLicences(state, target)
 		newOutputHash, err := calculateAndCheckRuleHash(state, target)

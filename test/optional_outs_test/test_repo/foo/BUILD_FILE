@@ -1,6 +1,9 @@
 genrule(
     name = "foo",
     outs = ["foo.a"],
-    optional_outs = ["foo.sym"],
-    cmd = "touch foo.a && touch foo.sym",
+    cmd = "touch foo.a && touch foo.sym && touch foo.wildcard.sym",
+    optional_outs = [
+        "foo.sym",
+        "*.wildcard.sym",
+    ],
 )
