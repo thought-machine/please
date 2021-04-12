@@ -132,7 +132,7 @@ func run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string,
 	} else {
 		// out_exe handles java binary stuff by invoking the .jar with java as necessary
 		if tmpDir {
-			command = filepath.Join(dir,  target.Outputs()[0])
+			command = filepath.Join(dir, target.Outputs()[0])
 		} else {
 			command, _ = core.ReplaceSequences(state, target, fmt.Sprintf("$(out_exe %s)", target.Label))
 		}
@@ -185,12 +185,12 @@ func run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string,
 }
 
 func prepareRunDir(state *core.BuildState, target *core.BuildTarget) (string, error) {
-	path :=  filepath.Join("plz-out", "run", target.Label.Subrepo, target.Label.PackageName)
+	path := filepath.Join("plz-out", "run", target.Label.Subrepo, target.Label.PackageName)
 	if err := os.MkdirAll(path, fs.DirPermissions); err != nil && !os.IsExist(err) {
 		return "", err
 	}
 
-	path, err := ioutil.TempDir(path, target.Label.Name + "_*")
+	path, err := ioutil.TempDir(path, target.Label.Name+"_*")
 	if err != nil {
 		return "", err
 	}
@@ -199,7 +199,7 @@ func prepareRunDir(state *core.BuildState, target *core.BuildTarget) (string, er
 		return "", err
 	}
 
-	for out := range core.IterRuntimeFiles(state.Graph, target, true,  path) {
+	for out := range core.IterRuntimeFiles(state.Graph, target, true, path) {
 		if err := core.PrepareSourcePair(out); err != nil {
 			return "", err
 		}

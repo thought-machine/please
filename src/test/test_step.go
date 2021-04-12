@@ -321,7 +321,7 @@ func prepareTestDir(state *core.BuildState, target *core.BuildTarget, run int) e
 	if err := state.EnsureDownloaded(target); err != nil {
 		return err
 	}
-	for out := range core.IterRuntimeFiles(state.Graph, target, true,  target.TestDir(run)) {
+	for out := range core.IterRuntimeFiles(state.Graph, target, true, target.TestDir(run)) {
 		if err := core.PrepareSourcePair(out); err != nil {
 			return err
 		}
