@@ -466,12 +466,12 @@ func convertPlatform(config *core.Configuration) *pb.Platform {
 
 // targetPlatform returns the platform properties for a target, including any global ones.
 func (c *Client) targetPlatform(target *core.BuildTarget) *pb.Platform {
-	if target.Platform == nil {
+	if target.RemotePlatform == nil {
 		return c.platform
 	}
-	platform := &pb.Platform{Properties: c.platform.Properties}
-	for k, v := range target.Platform {
-		c.platform.Properties = append(c.platform.Properties, &pb.Platform_Property{Name: k, Value: v})
+	platform := &pb.Platform{Properties: c.platform.Properties[:]}
+	for k, v := range target.RemotePlatform {
+		platform.Properties = append(platform.Properties, &pb.Platform_Property{Name: k, Value: v})
 	}
 	return platform
 }

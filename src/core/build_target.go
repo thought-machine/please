@@ -208,7 +208,7 @@ type BuildTarget struct {
 	// The content of text_file() rules
 	FileContent string `name:"content"`
 	// Platform requirements during remote execution. Can be nil.
-	Platform map[string]string `name:"platform"`
+	RemotePlatform map[string]string `name:"remote_platform"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't

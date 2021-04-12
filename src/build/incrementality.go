@@ -281,7 +281,9 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 
 	hashMap(h, target.EntryPoints)
 	hashMap(h, target.Env)
-	hashMap(h, target.Platform)
+	if target.RemotePlatform != nil {
+		hashMap(h, target.RemotePlatform)
+	}
 
 	h.Write([]byte(target.FileContent))
 
