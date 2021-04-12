@@ -69,6 +69,7 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 		CommandDigest:   commandDigest,
 		InputRootDigest: inputRootDigest,
 		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
+		Platform:        c.targetPlatform(target),
 	})
 	return command, actionDigest, nil
 }
