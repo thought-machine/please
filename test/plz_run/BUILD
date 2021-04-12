@@ -10,6 +10,15 @@ please_repo_e2e_test(
 )
 
 please_repo_e2e_test(
+    name = "env_test_in_tmp_dir",
+    expected_output = {
+        "wibble.txt": "src/wibble.txt src/wibble.sh",
+    },
+    plz_command = "plz run //src:env_printer --in_tmp_dir > wibble.txt",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
     name = "std_in_test",
     expected_output = {
         "wibble.txt": "wibble",

@@ -28,6 +28,15 @@ please_repo_e2e_test(
 )
 
 please_repo_e2e_test(
+    name = "run_entry_point_annotation_tmp_dir_test",
+    expected_output = {
+        "wibble.txt": "wibble",
+    },
+    plz_command = 'plz run --in_tmp_dir "//tools:my_tool|printer" > wibble.txt',
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
     name = "command_expansion_test",
     expected_output = {
         "wibble.txt": "wibble",

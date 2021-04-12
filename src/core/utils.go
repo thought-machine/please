@@ -233,13 +233,13 @@ func recursivelyProvideSource(graph *BuildGraph, target *BuildTarget, src BuildI
 }
 
 // IterRuntimeFiles yields all the runtime files for a rule (outputs, tools & data files), similar to above.
-func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool, testRun int) <-chan SourcePair {
+func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool, runtimeDir string) <-chan SourcePair {
 	done := map[string]bool{}
 	ch := make(chan SourcePair)
 
 	pushOut := func(src, out string) {
 		if absoluteOuts {
-			out = path.Join(RepoRoot, target.TestDir(testRun), out)
+			out = path.Join(RepoRoot, runtimeDir, out)
 		}
 		if !done[out] {
 			ch <- SourcePair{src, out}

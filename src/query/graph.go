@@ -137,7 +137,7 @@ func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget
 		t.Deps = append(t.Deps, dep.Label.String())
 	}
 	// just use run 1 as this is only used to print the test dir
-	for data := range core.IterRuntimeFiles(state.Graph, target, false, 1) {
+	for data := range core.IterRuntimeFiles(state.Graph, target, false,  target.TestDir(1)) {
 		t.Data = append(t.Data, data.Src)
 	}
 	t.Labels = target.Labels

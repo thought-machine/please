@@ -220,7 +220,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	return withUserProvidedEnv(target, env)
 }
 
-func runtimeDataPaths(graph *BuildGraph, t *BuildTarget, data []BuildInput) []string {
+func runtimeDataPaths(graph *BuildGraph, data []BuildInput) []string {
 	paths := make([]string, 0, len(data))
 	for _, in := range data {
 		paths = append(paths, in.FullPaths(graph)...)
@@ -229,7 +229,7 @@ func runtimeDataPaths(graph *BuildGraph, t *BuildTarget, data []BuildInput) []st
 }
 
 // RunEnvironment creates the environment variables for a `plz run --env`.
-func RunEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
+func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) BuildEnv {
 	env := TargetEnvironment(state, target)
 
 	env = append(env,
@@ -244,11 +244,20 @@ func RunEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, true), " "))
 	}
 	if len(target.Data) > 0 {
-		env = append(env, "DATA="+strings.Join(runtimeDataPaths(state.Graph, target, target.AllData()), " "))
+		if inTmpDir {
+			env = append(env, "DATA="+strings.Join(target.AllDataPaths(state.Graph), " "))
+		} else {
+			env = append(env, "DATA="+strings.Join(runtimeDataPaths(state.Graph, target.AllData()), " "))
+		}
 	}
 	if target.namedData != nil {
 		for name, data := range target.namedData {
-			paths := runtimeDataPaths(state.Graph, target, data)
+			var paths []string
+			if inTmpDir {
+				paths = target.SourcePaths(state.Graph, data)
+			} else {
+				paths = runtimeDataPaths(state.Graph, data)
+			}
 			env = append(env, "DATA_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
 		}
 	}
