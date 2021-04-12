@@ -45,6 +45,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb
 			CommandDigest:   commandDigest,
 			InputRootDigest: inputRootDigest,
 			Timeout:         ptypes.DurationProto(timeout(target, isTest)),
+			Platform:        c.targetPlatform(target),
 		})
 		ch <- actionEntry
 		digest = actionDigest
