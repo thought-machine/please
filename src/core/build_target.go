@@ -219,6 +219,8 @@ type BuildMetadata struct {
 	// Time this action was written. Used for remote execution to determine if
 	// the action is stale and needs re-checking or not.
 	Timestamp time.Time
+	// Additional optional outputs found from wildcard
+	OptionalOutputs []string
 	// Additional outputs from output directories serialised as a csv
 	OutputDirOuts []string
 	// True if this represents a test run.
