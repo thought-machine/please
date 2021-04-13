@@ -865,6 +865,10 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
 
+	if opts.Run.InTempDir && opts.Run.InWD {
+		log.Fatal("Can't use both --in_temp_dir and --in_wd at the same time")
+	}
+
 	runPlease(state, targets)
 	return state.Successful(), state
 }

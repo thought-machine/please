@@ -74,9 +74,6 @@ func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args
 }
 
 func prepareRun(dir string, inTmp bool) {
-	if inTmp && dir != "" {
-		log.Fatal("Can't use both --in_temp_dir and --in_wd at the same time")
-	}
 	os.RemoveAll("plz-out/run")
 }
 
