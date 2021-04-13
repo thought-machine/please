@@ -6,7 +6,12 @@ package(jarcat_tool = "//:jarcat_unzip")
 go_toolchain(
     name = "toolchain",
     version = "1.16",
-    hashes = ["sha256: 4dac57c00168d30bbd02d95131d5de9ca88e04f2c5a29a404576f30ae9b54810"],
+    hashes = [
+        "sha256: 4dac57c00168d30bbd02d95131d5de9ca88e04f2c5a29a404576f30ae9b54810", # darwin_arm64
+        "sha256: 6000a9522975d116bf76044967d7e69e04e982e9625330d9a539a8b45395f9a8", # darwin_amd64
+        "sha256: 013a489ebb3e24ef3d915abe5b94c3286c070dfe0818d5bca8108f1d6e8440d2", # linux_amd64
+        "sha256: 40b03216f6945fb6883a50604fc7f409a83f62171607229a9c598e701e684f8a", # freebsd_amd64
+    ],
     strip_srcs = True,
 )
 
