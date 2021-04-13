@@ -916,8 +916,8 @@ go_module(
     module = "github.com/prometheus/procfs",
     version = "v0.6.0",
     deps = [
-        ":xsys",
         ":errgroup",
+        ":xsys",
     ],
 )
 
