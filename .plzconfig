@@ -19,7 +19,6 @@ pleasegotool = //tools/please_go
 embedtool = //tools/please_go_embed
 importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
-extldtool = cc
 
 [cpp]
 defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter

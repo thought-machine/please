@@ -318,7 +318,7 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.UploadDirs = true
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
-	config.Go.CgoCCTool = "gcc"
+	config.Go.CCTool = "cc"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.DisableVendorFlags = false
 	config.Python.TestRunner = "unittest"
@@ -327,7 +327,7 @@ func DefaultConfiguration() *Configuration {
 	config.Python.InterpreterOptions = ""
 	config.Python.PipFlags = ""
 	config.Java.DefaultTestPackage = ""
-	config.Java.SourceLevel = "8"
+	config.Java.SourceLevel = "8"#
 	config.Java.TargetLevel = "8"
 	config.Java.ReleaseLevel = ""
 	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2", "https://jcenter.bintray.com/"}
@@ -485,9 +485,7 @@ type Configuration struct {
 		GoRoot           string `help:"If set, will set the GOROOT environment variable appropriately during build actions." var:"GOROOT"`
 		GoPath           string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
 		ImportPath       string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
-		CgoCCTool        string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`
-		ExtLDTool        string `help:"Sets the external linker (-extld) to use for when linking go binaries. If not set, go will attempt to use clang or gcc on the path." var:"GO_EXTLD_TOOL"`
-		CgoEnabled       string `help:"Sets the CGO_ENABLED which controls whether the cgo build flag is set during cross compilation. Defaults to '0' (disabled)" var:"CGO_ENABLED"`
+		CCTool           string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"GO_CC_TOOL"`
 		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
 		PleaseGoTool     string `help:"Sets the location of the please_go tool that is used to compile and test go code." var:"PLEASE_GO_TOOL"`
 		EmbedTool        string `help:"Sets the location of the please_go_embed tool that is used to parse //go:embed directives." var:"GO_EMBED_TOOL"`

@@ -46,8 +46,8 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     if CONFIG.TARGET_OS != CONFIG.HOSTOS or CONFIG.TARGET_ARCH != CONFIG.HOSTARCH:
         architectures += [f'{CONFIG.TARGET_OS}_{CONFIG.TARGET_ARCH}']
 
-    if architectures and CONFIG.CGO_ENABLED == "1":
-        cmd += f" && export CGO_ENABLED={CONFIG.CGO_ENABLED} && export CC=$TOOLS_CC"
+    if architectures and CONFIG.GO_CC_TOOL:
+        cmd += f" && export CGO_ENABLED=1 && export CC=$TOOLS_CC"
 
     for arch in architectures:
         goos, _, goarch = arch.partition("_")
@@ -65,8 +65,8 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
             'gofmt': f'{name}/bin/gofmt',
         },
         tools = {
-          "CC": [CONFIG.CGO_CC_TOOL],
-        } if CONFIG.CGO_ENABLED == "1" else {},
+          "CC": [CONFIG.GO_CC_TOOL],
+        } if CONFIG.GO_CC_TOOL else {},
         binary = True,
         visibility = visibility,
         building_description = "Installing...",
@@ -913,18 +913,21 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
     else:
         outs = [f'pkg/{CONFIG.GOOS}_{CONFIG.GOARCH}/{out}' for out in _remove_redundant_outs(outs)]
 
+    tools = {
+        'go': [CONFIG.GO_TOOL],
+        'please_go': [CONFIG.PLEASE_GO_TOOL],
+    }
+
+    if CONFIG.GO_CC_TOOL:
+        tools['cc'] = [CONFIG.GO_CC_TOOL]
+
     return build_rule(
         name = name,
         tag = "a_rule" if not binary else None,
         outs = outs,
         deps = deps,
         srcs = [src],
-        tools = {
-            'go': [CONFIG.GO_TOOL],
-            'please_go': [CONFIG.PLEASE_GO_TOOL],
-            # TODO(jpoole): this should be optional
-            'cc': [CONFIG.CGO_CC_TOOL],
-        },
+        tools = tools,
         visibility = visibility,
         building_description = 'Compiling...',
         cmd = ' && '.join(cmd),
@@ -1479,8 +1482,8 @@ def _set_go_env():
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
     cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
-    if CONFIG.CGO_ENABLED:
-        return f'export CGO_ENABLED={CONFIG.CGO_ENABLED} && {cmd}'
+    if CONFIG.GO_CC_TOOL:
+        return f'export CGO_ENABLED=1 && {cmd}'
     return cmd
 
 
@@ -1511,8 +1514,8 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
     """Returns the commands to run for linking a Go binary."""
 
     _link_cmd = f'"$TOOLS_GO" tool link -importcfg importconfig -tmpdir "$TMP_DIR" -o "$OUT"'
-    if CONFIG.GO_EXTLD_TOOL:
-        _link_cmd += ' -extld "$TOOLS_LD"'
+    if CONFIG.GO_CC_TOOL:
+        _link_cmd += ' -extld "$TOOLS_CC"'
 
     gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
@@ -1547,8 +1550,8 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
         cmds['cover'] = f'{gen_import_cfg} && {_link_cmd} {flags} -extldflags="-lgcov" $SRCS'
 
     tools = {'go': [CONFIG.GO_TOOL]}
-    if CONFIG.GO_EXTLD_TOOL:
-        tools["ld"] = CONFIG.GO_EXTLD_TOOL
+    if CONFIG.GO_CC_TOOL:
+        tools["cc"] = CONFIG.GO_CC_TOOL
 
     return cmds, tools
 

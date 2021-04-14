@@ -16,6 +16,6 @@ please_repo_e2e_test(
         "out.txt": "plz-out/bin/freebsd_arm64/src/main: ELF 64-bit LSB executable, ARM aarch64, version 1 (FreeBSD), statically linked, stripped",
     },
     labels = ["no-musl"],
-    plz_command = "plz build //src:main --arch freebsd_arm64 && file plz-out/bin/freebsd_arm64/src/main > out.txt",
+    plz_command = "plz build -o go.cctool: //src:main --arch freebsd_arm64 && file plz-out/bin/freebsd_arm64/src/main > out.txt",
     repo = "test_repo",
 )
