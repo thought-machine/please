@@ -44,7 +44,6 @@ go_module(
         "internal/randutil",
         "internal/syscall/...",
         "ocb",
-        "openpgp",
         "openpgp/...",
         "rand",
         "rsa",
@@ -62,7 +61,6 @@ go_module(
 go_module(
     name = "gcfg",
     install = [
-        ".",
         "...",
     ],
     module = "github.com/peterebden/gcfg",
@@ -130,7 +128,6 @@ go_module(
         "secure/...",
         "unicode/...",
         "transform",
-        "encoding",
         "encoding/...",
     ],
     module = "golang.org/x/text",
@@ -160,7 +157,6 @@ go_module(
         "balancer",
         "balancer/base",
         "balancer/grpclb/...",
-        "balancer/grpclb",
         "balancer/roundrobin",
         "binarylog/...",
         "codes",
@@ -174,7 +170,6 @@ go_module(
         "health",
         "health/grpc_health_v1",
         "internal/...",
-        "internal",
         "keepalive",
         "metadata",
         "peer",
@@ -650,7 +645,6 @@ go_module(
 go_module(
     name = "cmp",
     install = [
-        "cmp",
         "cmp/...",
     ],
     module = "github.com/google/go-cmp",
@@ -711,7 +705,6 @@ go_module(
 go_module(
     name = "promptui",
     install = [
-        ".",
         "...",
     ],
     module = "github.com/manifoldco/promptui",
@@ -731,7 +724,6 @@ go_module(
 go_module(
     name = "ansiterm",
     install = [
-        ".",
         "...",
     ],
     module = "github.com/juju/ansiterm",
@@ -784,7 +776,6 @@ go_module(
     name = "goldmark",
     install = [
         "...",
-        ".",
     ],
     module = "github.com/yuin/goldmark",
     version = "v1.2.1",
@@ -847,7 +838,6 @@ go_module(
     install = [
         "fse",
         "huff0",
-        "zstd",
         "zstd/...",
         "snappy",
     ],

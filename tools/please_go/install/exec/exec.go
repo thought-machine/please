@@ -21,7 +21,7 @@ type OsExecutor struct {
 // Exec runs the command
 func (e *OsExecutor) Exec(cmdStr string, args ...interface{}) error {
 	cmdStr = fmt.Sprintf(cmdStr, args...)
-	fmt.Fprintf(os.Stderr, "please_go_install -> %v\n", cmdStr)
+	fmt.Fprintf(os.Stderr, "please_go install -> %v\n", cmdStr)
 
 	cmd := exec.Command("bash", "-e", "-c", cmdStr)
 	cmd.Stdout = e.Stdout
