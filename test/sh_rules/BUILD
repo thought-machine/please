@@ -29,7 +29,7 @@ sh_cmd(
 sh_cmd(
     name = "sh_cmd_unexpanded",
     cmd = [
-        'git VAR="$OUT"',
+        'VAR="$OUT"',
         '[ "$VAR" = "" ] || (echo "Expected a build time var to be unexpanded." >&2 && exit 11)',
     ],
     expand_env_vars = False,
