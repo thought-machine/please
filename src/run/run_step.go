@@ -74,7 +74,9 @@ func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args
 }
 
 func prepareRun(dir string, inTmp bool) {
-	os.RemoveAll("plz-out/run")
+	if err := os.RemoveAll("plz-out/run"); err != nil && !os.IsNotExist(err) {
+		log.Warningf("failed to clean up old run working directory: %v", err)
+	}
 }
 
 // run implements the internal logic about running a target.
