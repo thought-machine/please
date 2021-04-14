@@ -21,8 +21,8 @@ class PythonCoverageTest(unittest.TestCase):
         import coverage
         self.assertIsNotNone(coverage)
 
-    @unittest.skipIf(sys.platform == 'darwin' and sys.version_info.major < 3,
-                     'Not working on OSX python2 at present due to symbol errors')
+    @unittest.skipIf(sys.version_info.major < 3,
+                     'Not working on python2 as python2 does not support multi-version-wheels')
     def test_can_import_tracer(self):
         """Test we can import the binary tracer module."""
         from coverage import tracer
