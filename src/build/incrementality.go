@@ -470,7 +470,7 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget, testRun int) 
 	hash := append(RuleHash(state, target, true, false), RuleHash(state, target, true, true)...)
 	hash = append(hash, state.Hashes.Config...)
 	h := sha1.New()
-	for source := range core.IterRuntimeFiles(state.Graph, target, true, testRun) {
+	for source := range core.IterRuntimeFiles(state.Graph, target, true, target.TestDir(testRun)) {
 		result, err := state.PathHasher.Hash(source.Src, false, true)
 		if err != nil {
 			return result, err

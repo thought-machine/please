@@ -164,6 +164,7 @@ var opts struct {
 		Env        bool   `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
 		Rebuild    bool   `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
 		InWD       bool   `long:"in_wd" description:"When running locally, stay in the original working directory."`
+		InTempDir  bool   `long:"in_tmp_dir" description:"Runs in a temp directory, setting env variables and copying in runtime data similar to tests."`
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Parallel   struct {
 			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
@@ -453,7 +454,7 @@ var buildFunctions = map[string]func() int{
 				log.Fatalf("%v expanded to too many targets: %v", opts.Run.Args.Target, annotatedOutputLabels)
 			}
 
-			run.Run(state, annotatedOutputLabels[0], opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, dir)
+			run.Run(state, annotatedOutputLabels[0], opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir)
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
@@ -464,7 +465,7 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
-			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, dir))
+			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
 		return 1
 	},
@@ -476,7 +477,7 @@ var buildFunctions = map[string]func() int{
 			}
 
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Sequential.PositionalArgs.Targets)
-			os.Exit(run.Sequential(state, ls, opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, dir))
+			os.Exit(run.Sequential(state, ls, opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir))
 		}
 		return 1
 	},
@@ -862,6 +863,10 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 
 	if state.DebugTests && len(targets) != 1 {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
+	}
+
+	if opts.Run.InTempDir && opts.Run.InWD {
+		log.Fatal("Can't use both --in_temp_dir and --in_wd at the same time")
 	}
 
 	runPlease(state, targets)
