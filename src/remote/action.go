@@ -45,7 +45,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb
 			CommandDigest:   commandDigest,
 			InputRootDigest: inputRootDigest,
 			Timeout:         ptypes.DurationProto(timeout(target, isTest)),
-			Platform:        c.targetPlatform(target),
+			Platform:        c.targetPlatformProperties(target),
 		})
 		ch <- actionEntry
 		digest = actionDigest
@@ -70,7 +70,7 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 		CommandDigest:   commandDigest,
 		InputRootDigest: inputRootDigest,
 		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
-		Platform:        c.targetPlatform(target),
+		Platform:        c.targetPlatformProperties(target),
 	})
 	return command, actionDigest, nil
 }
@@ -113,7 +113,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 	cmd, err := core.ReplaceSequences(state, target, cmd)
 	return &pb.Command{
-		Platform:             c.targetPlatform(target),
+		Platform:             c.targetPlatformProperties(target),
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp), target.Sandbox),
 		OutputPaths:          outs,

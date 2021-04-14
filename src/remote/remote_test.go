@@ -318,7 +318,7 @@ func TestDirectoryMetadataStore(t *testing.T) {
 
 func TestTargetPlatform(t *testing.T) {
 	c := newClientInstance("platform_test")
-	c.platform = convertPlatform(c.state.Config) // Bit of a hack but we can't go through the normal path.
+	c.platform = convertPlatform(c.state.Config.Remote.Platform) // Bit of a hack but we can't go through the normal path.
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target"})
 	cmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false)
 	assert.NoError(t, err)
@@ -331,20 +331,18 @@ func TestTargetPlatform(t *testing.T) {
 		},
 	}, cmd.Platform)
 
-	target.RemotePlatform = map[string]string{
-		"size": "chomky",
-	}
+	target.Labels = []string{"remote-platform-property:size=chomky"}
 	cmd, err = c.buildCommand(target, &pb.Directory{}, false, false, false)
 	assert.NoError(t, err)
 	assert.Equal(t, &pb.Platform{
 		Properties: []*pb.Platform_Property{
 			{
-				Name:  "OSFamily",
-				Value: "linux",
-			},
-			{
 				Name:  "size",
 				Value: "chomky",
+			},
+			{
+				Name:  "OSFamily",
+				Value: "linux",
 			},
 		},
 	}, cmd.Platform)
