@@ -432,7 +432,12 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 
-	if retrieveFromCache(state.Cache, target, mustShortTargetHash(state, target), target.Outputs()) != nil {
+	cacheKey := mustShortTargetHash(state, target)
+
+	// Attempt to retrieve any optional outputs
+	state.Cache.Retrieve(target, cacheKey, target.OptionalOutputs)
+
+	if retrieveFromCache(state.Cache, target, cacheKey, target.Outputs()) != nil {
 		log.Debug("Retrieved artifacts for %s from cache", target.Label)
 		checkLicences(state, target)
 		newOutputHash, err := calculateAndCheckRuleHash(state, target)

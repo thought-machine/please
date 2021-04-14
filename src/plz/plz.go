@@ -10,6 +10,7 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/remote"
 	"github.com/thought-machine/please/src/test"
@@ -32,6 +33,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	if config.Display.SystemStats {
 		go state.UpdateResources()
 	}
+	metrics.InitFromConfig(config)
 
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, preTargets, targets, arch)

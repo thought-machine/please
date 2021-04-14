@@ -8,7 +8,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
             test_only:bool&testonly=False, secrets:list|dict=None, requires:list=None, provides:dict=None,
             pre_build:function=None, post_build:function=None, tools:str|list|dict=None, pass_env:list=None,
             local:bool=False, output_dirs:list=[], exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={},
-            env:dict={}):
+            env:dict={}, optional_outs:list=[]):
     """A general build rule which allows the user to specify a command.
 
     Args:
@@ -105,6 +105,9 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
       entry_points (dict): A subset of outputs of this rule that can be used as entry points by other rules.
                            Entry points can be referenced though the `//path/to:rule|entry-point` syntax.
       env (dict): Any additional environment variables to set for this build rule.
+      optional_outs (list): Any additional outputs this rule might produce. These are are not made available to rules
+                            that depend on this rule. They are only copied to plz-out. These can be useful for symbols,
+                            source maps and other metadata like that.
     """
     if out and outs:
         fail('Can\'t specify both "out" and "outs".')
@@ -138,6 +141,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         exit_on_error = exit_on_error,
         entry_points = entry_points,
         env=env,
+        optional_outs = optional_outs,
     )
 
 

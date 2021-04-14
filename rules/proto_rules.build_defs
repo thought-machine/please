@@ -39,7 +39,8 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     lang_plugins = sorted(languages.items())
     plugins = [plugin for _, plugin in lang_plugins]
 
-    # TODO(pebers): genericise this bit?
+    # TODO(jpoole): Remove this once we drop support for the old unified grpc+proto plugin. We should be able to set
+    #   `option go_package = ...; on the proto and rely on import configs after that.
     if 'go' in languages:
         base_path = get_base_path()
         diff_pkg = basename(base_path) != name
@@ -83,7 +84,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
             tag_name = f'{language}_{p}'
             current_package = package_name()
             # TODO(jpoole): the provide stuff didn't really work because the mapping isn't always straight forward
-            # We probably need to make this a map
+            #   We probably need to make this a map
             if p == 'srcs' and language == 'go':
                 provides['go_src'] = f'//{current_package}:_{name}#go_srcs'
             else:
@@ -151,7 +152,6 @@ def _go_path_mapping(grpc):
         new_cmd = cmd.replace('--go_out=', f'--go_out={grpc_plugin}M{mapping}:')
         set_command(rule_name, new_cmd)
     return _map_go_paths
-
 
 def proto_language(language:str, extensions:list|dict=None, func:function, use_file_names:bool=True, protoc_flags:list=[],
                    tools: list | dict = None, deps:list=[], pre_build:function=None, proto_language:str='', provides:list=[]):
@@ -273,7 +273,7 @@ def proto_languages():
                 deps = deps,
                 test_only = test_only,
             ),
-            protoc_flags = ['--go_out="$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"'],
+            protoc_flags = ['--go_out="$OUT_DIR"', '--plugin=protoc-gen-go="`which $TOOLS_GO`"', '--go_opt=paths=source_relative'],
             tools = [CONFIG.PROTOC_GO_PLUGIN],
             deps = [CONFIG.PROTO_GO_DEP],
             pre_build = _go_path_mapping(False),
@@ -356,9 +356,12 @@ def grpc_languages():
                 '--go_out="$OUT_DIR"',
                 '--plugin=protoc-gen-go="`which $TOOLS_GO`"',
                 '--plugin=protoc-gen-go-grpc="`which $TOOLS_GRPC_GO`"',
+                '--go_opt=paths=source_relative',
+                '--go-grpc_opt=paths=source_relative',
             ] if CONFIG.GRPC_GO_PLUGIN else [
                 '--go_out="$OUT_DIR"',
                 '--plugin=protoc-gen-go="`which $TOOLS_GO`"',
+                '--go_opt=paths=source_relative',
             ],
             tools = {
                 'go': [CONFIG.PROTOC_GO_PLUGIN],
@@ -367,8 +370,8 @@ def grpc_languages():
                 CONFIG.PROTOC_GO_PLUGIN,
             ],
             deps = [CONFIG.PROTO_GO_DEP, CONFIG.GRPC_GO_DEP],
+            pre_build = None if CONFIG.GRPC_GO_PLUGIN else _go_path_mapping(True),
             # if we're using the old unified protoc plugin, tell it to generate grpc
-            pre_build = _go_path_mapping(not CONFIG.GRPC_GO_PLUGIN),
             provides=['srcs'],
         ),
         # We don't really support grpc-js right now, so this is the same as proto-js.
@@ -392,8 +395,8 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
     tools = {'protoc': [CONFIG.PROTOC_TOOL]}
     plugin_tools = plugin['tools']
     if isinstance(plugin_tools, dict):
-        for name, value in plugin_tools.items():
-            tools[name] = value
+        for tool_name, tool in plugin_tools.items():
+            tools[tool_name] = tool
     else:
         tools[language] = plugin_tools
 
