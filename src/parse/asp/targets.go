@@ -64,7 +64,6 @@ const (
 	entryPointsArgIdx
 	envArgIdx
 	fileContentArgIdx
-	remotePlatformArgIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -105,13 +104,6 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.ExitOnError = isTruthy(exitOnErrorArgIdx)
 	for _, o := range asStringList(s, args[outDirsBuildRuleArgIdx], "output_dirs") {
 		target.AddOutputDirectory(o)
-	}
-	if platform := args[remotePlatformArgIdx]; platform != nil && platform != None {
-		d := platform.(pyDict)
-		target.RemotePlatform = make(map[string]string, len(d))
-		for k, v := range d {
-			target.RemotePlatform[k] = v.String()
-		}
 	}
 
 	var size *core.Size
