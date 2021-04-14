@@ -461,10 +461,9 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         entry_points = entry_points,
     )
 
-def text_file(name:str, content:str, expand_content:bool=True, hashes:list=None, out:str=None, binary:bool=False,
-                visibility:list=None, licences:list=None, test_only:bool&testonly=False,
-                labels:list=[], deps:list=None, exported_deps:list=None,
-                _tag:str='', entry_points:dict={},):
+def text_file(name:str, content:str, hashes:list=None, data:list|dict=[], out:str=None,
+              binary:bool=False, visibility:list=None, licences:list=None, test_only:bool&testonly=False,
+              labels:list=[], deps:list|dict=None, exported_deps:list=None, _tag:str='', entry_points:dict={}):
     """Defines a rule to convert a string in the build language into a text file.
 
     Args:
@@ -477,7 +476,8 @@ def text_file(name:str, content:str, expand_content:bool=True, hashes:list=None,
       licences (list): List of licences that apply to this rule.
       test_only (bool): If true the rule is only visible to test targets.
       labels (list): Labels to apply to this rule.
-      deps (list): List of extra dependencies for this rule.
+      deps (list): List of dependencies for this rule.
+      data (list): List of runtime data for this rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
     """
 
@@ -492,6 +492,7 @@ def text_file(name:str, content:str, expand_content:bool=True, hashes:list=None,
         hashes = hashes,
         licences = licences,
         deps = deps,
+        data = data,
         exported_deps = exported_deps,
         test_only = test_only,
         labels = labels,

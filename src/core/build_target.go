@@ -1551,6 +1551,11 @@ func (target *BuildTarget) AddOutputDirectory(dir string) {
 	target.OutputDirectories = append(target.OutputDirectories, OutputDirectory(dir))
 }
 
+// GetFileContent returns the file content, expanding it if it needs to
+func (target *BuildTarget) GetFileContent(state *BuildState) (string, error) {
+	return ReplaceSequences(state, target, target.FileContent)
+}
+
 // BuildTargets makes a slice of build targets sortable by their labels.
 type BuildTargets []*BuildTarget
 
