@@ -1,0 +1,4 @@
+//test/revdeps/hidden_test:_lvl1#one
+//test/revdeps/hidden_test:_lvl1#two
+//test/revdeps/hidden_test:_lvl2#one
+//test/revdeps/hidden_test:lvl1

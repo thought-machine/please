@@ -24,26 +24,54 @@ func TestReverseDeps(t *testing.T) {
 	leaf.ResolveDependencies(graph)
 
 	pkg := core.NewPackage("package")
-	pkg.AddTarget(root)
-	pkg.AddTarget(branch)
-	pkg.AddTarget(leaf)
 	graph.AddPackage(pkg)
 
-	labels := revDepsLabels(state, []core.BuildLabel{branch.Label}, -1)
+	labels := revDepsLabels(state, []core.BuildLabel{branch.Label}, false, -1)
 	assert.ElementsMatch(t, core.BuildLabels{leaf.Label}, labels)
-	labels = revDepsLabels(state, []core.BuildLabel{root.Label}, -1)
+	labels = revDepsLabels(state, []core.BuildLabel{root.Label}, false, -1)
 	assert.ElementsMatch(t, core.BuildLabels{branch.Label, leaf.Label}, labels)
-	labels = revDepsLabels(state, []core.BuildLabel{root.Label}, 1)
+	labels = revDepsLabels(state, []core.BuildLabel{root.Label}, false, 1)
 	assert.ElementsMatch(t, core.BuildLabels{branch.Label}, labels)
 }
 
-func revDepsLabels(state *core.BuildState, labels []core.BuildLabel, levelsToGo int) core.BuildLabels {
-	ls := map[core.BuildLabel]int{}
-	getRevDepTransitiveLabels(state, labels, ls, levelsToGo)
+func TestReverseDepsWithHidden(t *testing.T) {
+	state := core.NewDefaultBuildState()
+	graph := state.Graph
 
-	ret := make([]core.BuildLabel, 0, len(ls))
-	for l := range ls {
-		ret = append(ret, l)
+	foo := core.NewBuildTarget(core.ParseBuildLabel("//package:foo", ""))
+	fooInter1 := core.NewBuildTarget(core.ParseBuildLabel("//package:_foo#tag1", ""))
+	fooInter2 := core.NewBuildTarget(core.ParseBuildLabel("//package:_foo#tag2", ""))
+	bar := core.NewBuildTarget(core.ParseBuildLabel("//package:bar", ""))
+	foo.AddDependency(fooInter2.Label)
+	fooInter2.AddDependency(fooInter1.Label)
+	fooInter1.AddDependency(bar.Label)
+	graph.AddTarget(foo)
+	graph.AddTarget(fooInter1)
+	graph.AddTarget(fooInter2)
+	graph.AddTarget(bar)
+
+	pkg := core.NewPackage("package")
+	graph.AddPackage(pkg)
+
+	labels := revDepsLabels(state, []core.BuildLabel{bar.Label}, false, 1)
+	assert.ElementsMatch(t, core.BuildLabels{foo.Label}, labels)
+
+	labels = revDepsLabels(state, []core.BuildLabel{bar.Label}, true, 1)
+	assert.ElementsMatch(t, core.BuildLabels{fooInter1.Label}, labels)
+
+	labels = revDepsLabels(state, []core.BuildLabel{bar.Label}, true, 2)
+	assert.ElementsMatch(t, core.BuildLabels{fooInter1.Label, fooInter2.Label}, labels)
+
+	labels = revDepsLabels(state, []core.BuildLabel{bar.Label}, true, 3)
+	assert.ElementsMatch(t, core.BuildLabels{fooInter1.Label, fooInter2.Label, foo.Label}, labels)
+}
+
+func revDepsLabels(state *core.BuildState, labels []core.BuildLabel, hidden bool, depth int) core.BuildLabels {
+	ts := FindRevdeps(state, labels, hidden, depth)
+
+	ret := make([]core.BuildLabel, 0, len(ts))
+	for t := range ts {
+		ret = append(ret, t.Label)
 	}
 	return ret
 }

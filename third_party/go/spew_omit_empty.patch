@@ -1,7 +1,7 @@
 diff --git a/config.go b/config.go
 index 2e3d22f..2245869 100644
---- a/config.go
-+++ b/config.go
+--- a/spew/config.go
++++ b/spew/config.go
 @@ -76,6 +76,13 @@ type ConfigState struct {
  	// data structures in tests.
  	DisableCapacities bool
@@ -37,8 +37,8 @@ index 2e3d22f..2245869 100644
  }
 diff --git a/doc.go b/doc.go
 index aacaac6..565d4d2 100644
---- a/doc.go
-+++ b/doc.go
+--- a/spew/doc.go
++++ b/spew/doc.go
 @@ -100,6 +100,13 @@ The following configuration options are available:
  		capacities for arrays, slices, maps and channels. This is useful when
  		diffing data structures in tests.
@@ -55,8 +55,8 @@ index aacaac6..565d4d2 100644
  		methods. Recursion after method invocation is disabled by default.
 diff --git a/dump.go b/dump.go
 index f78d89f..5aaa806 100644
---- a/dump.go
-+++ b/dump.go
+--- a/spew/dump.go
++++ b/spew/dump.go
 @@ -123,10 +123,12 @@ func (d *dumpState) dumpPtr(v reflect.Value) {
  	}
 

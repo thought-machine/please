@@ -6,6 +6,13 @@ package(jarcat_tool = "//:jarcat_unzip")
 go_toolchain(
     name = "toolchain",
     version = "1.16",
+    hashes = [
+        "4dac57c00168d30bbd02d95131d5de9ca88e04f2c5a29a404576f30ae9b54810", # darwin_arm64
+        "6000a9522975d116bf76044967d7e69e04e982e9625330d9a539a8b45395f9a8", # darwin_amd64
+        "013a489ebb3e24ef3d915abe5b94c3286c070dfe0818d5bca8108f1d6e8440d2", # linux_amd64
+        "40b03216f6945fb6883a50604fc7f409a83f62171607229a9c598e701e684f8a", # freebsd_amd64
+    ],
+    strip_srcs = True,
 )
 
 go_module(
@@ -26,7 +33,6 @@ go_module(
 
 go_module(
     name = "go-crypto",
-    module = "github.com/ProtonMail/go-crypto",
     install = [
         "bitcurves",
         "brainpool",
@@ -43,6 +49,7 @@ go_module(
         "rand",
         "rsa",
     ],
+    module = "github.com/ProtonMail/go-crypto",
     version = "3900d675f39ba9686203d137886d74fad620ae87",
 )
 
@@ -283,12 +290,13 @@ go_module(
     ],
 )
 
-go_get(
+go_module(
     name = "spew",
-    get = "github.com/davecgh/go-spew/spew",
+    module = "github.com/davecgh/go-spew",
+    install = ["spew"],
     licences = ["ISC"],
     patch = "spew_omit_empty.patch",
-    revision = "ecdeabc65495df2dec95d7c4a4c3e021903035e5",
+    version = "ecdeabc65495df2dec95d7c4a4c3e021903035e5",
 )
 
 go_module(
@@ -347,7 +355,7 @@ go_module(
     name = "queue",
     install = ["queue"],
     module = "github.com/Workiva/go-datastructures",
-    version = "064f3ea06ab2337e6eaf42052392d14f779e91cb",
+    version = "v1.0.53",
 )
 
 go_module(
@@ -649,11 +657,11 @@ go_module(
     version = "b1c9c4891a6525d98001fea424c8926c6d77bb56",
 )
 
-go_get(
+go_module(
     name = "glog",
-    get = "github.com/golang/glog",
+    module = "github.com/golang/glog",
     patch = "glog_disable.patch",
-    revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
+    version = "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
 )
 
 go_module(
@@ -870,4 +878,78 @@ go_module(
     name = "semver2",
     module = "github.com/Masterminds/semver/v3",
     version = "v3.1.1",
+)
+
+go_module(
+    name = "prometheus",
+    install = [
+        "prometheus",
+        "prometheus/internal",
+        "prometheus/push",
+    ],
+    licences = ["Apache 2.0"],
+    module = "github.com/prometheus/client_golang",
+    version = "v1.0.0",
+    deps = [
+        ":prometheus_common",
+        ":prometheus_model",
+        ":prometheus_procfs",
+        ":quantile",
+    ],
+)
+
+go_module(
+    name = "prometheus_model",
+    install = [
+        "go",
+    ],
+    licences = ["Apache 2.0"],
+    module = "github.com/prometheus/client_model",
+    version = "v0.2.0",
+    deps = [":protobuf"],
+)
+
+go_module(
+    name = "prometheus_common",
+    install = [
+        "model",
+        "expfmt",
+        "internal/bitbucket.org/ww/goautoneg",
+    ],
+    module = "github.com/prometheus/common",
+    version = "v0.19.0",
+    deps = [
+        ":pbutil",
+        ":prometheus_model",
+    ],
+)
+
+go_module(
+    name = "prometheus_procfs",
+    install = [
+        ".",
+        "internal/util",
+        "internal/fs",
+    ],
+    module = "github.com/prometheus/procfs",
+    version = "v0.6.0",
+    deps = [
+        ":xsys",
+        ":errgroup",
+    ],
+)
+
+go_module(
+    name = "pbutil",
+    install = ["pbutil"],
+    module = "github.com/matttproud/golang_protobuf_extensions",
+    version = "v1.0.1",
+    deps = [":protobuf"],
+)
+
+go_module(
+    name = "quantile",
+    install = ["quantile"],
+    module = "github.com/beorn7/perks",
+    version = "v1.0.1",
 )

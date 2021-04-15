@@ -10,6 +10,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/process",
+        "//src/metrics",
         "//third_party/go:errgroup",
         "//third_party/go:genproto_api",
         "//third_party/go:genproto_rpc",

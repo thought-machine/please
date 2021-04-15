@@ -13,7 +13,7 @@ go_test(
     data = ["test_data"],
     deps = [
         ":signer",
-        "//third_party/go:testify",
         "//third_party/go:go-crypto",
+        "//third_party/go:testify",
     ],
 )

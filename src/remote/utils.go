@@ -30,6 +30,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
 )
 
 // xattrName is the name we use to record attributes on files.
@@ -72,6 +73,7 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	for _, d := range ar.OutputDirectories {
 		tree := &pb.Tree{}
 		if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
+			metrics.DownloadErrorCounterInc()
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 
@@ -201,9 +203,7 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		if metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
 			if err := proto.Unmarshal(metadata.RemoteAction, ar); err == nil {
-				if err := c.setOutputs(target, ar); err == nil {
-					return metadata, ar
-				}
+				return metadata, ar
 			}
 		}
 	}
@@ -449,18 +449,29 @@ func (b *dirBuilder) walk(name string, ch chan<- *uploadinfo.Entry) *pb.Digest {
 }
 
 // convertPlatform converts the platform entries from the config into a Platform proto.
-func convertPlatform(config *core.Configuration) *pb.Platform {
+func convertPlatform(properties []string) *pb.Platform {
 	platform := &pb.Platform{}
-	for _, p := range config.Remote.Platform {
+	for _, p := range properties {
 		if parts := strings.SplitN(p, "=", 2); len(parts) == 2 {
 			platform.Properties = append(platform.Properties, &pb.Platform_Property{
 				Name:  parts[0],
 				Value: parts[1],
 			})
 		} else {
-			log.Warning("Invalid config setting in remote.platform %s; will ignore", p)
+			log.Warning("Invalid platform property setting %s; will ignore", p)
 		}
 	}
+	return platform
+}
+
+// targetPlatformProperties returns the platform properties for a target, including any global ones.
+func (c *Client) targetPlatformProperties(target *core.BuildTarget) *pb.Platform {
+	labels := target.PrefixedLabels("remote-platform-property:")
+	if len(labels) == 0 {
+		return c.platform
+	}
+	platform := convertPlatform(labels)
+	platform.Properties = append(platform.Properties, c.platform.Properties...)
 	return platform
 }
 

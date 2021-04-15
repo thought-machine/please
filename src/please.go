@@ -431,7 +431,7 @@ var buildFunctions = map[string]func() int{
 
 		if opts.Cover.LineCoverageReport {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile.AsStrings())
-		} else if !opts.Cover.NoCoverageReport {
+		} else if !opts.Cover.NoCoverageReport && !opts.Cover.Shell {
 			output.PrintCoverage(state, opts.Cover.IncludeFile.AsStrings())
 		}
 		if opts.Cover.Incremental {
@@ -676,7 +676,7 @@ var buildFunctions = map[string]func() int{
 			level = -1
 		case direct && (level == -2):
 			level = 1
-		case (level == -2):
+		case level == -2:
 			level = 0
 		}
 		runInexact := func(files []string) int {
@@ -843,6 +843,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedTests = shouldTest
 	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
+	if opts.Build.Prepare {
+		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
+	}
 	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell
 	state.PrepareShell = opts.Build.Shell || opts.Test.Shell || opts.Cover.Shell
 	state.Watch = len(opts.Watch.Args.Targets) > 0

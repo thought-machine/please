@@ -233,7 +233,7 @@ func (c *Client) initExec() error {
 	} else if !resp.ExecutionCapabilities.ExecEnabled {
 		return fmt.Errorf("Remote execution not enabled for this server")
 	}
-	c.platform = convertPlatform(c.state.Config)
+	c.platform = convertPlatform(c.state.Config.Remote.Platform)
 	log.Debug("Remote execution client initialised for execution")
 	if c.state.Config.Remote.AssetURL == "" {
 		c.fetchClient = fpb.NewFetchClient(client.Connection)

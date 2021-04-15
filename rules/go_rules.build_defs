@@ -4,7 +4,7 @@ Go has a strong built-in concept of packages so it's probably a good idea to mat
 rules to Go packages.
 """
 def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"],
-                 architectures:list=[]):
+                 architectures:list=[], strip_srcs=False):
     """
     Downloads Go and exposes :<name>|go and :<name>|gofmt as entry points. To use this rule add the
     following to your .plzconfig:
@@ -24,6 +24,9 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
       architectures (list): Any additional architectures to install in go architecture format e.g. linux_amd64. This
                             rule will automatically install the arch provided through --arch. This is only useful if you
                             want to manually cross-compile parts of the repo but not others.
+      strip_srcs (bool): Whether to strip sources from the SDK which can reduce the size of the cached artifacts and
+                         improve performance, especially for remote execution. This doesn't work with go_get() however
+                         it is recommended to set this to True if you're using go_module() exclusively.
     """
     if url and version:
         fail("Either version or url should be provided but not both")
@@ -52,6 +55,9 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     for arch in architectures:
         goos, _, goarch = arch.partition("_")
         cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install std)'
+    if strip_srcs:
+        trim_toolchain = "mv $OUT/src src && mkdir $OUT/src && mv src/unsafe $OUT/src/unsafe"
+        cmd = f"{cmd} && {trim_toolchain}"
 
     #TODO(jpoole): Add the option to compile these with -race for the race detector as well. This need to be plumbed
     # through to the go_library rules as well though.
@@ -998,7 +1004,7 @@ def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, 
 
 def go_mod_download(name:str, module:str, version:str, test_only:bool=False, visibility:list=None, strip:list=[],
                     licences:list=None, hashes:list=None, labels:list=[], _tag:str='', deps:list=[],
-                    go_path_compatibility:bool=False):
+                    go_path_compatibility:bool=False, patch:list=[]):
     """Downloads a third-party Go module using `go mod download`
 
     This rule is typically used in conjunction with go_module() to resolve cyclic dependencies between modules. This rule
@@ -1022,6 +1028,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
                              rule's outputs will be based on the name parameter, guaranteeing uniqueness, but is then
                              only compatible with go_module() rules. Defaults to false.
     """
+    out = name if not go_path_compatibility else f'src/{module}'
     # TODO(jpoole): write a proper please_go tool for this
     cmds = [
         f'$TOOL mod download -x -modcacherw -json {module}@{version} | tee mod.json',
@@ -1029,10 +1036,16 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         "cp -r $MOD_DIR $OUT",
     ] + [f'rm -rf $OUT/{s}' for s in strip]
 
+    if patch:
+        cmds += [f'for p in "$TMP_DIR"/$SRCS_PATCH; do patch -d {out} -p1 < $p; done']
+
     return build_rule(
         name = name,
+        srcs = {
+            "PATCH": patch,
+        },
         tag = _tag,
-        outs = [name] if not go_path_compatibility else [f'src/{module}'],
+        outs = [out],
         tools = [CONFIG.GO_TOOL],
         building_description = 'Fetching...',
         cmd = ' && '.join(cmds),
@@ -1050,7 +1063,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
-              licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}):
+              licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}, patch:list|str=[]):
     """Defines a dependency on a third-party Go module.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -1085,6 +1098,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
       env (dict): Any env variables to set during build time. This can be useful to set CGO_CFLAGS etc. to control
                   aspects of compilation.
     """
+    patch = [patch] if isinstance(patch, str) else patch
     if version and download:
         fail("You have provided both version and download. Must provided one or the other.")
 
@@ -1105,6 +1119,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             licences = licences,
             hashes = hashes,
             strip = strip,
+            patch=patch,
         )
     outs = []
     if not binary:

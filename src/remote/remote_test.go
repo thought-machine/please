@@ -316,6 +316,38 @@ func TestDirectoryMetadataStore(t *testing.T) {
 	assert.True(t, os.IsNotExist(err))
 }
 
+func TestTargetPlatform(t *testing.T) {
+	c := newClientInstance("platform_test")
+	c.platform = convertPlatform(c.state.Config.Remote.Platform) // Bit of a hack but we can't go through the normal path.
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target"})
+	cmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false)
+	assert.NoError(t, err)
+	assert.Equal(t, &pb.Platform{
+		Properties: []*pb.Platform_Property{
+			{
+				Name:  "OSFamily",
+				Value: "linux",
+			},
+		},
+	}, cmd.Platform)
+
+	target.Labels = []string{"remote-platform-property:size=chomky"}
+	cmd, err = c.buildCommand(target, &pb.Directory{}, false, false, false)
+	assert.NoError(t, err)
+	assert.Equal(t, &pb.Platform{
+		Properties: []*pb.Platform_Property{
+			{
+				Name:  "size",
+				Value: "chomky",
+			},
+			{
+				Name:  "OSFamily",
+				Value: "linux",
+			},
+		},
+	}, cmd.Platform)
+}
+
 // Store is a small hack that stores a target's outputs for testing only.
 func (c *Client) Store(target *core.BuildTarget) error {
 	if err := c.CheckInitialised(); err != nil {
