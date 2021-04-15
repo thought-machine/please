@@ -178,7 +178,7 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, er
 					return false, err
 				}
 			}
-			if f, err := os.OpenFile(hdr.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(hdr.Mode)); err != nil {
+			if f, err := os.OpenFile(hdr.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, target.OutMode()); err != nil {
 				return false, err
 			} else if _, err := io.Copy(f, tr); err != nil {
 				return false, err
