@@ -785,7 +785,6 @@ go_module(
     name = "cmap",
     install = [
         "...",
-        ".",
     ],
     module = "github.com/OneOfOne/cmap",
     version = "ccaef7657ab896465978ddf580830288b61f9f6e",
