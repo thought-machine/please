@@ -36,7 +36,7 @@ func TestLocalImports(t *testing.T) {
 	err := install.Install([]string{"local_imports/foo"})
 	require.NoError(t, err)
 
-	expectedOut := "out/example.com/local_imports/foo.a"
+	expectedOut := "out/example.com/local_imports/foo/foo.a"
 	require.True(t, fs.FileExists(expectedOut), "output file %s wasn't created", expectedOut)
 }
 

@@ -586,7 +586,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 	} else if target.IsRemoteFile {
 		return c.fetchRemoteFile(tid, target, digest)
 	} else if target.IsTextFile {
-		return c.buildTextFile(target, command, digest)
+		return c.buildTextFile(c.state, target, command, digest)
 	}
 
 	// We should skip the cache lookup (and override any existing action result) if we --rebuild, or --rerun and this is
@@ -866,14 +866,18 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 }
 
 // buildTextFile "builds" uploads a text file to the CAS
-func (c *Client) buildTextFile(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
 	ar := &pb.ActionResult{}
 	if err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
 		defer close(ch)
 		if len(command.OutputPaths) != 1 {
 			return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(command.OutputPaths))
 		}
-		entry := uploadinfo.EntryFromBlob([]byte(target.FileContent))
+		content, err := target.GetFileContent(state)
+		if err != nil {
+			return err
+		}
+		entry := uploadinfo.EntryFromBlob([]byte(content))
 		ch <- entry
 		ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
 			Path:   command.OutputPaths[0],

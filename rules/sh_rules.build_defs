@@ -138,8 +138,8 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list|di
     )
 
 
-def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, data:list=None, out:str="", shell:str='/bin/sh',
-           labels:list&features&tags=None, deps:list=None, visibility:list=None,
+def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=[], data:list=[], out:str="", shell:str='/bin/sh',
+           labels:list&features&tags=[], deps:list=[], visibility:list=None, expand_env_vars:bool=True,
            test_only:bool=False):
     """Generates a runnable shell script from a command.
 
@@ -152,29 +152,42 @@ def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=None, data:list=None, out
     Args:
       name (str): Name of the rule.
       cmd (str | dict): Command to write into the output script file. The commands are subject to
-                        shell expansion during build time, so if that is to be avoided the variables
-                        have to be escaped with \\\\\\$, i.e. \\\\\\${@}.
-      srcs (list | dict): Source files. Can be consumed by the generated command (but are not
+                        shell expansion during build time by default. If that is to be avoided, set expand_env_vars to
+                        False, or escape the variables with \\\\\\$, i.e. \\\\\\${@}.
+      expand_env_vars (bool): Whether to expand
+      srcs (list | dict): Source files. Can be consumed as env variables by the generated command (but are not
                           written into the output in any other way).
       data (list): Runtime data for this rule.
       out (str): Name of the output file to create. Defaults to name + .sh.
       shell (str): Shell to invoke in, by default /bin/sh.
       labels (list): Labels to apply to this rule.
-      deps (list): Any dependencies for this rule.
+      deps (list): Any dependencies for this rule. These can be consumed as env variables in the cmd but are not
+                   used in any other way.
       visibility (list): Visibility declaration of the rule.
       test_only (bool): If True, this rule can only be depended on by tests.
     """
     cmd = ' && '.join(cmd) if isinstance(cmd, list) else cmd
-    if isinstance(cmd, str):
-        cmds = f'{{ cat > "$OUT" << EOF\n#!{shell}\n{cmd}\nEOF\n}}'
-    elif isinstance(cmd, dict):
-        cmds = {k: f'{{ cat > "$OUT" << EOF\n#!{shell}\n{v}\nEOF\n}}' for k, v in cmd.items()}
+    cmd = cmd[CONFIG.BUILD_CONFIG] if isinstance(cmd, dict) else cmd
+    if not expand_env_vars:
+        return text_file(
+            name = name,
+            out = out or name + '.sh',
+            data = data,
+            labels = labels + ["sh_cmd"],
+            deps = deps + srcs, # There's no difference between these two as we're not expanding env vars as below
+            visibility = visibility,
+            binary = True,
+            test_only = test_only,
+            content = f"#!{shell}\n{cmd}\n",
+        )
+
+    cmd = f'{{ cat > "$OUT" << EOF\n#!{shell}\n{cmd}\nEOF\n}}'
     return build_rule(
         name = name,
         outs = [out or name + '.sh'],
         srcs = srcs,
         data = data,
-        cmd = cmds,
+        cmd = cmd,
         labels = labels,
         deps = deps,
         visibility = visibility,

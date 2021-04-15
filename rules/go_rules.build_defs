@@ -43,7 +43,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         hashes = hashes,
     )
 
-    cmd = 'tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*'
+    cmd = 'tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*; rm -rf $OUT/test'
     # If we're targeting another platform, build the std lib for that. We can't use CONFIG.OS as this is always set to
     # the host OS for tools.
     if CONFIG.TARGET_OS != CONFIG.HOSTOS or CONFIG.TARGET_ARCH != CONFIG.HOSTARCH:
@@ -1122,19 +1122,24 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             patch=patch,
         )
     outs = []
+
+    # Gets the expected archive name given a target package
+    def archive_name(i):
+        base = basename(i)
+        return f"{i}/{base}.a"
     if not binary:
         if not install:
-            outs = [f"{module}.a"]
+            outs = [archive_name(module)]
         else:
             for i in install:
                 if i == module or i == f"{module}/.":
-                    outs += [module + ".a"]
+                    outs = [archive_name(module)]
                 elif i == "...":
                     outs = [module]
                 elif i.endswith("/..."):
                     outs += [i.removesuffix("/...")]
                 else:
-                    outs += [f"{i}.a"]
+                    outs += [archive_name(i)]
 
     a_rule = _go_install_module(
         name = name,

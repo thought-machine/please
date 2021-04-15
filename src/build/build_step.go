@@ -436,11 +436,8 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 
 	cacheKey := mustShortTargetHash(state, target)
 
-	// Attempt to retrieve any optional outputs
-	state.Cache.Retrieve(target, cacheKey, target.OptionalOutputs)
-
 	if md := retrieveFromCache(state.Cache, target, cacheKey, target.Outputs()); md != nil {
-		// Retrieve additional optional outputs from metatada
+		// Retrieve additional optional outputs from metadata
 		if len(md.OptionalOutputs) > 0 {
 			state.Cache.Retrieve(target, cacheKey, md.OptionalOutputs)
 		}
@@ -473,7 +470,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 		return nil, fetchRemoteFile(state, target)
 	}
 	if target.IsTextFile {
-		return nil, buildTextFile(target)
+		return nil, buildTextFile(state, target)
 	}
 	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()))
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
@@ -484,14 +481,20 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	return out, nil
 }
 
-// buildTextFile runs the build action for text_fule() rules
-func buildTextFile(target *core.BuildTarget) error {
+// buildTextFile runs the build action for text_file() rules
+func buildTextFile(state *core.BuildState, target *core.BuildTarget) error {
 	outs := target.Outputs()
 	if len(outs) != 1 {
 		return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(outs))
 	}
 	outFile := filepath.Join(target.TmpDir(), outs[0])
-	return ioutil.WriteFile(outFile, []byte(target.FileContent), target.OutMode())
+
+	content, err := target.GetFileContent(state)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(outFile, []byte(content), target.OutMode())
 }
 
 // prepareOutputDirectories creates any directories the target has declared it will output into as a nicety

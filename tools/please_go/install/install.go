@@ -199,12 +199,22 @@ func (install *PleaseGoInstall) prepWorkdir(pkg *build.Package, workDir, out str
 	return install.tc.Exec.Exec("ln %s %s", toolchain.FullPaths(allSrcs, pkg.Dir), workDir)
 }
 
+// outPath returns the path to the .a for a given package. Unlike go build, please_go install will always output to
+// the same location regardless of if the package matches the package dir base e.g. example.com/foo will always produce
+// example.com/foo/foo.a no matter what the package under there is named.
+//
+// We can get away with this because we don't compile tests so there must be exactly one package per directory.
+func outPath(outDir, target string) string {
+	dirName := filepath.Base(target)
+	return filepath.Join(outDir, filepath.Dir(target), dirName, dirName+".a")
+}
+
 func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package) error {
 	if len(pkg.GoFiles)+len(pkg.CgoFiles) == 0 {
 		return nil
 	}
 
-	out := fmt.Sprintf("%s/%s.a", install.outDir, target)
+	out := outPath(install.outDir, target)
 	workDir := fmt.Sprintf("_build/%s", target)
 
 	if err := install.prepWorkdir(pkg, workDir, out); err != nil {

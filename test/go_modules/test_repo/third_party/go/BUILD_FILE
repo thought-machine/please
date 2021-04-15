@@ -35,7 +35,7 @@ go_module(
     name = "terminal",
     module = "golang.org/x/crypto",
     version = "7b85b097bf7527677d54d3220065e966a0e3b613", # Can still use revisions as versions
-    install = ["ssh/terminal"],
+    install = ["ssh/terminal/..."],
 )
 
 go_module(

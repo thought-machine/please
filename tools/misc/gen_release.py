@@ -49,7 +49,7 @@ class ReleaseGen:
             })
         self.version = self.read_file('VERSION').strip()
         self.version_name = 'Version ' + self.version
-        self.is_prerelease = 'a' in self.version or 'b' in self.version
+        self.is_prerelease = '-' in self.version
         self.known_content_types = {
             '.gz': 'application/gzip',
             '.xz': 'application/x-xz',
