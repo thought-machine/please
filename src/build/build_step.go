@@ -441,11 +441,8 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 
 	cacheKey := mustShortTargetHash(state, target)
 
-	// Attempt to retrieve any optional outputs
-	state.Cache.Retrieve(target, cacheKey, target.OptionalOutputs)
-
 	if md := retrieveFromCache(state.Cache, target, cacheKey, target.Outputs()); md != nil {
-		// Retrieve additional optional outputs from metatada
+		// Retrieve additional optional outputs from metadata
 		if len(md.OptionalOutputs) > 0 {
 			state.Cache.Retrieve(target, cacheKey, md.OptionalOutputs)
 		}
