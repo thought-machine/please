@@ -178,7 +178,7 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, er
 					return false, err
 				}
 			}
-			if f, err := os.OpenFile(hdr.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, target.OutMode()); err != nil {
+			if f, err := openFile(hdr); err != nil {
 				return false, err
 			} else if _, err := io.Copy(f, tr); err != nil {
 				return false, err
@@ -192,6 +192,16 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, er
 		default:
 			log.Warning("Unhandled file type %d for %s", hdr.Typeflag, hdr.Name)
 		}
+	}
+}
+
+func openFile(header *tar.Header) (*os.File, error) {
+	if f, err := os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode)); err != nil {
+		// The file might already exist and be ro. If so, remove it.
+		os.RemoveAll(header.Name)
+		return os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode))
+	} else {
+		return f, nil
 	}
 }
 
