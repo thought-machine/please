@@ -139,7 +139,7 @@ def sh_test(name:str, src:str=None, labels:list&features&tags=None, data:list|di
 
 
 def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=[], data:list=[], out:str="", shell:str='/bin/sh',
-           labels:list&features&tags=[], deps:list=[], visibility:list=[], expand_env_vars:bool=True,
+           labels:list&features&tags=[], deps:list=[], visibility:list=None, expand_env_vars:bool=True,
            test_only:bool=False):
     """Generates a runnable shell script from a command.
 
