@@ -198,9 +198,12 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, er
 func openFile(header *tar.Header) (*os.File, error) {
 	f, err := os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode))
 	if err != nil {
-		// The file might already exist and be ro. If so, remove it.
-		fs.ForceRemove(header.Name)
-		return os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode))
+		if os.IsPermission(err) {
+			// The file might already exist and be ro. If so, remove it.
+			fs.ForceRemove(header.Name)
+			return os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode))
+		}
+		return nil, err
 	}
 	return f, nil
 }
