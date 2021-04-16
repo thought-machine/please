@@ -82,6 +82,16 @@ int map_ids(int out_id, const char* path) {
     return 0;
 }
 
+// change_env_vars changes any environment variables prefixed with the old directory to the new one.
+void change_env_vars(char** environ, const char* old_dir, const char* new_dir) {
+  for (char** env = environ; *env; ++env) {
+    const char* equals = strchr(*env, '=');
+    if (equals) {
+      *env = change_path(*env, old_dir, new_dir, equals - *env + 1);
+    }
+  }
+}
+
 // mount_tmp mounts a tmpfs on /tmp for the tests to muck about in and
 // bind mounts the test directory to /tmp/plz_sandbox.
 // If the given string pointer (the argv[0] of the new process) is within the old temp dir
@@ -142,6 +152,7 @@ int mount_tmp(char** argv0) {
         perror("bind mount");
         return 1;
     }
+    change_env_vars(environ, dir, d);
     if (setenv("TEST_DIR", d, 1) != 0 ||
         setenv("TMP_DIR", d, 1) != 0 ||
         setenv("HOME", d, 1) != 0) {
@@ -267,16 +278,22 @@ int contain(char* argv[], bool net, bool mount) {
 // exec_name returns the name of the new binary to exec() as.
 // old_name is the current name; if it's within old_dir it will be re-prefixed to new_dir.
 char* exec_name(const char* old_name, const char* old_dir, const char* new_dir) {
+  return change_path(old_name, old_dir, new_dir, 0);
+}
+
+// change_path takes a string or environment variable and changes a prefix from one path to another.
+char* change_path(const char* old_name, const char* old_dir, const char* new_dir, int prefix_len) {
   const int new_dir_len = strlen(new_dir);
   const int old_dir_len = strlen(old_dir);
   const int old_name_len = strlen(old_name);
-  if (strncmp(old_dir, old_name, old_dir_len) != 0) {  // is old_name prefixed with old_dir
+  if (strncmp(old_dir, old_name + prefix_len, old_dir_len) != 0) {  // is the value of old_name prefixed with old_dir
     return (char*)old_name;  // Dodgy cast but we know we don't alter it again later.
   }
   const int new_len = new_dir_len + old_name_len - old_dir_len + 1;
   char* new_name = malloc(new_len + 1);
-  strcpy(new_name, new_dir);
-  strcpy(new_name + new_dir_len, old_name + old_dir_len);
+  strncpy(new_name, old_name, prefix_len);
+  strcpy(new_name + prefix_len, new_dir);
+  strcpy(new_name + prefix_len + new_dir_len, old_name + prefix_len + old_dir_len);
   new_name[new_len] = 0;
   return new_name;
 }
