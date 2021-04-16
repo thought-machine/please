@@ -362,7 +362,7 @@ func DefaultConfiguration() *Configuration {
 	config.Bazel.Compatibility = usingBazelWorkspace
 
 	// Please tools
-	config.Sandbox.Tool = "//_please:please_sandbox"
+	config.Sandbox.Tool = "please_sandbox"
 	config.Go.FilterTool = "//_please:please_go_filter"
 	config.Go.PleaseGoTool = "//_please:please_go"
 	config.Go.EmbedTool = "//_please:please_go_embed"
