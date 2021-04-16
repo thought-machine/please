@@ -10,7 +10,7 @@ import (
 
 // ReverseDeps finds all transitive targets that depend on the set of input labels.
 func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hidden bool) {
-	targets := FindRevdeps(state, labels, hidden, level)
+	targets := FindRevdeps(state, labels, hidden, true, level)
 	ls := make(core.BuildLabels, 0, len(targets))
 
 	for target := range targets {
@@ -66,6 +66,7 @@ func (os *openSet) Pop() *node {
 type revdeps struct {
 	// subincludes is a map of build labels to the packages that subinclude them
 	subincludes map[core.BuildLabel][]*core.Package
+	followSubincludes bool
 
 	// os is the open set of targets to process
 	os *openSet
@@ -78,18 +79,21 @@ type revdeps struct {
 }
 
 // newRevdeps creates a new reverse dependency searcher. revdeps is non-reusable.
-func newRevdeps(graph *core.BuildGraph, hidden bool, maxDepth int) *revdeps {
+func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth int) *revdeps {
 	// Initialise a map of labels to the packages that subinclude them upfront so we can include those targets as
 	// dependencies efficiently later
 	subincludes := make(map[core.BuildLabel][]*core.Package)
-	for _, pkg := range graph.PackageMap() {
-		for _, inc := range pkg.Subincludes {
-			subincludes[inc] = append(subincludes[inc], pkg)
+	if followSubincludes {
+		for _, pkg := range graph.PackageMap() {
+			for _, inc := range pkg.Subincludes {
+				subincludes[inc] = append(subincludes[inc], pkg)
+			}
 		}
 	}
 
 	return &revdeps{
 		subincludes: subincludes,
+		followSubincludes: followSubincludes,
 		os: &openSet{
 			items: list.New(),
 			done:  map[core.BuildLabel]struct{}{},
@@ -100,8 +104,8 @@ func newRevdeps(graph *core.BuildGraph, hidden bool, maxDepth int) *revdeps {
 }
 
 // FindRevdeps will return a set of build targets that are reverse dependencies of the provided labels.
-func FindRevdeps(state *core.BuildState, targets core.BuildLabels, hidden bool, depth int) map[*core.BuildTarget]struct{} {
-	r := newRevdeps(state.Graph, hidden, depth)
+func FindRevdeps(state *core.BuildState, targets core.BuildLabels, hidden, followSubincludes bool, depth int) map[*core.BuildTarget]struct{} {
+	r := newRevdeps(state.Graph, hidden, followSubincludes, depth)
 	// Initialise the open set with the original targets
 	for _, t := range targets {
 		r.os.Push(&node{
@@ -132,9 +136,10 @@ func (r *revdeps) findRevdeps(state *core.BuildState) map[*core.BuildTarget]stru
 	ret := make(map[*core.BuildTarget]struct{}, 1000)
 	for next := r.os.Pop(); next != nil; next = r.os.Pop() {
 		ts := state.Graph.ReverseDependencies(next.target)
-
-		for _, p := range r.subincludes[next.target.Label] {
-			ts = append(ts, p.AllTargets()...)
+		if r.followSubincludes {
+			for _, p := range r.subincludes[next.target.Label] {
+				ts = append(ts, p.AllTargets()...)
+			}
 		}
 
 		for _, t := range ts {
