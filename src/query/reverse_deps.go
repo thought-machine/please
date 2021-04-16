@@ -145,7 +145,7 @@ func (r *revdeps) findRevdeps(state *core.BuildState) map[*core.BuildTarget]stru
 				depth++
 			}
 
-			if next.depth < r.maxDepth || r.maxDepth == -1 {
+			if depth < r.maxDepth || r.maxDepth == -1 {
 				if r.hidden || !t.Label.IsHidden() {
 					ret[t] = struct{}{}
 				} else if parent := t.Parent(state.Graph); parent != nil {
