@@ -65,7 +65,7 @@ func (os *openSet) Pop() *node {
 
 type revdeps struct {
 	// subincludes is a map of build labels to the packages that subinclude them
-	subincludes map[core.BuildLabel][]*core.Package
+	subincludes       map[core.BuildLabel][]*core.Package
 	followSubincludes bool
 
 	// os is the open set of targets to process
@@ -92,7 +92,7 @@ func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth
 	}
 
 	return &revdeps{
-		subincludes: subincludes,
+		subincludes:       subincludes,
 		followSubincludes: followSubincludes,
 		os: &openSet{
 			items: list.New(),
