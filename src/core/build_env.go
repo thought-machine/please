@@ -177,8 +177,8 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 			"COVERAGE_FILE="+path.Join(testDir, CoverageFile),
 		)
 	}
-	if len(target.Outputs()) > 0 {
-		env = append(env, "TEST="+path.Join(testDir, target.Outputs()[0]))
+	if outs := target.Outputs(); len(outs) > 0 {
+		env = append(env, "TEST="+path.Join(testDir, outs[0]))
 	}
 	if len(target.testTools) == 1 {
 		env = append(env, "TOOL="+toolPath(state, target.testTools[0], abs))
