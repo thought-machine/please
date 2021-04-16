@@ -196,13 +196,13 @@ func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, er
 }
 
 func openFile(header *tar.Header) (*os.File, error) {
-	if f, err := os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode)); err != nil {
+	f, err := os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode))
+	if err != nil {
 		// The file might already exist and be ro. If so, remove it.
 		os.RemoveAll(header.Name)
 		return os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode))
-	} else {
-		return f, nil
 	}
+	return f, nil
 }
 
 func (cache *httpCache) Clean(target *core.BuildTarget) {
