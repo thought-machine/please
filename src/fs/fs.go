@@ -2,10 +2,12 @@
 package fs
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"syscall"
 
@@ -178,5 +180,18 @@ func copyFile(from, to string) (err error) {
 		return err
 	}
 
+	return nil
+}
+
+func ForceRemove(path string) error {
+	cmd := exec.Command("rm", "-rf", path)
+	output := new(bytes.Buffer)
+
+	cmd.Stderr = output
+	cmd.Stdout = output
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to remove %s: %w\nOutput: %s", path, err, output.String())
+	}
 	return nil
 }

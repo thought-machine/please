@@ -199,7 +199,7 @@ func openFile(header *tar.Header) (*os.File, error) {
 	f, err := os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode))
 	if err != nil {
 		// The file might already exist and be ro. If so, remove it.
-		os.RemoveAll(header.Name)
+		fs.ForceRemove(header.Name)
 		return os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode))
 	}
 	return f, nil
