@@ -82,16 +82,6 @@ int map_ids(int out_id, const char* path) {
     return 0;
 }
 
-// change_env_vars changes any environment variables prefixed with the old directory to the new one.
-void change_env_vars(char** environ, const char* old_dir, const char* new_dir) {
-  for (char** env = environ; *env; ++env) {
-    const char* equals = strchr(*env, '=');
-    if (equals) {
-      *env = change_path(*env, old_dir, new_dir, equals - *env + 1);
-    }
-  }
-}
-
 // mount_tmp mounts a tmpfs on /tmp for the tests to muck about in and
 // bind mounts the test directory to /tmp/plz_sandbox.
 // If the given string pointer (the argv[0] of the new process) is within the old temp dir
@@ -296,4 +286,14 @@ char* change_path(const char* old_name, const char* old_dir, const char* new_dir
   strcpy(new_name + prefix_len + new_dir_len, old_name + prefix_len + old_dir_len);
   new_name[new_len] = 0;
   return new_name;
+}
+
+// change_env_vars changes any environment variables prefixed with the old directory to the new one.
+void change_env_vars(char** environ, const char* old_dir, const char* new_dir) {
+  for (char** env = environ; *env; ++env) {
+    const char* equals = strchr(*env, '=');
+    if (equals) {
+      *env = change_path(*env, old_dir, new_dir, equals - *env + 1);
+    }
+  }
 }
