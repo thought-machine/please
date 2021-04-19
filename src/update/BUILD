@@ -4,6 +4,7 @@ go_library(
         ["*.go"],
         exclude = ["*_test.go"],
     ),
+    resources = ["pubkey.pem"],
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
@@ -28,6 +29,7 @@ go_test(
         "//src:please",
     ],
     labels = ["xz"],
+    resources = ["pubkey.pem"],
     deps = [
         ":update",
         "//src/cli",
@@ -41,6 +43,7 @@ go_test(
     name = "verify_test",
     srcs = ["verify_test.go"],
     data = ["test_data"],
+    resources = ["pubkey.pem"],
     deps = [
         ":update",
         "//third_party/go:testify",

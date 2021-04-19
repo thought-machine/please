@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha256"
+	_ "embed" // needed for //go:embed
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -16,6 +17,10 @@ import (
 
 // identity is the signing identity of this key.
 const identity = "Please Releases <releases@please.build>"
+
+// pubkey is the public key we verify Please releases with.
+//go:embed pubkey.pem
+var pubkey string
 
 // verifySignature verifies an OpenPGP detached signature of a file.
 // It returns true if the signature is correct according to our key.
