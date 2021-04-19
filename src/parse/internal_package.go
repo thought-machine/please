@@ -2,7 +2,7 @@ package parse
 
 import (
 	"bytes"
-	_ "embed"
+	_ "embed" // needed to use //go:embed
 	"runtime"
 	"text/template"
 
