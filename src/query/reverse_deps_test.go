@@ -67,7 +67,7 @@ func TestReverseDepsWithHidden(t *testing.T) {
 }
 
 func revDepsLabels(state *core.BuildState, labels []core.BuildLabel, hidden bool, depth int) core.BuildLabels {
-	ts := FindRevdeps(state, labels, hidden, depth)
+	ts := FindRevdeps(state, labels, hidden, true, depth)
 
 	ret := make([]core.BuildLabel, 0, len(ts))
 	for t := range ts {

@@ -1,13 +1,8 @@
-go_bindata(
-    name = "builtin_data",
-    srcs = glob(["*.build_defs"]),
-)
-
 go_library(
     name = "bazel",
-    srcs = [":builtin_data"],
+    srcs = ["bazel.go"],
+    resources = glob(["*.build_defs"]),
     visibility = [
-        "//src/help/...",
         "//src/parse/...",
     ],
 )

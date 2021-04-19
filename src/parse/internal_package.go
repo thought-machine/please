@@ -2,6 +2,7 @@ package parse
 
 import (
 	"bytes"
+	_ "embed" // needed to use //go:embed
 	"runtime"
 	"text/template"
 
@@ -10,39 +11,12 @@ import (
 
 const InternalPackageName = "_please"
 
-// TODO(jpoole): Make this the magic bindata thing once go 1.16 is out
 // TODO(jpoole): make langserver configurable
-const internalPackageTemplateStr = `
-remote_file(
-    name = "download",
-    url = f"{{ .DownloadLocation }}/{{ .OS }}_{{ .Arch }}/{{ .PLZVersion }}/please_tools_{{ .PLZVersion }}.tar.xz",
-)
-
-# Can't use extract = True, as that would depend on :jarcat
-genrule(
-  name = "please_tools",
-  srcs = [":download"],
-  cmd = "tar -xf $SRC",
-  outs = ["please_tools"],
-)
-
-{{ range $tool := .Tools }}
-genrule(
-    name = "{{$tool}}".removesuffix(".jar"),
-    cmd = f"mv $SRC/{{$tool}} $OUT",
-    srcs = [":please_tools"],
-    outs = ["{{$tool}}"],
-    visibility = ["PUBLIC"],
-    binary = True,
-)
-{{ end }}
-
-`
-
-var internalPackageTemplate = template.New("_please")
+//go:embed internal.tmpl
+var internalPackageTemplateStr string
 
 func GetInternalPackage(config *core.Configuration) (string, error) {
-	t, err := internalPackageTemplate.Parse(internalPackageTemplateStr)
+	t, err := template.New("_please").Parse(internalPackageTemplateStr)
 	if err != nil {
 		return "", err
 	}

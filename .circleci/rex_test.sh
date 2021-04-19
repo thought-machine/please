@@ -4,12 +4,13 @@ set -eu
 
 trap 'killall elan mettle zeal' SIGINT SIGTERM EXIT
 
-DIR="${1:-/tmp/please}"
+DIR="/tmp/please"
+WORKSPACE_DIR="${1:-/tmp/workspace/linux_amd64}"
 
 # Extract the plz installation from earlier step
 rm -rf "$DIR"
 mkdir "$DIR"
-tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz --strip-components=1 -C "$DIR"
+tar -xzf ${WORKSPACE_DIR}/please_*.tar.gz --strip-components=1 -C "$DIR"
 ln -s "${DIR}/please" "${DIR}/plz"
 export PATH="$DIR:$PATH"
 

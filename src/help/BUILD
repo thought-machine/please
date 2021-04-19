@@ -7,7 +7,6 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//rules",
-        "//rules/bazel",
         "//src/cli",
         "//src/core",
         "//src/parse/asp",
