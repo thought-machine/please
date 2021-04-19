@@ -867,7 +867,8 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 		return nil
 	}
 	target.NeededForSubinclude = target.NeededForSubinclude || neededForSubinclude
-	if target.SyncUpdateState(Semiactive, Active) {
+
+	queueAsync := func(shouldBuild bool) {
 		if target.IsTest && state.NeedTests {
 			if state.TestSequentially {
 				state.addActiveTargets(2) // One for build & one for test
@@ -880,7 +881,15 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 		}
 		// Actual queuing stuff now happens asynchronously in here.
 		atomic.AddInt64(&state.progress.numPending, 1)
-		go state.queueTargetAsync(target, dependent, rescan, forceBuild, neededForSubinclude, state.NeedBuild || forceBuild)
+		go state.queueTargetAsync(target, dependent, rescan, forceBuild, neededForSubinclude, shouldBuild)
+	}
+
+	if state.NeedBuild || forceBuild {
+		if target.SyncUpdateState(Inactive, Active) || target.SyncUpdateState(Semiactive, Active) {
+			queueAsync(true)
+		}
+	} else if target.SyncUpdateState(Inactive, Semiactive) {
+		queueAsync(false)
 	}
 	return nil
 }
