@@ -1031,7 +1031,8 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     out = name if not go_path_compatibility else f'src/{module}'
     # TODO(jpoole): write a proper please_go tool for this
     cmds = [
-        f'$TOOL mod download -x -modcacherw -json {module}@{version} | tee mod.json',
+        _set_go_env(),
+        f'$TOOLS_GO mod download -x -modcacherw -json {module}@{version} | tee mod.json',
         'export MOD_DIR=$(cat mod.json | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
     ] + [f'rm -rf $OUT/{s}' for s in strip]
@@ -1046,7 +1047,9 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         },
         tag = _tag,
         outs = [out],
-        tools = [CONFIG.GO_TOOL],
+        tools = {
+            "go": [CONFIG.GO_TOOL],
+        },
         building_description = 'Fetching...',
         cmd = ' && '.join(cmds),
         requires = ['go_src'],
