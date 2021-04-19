@@ -6,6 +6,7 @@ go_library(
         "parse_step.go",
         "suggest.go",
     ],
+    resources = ["internal.tmpl"],
     visibility = ["PUBLIC"],
     deps = [
         "//rules",
@@ -24,6 +25,7 @@ go_library(
 go_test(
     name = "parse_step_test",
     srcs = ["parse_step_test.go"],
+    resources = ["internal.tmpl"],
     deps = [
         ":parse",
         "//src/core",
@@ -34,6 +36,7 @@ go_test(
 go_test(
     name = "suggest_test",
     srcs = ["suggest_test.go"],
+    resources = ["internal.tmpl"],
     deps = [
         ":parse",
         "//third_party/go:testify",

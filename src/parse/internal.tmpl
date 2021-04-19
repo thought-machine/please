@@ -1,0 +1,23 @@
+remote_file(
+    name = "download",
+    url = f"{{ .DownloadLocation }}/{{ .OS }}_{{ .Arch }}/{{ .PLZVersion }}/please_tools_{{ .PLZVersion }}.tar.xz",
+)
+
+# Can't use extract = True, as that would depend on :jarcat
+genrule(
+  name = "please_tools",
+  srcs = [":download"],
+  cmd = "tar -xf $SRC",
+  outs = ["please_tools"],
+)
+
+{{ range $tool := .Tools }}
+genrule(
+    name = "{{$tool}}".removesuffix(".jar"),
+    cmd = f"mv $SRC/{{$tool}} $OUT",
+    srcs = [":please_tools"],
+    outs = ["{{$tool}}"],
+    visibility = ["PUBLIC"],
+    binary = True,
+)
+{{ end }}
