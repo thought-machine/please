@@ -6,6 +6,7 @@ go_library(
         "parse_step.go",
         "suggest.go",
     ],
+    resources = ["internal.tmpl"],
     visibility = ["PUBLIC"],
     deps = [
         "//rules",
