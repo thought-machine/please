@@ -191,8 +191,6 @@ type BuildState struct {
 	// True if we only need to parse the initial package (i.e. don't search downwards
 	// through deps) - for example when doing `plz query print`.
 	ParsePackageOnly bool
-	// True if the parse request is for the whole graph.
-	ParsingWholeGraph bool
 	// True if this build is triggered by watching for changes
 	Watch bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
@@ -869,39 +867,20 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 		return nil
 	}
 	target.NeededForSubinclude = target.NeededForSubinclude || neededForSubinclude
-	if state.NeedBuild || forceBuild || (!state.ParsingWholeGraph && state.IsOriginalTarget(target)) {
-		if target.SyncUpdateState(Semiactive, Active) {
-			if target.IsTest && state.NeedTests {
-				if state.TestSequentially {
-					state.addActiveTargets(2) // One for build & one for test
-				} else {
-					// Tests count however many times we're going to run them if parallel.
-					state.addActiveTargets(1 + state.NumTestRuns)
-				}
+	if target.SyncUpdateState(Semiactive, Active) {
+		if target.IsTest && state.NeedTests {
+			if state.TestSequentially {
+				state.addActiveTargets(2) // One for build & one for test
 			} else {
-				state.addActiveTargets(1)
+				// Tests count however many times we're going to run them if parallel.
+				state.addActiveTargets(1 + state.NumTestRuns)
 			}
-			// Actual queuing stuff now happens asynchronously in here.
-			atomic.AddInt64(&state.progress.numPending, 1)
-			go state.queueTargetAsync(target, dependent, rescan, forceBuild, neededForSubinclude, state.NeedBuild || forceBuild)
+		} else {
+			state.addActiveTargets(1)
 		}
-	} else {
-		for _, dep := range target.DeclaredDependencies() {
-			// Check the require/provide stuff; we may need to add a different target.
-			if len(target.Requires) > 0 {
-				if depTarget := state.Graph.Target(dep); depTarget != nil && len(depTarget.Provides) > 0 {
-					for _, provided := range depTarget.ProvideFor(target) {
-						if err := state.queueTarget(provided, target.Label, false, forceBuild, neededForSubinclude); err != nil {
-							return err
-						}
-					}
-					continue
-				}
-			}
-			if err := state.queueTarget(dep, target.Label, false, forceBuild, neededForSubinclude); err != nil {
-				return err
-			}
-		}
+		// Actual queuing stuff now happens asynchronously in here.
+		atomic.AddInt64(&state.progress.numPending, 1)
+		go state.queueTargetAsync(target, dependent, rescan, forceBuild, neededForSubinclude, state.NeedBuild || forceBuild)
 	}
 	return nil
 }
