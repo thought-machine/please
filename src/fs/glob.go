@@ -162,7 +162,7 @@ func (globber *Globber) walkDir(rootPath string) (walkedDir, error) {
 			}
 		}
 		// Exclude plz-out
-		if name == "plz-out" && rootPath== "." {
+		if name == "plz-out" && rootPath == "." {
 			return filepath.SkipDir
 		}
 		dir.fileNames = append(dir.fileNames, name)
