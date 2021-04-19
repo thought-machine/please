@@ -39,10 +39,8 @@ genrule(
 
 `
 
-var internalPackageTemplate = template.New("_please")
-
 func GetInternalPackage(config *core.Configuration) (string, error) {
-	t, err := internalPackageTemplate.Parse(internalPackageTemplateStr)
+	t, err := template.New("_please").Parse(internalPackageTemplateStr)
 	if err != nil {
 		return "", err
 	}
