@@ -1,0 +1,26 @@
+<h1 class="title-1">Please 16.0.0 migration guide</h1>
+
+<p>This major release has focused mainly around distribution
+    and installation. </p>
+
+<section class="mt4">
+    <h2 class="title-2">Installation</h2>
+    <p>
+        In v15, Please used to be distributed with all its tools for the core languages: Go, Java, Python, and C++.
+        In v16, Please is no longer distributed with all its tools. Instead, Please will download its tools
+        on demand through build rules in the new internal <code class="code">//:_please</code>, package.
+    </p>
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">Go modules and Go 1.16 support</h2>
+    <p>
+        Please v16 now support go 1.16 through use of the <code class="code">go_module()</code> rules.
+        <code class="code">go_get()</code> will recompile certain packages from source instead of using the
+        already compiled package. This doesn't work with 1.16 fingerprinting.
+    </p>
+    <p>
+        Going forward, <code class="code">go_get()</code> will be deprecated in favour of
+        <code class="code">go_module()</code>. For the most part, they work essentially the same.
+    </p>
+</section>
