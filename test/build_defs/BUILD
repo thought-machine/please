@@ -18,3 +18,9 @@ filegroup(
         ".plzconfig_freebsd_amd64",
     ],
 )
+
+filegroup(
+    name = "cc_embed_binary",
+    srcs = ["cc_embed_binary.build_defs"],
+    visibility = ["//test/..."],
+)
