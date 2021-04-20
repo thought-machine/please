@@ -862,10 +862,6 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 	if target.State() >= Active && !rescan && !forceBuild {
 		return nil // Target is already tagged to be built and likely on the queue.
 	}
-	// Only do this bit if we actually need to build the target
-	if !target.SyncUpdateState(Inactive, Semiactive) && !rescan && !forceBuild {
-		return nil
-	}
 	target.NeededForSubinclude = target.NeededForSubinclude || neededForSubinclude
 
 	queueAsync := func(shouldBuild bool) {
@@ -884,6 +880,9 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 		go state.queueTargetAsync(target, dependent, rescan, forceBuild, neededForSubinclude, shouldBuild)
 	}
 
+	// Here we want to ensure we don't queue the target every time; ideally we only do it once.
+	// However we might need to do it twice if the initial request doesn't require it to be built
+	// but a later one does.
 	if state.NeedBuild || forceBuild {
 		if target.SyncUpdateState(Inactive, Active) || target.SyncUpdateState(Semiactive, Active) {
 			queueAsync(true)
