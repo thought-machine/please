@@ -145,7 +145,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
     )
 
 
-def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str|dict=None, srcs:list|dict=None,
+def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cmd:str|list|dict=None, srcs:list|dict=None,
             outs:list=None, deps:list=None, exported_deps:list=None, tools:str|list|dict=None, test_tools:str|list|dict=None,
             data:list|dict=None, visibility:list=None, timeout:int=0, needs_transitive_deps:bool=False,
             flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False, test_outputs:list=None,
@@ -208,8 +208,8 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
         tools = tools,
         test_tools = test_tools,
         secrets = secrets,
-        test_cmd  =  test_cmd,
-        cmd = cmd,
+        test_cmd  =  ' && '.join(test_cmd) if isinstance(test_cmd, list) else test_cmd,
+        cmd = ' && '.join(cmd) if isinstance(cmd, list) else cmd,
         visibility = visibility,
         output_is_complete = output_is_complete,
         labels = labels,
