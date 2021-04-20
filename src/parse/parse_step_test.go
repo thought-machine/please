@@ -60,9 +60,8 @@ func TestAddDepNoBuild(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	assertPendingParses(t, state)         // None, we have both packages already
-	assertPendingBuilds(t, state)         // Nothing because we don't need to build.
-	assert.Equal(t, 1, state.NumActive()) // Parses only
+	assertPendingParses(t, state) // None, we have both packages already
+	assertPendingBuilds(t, state) // Nothing because we don't need to build.
 }
 
 func TestAddParseDep(t *testing.T) {
