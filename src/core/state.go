@@ -912,18 +912,18 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 			state.asyncError(target.Label, err)
 			return
 		}
+		// Wait for these targets to actually build.
+		if building {
+			for _, t := range target.Dependencies() {
+				t.WaitForBuild()
+			}
+		}
 		if !called {
 			// We are now ready to go, we have nothing to wait for.
 			if building && target.SyncUpdateState(Active, Pending) {
 				state.addPendingBuild(target.Label, dependent.IsAllTargets())
 			}
 			return
-		}
-		// Wait for these targets to actually build.
-		if building {
-			for _, t := range target.Dependencies() {
-				t.WaitForBuild()
-			}
 		}
 	}
 }
