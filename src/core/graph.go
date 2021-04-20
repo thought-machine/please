@@ -20,7 +20,7 @@ type pendingTargets struct {
 // relationships, especially reverse dependencies which are calculated here.
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
-	targets *cmap.CMap
+	targets *buildLabelBuildTargetCMap
 	// Targets that have been depended on by something that we're waiting to appear.
 	pendingTargets pendingTargets
 	// Map of all currently known packages.
@@ -69,7 +69,7 @@ func (p *pendingTargets) NotifyPendingPackageTargets(key packageKey) {
 
 // AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
-	graph.targets.Update(target.Label, func(old interface{}) interface{} {
+	graph.targets.Update(target.Label, func(old *BuildTarget) *BuildTarget {
 		if old != nil {
 			panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 		}
@@ -98,7 +98,7 @@ func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
 	if !ok {
 		return nil
 	}
-	return t.(*BuildTarget)
+	return t
 }
 
 // TargetOrDie retrieves a target from the graph by label. Dies if the target doesn't exist.
@@ -204,8 +204,8 @@ func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
 // AllTargets returns a consistently ordered slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
 	targets := BuildTargets{}
-	graph.targets.ForEach(func(k, v interface{}) bool {
-		targets = append(targets, v.(*BuildTarget))
+	graph.targets.ForEach(func(k BuildLabel, v *BuildTarget) bool {
+		targets = append(targets, v)
 		return true
 	})
 	sort.Sort(targets)
@@ -226,7 +226,7 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
 		cycleDetector:  newCycleDetector(),
-		targets:        cmap.New(),
+		targets:        New(),
 		pendingTargets: pendingTargets{m: cmap.New()},
 		packages:       cmap.New(),
 		subrepos:       cmap.New(),
