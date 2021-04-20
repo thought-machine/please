@@ -3,7 +3,7 @@ package query
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"os"
 	"path"
 	"sync"
 
@@ -15,13 +15,15 @@ import (
 func Graph(state *core.BuildState, targets []core.BuildLabel) {
 	log.Notice("Generating graph...")
 	g := makeJSONGraph(state, targets)
-	log.Notice("Marshalling...")
-	b, err := json.MarshalIndent(g, "", "    ")
-	if err != nil {
+
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "    ")
+	encoder.SetEscapeHTML(false)
+
+	log.Notice("Encoding...")
+	if err := encoder.Encode(g); err != nil {
 		log.Fatalf("Failed to serialise JSON: %s\n", err)
 	}
-	log.Notice("Writing...")
-	fmt.Println(string(b))
 	log.Notice("Done")
 }
 
@@ -135,7 +137,7 @@ func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget
 		t.Deps = append(t.Deps, dep.Label.String())
 	}
 	// just use run 1 as this is only used to print the test dir
-	for data := range core.IterRuntimeFiles(state.Graph, target, false, 1) {
+	for data := range core.IterRuntimeFiles(state.Graph, target, false, target.TestDir(1)) {
 		t.Data = append(t.Data, data.Src)
 	}
 	t.Labels = target.Labels

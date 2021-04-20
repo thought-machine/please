@@ -562,7 +562,6 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 }
 
 func (p *parser) parseIdentExpr() *IdentExpr {
-	//var endPos Position
 	identTok := p.next(Ident)
 	ie := &IdentExpr{
 		Name: identTok.Value,
@@ -715,7 +714,7 @@ func (p *parser) parseFString() *FString {
 	tok.Pos.Column++ // track position in case of error
 	for idx := p.findBrace(s); idx != -1; idx = p.findBrace(s) {
 		v := &f.Vars[p.newElement(&f.Vars)]
-		v.Prefix = strings.Replace(strings.Replace(s[:idx], "{{", "{", -1), "}}", "}", -1)
+		v.Prefix = strings.ReplaceAll(strings.ReplaceAll(s[:idx], "{{", "{"), "}}", "}")
 		s = s[idx+1:]
 		tok.Pos.Column += idx + 1
 		idx = strings.IndexByte(s, '}')
@@ -728,7 +727,7 @@ func (p *parser) parseFString() *FString {
 		s = s[idx+1:]
 		tok.Pos.Column += idx + 1
 	}
-	f.Suffix = strings.Replace(strings.Replace(s, "{{", "{", -1), "}}", "}", -1)
+	f.Suffix = strings.ReplaceAll(strings.ReplaceAll(s, "{{", "{"), "}}", "}")
 
 	return f
 }
@@ -737,7 +736,7 @@ func (p *parser) findBrace(s string) int {
 	last := ' '
 	for i, c := range s {
 		if c == '{' && last != '{' && last != '$' {
-			if i < len(s) && s[i+1] == '{' {
+			if i+1 < len(s) && s[i+1] == '{' {
 				last = c
 				continue
 			}

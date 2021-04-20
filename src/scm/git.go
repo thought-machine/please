@@ -3,8 +3,8 @@
 package scm
 
 import (
+	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -25,7 +25,7 @@ type git struct {
 func (g *git) DescribeIdentifier(revision string) string {
 	out, err := exec.Command("git", "describe", "--always", revision).CombinedOutput()
 	if err != nil {
-		log.Fatalf("Failed to read %s: %s", revision, err)
+		log.Fatalf("Failed to read %s: %s\nOutput:\n%s", revision, err, string(out))
 	}
 	return strings.TrimSpace(string(out))
 }
@@ -34,7 +34,7 @@ func (g *git) DescribeIdentifier(revision string) string {
 func (g *git) CurrentRevIdentifier() string {
 	out, err := exec.Command("git", "rev-parse", "HEAD").CombinedOutput()
 	if err != nil {
-		log.Fatalf("Failed to read HEAD: %s", err)
+		log.Fatalf("Failed to read HEAD: %s\nOutput:\n%s", err, string(out))
 	}
 	return strings.TrimSpace(string(out))
 }
@@ -48,7 +48,7 @@ func (g *git) ChangesIn(diffSpec string, relativeTo string) []string {
 	command := []string{"diff-tree", "--no-commit-id", "--name-only", "-r", diffSpec}
 	out, err := exec.Command("git", command...).CombinedOutput()
 	if err != nil {
-		log.Fatalf("unable to determine changes: %s", err)
+		log.Fatalf("unable to determine changes: %s\nOutput:\n%s", err, string(out))
 	}
 	output := strings.Split(string(out), "\n")
 	for _, o := range output {
@@ -67,7 +67,7 @@ func (g *git) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo 
 
 	out, err := exec.Command("git", append(command, relSuffix...)...).CombinedOutput()
 	if err != nil {
-		log.Fatalf("unable to find changes: %s", err)
+		log.Fatalf("unable to find changes: %s\nOutput:\n%s)", err, string(out))
 	}
 	files := strings.Split(string(out), "\n")
 
@@ -75,9 +75,10 @@ func (g *git) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo 
 		// Grab the diff from the merge-base to HEAD using ... syntax.  This ensures we have just
 		// the changes that have occurred on the current branch.
 		command = []string{"diff", "--name-only", fromCommit + "...HEAD"}
-		out, err = exec.Command("git", append(command, relSuffix...)...).CombinedOutput()
+		command = append(command, relSuffix...)
+		out, err = exec.Command("git", command...).CombinedOutput()
 		if err != nil {
-			log.Fatalf("unable to check diff vs. %s: %s", fromCommit, err)
+			log.Fatalf("unable to check diff vs. %s: %s\nOutput:\n%s", fromCommit, err, string(out))
 		}
 		committedChanges := strings.Split(string(out), "\n")
 		files = append(files, committedChanges...)
@@ -86,7 +87,7 @@ func (g *git) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo 
 		command = []string{"ls-files", "--other", "--exclude-standard"}
 		out, err = exec.Command("git", append(command, relSuffix...)...).CombinedOutput()
 		if err != nil {
-			log.Fatalf("unable to determine untracked files: %s", err)
+			log.Fatalf("unable to determine untracked files: %s\nOutput:\n%s", err, string(out))
 		}
 		untracked := strings.Split(string(out), "\n")
 		files = append(files, untracked...)
@@ -107,24 +108,73 @@ func (g *git) fixGitRelativePath(worktreePath, relativeTo string) string {
 	return p
 }
 
-func (g *git) IgnoreFile(name string) error {
-	gitignore := path.Join(g.repoRoot, ".gitignore")
-	b, err := ioutil.ReadFile(gitignore)
-	if err != nil && !os.IsNotExist(err) { // Not an error for this not to exist.
+const pleaseDoNotEdit = "# Entries below this point are managed by Please (DO NOT EDIT)"
+
+var defaultIgnoredFiles = []string{"plz-out", ".plzconfig.local"}
+
+func readUserEntries(file string) ([]string, error) {
+	f, err := os.Open(file)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+
+	var userEntires []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.TrimSpace(line) == pleaseDoNotEdit {
+			return userEntires, nil
+		}
+		userEntires = append(userEntires, line)
+	}
+	return userEntires, nil
+}
+
+func (g *git) IgnoreFiles(gitignore string, files []string) error {
+	// If we're generating the ignore in the root of the project, we should ignore some Please stuff too
+	if gitignore == ".gitignore" {
+		files = append(defaultIgnoredFiles, files...)
+	}
+
+	p := filepath.Join(g.repoRoot, gitignore)
+
+	userEntries, err := readUserEntries(p)
+	if err != nil {
 		return err
 	}
-	if len(b) > 0 { // Don't append an initial newline if at the start of the file.
-		b = append(b, '\n')
+
+	lines := userEntries
+	if len(lines) != 0 && lines[len(lines)-1] != "" {
+		lines = append(lines, "")
 	}
-	b = append(b, []byte("# Please output directory and local configuration\nplz-out\n.plzconfig.local\n")...)
-	return ioutil.WriteFile(gitignore, b, 0644)
+	lines = append(lines, pleaseDoNotEdit)
+	lines = append(lines, files...)
+
+	if err := os.RemoveAll(p); err != nil && err != os.ErrNotExist {
+		return err
+	}
+
+	file, err := os.Create(p)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	for _, line := range lines {
+		if _, err := fmt.Fprintln(file, line); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (g *git) Remove(names []string) error {
 	cmd := exec.Command("git", append([]string{"rm", "-q"}, names...)...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("git rm failed: %s %s", err, out)
+		return fmt.Errorf("git rm failed: %s\nOutput:\n%s", err, string(out))
 	}
 	return nil
 }
@@ -133,7 +183,7 @@ func (g *git) ChangedLines() (map[string][]int, error) {
 	cmd := exec.Command("git", "diff", "origin/master", "--unified=0", "--no-color", "--no-ext-diff")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("git diff failed: %s", err)
+		return nil, fmt.Errorf("git diff failed: %s\nOutput:\n%s", err, string(out))
 	}
 	return g.parseChangedLines(out)
 }
@@ -159,7 +209,7 @@ func (g *git) parseHunks(hunks []*diff.Hunk) []int {
 
 func (g *git) Checkout(revision string) error {
 	if out, err := exec.Command("git", "checkout", revision).CombinedOutput(); err != nil {
-		return fmt.Errorf("git checkout of %s failed: %s\n%s", revision, err, out)
+		return fmt.Errorf("git checkout of %s failed: %s\nOutput:\n%s", revision, err, string(out))
 	}
 	return nil
 }

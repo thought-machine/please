@@ -171,10 +171,22 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
     """
     org, _, repo = repo.partition('/')
     assert repo, "Must pass a valid Github repo argument, e.g. thought-machine/please"
+
+    # If it looks like semver, we need to remove the v from it because github formats their zips differently for semver
+    # tags
+    #
+    # TODO(jpoole): if we ever add semver or regex to asp, we can do a better job of this
+    if len(revision.split('.')) == 3:
+        prefix = revision.removeprefix('v')
+    else:
+        prefix = revision
+
+    prefix = f'{repo}-{prefix}'
+
     return new_http_archive(
         name = name,
         urls = [f'https://github.com/{org}/{repo}/archive/{revision}.zip'],
-        strip_prefix = strip_prefix or f'{repo}-{revision}',
+        strip_prefix = strip_prefix or prefix,
         strip_build = strip_build,
         build_file = build_file,
         hashes = hashes,

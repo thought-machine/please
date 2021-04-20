@@ -133,6 +133,8 @@ type BuildTarget struct {
 	IsFilegroup bool `print:"false"`
 	// Marks the target as a remote_file.
 	IsRemoteFile bool `print:"false"`
+	// Marks the target as a text_file.
+	IsTextFile bool `print:"false"`
 	// Marks that the target was added in a post-build function.
 	AddedPostBuild bool `print:"false"`
 	// If true, the interactive progress display will try to infer the target's progress
@@ -199,10 +201,12 @@ type BuildTarget struct {
 	// output for the rule. For example if an output directory "foo" contains "bar.txt" the rule will have the output
 	// "bar.txt"
 	OutputDirectories []OutputDirectory `name:"output_dirs"`
-	// RuleMetadata is the metadata attached to this build rule. It can be accessed through the "get_rule_metadata" BIF.
-	RuleMetadata interface{} `name:"config"`
 	// EntryPoints represent named binaries within the rules output that can be targeted via //package:rule|entry_point_name
 	EntryPoints map[string]string `name:"entry_points"`
+	// Env are any custom environment variables to set for this build target
+	Env map[string]string `name:"env"`
+	// The content of text_file() rules
+	FileContent string `name:"content"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -215,6 +219,8 @@ type BuildMetadata struct {
 	// Time this action was written. Used for remote execution to determine if
 	// the action is stale and needs re-checking or not.
 	Timestamp time.Time
+	// Additional optional outputs found from wildcard
+	OptionalOutputs []string
 	// Additional outputs from output directories serialised as a csv
 	OutputDirOuts []string
 	// True if this represents a test run.
@@ -403,7 +409,7 @@ func (target *BuildTarget) StartTestSuite() {
 	// If the results haven't been set yet, set them
 	if target.Results.Name == "" {
 		target.Results = TestSuite{
-			Package:   strings.Replace(target.Label.PackageName, "/", ".", -1),
+			Package:   strings.ReplaceAll(target.Label.PackageName, "/", "."),
 			Name:      target.Label.Name,
 			Timestamp: time.Now().Format(time.RFC3339),
 		}
@@ -440,8 +446,8 @@ func (target *BuildTarget) allSourcePaths(graph *BuildGraph, full buildPathsFunc
 // AllURLs returns all the URLs for this target.
 // This should only be called if the target is a remote file.
 // The URLs will have any embedded environment variables expanded according to the given config.
-func (target *BuildTarget) AllURLs(config *Configuration) []string {
-	env := GeneralBuildEnvironment(config)
+func (target *BuildTarget) AllURLs(state *BuildState) []string {
+	env := GeneralBuildEnvironment(state)
 	ret := make([]string, len(target.Sources))
 	for i, s := range target.Sources {
 		ret[i] = os.Expand(string(s.(URLLabel)), env.ReplaceEnvironment)
@@ -598,6 +604,19 @@ func (target *BuildTarget) FullOutputs() []string {
 	outDir := target.OutDir()
 	for i, out := range outs {
 		outs[i] = path.Join(outDir, out)
+	}
+	return outs
+}
+
+// AllOutputs returns a slice of all the outputs of this rule, including any output directories.
+// Outs are passed through GetTmpOutput as appropriate.
+func (target *BuildTarget) AllOutputs() []string {
+	outs := target.Outputs()
+	for i, out := range outs {
+		outs[i] = target.GetTmpOutput(out)
+	}
+	for _, out := range target.OutputDirectories {
+		outs = append(outs, out.Dir())
 	}
 	return outs
 }
@@ -1530,6 +1549,11 @@ func (target *BuildTarget) BuildCouldModifyTarget() bool {
 // AddOutputDirectory adds an output directory to the target
 func (target *BuildTarget) AddOutputDirectory(dir string) {
 	target.OutputDirectories = append(target.OutputDirectories, OutputDirectory(dir))
+}
+
+// GetFileContent returns the file content, expanding it if it needs to
+func (target *BuildTarget) GetFileContent(state *BuildState) (string, error) {
+	return ReplaceSequences(state, target, target.FileContent)
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

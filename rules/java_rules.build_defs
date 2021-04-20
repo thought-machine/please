@@ -35,7 +35,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             resources_cmd = '$(for SRC in $SRCS_RESOURCES; do mkdir -p $(dirname "_tmp/$SRC");cp "$SRC" "_tmp/$SRC"; done)'
 
     if srcs and src_dir:
-        raise ParseError('You cannot pass both srcs and src_dir to java_library')
+        fail('You cannot pass both srcs and src_dir to java_library')
     if srcs or src_dir:
         if javac_flags:
             # See http://bazel.io/blog/2015/06/25/ErrorProne.html for more info about this flag;
@@ -196,11 +196,11 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
       jlink_args (str): Arguments to pass to the JVM in the run script.
     """
     if not CONFIG.JAVA_HOME:
-        raise Exception('Java home needs to be set to link java runtime images against jmods.')
+        fail('Java home needs to be set to link java runtime images against jmods.')
     if not CONFIG.JLINK_TOOL:
-        raise Exception('A jlink tool is required to build java runtime images.')
+        fail('A jlink tool is required to build java runtime images.')
     if not modules:
-        raise Exception('You cannot assemble a java runtime image without specifying any modules.')
+        fail('You cannot assemble a java runtime image without specifying any modules.')
     out = out or name
     depflags = r'`find "$TMP_DIR" -name "*.jar" | tr \\\\n :`'
     modules = ','.join(modules)
@@ -240,7 +240,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
       toolchain (str): A label identifying a java_toolchain rule which will be used to build this java binary.
     """
     if main_class and manifest:
-        raise ParseError("Can't pass both main_class and manifest to java_binary")
+        fail("Can't pass both main_class and manifest to java_binary")
     if srcs:
         lib_rule = java_library(
             name = f'_{name}#lib',
@@ -357,8 +357,8 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
     )
 
 
-def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:list=None, deps:list=None,
-              visibility:list=None, filename:str=None, sources:bool=True, licences:list=None,
+def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:list=None, source_hashes:list|str=None,
+              deps:list=None, visibility:list=None, filename:str=None, sources:bool=True, licences:list=None,
               native:bool=False, artifact_type:str=None, test_only:bool&testonly=False,
               binary:bool=False, classifier:str='', classifier_sources_override:str=''):
     """Fetches a single Java dependency from Maven.
@@ -368,7 +368,8 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
       id (str): Maven id of the artifact (eg. org.junit:junit:4.1.0)
       repository (str | list): Maven repositories to fetch deps from.
       hash (str): Hash for produced rule.
-      hashes (list): List of hashes for produced rule.
+      hashes (list): List of hashes downloaded classes jar.
+      source_hashes (list): List of hashes for the downloaded sources jar.
       deps (list): Labels of dependencies, as usual.
       visibility (list): Visibility label.
       filename (str): Filename we attempt to download. Defaults to standard Maven name.
@@ -386,7 +387,7 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
                      e.g. logback-core-1.1.3-tests.jar and logback-core-1.1.3-test-sources.jar
     """
     if hash and hashes:
-        raise ParseError('You can pass only one of hash or hashes to maven_jar')
+        fail('You can pass only one of hash or hashes to maven_jar')
 
     hashes = hashes if hashes else [hash] if hash else None
 
@@ -422,6 +423,7 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
         exported_deps = deps,  # easiest to assume these are always exported.
         test_only = test_only,
         binary = binary,
+        hashes = hashes,
     )
     provides = {'java': bin_rule}
     srcs = [bin_rule]
@@ -435,11 +437,11 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
             name = name,
             _tag = 'src',
             url = urls,
-            out = filename if  CONFIG.FF_MAVEN_JAR else  name + '_src' + artifact_type,
+            out = filename,
             labels = ['maven-sources'],
-            hashes = hashes if CONFIG.FF_MAVEN_JAR else [],
             licences = licences,
             test_only = test_only,
+            hashes = source_hashes,
         )
         srcs += [src_rule]
 
@@ -472,7 +474,6 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
         provides = provides,
         exported_deps=deps,  # easiest to assume these are always exported.
         deps = local_deps,  # ensure the classes_rule gets built correctly if there is one.
-        hashes = None if CONFIG.FF_MAVEN_JAR else hashes,
         labels = ['mvn:' + id, 'rule:maven_jar'],
         visibility = visibility,
         licences = licences,
@@ -495,7 +496,7 @@ def _parse_maven_artifact(id, sources=True, licences=None):
     elif len(parts) == 3:
         group, artifact, version = parts
     else:
-        raise ParseError(f'Unknown artifact format: {id} (should be group:artifact:version)')
+        fail(f'Unknown artifact format: {id} (should be group:artifact:version)')
     return group, artifact, version, sources, licences
 
 
@@ -513,15 +514,15 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
 # This function is exposed as java_toolchain unless Bazel compatibility is enabled in which case it is exposed as
 # please_java_toolchain. This is to avoid namespace conflicts with Bazel's java_toolchain rule. 
 def _java_toolchain(name : str, jdk_url : str|dict='', jdk:str='', visibility:list = ["PUBLIC"], hashes = []) -> str:
-    """Downloads the JDK and sets up build rule metadata so the language rules can use the toolchain"""
+    """Downloads the JDK so language rules can use the toolchain"""
     if jdk_url and jdk:
-        raise ParseError("Either jdk or jdk_url should be provided but not both")
+        fail("Either jdk or jdk_url should be provided but not both")
 
     if not jdk:
         jdk_url = jdk_url if isinstance(jdk_url, str) else jdk_url.get(CONFIG.OS)
 
         if not jdk_url:
-            raise ParseError(f"No jdk_url defined for platform {CONFIG.OS}")
+            fail(f"No jdk_url defined for platform {CONFIG.OS}")
 
         jdk = remote_file(
             name=f"_{name}#download",

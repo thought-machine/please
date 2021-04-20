@@ -19,15 +19,29 @@ sh_test(
 sh_cmd(
     name = "sh_cmd",
     cmd = [
-        "BUILD_TIME_EXPANSION_VAR=\"$OUT\"",
-        "NO_EXPANSION_VAR=\"\\\\$@\"",
-        "[ \"\\\\$BUILD_TIME_EXPANSION_VAR\" != \"\" ] || (echo \"Expected a build time var to be expanded.\" >&2 && exit 11)",
-        "[ \"\\\\$NO_EXPANSION_VAR\" = \"test_value\" ] || (echo \"Expected a expansion not to happen\" >&2 && exit 11)",
+        'BUILD_TIME_EXPANSION_VAR="$OUT"',
+        'NO_EXPANSION_VAR="\\\\$@"',
+        '[ "\\\\$BUILD_TIME_EXPANSION_VAR" != "" ] || (echo "Expected a build time var to be expanded." >&2 && exit 11)',
+        '[ "\\\\$NO_EXPANSION_VAR" = "test_value" ] || (echo "Expected a expansion not to happen" >&2 && exit 11)',
     ],
+)
+
+sh_cmd(
+    name = "sh_cmd_unexpanded",
+    cmd = [
+        'VAR="$OUT"',
+        '[ "$VAR" = "" ] || (echo "Expected a build time var to be unexpanded." >&2 && exit 11)',
+    ],
+    expand_env_vars = False,
 )
 
 sh_test(
     name = "sh_cmd_test",
     src = ":sh_cmd",
     flags = "test_value",
+)
+
+sh_test(
+    name = "sh_cmd_unexpanded_test",
+    src = ":sh_cmd_unexpanded",
 )

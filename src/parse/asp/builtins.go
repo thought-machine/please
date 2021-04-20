@@ -3,13 +3,15 @@ package asp
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/manifoldco/promptui"
 	"io"
 	"path"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	"github.com/manifoldco/promptui"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -46,15 +48,17 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "subrepo_name", subrepoName)
 	setNativeCode(s, "canonicalise", canonicalise)
 	setNativeCode(s, "get_labels", getLabels)
+	setNativeCode(s, "add_label", addLabel)
 	setNativeCode(s, "add_dep", addDep)
 	setNativeCode(s, "add_out", addOut)
+	setNativeCode(s, "get_outs", getOuts)
 	setNativeCode(s, "add_licence", addLicence)
 	setNativeCode(s, "get_licences", getLicences)
 	setNativeCode(s, "get_command", getCommand)
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
 	setNativeCode(s, "breakpoint", breakpoint)
-	setNativeCode(s, "get_rule_metadata", getRuleMetadata)
+	setNativeCode(s, "semver_check", semverCheck)
 	stringMethods = map[string]*pyFunc{
 		"join":         setNativeCode(s, "join", strJoin),
 		"split":        setNativeCode(s, "split", strSplit),
@@ -225,27 +229,6 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-const (
-	getConfigRuleConfigNameIndex = iota
-)
-
-func getRuleMetadata(s *scope, args []pyObject) pyObject {
-	name := args[getConfigRuleConfigNameIndex].(pyString).String()
-	label := core.ParseBuildLabelContext(name, s.pkg)
-
-	t := s.state.Graph.Target(label)
-
-	if t == nil {
-		if label.Subrepo == s.pkg.SubrepoName && label.PackageName == s.pkg.Name {
-			// This is a get_rule_metadata in the same package, check the target exists.
-			log.Fatalf("Target %s is not defined in this package yet; it has to be defined before the get_rule_metadata() call", name)
-		}
-
-		t = s.WaitForBuiltTargetWithoutLimiter(label, core.NewBuildLabel(s.pkg.Name, "all"))
-	}
-	return t.RuleMetadata.(pyObject)
-}
-
 func (s *scope) WaitForBuiltTargetWithoutLimiter(l, dependent core.BuildLabel) *core.BuildTarget {
 	s.interpreter.limiter.Release()
 	defer s.interpreter.limiter.Acquire()
@@ -382,7 +365,7 @@ func strReplace(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyString)
 	old := args[1].(pyString)
 	new := args[2].(pyString)
-	return pyString(strings.Replace(string(self), string(old), string(new), -1))
+	return pyString(strings.ReplaceAll(string(self), string(old), string(new)))
 }
 
 func strPartition(s *scope, args []pyObject) pyObject {
@@ -460,9 +443,12 @@ func strRFind(s *scope, args []pyObject) pyObject {
 func strFormat(s *scope, args []pyObject) pyObject {
 	self := string(args[0].(pyString))
 	for k, v := range s.locals {
-		self = strings.Replace(self, "{"+k+"}", v.String(), -1)
+		self = strings.ReplaceAll(self, "{"+k+"}", v.String())
 	}
-	return pyString(strings.Replace(strings.Replace(self, "{{", "{", -1), "}}", "}", -1))
+	for _, arg := range args[1:] {
+		self = strings.Replace(self, "{}", arg.String(), 1)
+	}
+	return pyString(strings.ReplaceAll(strings.ReplaceAll(self, "{{", "{"), "}}", "}"))
 }
 
 func strCount(s *scope, args []pyObject) pyObject {
@@ -500,7 +486,10 @@ func glob(s *scope, args []pyObject) pyObject {
 	exclude := asStringList(s, args[1], "exclude")
 	hidden := args[2].IsTruthy()
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
-	return fromStringList(fs.Glob(s.state.Config.Parse.BuildFileName, s.pkg.SourceRoot(), include, exclude, hidden))
+	if s.globber == nil {
+		s.globber = fs.NewGlobber(s.state.Config.Parse.BuildFileName)
+	}
+	return fromStringList(s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden))
 }
 
 func asStringList(s *scope, arg pyObject, name string) []string {
@@ -680,6 +669,23 @@ func getLabels(s *scope, args []pyObject) pyObject {
 	return getLabelsInternal(target, prefix, core.Building, all)
 }
 
+// addLabel adds a set of labels to the named rule
+func addLabel(s *scope, args []pyObject) pyObject {
+	name := string(args[0].(pyString))
+
+	var target *core.BuildTarget
+	if core.LooksLikeABuildLabel(name) {
+		label := core.ParseBuildLabel(name, s.pkg.Name)
+		target = s.state.Graph.TargetOrDie(label)
+	} else {
+		target = getTargetPost(s, name)
+	}
+
+	target.AddLabel(args[1].String())
+
+	return None
+}
+
 func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all bool) pyObject {
 	if target.State() < minState {
 		log.Fatalf("get_labels called on a target that is not yet built: %s", target.Label)
@@ -717,6 +723,7 @@ func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.Bu
 // Panics if the target is not in the current package or has already been built.
 func getTargetPost(s *scope, name string) *core.BuildTarget {
 	target := s.pkg.Target(name)
+	//nolint:staticcheck
 	s.Assert(target != nil, "Unknown build target %s in %s", name, s.pkg.Name)
 	// It'd be cheating to try to modify targets that're already built.
 	// Prohibit this because it'd likely end up with nasty race conditions.
@@ -754,6 +761,26 @@ func addOut(s *scope, args []pyObject) pyObject {
 		s.pkg.MustRegisterOutput(out, target)
 	}
 	return None
+}
+
+// getOuts gets the outputs of a target
+func getOuts(s *scope, args []pyObject) pyObject {
+	name := args[0].String()
+
+	var target *core.BuildTarget
+	if core.LooksLikeABuildLabel(name) {
+		label := core.ParseBuildLabel(name, s.pkg.Name)
+		target = s.state.Graph.TargetOrDie(label)
+	} else {
+		target = getTargetPost(s, name)
+	}
+
+	outs := target.Outputs()
+	ret := make(pyList, len(outs))
+	for i, out := range outs {
+		ret[i] = pyString(out)
+	}
+	return ret
 }
 
 // addLicence adds a licence to a target.
@@ -932,4 +959,22 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 	}
 	fmt.Printf("Debugger exited, continuing...\n")
 	return None
+}
+
+func semverCheck(s *scope, args []pyObject) pyObject {
+	v, err := semver.NewVersion(string(args[0].(pyString)))
+	if err != nil {
+		s.Error("failed to parse version: %v", err)
+
+		return newPyBool(false)
+	}
+
+	c, err := semver.NewConstraint(string(args[1].(pyString)))
+	if err != nil {
+		s.Error("failed to parse constraint: %v", err)
+
+		return newPyBool(false)
+	}
+
+	return newPyBool(c.Check(v))
 }

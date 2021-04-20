@@ -1,6 +1,7 @@
 package query
 
 import (
+	"container/list"
 	"fmt"
 	"sort"
 
@@ -9,68 +10,159 @@ import (
 
 // ReverseDeps finds all transitive targets that depend on the set of input labels.
 func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hidden bool) {
-	for _, target := range getRevDepTransitiveLabels(state, labels, map[core.BuildLabel]struct{}{}, level) {
-		if hidden || target.Name[0] != '_' {
-			fmt.Printf("%s\n", target)
+	targets := FindRevdeps(state, labels, hidden, true, level)
+	ls := make(core.BuildLabels, 0, len(targets))
+
+	for target := range targets {
+		if state.ShouldInclude(target) {
+			ls = append(ls, target.Label)
 		}
+	}
+	sort.Sort(ls)
+
+	for _, l := range ls {
+		fmt.Println(l.String())
 	}
 }
 
-func getRevDepTransitiveLabels(state *core.BuildState, labels []core.BuildLabel, done map[core.BuildLabel]struct{}, level int) core.BuildLabels {
-	if level == 0 {
+// node represents a node in the build graph and the depth we visited it at.
+type node struct {
+	target *core.BuildTarget
+	depth  int
+}
+
+// openSet represents the queue of nodes we need to process in the graph. There are no duplicates in this set and the
+// queue will be ordered low to high by depth i.e. in the order they must be processed
+//
+// NB: We don't need to explicitly order this. Paths either cost 1 or 0, but all 0 cost paths are equivalent e.g. paths
+// :lib1 -> :_lib1#foo -> :lib2, lib1 -> :_lib1#foo -> :_lib1#bar -> :lib2, and :lib1 -> lib2 all have a cost of 1 and
+// will result in :lib1 and :lib2 as outputs. It doesn't matter which is explored to generate the output.
+type openSet struct {
+	items *list.List
+
+	// done contains a map of targets we've already processed.
+	done map[core.BuildLabel]struct{}
+}
+
+// Push implements pushing a node onto the queue of nodes to process, deduplicating nodes we've seen before.
+func (os *openSet) Push(n *node) {
+	if _, present := os.done[n.target.Label]; !present {
+		os.done[n.target.Label] = struct{}{}
+		os.items.PushBack(n)
+	}
+}
+
+// Pop fetches the next node off the queue for us to process
+func (os *openSet) Pop() *node {
+	next := os.items.Front()
+	if next == nil {
 		return nil
 	}
-	for _, l := range getRevDepsLabels(state, labels) {
-		if _, present := done[l]; !present {
-			done[l] = struct{}{}
-			getRevDepTransitiveLabels(state, []core.BuildLabel{l}, done, level-1)
-		}
-	}
-	ret := core.BuildLabels{}
-	for label := range done {
-		if state.ShouldInclude(state.Graph.TargetOrDie(label)) {
-			ret = append(ret, label)
-		}
-	}
-	sort.Sort(ret)
-	return ret
+	os.items.Remove(next)
+
+	return next.Value.(*node)
 }
 
-// getRevDepsLabels returns a slice of build labels that are the reverse dependencies of the build labels being passed in
-func getRevDepsLabels(state *core.BuildState, labels []core.BuildLabel) core.BuildLabels {
-	uniqueTargets := map[*core.BuildTarget]struct{}{}
+type revdeps struct {
+	// subincludes is a map of build labels to the packages that subinclude them
+	subincludes       map[core.BuildLabel][]*core.Package
+	followSubincludes bool
 
-	graph := state.Graph
-	for _, label := range labels {
-		for _, child := range graph.PackageOrDie(label).AllChildren(graph.TargetOrDie(label)) {
-			for _, target := range graph.ReverseDependencies(child) {
-				if parent := target.Parent(graph); parent != nil {
-					uniqueTargets[parent] = struct{}{}
-				} else {
-					uniqueTargets[target] = struct{}{}
-				}
+	// os is the open set of targets to process
+	os *openSet
+
+	// hidden is whether to count hidden targets towards the depth budget
+	hidden bool
+
+	// maxDepth is the depth budget for the search. -1 means unlimited.
+	maxDepth int
+}
+
+// newRevdeps creates a new reverse dependency searcher. revdeps is non-reusable.
+func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth int) *revdeps {
+	// Initialise a map of labels to the packages that subinclude them upfront so we can include those targets as
+	// dependencies efficiently later
+	subincludes := make(map[core.BuildLabel][]*core.Package)
+	if followSubincludes {
+		for _, pkg := range graph.PackageMap() {
+			for _, inc := range pkg.Subincludes {
+				subincludes[inc] = append(subincludes[inc], pkg)
 			}
 		}
 	}
-	// Check for anything subincluding this guy too
-	for _, pkg := range graph.PackageMap() {
-		for _, label := range labels {
-			if pkg.HasSubinclude(label) {
-				for _, target := range pkg.AllTargets() {
-					uniqueTargets[target] = struct{}{}
+
+	return &revdeps{
+		subincludes:       subincludes,
+		followSubincludes: followSubincludes,
+		os: &openSet{
+			items: list.New(),
+			done:  map[core.BuildLabel]struct{}{},
+		},
+		hidden:   hidden,
+		maxDepth: maxDepth,
+	}
+}
+
+// FindRevdeps will return a set of build targets that are reverse dependencies of the provided labels.
+func FindRevdeps(state *core.BuildState, targets core.BuildLabels, hidden, followSubincludes bool, depth int) map[*core.BuildTarget]struct{} {
+	r := newRevdeps(state.Graph, hidden, followSubincludes, depth)
+	// Initialise the open set with the original targets
+	for _, t := range targets {
+		r.os.Push(&node{
+			target: state.Graph.TargetOrDie(t),
+			depth:  0,
+		})
+	}
+	return r.findRevdeps(state)
+}
+
+func isSameTarget(graph *core.BuildGraph, lhs, rhs *core.BuildTarget) bool {
+	if lhs == rhs {
+		return true
+	}
+
+	// Otherwise check they belong to the same non-hidden rule
+	if lhs.Label.IsHidden() {
+		lhs = lhs.Parent(graph)
+	}
+	if rhs.Label.IsHidden() {
+		rhs = rhs.Parent(graph)
+	}
+	return lhs == rhs && lhs != nil
+}
+
+func (r *revdeps) findRevdeps(state *core.BuildState) map[*core.BuildTarget]struct{} {
+	// 1000 is chosen pretty much arbitrarily here
+	ret := make(map[*core.BuildTarget]struct{}, 1000)
+	for next := r.os.Pop(); next != nil; next = r.os.Pop() {
+		ts := state.Graph.ReverseDependencies(next.target)
+		if r.followSubincludes {
+			for _, p := range r.subincludes[next.target.Label] {
+				ts = append(ts, p.AllTargets()...)
+			}
+		}
+
+		for _, t := range ts {
+			depth := next.depth
+
+			// The label shouldn't count towards the depth if it's a child of the last label
+			if r.hidden || !isSameTarget(state.Graph, next.target, t) {
+				depth++
+			}
+
+			if next.depth < r.maxDepth || r.maxDepth == -1 {
+				if r.hidden || !t.Label.IsHidden() {
+					ret[t] = struct{}{}
+				} else if parent := t.Parent(state.Graph); parent != nil {
+					ret[parent] = struct{}{}
 				}
+
+				r.os.Push(&node{
+					target: t,
+					depth:  depth,
+				})
 			}
 		}
 	}
-
-	targets := make(core.BuildLabels, 0, len(uniqueTargets))
-	for _, label := range labels {
-		delete(uniqueTargets, graph.TargetOrDie(label))
-	}
-	for target := range uniqueTargets {
-		targets = append(targets, target.Label)
-	}
-	sort.Sort(targets)
-
-	return targets
+	return ret
 }

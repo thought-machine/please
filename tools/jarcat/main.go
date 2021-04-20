@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/op/go-logging.v1"
 
@@ -66,6 +67,7 @@ var opts = struct {
 		Suffix                []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
 		ExcludeSuffix         []string          `short:"e" long:"exclude_suffix" description:"Suffix of files to exclude"`
 		ExcludeJavaPrefixes   bool              `short:"j" long:"exclude_java_prefixes" description:"Use default Java exclusions"`
+		ExcludeTools          []string          `long:"exclude_tools" env:"TOOLS" env-delim:" " description:"Tools to exclude from the generated zipfile"`
 		ExcludeInternalPrefix []string          `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
 		IncludeInternalPrefix []string          `short:"t" long:"include_internal_prefix" description:"Prefix of files to include"`
 		StripPrefix           string            `long:"strip_prefix" description:"Prefix to strip off file names"`
@@ -201,6 +203,21 @@ func main() {
 	f.DirEntries = !opts.Zip.NoDirEntries
 	f.Align = opts.Zip.Align
 	f.Prefix = opts.Zip.Prefix
+
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to determine working directory: %s", err)
+	}
+	for _, excl := range opts.Zip.ExcludeTools {
+		f.Exclude = append(f.Exclude, excl)
+		if filepath.IsAbs(excl) {
+			if rel, err := filepath.Rel(wd, excl); err == nil {
+				f.Exclude = append(f.Exclude, rel)
+			}
+		}
+	}
+	// Never descend into the _please dir
+	f.Exclude = append(f.Exclude, "_please")
 
 	if opts.Zip.PreambleFrom != "" {
 		opts.Zip.Preamble = mustReadPreamble(opts.Zip.PreambleFrom)

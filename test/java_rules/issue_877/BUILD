@@ -1,6 +1,6 @@
 # Tests for Java Library including resources
 
-subinclude("//build_defs:plz_e2e_test")
+subinclude("//test/build_defs")
 
 java_library(
     name = "issue_877",

@@ -4,6 +4,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
 	"os/exec"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/process"
 )
@@ -24,15 +26,19 @@ import (
 var log = logging.MustGetLogger("run")
 
 // Run implements the running part of 'plz run'.
-func Run(state *core.BuildState, label core.BuildLabel, args []string, remote, env bool, dir string, arch cli.Arch) {
-	run(context.Background(), state, label, args, false, false, remote, env, false, dir, arch)
+func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, remote, env, inTmp bool, dir string) {
+	prepareRun(dir, inTmp)
+
+	run(state, label, args, false, false, remote, env, false, inTmp, dir)
 }
 
 // Parallel runs a series of targets in parallel.
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
 // The given context can be used to control the lifetime of the subprocesses.
-func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, args []string, numTasks int, quiet, remote, env, detach bool, dir string, arch cli.Arch) int {
+func Parallel(ctx context.Context, state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, quiet, remote, env, detach, inTmp bool, dir string) int {
+	prepareRun(dir, inTmp)
+
 	limiter := make(chan struct{}, numTasks)
 	var g errgroup.Group
 	for _, label := range labels {
@@ -40,7 +46,7 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLa
 		g.Go(func() error {
 			limiter <- struct{}{}
 			defer func() { <-limiter }()
-			return run(ctx, state, label, args, true, quiet, remote, env, detach, dir, arch)
+			return run(state, label, args, true, quiet, remote, env, detach, inTmp, dir)
 		})
 	}
 	if err := g.Wait(); err != nil {
@@ -55,10 +61,11 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.BuildLa
 // Sequential runs a series of targets sequentially.
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
-func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string, quiet, remote, env bool, dir string, arch cli.Arch) int {
+func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, quiet, remote, env, inTmp bool, dir string) int {
+	prepareRun(dir, inTmp)
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		if err := run(context.Background(), state, label, args, true, quiet, remote, env, false, dir, arch); err != nil {
+		if err := run(state, label, args, true, quiet, remote, env, false, inTmp, dir); err != nil {
 			log.Error("%s", err)
 			return err.(*exitError).code
 		}
@@ -66,24 +73,30 @@ func Sequential(state *core.BuildState, labels []core.BuildLabel, args []string,
 	return 0
 }
 
+func prepareRun(dir string, inTmp bool) {
+	if err := os.RemoveAll("plz-out/run"); err != nil && !os.IsNotExist(err) {
+		log.Warningf("failed to clean up old run working directory: %v", err)
+	}
+}
+
 // run implements the internal logic about running a target.
 // If fork is true then we fork to run the target and return any error from the subprocesses.
 // If it's false this function never returns (because we either win or die; it's like
 // Game of Thrones except rather less glamorous).
-func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, args []string, fork, quiet, remote, setenv, detach bool, dir string, arch cli.Arch) error {
+func run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, fork, quiet, remote, setenv, detach, tmpDir bool, dir string) error {
 	// This is a bit strange as normally if you run a binary for another platform, this will fail. In some cases
 	// this can be quite useful though e.g. to compile a binary for a target arch, then run an .sh script to
 	// push that to docker.
-	if arch.OS != "" && label.Subrepo == "" {
-		label.Subrepo = arch.String()
+	if state.TargetArch != cli.HostArch() {
+		label.Subrepo = state.TargetArch.String()
 	}
 
-	target := state.Graph.TargetOrDie(label)
+	target := state.Graph.TargetOrDie(label.BuildLabel)
 	if !target.IsBinary {
 		log.Fatalf("Target %s cannot be run; it's not marked as binary", label)
 	}
-	if len(target.Outputs()) != 1 && target.IsTest {
-		log.Fatalf("Targets %s cannot be run as it has %d outputs; Only tests with 1 output can be run.", label, len(target.Outputs()))
+	if label.Annotation == "" && len(target.Outputs()) != 1 {
+		log.Fatalf("Targets %s cannot be run as it has %d outputs.", label, len(target.Outputs()))
 	}
 	if remote {
 		// Send this off to be done remotely.
@@ -94,9 +107,35 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 		}
 		return state.RemoteClient.Run(target)
 	}
+
+	if tmpDir {
+		var err error
+		if dir, err = prepareRunDir(state, target); err != nil {
+			return err
+		}
+	}
+
 	// ReplaceSequences always quotes stuff in case it contains spaces or special characters,
 	// that works fine if we interpret it as a shell but not to pass it as an argument here.
-	command, _ := core.ReplaceSequences(state, target, fmt.Sprintf("$(out_exe %s)", target.Label))
+	command := ""
+	if label.Annotation != "" {
+		entryPoint, ok := target.EntryPoints[label.Annotation]
+		if !ok {
+			log.Fatalf("Cannot run %s as has no entry point %s", label, label.Annotation)
+		}
+		if tmpDir {
+			command = filepath.Join(dir, entryPoint)
+		} else {
+			command = filepath.Join(target.OutDir(), entryPoint)
+		}
+	} else {
+		// out_exe handles java binary stuff by invoking the .jar with java as necessary
+		if tmpDir {
+			command = filepath.Join(dir, target.Outputs()[0])
+		} else {
+			command, _ = core.ReplaceSequences(state, target, fmt.Sprintf("$(out_exe %s)", target.Label))
+		}
+	}
 	arg0 := strings.Trim(command, "\"")
 	// Handle targets where $(exe ...) returns something nontrivial
 	splitCmd := strings.Split(arg0, " ")
@@ -117,7 +156,8 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 	args = append(splitCmd, args...)
 	log.Info("Running target %s...", strings.Join(args, " "))
 	output.SetWindowTitle("plz run: " + strings.Join(args, " "))
-	env := environ(state, target, setenv)
+	env := environ(state, target, setenv, tmpDir)
+
 	if !fork {
 		if dir != "" {
 			err := syscall.Chdir(dir)
@@ -143,14 +183,38 @@ func run(ctx context.Context, state *core.BuildState, label core.BuildLabel, arg
 	return toExitError(err, args, output)
 }
 
+func prepareRunDir(state *core.BuildState, target *core.BuildTarget) (string, error) {
+	path := filepath.Join("plz-out", "run", target.Label.Subrepo, target.Label.PackageName)
+	if err := os.MkdirAll(path, fs.DirPermissions); err != nil && !os.IsExist(err) {
+		return "", err
+	}
+
+	path, err := ioutil.TempDir(path, target.Label.Name+"_*")
+	if err != nil {
+		return "", err
+	}
+
+	if err := state.EnsureDownloaded(target); err != nil {
+		return "", err
+	}
+
+	for out := range core.IterRuntimeFiles(state.Graph, target, true, path) {
+		if err := core.PrepareSourcePair(out); err != nil {
+			return "", err
+		}
+	}
+
+	return path, nil
+}
+
 // environ returns an appropriate environment for a command.
-func environ(state *core.BuildState, target *core.BuildTarget, setenv bool) []string {
+func environ(state *core.BuildState, target *core.BuildTarget, setenv, tmpDir bool) []string {
 	env := os.Environ()
 	for _, e := range adRunEnviron {
 		env = addEnv(env, e)
 	}
-	if setenv {
-		for _, e := range core.RunEnvironment(state, target) {
+	if setenv || tmpDir {
+		for _, e := range core.RunEnvironment(state, target, tmpDir) {
 			env = addEnv(env, e)
 		}
 	}

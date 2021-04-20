@@ -41,6 +41,10 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
 // String returns a string representation of this build label.
 func (label BuildLabel) String() string {
+	zero := BuildLabel{}
+	if label == zero {
+		return ""
+	}
 	s := "//" + label.PackageName
 	if label.Subrepo != "" {
 		s = "///" + label.Subrepo + s
@@ -348,6 +352,11 @@ func (label BuildLabel) Parent() BuildLabel {
 	}
 	label.Name = strings.TrimLeft(label.Name[:index], "_")
 	return label
+}
+
+// IsHidden return whether the target is an intermediate target created by the build definition.
+func (label BuildLabel) IsHidden() bool {
+	return label.Name[0] == '_'
 }
 
 // HasParent returns true if the build label has a parent that's not itself.

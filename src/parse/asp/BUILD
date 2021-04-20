@@ -14,6 +14,7 @@ go_library(
         "//src/fs",
         "//third_party/go:logging",
         "//third_party/go:promptui",
+        "//third_party/go:semver2",
     ],
 )
 

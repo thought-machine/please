@@ -6,6 +6,7 @@ package pex
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
 	"os"
 	"path"
@@ -13,6 +14,9 @@ import (
 
 	"github.com/thought-machine/please/tools/jarcat/zip"
 )
+
+//go:embed *.py
+var files embed.FS
 
 // A Writer implements writing a .pex file in various steps.
 type Writer struct {
@@ -146,22 +150,22 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	}
 
 	// Always write pex_main.py, with some templating.
-	b := MustAsset("pex_main.py")
-	b = bytes.Replace(b, []byte("__MODULE_DIR__"), []byte(strings.Replace(moduleDir, ".", "/", -1)), 1)
+	b := mustRead("pex_main.py")
+	b = bytes.Replace(b, []byte("__MODULE_DIR__"), []byte(strings.ReplaceAll(moduleDir, ".", "/")), 1)
 	b = bytes.Replace(b, []byte("__ENTRY_POINT__"), []byte(pw.realEntryPoint), 1)
 	b = bytes.Replace(b, []byte("__ZIP_SAFE__"), []byte(pythonBool(pw.zipSafe)), 1)
 	b = bytes.Replace(b, []byte("__PEX_STAMP__"), []byte(pw.pexStamp), 1)
 
 	if len(pw.testSrcs) != 0 {
 		// If we're writing a test, we append test_main.py to it.
-		b2 := MustAsset("test_main.py")
+		b2 := mustRead("test_main.py")
 		b2 = bytes.Replace(b2, []byte("__TEST_NAMES__"), []byte(strings.Join(pw.testSrcs, ",")), 1)
 		b = append(b, b2...)
 		// It also needs an appropriate test runner.
-		b = append(b, bytes.Replace(MustAsset(pw.testRunner), []byte("__TEST_RUNNER__"), []byte(pw.customTestRunner), 1)...)
+		b = append(b, bytes.Replace(mustRead(pw.testRunner), []byte("__TEST_RUNNER__"), []byte(pw.customTestRunner), 1)...)
 	}
 	// We always append the final if __name__ == '__main__' bit.
-	b = append(b, MustAsset("pex_run.py")...)
+	b = append(b, mustRead("pex_run.py")...)
 	return f.WriteFile("__main__.py", b, 0644)
 }
 
@@ -176,5 +180,14 @@ func pythonBool(b bool) string { //nolint:unused
 // toPythonPath converts a normal path to a Python import path.
 func toPythonPath(p string) string {
 	ext := path.Ext(p)
-	return strings.Replace(p[:len(p)-len(ext)], "/", ".", -1)
+	return strings.ReplaceAll(p[:len(p)-len(ext)], "/", ".")
+}
+
+// mustRead reads the given file from the embedded set. It dies on error.
+func mustRead(filename string) []byte {
+	b, err := files.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }

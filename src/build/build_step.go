@@ -97,12 +97,27 @@ func validateBuildTargetBeforeBuild(state *core.BuildState, target *core.BuildTa
 	return nil
 }
 
+func findFilegroupSourcesWithTmpDir(target *core.BuildTarget) []core.BuildLabel {
+	srcs := make([]core.BuildLabel, 0, len(target.Sources))
+	for _, src := range target.Sources {
+		if src.Label() != nil {
+			srcs = append(srcs, *src.Label())
+		}
+	}
+	return srcs
+}
+
 func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) error {
 	if target.IsFilegroup {
+		potentialTargets := findFilegroupSourcesWithTmpDir(target)
+		if len(potentialTargets) > 0 {
+			return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories... Perhaps you meant one of its srcs: %v", target.Label, potentialTargets)
+		}
+
 		return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
 	}
 	// Ensure we have downloaded any previous dependencies if that's relevant.
-	if err := downloadInputsIfNeeded(tid, state, target); err != nil {
+	if err := state.DownloadInputsIfNeeded(tid, target, false); err != nil {
 		return err
 	}
 	if err := prepareDirectories(target); err != nil {
@@ -178,7 +193,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 	} else {
 		// Ensure we have downloaded any previous dependencies if that's relevant.
-		if err := downloadInputsIfNeeded(tid, state, target); err != nil {
+		if err := state.DownloadInputsIfNeeded(tid, target, false); err != nil {
 			return err
 		}
 
@@ -282,6 +297,13 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		metadata, err = buildMaybeRemotely(state, target, cacheKey)
 		if err != nil {
 			return err
+		}
+
+		// Add optional outputs to target metadata
+		metadata.OptionalOutputs = make([]string, 0)
+		for _, output := range fs.Glob(state.Config.Parse.BuildFileName, target.TmpDir(), target.OptionalOutputs, nil, true) {
+			log.Debug("Add discovered optional output to metadata %s", output)
+			metadata.OptionalOutputs = append(metadata.OptionalOutputs, output)
 		}
 
 		metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(target)
@@ -417,7 +439,14 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 	}
 	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
 
-	if retrieveFromCache(state.Cache, target, mustShortTargetHash(state, target), target.Outputs()) != nil {
+	cacheKey := mustShortTargetHash(state, target)
+
+	if md := retrieveFromCache(state.Cache, target, cacheKey, target.Outputs()); md != nil {
+		// Retrieve additional optional outputs from metadata
+		if len(md.OptionalOutputs) > 0 {
+			state.Cache.Retrieve(target, cacheKey, md.OptionalOutputs)
+		}
+
 		log.Debug("Retrieved artifacts for %s from cache", target.Label)
 		checkLicences(state, target)
 		newOutputHash, err := calculateAndCheckRuleHash(state, target)
@@ -445,6 +474,9 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	if target.IsRemoteFile {
 		return nil, fetchRemoteFile(state, target)
 	}
+	if target.IsTextFile {
+		return nil, buildTextFile(state, target)
+	}
 	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()))
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
 	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, command, target.Sandbox)
@@ -452,6 +484,22 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
 	return out, nil
+}
+
+// buildTextFile runs the build action for text_file() rules
+func buildTextFile(state *core.BuildState, target *core.BuildTarget) error {
+	outs := target.Outputs()
+	if len(outs) != 1 {
+		return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(outs))
+	}
+	outFile := filepath.Join(target.TmpDir(), outs[0])
+
+	content, err := target.GetFileContent(state)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(outFile, []byte(content), target.OutMode())
 }
 
 // prepareOutputDirectories creates any directories the target has declared it will output into as a nicety
@@ -713,24 +761,6 @@ func checkForStaleOutput(filename string, err error) bool {
 	return false
 }
 
-// downloadInputs downloads all the inputs for this target if we are building remotely.
-func downloadInputsIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) error {
-	if state.RemoteClient != nil {
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading inputs...")
-		for input := range core.IterInputs(state.Graph, target, true, false) {
-			if l := input.Label(); l != nil {
-				dep := state.Graph.TargetOrDie(*l)
-				if s := dep.State(); s == core.BuiltRemotely || s == core.ReusedRemotely {
-					if err := state.RemoteClient.Download(dep); err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
-
 // calculateAndCheckRuleHash checks the output hash for a rule.
 func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	hash, err := state.TargetHasher.OutputHash(target)
@@ -960,6 +990,14 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 func buildLinks(state *core.BuildState, target *core.BuildTarget) {
 	buildLinksOfType(state, target, "link:", os.Symlink)
 	buildLinksOfType(state, target, "hlink:", os.Link)
+
+	if state.Config.Build.LinkGeneratedSources && target.HasLabel("codegen") {
+		for _, out := range target.Outputs() {
+			destDir := path.Join(core.RepoRoot, target.Label.PackageDir())
+			srcDir := path.Join(core.RepoRoot, target.OutDir())
+			linkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), os.Symlink)
+		}
+	}
 }
 
 type linkFunc func(string, string) error

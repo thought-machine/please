@@ -1,0 +1,6 @@
+genrule(
+    name = "foo",
+    outs = ["foo.gen"],
+    cmd = "echo wibble > $OUT",
+    labels = ["codegen"],
+)

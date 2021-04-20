@@ -1,17 +1,3 @@
-filegroup(
-    name = "pex_data",
-    srcs = [
-        "behave.py",
-        "custom.py",
-        "pex_main.py",
-        "pex_run.py",
-        "pytest.py",
-        "test_main.py",
-        "unittest.py",
-    ],
-    visibility = ["//tools/please_pex/pex:all"],
-)
-
 go_binary(
     name = "pex_main",
     srcs = ["pex_main.go"],

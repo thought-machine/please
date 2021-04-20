@@ -4,11 +4,6 @@
 pextool = //tools/please_pex
 moduledir = third_party.python
 
-[parse]
-; Make this generally available
-preloadbuilddefs = build_defs/go_bindata.build_defs
-builtinpleasings = false
-
 [gc]
 keep = //test/...
 keep = //docs:all
@@ -16,13 +11,15 @@ keep = //package:all
 
 [go]
 filtertool = //tools/please_go_filter
-installtool = //tools/please_go_install
-testtool = //tools/please_go_test
+pleasegotool = //tools/please_go
+embedtool = //tools/please_go_embed
 importpath = github.com/thought-machine/please
+gotool = //third_party/go:toolchain|go
 
 [cpp]
 defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
+TestMain = ///pleasings//cc:unittest_main
 
 [java]
 javacworker = //tools/java:javac_worker
@@ -52,7 +49,7 @@ cmd = run //:install --
 
 [alias "plz"]
 desc = Builds & runs the version of plz within this repo.
-cmd = run //src:please --
+cmd = run //package:installed_files --entry_point=please --
 subcommand = test
 subcommand = build
 positionallabels = true
@@ -85,4 +82,3 @@ accept = notice
 
 [featureflags]
 JavaBinaryExecutableByDefault = true
-RemovePleasings = true

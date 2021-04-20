@@ -46,8 +46,6 @@ func parseFile(pkg *core.Package, p *asp.Parser, filename string) error {
 		if opts.DumpAst {
 			config := spew.NewDefaultConfig()
 			config.DisablePointerAddresses = true
-			//config.DisableTypes = true
-			//config.OmitEmpty = true
 			config.Indent = "  "
 			os.Stdout.Write([]byte(cleanup(config.Sdump(stmts))))
 		}
@@ -110,14 +108,11 @@ func main() {
 	p := asp.NewParser(state)
 
 	log.Debug("Loading built-in build rules...")
-	dir, _ := rules.AssetDir("")
+	dir, _ := rules.AllAssets()
 	sort.Strings(dir)
 	for _, filename := range dir {
-		if strings.HasSuffix(filename, ".gob") {
-			srcFile := strings.TrimSuffix(filename, ".gob")
-			src, _ := rules.Asset(srcFile)
-			p.MustLoadBuiltins("rules/"+srcFile, src, rules.MustAsset(filename))
-		}
+		src, _ := rules.ReadAsset(filename)
+		p.MustLoadBuiltins(filename, src)
 	}
 
 	start := time.Now()

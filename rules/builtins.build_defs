@@ -3,7 +3,7 @@
 
 # Do not change the order of arguments to this function without updating the iota in targets.go to match it.
 def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', srcs:list|dict=None, data:list|dict=None, outs:list|dict=None,
-               deps:list=None, exported_deps:list=None, secrets:list|dict=None, tools:list|dict=None, test_tools:list|dict=None,
+               deps:list=None, exported_deps:list=None, secrets:list|dict=None, tools:str|list|dict=None, test_tools:str|list|dict=None,
                labels:list=None, visibility:list=CONFIG.DEFAULT_VISIBILITY, hashes:list=None, binary:bool=False, test:bool=False,
                test_only:bool=CONFIG.DEFAULT_TESTONLY, building_description:str=None, needs_transitive_deps:bool=False,
                output_is_complete:bool=False, _=None, sandbox:bool=CONFIG.BUILD_SANDBOX,
@@ -11,8 +11,8 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', srcs:list|dict=N
                test_timeout:int|str=0, pre_build:function=None, post_build:function=None, requires:list=None, provides:dict=None,
                licences:list=CONFIG.DEFAULT_LICENCES, test_outputs:list=None, system_srcs:list=None, stamp:bool=False,
                tag:str='', optional_outs:list=None, progress:bool=False, size:str=None, _urls:list=None,
-               internal_deps:list=None, pass_env:list=None, local:bool=False, output_dirs:list=[], metadata=None,
-               exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}):
+               internal_deps:list=None, pass_env:list=None, local:bool=False, output_dirs:list=[], __=None,
+               exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}, env:dict={}, _file_content:str=None):
     pass
 
 
@@ -96,9 +96,9 @@ def int(s:str) -> int:
 def str(s) -> str:
     pass
 def list(l):
-    raise 'list is not callable'
+    fail('list is not callable')
 def dict(d):
-    raise 'dict is not callable'
+    fail('dict is not callable')
 
 
 def glob(include:list, exclude:list&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY) -> list:
@@ -153,13 +153,13 @@ def copy(self:dict) -> dict:
 
 
 def git_branch(short:bool=True) -> str:
-    raise 'Disabled in config'
+    fail('Disabled in config')
 def git_commit() -> str:
-    raise 'Disabled in config'
+    fail('Disabled in config')
 def git_show(fmt:str) -> str:
-    raise 'Disabled in config'
+    fail('Disabled in config')
 def git_state(clean_label:str="clean", dirty_label:str="dirty") -> str:
-    raise 'Disabled in config'
+    fail('Disabled in config')
 
 def debug(args):
     pass
@@ -210,11 +210,15 @@ def dirname(p:str) -> str:
     return before
 
 
-# Exception types.
-# There is no actual Exception, but str() is similar enough here.
-ParseError = str
-ConfigError = str
-ValueError = str
+def _deprecated_exception(msg):
+    log.warning('Builtin exception types are deprecated, please use fail() instead. ' +
+                'See https://github.com/thought-machine/please/issues/1598 for more information.')
+    return str(msg)
+
+# These are deprecated and will be removed in v17.
+ParseError = _deprecated_exception
+ConfigError = _deprecated_exception
+ValueError = _deprecated_exception
 
 
 # Post-build callback functions.
@@ -222,11 +226,15 @@ def get_labels(name:str, prefix:str, all:bool=False) -> list:
     pass
 def has_label(name:str, prefix:str, all:bool=False) -> bool:
     return len(get_labels(name, prefix, all)) > 0
+def add_label(name:str, label:str):
+    pass
 def add_dep(target:str, dep:str, exported:bool=False):
     pass
 def add_exported_dep(target:str, dep:str):
     add_dep(target, dep, True)
 def add_out(target:str, name:str, out:str=''):
+    pass
+def get_outs(target:str):
     pass
 def add_licence(target:str, licence:str):
     pass
@@ -255,7 +263,5 @@ def breakpoint():
     """Breaks into an interactive debugging session."""
     pass
 
-
-def get_rule_metadata(label:str):
-    """Gets any metadata provided for a build rule"""
+def semver_check(version:str, constraint:str) -> bool:
     pass

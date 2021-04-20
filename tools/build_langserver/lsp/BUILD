@@ -23,9 +23,7 @@ go_test(
     size = "medium",
     srcs = glob(["*_test.go"]),
     data = ["test_data"],
-    # TODO(#1412): find out why this flakes
-    flaky = True,
-    labels = ["manual"] if CONFIG.OS == "freebsd" else [],
+    labels = ["manual"],  # TODO(#1412): find out why this flakes
     deps = [
         ":lsp",
         "//src/cli",

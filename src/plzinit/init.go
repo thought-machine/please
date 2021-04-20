@@ -80,7 +80,7 @@ func InitConfig(dir string, bazelCompatibility bool, noPrompt bool) {
 	// If we're in a known repository type, ignore the plz-out directory.
 	if s := scm.New(dir); s != nil {
 		fmt.Printf("Also marking plz-out to be ignored by your SCM.\n")
-		if err := s.IgnoreFile("plz-out"); err != nil {
+		if err := s.IgnoreFiles(".gitignore", nil); err != nil {
 			log.Error("Failed to ignore plz-out: %s", err)
 		}
 	}
@@ -116,7 +116,7 @@ func readConfig(filename string) []byte {
 
 // InitWrapperScript initialises the pleasew script.
 func InitWrapperScript() {
-	data := assets.MustAsset(wrapperScriptName)
+	data := assets.Pleasew
 	if err := ioutil.WriteFile(wrapperScriptName, data, 0755); err != nil {
 		log.Fatalf("Failed to write file: %s", err)
 	}

@@ -4,18 +4,23 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha256"
+	_ "embed" // needed for //go:embed
 	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/thought-machine/please/src/cli"
-	"golang.org/x/crypto/openpgp"
 )
 
 // identity is the signing identity of this key.
 const identity = "Please Releases <releases@please.build>"
+
+// pubkey is the public key we verify Please releases with.
+//go:embed pubkey.pem
+var pubkey string
 
 // verifySignature verifies an OpenPGP detached signature of a file.
 // It returns true if the signature is correct according to our key.
@@ -24,7 +29,7 @@ func verifySignature(signed, signature io.Reader) bool {
 	if err != nil {
 		log.Fatalf("%s", err) // Shouldn't happen
 	}
-	signer, err := openpgp.CheckArmoredDetachedSignature(entities, signed, signature)
+	signer, err := openpgp.CheckArmoredDetachedSignature(entities, signed, signature, nil)
 	if err != nil {
 		log.Error("Bad signature: %s", err)
 		return false

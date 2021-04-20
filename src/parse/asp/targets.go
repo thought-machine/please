@@ -59,9 +59,11 @@ const (
 	passEnvBuildRuleArgIdx
 	localBuildRuleArgIdx
 	outDirsBuildRuleArgIdx
-	configBuildRuleArgIdx
+	_
 	exitOnErrorArgIdx
 	entryPointsArgIdx
+	envArgIdx
+	fileContentArgIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -97,9 +99,9 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.TestOnly = test || isTruthy(testOnlyBuildRuleArgIdx)
 	target.ShowProgress = isTruthy(progressBuildRuleArgIdx)
 	target.IsRemoteFile = isTruthy(urlsBuildRuleArgIdx)
+	target.IsTextFile = isTruthy(fileContentArgIdx)
 	target.Local = isTruthy(localBuildRuleArgIdx)
 	target.ExitOnError = isTruthy(exitOnErrorArgIdx)
-	target.RuleMetadata = args[configBuildRuleArgIdx]
 	for _, o := range asStringList(s, args[outDirsBuildRuleArgIdx], "output_dirs") {
 		target.AddOutputDirectory(o)
 	}
@@ -203,11 +205,12 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 		for _, url := range args[urlsBuildRuleArgIdx].(pyList) {
 			t.AddSource(core.URLLabel(url.(pyString)))
 		}
-	} else {
-		addMaybeNamed(s, "srcs", args[srcsBuildRuleArgIdx], t.AddSource, t.AddNamedSource, false, false)
+	} else if t.IsTextFile {
+		t.FileContent = args[fileContentArgIdx].(pyString).String()
 	}
-	addMaybeNamed(s, "tools", args[toolsBuildRuleArgIdx], t.AddTool, t.AddNamedTool, true, true)
-	addMaybeNamed(s, "test_tools", args[testToolsBuildRuleArgIdx], t.AddTestTool, t.AddNamedTestTool, true, true)
+	addMaybeNamed(s, "srcs", args[srcsBuildRuleArgIdx], t.AddSource, t.AddNamedSource, false, false)
+	addMaybeNamedOrString(s, "tools", args[toolsBuildRuleArgIdx], t.AddTool, t.AddNamedTool, true, true)
+	addMaybeNamedOrString(s, "test_tools", args[testToolsBuildRuleArgIdx], t.AddTestTool, t.AddNamedTestTool, true, true)
 	addMaybeNamed(s, "system_srcs", args[systemSrcsBuildRuleArgIdx], t.AddSource, nil, true, false)
 	addMaybeNamed(s, "data", args[dataBuildRuleArgIdx], t.AddDatum, t.AddNamedDatum, false, false)
 	addMaybeNamedOutput(s, "outs", args[outsBuildRuleArgIdx], t.AddOutput, t.AddNamedOutput, t, false)
@@ -224,6 +227,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 		t.Visibility = append(t.Visibility, parseVisibility(s, str))
 	})
 	addEntryPoints(s, args[entryPointsArgIdx], t)
+	addEnv(s, args[envArgIdx], t)
 	addMaybeNamedSecret(s, "secrets", args[secretsBuildRuleArgIdx], t.AddSecret, t.AddNamedSecret, t, true)
 	addProvides(s, "provides", args[providesBuildRuleArgIdx], t)
 	if f := callbackFunction(s, "pre_build", args[preBuildBuildRuleArgIdx], 1, "argument"); f != nil {
@@ -250,6 +254,21 @@ func addEntryPoints(s *scope, arg pyObject, target *core.BuildTarget) {
 	target.EntryPoints = entryPoints
 }
 
+// addEnv adds entry points to a target
+func addEnv(s *scope, arg pyObject, target *core.BuildTarget) {
+	envPy, ok := asDict(arg)
+	s.Assert(ok, "env must be a dict")
+
+	env := make(map[string]string, len(envPy))
+	for name, val := range envPy {
+		v, ok := val.(pyString)
+		s.Assert(ok, "Values of env must be strings, found %v at key %v", val.Type(), name)
+		env[name] = string(v)
+	}
+
+	target.Env = env
+}
+
 // addMaybeNamed adds inputs to a target, possibly in named groups.
 func addMaybeNamed(s *scope, name string, obj pyObject, anon func(core.BuildInput), named func(string, core.BuildInput), systemAllowed, tool bool) {
 	if obj == nil {
@@ -265,18 +284,40 @@ func addMaybeNamed(s *scope, name string, obj pyObject, anon func(core.BuildInpu
 		s.Assert(named != nil, "%s cannot be given as a dict", name)
 		for k, v := range d {
 			if v != None {
-				l, ok := asList(v)
-				s.Assert(ok, "Values of %s must be lists of strings", name)
-				for _, li := range l {
-					if bi := parseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
+				if l, ok := asList(v); ok {
+					for _, li := range l {
+						if bi := parseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
+							named(k, bi)
+						}
+					}
+					continue
+				}
+				if str, ok := asString(v); ok {
+					if bi := parseBuildInput(s, str, name, systemAllowed, tool); bi != nil {
 						named(k, bi)
 					}
+					continue
 				}
+				s.Assert(ok, "Values of %s must be a string or lists of strings", name)
 			}
 		}
 	} else if obj != None {
 		s.Assert(false, "Argument %s must be a list or dict, not %s", name, obj.Type())
 	}
+}
+
+// addMaybeNamedOrString adds inputs to a target, possibly in named groups.
+func addMaybeNamedOrString(s *scope, name string, obj pyObject, anon func(core.BuildInput), named func(string, core.BuildInput), systemAllowed, tool bool) {
+	if obj == nil {
+		return
+	}
+	if str, ok := asString(obj); ok {
+		if bi := parseBuildInput(s, str, name, systemAllowed, tool); bi != nil {
+			anon(bi)
+		}
+		return
+	}
+	addMaybeNamed(s, name, obj, anon, named, systemAllowed, tool)
 }
 
 // addMaybeNamedOutput adds outputs to a target, possibly in a named group
@@ -443,7 +484,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	s.Assert(!strings.Contains(src, "../"), "%s is an invalid path; build target paths can't contain ../", src)
 	if src[0] == '/' || src[0] == '~' {
 		s.Assert(systemAllowed, "%s is an absolute path; that's not allowed", src)
-		return core.SystemFileLabel{Path: src}
+		return core.SystemFileLabel{Path: strings.TrimRight(src, "/")}
 	} else if tool {
 		// "go" as a source is interpreted as a file, as a tool it's interpreted as something on the PATH.
 		return core.SystemPathLabel{Name: src, Path: s.state.Config.Path()}
@@ -540,4 +581,12 @@ func asDict(obj pyObject) (pyDict, bool) {
 		return d.pyDict, true
 	}
 	return nil, false
+}
+
+// asString converts an object to a pyString
+func asString(obj pyObject) (pyString, bool) {
+	if s, ok := obj.(pyString); ok {
+		return s, true
+	}
+	return "", false
 }

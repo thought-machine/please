@@ -44,11 +44,15 @@ func newState() *core.BuildState {
 func AllBuiltinFunctions(state *core.BuildState) map[string]*asp.Statement {
 	p := asp.NewParser(state)
 	m := map[string]*asp.Statement{}
-	dir, _ := rules.AssetDir("")
+	dir, _ := rules.AllAssets()
 	sort.Strings(dir)
 	for _, filename := range dir {
-		if !strings.HasSuffix(filename, ".gob") && filename != "builtins.build_defs" {
-			if stmts, err := p.ParseData(rules.MustAsset(filename), filename); err == nil {
+		if filename != "builtins.build_defs" {
+			assetSrc, err := rules.ReadAsset(filename)
+			if err != nil {
+				log.Fatalf("Failed to read an asset %s", filename)
+			}
+			if stmts, err := p.ParseData(assetSrc, filename); err == nil {
 				addAllFunctions(m, stmts, true)
 			}
 		}
@@ -78,6 +82,13 @@ func addAllFunctions(m map[string]*asp.Statement, stmts []*asp.Statement, builti
 		if f := stmt.FuncDef; f != nil && !f.IsPrivate && f.Docstring != "" {
 			f.Docstring = strings.TrimSpace(strings.Trim(f.Docstring, `"`))
 			f.IsBuiltin = builtin
+			args := make([]asp.Argument, 0, len(f.Arguments))
+			for _, arg := range f.Arguments {
+				if !arg.IsPrivate {
+					args = append(args, arg)
+				}
+			}
+			f.Arguments = args
 			m[f.Name] = stmt
 		}
 	}

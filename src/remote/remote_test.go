@@ -64,9 +64,12 @@ func TestExecuteBuild(t *testing.T) {
 
 type postBuildFunction func(*core.BuildTarget, string) error //nolint:unused
 
+//nolint:unused
 func (f postBuildFunction) Call(target *core.BuildTarget, output string) error {
 	return f(target, output)
 }
+
+//nolint:unused
 func (f postBuildFunction) String() string { return "" }
 
 func TestExecutePostBuildFunction(t *testing.T) {
@@ -311,6 +314,38 @@ func TestDirectoryMetadataStore(t *testing.T) {
 
 	_, err = os.Lstat(filepath.Join(storeDirectoryName, "de", "delete"))
 	assert.True(t, os.IsNotExist(err))
+}
+
+func TestTargetPlatform(t *testing.T) {
+	c := newClientInstance("platform_test")
+	c.platform = convertPlatform(c.state.Config.Remote.Platform) // Bit of a hack but we can't go through the normal path.
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target"})
+	cmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false)
+	assert.NoError(t, err)
+	assert.Equal(t, &pb.Platform{
+		Properties: []*pb.Platform_Property{
+			{
+				Name:  "OSFamily",
+				Value: "linux",
+			},
+		},
+	}, cmd.Platform)
+
+	target.Labels = []string{"remote-platform-property:size=chomky"}
+	cmd, err = c.buildCommand(target, &pb.Directory{}, false, false, false)
+	assert.NoError(t, err)
+	assert.Equal(t, &pb.Platform{
+		Properties: []*pb.Platform_Property{
+			{
+				Name:  "size",
+				Value: "chomky",
+			},
+			{
+				Name:  "OSFamily",
+				Value: "linux",
+			},
+		},
+	}, cmd.Platform)
 }
 
 // Store is a small hack that stores a target's outputs for testing only.

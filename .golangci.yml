@@ -1,3 +1,8 @@
+run:
+  timeout: 5m
+  skip-dirs:
+    - test_data
+
 issues:
   exclude:
     - SA1019  # Upstream packages seem not to be ready to update protobuf yet
@@ -7,6 +12,7 @@ issues:
     - ifElseChain  # Generally don't agree.
     - appendAssign
     - halp  # Make misspell be quiet about this.
+    - exitAfterDefer # Potentially useful but not in any cases it fires right now.
   exclude-rules:
     - path: _test\.go
       linters:

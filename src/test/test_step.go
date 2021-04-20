@@ -42,7 +42,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, r
 		runsAllCompleted := target.CompleteRun(state)
 		if runsAllCompleted && state.Config.Test.Upload != "" {
 			if numUploadFailures < maxUploadFailures {
-				if err := uploadResults(target, state.Config.Test.Upload.String()); err != nil {
+				if err := uploadResults(target, state.Config.Test.Upload.String(), state.Config.Test.UploadGzipped, state.Config.Test.StoreTestOutputOnSuccess); err != nil {
 					log.Warning("%s", err)
 					if atomic.AddInt64(&numUploadFailures, 1) >= maxUploadFailures {
 						log.Error("Failed to upload test results %d times, giving up", maxUploadFailures)
@@ -69,12 +69,16 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	// If the user passed --shell then just prepare the directory.
 	if state.PrepareShell {
+		if err := state.DownloadInputsIfNeeded(tid, target, true); err != nil {
+			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to download test inputs")
+			return
+		}
 		if err := prepareTestDir(state, target, run); err != nil {
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to prepare test directory")
-		} else {
-			target.SetState(core.Stopped)
-			state.LogBuildResult(tid, label, core.TargetTestStopped, "Test stopped")
+			return
 		}
+		target.SetState(core.Stopped)
+		state.LogBuildResult(tid, label, core.TargetTestStopped, "Test stopped")
 		return
 	}
 
@@ -82,7 +86,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		log.Debug("Not re-running test %s; got cached results.", label)
 		coverage := parseCoverageFile(target, target.CoverageFile(), run)
 		results, err := parseTestResultsFile(target.TestResultsFile())
-		results.Package = strings.Replace(target.Label.PackageName, "/", ".", -1)
+		results.Package = strings.ReplaceAll(target.Label.PackageName, "/", ".")
 		results.Name = target.Label.Name
 		results.Cached = true
 		if err != nil {
@@ -317,7 +321,7 @@ func prepareTestDir(state *core.BuildState, target *core.BuildTarget, run int) e
 	if err := state.EnsureDownloaded(target); err != nil {
 		return err
 	}
-	for out := range core.IterRuntimeFiles(state.Graph, target, true, run) {
+	for out := range core.IterRuntimeFiles(state.Graph, target, true, target.TestDir(run)) {
 		if err := core.PrepareSourcePair(out); err != nil {
 			return err
 		}
@@ -353,7 +357,7 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemote
 	duration := time.Since(startTime)
 	parsedSuite := parseTestOutput(string(metadata.Stdout), string(metadata.Stderr), err, duration, target, resultsData)
 	return core.TestSuite{
-		Package:    strings.Replace(target.Label.PackageName, "/", ".", -1),
+		Package:    strings.ReplaceAll(target.Label.PackageName, "/", "."),
 		Name:       target.Label.Name,
 		Duration:   duration,
 		TimedOut:   err == context.DeadlineExceeded,
@@ -464,7 +468,7 @@ func parseTestOutput(stdout string, stderr string, runError error, duration time
 					},
 				}
 			}
-			//No output and no execution error and output expected - SYNTHETIC ERROR - Missing Results
+			// No output and no execution error and output expected - SYNTHETIC ERROR - Missing Results
 			return failSuite("Test failed to produce output results file", "MissingResults", "")
 		}
 		return failSuite("Test failed", "TestFailed", runError.Error())

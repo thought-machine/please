@@ -32,7 +32,6 @@ go_test(
         ":build",
         "//src/core",
         "//src/fs",
-        "//src/output",
         "//third_party/go:testify",
     ],
 )

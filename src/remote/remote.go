@@ -15,11 +15,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/retry"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
@@ -51,7 +51,6 @@ type Client struct {
 	fetchClient fpb.FetchClient
 	initOnce    sync.Once
 	state       *core.BuildState
-	origState   *core.BuildState
 	err         error // for initialisation
 	instance    string
 
@@ -124,11 +123,10 @@ type pendingDownload struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:     state,
-		origState: state,
-		instance:  state.Config.Remote.Instance,
-		outputs:   map[core.BuildLabel]*pb.Directory{},
-		mdStore:   newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
+		state:    state,
+		instance: state.Config.Remote.Instance,
+		outputs:  map[core.BuildLabel]*pb.Directory{},
+		mdStore:  newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
 		existingBlobs: map[string]struct{}{
 			digest.Empty.Hash: {},
 		},
@@ -164,8 +162,6 @@ func (c *Client) init() {
 // initExec initialiases the remote execution client.
 func (c *Client) initExec() error {
 	// Create a copy of the state where we can modify the config
-	c.state = c.state.ForConfig()
-	c.state.Config.HomeDir = c.state.Config.Remote.HomeDir
 	dialOpts, err := c.dialOpts()
 	if err != nil {
 		return err
@@ -176,7 +172,15 @@ func (c *Client) initExec() error {
 		NoSecurity:         !c.state.Config.Remote.Secure,
 		TransportCredsOnly: c.state.Config.Remote.Secure,
 		DialOpts:           dialOpts,
-	}, client.UseBatchOps(true), client.RetryTransient(), client.RPCTimeout(c.state.Config.Remote.Timeout))
+	}, client.UseBatchOps(true), &client.TreeSymlinkOpts{Preserved: true}, client.RetryTransient(), client.RPCTimeouts(map[string]time.Duration{
+		"default":          time.Duration(c.state.Config.Remote.Timeout),
+		"GetCapabilities":  5 * time.Second,
+		"BatchUpdateBlobs": time.Minute,
+		"BatchReadBlobs":   time.Minute,
+		"GetTree":          time.Minute,
+		"Execute":          0,
+		"WaitExecution":    0,
+	}))
 	if err != nil {
 		return err
 	}
@@ -229,7 +233,7 @@ func (c *Client) initExec() error {
 	} else if !resp.ExecutionCapabilities.ExecEnabled {
 		return fmt.Errorf("Remote execution not enabled for this server")
 	}
-	c.platform = convertPlatform(c.state.Config)
+	c.platform = convertPlatform(c.state.Config.Remote.Platform)
 	log.Debug("Remote execution client initialised for execution")
 	if c.state.Config.Remote.AssetURL == "" {
 		c.fetchClient = fpb.NewFetchClient(client.Connection)
@@ -296,7 +300,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 		return metadata, c.wrapActionErr(err, digest)
 	}
 
-	if c.origState.ShouldDownload(target) {
+	if c.state.ShouldDownload(target) {
 		if !c.outputsExist(target, digest) {
 			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
 			if err := c.download(target, func() error {
@@ -426,12 +430,13 @@ func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar 
 func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult, target *core.BuildTarget) error {
 	// We can download straight into the out dir if there are no outdirs to worry about
 	if len(target.OutputDirectories) == 0 {
-		return c.client.DownloadActionOutputs(ctx, ar, target.OutDir(), c.fileMetadataCache)
+		_, err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir(), c.fileMetadataCache)
+		return err
 	}
 
 	defer os.RemoveAll(target.TmpDir())
 
-	if err := c.client.DownloadActionOutputs(ctx, ar, target.TmpDir(), c.fileMetadataCache); err != nil {
+	if _, err := c.client.DownloadActionOutputs(ctx, ar, target.TmpDir(), c.fileMetadataCache); err != nil {
 		return err
 	}
 
@@ -509,7 +514,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget, run int) (metadata *cor
 	metadata, ar, err := c.execute(tid, target, command, digest, true, false)
 
 	if ar != nil {
-		dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run), c.fileMetadataCache)
+		_, dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run), c.fileMetadataCache)
 		if dlErr != nil {
 			log.Warningf("%v: failed to download test outputs: %v", target.Label, dlErr)
 		}
@@ -564,7 +569,7 @@ func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
-	if !isTest || c.state.NumTestRuns == 1 {
+	if !isTest || !c.state.ForceRerun || c.state.NumTestRuns == 1 {
 		if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, isTest, needStdout); metadata != nil {
 			return metadata, ar, nil
 		}
@@ -580,13 +585,21 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 		return c.buildFilegroup(target, command, digest)
 	} else if target.IsRemoteFile {
 		return c.fetchRemoteFile(tid, target, digest)
+	} else if target.IsTextFile {
+		return c.buildTextFile(c.state, target, command, digest)
 	}
-	return c.reallyExecute(tid, target, command, digest, needStdout, isTest)
+
+	// We should skip the cache lookup (and override any existing action result) if we --rebuild, or --rerun and this is
+	// one fo the targets we're testing or building.
+	skipCacheLookup := (isTest && c.state.ForceRerun) || (!isTest && c.state.ForceRebuild)
+	skipCacheLookup = skipCacheLookup && c.state.IsOriginalTarget(target)
+
+	return c.reallyExecute(tid, target, command, digest, needStdout, isTest, skipCacheLookup)
 }
 
 // reallyExecute is like execute but after the initial cache check etc.
 // The action & sources must have already been uploaded.
-func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest, skipCacheLookup bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	executing := false
 	updateProgress := func(metadata *pb.ExecuteOperationMetadata) {
 		if c.state.Config.Remote.DisplayURL != "" {
@@ -640,10 +653,10 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		}
 	}()
 
-	resp, err := c.client.ExecuteAndWaitProgress(context.Background(), &pb.ExecuteRequest{
+	resp, err := c.client.ExecuteAndWaitProgress(c.contextWithMetadata(target), &pb.ExecuteRequest{
 		InstanceName:    c.instance,
 		ActionDigest:    digest,
-		SkipCacheLookup: true, // We've already done it above.
+		SkipCacheLookup: skipCacheLookup,
 	}, updateProgress)
 	if err != nil {
 		// Handle timing issues if we try to resume an execution as it fails. If we get a
@@ -728,7 +741,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 			return nil, nil, err
 		}
 		log.Debug("Completed remote build action for %s", target)
-		if err := c.verifyActionResult(target, command, digest, response.Result, false, isTest); err != nil {
+		if err := c.verifyActionResult(target, command, digest, response.Result, c.state.Config.Remote.VerifyOutputs && !isTest, isTest); err != nil {
 			return metadata, response.Result, err
 		}
 		c.locallyCacheResults(target, digest, metadata, response.Result)
@@ -769,13 +782,13 @@ func (c *Client) DataRate() (int, int, int, int) {
 // fetchRemoteFile sends a request to fetch a file using the remote asset API.
 func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
 	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading...")
-	urls := target.AllURLs(c.state.Config)
+	urls := target.AllURLs(c.state)
 	req := &fpb.FetchBlobRequest{
 		InstanceName: c.instance,
 		Timeout:      ptypes.DurationProto(target.BuildTimeout),
 		Uris:         urls,
 	}
-	if !c.state.NeedHashesOnly || !c.state.IsOriginalTargetOrParent(target) {
+	if c.state.VerifyHashes && (!c.state.NeedHashesOnly || !c.state.IsOriginalTargetOrParent(target)) {
 		if sri := subresourceIntegrity(target); sri != "" {
 			req.Qualifiers = []*fpb.Qualifier{{
 				Name:  "checksum.sri",
@@ -811,21 +824,21 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 
 // buildFilegroup "builds" a single filegroup target.
 func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
-	b, err := c.uploadInputDir(nil, target, false) // We don't need to actually upload the inputs here, that is already done.
+	inputDir, err := c.uploadInputDir(nil, target, false) // We don't need to actually upload the inputs here, that is already done.
 	if err != nil {
 		return nil, nil, err
 	}
 	ar := &pb.ActionResult{}
-	if err := c.uploadBlobs(func(ch chan<- *chunker.Chunker) error {
+	if err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
 		defer close(ch)
-		b.Root(ch)
+		inputDir.Build(ch)
 		for _, out := range command.OutputPaths {
-			if d, f := b.Node(path.Join(target.Label.PackageName, out)); d != nil {
-				chomk, _ := chunker.NewFromProto(b.Tree(path.Join(target.Label.PackageName, out)), int(c.client.ChunkMaxSize))
-				ch <- chomk
+			if d, f := inputDir.Node(path.Join(target.Label.PackageName, out)); d != nil {
+				entry, digest := c.protoEntry(inputDir.Tree(path.Join(target.Label.PackageName, out)))
+				ch <- entry
 				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
 					Path:       out,
-					TreeDigest: chomk.Digest().ToProto(),
+					TreeDigest: digest,
 				})
 			} else if f != nil {
 				ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
@@ -838,6 +851,38 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 				return fmt.Errorf("Missing output from filegroup: %s", out)
 			}
 		}
+		return nil
+	}); err != nil {
+		return nil, nil, err
+	}
+	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
+		InstanceName: c.instance,
+		ActionDigest: actionDigest,
+		ActionResult: ar,
+	}); err != nil {
+		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
+	}
+	return &core.BuildMetadata{}, ar, nil
+}
+
+// buildTextFile "builds" uploads a text file to the CAS
+func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
+	ar := &pb.ActionResult{}
+	if err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
+		defer close(ch)
+		if len(command.OutputPaths) != 1 {
+			return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(command.OutputPaths))
+		}
+		content, err := target.GetFileContent(state)
+		if err != nil {
+			return err
+		}
+		entry := uploadinfo.EntryFromBlob([]byte(content))
+		ch <- entry
+		ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
+			Path:   command.OutputPaths[0],
+			Digest: entry.Digest.ToProto(),
+		})
 		return nil
 	}); err != nil {
 		return nil, nil, err

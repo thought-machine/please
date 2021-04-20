@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+option go_package = "github.com/thought-machine/please/test/proto_fules/go_frpc_ff/proto/service";
+
+service Service {
+  rpc MakeRequest(Request) returns (Response) {};
+}
+
+message Request {}
+message Response {}

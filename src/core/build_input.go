@@ -106,6 +106,7 @@ func (label SubrepoFileLabel) String() string {
 
 // NewFileLabel returns either a FileLabel or SubrepoFileLabel as appropriate.
 func NewFileLabel(src string, pkg *Package) BuildInput {
+	src = strings.TrimRight(src, "/")
 	if pkg.Subrepo != nil {
 		return SubrepoFileLabel{
 			File:        src,
@@ -239,6 +240,9 @@ func (label AnnotatedOutputLabel) nonOutputLabel() *BuildLabel {
 
 // String returns a string representation of this input.
 func (label AnnotatedOutputLabel) String() string {
+	if label.Annotation == "" {
+		return label.BuildLabel.String()
+	}
 	return label.BuildLabel.String() + "|" + label.Annotation
 }
 
@@ -251,6 +255,24 @@ func MustParseNamedOutputLabel(target string, pkg *Package) BuildInput {
 		return AnnotatedOutputLabel{BuildLabel: label, Annotation: target[index+1:]}
 	}
 	return ParseBuildLabelContext(target, pkg)
+}
+
+// UnmarshalFlag unmarshals a build label from a command line flag. Implementation of flags.Unmarshaler interface.
+func (label *AnnotatedOutputLabel) UnmarshalFlag(value string) error {
+	annotation := ""
+	if strings.Count(value, "|") == 1 {
+		parts := strings.Split(value, "|")
+		value = parts[0]
+		annotation = parts[1]
+	}
+
+	l := &BuildLabel{}
+	if err := l.UnmarshalFlag(value); err != nil {
+		return err
+	}
+	label.BuildLabel = *l
+	label.Annotation = annotation
+	return nil
 }
 
 // A URLLabel represents a remote input that's defined by a URL.

@@ -82,9 +82,7 @@
 <p>Comma-separating on the same line won't generally work.</p>
 
 <section class="mt4">
-  <h2 id="please" class="title-2">
-    [Please]
-  </h2>
+  <h2 id="please" class="title-2">[Please]</h2>
 
   <ul class="bulleted-list">
     <li>
@@ -271,13 +269,22 @@
         </p>
       </div>
     </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          PreloadSubincludes <span class="normal">(repeated string)</span>
+        </h3>
+        <p>
+          Subinclude targets to preload by the parser before loading any BUILD files.<br/>
+          Subincludes can be slow so it's recommended to use PreloadBuildDefs where possible.
+        </p>
+      </div>
+    </li>
   </ul>
 </section>
 
 <section class="mt4">
-  <h2 id="display" class="title-2">
-    [Display]
-  </h2>
+  <h2 id="display" class="title-2">[Display]</h2>
 
   <p>
     Contains options relating to display output. These have no impact on build
@@ -422,9 +429,10 @@
         </h3>
 
         <p>
-          Activates sandboxing for individual build actions, which isolates them
+          Activates sandboxing for build actions, which isolates them
           from network access, IPC and some aspects of the filesystem. Currently
-          only works on Linux. Defaults to <code class="code">False</code>.
+          only works on Linux. Defaults to <code class="code">False</code>.<br />
+          <span class="red">Deprecated from v16: use <a href="#sandbox">sandbox.build</a> instead.
         </p>
       </div>
     </li>
@@ -440,13 +448,23 @@
         </p>
       </div>
     </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">LinkGeneratedSources</h3>
+
+        <p>
+          When set, Please will link generated sources back into the source tree. A
+          <code>.gitignore</code> can be generated with
+          <code>plz generate --update_gitignore .gitignore</code>. This can help with
+          getting Please to work with IDEs and tooling.
+        </p>
+      </div>
+    </li>
   </ul>
 </section>
 
 <section class="mt4">
-  <h2 id="build-env" class="title-2">
-    [BuildEnv]
-  </h2>
+  <h2 id="build-env" class="title-2">[BuildEnv]</h2>
 
   <p>
     A set of extra environment variables to define for build rules. For example:
@@ -468,9 +486,66 @@
 </section>
 
 <section class="mt4">
-  <h2 id="remote" class="title-2">
-    [Remote]
-  </h2>
+  <h2 id="sandbox" class="title-2">[Sandbox]</h2>
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          Tool
+        </h3>
+
+        <p>
+          The binary to use for sandboxing build/test actions. Typically this
+          is <code>please_sandbox</code>, which currently only does anything on Linux.<br />
+          It receives the program to execute and all its arguments in its <code>argv</code>,
+          it is expected to do whatever it needs to then <code>exec</code> the real action.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          Build <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          Activates sandboxing for build actions, which isolates them
+          from network access, IPC and the repo-local filesystem. Currently
+          only works on Linux. Defaults to <code class="code">False</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          Test <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          Activates sandboxing for test actions, which isolates them
+          from network access, IPC and the repo-local filesystem. Currently
+          only works on Linux. Defaults to <code class="code">False</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          Dir <span class="normal">(repeated string)</span>
+        </h3>
+
+        <p>
+          Directories that the sandbox tool should mask (it's unspecified how, although mounting an
+          empty filesystem over the top is the current implementation).<br />
+          These are passed to the tool itself in the <code>SANDBOX_DIRS</code> env var as a comma-separated list.
+        </p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="remote" class="title-2">[Remote]</h2>
 
   <p class="red">
     This whole section is still experimental; some settings may not work fully
@@ -669,9 +744,10 @@
         </h3>
 
         <p>
-          Activates sandboxing for individual tests, which isolates them from
+          Activates sandboxing for tests, which isolates them from
           network access, IPC and some aspects of the filesystem. Currently only
           works on Linux. Defaults to <code class="code">False</code>.
+          <span class="red">Deprecated from v16: use <a href="#sandbox">sandbox.test</a> instead.
         </p>
       </div>
     </li>
@@ -695,6 +771,23 @@
         <p>
           URL to upload test results to. The request is a POST containing the
           results in XML format.
+        </p>
+      </div>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          UploadGzipped <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          True to use gzip compression when uploading test results. Disabled by default.
+        </p>
+      </div>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          StoreTestOutputOnSuccess <span class="normal">(bool)</span>
+        </h3>
+        <p>
+          True to store the standard output and standard error of successful test cases. Disabled by default.
         </p>
       </div>
     </li>
@@ -827,17 +920,6 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">TestTool</h3>
-
-        <p>
-          Sets the location of the <code class="code">please_go_test</code> tool
-          that is used to template the test main for
-          <code class="code">go_test</code> rules.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
         <h3 class="mt1 f6 lh-title">CgoCCTool</h3>
 
         <p>
@@ -845,6 +927,19 @@
           <code class="code">cgo_library</code> and
           <code class="code">cgo_test</code> rules. Defaults to
           <code class="code">gcc</code>
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">CgoEnabled</h3>
+
+        <p>
+          Sets CGO_ENABLED to "1" which is used by go tooling to toggle various
+          cgo related features including setting the cgo build flag. Defaults to
+          not being set, which will revert to the go default behavior. This is mostly
+          relevant when cross-compiling. See
+          <a href="https://golang.org/cmd/cgo/">cgo</a> for more information.
         </p>
       </div>
     </li>
@@ -872,13 +967,24 @@
         </p>
       </div>
     </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          GoTestRootCompat <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          When enabled, Please will enter the package directory when running the test binary.
+          It is useful when a test uses relative paths to files and
+          remaining compatible with <code class="code">go test</code> is important.
+        </p>
+      </div>
+    </li>
   </ul>
 </section>
 
 <section class="mt4">
-  <h2 id="python" class="title-2">
-    [Python]
-  </h2>
+  <h2 id="python" class="title-2">[Python]</h2>
 
   <p>Properties that affect how the various Python build rules work.</p>
 
@@ -1006,6 +1112,21 @@
             >{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl</code
           >
           along with a few common variants.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          DisableVendorFlags <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          Disables injection of vendor specific flags for <code class="code">pip</code> while using
+          <code class="code">pip_library</code>. The option can be useful if you are using
+          something like <code class="code">Pyenv</code>, and the passing of additional
+          flags or configuration that are vendor specific, e.g. <code class="code">--system</code>,
+          breaks your build.
         </p>
       </div>
     </li>
@@ -1325,6 +1446,18 @@
     </li>
     <li>
       <div>
+        <h3 class="mt1 f6 lh-title">ProtocFlag</h3>
+
+        <p>
+          Flags to pass to all protoc invocations. This can be used to set the location of well known types. It is
+          recommended to use <code>protoc_binary</code> which will manage the well known types for you, however you may
+          set this to <code class="code">-I/usr/local/include</code> or similar to use the well known
+          types from the host machine.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
         <h3 class="mt1 f6 lh-title">ProtocGoPlugin</h3>
 
         <p>
@@ -1440,9 +1573,7 @@
 </section>
 
 <section class="mt4">
-  <h2 id="licences" class="title-2">
-    [Licences]
-  </h2>
+  <h2 id="licences" class="title-2">[Licences]</h2>
 
   <p>
     Please has a limited ability to detect licences from third-party code. We
@@ -1488,9 +1619,7 @@
 </section>
 
 <section class="mt4">
-  <h2 id="build-config" class="title-2">
-    [Buildconfig]
-  </h2>
+  <h2 id="build-config" class="title-2">[Buildconfig]</h2>
 
   <p>
     This section lets you define arbitrary key-value pairs that can be consumed

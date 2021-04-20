@@ -39,8 +39,8 @@ func newClientInstance(name string) *Client {
 	config.Build.HashFunction = "sha256"
 	config.Remote.NumExecutors = 1
 	config.Remote.Instance = name
-	config.Remote.HomeDir = "~/.please"
 	config.Remote.Secure = false
+	config.Remote.Platform = []string{"OSFamily=linux"}
 	state := core.NewBuildState(config)
 	state.Config.Remote.URL = "127.0.0.1:9987"
 	state.Config.Remote.AssetURL = state.Config.Remote.URL
@@ -347,6 +347,7 @@ func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteSer
 			},
 		})
 	} else {
+		s.blobs["aaaf60fab1ff6b3d8147bafa3d29cb3e985cf0265cbf53705372eaabcd76c06b"] = []byte("what is the meaning of life, the universe, and everything?\n")
 		srv.Send(&longrunning.Operation{
 			Name: "geoff",
 			Metadata: mm(&pb.ExecuteOperationMetadata{
@@ -359,8 +360,8 @@ func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteSer
 						OutputFiles: []*pb.OutputFile{{
 							Path: "out2.txt",
 							Digest: &pb.Digest{
-								Hash:      "5fb3d47e893061ea6627334a8582c37398cfdc68fe7fa59c16912e4a3ab7a5d6",
-								SizeBytes: 19,
+								Hash:      "aaaf60fab1ff6b3d8147bafa3d29cb3e985cf0265cbf53705372eaabcd76c06b",
+								SizeBytes: 60,
 							},
 						}},
 						ExitCode: 0,

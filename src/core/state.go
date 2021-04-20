@@ -156,8 +156,12 @@ type BuildState struct {
 	Include, Exclude []string
 	// Actual targets to exclude from discovery
 	ExcludeTargets []BuildLabel
-	// The original architecture that the user requested to build for.
-	OriginalArch cli.Arch
+	// The original architecture that the user requested to build for. Either the host arch, --arch, or the arch in the
+	// .plzconfig
+	TargetArch cli.Arch
+	// The architecture this state is for. This might change as we re-parse packages for different architectures e.g.
+	// for tools that run on the host vs. outputs that are compiled for the target arch above.
+	Arch cli.Arch
 	// True if we require rule hashes to be correctly verified (usually the case).
 	VerifyHashes bool
 	// Aggregated coverage for this run
@@ -604,6 +608,48 @@ func (state *BuildState) ExpandOriginalLabels() BuildLabels {
 	return state.ExpandLabels(targets)
 }
 
+func annotateLabels(labels []BuildLabel) []AnnotatedOutputLabel {
+	ret := make([]AnnotatedOutputLabel, len(labels))
+	for i, l := range labels {
+		ret[i] = AnnotatedOutputLabel{BuildLabel: l}
+	}
+	return ret
+}
+
+func readingStdinAnnotated(labels []AnnotatedOutputLabel) bool {
+	for _, l := range labels {
+		if l.BuildLabel == BuildLabelStdin {
+			return true
+		}
+	}
+	return false
+}
+
+// ExpandOriginalMaybeAnnotatedLabels works the same as ExpandOriginalLabels, however requires that the possitional args
+// be passed to it.
+func (state *BuildState) ExpandOriginalMaybeAnnotatedLabels(args []AnnotatedOutputLabel) []AnnotatedOutputLabel {
+	if readingStdinAnnotated(args) {
+		args = annotateLabels(state.ExpandOriginalLabels())
+	}
+	return state.ExpandMaybeAnnotatedLabels(args)
+}
+
+// ExpandMaybeAnnotatedLabels is the same as ExpandOriginalLabels except for annotated labels
+func (state *BuildState) ExpandMaybeAnnotatedLabels(labels []AnnotatedOutputLabel) []AnnotatedOutputLabel {
+	ret := make([]AnnotatedOutputLabel, 0, len(labels))
+	for _, l := range labels {
+		if l.Annotation != "" {
+			ret = append(ret, l)
+		} else {
+			for _, l := range state.ExpandLabels([]BuildLabel{l.BuildLabel}) {
+				ret = append(ret, AnnotatedOutputLabel{BuildLabel: l})
+			}
+		}
+	}
+
+	return ret
+}
+
 // ExpandLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets) from a set of labels.
 func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
 	ret := BuildLabels{}
@@ -888,7 +934,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// This is slightly wrong in that other things (e.g. user-specified command line overrides) should
 	// in fact take priority over this, but that's a lot more fiddly to get right.
 	s := state.ForConfig(".plzconfig_" + arch.String())
-	s.Config.Build.Arch = arch
+	s.Arch = arch
 	return s
 }
 
@@ -897,7 +943,7 @@ func (state *BuildState) findArch(arch cli.Arch) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	for _, s := range state.progress.allStates {
-		if s.Config.Build.Arch == arch {
+		if s.Arch == arch {
 			return s
 		}
 	}
@@ -922,6 +968,43 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 	s.Config = c
 	state.progress.allStates = append(state.progress.allStates, s)
 	return s
+}
+
+// DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
+func (state *BuildState) DownloadInputsIfNeeded(tid int, target *BuildTarget, runtime bool) error {
+	if state.RemoteClient != nil {
+		state.LogBuildResult(tid, target.Label, TargetBuilding, "Downloading inputs...")
+		for input := range state.IterInputs(target, runtime) {
+			if l := input.Label(); l != nil {
+				dep := state.Graph.TargetOrDie(*l)
+				if s := dep.State(); s == BuiltRemotely || s == ReusedRemotely {
+					if err := state.RemoteClient.Download(dep); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// IterInputs returns a channel that iterates all the input files needed for a target.
+func (state *BuildState) IterInputs(target *BuildTarget, test bool) <-chan BuildInput {
+	if !test {
+		return IterInputs(state.Graph, target, true, target.IsFilegroup)
+	}
+	ch := make(chan BuildInput)
+	go func() {
+		ch <- target.Label
+		for _, datum := range target.AllData() {
+			ch <- datum
+		}
+		for _, datum := range target.TestTools() {
+			ch <- datum
+		}
+		close(ch)
+	}()
+	return ch
 }
 
 // DisableXattrs disables xattr support for this build. This is done for filesystems that
@@ -949,7 +1032,7 @@ func newBlake3() hash.Hash {
 // callers can't initialise all the required private fields.
 func NewBuildState(config *Configuration) *BuildState {
 	// Deliberately ignore the error here so we don't require the sandbox tool until it's needed.
-	sandboxTool, _ := LookBuildPath(config.Build.PleaseSandboxTool, config)
+	sandboxTool, _ := LookBuildPath(config.Sandbox.Tool, config)
 	state := &BuildState{
 		Graph:        NewGraph(),
 		pendingTasks: queue.NewPriorityQueue(10000, true), // big hint, why not
@@ -968,7 +1051,8 @@ func NewBuildState(config *Configuration) *BuildState {
 		NeedBuild:       true,
 		XattrsSupported: config.Build.Xattrs,
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
-		OriginalArch:    cli.HostArch(),
+		TargetArch:      config.Build.Arch,
+		Arch:            cli.HostArch(),
 		Stats:           &SystemStats{},
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.

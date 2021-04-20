@@ -118,11 +118,11 @@ func printMessage(msg string) {
 	if cli.ShowColouredOutput {
 		backtickRegex := regexp.MustCompile("\\`[^\\`\n]+\\`")
 		msg = backtickRegex.ReplaceAllStringFunc(msg, func(s string) string {
-			return "${BOLD_CYAN}" + strings.Replace(s, "`", "", -1) + "${RESET}"
+			return "${BOLD_CYAN}" + strings.ReplaceAll(s, "`", "") + "${RESET}"
 		})
 	}
 	// Replace % to %% when not followed by anything so it doesn't become a replacement.
-	cli.Fprintf(os.Stdout, strings.Replace(msg, "% ", "%% ", -1)+"\n")
+	cli.Fprintf(os.Stdout, strings.ReplaceAll(msg, "% ", "%% ")+"\n")
 }
 
 const docstringTemplate = `${BLUE}{{ .Name }}${RESET} is

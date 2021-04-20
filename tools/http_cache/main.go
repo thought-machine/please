@@ -16,7 +16,7 @@ var opts = struct {
 	Usage     string
 	Verbosity cli.Verbosity `short:"v" long:"verbosity" default:"warning" description:"Verbosity of output (higher number = more output)"`
 	CacheDir  string        `short:"d" long:"dir" default:"" description:"The directory to store cached artifacts in."`
-	Port      int           `short:"p" long:"port" description:"The port to run the server on"`
+	Port      int           `short:"p" long:"port" description:"The port to run the server on" default:"8080"`
 }{
 	Usage: `
 HTTP cache implements a resource based http server that please can use as a cache. The cache supports storing files

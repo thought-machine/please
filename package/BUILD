@@ -1,6 +1,5 @@
 subinclude("//build_defs:version")
 
-# This is the master list of files that get installed.
 filegroup(
     name = "tools",
     srcs = [
@@ -8,9 +7,9 @@ filegroup(
         "//tools/jarcat",
         "//tools/java:javac_worker",
         "//tools/java:junit_runner",
+        "//tools/please_go",
+        "//tools/please_go_embed",
         "//tools/please_go_filter",
-        "//tools/please_go_install",
-        "//tools/please_go_test",
         "//tools/please_pex",
         "//tools/sandbox:please_sandbox",
     ],
@@ -25,7 +24,11 @@ filegroup(
         "//src:please",
     ],
     binary = True,
-    visibility = ["//:install"],
+    entry_points = {
+        "please": "please",
+    },
+    labels = ["link:plz-out/please"],
+    visibility = ["PUBLIC"],
 )
 
 tarball(

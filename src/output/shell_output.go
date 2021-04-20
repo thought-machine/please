@@ -208,7 +208,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		}
 	}
 	if streamTestResults && (result.Status == core.TargetTested || result.Status == core.TargetTestFailed) {
-		os.Stdout.Write(test.SerialiseResultsToXML(target, false))
+		os.Stdout.Write(test.SerialiseResultsToXML(target, false, state.Config.Test.StoreTestOutputOnSuccess))
 		os.Stdout.Write([]byte{'\n'})
 	}
 }
@@ -489,7 +489,7 @@ func printHashes(state *core.BuildState, duration time.Duration) {
 
 func printTempDirs(state *core.BuildState, duration time.Duration) {
 	fmt.Printf("Temp directories prepared, total time %s:\n", duration)
-	state = state.ForArch(state.OriginalArch)
+	state = state.ForArch(state.TargetArch)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
 		cmd := target.GetCommand(state)

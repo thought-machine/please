@@ -6,8 +6,9 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
             building_description:str='Building...', data:list=None, hashes:list=None, timeout:int=0, binary:bool=False,
             sandbox:bool=None, needs_transitive_deps:bool=False, output_is_complete:bool=True,
             test_only:bool&testonly=False, secrets:list|dict=None, requires:list=None, provides:dict=None,
-            pre_build:function=None, post_build:function=None, tools:list|dict=None, pass_env:list=None,
-            local:bool=False, output_dirs:list=[], exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}):
+            pre_build:function=None, post_build:function=None, tools:str|list|dict=None, pass_env:list=None,
+            local:bool=False, output_dirs:list=[], exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={},
+            env:dict={}, optional_outs:list=[]):
     """A general build rule which allows the user to specify a command.
 
     Args:
@@ -32,7 +33,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
       data (list): Runtime data for this rule.
       deps (list): Dependencies of this rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
-      tools (list | dict): Tools used to build this rule; similar to srcs but are not copied to the
+      tools (str | list | dict): Tools used to build this rule; similar to srcs but are not copied to the
                            temporary build directory. Should be accessed via $(exe //path/to:tool)
                            or similar.
                            Entries that are not build labels are assumed to be system-level commands
@@ -103,9 +104,13 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
                      executed in a shell with -e).
       entry_points (dict): A subset of outputs of this rule that can be used as entry points by other rules.
                            Entry points can be referenced though the `//path/to:rule|entry-point` syntax.
+      env (dict): Any additional environment variables to set for this build rule.
+      optional_outs (list): Any additional outputs this rule might produce. These are are not made available to rules
+                            that depend on this rule. They are only copied to plz-out. These can be useful for symbols,
+                            source maps and other metadata like that.
     """
     if out and outs:
-        raise TypeError('Can\'t specify both "out" and "outs".')
+        fail('Can\'t specify both "out" and "outs".')
     return build_rule(
         name = name,
         srcs = srcs,
@@ -117,7 +122,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         tools = tools,
         secrets = secrets,
         labels = labels,
-        visibility  =  visibility,
+        visibility = visibility,
         output_is_complete = output_is_complete,
         building_description = building_description,
         hashes = hashes,
@@ -135,11 +140,13 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         output_dirs = output_dirs,
         exit_on_error = exit_on_error,
         entry_points = entry_points,
+        env = env,
+        optional_outs = optional_outs,
     )
 
 
-def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str|dict=None, srcs:list|dict=None,
-            outs:list=None, deps:list=None, exported_deps:list=None, tools:list|dict=None, test_tools:list|dict=None,
+def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cmd:str|list|dict=None, srcs:list|dict=None,
+            outs:list=None, deps:list=None, exported_deps:list=None, tools:str|list|dict=None, test_tools:str|list|dict=None,
             data:list|dict=None, visibility:list=None, timeout:int=0, needs_transitive_deps:bool=False,
             flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False, test_outputs:list=None,
             output_is_complete:bool=True, requires:list=None, sandbox:bool=None, size:str=None, local:bool=False,
@@ -164,9 +171,9 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
       outs (list): Output files of this rule.
       deps (list): Dependencies of this rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
-      tools (list| dict): Tools used to build this rule; similar to srcs but are not copied to the temporary
+      tools (str | list | dict): Tools used to build this rule; similar to srcs but are not copied to the temporary
                     build directory.
-      test_tools (list | dict): Like tools but available to test_cmd instead.
+      test_tools (str | list | dict): Like tools but available to test_cmd instead.
       secrets (list | dict): Secrets available to this rule while building.
       data (list | dict): Runtime data files for the test.
       visibility (list): Visibility declaration of this rule.
@@ -201,8 +208,8 @@ def gentest(name:str, test_cmd:str|dict, labels:list&features&tags=None, cmd:str
         tools = tools,
         test_tools = test_tools,
         secrets = secrets,
-        test_cmd  =  test_cmd,
-        cmd = cmd,
+        test_cmd  =  ' && '.join(test_cmd) if isinstance(test_cmd, list) else test_cmd,
+        cmd = ' && '.join(cmd) if isinstance(cmd, list) else cmd,
         visibility = visibility,
         output_is_complete = output_is_complete,
         labels = labels,
@@ -359,7 +366,8 @@ def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
 def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:bool=False,
                 visibility:list=None, licences:list=None, test_only:bool&testonly=False,
                 labels:list=[], deps:list=None, exported_deps:list=None,
-                extract:bool=False, strip_prefix:str='', _tag:str='',exported_files=[]):
+                extract:bool=False, strip_prefix:str='', _tag:str='',exported_files=[],
+                entry_points:dict={}):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -394,6 +402,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
 
         remote_rule = remote_file(
             name = name,
+            out = f"{name}_download",
             _tag = _tag + 'download',
             url = url,
             hashes = hashes,
@@ -428,6 +437,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
             building_description = 'Extracting...',
             deps = deps,
             exported_deps = exported_deps,
+            entry_points = entry_points,
         )
 
     urls = [url] if isinstance(url, str) else url
@@ -448,8 +458,47 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         test_only = test_only,
         labels = labels,
         sandbox = False,
+        entry_points = entry_points,
     )
 
+def text_file(name:str, content:str, hashes:list=None, data:list|dict=[], out:str=None,
+              binary:bool=False, visibility:list=None, licences:list=None, test_only:bool&testonly=False,
+              labels:list=[], deps:list|dict=None, exported_deps:list=None, _tag:str='', entry_points:dict={}):
+    """Defines a rule to convert a string in the build language into a text file.
+
+    Args:
+      name (str): Name of the rule
+      content (str): The text content of the file.
+      hashes (list): List of hashes; the output must match at least one of these.
+      out (str): Output name of the file. Chosen automatically if not given.
+      binary (bool): True to mark the output as binary and runnable.
+      visibility (list): Visibility declaration of the rule.
+      licences (list): List of licences that apply to this rule.
+      test_only (bool): If true the rule is only visible to test targets.
+      labels (list): Labels to apply to this rule.
+      deps (list): List of dependencies for this rule.
+      data (list): List of runtime data for this rule.
+      exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
+    """
+
+    return build_rule(
+        name = name,
+        tag = _tag,
+        cmd = '',
+        _file_content = content,
+        outs = [out or name],
+        binary = binary,
+        visibility = visibility,
+        hashes = hashes,
+        licences = licences,
+        deps = deps,
+        data = data,
+        exported_deps = exported_deps,
+        test_only = test_only,
+        labels = labels,
+        sandbox = False,
+        entry_points = entry_points,
+    )
 
 def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, gzip:bool=True,
             xzip:bool=False, flatten:bool=True, strip_prefix:str='',
@@ -533,11 +582,11 @@ def decompose(label:str):
         package, _, name = label.partition(':')
         return package.lstrip('/'), name
     else:
-        raise ValueError(f"{label} doesn't look like a build label")
+        fail(f"{label} doesn't look like a build label")
 
 
 def check_config(key:str, section:str='buildconfig', rule:str='', example:str='...'):
-    """Checks the configuration for the given item and raises an exception if it's not set.
+    """Checks the configuration for the given item and dies if it's not set.
 
     Args:
       key (str): Config key that must be set, e.g. ANDROID_HOME
@@ -552,7 +601,7 @@ def check_config(key:str, section:str='buildconfig', rule:str='', example:str='.
         rule_msg = f' to use {rule} rules' if rule else ''
         msg = f'You must set {section}.{key} in your .plzconfig{rule_msg}'
         msg = f'{msg}, e.g.\n[{section}]\n{key} = {example}\n'
-        raise ConfigError(msg)
+        fail(msg)
     return val
 
 

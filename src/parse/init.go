@@ -54,19 +54,16 @@ func buildPreamble(state *core.BuildState, pkg *core.Package) string {
 func newAspParser(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
 	log.Debug("Loading built-in build rules...")
-	dir, _ := rules.AssetDir("")
+	dir, _ := rules.AllAssets()
 	sort.Strings(dir)
 	for _, filename := range dir {
-		if strings.HasSuffix(filename, ".gob") {
-			srcFile := strings.TrimSuffix(filename, ".gob")
-			src, _ := rules.Asset(srcFile)
-			p.MustLoadBuiltins("rules/"+srcFile, src, rules.MustAsset(filename))
-		}
+		src, _ := rules.ReadAsset(filename)
+		p.MustLoadBuiltins(filename, src)
 	}
 
 	for _, preload := range state.Config.Parse.PreloadBuildDefs {
 		log.Debug("Preloading build defs from %s...", preload)
-		p.MustLoadBuiltins(preload, nil, nil)
+		p.MustLoadBuiltins(preload, nil)
 	}
 
 	if state.Config.Bazel.Compatibility {
@@ -135,9 +132,8 @@ func createBazelSubrepo(state *core.BuildState) {
 	if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
 		log.Fatalf("%s", err)
 	}
-	filenames, _ := bazel.AssetDir("")
-	for _, filename := range filenames {
-		if err := ioutil.WriteFile(path.Join(dir, strings.Replace(filename, ".build_defs", ".bzl", -1)), bazel.MustAsset(filename), 0644); err != nil {
+	for filename, data := range bazel.AllFiles() {
+		if err := ioutil.WriteFile(path.Join(dir, strings.ReplaceAll(filename, ".build_defs", ".bzl")), data, 0644); err != nil {
 			log.Fatalf("%s", err)
 		}
 	}

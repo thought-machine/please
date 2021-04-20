@@ -38,7 +38,7 @@ func Clean(config *core.Configuration, cache core.Cache, background bool) {
 }
 
 // Targets cleans a given set of build targets.
-func Targets(state *core.BuildState, labels []core.BuildLabel, cleanCache bool) {
+func Targets(state *core.BuildState, labels []core.BuildLabel) {
 	for _, label := range labels {
 		// Clean any and all sub-targets of this target.
 		// This is not super efficient; we potentially repeat this walk multiple times if
@@ -46,13 +46,13 @@ func Targets(state *core.BuildState, labels []core.BuildLabel, cleanCache bool) 
 		// unless we have lots of targets to clean and their packages are very large.
 		for _, target := range state.Graph.PackageOrDie(label).AllChildren(state.Graph.TargetOrDie(label)) {
 			if state.ShouldInclude(target) {
-				cleanTarget(state, target, cleanCache)
+				cleanTarget(state, target)
 			}
 		}
 	}
 }
 
-func cleanTarget(state *core.BuildState, target *core.BuildTarget, cleanCache bool) {
+func cleanTarget(state *core.BuildState, target *core.BuildTarget) {
 	if err := build.RemoveOutputs(target); err != nil {
 		log.Fatalf("Failed to remove output: %s", err)
 	}
@@ -61,7 +61,7 @@ func cleanTarget(state *core.BuildState, target *core.BuildTarget, cleanCache bo
 			log.Fatalf("Failed to remove file: %s", err)
 		}
 	}
-	if cleanCache && state.Cache != nil {
+	if state.Cache != nil {
 		state.Cache.Clean(target)
 	}
 }

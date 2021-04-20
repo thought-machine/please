@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/chunker"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/tree"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 
 	"github.com/thought-machine/please/src/core"
@@ -27,27 +27,28 @@ import (
 func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb.Command, *pb.Digest, error) {
 	var command *pb.Command
 	var digest *pb.Digest
-	err := c.uploadBlobs(func(ch chan<- *chunker.Chunker) error {
+	err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
 		defer close(ch)
 		inputRoot, err := c.uploadInputs(ch, target, isTest || isRun)
 		if err != nil {
 			return err
 		}
-		inputRootChunker, _ := chunker.NewFromProto(inputRoot, int(c.client.ChunkMaxSize))
-		ch <- inputRootChunker
+		inputRootEntry, inputRootDigest := c.protoEntry(inputRoot)
+		ch <- inputRootEntry
 		command, err = c.buildCommand(target, inputRoot, isTest, isRun, target.Stamp)
 		if err != nil {
 			return err
 		}
-		commandChunker, _ := chunker.NewFromProto(command, int(c.client.ChunkMaxSize))
-		ch <- commandChunker
-		actionChunker, _ := chunker.NewFromProto(&pb.Action{
-			CommandDigest:   commandChunker.Digest().ToProto(),
-			InputRootDigest: inputRootChunker.Digest().ToProto(),
+		commandEntry, commandDigest := c.protoEntry(command)
+		ch <- commandEntry
+		actionEntry, actionDigest := c.protoEntry(&pb.Action{
+			CommandDigest:   commandDigest,
+			InputRootDigest: inputRootDigest,
 			Timeout:         ptypes.DurationProto(timeout(target, isTest)),
-		}, int(c.client.ChunkMaxSize))
-		ch <- actionChunker
-		digest = actionChunker.Digest().ToProto()
+			Platform:        c.targetPlatformProperties(target),
+		})
+		ch <- actionEntry
+		digest = actionDigest
 		return nil
 	})
 	return command, digest, err
@@ -69,22 +70,29 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 		CommandDigest:   commandDigest,
 		InputRootDigest: inputRootDigest,
 		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
+		Platform:        c.targetPlatformProperties(target),
 	})
 	return command, actionDigest, nil
 }
 
 // buildCommand builds the command for a single target.
 func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest, isRun, stamp bool) (*pb.Command, error) {
+	state := c.state.ForTarget(target)
 	if isTest {
-		return c.buildTestCommand(target)
+		return c.buildTestCommand(state, target)
 	} else if isRun {
-		return c.buildRunCommand(target)
+		return c.buildRunCommand(state, target)
 	}
 	// We can't predict what variables like this should be so we sneakily bung something on
 	// the front of the command. It'd be nicer if there were a better way though...
 	var commandPrefix = "export TMP_DIR=\"`pwd`\" && export HOME=$TMP_DIR && "
-	// TODO(peterebden): Remove this nonsense once API v2.1 is released.
-	files, dirs := outputs(target)
+
+	// Similarly, we need to export these so that things like $TMP_DIR get expanded correctly.
+	for k, v := range target.Env {
+		commandPrefix += fmt.Sprintf("export %s=\"%s\" && ", k, v)
+	}
+
+	outs := target.AllOutputs()
 	if len(target.Outputs()) == 1 { // $OUT is relative when running remotely; make it absolute
 		commandPrefix += `export OUT="$TMP_DIR/$OUT" && `
 	}
@@ -94,47 +102,41 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		// not include the environment variables since we don't communicate those to the remote server).
 		return &pb.Command{
 			Arguments: []string{
-				"fetch", strings.Join(target.AllURLs(c.state.Config), " "), "verify", strings.Join(target.Hashes, " "),
+				"fetch", strings.Join(target.AllURLs(state), " "), "verify", strings.Join(target.Hashes, " "),
 			},
-			OutputFiles:       files,
-			OutputDirectories: dirs,
-			OutputPaths:       append(files, dirs...),
+			OutputPaths: outs,
 		}, nil
 	}
-	cmd := target.GetCommand(c.state)
+	cmd := target.GetCommand(state)
 	if cmd == "" {
 		cmd = "true"
 	}
-	cmd, err := core.ReplaceSequences(c.state, target, cmd)
+	cmd, err := core.ReplaceSequences(state, target, cmd)
 	return &pb.Command{
-		Platform:             c.platform,
-		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(target, inputRoot, stamp), target.Sandbox),
-		OutputFiles:          files,
-		OutputDirectories:    dirs,
-		OutputPaths:          append(files, dirs...),
+		Platform:             c.targetPlatformProperties(target),
+		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
+		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp), target.Sandbox),
+		OutputPaths:          outs,
 	}, err
 }
 
 // stampedBuildEnvironment returns a build environment, optionally with a stamp if stamp is true.
-func (c *Client) stampedBuildEnvironment(target *core.BuildTarget, inputRoot *pb.Directory, stamp bool) []string {
+func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.BuildTarget, inputRoot *pb.Directory, stamp bool) []string {
 	if target.IsFilegroup {
-		return core.GeneralBuildEnvironment(c.state.Config) // filegroups don't need a full build environment
-	} else if !stamp {
-		return core.BuildEnvironment(c.state, target, ".")
+		return core.GeneralBuildEnvironment(state) // filegroups don't need a full build environment
 	}
 	// We generate the stamp ourselves from the input root.
 	// TODO(peterebden): it should include the target properties too...
 	hash := c.sum(mustMarshal(inputRoot))
-	return core.StampedBuildEnvironment(c.state, target, hash, ".")
+	return core.StampedBuildEnvironment(state, target, hash, ".")
 }
 
 // buildTestCommand builds a command for a target when testing.
-func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error) {
+func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarget) (*pb.Command, error) {
 	// TODO(peterebden): Remove all this nonsense once API v2.1 is released.
 	files := target.TestOutputs
 	dirs := []string{}
-	if target.NeedCoverage(c.state) {
+	if target.NeedCoverage(state) {
 		files = append(files, core.CoverageFile)
 	}
 	if !target.NoTestOutput {
@@ -144,10 +146,13 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 			files = append(files, core.TestResultsFile)
 		}
 	}
-	const commandPrefix = "export TMP_DIR=\"`pwd`\" TEST_DIR=\"`pwd`\" && "
-	cmd, err := core.ReplaceTestSequences(c.state, target, target.GetTestCommand(c.state))
-	if len(c.state.TestArgs) != 0 {
-		cmd += " " + strings.Join(c.state.TestArgs, " ")
+	commandPrefix := "export TMP_DIR=\"`pwd`\" TEST_DIR=\"`pwd`\" && "
+	if outs := target.Outputs(); len(outs) > 0 {
+		commandPrefix += `export TEST="$TEST_DIR/` + outs[0] + `" && `
+	}
+	cmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
+	if len(state.TestArgs) != 0 {
+		cmd += " " + strings.Join(state.TestArgs, " ")
 	}
 	return &pb.Command{
 		Platform: &pb.Platform{
@@ -158,8 +163,8 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 				},
 			},
 		},
-		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, c.state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(c.state, target, "."), target.TestSandbox),
+		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
+		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, "."), target.TestSandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
@@ -167,7 +172,7 @@ func (c *Client) buildTestCommand(target *core.BuildTarget) (*pb.Command, error)
 }
 
 // buildRunCommand builds the command to run a target remotely.
-func (c *Client) buildRunCommand(target *core.BuildTarget) (*pb.Command, error) {
+func (c *Client) buildRunCommand(state *core.BuildState, target *core.BuildTarget) (*pb.Command, error) {
 	outs := target.Outputs()
 	if len(outs) == 0 {
 		return nil, fmt.Errorf("Target %s has no outputs, it can't be run with `plz run`", target)
@@ -175,12 +180,12 @@ func (c *Client) buildRunCommand(target *core.BuildTarget) (*pb.Command, error) 
 	return &pb.Command{
 		Platform:             c.platform,
 		Arguments:            outs,
-		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(c.state.Config), false),
+		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(state), false),
 	}, nil
 }
 
 // uploadInputs finds and uploads a set of inputs from a target.
-func (c *Client) uploadInputs(ch chan<- *chunker.Chunker, target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
+func (c *Client) uploadInputs(ch chan<- *uploadinfo.Entry, target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
 	if target.IsRemoteFile {
 		return &pb.Directory{}, nil
 	}
@@ -188,12 +193,14 @@ func (c *Client) uploadInputs(ch chan<- *chunker.Chunker, target *core.BuildTarg
 	if err != nil {
 		return nil, err
 	}
-	return b.Root(ch), nil
+	return b.Build(ch), nil
 }
 
-func (c *Client) uploadInputDir(ch chan<- *chunker.Chunker, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
+// uploadInputDir uploads the inputs to the build rule. It returns an un-finalised directory builder representing the
+// directory structure of the input dir. The caller is expected to finalise this by calling Build().
+func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
 	b := newDirBuilder(c)
-	for input := range c.iterInputs(target, isTest, target.IsFilegroup) {
+	for input := range c.state.IterInputs(target, isTest) {
 		if l := input.Label(); l != nil {
 			o := c.targetOutputs(*l)
 			if o == nil {
@@ -253,14 +260,14 @@ func (c *Client) uploadInputDir(ch chan<- *chunker.Chunker, target *core.BuildTa
 	}
 	if !isTest && target.Stamp {
 		stamp := core.StampFile(target)
-		chomk := chunker.NewFromBlob(stamp, int(c.client.ChunkMaxSize))
+		entry := uploadinfo.EntryFromBlob(stamp)
 		if ch != nil {
-			ch <- chomk
+			ch <- entry
 		}
 		d := b.Dir(".")
 		d.Files = append(d.Files, &pb.FileNode{
 			Name:   target.StampFileName(),
-			Digest: chomk.Digest().ToProto(),
+			Digest: entry.Digest.ToProto(),
 		})
 	}
 	return b, nil
@@ -269,7 +276,7 @@ func (c *Client) uploadInputDir(ch chan<- *chunker.Chunker, target *core.BuildTa
 // addChildDirs adds a set of child directories to a builder.
 func (c *Client) addChildDirs(b *dirBuilder, name string, dg *pb.Digest) error {
 	dir := &pb.Directory{}
-	if err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir); err != nil {
+	if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir); err != nil {
 		return err
 	}
 	d := b.Dir(name)
@@ -285,7 +292,7 @@ func (c *Client) addChildDirs(b *dirBuilder, name string, dg *pb.Digest) error {
 }
 
 // uploadInput finds and uploads a single input.
-func (c *Client) uploadInput(b *dirBuilder, ch chan<- *chunker.Chunker, input core.BuildInput) error {
+func (c *Client) uploadInput(b *dirBuilder, ch chan<- *uploadinfo.Entry, input core.BuildInput) error {
 	if _, ok := input.(core.SystemPathLabel); ok {
 		return nil // Don't need to upload things off the system (the remote is expected to have them)
 	}
@@ -328,7 +335,7 @@ func (c *Client) uploadInput(b *dirBuilder, ch chan<- *chunker.Chunker, input co
 				IsExecutable: info.Mode()&0100 != 0,
 			})
 			if ch != nil {
-				ch <- chunker.NewFromFile(name, digest.NewFromProtoUnvalidated(dg), int(c.client.ChunkMaxSize))
+				ch <- uploadinfo.EntryFromFile(digest.NewFromProtoUnvalidated(dg), name)
 			}
 			return nil
 		}); err != nil {
@@ -336,25 +343,6 @@ func (c *Client) uploadInput(b *dirBuilder, ch chan<- *chunker.Chunker, input co
 		}
 	}
 	return nil
-}
-
-// iterInputs yields all the input files needed for a target.
-func (c *Client) iterInputs(target *core.BuildTarget, isTest, isFilegroup bool) <-chan core.BuildInput {
-	if !isTest {
-		return core.IterInputs(c.state.Graph, target, true, isFilegroup)
-	}
-	ch := make(chan core.BuildInput)
-	go func() {
-		ch <- target.Label
-		for _, datum := range target.AllData() {
-			ch <- datum
-		}
-		for _, datum := range target.TestTools() {
-			ch <- datum
-		}
-		close(ch)
-	}()
-	return ch
 }
 
 // buildMetadata converts an ActionResult into one of our BuildMetadata protos.
@@ -365,14 +353,14 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		Stderr: ar.StderrRaw,
 	}
 	if needStdout && len(metadata.Stdout) == 0 && ar.StdoutDigest != nil {
-		b, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StdoutDigest))
+		b, _, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StdoutDigest))
 		if err != nil {
 			return metadata, err
 		}
 		metadata.Stdout = b
 	}
 	if needStderr && len(metadata.Stderr) == 0 && ar.StderrDigest != nil {
-		b, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StderrDigest))
+		b, _, err := c.client.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(ar.StderrDigest))
 		if err != nil {
 			return metadata, err
 		}
@@ -394,7 +382,7 @@ func outputsForActionResult(ar *pb.ActionResult) map[string]bool {
 		ret[o.Path] = true
 	}
 
-	//TODO(jpoole): remove these two after REAPI 2.1
+	// TODO(jpoole): remove these two after REAPI 2.1
 	for _, o := range ar.OutputFileSymlinks {
 		ret[o.Path] = true
 	}
@@ -440,6 +428,25 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 		}
 	}
 
+	if c.state.Config.Remote.UploadDirs {
+		entries := []*uploadinfo.Entry{}
+		for _, out := range ar.OutputDirectories {
+			tree := &pb.Tree{}
+			if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(out.TreeDigest), tree); err != nil {
+				return err
+			}
+			entry, _ := uploadinfo.EntryFromProto(tree.Root)
+			entries = append(entries, entry)
+			for _, child := range tree.Children {
+				entry, _ := uploadinfo.EntryFromProto(child)
+				entries = append(entries, entry)
+			}
+		}
+		if _, _, err := c.client.UploadIfMissing(context.Background(), entries...); err != nil {
+			return fmt.Errorf("Failed to upload directory protos: %s", err)
+		}
+	}
+
 	if !verifyRemoteBlobsExist {
 		return nil
 	}
@@ -460,7 +467,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	if missing, err := c.client.MissingBlobs(context.Background(), digests); err != nil {
 		return fmt.Errorf("Failed to verify action result outputs: %s", err)
 	} else if len(missing) != 0 {
-		return fmt.Errorf("Action result missing %d blobs", len(missing))
+		return fmt.Errorf("Action result missing %d blobs: %s", len(missing), missing)
 	}
 	log.Debug("Verified action result for %s in %s", target, time.Since(start))
 	return nil
@@ -468,15 +475,15 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 
 // uploadLocalTarget uploads the outputs of a target that was built locally.
 func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
-	m, ar, err := tree.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), int(c.client.ChunkMaxSize), filemetadata.NewNoopCache())
+	m, ar, err := c.client.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), filemetadata.NewNoopCache())
 	if err != nil {
 		return err
 	}
-	chomks := make([]*chunker.Chunker, 0, len(m))
-	for _, c := range m {
-		chomks = append(chomks, c)
+	entries := make([]*uploadinfo.Entry, 0, len(m))
+	for _, entry := range m {
+		entries = append(entries, entry)
 	}
-	if err := c.uploadIfMissing(context.Background(), chomks...); err != nil {
+	if err := c.uploadIfMissing(context.Background(), entries); err != nil {
 		return err
 	}
 	return c.setOutputs(target, ar)
@@ -519,4 +526,9 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 		}
 	}
 	return vars
+}
+
+func (c *Client) protoEntry(msg proto.Message) (*uploadinfo.Entry, *pb.Digest) {
+	entry, _ := uploadinfo.EntryFromProto(msg)
+	return entry, entry.Digest.ToProto()
 }

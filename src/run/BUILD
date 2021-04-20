@@ -5,6 +5,7 @@ go_library(
     deps = [
         "//src/cli",
         "//src/core",
+        "//src/fs",
         "//src/output",
         "//src/process",
         "//third_party/go:errgroup",
