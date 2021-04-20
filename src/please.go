@@ -386,6 +386,9 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"hash": func() int {
+		if opts.Hash.Update {
+			opts.FeatureFlags.NoHashVerification = true
+		}
 		success, state := runBuild(opts.Hash.Args.Targets, true, false, false)
 		if success {
 			if opts.Hash.Detailed {
