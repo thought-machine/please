@@ -496,9 +496,9 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 	if t == nil {
 		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
 	}
-	labels := t.ProvideFor(target)
-	// Small optimisation to avoid re-looking-up the same target again.
-	if len(labels) == 1 && labels[0] == t.Label {
+	labels := t.provideFor(target)
+	if len(labels) == 0 {
+		// Small optimisation to avoid re-looking-up the same target again.
 		dep.deps = []*BuildTarget{t}
 		return nil
 	}
@@ -1068,29 +1068,42 @@ func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
 
 // ProvideFor returns the build label that we'd provide for the given target.
 func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
+	if p := target.provideFor(other); len(p) > 0 {
+		return p
+	}
+	return []BuildLabel{target.Label}
+}
+
+// provideFor is like ProvideFor but returns an empty slice if there is a direct dependency.
+// It's a small optimisation to save allocating extra slices.
+func (target *BuildTarget) provideFor(other *BuildTarget) []BuildLabel {
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
-	ret := []BuildLabel{}
-	if target.Provides != nil && len(other.Requires) != 0 {
-		// Never do this if the other target has a data or tool dependency on us.
-		for _, data := range other.Data {
-			if label := data.Label(); label != nil && *label == target.Label {
-				return []BuildLabel{target.Label}
-			}
+	if target.Provides == nil || len(other.Requires) == 0 {
+		return nil
+	}
+	// Never do this if the other target has a data or tool dependency on us.
+	for _, data := range other.Data {
+		if label := data.Label(); label != nil && *label == target.Label {
+			return nil
 		}
-		if other.IsTool(target.Label) {
-			return []BuildLabel{target.Label}
-		}
-		for _, require := range other.Requires {
-			if label, present := target.Provides[require]; present {
+	}
+	if other.IsTool(target.Label) {
+		return nil
+	}
+	var backingStorage [2]BuildLabel
+	var ret []BuildLabel
+	for _, require := range other.Requires {
+		if label, present := target.Provides[require]; present {
+			if ret == nil {
+				backingStorage[0] = label
+				ret = backingStorage[:1]
+			} else {
 				ret = append(ret, label)
 			}
 		}
-		if len(ret) > 0 {
-			return ret
-		}
 	}
-	return []BuildLabel{target.Label}
+	return ret
 }
 
 // UnprefixedHashes returns the hashes for the target without any prefixes;
