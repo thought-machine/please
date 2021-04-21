@@ -6,7 +6,6 @@
 package core
 
 import (
-	"context"
 	"sync"
 
 	"github.com/OneOfOne/cmap/hashers"
@@ -15,107 +14,98 @@ import (
 // DefaultShardCount is the default number of shards to use when New() or NewFromJSON() are called. The default is 256.
 const DefaultShardCount = 1 << 8
 
-// buildLabelBuildTargetCMap is a concurrent safe sharded map to scale on multiple cores.
-type buildLabelBuildTargetCMap struct {
-	shards   []*buildLabelBuildTargetLMap
+// targetMap is a concurrent safe sharded map to scale on multiple cores.
+type targetMap struct {
+	shards   []*targetLMap
 	keysPool sync.Pool
 }
 
 // New is an alias for NewSize(DefaultShardCount)
-func New() *buildLabelBuildTargetCMap { return NewSize(DefaultShardCount) }
+func newTargetMap() *targetMap {
+	// shardCount must be a power of 2.
+	// Higher shardCount will improve concurrency but will consume more memory.
+	const shardCount = 1 << 8
 
-// NewSize returns a buildLabelBuildTargetCMap with the specific shardSize, note that for performance reasons,
-// shardCount must be a power of 2.
-// Higher shardCount will improve concurrency but will consume more memory.
-func NewSize(shardCount int) *buildLabelBuildTargetCMap {
-	// must be a power of 2
-	if shardCount < 1 {
-		shardCount = DefaultShardCount
-	} else if shardCount&(shardCount-1) != 0 {
-		panic("shardCount must be a power of 2")
-	}
-
-	cm := &buildLabelBuildTargetCMap{
-		shards: make([]*buildLabelBuildTargetLMap, shardCount),
+	cm := &targetMap{
+		shards: make([]*targetLMap, shardCount),
 	}
 
 	cm.keysPool.New = func() interface{} {
-		out := make([]BuildLabel, 0, DefaultShardCount) // good starting round
-
-		return &out // return a ptr to avoid extra allocation on Get/Put
+		out := make([]BuildLabel, 0, shardCount) // good starting round
+		return &out                              // return a ptr to avoid extra allocation on Get/Put
 	}
 
 	for i := range cm.shards {
-		cm.shards[i] = NewbuildLabelBuildTargetLMapSize(shardCount)
+		cm.shards[i] = newTargetLMapSize(shardCount)
 	}
 
 	return cm
 }
 
-// ShardForKey returns the buildLabelBuildTargetLMap that may hold the specific key.
-func (cm *buildLabelBuildTargetCMap) ShardForKey(key BuildLabel) *buildLabelBuildTargetLMap {
+// ShardForKey returns the targetLMap that may hold the specific key.
+func (cm *targetMap) ShardForKey(key BuildLabel) *targetLMap {
 	h := hasher(key)
 	return cm.shards[h&uint32(len(cm.shards)-1)]
 }
 
 // Set is the equivalent of `map[key] = val`.
-func (cm *buildLabelBuildTargetCMap) Set(key BuildLabel, val *BuildTarget) {
+func (cm *targetMap) Set(key BuildLabel, val *BuildTarget) {
 	h := hasher(key)
 	cm.shards[h&uint32(len(cm.shards)-1)].Set(key, val)
 }
 
 // SetIfNotExists will only assign val to key if it wasn't already set.
 // Use `Update` if you need more logic.
-func (cm *buildLabelBuildTargetCMap) SetIfNotExists(key BuildLabel, val *BuildTarget) (set bool) {
+func (cm *targetMap) SetIfNotExists(key BuildLabel, val *BuildTarget) (set bool) {
 	h := hasher(key)
 	return cm.shards[h&uint32(len(cm.shards)-1)].SetIfNotExists(key, val)
 }
 
 // Get is the equivalent of `val := map[key]`.
-func (cm *buildLabelBuildTargetCMap) Get(key BuildLabel) (val *BuildTarget) {
+func (cm *targetMap) Get(key BuildLabel) (val *BuildTarget) {
 	h := hasher(key)
 	return cm.shards[h&uint32(len(cm.shards)-1)].Get(key)
 }
 
 // GetOK is the equivalent of `val, ok := map[key]`.
-func (cm *buildLabelBuildTargetCMap) GetOK(key BuildLabel) (val *BuildTarget, ok bool) {
+func (cm *targetMap) GetOK(key BuildLabel) (val *BuildTarget, ok bool) {
 	h := hasher(key)
 	return cm.shards[h&uint32(len(cm.shards)-1)].GetOK(key)
 }
 
 // Has is the equivalent of `_, ok := map[key]`.
-func (cm *buildLabelBuildTargetCMap) Has(key BuildLabel) bool {
+func (cm *targetMap) Has(key BuildLabel) bool {
 	h := hasher(key)
 	return cm.shards[h&uint32(len(cm.shards)-1)].Has(key)
 }
 
 // Delete is the equivalent of `delete(map, key)`.
-func (cm *buildLabelBuildTargetCMap) Delete(key BuildLabel) {
+func (cm *targetMap) Delete(key BuildLabel) {
 	h := hasher(key)
 	cm.shards[h&uint32(len(cm.shards)-1)].Delete(key)
 }
 
 // DeleteAndGet is the equivalent of `oldVal := map[key]; delete(map, key)`.
-func (cm *buildLabelBuildTargetCMap) DeleteAndGet(key BuildLabel) *BuildTarget {
+func (cm *targetMap) DeleteAndGet(key BuildLabel) *BuildTarget {
 	h := hasher(key)
 	return cm.shards[h&uint32(len(cm.shards)-1)].DeleteAndGet(key)
 }
 
 // Update calls `fn` with the key's old value (or nil) and assign the returned value to the key.
 // The shard containing the key will be locked, it is NOT safe to call other cmap funcs inside `fn`.
-func (cm *buildLabelBuildTargetCMap) Update(key BuildLabel, fn func(oldval *BuildTarget) (newval *BuildTarget)) {
+func (cm *targetMap) Update(key BuildLabel, fn func(oldval *BuildTarget) (newval *BuildTarget)) {
 	h := hasher(key)
 	cm.shards[h&uint32(len(cm.shards)-1)].Update(key, fn)
 }
 
 // Swap is the equivalent of `oldVal, map[key] = map[key], newVal`.
-func (cm *buildLabelBuildTargetCMap) Swap(key BuildLabel, val *BuildTarget) *BuildTarget {
+func (cm *targetMap) Swap(key BuildLabel, val *BuildTarget) *BuildTarget {
 	h := hasher(key)
 	return cm.shards[h&uint32(len(cm.shards)-1)].Swap(key, val)
 }
 
 // Keys returns a slice of all the keys of the map.
-func (cm *buildLabelBuildTargetCMap) Keys() []BuildLabel {
+func (cm *targetMap) Keys() []BuildLabel {
 	out := make([]BuildLabel, 0, cm.Len())
 	for _, sh := range cm.shards {
 		out = sh.Keys(out)
@@ -123,27 +113,10 @@ func (cm *buildLabelBuildTargetCMap) Keys() []BuildLabel {
 	return out
 }
 
-// ForEach loops over all the key/values in the map.
-// You can break early by returning false.
-// It **is** safe to modify the map while using this iterator, however it uses more memory and is slightly slower.
-func (cm *buildLabelBuildTargetCMap) ForEach(fn func(key BuildLabel, val *BuildTarget) bool) bool {
-	keysP := cm.keysPool.Get().(*[]BuildLabel)
-	defer cm.keysPool.Put(keysP)
-
-	for _, lm := range cm.shards {
-		keys := (*keysP)[:0]
-		if !lm.ForEach(keys, fn) {
-			return false
-		}
-	}
-
-	return false
-}
-
 // ForEachLocked loops over all the key/values in the map.
 // You can break early by returning false.
 // It is **NOT* safe to modify the map while using this iterator.
-func (cm *buildLabelBuildTargetCMap) ForEachLocked(fn func(key BuildLabel, val *BuildTarget) bool) bool {
+func (cm *targetMap) ForEachLocked(fn func(key BuildLabel, val *BuildTarget) bool) bool {
 	for _, lm := range cm.shards {
 		if !lm.ForEachLocked(fn) {
 			return false
@@ -154,7 +127,7 @@ func (cm *buildLabelBuildTargetCMap) ForEachLocked(fn func(key BuildLabel, val *
 }
 
 // Len returns the length of the map.
-func (cm *buildLabelBuildTargetCMap) Len() int {
+func (cm *targetMap) Len() int {
 	ln := 0
 	for _, lm := range cm.shards {
 		ln += lm.Len()
@@ -164,7 +137,7 @@ func (cm *buildLabelBuildTargetCMap) Len() int {
 
 // ShardDistribution returns the distribution of data amoung all shards.
 // Useful for debugging the efficiency of a hash.
-func (cm *buildLabelBuildTargetCMap) ShardDistribution() []float64 {
+func (cm *targetMap) ShardDistribution() []float64 {
 	var (
 		out = make([]float64, len(cm.shards))
 		ln  = float64(cm.Len())
@@ -175,83 +148,30 @@ func (cm *buildLabelBuildTargetCMap) ShardDistribution() []float64 {
 	return out
 }
 
-// KV holds the key/value returned when Iter is called.
-type KV struct {
-	Key   BuildLabel
-	Value *BuildTarget
-}
-
-// Iter returns a channel to be used in for range.
-// Use `context.WithCancel` if you intend to break early or goroutines will leak.
-// It **is** safe to modify the map while using this iterator, however it uses more memory and is slightly slower.
-func (cm *buildLabelBuildTargetCMap) Iter(ctx context.Context, buffer int) <-chan *KV {
-	ch := make(chan *KV, buffer)
-	go func() {
-		cm.iterContext(ctx, ch, false)
-		close(ch)
-	}()
-	return ch
-}
-
-// IterLocked returns a channel to be used in for range.
-// Use `context.WithCancel` if you intend to break early or goroutines will leak and map access will deadlock.
-// It is **NOT* safe to modify the map while using this iterator.
-func (cm *buildLabelBuildTargetCMap) IterLocked(ctx context.Context, buffer int) <-chan *KV {
-	ch := make(chan *KV, buffer)
-	go func() {
-		cm.iterContext(ctx, ch, false)
-		close(ch)
-	}()
-	return ch
-}
-
-// iterContext is used internally
-func (cm *buildLabelBuildTargetCMap) iterContext(ctx context.Context, ch chan<- *KV, locked bool) {
-	fn := func(k BuildLabel, v *BuildTarget) bool {
-		select {
-		case <-ctx.Done():
-			return false
-		case ch <- &KV{k, v}:
-			return true
-		}
-	}
-
-	if locked {
-		_ = cm.ForEachLocked(fn)
-	} else {
-		_ = cm.ForEach(fn)
-	}
-}
-
 // NumShards returns the number of shards in the map.
-func (cm *buildLabelBuildTargetCMap) NumShards() int { return len(cm.shards) }
+func (cm *targetMap) NumShards() int { return len(cm.shards) }
 
 func hasher(key BuildLabel) uint32 {
 	return hashers.Fnv32(key.Subrepo) ^ hashers.Fnv32(key.PackageName) ^ hashers.Fnv32(key.Name)
 }
 
-// buildLabelBuildTargetLMap is a simple sync.RWMutex locked map.
-// Used by buildLabelBuildTargetCMap internally for sharding.
-type buildLabelBuildTargetLMap struct {
+// targetLMap is a simple sync.RWMutex locked map.
+// Used by targetMap internally for sharding.
+type targetLMap struct {
 	m map[BuildLabel]*BuildTarget
 	l *sync.RWMutex
 }
 
-// NewbuildLabelBuildTargetLMap returns a new buildLabelBuildTargetLMap with the cap set to 0.
-func NewbuildLabelBuildTargetLMap() *buildLabelBuildTargetLMap {
-	return NewbuildLabelBuildTargetLMapSize(0)
-}
-
-// NewbuildLabelBuildTargetLMapSize is the equivalent of `m := make(map[BuildLabel]*BuildTarget, cap)`
-func NewbuildLabelBuildTargetLMapSize(cap int) *buildLabelBuildTargetLMap {
-	return &buildLabelBuildTargetLMap{
+// newTargetLMapSize is the equivalent of `m := make(map[BuildLabel]*BuildTarget, cap)`
+func newTargetLMapSize(cap int) *targetLMap {
+	return &targetLMap{
 		m: make(map[BuildLabel]*BuildTarget, cap),
 		l: new(sync.RWMutex),
 	}
 }
 
 // Set is the equivalent of `map[key] = val`.
-func (lm *buildLabelBuildTargetLMap) Set(key BuildLabel, v *BuildTarget) {
+func (lm *targetLMap) Set(key BuildLabel, v *BuildTarget) {
 	lm.l.Lock()
 	lm.m[key] = v
 	lm.l.Unlock()
@@ -259,7 +179,7 @@ func (lm *buildLabelBuildTargetLMap) Set(key BuildLabel, v *BuildTarget) {
 
 // SetIfNotExists will only assign val to key if it wasn't already set.
 // Use `Update` if you need more logic.
-func (lm *buildLabelBuildTargetLMap) SetIfNotExists(key BuildLabel, val *BuildTarget) (set bool) {
+func (lm *targetLMap) SetIfNotExists(key BuildLabel, val *BuildTarget) (set bool) {
 	lm.l.Lock()
 	if _, ok := lm.m[key]; !ok {
 		lm.m[key], set = val, true
@@ -269,7 +189,7 @@ func (lm *buildLabelBuildTargetLMap) SetIfNotExists(key BuildLabel, val *BuildTa
 }
 
 // Get is the equivalent of `val := map[key]`.
-func (lm *buildLabelBuildTargetLMap) Get(key BuildLabel) (v *BuildTarget) {
+func (lm *targetLMap) Get(key BuildLabel) (v *BuildTarget) {
 	lm.l.RLock()
 	v = lm.m[key]
 	lm.l.RUnlock()
@@ -277,7 +197,7 @@ func (lm *buildLabelBuildTargetLMap) Get(key BuildLabel) (v *BuildTarget) {
 }
 
 // GetOK is the equivalent of `val, ok := map[key]`.
-func (lm *buildLabelBuildTargetLMap) GetOK(key BuildLabel) (v *BuildTarget, ok bool) {
+func (lm *targetLMap) GetOK(key BuildLabel) (v *BuildTarget, ok bool) {
 	lm.l.RLock()
 	v, ok = lm.m[key]
 	lm.l.RUnlock()
@@ -285,7 +205,7 @@ func (lm *buildLabelBuildTargetLMap) GetOK(key BuildLabel) (v *BuildTarget, ok b
 }
 
 // Has is the equivalent of `_, ok := map[key]`.
-func (lm *buildLabelBuildTargetLMap) Has(key BuildLabel) (ok bool) {
+func (lm *targetLMap) Has(key BuildLabel) (ok bool) {
 	lm.l.RLock()
 	_, ok = lm.m[key]
 	lm.l.RUnlock()
@@ -293,14 +213,14 @@ func (lm *buildLabelBuildTargetLMap) Has(key BuildLabel) (ok bool) {
 }
 
 // Delete is the equivalent of `delete(map, key)`.
-func (lm *buildLabelBuildTargetLMap) Delete(key BuildLabel) {
+func (lm *targetLMap) Delete(key BuildLabel) {
 	lm.l.Lock()
 	delete(lm.m, key)
 	lm.l.Unlock()
 }
 
 // DeleteAndGet is the equivalent of `oldVal := map[key]; delete(map, key)`.
-func (lm *buildLabelBuildTargetLMap) DeleteAndGet(key BuildLabel) (v *BuildTarget) {
+func (lm *targetLMap) DeleteAndGet(key BuildLabel) (v *BuildTarget) {
 	lm.l.Lock()
 	v = lm.m[key]
 	delete(lm.m, key)
@@ -310,14 +230,14 @@ func (lm *buildLabelBuildTargetLMap) DeleteAndGet(key BuildLabel) (v *BuildTarge
 
 // Update calls `fn` with the key's old value (or nil) and assigns the returned value to the key.
 // The shard containing the key will be locked, it is NOT safe to call other cmap funcs inside `fn`.
-func (lm *buildLabelBuildTargetLMap) Update(key BuildLabel, fn func(oldVal *BuildTarget) (newVal *BuildTarget)) {
+func (lm *targetLMap) Update(key BuildLabel, fn func(oldVal *BuildTarget) (newVal *BuildTarget)) {
 	lm.l.Lock()
 	lm.m[key] = fn(lm.m[key])
 	lm.l.Unlock()
 }
 
 // Swap is the equivalent of `oldVal, map[key] = map[key], newVal`.
-func (lm *buildLabelBuildTargetLMap) Swap(key BuildLabel, newV *BuildTarget) (oldV *BuildTarget) {
+func (lm *targetLMap) Swap(key BuildLabel, newV *BuildTarget) (oldV *BuildTarget) {
 	lm.l.Lock()
 	oldV = lm.m[key]
 	lm.m[key] = newV
@@ -328,7 +248,7 @@ func (lm *buildLabelBuildTargetLMap) Swap(key BuildLabel, newV *BuildTarget) (ol
 // ForEach loops over all the key/values in the map.
 // You can break early by returning an error .
 // It **is** safe to modify the map while using this iterator, however it uses more memory and is slightly slower.
-func (lm *buildLabelBuildTargetLMap) ForEach(keys []BuildLabel, fn func(key BuildLabel, val *BuildTarget) bool) bool {
+func (lm *targetLMap) ForEach(keys []BuildLabel, fn func(key BuildLabel, val *BuildTarget) bool) bool {
 	lm.l.RLock()
 	for key := range lm.m {
 		keys = append(keys, key)
@@ -353,7 +273,7 @@ func (lm *buildLabelBuildTargetLMap) ForEach(keys []BuildLabel, fn func(key Buil
 // ForEachLocked loops over all the key/values in the map.
 // You can break early by returning false
 // It is **NOT* safe to modify the map while using this iterator.
-func (lm *buildLabelBuildTargetLMap) ForEachLocked(fn func(key BuildLabel, val *BuildTarget) bool) bool {
+func (lm *targetLMap) ForEachLocked(fn func(key BuildLabel, val *BuildTarget) bool) bool {
 	lm.l.RLock()
 	defer lm.l.RUnlock()
 
@@ -367,7 +287,7 @@ func (lm *buildLabelBuildTargetLMap) ForEachLocked(fn func(key BuildLabel, val *
 }
 
 // Len returns the length of the map.
-func (lm *buildLabelBuildTargetLMap) Len() (ln int) {
+func (lm *targetLMap) Len() (ln int) {
 	lm.l.RLock()
 	ln = len(lm.m)
 	lm.l.RUnlock()
@@ -376,7 +296,7 @@ func (lm *buildLabelBuildTargetLMap) Len() (ln int) {
 
 // Keys appends all the keys in the map to buf and returns buf.
 // buf may be nil.
-func (lm *buildLabelBuildTargetLMap) Keys(buf []BuildLabel) []BuildLabel {
+func (lm *targetLMap) Keys(buf []BuildLabel) []BuildLabel {
 	lm.l.RLock()
 	if cap(buf) == 0 {
 		buf = make([]BuildLabel, 0, len(lm.m))
