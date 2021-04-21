@@ -306,7 +306,7 @@ $ plz test //src/...
 ## Third-party dependencies
 Duration: 7
 
-### Using `go_get()`
+### Using `go_module()`
 
 Eventually, most projects need to depend on third-party code. Let's include go-playground's basic assertion library.
 Conventionally, third-party dependencies live under `//third_party/...` (although they don't have to), so let's create
@@ -316,10 +316,10 @@ that package:
 ```python
 package(default_visibility = ["PUBLIC"])
 
-go_get(
+go_module(
     name = "assert",
-    get = "github.com/go-playground/assert",
-    revision = "v1.2.1",
+    module = "github.com/go-playground/assert",
+    version = "v1.2.1",
 )
 ```
 

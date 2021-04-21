@@ -132,9 +132,6 @@ go_module(
     ],
     module = "golang.org/x/text",
     version = "v0.3.5",
-    deps = [
-        ":tools",
-    ],
 )
 
 go_module(
@@ -223,7 +220,6 @@ go_module(
     module = "google.golang.org/genproto",
     deps = [
         ":grpc",
-        ":net",
         ":protobuf",
     ],
 )
@@ -242,10 +238,15 @@ go_module(
     ],
     install = ["..."],
     module = "github.com/golang/protobuf",
-    strip = [
-        "proto/proto3_proto",
-        "conformance",
-    ],
+)
+
+go_module(
+    name = "protoc-gen-go",
+    binary = True,
+    download = ":protobuf_download",
+    install = ["protoc-gen-go"],
+    module = "github.com/golang/protobuf",
+    deps = [":protobuf-go"],
 )
 
 go_module(
@@ -263,15 +264,6 @@ go_module(
     install = ["..."],
     module = "golang.org/x/xerrors",
     version = "5ec99f83aff198f5fbd629d6c8d8eb38a04218ca",
-)
-
-go_module(
-    name = "protoc-gen-go",
-    binary = True,
-    download = ":protobuf_download",
-    install = ["protoc-gen-go"],
-    module = "github.com/golang/protobuf",
-    deps = [":protobuf-go"],
 )
 
 go_module(
@@ -377,7 +369,6 @@ go_module(
     version = "fa8fef87dcecac0bda02d36abb3c790ab9e0030b",
     deps = [
         ":grpc",
-        ":net",
         ":protobuf",
     ],
 )
@@ -422,7 +413,6 @@ go_module(
     ],
     module = "golang.org/x/sync",
     version = "036812b2e83c0ddf193dd5a34e034151da389d09",
-    deps = [":net"],
 )
 
 go_module(
@@ -463,7 +453,7 @@ go_module(
     name = "xsys",
     install = ["..."],
     module = "golang.org/x/sys",
-    version = "765f4ea38db36397e827c4153018aa272eed7835",
+    version = "v0.0.0-20210415045647-66c3f260301c",
 )
 
 go_mod_download(
@@ -679,7 +669,7 @@ go_module(
     visibility = ["//third_party/go/..."],
     deps = [
         ":cloud-metadata",
-        "//third_party/go:net",
+        ":net",
     ],
 )
 
