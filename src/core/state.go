@@ -1044,7 +1044,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			"crc64":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC64, "crc64"),
 			"blake3": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newBlake3, "blake3"),
 		},
-		ProcessExecutor: process.New(sandboxTool),
+		ProcessExecutor: process.New(sandboxTool != ""),
 		StartTime:       startTime,
 		Config:          config,
 		VerifyHashes:    true,

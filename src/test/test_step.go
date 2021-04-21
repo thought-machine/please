@@ -347,7 +347,7 @@ func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte,
 		return nil, err
 	}
 	log.Debugf("Running test %s#%d\nENVIRONMENT:\n%s\n%s", target.Label, run, strings.Join(env, "\n"), replacedCmd)
-	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, target.TestDir(run), env, target.TestTimeout, state.ShowAllOutput, replacedCmd, target.TestSandbox, state.DebugTests)
+	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, target.TestDir(run), env, target.TestTimeout, state.ShowAllOutput, replacedCmd, state.DebugTests)
 	return stderr, err
 }
 

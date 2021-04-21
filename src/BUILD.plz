@@ -24,6 +24,7 @@ go_binary(
         "//src/scm",
         "//src/test",
         "//src/tool",
+        "//src/sandbox",
         "//src/update",
         "//src/utils",
         "//src/watch",

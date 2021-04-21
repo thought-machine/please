@@ -479,7 +479,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	}
 	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()))
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
-	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, command, target.Sandbox)
+	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, command)
 	if err != nil {
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}

@@ -20,9 +20,3 @@ func (e *Executor) ExecCommand(command string, args ...string) *exec.Cmd {
 	e.processes[cmd] = struct{}{}
 	return cmd
 }
-
-// MustSandboxCommand modifies the given command to run in the sandbox.
-// On non-Linux platforms this is a no-op since namespaces aren't available.
-func (e *Executor) MustSandboxCommand(cmd []string) []string {
-	return cmd
-}

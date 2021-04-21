@@ -22,15 +22,15 @@ var log = logging.MustGetLogger("progress")
 // An Executor handles starting, running and monitoring a set of subprocesses.
 // It registers as a signal handler to attempt to terminate them all at process exit.
 type Executor struct {
-	sandboxCommand string
+	shouldNamespace bool
 	processes      map[*exec.Cmd]struct{}
 	mutex          sync.Mutex
 }
 
 // New returns a new Executor.
-func New(sandboxCommand string) *Executor {
+func New(shouldNamespace bool) *Executor {
 	o := &Executor{
-		sandboxCommand: sandboxCommand,
+		shouldNamespace: shouldNamespace,
 		processes:      map[*exec.Cmd]struct{}{},
 	}
 	cli.AtExit(o.killAll) // Kill any subprocess if we are ourselves killed
@@ -50,6 +50,8 @@ type Target interface {
 	ProgressDescription() string
 	// ShouldExitOnError returns true if the executed process should exit if an error occurs.
 	ShouldExitOnError() bool
+	// NetSandbox is whether we should sandbox net for this build action
+	ShouldSandbox() bool
 }
 
 // ExecWithTimeout runs an external command with a timeout.
@@ -57,11 +59,15 @@ type Target interface {
 // If showOutput is true then output will be printed to stderr as well as returned.
 // It returns the stdout only, combined stdout and stderr and any error that occurred.
 func (e *Executor) ExecWithTimeout(target Target, dir string, env []string, timeout time.Duration, showOutput, attachStdin, attachStdout bool, argv []string) ([]byte, []byte, error) {
+	shouldSandbox := false
+	if target != nil {
+		shouldSandbox = target.ShouldSandbox()
+	}
 	// We deliberately don't attach this context to the command, so we have better
 	// control over how the process gets terminated.
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	cmd := e.ExecCommand(argv[0], argv[1:]...)
+	cmd := e.ExecCommand(shouldSandbox, shouldSandbox, argv[0], argv[1:]...)
 	defer e.removeProcess(cmd)
 	cmd.Dir = dir
 	cmd.Env = env
@@ -118,19 +124,17 @@ func runCommand(cmd *exec.Cmd, ch chan error) {
 // ExecWithTimeoutShell runs an external command within a Bash shell.
 // Other arguments are as ExecWithTimeout.
 // Note that the command is deliberately a single string.
-func (e *Executor) ExecWithTimeoutShell(target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, sandbox bool) ([]byte, []byte, error) {
-	return e.ExecWithTimeoutShellStdStreams(target, dir, env, timeout, showOutput, cmd, sandbox, false)
+func (e *Executor) ExecWithTimeoutShell(target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string) ([]byte, []byte, error) {
+	return e.ExecWithTimeoutShellStdStreams(target, dir, env, timeout, showOutput, cmd, false)
 }
 
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
-func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool) ([]byte, []byte, error) {
-	c := BashCommand("bash", cmd, target.ShouldExitOnError())
-	if sandbox {
-		if e.sandboxCommand == "" {
-			log.Fatalf("Sandbox tool not found on PATH")
-		}
-		c = append([]string{e.sandboxCommand}, c...)
+func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, attachStdStreams bool) ([]byte, []byte, error) {
+	binary := "bash"
+	if e.shouldNamespace && target.ShouldSandbox() {
+		// TODO(jpoole): change the binary to be `plz sandbox`
 	}
+	c := BashCommand(binary, cmd, target.ShouldExitOnError())
 	return e.ExecWithTimeout(target, dir, env, timeout, showOutput, attachStdStreams, attachStdStreams, c)
 }
 
@@ -251,8 +255,8 @@ func (e *Executor) killAll() {
 
 // ExecCommand is a utility function that runs the given command with few options.
 func ExecCommand(args ...string) ([]byte, error) {
-	e := New("")
-	cmd := e.ExecCommand(args[0], args[1:]...)
+	e := New(false)
+	cmd := e.ExecCommand(false, false, args[0], args[1:]...)
 	defer e.removeProcess(cmd)
 	return cmd.CombinedOutput()
 }
