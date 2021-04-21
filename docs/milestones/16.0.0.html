@@ -1,0 +1,154 @@
+<h1 class="title-1">Please 16.0.0 migration guide</h1>
+
+<p>
+    This document describes the breaking changes in v16, and how to migrate. You can find the complete changelog
+    <a class="copy-link" href="https://github.com/thought-machine/please/releases/tag/v16.0.0">here</a>.
+</p>
+
+<section class="mt4">
+    <h2 class="title-2">Installation</h2>
+    <p>
+        In v15, Please used to be distributed with all its tools for the core languages: Go, Java, Python, and C++.
+        In v16, Please will download its tools on demand through build rules in the new internal
+        <code class="code">//_please/...</code> package.
+    </p>
+    <p>
+        Please also now installs the Please wrapper script, <code class="code">pleasew</code>, onto the path instead of
+        a symlink to the active Please version. This is more robust as it doesn't change between version upgrades
+        solving the rare case where Please would simply vanish off the path.
+    </p>
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">Golang</h2>
+
+    <h3 class="title-3">Go module and 1.16 support</h3>
+    <p>
+        Please v16 now support go 1.16 through use of the <code class="code">go_module()</code> rules.
+        For context, <code class="code">go_get()</code> will recompile certain packages from source instead of using the
+        already compiled package. This doesn't work with the new fingerprinting introduced in go 1.15.
+    </p>
+    <p>
+        Going forward, <code class="code">go_get()</code> will be deprecated in favour of
+        <code class="code">go_module()</code>. For the most part, they work similarly, however there are a
+        few differences. Essentially:
+    </p>
+
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+      go_get(
+          name = "some_module_foo",
+          # go_get allows you to include the package to install in the get url
+          get = "example.com/some/module/foo/...",
+          revision = "v1.0.0",
+      )
+      </code>
+    </pre>
+
+    <p>Will become:</p>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+      go_module(
+          name = "some_module_foo",
+          # This must be a valid module name i.e. should match the go.mod
+          module = "example.com/some/module",
+          version = "v1.0.0",
+          # The packages to install have to be supplied differently
+          install = ["foo/..."],
+      )
+      </code>
+    </pre>
+    <p>For more information on using <code class="code">go_module()</code>, check out the
+        <a class="copy-link" href="/codelabs/go_module">codelab</a>.</p>
+
+    <h3 class="title-3">Changes to go rules</h3>
+    <p>
+        There have been a couple small changes to the go rules. Most notably, a long standing issue where Please was
+        pulling in all transitive dependencies for tests has been fixed. This means that tests now compile a lot faster,
+        however you have to be explicit about your dependencies.
+    </p>
+    <p>
+        Any package imported by a <code class="code">.go</code> file must have a corresponding entry in the
+        <code class="code">deps = []</code> list. To help with migrating and keeping these up to date, you can use
+        <a class="copy-link" href="https://github.com/tcncloud/wollemi">wollemi</a>, a tool to automatically
+        create and update your go rules.
+    </p>
+
+    <h3 class="title-3">No more duplicate basenames in imports</h3>
+    <p>
+        In v15, Please would allow you to import the package <code class="code">example.com/module</code>, as
+        <code class="code">example.com/module/module</code> i.e. duplicating the basename. This import path isn't
+        technically correct and in v16 will no longer be permitted.
+    </p>
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">Java</h2>
+
+    <h3 class="title-3">Maven source jars</h3>
+    <p>
+        Please now downloads Mavan jars using the conventially naming <code class="code">_sources.jar</code>. This means
+        that tools like vs-code can pick them up improving tooling integration. Note that you can expect the hashes of
+        your third party dependencies to change between v15 and v16.
+    </p>
+    <p>
+        To update them, simply run:
+    </p>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code>
+        $ plz hash --update //third_party/java:all
+      </code>
+    </pre>
+
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">Pleasings</h2>
+    <p>
+        In v15, Please would automatically register the the pleasings repo such that you could reference it
+        as <code class="code">///pleasings//...</code>. In v16 this has been removed for a number of reasons. Most
+        notably, most users were not using it. Secondly, it's recommended to pin third party dependencies to a specific
+        version.
+    </p>
+    <p>
+        If you would like to use build rules from the pleasings repo, you need to add a subrepo to your build graph.
+        To do this automatically, simply run <code class="code">plz init pleasings</code>.
+    </p>
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">CLI</h2>
+
+    <h3 class="title-3">Removed --nocache</h3>
+    <p>
+        This flag was deprecated, and now has been removed. If you wish to force Please to rebuild or retest a
+        target, use <code class="code">--rebuild</code> and <code class="code">--rerun</code> respectively. If you would
+        actually like to disable the cache, you can override the dir and http cache config settings as such:
+    </p>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code>
+        $ plz -o cache.dir: -o cache.httpurl: build/test/...
+      </code>
+    </pre>
+    <h3 class="title-3">Deprecated --prepare</h3>
+    <p>
+        This flag has been superseded by <code class="code">--shell</code>, which essentially does the same thing,
+        except it also drops you into the prepared directory.
+    </p>
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">Test results</h2>
+
+    <p>
+        When configured to upload test results, Please will no longer populate stdout or stderr on success. This
+        massively saves space. There's also a new config option to gzip the test results to further reduce space
+        requirements. If this output is required, set the config option
+        <code class="code">Test.StoreTestOutputOnSuccess</code>, to true. For more information on how to configure this,
+        see the docs <a class="copy-link" href="/config.html#test">here</a>.
+    </p>
+</section>
