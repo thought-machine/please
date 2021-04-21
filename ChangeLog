@@ -72,6 +72,8 @@ Version 16.0.0
     * Fixed some issues around python coverage on macOS #1735
     * Added `--in_tmp_dir` flag to `plz run` to run in the same temp directory
       that `plz test` would run in #1733
+    * `gentest()` can now accept lists for `cmd` and `test_cmd`
+    * `plz-out` is now excluded from `glob()` results
 
 
 Version 15.16.0
