@@ -25,8 +25,8 @@
     <h3 class="title-3">Go module and 1.16 support</h3>
     <p>
         Please v16 now support go 1.16 through use of the <code class="code">go_module()</code> rules.
-        <code class="code">go_get()</code> will recompile certain packages from source instead of using the
-        already compiled package. This doesn't work with 1.16 fingerprinting.
+        For context, <code class="code">go_get()</code> will recompile certain packages from source instead of using the
+        already compiled package. This doesn't work with the new fingerprinting introduced in go 1.15.
     </p>
     <p>
         Going forward, <code class="code">go_get()</code> will be deprecated in favour of
@@ -107,8 +107,6 @@
 
 <section class="mt4">
     <h2 class="title-2">Pleasings</h2>
-
-    <h3 class="title-3">No more pleasings</h3>
     <p>
         In v15, Please would automatically register the the pleasings repo such that you could reference it
         as <code class="code">///pleasings//...</code>. In v16 this has been removed for a number of reasons. Most
@@ -133,13 +131,13 @@
     <pre class="code-container">
       <!-- prettier-ignore -->
       <code>
-        $ plz -o cache.dir: -o cache.httpurl: build
+        $ plz -o cache.dir: -o cache.httpurl: build/test/...
       </code>
     </pre>
     <h3 class="title-3">Deprecated --prepare</h3>
     <p>
         This flag has been superseded by <code class="code">--shell</code>, which essentially does the same thing,
-        except drops you into the prepared directory too.
+        except it also drops you into the prepared directory.
     </p>
 </section>
 
