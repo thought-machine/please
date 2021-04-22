@@ -4,6 +4,11 @@
 pextool = //tools/please_pex
 moduledir = third_party.python
 
+[sandbox]
+build = true
+test = true
+tool = ; use plz sandbox
+
 [gc]
 keep = //test/...
 keep = //docs:all

@@ -22,19 +22,29 @@ var log = logging.MustGetLogger("progress")
 // An Executor handles starting, running and monitoring a set of subprocesses.
 // It registers as a signal handler to attempt to terminate them all at process exit.
 type Executor struct {
+	// Whether we should set up linux namespaces at all
 	shouldNamespace bool
-	processes      map[*exec.Cmd]struct{}
-	mutex          sync.Mutex
+	// The tool that will do the network/mount sandboxing
+	sandboxTool      string
+	usePleaseSandbox bool
+	processes        map[*exec.Cmd]struct{}
+	mutex            sync.Mutex
 }
 
-// New returns a new Executor.
-func New(shouldNamespace bool) *Executor {
+func NewSandboxingExecutor(shouldNamespace, usePleaseSandbox bool, sandboxTool string) *Executor {
 	o := &Executor{
-		shouldNamespace: shouldNamespace,
-		processes:      map[*exec.Cmd]struct{}{},
+		shouldNamespace:  shouldNamespace,
+		usePleaseSandbox: usePleaseSandbox,
+		sandboxTool:      sandboxTool,
+		processes:        map[*exec.Cmd]struct{}{},
 	}
 	cli.AtExit(o.killAll) // Kill any subprocess if we are ourselves killed
 	return o
+}
+
+// New returns a new Executor.
+func New() *Executor {
+	return NewSandboxingExecutor(false, false, "")
 }
 
 // A Target is a minimal interface of what we need from a BuildTarget.
@@ -67,7 +77,7 @@ func (e *Executor) ExecWithTimeout(target Target, dir string, env []string, time
 	// control over how the process gets terminated.
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	cmd := e.ExecCommand(shouldSandbox, shouldSandbox, argv[0], argv[1:]...)
+	cmd := e.ExecCommand(shouldSandbox, argv[0], argv[1:]...)
 	defer e.removeProcess(cmd)
 	cmd.Dir = dir
 	cmd.Env = env
@@ -130,11 +140,7 @@ func (e *Executor) ExecWithTimeoutShell(target Target, dir string, env []string,
 
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
 func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, attachStdStreams bool) ([]byte, []byte, error) {
-	binary := "bash"
-	if e.shouldNamespace && target.ShouldSandbox() {
-		// TODO(jpoole): change the binary to be `plz sandbox`
-	}
-	c := BashCommand(binary, cmd, target.ShouldExitOnError())
+	c := BashCommand("bash", cmd, target.ShouldExitOnError())
 	return e.ExecWithTimeout(target, dir, env, timeout, showOutput, attachStdStreams, attachStdStreams, c)
 }
 
@@ -255,8 +261,8 @@ func (e *Executor) killAll() {
 
 // ExecCommand is a utility function that runs the given command with few options.
 func ExecCommand(args ...string) ([]byte, error) {
-	e := New(false)
-	cmd := e.ExecCommand(false, false, args[0], args[1:]...)
+	e := New()
+	cmd := e.ExecCommand(false, args[0], args[1:]...)
 	defer e.removeProcess(cmd)
 	return cmd.CombinedOutput()
 }

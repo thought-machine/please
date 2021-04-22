@@ -9,10 +9,10 @@ import (
 // set up namespacing. This is probably not that useful except if you want to poke around in plz-out in an equivalent
 // elevation.
 //
-// plz unshare bash # starts bash in an
+// For example, `plz unshare bash` will open up a bash shell as a fake root user in a namespaced environment.
 func Unshare(args []string) error {
-	e := process.New(true)
-	cmd := e.ExecCommand(true, true, args[0], args[1:]...)
+	e := process.NewSandboxingExecutor(true, false, "")
+	cmd := e.ExecCommand(true, args[0], args[1:]...)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin

@@ -785,7 +785,7 @@ var buildFunctions = map[string]func() int{
 		if err := sandbox.Sandbox(os.Args[2:]); err != nil {
 			log.Fatal(err)
 		}
-		return 1
+		return 0
 	},
 	"unshare": func() int {
 		if err := sandbox.Unshare(os.Args[2:]); err != nil {
@@ -1033,7 +1033,7 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 }
 
 func initBuild(args []string) string {
-	if len(args) > 2 && (args[1] == "sandbox" || args[1] == "unshare") {
+	if len(args) > 1 && (args[1] == "sandbox" || args[1] == "unshare") {
 		// Shortcut these as they're special commands used for please sandboxing
 		// going through the normal init path would be too slow
 		return args[1]

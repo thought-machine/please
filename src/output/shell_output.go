@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -512,12 +511,14 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 			argv := []string{"bash", "--noprofile", "--norc", "-o", "pipefail"}
 			// TODO(jpoole): run plz sandbox here somehow
 			log.Debug("Full command: %s", strings.Join(argv, " "))
-			cmd := exec.Command(argv[0], argv[1:]...)
+			cmd := state.ProcessExecutor.ExecCommand(target.Sandbox, argv[0], argv[1:]...)
 			cmd.Dir = dir
 			cmd.Env = env
 			cmd.Stdin = os.Stdin
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
+			// TODO(jpoole): Read the docs. Attaching stdin and out doesn't seem to work with this.
+			cmd.SysProcAttr.Setpgid = false
 			cmd.Run() // Ignore errors, it will typically end by the user killing it somehow.
 		}
 	}

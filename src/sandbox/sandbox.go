@@ -11,7 +11,9 @@ import (
 	"C"
 )
 
-const MS_LAZYTIME = 1 << 25
+// mdLazytime is the bit for lazily flushing disk writes.
+// TODO(jpoole): find out if there's a reason this isn't in syscall
+const mdLazytime = 1 << 25
 
 func Sandbox(args []string) error {
 	cmd := exec.Command(args[0], args[1:]...)
@@ -19,20 +21,39 @@ func Sandbox(args []string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
+	// TODO(jpoole): configure this
 	cmd.Dir = "/tmp/plz_sandbox"
-	if err := mountTmp(); err != nil {
+
+	tmpDir := os.Getenv("TMP_DIR")
+	if err := mountTmp(tmpDir); err != nil {
 		return err
 	}
 	if i := C.lo_up(); i < 0 {
 		return fmt.Errorf("failed to bring loopback interface up")
 	}
 
-	fmt.Println("Welcome to the sandbox!")
+	if err := rewriteEnvVars(tmpDir); err != nil {
+		return err
+	}
+
 	return cmd.Run()
 }
 
-func mountTmp() error {
-	tmpDir := os.Getenv("TMP_DIR")
+func rewriteEnvVars(tmpDir string) error {
+	for _, envVar := range os.Environ() {
+		if strings.Contains(envVar, tmpDir) {
+			parts := strings.Split(envVar, "=")
+			key := parts[0]
+			value := strings.TrimPrefix(envVar, key+"=")
+			if err := os.Setenv(key, strings.ReplaceAll(value, tmpDir, "/tmp/plz_sandbox")); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func mountTmp(tmpDir string) error {
 	dir := "/tmp/plz_sandbox"
 
 	if strings.HasPrefix(tmpDir, "/tmp") {
@@ -45,7 +66,7 @@ func mountTmp() error {
 		return fmt.Errorf("failed to mount root: %w", err)
 	}
 
-	flags := MS_LAZYTIME | syscall.MS_NOATIME | syscall.MS_NODEV | syscall.MS_NOSUID
+	flags := mdLazytime | syscall.MS_NOATIME | syscall.MS_NODEV | syscall.MS_NOSUID
 	if err := syscall.Mount("tmpfs", "/tmp", "tmpfs", uintptr(flags), ""); err != nil {
 		return fmt.Errorf("failed to mount /tmp: %w", err)
 	}
@@ -59,7 +80,7 @@ func mountTmp() error {
 		return err
 	}
 
-	if err := os.Mkdir(dir, os.ModeDir | 0775); err != nil {
+	if err := os.Mkdir(dir, os.ModeDir|0775); err != nil {
 		return fmt.Errorf("failed to make %s: %w", dir, err)
 	}
 
@@ -67,7 +88,7 @@ func mountTmp() error {
 		return fmt.Errorf("failed to bind %s to %s : %w", tmpDir, dir, err)
 	}
 
-	if err := syscall.Mount("none", "/", "", syscall.MS_REMOUNT | syscall.MS_RDONLY | syscall.MS_BIND, ""); err != nil {
+	if err := syscall.Mount("none", "/", "", syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_BIND, ""); err != nil {
 		return fmt.Errorf("failed to remount root as readonly: %s", err)
 	}
 	return nil
