@@ -25,29 +25,13 @@ import (
 
 var log = logging.MustGetLogger("run")
 
-type ParallelOutput uint
+type ParallelOutput string
 
 const (
-	Default ParallelOutput = iota
-	Quiet
-	GroupImmediate
+	Default        ParallelOutput = "default"
+	Quiet          ParallelOutput = "quiet"
+	GroupImmediate ParallelOutput = "group_immediate"
 )
-
-// UnmarshalFlag unmarshals a parallel output from a command line flag. Implementation of flags.Unmarshaler interface.
-func (po *ParallelOutput) UnmarshalFlag(in string) error {
-	in = strings.ToLower(in)
-	flag, exists := map[string]ParallelOutput{
-		"default": Default,
-		"quiet": Quiet,
-		"group_immediate": GroupImmediate,
-	}[in]
-
-	if exists {
-		*po = flag
-		return nil
-	}
-	return fmt.Errorf("Invalid output %s", in)
-}
 
 // Run implements the running part of 'plz run'.
 func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, remote, env, inTmp bool, dir string) {

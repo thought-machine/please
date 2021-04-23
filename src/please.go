@@ -167,9 +167,9 @@ var opts struct {
 		InTempDir  bool   `long:"in_tmp_dir" description:"Runs in a temp directory, setting env variables and copying in runtime data similar to tests."`
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Parallel   struct {
-			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
-			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
-			Output         run.ParallelOutput `short:"o" long:"output" description:"Output (default, quiet, group_immediate)" default:"default"`
+			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Quiet          bool               `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			Output         run.ParallelOutput `short:"o" long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
