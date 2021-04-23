@@ -57,7 +57,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, r
 }
 
 func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool, run int) {
-	hash, err := runtimeHash(state, target, runRemotely, run)
+	hash, err := runtimeHash(tid, state, target, runRemotely, run)
 	if err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to calculate target hash")
 		return
@@ -565,9 +565,15 @@ func verifyHash(state *core.BuildState, filename string, hash []byte) bool {
 }
 
 // runtimeHash returns the runtime hash of a target, or an empty slice if running remotely.
-func runtimeHash(state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) ([]byte, error) {
+func runtimeHash(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) ([]byte, error) {
 	if runRemotely {
 		return nil, nil
+	}
+	if target.Local {
+		// If the test is marked to run locally, download the inputs as we need these to calculate the runtime hash.
+		if err := state.DownloadInputsIfNeeded(tid, target, true); err != nil {
+			return nil, err
+		}
 	}
 	hash, err := build.RuntimeHash(state, target, run)
 	if err == nil {
