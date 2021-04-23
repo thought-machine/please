@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -165,7 +166,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		if needCoverage {
 			files = append(files, path.Base(target.CoverageFile()))
 		}
-		return state.Cache == nil || !state.Cache.Retrieve(target, hash, files)
+		return !retrieveFromCache(state, target, hash, files)
 	}
 
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
@@ -213,6 +214,26 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	}
 
 	logTargetResults(tid, state, target, coverage, run)
+}
+
+func retrieveFromCache(state *core.BuildState, target *core.BuildTarget, hash []byte, files []string) bool {
+	if state.Cache == nil {
+		return false
+	}
+	if state.Cache.Retrieve(target, hash, files) {
+		// Record the xattr if we might've retrieved from the http cache.
+		if state.Config.Cache.HTTPURL != "" {
+			for _, f := range files {
+				fullPath := filepath.Join(target.OutDir(), f)
+				if err := fs.RecordAttr(fullPath, hash, xattrName, state.XattrsSupported); err != nil {
+					log.Warningf("%v failed to set hash on %s: %w", target, fullPath, err)
+					return false
+				}
+			}
+		}
+		return true // got from cache
+	}
+	return false
 }
 
 // doFlakeRun runs a test repeatably until it succeeds or exceeds the max number of flakes for the test
