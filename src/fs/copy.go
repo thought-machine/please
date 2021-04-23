@@ -59,3 +59,23 @@ func RecursiveCopyOrLinkFile(from string, to string, mode os.FileMode, link, fal
 	}
 	return CopyOrLinkFile(from, to, info.Mode(), mode, link, fallback)
 }
+
+type LinkFunc func(string, string) error
+
+// LinkIfNotExists creates dest as a link to src if it doesn't already exist.
+func LinkIfNotExists(src, dest string, f LinkFunc) {
+	if PathExists(dest) {
+		return
+	}
+	Walk(src, func(name string, isDir bool) error {
+		if !isDir {
+			fullDest := path.Join(dest, name[len(src):])
+			if err := EnsureDir(fullDest); err != nil {
+				log.Warning("Failed to create directory for %s: %s", fullDest, err)
+			} else if err := f(name, fullDest); err != nil && !os.IsExist(err) {
+				log.Warning("Failed to create %s: %s", fullDest, err)
+			}
+		}
+		return nil
+	})
+}

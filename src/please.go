@@ -768,13 +768,16 @@ var buildFunctions = map[string]func() int{
 
 		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
 			if opts.Codegen.Gitignore != "" {
-				if !state.Config.Build.LinkGeneratedSources {
-					log.Warning("You're updating a .gitignore with generated sources but Please isn't configured to link generated sources. See `plz help LinkGeneratedSources` for more information. ")
-				}
 				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Codegen.Gitignore)
 				if err != nil {
 					log.Fatalf("failed to update gitignore: %v", err)
 				}
+			}
+
+			// This may seem counter intuitive but if this was set, we would've linked during the build.
+			// If we've opted to not automatically link generated sources during the build, we should link them now.
+			if !state.Config.Build.LinkGeneratedSources {
+				generate.LinkGeneratedSources(state.Graph, state.ExpandOriginalLabels())
 			}
 			return 0
 		}
