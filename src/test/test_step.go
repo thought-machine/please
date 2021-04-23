@@ -570,7 +570,7 @@ func runtimeHash(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		return nil, nil
 	}
 	if target.Local {
-		// If the test is marked to run locally, download the inputs as we need these to calculate the rubtime hash.
+		// If the test is marked to run locally, download the inputs as we need these to calculate the runtime hash.
 		if err := state.DownloadInputsIfNeeded(tid, target, true); err != nil {
 			return nil, err
 		}
