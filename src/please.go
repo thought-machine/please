@@ -471,6 +471,7 @@ var buildFunctions = map[string]func() int{
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
 			output := opts.Run.Parallel.Output
 			if opts.Run.Parallel.Quiet {
+				log.Warningf("--quiet has been deprecated in favour of --output=quiet")
 				output = run.Quiet
 			}
 			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
