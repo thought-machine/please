@@ -1013,7 +1013,6 @@ func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix s
 	}
 }
 
-
 // fetchRemoteFile fetches a remote file from a URL.
 // This is a builtin for better efficiency and more control over the whole process.
 func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {

@@ -36,6 +36,7 @@ func UpdateGitignore(graph *core.BuildGraph, labels []core.BuildLabel, gitignore
 	return scm.NewFallback(core.RepoRoot).IgnoreFiles(gitignore, files)
 }
 
+// LinkGeneratedSources will link any generated sources for the outputs of the given labels
 func LinkGeneratedSources(graph *core.BuildGraph, labels []core.BuildLabel) {
 	for _, l := range labels {
 		target := graph.TargetOrDie(l)
