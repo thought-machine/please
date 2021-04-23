@@ -25,6 +25,30 @@ import (
 
 var log = logging.MustGetLogger("run")
 
+type ParallelOutput uint
+
+const (
+	Default ParallelOutput = iota
+	Quiet
+	GroupImmediate
+)
+
+// UnmarshalFlag unmarshals a parallel output from a command line flag. Implementation of flags.Unmarshaler interface.
+func (po *ParallelOutput) UnmarshalFlag(in string) error {
+	in = strings.ToLower(in)
+	flag, exists := map[string]ParallelOutput{
+		"default": Default,
+		"quiet": Quiet,
+		"group_immediate": GroupImmediate,
+	}[in]
+
+	if exists {
+		*po = flag
+		return nil
+	}
+	return fmt.Errorf("Invalid output %s", in)
+}
+
 // Run implements the running part of 'plz run'.
 func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, remote, env, inTmp bool, dir string) {
 	prepareRun(dir, inTmp)
@@ -36,7 +60,7 @@ func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string,
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
 // The given context can be used to control the lifetime of the subprocesses.
-func Parallel(ctx context.Context, state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, quiet, remote, env, detach, inTmp bool, dir string) int {
+func Parallel(ctx context.Context, state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, output ParallelOutput, remote, env, detach, inTmp bool, dir string) int {
 	prepareRun(dir, inTmp)
 
 	limiter := make(chan struct{}, numTasks)
@@ -46,7 +70,16 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 		g.Go(func() error {
 			limiter <- struct{}{}
 			defer func() { <-limiter }()
-			return run(state, label, args, true, quiet, remote, env, detach, inTmp, dir)
+
+			quiet := output == Quiet || output == GroupImmediate
+			out, err := run(state, label, args, true, quiet, remote, env, detach, inTmp, dir)
+
+			if output == GroupImmediate {
+				fmt.Println(label)
+				os.Stderr.Write(out)
+			}
+
+			return err
 		})
 	}
 	if err := g.Wait(); err != nil {
@@ -65,7 +98,8 @@ func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args
 	prepareRun(dir, inTmp)
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		if err := run(state, label, args, true, quiet, remote, env, false, inTmp, dir); err != nil {
+		_, err := run(state, label, args, true, quiet, remote, env, false, inTmp, dir)
+		if err != nil {
 			log.Error("%s", err)
 			return err.(*exitError).code
 		}
@@ -83,7 +117,7 @@ func prepareRun(dir string, inTmp bool) {
 // If fork is true then we fork to run the target and return any error from the subprocesses.
 // If it's false this function never returns (because we either win or die; it's like
 // Game of Thrones except rather less glamorous).
-func run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, fork, quiet, remote, setenv, detach, tmpDir bool, dir string) error {
+func run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, fork, quiet, remote, setenv, detach, tmpDir bool, dir string) ([]byte, error) {
 	// This is a bit strange as normally if you run a binary for another platform, this will fail. In some cases
 	// this can be quite useful though e.g. to compile a binary for a target arch, then run an .sh script to
 	// push that to docker.
@@ -105,13 +139,13 @@ func run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string,
 		if state.RemoteClient == nil {
 			log.Fatalf("You must configure remote execution to use plz run --remote")
 		}
-		return state.RemoteClient.Run(target)
+		return nil, state.RemoteClient.Run(target)
 	}
 
 	if tmpDir {
 		var err error
 		if dir, err = prepareRunDir(state, target); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -173,14 +207,14 @@ func run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string,
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Dir = dir
-		return toExitError(cmd.Start(), args, nil)
+		return nil, toExitError(cmd.Start(), args, nil)
 	}
 	// Run as a normal subcommand.
 	// Note that we don't connect stdin. It doesn't make sense for multiple processes.
 	// The process executor doesn't actually support not having a timeout, but the max is ~290 years so nobody
 	// should know the difference.
 	_, output, err := process.New("").ExecWithTimeout(nil, dir, env, time.Duration(math.MaxInt64), false, false, !quiet, args)
-	return toExitError(err, args, output)
+	return output, toExitError(err, args, output)
 }
 
 func prepareRunDir(state *core.BuildState, target *core.BuildTarget) (string, error) {

@@ -169,6 +169,7 @@ var opts struct {
 		Parallel   struct {
 			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			Output         run.ParallelOutput `short:"o" long:"output" description:"Output (default, quiet, group_immediate)" default:"default"`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -468,7 +469,11 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
-			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
+			output := opts.Run.Parallel.Output
+			if opts.Run.Parallel.Quiet {
+				output = run.Quiet
+			}
+			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
 		return 1
 	},
