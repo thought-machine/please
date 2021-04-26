@@ -58,8 +58,7 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 			quiet := output == Quiet || output == GroupImmediate
 			out, combined, err := run(state, label, args, true, quiet, remote, env, detach, inTmp, dir)
 
-			switch output {
-			case GroupImmediate:
+			if output == GroupImmediate {
 				fmt.Println(label)
 				if err != nil {
 					os.Stderr.Write(combined)
