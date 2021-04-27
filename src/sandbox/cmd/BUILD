@@ -1,7 +1,9 @@
 go_binary(
-    name = "please_unshare",
+    name = "sandbox",
     srcs = [
         "main.go",
     ],
-    deps = ["//src/process"],
+    deps = [
+        "//src/sandbox",
+    ],
 )

@@ -6,10 +6,8 @@ cgo_library(
     go_srcs = [
         "unshare.go",
     ],
-    visibility = ["//src:please"],
+    visibility = ["//src/..."],
     deps = [
-        "//src/core",
         "//src/process",
-        "//third_party/go:logging",
     ],
 )

@@ -7,15 +7,9 @@ import (
 	"strings"
 	"syscall"
 
-	"gopkg.in/op/go-logging.v1"
-
-	"github.com/thought-machine/please/src/core"
-
 	// #include "sandbox.h"
 	"C"
 )
-
-var log = logging.MustGetLogger("sandbox")
 
 
 // mdLazytime is the bit for lazily flushing disk writes.
@@ -49,13 +43,12 @@ func Sandbox(args []string) error {
 	}
 
 	if tmpDir != "" {
-		cmd.Dir = core.SandboxDir
+		cmd.Dir = "/tmp/plz_sandbox" //TODO(jpoole):
 		if err := rewriteEnvVars(tmpDir); err != nil {
 			return err
 		}
 	}
 
-	log.Info("Started sandbox")
 	return cmd.Run()
 }
 
