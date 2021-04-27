@@ -1430,11 +1430,6 @@ func (target *BuildTarget) AddNamedOutput(name, output string) {
 	target.namedOutputs[name] = target.insert(target.namedOutputs[name], output)
 }
 
-// AddOutput adds a new output to the target if it's not already there.
-func (target *BuildTarget) ShouldSandbox() bool {
-	return target.Sandbox
-}
-
 // insert adds a string into a slice if it's not already there. Sorted order is maintained.
 func (target *BuildTarget) insert(sl []string, s string) []string {
 	if s == "" {
