@@ -6,17 +6,28 @@ set -e
 VERSION=`curl -fsSL https://get.please.build/latest_version`
 # Find the os / arch to download. You can do this quite nicely with go env
 # but we use this script on machines that don't necessarily have Go itself.
-OS=`uname`
-if [ "$OS" = "Linux" ]; then
-    GOOS="linux"
-elif [ "$OS" = "Darwin" ]; then
-    GOOS="darwin"
-else
-    echo "Unknown operating system $OS"
-    exit 1
-fi
 
-PLEASE_URL="https://get.please.build/${GOOS}_amd64/${VERSION}/please_${VERSION}.tar.gz"
+case "`uname`" in
+  Linux)
+    GOOS="linux";;
+  Darwin)
+    GOOS="darwin";;
+  *)
+    echo "Unknown operating system $(uname)"
+    exit 1;;
+esac
+
+case "`uname -i`" in
+  arm*)
+    GOARCH="arm64";;
+  x86_64|amd64)
+    GOARCH="amd64";;
+  *)
+    echo "Unknown CPU arch $(uname -i)"
+    exit 1;;
+esac
+
+PLEASE_URL="https://get.please.build/${GOOS}_${GOARCH}/${VERSION}/please_${VERSION}.tar.gz"
 
 LOCATION="${HOME}/.please"
 DIR="${LOCATION}/${VERSION}"
