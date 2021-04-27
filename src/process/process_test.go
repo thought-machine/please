@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -9,19 +10,19 @@ import (
 )
 
 func TestExecWithTimeout(t *testing.T) {
-	out, _, err := New("").ExecWithTimeout(nil, "", nil, 10*time.Second, false, false, false, []string{"true"})
+	out, _, err := New("").ExecWithTimeout(context.Background(), nil, "", nil, 10*time.Second, false, false, false, []string{"true"})
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(out))
 }
 
 func TestExecWithTimeoutFailure(t *testing.T) {
-	out, _, err := New("").ExecWithTimeout(nil, "", nil, 10*time.Second, false, false, false, []string{"false"})
+	out, _, err := New("").ExecWithTimeout(context.Background(), nil, "", nil, 10*time.Second, false, false, false, []string{"false"})
 	assert.Error(t, err)
 	assert.Equal(t, 0, len(out))
 }
 
 func TestExecWithTimeoutDeadline(t *testing.T) {
-	out, _, err := New("").ExecWithTimeout(nil, "", nil, 1*time.Nanosecond, false, false, false, []string{"sleep", "10"})
+	out, _, err := New("").ExecWithTimeout(context.Background(), nil, "", nil, 1*time.Nanosecond, false, false, false, []string{"sleep", "10"})
 	assert.Error(t, err)
 	assert.True(t, strings.HasPrefix(err.Error(), "Timeout exceeded"))
 	assert.Equal(t, 0, len(out))
