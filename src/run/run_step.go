@@ -55,25 +55,32 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 			limiter <- struct{}{}
 			defer func() { <-limiter }()
 
-			quiet := output == Quiet || output == GroupImmediate
-			out, combined, err := run(state, label, args, true, quiet, remote, env, detach, inTmp, dir)
+			var out []byte
+			var err error
+			switch output {
+			case GroupImmediate:
+				out, _, err = run(state, label, args, true, true, remote, env, detach, inTmp, dir)
 
-			if output == GroupImmediate {
 				fmt.Println(label)
-				if err != nil {
-					os.Stderr.Write(combined)
-				} else {
+				if err == nil {
 					os.Stdout.Write(out)
 				}
+			case Quiet:
+				_, _, err = run(state, label, args, true, true, remote, env, detach, inTmp, dir)
+			case Default:
+				fallthrough
+			default:
+				_, _, err = run(state, label, args, true, false, remote, env, detach, inTmp, dir)
+			}
+
+			if err != nil {
+				log.Error("Command failed: %s", err)
 			}
 
 			return err
 		})
 	}
 	if err := g.Wait(); err != nil {
-		if ctx.Err() != context.Canceled { // Don't error if the context killed the process.
-			log.Error("Command failed: %s", err)
-		}
 		return err.(*exitError).code
 	}
 	return 0
