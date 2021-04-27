@@ -50,15 +50,15 @@ var config *core.Configuration
 var opts struct {
 	Usage      string `usage:"Please is a high-performance multi-language build system.\n\nIt uses BUILD files to describe what to build and how to build it.\nSee https://please.build for more information about how it works and what Please can do for you."`
 	BuildFlags struct {
-		Config     string              `short:"c" long:"config" env:"PLZ_BUILD_CONFIG" description:"Build config to use. Defaults to opt."`
-		Arch       cli.Arch            `short:"a" long:"arch" description:"Architecture to compile for."`
-		RepoRoot   cli.Filepath        `short:"r" long:"repo_root" description:"Root of repository to build."`
-		NumThreads int                 `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
-		Include    []string            `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
-		Exclude    []string            `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
-		Option     ConfigOverrides     `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
-		Profile    core.ConfigProfiles `long:"profile" env:"PLZ_CONFIG_PROFILE" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
-		PreTargets []core.BuildLabel   `long:"pre" hidden:"true" description:"Targets to build before the other command-line ones. Sometimes useful to debug targets generated as part of a post-build function."`
+		Config     string               `short:"c" long:"config" env:"PLZ_BUILD_CONFIG" description:"Build config to use. Defaults to opt."`
+		Arch       cli.Arch             `short:"a" long:"arch" description:"Architecture to compile for."`
+		RepoRoot   cli.Filepath         `short:"r" long:"repo_root" description:"Root of repository to build."`
+		NumThreads int                  `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
+		Include    []string             `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
+		Exclude    []string             `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
+		Option     ConfigOverrides      `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
+		Profile    []core.ConfigProfile `long:"profile" env:"PLZ_CONFIG_PROFILE" env-delim:";" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
+		PreTargets []core.BuildLabel    `long:"pre" hidden:"true" description:"Targets to build before the other command-line ones. Sometimes useful to debug targets generated as part of a post-build function."`
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
@@ -933,7 +933,7 @@ func testTargets(target core.BuildLabel, args []string, failed bool, resultsFile
 
 // readConfig reads the initial configuration files
 func readConfig(forceUpdate bool) *core.Configuration {
-	cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile.Strings())
+	cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	} else if err := cfg.ApplyOverrides(opts.BuildFlags.Option); err != nil {
@@ -1069,7 +1069,7 @@ func initBuild(args []string) string {
 		}
 		config = core.DefaultConfiguration()
 		if command == "tool" {
-			if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile.Strings()); err == nil {
+			if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
 				config = cfg
 			}
 		}
