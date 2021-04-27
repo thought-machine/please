@@ -462,6 +462,16 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 			state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached (unchanged)")
 		}
 		buildLinks(state, target)
+
+		// If we could've potentially pulled from the http cache, we need to write the xattrs back as they will be
+		// missing.
+		if state.Config.Cache.HTTPURL != "" {
+			if err := writeRuleHash(state, target); err != nil {
+				log.Warningf("failed to write target hash: %w", err)
+				return false
+			}
+		}
+
 		return true // got from cache
 	}
 	log.Debug("Nothing retrieved from remote cache for %s", target.Label)
