@@ -69,8 +69,12 @@ func readConfigFile(config *Configuration, filename string) error {
 // ReadDefaultConfigFiles reads all the config files from the default locations and
 // merges them into a config object.
 // The repo root must have already have been set before calling this.
-func ReadDefaultConfigFiles(profiles []string) (*Configuration, error) {
-	return ReadConfigFiles(defaultConfigFiles(), profiles)
+func ReadDefaultConfigFiles(profiles []ConfigProfile) (*Configuration, error) {
+	s := make([]string, len(profiles))
+	for i, p := range profiles {
+		s[i] = string(p)
+	}
+	return ReadConfigFiles(defaultConfigFiles(), s)
 }
 
 // defaultGlobalConfigFiles returns the set of global default config file names.
@@ -887,16 +891,4 @@ func (profile ConfigProfile) Complete(match string) (completions []flags.Complet
 		}
 	}
 	return completions
-}
-
-// ConfigProfiles makes it easier to convert ConfigProfile slices.
-type ConfigProfiles []ConfigProfile
-
-// Strings converts this to a slice of strings.
-func (profiles ConfigProfiles) Strings() []string {
-	ret := make([]string, len(profiles))
-	for i, p := range profiles {
-		ret[i] = string(p)
-	}
-	return ret
 }

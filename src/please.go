@@ -50,15 +50,15 @@ var config *core.Configuration
 var opts struct {
 	Usage      string `usage:"Please is a high-performance multi-language build system.\n\nIt uses BUILD files to describe what to build and how to build it.\nSee https://please.build for more information about how it works and what Please can do for you."`
 	BuildFlags struct {
-		Config     string              `short:"c" long:"config" env:"PLZ_BUILD_CONFIG" description:"Build config to use. Defaults to opt."`
-		Arch       cli.Arch            `short:"a" long:"arch" description:"Architecture to compile for."`
-		RepoRoot   cli.Filepath        `short:"r" long:"repo_root" description:"Root of repository to build."`
-		NumThreads int                 `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
-		Include    []string            `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
-		Exclude    []string            `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
-		Option     ConfigOverrides     `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
-		Profile    core.ConfigProfiles `long:"profile" env:"PLZ_CONFIG_PROFILE" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
-		PreTargets []core.BuildLabel   `long:"pre" hidden:"true" description:"Targets to build before the other command-line ones. Sometimes useful to debug targets generated as part of a post-build function."`
+		Config     string               `short:"c" long:"config" env:"PLZ_BUILD_CONFIG" description:"Build config to use. Defaults to opt."`
+		Arch       cli.Arch             `short:"a" long:"arch" description:"Architecture to compile for."`
+		RepoRoot   cli.Filepath         `short:"r" long:"repo_root" description:"Root of repository to build."`
+		NumThreads int                  `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
+		Include    []string             `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
+		Exclude    []string             `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
+		Option     ConfigOverrides      `short:"o" long:"override" env:"PLZ_OVERRIDES" env-delim:";" description:"Options to override from .plzconfig (e.g. -o please.selfupdate:false)"`
+		Profile    []core.ConfigProfile `long:"profile" env:"PLZ_CONFIG_PROFILE" env-delim:";" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
+		PreTargets []core.BuildLabel    `long:"pre" hidden:"true" description:"Targets to build before the other command-line ones. Sometimes useful to debug targets generated as part of a post-build function."`
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
@@ -167,8 +167,9 @@ var opts struct {
 		InTempDir  bool   `long:"in_tmp_dir" description:"Runs in a temp directory, setting env variables and copying in runtime data similar to tests."`
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Parallel   struct {
-			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
-			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Quiet          bool               `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
+			Output         run.ParallelOutput `short:"o" long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -468,7 +469,12 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
-			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
+			output := opts.Run.Parallel.Output
+			if opts.Run.Parallel.Quiet {
+				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
+				output = run.Quiet
+			}
+			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
 		return 1
 	},
@@ -927,7 +933,7 @@ func testTargets(target core.BuildLabel, args []string, failed bool, resultsFile
 
 // readConfig reads the initial configuration files
 func readConfig(forceUpdate bool) *core.Configuration {
-	cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile.Strings())
+	cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	} else if err := cfg.ApplyOverrides(opts.BuildFlags.Option); err != nil {
@@ -1063,7 +1069,7 @@ func initBuild(args []string) string {
 		}
 		config = core.DefaultConfiguration()
 		if command == "tool" {
-			if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile.Strings()); err == nil {
+			if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
 				config = cfg
 			}
 		}
