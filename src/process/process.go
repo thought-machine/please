@@ -103,9 +103,6 @@ func (e *Executor) ExecWithTimeout(ctx context.Context, target Target, dir strin
 	select {
 	case err = <-ch:
 		// Do nothing.
-	case <-time.After(timeout):
-		e.KillProcess(cmd)
-		err = fmt.Errorf("Timeout exceeded: %s", outerr.String())
 	case <-ctx.Done():
 		err = ctx.Err()
 		e.KillProcess(cmd)

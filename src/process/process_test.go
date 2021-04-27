@@ -2,7 +2,6 @@ package process
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -24,7 +23,7 @@ func TestExecWithTimeoutFailure(t *testing.T) {
 func TestExecWithTimeoutDeadline(t *testing.T) {
 	out, _, err := New("").ExecWithTimeout(context.Background(), nil, "", nil, 1*time.Nanosecond, false, false, false, []string{"sleep", "10"})
 	assert.Error(t, err)
-	assert.True(t, strings.HasPrefix(err.Error(), "Timeout exceeded"))
+	assert.Equal(t, context.DeadlineExceeded, err)
 	assert.Equal(t, 0, len(out))
 }
 
