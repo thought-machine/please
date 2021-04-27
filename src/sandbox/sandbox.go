@@ -7,13 +7,22 @@ import (
 	"strings"
 	"syscall"
 
+	"gopkg.in/op/go-logging.v1"
+
+	"github.com/thought-machine/please/src/core"
+
 	// #include "sandbox.h"
 	"C"
 )
 
+var log = logging.MustGetLogger("sandbox")
+
+
 // mdLazytime is the bit for lazily flushing disk writes.
 // TODO(jpoole): find out if there's a reason this isn't in syscall
 const mdLazytime = 1 << 25
+
+const sandboxDirsVar = "SANDBOX_DIRS"
 
 func Sandbox(args []string) error {
 	cmd := exec.Command(args[0], args[1:]...)
@@ -21,21 +30,32 @@ func Sandbox(args []string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
-	// TODO(jpoole): configure this
-	cmd.Dir = "/tmp/plz_sandbox"
 
 	tmpDir := os.Getenv("TMP_DIR")
 	if err := mountTmp(tmpDir); err != nil {
 		return err
 	}
+
+	if err := mountProc(); err != nil {
+		return err
+	}
+
 	if i := C.lo_up(); i < 0 {
 		return fmt.Errorf("failed to bring loopback interface up")
 	}
 
-	if err := rewriteEnvVars(tmpDir); err != nil {
-		return err
+	if err := mountSandboxDirs(); err != nil {
+		return fmt.Errorf("failed to mount over sandboxed dirs: %w", err)
 	}
 
+	if tmpDir != "" {
+		cmd.Dir = core.SandboxDir
+		if err := rewriteEnvVars(tmpDir); err != nil {
+			return err
+		}
+	}
+
+	log.Info("Started sandbox")
 	return cmd.Run()
 }
 
@@ -62,12 +82,12 @@ func mountTmp(tmpDir string) error {
 	}
 
 	// Remounting / as private is necessary so that the tmpfs mount isn't visible to anyone else.
-	if err := syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, ""); err != nil {
+	if err := syscall.Mount("", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, ""); err != nil {
 		return fmt.Errorf("failed to mount root: %w", err)
 	}
 
 	flags := mdLazytime | syscall.MS_NOATIME | syscall.MS_NODEV | syscall.MS_NOSUID
-	if err := syscall.Mount("tmpfs", "/tmp", "tmpfs", uintptr(flags), ""); err != nil {
+	if err := syscall.Mount("", "/tmp", "tmpfs", uintptr(flags), ""); err != nil {
 		return fmt.Errorf("failed to mount /tmp: %w", err)
 	}
 
@@ -88,8 +108,29 @@ func mountTmp(tmpDir string) error {
 		return fmt.Errorf("failed to bind %s to %s : %w", tmpDir, dir, err)
 	}
 
-	if err := syscall.Mount("none", "/", "", syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_BIND, ""); err != nil {
+	if err := syscall.Mount("", "/", "", syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_BIND, ""); err != nil {
 		return fmt.Errorf("failed to remount root as readonly: %s", err)
 	}
 	return nil
+}
+
+func mountProc() error {
+	if err := syscall.Mount("proc", "/proc", "proc", 0, ""); err != nil {
+		return fmt.Errorf("failed to mount /proc: %w", err)
+	}
+	return nil
+}
+
+func mountSandboxDirs() error {
+	dirs := strings.Split(os.Getenv(sandboxDirsVar), ",")
+	for _, d := range dirs {
+		if d == "" {
+			continue
+		}
+		if err := syscall.Mount("", d, "tmpfs", mdLazytime | syscall.MS_NOATIME | syscall.MS_NODEV | syscall.MS_NOSUID, ""); err != nil {
+			return fmt.Errorf("failed to mount sandbox dir %s: %w", d, err)
+		}
+	}
+
+	return os.Unsetenv(sandboxDirsVar)
 }

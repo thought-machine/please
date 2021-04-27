@@ -8,6 +8,8 @@ cgo_library(
     ],
     visibility = ["//src:please"],
     deps = [
+        "//src/core",
         "//src/process",
+        "//third_party/go:logging",
     ],
 )

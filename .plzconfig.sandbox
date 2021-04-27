@@ -1,0 +1,4 @@
+[sandbox]
+build = true
+test = true
+tool = ; use plz sandbox

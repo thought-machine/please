@@ -13,9 +13,12 @@ import (
 // TODO(jpoole): We may want to sandbox mount and net separately
 func (e *Executor) ExecCommand(sandbox bool, command string, args ...string) *exec.Cmd {
 	// If we're sandboxing, run the sandbox tool to set up the network, mount, etc.
-	if sandbox && e.shouldNamespace {
+	if sandbox {
 		// re-exec into `plz sandbox` if we're using the built in sandboxing
 		if e.usePleaseSandbox {
+			if !e.shouldNamespace {
+				log.Fatalf("can't use please sandbox and not namespace")
+			}
 			args = append([]string{"sandbox", command}, args...)
 			plz, err := os.Executable()
 			if err != nil {

@@ -150,7 +150,7 @@ def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cm
             data:list|dict=None, visibility:list=None, timeout:int=0, needs_transitive_deps:bool=False,
             flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False, test_outputs:list=None,
             output_is_complete:bool=True, requires:list=None, sandbox:bool=None, size:str=None, local:bool=False,
-            pass_env:list=None, exit_on_error:bool=CONFIG.EXIT_ON_ERROR):
+            pass_env:list=None, env:dict=None, exit_on_error:bool=CONFIG.EXIT_ON_ERROR):
     """A rule which creates a test with an arbitrary command.
 
     The command must return zero on success and nonzero on failure. Test results are written
@@ -195,6 +195,7 @@ def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cm
              be sent remotely but executed on the local machine.
       pass_env: List of environment variables to be passed from outside. Any changes to them will
                 be recorded in this target's hash and will hence force it to rebuild.
+      env: A dict of environment variables to be set inside the test env.
       exit_on_error: If true, the executed command will fail immediately on any error (i.e. it is
                      executed in a shell with -e).
     """
@@ -226,6 +227,7 @@ def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cm
         local = local,
         pass_env = pass_env,
         exit_on_error = exit_on_error,
+        env = env,
     )
 
 

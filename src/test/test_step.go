@@ -262,7 +262,7 @@ func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget,
 	if target.Results.TestCases.AllSucceeded() {
 		// Clean up the test directory.
 		if state.CleanWorkdirs {
-			if err := os.RemoveAll(target.TestDir(run)); err != nil {
+			if err := fs.ForceRemove(state.ProcessExecutor, target.TestDir(run)); err != nil {
 				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
 			}
 		}
@@ -312,7 +312,7 @@ func pluralise(word string, quantity int) string {
 }
 
 func prepareTestDir(state *core.BuildState, target *core.BuildTarget, run int) error {
-	if err := os.RemoveAll(target.TestDir(run)); err != nil {
+	if err := fs.ForceRemove(state.ProcessExecutor, target.TestDir(run)); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(target.TestDir(run), core.DirPermissions); err != nil {
@@ -347,7 +347,7 @@ func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte,
 		return nil, err
 	}
 	log.Debugf("Running test %s#%d\nENVIRONMENT:\n%s\n%s", target.Label, run, strings.Join(env, "\n"), replacedCmd)
-	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, target.TestDir(run), env, target.TestTimeout, state.ShowAllOutput, replacedCmd, state.DebugTests)
+	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, target.TestDir(run), env, target.TestTimeout, state.ShowAllOutput, target.TestSandbox, replacedCmd, state.DebugTests)
 	return stderr, err
 }
 
