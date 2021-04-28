@@ -1,3 +1,12 @@
+Version 16.0.1
+--------------
+    * For remote execution, Please now downloads runtime data for locally
+      executed tests first, avoiding errors when calculating the runtime hash #1769
+    * Please now support multiple profiles provided by `--profile` #1773
+    * The http cache now record the hash on the files avoiding issues where
+      subsequent runs resulted in a cache miss #1771
+
+
 Version 16.0.0
 --------------
     * The migration guide detailing the breaking changes and how to address them

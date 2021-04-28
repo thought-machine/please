@@ -4,6 +4,6 @@ import (
 	"github.com/golang/snappy" // includes asm sources
 )
 
-func main(){
+func main() {
 	_ = snappy.MaxEncodedLen(1234)
 }

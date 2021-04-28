@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"runtime/pprof"
 	"strings"
 	"sync"
@@ -90,6 +91,7 @@ var opts struct {
 
 	Profile          string `long:"profile_file" hidden:"true" description:"Write profiling output to this file"`
 	MemProfile       string `long:"mem_profile_file" hidden:"true" description:"Write a memory profile to this file"`
+	MutexProfile     string `long:"mutex_profile_file" hidden:"true" description:"Write a contended mutex profile to this file"`
 	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
@@ -167,8 +169,9 @@ var opts struct {
 		InTempDir  bool   `long:"in_tmp_dir" description:"Runs in a temp directory, setting env variables and copying in runtime data similar to tests."`
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Parallel   struct {
-			NumTasks       int  `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
-			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Quiet          bool               `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
+			Output         run.ParallelOutput `short:"o" long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -468,7 +471,12 @@ var buildFunctions = map[string]func() int{
 				dir = originalWorkingDirectory
 			}
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
-			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, opts.Run.Parallel.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
+			output := opts.Run.Parallel.Output
+			if opts.Run.Parallel.Quiet {
+				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
+				output = run.Quiet
+			}
+			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
 		return 1
 	},
@@ -991,6 +999,7 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	}
 	config := readConfig(forceUpdate)
 	// Now apply any flags that override this
+	config.Profiling = opts.Profile != ""
 	if opts.Update.Latest || opts.Update.LatestPrerelease {
 		config.Please.Version.Unset()
 	} else if opts.Update.Version.IsSet {
@@ -1143,6 +1152,17 @@ func execute(command string) int {
 		}
 		defer f.Close()
 		defer pprof.WriteHeapProfile(f)
+	}
+	if opts.MutexProfile != "" {
+		runtime.SetMutexProfileFraction(1)
+		f, err := os.Create(opts.MutexProfile)
+		if err != nil {
+			log.Fatalf("Failed to open mutex profile file: %s", err)
+		}
+		defer f.Close()
+		defer func() {
+			pprof.Lookup("mutex").WriteTo(f, 0)
+		}()
 	}
 	defer worker.StopAll()
 	return buildFunctions[command]()

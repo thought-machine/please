@@ -27,6 +27,7 @@ func handleSignals() {
 		}
 		close(done)
 	}()
+
 	select {
 	case <-done:
 		log.Info("All exit handlers run, shutting down process")

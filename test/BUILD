@@ -327,6 +327,7 @@ plz_e2e_test(
     data = ["cycle/TEST_BUILD"],
     expect_output_contains = "Dependency cycle found",
     expected_failure = True,
+    timeout = 30,
     pre_cmd = "mv test/cycle/TEST_BUILD test/cycle/BUILD",
 )
 

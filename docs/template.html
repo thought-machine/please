@@ -1,6 +1,4 @@
 <!DOCTYPE html>
-<meta charset="UTF-8">
-
 <html lang="en" {{ if eq .Filename "index.html" }} class="smooth-scroll" {{ end }}>
   <head>
     <meta charset="utf-8" />
@@ -9,6 +7,12 @@
       name="description"
       content="Please is a cross-language build system with an emphasis on high performance, portability, extensibility and correctness."
     />
+    <meta property="og:title" content="{{ .Title }}" />
+    <meta 
+      property="og:description"
+      content="Please is a cross-language build system with an emphasis on high performance, portability, extensibility and correctness."
+    />
+    <meta property="og:image" content="https://please.build/images/triangle_t.png" />
 
     <title>{{ .Title }}</title>
 

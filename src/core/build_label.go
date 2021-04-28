@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -388,6 +389,11 @@ func (label BuildLabel) SubrepoLabel() BuildLabel {
 	return BuildLabel{Name: label.Subrepo}
 }
 
+// packageKey returns a key for this build label that only uses the subrepo and package parts.
+func (label BuildLabel) packageKey() packageKey {
+	return packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
+}
+
 // CanSee returns true if label can see the given dependency, or false if not.
 func (label BuildLabel) CanSee(state *BuildState, dep *BuildTarget) bool {
 	// Targets are always visible to other targets in the same directory.
@@ -435,7 +441,7 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	os.Setenv("PLZ_COMPLETE", match)
 	os.Unsetenv("GO_FLAGS_COMPLETION")
 	exec, _ := os.Executable()
-	out, _, err := process.New("").ExecWithTimeout(nil, "", os.Environ(), 10*time.Second, false, false, false, append([]string{exec}, os.Args[1:]...))
+	out, _, err := process.New("").ExecWithTimeout(context.Background(), nil, "", os.Environ(), 10*time.Second, false, false, false, append([]string{exec}, os.Args[1:]...))
 	if err != nil {
 		return nil
 	}
@@ -486,4 +492,11 @@ func (slice BuildLabels) Less(i, j int) bool {
 }
 func (slice BuildLabels) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
+}
+func (slice BuildLabels) String() string {
+	s := make([]string, len(slice))
+	for i, l := range slice {
+		s[i] = l.String()
+	}
+	return strings.Join(s, ", ")
 }

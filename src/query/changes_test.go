@@ -51,7 +51,7 @@ func TestDiffGraphsIncludeDirect(t *testing.T) {
 	assert.EqualValues(t, []core.BuildLabel{t1.Label, t2.Label}, DiffGraphs(s1, s2, nil, 1))
 }
 
-func TestDiffGraphslevel(t *testing.T) {
+func TestDiffGraphsLevel(t *testing.T) {
 	s1 := core.NewDefaultBuildState()
 	s2 := core.NewDefaultBuildState()
 	t1 := addTarget(s1, "//src/core:core", nil, "src/core/core.go")
@@ -94,10 +94,12 @@ func addTarget(state *core.BuildState, label string, dep *core.BuildTarget, sour
 			Package: t.Label.PackageName,
 		})
 	}
-	state.Graph.AddTarget(t)
 	if dep != nil {
 		t.AddDependency(dep.Label)
-		state.Graph.AddDependency(t.Label, dep.Label)
+	}
+	state.Graph.AddTarget(t)
+	if err := t.ResolveDependencies(state.Graph); err != nil {
+		log.Fatalf("Failed to resolve dependency %s -> %s: %s", t, dep, err)
 	}
 	pkg := state.Graph.PackageByLabel(t.Label)
 	if pkg == nil {
