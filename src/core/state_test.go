@@ -123,6 +123,24 @@ func TestComparePendingTasks(t *testing.T) {
 	assertEqualPriority(Stop, Stop)
 }
 
+func TestAddDepsToTarget(t *testing.T) {
+	state := NewDefaultBuildState()
+	_, builds, _, _, _ := state.TaskQueues() //nolint:dogsled
+	pkg := NewPackage("src/core")
+	target1 := addTargetDeps(state, pkg, "//src/core:target1", "//src/core:target2")
+	target2 := addTargetDeps(state, pkg, "//src/core:target2")
+	state.Graph.AddPackage(pkg)
+	state.QueueTarget(target1.Label, OriginalTarget, false, false)
+	task := <-builds
+	assert.Equal(t, target2.Label, task)
+	// Now simulate target2 being built and adding a new dep to target1 in its post-build function.
+	target3 := addTargetDeps(state, pkg, "//src/core:target3")
+	target1.AddDependency(target3.Label)
+	target2.FinishBuild()
+	task = <-builds
+	assert.Equal(t, target3.Label, task)
+}
+
 func addTarget(state *BuildState, name string, labels ...string) {
 	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Labels = labels
@@ -134,4 +152,14 @@ func addTarget(state *BuildState, name string, labels ...string) {
 	}
 	pkg.AddTarget(target)
 	state.Graph.AddTarget(target)
+}
+
+func addTargetDeps(state *BuildState, pkg *Package, name string, deps ...string) *BuildTarget {
+	target := NewBuildTarget(ParseBuildLabel(name, ""))
+	for _, d := range deps {
+		target.AddDependency(ParseBuildLabel(d, ""))
+	}
+	pkg.AddTarget(target)
+	state.Graph.AddTarget(target)
+	return target
 }

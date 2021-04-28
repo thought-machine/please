@@ -772,6 +772,15 @@ go_module(
 )
 
 go_module(
+    name = "cmap",
+    install = [
+        "...",
+    ],
+    module = "github.com/OneOfOne/cmap",
+    version = "ccaef7657ab896465978ddf580830288b61f9f6e",
+)
+
+go_module(
     name = "csslex",
     module = "github.com/x1ddos/csslex",
     version = "7894d8ab8bfebee68b6c32bacec8f5189b45c67f",
