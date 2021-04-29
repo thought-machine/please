@@ -17,7 +17,7 @@ case "`uname`" in
     exit 1;;
 esac
 
-case "`uname -i`" in
+case "`uname -m`" in
   arm*)
     GOARCH="arm64";;
   x86_64|amd64)
@@ -40,7 +40,7 @@ for x in `ls "$DIR"`; do
     ln -sf "${DIR}/${x}" "$LOCATION"
 done
 ln -sf "${LOCATION}/please" "${LOCATION}/plz"
-mkdir "${LOCATION}/bin"
+mkdir -p "${LOCATION}/bin"
 curl https://get.please.build/pleasew -s --output "${LOCATION}/bin/plz"
 chmod +x "${LOCATION}/bin/plz"
 
