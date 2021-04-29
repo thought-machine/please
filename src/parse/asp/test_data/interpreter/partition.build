@@ -1,1 +1,2 @@
-major, _, minor = '27.0.3'.partition('.0.')
+major, mid, minor = '27.0.3'.partition('.0.')
+start, sep, end = "begin sep end".rpartition("sep")
