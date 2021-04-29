@@ -12,11 +12,6 @@ import (
 	"archive/tar"
 	"bufio"
 	"fmt"
-	"github.com/coreos/go-semver/semver"
-	"github.com/hashicorp/go-retryablehttp"
-	"github.com/thought-machine/please/src/utils"
-	"github.com/ulikunitz/xz"
-	"gopkg.in/op/go-logging.v1"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -27,6 +22,12 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/coreos/go-semver/semver"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/thought-machine/please/src/utils"
+	"github.com/ulikunitz/xz"
+	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -60,7 +61,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	}
 	word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
 	if !updateCommand {
-		log.Warning("%s Please from version %s to %s", word, core.PleaseVersion, config.Please.Version.VersionString())
+		fmt.Fprintf(os.Stderr, "%s Please from version %s to %s", word, core.PleaseVersion, config.Please.Version.VersionString())
 	}
 
 	// Must lock here so that the update process doesn't race when running two instances
