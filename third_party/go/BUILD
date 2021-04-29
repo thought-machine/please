@@ -339,13 +339,6 @@ go_module(
 )
 
 go_module(
-    name = "queue",
-    install = ["queue"],
-    module = "github.com/Workiva/go-datastructures",
-    version = "v1.0.53",
-)
-
-go_module(
     name = "fsnotify",
     module = "github.com/fsnotify/fsnotify",
     version = "a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb",
