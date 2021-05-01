@@ -7,7 +7,7 @@ remote_file(
 genrule(
   name = "please_tools",
   srcs = [":download"],
-  cmd = "tar -xf $SRC",
+  cmd = "tar --no-same-owner -xf $SRC",
   outs = ["please_tools"],
 )
 
