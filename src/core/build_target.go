@@ -1175,7 +1175,7 @@ func (target *BuildTarget) AddTestTool(tool BuildInput) {
 	}
 }
 
-// TestTools returns all the data files for this rule.
+// TestTools returns all the test tool paths for this rule.
 func (target *BuildTarget) TestTools() []BuildInput {
 	ret := target.testTools[:]
 	if target.namedTestTools != nil {
