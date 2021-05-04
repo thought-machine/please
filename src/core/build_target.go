@@ -1175,15 +1175,20 @@ func (target *BuildTarget) AddTestTool(tool BuildInput) {
 	}
 }
 
+// TestTools returns all the data files for this rule.
 func (target *BuildTarget) TestTools() []BuildInput {
-	if len(target.namedTestTools) > 0 {
-		var tools []BuildInput
-		for _, tool := range target.namedTestTools {
-			tools = append(tools, tool...)
+	ret := target.testTools[:]
+	if target.namedTestTools != nil {
+		keys := make([]string, 0, len(target.namedTestTools))
+		for k := range target.namedTestTools {
+			keys = append(keys, k)
 		}
-		return tools
+		sort.Strings(keys)
+		for _, k := range keys {
+			ret = append(ret, target.namedTestTools[k]...)
+		}
 	}
-	return target.testTools
+	return ret
 }
 
 func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
