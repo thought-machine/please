@@ -1,4 +1,5 @@
 [sandbox]
 build = true
 test = true
-tool = ; use plz sandbox
+namespace = never
+tool = please_sandbox; use plz sandbox

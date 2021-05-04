@@ -12,11 +12,13 @@ import (
 //      of the other functions which are higher-level interfaces).
 // TODO(jpoole): We may want to sandbox mount and net separately
 func (e *Executor) ExecCommand(sandbox bool, command string, args ...string) *exec.Cmd {
+	shouldNamespace := e.namespace == NamespaceAlways || (e.namespace == NamespaceSandbox && sandbox)
+
 	// If we're sandboxing, run the sandbox tool to set up the network, mount, etc.
 	if sandbox {
 		// re-exec into `plz sandbox` if we're using the built in sandboxing
 		if e.usePleaseSandbox {
-			if !e.shouldNamespace {
+			if !shouldNamespace {
 				log.Fatalf("can't use please sandbox and not namespace")
 			}
 			args = append([]string{"sandbox", command}, args...)
@@ -39,7 +41,7 @@ func (e *Executor) ExecCommand(sandbox bool, command string, args ...string) *ex
 
 	// If we have any sort of sandboxing set up, we should always namespace, however we only namespace mount and net if
 	// we're sandboxing this rule.
-	if e.shouldNamespace {
+	if shouldNamespace {
 		cmd.SysProcAttr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID
 		if sandbox {
 			// If we're sandboxing, namespace network and mount

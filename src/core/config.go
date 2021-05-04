@@ -236,10 +236,6 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		config.Sandbox.Tool = config.Build.PleaseSandboxTool
 	}
 
-	if config.Sandbox.Namespace == "" && (config.Sandbox.Build || config.Sandbox.Test) {
-		config.Sandbox.Namespace = "true"
-	}
-
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,
@@ -454,7 +450,7 @@ type Configuration struct {
 	Sandbox struct {
 		Tool      string   `help:"The location of the tool to use for sandboxing. This can assume it is being run in a new network, user, and mount namespace on linux. If not set, Please will use 'plz sandbox'."`
 		Dir       []string `help:"Directories to hide within the sandbox"`
-		Namespace string   `help:"True to enable Linux namespacing. This is implied true if Tool, Build or Test are set. If set, user namespacing will be enabled for all rules. Mount and network will only be enabled if Build and Test are set, and the rules can be sandboxed."`
+		Namespace string   `help:"Set to 'always', to namespace all actions. Set to 'sandbox' to namespace only when sandboxing the build action. Defaults to 'never', under the assumption the sandbox tool will handle its own namespacing. If set, user namespacing will be enabled for all rules. Mount and network will only be enabled if the rule is to be sandboxed."`
 		Build     bool     `help:"True to sandbox individual build actions, which isolates them from network access and some aspects of the filesystem. Currently only works on Linux." var:"BUILD_SANDBOX"`
 		Test      bool     `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
 	} `help:"A config section describing settings relating to sandboxing of build actions."`

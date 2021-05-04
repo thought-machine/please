@@ -14,7 +14,7 @@ import (
 //
 // For example, `plz unshare bash` will open up a bash shell as a fake root user in a namespaced environment.
 func Unshare(args []string) error {
-	e := process.NewSandboxingExecutor(true, false, "")
+	e := process.NewSandboxingExecutor(true, process.NamespaceAlways, "")
 	cmd := e.ExecCommand(false, args[0], args[1:]...)
 
 	cmd.Stdout = os.Stdout
@@ -23,8 +23,6 @@ func Unshare(args []string) error {
 
 	// Add in more sandboxing so `plz unshare plz sandbox` works.
 	cmd.SysProcAttr.Cloneflags = cmd.SysProcAttr.Cloneflags | syscall.CLONE_NEWNET | syscall.CLONE_NEWNS
-
-	// TODO(jpoole): Read the docs. Attaching stdin and out doesn't seem to work with this.
 	cmd.SysProcAttr.Setpgid = false
 
 	err := cmd.Run()

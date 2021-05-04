@@ -19,11 +19,17 @@ import (
 
 var log = logging.MustGetLogger("progress")
 
+const (
+	NamespaceAlways = "always"
+	NamespaceNever = "never"
+	NamespaceSandbox = "sandbox"
+)
+
 // An Executor handles starting, running and monitoring a set of subprocesses.
 // It registers as a signal handler to attempt to terminate them all at process exit.
 type Executor struct {
 	// Whether we should set up linux namespaces at all
-	shouldNamespace bool
+	namespace string
 	// The tool that will do the network/mount sandboxing
 	sandboxTool      string
 	usePleaseSandbox bool
@@ -31,9 +37,12 @@ type Executor struct {
 	mutex            sync.Mutex
 }
 
-func NewSandboxingExecutor(shouldNamespace, usePleaseSandbox bool, sandboxTool string) *Executor {
+func NewSandboxingExecutor(usePleaseSandbox bool, namespace, sandboxTool string) *Executor {
+	if usePleaseSandbox {
+		log.Warning("The please built in sandboxing is experimental and may not work as expected. Caveat usor!")
+	}
 	o := &Executor{
-		shouldNamespace:  shouldNamespace,
+		namespace:        namespace,
 		usePleaseSandbox: usePleaseSandbox,
 		sandboxTool:      sandboxTool,
 		processes:        map[*exec.Cmd]struct{}{},
@@ -44,7 +53,7 @@ func NewSandboxingExecutor(shouldNamespace, usePleaseSandbox bool, sandboxTool s
 
 // New returns a new Executor.
 func New() *Executor {
-	return NewSandboxingExecutor(false, false, "")
+	return NewSandboxingExecutor(false, NamespaceNever, "")
 }
 
 // A Target is a minimal interface of what we need from a BuildTarget.
