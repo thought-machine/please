@@ -22,6 +22,7 @@ log.propagate = False  # Needed to stop double logging?
 flags.DEFINE_integer('size', 100000, 'Number of BUILD files to generate')
 flags.DEFINE_integer('seed', 42, 'Random seed')
 flags.DEFINE_string('root', 'tree', 'Directory to put all files under')
+flags.DEFINE_boolean('format', True, 'Autoformat all the generated files')
 FLAGS = flags.FLAGS
 
 
@@ -92,10 +93,11 @@ def main(argv):
         packages.append(dir)
         pkgset.add(dir)
         filenames.append(filename)
-    # Format them all up (in chunks to avoid 'argument too long')
-    n = 100
-    for i in Bar('Formatting files').iter(range(0, len(filenames), n)):
-        subprocess.check_call(['plz', 'fmt', '-w'] + filenames[i: i + n])
+    if FLAGS.format:
+        # Format them all up (in chunks to avoid 'argument too long')
+        n = 100
+        for i in Bar('Formatting files').iter(range(0, len(filenames), n)):
+            subprocess.check_call(['plz', 'fmt', '-w'] + filenames[i: i + n])
 
 
 def choose_deps(candidates:list) -> list:
