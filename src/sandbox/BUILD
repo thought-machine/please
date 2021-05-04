@@ -8,7 +8,6 @@ if CONFIG.OS == "linux":
         deps = [
             "//src/process",
         ],
-        cover = False,
     )
 
 else:
