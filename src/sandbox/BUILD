@@ -9,7 +9,6 @@ if CONFIG.OS == "linux":
             "//src/process",
         ],
     )
-
 else:
     go_library(
         name = "sandbox",
