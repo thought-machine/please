@@ -124,7 +124,8 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 	}
 
 	target := state.Graph.TargetOrDie(label.BuildLabel)
-	if !target.IsBinary {
+	// Non binary targets can be run if an override command is passed in
+	if !target.IsBinary && overrideCmd == "" {
 		log.Fatalf("Target %s cannot be run; it's not marked as binary", label)
 	}
 	if label.Annotation == "" && len(target.Outputs()) != 1 {
