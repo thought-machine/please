@@ -11,6 +11,7 @@ from math import log10
 
 from third_party.python import colorlog
 from third_party.python.absl import app, flags
+from third_party.python.progress.bar import Bar
 
 handler = colorlog.StreamHandler()
 handler.setFormatter(colorlog.ColoredFormatter('%(log_color)s%(levelname)s: %(message)s'))
@@ -69,8 +70,9 @@ def main(argv):
     packages = []
     pkgset = set()
     filenames = []
-    shutil.rmtree(FLAGS.root)
-    for i in range(FLAGS.size):
+    if os.path.exists(FLAGS.root):
+        shutil.rmtree(FLAGS.root)
+    for i in Bar('Generating files', max=FLAGS.size).iter(range(FLAGS.size)):
         depth = random.randint(1, 1 + log10(FLAGS.size))
         dir = '/'.join([FLAGS.root] + [random.choice(DIRNAMES) for _ in range(depth)])
         if dir in pkgset:
@@ -90,8 +92,10 @@ def main(argv):
         packages.append(dir)
         pkgset.add(dir)
         filenames.append(filename)
-    # Format them all up
-    subprocess.check_call(['plz', 'fmt', '-w'] + filenames)
+    # Format them all up (in chunks to avoid 'argument too long')
+    n = 100
+    for i in Bar('Formatting files').iter(range(0, len(filenames), n)):
+        subprocess.check_call(['plz', 'fmt', '-w'] + filenames[i: i + n])
 
 
 def choose_deps(candidates:list) -> list:
@@ -101,8 +105,6 @@ def choose_deps(candidates:list) -> list:
     n = random.randint(0, min(len(candidates), 10))
     label = lambda x: f'//{x}:{os.path.basename(x)}'
     return [label(random.choice(candidates)) for _ in range(n)]
-
-
 
 
 if __name__ == '__main__':

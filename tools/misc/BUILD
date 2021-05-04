@@ -34,5 +34,6 @@ python_binary(
     deps = [
         "//third_party/python:absl",
         "//third_party/python:colorlog",
+        "//third_party/python:progress",
     ],
 )
