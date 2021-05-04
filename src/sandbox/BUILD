@@ -3,7 +3,7 @@ if CONFIG.OS == "linux":
         name = "sandbox",
         srcs = ["sandbox_linux.go"],
         hdrs = ["sandbox.h"],
-        c_srcs = ["sandbox.c"],
+        c_srcs = ["sandbox_linux.c"],
         visibility = ["//src/..."],
         deps = [
             "//src/process",
