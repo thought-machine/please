@@ -1,13 +1,22 @@
-cgo_library(
-    name = "sandbox",
-    srcs = ["sandbox.go"],
-    hdrs = ["sandbox.h"],
-    c_srcs = ["sandbox.c"],
-    go_srcs = [
-        "unshare.go",
-    ],
-    visibility = ["//src/..."],
-    deps = [
-        "//src/process",
-    ],
-)
+if CONFIG.OS == "linux":
+    cgo_library(
+        name = "sandbox",
+        srcs = ["sandbox_linux.go"],
+        hdrs = ["sandbox.h"],
+        c_srcs = ["sandbox.c"],
+        visibility = ["//src/..."],
+        deps = [
+            "//src/process",
+        ],
+        cover = False,
+    )
+
+else:
+    go_library(
+        name = "sandbox",
+        srcs = ["sandbox_other.go"],
+        visibility = ["//src/..."],
+        deps = [
+            "//src/process",
+        ],
+    )
