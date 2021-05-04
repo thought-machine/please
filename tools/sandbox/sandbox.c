@@ -106,7 +106,7 @@ int mount_tmp(char** argv0) {
         perror("mount");
         return 1;
     }
-    if (setenv("TMPDIR", "/tmp", 1) != 0) {
+    if (setenv("TMPDIR", d, 1) != 0) {
         perror("setenv");
         return 1;
     }
