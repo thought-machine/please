@@ -168,6 +168,7 @@ var opts struct {
 		InWD       bool   `long:"in_wd" description:"When running locally, stay in the original working directory."`
 		InTempDir  bool   `long:"in_tmp_dir" description:"Runs in a temp directory, setting env variables and copying in runtime data similar to tests."`
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
+		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
 		Parallel   struct {
 			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Quiet          bool               `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
@@ -460,7 +461,7 @@ var buildFunctions = map[string]func() int{
 				log.Fatalf("%v expanded to too many targets: %v", opts.Run.Args.Target, annotatedOutputLabels)
 			}
 
-			run.Run(state, annotatedOutputLabels[0], opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir)
+			run.Run(state, annotatedOutputLabels[0], opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir, opts.Run.Cmd)
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},

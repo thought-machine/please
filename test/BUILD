@@ -323,11 +323,11 @@ plz_e2e_test(
 
 plz_e2e_test(
     name = "cyclic_dependency_test",
+    timeout = 30,
     cmd = "plz test //plz-out/tmp/test/cyclic_dependency_test._test/run_1/test/cycle:all",
     data = ["cycle/TEST_BUILD"],
     expect_output_contains = "Dependency cycle found",
     expected_failure = True,
-    timeout = 30,
     pre_cmd = "mv test/cycle/TEST_BUILD test/cycle/BUILD",
 )
 
