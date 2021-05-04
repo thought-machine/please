@@ -1,3 +1,12 @@
+Version 16.0.1
+--------------
+    * For remote execution, Please now downloads runtime data for locally
+      executed tests first, avoiding errors when calculating the runtime hash #1769
+    * Please now support multiple profiles provided by `--profile` #1773
+    * The http cache now record the hash on the files avoiding issues where
+      subsequent runs resulted in a cache miss #1771
+
+
 Version 16.0.0
 --------------
     * The migration guide detailing the breaking changes and how to address them
@@ -72,6 +81,11 @@ Version 16.0.0
     * Fixed some issues around python coverage on macOS #1735
     * Added `--in_tmp_dir` flag to `plz run` to run in the same temp directory
       that `plz test` would run in #1733
+    * `gentest()` can now accept lists for `cmd` and `test_cmd` #1760
+    * `plz-out` is now excluded from `glob()` results #1756
+    * Added a darwin_arm64 release for the new apple silicone. Will need to be
+      installed manually for now as `get.please.build` isn't aware of this
+      release yet.
 
 
 Version 15.16.0

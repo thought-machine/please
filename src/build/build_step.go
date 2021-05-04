@@ -58,21 +58,10 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 		target.SetState(core.Failed)
 		return
 	}
-
-	// Add any of the reverse deps that are now fully built to the queue.
-	for _, reverseDep := range state.Graph.ReverseDependencies(target) {
-		if reverseDep.State() == core.Active && state.Graph.AllDepsBuilt(reverseDep) && reverseDep.SyncUpdateState(core.Active, core.Pending) {
-			state.AddPendingBuild(reverseDep.Label, false)
-		}
-	}
+	// Mark the target as having finished building.
+	target.FinishBuild()
 	if target.IsTest && state.NeedTests && state.IsOriginalTarget(target) {
-		if state.TestSequentially {
-			state.AddPendingTest(target.Label, 1)
-		} else {
-			for runNum := 1; runNum <= state.NumTestRuns; runNum++ {
-				state.AddPendingTest(target.Label, runNum)
-			}
-		}
+		state.AddPendingTest(target)
 	}
 }
 
@@ -463,6 +452,16 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 			state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached (unchanged)")
 		}
 		buildLinks(state, target)
+
+		// If we could've potentially pulled from the http cache, we need to write the xattrs back as they will be
+		// missing.
+		if state.Config.Cache.HTTPURL != "" {
+			if err := writeRuleHash(state, target); err != nil {
+				log.Warningf("failed to write target hash: %w", err)
+				return false
+			}
+		}
+
 		return true // got from cache
 	}
 	log.Debug("Nothing retrieved from remote cache for %s", target.Label)

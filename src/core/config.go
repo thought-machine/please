@@ -69,8 +69,12 @@ func readConfigFile(config *Configuration, filename string) error {
 // ReadDefaultConfigFiles reads all the config files from the default locations and
 // merges them into a config object.
 // The repo root must have already have been set before calling this.
-func ReadDefaultConfigFiles(profiles []string) (*Configuration, error) {
-	return ReadConfigFiles(defaultConfigFiles(), profiles)
+func ReadDefaultConfigFiles(profiles []ConfigProfile) (*Configuration, error) {
+	s := make([]string, len(profiles))
+	for i, p := range profiles {
+		s[i] = string(p)
+	}
+	return ReadConfigFiles(defaultConfigFiles(), s)
 }
 
 // defaultGlobalConfigFiles returns the set of global default config file names.
@@ -574,6 +578,9 @@ type Configuration struct {
 	PleaseLocation string
 	// buildEnvStored is a cached form of BuildEnv.
 	buildEnvStored *storedBuildEnv
+	// Profiling can be set to true by a caller to enable CPU profiling in any areas that might
+	// want to take special effort about it.
+	Profiling bool
 
 	FeatureFlags struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
@@ -888,16 +895,4 @@ func (profile ConfigProfile) Complete(match string) (completions []flags.Complet
 		}
 	}
 	return completions
-}
-
-// ConfigProfiles makes it easier to convert ConfigProfile slices.
-type ConfigProfiles []ConfigProfile
-
-// Strings converts this to a slice of strings.
-func (profiles ConfigProfiles) Strings() []string {
-	ret := make([]string, len(profiles))
-	for i, p := range profiles {
-		ret[i] = string(p)
-	}
-	return ret
 }

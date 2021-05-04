@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/streamrail/concurrent-map"
+	cmap "github.com/streamrail/concurrent-map"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
@@ -177,6 +177,6 @@ func build(ctx context.Context, state *core.BuildState, labels []core.BuildLabel
 				BuildLabel: l,
 			}
 		}
-		go run.Parallel(ctx, state, als, nil, state.Config.Please.NumThreads, false, false, false, false, false, "")
+		go run.Parallel(ctx, state, als, nil, state.Config.Please.NumThreads, run.Default, false, false, false, false, "")
 	}
 }

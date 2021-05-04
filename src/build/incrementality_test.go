@@ -72,21 +72,24 @@ var KnownFields = map[string]bool{
 
 	// These fields we have thought about and decided that they shouldn't contribute to the
 	// hash because they don't affect the actual output of the target.
-	"Subrepo":             true,
-	"AddedPostBuild":      true,
-	"Flakiness":           true,
-	"NoTestOutput":        true,
-	"BuildTimeout":        true,
-	"TestTimeout":         true,
-	"state":               true,
-	"Results":             true, // Recall that unsuccessful test results aren't cached...
-	"resultsMux":          true,
-	"completedRuns":       true,
-	"BuildingDescription": true,
-	"ShowProgress":        true,
-	"Progress":            true,
-	"PassUnsafeEnv":       true,
-	"NeededForSubinclude": true,
+	"Subrepo":                true,
+	"AddedPostBuild":         true,
+	"Flakiness":              true,
+	"NoTestOutput":           true,
+	"BuildTimeout":           true,
+	"TestTimeout":            true,
+	"state":                  true,
+	"Results":                true, // Recall that unsuccessful test results aren't cached...
+	"resultsMux":             true,
+	"completedRuns":          true,
+	"BuildingDescription":    true,
+	"ShowProgress":           true,
+	"Progress":               true,
+	"PassUnsafeEnv":          true,
+	"NeededForSubinclude":    true,
+	"mutex":                  true,
+	"dependenciesRegistered": true,
+	"finishedBuilding":       true,
 
 	// Used to save the rule hash rather than actually being hashed itself.
 	"RuleHash": true,

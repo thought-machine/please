@@ -59,9 +59,5 @@ func (e *Executor) ExecCommand(sandbox bool, command string, args ...string) *ex
 			{HostID: os.Getgid(), Size: 1, ContainerID: 0},
 		}
 	}
-
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	e.processes[cmd] = struct{}{}
 	return cmd
 }

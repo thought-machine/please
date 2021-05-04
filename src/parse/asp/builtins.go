@@ -381,7 +381,7 @@ func strRPartition(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyString)
 	sep := args[1].(pyString)
 	if idx := strings.LastIndex(string(self), string(sep)); idx != -1 {
-		return pyList{self[:idx], self[idx : idx+1], self[idx+1:]}
+		return pyList{self[:idx], self[idx : idx+len(sep)], self[idx+len(sep):]}
 	}
 	return pyList{pyString(""), pyString(""), self}
 }
@@ -738,9 +738,6 @@ func addDep(s *scope, args []pyObject) pyObject {
 	dep := core.ParseBuildLabelContext(string(args[1].(pyString)), s.pkg)
 	exported := args[2].IsTruthy()
 	target.AddMaybeExportedDependency(dep, exported, false, false)
-	// Note that here we're in a post-build function so we must call this explicitly
-	// (in other callbacks it's handled after the package parses all at once).
-	s.state.Graph.AddDependency(target.Label, dep)
 	s.pkg.MarkTargetModified(target)
 	return None
 }

@@ -50,7 +50,7 @@ def plz_e2e_test(name:str, cmd:str, pre_cmd:str=None, expected_output:str=None,
                  expected_failure:bool=False, expect_output_contains:str=None,
                  expect_output_doesnt_contain:str=None, deps:list=None, data:list=[],
                  labels:list=None, completion:bool=False,
-                 expect_file_exists:str=None, expect_file_doesnt_exist:str=None):
+                 expect_file_exists:str=None, expect_file_doesnt_exist:str=None, timeout:int=None):
     # Please isn't really designed to work this way (running a test against the entire source repo)
     # but we can make it do it and it's a convenient way of testing the tool itself.
 
@@ -101,4 +101,5 @@ def plz_e2e_test(name:str, cmd:str, pre_cmd:str=None, expected_output:str=None,
         local = True,
         pass_env = ["PLZ_ARGS"],
         exit_on_error = False,
+        timeout = timeout,
     )

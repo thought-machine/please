@@ -297,7 +297,10 @@ func makeTarget2(name string, command string, dep *BuildTarget) *BuildTarget {
 		graph := NewGraph()
 		graph.AddTarget(target)
 		graph.AddTarget(dep)
-		graph.AddDependency(target.Label, dep.Label)
+		target.AddDependency(dep.Label)
+		if err := target.ResolveDependencies(graph); err != nil {
+			log.Fatalf("Failed to resolve some dependencies for %s: %s", target, err)
+		}
 	}
 	return target
 }

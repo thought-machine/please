@@ -4,12 +4,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/thought-machine/please/src/core"
 )
 
 func TestQueryEntireGraph(t *testing.T) {
-	graph := makeJSONGraph(makeGraph(), nil)
+	state := makeGraph(t)
+	graph := makeJSONGraph(state, nil)
 	assert.Equal(t, 2, len(graph.Packages))
 	pkg1 := graph.Packages["package1"]
 	assert.Equal(t, 2, len(pkg1.Targets))
@@ -21,7 +23,7 @@ func TestQueryEntireGraph(t *testing.T) {
 }
 
 func TestQuerySingleTarget(t *testing.T) {
-	graph := makeJSONGraph(makeGraph(), []core.BuildLabel{core.ParseBuildLabel("//package1:target2", "")})
+	graph := makeJSONGraph(makeGraph(t), []core.BuildLabel{core.ParseBuildLabel("//package1:target2", "")})
 	assert.Equal(t, 1, len(graph.Packages))
 	pkg1 := graph.Packages["package1"]
 	assert.Equal(t, 2, len(pkg1.Targets))
@@ -29,7 +31,7 @@ func TestQuerySingleTarget(t *testing.T) {
 }
 
 func TestQueryPackage(t *testing.T) {
-	graph := makeJSONGraph(makeGraph(), []core.BuildLabel{core.ParseBuildLabel("//package1:all", "")})
+	graph := makeJSONGraph(makeGraph(t), []core.BuildLabel{core.ParseBuildLabel("//package1:all", "")})
 	assert.Equal(t, 1, len(graph.Packages))
 	pkg1 := graph.Packages["package1"]
 	assert.Equal(t, 2, len(pkg1.Targets))
@@ -37,21 +39,23 @@ func TestQueryPackage(t *testing.T) {
 	assert.Equal(t, []string{"//package1:target1"}, pkg1.Targets["target2"].Deps)
 }
 
-func makeGraph() *core.BuildState {
+func makeGraph(t *testing.T) *core.BuildState {
 	state := core.NewDefaultBuildState()
 	graph := state.Graph
 	pkg1 := core.NewPackage("package1")
 	pkg1.AddTarget(makeTarget("//package1:target1"))
-	pkg1.AddTarget(makeTarget("//package1:target2", "//package1:target1"))
-	graph.AddPackage(pkg1)
+	t2 := makeTarget("//package1:target2", "//package1:target1")
+	pkg1.AddTarget(t2)
 	graph.AddTarget(pkg1.Target("target1"))
 	graph.AddTarget(pkg1.Target("target2"))
+	graph.AddPackage(pkg1)
 	pkg2 := core.NewPackage("package2")
-	pkg2.AddTarget(makeTarget("//package2:target3", "//package1:target2"))
-	graph.AddPackage(pkg2)
+	t3 := makeTarget("//package2:target3", "//package1:target2")
+	pkg2.AddTarget(t3)
 	graph.AddTarget(pkg2.Target("target3"))
-	graph.AddDependency(core.ParseBuildLabel("//package1:target2", ""), core.ParseBuildLabel("//package1:target1", ""))
-	graph.AddDependency(core.ParseBuildLabel("//package2:target3", ""), core.ParseBuildLabel("//package1:target2", ""))
+	graph.AddPackage(pkg2)
+	require.NoError(t, t2.ResolveDependencies(graph))
+	require.NoError(t, t3.ResolveDependencies(graph))
 	return state
 }
 

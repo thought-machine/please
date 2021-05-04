@@ -339,13 +339,6 @@ go_module(
 )
 
 go_module(
-    name = "queue",
-    install = ["queue"],
-    module = "github.com/Workiva/go-datastructures",
-    version = "v1.0.53",
-)
-
-go_module(
     name = "fsnotify",
     module = "github.com/fsnotify/fsnotify",
     version = "a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb",
@@ -769,6 +762,15 @@ go_module(
     ],
     module = "github.com/yuin/goldmark",
     version = "v1.2.1",
+)
+
+go_module(
+    name = "cmap",
+    install = [
+        "...",
+    ],
+    module = "github.com/OneOfOne/cmap",
+    version = "ccaef7657ab896465978ddf580830288b61f9f6e",
 )
 
 go_module(
