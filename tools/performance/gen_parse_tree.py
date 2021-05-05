@@ -12,6 +12,7 @@ from math import log10
 from third_party.python.absl import app, flags
 from third_party.python.progress.bar import Bar
 
+flags.DEFINE_string('plz', 'plz', 'Binary to run to invoke plz')
 flags.DEFINE_integer('size', 100000, 'Number of BUILD files to generate')
 flags.DEFINE_integer('seed', 42, 'Random seed')
 flags.DEFINE_string('root', 'tree', 'Directory to put all files under')
@@ -90,7 +91,7 @@ def main(argv):
         # Format them all up (in chunks to avoid 'argument too long')
         n = 100
         for i in Bar('Formatting files').iter(range(0, len(filenames), n)):
-            subprocess.check_call(['plz', 'fmt', '-w'] + filenames[i: i + n])
+            subprocess.check_call([FLAGS.plz, 'fmt', '-w'] + filenames[i: i + n])
 
 
 def choose_deps(candidates:list) -> list:

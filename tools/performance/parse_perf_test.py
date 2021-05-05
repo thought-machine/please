@@ -2,6 +2,7 @@
 #
 # Runs a performance test on some tasks to measure parse-time performance.
 
+import datetime
 import json
 import subprocess
 import time
@@ -33,20 +34,24 @@ def run(i: int):
 
 def main(argv):
     results = [run(i) for i in range(FLAGS.number)]
+    results.sort()
     median = results[len(results)//2]
     log.info('Complete, median time: %0.2f', median)
     log.info('Running again to generate profiling info')
     subprocess.check_call([FLAGS.plz, 'query', 'alltargets', '--profile_file', 'plz.prof'],
                           stdout=subprocess.DEVNULL)
     log.info('Generating results')
-    results.sort()
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
     with open(FLAGS.output, 'w') as f:
         json.dump({
+            'revision': revision,
+            'timestamp': datetime.datetime.now().isoformat(),
             'parse': {
                 'raw': results,
                 'median': median,
             },
         }, f)
+        f.write('\n')
 
 
 if __name__ == '__main__':
