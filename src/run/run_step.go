@@ -163,7 +163,7 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 			command = filepath.Join(target.OutDir(), entryPoint)
 		}
 	case overrideCmd != "":
-		command = overrideCmd
+		command, _ = core.ReplaceSequences(state, target, overrideCmd)
 	default:
 		// out_exe handles java binary stuff by invoking the .jar with java as necessary
 		if tmpDir {
