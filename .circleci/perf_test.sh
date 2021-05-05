@@ -12,7 +12,7 @@ echo "Running parse performance test"
 echo "Uploading results..."
 aws s3 cp plz.prof "s3://please-releases/performance/${REVISION}.prof"
 aws s3 cp results.json "s3://please-releases/performance/${REVISION}.json"
-aws s3 cp s3://please-releases/performance/all_results.json all_results.json
-cat all_results.json results.json | tail -n 100 > updated_results.json
-aws s3 cp updated_results.json s3://please-releases/performance/all_results.json
+aws s3 cp s3://please-releases/performance/all_results.jsonl all_results.jsonl
+cat all_results.jsonl results.json | tail -n 100 > updated_results.jsonl
+aws s3 cp updated_results.jsonl s3://please-releases/performance/all_results.jsonl
 echo "Done!"
