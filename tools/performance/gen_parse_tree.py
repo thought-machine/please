@@ -9,15 +9,8 @@ import shutil
 import subprocess
 from math import log10
 
-from third_party.python import colorlog
 from third_party.python.absl import app, flags
 from third_party.python.progress.bar import Bar
-
-handler = colorlog.StreamHandler()
-handler.setFormatter(colorlog.ColoredFormatter('%(log_color)s%(levelname)s: %(message)s'))
-log = colorlog.getLogger(__name__)
-log.addHandler(handler)
-log.propagate = False  # Needed to stop double logging?
 
 flags.DEFINE_integer('size', 100000, 'Number of BUILD files to generate')
 flags.DEFINE_integer('seed', 42, 'Random seed')
