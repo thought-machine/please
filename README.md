@@ -165,7 +165,7 @@ domain. You have all the same tools Please has to expand your build
 definitions to satisfy your needs.
 
 Please does all this with a focus on simplicity and transparency. There are 
-a limited amount of concepts tha are needed to get started and once they are 
+a limited amount of concepts that are needed to get started and once they are 
 grocked, the possibilities are endless. Please relies on these concepts rather 
 than requiring lots of magic and incantation. Configuration is simple and largely 
 optional so getting going is easy, and there's no single WORKSPACE file nobody really
@@ -233,5 +233,5 @@ BUILD language, command line or other behaviour. We try to minimise this where
 possible.
 
 We're very happy to accept pull requests, feature requests, and bugs if it's
-not working for you. We don't always have time for everything but please is
+not working for you. We don't always have time for everything but Please is
 under active development.
