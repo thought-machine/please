@@ -601,11 +601,17 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 // The action & sources must have already been uploaded.
 func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest, skipCacheLookup bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	executing := false
+	building := target.State() <= core.Built
+	if building {
+		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Submitting job...")
+	} else {
+		c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Submitting job...")
+	}
 	updateProgress := func(metadata *pb.ExecuteOperationMetadata) {
 		if c.state.Config.Remote.DisplayURL != "" {
 			log.Debug("Remote progress for %s: %s%s", target.Label, metadata.Stage, c.actionURL(metadata.ActionDigest, true))
 		}
-		if target.State() <= core.Built {
+		if building {
 			switch metadata.Stage {
 			case pb.ExecutionStage_CACHE_CHECK:
 				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
