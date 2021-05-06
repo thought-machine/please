@@ -7,7 +7,7 @@ REV="`git rev-parse HEAD`"
 BUCKET="s3://please-releases/performance"
 
 echo "Generating test file tree"
-/tmp/workspace/gen_parse_tree.pex -- --plz "$PLZ"
+/tmp/workspace/gen_parse_tree.pex -- --plz "$PLZ" --noprogress
 echo "Running parse performance test"
 /tmp/workspace/parse_perf_test.pex -- --plz "$PLZ"
 echo "Uploading results..."

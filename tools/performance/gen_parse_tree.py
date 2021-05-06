@@ -17,6 +17,7 @@ flags.DEFINE_integer('size', 100000, 'Number of BUILD files to generate')
 flags.DEFINE_integer('seed', 42, 'Random seed')
 flags.DEFINE_string('root', 'tree', 'Directory to put all files under')
 flags.DEFINE_boolean('format', True, 'Autoformat all the generated files')
+flags.DEFINE_boolean('progress', True, 'Display animated progress bars')
 FLAGS = flags.FLAGS
 
 
@@ -65,9 +66,10 @@ def main(argv):
     packages = []
     pkgset = set()
     filenames = []
+    progress = lambda desc, it: Bar(desc).iter(it) if FLAGS.progress else it
     if os.path.exists(FLAGS.root):
         shutil.rmtree(FLAGS.root)
-    for i in Bar('Generating files', max=FLAGS.size).iter(range(FLAGS.size)):
+    for i in progress('Generating files', range(FLAGS.size)):
         depth = random.randint(1, 1 + log10(FLAGS.size))
         dir = '/'.join([FLAGS.root] + [random.choice(DIRNAMES) for _ in range(depth)])
         if dir in pkgset:
@@ -90,7 +92,7 @@ def main(argv):
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
         n = 100
-        for i in Bar('Formatting files').iter(range(0, len(filenames), n)):
+        for i in progress('Formatting files', range(0, len(filenames), n)):
             subprocess.check_call([FLAGS.plz, 'fmt', '-w'] + filenames[i: i + n])
 
 
