@@ -150,46 +150,51 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 
 	// ReplaceSequences always quotes stuff in case it contains spaces or special characters,
 	// that works fine if we interpret it as a shell but not to pass it as an argument here.
-	command := ""
 	switch {
+	case overrideCmd != "":
+		command, _ := core.ReplaceSequences(state, target, overrideCmd)
+		// We don't care about passed in args when an override command is provided
+		args = process.BashCommand("bash", strings.Trim(command, "\""), true)
 	case label.Annotation != "":
 		entryPoint, ok := target.EntryPoints[label.Annotation]
 		if !ok {
 			log.Fatalf("Cannot run %s as has no entry point %s", label, label.Annotation)
 		}
+		var command string
 		if tmpDir {
 			command = filepath.Join(dir, entryPoint)
 		} else {
 			command = filepath.Join(target.OutDir(), entryPoint)
 		}
-	case overrideCmd != "":
-		command, _ = core.ReplaceSequences(state, target, overrideCmd)
+		args = append(strings.Split(command, " "), args...)
 	default:
 		// out_exe handles java binary stuff by invoking the .jar with java as necessary
+		var command string
 		if tmpDir {
 			command = filepath.Join(dir, target.Outputs()[0])
 		} else {
 			command, _ = core.ReplaceSequences(state, target, fmt.Sprintf("$(out_exe %s)", target.Label))
+			command = strings.Trim(command, "\"")
 		}
+		args = append(strings.Split(command, " "), args...)
 	}
-	arg0 := strings.Trim(command, "\"")
+
 	// Handle targets where $(exe ...) returns something nontrivial
-	splitCmd := strings.Split(arg0, " ")
-	if !strings.Contains(splitCmd[0], "/") {
+	if !strings.Contains(args[0], "/") {
 		// Probably it's a java -jar, we need an absolute path to it.
-		cmd, err := exec.LookPath(splitCmd[0])
+		cmd, err := exec.LookPath(args[0])
 		if err != nil {
-			log.Fatalf("Can't find binary %s", splitCmd[0])
+			log.Fatalf("Can't find binary %s", args[0])
 		}
-		splitCmd[0] = cmd
+		args[0] = cmd
 	} else if dir != "" { // Find an absolute path before changing directory
-		abs, err := filepath.Abs(splitCmd[0])
+		abs, err := filepath.Abs(args[0])
 		if err != nil {
-			log.Fatalf("Couldn't calculate absolute path for %s: %s", splitCmd[0], err)
+			log.Fatalf("Couldn't calculate absolute path for %s: %s", args[0], err)
 		}
-		splitCmd[0] = abs
+		args[0] = abs
 	}
-	args = append(splitCmd, args...)
+
 	log.Info("Running target %s...", strings.Join(args, " "))
 	output.SetWindowTitle("plz run: " + strings.Join(args, " "))
 	env := environ(state, target, setenv, tmpDir)
@@ -202,10 +207,10 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 			}
 		}
 		// Plain 'plz run'. One way or another we never return from the following line.
-		must(syscall.Exec(splitCmd[0], args, env), args)
+		must(syscall.Exec(args[0], args, env), args)
 	} else if detach {
 		// Bypass the whole process management system since we explicitly aim not to manage this subprocess.
-		cmd := exec.Command(splitCmd[0], args[1:]...)
+		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Dir = dir
