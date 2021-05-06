@@ -2,7 +2,8 @@
 
 set -eu
 
-PLZ="/tmp/workspace/linux_amd64/please"
+VER="`cat VERSION`"
+PLZ="/tmp/workspace/linux_amd64/please_${VER}"
 BUCKET="s3://please-releases/performance"
 
 echo "Generating test file tree"
