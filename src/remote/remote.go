@@ -395,6 +395,7 @@ func (c *Client) Download(target *core.BuildTarget) error {
 	return c.download(target, func() error {
 		buildAction := c.unstampedBuildActionDigests.Get(target.Label)
 		if c.outputsExist(target, buildAction) {
+			log.Debug("Not downloading outputs for %s, they're already up-to-date", target)
 			return nil
 		}
 		_, ar := c.retrieveResults(target, nil, buildAction, false, false)
