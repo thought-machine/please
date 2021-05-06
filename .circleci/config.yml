@@ -352,7 +352,7 @@ workflows:
           filters:
             branches:
               only: master
-      - perf_test:
+      - perf-test:
           requires:
             - build-alpine
             - build-linux
