@@ -437,3 +437,8 @@ pip_library(
         ":six",
     ],
 )
+
+pip_library(
+    name = "progress",
+    version = "1.5",
+)
