@@ -19,6 +19,7 @@ log.propagate = False  # Needed to stop double logging?
 
 flags.DEFINE_string('plz', 'plz', 'Binary to run to invoke plz')
 flags.DEFINE_string('output', 'results.json', 'File to write results to')
+flags.DEFINE_string('revision', 'unknown', 'Git revision')
 flags.DEFINE_integer('number', 5, 'Number of times to run test')
 flags.DEFINE_string('root', 'tree', 'Directory to run in')
 FLAGS = flags.FLAGS
@@ -45,10 +46,9 @@ def main(argv):
     subprocess.check_call([FLAGS.plz, '--repo_root', FLAGS.root, 'query', 'alltargets',
                            '--profile_file', 'plz.prof'], stdout=subprocess.DEVNULL)
     log.info('Generating results')
-    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
     with open(FLAGS.output, 'w') as f:
         json.dump({
-            'revision': revision,
+            'revision': FLAGS.revision,
             'timestamp': datetime.datetime.now().isoformat(),
             'parse': {
                 'raw': results,
