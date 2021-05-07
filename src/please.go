@@ -981,7 +981,11 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	if opts.BuildFlags.RepoRoot == "" {
 		log.Debug("Found repo root at %s", core.MustFindRepoRoot())
 	} else {
-		core.RepoRoot = string(opts.BuildFlags.RepoRoot)
+		abs, err := filepath.Abs(string(opts.BuildFlags.RepoRoot))
+		if err != nil {
+			log.Fatalf("Cannot make --repo_root absolute: %s", err)
+		}
+		core.RepoRoot = abs
 	}
 
 	// Save the current working directory before moving to root
