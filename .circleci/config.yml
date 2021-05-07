@@ -358,4 +358,4 @@ workflows:
             - build-linux
           filters:
             branches:
-              only: perf-test
+              only: master
