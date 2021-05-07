@@ -1,0 +1,5 @@
+[sandbox]
+build = true
+test = true
+namespace = never
+tool = please_sandbox

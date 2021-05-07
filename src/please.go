@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/thought-machine/please/src/sandbox"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -789,6 +790,12 @@ var buildFunctions = map[string]func() int{
 		}
 		return 1
 	},
+	"sandbox": func() int {
+		if err := sandbox.Sandbox(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		return 0
+	},
 }
 
 // ConfigOverrides are used to implement completion on the -o flag.
@@ -1030,6 +1037,11 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 }
 
 func initBuild(args []string) string {
+	if len(args) > 1 && (args[1] == "sandbox") {
+		// Shortcut these as they're special commands used for please sandboxing
+		// going through the normal init path would be too slow
+		return args[1]
+	}
 	if _, present := os.LookupEnv("GO_FLAGS_COMPLETION"); present {
 		cli.InitLogging(cli.MinVerbosity)
 	}

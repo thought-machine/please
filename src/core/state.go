@@ -8,6 +8,7 @@ import (
 	"hash/crc32"
 	"hash/crc64"
 	"io"
+	"path/filepath"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -971,12 +972,20 @@ func newBlake3() hash.Hash {
 	return blake3.New(32, nil)
 }
 
+func sandboxTool(config *Configuration) string {
+	tool := config.Sandbox.Tool
+	if filepath.IsAbs(tool) {
+		return tool
+	}
+	sandboxTool, _ := LookBuildPath(tool, config)
+	return sandboxTool
+}
+
 // NewBuildState constructs and returns a new BuildState.
 // Everyone should use this rather than attempting to construct it themselves;
 // callers can't initialise all the required private fields.
 func NewBuildState(config *Configuration) *BuildState {
 	// Deliberately ignore the error here so we don't require the sandbox tool until it's needed.
-	sandboxTool, _ := LookBuildPath(config.Sandbox.Tool, config)
 	state := &BuildState{
 		Graph:               NewGraph(),
 		pendingParses:       make(chan ParseTask, 10000),
@@ -992,7 +1001,11 @@ func NewBuildState(config *Configuration) *BuildState {
 			"crc64":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC64, "crc64"),
 			"blake3": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newBlake3, "blake3"),
 		},
-		ProcessExecutor: process.New(sandboxTool),
+		ProcessExecutor: process.NewSandboxingExecutor(
+			config.Sandbox.Tool == "" && (config.Sandbox.Build || config.Sandbox.Test),
+			process.NamespacingPolicy(config.Sandbox.Namespace),
+			sandboxTool(config),
+		),
 		StartTime:       startTime,
 		Config:          config,
 		VerifyHashes:    true,
