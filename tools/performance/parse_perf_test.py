@@ -43,8 +43,9 @@ def main(argv):
     median = results[len(results)//2]
     log.info('Complete, median time: %0.2f', median)
     log.info('Running again to generate profiling info')
+    profile_file = os.path.join(os.getcwd(), 'plz.prof')
     subprocess.check_call([FLAGS.plz, '--repo_root', FLAGS.root, 'query', 'alltargets',
-                           '--profile_file', 'plz.prof'], stdout=subprocess.DEVNULL)
+                           '--profile_file', profile_file], stdout=subprocess.DEVNULL)
     log.info('Generating results')
     with open(FLAGS.output, 'w') as f:
         json.dump({
