@@ -156,6 +156,8 @@ func (globber *Globber) Glob(rootPath string, includes, excludes []string, inclu
 	var filenames []string
 	for _, include := range includes {
 		mustBeValidGlobString(include)
+		// glob(["./x"]) is equivalent to just glob(["x"])
+		include = strings.TrimPrefix(include, "./")
 
 		matches, err := globber.glob(rootPath, include, excludes, includeHidden)
 		if err != nil {
