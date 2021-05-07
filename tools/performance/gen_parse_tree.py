@@ -70,7 +70,7 @@ def main(argv):
     if os.path.exists(FLAGS.root):
         shutil.rmtree(FLAGS.root)
     for i in progress('Generating files', range(FLAGS.size)):
-        depth = random.randint(1, 1 + log10(FLAGS.size))
+        depth = random.randint(1, 1 + int(log10(FLAGS.size)))
         dir = '/'.join([FLAGS.root] + [random.choice(DIRNAMES) for _ in range(depth)])
         if dir in pkgset:
             continue
