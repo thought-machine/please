@@ -5,6 +5,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -111,6 +112,7 @@ func (ft *fileTree) AllPrefixed(prefix []string) []string {
 	for i, name := range files {
 		ret[i] = path.Join(prefix[0], name)
 	}
+	sort.Strings(ret)
 	return ret
 }
 
