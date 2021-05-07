@@ -329,6 +329,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
 		}
 		if state.ShouldDownload(target) {
+			if err := state.EnsureDownloaded(target); err != nil {
+				return err
+			}
 			buildLinks(state, target)
 		}
 		return nil
