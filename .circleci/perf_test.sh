@@ -7,7 +7,7 @@ PLZ="/tmp/workspace/linux_amd64/please_${VER}"
 BUCKET="s3://please-releases/performance"
 
 echo "Generating test file tree"
-/tmp/workspace/gen_parse_tree.pex --plz "$PLZ" --noprogress --size 500000
+/tmp/workspace/gen_parse_tree.pex --plz "$PLZ" --noprogress --size 300000
 echo "Running parse performance test"
 /tmp/workspace/parse_perf_test.pex --plz "$PLZ" --revision "$CIRCLE_SHA1"
 echo "Uploading results..."
