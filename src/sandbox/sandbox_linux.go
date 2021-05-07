@@ -4,6 +4,7 @@ package sandbox
 
 import (
 	"fmt"
+	"github.com/thought-machine/please/src/core"
 	"os"
 	"os/exec"
 	"strings"
@@ -45,7 +46,7 @@ func Sandbox(args []string) error {
 	}
 
 	if tmpDir != "" {
-		cmd.Dir = "/tmp/plz_sandbox" //TODO(jpoole):
+		cmd.Dir = core.SandboxDir
 		if err := rewriteEnvVars(tmpDir); err != nil {
 			return err
 		}
@@ -60,7 +61,7 @@ func rewriteEnvVars(tmpDir string) error {
 			parts := strings.Split(envVar, "=")
 			key := parts[0]
 			value := strings.TrimPrefix(envVar, key+"=")
-			if err := os.Setenv(key, strings.ReplaceAll(value, tmpDir, "/tmp/plz_sandbox")); err != nil {
+			if err := os.Setenv(key, strings.ReplaceAll(value, tmpDir, core.SandboxDir)); err != nil {
 				return err
 			}
 		}
@@ -69,7 +70,7 @@ func rewriteEnvVars(tmpDir string) error {
 }
 
 func mountTmp(tmpDir string) error {
-	dir := "/tmp/plz_sandbox"
+	dir := core.SandboxDir
 
 	if strings.HasPrefix(tmpDir, "/tmp") {
 		_, err := fmt.Fprintln(os.Stderr, "Not mounting /tmp as $TMP_DIR is a subdir")
@@ -91,7 +92,7 @@ func mountTmp(tmpDir string) error {
 	}
 
 	if tmpDir == "" {
-		_, err := fmt.Fprintln(os.Stderr, "$TMP_DIR not set, will not bind-mount to /tmp/plz_sandbox")
+		_, err := fmt.Fprintln(os.Stderr, "$TMP_DIR not set, will not bind-mount to ", core.SandboxDir)
 		return err
 	}
 

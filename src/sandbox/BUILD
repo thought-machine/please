@@ -6,6 +6,7 @@ if CONFIG.OS == "linux":
         c_srcs = ["sandbox_linux.c"],
         visibility = ["//src/..."],
         deps = [
+            "//src/core",
             "//src/process",
         ],
     )

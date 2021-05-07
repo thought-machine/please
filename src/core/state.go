@@ -1003,7 +1003,7 @@ func NewBuildState(config *Configuration) *BuildState {
 		},
 		ProcessExecutor: process.NewSandboxingExecutor(
 			config.Sandbox.Tool == "" && (config.Sandbox.Build || config.Sandbox.Test),
-			config.Sandbox.Namespace,
+			process.NamespacingPolicy(config.Sandbox.Namespace),
 			sandboxTool(config),
 		),
 		StartTime:       startTime,

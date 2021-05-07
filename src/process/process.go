@@ -19,17 +19,19 @@ import (
 
 var log = logging.MustGetLogger("progress")
 
+type NamespacingPolicy string
+
 const (
-	NamespaceAlways = "always"
-	NamespaceNever = "never"
-	NamespaceSandbox = "sandbox"
+	NamespaceAlways  NamespacingPolicy = "always"
+	NamespaceNever   NamespacingPolicy = "never"
+	NamespaceSandbox NamespacingPolicy = "sandbox"
 )
 
 // An Executor handles starting, running and monitoring a set of subprocesses.
 // It registers as a signal handler to attempt to terminate them all at process exit.
 type Executor struct {
 	// Whether we should set up linux namespaces at all
-	namespace string
+	namespace NamespacingPolicy
 	// The tool that will do the network/mount sandboxing
 	sandboxTool      string
 	usePleaseSandbox bool
@@ -37,7 +39,7 @@ type Executor struct {
 	mutex            sync.Mutex
 }
 
-func NewSandboxingExecutor(usePleaseSandbox bool, namespace, sandboxTool string) *Executor {
+func NewSandboxingExecutor(usePleaseSandbox bool, namespace NamespacingPolicy, sandboxTool string) *Executor {
 	if usePleaseSandbox {
 		log.Warning("The please built in sandboxing is experimental and may not work as expected. Caveat usor!")
 	}
