@@ -4,6 +4,7 @@
 
 import datetime
 import json
+import os
 import subprocess
 import time
 
@@ -35,6 +36,7 @@ def run(i: int):
 
 
 def main(argv):
+    FLAGS.root = os.path.abspath(FLAGS.root)
     results = [run(i) for i in range(FLAGS.number)]
     results.sort()
     median = results[len(results)//2]

@@ -91,6 +91,12 @@ def main(argv):
         filenames.append(filename)
     # Copy these over directly
     shutil.copytree('third_party', os.path.join(FLAGS.root, 'third_party'))
+    # Same here but don't bring in the dependency on the root BUILD file, that opens a big can of worms.
+    os.mkdir(os.path.join(FLAGS.root, 'build_defs'))
+    with open('build_defs/BUILD') as fr, open(os.path.join(FLAGS.root, 'build_defs/BUILD'), 'w') as fw:
+        fw.write(fr.read().replace('//:version', 'VERSION'))
+    shutil.copy('build_defs/multiversion_wheel.build_defs',
+                os.path.join(FLAGS.root, 'build_defs/multiversion_wheel.build_defs'))
     # Create the .plzconfig in the new root
     with open(os.path.join(FLAGS.root, '.plzconfig'), 'w') as f:
         pass
@@ -106,8 +112,9 @@ def choose_deps(candidates:list) -> list:
     if not candidates:
         return []
     n = random.randint(0, min(len(candidates), 10))
+    trim = lambda x: x[len(FLAGS.root) + 1:] if x.startswith(FLAGS.root) else x
     label = lambda x: f'//{x}:{os.path.basename(x)}'
-    return [label(random.choice(candidates)) for _ in range(n)]
+    return [label(trim(random.choice(candidates))) for _ in range(n)]
 
 
 if __name__ == '__main__':
