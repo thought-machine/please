@@ -4,6 +4,7 @@
 
 import datetime
 import json
+import os
 import subprocess
 import time
 
@@ -18,7 +19,9 @@ log.propagate = False  # Needed to stop double logging?
 
 flags.DEFINE_string('plz', 'plz', 'Binary to run to invoke plz')
 flags.DEFINE_string('output', 'results.json', 'File to write results to')
+flags.DEFINE_string('revision', 'unknown', 'Git revision')
 flags.DEFINE_integer('number', 5, 'Number of times to run test')
+flags.DEFINE_string('root', 'tree', 'Directory to run in')
 FLAGS = flags.FLAGS
 
 
@@ -26,25 +29,27 @@ def run(i: int):
     """Run once and return the length of time taken."""
     log.info('Run %d of %d', i + 1, FLAGS.number)
     start = time.time()
-    subprocess.check_call([FLAGS.plz, 'query', 'alltargets'], stdout=subprocess.DEVNULL)
+    subprocess.check_call([FLAGS.plz, '--repo_root', FLAGS.root, 'query', 'alltargets'],
+                          stdout=subprocess.DEVNULL)
     duration = time.time() - start
     log.info('Complete in %0.2fs', duration)
     return duration
 
 
 def main(argv):
+    FLAGS.root = os.path.abspath(FLAGS.root)
     results = [run(i) for i in range(FLAGS.number)]
     results.sort()
     median = results[len(results)//2]
     log.info('Complete, median time: %0.2f', median)
     log.info('Running again to generate profiling info')
-    subprocess.check_call([FLAGS.plz, 'query', 'alltargets', '--profile_file', 'plz.prof'],
-                          stdout=subprocess.DEVNULL)
+    profile_file = os.path.join(os.getcwd(), 'plz.prof')
+    subprocess.check_call([FLAGS.plz, '--repo_root', FLAGS.root, 'query', 'alltargets',
+                           '--profile_file', profile_file], stdout=subprocess.DEVNULL)
     log.info('Generating results')
-    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
     with open(FLAGS.output, 'w') as f:
         json.dump({
-            'revision': revision,
+            'revision': FLAGS.revision,
             'timestamp': datetime.datetime.now().isoformat(),
             'parse': {
                 'raw': results,
