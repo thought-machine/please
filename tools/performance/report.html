@@ -1,0 +1,35 @@
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+          fetch('/performance/all_results.jsonl', {
+              method: 'GET',
+              cache: 'no-cache',
+              redirect: 'follow',
+          }).then(response => response.text().then(text => {
+              const results = text.trim().split('\n').map(JSON.parse);
+              const dt = new google.visualization.DataTable({
+                  cols: [
+                      {id: 'revision', label: 'Revision', type: 'string'},
+                      {id: 'time', label: 'Time', type: 'number'},
+                  ],
+                  rows: results.map(r => ({c:[{v: r.revision}, {v: r.parse.median}]})),
+              });
+              const chart = new google.visualization.LineChart(document.getElementById('parse_chart'));
+              chart.draw(dt, {
+                  title: 'Parse Time (seconds)',
+                  curveType: 'none',
+                  legend: { position: 'none' }
+              });
+          }));
+      }
+    </script>
+  </head>
+  <body>
+    <div id="parse_chart" style="width: 1200px; height: 500px"></div>
+  </body>
+</html>

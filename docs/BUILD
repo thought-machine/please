@@ -26,6 +26,8 @@ genrule(
     name = "rules",
     outs = ["rules.json"],
     cmd = '"$TOOL" query rules > "$OUT"',
+    local = True,
+    sandbox = False,
     tools = ["//src:please"],
 )
 

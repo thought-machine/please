@@ -2,14 +2,14 @@
 package fs
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"syscall"
+
+	"github.com/thought-machine/please/src/process"
 
 	"gopkg.in/op/go-logging.v1"
 )
@@ -183,15 +183,18 @@ func copyFile(from, to string) (err error) {
 	return nil
 }
 
-func ForceRemove(path string) error {
-	cmd := exec.Command("rm", "-rf", path)
-	output := new(bytes.Buffer)
+// ForceRemove will try and remove the path with `os.RemoveAll`, and if that fails, it will use `rm -rf` running the
+// command in any namespace that please is configured to.
+func ForceRemove(exec *process.Executor, path string) error {
+	// Try and remove it normally first
+	if err := os.RemoveAll(path); err == nil || os.IsNotExist(err) {
+		return nil
+	}
 
-	cmd.Stderr = output
-	cmd.Stdout = output
+	cmd := exec.ExecCommand(false, "rm", "-rf", path)
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to remove %s: %w\nOutput: %s", path, err, output.String())
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to remove %s: %w\nOutput: %s", path, err, string(out))
 	}
 	return nil
 }

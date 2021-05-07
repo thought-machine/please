@@ -7,7 +7,6 @@ import (
 	"compress/gzip"
 	"encoding/hex"
 	"fmt"
-	"github.com/thought-machine/please/src/utils"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -19,6 +18,8 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/process"
+	"github.com/thought-machine/please/src/utils"
 )
 
 type httpCache struct {
@@ -126,18 +127,18 @@ func (cache *httpCache) storeFile(tw *tar.Writer, name string) error {
 	return err
 }
 
-func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, files []string) bool {
+func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, _ []string) bool {
 	cache.requestLimiter.acquire()
 	defer cache.requestLimiter.release()
 
-	m, err := cache.retrieve(target, key)
+	m, err := cache.retrieve(key)
 	if err != nil {
 		log.Warning("%s: Failed to retrieve files from HTTP cache: %s", target.Label, err)
 	}
 	return m
 }
 
-func (cache *httpCache) retrieve(target *core.BuildTarget, key []byte) (bool, error) {
+func (cache *httpCache) retrieve(key []byte) (bool, error) {
 	req, err := retryablehttp.NewRequest(http.MethodGet, cache.makeURL(key), nil)
 	if err != nil {
 		return false, err
@@ -200,7 +201,9 @@ func openFile(header *tar.Header) (*os.File, error) {
 	if err != nil {
 		if os.IsPermission(err) {
 			// The file might already exist and be ro. If so, remove it.
-			fs.ForceRemove(header.Name)
+			if err := fs.ForceRemove(process.New(), header.Name); err != nil {
+				log.Debug("failed to remove existing file when restoring from the cache: %w", err)
+			}
 			return os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode))
 		}
 		return nil, err
@@ -208,7 +211,7 @@ func openFile(header *tar.Header) (*os.File, error) {
 	return f, nil
 }
 
-func (cache *httpCache) Clean(target *core.BuildTarget) {
+func (cache *httpCache) Clean(*core.BuildTarget) {
 	// Not possible; this implementation can only clean for a hash.
 }
 
