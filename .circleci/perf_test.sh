@@ -20,4 +20,5 @@ if aws s3 ls "${BUCKET}/all_results.jsonl"; then
 else
     aws s3 cp results.json "${BUCKET}/all_results.jsonl"
 fi
+aws s3 cp tools/performance/report.html "${BUCKET}/report.html"
 echo "Done!"
