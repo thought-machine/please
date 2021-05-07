@@ -156,11 +156,6 @@ func (globber *Globber) Glob(rootPath string, includes, excludes []string, inclu
 	var filenames []string
 	for _, include := range includes {
 		mustBeValidGlobString(include)
-		// TODO(peterebden): Add this to mustBeValidGlobString as a fatal error in v17
-		if strings.HasPrefix(include, "/") {
-			log.Warning("Glob expression %s should not begin with a /", include)
-			include = strings.TrimPrefix(include, "/")
-		}
 
 		matches, err := globber.glob(rootPath, include, excludes, includeHidden)
 		if err != nil {
@@ -259,6 +254,9 @@ func (globber *Globber) globPrefix(expression string) []string {
 func mustBeValidGlobString(glob string) {
 	if glob == "" {
 		panic("cannot use an empty string as a glob")
+	}
+	if strings.HasPrefix(glob, "/") {
+		panic("globs cannot be absolute")
 	}
 }
 
