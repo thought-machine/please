@@ -232,7 +232,7 @@ func runtimeDataPaths(graph *BuildGraph, data []BuildInput) []string {
 func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) BuildEnv {
 	env := TargetEnvironment(state, target)
 
-	outEnv := target.GetTmpOutputAll(target.Outputs())
+	outEnv := target.Outputs()
 	env = append(env, "OUTS="+strings.Join(outEnv, " "))
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
