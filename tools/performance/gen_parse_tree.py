@@ -89,6 +89,11 @@ def main(argv):
         packages.append(dir)
         pkgset.add(dir)
         filenames.append(filename)
+    # Copy these over directly
+    shutil.copytree('third_party', os.path.join(FLAGS.root, 'third_party'))
+    # Create the .plzconfig in the new root
+    with open(os.path.join(FLAGS.root, '.plzconfig'), 'w') as f:
+        pass
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
         n = 100
