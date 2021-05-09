@@ -69,12 +69,7 @@ func (p *pendingTargets) NotifyPendingPackageTargets(key packageKey) {
 
 // AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
-	graph.targets.Update(target.Label, func(old *BuildTarget) *BuildTarget {
-		if old != nil {
-			panic("Attempted to re-add existing target to build graph: " + target.Label.String())
-		}
-		return target
-	})
+	graph.targets.Set(target.Label, target)
 	// Notify anything that called WaitForTarget
 	close(graph.pendingTargets.GetTargetChannel(target.Label))
 	return target
@@ -204,9 +199,8 @@ func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
 // AllTargets returns a consistently ordered slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
 	targets := BuildTargets{}
-	graph.targets.ForEachLocked(func(k BuildLabel, v *BuildTarget) bool {
+	graph.targets.ForEachLocked(func(k BuildLabel, v *BuildTarget) {
 		targets = append(targets, v)
-		return true
 	})
 	sort.Sort(targets)
 	return targets
