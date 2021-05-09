@@ -31,15 +31,15 @@ func newTargetMap() *targetMap {
 }
 
 // Set is the equivalent of `map[key] = val`.
-// It panics if key is already set.
-func (cm *targetMap) Set(key BuildLabel, val *BuildTarget) {
-	h := hasher(key)
-	cm.shards[h&uint32(len(cm.shards)-1)].Set(key, val)
+// It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
+func (cm *targetMap) Set(key BuildLabel, val *BuildTarget) bool {
+	h := hashBuildLabel(key)
+	return cm.shards[h&uint32(len(cm.shards)-1)].Set(key, val)
 }
 
 // GetOK is the equivalent of `val, ok := map[key]`.
 func (cm *targetMap) GetOK(key BuildLabel) (val *BuildTarget, ok bool) {
-	h := hasher(key)
+	h := hashBuildLabel(key)
 	return cm.shards[h&uint32(len(cm.shards)-1)].GetOK(key)
 }
 
@@ -52,7 +52,7 @@ func (cm *targetMap) ForEachLocked(fn func(key BuildLabel, val *BuildTarget)) {
 	}
 }
 
-func hasher(key BuildLabel) uint32 {
+func hashBuildLabel(key BuildLabel) uint32 {
 	return hashers.Fnv32(key.Subrepo) ^ hashers.Fnv32(key.PackageName) ^ hashers.Fnv32(key.Name)
 }
 
@@ -71,13 +71,15 @@ func newTargetLMapSize(cap int) *targetLMap {
 }
 
 // Set is the equivalent of `map[key] = val`.
-func (lm *targetLMap) Set(key BuildLabel, v *BuildTarget) {
+// It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
+func (lm *targetLMap) Set(key BuildLabel, v *BuildTarget) bool {
 	lm.l.Lock()
 	defer lm.l.Unlock()
 	if _, present := lm.m[key]; present {
-		panic("Attempted to re-add target " + key.String() + " to graph")
+		return false
 	}
 	lm.m[key] = v
+	return true
 }
 
 // GetOK is the equivalent of `val, ok := map[key]`.

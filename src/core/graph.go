@@ -69,7 +69,9 @@ func (p *pendingTargets) NotifyPendingPackageTargets(key packageKey) {
 
 // AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
-	graph.targets.Set(target.Label, target)
+	if !graph.targets.Set(target.Label, target) {
+		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
+	}
 	// Notify anything that called WaitForTarget
 	close(graph.pendingTargets.GetTargetChannel(target.Label))
 	return target
