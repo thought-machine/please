@@ -43,13 +43,15 @@ func (cm *targetMap) GetOK(key BuildLabel) (val *BuildTarget, ok bool) {
 	return cm.shards[h&uint32(len(cm.shards)-1)].GetOK(key)
 }
 
-// ForEachLocked loops over all the key/values in the map.
-// You can break early by returning false.
-// It is **NOT* safe to modify the map while using this iterator.
-func (cm *targetMap) ForEachLocked(fn func(key BuildLabel, val *BuildTarget)) {
+// Values returns a slice of all the current values in the map.
+// This is a view that an observer could potentially have had at some point around the calling of this function,
+// but no particular consistency guarantees are made.
+func (cm *targetMap) Values() BuildTargets {
+	ret := BuildTargets{}
 	for _, lm := range cm.shards {
-		lm.ForEachLocked(fn)
+		ret = append(ret, lm.Values()...)
 	}
+	return ret
 }
 
 func hashBuildLabel(key BuildLabel) uint32 {
@@ -90,12 +92,13 @@ func (lm *targetLMap) GetOK(key BuildLabel) (*BuildTarget, bool) {
 	return v, ok
 }
 
-// ForEachLocked loops over all the key/values in the map.
-// It is **NOT* safe to modify the map while using this iterator.
-func (lm *targetLMap) ForEachLocked(fn func(key BuildLabel, val *BuildTarget)) {
+// Values returns a copy of all the values currently in the map.
+func (lm *targetLMap) Values() []*BuildTarget {
 	lm.l.RLock()
 	defer lm.l.RUnlock()
-	for key, val := range lm.m {
-		fn(key, val)
+	ret := make([]*BuildTarget, 0, len(lm.m))
+	for _, v := range lm.m {
+		ret = append(ret, v)
 	}
+	return ret
 }

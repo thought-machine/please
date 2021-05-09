@@ -200,10 +200,7 @@ func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
 
 // AllTargets returns a consistently ordered slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
-	targets := BuildTargets{}
-	graph.targets.ForEachLocked(func(k BuildLabel, v *BuildTarget) {
-		targets = append(targets, v)
-	})
+	targets := graph.targets.Values()
 	sort.Sort(targets)
 	return targets
 }
