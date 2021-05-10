@@ -208,7 +208,7 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 // PackageMap returns a copy of the graph's internal map of name to package.
 func (graph *BuildGraph) PackageMap() map[string]*Package {
 	packages := map[string]*Package{}
-	graph.packages.ForEachLocked(func(k, v interface{}) bool {
+	graph.packages.ForEach(func(k, v interface{}) bool {
 		packages[k.(packageKey).String()] = v.(*Package)
 		return true
 	})
