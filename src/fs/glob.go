@@ -101,6 +101,7 @@ func (ft *fileTree) AllPrefixed(prefix []string) []string {
 				ret = append(ret, path.Join(name, file))
 			}
 		}
+		sort.Strings(ret)
 		return ret
 	}
 	child, present := ft.children[prefix[0]]
@@ -241,7 +242,7 @@ func (globber *Globber) walkDir(rootPath string) (walkedDir, error) {
 }
 
 // globPrefix extracts the fixed prefix part from a glob expression.
-// i.e. "src/fs/**/*.go" -> ["src", "fs"], ["**", "/*.go"]
+// i.e. "src/fs/**/*.go" -> ["src", "fs"]
 func (globber *Globber) globPrefix(expression string) []string {
 	parts := splitPath(expression)
 	for i, part := range parts {
@@ -249,7 +250,9 @@ func (globber *Globber) globPrefix(expression string) []string {
 			return parts[:i]
 		}
 	}
-	// If we get here, the entire expression was fixed; leave the last item off which saves some craziness later.
+	// If we get here, the entire expression was fixed; leave the last item off which other
+	// parts of the code find easier to handle later - we would otherwise have to special case
+	// the glob matches since we don't want to do `filepath.Glob("")`.
 	return parts[:len(parts)-1]
 }
 
