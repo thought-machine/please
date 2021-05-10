@@ -38,8 +38,10 @@ func main() {
 	if opts.LogFile != "" {
 		cli.InitFileLogging(string(opts.LogFile), opts.Verbosity, false)
 	}
-	if err := serve(lsp.NewHandler()); err != nil {
-		log.Fatalf("fail to start server: %s", err)
+	for {
+		if err := serve(lsp.NewHandler()); err != nil {
+			log.Fatalf("fail to start server: %s", err)
+		}
 	}
 }
 
