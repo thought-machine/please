@@ -87,7 +87,6 @@ func TestDefinitionBuildLabel(t *testing.T) {
 	}, locs)
 }
 
-
 func TestDefinitionFileInput(t *testing.T) {
 	content := `go_test(
     name = "config_test",
@@ -97,7 +96,7 @@ func TestDefinitionFileInput(t *testing.T) {
 	h := initHandler()
 	err := h.Request("textDocument/didOpen", &lsp.DidOpenTextDocumentParams{
 		TextDocument: lsp.TextDocumentItem{
-			URI: lsp.DocumentURI(uri),
+			URI:  lsp.DocumentURI(uri),
 			Text: content,
 		},
 	}, nil)

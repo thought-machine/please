@@ -81,7 +81,7 @@ func (h *Handler) findLabel(currentPath, label string) lsp.Location {
 	}
 
 	pkg := h.state.Graph.PackageByLabel(l)
-	uri :=  lsp.DocumentURI("file://" + pkg.Filename)
+	uri := lsp.DocumentURI("file://" + pkg.Filename)
 	loc := lsp.Location{URI: uri}
 	doc, err := h.maybeOpenDoc(uri)
 	if err != nil {
@@ -96,7 +96,7 @@ func (h *Handler) findLabel(currentPath, label string) lsp.Location {
 			if findName(expr.Val.Call.Arguments) == l.Name {
 				loc.Range = lsp.Range{
 					Start: lsp.Position{Line: expr.Pos.Line, Character: expr.Pos.Column},
-					End: lsp.Position{Line: expr.EndPos.Line, Character: expr.EndPos.Column},
+					End:   lsp.Position{Line: expr.EndPos.Line, Character: expr.EndPos.Column},
 				}
 			}
 			return false
@@ -109,7 +109,7 @@ func (h *Handler) findLabel(currentPath, label string) lsp.Location {
 			if findName(stmt.Ident.Action.Call.Arguments) == l.Name {
 				loc.Range = lsp.Range{
 					Start: lsp.Position{Line: stmt.Pos.Line, Character: stmt.Pos.Column},
-					End: lsp.Position{Line: stmt.EndPos.Line, Character: stmt.EndPos.Column},
+					End:   lsp.Position{Line: stmt.EndPos.Line, Character: stmt.EndPos.Column},
 				}
 			}
 			return false
@@ -128,7 +128,7 @@ func findName(args []asp.CallArgument) string {
 			if arg.Value.Val != nil && arg.Value.Val.String != "" {
 				return astutils.TrimStrLit(arg.Value.Val.String)
 			}
- 		}
+		}
 	}
 	return ""
 }

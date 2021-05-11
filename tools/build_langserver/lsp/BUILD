@@ -11,11 +11,11 @@ go_library(
         "//src/help",
         "//src/parse/asp",
         "//src/plz",
-        "//tools/build_langserver/lsp/astutils",
         "//third_party/go:buildtools",
         "//third_party/go:jsonrpc2",
         "//third_party/go:logging",
         "//third_party/go:lsp",
+        "//tools/build_langserver/lsp/astutils",
     ],
 )
 
