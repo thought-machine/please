@@ -54,7 +54,8 @@ func serve() error {
 		for {
 			conn, err := lis.Accept()
 			if err != nil {
-				return err
+				log.Warningf("connection failed: %v", err)
+				continue
 			}
 			go reallyServe(lsp.NewHandler(), conn)
 		}
