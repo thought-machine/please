@@ -38,14 +38,12 @@ func main() {
 	if opts.LogFile != "" {
 		cli.InitFileLogging(string(opts.LogFile), opts.Verbosity, false)
 	}
-	for {
-		if err := serve(lsp.NewHandler()); err != nil {
-			log.Fatalf("fail to start server: %s", err)
-		}
+	if err := serve(); err != nil {
+		log.Fatalf("fail to start server: %s", err)
 	}
 }
 
-func serve(handler *lsp.Handler) error {
+func serve() error {
 	if opts.Mode == "tcp" {
 		lis, err := net.Listen("tcp", opts.Host+":"+opts.Port)
 		if err != nil {
@@ -53,14 +51,16 @@ func serve(handler *lsp.Handler) error {
 		}
 		defer lis.Close()
 		log.Notice("build_langserver: listening on %s:%s", opts.Host, opts.Port)
-		conn, err := lis.Accept()
-		if err != nil {
-			return err
+		for {
+			conn, err := lis.Accept()
+			if err != nil {
+				return err
+			}
+			go reallyServe(lsp.NewHandler(), conn)
 		}
-		reallyServe(handler, conn)
 	} else {
 		log.Info("build_langserver: reading on stdin, writing on stdout")
-		reallyServe(handler, stdrwc{})
+		reallyServe(lsp.NewHandler(), stdrwc{})
 	}
 	return nil
 }
