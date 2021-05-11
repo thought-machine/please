@@ -22,12 +22,14 @@
                       {id: 'time', label: 'Time', type: 'number'},
                       {id: 'min', label: 'Min', type: 'number', role: 'interval'},
                       {id: 'max', label: 'Max', type: 'number', role: 'interval'},
+                      {id: 'style', label: 'Style', type: 'string', role: 'style'},
                   ],
                   rows: results.map(r => ({c:[
                       {v: r.revision},
                       {v: r.parse.median},
                       {v: Math.min(...r.parse.raw)},
                       {v: Math.max(...r.parse.raw)},
+                      {v: 'color: #02e68f;'},
                   ]})),
               });
               const chart = new google.visualization.LineChart(document.getElementById('parse_chart'));
@@ -39,7 +41,7 @@
                   vAxis: { minValue: 0, textStyle: {color: 'white'}},
                   hAxis: { textStyle: {color: 'white'}},
                   backgroundColor: '#202328',
-                  lineWidth: 4,
+                  lineWidth: 3,
               });
           }));
       }
@@ -51,7 +53,7 @@
       <p>This measures time on purely parsing / adding targets / setting dependencies, on a
       large (~300,000 targets) synthetic graph. It's primarily a benchmark of asp, the core
       build graph and relevant parts of the Go runtime.</p>
-      <div id="parse_chart" style="width: 1200px; height: 500px"></div>
+      <div id="parse_chart" style="width: 1400px; height: 700px"></div>
     </div>
   </body>
 </html>
