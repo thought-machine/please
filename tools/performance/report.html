@@ -1,5 +1,9 @@
 <html>
   <head>
+    <title>plz perform</title>
+    <link rel="stylesheet" href="https://please.build/tachyons-4.12.0.min.css" />
+    <link rel="stylesheet" href="https://please.build/styles.css" />
+
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript">
       google.charts.load('current', {'packages':['corechart']});
@@ -29,15 +33,25 @@
               const chart = new google.visualization.LineChart(document.getElementById('parse_chart'));
               chart.draw(dt, {
                   title: 'Parse Time (seconds)',
+                  titleTextStyle: {color: 'white'},
                   curveType: 'none',
                   legend: { position: 'none' },
-                  vAxis: { minValue: 0 }
+                  vAxis: { minValue: 0, textStyle: {color: 'white'}},
+                  hAxis: { textStyle: {color: 'white'}},
+                  backgroundColor: '#202328',
+                  lineWidth: 4,
               });
           }));
       }
     </script>
   </head>
-  <body>
-    <div id="parse_chart" style="width: 1200px; height: 500px"></div>
+  <body class="silver bg-raisin-black essential-pragmata-pro f5 lh-copy nested-list-reset">
+    <div id="main-content" role="main">
+      <h2 class="title-1">Parse performance</h2>
+      <p>This measures time on purely parsing / adding targets / setting dependencies, on a
+      large (~300,000 targets) synthetic graph. It's primarily a benchmark of asp, the core
+      build graph and relevant parts of the Go runtime.</p>
+      <div id="parse_chart" style="width: 1200px; height: 500px"></div>
+    </div>
   </body>
 </html>
