@@ -16,8 +16,15 @@
                   cols: [
                       {id: 'revision', label: 'Revision', type: 'string'},
                       {id: 'time', label: 'Time', type: 'number'},
+                      {id: 'min', label: 'Min', type: 'number', role: 'interval'},
+                      {id: 'max', label: 'Max', type: 'number', role: 'interval'},
                   ],
-                  rows: results.map(r => ({c:[{v: r.revision}, {v: r.parse.median}]})),
+                  rows: results.map(r => ({c:[
+                      {v: r.revision},
+                      {v: r.parse.median},
+                      {v: Math.min(...r.parse.raw)},
+                      {v: Math.max(...r.parse.raw)},
+                  ]})),
               });
               const chart = new google.visualization.LineChart(document.getElementById('parse_chart'));
               chart.draw(dt, {
