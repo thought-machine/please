@@ -229,7 +229,7 @@ var opts struct {
 			Args  struct {
 				Options ConfigOverrides `positional-arg-name:"config" required:"true" description:"Attributes to set"`
 			} `positional-args:"true" required:"true"`
-		} `command:"config" description:"Initialises specific attributes of config files"`
+		} `command:"config" description:"Initialises specific attributes of config files. Warning, will add duplicate entries if attribute already set"`
 		Pleasings struct {
 			Revision  string `short:"r" long:"revision" description:"The revision to pin the pleasings repo to. This can be a branch, commit, tag, or other git reference."`
 			Location  string `short:"l" long:"location" description:"The location of the build file to write the subrepo rule to" default:"BUILD"`
