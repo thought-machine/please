@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"fmt"
+	"io/ioutil"
 	"path"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,8 @@ import (
 type doc struct {
 	// The filename of the document.
 	Filename string
+	// The Please package for this file
+	PkgName string
 	// The raw content of the document.
 	Content []string
 	// Parsed version of it
@@ -45,22 +48,45 @@ func (d *doc) SetText(text string) {
 }
 
 func (h *Handler) didOpen(params *lsp.DidOpenTextDocumentParams) (*struct{}, error) {
-	filename := fromURI(params.TextDocument.URI)
-	content := params.TextDocument.Text
+	_, err := h.open(params.TextDocument.URI, params.TextDocument.Text)
+	return nil, err
+}
+
+func (h *Handler) open(uri lsp.DocumentURI, content string) (*doc, error) {
+	filename := fromURI(uri)
 	d := &doc{
 		Filename:    filename,
 		Diagnostics: make(chan []*asp.Statement, 100),
 	}
 	if path, err := filepath.Rel(h.root, filename); err == nil {
 		d.Filename = path
+	} else {
+		log.Warningf("failed to figure out rel path: %v", err)
 	}
+	d.PkgName = filepath.Dir(d.Filename)
+
 	d.SetText(content)
 	go h.parse(d, content)
 	go h.diagnose(d)
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 	h.docs[filename] = d
-	return nil, nil
+	return d, nil
+}
+
+// maybeOpenDoc will open a doc unless it is already open. It will load
+// the doc from disk to initialise its content
+func (h *Handler) maybeOpenDoc(uri lsp.DocumentURI) (*doc, error) {
+	filename := fromURI(uri)
+	if doc, ok := h.docs[filename]; ok {
+		return doc, nil
+	}
+
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	return h.open(uri, string(content))
 }
 
 // parse parses the given document and updates its statements.
