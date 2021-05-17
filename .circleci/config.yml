@@ -69,7 +69,7 @@ jobs:
            path: plz-out/results
        - run:
            name: Package
-           command: plz-out/please/plz build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball -p
+           command: plz-out/please/plz build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball //tools/performance:all -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -77,6 +77,8 @@ jobs:
              - release_signer
              - docs.tar.gz
              - deep-docs.tar.gz
+             - gen_parse_tree.pex
+             - parse_perf_test.pex
        - store_artifacts:
            path: plz-out/log
        - save_cache:
@@ -242,8 +244,6 @@ jobs:
        - checkout
        - attach_workspace:
            at: /tmp/workspace
-       - restore_cache:
-           key: elan-v4-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Test Remote Execution
            command: ./.circleci/rex_test.sh
@@ -251,9 +251,6 @@ jobs:
            path: plz-out/results
        - store_artifacts:
            path: plz-out/log
-       - save_cache:
-           key: elan-v4-{{ checksum "third_party/go/BUILD" }}
-           paths: [ "plz-out/elan" ]
 
    test-http-cache:
      working_directory: ~/please
@@ -292,6 +289,18 @@ jobs:
        - attach_workspace:
            at: /tmp/workspace
        - run: ./.circleci/release_s3.sh
+
+   # Runs a benchmarking test and records some performance results.
+   perf-test:
+     docker:
+       - image: thoughtmachine/please_docs:20200930
+     resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
+     steps:
+       - checkout
+       - attach_workspace:
+           at: /tmp/workspace
+       - run: ./.circleci/perf_test.sh
+
 
 workflows:
   version: 2
@@ -340,6 +349,13 @@ workflows:
             - build-darwin
             - test-rex
             - test-http-cache
+          filters:
+            branches:
+              only: master
+      - perf-test:
+          requires:
+            - build-alpine
+            - build-linux
           filters:
             branches:
               only: master

@@ -64,6 +64,8 @@ func (os *openSet) Pop() *node {
 }
 
 type revdeps struct {
+	// revdeps is the map of immediate reverse dependencies
+	revdeps map[core.BuildLabel][]*core.BuildTarget
 	// subincludes is a map of build labels to the packages that subinclude them
 	subincludes       map[core.BuildLabel][]*core.Package
 	followSubincludes bool
@@ -92,6 +94,7 @@ func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth
 	}
 
 	return &revdeps{
+		revdeps:           buildRevdeps(graph),
 		subincludes:       subincludes,
 		followSubincludes: followSubincludes,
 		os: &openSet{
@@ -101,6 +104,18 @@ func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth
 		hidden:   hidden,
 		maxDepth: maxDepth,
 	}
+}
+
+// buildRevdeps builds the reverse dependency map from a build graph.
+func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarget {
+	targets := graph.AllTargets()
+	revdeps := make(map[core.BuildLabel][]*core.BuildTarget, len(targets))
+	for _, t := range targets {
+		for _, d := range t.DeclaredDependencies() {
+			revdeps[d] = append(revdeps[d], t)
+		}
+	}
+	return revdeps
 }
 
 // FindRevdeps will return a set of build targets that are reverse dependencies of the provided labels.
@@ -135,7 +150,7 @@ func (r *revdeps) findRevdeps(state *core.BuildState) map[*core.BuildTarget]stru
 	// 1000 is chosen pretty much arbitrarily here
 	ret := make(map[*core.BuildTarget]struct{}, 1000)
 	for next := r.os.Pop(); next != nil; next = r.os.Pop() {
-		ts := state.Graph.ReverseDependencies(next.target)
+		ts := r.revdeps[next.target.Label]
 		if r.followSubincludes {
 			for _, p := range r.subincludes[next.target.Label] {
 				ts = append(ts, p.AllTargets()...)

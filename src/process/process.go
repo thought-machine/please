@@ -19,22 +19,43 @@ import (
 
 var log = logging.MustGetLogger("progress")
 
+type NamespacingPolicy string
+
+const (
+	NamespaceAlways  NamespacingPolicy = "always"
+	NamespaceNever   NamespacingPolicy = "never"
+	NamespaceSandbox NamespacingPolicy = "sandbox"
+)
+
 // An Executor handles starting, running and monitoring a set of subprocesses.
 // It registers as a signal handler to attempt to terminate them all at process exit.
 type Executor struct {
-	sandboxCommand string
-	processes      map[*exec.Cmd]*os.Process
-	mutex          sync.Mutex
+	// Whether we should set up linux namespaces at all
+	namespace NamespacingPolicy
+	// The tool that will do the network/mount sandboxing
+	sandboxTool      string
+	usePleaseSandbox bool
+	processes        map[*exec.Cmd]*os.Process
+	mutex            sync.Mutex
 }
 
-// New returns a new Executor.
-func New(sandboxCommand string) *Executor {
+func NewSandboxingExecutor(usePleaseSandbox bool, namespace NamespacingPolicy, sandboxTool string) *Executor {
+	if usePleaseSandbox {
+		log.Warning("The please built in sandboxing is experimental and may not work as expected. Caveat usor!")
+	}
 	o := &Executor{
-		sandboxCommand: sandboxCommand,
-		processes:      map[*exec.Cmd]*os.Process{},
+		namespace:        namespace,
+		usePleaseSandbox: usePleaseSandbox,
+		sandboxTool:      sandboxTool,
+		processes:        map[*exec.Cmd]*os.Process{},
 	}
 	cli.AtExit(o.killAll) // Kill any subprocess if we are ourselves killed
 	return o
+}
+
+// New returns a new Executor.
+func New() *Executor {
+	return NewSandboxingExecutor(false, NamespaceNever, "")
 }
 
 // A Target is a minimal interface of what we need from a BuildTarget.
@@ -56,12 +77,12 @@ type Target interface {
 // If the command times out the returned error will be a context.DeadlineExceeded error.
 // If showOutput is true then output will be printed to stderr as well as returned.
 // It returns the stdout only, combined stdout and stderr and any error that occurred.
-func (e *Executor) ExecWithTimeout(ctx context.Context, target Target, dir string, env []string, timeout time.Duration, showOutput, attachStdin, attachStdout bool, argv []string) ([]byte, []byte, error) {
+func (e *Executor) ExecWithTimeout(ctx context.Context, target Target, dir string, env []string, timeout time.Duration, showOutput, attachStdin, attachStdout, shouldSandbox bool, argv []string) ([]byte, []byte, error) {
 	// We deliberately don't attach this context to the command, so we have better
 	// control over how the process gets terminated.
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	cmd := e.ExecCommand(argv[0], argv[1:]...)
+	cmd := e.ExecCommand(shouldSandbox, argv[0], argv[1:]...)
 	cmd.Dir = dir
 	cmd.Env = env
 
@@ -119,20 +140,14 @@ func runCommand(cmd *exec.Cmd, ch chan error) {
 // ExecWithTimeoutShell runs an external command within a Bash shell.
 // Other arguments are as ExecWithTimeout.
 // Note that the command is deliberately a single string.
-func (e *Executor) ExecWithTimeoutShell(target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, sandbox bool) ([]byte, []byte, error) {
-	return e.ExecWithTimeoutShellStdStreams(target, dir, env, timeout, showOutput, cmd, sandbox, false)
+func (e *Executor) ExecWithTimeoutShell(target Target, dir string, env []string, timeout time.Duration, showOutput, shouldSandbox bool, cmd string) ([]byte, []byte, error) {
+	return e.ExecWithTimeoutShellStdStreams(target, dir, env, timeout, showOutput, shouldSandbox, cmd, false)
 }
 
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
-func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env []string, timeout time.Duration, showOutput bool, cmd string, sandbox, attachStdStreams bool) ([]byte, []byte, error) {
+func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env []string, timeout time.Duration, showOutput, shouldSandbox bool, cmd string, attachStdStreams bool) ([]byte, []byte, error) {
 	c := BashCommand("bash", cmd, target.ShouldExitOnError())
-	if sandbox {
-		if e.sandboxCommand == "" {
-			log.Fatalf("Sandbox tool not found on PATH")
-		}
-		c = append([]string{e.sandboxCommand}, c...)
-	}
-	return e.ExecWithTimeout(context.Background(), target, dir, env, timeout, showOutput, attachStdStreams, attachStdStreams, c)
+	return e.ExecWithTimeout(context.Background(), target, dir, env, timeout, showOutput, attachStdStreams, attachStdStreams, shouldSandbox, c)
 }
 
 // KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL
@@ -259,8 +274,8 @@ func (e *Executor) killAll() {
 
 // ExecCommand is a utility function that runs the given command with few options.
 func ExecCommand(args ...string) ([]byte, error) {
-	e := New("")
-	cmd := e.ExecCommand(args[0], args[1:]...)
+	e := New()
+	cmd := e.ExecCommand(false, args[0], args[1:]...)
 	defer e.removeProcess(cmd)
 	return cmd.CombinedOutput()
 }

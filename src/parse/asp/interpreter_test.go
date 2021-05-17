@@ -257,7 +257,11 @@ func TestInterpreterPartition(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/partition.build")
 	assert.NoError(t, err)
 	assert.EqualValues(t, "27", s.Lookup("major"))
+	assert.EqualValues(t, ".0.", s.Lookup("mid"))
 	assert.EqualValues(t, "3", s.Lookup("minor"))
+	assert.EqualValues(t, "begin ", s.Lookup("start"))
+	assert.EqualValues(t, "sep", s.Lookup("sep"))
+	assert.EqualValues(t, " end", s.Lookup("end"))
 }
 
 func TestInterpreterFStrings(t *testing.T) {

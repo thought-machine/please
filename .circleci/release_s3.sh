@@ -22,7 +22,10 @@ aws s3 sync /tmp/workspace/darwin_arm64 s3://please-releases/darwin_arm64/$VERSI
 aws s3 sync /tmp/workspace/linux_amd64 s3://please-releases/linux_amd64/$VERSION
 aws s3 sync /tmp/workspace/freebsd_amd64 s3://please-releases/freebsd_amd64/$VERSION
 
+# Sign the download script with our release key
+/tmp/workspace/release_signer -o get_plz.sh.asc -i tools/misc/get_plz.sh
 aws s3 cp tools/misc/get_plz.sh s3://please-releases/get_plz.sh --content-type text/x-shellscript
+aws s3 cp get_plz.sh.asc s3://please-releases/get_plz.sh.asc --content-type text/plain
 
 if [[ "$VERSION" == *"beta"* ]] || [[ "$VERSION" == *"alpha"* ]] || [[ "$VERSION" == *"prerelease"* ]]; then
   echo "$VERSION is a prerelease, only setting latest_prerelease_version"

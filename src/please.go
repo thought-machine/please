@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/thought-machine/please/src/sandbox"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -168,10 +169,11 @@ var opts struct {
 		InWD       bool   `long:"in_wd" description:"When running locally, stay in the original working directory."`
 		InTempDir  bool   `long:"in_tmp_dir" description:"Runs in a temp directory, setting env variables and copying in runtime data similar to tests."`
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
+		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
 		Parallel   struct {
 			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Quiet          bool               `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
-			Output         run.ParallelOutput `short:"o" long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
+			Output         run.ParallelOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -227,7 +229,7 @@ var opts struct {
 			Args  struct {
 				Options ConfigOverrides `positional-arg-name:"config" required:"true" description:"Attributes to set"`
 			} `positional-args:"true" required:"true"`
-		} `command:"config" description:"Initialises specific attributes of config files"`
+		} `command:"config" description:"Initialises specific attributes of config files. Warning, will add duplicate entries if attribute already set"`
 		Pleasings struct {
 			Revision  string `short:"r" long:"revision" description:"The revision to pin the pleasings repo to. This can be a branch, commit, tag, or other git reference."`
 			Location  string `short:"l" long:"location" description:"The location of the build file to write the subrepo rule to" default:"BUILD"`
@@ -460,7 +462,7 @@ var buildFunctions = map[string]func() int{
 				log.Fatalf("%v expanded to too many targets: %v", opts.Run.Args.Target, annotatedOutputLabels)
 			}
 
-			run.Run(state, annotatedOutputLabels[0], opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir)
+			run.Run(state, annotatedOutputLabels[0], opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir, opts.Run.Cmd)
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
@@ -788,6 +790,12 @@ var buildFunctions = map[string]func() int{
 		}
 		return 1
 	},
+	"sandbox": func() int {
+		if err := sandbox.Sandbox(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		return 0
+	},
 }
 
 // ConfigOverrides are used to implement completion on the -o flag.
@@ -973,7 +981,11 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	if opts.BuildFlags.RepoRoot == "" {
 		log.Debug("Found repo root at %s", core.MustFindRepoRoot())
 	} else {
-		core.RepoRoot = string(opts.BuildFlags.RepoRoot)
+		abs, err := filepath.Abs(string(opts.BuildFlags.RepoRoot))
+		if err != nil {
+			log.Fatalf("Cannot make --repo_root absolute: %s", err)
+		}
+		core.RepoRoot = abs
 	}
 
 	// Save the current working directory before moving to root
@@ -1029,6 +1041,11 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 }
 
 func initBuild(args []string) string {
+	if len(args) > 1 && (args[1] == "sandbox") {
+		// Shortcut these as they're special commands used for please sandboxing
+		// going through the normal init path would be too slow
+		return args[1]
+	}
 	if _, present := os.LookupEnv("GO_FLAGS_COMPLETION"); present {
 		cli.InitLogging(cli.MinVerbosity)
 	}

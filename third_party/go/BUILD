@@ -339,13 +339,6 @@ go_module(
 )
 
 go_module(
-    name = "queue",
-    install = ["queue"],
-    module = "github.com/Workiva/go-datastructures",
-    version = "v1.0.53",
-)
-
-go_module(
     name = "fsnotify",
     module = "github.com/fsnotify/fsnotify",
     version = "a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb",
@@ -799,18 +792,12 @@ go_module(
     version = "v1.0.0",
 )
 
-genrule(
-    name = "claat_download",
-    out = "claat_download",
-    cmd = "git clone https://github.com/googlecodelabs/tools $OUT && cd $OUT && git checkout -q v2.2.4",
-)
-
 go_module(
     name = "claat",
     binary = True,
-    download = ":claat_download",
     install = ["claat"],
     module = "github.com/googlecodelabs/tools",
+    version = "v2.2.4",
     deps = [
         ":blackfriday",
         ":csslex",

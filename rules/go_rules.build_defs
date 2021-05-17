@@ -382,6 +382,9 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
     """
     assert srcs or go_srcs, 'At least one of srcs and go_srcs must be provided'
 
+    if CONFIG.BUILD_CONFIG == "cover":
+        linker_flags += ["-lgcov"]
+
     if not srcs:
         return go_library(
             name = name,
@@ -1032,7 +1035,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     # TODO(jpoole): write a proper please_go tool for this
     cmds = [
         'echo module example.com/module > go.mod', # stops go reading the main go.mod, and downloading all of those too
-        f'$TOOL mod download -x -modcacherw -json {module}@{version} | tee mod.json',
+        f'$TOOLS_GO mod download -x -modcacherw -json {module}@{version} | tee mod.json',
         'export MOD_DIR=$(cat mod.json | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
     ] + [f'rm -rf $OUT/{s}' for s in strip]
@@ -1047,7 +1050,9 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         },
         tag = _tag,
         outs = [out],
-        tools = [CONFIG.GO_TOOL],
+        tools = {
+            "go": [CONFIG.GO_TOOL],
+        },
         building_description = 'Fetching...',
         cmd = ' && '.join(cmds),
         requires = ['go_src'],
