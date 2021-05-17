@@ -191,6 +191,8 @@ func (l *lex) nextToken() Token {
 	case 0:
 		// End of file (we null terminate it above so this is easy to spot)
 		return Token{Type: EOF, Pos: pos}
+	case '\r':
+		return l.nextToken()
 	case '\n':
 		// End of line, read indent to next non-space character
 		lastIndent := l.indent
