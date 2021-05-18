@@ -1034,7 +1034,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     out = name if not go_path_compatibility else f'src/{module}'
     # TODO(jpoole): write a proper please_go tool for this
     cmds = [
-        'echo module example.com/module > go.mod', # stops go reading the main go.mod, and downloading all of those too
+        'echo module please_ignore > go.mod', # stops go reading the main go.mod, and downloading all of those too
         f'$TOOLS_GO mod download -x -modcacherw -json {module}@{version} | tee mod.json',
         'export MOD_DIR=$(cat mod.json | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
