@@ -209,10 +209,10 @@ func (pkg *Package) Label() BuildLabel {
 // VerifyOutputs checks all files output from this package and verifies that they're all OK;
 // notably it checks that if targets that output into a subdirectory, that subdirectory isn't
 // created by another target. That kind of thing can lead to subtle and annoying bugs.
-// It logs detected warnings to stdout.
+// It logs detected errors to stderr.
 func (pkg *Package) VerifyOutputs() {
-	for _, warning := range pkg.verifyOutputs() {
-		log.Warning("%s: %s", pkg.Filename, warning)
+	for _, errMsg := range pkg.verifyOutputs() {
+		log.Error("%s: %s", pkg.Filename, errMsg)
 	}
 }
 
@@ -223,7 +223,7 @@ func (pkg *Package) verifyOutputs() []string {
 	for filename, target := range pkg.Outputs {
 		for dir := path.Dir(filename); dir != "."; dir = path.Dir(dir) {
 			if target2, present := pkg.Outputs[dir]; present && target2 != target && !target.HasDependency(target2.Label.Parent()) {
-				ret = append(ret, fmt.Sprintf("Target %s outputs files into the directory %s, which is separately output by %s. This can cause errors based on build order - you should add a dependency.", target.Label, dir, target2.Label))
+				ret = append(ret, fmt.Sprintf("Target %s outputs files into the directory %s, which is separately output by %s. This can cause errors based on build order - you must add a dependency.", target.Label, dir, target2.Label))
 			}
 		}
 	}
