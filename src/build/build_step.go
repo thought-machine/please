@@ -998,42 +998,22 @@ func buildLinks(state *core.BuildState, target *core.BuildTarget) {
 		for _, out := range target.Outputs() {
 			destDir := path.Join(core.RepoRoot, target.Label.PackageDir())
 			srcDir := path.Join(core.RepoRoot, target.OutDir())
-			linkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), os.Symlink)
+			fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), os.Symlink)
 		}
 	}
 }
 
-type linkFunc func(string, string) error
-
-func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix string, f linkFunc) {
+func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix string, f fs.LinkFunc) {
 	if labels := target.PrefixedLabels(prefix); len(labels) > 0 {
 		env := core.TargetEnvironment(state, target)
 		for _, dest := range labels {
 			destDir := path.Join(core.RepoRoot, os.Expand(dest, env.ReplaceEnvironment))
 			srcDir := path.Join(core.RepoRoot, target.OutDir())
 			for _, out := range target.Outputs() {
-				linkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), f)
+				fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), f)
 			}
 		}
 	}
-}
-
-// linkIfNotExists creates dest as a link to src if it doesn't already exist.
-func linkIfNotExists(src, dest string, f linkFunc) {
-	if fs.PathExists(dest) {
-		return
-	}
-	fs.Walk(src, func(name string, isDir bool) error {
-		if !isDir {
-			fullDest := path.Join(dest, name[len(src):])
-			if err := fs.EnsureDir(fullDest); err != nil {
-				log.Warning("Failed to create directory for %s: %s", fullDest, err)
-			} else if err := f(name, fullDest); err != nil && !os.IsExist(err) {
-				log.Warning("Failed to create %s: %s", fullDest, err)
-			}
-		}
-		return nil
-	})
 }
 
 // fetchRemoteFile fetches a remote file from a URL.
