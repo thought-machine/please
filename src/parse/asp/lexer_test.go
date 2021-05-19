@@ -340,5 +340,4 @@ func TestCRLF(t *testing.T) {
 	assertToken(t, l.Next(), '(', "(", 2, 11, 22)
 	assertToken(t, l.Next(), ')', ")", 2, 12, 23)
 	assertToken(t, l.Next(), EOL, "", 2, 14, 25)
-
 }
