@@ -209,25 +209,24 @@ func (pkg *Package) Label() BuildLabel {
 // VerifyOutputs checks all files output from this package and verifies that they're all OK;
 // notably it checks that if targets that output into a subdirectory, that subdirectory isn't
 // created by another target. That kind of thing can lead to subtle and annoying bugs.
-// It logs detected errors to stderr.
 func (pkg *Package) VerifyOutputs() {
-	for _, errMsg := range pkg.verifyOutputs() {
-		log.Error("%s: %s", pkg.Filename, errMsg)
+	err := pkg.verifyOutputs()
+	if err != nil {
+		log.Fatalf("%s: %s", pkg.Filename, err)
 	}
 }
 
-func (pkg *Package) verifyOutputs() []string {
+func (pkg *Package) verifyOutputs() error {
 	pkg.mutex.RLock()
 	defer pkg.mutex.RUnlock()
-	ret := []string{}
 	for filename, target := range pkg.Outputs {
 		for dir := path.Dir(filename); dir != "."; dir = path.Dir(dir) {
 			if target2, present := pkg.Outputs[dir]; present && target2 != target && !target.HasDependency(target2.Label.Parent()) {
-				ret = append(ret, fmt.Sprintf("Target %s outputs files into the directory %s, which is separately output by %s. This can cause errors based on build order - you must add a dependency.", target.Label, dir, target2.Label))
+				return fmt.Errorf("Target %s outputs files into the directory %s, which is separately output by %s. You need to add a dependency to fix this.", target.Label, dir, target2.Label)
 			}
 		}
 	}
-	return ret
+	return nil
 }
 
 // FindOwningPackages returns build labels corresponding to the packages that own each of the given files.
