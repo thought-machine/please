@@ -222,7 +222,7 @@ func (pkg *Package) verifyOutputs() error {
 	for filename, target := range pkg.Outputs {
 		for dir := path.Dir(filename); dir != "."; dir = path.Dir(dir) {
 			if target2, present := pkg.Outputs[dir]; present && target2 != target && !target.HasDependency(target2.Label.Parent()) {
-				return fmt.Errorf("Target %s outputs files into the directory %s, which is separately output by %s. You need to add a dependency to fix this.", target.Label, dir, target2.Label)
+				return fmt.Errorf("Target %s outputs files into the directory %s, which is separately output by %s. You need to add a dependency to fix this", target.Label, dir, target2.Label)
 			}
 		}
 	}
