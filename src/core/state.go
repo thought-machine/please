@@ -778,7 +778,19 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceB
 			return fmt.Errorf("Target %s (referenced by %s) doesn't exist", label, dependent)
 		}
 	}
-	return state.queueResolvedTarget(target, dependent, rescan, forceBuild, neededForSubinclude)
+	if dependent.IsAllTargets() || dependent == OriginalTarget {
+		return state.queueResolvedTarget(target, dependent, rescan, forceBuild, neededForSubinclude)
+	}
+	for _, l := range target.ProvideFor(state.Graph.TargetOrDie(dependent)) {
+		if l == label {
+			if err := state.queueResolvedTarget(target, dependent, rescan, forceBuild, neededForSubinclude); err != nil {
+				return err
+			}
+		} else if err := state.queueTarget(l, dependent, rescan, forceBuild, neededForSubinclude); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // queueResolvedTarget is like queueTarget but once we have a resolved target.
