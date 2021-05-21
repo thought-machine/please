@@ -523,7 +523,7 @@ var buildFunctions = map[string]func() int{
 		if err == nil {
 			err = syscall.Exec(executable, append([]string{executable}, cmd...), os.Environ())
 		}
-		log.Fatalf("SORRY OP: %s", err) // On success Exec never returns.
+		log.Fatalf("SORRY OP: %s", err) // On success Run never returns.
 		return 1
 	},
 	"gc": func() int {

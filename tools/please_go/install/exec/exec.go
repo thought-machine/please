@@ -5,21 +5,17 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 )
 
-// Executor are able to "execute" the command.
-type Executor interface {
-	Exec(cmd string, args ...interface{}) error
-}
-
-// OsExecutor executes the command using the os/exec package
-type OsExecutor struct {
+// Executor executes the command using the os/exec package
+type Executor struct {
 	Stdout io.Writer
 	Stderr io.Writer
 }
 
-// Exec runs the command
-func (e *OsExecutor) Exec(cmdStr string, args ...interface{}) error {
+// Run runs the command
+func (e *Executor) Run(cmdStr string, args ...interface{}) error {
 	cmdStr = fmt.Sprintf(cmdStr, args...)
 	fmt.Fprintf(os.Stderr, "please_go install -> %v\n", cmdStr)
 
@@ -28,4 +24,14 @@ func (e *OsExecutor) Exec(cmdStr string, args ...interface{}) error {
 	cmd.Stderr = e.Stderr
 
 	return cmd.Run()
+}
+
+func (e *Executor) CombinedOutput(bin string, args ...string) ([]byte, error) {
+	fmt.Fprintln(os.Stderr, "please_go install ->", bin, strings.Join(args, " "))
+
+	cmd := exec.Command(bin, args...)
+	out, err := cmd.CombinedOutput()
+
+	fmt.Print(string(out))
+	return out, err
 }

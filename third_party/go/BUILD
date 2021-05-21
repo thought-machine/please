@@ -919,3 +919,11 @@ go_module(
     module = "github.com/beorn7/perks",
     version = "v1.0.1",
 )
+
+go_module(
+    name="gotk3",
+    module="github.com/gotk3/gotk3",
+    version="master",
+    install=["..."],
+    build_tags = ["pango_1_42", "gtk_3_22"],
+)

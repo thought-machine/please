@@ -908,12 +908,13 @@ def _remove_redundant_outs(outs):
     return [r for r in new_outs.keys() if new_outs[r]]
 
 def _go_install_module(name:str, module:str, install:list, src:str, outs:list, deps:list, binary:bool, visibility:list,
-                       test_only:bool, licences:list, linker_flags:list, env:dict):
+                       test_only:bool, licences:list, linker_flags:list, env:dict, build_tags:list):
+    build_tags = " ".join([f"--build_tag={tag}" for tag in build_tags])
     cmd = [
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"$TOOLS_PLEASE_GO install --trim_path $TMP_DIR --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
+        f"$TOOLS_PLEASE_GO install {build_tags} --trim_path $TMP_DIR --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --pkg_config_tool=$TOOLS_PKG_CONFIG --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
         "cat LD_FLAGS",
     ]
 
@@ -933,6 +934,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
             'please_go': [CONFIG.PLEASE_GO_TOOL],
             # TODO(jpoole): this should be optional
             'cc': [CONFIG.CGO_CC_TOOL],
+            'pkg_config': ["pkg-config"],
         },
         visibility = visibility,
         building_description = 'Compiling...',
@@ -1066,7 +1068,8 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
-              licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}, patch:list|str=[]):
+              licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}, patch:list|str=[],
+              build_tags:list=[]):
     """Defines a dependency on a third-party Go module.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -1100,6 +1103,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
                            automatically be collected so this is typically not necessary.
       env (dict): Any env variables to set during build time. This can be useful to set CGO_CFLAGS etc. to control
                   aspects of compilation.
+      build_tags (list): Any build tags to apply to the build context.
     """
     patch = [patch] if isinstance(patch, str) else patch
     if version and download:
@@ -1157,6 +1161,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         licences = licences,
         linker_flags = linker_flags,
         env = env,
+        build_tags = build_tags,
     )
 
     if binary:

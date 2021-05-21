@@ -15,6 +15,7 @@ import (
 // PleaseGoInstall implements functionality similar to `go install` however it works with import configs to avoid a
 // dependence on the GO_PATH, go.mod or other go build concepts.
 type PleaseGoInstall struct {
+	buildContext build.Context
 	srcRoot      string
 	moduleName   string
 	importConfig string
@@ -25,22 +26,31 @@ type PleaseGoInstall struct {
 	tc *toolchain.Toolchain
 
 	compiledPackages map[string]bool
+
+	// A set of flags we from pkg-config or #cgo comments
+	collectedLdFlags map[string]struct{}
 }
 
 // New creates a new PleaseGoInstall
-func New(srcRoot, moduleName, importConfig, ldFlags, goTool, ccTool, out, trimPath string) *PleaseGoInstall {
+func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, goTool, ccTool, pkgConfTool, out, trimPath string) *PleaseGoInstall {
+	ctx := build.Default
+	ctx.BuildTags = append(ctx.BuildTags, buildTags...)
+
 	return &PleaseGoInstall{
+		buildContext: ctx,
 		srcRoot:      srcRoot,
 		moduleName:   moduleName,
 		importConfig: importConfig,
 		ldFlags:      ldFlags,
 		outDir:       out,
 		trimPath:     trimPath,
+		collectedLdFlags: map[string]struct{}{},
 
 		tc: &toolchain.Toolchain{
-			CcTool: ccTool,
-			GoTool: goTool,
-			Exec:   &exec.OsExecutor{Stdout: os.Stdout, Stderr: os.Stderr},
+			CcTool:        ccTool,
+			GoTool:        goTool,
+			PkgConfigTool: pkgConfTool,
+			Exec:          &exec.Executor{Stdout: os.Stdout, Stderr: os.Stderr},
 		},
 	}
 }
@@ -67,6 +77,25 @@ func (install *PleaseGoInstall) Install(packages []string) error {
 			}
 		} else if err := install.compile([]string{}, target); err != nil {
 			return fmt.Errorf("failed to compile %v: %w", target, err)
+		}
+	}
+
+	if err := install.writeLDFlags(); err != nil {
+		return fmt.Errorf("failed to write ld flags: %w", err)
+	}
+
+	return nil
+}
+
+func (install *PleaseGoInstall) writeLDFlags() error {
+	ldFlags := make([]string, 0, len(install.collectedLdFlags))
+	for flag, _ := range install.collectedLdFlags {
+		ldFlags = append(ldFlags, flag)
+	}
+
+	if len(ldFlags) > 0 {
+		if err := install.tc.Exec.Run("echo -n \"%s\" >> %s", strings.Join(ldFlags, " "), install.ldFlags); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -100,10 +129,10 @@ func (install *PleaseGoInstall) compileAll(dir string) error {
 }
 
 func (install *PleaseGoInstall) initBuildEnv() error {
-	if err := install.tc.Exec.Exec("mkdir -p %s\n", filepath.Join(install.outDir, "bin")); err != nil {
+	if err := install.tc.Exec.Run("mkdir -p %s\n", filepath.Join(install.outDir, "bin")); err != nil {
 		return err
 	}
-	return install.tc.Exec.Exec("touch %s", install.ldFlags)
+	return install.tc.Exec.Run("touch %s", install.ldFlags)
 }
 
 // pkgDir returns the file path to the given target package
@@ -162,8 +191,7 @@ func (install *PleaseGoInstall) compile(from []string, target string) error {
 		pkgDir = filepath.Dir(pkgDir)
 	}
 
-	// TODO(jpoole): is import vendor the correct thing to do here?
-	pkg, err := build.ImportDir(pkgDir, build.ImportComment)
+	pkg, err := install.buildContext.ImportDir(pkgDir, build.ImportComment)
 	if err != nil {
 		return err
 	}
@@ -190,13 +218,13 @@ func (install *PleaseGoInstall) compile(from []string, target string) error {
 func (install *PleaseGoInstall) prepWorkdir(pkg *build.Package, workDir, out string) error {
 	allSrcs := append(append(pkg.CFiles, pkg.GoFiles...), pkg.HFiles...)
 
-	if err := install.tc.Exec.Exec("mkdir -p %s", workDir); err != nil {
+	if err := install.tc.Exec.Run("mkdir -p %s", workDir); err != nil {
 		return err
 	}
-	if err := install.tc.Exec.Exec("mkdir -p %s", filepath.Dir(out)); err != nil {
+	if err := install.tc.Exec.Run("mkdir -p %s", filepath.Dir(out)); err != nil {
 		return err
 	}
-	return install.tc.Exec.Exec("ln %s %s", toolchain.FullPaths(allSrcs, pkg.Dir), workDir)
+	return install.tc.Exec.Run("ln %s %s", toolchain.FullPaths(allSrcs, pkg.Dir), workDir)
 }
 
 // outPath returns the path to the .a for a given package. Unlike go build, please_go install will always output to
@@ -225,10 +253,32 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 
 	var objFiles []string
 
+	ldFlags := pkg.CgoLDFLAGS
 	if len(pkg.CgoFiles) > 0 {
+		cFlags := pkg.CgoCFLAGS
+
+		if len(pkg.CgoPkgConfig) > 0 {
+			pkgConfCFlags, err := install.tc.PkgConfigCFlags(pkg.CgoPkgConfig)
+			if err != nil {
+				return err
+			}
+
+			cFlags = append(cFlags, pkgConfCFlags...)
+
+			pkgConfLDFlags, err := install.tc.PkgConfigLDFlags(pkg.CgoPkgConfig)
+			if err != nil {
+				return err
+			}
+
+			ldFlags = append(ldFlags, pkgConfLDFlags...)
+			if len(pkgConfLDFlags) > 0 {
+				fmt.Fprintf(os.Stderr, "------ ***** ------ ld flags for %s: %s\n", target, strings.Join(pkgConfLDFlags, " "))
+			}
+		}
+
 		cFiles := pkg.CFiles
 
-		cgoGoFiles, cgoCFiles, err := install.tc.CGO(pkg.Dir, workDir, pkg.CgoFiles)
+		cgoGoFiles, cgoCFiles, err := install.tc.CGO(pkg.Dir, workDir, cFlags, pkg.CgoFiles)
 		if err != nil {
 			return err
 		}
@@ -236,7 +286,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 		goFiles = append(goFiles, cgoGoFiles...)
 		cFiles = append(cFiles, cgoCFiles...)
 
-		cObjFiles, err := install.tc.CCompile(workDir, cFiles, pkg.CgoCFLAGS)
+		cObjFiles, err := install.tc.CCompile(workDir, cFiles, cFlags)
 		if err != nil {
 			return err
 		}
@@ -274,13 +324,12 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 		}
 	}
 
-	if err := install.tc.Exec.Exec("echo \"packagefile %s=%s\" >> %s", target, out, install.importConfig); err != nil {
+	if err := install.tc.Exec.Run("echo \"packagefile %s=%s\" >> %s", target, out, install.importConfig); err != nil {
 		return err
 	}
-	if len(pkg.CgoLDFLAGS) > 0 {
-		if err := install.tc.Exec.Exec("echo -n \"%s\" >> %s", strings.Join(pkg.CgoLDFLAGS, " "), install.ldFlags); err != nil {
-			return err
-		}
+
+	for _, f := range ldFlags {
+		install.collectedLdFlags[f] = struct{}{}
 	}
 
 	if pkg.IsCommand() {
