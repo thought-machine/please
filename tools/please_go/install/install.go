@@ -72,11 +72,11 @@ func (install *PleaseGoInstall) Install(packages []string) error {
 
 			pkg, err := install.importDir(target)
 			if err != nil {
-				return err
+				panic(fmt.Sprintf("import dir failed after successful compilation: %v", err))
 			}
 			if pkg.IsCommand() {
 				if err := install.linkPackage(target); err != nil {
-					return err
+					return fmt.Errorf("failed to link %v: %w", target, err)
 				}
 			}
 		}
@@ -187,6 +187,9 @@ func (install *PleaseGoInstall) compile(from []string, target string) error {
 	}
 
 	pkg, err := install.importDir(target)
+	if err != nil {
+		return err
+	}
 
 	for _, i := range pkg.Imports {
 		err := install.compile(from, i)
