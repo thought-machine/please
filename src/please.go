@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/thought-machine/please/src/sandbox"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -36,6 +35,7 @@ import (
 	"github.com/thought-machine/please/src/plzinit"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
+	"github.com/thought-machine/please/src/sandbox"
 	"github.com/thought-machine/please/src/scm"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
@@ -341,6 +341,14 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to render graph for"`
 			} `positional-args:"true"`
 		} `command:"graph" description:"Prints a JSON representation of the build graph."`
+		WhatInputs struct {
+			Hidden    bool `long:"hidden" short:"h" description:"Output internal / hidden targets too."`
+			Local     bool `long:"local" short:"l" description:"Only output targets where the file sources don't come from other targets."`
+			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
+			Args      struct {
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to query as sources to targets" required:"true"`
+			} `positional-args:"true" required:"true"`
+		} `command:"whatinputs" description:"Prints out target(s) with provided file(s) as inputs"`
 		WhatOutputs struct {
 			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
 			Args      struct {
@@ -586,6 +594,11 @@ var buildFunctions = map[string]func() int{
 	"tool": func() int {
 		tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args.AsStrings())
 		return 1 // If the function returns (which it shouldn't), something went wrong.
+	},
+	"whatinputs": func() int {
+		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
+			query.WhatInputs(state.Graph, opts.Query.WhatInputs.Args.Files.Get(), opts.Query.WhatInputs.Local, opts.Query.WhatInputs.Hidden, opts.Query.WhatInputs.EchoFiles)
+		})
 	},
 	"deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
