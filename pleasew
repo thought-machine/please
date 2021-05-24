@@ -42,19 +42,27 @@ fi
 
 # Find the os / arch to download. You can do this quite nicely with go env
 # but we use this script on machines that don't necessarily have Go itself.
-OS=`uname`
-if [ "$OS" = "Linux" ]; then
-    GOOS="linux"
-elif [ "$OS" = "Darwin" ]; then
-    GOOS="darwin"
-else
-    echo -e >&2 "${RED}Unknown operating system $OS${RESET}"
-    exit 1
-fi
-# Don't have any builds other than amd64 at the moment.
-ARCH="amd64"
+case "`uname`" in
+  Linux)
+    GOOS="linux";;
+  Darwin)
+    GOOS="darwin";;
+  *)
+    echo "Unknown operating system $(uname)"
+    exit 1;;
+esac
 
-PLEASE_URL="${URL_BASE}/${GOOS}_${ARCH}/${VERSION}/please_${VERSION}.tar.xz"
+case "`uname -m`" in
+  arm*)
+    GOARCH="arm64";;
+  x86_64|amd64)
+    GOARCH="amd64";;
+  *)
+    echo "Unknown CPU arch $(uname -i)"
+    exit 1;;
+esac
+
+PLEASE_URL="${URL_BASE}/${GOOS}_${GOARCH}/${VERSION}/please_${VERSION}.tar.xz"
 DIR="${LOCATION}/${VERSION}"
 # Potentially we could reuse this but it's easier not to really.
 if [ ! -d "$DIR" ]; then
