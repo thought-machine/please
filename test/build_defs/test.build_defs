@@ -4,10 +4,10 @@ def please_repo_e2e_test(
         plz_command: str,
         repo: str,
         deps: list=[],
+        tools: dict={},
         expected_output: dict = {},
         labels: list = [],
 ):
-
     plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
     test_cmd = [
         "mv $DATA_BASE_CONFIG $DATA_REPO",
@@ -26,10 +26,8 @@ def please_repo_e2e_test(
         "BASE_CONFIG": ["//test/build_defs:base_config"],
     }
 
-    tools = {
-        "PLEASE": ["//package:installed_files|please"],
-        "CONTENT_CHECKER": ["//test/build_defs:content_checker"],
-    }
+    tools["PLEASE"] = ["//package:installed_files|please"]
+    tools["CONTENT_CHECKER"] = ["//test/build_defs:content_checker"]
 
     return gentest(
         name = name,

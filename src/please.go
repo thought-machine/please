@@ -459,7 +459,7 @@ var buildFunctions = map[string]func() int{
 
 			annotatedOutputLabels := state.ExpandOriginalMaybeAnnotatedLabels([]core.AnnotatedOutputLabel{opts.Run.Args.Target})
 			if len(annotatedOutputLabels) != 1 {
-				log.Fatalf("%v expanded to too many targets: %v", opts.Run.Args.Target, annotatedOutputLabels)
+				log.Fatalf("%v expanded to more than one target. If you want to run multiple targets, use `plz run parallel %v` or `plz run sequential %v`. ", opts.Run.Args.Target, opts.Run.Args.Target, opts.Run.Args.Target)
 			}
 
 			run.Run(state, annotatedOutputLabels[0], opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir, opts.Run.Cmd)
@@ -523,7 +523,7 @@ var buildFunctions = map[string]func() int{
 		if err == nil {
 			err = syscall.Exec(executable, append([]string{executable}, cmd...), os.Environ())
 		}
-		log.Fatalf("SORRY OP: %s", err) // On success Exec never returns.
+		log.Fatalf("SORRY OP: %s", err) // On success Run never returns.
 		return 1
 	},
 	"gc": func() int {
