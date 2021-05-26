@@ -8,6 +8,7 @@ please_repo_e2e_test(
     labels = ["no-musl"],
     plz_command = "plz test //src/foo:foo_test && plz run //src:main > out.txt",
     repo = "test_repo",
+    set_go_tool = False,
 )
 
 please_repo_e2e_test(
@@ -18,4 +19,5 @@ please_repo_e2e_test(
     labels = ["no-musl"],
     plz_command = "plz build //src:main --arch freebsd_arm64 && file plz-out/bin/freebsd_arm64/src/main > out.txt",
     repo = "test_repo",
+    set_go_tool = False,
 )

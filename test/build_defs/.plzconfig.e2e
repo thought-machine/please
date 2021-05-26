@@ -5,7 +5,7 @@ Tool = please_sandbox
 [go]
 PleaseGoTool = please_go
 FilterTool = please_go_filter
-EmbedTool= please_go_embed
+EmbedTool = please_go_embed
 
 [Python]
 PexTool = please_pex
