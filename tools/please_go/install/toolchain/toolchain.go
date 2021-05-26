@@ -121,7 +121,6 @@ func (tc *Toolchain) PkgConfigCFlags(cfgs []string) ([]string, error) {
 	return tc.pkgConfig("--cflags", cfgs)
 }
 
-
 func (tc *Toolchain) PkgConfigLDFlags(cfgs []string) ([]string, error) {
 	return tc.pkgConfig("--libs", cfgs)
 }

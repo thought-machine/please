@@ -11,9 +11,7 @@ please_repo_e2e_test(
 
 please_repo_e2e_test(
     name = "pkg_config_test",
-    labels = [
-        "no-musl",
-    ],
+    labels = ["manual"],
     plz_command = "plz build //third_party/go:all",
     repo = "pkg_config_repo",
 )

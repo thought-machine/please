@@ -914,7 +914,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"$TOOLS_PLEASE_GO install {build_tags} --trim_path $TMP_DIR --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --pkg_config_tool=$TOOLS_PKG_CONFIG --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
+        f"$TOOLS_PLEASE_GO install {build_tags} --trim_path $TMP_DIR --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
         "cat LD_FLAGS",
     ]
 
@@ -934,7 +934,6 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
             'please_go': [CONFIG.PLEASE_GO_TOOL],
             # TODO(jpoole): this should be optional
             'cc': [CONFIG.CGO_CC_TOOL],
-            'pkg_config': ["pkg-config"],
         },
         visibility = visibility,
         building_description = 'Compiling...',

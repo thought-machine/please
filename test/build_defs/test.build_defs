@@ -6,11 +6,7 @@ def please_repo_e2e_test(
         deps: list=[],
         expected_output: dict = {},
         labels: list = [],
-        set_go_tool = True,
 ):
-    if set_go_tool:
-        plz_command = plz_command.replace("plz ", "plz -o go.gotool:$TOOLS_GO ")
-
     plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
     test_cmd = [
         "mv $DATA_BASE_CONFIG $DATA_REPO",

@@ -37,13 +37,13 @@ func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, goTool,
 	ctx.BuildTags = append(ctx.BuildTags, buildTags...)
 
 	return &PleaseGoInstall{
-		buildContext: ctx,
-		srcRoot:      srcRoot,
-		moduleName:   moduleName,
-		importConfig: importConfig,
-		ldFlags:      ldFlags,
-		outDir:       out,
-		trimPath:     trimPath,
+		buildContext:     ctx,
+		srcRoot:          srcRoot,
+		moduleName:       moduleName,
+		importConfig:     importConfig,
+		ldFlags:          ldFlags,
+		outDir:           out,
+		trimPath:         trimPath,
 		collectedLdFlags: map[string]struct{}{},
 
 		tc: &toolchain.Toolchain{
@@ -101,7 +101,7 @@ func (install *PleaseGoInstall) Install(packages []string) error {
 
 func (install *PleaseGoInstall) writeLDFlags() error {
 	ldFlags := make([]string, 0, len(install.collectedLdFlags))
-	for flag, _ := range install.collectedLdFlags {
+	for flag := range install.collectedLdFlags {
 		ldFlags = append(ldFlags, flag)
 	}
 
@@ -201,7 +201,7 @@ func (install *PleaseGoInstall) importDir(target string) (*build.Package, error)
 		pkgDir = filepath.Dir(pkgDir)
 	}
 
-	return  install.buildContext.ImportDir(pkgDir, build.ImportComment)
+	return install.buildContext.ImportDir(pkgDir, build.ImportComment)
 }
 
 func (install *PleaseGoInstall) compile(from []string, target string) error {
