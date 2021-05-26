@@ -4,6 +4,7 @@ def please_repo_e2e_test(
         plz_command: str,
         repo: str,
         deps: list=[],
+        tools: dict={},
         expected_output: dict = {},
         labels: list = [],
 ):
@@ -25,11 +26,8 @@ def please_repo_e2e_test(
         "BASE_CONFIG": ["//test/build_defs:base_config"],
     }
 
-    tools = {
-        "PLEASE": ["//package:installed_files|please"],
-        "CONTENT_CHECKER": ["//test/build_defs:content_checker"],
-        "GO": ["//third_party/go:toolchain|go"],
-    }
+    tools["PLEASE"] = ["//package:installed_files|please"]
+    tools["CONTENT_CHECKER"] = ["//test/build_defs:content_checker"]
 
     return gentest(
         name = name,
