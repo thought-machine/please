@@ -329,3 +329,15 @@ func TestUnevenUnindent(t *testing.T) {
 	assertToken(t, l.Next(), Unindent, "", 6, 1, 52)
 	assertToken(t, l.Next(), EOF, "", 6, 1, 52)
 }
+
+func TestCRLF(t *testing.T) {
+	l := newLexer(strings.NewReader("package()\r\nsubinclude()\r\n"))
+	assertToken(t, l.Next(), Ident, "package", 1, 1, 1)
+	assertToken(t, l.Next(), '(', "(", 1, 8, 8)
+	assertToken(t, l.Next(), ')', ")", 1, 9, 9)
+	assertToken(t, l.Next(), EOL, "", 1, 11, 11)
+	assertToken(t, l.Next(), Ident, "subinclude", 2, 1, 12)
+	assertToken(t, l.Next(), '(', "(", 2, 11, 22)
+	assertToken(t, l.Next(), ')', ")", 2, 12, 23)
+	assertToken(t, l.Next(), EOL, "", 2, 14, 25)
+}

@@ -25,7 +25,7 @@ type PleaseGoInstall struct {
 
 	tc *toolchain.Toolchain
 
-	compiledPackages map[string]bool
+	compiledPackages map[string]string
 
 	// A set of flags we from pkg-config or #cgo comments
 	collectedLdFlags map[string]struct{}
@@ -75,8 +75,20 @@ func (install *PleaseGoInstall) Install(packages []string) error {
 			if err != nil {
 				return err
 			}
-		} else if err := install.compile([]string{}, target); err != nil {
-			return fmt.Errorf("failed to compile %v: %w", target, err)
+		} else {
+			if err := install.compile([]string{}, target); err != nil {
+				return fmt.Errorf("failed to compile %v: %w", target, err)
+			}
+
+			pkg, err := install.importDir(target)
+			if err != nil {
+				panic(fmt.Sprintf("import dir failed after successful compilation: %v", err))
+			}
+			if pkg.IsCommand() {
+				if err := install.linkPackage(target); err != nil {
+					return fmt.Errorf("failed to link %v: %w", target, err)
+				}
+			}
 		}
 	}
 
@@ -99,6 +111,14 @@ func (install *PleaseGoInstall) writeLDFlags() error {
 		}
 	}
 	return nil
+}
+
+func (install *PleaseGoInstall) linkPackage(target string) error {
+	out := install.compiledPackages[target]
+	filename := strings.TrimSuffix(filepath.Base(out), ".a")
+	binName := filepath.Join(install.outDir, "bin", filename)
+
+	return install.tc.Link(out, binName, install.importConfig, install.ldFlags)
 }
 
 // compileAll walks the provided directory looking for go packages to compile. Unlike compile(), this will skip any
@@ -142,9 +162,9 @@ func (install *PleaseGoInstall) pkgDir(target string) string {
 }
 
 func (install *PleaseGoInstall) parseImportConfig() error {
-	install.compiledPackages = map[string]bool{
-		"unsafe": true, // Not sure how many other packages like this I need to handle
-		"C":      true, // Pseudo-package for cgo symbols
+	install.compiledPackages = map[string]string{
+		"unsafe": "", // Not sure how many other packages like this I need to handle
+		"C":      "", // Pseudo-package for cgo symbols
 	}
 
 	if install.importConfig != "" {
@@ -158,7 +178,7 @@ func (install *PleaseGoInstall) parseImportConfig() error {
 		for importCfg.Scan() {
 			line := importCfg.Text()
 			parts := strings.Split(strings.TrimPrefix(line, "packagefile "), "=")
-			install.compiledPackages[parts[0]] = true
+			install.compiledPackages[parts[0]] = parts[1]
 		}
 	}
 	return nil
@@ -174,8 +194,18 @@ func checkCycle(path []string, next string) ([]string, error) {
 	return append(path, next), nil
 }
 
+func (install *PleaseGoInstall) importDir(target string) (*build.Package, error) {
+	pkgDir := install.pkgDir(target)
+	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
+	if _, err := os.Lstat(pkgDir); os.IsNotExist(err) {
+		pkgDir = filepath.Dir(pkgDir)
+	}
+
+	return  install.buildContext.ImportDir(pkgDir, build.ImportComment)
+}
+
 func (install *PleaseGoInstall) compile(from []string, target string) error {
-	if done := install.compiledPackages[target]; done {
+	if _, done := install.compiledPackages[target]; done {
 		return nil
 	}
 	fmt.Fprintf(os.Stderr, "Compiling package %s from %v\n", target, from)
@@ -185,13 +215,7 @@ func (install *PleaseGoInstall) compile(from []string, target string) error {
 		return err
 	}
 
-	pkgDir := install.pkgDir(target)
-	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
-	if _, err := os.Lstat(pkgDir); os.IsNotExist(err) {
-		pkgDir = filepath.Dir(pkgDir)
-	}
-
-	pkg, err := install.buildContext.ImportDir(pkgDir, build.ImportComment)
+	pkg, err := install.importDir(target)
 	if err != nil {
 		return err
 	}
@@ -211,7 +235,6 @@ func (install *PleaseGoInstall) compile(from []string, target string) error {
 	if err != nil {
 		return err
 	}
-	install.compiledPackages[target] = true
 	return nil
 }
 
@@ -331,12 +354,6 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 	for _, f := range ldFlags {
 		install.collectedLdFlags[f] = struct{}{}
 	}
-
-	if pkg.IsCommand() {
-		filename := strings.TrimSuffix(filepath.Base(out), ".a")
-		binName := filepath.Join(install.outDir, "bin", filename)
-
-		return install.tc.Link(out, binName, install.importConfig, install.ldFlags)
-	}
+	install.compiledPackages[target] = out
 	return nil
 }

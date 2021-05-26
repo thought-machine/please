@@ -15,6 +15,7 @@ go_library(
         "//third_party/go:jsonrpc2",
         "//third_party/go:logging",
         "//third_party/go:lsp",
+        "//tools/build_langserver/lsp/astutils",
     ],
 )
 

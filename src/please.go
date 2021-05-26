@@ -229,7 +229,7 @@ var opts struct {
 			Args  struct {
 				Options ConfigOverrides `positional-arg-name:"config" required:"true" description:"Attributes to set"`
 			} `positional-args:"true" required:"true"`
-		} `command:"config" description:"Initialises specific attributes of config files"`
+		} `command:"config" description:"Initialises specific attributes of config files. Warning, will add duplicate entries if attribute already set"`
 		Pleasings struct {
 			Revision  string `short:"r" long:"revision" description:"The revision to pin the pleasings repo to. This can be a branch, commit, tag, or other git reference."`
 			Location  string `short:"l" long:"location" description:"The location of the build file to write the subrepo rule to" default:"BUILD"`
@@ -778,13 +778,16 @@ var buildFunctions = map[string]func() int{
 
 		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
 			if opts.Codegen.Gitignore != "" {
-				if !state.Config.Build.LinkGeneratedSources {
-					log.Warning("You're updating a .gitignore with generated sources but Please isn't configured to link generated sources. See `plz help LinkGeneratedSources` for more information. ")
-				}
 				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Codegen.Gitignore)
 				if err != nil {
 					log.Fatalf("failed to update gitignore: %v", err)
 				}
+			}
+
+			// This may seem counter intuitive but if this was set, we would've linked during the build.
+			// If we've opted to not automatically link generated sources during the build, we should link them now.
+			if !state.Config.Build.LinkGeneratedSources {
+				generate.LinkGeneratedSources(state.Graph, state.ExpandOriginalLabels())
 			}
 			return 0
 		}
