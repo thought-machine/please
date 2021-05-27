@@ -833,7 +833,7 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, rescan, forceB
 func (state *BuildState) queueTargetAsync(target *BuildTarget, rescan, forceBuild, building bool) {
 	defer state.taskDone(true)
 
-	// TODO(jpoole): why do we need to queue these up here if we're requing them when we resolve?
+	// TODO(jpoole): why do we need to queue these up here if we're re-queuing them when we resolve?
 	for _, dep := range target.DeclaredDependencies() {
 		if err := state.queueTarget(dep, target.Label, rescan, forceBuild, false); err != nil {
 			state.asyncError(dep, err)
