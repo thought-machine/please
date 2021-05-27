@@ -54,8 +54,8 @@ func makeGraph(t *testing.T) *core.BuildState {
 	pkg2.AddTarget(t3)
 	graph.AddTarget(pkg2.Target("target3"))
 	graph.AddPackage(pkg2)
-	require.NoError(t, t2.ResolveDependencies(graph))
-	require.NoError(t, t3.ResolveDependencies(graph))
+	require.NoError(t, t2.ResolveDependencies(state))
+	require.NoError(t, t3.ResolveDependencies(state))
 	return state
 }
 

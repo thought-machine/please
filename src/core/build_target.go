@@ -467,7 +467,7 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 // TODO(peterebden,tatskaari): Work out if we really want to have this and how the suite of *Dependencies functions
 //                             below should behave (preferably nicely).
 // TODO(tatskaari): Work out if we can use a channel instead of a callback.
-func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
+func (target *BuildTarget) resolveDependencies(state *BuildState, callback func(*BuildTarget) error) error {
 	var g errgroup.Group
 	target.mutex.RLock()
 	for i := range target.dependencies {
@@ -476,7 +476,7 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 			continue // already done
 		}
 		g.Go(func() error {
-			if err := target.resolveOneDependency(graph, dep); err != nil {
+			if err := target.resolveOneDependency(state, dep); err != nil {
 				return err
 			}
 			for _, d := range dep.deps {
@@ -491,8 +491,10 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 	return g.Wait()
 }
 
-func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo) error {
-	t := graph.WaitForTarget(dep.declared)
+func (target *BuildTarget) resolveOneDependency(state *BuildState, dep *depInfo) error {
+	// The target may have been added as part of a post-build and therefore
+	state.WaitForPackage(dep.declared, target.Label)
+	t := state.Graph.WaitForTarget(dep.declared)
 	if t == nil {
 		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
 	}
@@ -503,7 +505,7 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 		return nil
 	}
 	for _, l := range labels {
-		t := graph.WaitForTarget(l)
+		t := state.Graph.WaitForTarget(l)
 		if t == nil {
 			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, t)
 		}
@@ -514,8 +516,8 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 
 // MustResolveDependencies is exposed only for testing purposes.
 // TODO(peterebden, tatskaari): See if we can get rid of this.
-func (target *BuildTarget) ResolveDependencies(graph *BuildGraph) error {
-	return target.resolveDependencies(graph, func(*BuildTarget) error { return nil })
+func (target *BuildTarget) ResolveDependencies(state *BuildState) error {
+	return target.resolveDependencies(state, func(*BuildTarget) error { return nil })
 }
 
 // DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).

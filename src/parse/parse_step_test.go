@@ -19,9 +19,9 @@ func TestAddDepSimple(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	assertPendingParses(t, state, "//package2:target1", "//package2:target1")
+	assertPendingParses(t, state, "//package2:target1", "//package2:target1", "//package2:target1")
 	assertPendingBuilds(t, state) // None until package2 parses
-	assert.Equal(t, 5, state.NumActive())
+	assert.Equal(t, 6, state.NumActive())
 }
 
 func TestAddDepMultiple(t *testing.T) {
@@ -35,9 +35,9 @@ func TestAddDepMultiple(t *testing.T) {
 
 	// We get an additional dep on target2, but not another on package2:target1 because target2
 	// is already activated since package1:target1 depends on it
-	assertPendingParses(t, state, "//package2:target1", "//package2:target1", "//package2:target2")
+	assertPendingParses(t, state, "//package2:target1", "//package2:target1", "//package2:target2", "//package2:target2")
 	assertPendingBuilds(t, state) // None until package2 parses
-	assert.Equal(t, 7, state.NumActive())
+	assert.Equal(t, 8, state.NumActive())
 }
 
 func TestAddDepMultiplePackages(t *testing.T) {
