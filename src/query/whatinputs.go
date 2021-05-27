@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -9,11 +10,11 @@ import (
 // WhatInputs prints the targets with the provided files as sources
 // The targets are printed in the same order as the provided files, separated by a newline
 // Use printFiles to additionally echo the files themselves (i.e. print <file> <target>)
-func WhatInputs(graph *core.BuildGraph, files []string, local, hidden, printFiles bool) {
+func WhatInputs(graph *core.BuildGraph, files []string, hidden, printFiles bool) {
 	targets := graph.AllTargets()
 
 	for _, file := range files {
-		if inputLabels := whatInputs(graph, targets, file, local, hidden); len(inputLabels) > 0 {
+		if inputLabels := whatInputs(targets, file, hidden); len(inputLabels) > 0 {
 			for _, label := range inputLabels {
 				if printFiles {
 					fmt.Printf("%s ", file)
@@ -30,42 +31,25 @@ func WhatInputs(graph *core.BuildGraph, files []string, local, hidden, printFile
 	}
 }
 
-func whatInputs(graph *core.BuildGraph, targets []*core.BuildTarget, file string, local, hidden bool) []core.BuildLabel {
-	inputTargets := make(map[*core.BuildTarget]struct{})
-
+func whatInputs(targets []*core.BuildTarget, file string, hidden bool) []core.BuildLabel {
+	labels := make(map[core.BuildLabel]struct{})
 	for _, target := range targets {
-		var sources []string
-		if local {
-			sources = target.AllLocalSources()
-		} else {
-			sources = target.AllSourcePaths(graph)
-		}
-
-		for _, source := range sources {
+		for _, source := range target.AllLocalSources() {
 			if source == file {
-				inputTargets[resolveTarget(graph, target, !hidden)] = struct{}{}
+				label := target.Label
+				if !hidden {
+					label = target.Label.Parent()
+				}
+				labels[label] = struct{}{}
 			}
 		}
 	}
 
-	ret := make([]core.BuildLabel, 0, len(inputTargets))
-	for target := range inputTargets {
-		ret = append(ret, target.Label)
+	ret := make(core.BuildLabels, 0, len(labels))
+	for label := range labels {
+		ret = append(ret, label)
 	}
+	sort.Sort(ret)
 
 	return ret
-}
-
-// Resolves targets based on whether we are looking for the parent one or not
-func resolveTarget(graph *core.BuildGraph, target *core.BuildTarget, parent bool) *core.BuildTarget {
-	if !parent {
-		return target
-	}
-
-	parentTarget := target.Parent(graph)
-	if parentTarget != nil {
-		return parentTarget
-	}
-
-	return target
 }

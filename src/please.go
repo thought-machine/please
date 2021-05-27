@@ -343,7 +343,6 @@ var opts struct {
 		} `command:"graph" description:"Prints a JSON representation of the build graph."`
 		WhatInputs struct {
 			Hidden    bool `long:"hidden" short:"h" description:"Output internal / hidden targets too."`
-			Local     bool `long:"local" short:"l" description:"Only output targets where the file sources don't come from other targets."`
 			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
 			Args      struct {
 				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to query as sources to targets" required:"true"`
@@ -595,11 +594,6 @@ var buildFunctions = map[string]func() int{
 		tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args.AsStrings())
 		return 1 // If the function returns (which it shouldn't), something went wrong.
 	},
-	"whatinputs": func() int {
-		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.WhatInputs(state.Graph, opts.Query.WhatInputs.Args.Files.Get(), opts.Query.WhatInputs.Local, opts.Query.WhatInputs.Hidden, opts.Query.WhatInputs.EchoFiles)
-		})
-	},
 	"deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
 			query.Deps(state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level)
@@ -672,6 +666,18 @@ var buildFunctions = map[string]func() int{
 				targets = opts.Query.Graph.Args.Targets // It special-cases doing the full graph.
 			}
 			query.Graph(state, state.ExpandLabels(targets))
+		})
+	},
+	"whatinputs": func() int {
+		files := opts.Query.WhatInputs.Args.Files.Get()
+		// We only need this to retrieve the BuildFileName
+		state := core.NewBuildState(config)
+		labels := make([]core.BuildLabel, 0, len(files))
+		for _, file := range files {
+			labels = append(labels, core.FindOwningPackage(state, file))
+		}
+		return runQuery(true, labels, func(state *core.BuildState) {
+			query.WhatInputs(state.Graph, files, opts.Query.WhatInputs.Hidden, opts.Query.WhatInputs.EchoFiles)
 		})
 	},
 	"whatoutputs": func() int {

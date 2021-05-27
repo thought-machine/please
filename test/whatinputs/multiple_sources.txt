@@ -1,0 +1,2 @@
+//test/whatinputs/test_package:target1
+//test/whatinputs/test_package:target1
