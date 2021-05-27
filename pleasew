@@ -11,8 +11,8 @@ DEFAULT_URL_BASE="https://get.please.build"
 LOCATION=$(grep -i "^location" .plzconfig 2>/dev/null | cut -d '=' -f 2 | tr -d ' ')
 if [ -z "$LOCATION" ]; then
     if [ -z "$HOME" ]; then
-	    echo -e >&2 "${RED}\$HOME not set, not sure where to look for Please.${RESET}"
-	    exit 1
+        echo -e >&2 "${RED}\$HOME not set, not sure where to look for Please.${RESET}"
+        exit 1
     fi
     LOCATION="${HOME}/.please"
 else
