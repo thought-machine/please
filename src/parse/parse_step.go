@@ -242,18 +242,6 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 	return "", pkgName
 }
 
-func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) error {
-	// Run over all the changed targets in this package and ensure that any newly added dependencies enter the build queue.
-	for target := range changed {
-		if s := target.State(); s < core.Built && s > core.Inactive {
-			if err := state.QueueTarget(target.Label, core.OriginalTarget, true, false); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // exportFile adds a single-file export target. This is primarily used for Bazel compat.
 func exportFile(state *core.BuildState, pkg *core.Package, label core.BuildLabel) {
 	t := core.NewBuildTarget(label)

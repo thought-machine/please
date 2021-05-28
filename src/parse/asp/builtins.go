@@ -169,7 +169,6 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	s.state.AddTarget(s.pkg, target)
 	if s.Callback {
 		target.AddedPostBuild = true
-		s.pkg.MarkTargetModified(target)
 	}
 	return pyString(":" + target.Label.Name)
 }
@@ -750,8 +749,6 @@ func addDep(s *scope, args []pyObject) pyObject {
 		err := s.state.QueueTarget(dep, target.Label, true, false)
 		s.Assert(err == nil, "%s", err)
 	}
-	// TODO(peterebden): Do we even need the following any more?
-	s.pkg.MarkTargetModified(target)
 	return None
 }
 
