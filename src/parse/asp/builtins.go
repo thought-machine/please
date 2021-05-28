@@ -746,7 +746,7 @@ func addDep(s *scope, args []pyObject) pyObject {
 	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Queue this dependency if it'll be needed.
 	if target.State() > core.Inactive {
-		err := s.state.QueueTarget(dep, target.Label, true, false)
+		err := s.state.QueueTarget(dep, target.Label, false)
 		s.Assert(err == nil, "%s", err)
 	}
 	return None

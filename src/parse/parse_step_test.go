@@ -98,7 +98,7 @@ func TestAddDepRescan(t *testing.T) {
 	target1.AddDependency(buildLabel("//package1:target4"))
 
 	// Fake test: calling this now should have no effect because rescan is not true.
-	state.QueueTarget(buildLabel("//package1:target1"), core.OriginalTarget, false, false)
+	state.QueueTarget(buildLabel("//package1:target1"), core.OriginalTarget, false)
 	assertPendingParses(t, state)
 	assertPendingBuilds(t, state) // Note that the earlier call to assertPendingBuilds cleared it.
 

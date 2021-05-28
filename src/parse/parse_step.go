@@ -157,7 +157,7 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 					// Must always do this for coverage because we need to calculate sources of
 					// non-test targets later on.
 					if !state.NeedTests || target.IsTest() || state.NeedCoverage {
-						if err := state.QueueTarget(target.Label, dependent, false, dependent.IsAllTargets()); err != nil {
+						if err := state.QueueTarget(target.Label, dependent, dependent.IsAllTargets()); err != nil {
 							return err
 						}
 					}
@@ -167,7 +167,7 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 	} else {
 		for _, l := range state.Graph.DependentTargets(dependent, label) {
 			// We use :all to indicate a dependency needed for parse.
-			if err := state.QueueTarget(l, dependent, false, forSubinclude || dependent.IsAllTargets()); err != nil {
+			if err := state.QueueTarget(l, dependent, forSubinclude || dependent.IsAllTargets()); err != nil {
 				return err
 			}
 		}
