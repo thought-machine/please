@@ -14,7 +14,6 @@ import (
 	"C"
 )
 
-
 // mdLazytime is the bit for lazily flushing disk writes.
 // TODO(jpoole): find out if there's a reason this isn't in syscall
 const mdLazytime = 1 << 25
@@ -123,7 +122,7 @@ func mountSandboxDirs() error {
 		if d == "" {
 			continue
 		}
-		if err := syscall.Mount("", d, "tmpfs", mdLazytime | syscall.MS_NOATIME | syscall.MS_NODEV | syscall.MS_NOSUID, ""); err != nil {
+		if err := syscall.Mount("", d, "tmpfs", mdLazytime|syscall.MS_NOATIME|syscall.MS_NODEV|syscall.MS_NOSUID, ""); err != nil {
 			return fmt.Errorf("failed to mount sandbox dir %s: %w", d, err)
 		}
 	}

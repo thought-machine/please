@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/thought-machine/please/src/sandbox"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -36,6 +35,7 @@ import (
 	"github.com/thought-machine/please/src/plzinit"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
+	"github.com/thought-machine/please/src/sandbox"
 	"github.com/thought-machine/please/src/scm"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
@@ -341,6 +341,13 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to render graph for"`
 			} `positional-args:"true"`
 		} `command:"graph" description:"Prints a JSON representation of the build graph."`
+		WhatInputs struct {
+			Hidden    bool `long:"hidden" short:"h" description:"Output internal / hidden targets too."`
+			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
+			Args      struct {
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to query as sources to targets" required:"true"`
+			} `positional-args:"true" required:"true"`
+		} `command:"whatinputs" description:"Prints out target(s) with provided file(s) as inputs"`
 		WhatOutputs struct {
 			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
 			Args      struct {
@@ -659,6 +666,18 @@ var buildFunctions = map[string]func() int{
 				targets = opts.Query.Graph.Args.Targets // It special-cases doing the full graph.
 			}
 			query.Graph(state, state.ExpandLabels(targets))
+		})
+	},
+	"whatinputs": func() int {
+		files := opts.Query.WhatInputs.Args.Files.Get()
+		// We only need this to retrieve the BuildFileName
+		state := core.NewBuildState(config)
+		labels := make([]core.BuildLabel, 0, len(files))
+		for _, file := range files {
+			labels = append(labels, core.FindOwningPackage(state, file))
+		}
+		return runQuery(true, labels, func(state *core.BuildState) {
+			query.WhatInputs(state.Graph, files, opts.Query.WhatInputs.Hidden, opts.Query.WhatInputs.EchoFiles)
 		})
 	},
 	"whatoutputs": func() int {

@@ -46,6 +46,16 @@ go_test(
 )
 
 go_test(
+    name = "whatinputs_test",
+    srcs = ["whatinputs_test.go"],
+    deps = [
+        ":query",
+        "//src/core",
+        "//third_party/go:testify",
+    ],
+)
+
+go_test(
     name = "changes_test",
     srcs = ["changes_test.go"],
     deps = [
