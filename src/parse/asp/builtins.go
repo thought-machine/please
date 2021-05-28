@@ -738,8 +738,11 @@ func addDep(s *scope, args []pyObject) pyObject {
 	dep := core.ParseBuildLabelContext(string(args[1].(pyString)), s.pkg)
 	exported := args[2].IsTruthy()
 	target.AddMaybeExportedDependency(dep, exported, false, false)
-	err := s.state.QueueTarget(dep, target.Label, true, false)
-	s.Assert(err == nil, "%s", err)
+	// Queue this dependency if it'll be needed.
+	if target.State() > core.Inactive {
+		err := s.state.QueueTarget(dep, target.Label, true, false)
+		s.Assert(err == nil, "%s", err)
+	}
 	// TODO(peterebden): Do we even need the following any more?
 	s.pkg.MarkTargetModified(target)
 	return None
