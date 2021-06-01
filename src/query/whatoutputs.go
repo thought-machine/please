@@ -12,15 +12,19 @@ import (
 func WhatOutputs(graph *core.BuildGraph, files []string, printFiles bool) {
 	targets := graph.AllTargets()
 	for _, f := range files {
-		if printFiles {
-			fmt.Printf("%s ", f)
-		}
 		if t := whatOutputs(targets, f); len(t) > 0 {
 			for _, l := range t {
+				if printFiles {
+					fmt.Printf("%s ", f)
+				}
 				fmt.Printf("%s\n", l)
 			}
 		} else {
-			fmt.Println("Error: the file is not a product of any current target")
+			if printFiles {
+				fmt.Printf("%s Error: Not a product of any current target\n", f)
+			} else {
+				fmt.Printf("Error: '%s' is not a product of any current target\n", f)
+			}
 		}
 	}
 }

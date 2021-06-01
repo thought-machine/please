@@ -34,7 +34,7 @@ func TestBuildLotsOfTargets(t *testing.T) {
 	for i := 1; i <= size; i++ {
 		addTarget(state, i)
 	}
-	state.TaskDone(true) // Initial target adding counts as one.
+	state.TaskDone() // Initial target adding counts as one.
 
 	results := state.Results()
 	// Consume and discard any results

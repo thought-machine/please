@@ -382,6 +382,9 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
     """
     assert srcs or go_srcs, 'At least one of srcs and go_srcs must be provided'
 
+    if CONFIG.BUILD_CONFIG == "cover":
+        linker_flags += ["-lgcov"]
+
     if not srcs:
         return go_library(
             name = name,
@@ -905,12 +908,13 @@ def _remove_redundant_outs(outs):
     return [r for r in new_outs.keys() if new_outs[r]]
 
 def _go_install_module(name:str, module:str, install:list, src:str, outs:list, deps:list, binary:bool, visibility:list,
-                       test_only:bool, licences:list, linker_flags:list, env:dict):
+                       test_only:bool, licences:list, linker_flags:list, env:dict, build_tags:list):
+    build_tags = " ".join([f"--build_tag={tag}" for tag in build_tags])
     cmd = [
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"$TOOLS_PLEASE_GO install --trim_path $TMP_DIR --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
+        f"$TOOLS_PLEASE_GO install {build_tags} --trim_path $TMP_DIR --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
         "cat LD_FLAGS",
     ]
 
@@ -1031,7 +1035,8 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     out = name if not go_path_compatibility else f'src/{module}'
     # TODO(jpoole): write a proper please_go tool for this
     cmds = [
-        f'$TOOL mod download -x -modcacherw -json {module}@{version} | tee mod.json',
+        'echo module please_ignore > go.mod', # stops go reading the main go.mod, and downloading all of those too
+        f'$TOOLS_GO mod download -x -modcacherw -json {module}@{version} | tee mod.json',
         'export MOD_DIR=$(cat mod.json | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
     ] + [f'rm -rf $OUT/{s}' for s in strip]
@@ -1046,7 +1051,9 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         },
         tag = _tag,
         outs = [out],
-        tools = [CONFIG.GO_TOOL],
+        tools = {
+            "go": [CONFIG.GO_TOOL],
+        },
         building_description = 'Fetching...',
         cmd = ' && '.join(cmds),
         requires = ['go_src'],
@@ -1063,7 +1070,8 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
-              licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}, patch:list|str=[]):
+              licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}, patch:list|str=[],
+              build_tags:list=[]):
     """Defines a dependency on a third-party Go module.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -1097,6 +1105,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
                            automatically be collected so this is typically not necessary.
       env (dict): Any env variables to set during build time. This can be useful to set CGO_CFLAGS etc. to control
                   aspects of compilation.
+      build_tags (list): Any build tags to apply to the build context.
     """
     patch = [patch] if isinstance(patch, str) else patch
     if version and download:
@@ -1154,6 +1163,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         licences = licences,
         linker_flags = linker_flags,
         env = env,
+        build_tags = build_tags,
     )
 
     if binary:

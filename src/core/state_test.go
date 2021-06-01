@@ -91,38 +91,6 @@ func TestExpandOriginalLabelsOrdering(t *testing.T) {
 	assert.Equal(t, expected, state.ExpandOriginalLabels())
 }
 
-func TestComparePendingTasks(t *testing.T) {
-	p := func(taskType taskType) pendingTask { return pendingTask{Type: taskType} }
-	// NB. "Higher priority" means the task comes first, does not refer to numeric values.
-	assertHigherPriority := func(a, b taskType) {
-		// relationship should be commutative
-		assert.True(t, p(a).Compare(p(b)) < 0)
-		assert.True(t, p(b).Compare(p(a)) > 0)
-	}
-	assertEqualPriority := func(a, b taskType) {
-		assert.True(t, p(a).Compare(p(b)) == 0)
-		assert.True(t, p(b).Compare(p(a)) == 0)
-	}
-
-	assertHigherPriority(SubincludeBuild, SubincludeParse)
-	assertHigherPriority(SubincludeParse, Build)
-	assertHigherPriority(SubincludeBuild, Build)
-	assertEqualPriority(Build, Parse)
-	assertEqualPriority(Build, Test)
-	assertEqualPriority(Parse, Test)
-	assertHigherPriority(Build, Stop)
-	assertHigherPriority(Test, Stop)
-	assertHigherPriority(Parse, Stop)
-
-	// sanity check
-	assertEqualPriority(SubincludeBuild, SubincludeBuild)
-	assertEqualPriority(SubincludeParse, SubincludeParse)
-	assertEqualPriority(Build, Build)
-	assertEqualPriority(Parse, Parse)
-	assertEqualPriority(Test, Test)
-	assertEqualPriority(Stop, Stop)
-}
-
 func TestAddDepsToTarget(t *testing.T) {
 	state := NewDefaultBuildState()
 	_, builds, _, _, _ := state.TaskQueues() //nolint:dogsled

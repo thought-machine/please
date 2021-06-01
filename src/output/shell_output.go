@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -492,10 +491,12 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 		cmd := target.GetCommand(state)
 		dir := target.TmpDir()
 		env := core.StampedBuildEnvironment(state, target, nil, path.Join(core.RepoRoot, target.TmpDir()))
+		shouldSandbox := target.Sandbox
 		if state.NeedTests {
 			cmd = target.GetTestCommand(state)
 			dir = path.Join(core.RepoRoot, target.TestDir(1))
 			env = core.TestEnvironment(state, target, dir)
+			shouldSandbox = target.TestSandbox
 		}
 		cmd, _ = core.ReplaceSequences(state, target, cmd)
 		env = append(env, "CMD="+cmd)
@@ -507,16 +508,15 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 		} else {
 			fmt.Printf("\n")
 			argv := []string{"bash", "--noprofile", "--norc", "-o", "pipefail"}
-			if (state.NeedTests && target.TestSandbox) || (!state.NeedTests && target.Sandbox) {
-				argv = state.ProcessExecutor.MustSandboxCommand(argv)
-			}
 			log.Debug("Full command: %s", strings.Join(argv, " "))
-			cmd := exec.Command(argv[0], argv[1:]...)
+			cmd := state.ProcessExecutor.ExecCommand(shouldSandbox, argv[0], argv[1:]...)
 			cmd.Dir = dir
 			cmd.Env = env
 			cmd.Stdin = os.Stdin
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
+			// TODO(jpoole): Read the docs. Attaching stdin and out doesn't seem to work with this.
+			cmd.SysProcAttr.Setpgid = false
 			cmd.Run() // Ignore errors, it will typically end by the user killing it somehow.
 		}
 	}

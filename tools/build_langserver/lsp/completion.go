@@ -27,7 +27,7 @@ func (h *Handler) completeLabel(doc *doc, partial string, line, col int) (*lsp.C
 			labelName += "all" // Won't be a valid build label without this.
 		}
 		list := &lsp.CompletionList{}
-		pkgName := path.Base(doc.Filename)
+		pkgName := doc.PkgName
 		pkgLabel := core.BuildLabel{PackageName: pkgName, Name: "all"}
 		label, err := core.TryParseBuildLabel(labelName, pkgName, pkgLabel.Subrepo)
 		if err != nil {

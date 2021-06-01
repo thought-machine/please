@@ -35,6 +35,7 @@ import (
 	"github.com/thought-machine/please/src/plzinit"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
+	"github.com/thought-machine/please/src/sandbox"
 	"github.com/thought-machine/please/src/scm"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
@@ -168,6 +169,7 @@ var opts struct {
 		InWD       bool   `long:"in_wd" description:"When running locally, stay in the original working directory."`
 		InTempDir  bool   `long:"in_tmp_dir" description:"Runs in a temp directory, setting env variables and copying in runtime data similar to tests."`
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
+		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
 		Parallel   struct {
 			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Quiet          bool               `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
@@ -227,7 +229,7 @@ var opts struct {
 			Args  struct {
 				Options ConfigOverrides `positional-arg-name:"config" required:"true" description:"Attributes to set"`
 			} `positional-args:"true" required:"true"`
-		} `command:"config" description:"Initialises specific attributes of config files"`
+		} `command:"config" description:"Initialises specific attributes of config files. Warning, will add duplicate entries if attribute already set"`
 		Pleasings struct {
 			Revision  string `short:"r" long:"revision" description:"The revision to pin the pleasings repo to. This can be a branch, commit, tag, or other git reference."`
 			Location  string `short:"l" long:"location" description:"The location of the build file to write the subrepo rule to" default:"BUILD"`
@@ -339,6 +341,13 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to render graph for"`
 			} `positional-args:"true"`
 		} `command:"graph" description:"Prints a JSON representation of the build graph."`
+		WhatInputs struct {
+			Hidden    bool `long:"hidden" short:"h" description:"Output internal / hidden targets too."`
+			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
+			Args      struct {
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to query as sources to targets" required:"true"`
+			} `positional-args:"true" required:"true"`
+		} `command:"whatinputs" description:"Prints out target(s) with provided file(s) as inputs"`
 		WhatOutputs struct {
 			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
 			Args      struct {
@@ -457,10 +466,10 @@ var buildFunctions = map[string]func() int{
 
 			annotatedOutputLabels := state.ExpandOriginalMaybeAnnotatedLabels([]core.AnnotatedOutputLabel{opts.Run.Args.Target})
 			if len(annotatedOutputLabels) != 1 {
-				log.Fatalf("%v expanded to too many targets: %v", opts.Run.Args.Target, annotatedOutputLabels)
+				log.Fatalf("%v expanded to more than one target. If you want to run multiple targets, use `plz run parallel %v` or `plz run sequential %v`. ", opts.Run.Args.Target, opts.Run.Args.Target, opts.Run.Args.Target)
 			}
 
-			run.Run(state, annotatedOutputLabels[0], opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir)
+			run.Run(state, annotatedOutputLabels[0], opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir, opts.Run.Cmd)
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
@@ -521,7 +530,7 @@ var buildFunctions = map[string]func() int{
 		if err == nil {
 			err = syscall.Exec(executable, append([]string{executable}, cmd...), os.Environ())
 		}
-		log.Fatalf("SORRY OP: %s", err) // On success Exec never returns.
+		log.Fatalf("SORRY OP: %s", err) // On success Run never returns.
 		return 1
 	},
 	"gc": func() int {
@@ -659,6 +668,18 @@ var buildFunctions = map[string]func() int{
 			query.Graph(state, state.ExpandLabels(targets))
 		})
 	},
+	"whatinputs": func() int {
+		files := opts.Query.WhatInputs.Args.Files.Get()
+		// We only need this to retrieve the BuildFileName
+		state := core.NewBuildState(config)
+		labels := make([]core.BuildLabel, 0, len(files))
+		for _, file := range files {
+			labels = append(labels, core.FindOwningPackage(state, file))
+		}
+		return runQuery(true, labels, func(state *core.BuildState) {
+			query.WhatInputs(state.Graph, files, opts.Query.WhatInputs.Hidden, opts.Query.WhatInputs.EchoFiles)
+		})
+	},
 	"whatoutputs": func() int {
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
 			query.WhatOutputs(state.Graph, opts.Query.WhatOutputs.Args.Files.Get(), opts.Query.WhatOutputs.EchoFiles)
@@ -776,17 +797,26 @@ var buildFunctions = map[string]func() int{
 
 		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
 			if opts.Codegen.Gitignore != "" {
-				if !state.Config.Build.LinkGeneratedSources {
-					log.Warning("You're updating a .gitignore with generated sources but Please isn't configured to link generated sources. See `plz help LinkGeneratedSources` for more information. ")
-				}
 				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Codegen.Gitignore)
 				if err != nil {
 					log.Fatalf("failed to update gitignore: %v", err)
 				}
 			}
+
+			// This may seem counter intuitive but if this was set, we would've linked during the build.
+			// If we've opted to not automatically link generated sources during the build, we should link them now.
+			if !state.Config.Build.LinkGeneratedSources {
+				generate.LinkGeneratedSources(state.Graph, state.ExpandOriginalLabels())
+			}
 			return 0
 		}
 		return 1
+	},
+	"sandbox": func() int {
+		if err := sandbox.Sandbox(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		return 0
 	},
 }
 
@@ -973,7 +1003,11 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	if opts.BuildFlags.RepoRoot == "" {
 		log.Debug("Found repo root at %s", core.MustFindRepoRoot())
 	} else {
-		core.RepoRoot = string(opts.BuildFlags.RepoRoot)
+		abs, err := filepath.Abs(string(opts.BuildFlags.RepoRoot))
+		if err != nil {
+			log.Fatalf("Cannot make --repo_root absolute: %s", err)
+		}
+		core.RepoRoot = abs
 	}
 
 	// Save the current working directory before moving to root
@@ -1029,6 +1063,11 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 }
 
 func initBuild(args []string) string {
+	if len(args) > 1 && (args[1] == "sandbox") {
+		// Shortcut these as they're special commands used for please sandboxing
+		// going through the normal init path would be too slow
+		return args[1]
+	}
 	if _, present := os.LookupEnv("GO_FLAGS_COMPLETION"); present {
 		cli.InitLogging(cli.MinVerbosity)
 	}

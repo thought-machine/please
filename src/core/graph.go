@@ -7,7 +7,6 @@ package core
 import (
 	"reflect"
 	"sort"
-	"sync"
 
 	"github.com/OneOfOne/cmap"
 	"github.com/OneOfOne/cmap/stringcmap"
@@ -21,16 +20,13 @@ type pendingTargets struct {
 // relationships, especially reverse dependencies which are calculated here.
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
-	targets *cmap.CMap
+	targets *targetMap
 	// Targets that have been depended on by something that we're waiting to appear.
 	pendingTargets pendingTargets
 	// Map of all currently known packages.
 	packages *cmap.CMap
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.CMap
-	// Reverse dependencies
-	revdeps     map[BuildLabel][]*BuildTarget
-	revdepsOnce sync.Once
 	// checks for cycles in the graph asynchronously
 	cycleDetector *cycleDetector
 }
@@ -73,12 +69,9 @@ func (p *pendingTargets) NotifyPendingPackageTargets(key packageKey) {
 
 // AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
-	graph.targets.Update(target.Label, func(old interface{}) interface{} {
-		if old != nil {
-			panic("Attempted to re-add existing target to build graph: " + target.Label.String())
-		}
-		return target
-	})
+	if !graph.targets.Set(target.Label, target) {
+		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
+	}
 	// Notify anything that called WaitForTarget
 	close(graph.pendingTargets.GetTargetChannel(target.Label))
 	return target
@@ -102,7 +95,7 @@ func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
 	if !ok {
 		return nil
 	}
-	return t.(*BuildTarget)
+	return t
 }
 
 // TargetOrDie retrieves a target from the graph by label. Dies if the target doesn't exist.
@@ -207,11 +200,7 @@ func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
 
 // AllTargets returns a consistently ordered slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
-	targets := BuildTargets{}
-	graph.targets.ForEach(func(k, v interface{}) bool {
-		targets = append(targets, v.(*BuildTarget))
-		return true
-	})
+	targets := graph.targets.Values()
 	sort.Sort(targets)
 	return targets
 }
@@ -230,28 +219,13 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
 		cycleDetector:  newCycleDetector(),
-		targets:        cmap.New(),
+		targets:        newTargetMap(),
 		pendingTargets: pendingTargets{m: cmap.New()},
 		packages:       cmap.New(),
 		subrepos:       cmap.New(),
 	}
 	g.cycleDetector.run()
 	return g
-}
-
-// ReverseDependencies returns the set of revdeps on the given target.
-// N.B. This runs in amortised constant time and initialises itself once, so should
-//      only be used for queries.
-func (graph *BuildGraph) ReverseDependencies(target *BuildTarget) []*BuildTarget {
-	graph.revdepsOnce.Do(func() {
-		graph.revdeps = map[BuildLabel][]*BuildTarget{}
-		for _, t := range graph.AllTargets() {
-			for _, d := range t.DeclaredDependencies() {
-				graph.revdeps[d] = append(graph.revdeps[d], t)
-			}
-		}
-	})
-	return graph.revdeps[target.Label]
 }
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.

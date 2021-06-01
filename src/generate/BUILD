@@ -4,6 +4,7 @@ go_library(
     visibility = ["//src/..."],
     deps = [
         "//src/core",
+        "//src/fs",
         "//src/scm",
     ],
 )

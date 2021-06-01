@@ -34,10 +34,10 @@ const (
 )
 
 // Run implements the running part of 'plz run'.
-func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, remote, env, inTmp bool, dir string) {
-	prepareRun(dir, inTmp)
+func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, remote, env, inTmp bool, dir, overrideCmd string) {
+	prepareRun()
 
-	run(context.Background(), state, label, args, false, false, remote, env, false, inTmp, dir)
+	run(context.Background(), state, label, args, false, false, remote, env, false, inTmp, dir, overrideCmd)
 }
 
 // Parallel runs a series of targets in parallel.
@@ -45,7 +45,7 @@ func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string,
 // that code, otherwise 0 if all were successful).
 // The given context can be used to control the lifetime of the subprocesses.
 func Parallel(ctx context.Context, state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, output ParallelOutput, remote, env, detach, inTmp bool, dir string) int {
-	prepareRun(dir, inTmp)
+	prepareRun()
 
 	limiter := make(chan struct{}, numTasks)
 	var g errgroup.Group
@@ -59,18 +59,18 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 			var err error
 			switch output {
 			case GroupImmediate:
-				out, _, err = run(ctx, state, label, args, true, true, remote, env, detach, inTmp, dir)
+				out, _, err = run(ctx, state, label, args, true, true, remote, env, detach, inTmp, dir, "")
 
 				fmt.Println(label)
 				if err == nil {
 					os.Stdout.Write(out)
 				}
 			case Quiet:
-				_, _, err = run(ctx, state, label, args, true, true, remote, env, detach, inTmp, dir)
+				_, _, err = run(ctx, state, label, args, true, true, remote, env, detach, inTmp, dir, "")
 			case Default:
 				fallthrough
 			default:
-				_, _, err = run(ctx, state, label, args, true, false, remote, env, detach, inTmp, dir)
+				_, _, err = run(ctx, state, label, args, true, false, remote, env, detach, inTmp, dir, "")
 			}
 
 			if err != nil && ctx.Err() == nil {
@@ -93,10 +93,10 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
 func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, quiet, remote, env, inTmp bool, dir string) int {
-	prepareRun(dir, inTmp)
+	prepareRun()
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		_, _, err := run(context.Background(), state, label, args, true, quiet, remote, env, false, inTmp, dir)
+		_, _, err := run(context.Background(), state, label, args, true, quiet, remote, env, false, inTmp, dir, "")
 		if err != nil {
 			log.Error("%s", err)
 			return err.(*exitError).code
@@ -105,7 +105,7 @@ func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args
 	return 0
 }
 
-func prepareRun(dir string, inTmp bool) {
+func prepareRun() {
 	if err := os.RemoveAll("plz-out/run"); err != nil && !os.IsNotExist(err) {
 		log.Warningf("failed to clean up old run working directory: %v", err)
 	}
@@ -115,7 +115,7 @@ func prepareRun(dir string, inTmp bool) {
 // If fork is true then we fork to run the target and return any error from the subprocesses.
 // If it's false this function never returns (because we either win or die; it's like
 // Game of Thrones except rather less glamorous).
-func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutputLabel, args []string, fork, quiet, remote, setenv, detach, tmpDir bool, dir string) ([]byte, []byte, error) {
+func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutputLabel, args []string, fork, quiet, remote, setenv, detach, tmpDir bool, dir, overrideCmd string) ([]byte, []byte, error) {
 	// This is a bit strange as normally if you run a binary for another platform, this will fail. In some cases
 	// this can be quite useful though e.g. to compile a binary for a target arch, then run an .sh script to
 	// push that to docker.
@@ -124,7 +124,8 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 	}
 
 	target := state.Graph.TargetOrDie(label.BuildLabel)
-	if !target.IsBinary {
+	// Non binary targets can be run if an override command is passed in
+	if !target.IsBinary && overrideCmd == "" {
 		log.Fatalf("Target %s cannot be run; it's not marked as binary", label)
 	}
 	if label.Annotation == "" && len(target.Outputs()) != 1 {
@@ -149,43 +150,51 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 
 	// ReplaceSequences always quotes stuff in case it contains spaces or special characters,
 	// that works fine if we interpret it as a shell but not to pass it as an argument here.
-	command := ""
-	if label.Annotation != "" {
+	switch {
+	case overrideCmd != "":
+		command, _ := core.ReplaceSequences(state, target, overrideCmd)
+		// We don't care about passed in args when an override command is provided
+		args = process.BashCommand("bash", strings.Trim(command, "\""), true)
+	case label.Annotation != "":
 		entryPoint, ok := target.EntryPoints[label.Annotation]
 		if !ok {
 			log.Fatalf("Cannot run %s as has no entry point %s", label, label.Annotation)
 		}
+		var command string
 		if tmpDir {
 			command = filepath.Join(dir, entryPoint)
 		} else {
 			command = filepath.Join(target.OutDir(), entryPoint)
 		}
-	} else {
+		args = append(strings.Split(command, " "), args...)
+	default:
 		// out_exe handles java binary stuff by invoking the .jar with java as necessary
+		var command string
 		if tmpDir {
 			command = filepath.Join(dir, target.Outputs()[0])
 		} else {
 			command, _ = core.ReplaceSequences(state, target, fmt.Sprintf("$(out_exe %s)", target.Label))
+			command = strings.Trim(command, "\"")
 		}
+		args = append(strings.Split(command, " "), args...)
 	}
-	arg0 := strings.Trim(command, "\"")
+
 	// Handle targets where $(exe ...) returns something nontrivial
-	splitCmd := strings.Split(arg0, " ")
-	if !strings.Contains(splitCmd[0], "/") {
+	if !strings.Contains(args[0], "/") {
 		// Probably it's a java -jar, we need an absolute path to it.
-		cmd, err := exec.LookPath(splitCmd[0])
+		cmd, err := exec.LookPath(args[0])
 		if err != nil {
-			log.Fatalf("Can't find binary %s", splitCmd[0])
+			log.Fatalf("Can't find binary %s", args[0])
 		}
-		splitCmd[0] = cmd
+		args[0] = cmd
 	} else if dir != "" { // Find an absolute path before changing directory
-		abs, err := filepath.Abs(splitCmd[0])
+		abs, err := filepath.Abs(args[0])
 		if err != nil {
-			log.Fatalf("Couldn't calculate absolute path for %s: %s", splitCmd[0], err)
+			log.Fatalf("Couldn't calculate absolute path for %s: %s", args[0], err)
 		}
-		splitCmd[0] = abs
+		args[0] = abs
 	}
-	args = append(splitCmd, args...)
+
 	log.Info("Running target %s...", strings.Join(args, " "))
 	output.SetWindowTitle("plz run: " + strings.Join(args, " "))
 	env := environ(state, target, setenv, tmpDir)
@@ -198,10 +207,10 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 			}
 		}
 		// Plain 'plz run'. One way or another we never return from the following line.
-		must(syscall.Exec(splitCmd[0], args, env), args)
+		must(syscall.Exec(args[0], args, env), args)
 	} else if detach {
 		// Bypass the whole process management system since we explicitly aim not to manage this subprocess.
-		cmd := exec.Command(splitCmd[0], args[1:]...)
+		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Dir = dir
@@ -211,7 +220,7 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 	// Note that we don't connect stdin. It doesn't make sense for multiple processes.
 	// The process executor doesn't actually support not having a timeout, but the max is ~290 years so nobody
 	// should know the difference.
-	out, combined, err := process.New("").ExecWithTimeout(ctx, nil, dir, env, time.Duration(math.MaxInt64), false, false, !quiet, args)
+	out, combined, err := process.New().ExecWithTimeout(ctx, nil, dir, env, time.Duration(math.MaxInt64), false, false, !quiet, false, args)
 	return out, combined, toExitError(err, args, combined)
 }
 
