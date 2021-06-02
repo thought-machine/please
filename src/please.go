@@ -911,6 +911,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	}
 
 	runPlease(state, targets)
+	if state.RemoteClient != nil && !opts.Run.Remote {
+		defer state.RemoteClient.Disconnect()
+	}
 	return state.Successful(), state
 }
 
