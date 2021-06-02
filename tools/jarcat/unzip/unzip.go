@@ -76,7 +76,9 @@ func (e *extractor) Extract() error {
 	// Finally zstd
 	f.Seek(0, io.SeekStart)
 	if r, err := zstd.NewReader(f); err == nil {
-		return e.extractTar(r)
+		if err := e.extractTar(r); err == nil || err != zstd.ErrMagicMismatch {
+			return err
+		}
 	}
 	// Assume uncompressed.
 	f.Seek(0, io.SeekStart)
