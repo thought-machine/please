@@ -291,6 +291,7 @@ func DefaultConfiguration() *Configuration {
 	config.Please.NumThreads = runtime.NumCPU() + 2
 	config.Parse.NumThreads = config.Please.NumThreads
 	config.Parse.GitFunctions = true
+	config.Parse.BuildDefsDir = []string{"build/defs", "build_defs"}
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
 	config.Build.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
 	config.Build.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
@@ -409,7 +410,7 @@ type Configuration struct {
 		MaxWorkers   int    `help:"Maximum number of worker rows to display at any one time."`
 		ColourScheme string `help:"Shell colour scheme mode, dark or light. Defaults to dark"`
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
-	Colours map[string]string `help:"Colour code overrides in interactive output. These correspond to requirements on each target."`
+	Colours map[string]string `help:"Colour code overrides for the targets in interactive output. These colours are map labels on targets to colours e.g. go -> ${YELLOW}."`
 	Build   struct {
 		Arch                 cli.Arch     `help:"The target architecture to compile for. Defaults to the host architecture."`
 		Timeout              cli.Duration `help:"Default timeout for build actions. Default is ten minutes."`
