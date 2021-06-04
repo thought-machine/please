@@ -484,7 +484,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title" id="build.passenvunsafe">
+        <h3 class="mt1 f6 lh-title" id="build.passunsafeenv">
           PassUnsafeEnv <span class="normal">(repeated string)</span>
         </h3>
 
@@ -901,6 +901,23 @@
 <section class="mt4">
   <h2 id="size" class="title-2">[Size]</h2>
   <p>{{ index .ConfigHelpText "size" }}</p>
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="size.timeout">
+          Timeout <span class="normal">(int)</span>
+        </h3>
+        <p>{{ index .ConfigHelpText "size.timeout" }}</p>
+
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="size.timeoutname">TimeoutName</h3>
+        <p>{{ index .ConfigHelpText "size.timeoutname" }}</p>
+      </div>
+    </li>
+  </ul>
 </section>
 
 <section class="mt4">
@@ -1094,6 +1111,14 @@
         <p>
           Whether this alias's positional arguments are build labels.
         </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="alias.desc">
+          Desc <span class="normal">(bool)</span>
+        </h3>
+        <p>{{ index .ConfigHelpText "alias.desc" }}</p>
       </div>
     </li>
   </ul>
@@ -1515,12 +1540,6 @@
           >
           is purr-ly coincidental.
         </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title" id="java.defaultmavenropo">DefaultMavenRepo</h3>
-        <p>Default location to load artifacts from in maven_jar rules.</p>
       </div>
     </li>
     <li>

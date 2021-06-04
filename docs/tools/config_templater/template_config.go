@@ -38,9 +38,17 @@ func getConfigHelpText(path string, configHelpText map[string]string, t reflect.
 		}
 
 		configHelpText[name] = field.Tag.Get("help")
-
-		if field.Type.Kind() == reflect.Struct {
-			getConfigHelpText(name, configHelpText, field.Type)
+		t := fieldElem(field.Type)
+		if t.Kind() == reflect.Struct {
+			getConfigHelpText(name, configHelpText, t)
 		}
 	}
+}
+
+func fieldElem(t reflect.Type) reflect.Type {
+	kind := t.Kind()
+	if kind == reflect.Ptr || kind == reflect.Map || kind == reflect.Array || kind == reflect.Slice {
+		return fieldElem(t.Elem())
+	}
+	return t
 }

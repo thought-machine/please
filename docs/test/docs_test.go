@@ -68,18 +68,11 @@ func TestAllLinksAreLive(t *testing.T) {
 	}
 }
 
+// Config options we don't want to document for various reasons
 var ignoreConfigFields = map[string]struct{} {
-	// These are covered by the documentation of their parent
-	"please.version.version": {},
-	"build.arch.os": {},
-	"build.arch.arch": {},
-	"cpp.testmain.packagename": {},
-	"cpp.testmain.name": {},
-	"cpp.testmain.subrepo": {},
 	// These are deprecated
 	"build.pleasesandboxtool": {},
 	// Just don't want to advertise these ones too much
-	"build.passunsafeenv": {},
 	"bazel.compatibility": {},
 	"featureflags": {},
 	"metrics": {},
@@ -92,7 +85,17 @@ var ignoreConfigFields = map[string]struct{} {
 	"pleaselocation": {},
 }
 
+// IDs in the html that are for other purposes other than documenting config.
+var nonConfigIds = map[string]struct{}{
+	"menu-list": {},
+	"nav-graphic": {},
+	"side-images": {},
+	"menu-button": {},
+	"main-content": {},
+}
+
 func TestConfigDocumented(t *testing.T) {
+	findConfigFields("", reflect.TypeOf(core.Configuration{}))
 	configHTML, err := os.Open("docs/config.html")
 	if err != nil {
 		t.Fatalf("couldn't read docs/config.html: %v", err)
@@ -106,19 +109,34 @@ func TestConfigDocumented(t *testing.T) {
 	ids := map[string]struct{}{}
 	findIDs(doc, ids)
 
+	configFields := map[string]struct{}{}
 	for _, configField := range findConfigFields("", reflect.TypeOf(core.Configuration{})) {
+		configFields[configField] = struct{}{}
 		if _, ok := ids[configField]; !ok {
 			t.Logf("missing section with matching ID for config field %v", configField)
 			t.Fail()
 		}
 	}
 
+	for id := range ids {
+		if _, ok := nonConfigIds[id]; ok {
+			continue
+		}
+		if _, ok := configFields[id]; !ok {
+			t.Logf("config section with id %v matches no config field", id)
+			t.Fail()
+		}
+	}
 }
 
 func findConfigFields(path string, configType reflect.Type) []string {
 	var fields []string
 	for i := 0; i < configType.NumField(); i++ {
 		field := configType.Field(i)
+
+		if field.Tag.Get("help") == "" {
+			continue
+		}
 
 		name := strings.ToLower(field.Name)
 		if path != "" {
@@ -129,11 +147,21 @@ func findConfigFields(path string, configType reflect.Type) []string {
 		}
 		fields = append(fields, name)
 
-		if field.Type.Kind() == reflect.Struct {
-			fields = append(fields, findConfigFields(name, field.Type)...)
+		t := fieldElem(field.Type)
+		if t.Kind() == reflect.Struct {
+			fields = append(fields, findConfigFields(name, t)...)
 		}
+
 	}
 	return fields
+}
+
+func fieldElem(t reflect.Type) reflect.Type {
+	kind := t.Kind()
+	if kind == reflect.Ptr || kind == reflect.Map || kind == reflect.Array || kind == reflect.Slice {
+		return fieldElem(t.Elem())
+	}
+	return t
 }
 
 func findIDs(node *html.Node, ids map[string]struct{}) map[string]struct{} {
