@@ -291,7 +291,6 @@ func DefaultConfiguration() *Configuration {
 	config.Please.NumThreads = runtime.NumCPU() + 2
 	config.Parse.NumThreads = config.Please.NumThreads
 	config.Parse.GitFunctions = true
-	config.Parse.BuildDefsDir = []string{"build/defs", "build_defs"}
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
 	config.Build.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
 	config.Build.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
