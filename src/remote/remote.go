@@ -144,6 +144,12 @@ func (c *Client) CheckInitialised() error {
 	return c.err
 }
 
+// Disconnect disconnects this client from the remote server.
+func (c *Client) Disconnect() error {
+	log.Debug("Disconnecting from remote execution server...")
+	return c.client.Close()
+}
+
 // init is passed to the sync.Once to do the actual initialisation.
 func (c *Client) init() {
 	// Change grpc to log using our implementation

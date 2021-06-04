@@ -66,6 +66,8 @@ type RemoteClient interface {
 	PrintHashes(target *BuildTarget, isTest bool)
 	// DataRate returns an estimate of the current in/out RPC data rates and totals so far in bytes per second.
 	DataRate() (int, int, int, int)
+	// Disconnect disconnects from the remote execution server.
+	Disconnect() error
 }
 
 // A TargetHasher is a thing that knows how to create hashes for targets.
