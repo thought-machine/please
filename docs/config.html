@@ -87,7 +87,7 @@
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">Version</h3>
+        <h3 class="mt1 f6 lh-title" id="please.version">Version</h3>
 
         <p>
           Defines the version of plz that this repo is supposed to use
@@ -107,7 +107,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">VersionChecksum</h3>
+        <h3 class="mt1 f6 lh-title" id="please.versionchecksum">VersionChecksum</h3>
 
         <p>
           Defines a hex-encoded sha256 checksum that the downloaded version must
@@ -118,7 +118,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">Location</h3>
+        <h3 class="mt1 f6 lh-title" id="please.location">Location</h3>
 
         <p>
           Defines the directory Please is installed into.<br />
@@ -129,7 +129,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="please.selfupdate">
           SelfUpdate <span class="normal">(bool)</span>
         </h3>
 
@@ -141,7 +141,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">DownloadLocation</h3>
+        <h3 class="mt1 f6 lh-title" id="please.downloadlocation">DownloadLocation <span class="normal">(bool)</span></h3>
 
         <p>
           Defines the location to download Please from when self-updating.
@@ -172,7 +172,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="please.numthreads">
           NumThreads <span class="normal">(int)</span>
         </h3>
 
@@ -185,11 +185,37 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">defaultrepo</h3>
-        </h3>
+        <h3 class="mt1 f6 lh-title" id="please.defaultrepo">DefaultRepo</h3>
 
         <p>
           Location of the please repo to use by default, if not already in a please repo.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="please.autoclean">Autoclean <span class="normal">(b ool)</span></h3>
+
+        <p>
+          Automatically clean stale versions without prompting. Defaults to true.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="please.numoldversions">NumOldVersions <span class="normal">(int)</span></h3>
+
+        <p>
+          The number of old versions to keep. Defaults to 10.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="please.motd">MOTD</h3>
+
+        <p>
+          {{ index .ConfigHelpText "please.motd" }}
         </p>
       </div>
     </li>
@@ -202,7 +228,7 @@
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="parse.buildfilename">
           BuildFileName <span class="normal">(repeated string)</span>
         </h3>
 
@@ -220,7 +246,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="parse.blacklistdirs">
           BlacklistDirs <span class="normal">(repeated string)</span>
         </h3>
 
@@ -237,7 +263,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="parse.experimentaldir">
           ExperimentalDir <span class="normal">(repeated string)</span>
         </h3>
 
@@ -267,7 +293,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="parse.preloadbuilddefs">
           PreloadBuildDefs <span class="normal">(repeated string)</span>
         </h3>
 
@@ -281,12 +307,41 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="parse.preloadsubincludes">
           PreloadSubincludes <span class="normal">(repeated string)</span>
         </h3>
         <p>
           Subinclude targets to preload by the parser before loading any BUILD files.<br/>
           Subincludes can be slow so it's recommended to use PreloadBuildDefs where possible.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="parse.builddefsdir">
+          BuildDefsDir <span class="normal">(repeated string)</span>
+        </h3>
+        <p>
+          Tells Please about any directories that contain custom build definitions. These are used by `plz help` to
+          provide help text for build rules that are not built in. Defaults to <code>build_defs</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="parse.numthreads">
+          NumThreads <span class="normal">(int)</span>
+        </h3>
+        <p>
+          The number of threads to use while parsing the build graph. Default is the number of CPU threads + 2.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="parse.gitfunctions">GitFunctions</h3>
+        <p>
+          Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time. Defaults to true.
         </p>
       </div>
     </li>
@@ -304,7 +359,7 @@
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="display.updatetitle">
           UpdateTitle <span class="normal">(bool)</span>
         </h3>
 
@@ -317,7 +372,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="display.systemstats">
           SystemStats <span class="normal">(bool)</span>
         </h3>
 
@@ -329,10 +384,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
-          ColourScheme <span class="normal">(string)</span>
-        </h3>
-
+        <h3 class="mt1 f6 lh-title" id="display.colourscheme">ColourScheme</h3>
         <p>
           Shell colour scheme mode, dark or light. Adapts interactive display
           colours to the colour scheme mode. Defaults to
@@ -340,7 +392,20 @@
         </p>
       </div>
     </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="display.maxworkers">
+          MaxWorkers <span class="normal">(int)</span>
+        </h3>
+        <p>{{ index .ConfigHelpText "display.maxworkers" }}</p>
+      </div>
+    </li>
   </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="colours" class="title-2">[Colours]</h2>
+  <p>{{ index .ConfigHelpText "colours" }}</p>
 </section>
 
 <section class="mt4">
@@ -349,14 +414,14 @@
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">Arch</h3>
+        <h3 class="mt1 f6 lh-title" id="build.arch">Arch</h3>
 
         <p>Architecture to compile for. Defaults to the host architecture.</p>
       </div>
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="build.timeout">
           Timeout <span class="normal">(int)</span>
         </h3>
 
@@ -368,7 +433,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="build.path">
           Path <span class="normal">(repeated string)</span>
         </h3>
 
@@ -382,7 +447,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">Config</h3>
+        <h3 class="mt1 f6 lh-title" id="build.config">Config</h3>
 
         <p>
           The build config to use when one is not chosen on the command line.
@@ -392,7 +457,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">FallbackConfig</h3>
+        <h3 class="mt1 f6 lh-title" id="build.fallbackconfig">FallbackConfig</h3>
 
         <p>
           The build config to use when one is chosen and a required target does
@@ -403,7 +468,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="build.passenv">
           PassEnv <span class="normal">(repeated string)</span>
         </h3>
 
@@ -418,7 +483,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="build.passunsafeenv">
           PassUnsafeEnv <span class="normal">(repeated string)</span>
         </h3>
 
@@ -434,7 +499,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="build.sandbox">
           Sandbox <span class="normal">(bool)</span>
         </h3>
 
@@ -448,7 +513,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">Lang</h3>
+        <h3 class="mt1 f6 lh-title" id="build.lang">Lang</h3>
 
         <p>
           Sets the language passed to build rules when building. This can be
@@ -460,7 +525,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">LinkGeneratedSources</h3>
+        <h3 class="mt1 f6 lh-title" id="build.linkgeneratedsources">LinkGeneratedSources</h3>
 
         <p>
           When set, Please will link generated sources back into the source tree. A
@@ -470,11 +535,46 @@
         </p>
       </div>
     </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="build.xattrs">XAttrs</h3>
+
+        <p>{{ index .ConfigHelpText "build.xattrs" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="build.nonce">Nonce</h3>
+
+        <p>{{ index .ConfigHelpText "build.nonce" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="build.httpproxy">HttpProxy</h3>
+
+        <p>{{ index .ConfigHelpText "build.httpproxy" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="build.hashfunction">hashFunction</h3>
+
+        <p>{{ index .ConfigHelpText "build.hashfunction" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="build.exitonerror">ExitOnError <span class="normal">(bool)</span></h3>
+
+        <p>{{ index .ConfigHelpText "build.exitonerror" }}</p>
+      </div>
+    </li>
   </ul>
 </section>
 
 <section class="mt4">
-  <h2 id="build-env" class="title-2">[BuildEnv]</h2>
+  <h2 id="buildenv" class="title-2">[BuildEnv]</h2>
 
   <p>
     A set of extra environment variables to define for build rules. For example:
@@ -500,7 +600,7 @@
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="sandbox.tool">
           Tool
         </h3>
 
@@ -514,7 +614,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="sandbox.build">
           Build <span class="normal">(bool)</span>
         </h3>
 
@@ -527,7 +627,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="sandbox.test">
           Test <span class="normal">(bool)</span>
         </h3>
 
@@ -540,7 +640,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="sandbox.dir">
           Dir <span class="normal">(repeated string)</span>
         </h3>
 
@@ -551,21 +651,23 @@
         </p>
       </div>
     </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="sandbox.namespace">
+          Namespace <span class="normal">(bool)</span>
+        </h3>
+        <p>{{ index .ConfigHelpText "sandbox.namespace" }}</p>
+      </div>
+    </li>
   </ul>
 </section>
 
 <section class="mt4">
   <h2 id="remote" class="title-2">[Remote]</h2>
-
-  <p class="red">
-    This whole section is still experimental; some settings may not work fully
-    and as a whole it's subject to change. Proceed with caution!
-  </p>
-
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">URL</h3>
+        <h3 class="mt1 f6 lh-title" id="remote.url">URL</h3>
 
         <p>
           Sets the URL to communicate with the remote server on.<br />
@@ -577,7 +679,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">Instance</h3>
+        <h3 class="mt1 f6 lh-title" id="remote.instance">Instance</h3>
 
         <p>
           Defines the name of the remote instance to request. Depending on the
@@ -588,7 +690,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="remote.numexecutors">
           NumExecutors <span class="normal">(int)</span>
         </h3>
 
@@ -597,13 +699,85 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">Name</h3>
+        <h3 class="mt1 f6 lh-title" id="remote.name">Name</h3>
 
         <p>
           A name for this worker instance. This is informational only and
           attached to artifacts uploaded to remote storage to identify the
           original machine that created them.
         </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.casurl">CasUrl</h3>
+        <p>{{ index .ConfigHelpText "remote.casurl" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.asseturl">AssetUrl</h3>
+        <p>{{ index .ConfigHelpText "remote.asseturl" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.displayurl">DisplayUrl</h3>
+        <p>{{ index .ConfigHelpText "remote.displayurl" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.tokenfile">TokenFile</h3>
+        <p>{{ index .ConfigHelpText "remote.tokenfile" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.timeout">Timeout <span class="normal">(int)</span></h3>
+        <p>{{ index .ConfigHelpText "remote.timeout" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.secure">Secure <span class="normal">(bool)</span></h3>
+        <p>{{ index .ConfigHelpText "remote.secure" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.verifyoutputs">VerifyOutputs <span class="normal">(bool)</span></h3>
+        <p>{{ index .ConfigHelpText "remote.verifyoutputs" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.uploaddirs">UploadDirs <span class="normal">(bool)</span></h3>
+        <p>{{ index .ConfigHelpText "remote.uploaddirs" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.shell">Shell </h3>
+        <p>{{ index .ConfigHelpText "remote.shell" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.platform">Platform <span class="normal">(repeated string)</span></h3>
+        <p>{{ index .ConfigHelpText "remote.platform" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.cacheduration">CacheDuraction <span class="normal">(int)</span></h3>
+        <p>{{ index .ConfigHelpText "remote.cacheduration" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.buildid">BuildId</h3>
+        <p>{{ index .ConfigHelpText "remote.buildid" }}</p>
       </div>
     </li>
   </ul>
@@ -615,7 +789,7 @@
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">Dir</h3>
+        <h3 class="mt1 f6 lh-title" id="cache.dir">Dir</h3>
 
         <p>
           Sets the directory to use for the dir cache.<br />
@@ -626,7 +800,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="cache.dircachehighwatermark">
           DirCacheHighWaterMark <span class="normal">(size)</span>
         </h3>
 
@@ -640,7 +814,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="cache.dircachelowwatermark">
           DirCacheLowWaterMark <span class="normal">(size)</span>
         </h3>
 
@@ -652,7 +826,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">HttpUrl</h3>
+        <h3 class="mt1 f6 lh-title" id="cache.httpurl">HttpUrl</h3>
 
         <p>
           Base URL of the HTTP cache.<br />
@@ -662,7 +836,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="cache.httpwriteable">
           HttpWriteable <span class="normal">(bool)</span>
         </h3>
 
@@ -675,7 +849,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="cache.httptimeout">
           HttpTimeout <span class="normal">(int)</span>
         </h3>
 
@@ -684,48 +858,62 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">RcpUrl</h3>
-
-        <p>
-          Base URL of the RPC cache.<br />
-          Not set to anything by default which means the cache will be disabled.
-        </p>
+        <h3 class="mt1 f6 lh-title" id="cache.workers">Workers</h3>
+        <p>{{ index .ConfigHelpText "cache.workers" }}</p>
       </div>
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
-          RpcWriteable <span class="normal">(bool)</span>
+        <h3 class="mt1 f6 lh-title" id="cache.dirclean">
+          DirClean <span class="normal">(bool)</span>
         </h3>
-
-        <p>
-          If True this plz instance will write content back to the RPC cache.<br />
-          By default it runs in read-only mode.
-        </p>
+        <p>{{ index .ConfigHelpText "cache.dirclean" }}</p>
       </div>
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
-          RcpTimeout <span class="normal">(int)</span>
+        <h3 class="mt1 f6 lh-title" id="cache.dircompress">
+          DirCompress <span class="normal">(bool)</span>
         </h3>
-
-        <p>Timeout for operations contacting the RPC cache, in seconds.</p>
+        <p>{{ index .ConfigHelpText "cache.dircompress" }}</p>
       </div>
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
-          RpcMaxMsgSize <span class="normal">(bytes)</span>
+        <h3 class="mt1 f6 lh-title" id="cache.httpconcurrentrequestlimit">
+          HttpConcurrentRequestLimit <span class="normal">(int)</span>
         </h3>
+        <p>{{ index .ConfigHelpText "cache.httpconcurrentrequestlimit" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cache.httpretry">
+          HttpRetry <span class="normal">(int)</span>
+        </h3>
+        <p>{{ index .ConfigHelpText "cache.httpretry" }}</p>
+      </div>
+    </li>
+  </ul>
+</section>
 
-        <p>
-          Maximum size of a single message that we'll send to the RPC server.<br />
-          This should agree with the server's limit, if it's higher the
-          artifacts will be rejected.<br />
-          The value is given as a byte size so can be suffixed with M, GB, KiB,
-          etc.
-        </p>
+<section class="mt4">
+  <h2 id="size" class="title-2">[Size]</h2>
+  <p>{{ index .ConfigHelpText "size" }}</p>
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="size.timeout">
+          Timeout <span class="normal">(int)</span>
+        </h3>
+        <p>{{ index .ConfigHelpText "size.timeout" }}</p>
+
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="size.timeoutname">TimeoutName</h3>
+        <p>{{ index .ConfigHelpText "size.timeoutname" }}</p>
       </div>
     </li>
   </ul>
@@ -737,7 +925,7 @@
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="test.timeout">
           Timeout <span class="normal">(int)</span>
         </h3>
 
@@ -749,7 +937,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="test.sandbox">
           Sandbox <span class="normal">(bool)</span>
         </h3>
 
@@ -763,7 +951,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="test.disablecoverage">
           DisableCoverage <span class="normal">(repeated string)</span>
         </h3>
 
@@ -774,7 +962,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="test.upload">
           Upload <span class="normal">(string)</span>
         </h3>
 
@@ -786,23 +974,21 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="test.uploadgzipped">
           UploadGzipped <span class="normal">(bool)</span>
         </h3>
 
         <p>
-          True to use gzip compression when uploading test results. Disabled by default.
-        </p>
+        <p>{{ index .ConfigHelpText "test.uploadgzipped" }}</p>
       </div>
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="test.storetestoutputonsuccess">
           StoreTestOutputOnSuccess <span class="normal">(bool)</span>
         </h3>
         <p>
-          True to store the standard output and standard error of successful test cases. Disabled by default.
-        </p>
+        <p>{{ index .ConfigHelpText "test.storetestoutputonsuccess" }}</p>
       </div>
     </li>
   </ul>
@@ -814,7 +1000,7 @@
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="cover.fileextension">
           FileExtension <span class="normal">(repeated string)</span>
         </h3>
 
@@ -829,7 +1015,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="cover.excludeextension">
           ExcludeExtension <span class="normal">(repeated string)</span>
         </h3>
 
@@ -858,7 +1044,7 @@
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title" id="gc.keep">
           Keep <span class="normal">(build label)</span>
         </h3>
 
@@ -871,7 +1057,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">KeepLabel</h3>
+        <h3 class="mt1 f6 lh-title" id="gc.keeplabel">KeepLabel</h3>
 
         <p>
           Defines a target label to be kept; for example, if you set this to
@@ -884,784 +1070,58 @@
 </section>
 
 <section class="mt4">
-  <h2 id="go" class="title-2">[Go]</h2>
-
-  <p>Properties that affect how the various Go build rules work.</p>
-
+  <h2 id="alias" class="title-2">[Alias "name"]</h2>
+  <p>This section can be used to add custom commands to the plz cli. The section
+    can be repeated multiple times to add many aliases.</p>
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">ImportPath</h3>
-
+        <h3 class="mt1 f6 lh-title" id="alias.cmd">Cmd</h3>
         <p>
-          String name of the canonical path of this repository.<br />
-          This path is used as the prefix of the package name relative to this
-          <code class="code">please</code> build directory.
-          <code class="code">importpath</code> is commonly used to prepend
-          <code class="code">github.com/myorg/myrepo</code> to a project's path.
+          The actual command to run. Will be prefixed by `plz` and all arguments will be passed to this literally.
         </p>
       </div>
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">GoPath</h3>
-
-        <p>
-          If set, will set the GOPATH environment variable appropriately during
-          build actions.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">GoTool</h3>
-
-        <p>
-          If set, the binary name to use to invoke Go &amp; its subtools with.
-          Defaults to <code class="code">go</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">GoRoot</h3>
-
-        <p>
-          If set, will set the GOROOT environment variable appropriately during
-          build actions.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">CgoCCTool</h3>
-
-        <p>
-          Sets the location of <code class="code">CC</code> while building
-          <code class="code">cgo_library</code> and
-          <code class="code">cgo_test</code> rules. Defaults to
-          <code class="code">gcc</code>
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">CgoEnabled</h3>
-
-        <p>
-          Sets CGO_ENABLED to "1" which is used by go tooling to toggle various
-          cgo related features including setting the cgo build flag. Defaults to
-          not being set, which will revert to the go default behavior. This is mostly
-          relevant when cross-compiling. See
-          <a href="https://golang.org/cmd/cgo/">cgo</a> for more information.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">FilterTool</h3>
-
-        <p>
-          Sets the location of the
-          <code class="code">please_go_filter</code> tool that is used to filter
-          source files against build constraints.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">
-          DefaultStatic <span class="normal">(bool)</span>
+        <h3 class="mt1 f6 lh-title" id="alias.subcommand">
+          Subcommand <span class="normal">(repeated string)</span>
         </h3>
-
         <p>
-          Sets Go binaries to default to static linking. Note that enabling this
-          may have negative consequences for some code, including Go's DNS
-          lookup code in the net module.
+          Any subcommands of this alias. Used for tab completion.
         </p>
       </div>
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title">
-          GoTestRootCompat <span class="normal">(bool)</span>
+        <h3 class="mt1 f6 lh-title" id="alias.flag">
+          Flag <span class="normal">(repeated string)</span>
         </h3>
-
         <p>
-          When enabled, Please will enter the package directory when running the test binary.
-          It is useful when a test uses relative paths to files and
-          remaining compatible with <code class="code">go test</code> is important.
+          Any flags of this alias. Used for tab completion.
         </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="alias.positionallabels">
+          PositionalLabels <span class="normal">(repeated string)</span>
+        </h3>
+        <p>
+          Whether this alias's positional arguments are build labels.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="alias.desc">Desc</h3>
+        <p>{{ index .ConfigHelpText "alias.desc" }}</p>
       </div>
     </li>
   </ul>
-</section>
-
-<section class="mt4">
-  <h2 id="python" class="title-2">[Python]</h2>
-
-  <p>Properties that affect how the various Python build rules work.</p>
-
-  <ul class="bulleted-list">
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">PipTool</h3>
-
-        <p>
-          The tool that is invoked during
-          <code class="code">pip_library</code> rules. Defaults to
-          <code class="code">pip3</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">PexTool</h3>
-
-        <p>
-          The tool that's invoked to build pexes. Defaults to
-          <code class="code">please_pex</code> in the install directory.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">DefaultInterpreter</h3>
-
-        <p>
-          The interpreter used for <code class="code">python_binary</code> and
-          <code class="code">python_test</code> rules when none is specified on
-          the rule itself. Defaults to <code class="code">python3</code> but you
-          could of course set it to <code class="code">pypy</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">TestRunner</h3>
-
-        <p>
-          The test runner used to discover &amp; run Python tests; one of
-          <code class="code">unittest</code>,
-          <code class="code">pytest</code> or <code class="code">behave</code>.
-          Defaults to <code class="code">unittest</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">ModuleDir</h3>
-
-        <p>
-          Defines a directory containing modules from which they can be imported
-          at the top level.<br />
-          By default this is empty but by convention we define our
-          <code class="code">pip_library</code> rules in
-          <code class="code">third_party/python</code> and set this
-          appropriately. Hence any of those third-party libraries that try
-          something like <code class="code">import six</code> will have it work
-          as they expect, even though it's actually in a different location
-          within the .pex.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">DefaultPipRepo</h3>
-
-        <p>
-          Defines a location for a pip repo to download wheels from.<br />
-          By default <code class="code">pip_library</code> uses PyPI (although
-          see below on that) but you may well want to use this define another
-          location to upload your own wheels to.<br />
-          Is overridden by the <code class="code">repo</code> argument to
-          <code class="code">pip_library</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">WheelRepo</h3>
-
-        <p>
-          Defines a location for a remote repo that python_wheel rules will
-          download from. See
-          <a class="copy-link" href="/lexicon.html#python_wheel"
-            >python_wheel</a
-          >
-          for more information.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">
-          UsePyPI <span class="normal">(bool)</span>
-        </h3>
-
-        <p>
-          Whether or not to use PyPI for
-          <code class="code">pip_library</code> rules or not. Defaults to
-          <code class="code">True</code>, if you disable this you will
-          presumably want to set DefaultPipRepo to use one of your own.<br />
-          Is overridden by the <code class="code">use_pypi</code> argument to
-          <code class="code">pip_library</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">
-          WheelNameScheme <span class="normal">(string)</span>
-        </h3>
-
-        <p>
-          Defines a custom templatized wheel naming scheme.<br />
-          Templatized variables should be surrounded in curly braces within the
-          scheme, and the available options are:
-          <code class="code">url_base</code>,
-          <code class="code">package_name</code>, and
-          <code class="code">version</code>. The default search pattern is
-          <code class="code"
-            >{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl</code
-          >
-          along with a few common variants.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">
-          DisableVendorFlags <span class="normal">(bool)</span>
-        </h3>
-
-        <p>
-          Disables injection of vendor specific flags for <code class="code">pip</code> while using
-          <code class="code">pip_library</code>. The option can be useful if you are using
-          something like <code class="code">Pyenv</code>, and the passing of additional
-          flags or configuration that are vendor specific, e.g. <code class="code">--system</code>,
-          breaks your build.
-        </p>
-      </div>
-    </li>
-  </ul>
-</section>
-
-<section class="mt4">
-  <h2 id="java" class="title-2">[Java]</h2>
-
-  <p>Properties that affect how the various Java build rules work.</p>
-
-  <ul class="bulleted-list">
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">JavacTool</h3>
-
-        <p>
-          Defines the tool used for the Java compiler. Defaults to
-          <code class="code">javac</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">JlinkTool</h3>
-
-        <p>
-          Defines the tool used for the Java linker. Defaults to
-          <code class="code">jlink</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">JavaHome</h3>
-
-        <p>Defines the Java home folder.</p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">JarTool</h3>
-
-        <p>
-          Defines the tool used to build a .jar. Defaults to
-          <code class="code">jar</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">JarcatTool</h3>
-
-        <p>
-          Defines the tool used to concatenate .jar files which we use to build
-          the output of <code class="code">java_binary</code> and
-          <code class="code">java_test</code>.Defaults to
-          <code class="code">jarcat</code> in the Please install directory.<br />
-          Any resemblance to
-          <a
-            class="copy-link"
-            href="http://4.bp.blogspot.com/_fzolLOGJOn0/TRkl9BFE_4I/AAAAAAAAEGQ/vxs9pwhDCVA/s1600/Cat-Packed.in.Glass.jpg"
-            target="_blank"
-            rel="noopener"
-            >this</a
-          >
-          or
-          <a
-            class="copy-link"
-            href="http://d104xtrw2rzoau.cloudfront.net/wp-content/uploads/2013/06/15806-cat_stuck_jar_27_8_2012.jpg"
-            target="_blank"
-            rel="noopener"
-            >this</a
-          >
-          is purr-ly coincidental.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">DefaultMavenRepo</h3>
-
-        <p>Default location to load artifacts from in maven_jar rules.</p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">JUnitRunner</h3>
-
-        <p>
-          Defines the .jar containing the JUnit runner. This is built into all
-          <code class="code">java_test</code> rules since it's necessary to make
-          JUnit do anything useful.<br />
-          Defaults to <code class="code">junit_runner.jar</code> in the Please
-          install directory.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">DefaultTestPackage</h3>
-
-        <p>
-          The Java classpath to search for functions annotated with
-          <code class="code">@Test</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">SourceLevel</h3>
-
-        <p>The default Java source level when compiling. Defaults to 8.</p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">
-          TargetLevel <span class="normal">(int)</span>
-        </h3>
-
-        <p>The default Java bytecode level to target. Defaults to 8.</p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">
-          ReleaseLevel <span class="normal">(int)</span>
-        </h3>
-
-        <p>
-          The default Java release level when compiling. SourceLevel and
-          TargetLevel are ignored if this is set. Bear in mind that this flag is
-          only supported in Java version 9+.
-        </p>
-      </div>
-    </li>
-  </ul>
-</section>
-
-<section class="mt4">
-  <h2 id="cpp" class="title-2">[Cpp]</h2>
-
-  <p>Properties that affect how the various C++ build rules work.</p>
-
-  <ul class="bulleted-list">
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">CCTool</h3>
-
-        <p>
-          The tool invoked to compile C code. Defaults to
-          <code class="code">gcc</code> but you might want to set it to
-          <code class="code">clang</code>, for example.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">CppTool</h3>
-
-        <p>
-          The tool invoked to compile C++ code. Defaults to
-          <code class="code">g++</code> but you might want to set it to
-          <code class="code">clang++</code>, for example.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">LdTool</h3>
-
-        <p>
-          The tool invoked to link object files. Defaults to
-          <code class="code">ld</code> but you could also set it to
-          <code class="code">gold</code>, for example.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">ArTool</h3>
-
-        <p>
-          The tool invoked to archive static libraries. Defaults to
-          <code class="code">ar</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">LinkWithLdTool</h3>
-
-        <p>
-          If true, instructs Please to use the tool set earlier in
-          <code class="code">ldtool</code> to link binaries instead of
-          <code class="code">cctool</code>.<br />
-          This is an esoteric setting that most people don't want; a vanilla
-          <code class="code">ld</code> will not perform all steps necessary here
-          (you'll get lots of missing symbol messages from having no libc etc).
-          Generally best to leave this disabled.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">DefaultOptCflags</h3>
-
-        <p>
-          Compiler flags passed to all C rules during
-          <code class="code">opt</code> builds; these are typically pretty basic
-          things like what language standard you want to target, warning flags,
-          etc.<br />
-          Defaults to
-          <code class="code">--std=c99 -O3 -DNDEBUG -Wall -Werror</code>
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">DefaultDbgCflags</h3>
-
-        <p>
-          Compiler rules passed to all C rules during
-          <code class="code">dbg</code> builds.<br />
-          Defaults to
-          <code class="code">--std=c99 -g3 -DDEBUG -Wall -Werror</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">DefaultOptCppflags</h3>
-
-        <p>
-          Compiler flags passed to all C++ rules during
-          <code class="code">opt</code> builds; these are typically pretty basic
-          things like what language standard you want to target, warning flags,
-          etc.<br />
-          Defaults to
-          <code class="code">--std=c++11 -O3 -DNDEBUG -Wall -Werror</code>
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">DefaultDbgCppflags</h3>
-
-        <p>
-          Compiler rules passed to all C++ rules during
-          <code class="code">dbg</code> builds.<br />
-          Defaults to
-          <code class="code">--std=c++11 -g3 -DDEBUG -Wall -Werror</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">DefaultLdFlags</h3>
-
-        <p>
-          Linker flags passed to all C++ rules.<br />
-          By default this is empty.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">Coverage</h3>
-
-        <p>
-          If true (the default), coverage will be available for C and C++ build
-          rules.<br />
-          This is still a little experimental but should work for GCC. Right now
-          it does
-          <strong>not</strong> work for Clang (it likely will in Clang 4.0 which
-          will likely support <code class="code">--fprofile-dir</code>) and so
-          this can be useful to disable it.<br />
-          It's also useful in some cases for CI systems etc if you'd prefer to
-          avoid the overhead, since the tests have to be compiled with extra
-          instrumentation and without optimisation.
-        </p>
-      </div>
-    </li>
-  </ul>
-</section>
-
-<section class="mt4">
-  <h2 id="proto" class="title-2">[Proto]</h2>
-
+  <h4 class="title-3">Example</h4>
   <p>
-    Properties that affect how the <code class="code">proto_library</code> and
-    <code class="code">grpc_library</code> rules work.
-  </p>
-
-  <p>
-    As noted elsewhere, these rules are fairly complex and do a bunch of things
-    internally, so they correspondingly have a lot of options here.
-  </p>
-
-  <p>
-    Obviously the various gRPC-related properties only apply to
-    <code class="code">grpc_library</code> rules, whereas
-    <code class="code">proto_library</code> rules are affected by all of them.
-  </p>
-
-  <ul class="bulleted-list">
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">ProtocTool</h3>
-
-        <p>
-          The binary invoked to compile .proto files. Defaults to
-          <code class="code">protoc</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">ProtocFlag</h3>
-
-        <p>
-          Flags to pass to all protoc invocations. This can be used to set the location of well known types. It is
-          recommended to use <code>protoc_binary</code> which will manage the well known types for you, however you may
-          set this to <code class="code">-I/usr/local/include</code> or similar to use the well known
-          types from the host machine.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">ProtocGoPlugin</h3>
-
-        <p>
-          The binary passed to protoc as a plugin to generate Go code. Defaults
-          to <code class="code">protoc-gen-go</code>.<br />
-          We've found this easier to manage with a
-          <code class="code">go_get</code> rule instead though, so you can also
-          pass a build label here. See the Please repo for an example.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">GrpcPythonPlugin</h3>
-
-        <p>
-          The plugin invoked to compile Python code for
-          <code class="code">grpc_library</code>.<br />
-          Defaults to <code class="code">grpc_python_plugin</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">GrpcJavaPlugin</h3>
-
-        <p>
-          The plugin invoked to compile Java code for
-          <code class="code">grpc_library</code>.<br />
-          Defaults to <code class="code">protoc-gen-grpc-java</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">
-          Language <span class="normal">(repeated string)</span>
-        </h3>
-
-        <p>
-          Sets the default set of languages that proto rules are built for.<br />
-          Chosen from the set of {<code class="code">cc</code>,
-          <code class="code">java</code>, <code class="code">go</code>,
-          <code class="code">py</code>}.<br />
-          Defaults to multiple <code class="code">Language</code> lines, one
-          line for each of the following values: <code class="code">cc</code>,
-          <code class="code">py</code>, <code class="code">java</code>,
-          <code class="code">go</code>, and <code class="code">js</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">PythonDep</h3>
-
-        <p>
-          An in-repo dependency that's applied to any Python targets built.
-          Defaults to <code class="code">//third_party/python:protobuf</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">JavaDep</h3>
-
-        <p>
-          An in-repo dependency that's applied to any Java targets built.
-          Defaults to <code class="code">//third_party/java:protobuf</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">GoDep</h3>
-
-        <p>
-          An in-repo dependency that's applied to any Go targets built. Defaults
-          to <code class="code">//third_party/go:protobuf</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">PythonGrpcDep</h3>
-
-        <p>
-          An in-repo dependency that's applied to any Python gRPC targets built.
-          Defaults to <code class="code">//third_party/python:grpc</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">JavaGrpcDep</h3>
-
-        <p>
-          An in-repo dependency that's applied to any Java gRPC targets built.
-          Defaults to <code class="code">/third_party/java:grpc-all</code>.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">GoGrpcDep</h3>
-
-        <p>
-          An in-repo dependency that's applied to any Go gRPC targets built.
-          Defaults to <code class="code">//third_party/go:grpc</code>.
-        </p>
-      </div>
-    </li>
-  </ul>
-</section>
-
-<section class="mt4">
-  <h2 id="licences" class="title-2">[Licences]</h2>
-
-  <p>
-    Please has a limited ability to detect licences from third-party code. We
-    obviously can't be 100% sure of these due to the complex nature of
-    dependency management formats and the many, many different forms each
-    licence can be described as. Hopefully though this should offer some help in
-    cases where licences can be detected.
-  </p>
-
-  <ul class="bulleted-list">
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">
-          Accept <span class="normal">(repeated string)</span>
-        </h3>
-
-        <p>
-          Licences that are accepted in this repository.<br />
-          When this is empty licences are ignored. As soon as it's set any
-          licence detected or assigned must be accepted explicitly here.<br />
-          There's no fuzzy matching, so some package managers (especially PyPI
-          and Maven, but shockingly not npm which rather nicely uses SPDX) will
-          generate a lot of slightly different spellings of the same thing,
-          which will all have to be accepted here. We'd rather that than trying
-          to "cleverly" match them which might result in matching the wrong
-          thing.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title">Reject</h3>
-
-        <p>
-          Licences that are explicitly rejected in this repository.<br />
-          An astute observer will notice that this is not very different to just
-          not adding it to the accept section, but it does have the advantage of
-          explicitly documenting things that the team aren't allowed to use.
-        </p>
-      </div>
-    </li>
-  </ul>
-</section>
-
-<section class="mt4">
-  <h2 id="build-config" class="title-2">[Buildconfig]</h2>
-
-  <p>
-    This section lets you define arbitrary key-value pairs that can be consumed
-    by custom build rules. For example:
-  </p>
-
-  <pre class="code-container">
-    <!-- prettier-ignore -->
-    <code>
-    [buildconfig]
-    rust-toolchain = //third_party/rust:toolchain
-    </code>
-  </pre>
-
-  <p>
-    The above can then be read in a .build_def or BUILD file as
-    <code class="code">CONFIG.RUST_TOOLCHAIN</code>, i.e. they are upper-cased
-    and hyphens are converted to underscores.
-  </p>
-</section>
-
-<section class="mt4">
-  <h2 id="alias" class="title-2">[Alias]</h2>
-
-  <p>
-    This section can be used to add custom commands to the plz cli. The section
-    can be repeated multiple times to add many aliases. For example, an alias to
-    run <code class="code">//deployment:deployer</code> with the form
+    An alias to run <code class="code">//deployment:deployer</code> with the form
     <code class="code">plz deploy prod --force //my:target</code> would look
     like this in the config:
   </p>
@@ -1704,7 +1164,852 @@
     Aliases for personal use can be added to your local (personal) please
     configuration i.e. <code class="code">.plzconfig.local</code>.
   </p>
+
 </section>
+
+<section class="mt4">
+  <h2 id="go" class="title-2">[Go]</h2>
+
+  <p>Properties that affect how the various Go build rules work.</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.importpath">ImportPath</h3>
+
+        <p>
+          String name of the canonical path of this repository.<br />
+          This path is used as the prefix of the package name relative to this
+          <code class="code">please</code> build directory.
+          <code class="code">importpath</code> is commonly used to prepend
+          <code class="code">github.com/myorg/myrepo</code> to a project's path.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.gopath">GoPath</h3>
+
+        <p>
+          If set, will set the GOPATH environment variable appropriately during
+          build actions.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.gotool">GoTool</h3>
+
+        <p>
+          If set, the binary name to use to invoke Go &amp; its subtools with.
+          Defaults to <code class="code">go</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.goroot">GoRoot</h3>
+
+        <p>
+          If set, will set the GOROOT environment variable appropriately during
+          build actions.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.cgocctool">CgoCCTool</h3>
+
+        <p>
+          Sets the location of <code class="code">CC</code> while building
+          <code class="code">cgo_library</code> and
+          <code class="code">cgo_test</code> rules. Defaults to
+          <code class="code">gcc</code>
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.cgoenabled">CgoEnabled</h3>
+
+        <p>
+          Sets CGO_ENABLED to "1" which is used by go tooling to toggle various
+          cgo related features including setting the cgo build flag. Defaults to
+          not being set, which will revert to the go default behavior. This is mostly
+          relevant when cross-compiling. See
+          <a href="https://golang.org/cmd/cgo/">cgo</a> for more information.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.filtertool">FilterTool</h3>
+
+        <p>
+          Sets the location of the
+          <code class="code">please_go_filter</code> tool that is used to filter
+          source files against build constraints.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.defaultstatic">
+          DefaultStatic <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          Sets Go binaries to default to static linking. Note that enabling this
+          may have negative consequences for some code, including Go's DNS
+          lookup code in the net module.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.gotestrootcompat">
+          GoTestRootCompat <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          When enabled, Please will enter the package directory when running the test binary.
+          It is useful when a test uses relative paths to files and
+          remaining compatible with <code class="code">go test</code> is important.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.pleasegotool">PleaseGoTool</h3>
+        <p>{{ index .ConfigHelpText "go.pleasegotool" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.embedtool">EmbdedTool</h3>
+        <p>{{ index .ConfigHelpText "go.embedtool" }}</p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="python" class="title-2">[Python]</h2>
+
+  <p>Properties that affect how the various Python build rules work.</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.piptool">PipTool</h3>
+
+        <p>
+          The tool that is invoked during
+          <code class="code">pip_library</code> rules. Defaults to
+          <code class="code">pip3</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.pextool">PexTool</h3>
+
+        <p>
+          The tool that's invoked to build pexes. Defaults to
+          <code class="code">please_pex</code> in the install directory.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.defaultinterpreter">DefaultInterpreter</h3>
+
+        <p>
+          The interpreter used for <code class="code">python_binary</code> and
+          <code class="code">python_test</code> rules when none is specified on
+          the rule itself. Defaults to <code class="code">python3</code> but you
+          could of course set it to <code class="code">pypy</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.testrunner">TestRunner</h3>
+
+        <p>
+          The test runner used to discover &amp; run Python tests; one of
+          <code class="code">unittest</code>,
+          <code class="code">pytest</code> or <code class="code">behave</code>.
+          Defaults to <code class="code">unittest</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.moduledir">ModuleDir</h3>
+
+        <p>
+          Defines a directory containing modules from which they can be imported
+          at the top level.<br />
+          By default this is empty but by convention we define our
+          <code class="code">pip_library</code> rules in
+          <code class="code">third_party/python</code> and set this
+          appropriately. Hence any of those third-party libraries that try
+          something like <code class="code">import six</code> will have it work
+          as they expect, even though it's actually in a different location
+          within the .pex.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.defaultpiprepo">DefaultPipRepo</h3>
+
+        <p>
+          Defines a location for a pip repo to download wheels from.<br />
+          By default <code class="code">pip_library</code> uses PyPI (although
+          see below on that) but you may well want to use this define another
+          location to upload your own wheels to.<br />
+          Is overridden by the <code class="code">repo</code> argument to
+          <code class="code">pip_library</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.wheelrepo">WheelRepo</h3>
+
+        <p>
+          Defines a location for a remote repo that python_wheel rules will
+          download from. See
+          <a class="copy-link" href="/lexicon.html#python_wheel"
+            >python_wheel</a
+          >
+          for more information.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.usepypi">
+          UsePyPI <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          Whether or not to use PyPI for
+          <code class="code">pip_library</code> rules or not. Defaults to
+          <code class="code">True</code>, if you disable this you will
+          presumably want to set DefaultPipRepo to use one of your own.<br />
+          Is overridden by the <code class="code">use_pypi</code> argument to
+          <code class="code">pip_library</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.wheelnamescheme">WheelNameScheme</h3>
+        <p>
+          Defines a custom templatized wheel naming scheme.<br />
+          Templatized variables should be surrounded in curly braces within the
+          scheme, and the available options are:
+          <code class="code">url_base</code>,
+          <code class="code">package_name</code>, and
+          <code class="code">version</code>. The default search pattern is
+          <code class="code">{{ "{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl" }}</code>
+          along with a few common variants.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.disablevendorflags">
+          DisableVendorFlags <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          Disables injection of vendor specific flags for <code class="code">pip</code> while using
+          <code class="code">pip_library</code>. The option can be useful if you are using
+          something like <code class="code">Pyenv</code>, and the passing of additional
+          flags or configuration that are vendor specific, e.g. <code class="code">--system</code>,
+          breaks your build.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.pipflags">PipFlags</h3>
+        <p>{{ index .ConfigHelpText "python.pipflags" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.testrunnerbootstrap">TestRunnerBootstrap</h3>
+        <p>{{ index .ConfigHelpText "python.testrunnerbootstrap" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.interpreteroptions">InterpreterOptions</h3>
+        <p>{{ index .ConfigHelpText "python.interpreteroptions" }}</p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="java" class="title-2">[Java]</h2>
+
+  <p>Properties that affect how the various Java build rules work.</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.javactool">JavacTool</h3>
+        <p>{{ index .ConfigHelpText "java.javactool" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.jlinktool">JlinkTool</h3>
+        <p>{{ index .ConfigHelpText "java.jlinktool" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.javahome">JavaHome</h3>
+        <p>{{ index .ConfigHelpText "java.javahome" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.toolchain">Toolchain</h3>
+        <p>{{ index .ConfigHelpText "java.toolchain" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.javacworker">JavacWorker</h3>
+        <p>{{ index .ConfigHelpText "java.javacworker" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.javacflags">JavacFlags</h3>
+        <p>{{ index .ConfigHelpText "java.javacflags" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.javactestflags">JavacTestFlags</h3>
+        <p>{{ index .ConfigHelpText "java.javactestflags" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.defaultmavenrepo">DefaultMavenRepo</h3>
+        <p>{{ index .ConfigHelpText "java.defaultmavenrepo" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.jarcattool">JarcatTool</h3>
+
+        <p>
+          Defines the tool used to concatenate .jar files which we use to build
+          the output of <code class="code">java_binary</code> and
+          <code class="code">java_test</code>.Defaults to
+          <code class="code">jarcat</code> in the Please install directory.<br />
+          Any resemblance to
+          <a
+            class="copy-link"
+            href="http://4.bp.blogspot.com/_fzolLOGJOn0/TRkl9BFE_4I/AAAAAAAAEGQ/vxs9pwhDCVA/s1600/Cat-Packed.in.Glass.jpg"
+            target="_blank"
+            rel="noopener"
+            >this</a
+          >
+          or
+          <a
+            class="copy-link"
+            href="http://d104xtrw2rzoau.cloudfront.net/wp-content/uploads/2013/06/15806-cat_stuck_jar_27_8_2012.jpg"
+            target="_blank"
+            rel="noopener"
+            >this</a
+          >
+          is purr-ly coincidental.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.junitrunner">JUnitRunner</h3>
+
+        <p>
+          Defines the .jar containing the JUnit runner. This is built into all
+          <code class="code">java_test</code> rules since it's necessary to make
+          JUnit do anything useful.<br />
+          Defaults to <code class="code">junit_runner.jar</code> in the Please
+          install directory.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.defaulttestpackage">DefaultTestPackage</h3>
+
+        <p>
+          The Java classpath to search for functions annotated with
+          <code class="code">@Test</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.sourcelevel">SourceLevel <span class="normal">(int)</span></h3>
+
+        <p>The default Java source level when compiling. Defaults to 8.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.targetlevel">
+          TargetLevel <span class="normal">(int)</span>
+        </h3>
+
+        <p>The default Java bytecode level to target. Defaults to 8.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="java.releaselevel">
+          ReleaseLevel <span class="normal">(int)</span>
+        </h3>
+
+        <p>
+          The default Java release level when compiling. SourceLevel and
+          TargetLevel are ignored if this is set. Bear in mind that this flag is
+          only supported in Java version 9+.
+        </p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="cpp" class="title-2">[Cpp]</h2>
+
+  <p>Properties that affect how the various C++ build rules work.</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.cctool">CCTool</h3>
+
+        <p>
+          The tool invoked to compile C code. Defaults to
+          <code class="code">gcc</code> but you might want to set it to
+          <code class="code">clang</code>, for example.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.cpptool">CppTool</h3>
+
+        <p>
+          The tool invoked to compile C++ code. Defaults to
+          <code class="code">g++</code> but you might want to set it to
+          <code class="code">clang++</code>, for example.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.ldtool">LdTool</h3>
+
+        <p>
+          The tool invoked to link object files. Defaults to
+          <code class="code">ld</code> but you could also set it to
+          <code class="code">gold</code>, for example.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.artool">ArTool</h3>
+
+        <p>
+          The tool invoked to archive static libraries. Defaults to
+          <code class="code">ar</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.linkwithldtool">LinkWithLdTool</h3>
+
+        <p>
+          If true, instructs Please to use the tool set earlier in
+          <code class="code">ldtool</code> to link binaries instead of
+          <code class="code">cctool</code>.<br />
+          This is an esoteric setting that most people don't want; a vanilla
+          <code class="code">ld</code> will not perform all steps necessary here
+          (you'll get lots of missing symbol messages from having no libc etc).
+          Generally best to leave this disabled.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.defaultoptcflags">DefaultOptCflags</h3>
+
+        <p>
+          Compiler flags passed to all C rules during
+          <code class="code">opt</code> builds; these are typically pretty basic
+          things like what language standard you want to target, warning flags,
+          etc.<br />
+          Defaults to
+          <code class="code">--std=c99 -O3 -DNDEBUG -Wall -Werror</code>
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.defaultdbgcflags">DefaultDbgCflags</h3>
+
+        <p>
+          Compiler rules passed to all C rules during
+          <code class="code">dbg</code> builds.<br />
+          Defaults to
+          <code class="code">--std=c99 -g3 -DDEBUG -Wall -Werror</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.defaultoptcppflags">DefaultOptCppflags</h3>
+
+        <p>
+          Compiler flags passed to all C++ rules during
+          <code class="code">opt</code> builds; these are typically pretty basic
+          things like what language standard you want to target, warning flags,
+          etc.<br />
+          Defaults to
+          <code class="code">--std=c++11 -O3 -DNDEBUG -Wall -Werror</code>
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.defaultdbgcppflags">DefaultDbgCppflags</h3>
+
+        <p>
+          Compiler rules passed to all C++ rules during
+          <code class="code">dbg</code> builds.<br />
+          Defaults to
+          <code class="code">--std=c++11 -g3 -DDEBUG -Wall -Werror</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.defaultldflags">DefaultLdFlags</h3>
+
+        <p>
+          Linker flags passed to all C++ rules.<br />
+          By default this is empty.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.coverage">Coverage</h3>
+
+        <p>
+          If true (the default), coverage will be available for C and C++ build
+          rules.<br />
+          This is still a little experimental but should work for GCC. Right now
+          it does
+          <strong>not</strong> work for Clang (it likely will in Clang 4.0 which
+          will likely support <code class="code">--fprofile-dir</code>) and so
+          this can be useful to disable it.<br />
+          It's also useful in some cases for CI systems etc if you'd prefer to
+          avoid the overhead, since the tests have to be compiled with extra
+          instrumentation and without optimisation.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.pkgconfigpath"> PkgConfigPath</h3>
+        <p>{{ index .ConfigHelpText "cpp.pkgconfigpath" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.testmain"> TestMain</h3>
+        <p>{{ index .ConfigHelpText "cpp.testmain" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.clangmodules"> ClangModules</h3>
+        <p>{{ index .ConfigHelpText "cpp.clangmodules" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cpp.dsymtool"> DsymTool</h3>
+        <p>{{ index .ConfigHelpText "cpp.dsymtool" }}</p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="proto" class="title-2">[Proto]</h2>
+
+  <p>
+    Properties that affect how the <code class="code">proto_library</code> and
+    <code class="code">grpc_library</code> rules work.
+  </p>
+
+  <p>
+    As noted elsewhere, these rules are fairly complex and do a bunch of things
+    internally, so they correspondingly have a lot of options here.
+  </p>
+
+  <p>
+    Obviously the various gRPC-related properties only apply to
+    <code class="code">grpc_library</code> rules, whereas
+    <code class="code">proto_library</code> rules are affected by all of them.
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.protoctool">ProtocTool</h3>
+
+        <p>
+          The binary invoked to compile .proto files. Defaults to
+          <code class="code">protoc</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.protocflag">ProtocFlag</h3>
+
+        <p>
+          Flags to pass to all protoc invocations. This can be used to set the location of well known types. It is
+          recommended to use <code>protoc_binary</code> which will manage the well known types for you, however you may
+          set this to <code class="code">-I/usr/local/include</code> or similar to use the well known
+          types from the host machine.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.protocgoplugin">ProtocGoPlugin</h3>
+
+        <p>
+          The binary passed to protoc as a plugin to generate Go code. Defaults
+          to <code class="code">protoc-gen-go</code>.<br />
+          We've found this easier to manage with a
+          <code class="code">go_get</code> rule instead though, so you can also
+          pass a build label here. See the Please repo for an example.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.grpcgoplugin"> GrpcGoPlugin</h3>
+        <p>{{ index .ConfigHelpText "proto.grpcgoplugin" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.grpcccplugin"> GrpcCcPlugin</h3>
+        <p>{{ index .ConfigHelpText "proto.grpcccplugin" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.grpcpythonplugin">GrpcPythonPlugin</h3>
+
+        <p>
+          The plugin invoked to compile Python code for
+          <code class="code">grpc_library</code>.<br />
+          Defaults to <code class="code">grpc_python_plugin</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.grpcjavaplugin">GrpcJavaPlugin</h3>
+
+        <p>
+          The plugin invoked to compile Java code for
+          <code class="code">grpc_library</code>.<br />
+          Defaults to <code class="code">protoc-gen-grpc-java</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.language">
+          Language <span class="normal">(repeated string)</span>
+        </h3>
+
+        <p>
+          Sets the default set of languages that proto rules are built for.<br />
+          Chosen from the set of {<code class="code">cc</code>,
+          <code class="code">java</code>, <code class="code">go</code>,
+          <code class="code">py</code>}.<br />
+          Defaults to multiple <code class="code">Language</code> lines, one
+          line for each of the following values: <code class="code">cc</code>,
+          <code class="code">py</code>, <code class="code">java</code>,
+          <code class="code">go</code>, and <code class="code">js</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.pythondep">PythonDep</h3>
+
+        <p>
+          An in-repo dependency that's applied to any Python targets built.
+          Defaults to <code class="code">//third_party/python:protobuf</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.javadep">JavaDep</h3>
+
+        <p>
+          An in-repo dependency that's applied to any Java targets built.
+          Defaults to <code class="code">//third_party/java:protobuf</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.godep">GoDep</h3>
+
+        <p>
+          An in-repo dependency that's applied to any Go targets built. Defaults
+          to <code class="code">//third_party/go:protobuf</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.pythongrpcdep">PythonGrpcDep</h3>
+
+        <p>
+          An in-repo dependency that's applied to any Python gRPC targets built.
+          Defaults to <code class="code">//third_party/python:grpc</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.javagrpcdep">JavaGrpcDep</h3>
+
+        <p>
+          An in-repo dependency that's applied to any Java gRPC targets built.
+          Defaults to <code class="code">/third_party/java:grpc-all</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.gogrpcdep">GoGrpcDep</h3>
+
+        <p>
+          An in-repo dependency that's applied to any Go gRPC targets built.
+          Defaults to <code class="code">//third_party/go:grpc</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="proto.jsdep">JsDep</h3>
+        <p>{{ index .ConfigHelpText "proto.jsdep" }}</p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="licences" class="title-2">[Licences]</h2>
+
+  <p>
+    Please has a limited ability to detect licences from third-party code. We
+    obviously can't be 100% sure of these due to the complex nature of
+    dependency management formats and the many, many different forms each
+    licence can be described as. Hopefully though this should offer some help in
+    cases where licences can be detected.
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="licences.accept">
+          Accept <span class="normal">(repeated string)</span>
+        </h3>
+
+        <p>
+          Licences that are accepted in this repository.<br />
+          When this is empty licences are ignored. As soon as it's set any
+          licence detected or assigned must be accepted explicitly here.<br />
+          There's no fuzzy matching, so some package managers (especially PyPI
+          and Maven, but shockingly not npm which rather nicely uses SPDX) will
+          generate a lot of slightly different spellings of the same thing,
+          which will all have to be accepted here. We'd rather that than trying
+          to "cleverly" match them which might result in matching the wrong
+          thing.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="licences.reject">Reject</h3>
+
+        <p>
+          Licences that are explicitly rejected in this repository.<br />
+          An astute observer will notice that this is not very different to just
+          not adding it to the accept section, but it does have the advantage of
+          explicitly documenting things that the team aren't allowed to use.
+        </p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="buildconfig" class="title-2">[BuildConfig]</h2>
+
+  <p>
+    This section lets you define arbitrary key-value pairs that can be consumed
+    by custom build rules. For example:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code>
+    [buildconfig]
+    rust-toolchain = //third_party/rust:toolchain
+    </code>
+  </pre>
+
+  <p>
+    The above can then be read in a .build_def or BUILD file as
+    <code class="code">CONFIG.RUST_TOOLCHAIN</code>, i.e. they are upper-cased
+    and hyphens are converted to underscores.
+  </p>
+</section>
+
 
 <section class="mt4">
   <h2 id="bazel" class="title-2">[Bazel]</h2>

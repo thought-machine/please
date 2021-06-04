@@ -11,6 +11,7 @@ for src in glob(
         "template.html",
         "lexicon*.html",
         "language.html",
+        "config.html",
         "error.html",
     ],
 ):
@@ -46,10 +47,27 @@ genrule(
         'mv tmp.html "$OUT"',
     ],
     tools = {
-        "lex": [":lexicon_templater"],
-        "tmpl": [":templater"],
+        "lex": ["//docs/tools/lexicon_templater"],
+        "tmpl": ["//docs/tools/templater"],
     },
 )
+
+genrule(
+    name = "config_html",
+    srcs = [
+        "config.html",
+        "template.html",
+    ],
+    outs = ["config.html"],
+    cmd = [
+        '"$TOOLS_CONFIG" > config.html',
+        '"$TOOLS_TMPL" --template docs/template.html --in config.html > tmp.html',
+        'mv tmp.html "$OUT"',
+    ],
+    tools = {
+        "config": ["//docs/tools/config_templater"],
+        "tmpl": ["//docs/tools/templater"],
+    },)
 
 genrule(
     name = "language_html",
@@ -61,8 +79,8 @@ genrule(
     outs = ["language.html"],
     cmd = '"$TOOLS_TEMPLATE" --template $SRCS_TEMPLATE --in $SRCS_HTML | "$TOOLS_GRAMMAR" > "$OUT"',
     tools = {
-        "grammar": [":grammar_templater"],
-        "template": [":templater"],
+        "grammar": ["//docs/tools/grammar_templater"],
+        "template": ["//docs/tools/templater"],
     },
 )
 
@@ -71,6 +89,7 @@ filegroup(
     srcs = glob(["images/*.png"]) + deps + [
         ":language_html",
         ":lexicon_html",
+        ":config_html",
         "tachyons-4.12.0.min.css",
         "styles.css",
         "action.js",
@@ -83,6 +102,7 @@ filegroup(
         ":codelabs_html",
     ],
     deps = ["//docs/codelabs"],
+    visibility = ["//docs/..."],
 )
 
 #TODO(jpoole): unify these two once we switch to the new website
@@ -105,29 +125,10 @@ tarball(
     labels = ["hlink:plz-out/pkg"],
 )
 
-go_binary(
-    name = "templater",
-    srcs = ["template.go"],
-    visibility = ["//docs/..."],
-    deps = [
-        "//third_party/go:cli-init",
-    ],
-)
-
 filegroup(
     name = "template_html",
     srcs = ["template.html"],
     visibility = ["//docs/..."],
-)
-
-go_binary(
-    name = "lexicon_templater",
-    srcs = ["template_lexicon.go"],
-)
-
-go_binary(
-    name = "grammar_templater",
-    srcs = ["template_grammar.go"],
 )
 
 # Convenient for popping open the docs in a browser after building (must use 'plz run').
@@ -149,12 +150,3 @@ sh_cmd(
     ],
 )
 
-go_test(
-    name = "docs_test",
-    srcs = ["docs_test.go"],
-    data = [":docs"],
-    deps = [
-        "//third_party/go:net",
-        "//third_party/go:testify",
-    ],
-)

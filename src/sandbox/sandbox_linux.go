@@ -21,6 +21,9 @@ const mdLazytime = 1 << 25
 const sandboxDirsVar = "SANDBOX_DIRS"
 
 func Sandbox(args []string) error {
+	if len(args) < 2 {
+		return fmt.Errorf("incorrect number of args to call plz sandbox")
+	}
 	cmd := exec.Command(args[0], args[1:]...)
 
 	cmd.Stdout = os.Stdout

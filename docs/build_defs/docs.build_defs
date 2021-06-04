@@ -21,6 +21,6 @@ def html_template(name : str, src : str, output : str = ''):
         },
         outs = [output if output else src],
         cmd = f'{cmd} > "$OUT"',
-        tools = ["//docs:templater"],
+        tools = ["//docs/tools/templater"],
         visibility = ["//docs/..."],
     )
