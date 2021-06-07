@@ -4,6 +4,7 @@ go_library(
     visibility = ["//tools/jarcat:all"],
     deps = [
         "//third_party/go:xz",
+        "//third_party/go:zstd",
         "//third_party/go/zip",
     ],
 )

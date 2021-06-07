@@ -1,11 +1,11 @@
 module github.com/thought-machine/please
 
 require (
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/OneOfOne/cmap v0.0.0-20170825200327-ccaef7657ab8
+	github.com/ProtonMail/go-crypto v0.0.0-20210329181949-3900d675f39b
 	github.com/Songmu/prompter v0.0.0-20181014095714-d227c68538bd
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/Masterminds/semver/v3 v3.1.1
-	github.com/ProtonMail/go-crypto v0.0.0-20210329181949-3900d675f39b
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/alecthomas/units v0.0.0-20201120081800-1786d5ef83d4 // indirect
 	github.com/bazelbuild/buildtools v0.0.0-20190228125936-4bcdbd1064fc
@@ -23,6 +23,7 @@ require (
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/karrick/godirwalk v1.7.8
+	github.com/klauspost/compress v1.12.3 // indirect
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/manifoldco/promptui v0.3.2
 	github.com/nicksnyder/go-i18n v1.10.1 // indirect
