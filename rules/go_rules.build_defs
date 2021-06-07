@@ -262,15 +262,15 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
 
 
     package_path = _get_import_path(import_path)
-    if not package_path.endswith(package):
-        package_path = f"{package_path}/{package}"
+    if not package_path.endswith(package) and not import_path:
+            package_path = f"{package_path}/{package}"
     return build_rule(
         name=name,
         srcs=srcs,
         deps=deps,
         internal_deps = [src_rule],
         outs=outs,
-        cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),
+        cmd=_go_library_cmds(import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),
         visibility=visibility,
         building_description="Compiling...",
         requires=['go'],
@@ -557,6 +557,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         _link_private = True,
         _link_extra = False,
         _generate_import_config=False,
+        import_path="main",
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
     return build_rule(
@@ -1516,7 +1517,7 @@ def _set_go_env():
     return cmd
 
 
-def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None):
+def _go_library_cmds(import_path:str, complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None):
     """Returns the commands to run for building a Go library."""
     filter_cmd = 'export SRCS_GO="$(\"${TOOLS_FILTER}\" ${SRCS_GO})"; ' if filter_srcs else ''
     # Invokes the Go compiler.
@@ -1530,8 +1531,13 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
     prefix = ('export SRCS_GO="$PKG_DIR/*.go"; ' + gen_import_cfg) if all_srcs else gen_import_cfg
+
+    flag = f" -p {import_path}"
+    if '#' in import_path:
+        flag = ""
+
     cmds = {
-        'dbg': f'{prefix}; {filter_cmd}{compile_cmd} -N -l $SRCS_GO',
+        'dbg': f'{prefix}; {filter_cmd}{compile_cmd}{flag} -N -l $SRCS_GO',
         'opt': f'{prefix}; {filter_cmd}{compile_cmd} $SRCS_GO',
     }
     if cover:
@@ -1626,7 +1632,6 @@ def _replace_test_package(name, output, static, definitions, cgo):
         if line.startswith('Package: '):
             ldflags, pkg_config = _get_ldflags_and_pkgconfig(name)
             pkg_name = line[9:]
-            pkg_dir = package_name()
 
             import_dir = _get_import_path(None)
             import_path = f'{import_dir}/{pkg_name}'
@@ -1637,5 +1642,5 @@ def _replace_test_package(name, output, static, definitions, cgo):
             for k, v in binary_cmds.items():
                 set_command(new_name, k, f'{import_config_cmd} && {v}')
 
-            for k, v in _go_library_cmds().items():
+            for k, v in _go_library_cmds(import_path=import_path).items():
                 set_command(lib, k, f'{import_config_cmd} && {v}')
