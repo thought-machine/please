@@ -283,6 +283,7 @@ func (c *Client) addChildDirs(b *dirBuilder, name string, dg *pb.Digest) error {
 	d.Directories = append(d.Directories, dir.Directories...)
 	d.Files = append(d.Files, dir.Files...)
 	d.Symlinks = append(d.Symlinks, dir.Symlinks...)
+	d.NodeProperties = dir.NodeProperties
 	for _, subdir := range dir.Directories {
 		if err := c.addChildDirs(b, path.Join(name, subdir.Name), subdir.Digest); err != nil {
 			return err
