@@ -12,9 +12,9 @@ please_repo_e2e_test(
 please_repo_e2e_test(
     name = "pkg_config_test",
     labels = ["manual"],
-    tools = {"go": ["//third_party/go:toolchain|go"]},
     plz_command = "plz build -o go.gotool:$TOOLS_GO //third_party/go:all",
     repo = "pkg_config_repo",
+    tools = {"go": ["//third_party/go:toolchain|go"]},
 )
 
 please_repo_e2e_test(
