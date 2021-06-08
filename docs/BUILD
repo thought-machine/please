@@ -67,7 +67,8 @@ genrule(
     tools = {
         "config": ["//docs/tools/config_templater"],
         "tmpl": ["//docs/tools/templater"],
-    },)
+    },
+)
 
 genrule(
     name = "language_html",
@@ -101,8 +102,8 @@ filegroup(
         "favicon",
         ":codelabs_html",
     ],
-    deps = ["//docs/codelabs"],
     visibility = ["//docs/..."],
+    deps = ["//docs/codelabs"],
 )
 
 #TODO(jpoole): unify these two once we switch to the new website
@@ -149,4 +150,3 @@ sh_cmd(
         ":index_html",
     ],
 )
-
