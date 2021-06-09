@@ -146,8 +146,11 @@ func (c *Client) CheckInitialised() error {
 
 // Disconnect disconnects this client from the remote server.
 func (c *Client) Disconnect() error {
-	log.Debug("Disconnecting from remote execution server...")
-	return c.client.Close()
+	if c.client != nil {
+		log.Debug("Disconnecting from remote execution server...")
+		return c.client.Close()
+	}
+	return nil
 }
 
 // init is passed to the sync.Once to do the actual initialisation.
