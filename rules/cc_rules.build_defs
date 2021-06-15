@@ -482,7 +482,7 @@ def cc_module(name:str, srcs:list=[], hdrs:list=[], interfaces:list=[], private_
 
 def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
               compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-              deps:list=[], visibility:list=None, pkg_config_libs:list=[], includes:list=[], defines:list=[],
+              deps:list=[], visibility:list=None, pkg_config_libs:list=[], includes:list=[], defines:list|dict=[],
               pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, _c=False,
               linkstatic:bool=False):
     """Builds a binary from a collection of C++ rules.
