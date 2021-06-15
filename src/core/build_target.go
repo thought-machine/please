@@ -851,13 +851,13 @@ func (target *BuildTarget) CheckTargetOwnsBuildOutputs(state *BuildState) error 
 
 // CheckTargetOwnsBuildInputs checks that any file inputs to this rule belong to this package.
 func (target *BuildTarget) CheckTargetOwnsBuildInputs(state *BuildState) error {
-	for _, input := range target.Sources {
+	for _, input := range target.AllSources() {
 		if err := target.checkTargetOwnsBuildInput(state, input); err != nil {
 			return err
 		}
 	}
 
-	for _, input := range target.Data {
+	for _, input := range target.AllData() {
 		if err := target.checkTargetOwnsBuildInput(state, input); err != nil {
 			return err
 		}
