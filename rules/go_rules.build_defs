@@ -576,7 +576,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         visibility=visibility,
         labels=labels,
         requires=['go'],
-        pre_build=_collect_linker_flags(static),
+        pre_build=_collect_linker_flags(static, definitions),
         stamp = stamp,
     )
 
@@ -1601,12 +1601,12 @@ def _go_import_path_cmd(import_path):
         return ' && ln -s "$TMP_DIR" ' + import_path
 
 
-def _collect_linker_flags(static):
+def _collect_linker_flags(static, definitions):
     """Returns a pre-build function to apply transitive linker flags to a go_binary rule."""
     def collect_linker_flags(name):
         ldflags, pkg_config = _get_ldflags_and_pkgconfig(name)
         if ldflags or pkg_config:
-            cmds, _ =  _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config)
+            cmds, _ =  _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config, definitions=definitions)
             for k, v in cmds.items():
                 set_command(name, k, v)
     return collect_linker_flags
