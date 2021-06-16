@@ -63,6 +63,7 @@ go_module(
     name = "snappy",
     module = "github.com/golang/snappy",
     version = "v0.0.2",
+    install = [""],
 )
 
 go_mod_download(
