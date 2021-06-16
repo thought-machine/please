@@ -692,6 +692,13 @@
       >
     </li>
     <li>
+      <span><code class="code">filter</code>: Filter targets based on <code class="code">--include</code> and <code class="code">--exclude</code>.
+        This is commonly used with other commands. For example, to run e2e tests separately from other tests:
+        <code class="code">plz query changes --since master > plz-out/changes</code>, then
+        <code class="code">cat plz-out/changes | plz query filter --include e2e - | plz test -</code>.
+      </span>
+    </li>
+    <li>
       <span
         ><code class="code">changes</code>: Queries changed targets versus a
         revision or from a set of files.</span
@@ -749,6 +756,16 @@
         ><code class="code">rules</code>: Prints out a machine-parseable
         description of all currently known build rules.</span
       >
+    </li>
+    <li>
+      <span>
+        <code class="code">whatinputs</code>: Prints out target(s) with provided file(s) as inputs
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">whatoutputs</code>: Prints out target(s) responsible for outputting provided file(s)
+      </span>
     </li>
   </ul>
 
