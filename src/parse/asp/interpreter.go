@@ -775,10 +775,10 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	return nil
 }
 
-// pkgFilename returns the filename of the current package, or the empty string if there is none.
-func (s *scope) pkgFilename() string {
+// pkgName returns the name of the current package, or the empty string if there is none.
+func (s *scope) pkgName() string {
 	if s.pkg != nil {
-		return s.pkg.Filename
+		return s.pkg.Name
 	}
 	return ""
 }
