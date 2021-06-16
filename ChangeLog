@@ -1,3 +1,17 @@
+Version 16.1.1
+--------------
+    * Fixed an issue where debug symbols didn't work for go targets build with Go 1.15+
+      #1845
+    * Some remote execution small fixes #1838 #1842 #1849
+    * Added zstd support to the jarcat tool #1837
+    * Allow defined on `cc_binary()` to be a dict #1854
+    * Root package is now picked up by `plz query changes` #1855
+    * Check that a target owns it's named inputs #1857
+    * Fixed issue where goland definitions weren't being applied when
+      the binary found linker flags on it's dependencies #1859
+    * Handle the empty string in the `go_module()` install list #1858
+
+
 Version 16.1.0
 --------------
     * Redesigned the build graph to be more event driven utilise channels and blocking
