@@ -1091,16 +1091,10 @@ func (target *BuildTarget) provideFor(other *BuildTarget) []BuildLabel {
 	if other.IsTool(target.Label) {
 		return nil
 	}
-	var backingStorage [2]BuildLabel
 	var ret []BuildLabel
 	for _, require := range other.Requires {
 		if label, present := target.Provides[require]; present {
-			if ret == nil {
-				backingStorage[0] = label
-				ret = backingStorage[:1]
-			} else {
-				ret = append(ret, label)
-			}
+			ret = append(ret, label)
 		}
 	}
 	return ret
