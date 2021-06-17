@@ -5,7 +5,7 @@ import (
 )
 
 // Use this to prevent compiler optimisations from removing anything.
-var result []BuildLabel
+var result []BuildLabel //nolint:unused
 
 func BenchmarkProvideFor(b *testing.B) {
 	target1 := NewBuildTarget(BuildLabel{PackageName: "src/core", Name: "target1"})
