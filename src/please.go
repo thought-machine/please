@@ -925,7 +925,6 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	}
 	core.CheckXattrsSupported(state)
 
-
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
 		(len(targets) == 1 && !targets[0].IsAllTargets() &&
 			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
