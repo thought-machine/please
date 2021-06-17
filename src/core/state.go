@@ -316,7 +316,6 @@ func (state *BuildState) Stop() {
 		close(state.pendingTests)
 		close(state.pendingRemoteTests)
 	})
-	state.CloseResults()
 }
 
 // CloseResults closes the result channels.
