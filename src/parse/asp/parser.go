@@ -1,6 +1,6 @@
-// Package asp implements an experimental BUILD-language parser.
-// Parsing is doing using Participle (github.com/alecthomas/participle) in native Go,
-// with a custom and also native partial Python interpreter.
+// Package asp implements the BUILD language parser for Please.
+// Asp is a syntactic subset of Python, with the lexer, parser and interpreter all
+// implemented natively in Go.
 package asp
 
 import (
