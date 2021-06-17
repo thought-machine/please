@@ -438,9 +438,37 @@ func (b *dirBuilder) walk(name string, ch chan<- *uploadinfo.Entry) *pb.Digest {
 	}
 	// The protocol requires that these are sorted into lexicographic order. Not all servers
 	// necessarily care, but some do, and we should be compliant.
-	sort.Slice(dir.Files, func(i, j int) bool { return dir.Files[i].Name < dir.Files[j].Name })
-	sort.Slice(dir.Directories, func(i, j int) bool { return dir.Directories[i].Name < dir.Directories[j].Name })
-	sort.Slice(dir.Symlinks, func(i, j int) bool { return dir.Symlinks[i].Name < dir.Symlinks[j].Name })
+	files := dir.Files
+	dirs := dir.Directories
+	syms := dir.Symlinks
+	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
+	sort.Slice(dirs, func(i, j int) bool { return dirs[i].Name < dirs[j].Name })
+	sort.Slice(syms, func(i, j int) bool { return syms[i].Name < syms[j].Name })
+
+	// Ensure there are not duplicates in these slices.
+	last := ""
+	dir.Files = files[:0]
+	for _, f := range files {
+		if f.Name != last {
+			dir.Files = append(dir.Files, f)
+			last = f.Name
+		}
+	}
+	dir.Directories = dirs[:0]
+	for _, d := range dirs {
+		if d.Name != last {
+			dir.Directories = append(dir.Directories, d)
+			last = d.Name
+		}
+	}
+	dir.Symlinks = syms[:0]
+	for _, s := range syms {
+		if s.Name != last {
+			dir.Symlinks = append(dir.Symlinks, s)
+			last = s.Name
+		}
+	}
+
 	entry, _ := uploadinfo.EntryFromProto(dir)
 	if ch != nil {
 		ch <- entry
