@@ -1094,6 +1094,9 @@ func (target *BuildTarget) provideFor(other *BuildTarget) []BuildLabel {
 	var ret []BuildLabel
 	for _, require := range other.Requires {
 		if label, present := target.Provides[require]; present {
+			if ret == nil {
+				ret = make([]BuildLabel, 0, len(other.Requires))
+			}
 			ret = append(ret, label)
 		}
 	}
