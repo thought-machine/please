@@ -498,8 +498,8 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 		fmt.Printf("  Source: %s: %s\n", source.Src, b64(state.PathHasher.MustHash(source.Src)))
 	}
 	for _, tool := range target.AllTools() {
-		if label := tool.Label(); label != nil {
-			fmt.Printf("    Tool: %s: %s\n", *label, b64(mustShortTargetHash(state, state.Graph.TargetOrDie(*label))))
+		if label, ok := tool.Label(); ok {
+			fmt.Printf("    Tool: %s: %s\n", label, b64(mustShortTargetHash(state, state.Graph.TargetOrDie(label))))
 		} else {
 			fmt.Printf("    Tool: %s: %s\n", tool, b64(state.PathHasher.MustHash(tool.FullPaths(state.Graph)[0])))
 		}

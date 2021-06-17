@@ -201,24 +201,24 @@ func (c *Client) uploadInputs(ch chan<- *uploadinfo.Entry, target *core.BuildTar
 func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
 	b := newDirBuilder(c)
 	for input := range c.state.IterInputs(target, isTest) {
-		if l := input.Label(); l != nil {
-			o := c.targetOutputs(*l)
+		if l, ok := input.Label(); ok {
+			o := c.targetOutputs(l)
 			if o == nil {
-				if dep := c.state.Graph.TargetOrDie(*l); dep.Local {
+				if dep := c.state.Graph.TargetOrDie(l); dep.Local {
 					// We have built this locally, need to upload its outputs
 					if err := c.uploadLocalTarget(dep); err != nil {
 						return nil, err
 					}
-					o = c.targetOutputs(*l)
+					o = c.targetOutputs(l)
 				} else {
 					// Classic "we shouldn't get here" stuff
-					return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", *l)
+					return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", l)
 				}
 			}
 			pkgName := l.PackageName
 			if target.IsFilegroup {
 				pkgName = target.Label.PackageName
-			} else if isTest && *l == target.Label {
+			} else if isTest && l == target.Label {
 				// At test time the target itself is put at the root rather than in the normal dir.
 				// This is just How Things Are, so mimic it here.
 				pkgName = "."
