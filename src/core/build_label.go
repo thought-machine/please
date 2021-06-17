@@ -308,12 +308,12 @@ func (label BuildLabel) LocalPaths(graph *BuildGraph) []string {
 }
 
 // Label is an implementation of BuildInput interface. It always returns this label.
-func (label BuildLabel) Label() *BuildLabel {
-	return &label
+func (label BuildLabel) Label() (BuildLabel, bool) {
+	return label, true
 }
 
-func (label BuildLabel) nonOutputLabel() *BuildLabel {
-	return &label
+func (label BuildLabel) nonOutputLabel() (BuildLabel, bool) {
+	return label, true
 }
 
 // UnmarshalFlag unmarshals a build label from a command line flag. Implementation of flags.Unmarshaler interface.

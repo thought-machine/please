@@ -191,8 +191,8 @@ func replaceSequence(state *BuildState, target *BuildTarget, in string, runnable
 		return replaceSequenceLabel(state, target, label, ep, in, runnable, multiple, dir, outPrefix, hash, test, true)
 	}
 	for _, src := range sourcesOrTools(target, runnable) {
-		if label := src.Label(); label != nil && src.String() == in {
-			return replaceSequenceLabel(state, target, *label, "", in, runnable, multiple, dir, outPrefix, hash, test, false)
+		if label, ok := src.Label(); ok && src.String() == in {
+			return replaceSequenceLabel(state, target, label, "", in, runnable, multiple, dir, outPrefix, hash, test, false)
 		} else if runnable && src.String() == in {
 			return src.String()
 		}
