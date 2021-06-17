@@ -920,9 +920,10 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	// Acquire the lock before we start building
 	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
-		core.AcquireRepoLock(state)
+		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
 	}
+	core.CheckXattrsSupported(state)
 
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
 		(len(targets) == 1 && !targets[0].IsAllTargets() &&
