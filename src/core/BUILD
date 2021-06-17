@@ -180,3 +180,11 @@ go_test(
         "//third_party/go:testify",
     ],
 )
+
+go_benchmark(
+    name = "build_target_benchmark",
+    srcs = ["build_target_benchmark.go"],
+    deps = [
+        ":core",
+    ],
+)
