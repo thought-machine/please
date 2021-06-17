@@ -8,10 +8,10 @@ import (
 var result []BuildLabel
 
 func BenchmarkProvideFor(b *testing.B) {
-	target1 := NewBuildTarget(BuildLabel{PackageName:"src/core", Name:"target1"})
-	target2 := NewBuildTarget(BuildLabel{PackageName:"src/core", Name:"target2"})
-	target3 := NewBuildTarget(BuildLabel{PackageName:"src/core", Name:"target3"})
-	target4 := NewBuildTarget(BuildLabel{PackageName:"src/core", Name:"target4"})
+	target1 := NewBuildTarget(BuildLabel{PackageName: "src/core", Name: "target1"})
+	target2 := NewBuildTarget(BuildLabel{PackageName: "src/core", Name: "target2"})
+	target3 := NewBuildTarget(BuildLabel{PackageName: "src/core", Name: "target3"})
+	target4 := NewBuildTarget(BuildLabel{PackageName: "src/core", Name: "target4"})
 
 	b.Run("Simple", func(b *testing.B) {
 		b.ReportAllocs()
