@@ -85,7 +85,7 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 // interpretAll runs a series of statements in the context of the given package.
 // The first return value is for testing only.
 func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (s *scope, err error) {
-	s = i.scope.NewPackagedScope(pkg)
+	s = i.scope.NewPackagedScope(pkg, 1)
 	// Config needs a little separate tweaking.
 	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
 	// mutating operations like .setdefault() otherwise.
@@ -214,11 +214,12 @@ type scope struct {
 
 // NewScope creates a new child scope of this one.
 func (s *scope) NewScope() *scope {
-	return s.NewPackagedScope(s.pkg)
+	return s.NewPackagedScope(s.pkg, 0)
 }
 
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
-func (s *scope) NewPackagedScope(pkg *core.Package) *scope {
+// hint is a size hint for the new set of locals.
+func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
 	s2 := &scope{
 		ctx:         s.ctx,
 		interpreter: s.interpreter,
@@ -226,7 +227,7 @@ func (s *scope) NewPackagedScope(pkg *core.Package) *scope {
 		pkg:         pkg,
 		contextPkg:  pkg,
 		parent:      s,
-		locals:      pyDict{},
+		locals:      make(pyDict, hint),
 		config:      s.config,
 		Callback:    s.Callback,
 	}
