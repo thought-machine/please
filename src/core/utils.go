@@ -152,8 +152,8 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnl
 		}
 		// All the sources of this target now count as done
 		for _, src := range dependency.AllSources() {
-			if label := src.Label(); label != nil && dependency.IsSourceOnlyDep(*label) {
-				done[*label] = true
+			if label, ok := src.Label(); ok && dependency.IsSourceOnlyDep(label) {
+				done[label] = true
 			}
 		}
 		done[dependency.Label] = true
@@ -220,8 +220,8 @@ func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, d
 
 // recursivelyProvideSource is similar to recursivelyProvideFor but operates on a BuildInput.
 func recursivelyProvideSource(graph *BuildGraph, target *BuildTarget, src BuildInput) []BuildInput {
-	if label := src.nonOutputLabel(); label != nil {
-		dep := graph.TargetOrDie(*label)
+	if label, ok := src.nonOutputLabel(); ok {
+		dep := graph.TargetOrDie(label)
 		provided := recursivelyProvideFor(graph, target, target, dep.Label)
 		ret := make([]BuildInput, len(provided))
 		for i, p := range provided {
@@ -286,7 +286,7 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 			// the channel to prevent us outputting any intermediate files.
 			for _, source := range target.AllSources() {
 				// If the label is nil add any input paths contained here.
-				if label := source.nonOutputLabel(); label == nil {
+				if label, ok := source.nonOutputLabel(); !ok {
 					for _, sourcePath := range source.FullPaths(graph) {
 						if !donePaths[sourcePath] {
 							ch <- sourcePath
@@ -295,14 +295,14 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 					}
 					// Otherwise we should recurse for this build label (and gather its sources)
 				} else {
-					inner(graph.TargetOrDie(*label))
+					inner(graph.TargetOrDie(label))
 				}
 			}
 
 			// Now yield all the data deps of this rule.
 			for _, data := range target.AllData() {
 				// If the label is nil add any input paths contained here.
-				if label := data.Label(); label == nil {
+				if label, ok := data.Label(); !ok {
 					for _, sourcePath := range data.FullPaths(graph) {
 						if !donePaths[sourcePath] {
 							ch <- sourcePath
@@ -311,7 +311,7 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 					}
 					// Otherwise we should recurse for this build label (and gather its sources)
 				} else {
-					inner(graph.TargetOrDie(*label))
+					inner(graph.TargetOrDie(label))
 				}
 			}
 

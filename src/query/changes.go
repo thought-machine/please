@@ -106,7 +106,7 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) (hash []byte, 
 	}()
 	h := sha1.New()
 	for _, tool := range target.AllTools() {
-		if tool.Label() != nil {
+		if _, ok := tool.Label(); ok {
 			continue // Skip in-repo tools, that will be handled via revdeps.
 		}
 		for _, path := range tool.FullPaths(state.Graph) {

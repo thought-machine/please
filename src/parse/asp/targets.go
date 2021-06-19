@@ -475,8 +475,8 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 			}
 		}
 		label := core.MustParseNamedOutputLabel(src, pkg)
-		if l := label.Label(); l != nil {
-			checkLabel(s, *l)
+		if l, ok := label.Label(); ok {
+			checkLabel(s, l)
 		}
 		return label
 	}
