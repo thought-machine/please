@@ -538,14 +538,21 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 }
 
 func (s *scope) interpretFString(f *FString) pyObject {
+	stringVar := func(v FStringVar) string {
+		if v.Config != "" {
+			return s.config.MustGet(v.Config).String()
+		}
+		return s.Lookup(v.Var).String()
+	}
 	var b strings.Builder
+	size := len(f.Suffix)
+	for _, v := range f.Vars {
+		size += len(v.Prefix) + len(stringVar(v))
+	}
+	b.Grow(size)
 	for _, v := range f.Vars {
 		b.WriteString(v.Prefix)
-		if v.Config != "" {
-			b.WriteString(s.config.MustGet(v.Config).String())
-		} else {
-			b.WriteString(s.Lookup(v.Var).String())
-		}
+		b.WriteString(stringVar(v))
 	}
 	b.WriteString(f.Suffix)
 	return pyString(b.String())
