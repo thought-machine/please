@@ -90,8 +90,8 @@ func validateBuildTargetBeforeBuild(state *core.BuildState, target *core.BuildTa
 func findFilegroupSourcesWithTmpDir(target *core.BuildTarget) []core.BuildLabel {
 	srcs := make([]core.BuildLabel, 0, len(target.Sources))
 	for _, src := range target.Sources {
-		if src.Label() != nil {
-			srcs = append(srcs, *src.Label())
+		if l, ok := src.Label(); ok {
+			srcs = append(srcs, l)
 		}
 	}
 	return srcs

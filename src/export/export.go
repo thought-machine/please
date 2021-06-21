@@ -53,7 +53,7 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 		return
 	}
 	for _, src := range target.AllSources() {
-		if src.Label() == nil { // We'll handle these dependencies later
+		if _, ok := src.Label(); !ok { // We'll handle these dependencies later
 			for _, p := range src.FullPaths(graph) {
 				if !strings.HasPrefix(p, "/") { // Don't copy system file deps.
 					if err := fs.RecursiveCopy(p, path.Join(dir, p), 0); err != nil {

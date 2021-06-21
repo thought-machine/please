@@ -475,8 +475,8 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 			}
 		}
 		label := core.MustParseNamedOutputLabel(src, pkg)
-		if l := label.Label(); l != nil {
-			checkLabel(s, *l)
+		if l, ok := label.Label(); ok {
+			checkLabel(s, l)
 		}
 		return label
 	}
@@ -522,7 +522,9 @@ type preBuildFunction struct {
 }
 
 func (f *preBuildFunction) Call(target *core.BuildTarget) error {
-	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label))
+	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label), 1)
+	s.config = f.s.config
+	s.Set("CONFIG", f.s.config)
 	s.Callback = true
 	s.Set(f.f.args[0], pyString(target.Label.Name))
 	_, err := s.interpreter.interpretStatements(s, f.f.code)
@@ -540,7 +542,9 @@ type postBuildFunction struct {
 }
 
 func (f *postBuildFunction) Call(target *core.BuildTarget, output string) error {
-	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label))
+	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label), 2)
+	s.config = f.s.config
+	s.Set("CONFIG", f.s.config)
 	s.Callback = true
 	s.Set(f.f.args[0], pyString(target.Label.Name))
 	s.Set(f.f.args[1], fromStringList(strings.Split(strings.TrimSpace(output), "\n")))

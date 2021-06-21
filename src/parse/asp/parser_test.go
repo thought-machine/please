@@ -670,11 +670,7 @@ func TestFStringConcat(t *testing.T) {
 
 		rhs := &ValueExpression{
 			FString: &FString{
-				Vars: []struct {
-					Prefix string
-					Var    string
-					Config string
-				}{
+				Vars: []FStringVar{
 					{
 						Prefix: " this is the rhs: ",
 						Var:    "rhs",
@@ -697,11 +693,7 @@ func TestFStringConcat(t *testing.T) {
 	t.Run("lhs fstring, rhs string", func(t *testing.T) {
 		lhs := &ValueExpression{
 			FString: &FString{
-				Vars: []struct {
-					Prefix string
-					Var    string
-					Config string
-				}{
+				Vars: []FStringVar{
 					{
 						Prefix: "this is the lhs: ",
 						Var:    "lhs",
@@ -728,11 +720,7 @@ func TestFStringConcat(t *testing.T) {
 	t.Run("both fstring", func(t *testing.T) {
 		lhs := &ValueExpression{
 			FString: &FString{
-				Vars: []struct {
-					Prefix string
-					Var    string
-					Config string
-				}{
+				Vars: []FStringVar{
 					{
 						Prefix: "this is the lhs: ",
 						Var:    "lhs",
@@ -745,11 +733,7 @@ func TestFStringConcat(t *testing.T) {
 
 		rhs := &ValueExpression{
 			FString: &FString{
-				Vars: []struct {
-					Prefix string
-					Var    string
-					Config string
-				}{
+				Vars: []FStringVar{
 					{
 						Prefix: " this is the rhs: ",
 						Var:    "rhs",

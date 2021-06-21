@@ -145,16 +145,19 @@ type ValueExpression struct {
 	Call     *Call
 }
 
-// A FString represents a minimal version of a Python literal format string.
+// An FString represents a minimal version of a Python literal format string.
 // Note that we only support a very small subset of what Python allows there; essentially only
 // variable substitution, which gives a much simpler AST structure here.
 type FString struct {
-	Vars []struct {
-		Prefix string // Preceding string bit
-		Var    string // Variable name to interpolate
-		Config string // Config variable to look up
-	}
+	Vars   []FStringVar
 	Suffix string // Following string bit
+}
+
+// An FStringVar represents a single variable in an FString.
+type FStringVar struct {
+	Prefix string // Preceding string bit
+	Var    string // Variable name to interpolate
+	Config string // Config variable to look up
 }
 
 // A UnaryOp represents a unary operation - in our case the only ones we support are negation and not.

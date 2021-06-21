@@ -923,7 +923,9 @@ func TestIsTool(t *testing.T) {
 	target.AddTool(withEP)
 
 	assert.True(t, target.IsTool(noEP))
-	assert.True(t, target.IsTool(*withEP.Label()))
+	l, ok := withEP.Label()
+	assert.True(t, ok)
+	assert.True(t, target.IsTool(l))
 }
 
 func makeTarget1(label, visibility string, deps ...*BuildTarget) *BuildTarget {
