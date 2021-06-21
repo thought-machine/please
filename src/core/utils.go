@@ -179,8 +179,10 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnl
 		for _, source := range target.AllSources() {
 			recursivelyProvideSource(graph, target, source, ch)
 		}
-		for _, tool := range target.AllTools() {
-			recursivelyProvideSource(graph, target, tool, ch)
+		if includeTools {
+			for _, tool := range target.AllTools() {
+				recursivelyProvideSource(graph, target, tool, ch)
+			}
 		}
 		if !sourcesOnly {
 			inner(target)
