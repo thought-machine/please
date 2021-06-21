@@ -1228,6 +1228,7 @@ func (target *BuildTarget) AddNamedDatum(name string, datum BuildInput) {
 		target.AddDependency(*label)
 		target.dependencyInfo(*label).data = true
 	}
+	target.allNamedData = nil
 }
 
 // AddNamedTool adds a new tool to the target.

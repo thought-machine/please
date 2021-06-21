@@ -6,6 +6,19 @@ import (
 	"testing"
 )
 
+func BenchmarkIterInputsControl(b *testing.B) {
+	state := core.NewDefaultBuildState()
+	target := core.NewBuildTarget(core.NewBuildLabel("src/foo", "foo_lib"))
+	state.Graph.AddTarget(target)
+
+	b.ReportAllocs()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for range core.IterInputs(state.Graph, target, true, false) {}
+	}
+}
+
 func BenchmarkIterInputsSimple(b *testing.B) {
 	state := core.NewDefaultBuildState()
 
