@@ -182,9 +182,7 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnl
 			srcs = append(srcs, target.AllTools()...)
 		}
 		for _, source := range srcs {
-			for _, src := range recursivelyProvideSource(graph, target, source) {
-				ch <- src
-			}
+			recursivelyProvideSource(graph, target, source, ch)
 		}
 		if !sourcesOnly {
 			inner(target)
@@ -219,17 +217,13 @@ func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, d
 }
 
 // recursivelyProvideSource is similar to recursivelyProvideFor but operates on a BuildInput.
-func recursivelyProvideSource(graph *BuildGraph, target *BuildTarget, src BuildInput) []BuildInput {
+func recursivelyProvideSource(graph *BuildGraph, target *BuildTarget, src BuildInput, ch chan BuildInput) {
 	if label := src.nonOutputLabel(); label != nil {
-		dep := graph.TargetOrDie(*label)
-		provided := recursivelyProvideFor(graph, target, target, dep.Label)
-		ret := make([]BuildInput, len(provided))
-		for i, p := range provided {
-			ret[i] = p
+		for _, p := range recursivelyProvideFor(graph, target, target, *label) {
+			ch <- p
 		}
-		return ret
 	}
-	return []BuildInput{src}
+	ch <- src
 }
 
 // IterRuntimeFiles yields all the runtime files for a rule (outputs, tools & data files), similar to above.
