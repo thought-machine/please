@@ -496,9 +496,9 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 	if t == nil {
 		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
 	}
-	labels := t.ProvideFor(target)
-	// Small optimisation to avoid re-looking-up the same target again.
-	if len(labels) == 1 && labels[0] == t.Label {
+	labels := t.provideFor(target)
+	if len(labels) == 0 {
+		// Small optimisation to avoid re-looking-up the same target again.
 		dep.deps = []*BuildTarget{t}
 		return nil
 	}
@@ -667,10 +667,10 @@ func (target *BuildTarget) Outputs() []string {
 				for _, dep := range target.DependenciesFor(namedLabel.BuildLabel) {
 					ret = append(ret, dep.NamedOutputs(namedLabel.Annotation)...)
 				}
-			} else if label := src.nonOutputLabel(); label == nil {
+			} else if label, ok := src.nonOutputLabel(); !ok {
 				ret = append(ret, src.LocalPaths(nil)[0])
 			} else {
-				for _, dep := range target.DependenciesFor(*label) {
+				for _, dep := range target.DependenciesFor(label) {
 					ret = append(ret, dep.Outputs()...)
 				}
 			}
@@ -773,9 +773,9 @@ func (target *BuildTarget) SourcePaths(graph *BuildGraph, sources []BuildInput) 
 
 // sourcePaths returns the source paths for a single source.
 func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f buildPathsFunc) []string {
-	if label := source.nonOutputLabel(); label != nil {
+	if label, ok := source.nonOutputLabel(); ok {
 		ret := []string{}
-		for _, providedLabel := range graph.TargetOrDie(*label).ProvideFor(target) {
+		for _, providedLabel := range graph.TargetOrDie(label).ProvideFor(target) {
 			ret = append(ret, f(providedLabel, graph)...)
 		}
 		return ret
@@ -1068,29 +1068,39 @@ func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
 
 // ProvideFor returns the build label that we'd provide for the given target.
 func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
-	target.mutex.RLock()
-	defer target.mutex.RUnlock()
-	ret := []BuildLabel{}
-	if target.Provides != nil && len(other.Requires) != 0 {
-		// Never do this if the other target has a data or tool dependency on us.
-		for _, data := range other.Data {
-			if label := data.Label(); label != nil && *label == target.Label {
-				return []BuildLabel{target.Label}
-			}
-		}
-		if other.IsTool(target.Label) {
-			return []BuildLabel{target.Label}
-		}
-		for _, require := range other.Requires {
-			if label, present := target.Provides[require]; present {
-				ret = append(ret, label)
-			}
-		}
-		if len(ret) > 0 {
-			return ret
-		}
+	if p := target.provideFor(other); len(p) > 0 {
+		return p
 	}
 	return []BuildLabel{target.Label}
+}
+
+// provideFor is like ProvideFor but returns an empty slice if there is a direct dependency.
+// It's a small optimisation to save allocating extra slices.
+func (target *BuildTarget) provideFor(other *BuildTarget) []BuildLabel {
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
+	if target.Provides == nil || len(other.Requires) == 0 {
+		return nil
+	}
+	// Never do this if the other target has a data or tool dependency on us.
+	for _, data := range other.Data {
+		if label, ok := data.Label(); ok && label == target.Label {
+			return nil
+		}
+	}
+	if other.IsTool(target.Label) {
+		return nil
+	}
+	var ret []BuildLabel
+	for _, require := range other.Requires {
+		if label, present := target.Provides[require]; present {
+			if ret == nil {
+				ret = make([]BuildLabel, 0, len(other.Requires))
+			}
+			ret = append(ret, label)
+		}
+	}
+	return ret
 }
 
 // UnprefixedHashes returns the hashes for the target without any prefixes;
@@ -1118,8 +1128,8 @@ func (target *BuildTarget) addSource(sources []BuildInput, source BuildInput) []
 		}
 	}
 	// Add a dependency if this is not just a file.
-	if label := source.Label(); label != nil {
-		target.AddMaybeExportedDependency(*label, false, true, false)
+	if label, ok := source.Label(); ok {
+		target.AddMaybeExportedDependency(label, false, true, false)
 	}
 	return append(sources, source)
 }
@@ -1162,16 +1172,16 @@ func (target *BuildTarget) AddNamedSecret(name string, secret string) {
 // AddTool adds a new tool to the target.
 func (target *BuildTarget) AddTool(tool BuildInput) {
 	target.Tools = append(target.Tools, tool)
-	if label := tool.Label(); label != nil {
-		target.AddDependency(*label)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
 	}
 }
 
 // AddTestTool adds a new test tool to the target.
 func (target *BuildTarget) AddTestTool(tool BuildInput) {
 	target.testTools = append(target.testTools, tool)
-	if label := tool.Label(); label != nil {
-		target.AddDependency(*label)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
 	}
 }
 
@@ -1198,9 +1208,9 @@ func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
 // AddDatum adds a new item of data to the target.
 func (target *BuildTarget) AddDatum(datum BuildInput) {
 	target.Data = append(target.Data, datum)
-	if label := datum.Label(); label != nil {
-		target.AddDependency(*label)
-		target.dependencyInfo(*label).data = true
+	if label, ok := datum.Label(); ok {
+		target.AddDependency(label)
+		target.dependencyInfo(label).data = true
 	}
 }
 
@@ -1211,9 +1221,9 @@ func (target *BuildTarget) AddNamedDatum(name string, datum BuildInput) {
 	} else {
 		target.namedData[name] = append(target.namedData[name], datum)
 	}
-	if label := datum.Label(); label != nil {
-		target.AddDependency(*label)
-		target.dependencyInfo(*label).data = true
+	if label, ok := datum.Label(); ok {
+		target.AddDependency(label)
+		target.dependencyInfo(label).data = true
 	}
 }
 
@@ -1224,8 +1234,8 @@ func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
 	} else {
 		target.namedTools[name] = append(target.namedTools[name], tool)
 	}
-	if label := tool.Label(); label != nil {
-		target.AddDependency(*label)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
 	}
 }
 
@@ -1236,8 +1246,8 @@ func (target *BuildTarget) AddNamedTestTool(name string, tool BuildInput) {
 	} else {
 		target.namedTestTools[name] = append(target.namedTestTools[name], tool)
 	}
-	if label := tool.Label(); label != nil {
-		target.AddDependency(*label)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
 	}
 }
 
@@ -1436,13 +1446,13 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, 
 // IsTool returns true if the given build label is a tool used by this target.
 func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 	for _, t := range target.Tools {
-		if t.Label() != nil && *t.Label() == tool {
+		if label, ok := t.Label(); ok && label == tool {
 			return true
 		}
 	}
 	for _, tools := range target.namedTools {
 		for _, t := range tools {
-			if t.Label() != nil && *t.Label() == tool {
+			if label, ok := t.Label(); ok && label == tool {
 				return true
 			}
 		}

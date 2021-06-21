@@ -334,8 +334,8 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 func (c *Client) downloadData(target *core.BuildTarget) error {
 	var g errgroup.Group
 	for _, datum := range target.AllData() {
-		if l := datum.Label(); l != nil {
-			t := c.state.Graph.TargetOrDie(*l)
+		if l, ok := datum.Label(); ok {
+			t := c.state.Graph.TargetOrDie(l)
 			g.Go(func() error {
 				if err := c.Download(t); err != nil {
 					return err
