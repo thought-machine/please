@@ -149,8 +149,6 @@ type BuildTarget struct {
 	Results TestSuite `print:"false"`
 	// The number of completed runs
 	completedRuns int `print:"false"`
-	// A mutex to control access to Results
-	resultsMux sync.Mutex `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
 	BuildingDescription string `name:"building_description"`
@@ -206,7 +204,7 @@ type BuildTarget struct {
 	OutputDirectories []OutputDirectory `name:"output_dirs"`
 	// EntryPoints represent named binaries within the rules output that can be targeted via //package:rule|entry_point_name
 	EntryPoints map[string]string `name:"entry_points"`
-	// Used to arbitrate concurrent access to dependencies
+	// Used to arbitrate concurrent access to dependencies, and to the test results.
 	mutex sync.RWMutex `print:"false"`
 	// Used to notify once this target has built successfully.
 	finishedBuilding chan struct{} `print:"false"`
@@ -379,8 +377,8 @@ func (target *BuildTarget) TestDirs() string {
 
 // CompleteRun completes a run and returns true if this was the last run
 func (target *BuildTarget) CompleteRun(state *BuildState) bool {
-	target.resultsMux.Lock()
-	defer target.resultsMux.Unlock()
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 
 	target.completedRuns++
 	return target.completedRuns == state.NumTestRuns
@@ -398,8 +396,8 @@ func (target *BuildTarget) CoverageFile() string {
 
 // AddTestResults adds results to the target
 func (target *BuildTarget) AddTestResults(results TestSuite) {
-	target.resultsMux.Lock()
-	defer target.resultsMux.Unlock()
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 
 	if len(target.Results.TestCases) == 0 {
 		target.Results.Cached = results.Cached // On the first run we take whatever this is
@@ -411,8 +409,8 @@ func (target *BuildTarget) AddTestResults(results TestSuite) {
 
 // StartTestSuite sets the initial properties on the result test suite
 func (target *BuildTarget) StartTestSuite() {
-	target.resultsMux.Lock()
-	defer target.resultsMux.Unlock()
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 
 	// If the results haven't been set yet, set them
 	if target.Results.Name == "" {
