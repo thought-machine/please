@@ -206,6 +206,9 @@ func parseBuildLabelSubrepo(target, currentPath string) (string, string, string)
 			return "", target, target
 		}
 	}
+	if strings.ContainsRune(target[:idx], ':') {
+		return "", "", ""
+	}
 	pkg, name, _ := parseBuildLabelParts(target[idx:], currentPath, "")
 	return pkg, name, target[:idx]
 }
