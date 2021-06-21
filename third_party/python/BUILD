@@ -3,6 +3,7 @@ subinclude("//build_defs:multiversion_wheel")
 package(
     default_visibility = ["PUBLIC"],
     python_wheel_repo = "https://get.please.build/third_party/python/py3",
+    python_wheel_name_scheme = ["https://files.pythonhosted.org/packages/py3/{initial}/{package_name}/{package_name}-{version}-py3-none-any.whl"],
 )
 
 python_wheel(
@@ -163,8 +164,8 @@ python_wheel(
 python_wheel(
     name = "pkg_resources",
     package_name = "setuptools",
-    hashes = ["05f20a29a5dff7dd5b908afcf37c2b1bea8d3db6"],
-    version = "33.1.1",
+    hashes = ["184aa380e787226bd0940098ba12a2f6aeb5d000b6ac46fd35eb8f61cbf9aa1d"],
+    version = "57.0.0",
 )
 
 python_wheel(
