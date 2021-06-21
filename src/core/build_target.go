@@ -188,8 +188,12 @@ type BuildTarget struct {
 	testTools []BuildInput `name:"test_tools"`
 	// Named tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"tools"`
+	// Memoization for AllTools
+	allNamedTools []BuildInput `print:"false"`
 	// Named test tools, similar to named sources.
 	namedTestTools map[string][]BuildInput `name:"test_tools"`
+	// Memoization for AllTestTools
+	allNamedTestTools []BuildInput `print:"false"`
 	// Target-specific environment passthroughs.
 	PassEnv *[]string `name:"pass_env"`
 	// Target-specific unsafe environment passthroughs.
@@ -1188,20 +1192,15 @@ func (target *BuildTarget) AddTestTool(tool BuildInput) {
 	}
 }
 
-// TestTools returns all the test tool paths for this rule.
-func (target *BuildTarget) TestTools() []BuildInput {
-	ret := target.testTools[:]
-	if target.namedTestTools != nil {
-		keys := make([]string, 0, len(target.namedTestTools))
-		for k := range target.namedTestTools {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			ret = append(ret, target.namedTestTools[k]...)
-		}
+// AllTestTools returns all the test tool paths for this rule.
+func (target *BuildTarget) AllTestTools() []BuildInput {
+	if target.namedTestTools == nil {
+		return target.testTools
 	}
-	return ret
+	if target.allNamedTestTools == nil {
+		target.allNamedTestTools = target.allBuildInputs(target.testTools, target.namedTestTools)
+	}
+	return target.allNamedTestTools
 }
 
 func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
@@ -1241,6 +1240,7 @@ func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
 	if label := tool.Label(); label != nil {
 		target.AddDependency(*label)
 	}
+	target.allNamedTools = nil
 }
 
 // AddNamedTestTool adds a new tool to the target.
@@ -1253,6 +1253,7 @@ func (target *BuildTarget) AddNamedTestTool(name string, tool BuildInput) {
 	if label := tool.Label(); label != nil {
 		target.AddDependency(*label)
 	}
+	target.allNamedTestTools = nil
 }
 
 // AddCommand adds a new config-specific command to this build target.
@@ -1386,10 +1387,9 @@ func (target *BuildTarget) AllData() []BuildInput {
 		return target.Data
 	}
 
-	if target.allNamedData != nil {
-		return target.allNamedData
+	if target.allNamedData == nil {
+		target.allNamedData = target.allBuildInputs(target.Data, target.namedData)
 	}
-	target.allNamedSources = target.allBuildInputs(target.Data, target.namedData)
 
 	return target.allNamedData
 }
@@ -1410,14 +1410,12 @@ func (target *BuildTarget) AllDataPaths(graph *BuildGraph) []string {
 // AllTools returns all the tools for this rule in some canonical order.
 func (target *BuildTarget) AllTools() []BuildInput {
 	if target.namedTools == nil {
-		return target.Tools[:] // Leave them in input order, that's sufficiently consistent.
+		return target.Tools
 	}
-	tools := make([]BuildInput, len(target.Tools), len(target.Tools)+len(target.namedTools)*2)
-	copy(tools, target.Tools)
-	for _, name := range target.ToolNames() {
-		tools = append(tools, target.namedTools[name]...)
+	if target.allNamedTools == nil {
+		target.allNamedTools = target.allBuildInputs(target.Tools, target.namedTools)
 	}
-	return tools
+	return target.allNamedTools
 }
 
 // ToolNames returns an ordered list of tool names.

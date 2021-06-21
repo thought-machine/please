@@ -93,6 +93,12 @@ var KnownFields = map[string]bool{
 
 	// Used to save the rule hash rather than actually being hashed itself.
 	"RuleHash": true,
+
+	// Used for memoization
+	"allNamedSources": true,
+	"allNamedData": true,
+	"allNamedTools": true,
+	"allNamedTestTools": true,
 }
 
 func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {

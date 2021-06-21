@@ -70,7 +70,7 @@ var specialFields = map[string]func(*printer) (string, bool){
 		if tools := p.target.NamedTestTools(); len(tools) > 0 {
 			return p.genericPrint(reflect.ValueOf(tools))
 		}
-		return p.genericPrint(reflect.ValueOf(p.target.TestTools()))
+		return p.genericPrint(reflect.ValueOf(p.target.AllTestTools()))
 	},
 	"data": func(p *printer) (string, bool) {
 		if data := p.target.NamedData(); len(data) > 0 {

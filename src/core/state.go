@@ -957,7 +957,7 @@ func (state *BuildState) IterInputs(target *BuildTarget, test bool) <-chan Build
 		for _, datum := range target.AllData() {
 			ch <- datum
 		}
-		for _, datum := range target.TestTools() {
+		for _, datum := range target.AllTestTools() {
 			ch <- datum
 		}
 		close(ch)
