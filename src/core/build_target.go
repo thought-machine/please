@@ -72,13 +72,13 @@ type BuildTarget struct {
 	// Source files of this rule. Can refer to build rules themselves.
 	Sources []BuildInput `name:"srcs"`
 	// Named source files of this rule; as above but identified by name.
-	NamedSources map[string][]BuildInput `name:"srcs"`
-	allNamedSources []BuildInput `print:"false"`
+	NamedSources    map[string][]BuildInput `name:"srcs"`
+	allNamedSources []BuildInput            `print:"false"`
 	// Data files of this rule. Similar to sources but used at runtime, typically by tests.
 	Data []BuildInput `name:"data"`
 	// Data files of this rule by name.
-	namedData map[string][]BuildInput `name:"data"`
-	allNamedData []BuildInput `print:"false"`
+	namedData    map[string][]BuildInput `name:"data"`
+	allNamedData []BuildInput            `print:"false"`
 	// Output files of this rule. All are paths relative to this package.
 	outputs []string `name:"outs"`
 	// Named output subsets of this rule. All are paths relative to this package but can be

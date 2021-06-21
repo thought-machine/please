@@ -95,9 +95,9 @@ var KnownFields = map[string]bool{
 	"RuleHash": true,
 
 	// Used for memoization
-	"allNamedSources": true,
-	"allNamedData": true,
-	"allNamedTools": true,
+	"allNamedSources":   true,
+	"allNamedData":      true,
+	"allNamedTools":     true,
 	"allNamedTestTools": true,
 }
 
