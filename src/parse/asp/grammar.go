@@ -131,9 +131,13 @@ type OpExpression struct {
 type ValueExpression struct {
 	String  string
 	FString *FString
-	Int     *struct {
-		Int int
-	} // Should just be *int, but https://github.com/golang/go/issues/23498 :(
+	// These are true if this represents one of the boolean singletons
+	True  bool
+	False bool
+	None  bool
+	// True if the Int field is set; this helps us distinguish values of 0.
+	IsInt    bool
+	Int      int
 	Bool     string
 	List     *List
 	Dict     *Dict
