@@ -13,8 +13,8 @@ def benchmark(name:str, srcs:list, deps:list=[], data:list=[], visibility:list=N
         srcs = [benchmark_rule],
         tools = ["//tools/performance/benchmark"],
         outs = [f"{name}.json"],
-        cmd = "$SRC | $TOOL > $OUT",
-        labels = ["link:plz-out/benchmarks"] + labels,
+        cmd = f"$SRC | $TOOL --revision {CONFIG.BENCHMARK_REVISION} > $OUT",
+        labels = ["link:plz-out/benchmarks", "benchmark"] + labels,
         test_only = True,
     )
     return filegroup(
@@ -26,3 +26,5 @@ def benchmark(name:str, srcs:list, deps:list=[], data:list=[], visibility:list=N
         labels = labels,
         visibility = visibility,
     )
+
+CONFIG.setdefault("BENCHMARK_REVISION", "master")
