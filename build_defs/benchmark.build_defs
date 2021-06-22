@@ -4,7 +4,7 @@ def benchmark(name:str, srcs:list, deps:list=[], data:list=[], visibility:list=N
         srcs = srcs,
         deps = deps,
         data = data,
-        labels=labels,
+        labels = labels,
     )
 
     results = build_rule(
@@ -15,7 +15,7 @@ def benchmark(name:str, srcs:list, deps:list=[], data:list=[], visibility:list=N
         outs = [f"{name}.json"],
         cmd = "$SRC | $TOOL > $OUT",
         labels = ["link:plz-out/benchmarks"] + labels,
-        test_only=True,
+        test_only = True,
     )
     return filegroup(
         name = name,

@@ -1,0 +1,48 @@
+<h2 class="title-1">Parse performance</h2>
+<p>This measures time on purely parsing / adding targets / setting dependencies, on a
+    large (~300,000 targets) synthetic graph. It's primarily a benchmark of asp, the core
+    build graph and relevant parts of the Go runtime.</p>
+<div id="parse_chart" style="width: 100%; height: 400px"></div>
+
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script type="text/javascript">
+    google.charts.load('current', {'packages':['corechart']});
+    google.charts.setOnLoadCallback(drawChart);
+
+    function drawChart() {
+        fetch('/performance/all_results.jsonl', {
+            method: 'GET',
+            cache: 'no-cache',
+            redirect: 'follow',
+        }).then(response => response.text().then(text => {
+            const results = text.trim().split('\n').map(JSON.parse);
+            const dt = new google.visualization.DataTable({
+                cols: [
+                    {id: 'revision', label: 'Revision', type: 'string'},
+                    {id: 'time', label: 'Time', type: 'number'},
+                    {id: 'min', label: 'Min', type: 'number', role: 'interval'},
+                    {id: 'max', label: 'Max', type: 'number', role: 'interval'},
+                    {id: 'style', label: 'Style', type: 'string', role: 'style'},
+                ],
+                rows: results.map(r => ({c:[
+                        {v: r.revision.substring(0, 7)}, // short hash
+                        {v: r.parse.median},
+                        {v: Math.min(...r.parse.raw)},
+                        {v: Math.max(...r.parse.raw)},
+                        {v: 'color: #02e68f;'},
+                    ]})),
+            });
+            const chart = new google.visualization.LineChart(document.getElementById('parse_chart'));
+            chart.draw(dt, {
+                title: 'Parse Time (seconds)',
+                titleTextStyle: {color: 'white'},
+                curveType: 'none',
+                legend: { position: 'none' },
+                vAxis: { minValue: 0, textStyle: {color: 'white'}},
+                hAxis: { textStyle: {color: 'white'}},
+                backgroundColor: '#202328',
+                lineWidth: 3,
+            });
+        }));
+    }
+</script>

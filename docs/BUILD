@@ -132,21 +132,21 @@ filegroup(
     visibility = ["//docs/..."],
 )
 
+genrule(
+    name = "performance_data",
+    cmd = "curl https://get.please.build/performance/all_results.jsonl > $OUT",
+    outs = ["performance/all_results.jsonl"],
+)
+
 # Convenient for popping open the docs in a browser after building (must use 'plz run').
 sh_cmd(
     name = "view",
     cmd = "sensible-browser http://localhost:8080 && cd plz-out/gen/docs && python3 -m http.server 8080",
-    data = [
-        ":docs",
-        ":index_html",
-    ],
+    data = [":docs", ":performance_data"],
 )
 
 sh_cmd(
     name = "server",
     cmd = "cd plz-out/gen/docs && python3 -m http.server 8080",
-    data = [
-        ":docs",
-        ":index_html",
-    ],
+    data = [":docs", ":performance_data"],
 )

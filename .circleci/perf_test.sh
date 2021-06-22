@@ -4,7 +4,7 @@ set -eu
 
 VER="`cat VERSION`"
 PLZ="/tmp/workspace/linux_amd64/please_${VER}"
-BUCKET="s3://please-releases/performance"
+BUCKET="s3://please-docs/performance"
 
 echo "Generating test file tree"
 /tmp/workspace/gen_parse_tree.pex --plz "$PLZ" --noprogress --size 300000

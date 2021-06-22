@@ -7,7 +7,7 @@ filegroup(
 filegroup(
     name = "benchmark",
     srcs = ["benchmark.build_defs"],
-    visibility=["PUBLIC"],
+    visibility = ["PUBLIC"],
 )
 
 genrule(
