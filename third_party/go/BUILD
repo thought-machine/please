@@ -117,6 +117,7 @@ go_module(
         "go/loader",
         "go/buildutil",
         "go/ast/astutil",
+        "benchmark/parse",
     ],
     module = "golang.org/x/tools",
     version = "2ae76fd1560b622911f444c1e66b70a857e1de67",

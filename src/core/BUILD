@@ -1,3 +1,5 @@
+subinclude("//build_defs:benchmark")
+
 genrule(
     name = "version",
     srcs = {
@@ -181,7 +183,7 @@ go_test(
     ],
 )
 
-go_benchmark(
+benchmark(
     name = "build_target_benchmark",
     srcs = ["build_target_benchmark.go"],
     deps = [

@@ -4,6 +4,12 @@ filegroup(
     visibility = ["//third_party/python:all"],
 )
 
+filegroup(
+    name = "benchmark",
+    srcs = ["benchmark.build_defs"],
+    visibility=["PUBLIC"],
+)
+
 genrule(
     name = "version",
     srcs = ["//:version"],
