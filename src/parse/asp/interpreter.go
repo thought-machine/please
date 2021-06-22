@@ -66,6 +66,12 @@ func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements 
 		return err
 	} else if len(contents) != 0 {
 		stmts, err := i.parser.ParseData(contents, filename)
+		for _, stmt := range stmts {
+			if stmt.FuncDef != nil {
+				stmt.FuncDef.KeywordsOnly = !whitelistedKwargs(stmt.FuncDef.Name, filename)
+				stmt.FuncDef.IsBuiltin = true
+			}
+		}
 		return i.loadBuiltinStatements(s, stmts, err)
 	}
 	stmts, err := i.parser.parse(filename)
