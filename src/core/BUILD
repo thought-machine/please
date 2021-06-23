@@ -188,7 +188,7 @@ go_benchmark(
 )
 
 go_benchmark(
-    name = "benchmark",
+    name = "utils_benchmark",
     srcs = ["utils_benchmark_test.go"],
     deps = [":core"],
 )

@@ -72,13 +72,11 @@ type BuildTarget struct {
 	// Source files of this rule. Can refer to build rules themselves.
 	Sources []BuildInput `name:"srcs"`
 	// Named source files of this rule; as above but identified by name.
-	NamedSources    map[string][]BuildInput `name:"srcs"`
-	allNamedSources []BuildInput            `print:"false"`
+	NamedSources map[string][]BuildInput `name:"srcs"`
 	// Data files of this rule. Similar to sources but used at runtime, typically by tests.
 	Data []BuildInput `name:"data"`
 	// Data files of this rule by name.
-	namedData    map[string][]BuildInput `name:"data"`
-	allNamedData []BuildInput            `print:"false"`
+	namedData map[string][]BuildInput `name:"data"`
 	// Output files of this rule. All are paths relative to this package.
 	outputs []string `name:"outs"`
 	// Named output subsets of this rule. All are paths relative to this package but can be
@@ -188,12 +186,8 @@ type BuildTarget struct {
 	testTools []BuildInput `name:"test_tools"`
 	// Named tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"tools"`
-	// Memoization for AllTools
-	allNamedTools []BuildInput `print:"false"`
 	// Named test tools, similar to named sources.
 	namedTestTools map[string][]BuildInput `name:"test_tools"`
-	// Memoization for AllTestTools
-	allNamedTestTools []BuildInput `print:"false"`
 	// Target-specific environment passthroughs.
 	PassEnv *[]string `name:"pass_env"`
 	// Target-specific unsafe environment passthroughs.
@@ -1163,7 +1157,6 @@ func (target *BuildTarget) AddNamedSource(name string, source BuildInput) {
 	} else {
 		target.NamedSources[name] = target.addSource(target.NamedSources[name], source)
 	}
-	target.allNamedSources = nil
 }
 
 // AddNamedSecret adds a secret to the target which is tagged with a particular name.
@@ -1197,10 +1190,7 @@ func (target *BuildTarget) AllTestTools() []BuildInput {
 	if target.namedTestTools == nil {
 		return target.testTools
 	}
-	if target.allNamedTestTools == nil {
-		target.allNamedTestTools = target.allBuildInputs(target.testTools, target.namedTestTools)
-	}
-	return target.allNamedTestTools
+	return target.allBuildInputs(target.testTools, target.namedTestTools)
 }
 
 func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
@@ -1227,7 +1217,6 @@ func (target *BuildTarget) AddNamedDatum(name string, datum BuildInput) {
 		target.AddDependency(label)
 		target.dependencyInfo(label).data = true
 	}
-	target.allNamedData = nil
 }
 
 // AddNamedTool adds a new tool to the target.
@@ -1240,7 +1229,6 @@ func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
 	if label, ok := tool.Label(); ok {
 		target.AddDependency(label)
 	}
-	target.allNamedTools = nil
 }
 
 // AddNamedTestTool adds a new tool to the target.
@@ -1253,7 +1241,6 @@ func (target *BuildTarget) AddNamedTestTool(name string, tool BuildInput) {
 	if label, ok := tool.Label(); ok {
 		target.AddDependency(label)
 	}
-	target.allNamedTestTools = nil
 }
 
 // AddCommand adds a new config-specific command to this build target.
@@ -1326,11 +1313,7 @@ func (target *BuildTarget) AllSources() []BuildInput {
 	if target.NamedSources == nil {
 		return target.Sources
 	}
-	if target.allNamedSources != nil {
-		return target.allNamedSources
-	}
-	target.allNamedSources = target.allBuildInputs(target.Sources, target.NamedSources)
-	return target.allNamedSources
+	return target.allBuildInputs(target.Sources, target.NamedSources)
 }
 
 func (target *BuildTarget) allBuildInputs(unnamed []BuildInput, named map[string][]BuildInput) []BuildInput {
@@ -1387,11 +1370,7 @@ func (target *BuildTarget) AllData() []BuildInput {
 		return target.Data
 	}
 
-	if target.allNamedData == nil {
-		target.allNamedData = target.allBuildInputs(target.Data, target.namedData)
-	}
-
-	return target.allNamedData
+	return target.allBuildInputs(target.Data, target.namedData)
 }
 
 func (target *BuildTarget) NamedData() map[string][]BuildInput {
@@ -1412,10 +1391,7 @@ func (target *BuildTarget) AllTools() []BuildInput {
 	if target.namedTools == nil {
 		return target.Tools
 	}
-	if target.allNamedTools == nil {
-		target.allNamedTools = target.allBuildInputs(target.Tools, target.namedTools)
-	}
-	return target.allNamedTools
+	return target.allBuildInputs(target.Tools, target.namedTools)
 }
 
 // ToolNames returns an ordered list of tool names.
