@@ -272,11 +272,11 @@ func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) Build
 }
 
 // StampedBuildEnvironment returns the shell env vars to be passed into exec.Command.
-// Optionally includes a stamp if the target is marked as such.
-func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte, tmpDir string) BuildEnv {
+// Optionally includes a stamp if asked.
+func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte, tmpDir string, shouldStamp bool) BuildEnv {
 	env := BuildEnvironment(state, target, tmpDir)
 	encStamp := base64.RawURLEncoding.EncodeToString(stamp)
-	if target.Stamp {
+	if shouldStamp {
 		stampEnvOnce.Do(initStampEnv)
 		env = append(env, stampEnv...)
 		env = append(env, "STAMP_FILE="+target.StampFileName())
