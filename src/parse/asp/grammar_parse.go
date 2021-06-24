@@ -546,19 +546,23 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 			i.Index.AugAssign = p.parseExpression()
 		}
 	case '.':
-		p.initField(&i.Action)
-		i.Action.Property = p.parseIdentExpr()
+		i.Action = &IdentStatementAction{
+			Property: p.parseIdentExpr(),
+		}
 		p.endPos = i.Action.Property.EndPos
 	case '(':
-		p.initField(&i.Action)
-		i.Action.Call = p.parseCall()
+		i.Action = &IdentStatementAction{
+			Call: p.parseCall(),
+		}
 	case '=':
-		p.initField(&i.Action)
-		i.Action.Assign = p.parseExpression()
+		i.Action = &IdentStatementAction{
+			Assign: p.parseExpression(),
+		}
 	default:
 		p.assert(tok.Value == "+=", tok, "Unexpected token %s, expected one of , [ . ( = +=", tok)
-		p.initField(&i.Action)
-		i.Action.AugAssign = p.parseExpression()
+		i.Action = &IdentStatementAction{
+			AugAssign: p.parseExpression(),
+		}
 	}
 	return i
 }
