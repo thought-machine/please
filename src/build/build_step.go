@@ -480,7 +480,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	if target.IsTextFile {
 		return nil, buildTextFile(state, target)
 	}
-	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()))
+	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
 	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, target.Sandbox, command)
 	if err != nil {

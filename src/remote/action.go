@@ -128,7 +128,7 @@ func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.Bu
 	// We generate the stamp ourselves from the input root.
 	// TODO(peterebden): it should include the target properties too...
 	hash := c.sum(mustMarshal(inputRoot))
-	return core.StampedBuildEnvironment(state, target, hash, ".")
+	return core.StampedBuildEnvironment(state, target, hash, ".", stamp && target.Stamp)
 }
 
 // buildTestCommand builds a command for a target when testing.
