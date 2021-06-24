@@ -138,7 +138,6 @@ type ValueExpression struct {
 	// True if the Int field is set; this helps us distinguish values of 0.
 	IsInt    bool
 	Int      int
-	Bool     string
 	List     *List
 	Dict     *Dict
 	Tuple    *List
