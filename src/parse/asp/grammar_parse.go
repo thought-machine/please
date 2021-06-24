@@ -326,14 +326,6 @@ func (p *parser) parseIf() *IfStatement {
 	return i
 }
 
-// newElement is a nasty little hack to allow extending slices of types that we can't readily name.
-// This is added in preference to having to break everything out to separately named types.
-func (p *parser) newElement(x interface{}) int {
-	v := reflect.ValueOf(x).Elem()
-	v.Set(reflect.Append(v, reflect.Zero(v.Type().Elem())))
-	return v.Len() - 1
-}
-
 // initField is a similar little hack for initialising non-slice fields.
 func (p *parser) initField(x interface{}) {
 	v := reflect.ValueOf(x).Elem()
@@ -579,7 +571,10 @@ func (p *parser) parseIdentExpr() *IdentExpr {
 	}
 	for tok := p.l.Peek(); tok.Type == '.' || tok.Type == '('; tok = p.l.Peek() {
 		tok := p.l.Next()
-		action := &ie.Action[p.newElement(&ie.Action)]
+		action := struct {
+			Property *IdentExpr
+			Call     *Call
+		}{}
 		if tok.Type == '.' {
 			action.Property = p.parseIdentExpr()
 			ie.EndPos = action.Property.EndPos
@@ -587,6 +582,7 @@ func (p *parser) parseIdentExpr() *IdentExpr {
 			action.Call = p.parseCall()
 			ie.EndPos = p.endPos
 		}
+		ie.Action = append(ie.Action, action)
 	}
 	// In case the Ident is a variable name, we assign the endPos to the end of current token.
 	// see test_data/unary_op.build
