@@ -26,21 +26,24 @@ func (pos Position) String() string {
 // support backoff (i.e. if an earlier entry matches to its completion but can't consume
 // following tokens, it doesn't then make another choice :( )
 type Statement struct {
-	Pos     Position
-	EndPos  Position
-	FuncDef *FuncDef
-	For     *ForStatement
-	If      *IfStatement
-	Return  *ReturnStatement
-	Raise   *Expression // Deprecated
-	Assert  *struct {
-		Expr    *Expression
-		Message *Expression
-	}
+	Pos      Position
+	EndPos   Position
+	FuncDef  *FuncDef
+	For      *ForStatement
+	If       *IfStatement
+	Return   *ReturnStatement
+	Raise    *Expression // Deprecated
+	Assert   *AssertStatement
 	Ident    *IdentStatement
 	Literal  *Expression
 	Pass     bool
 	Continue bool
+}
+
+// An AssertStatement implements the 'assert' statement.
+type AssertStatement struct {
+	Expr    *Expression
+	Message *Expression
 }
 
 // A ReturnStatement implements the Python 'return' statement.
@@ -173,16 +176,22 @@ type UnaryOp struct {
 // starts off with a variable name). It is a little fiddly due to parser limitations.
 type IdentStatement struct {
 	Name   string
-	Unpack *struct {
-		Names []string
-		Expr  *Expression
-	}
-	Index *struct {
-		Expr      *Expression
-		Assign    *Expression
-		AugAssign *Expression
-	}
+	Unpack *IdentStatementUnpack
+	Index  *IdentStatementIndex
 	Action *IdentStatementAction
+}
+
+// An IdentStatementUnpack implements unpacking on an IdentStatement.
+type IdentStatementUnpack struct {
+	Names []string
+	Expr  *Expression
+}
+
+// An IdentStatementIndex implements indexing on an IdentStatement.
+type IdentStatementIndex struct {
+	Expr      *Expression
+	Assign    *Expression
+	AugAssign *Expression
 }
 
 // An IdentStatementAction implements actions on an IdentStatement.

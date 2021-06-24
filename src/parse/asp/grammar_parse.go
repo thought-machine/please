@@ -2,7 +2,6 @@ package asp
 
 import (
 	"io"
-	"reflect"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -171,9 +170,10 @@ func (p *parser) parseStatement() *Statement {
 		s.Raise = p.parseExpression()
 		p.next(EOL)
 	case "assert":
-		p.initField(&s.Assert)
 		p.l.Next()
-		s.Assert.Expr = p.parseExpression()
+		s.Assert = &AssertStatement{
+			Expr: p.parseExpression(),
+		}
 		if p.optional(',') {
 			s.Assert.Message = p.parseExpression()
 			p.endPos = s.Assert.Message.EndPos
@@ -324,12 +324,6 @@ func (p *parser) parseIf() *IfStatement {
 	}
 
 	return i
-}
-
-// initField is a similar little hack for initialising non-slice fields.
-func (p *parser) initField(x interface{}) {
-	v := reflect.ValueOf(x).Elem()
-	v.Set(reflect.New(v.Type().Elem()))
 }
 
 func (p *parser) parseFor() *ForStatement {
@@ -532,20 +526,13 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 	tok = p.l.Next()
 	switch tok.Type {
 	case ',':
-		i.Unpack = &struct {
-			Names []string
-			Expr  *Expression
-		}{
+		i.Unpack = &IdentStatementUnpack{
 			Names: p.parseIdentList(),
 		}
 		p.next('=')
 		i.Unpack.Expr = p.parseExpression()
 	case '[':
-		i.Index = &struct {
-			Expr      *Expression
-			Assign    *Expression
-			AugAssign *Expression
-		}{
+		i.Index = &IdentStatementIndex{
 			Expr: p.parseExpression(),
 		}
 		p.endPos = p.next(']').EndPos()
@@ -695,8 +682,12 @@ func (p *parser) parseComprehension() *Comprehension {
 	p.nextv("in")
 	c.Expr = p.parseUnconditionalExpression()
 	if p.optionalv("for") {
-		p.initField(&c.Second)
-		c.Second.Names = p.parseIdentList()
+		c.Second = &struct {
+			Names []string
+			Expr  *Expression
+		}{
+			Names: p.parseIdentList(),
+		}
 		p.nextv("in")
 		c.Second.Expr = p.parseUnconditionalExpression()
 	}
