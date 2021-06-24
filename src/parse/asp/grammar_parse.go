@@ -307,11 +307,15 @@ func (p *parser) parseIf() *IfStatement {
 	i.Statements = p.parseStatements()
 
 	for p.optionalv("elif") {
-		elif := &i.Elif[p.newElement(&i.Elif)]
+		elif := struct {
+			Condition  Expression
+			Statements []*Statement
+		}{}
 		p.parseExpressionInPlace(&elif.Condition)
 		p.next(':')
 		p.next(EOL)
 		elif.Statements = p.parseStatements()
+		i.Elif = append(i.Elif, elif)
 	}
 	if p.optionalv("else") {
 		p.next(':')
@@ -408,8 +412,7 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 	}
 	if op, present := operators[tok.Value]; present {
 		tok = p.l.Next()
-		o := &e.Op[p.newElement(&e.Op)]
-		o.Op = op
+		o := OpExpression{Op: op}
 		if op == Is {
 			if tok := p.l.Peek(); tok.Value == "not" {
 				// Mild hack for "is not" which needs to become a single operator.
@@ -419,6 +422,7 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 			}
 		}
 		o.Expr = p.parseUnconditionalExpression()
+		e.Op = append(e.Op, o)
 		if len(o.Expr.Op) > 0 {
 			if op := o.Expr.Op[0].Op; op == And || op == Or || op == Is {
 				// Hoist logical operator back up here to fix precedence. This is a bit of a hack and
