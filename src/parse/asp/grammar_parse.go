@@ -532,13 +532,22 @@ func (p *parser) parseIdentStatement() *IdentStatement {
 	tok = p.l.Next()
 	switch tok.Type {
 	case ',':
-		p.initField(&i.Unpack)
-		i.Unpack.Names = p.parseIdentList()
+		i.Unpack = &struct {
+			Names []string
+			Expr  *Expression
+		}{
+			Names: p.parseIdentList(),
+		}
 		p.next('=')
 		i.Unpack.Expr = p.parseExpression()
 	case '[':
-		p.initField(&i.Index)
-		i.Index.Expr = p.parseExpression()
+		i.Index = &struct {
+			Expr      *Expression
+			Assign    *Expression
+			AugAssign *Expression
+		}{
+			Expr: p.parseExpression(),
+		}
 		p.endPos = p.next(']').EndPos()
 		if tok := p.oneofval("=", "+="); tok.Type == '=' {
 			i.Index.Assign = p.parseExpression()
