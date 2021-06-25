@@ -344,26 +344,6 @@ func TestHasAbsoluteSource(t *testing.T) {
 	assert.False(t, target.HasSource("src/core/file3.go"))
 }
 
-func TestAllSourcesNamed(t *testing.T) {
-	target := makeTarget1("//src/core:target1", "")
-	target.AddNamedSource("c", FileLabel{File: "file.c"})
-	target.AddNamedSource("hdrs", FileLabel{File: "file.h"})
-
-	assert.ElementsMatch(t, []BuildInput{FileLabel{File: "file.c"}, FileLabel{File: "file.h"}}, target.AllSources())
-	assert.Equal(t, target.NamedSources["c"], []BuildInput{FileLabel{File: "file.c"}})
-	assert.Equal(t, target.NamedSources["hdrs"], []BuildInput{FileLabel{File: "file.h"}})
-}
-
-func TestAllDataNamed(t *testing.T) {
-	target := makeTarget1("//src/core:target1", "")
-	target.AddNamedDatum("c", FileLabel{File: "file.c"})
-	target.AddNamedDatum("hdrs", FileLabel{File: "file.h"})
-
-	assert.ElementsMatch(t, []BuildInput{FileLabel{File: "file.c"}, FileLabel{File: "file.h"}}, target.AllData())
-	assert.Equal(t, target.namedData["c"], []BuildInput{FileLabel{File: "file.c"}})
-	assert.Equal(t, target.namedData["hdrs"], []BuildInput{FileLabel{File: "file.h"}})
-}
-
 func TestToolPath(t *testing.T) {
 	target := makeTarget1("//src/core:target1", "")
 	target.AddOutput("file1.go")
