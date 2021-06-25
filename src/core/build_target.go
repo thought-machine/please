@@ -1322,11 +1322,7 @@ func (target *BuildTarget) allBuildInputs(unnamed []BuildInput, named map[string
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		start := len(ret)
-		end := start + len(named[k])
 		ret = append(ret, named[k]...)
-		// Make sure we have no references to the original data so that it can be gc'ed
-		named[k] = ret[start:end]
 	}
 
 	return ret
