@@ -513,10 +513,14 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 		return pyString(stringLiteral(expr.String))
 	} else if expr.FString != nil {
 		return s.interpretFString(expr.FString)
-	} else if expr.Int != nil {
-		return pyInt(expr.Int.Int)
-	} else if expr.Bool != "" {
-		return s.Lookup(expr.Bool)
+	} else if expr.IsInt {
+		return pyInt(expr.Int)
+	} else if expr.True {
+		return True
+	} else if expr.False {
+		return False
+	} else if expr.None {
+		return None
 	} else if expr.List != nil {
 		return s.interpretList(expr.List)
 	} else if expr.Dict != nil {
@@ -769,7 +773,7 @@ func (s *scope) Constant(expr *Expression) pyObject {
 		return expr.Optimised.Constant
 	} else if expr.Val == nil || len(expr.Val.Slices) != 0 || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.If != nil {
 		return nil
-	} else if expr.Val.Bool != "" || expr.Val.String != "" || expr.Val.Int != nil {
+	} else if expr.Val.True || expr.Val.False || expr.Val.None || expr.Val.IsInt || expr.Val.String != "" {
 		return s.interpretValueExpression(expr.Val)
 	} else if expr.Val.List != nil && expr.Val.List.Comprehension == nil {
 		// Lists can be constant if all their elements are also.

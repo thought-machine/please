@@ -38,9 +38,10 @@ func TestParseDefaultArguments(t *testing.T) {
 	assert.Equal(t, "name", args[0].Name)
 	assert.Equal(t, "\"name\"", args[0].Value.Val.String)
 	assert.Equal(t, "timeout", args[1].Name)
-	assert.Equal(t, 10, args[1].Value.Val.Int.Int)
+	assert.True(t, args[1].Value.Val.IsInt)
+	assert.Equal(t, 10, args[1].Value.Val.Int)
 	assert.Equal(t, "args", args[2].Name)
-	assert.Equal(t, "None", args[2].Value.Val.Bool)
+	assert.True(t, args[2].Value.Val.None)
 
 	// Test for Endpos
 	assert.Equal(t, 9, statements[0].EndPos.Column)
@@ -107,7 +108,7 @@ func TestParseAssignments(t *testing.T) {
 	assert.NotNil(t, ass)
 	assert.Equal(t, 3, len(ass.Items))
 	assert.Equal(t, "\"mickey\"", ass.Items[0].Key.Val.String)
-	assert.Equal(t, 3, ass.Items[0].Value.Val.Int.Int)
+	assert.Equal(t, 3, ass.Items[0].Value.Val.Int)
 	assert.Equal(t, "\"donald\"", ass.Items[1].Key.Val.String)
 	assert.Equal(t, "\"sora\"", ass.Items[1].Value.Val.String)
 	assert.Equal(t, "\"goofy\"", ass.Items[2].Key.Val.String)
@@ -181,7 +182,7 @@ func TestIndexing(t *testing.T) {
 	assert.NotNil(t, statements[1].Ident.Action.Assign)
 	assert.Equal(t, "x", statements[1].Ident.Action.Assign.Val.Ident.Name)
 	assert.Equal(t, 1, len(statements[1].Ident.Action.Assign.Val.Slices))
-	assert.Equal(t, 2, statements[1].Ident.Action.Assign.Val.Slices[0].Start.Val.Int.Int)
+	assert.Equal(t, 2, statements[1].Ident.Action.Assign.Val.Slices[0].Start.Val.Int)
 	assert.Equal(t, "", statements[1].Ident.Action.Assign.Val.Slices[0].Colon)
 	assert.Nil(t, statements[1].Ident.Action.Assign.Val.Slices[0].End)
 
@@ -189,15 +190,15 @@ func TestIndexing(t *testing.T) {
 	assert.NotNil(t, statements[2].Ident.Action.Assign)
 	assert.Equal(t, "x", statements[2].Ident.Action.Assign.Val.Ident.Name)
 	assert.Equal(t, 1, len(statements[2].Ident.Action.Assign.Val.Slices))
-	assert.Equal(t, 1, statements[2].Ident.Action.Assign.Val.Slices[0].Start.Val.Int.Int)
+	assert.Equal(t, 1, statements[2].Ident.Action.Assign.Val.Slices[0].Start.Val.Int)
 	assert.Equal(t, ":", statements[2].Ident.Action.Assign.Val.Slices[0].Colon)
-	assert.Equal(t, -1, statements[2].Ident.Action.Assign.Val.Slices[0].End.Val.Int.Int)
+	assert.Equal(t, -1, statements[2].Ident.Action.Assign.Val.Slices[0].End.Val.Int)
 
 	assert.Equal(t, "a", statements[3].Ident.Name)
 	assert.NotNil(t, statements[3].Ident.Action.Assign)
 	assert.Equal(t, "x", statements[3].Ident.Action.Assign.Val.Ident.Name)
 	assert.Equal(t, 1, len(statements[3].Ident.Action.Assign.Val.Slices))
-	assert.Equal(t, 2, statements[3].Ident.Action.Assign.Val.Slices[0].Start.Val.Int.Int)
+	assert.Equal(t, 2, statements[3].Ident.Action.Assign.Val.Slices[0].Start.Val.Int)
 	assert.Equal(t, ":", statements[3].Ident.Action.Assign.Val.Slices[0].Colon)
 	assert.Nil(t, statements[3].Ident.Action.Assign.Val.Slices[0].End)
 
@@ -207,7 +208,7 @@ func TestIndexing(t *testing.T) {
 	assert.Equal(t, 1, len(statements[4].Ident.Action.Assign.Val.Slices))
 	assert.Nil(t, statements[4].Ident.Action.Assign.Val.Slices[0].Start)
 	assert.Equal(t, ":", statements[4].Ident.Action.Assign.Val.Slices[0].Colon)
-	assert.Equal(t, 2, statements[4].Ident.Action.Assign.Val.Slices[0].End.Val.Int.Int)
+	assert.Equal(t, 2, statements[4].Ident.Action.Assign.Val.Slices[0].End.Val.Int)
 
 	assert.Equal(t, "c", statements[5].Ident.Name)
 	assert.NotNil(t, statements[5].Ident.Action.Assign)
@@ -285,7 +286,7 @@ func TestInlineIf(t *testing.T) {
 	assert.NotNil(t, ass.If)
 	assert.Equal(t, "y", ass.If.Condition.Val.Ident.Name)
 	assert.EqualValues(t, Is, ass.If.Condition.Op[0].Op)
-	assert.Equal(t, "None", ass.If.Condition.Op[0].Expr.Val.Bool)
+	assert.True(t, ass.If.Condition.Op[0].Expr.Val.None)
 	assert.NotNil(t, ass.If.Else.Val.List)
 	assert.Equal(t, 1, len(ass.If.Else.Val.List.Values))
 
