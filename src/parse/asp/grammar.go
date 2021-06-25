@@ -79,13 +79,16 @@ type ForStatement struct {
 
 // An IfStatement implements the if-elif-else statement.
 type IfStatement struct {
+	Condition      Expression
+	Statements     []*Statement
+	Elif           []IfStatementElif
+	ElseStatements []*Statement
+}
+
+// An IfStatementElif holds an elif clause in the if-elif-else statement.
+type IfStatementElif struct {
 	Condition  Expression
 	Statements []*Statement
-	Elif       []struct {
-		Condition  Expression
-		Statements []*Statement
-	}
-	ElseStatements []*Statement
 }
 
 // An Argument represents an argument to a function definition.
@@ -208,10 +211,13 @@ type IdentExpr struct {
 	Pos    Position
 	EndPos Position
 	Name   string
-	Action []struct {
-		Property *IdentExpr
-		Call     *Call
-	}
+	Action []IdentExprAction
+}
+
+// An IdentExprAction represents an Action within an IdentExpr.
+type IdentExprAction struct {
+	Property *IdentExpr
+	Call     *Call
 }
 
 // A Call represents a call site of a function.
@@ -261,11 +267,14 @@ type InlineIf struct {
 type Comprehension struct {
 	Names  []string
 	Expr   *Expression
-	Second *struct {
-		Names []string
-		Expr  *Expression
-	}
-	If *Expression
+	Second *SecondComprehension
+	If     *Expression
+}
+
+// A SecondComprehension represents a second 'for' clause in a list or dict comprehension.
+type SecondComprehension struct {
+	Names []string
+	Expr  *Expression
 }
 
 // A Lambda is the inline lambda function.

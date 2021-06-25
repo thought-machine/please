@@ -307,10 +307,7 @@ func (p *parser) parseIf() *IfStatement {
 	i.Statements = p.parseStatements()
 
 	for p.optionalv("elif") {
-		elif := struct {
-			Condition  Expression
-			Statements []*Statement
-		}{}
+		elif := IfStatementElif{}
 		p.parseExpressionInPlace(&elif.Condition)
 		p.next(':')
 		p.next(EOL)
@@ -571,10 +568,7 @@ func (p *parser) parseIdentExpr() *IdentExpr {
 	}
 	for tok := p.l.Peek(); tok.Type == '.' || tok.Type == '('; tok = p.l.Peek() {
 		tok := p.l.Next()
-		action := struct {
-			Property *IdentExpr
-			Call     *Call
-		}{}
+		action := IdentExprAction{}
 		if tok.Type == '.' {
 			action.Property = p.parseIdentExpr()
 			ie.EndPos = action.Property.EndPos
@@ -682,10 +676,7 @@ func (p *parser) parseComprehension() *Comprehension {
 	p.nextv("in")
 	c.Expr = p.parseUnconditionalExpression()
 	if p.optionalv("for") {
-		c.Second = &struct {
-			Names []string
-			Expr  *Expression
-		}{
+		c.Second = &SecondComprehension{
 			Names: p.parseIdentList(),
 		}
 		p.nextv("in")
