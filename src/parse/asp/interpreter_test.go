@@ -4,6 +4,7 @@
 package asp
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -379,9 +380,22 @@ func TestFormat(t *testing.T) {
 	assert.EqualValues(t, `ARCH="linux_amd64"`, s.Lookup("arch2"))
 }
 
-func TestSemver(t *testing.T) {
+func TestIsSemver(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
-		s, err := parseFile("src/parse/asp/test_data/interpreter/semver.build")
+		s, err := parseFile("src/parse/asp/test_data/interpreter/is_semver.build")
+		assert.NoError(t, err)
+		for i := 1; i <= 18; i++ {
+			assert.EqualValues(t, pyBool(true), s.Lookup(fmt.Sprintf("t%d", i)))
+		}
+		for i := 1; i <= 16; i++ {
+			assert.EqualValues(t, pyBool(false), s.Lookup(fmt.Sprintf("f%d", i)))
+		}
+	})
+}
+
+func TestSemverCheck(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		s, err := parseFile("src/parse/asp/test_data/interpreter/semver_check.build")
 		assert.NoError(t, err)
 		assert.EqualValues(t, pyBool(true), s.Lookup("c1"))
 		assert.EqualValues(t, pyBool(false), s.Lookup("c2"))
@@ -390,12 +404,12 @@ func TestSemver(t *testing.T) {
 	})
 
 	t.Run("InvalidVersion", func(t *testing.T) {
-		_, err := parseFile("src/parse/asp/test_data/interpreter/semver_invalid_version.build")
+		_, err := parseFile("src/parse/asp/test_data/interpreter/semver_check_invalid_version.build")
 		assert.Error(t, err)
 	})
 
 	t.Run("InvalidConstraint", func(t *testing.T) {
-		_, err := parseFile("src/parse/asp/test_data/interpreter/semver_invalid_constraint.build")
+		_, err := parseFile("src/parse/asp/test_data/interpreter/semver_check_invalid_constraint.build")
 		assert.Error(t, err)
 	})
 }
