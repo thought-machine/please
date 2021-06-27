@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -35,8 +34,6 @@ var numUploadFailures int64
 
 const maxUploadFailures int64 = 10
 
-var uploadFailureOnce sync.Once
-
 // Test runs the tests for a single target.
 func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, run int) {
 	target := state.Graph.TargetOrDie(label)
@@ -47,13 +44,10 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, r
 		if runsAllCompleted && state.Config.Test.Upload != "" {
 			if numUploadFailures < maxUploadFailures {
 				if err := uploadResults(target, state.Config.Test.Upload.String(), state.Config.Test.UploadGzipped, state.Config.Test.StoreTestOutputOnSuccess); err != nil {
-					if numUploadFailures < maxUploadFailures {
+					if atomic.AddInt64(&numUploadFailures, 1) == maxUploadFailures {
+						log.Error("Failed to upload test results %d times, giving up", maxUploadFailures)
+					} else {
 						log.Warning("%s", err)
-					}
-					if atomic.AddInt64(&numUploadFailures, 1) >= maxUploadFailures {
-						uploadFailureOnce.Do(func() {
-							log.Error("Failed to upload test results %d times, giving up", maxUploadFailures)
-						})
 					}
 				}
 			}
