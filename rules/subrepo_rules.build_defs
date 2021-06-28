@@ -193,6 +193,47 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
     )
 
 
+def gitlab_repo(name:str, repo:str, revision:str, instance:str="gitlab.com", build_file:str=None,
+                hashes:str|list=None, strip_prefix:str=None, strip_build:bool=False, config:str=None,
+                bazel_compat:bool=False):
+    """Defines a new subrepo corresponding to a GitLab project.
+
+    Like github_repo, this is a convenience alias to new_http_archive.
+
+    Args:
+      name: Name of the rule.
+      repo: GitLab repository to fetch from (e.g. "gitlab-org/gitlab-foss").
+      revision: Revision to download.
+      instance: The root URL of the GitLab instance to fetch from (e.g. "gitlab.gnome.org" for the
+                GNOME GitLab instance at https://gitlab.gnome.org). Defaults to "gitlab.com", the
+                official public GitLab instance.
+      build_file: The file to use as a BUILD file for this subrepository.
+      hashes: List of hashes to verify the rule with.
+      strip_prefix: Prefix to strip from the contents of the zip. This is usually automatically
+                    detected.
+      strip_build: True to strip any BUILD files from the archive after download.
+      config: Configuration file to apply to this subrepo.
+      bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
+                    specifying a config file with `compatibility = true` in the `[bazel]`
+                    section.
+    """
+    org, _, repo = repo.partition('/')
+    assert repo, "Must pass a valid GitLab repo argument, e.g. gitlab-org/gitlab-foss"
+
+    prefix = f'{repo}-{revision}'
+
+    return new_http_archive(
+        name = name,
+        urls = [f'https://{instance}/{org}/{repo}/-/archive/{revision}/{repo}-{revision}.zip'],
+        strip_prefix = strip_prefix or prefix,
+        strip_build = strip_build,
+        build_file = build_file,
+        hashes = hashes,
+        config = config,
+        bazel_compat = bazel_compat,
+    )
+
+
 def arch(name:str, os:str, arch:str):
     """ Defines an architecture subrepo.
 
