@@ -56,6 +56,7 @@ go_library(
     name = "test_main_lib",
     srcs = ["main_test.go"],
     package = "whatever",
+    import_path="test_main",
     test_only = True,
 )
 
