@@ -2,14 +2,16 @@
 
 set -eu
 
-VER="`cat VERSION`"
+VER="$(cat VERSION)"
 PLZ="/tmp/workspace/linux_amd64/please_${VER}"
-BUCKET="s3://please-releases/performance"
+BUCKET="s3://please-docs/performance"
 
-echo "Generating test file tree"
+echo "Generating test file tree..."
 /tmp/workspace/gen_parse_tree.pex --plz "$PLZ" --noprogress --size 300000
-echo "Running parse performance test"
+
+echo "Running parse performance test..."
 /tmp/workspace/parse_perf_test.pex --plz "$PLZ" --revision "$CIRCLE_SHA1"
+
 echo "Uploading results..."
 aws s3 cp plz.prof "${BUCKET}/${CIRCLE_SHA1}.prof"
 aws s3 cp results.json "${BUCKET}/${CIRCLE_SHA1}.json"
@@ -20,5 +22,26 @@ if aws s3 ls "${BUCKET}/all_results.jsonl"; then
 else
     aws s3 cp results.json "${BUCKET}/all_results.jsonl"
 fi
-aws s3 cp tools/performance/report.html "${BUCKET}/report.html"
+
+echo "Running benchmarks..."
+$PLZ build -i benchmark -p -v notice -o "buildconfig.benchmark-revision:${CIRCLE_SHA1}"
+
+for RESULT in plz-out/benchmarks/*.json; do
+  BENCHMARK_NAME=${RESULT%.json}
+  BENCHMARK_NAME=${BENCHMARK_NAME#plz-out/benchmarks/}
+
+  echo "Uploading ${BENCHMARK_NAME} results..."
+
+  s3 cp "$RESULT" "${BUCKET}/${BENCHMARK_NAME}_${CIRCLE_SHA1}.json"
+
+  ALL_RESULTS="${BENCHMARK_NAME}_all_results.jsonl"
+  if aws s3 ls "${ALL_RESULTS}"; then
+      aws s3 cp "${BUCKET}/${ALL_RESULTS}" "${ALL_RESULTS}"
+      cat "${ALL_RESULTS}" "${RESULT}" | tail -n 100 > "updated_${ALL_RESULTS}"
+      aws s3 cp "updated_${ALL_RESULTS}" "${BUCKET}/${ALL_RESULTS}"
+  else
+      aws s3 cp "${RESULT}" "${BUCKET}/${ALL_RESULTS}"
+  fi
+done
+
 echo "Done!"
