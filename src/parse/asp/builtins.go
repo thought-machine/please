@@ -58,6 +58,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
 	setNativeCode(s, "breakpoint", breakpoint)
+	setNativeCode(s, "is_semver", isSemver)
 	setNativeCode(s, "semver_check", semverCheck)
 	stringMethods = map[string]*pyFunc{
 		"join":         setNativeCode(s, "join", strJoin),
@@ -962,6 +963,15 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 	}
 	fmt.Printf("Debugger exited, continuing...\n")
 	return None
+}
+
+func isSemver(s *scope, args []pyObject) pyObject {
+	// semver.NewVersion is insufficiently strict for a validation function, since it coerces
+	// semver-ish strings (e.g. "1.2") into semvers ("1.2.0"); semver.StrictNewVersion is slightly
+	// too strict, since it doesn't allow the commonly-used leading "v". Stripping any leading "v"
+	// and using semver.StrictNewVersion is a decent compromise
+	_, err := semver.StrictNewVersion(strings.TrimPrefix(string(args[0].(pyString)), "v"))
+	return newPyBool(err == nil)
 }
 
 func semverCheck(s *scope, args []pyObject) pyObject {

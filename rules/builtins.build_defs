@@ -263,5 +263,11 @@ def breakpoint():
     """Breaks into an interactive debugging session."""
     pass
 
+def is_semver(s:str) -> bool:
+    """Returns true if the given string is a semantic version number (either with or without
+    a leading v), or false if not.
+    """
+    pass
+
 def semver_check(version:str, constraint:str) -> bool:
     pass
