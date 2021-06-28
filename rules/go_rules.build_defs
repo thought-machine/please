@@ -262,8 +262,6 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
 
 
     package_path = _get_import_path(import_path)
-    if not package_path.endswith(package) and not import_path:
-        package_path = f"{package_path}/{package}"
     return build_rule(
         name=name,
         srcs=srcs,
