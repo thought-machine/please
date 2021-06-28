@@ -10,7 +10,7 @@ import (
 
 type result struct {
 	Revision string
-	Set parse.Set
+	Set      parse.Set
 }
 
 // Formats go benchmark results into json
@@ -25,7 +25,7 @@ func main() {
 
 	results := &result{
 		Revision: revision,
-		Set: set,
+		Set:      set,
 	}
 
 	encoder := json.NewEncoder(os.Stdout)
