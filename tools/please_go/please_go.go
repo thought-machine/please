@@ -35,7 +35,7 @@ var opts = struct {
 		Dir        string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
 		Exclude    []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
 		Output     string   `short:"o" long:"output" description:"Output filename" required:"true"`
-		Package    string   `short:"p" long:"package" description:"Package containing this test" env:"PKG_DIR"`
+		TestPackage string `short:"t" long:"test_package" description:"The import path of the test package"`
 		ImportPath string   `short:"i" long:"import_path" description:"Full import path to the package"`
 		Benchmark  bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
 		Args       struct {
@@ -81,7 +81,7 @@ var subCommands = map[string]func() int{
 		test.PleaseGoTest(
 			opts.Test.Dir,
 			opts.Test.ImportPath,
-			opts.Test.Package,
+			opts.Test.TestPackage,
 			opts.Test.Output,
 			opts.Test.Args.Sources,
 			opts.Test.Exclude,
