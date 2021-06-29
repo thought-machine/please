@@ -55,7 +55,6 @@ go_test(
 go_library(
     name = "test_main_lib",
     srcs = ["main_test.go"],
-    import_path = "test_main",
     package = "whatever",
     test_only = True,
 )
@@ -63,6 +62,7 @@ go_library(
 go_test_main(
     name = "test_main",
     srcs = ["main_test.go"],
+    test_package = "github.com/thought-machine/please/test/go_rules/whatever",
     test_only = True,
 )
 

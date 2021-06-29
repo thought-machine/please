@@ -332,7 +332,7 @@ def _write_import_config_cmd(package, import_path):
     import_path = _get_import_path(package, import_path)
     return f"echo packagefile {import_path}=$PKG_DIR/{package}.a >> $OUT"
 
-def _get_import_path(package, import_path=""):
+def _get_import_path(package="", import_path=""):
     if import_path:
         return import_path
 
@@ -347,9 +347,9 @@ def _get_import_path(package, import_path=""):
         path = pkg
 
     # TODO(jpoole): this isn't really necessary and isn't how go works. We could probably remove this for v17.
-    if path.endswith(package):
-        return path
-    return f"{path}/{package}"
+    if package and not path.endswith(package):
+        return f"{path}/{package}"
+    return path
 
 def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 package:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
@@ -844,12 +844,14 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
     Args:
       name: Name of the rule
       srcs: Source .go files that define the tests.
+      test_package: This is the import path of the package to be tested. Defaults to the import path of the current
+                    directory.
       test_only: If True, can only be consumed by tests (or other test_only rules).
       deps: Any additional dependencies
       visibility: Visibility of the rule.
       labels: Any labels to apply to this rule.
     """
-    test_package = test_package or name
+    test_package = test_package or _get_import_path()
     cmd = f'"$TOOLS" testmain --test_package "{test_package}" --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
     if benchmark:
         cmd = f'{cmd} --benchmark'
