@@ -32,13 +32,13 @@ var opts = struct {
 		} `positional-args:"true" required:"true"`
 	} `command:"install" alias:"i" description:"Compile a go module similarly to 'go install'"`
 	Test struct {
-		Dir        string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
-		Exclude    []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
-		Output     string   `short:"o" long:"output" description:"Output filename" required:"true"`
-		TestPackage string `short:"t" long:"test_package" description:"The import path of the test package"`
-		ImportPath string   `short:"i" long:"import_path" description:"Full import path to the package"`
-		Benchmark  bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
-		Args       struct {
+		Dir         string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
+		Exclude     []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
+		Output      string   `short:"o" long:"output" description:"Output filename" required:"true"`
+		TestPackage string   `short:"t" long:"test_package" description:"The import path of the test package"`
+		ImportPath  string   `short:"i" long:"import_path" description:"Full import path to the package"`
+		Benchmark   bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
+		Args        struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
 	} `command:"testmain" alias:"t" description:"Generates a go main package to run the tests in a package."`

@@ -721,6 +721,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         building_description="Compiling...",
         needs_transitive_deps=True,
         output_is_complete=True,
+        pre_build=_collect_linker_flags(static, definitions),
     )
 
 
