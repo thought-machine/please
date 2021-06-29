@@ -62,7 +62,7 @@ func InitConfig(dir string, bazelCompatibility bool, noPrompt bool) {
 		log.Warning("Can't determine absolute directory: %s", err)
 	}
 	config := path.Join(dir, core.ConfigFileName)
-	contents := fmt.Sprintf(configTemplate, core.PleaseVersion)
+	contents := fmt.Sprintf(configTemplate, core.RawVersion)
 
 	if bazelCompatibility {
 		contents += bazelCompatibilityConfig
