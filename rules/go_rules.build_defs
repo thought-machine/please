@@ -639,7 +639,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         _link_extra = False,
         complete = False,
         _generate_import_config=False,
-        import_path=test_package,
+        import_path = test_package,
     )
 
     if cgo:
@@ -652,7 +652,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
             labels = labels + ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
             test_only = True,
             deps = deps,
-            package=test_package + "_cgo",
+            package = archive_name,
         )
     else:
         archive_name = test_package
@@ -661,9 +661,9 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         name=f'_{name}#lib_import_config',
         cmd = _write_import_config_cmd(archive_name, test_package),
         outs = [f'{test_package}.importconfig'],
-        visibility=visibility,
-        test_only=True,
-        labels=labels,
+        visibility = visibility,
+        test_only = True,
+        labels = labels,
     )
     main_rule = go_test_main(
         name = name,
@@ -672,19 +672,19 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         deps = deps,
         test_only = True,
         labels = labels,
-        test_package=test_package,
+        test_package = test_package,
     )
 
     deps += [lib_rule, import_config]
     lib_rule = go_library(
         name='_%s#main_lib' % name,
-        srcs=[main_rule],
-        deps=deps,
+        srcs = [main_rule],
+        deps = deps,
         _needs_transitive_deps=CONFIG.BUILD_CONFIG == "cover",
-        test_only=True,
-        _generate_import_config=False,
-        labels=labels,
-        import_path="main",
+        test_only = True,
+        _generate_import_config = False,
+        labels = labels,
+        import_path = "main",
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
@@ -700,28 +700,28 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
             test_cmd += f' && mv {out} $TMP_DIR/{out}'
 
     return build_rule(
-        name=name,
-        srcs=[lib_rule],
-        data=data,
-        deps=deps,
-        outs=[name],
-        tools=tools,
-        cmd=cmds,
-        test_cmd=test_cmd,
-        visibility=visibility,
-        test_sandbox=sandbox,
-        test_timeout=timeout,
+        name = name,
+        srcs = [lib_rule],
+        data = data,
+        deps = deps,
+        outs = [name],
+        tools = tools,
+        cmd = cmds,
+        test_cmd = test_cmd,
+        visibility = visibility,
+        test_sandbox = sandbox,
+        test_timeout = timeout,
         size = size,
-        flaky=flaky,
-        test_outputs=test_outputs,
-        requires=['go', 'test'],
-        labels=labels,
-        binary=True,
-        test=True,
-        building_description="Compiling...",
-        needs_transitive_deps=True,
-        output_is_complete=True,
-        pre_build=_collect_linker_flags(static, definitions),
+        flaky = flaky,
+        test_outputs = test_outputs,
+        requires = ['go', 'test'],
+        labels = labels,
+        binary = True,
+        test = True,
+        building_description = "Compiling...",
+        needs_transitive_deps = True,
+        output_is_complete = True,
+        pre_build = _collect_linker_flags(static, definitions),
     )
 
 

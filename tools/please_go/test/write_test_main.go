@@ -38,7 +38,7 @@ func WriteTestMain(importPath, testPackage string, sources []string, output stri
 	testDescr.CoverVars = coverVars
 	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || testDescr.Main != "" {
 		// Can't set this if there are no test functions, it'll be an unused import.
-		testDescr.Imports = extraImportPaths(testPackage, importPath, testDescr.CoverVars)
+		testDescr.Imports = extraImportPaths(testPackage, testDescr.Package, importPath, testDescr.CoverVars)
 	}
 
 	testDescr.Benchmark = benchmark
@@ -54,9 +54,9 @@ func WriteTestMain(importPath, testPackage string, sources []string, output stri
 }
 
 // extraImportPaths returns the set of extra import paths that are needed.
-func extraImportPaths(testPackage, importPath string, coverVars []CoverVar) []string {
+func extraImportPaths(testPackage, alias, importPath string, coverVars []CoverVar) []string {
 	ret := make([]string, 0, len(coverVars)+1)
-	ret = append(ret, fmt.Sprintf("\"%s\"", testPackage))
+	ret = append(ret, fmt.Sprintf("%s \"%s\"", alias, testPackage))
 
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)

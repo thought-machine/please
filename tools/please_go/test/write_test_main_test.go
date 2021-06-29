@@ -110,22 +110,22 @@ func TestWriteTestMainWithBenchmark(t *testing.T) {
 }
 
 func TestExtraImportPaths(t *testing.T) {
-	assert.Equal(t, extraImportPaths("core", "", []CoverVar{
+	assert.Equal(t, extraImportPaths("core", "core", "", []CoverVar{
 		{ImportPath: "core"},
 		{ImportPath: "output"},
 	}), []string{
-		"\"core\"",
+		"core \"core\"",
 		"_cover0 \"core\"",
 		"_cover1 \"output\"",
 	})
 }
 
 func TestExtraImportPathsWithImportPath(t *testing.T) {
-	assert.Equal(t, extraImportPaths("core", "github.com/thought-machine/please", []CoverVar{
+	assert.Equal(t, extraImportPaths("core", "core", "github.com/thought-machine/please", []CoverVar{
 		{ImportPath: "src/core"},
 		{ImportPath: "output"},
 	}), []string{
-		"\"core\"",
+		"core \"core\"",
 		"_cover0 \"github.com/thought-machine/please/src/core\"",
 		"_cover1 \"github.com/thought-machine/please/output\"",
 	})
