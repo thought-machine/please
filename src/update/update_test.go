@@ -126,7 +126,7 @@ func TestShouldUpdateNoVersion(t *testing.T) {
 	// No version is set, shouldn't update unless we force
 	c.Please.Version = cli.Version{}
 	assert.False(t, shouldUpdate(c, true, false, false))
-	assert.Equal(t, core.PleaseVersion, c.Please.Version.Semver())
+	assert.Equal(t, pleaseVersion(), c.Please.Version.Semver())
 	c.Please.Version = cli.Version{}
 	assert.True(t, shouldUpdate(c, true, true, false))
 }
@@ -160,7 +160,7 @@ func TestFullDistVersion(t *testing.T) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	vCurrent := fmt.Sprintf("/%s_%s/%s/please_%s", runtime.GOOS, runtime.GOARCH, core.PleaseVersion, core.PleaseVersion)
+	vCurrent := fmt.Sprintf("/%s_%s/%s/please_%s", runtime.GOOS, runtime.GOARCH, pleaseVersion(), pleaseVersion())
 	v42 := fmt.Sprintf("/%s_%s/42.0.0/please_42.0.0", runtime.GOOS, runtime.GOARCH)
 	if r.URL.Path == "/latest_version" {
 		w.Write([]byte("42.0.0"))
