@@ -31,6 +31,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
 )
 
 var downloadErrors = prometheus.NewCounter(prometheus.CounterOpts{
@@ -41,7 +42,7 @@ var downloadErrors = prometheus.NewCounter(prometheus.CounterOpts{
 })
 
 func init() {
-	prometheus.MustRegister(downloadErrors)
+	metrics.MustRegister(downloadErrors)
 }
 
 // xattrName is the name we use to record attributes on files.
