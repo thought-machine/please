@@ -21,8 +21,8 @@ import (
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/prometheus/client_golang/prometheus"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -37,8 +37,8 @@ import (
 var downloadErrors = prometheus.NewCounter(prometheus.CounterOpts{
 	Namespace: "plz",
 	Subsystem: "remote",
-	Name: "tree_digest_download_eof_errors_total",
-	Help: "Number of times the Unexpected EOF error has been seen during a tree digest download",
+	Name:      "tree_digest_download_eof_errors_total",
+	Help:      "Number of times the Unexpected EOF error has been seen during a tree digest download",
 })
 
 func init() {
