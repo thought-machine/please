@@ -21,6 +21,7 @@ import (
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
@@ -30,8 +31,16 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/metrics"
 )
+
+var downloadErrors = prometheus.NewCounter(prometheus.CounterOpts{
+	Name: "tree_digest_download_eof_error",
+	Help: "Number of times the Unexpected EOF error has been seen during a tree digest download",
+})
+
+func init() {
+	prometheus.MustRegister(downloadErrors)
+}
 
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"
@@ -73,7 +82,7 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	for _, d := range ar.OutputDirectories {
 		tree := &pb.Tree{}
 		if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
-			metrics.DownloadErrorCounterInc()
+			downloadErrors.Inc()
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 
