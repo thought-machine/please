@@ -79,10 +79,18 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     )
 
 def _pkg_sources(name: str, deps: list, test_only:bool):
+    """
+    This rule generates a list of go srcs for any rule in the deps list that is local to this package.
+
+    This is how we avoid transitively depending on all sources for a target in order to compile non-external tests.
+    Without this, we'd have to transitively pull in all third party sources for the rule which is very expensive,
+    especially for remote execution.
+    """
+    package_prefix = "//" + package_name() + ":"
     return filegroup(
        name = name,
        tag = "pkg_srcs",
-       exported_deps = [dep for dep in deps if canonicalise(dep).startswith("//" + package_name() + ":")],
+       exported_deps = [dep for dep in deps if canonicalise(dep).startswith(package_prefix)],
        requires = ["go_src"],
        test_only = test_only,
    )
@@ -321,7 +329,13 @@ def _trim_import_path(pkg):
 
 def _write_import_config_cmd(name, import_path):
     import_path = _get_import_path(import_path)
-    return f"echo packagefile {import_path}=$PKG_DIR/{name}.a >> $OUT"
+    package_file = f"packagefile {import_path}=$PKG_DIR/{name}.a"
+
+    # TODO(jpoole): This is for backwards compatibility and should be removed in v17. If people use this import path,
+    #   debug won't work.
+    if package_name() and not package_name().endswith(name):
+        package_file = f"{package_file}\npackagefile {import_path}/{name}=$PKG_DIR/{name}.a"
+    return f'echo "{package_file}" >> $OUT'
 
 def _get_import_path(import_path=""):
     if import_path:
@@ -610,8 +624,6 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
                      definition to the linker.  If set to a dict, each key/value pair is
                      used to contruct the list of definitions passed to the linker.
     """
-    if not external:
-        srcs += [_pkg_sources(name, deps, True)]
     test_package = name + '_lib'
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
@@ -629,15 +641,9 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         _generate_import_config=False,
         import_path=test_package,
     )
-    import_config = build_rule(
-        name=f'_{name}#lib_import_config',
-        cmd = _write_import_config_cmd(test_package, test_package),
-        outs = [f'{test_package}.importconfig'],
-        visibility=visibility,
-        test_only=True,
-        labels=labels,
-    )
+
     if cgo:
+        archive_name = test_package + "_cgo"
         lib_rule = _merge_cgo_obj(
             name = name,
             tag='cgo',
@@ -646,8 +652,19 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
             labels = labels + ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
             test_only = True,
             deps = deps,
+            package=test_package + "_cgo",
         )
+    else:
+        archive_name = test_package
 
+    import_config = build_rule(
+        name=f'_{name}#lib_import_config',
+        cmd = _write_import_config_cmd(archive_name, test_package),
+        outs = [f'{test_package}.importconfig'],
+        visibility=visibility,
+        test_only=True,
+        labels=labels,
+    )
     main_rule = go_test_main(
         name = name,
         _tag = 'main',
@@ -739,8 +756,6 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
                      used to contruct the list of definitions passed to the linker.
        test_only (bool): If True, is only visible to test rules.
     """
-    if not external:
-        srcs += [_pkg_sources(name, deps, test_only)]
     test_package = name + '_lib'
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
@@ -1555,7 +1570,7 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
     package_flag = f" -p {import_path}" if import_path else ""
     cmds = {
         'dbg': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} -N -l $SRCS_GO',
-        'opt': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} $SRCS_GO',
+        'opt': f'{prefix}; {filter_cmd}{compile_cmd} $SRCS_GO',
     }
     if cover:
         cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd} $SRCS_GO'
