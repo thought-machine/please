@@ -21,7 +21,7 @@ func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options
 	} else if options != "" {
 		return strings.ReplaceAll(options, ",", " | ")
 	} else if name == "version" {
-		return core.PleaseVersion.String() // keep it up to date!
+		return core.RawVersion // keep it up to date!
 	} else if t.Kind() == reflect.String {
 		if f.String() != "" {
 			return f.String()

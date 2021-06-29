@@ -168,7 +168,7 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, pre
 	if config.Please.Version.Major == 0 {
 		// Specific version isn't set, only update on `plz update`.
 		if !updateCommand {
-			config.Please.Version.Set(core.PleaseVersion.String())
+			config.Please.Version.Set(core.RawVersion)
 			return false
 		}
 		config.Please.Version = findLatestVersion(config.Please.DownloadLocation.String(), prerelease)

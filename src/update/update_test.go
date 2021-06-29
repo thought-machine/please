@@ -31,9 +31,9 @@ func (*fakeLogBackend) Log(level logging.Level, calldepth int, rec *logging.Reco
 }
 
 func TestVerifyNewPlease(t *testing.T) {
-	assert.True(t, verifyNewPlease("src/please", core.PleaseVersion.String()))
+	assert.True(t, verifyNewPlease("src/please", core.RawVersion))
 	assert.False(t, verifyNewPlease("src/please", "wibble"))
-	assert.False(t, verifyNewPlease("wibble", core.PleaseVersion.String()))
+	assert.False(t, verifyNewPlease("wibble", core.RawVersion))
 }
 
 func TestFindLatestVersion(t *testing.T) {
@@ -82,7 +82,7 @@ func TestDownloadNewPlease(t *testing.T) {
 
 func TestShouldUpdateVersionsMatch(t *testing.T) {
 	c := makeConfig("shouldupdate")
-	c.Please.Version.Set(core.PleaseVersion.String())
+	c.Please.Version.Set(core.RawVersion)
 	// Versions match, update is never needed
 	assert.False(t, shouldUpdate(c, false, false, false))
 	assert.False(t, shouldUpdate(c, true, true, false))
@@ -133,7 +133,7 @@ func TestShouldUpdateNoVersion(t *testing.T) {
 
 func TestDownloadAndLinkPlease(t *testing.T) {
 	c := makeConfig("downloadandlink")
-	c.Please.Version.UnmarshalFlag(core.PleaseVersion.String())
+	c.Please.Version.UnmarshalFlag(core.RawVersion)
 	newPlease := downloadAndLinkPlease(c, false, true)
 	assert.True(t, core.PathExists(newPlease))
 }
