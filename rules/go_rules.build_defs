@@ -205,6 +205,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             _all_srcs = _all_srcs,
             _generate_import_config=False,
             labels=labels,
+            import_path=import_path,
         )
         asm_rule = build_rule(
             name = name,
@@ -271,7 +272,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         outs = [out]
 
 
-    package_path = _get_import_path(import_path)
+    package_path = _get_import_path(package, import_path)
     return build_rule(
         name=name,
         srcs=srcs,
@@ -327,17 +328,11 @@ def _trim_import_path(pkg):
     else:
         return pkg
 
-def _write_import_config_cmd(name, import_path):
-    import_path = _get_import_path(import_path)
-    package_file = f"packagefile {import_path}=$PKG_DIR/{name}.a"
+def _write_import_config_cmd(package, import_path):
+    import_path = _get_import_path(package, import_path)
+    return f"echo packagefile {import_path}=$PKG_DIR/{package}.a >> $OUT"
 
-    # TODO(jpoole): This is for backwards compatibility and should be removed in v17. If people use this import path,
-    #   debug won't work.
-    if package_name() and not package_name().endswith(name):
-        package_file = f"{package_file}\npackagefile {import_path}/{name}=$PKG_DIR/{name}.a"
-    return f'echo "{package_file}" >> $OUT'
-
-def _get_import_path(import_path=""):
+def _get_import_path(package, import_path=""):
     if import_path:
         return import_path
 
@@ -345,11 +340,16 @@ def _get_import_path(import_path=""):
 
     if CONFIG.GO_IMPORT_PATH:
         if pkg:
-            return f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
+            path = f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
         else:
-            return CONFIG.GO_IMPORT_PATH
+            path = CONFIG.GO_IMPORT_PATH
+    else:
+        path = pkg
 
-    return pkg
+    # TODO(jpoole): this isn't really necessary and isn't how go works. We could probably remove this for v17.
+    if path.endswith(package):
+        return path
+    return f"{path}/{package}"
 
 def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 package:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
@@ -409,7 +409,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
 
     # Resolve the import_path early
     # _write_import_config_cmd won't resolve it again
-    import_path = _get_import_path(import_path)
+    import_path = _get_import_path(package or name, import_path)
 
     cgo_rule = build_rule(
         name = name,
