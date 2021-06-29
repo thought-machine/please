@@ -34,7 +34,9 @@ import (
 )
 
 var downloadErrors = prometheus.NewCounter(prometheus.CounterOpts{
-	Name: "tree_digest_download_eof_error",
+	Namespace: "plz",
+	Subsystem: "remote",
+	Name: "tree_digest_download_eof_errors_total",
 	Help: "Number of times the Unexpected EOF error has been seen during a tree digest download",
 })
 
