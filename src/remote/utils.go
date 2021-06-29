@@ -605,7 +605,7 @@ func (c *Client) contextWithMetadata(target *core.BuildTarget) context.Context {
 		CorrelatedInvocationsId: c.state.Config.Remote.BuildID,
 		ToolDetails: &pb.ToolDetails{
 			ToolName:    "please",
-			ToolVersion: core.RawVersion,
+			ToolVersion: core.PleaseVersion,
 		},
 	})
 	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs(key, string(b)))

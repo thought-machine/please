@@ -28,7 +28,7 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 		DownloadLocation string
 		Tools            []string
 	}{
-		PLZVersion:       core.RawVersion,
+		PLZVersion:       core.PleaseVersion,
 		OS:               runtime.GOOS,
 		Arch:             runtime.GOARCH,
 		DownloadLocation: config.Please.DownloadLocation.String(),

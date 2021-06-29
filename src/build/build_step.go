@@ -1074,7 +1074,7 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent", fmt.Sprintf("please.build/%s", core.RawVersion))
+	req.Header.Set("User-Agent", fmt.Sprintf("please.build/%s", core.PleaseVersion))
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err

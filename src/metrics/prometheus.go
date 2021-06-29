@@ -11,7 +11,7 @@ import (
 var log = logging.MustGetLogger("metrics")
 
 var registerer = prometheus.WrapRegistererWith(prometheus.Labels{
-	"version": core.RawVersion,
+	"version": core.PleaseVersion,
 }, prometheus.DefaultRegisterer)
 
 // Push performs a single push of all registered metrics to the pushgateway (if configured).

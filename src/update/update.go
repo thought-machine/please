@@ -45,7 +45,7 @@ const milestoneURL = "https://please.build/milestones"
 
 // pleaseVersion returns the current version of Please as a semver.
 func pleaseVersion() semver.Version {
-	return *semver.New(core.RawVersion)
+	return *semver.New(core.PleaseVersion)
 }
 
 // CheckAndUpdate checks whether we should update Please and does so if needed.
@@ -173,7 +173,7 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, pre
 	if config.Please.Version.Major == 0 {
 		// Specific version isn't set, only update on `plz update`.
 		if !updateCommand {
-			config.Please.Version.Set(core.RawVersion)
+			config.Please.Version.Set(core.PleaseVersion)
 			return false
 		}
 		config.Please.Version = findLatestVersion(config.Please.DownloadLocation.String(), prerelease)

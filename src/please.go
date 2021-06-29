@@ -519,7 +519,7 @@ var buildFunctions = map[string]func() int{
 		return 1
 	},
 	"update": func() int {
-		fmt.Printf("Up to date (version %s).\n", core.RawVersion)
+		fmt.Printf("Up to date (version %s).\n", core.PleaseVersion)
 		return 0 // We'd have died already if something was wrong.
 	},
 	"op": func() int {
@@ -1078,7 +1078,7 @@ func initBuild(args []string) string {
 	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions)
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
 	if opts.HelpFlags.Version {
-		fmt.Printf("Please version %s\n", core.RawVersion)
+		fmt.Printf("Please version %s\n", core.PleaseVersion)
 		os.Exit(0) // Ignore other flags if --version was passed.
 	} else if opts.HelpFlags.Help {
 		// Attempt to read config files to produce help for aliases.
