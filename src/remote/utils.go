@@ -22,7 +22,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/prometheus/client_golang/prometheus"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -34,16 +33,7 @@ import (
 	"github.com/thought-machine/please/src/metrics"
 )
 
-var downloadErrors = prometheus.NewCounter(prometheus.CounterOpts{
-	Namespace: "plz",
-	Subsystem: "remote",
-	Name:      "tree_digest_download_eof_errors_total",
-	Help:      "Number of times the Unexpected EOF error has been seen during a tree digest download",
-})
-
-func init() {
-	metrics.MustRegister(downloadErrors)
-}
+var downloadErrors = metrics.NewCounter("plz", "tree_digest_download_eof_errors_total", "Number of times the Unexpected EOF error has been seen during a tree digest download")
 
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"

@@ -29,3 +29,15 @@ func Push(config *core.Configuration) {
 func MustRegister(cs ...prometheus.Collector) {
 	registerer.MustRegister(cs...)
 }
+
+// NewCounter creates & registers a new counter.
+func NewCounter(subsystem, name, help string) prometheus.Counter {
+	counter := prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "plz",
+		Subsystem: subsystem,
+		Name:      name,
+		Help:      help,
+	})
+	MustRegister(counter)
+	return counter
+}
