@@ -25,7 +25,7 @@ var replacer = strings.NewReplacer(
 )
 
 // FindCoverVars searches the given directory recursively to find all Go files with coverage variables.
-func FindCoverVars(dir, importPath string, exclude, srcs []string) ([]CoverVar, error) {
+func FindCoverVars(dir, importPath, testPackage string, exclude, srcs []string) ([]CoverVar, error) {
 	if dir == "" {
 		return nil, nil
 	}
@@ -44,7 +44,7 @@ func FindCoverVars(dir, importPath string, exclude, srcs []string) ([]CoverVar, 
 				return filepath.SkipDir
 			}
 		} else if strings.HasSuffix(name, ".a") && !strings.ContainsRune(path.Base(name), '#') {
-			vars, err := findCoverVars(name, importPath, srcs)
+			vars, err := findCoverVars(name, importPath, testPackage, srcs)
 			if err != nil {
 				return err
 			}
@@ -56,7 +56,7 @@ func FindCoverVars(dir, importPath string, exclude, srcs []string) ([]CoverVar, 
 }
 
 // findCoverVars scans a directory containing a .a file for any go files.
-func findCoverVars(filepath, importPath string, srcs []string) ([]CoverVar, error) {
+func findCoverVars(filepath, importPath, testPackage string, srcs []string) ([]CoverVar, error) {
 	dir, file := path.Split(filepath)
 	dir = strings.TrimRight(dir, "/")
 	if dir == "" {
@@ -66,7 +66,13 @@ func findCoverVars(filepath, importPath string, srcs []string) ([]CoverVar, erro
 	if err != nil {
 		return nil, err
 	}
+	// TODO(jpoole): the import path should always be the path to the dir and doesn't depend on the archive name.
+	// 	 remove this in v17
 	importPath = collapseFinalDir(strings.TrimSuffix(filepath, ".a"), importPath)
+	if dir == os.Getenv("PKG_DIR") {
+		importPath = testPackage
+		dir = "."
+	}
 	ret := make([]CoverVar, 0, len(fi))
 	for _, info := range fi {
 		name := info.Name()
@@ -76,6 +82,7 @@ func findCoverVars(filepath, importPath string, srcs []string) ([]CoverVar, erro
 		} else if strings.HasSuffix(name, ".go") && !info.IsDir() && !contains(path.Join(dir, name), srcs) {
 			if ok, err := build.Default.MatchFile(dir, name); ok && err == nil {
 				v := "GoCover_" + replacer.Replace(name)
+
 				ret = append(ret, coverVar(dir, importPath, v))
 			}
 		}

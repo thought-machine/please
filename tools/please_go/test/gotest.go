@@ -4,7 +4,7 @@ import "log"
 
 // PleaseGoTest will generate the test main for the provided sources
 func PleaseGoTest(dir, importPath, testPackage, output string, sources, exclude []string, isBenchmark bool) {
-	coverVars, err := FindCoverVars(dir, importPath, exclude, sources)
+	coverVars, err := FindCoverVars(dir, importPath, testPackage, exclude, sources)
 	if err != nil {
 		log.Fatalf("Error scanning for coverage: %s", err)
 	}
