@@ -48,7 +48,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20210313
+       - image: thoughtmachine/please_ubuntu:20210701
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
@@ -136,7 +136,7 @@ jobs:
    build-darwin-arm64:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20200812
+       - image: thoughtmachine/please_ubuntu:20210701
      resource_class: large
      steps:
        - checkout
@@ -238,7 +238,7 @@ jobs:
    test-rex:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20200812
+       - image: thoughtmachine/please_ubuntu:20210701
      resource_class: large
      steps:
        - checkout
@@ -255,7 +255,7 @@ jobs:
    test-http-cache:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20200812
+       - image: thoughtmachine/please_ubuntu:20210701
      resource_class: large
      steps:
        - checkout
@@ -293,7 +293,7 @@ jobs:
    # Runs a benchmarking test and records some performance results.
    perf-test:
      docker:
-       - image: thoughtmachine/please_ubuntu:20200812
+       - image: thoughtmachine/please_ubuntu:20210701
      resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
      steps:
        - checkout
