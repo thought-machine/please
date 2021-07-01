@@ -1183,20 +1183,12 @@ func (target *BuildTarget) AddTestTool(tool BuildInput) {
 	}
 }
 
-// TestTools returns all the test tool paths for this rule.
-func (target *BuildTarget) TestTools() []BuildInput {
-	ret := target.testTools[:]
-	if target.namedTestTools != nil {
-		keys := make([]string, 0, len(target.namedTestTools))
-		for k := range target.namedTestTools {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			ret = append(ret, target.namedTestTools[k]...)
-		}
+// AllTestTools returns all the test tool paths for this rule.
+func (target *BuildTarget) AllTestTools() []BuildInput {
+	if target.namedTestTools == nil {
+		return target.testTools
 	}
-	return ret
+	return target.allBuildInputs(target.testTools, target.namedTestTools)
 }
 
 func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
@@ -1316,25 +1308,32 @@ func (target *BuildTarget) getCommand(state *BuildState, commands map[string]str
 
 // AllSources returns all the sources of this rule.
 func (target *BuildTarget) AllSources() []BuildInput {
-	ret := target.Sources[:]
-	if target.NamedSources != nil {
-		keys := make([]string, 0, len(target.NamedSources))
-		for k := range target.NamedSources {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			ret = append(ret, target.NamedSources[k]...)
-		}
+	if target.NamedSources == nil {
+		return target.Sources
 	}
+	return target.allBuildInputs(target.Sources, target.NamedSources)
+}
+
+func (target *BuildTarget) allBuildInputs(unnamed []BuildInput, named map[string][]BuildInput) []BuildInput {
+	ret := unnamed
+	keys := make([]string, 0, len(named))
+	for k := range named {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		ret = append(ret, named[k]...)
+	}
+
 	return ret
 }
 
 // AllLocalSources returns all the "local" sources of this rule, i.e. all sources that are
 // actually sources in the repo, not other rules or system srcs etc.
 func (target *BuildTarget) AllLocalSources() []string {
-	ret := []string{}
-	for _, src := range target.AllSources() {
+	srcs := target.AllSources()
+	ret := make([]string, 0, len(srcs))
+	for _, src := range srcs {
 		if file, ok := src.(FileLabel); ok {
 			ret = append(ret, file.Paths(nil)[0])
 		}
@@ -1359,20 +1358,13 @@ func (target *BuildTarget) HasAbsoluteSource(source string) bool {
 	return target.HasSource(strings.TrimPrefix(source, target.Label.PackageName+"/"))
 }
 
-// AllData returns all the data files for this rule.
+// AllData returns all the sources of this rule.
 func (target *BuildTarget) AllData() []BuildInput {
-	ret := target.Data[:]
-	if target.namedData != nil {
-		keys := make([]string, 0, len(target.namedData))
-		for k := range target.namedData {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			ret = append(ret, target.namedData[k]...)
-		}
+	if target.namedData == nil {
+		return target.Data
 	}
-	return ret
+
+	return target.allBuildInputs(target.Data, target.namedData)
 }
 
 func (target *BuildTarget) NamedData() map[string][]BuildInput {
@@ -1391,14 +1383,9 @@ func (target *BuildTarget) AllDataPaths(graph *BuildGraph) []string {
 // AllTools returns all the tools for this rule in some canonical order.
 func (target *BuildTarget) AllTools() []BuildInput {
 	if target.namedTools == nil {
-		return target.Tools // Leave them in input order, that's sufficiently consistent.
+		return target.Tools
 	}
-	tools := make([]BuildInput, len(target.Tools), len(target.Tools)+len(target.namedTools)*2)
-	copy(tools, target.Tools)
-	for _, name := range target.ToolNames() {
-		tools = append(tools, target.namedTools[name]...)
-	}
-	return tools
+	return target.allBuildInputs(target.Tools, target.namedTools)
 }
 
 // ToolNames returns an ordered list of tool names.

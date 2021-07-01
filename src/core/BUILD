@@ -185,8 +185,12 @@ go_test(
 
 benchmark(
     name = "build_target_benchmark",
-    srcs = ["build_target_benchmark.go"],
-    deps = [
-        ":core",
-    ],
+    srcs = ["build_target_benchmark_test.go"],
+    deps = [":core"],
+)
+
+go_benchmark(
+    name = "utils_benchmark",
+    srcs = ["utils_benchmark_test.go"],
+    deps = [":core"],
 )
