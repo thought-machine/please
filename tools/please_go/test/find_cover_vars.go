@@ -25,7 +25,7 @@ var replacer = strings.NewReplacer(
 )
 
 // FindCoverVars searches the given directory recursively to find all Go files with coverage variables.
-func FindCoverVars(dir, importPath, testPackage string, exclude, srcs []string) ([]CoverVar, error) {
+func FindCoverVars(dir, importPath, testPackage string, external bool, exclude, srcs []string) ([]CoverVar, error) {
 	if dir == "" {
 		return nil, nil
 	}
@@ -33,7 +33,7 @@ func FindCoverVars(dir, importPath, testPackage string, exclude, srcs []string) 
 	for _, e := range exclude {
 		excludeMap[e] = struct{}{}
 	}
-	ret := []CoverVar{}
+	var ret []CoverVar
 
 	err := filepath.Walk(dir, func(name string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -44,7 +44,7 @@ func FindCoverVars(dir, importPath, testPackage string, exclude, srcs []string) 
 				return filepath.SkipDir
 			}
 		} else if strings.HasSuffix(name, ".a") && !strings.ContainsRune(path.Base(name), '#') {
-			vars, err := findCoverVars(name, importPath, testPackage, srcs)
+			vars, err := findCoverVars(name, importPath, testPackage, external, srcs)
 			if err != nil {
 				return err
 			}
@@ -56,23 +56,25 @@ func FindCoverVars(dir, importPath, testPackage string, exclude, srcs []string) 
 }
 
 // findCoverVars scans a directory containing a .a file for any go files.
-func findCoverVars(filepath, importPath, testPackage string, srcs []string) ([]CoverVar, error) {
+func findCoverVars(filepath, importPath, testPackage string, external bool, srcs []string) ([]CoverVar, error) {
 	dir, file := path.Split(filepath)
 	dir = strings.TrimRight(dir, "/")
 	if dir == "" {
 		dir = "."
 	}
+
+	packagePath := importPath
+	if !external && dir == os.Getenv("PKG_DIR") {
+		packagePath = testPackage
+	} else if dir != "." {
+		packagePath = collapseFinalDir(strings.TrimSuffix(filepath, ".a"), importPath)
+	}
+
 	fi, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	// TODO(jpoole): the import path should always be the path to the dir and doesn't depend on the archive name.
-	// 	 remove this in v17
-	importPath = collapseFinalDir(strings.TrimSuffix(filepath, ".a"), importPath)
-	if dir == os.Getenv("PKG_DIR") {
-		importPath = testPackage
-		dir = "."
-	}
+
 	ret := make([]CoverVar, 0, len(fi))
 	for _, info := range fi {
 		name := info.Name()
@@ -82,8 +84,7 @@ func findCoverVars(filepath, importPath, testPackage string, srcs []string) ([]C
 		} else if strings.HasSuffix(name, ".go") && !info.IsDir() && !contains(path.Join(dir, name), srcs) {
 			if ok, err := build.Default.MatchFile(dir, name); ok && err == nil {
 				v := "GoCover_" + replacer.Replace(name)
-
-				ret = append(ret, coverVar(dir, importPath, v))
+				ret = append(ret, coverVar(dir, packagePath, v))
 			}
 		}
 	}
@@ -120,8 +121,10 @@ func collapseFinalDir(s, importPath string) string {
 	if importPath == "" {
 		s = strings.TrimPrefix(s, "src/")
 	}
+	// TODO(jpoole): the import path should always be the path to the dir and doesn't depend on the archive name.
+	// 	 remove this in v17
 	if path.Base(path.Dir(s)) == path.Base(s) {
-		return path.Dir(s)
+		s = path.Dir(s)
 	}
-	return s
+	return filepath.Join(importPath, s)
 }

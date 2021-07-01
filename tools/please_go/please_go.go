@@ -38,6 +38,7 @@ var opts = struct {
 		TestPackage string   `short:"t" long:"test_package" description:"The import path of the test package"`
 		ImportPath  string   `short:"i" long:"import_path" description:"Full import path to the package"`
 		Benchmark   bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
+		External   bool      `short:"e" long:"external" description:"Whether the test package is external"`
 		Args        struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
@@ -86,6 +87,7 @@ var subCommands = map[string]func() int{
 			opts.Test.Args.Sources,
 			opts.Test.Exclude,
 			opts.Test.Benchmark,
+			opts.Test.External,
 		)
 		return 0
 	},
