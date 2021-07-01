@@ -23,7 +23,7 @@ def benchmark(name:str, srcs:list, deps:list=[], data:list=[], visibility:list=N
         binary = True,
         test_only=True,
         deps = [results],
-        labels = labels,
+        labels = labels + ["benchmark"],
         visibility = visibility,
     )
 

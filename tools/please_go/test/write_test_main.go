@@ -29,7 +29,7 @@ type testDescr struct {
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(pkgDir, importPath string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark bool) error {
+func WriteTestMain(importPath, testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark bool) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func WriteTestMain(pkgDir, importPath string, sources []string, output string, c
 	testDescr.CoverVars = coverVars
 	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || testDescr.Main != "" {
 		// Can't set this if there are no test functions, it'll be an unused import.
-		testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, importPath, testDescr.CoverVars)
+		testDescr.Imports = extraImportPaths(testPackage, testDescr.Package, importPath, testDescr.CoverVars)
 	}
 
 	testDescr.Benchmark = benchmark
@@ -54,25 +54,15 @@ func WriteTestMain(pkgDir, importPath string, sources []string, output string, c
 }
 
 // extraImportPaths returns the set of extra import paths that are needed.
-func extraImportPaths(pkg, pkgDir, importPath string, coverVars []CoverVar) []string {
-	isRoot := pkgDir == "" || pkgDir == "."
-
-	pkgDir = collapseFinalDir(path.Join(pkgDir, pkg), importPath)
-
+func extraImportPaths(testPackage, alias, importPath string, coverVars []CoverVar) []string {
 	ret := make([]string, 0, len(coverVars)+1)
-	// If we're in the root of the repo, and the import path matches the root package, collapse that as we import it via
-	// the module name
-	if isRoot && strings.HasSuffix(importPath, pkg) {
-		ret = append(ret, fmt.Sprintf("%s \"%s\"", pkg, importPath))
-	} else {
-		ret = append(ret, fmt.Sprintf("%s \"%s\"", pkg, path.Join(importPath, pkgDir)))
-	}
+	ret = append(ret, fmt.Sprintf("%s \"%s\"", alias, testPackage))
 
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)
 		coverVars[i].ImportName = name
 
-		// Same thing as above: import the module's root package via the module name if they're the same name
+		// Import the module's root package via the module name if they're the same name
 		if (v.Dir == "." || v.Dir == "") && v.ImportPath == filepath.Base(importPath) {
 			ret = append(ret, fmt.Sprintf("%s \"%s\"", name, importPath))
 		} else {
