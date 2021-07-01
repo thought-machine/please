@@ -33,6 +33,8 @@ import (
 	"github.com/thought-machine/please/src/metrics"
 )
 
+var downloadErrors = metrics.NewCounter("plz", "tree_digest_download_eof_errors_total", "Number of times the Unexpected EOF error has been seen during a tree digest download")
+
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"
 
@@ -73,7 +75,7 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	for _, d := range ar.OutputDirectories {
 		tree := &pb.Tree{}
 		if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
-			metrics.DownloadErrorCounterInc()
+			downloadErrors.Inc()
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 
@@ -593,7 +595,7 @@ func (c *Client) contextWithMetadata(target *core.BuildTarget) context.Context {
 		CorrelatedInvocationsId: c.state.Config.Remote.BuildID,
 		ToolDetails: &pb.ToolDetails{
 			ToolName:    "please",
-			ToolVersion: core.PleaseVersion.String(),
+			ToolVersion: core.PleaseVersion,
 		},
 	})
 	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs(key, string(b)))

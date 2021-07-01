@@ -856,13 +856,20 @@ go_module(
     ],
     licences = ["Apache 2.0"],
     module = "github.com/prometheus/client_golang",
-    version = "v1.0.0",
+    version = "v1.11.0",
     deps = [
         ":prometheus_common",
         ":prometheus_model",
         ":prometheus_procfs",
         ":quantile",
+        ":xxhash",
     ],
+)
+
+go_module(
+    name = "xxhash",
+    module = "github.com/cespare/xxhash/v2",
+    version = "v2.1.1",
 )
 
 go_module(
@@ -884,7 +891,7 @@ go_module(
         "internal/bitbucket.org/ww/goautoneg",
     ],
     module = "github.com/prometheus/common",
-    version = "v0.19.0",
+    version = "v0.26.0",
     deps = [
         ":pbutil",
         ":prometheus_model",

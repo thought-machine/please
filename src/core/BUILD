@@ -1,15 +1,5 @@
 subinclude("//build_defs:benchmark")
 
-genrule(
-    name = "version",
-    srcs = {
-        "go": ["version.go"],
-        "version": ["//:version"],
-    },
-    outs = ["versioned.go"],
-    cmd = "sed \"s/1.0.9999/`cat $SRCS_VERSION`/\" $SRCS_GO > \"$OUT\"",
-)
-
 go_library(
     name = "core",
     srcs = glob(
@@ -17,11 +7,8 @@ go_library(
         exclude = [
             "*_benchmark.go",
             "*_test.go",
-            "version.go",
         ],
-    ) + [
-        ":version",
-    ],
+    ),
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
@@ -36,7 +23,6 @@ go_library(
         "//third_party/go:godirwalk",
         "//third_party/go:logging",
         "//third_party/go:psutil",
-        "//third_party/go:semver",
         "//third_party/go:shlex",
         "//third_party/go:xattr",
     ],

@@ -43,6 +43,11 @@ var httpClient *retryablehttp.Client
 
 const milestoneURL = "https://please.build/milestones"
 
+// pleaseVersion returns the current version of Please as a semver.
+func pleaseVersion() semver.Version {
+	return *semver.New(core.PleaseVersion)
+}
+
 // CheckAndUpdate checks whether we should update Please and does so if needed.
 // If it requires an update it will never return, it will either die on failure or on success will exec the new Please.
 // Conversely, if an update isn't required it will return. It may adjust the version in the configuration.
@@ -58,9 +63,9 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 		clean(config, updateCommand)
 		return
 	}
-	word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
+	word := describe(config.Please.Version.Semver(), pleaseVersion(), true)
 	if !updateCommand {
-		fmt.Fprintf(os.Stderr, "%s Please from version %s to %s", word, core.PleaseVersion, config.Please.Version.VersionString())
+		fmt.Fprintf(os.Stderr, "%s Please from version %s to %s", word, pleaseVersion(), config.Please.Version.VersionString())
 	}
 
 	// Must lock here so that the update process doesn't race when running two instances
@@ -142,20 +147,20 @@ func printMilestoneMessage(pleaseVersion string) {
 
 // shouldUpdate determines whether we should run an update or not. It returns true iff one is required.
 func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, prerelease bool) bool {
-	if config.Please.Version.Semver() == core.PleaseVersion {
+	if config.Please.Version.Semver() == pleaseVersion() {
 		return false // Version matches, nothing to do here.
-	} else if config.Please.Version.IsGTE && config.Please.Version.LessThan(core.PleaseVersion) {
+	} else if config.Please.Version.IsGTE && config.Please.Version.LessThan(pleaseVersion()) {
 		if !updateCommand {
 			return false // Version specified is >= and we are above it, nothing to do unless it's `plz update`
 		}
 		// Find the latest available version. Update if it's newer than the current one.
 		config.Please.Version = findLatestVersion(config.Please.DownloadLocation.String(), prerelease)
-		return config.Please.Version.Semver() != core.PleaseVersion
+		return config.Please.Version.Semver() != pleaseVersion()
 	} else if (!updatesEnabled || !config.Please.SelfUpdate) && !updateCommand {
 		// Update is required but has been skipped (--noupdate or whatever)
 		if config.Please.Version.Major != 0 {
-			word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
-			log.Warning("%s to Please version %s skipped (current version: %s)", word, config.Please.Version, core.PleaseVersion)
+			word := describe(config.Please.Version.Semver(), pleaseVersion(), true)
+			log.Warning("%s to Please version %s skipped (current version: %s)", word, config.Please.Version, pleaseVersion())
 		}
 		return false
 	} else if config.Please.Location == "" {
@@ -168,7 +173,7 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, pre
 	if config.Please.Version.Major == 0 {
 		// Specific version isn't set, only update on `plz update`.
 		if !updateCommand {
-			config.Please.Version.Set(core.PleaseVersion.String())
+			config.Please.Version.Set(core.PleaseVersion)
 			return false
 		}
 		config.Please.Version = findLatestVersion(config.Please.DownloadLocation.String(), prerelease)
