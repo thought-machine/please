@@ -1,3 +1,20 @@
+Version 16.2.0
+--------------
+    * Fixed issue where Please would attempt to use xattrs on unsupported filesystems
+      under some circumstances #1866
+    * Fixed issue were Please status output during builds would stop updating after a
+      failure #1868
+    * Various performance work #1847 #1848 #1869 #1872 #1876 #1877 #1881 #1885
+      #1878 #1888
+    * Fixed issue where `post_build` functions would not have config overrides set
+      via `package()` in some circumstances #1871
+    * Added an `is_semver()` builtin to check if a string matches the semver format
+    * `c_binary()` now allows defines to be a dictionary
+    * Applied the correct expected packages to `go tool compile` invocations to address
+      some issues with debug symbols #1896
+    * Added a `gitlab_repo()` rule which works similarly to `github_repo()` #1898
+
+
 Version 16.1.1
 --------------
     * Fixed an issue where debug symbols didn't work for go targets build with Go 1.15+
