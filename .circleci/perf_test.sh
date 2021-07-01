@@ -23,6 +23,8 @@ else
     aws s3 cp results.json "${BUCKET}/all_results.jsonl"
 fi
 
+rm -rf tree
+
 echo "Running benchmarks..."
 $PLZ build -i benchmark -p -v notice -o "buildconfig.benchmark-revision:${CIRCLE_SHA1}"
 
