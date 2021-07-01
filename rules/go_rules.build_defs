@@ -129,6 +129,8 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
     link_labels = []
     src_labels = []
     private = out.startswith('_')
+    package_path = _get_import_path(package, import_path)
+
 
     # We could just depend on go_src for all our deps but that would mean bringing in srcs for targets outside this
     # package like third party sources which is especially slow on systems with slow syscall performance (macOS)
@@ -205,7 +207,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             _all_srcs = _all_srcs,
             _generate_import_config=False,
             labels=labels,
-            import_path=import_path,
+            import_path=package_path,
         )
         asm_rule = build_rule(
             name = name,
@@ -272,7 +274,6 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         outs = [out]
 
 
-    package_path = _get_import_path(package, import_path)
     return build_rule(
         name=name,
         srcs=srcs,
@@ -458,6 +459,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
         complete = False,
         deps = deps,
         _generate_import_config=False,
+        import_path=import_path,
     )
 
     output = package if package else name
@@ -1573,7 +1575,7 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
     package_flag = f" -p {import_path}" if import_path else ""
     cmds = {
         'dbg': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} -N -l $SRCS_GO',
-        'opt': f'{prefix}; {filter_cmd}{compile_cmd} $SRCS_GO',
+        'opt': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} $SRCS_GO',
     }
     if cover:
         cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd} $SRCS_GO'
