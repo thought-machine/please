@@ -98,8 +98,8 @@ func TestExtraImportPaths(t *testing.T) {
 
 func TestExtraImportPathsWithImportPath(t *testing.T) {
 	assert.Equal(t, extraImportPaths("core", "core", []CoverVar{
-		{ImportPath: "src/core"},
-		{ImportPath: "output"},
+		{ImportPath: "github.com/thought-machine/please/src/core"},
+		{ImportPath: "github.com/thought-machine/please/output"},
 	}), []string{
 		"core \"core\"",
 		"_cover0 \"github.com/thought-machine/please/src/core\"",
