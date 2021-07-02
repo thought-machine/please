@@ -39,6 +39,30 @@ var downloadErrors = metrics.NewCounter(
 	"Number of times the Unexpected EOF error has been seen during a tree digest download",
 )
 
+var actionCacheHits = metrics.NewCounter(
+	"remote",
+	"action_cache_hits_total",
+	"Number of build actions successfully retrieved from the action cache",
+)
+
+var localCacheHits = metrics.NewCounter(
+	"remote",
+	"local_cache_hits_total",
+	"Number of build actions successfully retrieved from the local cache",
+)
+
+var cacheMisses = metrics.NewCounter(
+	"remote",
+	"cache_misses_total",
+	"Number of uncached build actions that were rebuilt",
+)
+
+var downloadDurations = metrics.NewHistogram(
+	"remote",
+	"download_duration_seconds",
+	"Download durations of remote artifacts, in seconds",
+)
+
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"
 

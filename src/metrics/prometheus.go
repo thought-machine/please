@@ -14,6 +14,10 @@ var registerer = prometheus.WrapRegistererWith(prometheus.Labels{
 	"version": core.PleaseVersion,
 }, prometheus.DefaultRegisterer)
 
+// defBuckets are the default histogram buckets (which are a bit longer than Prometheus'
+// default since we have a bunch of operations that can run longer than theirs)
+var defBuckets = []float64{.05, .1, .5, 1.0, 5, 10, 50, 100, 500}
+
 // Push performs a single push of all registered metrics to the pushgateway (if configured).
 func Push(config *core.Configuration) {
 	if config.Metrics.PrometheusGatewayURL == "" {
@@ -40,4 +44,34 @@ func NewCounter(subsystem, name, help string) prometheus.Counter {
 	})
 	MustRegister(counter)
 	return counter
+}
+
+// NewHistogram creates & registers a new histogram.
+func NewHistogram(subsystem, name, help string) prometheus.Histogram {
+	histogram := prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "plz",
+		Subsystem: subsystem,
+		Name:      name,
+		Help:      help,
+		Buckets:   defBuckets,
+	})
+}
+
+// Duration provides a convenience wrapper for observing histogram durations.
+// Use it like so:
+// defer metrics.Duration(histogram).Observe()
+func Duration(histogram prometheus.Histogram) Observer {
+	return Observer{
+		hist:  histogram,
+		start: time.Now(),
+	}
+}
+
+type Observer struct {
+	hist  prometheus.Histogram
+	start time.Time
+}
+
+func (obs Observer) Observe() {
+	obs.hist.Observe(time.Since(obs.start).Seconds())
 }
