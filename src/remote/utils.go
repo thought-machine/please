@@ -33,7 +33,11 @@ import (
 	"github.com/thought-machine/please/src/metrics"
 )
 
-var downloadErrors = metrics.NewCounter("plz", "tree_digest_download_eof_errors_total", "Number of times the Unexpected EOF error has been seen during a tree digest download")
+var downloadErrors = metrics.NewCounter(
+	"remote",
+	"tree_digest_download_eof_errors_total",
+	"Number of times the Unexpected EOF error has been seen during a tree digest download",
+)
 
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"
