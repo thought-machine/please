@@ -675,6 +675,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         test_only = True,
         labels = labels,
         test_package = test_package,
+        external = external,
     )
 
     deps += [lib_rule, import_config]
@@ -798,9 +799,10 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         _tag = 'main',
         srcs = srcs,
         deps = deps,
-        benchmark=True,
+        benchmark = True,
         test_only = test_only,
-        test_package=test_package,
+        test_package = test_package,
+        external = external,
     )
     deps += [lib_rule, import_config]
     lib_rule = go_library(
@@ -834,7 +836,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         test_only=test_only,
     )
 
-def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
+def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False, external=False,
                  deps:list=[], visibility:list=None, _post_build:function=None, _tag=None, benchmark=False,
                  labels:list=[]):
     """Outputs the main file for a Go test.
@@ -854,7 +856,8 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
       labels: Any labels to apply to this rule.
     """
     test_package = test_package or _get_import_path()
-    cmd = f'"$TOOLS" testmain --test_package "{test_package}" --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
+    external_flag = " --external" if external else ""
+    cmd = f'"$TOOLS" testmain --test_package "{test_package}"{external_flag} --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
     if benchmark:
         cmd = f'{cmd} --benchmark'
     cmds = {
