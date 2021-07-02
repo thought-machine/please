@@ -26,6 +26,7 @@ var opts = struct {
 	Stamp              string        `long:"stamp" description:"Unique value used to derive cache directory for pex"`
 	InterpreterOptions string        `long:"interpreter_options" description:"Options-string to pass to the python interpreter"`
 	AddTestRunnerDeps  bool          `long:"add_test_runner_deps" description:"True if test-runner dependencies should be baked into test binaries"`
+	StripPackageName   string        `long:"strip_package_name" description:"If present it indicates the package prefix name to remove"`
 }{
 	Usage: `
 please_pex is a tool to create .pex files for Python.
@@ -40,7 +41,7 @@ func main() {
 	cli.ParseFlagsOrDie("please_pex", &opts)
 	cli.InitLogging(opts.Verbosity)
 	w := pex.NewWriter(
-		opts.EntryPoint, opts.Interpreter, opts.InterpreterOptions, opts.Stamp,
+		opts.EntryPoint, opts.StripPackageName, opts.Interpreter, opts.InterpreterOptions, opts.Stamp,
 		opts.ZipSafe, !opts.Site)
 	if opts.Shebang != "" {
 		w.SetShebang(opts.Shebang, opts.InterpreterOptions)

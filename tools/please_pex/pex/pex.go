@@ -25,6 +25,7 @@ type Writer struct {
 	shebang          string
 	realEntryPoint   string
 	pexStamp         string
+	stripPackageName string
 	testSrcs         []string
 	includeLibs      []string
 	testRunner       string
@@ -32,11 +33,11 @@ type Writer struct {
 }
 
 // NewWriter constructs a new Writer.
-func NewWriter(entryPoint, interpreter, options, stamp string, zipSafe, noSite bool) *Writer {
+func NewWriter(entryPoint, stripPackageName, interpreter, options, stamp string, zipSafe, noSite bool) *Writer {
 	pw := &Writer{
 		zipSafe:        zipSafe,
 		noSite:         noSite,
-		realEntryPoint: toPythonPath(entryPoint),
+		realEntryPoint: toPythonPath(entryPoint, stripPackageName),
 		pexStamp:       stamp,
 	}
 	pw.SetShebang(interpreter, options)
@@ -178,9 +179,17 @@ func pythonBool(b bool) string { //nolint:unused
 }
 
 // toPythonPath converts a normal path to a Python import path.
-func toPythonPath(p string) string {
+// if the stripPackageName is provided, and the path starts with that name
+// the result will have the prefix path stripped.
+func toPythonPath(p string, stripPackageName string) string {
 	ext := path.Ext(p)
-	return strings.ReplaceAll(p[:len(p)-len(ext)], "/", ".")
+	modulePath := strings.ReplaceAll(p[:len(p)-len(ext)], "/", ".")
+
+	if stripPackageName != "" && strings.HasPrefix(p, stripPackageName) {
+		return modulePath[len(stripPackageName)+1:]
+	}
+
+	return modulePath
 }
 
 // mustRead reads the given file from the embedded set. It dies on error.
