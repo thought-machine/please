@@ -49,7 +49,7 @@ func NewCounter(subsystem, name, help string) prometheus.Counter {
 }
 
 // NewHistogram creates & registers a new histogram.
-func NewHistogram(subsystem, name, help string) prometheus.Histogram {
+func NewHistogram(subsystem, name, help string, labels ...string) prometheus.Histogram {
 	histogram := prometheus.NewHistogram(prometheus.HistogramOpts{
 		Namespace: "plz",
 		Subsystem: subsystem,
@@ -61,10 +61,23 @@ func NewHistogram(subsystem, name, help string) prometheus.Histogram {
 	return histogram
 }
 
+// NewLabelledHistogram creates & registers a new histogram with labels.
+func NewLabelledHistogram(subsystem, name, help string, labels []string) *prometheus.HistogramVec {
+	histogram := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "plz",
+		Subsystem: subsystem,
+		Name:      name,
+		Help:      help,
+		Buckets:   defBuckets,
+	}, labels)
+	MustRegister(histogram)
+	return histogram
+}
+
 // Duration provides a convenience wrapper for observing histogram durations.
 // Use it like so:
 // defer metrics.Duration(histogram).Observe()
-func Duration(histogram prometheus.Histogram) Observer {
+func Duration(histogram prometheus.Observer) Observer {
 	return Observer{
 		hist:  histogram,
 		start: time.Now(),
@@ -72,7 +85,7 @@ func Duration(histogram prometheus.Histogram) Observer {
 }
 
 type Observer struct {
-	hist  prometheus.Histogram
+	hist  prometheus.Observer
 	start time.Time
 }
 
