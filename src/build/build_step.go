@@ -25,6 +25,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/worker"
 )
@@ -39,6 +40,42 @@ var httpClient http.Client
 var httpClientOnce sync.Once
 
 var magicSourcesWorkerKey = "WORKER"
+
+var targetsBuilt = metrics.NewCounter(
+	"build",
+	"targets_built_total",
+	"Total number of non-filegroup targets built",
+)
+
+var filegroupsBuilt = metrics.NewCounter(
+	"build",
+	"filegroups_built_total",
+	"Total number of filegroups built",
+)
+
+var targetsUnbuilt = metrics.NewCounter(
+	"build",
+	"targets_unbuilt_total",
+	"Total number of targets that we didn't need to rebuild",
+)
+
+var prepareSourceDurations = metrics.NewHistogram(
+	"build",
+	"prepare_source_duration_seconds",
+	"Time to prepare sources for each target",
+)
+
+var buildDurations = metrics.NewHistogram(
+	"build",
+	"build_duration_seconds",
+	"Time to execute the build action for each target",
+)
+
+var collectOutputDurations = metrics.NewHistogram(
+	"build",
+	"collect_output_duration_seconds",
+	"Time to collect the outputs for each target",
+)
 
 // Build implements the core logic for building a single target.
 func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
@@ -221,6 +258,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 				target.SetState(core.Reused)
 				state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
 				buildLinks(state, target)
+				targetsUnbuilt.Inc()
 				return nil // Nothing needs to be done.
 			}
 			log.Debug("Rebuilding %s after post-build function", target.Label)
@@ -240,8 +278,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 				state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
 			}
 			buildLinks(state, target)
+			filegroupsBuilt.Inc()
 			return nil
 		}
+		defer targetsBuilt.Inc()
 		if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
 			return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
 		}
@@ -561,6 +601,7 @@ func prepareDirectory(executor *process.Executor, directory string, remove bool)
 
 // Symlinks the source files of this rule into its temp directory.
 func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
+	defer metrics.Duration(prepareSourceDurations).Observe()
 	for source := range core.IterSources(graph, target, false) {
 		if err := core.PrepareSourcePair(source); err != nil {
 			return err
@@ -652,6 +693,7 @@ func copyOutDir(target *core.BuildTarget, from string, to string) ([]string, err
 }
 
 func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bool, error) {
+	defer metrics.Duration(collectOutputDurations).Observe()
 	changed := false
 	tmpDir := target.TmpDir()
 	outDir := target.OutDir()
@@ -1116,6 +1158,7 @@ func (r *progressReader) Read(b []byte) (int, error) {
 // buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
 // or locally if not.
 func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) (*core.BuildMetadata, error) {
+	defer metrics.Duration(buildDurations).Observe()
 	metadata := new(core.BuildMetadata)
 
 	workerCmd, workerArgs, localCmd, err := core.WorkerCommandAndArgs(state, target)

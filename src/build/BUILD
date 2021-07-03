@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//src/core",
         "//src/fs",
+        "//src/metrics",
         "//src/process",
         "//src/worker",
         "//third_party/go:go-multierror",

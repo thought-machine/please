@@ -65,14 +65,14 @@ var actionCacheLookupDurations = metrics.NewHistogram(
 
 var executeDurations = metrics.NewLabelledHistogram(
 	"remote",
-	"execute_durations",
+	"execute_duration_seconds",
 	"Length of time to execute actions",
 	[]string{"is_test"},
 )
 
 var actionCreationDurations = metrics.NewLabelledHistogram(
 	"remote",
-	"action_creation_durations",
+	"action_creation_duration_seconds",
 	"Length of time to create & upload actions",
 	[]string{"upload"},
 )
