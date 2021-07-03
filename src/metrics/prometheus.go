@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"gopkg.in/op/go-logging.v1"
@@ -55,6 +57,8 @@ func NewHistogram(subsystem, name, help string) prometheus.Histogram {
 		Help:      help,
 		Buckets:   defBuckets,
 	})
+	MustRegister(histogram)
+	return histogram
 }
 
 // Duration provides a convenience wrapper for observing histogram durations.

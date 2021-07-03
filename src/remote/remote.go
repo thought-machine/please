@@ -545,6 +545,7 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 		return metadata, ar
 	}
 	// Now see if it is cached on the remote server
+	defer metrics.Duration(actionCacheLookupDurations).Observe()
 	if ar, err := c.client.GetActionResult(context.Background(), &pb.GetActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,

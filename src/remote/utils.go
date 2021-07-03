@@ -57,6 +57,12 @@ var cacheMisses = metrics.NewCounter(
 	"Number of uncached build actions that were rebuilt",
 )
 
+var actionCacheLookupDurations = metrics.NewHistogram(
+	"remote",
+	"action_cache_lookup_seconds",
+	"Lookup durations in the action cache",
+)
+
 var downloadDurations = metrics.NewHistogram(
 	"remote",
 	"download_duration_seconds",
