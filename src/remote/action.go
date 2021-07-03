@@ -20,11 +20,13 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/process"
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
 func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb.Command, *pb.Digest, error) {
+	defer metrics.Duration(actionCreationDurations.WithLabelValues("true")).Observe()
 	var command *pb.Command
 	var digest *pb.Digest
 	err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
@@ -56,6 +58,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb
 
 // buildAction creates a build action for a target and returns the command and the action digest. No uploading is done.
 func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.Command, *pb.Digest, error) {
+	defer metrics.Duration(actionCreationDurations.WithLabelValues("false")).Observe()
 	inputRoot, err := c.uploadInputs(nil, target, isTest)
 	if err != nil {
 		return nil, nil, err

@@ -70,6 +70,13 @@ var executeDurations = metrics.NewLabelledHistogram(
 	[]string{"is_test"},
 )
 
+var actionCreationDurations = metrics.NewLabelledHistogram(
+	"remote",
+	"action_creation_durations",
+	"Length of time to create & upload actions",
+	[]string{"upload"},
+)
+
 var downloadDurations = metrics.NewHistogram(
 	"remote",
 	"download_duration_seconds",

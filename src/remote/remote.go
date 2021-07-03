@@ -676,9 +676,9 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 	}()
 
 	if isTest {
-		defer metrics.Duration(executeDurations.WithLabelValues("test")).Observe()
+		defer metrics.Duration(executeDurations.WithLabelValues("true")).Observe()
 	} else {
-		defer metrics.Duration(executeDurations.WithLabelValues("build")).Observe()
+		defer metrics.Duration(executeDurations.WithLabelValues("false")).Observe()
 	}
 	resp, err := c.client.ExecuteAndWaitProgress(c.contextWithMetadata(target), &pb.ExecuteRequest{
 		InstanceName:    c.instance,
