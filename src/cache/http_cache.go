@@ -18,9 +18,9 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/utils"
-	"github.com/thought-machine/please/src/metrics"
 )
 
 var httpCacheTargetsStored = metrics.NewCounter(
