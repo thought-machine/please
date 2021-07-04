@@ -20,6 +20,37 @@ import (
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/utils"
+	"github.com/thought-machine/please/src/metrics"
+)
+
+var httpCacheTargetsStored = metrics.NewCounter(
+	"http_cache",
+	"targets_stored_total",
+	"Total number of targets stored in the cache",
+)
+
+var httpCacheHits = metrics.NewCounter(
+	"http_cache",
+	"hits_total",
+	"Total number of cache hits",
+)
+
+var httpCacheMisses = metrics.NewCounter(
+	"http_cache",
+	"misses_total",
+	"Total number of cache misses",
+)
+
+var httpCacheStoreDurations = metrics.NewHistogram(
+	"http_cache",
+	"store_duration_seconds",
+	"Time to store each target in the cache",
+)
+
+var httpCacheRetrieveDurations = metrics.NewHistogram(
+	"http_cache",
+	"retrieve_duration_seconds",
+	"Time to store each target in the cache",
 )
 
 type httpCache struct {
@@ -50,6 +81,7 @@ func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files []stri
 	if cache.writable {
 		cache.requestLimiter.acquire()
 		defer cache.requestLimiter.release()
+		defer metrics.Duration(httpCacheStoreDurations).Observe()
 
 		r, w := io.Pipe()
 		go cache.write(w, target, files)
@@ -62,6 +94,7 @@ func (cache *httpCache) Store(target *core.BuildTarget, key []byte, files []stri
 			log.Warning("Failed to store files in HTTP cache: %s", err)
 		} else {
 			resp.Body.Close()
+			httpCacheTargetsStored.Inc()
 		}
 	}
 }
@@ -130,12 +163,17 @@ func (cache *httpCache) storeFile(tw *tar.Writer, name string) error {
 func (cache *httpCache) Retrieve(target *core.BuildTarget, key []byte, _ []string) bool {
 	cache.requestLimiter.acquire()
 	defer cache.requestLimiter.release()
+	defer metrics.Duration(httpCacheRetrieveDurations).Observe()
 
-	m, err := cache.retrieve(key)
-	if err != nil {
+	if retrieved, err := cache.retrieve(key); err != nil {
 		log.Warning("%s: Failed to retrieve files from HTTP cache: %s", target.Label, err)
+		return false
+	} else if !retrieved {
+		httpCacheMisses.Inc()
+		return false
 	}
-	return m
+	httpCacheHits.Inc()
+	return true
 }
 
 func (cache *httpCache) retrieve(key []byte) (bool, error) {
