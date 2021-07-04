@@ -22,6 +22,25 @@ import (
 	"github.com/thought-machine/please/src/clean"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
+)
+
+var dirCacheTargetsStored = metrics.NewCounter(
+	"dir_cache",
+	"targets_stored_total",
+	"Total number of targets stored in the cache",
+)
+
+var dirCacheHits = metrics.NewCounter(
+	"dir_cache",
+	"hits_total",
+	"Total number of cache hits",
+)
+
+var dirCacheMisses = metrics.NewCounter(
+	"dir_cache",
+	"misses_total",
+	"Total number of cache misses",
 )
 
 type dirCache struct {
@@ -42,6 +61,7 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files []strin
 		return
 	}
 	cache.storeFiles(target, key, "", cacheDir, tmpDir, files, true)
+	dirCacheTargetsStored.Inc()
 	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
 	}
@@ -179,7 +199,12 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 }
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) bool {
-	return cache.retrieve(target, key, "", outs)
+	if cache.retrieve(target, key, "", outs) {
+		dirCacheHits.Inc()
+		return true
+	}
+	dirCacheMisses.Inc()
+	return false
 }
 
 // retrieveFiles retrieves the given set of files from the cache.
