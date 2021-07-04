@@ -53,6 +53,12 @@ var prepareInputDurations = metrics.NewHistogram(
 	"Time to prepare inputs for each target",
 )
 
+var executionDurations = metrics.NewHistogram(
+	"test",
+	"execution_duration_seconds",
+	"Time to execute each test",
+)
+
 // Test runs the tests for a single target.
 func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, run int) {
 	target := state.Graph.TargetOrDie(label)
@@ -396,6 +402,7 @@ func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte,
 }
 
 func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
+	defer metrics.Duration(executionDurations).Observe()
 	startTime := time.Now()
 	metadata, resultsData, coverage, err := doTestResults(tid, state, target, runRemotely, run)
 	duration := time.Since(startTime)
