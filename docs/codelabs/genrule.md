@@ -163,7 +163,7 @@ so let's create a `wordcount()` build definition!
 A build definition is just a function that creates one or more build targets which define how to build something. These
 are typically defined inside `.build_def` files within your repository. Let's just create a folder for our definition:
 
-### `build/defs/word_count.build_defs`
+### `build_defs/word_count.build_defs`
 ```python
 def word_count(name:str, file:str) -> str:
     return genrule(
@@ -176,7 +176,7 @@ def word_count(name:str, file:str) -> str:
 
 We then need some way to access these build definitions from other packages. To do this, we typically use a filegroup:
 
-### `build/defs/BUILD`
+### `build_defs/BUILD`
 ```python
 filegroup(
     name = "word_count",
@@ -189,7 +189,7 @@ We can then use this in place of our `genrule()`:
 
 ### `BUILD`
 ```python
-subinclude("//build/defs:word_count")
+subinclude("//build_defs:word_count")
 
 word_count(
     name = "word_count",
@@ -224,7 +224,7 @@ Duration: 7
 Right now we're relying on `wc` to be available on the configured path. This is a pretty safe bet, however, Please
 provides a powerful mechanism for managing tools, so let's over-engineer this:
 
-### `build/defs/word_count.build_defs`
+### `build_defs/word_count.build_defs`
 ```python
 def word_count(name:str, file:str, wc_tool:str="wc") -> str:
     return genrule(
@@ -279,7 +279,7 @@ Brilliant! We can now use this in our build rule like so:
 
 ### `BUILD`
 ```python
-subinclude("//build/defs:word_count")
+subinclude("//build_defs:word_count")
 
 word_count(
     name = "lines_words_and_chars",
@@ -325,7 +325,7 @@ word-count-tool = //tools:wc
 The `[buildconfig]` section can be used to add configuration specific to your project. By adding the `word-count-tool`
 config option here, we can use this in our build definition:
 
-### `build/defs/word_count.build_defs`
+### `build_defs/word_count.build_defs`
 ```python
 def word_count(name:str, file:str, wc_tool:str=CONFIG.WORD_COUNT_TOOL) -> str:
     return genrule(
@@ -350,7 +350,7 @@ We then need to update our build rules:
 
 ### `BUILD`
 ```python
-subinclude("//build/defs:word_count")
+subinclude("//build_defs:word_count")
 
 word_count(
     name = "lines_words_and_chars",
