@@ -467,11 +467,8 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
 	var g errgroup.Group
 
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
-
 	for i := range target.dependencies {
-		dep := &target.dependencies[i]
+		dep := &target.dependencies[i] // avoid using a loop variable here as it mutates each iteration
 		if len(dep.deps) > 0 {
 			continue // already done
 		}
@@ -495,19 +492,32 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 	if t == nil {
 		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
 	}
+
 	labels := t.provideFor(target)
+
 	if len(labels) == 0 {
+		target.mutex.Lock()
+		defer target.mutex.Unlock()
+
 		// Small optimisation to avoid re-looking-up the same target again.
 		dep.deps = []*BuildTarget{t}
 		return nil
 	}
+
+	deps := make([]*BuildTarget, 0,  len(labels))
 	for _, l := range labels {
 		t := graph.WaitForTarget(l)
 		if t == nil {
 			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, t)
 		}
-		dep.deps = append(dep.deps, t)
+		deps = append(deps, t)
 	}
+
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
+
+	dep.deps = deps
+
 	return nil
 }
 
