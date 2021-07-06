@@ -770,12 +770,14 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	if err != nil {
 		return nil, err
 	}
+
 	if err = checkRuleHashes(state, target, hash); err != nil {
 		if state.NeedHashesOnly && state.IsOriginalTargetOrParent(target) {
-			return nil, errStop
-		} else if state.VerifyHashes {
-			return nil, err
+			log.Info("Updated hash for %v: %v", target, string(hash))
 		} else {
+			if state.VerifyHashes {
+				return nil, err
+			}
 			log.Warning("%s", err)
 		}
 	}
