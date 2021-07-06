@@ -49,6 +49,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 		if errors.Is(err, errStop) {
 			target.SetState(core.Stopped)
 			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Build stopped")
+			target.FinishBuild()
 			return
 		}
 		state.LogBuildError(tid, label, core.TargetBuildFailed, err, "Build failed: %s", err)
