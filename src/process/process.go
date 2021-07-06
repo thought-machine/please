@@ -58,6 +58,19 @@ func New() *Executor {
 	return NewSandboxingExecutor(false, NamespaceNever, "")
 }
 
+// SandboxConfig contains what namespaces should be sandboxed
+type SandboxConfig struct {
+	Network, Mount bool
+}
+
+// NoSandbox represents a no-sandbox value
+var NoSandbox = SandboxConfig{}
+
+// NewSandboxConfig creates a new SandboxConfig
+func NewSandboxConfig(network, mount bool) SandboxConfig {
+	return SandboxConfig{Network: network, Mount: mount}
+}
+
 // A Target is a minimal interface of what we need from a BuildTarget.
 // It's here to avoid a hard dependency on the core package.
 type Target interface {

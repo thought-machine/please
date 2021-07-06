@@ -6,16 +6,6 @@ import (
 	"syscall"
 )
 
-type SandboxConfig struct {
-	Network, Mount bool
-}
-
-var NoSandbox = SandboxConfig{}
-
-func NewSandboxConfig(network, mount bool) SandboxConfig {
-	return SandboxConfig{Network: network, Mount: mount}
-}
-
 // ExecCommand executes an external command.
 // We set Pdeathsig to try to make sure commands don't outlive us if we die.
 // N.B. This does not start the command - the caller must handle that (or use one
