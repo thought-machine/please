@@ -23,6 +23,7 @@ import (
 	"github.com/thought-machine/please/src/clean"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/exec"
 	"github.com/thought-machine/please/src/export"
 	"github.com/thought-machine/please/src/format"
 	"github.com/thought-machine/please/src/fs"
@@ -193,6 +194,14 @@ var opts struct {
 		} `positional-args:"true"`
 		Remote bool `long:"remote" description:"Send targets to be executed remotely."`
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
+
+	Exec struct {
+		ShareNetwork bool `long:"share_network" description:"Share network namespace"`
+		Args         struct {
+			Target      core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
+			CommandArgs []string        `positional-arg-name:"command_args" description:"Command args"`
+		} `positional-args:"true"`
+	} `command:"exec" description:"Builds and executes a single target in a sandboxed environment"`
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
@@ -452,6 +461,12 @@ var buildFunctions = map[string]func() int{
 			output.PrintIncrementalCoverage(stats)
 		}
 		return toExitCode(success, state)
+	},
+	"exec": func() int {
+		if success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false); success {
+			exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.CommandArgs, opts.Exec.ShareNetwork)
+		}
+		return 1
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
