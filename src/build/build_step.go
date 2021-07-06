@@ -777,9 +777,8 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 		} else {
 			if state.VerifyHashes {
 				return nil, err
-			} else {
-				log.Warning("%s", err)
 			}
+			log.Warning("%s", err)
 		}
 	}
 	if !target.IsFilegroup {
