@@ -814,7 +814,7 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 		}
 		// Actual queuing stuff now happens asynchronously in here.
 		atomic.AddInt64(&state.progress.numPending, 1)
-		go state.queueTargetAsync(target, rescan, forceBuild, shouldBuild)
+		go state.queueTargetAsync(target, dependent, rescan, forceBuild, shouldBuild)
 	}
 
 	// Here we want to ensure we don't queue the target every time; ideally we only do it once.
@@ -831,7 +831,7 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 }
 
 // queueTarget enqueues a target's dependencies and the target itself once they are done.
-func (state *BuildState) queueTargetAsync(target *BuildTarget, rescan, forceBuild, building bool) {
+func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLabel, rescan, forceBuild, building bool) {
 	defer state.taskDone(true)
 	for _, dep := range target.DeclaredDependencies() {
 		if err := state.queueTarget(dep, target.Label, rescan, forceBuild, false); err != nil {

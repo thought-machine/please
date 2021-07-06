@@ -464,12 +464,10 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 // resolveDependencies matches up all declared dependencies to the actual build targets.
 // TODO(peterebden,tatskaari): Work out if we really want to have this and how the suite of *Dependencies functions
 //                             below should behave (preferably nicely).
+// TODO(tatskaari): Work out if we can use a channel instead of a callback.
 func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
 	var g errgroup.Group
-
-	target.mutex.Lock()
-	defer target.mutex.Unlock()
-
+	target.mutex.RLock()
 	for i := range target.dependencies {
 		dep := &target.dependencies[i]
 		if len(dep.deps) > 0 {
@@ -487,6 +485,7 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 			return nil
 		})
 	}
+	target.mutex.RUnlock()
 	return g.Wait()
 }
 
