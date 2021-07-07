@@ -26,9 +26,9 @@ func main() {
 	}
 
 	results := &result{
-		Revision: revision,
+		Revision:  revision,
 		Timestamp: time.Now(),
-		Set:      set,
+		Set:       set,
 	}
 
 	encoder := json.NewEncoder(os.Stdout)
