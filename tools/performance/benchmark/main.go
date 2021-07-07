@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
+	"time"
 
 	"golang.org/x/tools/benchmark/parse"
 )
 
 type result struct {
-	Revision string
-	Set      parse.Set
+	Revision  string
+	Timestamp time.Time
+	Set       parse.Set
 }
 
 // Formats go benchmark results into json
@@ -25,6 +27,7 @@ func main() {
 
 	results := &result{
 		Revision: revision,
+		Timestamp: time.Now(),
 		Set:      set,
 	}
 
