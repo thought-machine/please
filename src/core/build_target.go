@@ -484,7 +484,7 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 			return nil
 		})
 	}
-	target.mutex.Unlock()
+	target.mutex.RUnlock()
 	return g.Wait()
 }
 
