@@ -466,7 +466,7 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 //                             below should behave (preferably nicely).
 func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
 	var g errgroup.Group
-
+	target.mutex.RLock()
 	for i := range target.dependencies {
 		dep := &target.dependencies[i] // avoid using a loop variable here as it mutates each iteration
 		if len(dep.deps) > 0 {
@@ -484,6 +484,7 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 			return nil
 		})
 	}
+	target.mutex.Unlock()
 	return g.Wait()
 }
 
