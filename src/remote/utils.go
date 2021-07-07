@@ -204,7 +204,7 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 	if c.state.Cache != nil {
 		metadata, err := c.mdStore.retrieveMetadata(c.metadataStoreKey(digest))
 		if err != nil {
-			log.Warningf("Failed to retrieve stored matadata for target %s, %v", target.Label, err)
+			log.Warningf("Failed to retrieve stored metadata for target %s, %v", target.Label, err)
 		}
 		if metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
