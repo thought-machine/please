@@ -306,8 +306,12 @@ func objLen(obj pyObject) pyInt {
 	switch t := obj.(type) {
 	case pyList:
 		return pyInt(len(t))
+	case pyFrozenList:
+		return pyInt(len(t.pyList))
 	case pyDict:
 		return pyInt(len(t))
+	case pyFrozenDict:
+		return pyInt(len(t.pyDict))
 	case pyString:
 		return pyInt(len(t))
 	}
