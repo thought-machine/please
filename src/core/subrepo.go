@@ -1,8 +1,11 @@
 package core
 
 import (
-	"github.com/thought-machine/please/src/cli"
 	"path"
+	"path/filepath"
+	"sync"
+
+	"github.com/thought-machine/please/src/cli"
 )
 
 // A Subrepo stores information about a registered subrepository, typically one
@@ -21,6 +24,9 @@ type Subrepo struct {
 	Arch cli.Arch
 	// True if this subrepo was created for a different architecture
 	IsCrossCompile bool
+	// loadConfig is used to control when we load plugin configuration. We need access to the subrepo itself to do this
+	// so it happens at build time.
+	loadConfig sync.Once
 }
 
 // SubrepoForArch creates a new subrepo for the given architecture.
@@ -36,4 +42,13 @@ func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
 // Dir returns the directory for a package of this name.
 func (s *Subrepo) Dir(dir string) string {
 	return path.Join(s.Root, dir)
+}
+
+// LoadSubrepoConfig will load the .plzconfig from the subrepo. We can only do this once the subrepo is built hence why
+// it's not done up front.
+func (s *Subrepo) LoadSubrepoConfig() (err error) {
+	s.loadConfig.Do(func() {
+		err = readConfigFile(s.State.Config, filepath.Join(s.Root, ".plzconfig"))
+	})
+	return
 }

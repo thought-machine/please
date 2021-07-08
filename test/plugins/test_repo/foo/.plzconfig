@@ -1,0 +1,9 @@
+[Parse]
+BuildFileName = BUILD.plugin
+
+[PluginDefinition]
+name = foo
+
+[PluginConfig "FOOC_TOOL"]
+ConfigKey = FoocTool
+DefaultValue = fooc

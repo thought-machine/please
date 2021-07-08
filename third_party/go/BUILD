@@ -64,7 +64,7 @@ go_module(
         "...",
     ],
     module = "github.com/peterebden/gcfg",
-    version = "v1.3.0",
+    download = "//third_party/go/github_repos:my_gcfg",
     deps = [
         ":warnings",
     ],
