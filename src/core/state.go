@@ -780,11 +780,11 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceB
 		}
 	}
 	if dependent.IsAllTargets() || dependent == OriginalTarget {
-		return state.queueResolvedTarget(target, dependent, rescan, forceBuild, neededForSubinclude)
+		return state.queueResolvedTarget(target, rescan, forceBuild, neededForSubinclude)
 	}
 	for _, l := range target.ProvideFor(state.Graph.TargetOrDie(dependent)) {
 		if l == label {
-			if err := state.queueResolvedTarget(target, dependent, rescan, forceBuild, neededForSubinclude); err != nil {
+			if err := state.queueResolvedTarget(target, rescan, forceBuild, neededForSubinclude); err != nil {
 				return err
 			}
 		} else if err := state.queueTarget(l, dependent, rescan, forceBuild, neededForSubinclude); err != nil {
@@ -795,7 +795,7 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceB
 }
 
 // queueResolvedTarget is like queueTarget but once we have a resolved target.
-func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent BuildLabel, rescan, forceBuild, neededForSubinclude bool) error {
+func (state *BuildState) queueResolvedTarget(target *BuildTarget, rescan, forceBuild, neededForSubinclude bool) error {
 	target.NeededForSubinclude = target.NeededForSubinclude || neededForSubinclude
 	if target.State() >= Active && !rescan && !forceBuild {
 		return nil // Target is already tagged to be built and likely on the queue.
@@ -814,7 +814,7 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 		}
 		// Actual queuing stuff now happens asynchronously in here.
 		atomic.AddInt64(&state.progress.numPending, 1)
-		go state.queueTargetAsync(target, dependent, rescan, forceBuild, shouldBuild)
+		go state.queueTargetAsync(target, rescan, forceBuild, shouldBuild)
 	}
 
 	// Here we want to ensure we don't queue the target every time; ideally we only do it once.
@@ -831,7 +831,7 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, dependent Buil
 }
 
 // queueTarget enqueues a target's dependencies and the target itself once they are done.
-func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLabel, rescan, forceBuild, building bool) {
+func (state *BuildState) queueTargetAsync(target *BuildTarget, rescan, forceBuild, building bool) {
 	defer state.taskDone(true)
 	for _, dep := range target.DeclaredDependencies() {
 		if err := state.queueTarget(dep, target.Label, rescan, forceBuild, false); err != nil {
@@ -844,7 +844,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, dependent BuildLa
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
 			called = true
 			state.Graph.cycleDetector.AddDependency(target.Label, t.Label)
-			return state.queueResolvedTarget(t, target.Label, rescan, forceBuild, false)
+			return state.queueResolvedTarget(t, rescan, forceBuild, false)
 		}); err != nil {
 			state.asyncError(target.Label, err)
 			return
