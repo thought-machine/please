@@ -37,7 +37,8 @@ func (c *cycleDetector) AddDependency(depending BuildLabel, dep BuildLabel) {
 	}()
 }
 
-
+// checkForCycle just checks to see if there's a dependency cycle. It doesn't compute the cycle to avoid excess
+// allocations. buildCycle can be used to reconstruct the cycle once one has been found.
 func (c *cycleDetector) checkForCycle(head, tail BuildLabel) bool {
 	if tailDeps, ok := c.deps[tail]; ok {
 		for _, dep := range tailDeps {
@@ -54,11 +55,14 @@ func (c *cycleDetector) checkForCycle(head, tail BuildLabel) bool {
 	return false
 }
 
+// buildCycle is used to actually reconstruct the cycle after we've found one
 func (c *cycleDetector) buildCycle(chain []BuildLabel) []BuildLabel {
 	tail := chain[len(chain)-1]
+	head := chain[0]
+
 	if tailDeps, ok := c.deps[tail]; ok {
 		for _, dep := range tailDeps {
-			if dep == chain[0] {
+			if dep == head {
 				// If the tail has a dependency on the head, we've found a cycle
 				return chain
 			}
