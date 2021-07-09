@@ -4,8 +4,8 @@ import "strings"
 
 type dependencyChain []BuildLabel
 type dependencyLink struct {
-	label BuildLabel
-	dep   BuildLabel
+	from BuildLabel
+	to   BuildLabel
 }
 
 func (c dependencyChain) String() string {
@@ -33,18 +33,37 @@ func newCycleDetector() *cycleDetector {
 // AddDependency queues up another dependency for the cycle detector to check
 func (c *cycleDetector) AddDependency(depending BuildLabel, dep BuildLabel) {
 	go func() {
-		c.queue <- dependencyLink{label: depending, dep: dep}
+		c.queue <- dependencyLink{from: depending, to: dep}
 	}()
 }
 
-func (c *cycleDetector) buildChain(chain dependencyChain) dependencyChain {
+
+func (c *cycleDetector) checkForCycle(head, tail BuildLabel) bool {
+	if tailDeps, ok := c.deps[tail]; ok {
+		for _, dep := range tailDeps {
+			if dep == head {
+				// If the tail has a dependency on the head, we've found a cycle
+				return true
+			}
+
+			if c.checkForCycle(head, dep) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (c *cycleDetector) buildCycle(chain []BuildLabel) []BuildLabel {
 	tail := chain[len(chain)-1]
 	if tailDeps, ok := c.deps[tail]; ok {
 		for _, dep := range tailDeps {
 			if dep == chain[0] {
-				return append(chain, dep)
+				// If the tail has a dependency on the head, we've found a cycle
+				return chain
 			}
-			if newChain :=  c.buildChain(append(chain, dep)); newChain != nil {
+
+			if newChain := c.buildCycle(append(chain, dep)); newChain != nil {
 				return newChain
 			}
 		}
@@ -52,20 +71,15 @@ func (c *cycleDetector) buildChain(chain dependencyChain) dependencyChain {
 	return nil
 }
 
-// TODO(pebers) unit tests
-func (c *cycleDetector) checkForCycle(dep, next BuildLabel) dependencyChain {
-	return c.buildChain(dependencyChain{dep, next})
-}
-
-func (c *cycleDetector) addDep(depending BuildLabel, dep BuildLabel) {
-	if cycle := c.checkForCycle(depending, dep); cycle != nil {
-		failWithGraphCycle(cycle)
+func (c *cycleDetector) addDep(link dependencyLink) {
+	if c.checkForCycle(link.from, link.to) {
+		failWithGraphCycle(c.buildCycle([]BuildLabel{link.from, link.to}))
 	}
 
-	if deps, ok := c.deps[depending]; ok {
-		c.deps[depending] = append(deps, dep)
+	if deps, ok := c.deps[link.from]; ok {
+		c.deps[link.from] = append(deps, link.to)
 	} else {
-		c.deps[depending] = []BuildLabel{dep}
+		c.deps[link.from] = []BuildLabel{link.to}
 	}
 }
 
@@ -78,7 +92,7 @@ func failWithGraphCycle(cycle dependencyChain) {
 func (c *cycleDetector) run() {
 	go func() {
 		for next := range c.queue {
-			c.addDep(next.label, next.dep)
+			c.addDep(next)
 		}
 	}()
 }
