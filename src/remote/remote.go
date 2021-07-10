@@ -537,7 +537,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget, run int) (metadata *cor
 func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest bool) (*core.BuildMetadata, *pb.ActionResult) {
 	// First see if this execution is cached locally
 	if metadata, ar := c.retrieveLocalResults(target, digest); metadata != nil {
-		log.Debug("Got locally cached results for %s %s", target.Label, c.actionURL(digest, true))
+		log.Debug("Got locally cached results for %s %s (age %s)", target.Label, c.actionURL(digest, true), time.Since(metadata.Timestamp).Truncate(time.Second))
 		metadata.Cached = true
 		return metadata, ar
 	}

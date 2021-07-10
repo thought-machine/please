@@ -825,8 +825,8 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         tools=tools,
         cmd=cmds,
         visibility=visibility,
-        test_sandbox=sandbox,
-        test_timeout=timeout,
+        sandbox=sandbox,
+        build_timeout=timeout,
         requires=['go', 'test'],
         labels=labels,
         binary=True,
@@ -834,6 +834,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         needs_transitive_deps=True,
         output_is_complete=True,
         test_only=test_only,
+        pre_build = _collect_linker_flags(static, definitions),
     )
 
 def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False, external=False,
