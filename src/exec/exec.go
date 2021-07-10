@@ -1,10 +1,10 @@
 package exec
 
 import (
-	"context"
+	"errors"
 	"math"
 	"os"
-	"path"
+	e "os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -18,61 +18,79 @@ import (
 
 var log = logging.MustGetLogger("exec")
 
-func Exec(state *core.BuildState, label core.BuildLabel, cmdArgs []string, shareNetwork bool) {
-	exec(context.Background(), state, label, cmdArgs, shareNetwork)
+// Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
+func Exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []string, shareNetwork bool, shareMount bool) int {
+	if err := exec(state, label, overrideCmdArgs, shareNetwork, shareMount); err != nil {
+		if exitError, ok := err.(*e.ExitError); ok {
+			return exitError.ExitCode()
+		}
+		log.Fatal(err)
+	}
+	return 0
 }
 
-func exec(ctx context.Context, state *core.BuildState, label core.BuildLabel, cmdArgs []string, shareNetwork bool) error {
+func exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []string, shareNetwork, shareMount bool) error {
 	target := state.Graph.TargetOrDie(label)
 
-	if !target.IsBinary && len(cmdArgs) == 0 {
-		log.Fatalf("Target %s cannot be executed; it's not marked as binary", target.Label)
+	if !target.IsBinary && len(overrideCmdArgs) == 0 {
+		return errors.New("Either the target needs to be a binary or an override command must be provided")
 	}
 
-	var cmd string
-	if len(cmdArgs) > 0 {
-		var err error
-		if cmd, err = core.ReplaceSequences(state, target, strings.Join(cmdArgs, " ")); err != nil {
-			return err
-		}
-	} else {
-		outs := target.Outputs()
-		if len(outs) != 1 {
-			log.Fatalf("Target %s cannot be executed as it has %d outputs", target.Label, len(outs))
-		}
-		cmd = outs[0]
-	}
-
-	dir := filepath.Join(core.OutDir, "exec", target.Label.Subrepo, target.Label.PackageName)
-	if err := PrepareRuntimeDir(state, target, dir); err != nil {
+	runtimeDir, err := prepareRuntimeDir(state, target)
+	if err != nil {
 		return err
 	}
 
-	env := core.ExecEnvironment(state, target, path.Join(core.RepoRoot, dir))
-	_, _, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, dir, env, time.Duration(math.MaxInt64), false, process.NewSandboxConfig(!shareNetwork, true), cmd, true)
+	cmd, err := resolveCmd(state, target, overrideCmdArgs, runtimeDir, shareMount)
+	if err != nil {
+		return err
+	}
 
+	env := core.ExecEnvironment(state, target, runtimeDir)
+	sandboxConfig := process.NewSandboxConfig(!shareNetwork, !shareMount)
+
+	_, _, err = state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, runtimeDir, env, time.Duration(math.MaxInt64), false, sandboxConfig, cmd, true)
 	return err
 }
 
+func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArgs []string, runtimeDir string, shareMount bool) (string, error) {
+	// The override command takes precedence if provided
+	if len(overrideCmdArgs) > 0 {
+		return core.ReplaceSequences(state, target, strings.Join(overrideCmdArgs, " "))
+	}
+
+	outs := target.Outputs()
+	if len(outs) != 1 {
+		log.Fatalf("Target %s cannot be executed as it has %d outputs", target.Label, len(outs))
+	}
+
+	if shareMount {
+		return filepath.Join(core.RepoRoot, runtimeDir, outs[0]), nil
+	}
+	return filepath.Join(core.SandboxDir, outs[0]), nil
+}
+
 // TODO(tiagovtristao): We might want to find a better way of reusing this logic, since it's similarly used in a couple of places already.
-func PrepareRuntimeDir(state *core.BuildState, target *core.BuildTarget, dir string) error {
+func prepareRuntimeDir(state *core.BuildState, target *core.BuildTarget) (string, error) {
+	dir := filepath.Join(core.OutDir, "exec", target.Label.Subrepo, target.Label.PackageName)
+
 	if err := fs.ForceRemove(state.ProcessExecutor, dir); err != nil {
-		return err
+		return dir, err
 	}
 
 	if err := os.MkdirAll(dir, fs.DirPermissions); err != nil {
-		return err
+		return dir, err
 	}
 
 	if err := state.EnsureDownloaded(target); err != nil {
-		return err
+		return dir, err
 	}
 
 	for out := range core.IterRuntimeFiles(state.Graph, target, true, dir) {
 		if err := core.PrepareSourcePair(out); err != nil {
-			return err
+			return dir, err
 		}
 	}
 
-	return nil
+	return dir, nil
 }

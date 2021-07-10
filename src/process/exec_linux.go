@@ -31,7 +31,7 @@ func (e *Executor) ExecCommand(sandbox SandboxConfig, command string, args ...st
 			// Otherwise exec the sandbox tool
 			args = append([]string{command}, args...)
 			command = e.sandboxTool
-			env = []string{"SANDBOX_NETWORK=" + boolToString(sandbox.Network), "SANDBOX_MOUNT=" + boolToString(sandbox.Mount)}
+			env = []string{"SHARE_NETWORK=" + boolToString(!sandbox.Network), "SHARE_MOUNT=" + boolToString(!sandbox.Mount)}
 		}
 	}
 	cmd := exec.Command(command, args...)

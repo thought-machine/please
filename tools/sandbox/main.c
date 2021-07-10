@@ -19,13 +19,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Network namespace is sandboxed by default unless the `SANDBOX_NETWORK=0` env exists 
-    const char* sandbox_network_env = getenv("SANDBOX_NETWORK");
-    const bool sandbox_network = sandbox_network_env == NULL || strcmp(sandbox_network_env, "0");
+    // Network namespace is sandboxed by default but it can be opted out if `SHARE_NETWORK=1` env is set
+    const char* share_network_env = getenv("SHARE_NETWORK");
+    const bool share_network = share_network_env != NULL && !strcmp(share_network_env, "1");
 
-    // Mount namespace is sandboxed by default unless the `SANDBOX_MOUNT=0` env exists 
-    const char* sandbox_mount_env = getenv("SANDBOX_MOUNT");
-    const bool sandbox_mount = sandbox_mount_env == NULL || strcmp(sandbox_network_env, "0");
+    // Mount namespace is sandboxed by default but it can be opted out if `SHARE_MOUNT=1` env is set
+    const char* share_mount_env = getenv("SHARE_MOUNT");
+    const bool share_mount = share_mount_env != NULL && !strcmp(share_mount_env, "1");
 
-    return contain(&argv[1], sandbox_network, sandbox_mount);
+    return contain(&argv[1], !share_network, !share_mount);
 }

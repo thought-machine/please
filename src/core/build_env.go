@@ -275,7 +275,7 @@ func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) Build
 func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) BuildEnv {
 	env := TargetEnvironment(state, target)
 
-	env = append(env, "TMP_DIR="+execDir)
+	env = append(env, "TMP_DIR="+filepath.Join(RepoRoot, execDir))
 
 	outEnv := target.Outputs()
 	env = append(env, "OUTS="+strings.Join(outEnv, " "))

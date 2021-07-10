@@ -196,10 +196,13 @@ var opts struct {
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
 
 	Exec struct {
-		ShareNetwork bool `long:"share_network" description:"Share network namespace"`
-		Args         struct {
-			Target      core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
-			CommandArgs []string        `positional-arg-name:"command_args" description:"Command args"`
+		Share struct {
+			Network bool `long:"share_network" description:"Share network namespace"`
+			Mount   bool `long:"share_mount" description:"Share mount namespace"`
+		} `group:"Options allowing namespace sharing"`
+		Args struct {
+			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
+			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
 		} `positional-args:"true"`
 	} `command:"exec" description:"Builds and executes a single target in a sandboxed environment"`
 
@@ -463,10 +466,11 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"exec": func() int {
-		if success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false); success {
-			exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.CommandArgs, opts.Exec.ShareNetwork)
+		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
+		if !success {
+			return toExitCode(success, state)
 		}
-		return 1
+		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, opts.Exec.Share.Network, opts.Exec.Share.Mount)
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
