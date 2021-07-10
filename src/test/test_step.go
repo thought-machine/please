@@ -364,6 +364,9 @@ func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget, run int
 }
 
 func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte, error) {
+	//core.AcquireFileLock(path.Join(target.TestDir(run), ".lock"))
+	//defer core.ReleaseFileLock(path.Join(target.TestDir(run), ".lock"))
+
 	replacedCmd, env, err := testCommandAndEnv(state, target, run)
 	if err != nil {
 		return nil, err

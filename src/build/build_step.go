@@ -242,6 +242,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			buildLinks(state, target)
 			return nil
 		}
+
+		core.AcquireFileLock(target.TmpDir()+".lock")
+		defer core.ReleaseFileLock(target.TmpDir()+".lock")
+
 		if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
 			return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
 		}

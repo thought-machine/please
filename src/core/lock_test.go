@@ -13,7 +13,7 @@ func TestAcquireRepoLock(t *testing.T) {
 	// Grab the lock
 	AcquireRepoLock()
 	// Now we should be able to open the file (ie. it exists)
-	lockFile, err := os.Open(lockFilePath)
+	lockFile, err := os.Open(repoLockFilePath)
 	assert.NoError(t, err)
 	defer lockFile.Close()
 	assert.Error(t, syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB))
@@ -26,7 +26,7 @@ func TestAcquireRepoLock(t *testing.T) {
 }
 
 func TestReadLastOperation(t *testing.T) {
-	assert.NoError(t, ioutil.WriteFile(lockFilePath, []byte("op plz"), 0644))
+	assert.NoError(t, ioutil.WriteFile(repoLockFilePath, []byte("op plz"), 0644))
 	assert.Equal(t, []string{"op", "plz"}, ReadLastOperationOrDie())
 	// Can't really test a failure case because of the "or die" bit :(
 }
