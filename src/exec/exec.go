@@ -4,7 +4,7 @@ import (
 	"errors"
 	"math"
 	"os"
-	e "os/exec"
+	osExec "os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -21,7 +21,7 @@ var log = logging.MustGetLogger("exec")
 // Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
 func Exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []string, sandbox process.SandboxConfig) int {
 	if err := exec(state, label, overrideCmdArgs, sandbox); err != nil {
-		if exitError, ok := err.(*e.ExitError); ok {
+		if exitError, ok := err.(*osExec.ExitError); ok {
 			return exitError.ExitCode()
 		}
 		log.Fatal(err)
