@@ -19,8 +19,8 @@ import (
 var log = logging.MustGetLogger("exec")
 
 // Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
-func Exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []string, shareNetwork bool, shareMount bool) int {
-	if err := exec(state, label, overrideCmdArgs, shareNetwork, shareMount); err != nil {
+func Exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []string, sandbox process.SandboxConfig) int {
+	if err := exec(state, label, overrideCmdArgs, sandbox); err != nil {
 		if exitError, ok := err.(*e.ExitError); ok {
 			return exitError.ExitCode()
 		}
@@ -29,7 +29,7 @@ func Exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []strin
 	return 0
 }
 
-func exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []string, shareNetwork, shareMount bool) error {
+func exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []string, sandbox process.SandboxConfig) error {
 	target := state.Graph.TargetOrDie(label)
 
 	if !target.IsBinary && len(overrideCmdArgs) == 0 {
@@ -41,19 +41,17 @@ func exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []strin
 		return err
 	}
 
-	cmd, err := resolveCmd(state, target, overrideCmdArgs, runtimeDir, shareMount)
+	cmd, err := resolveCmd(state, target, overrideCmdArgs, runtimeDir, sandbox)
 	if err != nil {
 		return err
 	}
 
 	env := core.ExecEnvironment(state, target, runtimeDir)
-	sandboxConfig := process.NewSandboxConfig(!shareNetwork, !shareMount)
-
-	_, _, err = state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, runtimeDir, env, time.Duration(math.MaxInt64), false, sandboxConfig, cmd, true)
+	_, _, err = state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, runtimeDir, env, time.Duration(math.MaxInt64), false, sandbox, cmd, true)
 	return err
 }
 
-func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArgs []string, runtimeDir string, shareMount bool) (string, error) {
+func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArgs []string, runtimeDir string, sandbox process.SandboxConfig) (string, error) {
 	// The override command takes precedence if provided
 	if len(overrideCmdArgs) > 0 {
 		return core.ReplaceSequences(state, target, strings.Join(overrideCmdArgs, " "))
@@ -64,7 +62,7 @@ func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArg
 		log.Fatalf("Target %s cannot be executed as it has %d outputs", target.Label, len(outs))
 	}
 
-	if shareMount {
+	if !sandbox.Mount {
 		return filepath.Join(core.RepoRoot, runtimeDir, outs[0]), nil
 	}
 	return filepath.Join(core.SandboxDir, outs[0]), nil

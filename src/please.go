@@ -34,6 +34,7 @@ import (
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/src/plzinit"
+	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
 	"github.com/thought-machine/please/src/sandbox"
@@ -470,7 +471,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, opts.Exec.Share.Network, opts.Exec.Share.Mount)
+		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(!opts.Exec.Share.Network, !opts.Exec.Share.Mount))
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {

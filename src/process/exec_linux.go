@@ -13,8 +13,18 @@ import (
 func (e *Executor) ExecCommand(sandbox SandboxConfig, command string, args ...string) *exec.Cmd {
 	shouldNamespace := e.namespace == NamespaceAlways || (e.namespace == NamespaceSandbox && sandbox != NoSandbox)
 
-	// If we're sandboxing, run the sandbox tool to set up the network, mount, etc.
-	var env []string
+	cmd := exec.Command(command, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig: syscall.SIGHUP,
+		Setpgid:   true,
+	}
+
+	// We are done here if no sandboxing and/or namespacing is necessary
+	if sandbox == NoSandbox && !shouldNamespace {
+		return cmd
+	}
+
+	// If we're sandboxing, run the sandbox tool instead to set up the network, mount, etc.
 	if sandbox != NoSandbox {
 		// re-exec into `plz sandbox` if we're using the built in sandboxing
 		if e.usePleaseSandbox {
@@ -26,34 +36,26 @@ func (e *Executor) ExecCommand(sandbox SandboxConfig, command string, args ...st
 			if err != nil {
 				panic(err)
 			}
-			command = plz
+			cmd = exec.Command(plz, args...)
 		} else {
 			// Otherwise exec the sandbox tool
 			args = append([]string{command}, args...)
-			command = e.sandboxTool
-			env = []string{"SHARE_NETWORK=" + boolToString(!sandbox.Network), "SHARE_MOUNT=" + boolToString(!sandbox.Mount)}
+			cmd = exec.Command(e.sandboxTool, args...)
 		}
-	}
-	cmd := exec.Command(command, args...)
-	cmd.Env = env
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGHUP,
-		Setpgid:   true,
+		cmd.Env = []string{"SHARE_NETWORK=" + boolToString(!sandbox.Network), "SHARE_MOUNT=" + boolToString(!sandbox.Mount)}
 	}
 
-	// If we have any sort of sandboxing set up, we should always namespace, however we only namespace mount and net if
+	// If we have any sort of sandboxing set up, we should always namespace, however we only namespace mount and/or net if
 	// we're sandboxing this rule.
 	if shouldNamespace {
 		cmd.SysProcAttr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID
-		if sandbox != NoSandbox {
-			if sandbox.Network {
-				// Namespace network
-				cmd.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
-			}
-			if sandbox.Mount {
-				// Namespace mount
-				cmd.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
-			}
+		if sandbox.Network {
+			// Namespace network
+			cmd.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
+		}
+		if sandbox.Mount {
+			// Namespace mount
+			cmd.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
 		}
 
 		cmd.SysProcAttr.UidMappings = []syscall.SysProcIDMap{

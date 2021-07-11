@@ -21,11 +21,11 @@ int main(int argc, char* argv[]) {
 
     // Network namespace is sandboxed by default but it can be opted out if `SHARE_NETWORK=1` env is set
     const char* share_network_env = getenv("SHARE_NETWORK");
-    const bool share_network = share_network_env != NULL && !strcmp(share_network_env, "1");
+    const bool unshare_network = share_network_env == NULL || strcmp(share_network_env, "1");
 
     // Mount namespace is sandboxed by default but it can be opted out if `SHARE_MOUNT=1` env is set
     const char* share_mount_env = getenv("SHARE_MOUNT");
-    const bool share_mount = share_mount_env != NULL && !strcmp(share_mount_env, "1");
+    const bool unshare_mount = share_mount_env == NULL || strcmp(share_mount_env, "1");
 
-    return contain(&argv[1], !share_network, !share_mount);
+    return contain(&argv[1], unshare_network, unshare_mount);
 }
