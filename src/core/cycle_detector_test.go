@@ -5,7 +5,6 @@ import (
 	"testing"
 )
 
-
 func TestCycleDetector(t *testing.T) {
 	cd := newCycleDetector()
 

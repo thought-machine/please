@@ -184,7 +184,6 @@ benchmark(
     deps = [":core"],
 )
 
-
 benchmark(
     name = "build_target_benchmark",
     srcs = ["build_target_benchmark_test.go"],

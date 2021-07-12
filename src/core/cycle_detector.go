@@ -88,16 +88,14 @@ func (c *cycleDetector) addDep(link dependencyLink) error {
 }
 
 func failWithGraphCycle(cycle dependencyChain) error {
-	msg := "Dependency cycle found:\n"
-	msg += cycle.String()
-	return fmt.Errorf("%s \nSorry, but you'll have to refactor your build files to avoid this cycle.", msg)
+	return fmt.Errorf("%s \nSorry, but you'll have to refactor your build files to avoid this cycle", cycle.String())
 }
 
 func (c *cycleDetector) run() {
 	go func() {
 		for next := range c.queue {
 			if err := c.addDep(next); err != nil {
-				log.Fatalf("%v", err)
+				log.Fatalf("Dependency cycle found:\n %v", err)
 			}
 		}
 	}()

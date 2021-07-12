@@ -57,7 +57,7 @@ func benchmarkCycleDetector(b *testing.B, graphLevels int) {
 		}
 	}
 
-	duration := time.Now().Sub(start) / time.Millisecond
+	duration := time.Since(start) / time.Millisecond
 	linksPerMS := float64(len(links)*b.N) / float64(duration)
 	b.ReportMetric(linksPerMS, "links/ms")
 }
