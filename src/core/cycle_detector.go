@@ -1,6 +1,9 @@
 package core
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type dependencyChain []BuildLabel
 type dependencyLink struct {
@@ -23,9 +26,10 @@ type cycleDetector struct {
 
 func newCycleDetector() *cycleDetector {
 	c := new(cycleDetector)
-	c.deps = map[BuildLabel][]BuildLabel{}
 
-	c.queue = make(chan dependencyLink, 100000)
+	// Set these
+	c.deps = make(map[BuildLabel][]BuildLabel, 1000)
+	c.queue = make(chan dependencyLink, 1000)
 
 	return c
 }
@@ -64,7 +68,7 @@ func (c *cycleDetector) buildCycle(chain []BuildLabel) []BuildLabel {
 		for _, dep := range tailDeps {
 			if dep == head {
 				// If the tail has a dependency on the head, we've found a cycle
-				return chain
+				return append(chain, dep)
 			}
 
 			if newChain := c.buildCycle(append(chain, dep)); newChain != nil {
@@ -75,28 +79,26 @@ func (c *cycleDetector) buildCycle(chain []BuildLabel) []BuildLabel {
 	return nil
 }
 
-func (c *cycleDetector) addDep(link dependencyLink) {
+func (c *cycleDetector) addDep(link dependencyLink) error {
 	if c.checkForCycle(link.from, link.to) {
-		failWithGraphCycle(c.buildCycle([]BuildLabel{link.from, link.to}))
+		return failWithGraphCycle(c.buildCycle([]BuildLabel{link.from, link.to}))
 	}
-
-	if deps, ok := c.deps[link.from]; ok {
-		c.deps[link.from] = append(deps, link.to)
-	} else {
-		c.deps[link.from] = []BuildLabel{link.to}
-	}
+	c.deps[link.from] = append(c.deps[link.from], link.to)
+	return nil
 }
 
-func failWithGraphCycle(cycle dependencyChain) {
+func failWithGraphCycle(cycle dependencyChain) error {
 	msg := "Dependency cycle found:\n"
 	msg += cycle.String()
-	log.Fatalf("%s \nSorry, but you'll have to refactor your build files to avoid this cycle.", msg)
+	return fmt.Errorf("%s \nSorry, but you'll have to refactor your build files to avoid this cycle.", msg)
 }
 
 func (c *cycleDetector) run() {
 	go func() {
 		for next := range c.queue {
-			c.addDep(next)
+			if err := c.addDep(next); err != nil {
+				log.Fatalf("%v", err)
+			}
 		}
 	}()
 }
