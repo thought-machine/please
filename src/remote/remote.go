@@ -81,6 +81,9 @@ type Client struct {
 	// Path to the shell to use to execute actions in.
 	shellPath string
 
+	// User's home directory.
+	userHome string
+
 	// Stats used to report RPC data rates
 	byteRateIn, byteRateOut, totalBytesIn, totalBytesOut int
 	stats                                                *statsHandler
@@ -232,7 +235,12 @@ func (c *Client) initExec() error {
 		}
 		c.shellPath = bash
 	}
-	log.Debug("Remote execution client initialised for storage")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("Failed to determine user home dir: %s", err)
+	}
+	c.userHome = home
+
 	// Now check if it can do remote execution
 	if resp.ExecutionCapabilities == nil {
 		return fmt.Errorf("Remote execution is configured but the build server doesn't support it")
@@ -243,7 +251,7 @@ func (c *Client) initExec() error {
 		return fmt.Errorf("Remote execution not enabled for this server")
 	}
 	c.platform = convertPlatform(c.state.Config.Remote.Platform)
-	log.Debug("Remote execution client initialised for execution")
+	log.Debug("Remote execution client initialised")
 	if c.state.Config.Remote.AssetURL == "" {
 		c.fetchClient = fpb.NewFetchClient(client.Connection)
 	}
