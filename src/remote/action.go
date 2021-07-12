@@ -533,7 +533,7 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 					replaced = append(replaced, part)
 				}
 			}
-			v = strings.Join(parts, ":")
+			v = strings.Join(replaced, ":")
 		}
 		vars[i] = &pb.Command_EnvironmentVariable{
 			Name:  name,
