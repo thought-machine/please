@@ -688,7 +688,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env = append(env, "PATH="+fs.ExpandHomePathTo(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":"), config.HomeDir))
+		env = append(env, "PATH="+fs.ExpandHomePathTo(strings.Join(config.Build.Path, ":"), config.HomeDir))
 	}
 
 	sort.Strings(env)
