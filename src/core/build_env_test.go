@@ -67,4 +67,3 @@ func TestExecEnvironment(t *testing.T) {
 	assert.Contains(t, env, "OUTS=file1")
 	assert.Contains(t, env, "OUT=file1")
 }
-

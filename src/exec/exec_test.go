@@ -108,4 +108,3 @@ func TestCommandExitCode(t *testing.T) {
 	exitCode := Exec(state, target.Label, []string{"exit", "5"}, process.NoSandbox)
 	assert.Equal(t, 5, exitCode)
 }
-

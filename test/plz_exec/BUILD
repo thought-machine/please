@@ -3,8 +3,8 @@ subinclude("//test/build_defs")
 plz_e2e_test(
     name = "binary_target",
     cmd = "plz exec //test/plz_exec/test_package:hello_world",
-    expected_output = "hello_world.txt",
     expected_failure = False,
+    expected_output = "hello_world.txt",
 )
 
 # TODO(tiagovtristao): This is currently flaky when executed in parallel with others.
@@ -36,4 +36,3 @@ plz_e2e_test(
 #   expect_output_contains = "plz-out/exec/test/plz_exec/test_package",
 #   expected_failure = False,
 #)
-
