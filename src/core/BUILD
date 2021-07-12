@@ -169,6 +169,21 @@ go_test(
     ],
 )
 
+go_test(
+    name = "cycle_detector_test",
+    srcs = ["cycle_detector_test.go"],
+    deps = [
+        ":core",
+        "//third_party/go:testify",
+    ],
+)
+
+benchmark(
+    name = "cycle_detector_benchmark",
+    srcs = ["cycle_detector_benchmark_test.go"],
+    deps = [":core"],
+)
+
 benchmark(
     name = "build_target_benchmark",
     srcs = ["build_target_benchmark_test.go"],
