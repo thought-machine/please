@@ -2,6 +2,7 @@ package core
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -54,3 +55,16 @@ func TestString(t *testing.T) {
 	}
 	assert.EqualValues(t, "A=B\nC=D", env.String())
 }
+
+func TestExecEnvironment(t *testing.T) {
+	MustFindRepoRoot()
+
+	target := NewBuildTarget(NewBuildLabel("pkg", "t"))
+	target.AddOutput("file1")
+	env := ExecEnvironment(NewDefaultBuildState(), target, "runtime/dir")
+
+	assert.Contains(t, env, "TMP_DIR="+filepath.Join(RepoRoot, "runtime/dir"))
+	assert.Contains(t, env, "OUTS=file1")
+	assert.Contains(t, env, "OUT=file1")
+}
+

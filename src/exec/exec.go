@@ -1,7 +1,7 @@
 package exec
 
 import (
-	"errors"
+	"fmt"
 	"math"
 	"os"
 	osExec "os/exec"
@@ -20,20 +20,20 @@ var log = logging.MustGetLogger("exec")
 
 // Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
 func Exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []string, sandbox process.SandboxConfig) int {
-	if err := exec(state, label, overrideCmdArgs, sandbox); err != nil {
+	target := state.Graph.TargetOrDie(label)
+	if err := exec(state, target, overrideCmdArgs, sandbox); err != nil {
+		log.Error("Command execution failed: %s", err)
 		if exitError, ok := err.(*osExec.ExitError); ok {
 			return exitError.ExitCode()
 		}
-		log.Fatal(err)
+		return 1
 	}
 	return 0
 }
 
-func exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []string, sandbox process.SandboxConfig) error {
-	target := state.Graph.TargetOrDie(label)
-
+func exec(state *core.BuildState, target *core.BuildTarget, overrideCmdArgs []string, sandbox process.SandboxConfig) error {
 	if !target.IsBinary && len(overrideCmdArgs) == 0 {
-		return errors.New("Either the target needs to be a binary or an override command must be provided")
+		return fmt.Errorf("Either the target needs to be a binary or an override command must be provided")
 	}
 
 	runtimeDir, err := prepareRuntimeDir(state, target)
@@ -59,7 +59,7 @@ func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArg
 
 	outs := target.Outputs()
 	if len(outs) != 1 {
-		log.Fatalf("Target %s cannot be executed as it has %d outputs", target.Label, len(outs))
+		return "", fmt.Errorf("Target %s cannot be executed as it has %d outputs", target.Label, len(outs))
 	}
 
 	if !sandbox.Mount {
