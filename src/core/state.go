@@ -843,7 +843,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, rescan, forceBuil
 		called := false
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
 			called = true
-			state.Graph.cycleDetector.AddDependency(target.Label, t.Label)
+			state.Graph.cycleDetector.AddDependency(&target.Label, &t.Label)
 			return state.queueResolvedTarget(t, rescan, forceBuild, false)
 		}); err != nil {
 			state.asyncError(target.Label, err)

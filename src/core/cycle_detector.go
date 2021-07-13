@@ -5,10 +5,10 @@ import (
 	"strings"
 )
 
-type dependencyChain []BuildLabel
+type dependencyChain []*BuildLabel
 type dependencyLink struct {
-	from BuildLabel
-	to   BuildLabel
+	from *BuildLabel
+	to   *BuildLabel
 }
 
 func (c dependencyChain) String() string {
@@ -20,30 +20,32 @@ func (c dependencyChain) String() string {
 }
 
 type cycleDetector struct {
-	deps  map[BuildLabel][]BuildLabel
+	deps  map[*BuildLabel][]*BuildLabel
 	queue chan dependencyLink
 }
 
 func newCycleDetector() *cycleDetector {
 	c := new(cycleDetector)
 
-	// Set these
-	c.deps = make(map[BuildLabel][]BuildLabel, 1000)
+	// Set this to an order of magnitude that seems sensible to avoid resizing them rapidly initially
+	c.deps = make(map[*BuildLabel][]*BuildLabel, 1000)
+
+	// Buffer this a little so handle spikes in targets coming in
 	c.queue = make(chan dependencyLink, 1000)
 
 	return c
 }
 
 // AddDependency queues up another dependency for the cycle detector to check
-func (c *cycleDetector) AddDependency(depending BuildLabel, dep BuildLabel) {
+func (c *cycleDetector) AddDependency(from *BuildLabel, to *BuildLabel) {
 	go func() {
-		c.queue <- dependencyLink{from: depending, to: dep}
+		c.queue <- dependencyLink{from: from, to: to}
 	}()
 }
 
 // checkForCycle just checks to see if there's a dependency cycle. It doesn't compute the cycle to avoid excess
 // allocations. buildCycle can be used to reconstruct the cycle once one has been found.
-func (c *cycleDetector) checkForCycle(head, tail BuildLabel) bool {
+func (c *cycleDetector) checkForCycle(head, tail *BuildLabel) bool {
 	if tailDeps, ok := c.deps[tail]; ok {
 		for _, dep := range tailDeps {
 			if dep == head {
@@ -60,7 +62,7 @@ func (c *cycleDetector) checkForCycle(head, tail BuildLabel) bool {
 }
 
 // buildCycle is used to actually reconstruct the cycle after we've found one
-func (c *cycleDetector) buildCycle(chain []BuildLabel) []BuildLabel {
+func (c *cycleDetector) buildCycle(chain []*BuildLabel) []*BuildLabel {
 	tail := chain[len(chain)-1]
 	head := chain[0]
 
@@ -81,7 +83,7 @@ func (c *cycleDetector) buildCycle(chain []BuildLabel) []BuildLabel {
 
 func (c *cycleDetector) addDep(link dependencyLink) error {
 	if c.checkForCycle(link.from, link.to) {
-		return failWithGraphCycle(c.buildCycle([]BuildLabel{link.from, link.to}))
+		return failWithGraphCycle(c.buildCycle([]*BuildLabel{link.from, link.to}))
 	}
 	c.deps[link.from] = append(c.deps[link.from], link.to)
 	return nil
