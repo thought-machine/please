@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//src/build",
         "//src/cli",
+        "//src/fs",
         "//src/core",
         "//src/scm",
         "//src/utils",
