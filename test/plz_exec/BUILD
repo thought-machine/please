@@ -13,7 +13,7 @@ please_repo_e2e_test(
 
 please_repo_e2e_test(
     name = "network_unshared",
-    exit_code = 6,
+    expected_failure = True,
     expect_output_contains = {
         "output": "Could not resolve host",
     },

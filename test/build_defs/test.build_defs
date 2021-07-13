@@ -5,17 +5,20 @@ def please_repo_e2e_test(
         repo: str,
         deps: list=[],
         tools: dict={},
+        expected_failure: bool = False,
         expected_output: dict = {},
         expect_output_contains: dict = {},
         expect_output_doesnt_contain: dict = {},
-        exit_code: int = 0,
         labels: list = [],
 ):
     plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
+    if expected_failure:
+        plz_command += "; [ ! $? -eq 0 ]"
+
     test_cmd = [
         "mv $DATA_BASE_CONFIG $DATA_REPO",
         "cd $DATA_REPO",
-        f"{plz_command}; if [ ! $? -eq {exit_code} ]; then exit 1; fi",
+        plz_command,
     ]
 
     if expected_output:
