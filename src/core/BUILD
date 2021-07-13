@@ -190,7 +190,7 @@ benchmark(
     deps = [":core"],
 )
 
-go_benchmark(
+benchmark(
     name = "utils_benchmark",
     srcs = ["utils_benchmark_test.go"],
     deps = [":core"],
