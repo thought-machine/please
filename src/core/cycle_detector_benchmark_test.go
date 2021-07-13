@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func buildTree(levels, width int, from BuildLabel) []dependencyLink {
+func buildTree(levels, width int, from *BuildLabel) []dependencyLink {
 	if levels == 0 {
 		return []dependencyLink{}
 	}
@@ -14,8 +14,8 @@ func buildTree(levels, width int, from BuildLabel) []dependencyLink {
 	var links []dependencyLink
 	for i := 0; i < width; i++ {
 		to := ParseBuildLabel(fmt.Sprintf("%v_%v", from, i), "")
-		links = append(links, dependencyLink{from: from, to: to})
-		links = append(links, buildTree(levels-1, width, to)...)
+		links = append(links, dependencyLink{from: from, to: &to})
+		links = append(links, buildTree(levels-1, width, &to)...)
 	}
 	return links
 }
@@ -37,7 +37,7 @@ func BenchmarkCycles(b *testing.B) {
 func benchmarkCycleDetector(b *testing.B, graphLevels int) {
 	from := ParseBuildLabel("//src:root", "")
 	// Generates a tree of almost 20k targets for large (level 6)
-	links := buildTree(graphLevels, 5, from)
+	links := buildTree(graphLevels, 5, &from)
 
 	cycleDetectors := make([]*cycleDetector, b.N)
 	for n := 0; n < b.N; n++ {
