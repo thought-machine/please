@@ -8,8 +8,8 @@ go_library(
     deps = [
         "//src/build",
         "//src/cli",
-        "//src/fs",
         "//src/core",
+        "//src/fs",
         "//src/scm",
         "//src/utils",
         "//third_party/go:logging",

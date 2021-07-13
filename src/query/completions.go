@@ -29,7 +29,6 @@ func CompletionLabels(config *core.Configuration, args []string, repoRoot string
 		return []core.BuildLabel{{PackageName: labels[0].PackageName, Name: parts[1]}}, labels, strings.Contains(query, ":_")
 	}
 
-
 	pkg := packageToParse(config, query, repoRoot)
 	// We matched more than one package so we don't need to complete any actual labels.
 	if pkg == "" {
@@ -65,7 +64,7 @@ func getAllCompletions(config *core.Configuration, query, repoRoot string) ([]st
 	}
 
 	for _, entry := range dirEntries {
-		if entry.IsDir() && strings.HasPrefix(entry.Name(), prefix) && fs.IsPackage(config.Parse.BuildFileName, filepath.Join(root, entry.Name())){
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), prefix) && fs.IsPackage(config.Parse.BuildFileName, filepath.Join(root, entry.Name())) {
 			packages = append(packages, filepath.Join(currentPackage, entry.Name()))
 		}
 	}
