@@ -14,13 +14,13 @@ please_repo_e2e_test(
 please_repo_e2e_test(
     name = "network_unshared",
     expected_failure = True,
-    plz_command = "plz exec --share_mount //:network_test 2>output",
+    plz_command = "plz exec --share_mount //:network_test",
     repo = "test_repo",
 )
 
 please_repo_e2e_test(
     name = "network_shared",
-    plz_command = "plz exec --share_mount --share_network //:network_test 2>output",
+    plz_command = "plz exec --share_mount --share_network //:network_test",
     repo = "test_repo",
 )
 
