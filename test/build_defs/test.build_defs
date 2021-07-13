@@ -6,18 +6,26 @@ def please_repo_e2e_test(
         deps: list=[],
         tools: dict={},
         expected_output: dict = {},
+        expect_output_contains: dict = {},
+        expect_output_doesnt_contain: dict = {},
+        exit_code: int = 0,
         labels: list = [],
 ):
     plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
     test_cmd = [
         "mv $DATA_BASE_CONFIG $DATA_REPO",
         "cd $DATA_REPO",
-         plz_command,
+        f"{plz_command}; if [ ! $? -eq {exit_code} ]; then exit 1; fi",
     ]
 
     if expected_output:
        test_cmd += [f"$TOOLS_CONTENT_CHECKER '{o}' '{c}'" for o, c in expected_output.items()]
 
+    if expect_output_contains:
+       test_cmd += [f"if ! grep -q '{c}' {o}; then cat {o}; exit 1; fi" for o, c in expect_output_contains.items()]
+
+    if expect_output_doesnt_contain:
+       test_cmd += [f"if grep -q '{c}' {o}; then cat {o}; exit 1; fi" for o, c in expect_output_contains.items()]
 
     test_cmd = ' && '.join(test_cmd)
 
