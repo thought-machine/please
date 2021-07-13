@@ -840,7 +840,6 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 
 // buildFilegroup "builds" a single filegroup target.
 func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
-	log.Debugf("Building filegroup %v with output paths %v", target, command.OutputPaths)
 	inputDir, err := c.uploadInputDir(nil, target, false) // We don't need to actually upload the inputs here, that is already done.
 	if err != nil {
 		return nil, nil, err
