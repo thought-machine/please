@@ -271,7 +271,7 @@ func (c *Client) initFetch() error {
 
 // chooseDigest selects a digest function that we will use.w
 func (c *Client) chooseDigest(fns []pb.DigestFunction_Value) error {
-	systemFn := c.digestEnum(c.state.Config.Build.HashFunction)
+	systemFn := c.digestEnum()
 	for _, fn := range fns {
 		if fn == systemFn {
 			return nil
@@ -281,7 +281,7 @@ func (c *Client) chooseDigest(fns []pb.DigestFunction_Value) error {
 }
 
 // digestEnum returns a proto enum for the digest function of given name (as we name them in config)
-func (c *Client) digestEnum(name string) pb.DigestFunction_Value {
+func (c *Client) digestEnum() pb.DigestFunction_Value {
 	switch c.state.Config.Build.HashFunction {
 	case "sha256":
 		return pb.DigestFunction_SHA256

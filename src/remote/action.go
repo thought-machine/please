@@ -404,12 +404,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, core.TestResultsFile, c.actionURL(actionDigest, true))
 		}
 	} else {
-		for _, out := range command.OutputFiles {
-			if !outs[out] {
-				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
-			}
-		}
-		for _, out := range command.OutputDirectories {
+		for _, out := range command.OutputPaths {
 			if !outs[out] {
 				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
 			}
