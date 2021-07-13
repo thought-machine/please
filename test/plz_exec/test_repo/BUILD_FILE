@@ -2,3 +2,8 @@ sh_cmd(
     name = "hello_world",
     cmd = "echo \"hello world\"",
 )
+
+go_binary(
+    name = "network_test",
+    srcs = ["network_test.go"]
+)

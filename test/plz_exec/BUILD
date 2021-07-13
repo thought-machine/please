@@ -13,20 +13,20 @@ please_repo_e2e_test(
 
 please_repo_e2e_test(
     name = "network_unshared",
-    expected_failure = True,
     expect_output_contains = {
-        "output": "no servers could be reached",
+        "output": "dial tcp: i/o timeout",
     },
-    plz_command = "plz exec --share_mount //:hello_world -- host -W 1 google.com >output",
+    expected_failure = True,
+    plz_command = "plz exec --share_mount //:network_test 2>output",
     repo = "test_repo",
 )
 
 please_repo_e2e_test(
     name = "network_shared",
     expect_output_doesnt_contain = {
-        "output": "no servers could be reached",
+        "output": "dial tcp: i/o timeout",
     },
-    plz_command = "plz exec --share_network --share_mount //:hello_world -- host -W 1 google.com >output",
+    plz_command = "plz exec --share_mount --share_network //:network_test 2>output",
     repo = "test_repo",
 )
 
