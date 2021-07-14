@@ -69,7 +69,7 @@ func TestVerifyOutputs(t *testing.T) {
 	pkg.AddTarget(target2)
 	pkg.MustRegisterOutput("dir/file1.go", target1)
 	pkg.MustRegisterOutput("dir", target2)
-	assert.Equal(t, 1, len(pkg.verifyOutputs()))
+	assert.Error(t, pkg.verifyOutputs())
 	target1.AddDependency(target2.Label)
-	assert.Equal(t, 0, len(pkg.verifyOutputs()))
+	assert.NoError(t, pkg.verifyOutputs())
 }
