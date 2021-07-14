@@ -3,6 +3,7 @@ package query
 import (
 	"fmt"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/utils"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,10 +19,12 @@ import (
 func CompletionLabels(config *core.Configuration, args []string, repoRoot string) ([]core.BuildLabel, []core.BuildLabel, bool) {
 	if len(args) == 0 {
 		packageToParse(config, ".", repoRoot)
-		return []core.BuildLabel{{PackageName: ".", Name: ""}}, []core.BuildLabel{{PackageName: ".", Name: ":all"}}, false
+		return []core.BuildLabel{{PackageName: "", Name: ""}}, []core.BuildLabel{{PackageName: "", Name: "all"}}, false
 	}
 
 	query := strings.ReplaceAll(args[0], "\\:", ":")
+	packageOnly := strings.HasSuffix(query, "/") // True when the query ends with a /
+	isRootPackage := query == "" || query == "//"
 
 	if strings.Contains(query, ":") {
 		parts := strings.Split(query, ":")
@@ -30,15 +33,29 @@ func CompletionLabels(config *core.Configuration, args []string, repoRoot string
 	}
 
 	pkg := packageToParse(config, query, repoRoot)
-	// We matched more than one package so we don't need to complete any actual labels.
-	if pkg == "" {
+	// We matched more than one package so we don't need to complete any actual labels, or we're matching packages only
+	// NB: pkg will be "" for the root package so we should match labels then
+	if !isRootPackage && (pkg == "" || packageOnly) {
 		os.Exit(0)
 	}
 	return []core.BuildLabel{{PackageName: pkg, Name: ""}}, []core.BuildLabel{{PackageName: pkg, Name: "all"}}, false
 }
 
 func packageToParse(config *core.Configuration, query, repoRoot string) string {
-	packages, toParse := getAllCompletions(config, query, repoRoot)
+	query = strings.Trim(query, "/")
+	root := path.Join(repoRoot, query)
+	currentPackage := query
+	prefix := ""
+	if !core.PathExists(root) {
+		root, prefix = path.Split(root)
+		currentPackage = path.Dir(query)
+	}
+
+	allPackages := make(map[string]struct{})
+	for pkg := range utils.FindAllSubpackages(config, repoRoot, currentPackage) {
+		allPackages[pkg] = struct{}{}
+	}
+	packages, toParse := getAllCompletions(config, currentPackage, prefix, repoRoot, allPackages)
 	for _, pkg := range packages {
 		fmt.Printf("//%s\n", pkg)
 	}
@@ -47,16 +64,9 @@ func packageToParse(config *core.Configuration, query, repoRoot string) string {
 
 // getAllCompletions returns a string slice of all the package labels, such as "//src/core/query". The second string
 // is the package we matched directory (if any).
-func getAllCompletions(config *core.Configuration, query, repoRoot string) ([]string, string) {
-	query = strings.TrimLeft(query, "/")
-	currentPackage := query
-	root := path.Join(repoRoot, query)
-	prefix := ""
-	if !core.PathExists(root) {
-		root, prefix = path.Split(root)
-		currentPackage = path.Dir(query)
-	}
+func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoRoot string, allPackages map[string]struct{}) ([]string, string) {
 	var packages []string
+	root := path.Join(repoRoot, currentPackage)
 
 	dirEntries, err := os.ReadDir(root)
 	if err != nil {
@@ -64,14 +74,25 @@ func getAllCompletions(config *core.Configuration, query, repoRoot string) ([]st
 	}
 
 	for _, entry := range dirEntries {
-		if entry.IsDir() && strings.HasPrefix(entry.Name(), prefix) && fs.IsPackage(config.Parse.BuildFileName, filepath.Join(root, entry.Name())) {
-			packages = append(packages, filepath.Join(currentPackage, entry.Name()))
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), prefix) {
+			pkgName := filepath.Join(currentPackage, entry.Name())
+			if _, ok := allPackages[filepath.Join(currentPackage, pkgName)]; ok {
+				packages = append(packages, pkgName)
+			}
 		}
 	}
 
+
 	// If we match just one package, return all the immediate subpackages, and return the single package we matched
 	if len(packages) == 1 {
-		pkgs, _ := getAllCompletions(config, packages[0], repoRoot)
+		if prefix == "" && fs.IsPackage(config.Parse.BuildFileName, currentPackage) {
+			return packages, currentPackage
+		}
+		pkgs, pkg := getAllCompletions(config, packages[0], "", repoRoot, allPackages)
+		// If we again matched a package exactly, use that one
+		if pkg != "" {
+			return pkgs, pkg
+		}
 		return pkgs, packages[0]
 	}
 
