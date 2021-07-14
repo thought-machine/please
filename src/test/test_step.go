@@ -17,6 +17,7 @@ import (
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/worker"
 )
 
@@ -33,6 +34,30 @@ const xattrName = "user.plz_test"
 var numUploadFailures int64
 
 const maxUploadFailures int64 = 10
+
+var targetsTested = metrics.NewCounter(
+	"test",
+	"targets_tested_total",
+	"Total number of targets tested",
+)
+
+var targetsCached = metrics.NewCounter(
+	"test",
+	"targets_cached_total",
+	"Total number of targets not re-tested due to caching",
+)
+
+var prepareInputDurations = metrics.NewHistogram(
+	"test",
+	"prepare_input_duration_seconds",
+	"Time to prepare inputs for each target",
+)
+
+var executionDurations = metrics.NewHistogram(
+	"test",
+	"execution_duration_seconds",
+	"Time to execute each test",
+)
 
 // Test runs the tests for a single target.
 func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, run int) {
@@ -173,10 +198,12 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
 	if state.NumTestRuns == 1 && !runRemotely && !needToRun() {
 		if cachedResults := cachedTestResults(); cachedResults != nil {
+			targetsCached.Inc()
 			target.Results = *cachedResults
 			return
 		}
 	}
+	targetsTested.Inc()
 
 	// Remove any cached test result file.
 	if err := RemoveTestOutputs(target); err != nil {
@@ -334,6 +361,7 @@ func pluralise(word string, quantity int) string {
 }
 
 func prepareTestDir(state *core.BuildState, target *core.BuildTarget, run int) error {
+	defer metrics.Duration(prepareInputDurations).Observe()
 	if err := fs.ForceRemove(state.ProcessExecutor, target.TestDir(run)); err != nil {
 		return err
 	}
@@ -374,6 +402,7 @@ func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte,
 }
 
 func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
+	defer metrics.Duration(executionDurations).Observe()
 	startTime := time.Now()
 	metadata, resultsData, coverage, err := doTestResults(tid, state, target, runRemotely, run)
 	duration := time.Since(startTime)

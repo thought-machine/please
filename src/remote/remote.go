@@ -36,6 +36,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
 )
 
 var log = logging.MustGetLogger("remote")
@@ -433,6 +434,7 @@ func (c *Client) download(target *core.BuildTarget, f func() error) error {
 }
 
 func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
+	defer metrics.Duration(downloadDurations).Observe()
 	log.Debug("Downloading outputs for %s", target)
 	if err := removeOutputs(target); err != nil {
 		return err
@@ -547,9 +549,11 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 	if metadata, ar := c.retrieveLocalResults(target, digest); metadata != nil {
 		log.Debug("Got locally cached results for %s %s (age %s)", target.Label, c.actionURL(digest, true), time.Since(metadata.Timestamp).Truncate(time.Second))
 		metadata.Cached = true
+		localCacheHits.Inc()
 		return metadata, ar
 	}
 	// Now see if it is cached on the remote server
+	defer metrics.Duration(actionCacheLookupDurations).Observe()
 	if ar, err := c.client.GetActionResult(context.Background(), &pb.GetActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,
@@ -564,11 +568,13 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 			if err == nil {
 				c.locallyCacheResults(target, digest, metadata, ar)
 				metadata.Cached = true
+				actionCacheHits.Inc()
 				return metadata, ar
 			}
 			log.Debug("Remotely cached results for %s were missing some outputs, forcing a rebuild: %s", target.Label, err)
 		}
 	}
+	cacheMisses.Inc()
 	return nil, nil
 }
 
@@ -677,6 +683,11 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		}
 	}()
 
+	if isTest {
+		defer metrics.Duration(executeDurations.WithLabelValues("true")).Observe()
+	} else {
+		defer metrics.Duration(executeDurations.WithLabelValues("false")).Observe()
+	}
 	resp, err := c.client.ExecuteAndWaitProgress(c.contextWithMetadata(target), &pb.ExecuteRequest{
 		InstanceName:    c.instance,
 		ActionDigest:    digest,
