@@ -1,5 +1,6 @@
 subinclude("//test/build_defs")
 
+# MacOS doesn't natively support namespaces
 if CONFIG.OS != "darwin":
     # We need to pass in `--share_mount` due to permission privileges in CircleCI
     please_repo_e2e_test(
