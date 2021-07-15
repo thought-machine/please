@@ -104,12 +104,9 @@ func failWithGraphCycle(cycle dependencyChain) error {
 func (c *cycleDetector) run() {
 	go func() {
 		for next := range c.queue {
-			log.Warningf("starting %v -> %v", next.from, next.to)
 			if err := c.addDep(next); err != nil {
 				log.Fatalf("Dependency cycle found:\n %v", err)
 			}
-			log.Warningf("fin %v -> %v", next.from, next.to)
-
 		}
 	}()
 }
