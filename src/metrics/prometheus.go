@@ -20,7 +20,8 @@ func Push(config *core.Configuration) {
 		return
 	}
 	if err := push.New(config.Metrics.PrometheusGatewayURL, "please").Gatherer(prometheus.DefaultGatherer).Push(); err != nil {
-		log.Warning("Error pushing Prometheus metrics: %s", err)
+		// TODO(jpoole): diagnose why we're seeing this and promote this to error again
+		log.Debugf("Error pushing Prometheus metrics: %s", err)
 	}
 }
 

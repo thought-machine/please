@@ -81,6 +81,9 @@ type Client struct {
 	// Path to the shell to use to execute actions in.
 	shellPath string
 
+	// User's home directory.
+	userHome string
+
 	// Stats used to report RPC data rates
 	byteRateIn, byteRateOut, totalBytesIn, totalBytesOut int
 	stats                                                *statsHandler
@@ -232,7 +235,12 @@ func (c *Client) initExec() error {
 		}
 		c.shellPath = bash
 	}
-	log.Debug("Remote execution client initialised for storage")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("Failed to determine user home dir: %s", err)
+	}
+	c.userHome = home
+
 	// Now check if it can do remote execution
 	if resp.ExecutionCapabilities == nil {
 		return fmt.Errorf("Remote execution is configured but the build server doesn't support it")
@@ -243,7 +251,7 @@ func (c *Client) initExec() error {
 		return fmt.Errorf("Remote execution not enabled for this server")
 	}
 	c.platform = convertPlatform(c.state.Config.Remote.Platform)
-	log.Debug("Remote execution client initialised for execution")
+	log.Debug("Remote execution client initialised")
 	if c.state.Config.Remote.AssetURL == "" {
 		c.fetchClient = fpb.NewFetchClient(client.Connection)
 	}
@@ -271,7 +279,7 @@ func (c *Client) initFetch() error {
 
 // chooseDigest selects a digest function that we will use.w
 func (c *Client) chooseDigest(fns []pb.DigestFunction_Value) error {
-	systemFn := c.digestEnum(c.state.Config.Build.HashFunction)
+	systemFn := c.digestEnum()
 	for _, fn := range fns {
 		if fn == systemFn {
 			return nil
@@ -281,7 +289,7 @@ func (c *Client) chooseDigest(fns []pb.DigestFunction_Value) error {
 }
 
 // digestEnum returns a proto enum for the digest function of given name (as we name them in config)
-func (c *Client) digestEnum(name string) pb.DigestFunction_Value {
+func (c *Client) digestEnum() pb.DigestFunction_Value {
 	switch c.state.Config.Build.HashFunction {
 	case "sha256":
 		return pb.DigestFunction_SHA256

@@ -1,11 +1,14 @@
 package core
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
-type dependencyChain []BuildLabel
+type dependencyChain []*BuildLabel
 type dependencyLink struct {
-	label BuildLabel
-	dep   BuildLabel
+	from *BuildLabel
+	to   *BuildLabel
 }
 
 func (c dependencyChain) String() string {
@@ -17,56 +20,85 @@ func (c dependencyChain) String() string {
 }
 
 type cycleDetector struct {
-	deps  map[BuildLabel]BuildLabel
+	deps  map[*BuildLabel][]*BuildLabel
 	queue chan dependencyLink
 }
 
 func newCycleDetector() *cycleDetector {
 	c := new(cycleDetector)
-	c.deps = map[BuildLabel]BuildLabel{}
 
-	c.queue = make(chan dependencyLink, 100000)
+	// Set this to an order of magnitude that seems sensible to avoid resizing them rapidly initially
+	c.deps = make(map[*BuildLabel][]*BuildLabel, 1000)
+
+	// Buffer this a little so handle spikes in targets coming in
+	c.queue = make(chan dependencyLink, 1000)
 
 	return c
 }
 
 // AddDependency queues up another dependency for the cycle detector to check
-func (c *cycleDetector) AddDependency(depending BuildLabel, dep BuildLabel) {
-	go func() { c.queue <- dependencyLink{label: depending, dep: dep} }()
+func (c *cycleDetector) AddDependency(from *BuildLabel, to *BuildLabel) {
+	go func() {
+		c.queue <- dependencyLink{from: from, to: to}
+	}()
 }
 
-func (c *cycleDetector) buildChain(chain dependencyChain) dependencyChain {
-	if next, ok := c.deps[chain[len(chain)-1]]; ok {
-		if next == chain[0] {
-			return append(chain, next)
+// checkForCycle just checks to see if there's a dependency cycle. It doesn't compute the cycle to avoid excess
+// allocations. buildCycle can be used to reconstruct the cycle once one has been found.
+func (c *cycleDetector) checkForCycle(head, tail *BuildLabel) bool {
+	if tailDeps, ok := c.deps[tail]; ok {
+		for _, dep := range tailDeps {
+			if dep == head {
+				// If the tail has a dependency on the head, we've found a cycle
+				return true
+			}
+
+			if c.checkForCycle(head, dep) {
+				return true
+			}
 		}
-		return c.buildChain(append(chain, next))
+	}
+	return false
+}
+
+// buildCycle is used to actually reconstruct the cycle after we've found one
+func (c *cycleDetector) buildCycle(chain []*BuildLabel) []*BuildLabel {
+	tail := chain[len(chain)-1]
+	head := chain[0]
+
+	if tailDeps, ok := c.deps[tail]; ok {
+		for _, dep := range tailDeps {
+			if dep == head {
+				// If the tail has a dependency on the head, we've found a cycle
+				return append(chain, dep)
+			}
+
+			if newChain := c.buildCycle(append(chain, dep)); newChain != nil {
+				return newChain
+			}
+		}
 	}
 	return nil
 }
 
-// TODO(jpoole) unit tests
-func (c *cycleDetector) checkForCycle(dep, next BuildLabel) dependencyChain {
-	return c.buildChain(dependencyChain{dep, next})
-}
-
-func (c *cycleDetector) addDep(depending BuildLabel, dep BuildLabel) {
-	if cycle := c.checkForCycle(depending, dep); cycle != nil {
-		failWithGraphCycle(cycle)
+func (c *cycleDetector) addDep(link dependencyLink) error {
+	if c.checkForCycle(link.from, link.to) {
+		return failWithGraphCycle(c.buildCycle([]*BuildLabel{link.from, link.to}))
 	}
-	c.deps[depending] = dep
+	c.deps[link.from] = append(c.deps[link.from], link.to)
+	return nil
 }
 
-func failWithGraphCycle(cycle dependencyChain) {
-	msg := "Dependency cycle found:\n"
-	msg += cycle.String()
-	log.Fatalf("%s \nSorry, but you'll have to refactor your build files to avoid this cycle.", msg)
+func failWithGraphCycle(cycle dependencyChain) error {
+	return fmt.Errorf("%s \nSorry, but you'll have to refactor your build files to avoid this cycle", cycle.String())
 }
 
 func (c *cycleDetector) run() {
 	go func() {
 		for next := range c.queue {
-			c.addDep(next.label, next.dep)
+			if err := c.addDep(next); err != nil {
+				log.Fatalf("Dependency cycle found:\n %v", err)
+			}
 		}
 	}()
 }

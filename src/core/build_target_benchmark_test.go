@@ -12,6 +12,7 @@ func BenchmarkProvideFor(b *testing.B) {
 	target2 := NewBuildTarget(BuildLabel{PackageName: "src/core", Name: "target2"})
 	target3 := NewBuildTarget(BuildLabel{PackageName: "src/core", Name: "target3"})
 	target4 := NewBuildTarget(BuildLabel{PackageName: "src/core", Name: "target4"})
+	target5 := NewBuildTarget(BuildLabel{PackageName: "src/core", Name: "target5"})
 
 	b.Run("Simple", func(b *testing.B) {
 		b.ReportAllocs()
@@ -40,6 +41,15 @@ func BenchmarkProvideFor(b *testing.B) {
 
 	target1.Requires = []string{"go", "go_src"}
 	b.Run("TwoMatches", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			result = target2.provideFor(target1)
+		}
+	})
+
+	target1.Requires = []string{"go", "go_src", "py", "py_src"}
+	target2.AddProvide("py_src", target5.Label)
+	b.Run("FourMatches", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
 			result = target2.provideFor(target1)
