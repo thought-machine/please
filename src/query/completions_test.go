@@ -12,7 +12,7 @@ import (
 
 var repoRoot = os.Getenv("DATA")
 
-func TestPackageToParseInRepoRoot(t *testing.T) {
+func TestGetPackageToParse(t *testing.T) {
 	if err := os.Chdir(repoRoot); err != nil {
 		t.Fatalf("failed to change to repo root: %v", err)
 	}
@@ -20,7 +20,7 @@ func TestPackageToParseInRepoRoot(t *testing.T) {
 	config := core.DefaultConfiguration()
 	config.Parse.BuildFileName = []string{"BUILD_FILE"}
 
-	t.Run("complete //", func(t *testing.T) {
+	t.Run("complete in repo root", func(t *testing.T) {
 		pkgs, toParse := getPackagesAndPackageToParse(config, "//", ".")
 		assert.Equal(t, "", toParse)
 
@@ -28,7 +28,7 @@ func TestPackageToParseInRepoRoot(t *testing.T) {
 		assert.ElementsMatch(t, []string{"foo", "bing"}, pkgs)
 	})
 
-	t.Run("complete //foo", func(t *testing.T) {
+	t.Run("complete package with sub-packages", func(t *testing.T) {
 		pkgs, toParse := getPackagesAndPackageToParse(config, "//foo", ".")
 		assert.Equal(t, "foo", toParse)
 
@@ -36,7 +36,7 @@ func TestPackageToParseInRepoRoot(t *testing.T) {
 		assert.ElementsMatch(t, []string{"foo/bar", "foo/baz"}, pkgs)
 	})
 
-	t.Run("complete //foo/", func(t *testing.T) {
+	t.Run("complete packages only", func(t *testing.T) {
 		pkgs, toParse := getPackagesAndPackageToParse(config, "//foo/", ".")
 		assert.Equal(t, "", toParse)
 
@@ -44,26 +44,25 @@ func TestPackageToParseInRepoRoot(t *testing.T) {
 		assert.ElementsMatch(t, []string{"foo/bar", "foo/baz"}, pkgs)
 	})
 
-	t.Run("complete //foo:", func(t *testing.T) {
+	t.Run("complete labels only", func(t *testing.T) {
 		pkgs, toParse := getPackagesAndPackageToParse(config, "//foo:", ".")
 		assert.Equal(t, "", toParse)
 
 		require.Len(t, pkgs, 0)
 	})
 
-	t.Run("complete //foo/bar/", func(t *testing.T) {
-		pkgs, toParse := getPackagesAndPackageToParse(config, "//foo/bar/", ".")
-		assert.Equal(t, "foo/bar/net/thoughtmachine/please", toParse)
-
-		require.Len(t, pkgs, 1)
-		assert.ElementsMatch(t, []string{"foo/bar/net/thoughtmachine/please/main"}, pkgs)
-	})
-
-	t.Run("complete //bing/", func(t *testing.T) {
+	t.Run("complete package with single nested subpackage", func(t *testing.T) {
 		pkgs, toParse := getPackagesAndPackageToParse(config, "//bing/", ".")
 		assert.Equal(t, "bing/net/thoughtmachine/please", toParse)
 
 		require.Len(t, pkgs, 0)
 	})
 
+	t.Run("complete package with nested subpackages", func(t *testing.T) {
+		pkgs, toParse := getPackagesAndPackageToParse(config, "//foo/bar/", ".")
+		assert.Equal(t, "foo/bar/net/thoughtmachine/please", toParse)
+
+		require.Len(t, pkgs, 1)
+		assert.ElementsMatch(t, []string{"foo/bar/net/thoughtmachine/please/main"}, pkgs)
+	})
 }
