@@ -59,7 +59,7 @@ func getPackagesAndPackageToParse(config *core.Configuration, query, repoRoot st
 	}
 
 	// TODO(jpoole): We currently walk the entire file tree trying to discover BUILD files whereas we can probably just
-	// walk until we find the first ones and build of a trie.
+	// 	walk until we find the first ones in each branch and build a trie. This seems fast enough for now though.
 	var allPackages []string
 	for pkg := range utils.FindAllSubpackages(config, currentPackage, "") {
 		allPackages = append(allPackages, pkg)
@@ -80,7 +80,7 @@ func containsPackage(dir string, allPackages []string) bool {
 	return false
 }
 
-// getAllCompletions essentaillyt he same as getPackagesAndPackageToParse without the setup
+// getAllCompletions essentailly the same as getPackagesAndPackageToParse without the setup
 func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoRoot string, allPackages []string, skipSelf bool) ([]string, string) {
 	var packages []string
 	root := path.Join(repoRoot, currentPackage)

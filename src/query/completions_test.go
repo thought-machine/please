@@ -44,6 +44,12 @@ func TestPackageToParseInRepoRoot(t *testing.T) {
 		assert.ElementsMatch(t, []string{"foo/bar", "foo/baz"}, pkgs)
 	})
 
+	t.Run("complete //foo:", func(t *testing.T) {
+		pkgs, toParse := getPackagesAndPackageToParse(config, "//foo:", ".")
+		assert.Equal(t, "", toParse)
+
+		require.Len(t, pkgs, 0)
+	})
 
 	t.Run("complete //foo/bar/", func(t *testing.T) {
 		pkgs, toParse := getPackagesAndPackageToParse(config, "//foo/bar/", ".")
