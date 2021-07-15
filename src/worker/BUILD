@@ -7,6 +7,7 @@ go_library(
     visibility = ["//src/..."],
     deps = [
         "//src/core",
+        "//src/process",
         "//third_party/go:logging",
     ],
 )
