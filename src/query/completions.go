@@ -54,13 +54,13 @@ func getPackagesAndPackageToParse(config *core.Configuration, query, repoRoot st
 	currentPackage := query
 	prefix := ""
 	if !core.PathExists(root) {
-		root, prefix = path.Split(root)
+		_, prefix = path.Split(root)
 		currentPackage = path.Dir(query)
 	}
 
 	// TODO(jpoole): We currently walk the entire file tree trying to discover BUILD files whereas we can probably just
 	// 	walk until we find the first ones in each branch and build a trie. This seems fast enough for now though.
-	var allPackages []string
+	allPackages := make([]string, 0, 10)
 	for pkg := range utils.FindAllSubpackages(config, currentPackage, "") {
 		allPackages = append(allPackages, pkg)
 	}
@@ -80,7 +80,7 @@ func containsPackage(dir string, allPackages []string) bool {
 	return false
 }
 
-// getAllCompletions essentailly the same as getPackagesAndPackageToParse without the setup
+// getAllCompletions essentially the same as getPackagesAndPackageToParse without the setup
 func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoRoot string, allPackages []string, skipSelf bool) ([]string, string) {
 	var packages []string
 	root := path.Join(repoRoot, currentPackage)
@@ -98,7 +98,6 @@ func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoR
 			}
 		}
 	}
-
 
 	// If we match just one package, return all the immediate subpackages, and return the single package we matched
 	if len(packages) == 1 {
