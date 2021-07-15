@@ -668,6 +668,10 @@ var buildFunctions = map[string]func() int{
 			return 0
 		}
 		labels, parseLabels, hidden := query.CompletionLabels(config, fragments, core.RepoRoot)
+		// We have no labels to parse so we're done already
+		if len(parseLabels) == 0 {
+			return 0
+		}
 		if success, state := Please(parseLabels, config, false, false); success {
 			binary := opts.Query.Completions.Cmd == "run"
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"

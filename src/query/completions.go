@@ -18,12 +18,11 @@ import (
 // (i.e. name begins with an underscore).
 func CompletionLabels(config *core.Configuration, args []string, repoRoot string) ([]core.BuildLabel, []core.BuildLabel, bool) {
 	if len(args) == 0 {
-		packageToParse(config, ".", repoRoot)
+		getPackagesAndPackageToParse(config, ".", repoRoot)
 		return []core.BuildLabel{{PackageName: "", Name: ""}}, []core.BuildLabel{{PackageName: "", Name: "all"}}, false
 	}
 
 	query := strings.ReplaceAll(args[0], "\\:", ":")
-	packageOnly := strings.HasSuffix(query, "/") // True when the query ends with a /
 	isRootPackage := query == "" || query == "//"
 
 	if strings.Contains(query, ":") {
@@ -32,16 +31,24 @@ func CompletionLabels(config *core.Configuration, args []string, repoRoot string
 		return []core.BuildLabel{{PackageName: labels[0].PackageName, Name: parts[1]}}, labels, strings.Contains(query, ":_")
 	}
 
-	pkg := packageToParse(config, query, repoRoot)
+	pkgs, pkg := getPackagesAndPackageToParse(config, query, repoRoot)
+	for _, p := range pkgs {
+		fmt.Printf("//%s\n", p)
+	}
 	// We matched more than one package so we don't need to complete any actual labels, or we're matching packages only
 	// NB: pkg will be "" for the root package so we should match labels then
-	if !isRootPackage && (pkg == "" || packageOnly) {
-		os.Exit(0)
+	if !isRootPackage && pkg == "" {
+		return nil, nil, false
 	}
 	return []core.BuildLabel{{PackageName: pkg, Name: ""}}, []core.BuildLabel{{PackageName: pkg, Name: "all"}}, false
 }
 
-func packageToParse(config *core.Configuration, query, repoRoot string) string {
+// getPackagesAndPackageToParse returns a list of packages that are possible completions and optionally, the package to
+// parse if we should include it's labels as well.
+func getPackagesAndPackageToParse(config *core.Configuration, query, repoRoot string) ([]string, string) {
+	// Whether we need to include build labels or just the packages in the results
+	packageOnly := strings.HasSuffix(query, "/") && query != "//"
+
 	query = strings.Trim(query, "/")
 	root := path.Join(repoRoot, query)
 	currentPackage := query
@@ -51,20 +58,30 @@ func packageToParse(config *core.Configuration, query, repoRoot string) string {
 		currentPackage = path.Dir(query)
 	}
 
-	allPackages := make(map[string]struct{})
-	for pkg := range utils.FindAllSubpackages(config, repoRoot, currentPackage) {
-		allPackages[pkg] = struct{}{}
+	// TODO(jpoole): We currently walk the entire file tree trying to discover BUILD files whereas we can probably just
+	// walk until we find the first ones and build of a trie.
+	var allPackages []string
+	for pkg := range utils.FindAllSubpackages(config, currentPackage, "") {
+		allPackages = append(allPackages, pkg)
 	}
-	packages, toParse := getAllCompletions(config, currentPackage, prefix, repoRoot, allPackages)
-	for _, pkg := range packages {
-		fmt.Printf("//%s\n", pkg)
+	pkgs, pkg := getAllCompletions(config, currentPackage, prefix, repoRoot, allPackages, packageOnly)
+	if packageOnly && pkg == currentPackage || !fs.IsPackage(config.Parse.BuildFileName, pkg) {
+		return pkgs, ""
 	}
-	return toParse
+	return pkgs, pkg
 }
 
-// getAllCompletions returns a string slice of all the package labels, such as "//src/core/query". The second string
-// is the package we matched directory (if any).
-func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoRoot string, allPackages map[string]struct{}) ([]string, string) {
+func containsPackage(dir string, allPackages []string) bool {
+	for _, pkg := range allPackages {
+		if strings.HasPrefix(pkg, dir) {
+			return true
+		}
+	}
+	return false
+}
+
+// getAllCompletions essentaillyt he same as getPackagesAndPackageToParse without the setup
+func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoRoot string, allPackages []string, skipSelf bool) ([]string, string) {
 	var packages []string
 	root := path.Join(repoRoot, currentPackage)
 
@@ -76,7 +93,7 @@ func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoR
 	for _, entry := range dirEntries {
 		if entry.IsDir() && strings.HasPrefix(entry.Name(), prefix) {
 			pkgName := filepath.Join(currentPackage, entry.Name())
-			if _, ok := allPackages[filepath.Join(currentPackage, pkgName)]; ok {
+			if containsPackage(pkgName, allPackages) {
 				packages = append(packages, pkgName)
 			}
 		}
@@ -85,10 +102,10 @@ func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoR
 
 	// If we match just one package, return all the immediate subpackages, and return the single package we matched
 	if len(packages) == 1 {
-		if prefix == "" && fs.IsPackage(config.Parse.BuildFileName, currentPackage) {
+		if !skipSelf && prefix == "" && fs.IsPackage(config.Parse.BuildFileName, currentPackage) {
 			return packages, currentPackage
 		}
-		pkgs, pkg := getAllCompletions(config, packages[0], "", repoRoot, allPackages)
+		pkgs, pkg := getAllCompletions(config, packages[0], "", repoRoot, allPackages, false)
 		// If we again matched a package exactly, use that one
 		if pkg != "" {
 			return pkgs, pkg

@@ -75,3 +75,14 @@ go_test(
         "//third_party/go:testify",
     ],
 )
+
+go_test(
+    name = "completions_test",
+    srcs = ["completions_test.go"],
+    data = ["completions_test_repo"],
+    deps = [
+        ":query",
+        "//src/core",
+        "//third_party/go:testify",
+    ],
+)
