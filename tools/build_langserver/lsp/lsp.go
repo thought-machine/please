@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -93,6 +94,7 @@ func (h *Handler) handle(method string, params *json.RawMessage) (i interface{},
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("Panic in handler for %s: %s", method, r)
+			log.Debug("%s\n%v", r, string(debug.Stack()))
 			err = &jsonrpc2.Error{
 				Code:    jsonrpc2.CodeInternalError,
 				Message: fmt.Sprintf("%s", r),
