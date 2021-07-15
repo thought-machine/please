@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//src/cli",
         "//src/core",
+        "//src/process",
         "//src/test",
         "//third_party/go:go-flags",
         "//third_party/go:humanize",

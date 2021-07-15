@@ -271,6 +271,21 @@ func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) Build
 	return withUserProvidedEnv(target, env)
 }
 
+// ExecEnvironment creates the environment variables for a `plz exec`.
+func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) BuildEnv {
+	env := TargetEnvironment(state, target)
+
+	env = append(env, "TMP_DIR="+filepath.Join(RepoRoot, execDir))
+
+	outEnv := target.Outputs()
+	env = append(env, "OUTS="+strings.Join(outEnv, " "))
+	if len(outEnv) == 1 {
+		env = append(env, "OUT="+outEnv[0])
+	}
+
+	return withUserProvidedEnv(target, env)
+}
+
 // StampedBuildEnvironment returns the shell env vars to be passed into exec.Command.
 // Optionally includes a stamp if asked.
 func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte, tmpDir string, shouldStamp bool) BuildEnv {
