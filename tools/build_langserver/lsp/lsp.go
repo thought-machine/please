@@ -112,10 +112,6 @@ func (h *Handler) handle(method string, params *json.RawMessage) (i interface{},
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 	}
 	ret := m.Func.Call([]reflect.Value{p.Elem()})
-	if len(ret) == 0 {
-		// Some handlers don't return anything e.g. shutdown
-		return nil, nil
-	}
 	if err, ok := ret[1].Interface().(error); ok && err != nil {
 		log.Warning("Error from handler for %s: %s", method, err)
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInternalError, Message: err.Error()}
