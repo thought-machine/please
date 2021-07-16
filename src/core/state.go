@@ -684,8 +684,8 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 		}
 		return make(chan struct{})
 	})
-	if ch != nil {
 
+	if ch != nil {
 		// Something's already registered for this, get on the train
 		<-ch
 		t := state.Graph.Target(l)

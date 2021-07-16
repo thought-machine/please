@@ -20,8 +20,8 @@ func (c dependencyChain) String() string {
 }
 
 type cycleDetector struct {
-	deps  map[*BuildLabel]map[*BuildLabel]struct{}
-	addQueue chan dependencyLink
+	deps        map[*BuildLabel]map[*BuildLabel]struct{}
+	addQueue    chan dependencyLink
 	removeQueue chan dependencyLink
 }
 
@@ -111,7 +111,6 @@ func (c *cycleDetector) addDep(link dependencyLink) error {
 	return nil
 }
 
-
 func failWithGraphCycle(cycle dependencyChain) error {
 	return fmt.Errorf("%s \nSorry, but you'll have to refactor your build files to avoid this cycle", cycle.String())
 }
@@ -121,12 +120,10 @@ func (c *cycleDetector) run() {
 		for {
 			select {
 			case dep := <-c.addQueue:
-				log.Warningf("%v waiting for %v", dep.from, dep.to)
 				if err := c.addDep(dep); err != nil {
 					log.Fatalf("Dependency cycle found:\n %v", err)
 				}
 			case dep := <-c.removeQueue:
-				log.Warningf("%v done for %v", dep.from, dep.to)
 				delete(c.deps[dep.from], dep.to)
 				if len(c.deps[dep.from]) == 0 {
 					delete(c.deps, dep.from)

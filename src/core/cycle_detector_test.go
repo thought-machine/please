@@ -15,13 +15,14 @@ func TestCycleDetector(t *testing.T) {
 	t.Run("Add dep first dep", func(t *testing.T) {
 		err := cd.addDep(dependencyLink{from: &targetA, to: &targetB})
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, cd.deps[&targetA], []*BuildLabel{&targetB})
+		assert.Contains(t, cd.deps[&targetA], &targetB)
 	})
 
 	t.Run("Add second dep", func(t *testing.T) {
 		err := cd.addDep(dependencyLink{from: &targetA, to: &targetC})
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, cd.deps[&targetA], []*BuildLabel{&targetB, &targetC})
+		assert.Contains(t, cd.deps[&targetA], &targetB)
+		assert.Contains(t, cd.deps[&targetA], &targetC)
 	})
 
 	t.Run("Add cycle", func(t *testing.T) {
