@@ -45,7 +45,11 @@ func (c *cycleDetector) AddDependency(from *BuildLabel, to *BuildLabel) {
 
 // checkForCycle just checks to see if there's a dependency cycle. It doesn't compute the cycle to avoid excess
 // allocations. buildCycle can be used to reconstruct the cycle once one has been found.
-func (c *cycleDetector) checkForCycle(head, tail *BuildLabel) bool {
+func (c *cycleDetector) checkForCycle(head, tail *BuildLabel, done map[BuildLabel]struct{}) bool {
+	if _, ok := done[*tail]; ok {
+		return false
+	}
+	done[*tail] = struct{}{}
 	if tailDeps, ok := c.deps[tail]; ok {
 		for _, dep := range tailDeps {
 			if dep == head {
@@ -53,7 +57,7 @@ func (c *cycleDetector) checkForCycle(head, tail *BuildLabel) bool {
 				return true
 			}
 
-			if c.checkForCycle(head, dep) {
+			if c.checkForCycle(head, dep, done) {
 				return true
 			}
 		}
@@ -62,10 +66,14 @@ func (c *cycleDetector) checkForCycle(head, tail *BuildLabel) bool {
 }
 
 // buildCycle is used to actually reconstruct the cycle after we've found one
-func (c *cycleDetector) buildCycle(chain []*BuildLabel) []*BuildLabel {
+func (c *cycleDetector) buildCycle(chain []*BuildLabel, done map[BuildLabel]struct{}) []*BuildLabel {
 	tail := chain[len(chain)-1]
 	head := chain[0]
 
+	if _, ok := done[*tail]; ok {
+		return nil
+	}
+	done[*tail] = struct{}{}
 	if tailDeps, ok := c.deps[tail]; ok {
 		for _, dep := range tailDeps {
 			if dep == head {
@@ -73,7 +81,7 @@ func (c *cycleDetector) buildCycle(chain []*BuildLabel) []*BuildLabel {
 				return append(chain, dep)
 			}
 
-			if newChain := c.buildCycle(append(chain, dep)); newChain != nil {
+			if newChain := c.buildCycle(append(chain, dep), done); newChain != nil {
 				return newChain
 			}
 		}
@@ -82,8 +90,8 @@ func (c *cycleDetector) buildCycle(chain []*BuildLabel) []*BuildLabel {
 }
 
 func (c *cycleDetector) addDep(link dependencyLink) error {
-	if c.checkForCycle(link.from, link.to) {
-		return failWithGraphCycle(c.buildCycle([]*BuildLabel{link.from, link.to}))
+	if c.checkForCycle(link.from, link.to, make(map[BuildLabel]struct{})) {
+		return failWithGraphCycle(c.buildCycle([]*BuildLabel{link.from, link.to}, make(map[BuildLabel]struct{})))
 	}
 	c.deps[link.from] = append(c.deps[link.from], link.to)
 	return nil
