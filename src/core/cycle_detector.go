@@ -20,18 +20,20 @@ func (c dependencyChain) String() string {
 }
 
 type cycleDetector struct {
-	deps  map[*BuildLabel][]*BuildLabel
-	queue chan dependencyLink
+	deps  map[*BuildLabel]map[*BuildLabel]struct{}
+	addQueue chan dependencyLink
+	removeQueue chan dependencyLink
 }
 
 func newCycleDetector() *cycleDetector {
 	c := new(cycleDetector)
 
 	// Set this to an order of magnitude that seems sensible to avoid resizing them rapidly initially
-	c.deps = make(map[*BuildLabel][]*BuildLabel, 1000)
+	c.deps = make(map[*BuildLabel]map[*BuildLabel]struct{}, 1000)
 
 	// Buffer this a little so handle spikes in targets coming in
-	c.queue = make(chan dependencyLink, 1000)
+	c.addQueue = make(chan dependencyLink)
+	c.removeQueue = make(chan dependencyLink)
 
 	return c
 }
@@ -39,7 +41,14 @@ func newCycleDetector() *cycleDetector {
 // AddDependency queues up another dependency for the cycle detector to check
 func (c *cycleDetector) AddDependency(from *BuildLabel, to *BuildLabel) {
 	go func() {
-		c.queue <- dependencyLink{from: from, to: to}
+		c.addQueue <- dependencyLink{from: from, to: to}
+	}()
+}
+
+// AddDependency queues up another dependency for the cycle detector to check
+func (c *cycleDetector) RemoveDependency(from *BuildLabel, to *BuildLabel) {
+	go func() {
+		c.removeQueue <- dependencyLink{from: from, to: to}
 	}()
 }
 
@@ -51,7 +60,7 @@ func (c *cycleDetector) checkForCycle(head, tail *BuildLabel, done map[BuildLabe
 	}
 	done[*tail] = struct{}{}
 	if tailDeps, ok := c.deps[tail]; ok {
-		for _, dep := range tailDeps {
+		for dep := range tailDeps {
 			if dep == head {
 				// If the tail has a dependency on the head, we've found a cycle
 				return true
@@ -75,7 +84,7 @@ func (c *cycleDetector) buildCycle(chain []*BuildLabel, done map[BuildLabel]stru
 	}
 	done[*tail] = struct{}{}
 	if tailDeps, ok := c.deps[tail]; ok {
-		for _, dep := range tailDeps {
+		for dep := range tailDeps {
 			if dep == head {
 				// If the tail has a dependency on the head, we've found a cycle
 				return append(chain, dep)
@@ -93,9 +102,15 @@ func (c *cycleDetector) addDep(link dependencyLink) error {
 	if c.checkForCycle(link.from, link.to, make(map[BuildLabel]struct{})) {
 		return failWithGraphCycle(c.buildCycle([]*BuildLabel{link.from, link.to}, make(map[BuildLabel]struct{})))
 	}
-	c.deps[link.from] = append(c.deps[link.from], link.to)
+	m := c.deps[link.from]
+	if m == nil {
+		m = map[*BuildLabel]struct{}{}
+		c.deps[link.from] = m
+	}
+	c.deps[link.from][link.to] = struct{}{}
 	return nil
 }
+
 
 func failWithGraphCycle(cycle dependencyChain) error {
 	return fmt.Errorf("%s \nSorry, but you'll have to refactor your build files to avoid this cycle", cycle.String())
@@ -103,9 +118,19 @@ func failWithGraphCycle(cycle dependencyChain) error {
 
 func (c *cycleDetector) run() {
 	go func() {
-		for next := range c.queue {
-			if err := c.addDep(next); err != nil {
-				log.Fatalf("Dependency cycle found:\n %v", err)
+		for {
+			select {
+			case dep := <-c.addQueue:
+				log.Warningf("%v waiting for %v", dep.from, dep.to)
+				if err := c.addDep(dep); err != nil {
+					log.Fatalf("Dependency cycle found:\n %v", err)
+				}
+			case dep := <-c.removeQueue:
+				log.Warningf("%v done for %v", dep.from, dep.to)
+				delete(c.deps[dep.from], dep.to)
+				if len(c.deps[dep.from]) == 0 {
+					delete(c.deps, dep.from)
+				}
 			}
 		}
 	}()

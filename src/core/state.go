@@ -685,6 +685,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 		return make(chan struct{})
 	})
 	if ch != nil {
+
 		// Something's already registered for this, get on the train
 		<-ch
 		t := state.Graph.Target(l)
@@ -843,7 +844,6 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, rescan, forceBuil
 		called := false
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
 			called = true
-			state.Graph.cycleDetector.AddDependency(&target.Label, &t.Label)
 			return state.queueResolvedTarget(t, rescan, forceBuild, false)
 		}); err != nil {
 			state.asyncError(target.Label, err)
@@ -852,7 +852,9 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, rescan, forceBuil
 		// Wait for these targets to actually build.
 		if building {
 			for _, t := range target.Dependencies() {
+				state.Graph.cycleDetector.AddDependency(&target.Label, &t.Label)
 				t.WaitForBuild()
+				state.Graph.cycleDetector.RemoveDependency(&target.Label, &t.Label)
 			}
 		}
 		if !called {
