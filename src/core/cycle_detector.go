@@ -12,6 +12,7 @@ type cycleDetector struct {
 // Check runs a single check of the build graph to see if any cycles can be detected.
 // If it finds one an errCycle is returned.
 func (c *cycleDetector) Check() *errCycle {
+	log.Debug("Running cycle detection...")
 	permanent := map[*BuildTarget]struct{}{}
 	temporary := map[*BuildTarget]struct{}{}
 
@@ -39,10 +40,12 @@ func (c *cycleDetector) Check() *errCycle {
 	for _, target := range c.graph.AllTargets() {
 		if _, present := permanent[target]; !present {
 			if cycle, _ := visit(target); cycle != nil {
+				log.Debug("Cycle detection complete, cycle found: %s", cycle)
 				return &errCycle{Cycle: cycle}
 			}
 		}
 	}
+	log.Debug("Cycle detection complete, no cycles found")
 	return nil
 }
 
