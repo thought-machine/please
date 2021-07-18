@@ -513,7 +513,6 @@ func (state *BuildState) forwardResults() {
 	t := time.NewTimer(cycleCheckDuration)
 	t.Stop()
 	var result *BuildResult
-	cycleDetector := cycleDetector{state: state}
 	for {
 		if len(activeTargets) == 0 {
 			t.Reset(cycleCheckDuration)
@@ -524,7 +523,7 @@ func (state *BuildState) forwardResults() {
 					<-t.C
 				}
 			case <-t.C:
-				go cycleDetector.Check()
+				go state.checkForCycles()
 				// Still need to get a result!
 				result = <-state.progress.internalResults
 			}
@@ -541,6 +540,15 @@ func (state *BuildState) forwardResults() {
 		if state.progress.results != nil {
 			state.progress.results <- result
 		}
+	}
+}
+
+// checkForCycles is run to detect a cycle in the graph. It converts any returned error into an async error.
+func (state *BuildState) checkForCycles() {
+	cycleDetector := cycleDetector{graph: state.Graph}
+	if err := cycleDetector.Check(); err != nil {
+		state.LogBuildError(0, err.Cycle[0].Label, TargetBuildFailed, err, "")
+		state.Stop()
 	}
 }
 

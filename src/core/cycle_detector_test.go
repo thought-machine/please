@@ -1,31 +1,75 @@
 package core
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCycleDetector(t *testing.T) {
-	cd := newCycleDetector()
+	newTarget := func(state *BuildState, label string, deps ...string) *BuildTarget {
+		target := NewBuildTarget(ParseBuildLabel(label, ""))
+		for _, dep := range deps {
+			target.AddDependency(ParseBuildLabel(dep, ""))
+		}
+		state.Graph.AddTarget(target)
+		state.QueueTarget(target.Label, OriginalTarget, false, true)
+		return target
+	}
 
-	targetA := ParseBuildLabel("//src:a", "")
-	targetB := ParseBuildLabel("//src:b", "")
-	targetC := ParseBuildLabel("//src:c", "")
+	waitForDeps := func(state *BuildState) {
+		// Wait for all targets to have resolved all their dependencies.
+		allDepsResolved := func() bool {
+			for _, target := range state.Graph.AllTargets() {
+				if len(target.DeclaredDependencies()) != len(target.Dependencies()) {
+					return false
+				}
+			}
+			return true
+		}
+		for i := 0; i < 1000; i++ {
+			if allDepsResolved() {
+				return
+			}
+			time.Sleep(2 * time.Millisecond)
+		}
+		panic("not all dependencies resolved")
+	}
 
-	t.Run("Add dep first dep", func(t *testing.T) {
-		err := cd.addDep(dependencyLink{from: &targetA, to: &targetB})
-		assert.NoError(t, err)
-		assert.ElementsMatch(t, cd.deps[&targetA], []*BuildLabel{&targetB})
+	t.Run("NoCycle", func(t *testing.T) {
+		return
+		state := NewDefaultBuildState()
+		newTarget(state, "//src:a", "//src:b", "//src:c")
+		newTarget(state, "//src:b", "//src:d", "//src:e")
+		newTarget(state, "//src:c", "//src:b", "//src:f")
+		newTarget(state, "//src:d", "//src:f")
+		newTarget(state, "//src:e", "//src:f")
+		newTarget(state, "//src:f", "//src:g")
+		newTarget(state, "//src:g")
+		waitForDeps(state)
+
+		detector := cycleDetector{graph: state.Graph}
+		assert.Nil(t, detector.Check())
 	})
 
-	t.Run("Add second dep", func(t *testing.T) {
-		err := cd.addDep(dependencyLink{from: &targetA, to: &targetC})
-		assert.NoError(t, err)
-		assert.ElementsMatch(t, cd.deps[&targetA], []*BuildLabel{&targetB, &targetC})
-	})
+	t.Run("Cycle", func(t *testing.T) {
+		state := NewDefaultBuildState()
+		newTarget(state, "//src:a", "//src:b", "//src:c")
+		newTarget(state, "//src:b", "//src:d", "//src:e")
+		newTarget(state, "//src:c", "//src:b", "//src:f")
+		newTarget(state, "//src:d", "//src:f")
+		e := newTarget(state, "//src:e", "//src:f")
+		f := newTarget(state, "//src:f", "//src:g")
+		g := newTarget(state, "//src:g", "//src:e")
+		waitForDeps(state)
 
-	t.Run("Add cycle", func(t *testing.T) {
-		err := cd.addDep(dependencyLink{from: &targetC, to: &targetA})
-		assert.Error(t, err, "didn't detect cycle from :c -> :a")
+		detector := cycleDetector{graph: state.Graph}
+		err := detector.Check()
+		require.NotNil(t, err)
+		require.Equal(t, 3, len(err.Cycle))
+		log.Warning("%s", err)
+		assert.Equal(t, []*BuildTarget{g, e, f}, err.Cycle)
 	})
 }
