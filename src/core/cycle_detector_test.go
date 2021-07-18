@@ -39,7 +39,6 @@ func TestCycleDetector(t *testing.T) {
 	}
 
 	t.Run("NoCycle", func(t *testing.T) {
-		return
 		state := NewDefaultBuildState()
 		newTarget(state, "//src:a", "//src:b", "//src:c")
 		newTarget(state, "//src:b", "//src:d", "//src:e")
