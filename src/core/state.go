@@ -89,8 +89,6 @@ type BuildState struct {
 	pendingParses                      chan ParseTask
 	pendingBuilds, pendingRemoteBuilds chan BuildTask
 	pendingTests, pendingRemoteTests   chan TestTask
-	// Stream of results from the build
-	results chan *BuildResult
 	// Timestamp that the build is considered to start at.
 	StartTime time.Time
 	// Various system statistics. Mostly used during remote communication.
@@ -208,6 +206,10 @@ type stateProgress struct {
 	originalTargetMutex sync.Mutex
 	// True if the build has been successful so far (i.e. nothing has failed yet).
 	success bool
+	// Stream of results from the build
+	results chan *BuildResult
+	// Internal result stream, used to intermediate them for the cycle checker.
+	internalResults chan *BuildResult
 }
 
 // SystemStats stores information about the system.
@@ -412,8 +414,8 @@ func (state *BuildState) OutputHashCheckers() []*fs.PathHasher {
 	return []*fs.PathHasher{state.Hasher("sha1"), state.Hasher("sha256"), state.Hasher("blake3")}
 }
 
-// LogBuildResult logs the result of a target either building or parsing.
-func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
+// LogParseResult logs the result of a target parsing.
+func (state *BuildState) LogParseResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
 	if status == PackageParsed {
 		// We may have parse tasks waiting for this package to exist, check for them.
 		if ch, present := state.progress.pendingPackages.GetOK(packageKey{Name: label.PackageName, Subrepo: label.Subrepo}); present {
@@ -424,10 +426,21 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 		}
 		return // We don't notify anything else on these.
 	}
-	state.LogResult(&BuildResult{
+	state.logResult(&BuildResult{
 		ThreadID:    tid,
-		Time:        time.Now(),
 		Label:       label,
+		Status:      status,
+		Err:         nil,
+		Description: description,
+	})
+}
+
+// LogBuildResult logs the result of a target building.
+func (state *BuildState) LogBuildResult(tid int, target *BuildTarget, status BuildResultStatus, description string) {
+	state.logResult(&BuildResult{
+		ThreadID:    tid,
+		Label:       target.Label,
+		target:      target,
 		Status:      status,
 		Err:         nil,
 		Description: description,
@@ -441,11 +454,11 @@ func (state *BuildState) LogBuildResult(tid int, label BuildLabel, status BuildR
 }
 
 // LogTestResult logs the result of a target once its tests have completed.
-func (state *BuildState) LogTestResult(tid int, label BuildLabel, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
-	state.LogResult(&BuildResult{
+func (state *BuildState) LogTestResult(tid int, target *BuildTarget, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
+	state.logResult(&BuildResult{
 		ThreadID:    tid,
-		Time:        time.Now(),
-		Label:       label,
+		Label:       target.Label,
+		target:      target,
 		Status:      status,
 		Err:         err,
 		Description: fmt.Sprintf(format, args...),
@@ -457,36 +470,47 @@ func (state *BuildState) LogTestResult(tid int, label BuildLabel, status BuildRe
 }
 
 // LogBuildError logs a failure for a target to parse, build or test.
-func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
-	state.LogResult(&BuildResult{
+func (state *BuildState) LogBuildError(tid int, target *BuildTarget, status BuildResultStatus, err error, format string, args ...interface{}) {
+	state.logResult(&BuildResult{
 		ThreadID:    tid,
-		Time:        time.Now(),
-		Label:       label,
+		Label:       target.Label,
+		target:      target,
 		Status:      status,
 		Err:         err,
 		Description: fmt.Sprintf(format, args...),
 	})
 }
 
-// LogResult logs a build result directly to the state's queue.
-func (state *BuildState) LogResult(result *BuildResult) {
-	defer func() {
-		if r := recover(); r != nil {
-			// This is basically always "send on closed channel" which can happen because this
-			// channel gets closed while there might still be some other workers doing stuff.
-			// At that point we don't care much because the build has already failed.
-			log.Info("%s", r)
-		}
-	}()
-	if state.results != nil {
-		state.results <- result
-	}
+// logResult logs a build result directly to the state's queue.
+func (state *BuildState) logResult(result *BuildResult) {
+	result.Time = time.Now()
+	state.progress.internalResults <- result
 	if result.Status.IsFailure() {
 		state.progress.success = false
 		if result.Status == TargetBuildFailed {
 			state.BuildFailed = true
 		} else if result.Status == TargetTestFailed {
 			state.TestFailed = true
+		}
+	}
+}
+
+// forwardResults runs indefinitely, forwarding results from the internal
+// channel to the external one. On the way it checks if we need to do
+// cycle detection.
+func (state *BuildState) forwardResults() {
+	defer func() {
+		if r := recover(); r != nil {
+			// Ensure we don't get a "send on closed channel" when the
+			// outward results channel is closed.
+			log.Debug("%s", r)
+		}
+	}()
+	for result := range state.progress.internalResults {
+		if target := result.target; target != nil {
+		}
+		if state.progress.results != nil {
+			state.progress.results <- result
 		}
 	}
 }
@@ -498,10 +522,10 @@ func (state *BuildState) Successful() bool {
 
 // Results returns a channel on which the caller can listen for results.
 func (state *BuildState) Results() <-chan *BuildResult {
-	if state.results == nil {
-		state.results = make(chan *BuildResult, 1000)
+	if state.progress.results == nil {
+		state.progress.results = make(chan *BuildResult, 1000)
 	}
-	return state.results
+	return state.progress.results
 }
 
 // NumActive returns the number of currently active tasks (i.e. those that are
@@ -1036,6 +1060,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			pendingTargets:  cmap.New(),
 			packageWaits:    cmap.New(),
 			success:         true,
+			internalResults: make(chan *BuildResult, 1000),
 		},
 	}
 	state.PathHasher = state.Hasher(config.Build.HashFunction)
@@ -1062,6 +1087,8 @@ type BuildResult struct {
 	Time time.Time
 	// Target which has just changed
 	Label BuildLabel
+	// Target which has changed. Nil if it's a parse action.
+	target *BuildTarget
 	// Its current status
 	Status BuildResultStatus
 	// Error, only populated for failure statuses
