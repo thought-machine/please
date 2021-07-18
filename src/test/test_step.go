@@ -55,7 +55,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, r
 		}
 	}()
 
-	state.LogBuildResult(tid, label, core.TargetTesting, "Testing...")
+	state.LogBuildResult(tid, target, core.TargetTesting, "Testing...")
 	test(tid, state.ForTarget(target), label, target, remote, run)
 }
 
@@ -81,7 +81,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			return
 		}
 		target.SetState(core.Stopped)
-		state.LogBuildResult(tid, label, core.TargetTestStopped, "Test stopped")
+		state.LogBuildResult(tid, target, core.TargetTestStopped, "Test stopped")
 		return
 	}
 
@@ -101,7 +101,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			state.Cache.Clean(target)
 			return nil
 		} else {
-			logTestSuccess(state, tid, label, &results, coverage)
+			logTestSuccess(state, tid, target, &results, coverage)
 		}
 		return &results
 	}
@@ -119,13 +119,13 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		}
 		outs := []string{path.Base(target.TestResultsFile())}
 		if err := moveOutputFile(state, hash, outputFile, target.TestResultsFile(), dummyOutput); err != nil {
-			state.LogTestResult(tid, label, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
+			state.LogTestResult(tid, target, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
 			return false
 		}
 
 		if needCoverage || core.PathExists(coverageFile) {
 			if err := moveOutputFile(state, hash, coverageFile, target.CoverageFile(), dummyCoverage); err != nil {
-				state.LogTestResult(tid, label, core.TargetTestFailed, results, coverage, err, "Failed to move test coverage file")
+				state.LogTestResult(tid, target, core.TargetTestFailed, results, coverage, err, "Failed to move test coverage file")
 				return false
 			}
 			outs = append(outs, path.Base(target.CoverageFile()))
@@ -134,7 +134,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			tmpFile := path.Join(target.TestDir(run), output)
 			outFile := path.Join(target.OutDir(), output)
 			if err := moveOutputFile(state, hash, tmpFile, outFile, ""); err != nil {
-				state.LogTestResult(tid, label, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
+				state.LogTestResult(tid, target, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
 				return false
 			}
 			outs = append(outs, output)
@@ -203,13 +203,13 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		}
 	} else if state.TestSequentially {
 		for run := 1; run <= state.NumTestRuns; run++ {
-			state.LogBuildResult(tid, target.Label, core.TargetTesting, getRunStatus(run, state.NumTestRuns))
+			state.LogBuildResult(tid, target, core.TargetTesting, getRunStatus(run, state.NumTestRuns))
 			var results core.TestSuite
 			results, coverage = doTest(tid, state, target, runRemotely, 1) // Sequential tests re-use run 1's test dir
 			target.AddTestResults(results)
 		}
 	} else {
-		state.LogBuildResult(tid, target.Label, core.TargetTesting, getRunStatus(run, state.NumTestRuns))
+		state.LogBuildResult(tid, target, core.TargetTesting, getRunStatus(run, state.NumTestRuns))
 		var results core.TestSuite
 		results, coverage = doTest(tid, state, target, runRemotely, run)
 		target.AddTestResults(results)
@@ -245,7 +245,7 @@ func doFlakeRun(tid int, state *core.BuildState, target *core.BuildTarget, runRe
 
 	// New group of test cases for each group of flaky runs
 	for flakes := 1; flakes <= target.Flakiness; flakes++ {
-		state.LogBuildResult(tid, target.Label, core.TargetTesting, getFlakeStatus(flakes, target.Flakiness))
+		state.LogBuildResult(tid, target, core.TargetTesting, getFlakeStatus(flakes, target.Flakiness))
 
 		testSuite, cov := doTest(tid, state, target, runRemotely, 1) // If we're running flakes, numRuns must be 1
 
@@ -289,7 +289,7 @@ func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget,
 				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
 			}
 		}
-		logTestSuccess(state, tid, target.Label, &target.Results, coverage)
+		logTestSuccess(state, tid, target, &target.Results, coverage)
 		return
 	}
 	var resultErr error
@@ -312,10 +312,10 @@ func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget,
 		resultErr = fmt.Errorf("unknown error")
 		resultMsg = "Something went wrong"
 	}
-	state.LogTestResult(tid, target.Label, core.TargetTestFailed, &target.Results, coverage, resultErr, resultMsg)
+	state.LogTestResult(tid, target, core.TargetTestFailed, &target.Results, coverage, resultErr, resultMsg)
 }
 
-func logTestSuccess(state *core.BuildState, tid int, label core.BuildLabel, results *core.TestSuite, coverage *core.TestCoverage) {
+func logTestSuccess(state *core.BuildState, tid int, target *core.BuildTarget, results *core.TestSuite, coverage *core.TestCoverage) {
 	var description string
 	tests := pluralise("test", results.Tests())
 	if results.Skips() != 0 {
@@ -324,7 +324,7 @@ func logTestSuccess(state *core.BuildState, tid int, label core.BuildLabel, resu
 	} else {
 		description = fmt.Sprintf("%d %s passed.", len(results.TestCases), tests)
 	}
-	state.LogTestResult(tid, label, core.TargetTested, results, coverage, nil, description)
+	state.LogTestResult(tid, target, core.TargetTested, results, coverage, nil, description)
 }
 
 func pluralise(word string, quantity int) string {
@@ -570,10 +570,10 @@ func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.Build
 	} else if workerCmd == "" {
 		return nil
 	}
-	state.LogBuildResult(tid, target.Label, core.TargetTesting, "Starting test worker...")
+	state.LogBuildResult(tid, target, core.TargetTesting, "Starting test worker...")
 	resp, err := worker.EnsureWorkerStarted(state, workerCmd, testCmd, target)
 	if err == nil {
-		state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
+		state.LogBuildResult(tid, target, core.TargetTesting, "Testing...")
 		if resp.Command != "" {
 			log.Debug("Setting test command for %s to %s", target.Label, resp.Command)
 			target.TestCommand = resp.Command

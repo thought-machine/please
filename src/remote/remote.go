@@ -319,7 +319,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 
 	if c.state.ShouldDownload(target) {
 		if !c.outputsExist(target, digest) {
-			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
+			c.state.LogBuildResult(tid, target, core.TargetBuilding, "Downloading")
 			if err := c.download(target, func() error {
 				return c.reallyDownload(target, digest, ar)
 			}); err != nil {
@@ -576,7 +576,7 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 // (i.e. not if we're doing plz build --rebuild or plz test --rerun).
 func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult) {
 	if !c.state.ShouldRebuild(target) && !(c.state.NeedTests && isTest && c.state.ForceRerun) {
-		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking remote...")
+		c.state.LogBuildResult(tid, target, core.TargetBuilding, "Checking remote...")
 		if metadata, ar := c.retrieveResults(target, command, digest, needStdout, isTest); metadata != nil {
 			return metadata, ar
 		}
@@ -621,9 +621,9 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 	executing := false
 	building := target.State() <= core.Built
 	if building {
-		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Submitting job...")
+		c.state.LogBuildResult(tid, target, core.TargetBuilding, "Submitting job...")
 	} else {
-		c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Submitting job...")
+		c.state.LogBuildResult(tid, target, core.TargetTesting, "Submitting job...")
 	}
 	updateProgress := func(metadata *pb.ExecuteOperationMetadata) {
 		if c.state.Config.Remote.DisplayURL != "" {
@@ -632,26 +632,26 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		if building {
 			switch metadata.Stage {
 			case pb.ExecutionStage_CACHE_CHECK:
-				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
+				c.state.LogBuildResult(tid, target, core.TargetBuilding, "Checking cache...")
 			case pb.ExecutionStage_QUEUED:
-				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Queued")
+				c.state.LogBuildResult(tid, target, core.TargetBuilding, "Queued")
 			case pb.ExecutionStage_EXECUTING:
 				executing = true
-				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Building...")
+				c.state.LogBuildResult(tid, target, core.TargetBuilding, "Building...")
 			case pb.ExecutionStage_COMPLETED:
-				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Completed")
+				c.state.LogBuildResult(tid, target, core.TargetBuilding, "Completed")
 			}
 		} else {
 			switch metadata.Stage {
 			case pb.ExecutionStage_CACHE_CHECK:
-				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Checking cache...")
+				c.state.LogBuildResult(tid, target, core.TargetTesting, "Checking cache...")
 			case pb.ExecutionStage_QUEUED:
-				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Queued")
+				c.state.LogBuildResult(tid, target, core.TargetTesting, "Queued")
 			case pb.ExecutionStage_EXECUTING:
 				executing = true
-				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
+				c.state.LogBuildResult(tid, target, core.TargetTesting, "Testing...")
 			case pb.ExecutionStage_COMPLETED:
-				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Completed")
+				c.state.LogBuildResult(tid, target, core.TargetTesting, "Completed")
 			}
 		}
 	}
@@ -704,7 +704,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 			return nil, nil, err
 		}
 		if response.CachedResult {
-			c.state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
+			c.state.LogBuildResult(tid, target, core.TargetCached, "Cached")
 		}
 		for k, v := range response.ServerLogs {
 			log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
@@ -805,7 +805,7 @@ func (c *Client) DataRate() (int, int, int, int) {
 
 // fetchRemoteFile sends a request to fetch a file using the remote asset API.
 func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
-	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading...")
+	c.state.LogBuildResult(tid, target, core.TargetBuilding, "Downloading...")
 	urls := target.AllURLs(c.state)
 	req := &fpb.FetchBlobRequest{
 		InstanceName: c.instance,
@@ -826,7 +826,7 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to download file: %s", err)
 	}
-	c.state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Downloaded.")
+	c.state.LogBuildResult(tid, target, core.TargetBuilt, "Downloaded.")
 	// If we get here, the blob exists in the CAS. Create an ActionResult corresponding to it.
 	outs := target.Outputs()
 	ar := &pb.ActionResult{

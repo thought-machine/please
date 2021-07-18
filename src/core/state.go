@@ -322,9 +322,9 @@ func (state *BuildState) Stop() {
 
 // CloseResults closes the result channels.
 func (state *BuildState) CloseResults() {
-	if state.results != nil {
+	if state.progress.results != nil {
 		state.progress.resultOnce.Do(func() {
-			close(state.results)
+			close(state.progress.results)
 		})
 	}
 }
@@ -447,7 +447,7 @@ func (state *BuildState) LogBuildResult(tid int, target *BuildTarget, status Bui
 	})
 	if status == TargetBuilt || status == TargetCached {
 		// We may have parse tasks waiting for this guy to build, check for them.
-		if ch, present := state.progress.pendingTargets.GetOK(label); present {
+		if ch, present := state.progress.pendingTargets.GetOK(target.Label); present {
 			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
 		}
 	}
@@ -470,11 +470,10 @@ func (state *BuildState) LogTestResult(tid int, target *BuildTarget, status Buil
 }
 
 // LogBuildError logs a failure for a target to parse, build or test.
-func (state *BuildState) LogBuildError(tid int, target *BuildTarget, status BuildResultStatus, err error, format string, args ...interface{}) {
+func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
 	state.logResult(&BuildResult{
 		ThreadID:    tid,
-		Label:       target.Label,
-		target:      target,
+		Label:       label,
 		Status:      status,
 		Err:         err,
 		Description: fmt.Sprintf(format, args...),
@@ -955,7 +954,7 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 // DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
 func (state *BuildState) DownloadInputsIfNeeded(tid int, target *BuildTarget, runtime bool) error {
 	if state.RemoteClient != nil {
-		state.LogBuildResult(tid, target.Label, TargetBuilding, "Downloading inputs...")
+		state.LogBuildResult(tid, target, TargetBuilding, "Downloading inputs...")
 		for input := range state.IterInputs(target, runtime) {
 			if l, ok := input.Label(); ok {
 				dep := state.Graph.TargetOrDie(l)
@@ -1069,6 +1068,7 @@ func NewBuildState(config *Configuration) *BuildState {
 	for _, exp := range config.Parse.ExperimentalDir {
 		state.experimentalLabels = append(state.experimentalLabels, BuildLabel{PackageName: exp, Name: "..."})
 	}
+	go state.forwardResults()
 	return state
 }
 
