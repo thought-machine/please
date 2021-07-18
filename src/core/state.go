@@ -517,7 +517,7 @@ func (state *BuildState) forwardResults() {
 		if len(activeTargets) == 0 {
 			t.Reset(cycleCheckDuration)
 			select {
-			case result = <- state.progress.internalResults:
+			case result = <-state.progress.internalResults:
 				// This has to be properly managed to prevent hangs.
 				if !t.Stop() {
 					<-t.C

@@ -27,7 +27,7 @@ func (c *cycleDetector) Check() *errCycle {
 		for _, dep := range target.Dependencies() {
 			if cycle, done := visit(dep); cycle != nil {
 				if done || target == cycle[len(cycle)-1] {
-					return cycle, true  // This target is already in the cycle
+					return cycle, true // This target is already in the cycle
 				}
 				return append([]*BuildTarget{target}, cycle...), false
 			}
@@ -50,7 +50,7 @@ func (c *cycleDetector) Check() *errCycle {
 }
 
 // An errCycle is emitted when a graph cycle is detected.
-type errCycle struct{
+type errCycle struct {
 	Cycle []*BuildTarget
 }
 
