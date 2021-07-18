@@ -911,7 +911,37 @@ func newConfig(state *core.BuildState) *pyConfig {
 	c["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
 	c["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 
+	loadPluginConfig(state, c)
+
 	return &pyConfig{base: c}
+}
+
+func loadPluginConfig(state *core.BuildState, c pyDict) {
+	pluginName := state.Config.PluginDefinition.Name
+	if pluginName == "" {
+		return
+	}
+
+	config := state.Config.Plugin[pluginName]
+	if config == nil {
+		return
+	}
+
+	pluginNamespace := pyDict{}
+
+	configValueDefinitions := state.Config.PluginConfig
+	for key, definition := range configValueDefinitions {
+		// TODO(jpoole): handle repeatable values
+		value, ok := config.ExtraValues[definition.ConfigKey]
+		if !ok {
+			value = definition.DefaultValue
+		}
+		if value == "" && !definition.Optional {
+			log.Fatalf("plugin config %v.%v is not optional", pluginName, definition.ConfigKey)
+		}
+		pluginNamespace[key] = pyString(value)
+	}
+	c[strings.ToUpper(pluginName)] = pluginNamespace
 }
 
 // A pyFrozenConfig is a config object that disallows further updates.

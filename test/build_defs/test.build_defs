@@ -3,6 +3,7 @@ def please_repo_e2e_test(
         name: str,
         plz_command: str,
         repo: str,
+        data: dict={},
         deps: list=[],
         tools: dict={},
         expected_failure: bool = False,
@@ -32,10 +33,8 @@ def please_repo_e2e_test(
 
     test_cmd = ' && '.join(test_cmd)
 
-    data = {
-        "REPO": [repo],
-        "BASE_CONFIG": ["//test/build_defs:base_config"],
-    }
+    data["REPO"] = [repo]
+    data["BASE_CONFIG"] = ["//test/build_defs:base_config"]
 
     tools["PLEASE"] = ["//package:installed_files|please"]
     tools["CONTENT_CHECKER"] = ["//test/build_defs:content_checker"]
@@ -44,8 +43,8 @@ def please_repo_e2e_test(
         name = name,
         test_cmd = test_cmd,
         test_tools = tools,
-        deps = deps,
         data = data,
+        deps = deps,
         env = {
             "PLZ_CONFIG_PROFILE": "e2e",
         },

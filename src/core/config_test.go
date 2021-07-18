@@ -356,3 +356,9 @@ func TestGetTags(t *testing.T) {
 	assert.Equal(t, "Version", tags["PLZ_VERSION"].Name)
 	assert.True(t, tags["PLZ_VERSION"].Type == reflect.TypeOf(cli.Version{}))
 }
+
+func TestPluginConfig(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/plugin.plzconfig"}, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "fooc", config.Plugin["foo"].ExtraValues["FoocTool"])
+}
