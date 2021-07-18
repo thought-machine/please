@@ -25,6 +25,9 @@ import (
 // startTime is as close as we can conveniently get to process start time.
 var startTime = time.Now()
 
+// cycleCheckDuration is the length of time we allow inactivity for before we trigger cycle detection.
+const cycleCheckDuration = 2 * time.Second
+
 // ParseTask is the type for the parse task queue
 type ParseTask struct {
 	Label, Dependent BuildLabel
@@ -505,8 +508,35 @@ func (state *BuildState) forwardResults() {
 			log.Debug("%s", r)
 		}
 	}()
-	for result := range state.progress.internalResults {
+	activeTargets := map[*BuildTarget]struct{}{}
+	// Persist this one timer throughout so we don't generate bazillions of them.
+	t := time.NewTimer(cycleCheckDuration)
+	t.Stop()
+	var result *BuildResult
+	cycleDetector := cycleDetector{state: state}
+	for {
+		if len(activeTargets) == 0 {
+			t.Reset(cycleCheckDuration)
+			select {
+			case result = <- state.progress.internalResults:
+				// This has to be properly managed to prevent hangs.
+				if !t.Stop() {
+					<-t.C
+				}
+			case <-t.C:
+				go cycleDetector.Check()
+				// Still need to get a result!
+				result = <-state.progress.internalResults
+			}
+		} else {
+			result = <-state.progress.internalResults
+		}
 		if target := result.target; target != nil {
+			if result.Status.IsActive() {
+				activeTargets[target] = struct{}{}
+			} else {
+				delete(activeTargets, target)
+			}
 		}
 		if state.progress.results != nil {
 			state.progress.results <- result
@@ -866,7 +896,6 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, rescan, forceBuil
 		called := false
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
 			called = true
-			state.Graph.cycleDetector.AddDependency(&target.Label, &t.Label)
 			return state.queueResolvedTarget(t, rescan, forceBuild, false)
 		}); err != nil {
 			state.asyncError(target.Label, err)
