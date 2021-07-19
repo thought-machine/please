@@ -42,8 +42,8 @@ linters:
     - prealloc
     - unconvert
     - whitespace
+    - maligned
 
     # To consider enabling in future (once we fix errors etc):
-    # - maligned
     # - errcheck
     # - scopelint
