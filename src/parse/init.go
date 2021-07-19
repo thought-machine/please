@@ -104,7 +104,7 @@ func (p *aspParser) RunPostBuildFunction(threadID int, state *core.BuildState, t
 
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
-	state.LogBuildResult(tid, target.Label, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
+	state.LogBuildResult(tid, target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
 	pkg := state.SyncParsePackage(target.Label)
 	changed, err := pkg.EnterBuildCallback(f)
 	if err != nil {
@@ -113,7 +113,7 @@ func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *co
 		if err := rescanDeps(state, changed); err != nil {
 			return err
 		}
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding, fmt.Sprintf("Finished %s-build function for %s", callbackType, target.Label))
+		state.LogBuildResult(tid, target, core.TargetBuilding, fmt.Sprintf("Finished %s-build function for %s", callbackType, target.Label))
 	}
 	return err
 }

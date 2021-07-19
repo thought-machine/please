@@ -27,8 +27,6 @@ type BuildGraph struct {
 	packages *cmap.CMap
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.CMap
-	// checks for cycles in the graph asynchronously
-	cycleDetector *cycleDetector
 }
 
 func (p *pendingTargets) getPackage(key packageKey) (ret *stringcmap.LMap) {
@@ -218,13 +216,11 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // NewGraph constructs and returns a new BuildGraph.
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
-		cycleDetector:  newCycleDetector(),
 		targets:        newTargetMap(),
 		pendingTargets: pendingTargets{m: cmap.New()},
 		packages:       cmap.New(),
 		subrepos:       cmap.New(),
 	}
-	g.cycleDetector.run()
 	return g
 }
 
