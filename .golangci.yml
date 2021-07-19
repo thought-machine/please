@@ -18,6 +18,13 @@ issues:
       linters:
         - errcheck
         - dupl
+        - maligned
+    - path: src/core/config.go # The config struct is big & complex and there's usually only one.
+      linters:
+        - maligned
+    - path: src/please.go # Similarly for flags.
+      linters:
+        - maligned
 linters:
   disable-all: true
   enable:

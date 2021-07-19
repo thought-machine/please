@@ -129,10 +129,10 @@ type BuildState struct {
 	// The architecture this state is for. This might change as we re-parse packages for different architectures e.g.
 	// for tools that run on the host vs. outputs that are compiled for the target arch above.
 	Arch cli.Arch
-	// True if we require rule hashes to be correctly verified (usually the case).
-	VerifyHashes bool
 	// Aggregated coverage for this run
 	Coverage TestCoverage
+	// True if we require rule hashes to be correctly verified (usually the case).
+	VerifyHashes bool
 	// True if >= 1 target has failed to build
 	BuildFailed bool
 	// True if >= 1 target has failed test cases
@@ -159,8 +159,6 @@ type BuildState struct {
 	ParsePackageOnly bool
 	// True if this build is triggered by watching for changes
 	Watch bool
-	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
-	NumTestRuns int
 	// Whether to run multiple test runs sequentially or across multiple workers (can be useful if tests bind to ports
 	// or similar)
 	TestSequentially bool
@@ -180,6 +178,8 @@ type BuildState struct {
 	XattrsSupported bool
 	// True if we have any remote executors configured.
 	anyRemote bool
+	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
+	NumTestRuns int
 	// Experimental directories
 	experimentalLabels []BuildLabel
 	// Various items for tracking progress.
