@@ -14,10 +14,10 @@ if CONFIG.OS == "linux":
 
     please_repo_e2e_test(
         name = "network_unshared",
-        expected_failure = True,
         expect_output_contains = {
             "output": "Dial error: ",
         },
+        expected_failure = True,
         plz_command = "plz exec --share_mount //:network_test 2>output",
         repo = "test_repo",
     )

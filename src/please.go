@@ -667,10 +667,11 @@ var buildFunctions = map[string]func() int{
 			}
 			return 0
 		}
-		if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
-			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
-		}
 		labels, parseLabels, hidden := query.CompletionLabels(config, fragments, core.RepoRoot)
+		// We have no labels to parse so we're done already
+		if len(parseLabels) == 0 {
+			return 0
+		}
 		if success, state := Please(parseLabels, config, false, false); success {
 			binary := opts.Query.Completions.Cmd == "run"
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
