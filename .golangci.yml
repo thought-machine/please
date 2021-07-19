@@ -18,13 +18,13 @@ issues:
       linters:
         - errcheck
         - dupl
-        - maligned
     - path: src/core/config.go # The config struct is big & complex and there's usually only one.
       linters:
         - maligned
     - path: src/please.go # Similarly for flags.
       linters:
         - maligned
+
 linters:
   disable-all: true
   enable:
@@ -49,8 +49,11 @@ linters:
     - prealloc
     - unconvert
     - whitespace
-    - maligned
 
     # To consider enabling in future (once we fix errors etc):
     # - errcheck
     # - scopelint
+
+linters-settings:
+  govet:
+    enable-all: true
