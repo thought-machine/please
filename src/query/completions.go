@@ -31,7 +31,7 @@ func CompletionLabels(config *core.Configuration, query string, repoRoot string)
 	if query == "" {
 		pkgs, toParse := getPackagesAndPackageToParse(config, ".", repoRoot)
 		return &CompletionsLabels{
-			Pkgs: pkgs,
+			Pkgs:           pkgs,
 			PackageToParse: toParse,
 		}
 	}
