@@ -144,6 +144,8 @@ func Completions(graph *core.BuildGraph, packageName, prefix string, pkgs []stri
 	// package, we should try and match binary targets in there.
 	if binary && count == 0 && len(pkgs) == 1 {
 		printLabelsInPackage(graph, pkgs[0], prefix, binary, test, hidden)
+		// This isn't totally correct as we should really recurse the entire algo. This is probably good enough though.
+		fmt.Printf("//%s\n", pkgs[0])
 	} else {
 		for _, pkg := range pkgs {
 			fmt.Printf("//%s\n", pkg)
