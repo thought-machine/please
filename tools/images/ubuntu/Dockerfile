@@ -10,7 +10,7 @@ RUN truncate -s0 /tmp/preseed.cfg; \
     echo "tzdata tzdata/Areas select Europe" >> /tmp/preseed.cfg; \
     echo "tzdata tzdata/Zones/Europe select London" >> /tmp/preseed.cfg; \
     apt-get update && \
-    apt-get install -y python3 python3-dev python3-pip openjdk-8-jdk-headless \
+    apt-get install -y python3 python3-dev python3-pip openjdk-8-jdk-headless time \
     curl unzip git locales pkg-config zlib1g-dev psmisc awscli && \
     apt-get clean
 
