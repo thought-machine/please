@@ -54,6 +54,26 @@ const TestResultsDirLabel = "test_results_dir"
 // tempOutputSuffix is the suffix we attach to temporary outputs to avoid name clashes.
 const tempOutputSuffix = ".out"
 
+type TestFields struct {
+	// Shell command to run for test targets.
+	Command string `name:"test_cmd"`
+	// Per-configuration test commands to run.
+	Commands map[string]string `name:"test_cmd"`
+	// True if the test action is sandboxed.
+	Sandbox bool `name:"test_sandbox"`
+	// True if the target is a test and has no output file.
+	// Default is false, meaning all tests must produce test.results as output.
+	NoTestOutput bool `name:"no_test_output"`
+	// Like tools but available to the test_cmd instead
+	testTools []BuildInput `name:"test_tools"`
+	// Named test tools, similar to named sources.
+	namedTestTools map[string][]BuildInput `name:"test_tools"`
+	Timeout        time.Duration           `name:"test_timeout"`
+	// Extra output files from the test.
+	// These are in addition to the usual test.results output file.
+	Outputs []string `name:"test_outputs"`
+}
+
 // A BuildTarget is a representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 type BuildTarget struct {
@@ -76,7 +96,7 @@ type BuildTarget struct {
 	// Data files of this rule. Similar to sources but used at runtime, typically by tests.
 	Data []BuildInput `name:"data"`
 	// Data files of this rule by name.
-	namedData map[string][]BuildInput `name:"data"`
+	namedData  map[string][]BuildInput `name:"data"`
 	// Output files of this rule. All are paths relative to this package.
 	outputs []string `name:"outs"`
 	// Named output subsets of this rule. All are paths relative to this package but can be
@@ -92,26 +112,18 @@ type BuildTarget struct {
 	Command string `name:"cmd" hide:"filegroup"`
 	// Per-configuration shell commands to run.
 	Commands map[string]string `name:"cmd" hide:"filegroup"`
-	// Shell command to run for test targets.
-	TestCommand string `name:"test_cmd"`
-	// Per-configuration test commands to run.
-	TestCommands map[string]string `name:"test_cmd"`
 	// Represents the state of this build target (see below)
 	state int32 `print:"false"`
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
 	IsBinary bool `name:"binary"`
 	// True if this target is a test
 	IsTest bool `name:"test"`
+	Test   *TestFields
 	// Indicates that the target can only be depended on by tests or other rules with this set.
 	// Used to restrict non-deployable code and also affects coverage detection.
 	TestOnly bool `name:"test_only"`
 	// True if the build action is sandboxed.
 	Sandbox bool
-	// True if the test action is sandboxed.
-	TestSandbox bool `name:"test_sandbox"`
-	// True if the target is a test and has no output file.
-	// Default is false, meaning all tests must produce test.results as output.
-	NoTestOutput bool `name:"no_test_output"`
 	// True if this target needs access to its transitive dependencies to build.
 	// This would be false for most 'normal' genrules but true for eg. compiler steps
 	// that need to build in everything.
@@ -180,12 +192,8 @@ type BuildTarget struct {
 	// Tools that this rule will use, ie. other rules that it may use at build time which are not
 	// copied into its source directory.
 	Tools []BuildInput
-	// Like tools but available to the test_cmd instead
-	testTools []BuildInput `name:"test_tools"`
 	// Named tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"tools"`
-	// Named test tools, similar to named sources.
-	namedTestTools map[string][]BuildInput `name:"test_tools"`
 	// Target-specific environment passthroughs.
 	PassEnv *[]string `name:"pass_env"`
 	// Target-specific unsafe environment passthroughs.
@@ -194,10 +202,6 @@ type BuildTarget struct {
 	Flakiness int `name:"flaky"`
 	// Timeouts for build/test actions
 	BuildTimeout time.Duration `name:"timeout"`
-	TestTimeout  time.Duration `name:"test_timeout"`
-	// Extra output files from the test.
-	// These are in addition to the usual test.results output file.
-	TestOutputs []string `name:"test_outputs"`
 	// OutputDirectories are the directories that outputs can be produced into which will be added to the root of the
 	// output for the rule. For example if an output directory "foo" contains "bar.txt" the rule will have the output
 	// "bar.txt"
@@ -1177,7 +1181,7 @@ func (target *BuildTarget) AddTool(tool BuildInput) {
 
 // AddTestTool adds a new test tool to the target.
 func (target *BuildTarget) AddTestTool(tool BuildInput) {
-	target.testTools = append(target.testTools, tool)
+	target.Test.testTools = append(target.Test.testTools, tool)
 	if label, ok := tool.Label(); ok {
 		target.AddDependency(label)
 	}
@@ -1185,14 +1189,14 @@ func (target *BuildTarget) AddTestTool(tool BuildInput) {
 
 // AllTestTools returns all the test tool paths for this rule.
 func (target *BuildTarget) AllTestTools() []BuildInput {
-	if target.namedTestTools == nil {
-		return target.testTools
+	if target.Test.namedTestTools == nil {
+		return target.Test.testTools
 	}
-	return target.allBuildInputs(target.testTools, target.namedTestTools)
+	return target.allBuildInputs(target.Test.testTools, target.Test.namedTestTools)
 }
 
 func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
-	return target.namedTestTools
+	return target.Test.namedTestTools
 }
 
 // AddDatum adds a new item of data to the target.
@@ -1231,10 +1235,13 @@ func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
 
 // AddNamedTestTool adds a new tool to the target.
 func (target *BuildTarget) AddNamedTestTool(name string, tool BuildInput) {
-	if target.namedTestTools == nil {
-		target.namedTestTools = map[string][]BuildInput{name: {tool}}
+	if target.Test == nil {
+		target.Test = new(TestFields)
+	}
+	if target.Test.namedTestTools == nil {
+		target.Test.namedTestTools = map[string][]BuildInput{name: {tool}}
 	} else {
-		target.namedTestTools[name] = append(target.namedTestTools[name], tool)
+		target.Test.namedTestTools[name] = append(target.Test.namedTestTools[name], tool)
 	}
 	if label, ok := tool.Label(); ok {
 		target.AddDependency(label)
@@ -1254,14 +1261,14 @@ func (target *BuildTarget) AddCommand(config, command string) {
 }
 
 // AddTestCommand adds a new config-specific test command to this build target.
-// Adding a general command is still done by simply setting the TestCommand member.
+// Adding a general command is still done by simply setting the Command member.
 func (target *BuildTarget) AddTestCommand(config, command string) {
-	if target.TestCommand != "" {
+	if target.Test.Command != "" {
 		panic(fmt.Sprintf("Adding named test command %s to %s, but it already has a general test command set", config, target.Label))
-	} else if target.TestCommands == nil {
-		target.TestCommands = map[string]string{config: command}
+	} else if target.Test.Commands == nil {
+		target.Test.Commands = map[string]string{config: command}
 	} else {
-		target.TestCommands[config] = command
+		target.Test.Commands[config] = command
 	}
 }
 
@@ -1280,7 +1287,7 @@ func (target *BuildTarget) GetCommandConfig(config string) string {
 
 // GetTestCommand returns the command we should use to test this target for the current config.
 func (target *BuildTarget) GetTestCommand(state *BuildState) string {
-	return target.getCommand(state, target.TestCommands, target.TestCommand)
+	return target.getCommand(state, target.Test.Commands, target.Test.Command)
 }
 
 func (target *BuildTarget) getCommand(state *BuildState, commands map[string]string, singleCommand string) string {
@@ -1483,7 +1490,7 @@ func (target *BuildTarget) AddOptionalOutput(output string) {
 
 // AddTestOutput adds a new test output to the target if it's not already there.
 func (target *BuildTarget) AddTestOutput(output string) {
-	target.TestOutputs = target.insert(target.TestOutputs, output)
+	target.Test.Outputs = target.insert(target.Test.Outputs, output)
 }
 
 // AddNamedOutput adds a new output to the target under a named group.
@@ -1561,7 +1568,10 @@ func (target *BuildTarget) StampFileName() string {
 // NeedCoverage returns true if this target should output coverage during a test
 // for a particular invocation.
 func (target *BuildTarget) NeedCoverage(state *BuildState) bool {
-	return state.NeedCoverage && !target.NoTestOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
+	if target.Test == nil {
+		return false
+	}
+	return state.NeedCoverage && !target.Test.NoTestOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
 }
 
 // Parent finds the parent of a build target, or nil if the target is parentless.

@@ -13,7 +13,7 @@ import (
 func CopySurefireXMLFilesToDir(state *core.BuildState, surefireDir string) {
 	for _, label := range state.ExpandOriginalLabels() {
 		target := state.Graph.TargetOrDie(label)
-		if state.ShouldInclude(target) && target.IsTest && !target.NoTestOutput {
+		if state.ShouldInclude(target) && target.IsTest && !target.Test.NoTestOutput {
 			copySurefireXMLtoDir(target.TestResultsFile(), surefireDir)
 		}
 	}

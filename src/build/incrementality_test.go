@@ -29,7 +29,7 @@ var KnownFields = map[string]bool{
 	"Command":                     true,
 	"Commands":                    true,
 	"TestCommand":                 true,
-	"TestCommands":                true,
+	"Commands":                true,
 	"NeedsTransitiveDependencies": true,
 	"Local":                       true,
 	"OptionalOutputs":             true,
@@ -51,7 +51,7 @@ var KnownFields = map[string]bool{
 	"namedTestTools":              true,
 	"Secrets":                     true,
 	"NamedSecrets":                true,
-	"TestOutputs":                 true,
+	"Outputs":                 true,
 	"Stamp":                       true,
 	"OutputDirectories":           true,
 	"ExitOnError":                 true,
@@ -61,7 +61,7 @@ var KnownFields = map[string]bool{
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
 	"namedData":         true,
-	"TestSandbox":       true,
+	"Sandbox":       true,
 	"ContainerSettings": true,
 
 	// These would ideally not contribute to the hash, but we need that at present
@@ -77,7 +77,7 @@ var KnownFields = map[string]bool{
 	"Flakiness":              true,
 	"NoTestOutput":           true,
 	"BuildTimeout":           true,
-	"TestTimeout":            true,
+	"Timeout":            true,
 	"state":                  true,
 	"Results":                true, // Recall that unsuccessful test results aren't cached...
 	"completedRuns":          true,

@@ -93,6 +93,9 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.Subrepo = s.pkg.Subrepo
 	target.IsBinary = isTruthy(binaryBuildRuleArgIdx)
 	target.IsTest = test
+	if test {
+		target.Test = new(core.TestFields)
+	}
 	target.NeedsTransitiveDependencies = isTruthy(needsTransitiveDepsBuildRuleArgIdx)
 	target.OutputIsComplete = isTruthy(outputIsCompleteBuildRuleArgIdx)
 	target.Sandbox = isTruthy(sandboxBuildRuleArgIdx)
@@ -146,11 +149,11 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 			target.Flakiness = 1
 		}
 		if testCmd != nil && testCmd != None {
-			target.TestCommand, target.TestCommands = decodeCommands(s, args[testCMDBuildRuleArgIdx])
+			target.Test.Command, target.Test.Commands = decodeCommands(s, args[testCMDBuildRuleArgIdx])
 		}
-		target.TestTimeout = sizeAndTimeout(s, size, args[testTimeoutBuildRuleArgIdx], s.state.Config.Test.Timeout)
-		target.TestSandbox = isTruthy(testSandboxBuildRuleArgIdx)
-		target.NoTestOutput = isTruthy(noTestOutputBuildRuleArgIdx)
+		target.Test.Timeout = sizeAndTimeout(s, size, args[testTimeoutBuildRuleArgIdx], s.state.Config.Test.Timeout)
+		target.Test.Sandbox = isTruthy(testSandboxBuildRuleArgIdx)
+		target.Test.NoTestOutput = isTruthy(noTestOutputBuildRuleArgIdx)
 	}
 	return target
 }

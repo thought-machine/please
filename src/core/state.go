@@ -778,9 +778,11 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 		for _, out := range target.DeclaredOutputs() {
 			pkg.MustRegisterOutput(out, target)
 		}
-		for _, out := range target.TestOutputs {
-			if !fs.IsGlob(out) {
-				pkg.MustRegisterOutput(out, target)
+		if target.IsTest {
+			for _, out := range target.Test.Outputs {
+				if !fs.IsGlob(out) {
+					pkg.MustRegisterOutput(out, target)
+				}
 			}
 		}
 	}
