@@ -19,11 +19,13 @@ issues:
         - errcheck
         - dupl
     - path: src/core/config.go # The config struct is big & complex and there's usually only one.
+      text: fieldalignment
       linters:
-        - maligned
+        - govet
     - path: src/please.go # Similarly for flags.
+      text: fieldalignment
       linters:
-        - maligned
+        - govet
 
 linters:
   disable-all: true
@@ -57,3 +59,9 @@ linters:
 linters-settings:
   govet:
     enable-all: true
+    disable:
+      - deepequalerrors # Only seen this once and it's a false positive
+      - unusedwrite # Similarly
+      - shadow # Probably not useful enough to clean everything up
+      # TODO(peterebden): Should clean up these warnings & enable (although they are pretty finicky)
+      - fieldalignment
