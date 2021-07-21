@@ -37,14 +37,14 @@ type buildingTargetData struct {
 	Started      time.Time
 	Finished     time.Time
 	Description  string
-	Active       bool
-	Failed       bool
-	Cached       bool
 	Err          error
 	Colour       string
 	Target       *core.BuildTarget
-	LastProgress float32
 	Eta          time.Duration
+	Active       bool
+	Failed       bool
+	Cached       bool
+	LastProgress float32
 }
 
 // MonitorState monitors the build while it's running and prints output.
