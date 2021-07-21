@@ -505,7 +505,7 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 		return nil
 	}
 
-	deps := make([]*BuildTarget, 0,  len(labels))
+	deps := make([]*BuildTarget, 0, len(labels))
 	for _, l := range labels {
 		t := graph.WaitForTarget(l)
 		if t == nil {
