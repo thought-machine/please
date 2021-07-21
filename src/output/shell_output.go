@@ -274,7 +274,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 	targets := 0
 	aggregate := core.TestSuite{}
 	for _, target := range state.Graph.AllTargets() {
-		if target.IsTest {
+		if target.IsTest() {
 			aggregate.TestCases = append(aggregate.TestCases, target.Results.TestCases...)
 			aggregate.Duration += target.Results.Duration
 			if len(target.Results.TestCases) > 0 {
@@ -497,7 +497,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 			cmd = target.GetTestCommand(state)
 			dir = path.Join(core.RepoRoot, target.TestDir(1))
 			env = core.TestEnvironment(state, target, dir)
-			shouldSandbox = target.TestSandbox
+			shouldSandbox = target.Test.Sandbox
 		}
 		cmd, _ = core.ReplaceSequences(state, target, cmd)
 		env = append(env, "CMD="+cmd)

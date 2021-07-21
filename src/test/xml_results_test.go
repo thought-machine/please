@@ -117,7 +117,7 @@ func xmlTestScenario() *core.BuildTarget {
 			},
 		},
 	}
-	target.IsTest = true
+	target.Test = new(core.TestFields)
 	return target
 }
 

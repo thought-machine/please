@@ -56,7 +56,7 @@ func cleanTarget(state *core.BuildState, target *core.BuildTarget) {
 	if err := build.RemoveOutputs(target); err != nil {
 		log.Fatalf("Failed to remove output: %s", err)
 	}
-	if target.IsTest {
+	if target.IsTest() {
 		if err := test.RemoveTestOutputs(target); err != nil {
 			log.Fatalf("Failed to remove file: %s", err)
 		}

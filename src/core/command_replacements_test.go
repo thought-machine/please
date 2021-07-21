@@ -100,7 +100,7 @@ func TestReplacementsForTest(t *testing.T) {
 	target2 := makeTarget2("//path/to:target2", "", nil)
 	target1 := makeTarget2("//path/to:target1", "$(exe //path/to:target1) $(location //path/to:target2)", target2)
 	target1.IsBinary = true
-	target1.IsTest = true
+	target1.Test = new(TestFields)
 
 	expected := "./target1.py path/to/target2.py"
 	cmd, _ := ReplaceTestSequences(state, target1, target1.Command)

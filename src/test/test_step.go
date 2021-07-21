@@ -130,7 +130,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			}
 			outs = append(outs, path.Base(target.CoverageFile()))
 		}
-		for _, output := range target.TestOutputs {
+		for _, output := range target.Test.Outputs {
 			tmpFile := path.Join(target.TestDir(run), output)
 			outFile := path.Join(target.OutDir(), output)
 			if err := moveOutputFile(state, hash, tmpFile, outFile, ""); err != nil {
@@ -370,7 +370,7 @@ func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte,
 		return nil, err
 	}
 	log.Debugf("Running test %s#%d\nENVIRONMENT:\n%s\n%s", target.Label, run, strings.Join(env, "\n"), replacedCmd)
-	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, target.TestDir(run), env, target.TestTimeout, state.ShowAllOutput, process.NewSandboxConfig(target.TestSandbox, target.TestSandbox), replacedCmd, state.DebugTests)
+	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, target.TestDir(run), env, target.Test.Timeout, state.ShowAllOutput, process.NewSandboxConfig(target.Test.Sandbox, target.Test.Sandbox), replacedCmd, state.DebugTests)
 	return stderr, err
 }
 
@@ -409,7 +409,7 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 
 	var data [][]byte
 	// If this test is meant to produce an output file and the test ran successfully
-	if !target.NoTestOutput {
+	if !target.Test.NoTestOutput {
 		d, readErr := readTestResultsDir(path.Join(target.TestDir(run), core.TestResultsFile))
 		if readErr != nil {
 			// If we got an error running the tests, this is probably to be expected and not worth warning about
@@ -474,7 +474,7 @@ func parseTestOutput(stdout string, stderr string, runError error, duration time
 	if len(resultsData) == 0 {
 		if runError == nil {
 			// No output and no execution error and output not expected - OK
-			if target.NoTestOutput {
+			if target.Test.NoTestOutput {
 				return core.TestSuite{
 					TestCases: []core.TestCase{
 						{
@@ -534,7 +534,7 @@ func RemoveTestOutputs(target *core.BuildTarget) error {
 	} else if err := os.RemoveAll(target.CoverageFile()); err != nil {
 		return err
 	}
-	for _, output := range target.TestOutputs {
+	for _, output := range target.Test.Outputs {
 		if err := os.RemoveAll(path.Join(target.OutDir(), output)); err != nil {
 			return err
 		}
@@ -576,7 +576,7 @@ func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.Build
 		state.LogBuildResult(tid, target, core.TargetTesting, "Testing...")
 		if resp.Command != "" {
 			log.Debug("Setting test command for %s to %s", target.Label, resp.Command)
-			target.TestCommand = resp.Command
+			target.Test.Command = resp.Command
 		}
 	}
 	return err

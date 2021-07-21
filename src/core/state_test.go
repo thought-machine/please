@@ -112,7 +112,9 @@ func TestAddDepsToTarget(t *testing.T) {
 func addTarget(state *BuildState, name string, labels ...string) {
 	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Labels = labels
-	target.IsTest = strings.HasSuffix(name, "_test")
+	if strings.HasSuffix(name, "_test") {
+		target.Test = new(TestFields)
+	}
 	pkg := state.Graph.PackageByLabel(target.Label)
 	if pkg == nil {
 		pkg = NewPackage(target.Label.PackageName)

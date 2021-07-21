@@ -60,7 +60,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 	}
 	// Mark the target as having finished building.
 	target.FinishBuild()
-	if target.IsTest && state.NeedTests && state.IsOriginalTarget(target) {
+	if target.IsTest() && state.NeedTests && state.IsOriginalTarget(target) {
 		state.AddPendingTest(target)
 	}
 }

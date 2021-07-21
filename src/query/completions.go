@@ -131,7 +131,7 @@ func Completions(graph *core.BuildGraph, labels []core.BuildLabel, binary, test,
 			if !strings.HasPrefix(target.Label.Name, label.Name) {
 				continue
 			}
-			if (binary && (!target.IsBinary || target.IsTest)) || (test && !target.IsTest) {
+			if (binary && (!target.IsBinary || target.IsTest())) || (test && !target.IsTest()) {
 				continue
 			}
 			if hidden || !strings.HasPrefix(target.Label.Name, "_") {

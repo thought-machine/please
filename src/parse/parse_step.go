@@ -156,7 +156,7 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 				if state.ShouldInclude(target) && !target.AddedPostBuild {
 					// Must always do this for coverage because we need to calculate sources of
 					// non-test targets later on.
-					if !state.NeedTests || target.IsTest || state.NeedCoverage {
+					if !state.NeedTests || target.IsTest() || state.NeedCoverage {
 						if err := state.QueueTarget(target.Label, dependent, false, dependent.IsAllTargets()); err != nil {
 							return err
 						}

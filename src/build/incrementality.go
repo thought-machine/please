@@ -211,9 +211,15 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	for _, licence := range target.Licences {
 		h.Write([]byte(licence))
 	}
-	for _, output := range target.TestOutputs {
-		h.Write([]byte(output))
+	if target.IsTest() {
+		for _, output := range target.Test.Outputs {
+			h.Write([]byte(output))
+		}
+		if runtime {
+			hashOptionalBool(h, target.Test.Sandbox)
+		}
 	}
+
 	for _, output := range target.OptionalOutputs {
 		h.Write([]byte(output))
 	}
@@ -224,7 +230,6 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 		h.Write([]byte(secret))
 	}
 	hashBool(h, target.IsBinary)
-	hashBool(h, target.IsTest)
 	hashOptionalBool(h, target.Sandbox)
 
 	// Note that we only hash the current command here; whatever's set in commands that we're not going
@@ -237,7 +242,6 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 		for _, datum := range target.AllData() {
 			h.Write([]byte(datum.String()))
 		}
-		hashOptionalBool(h, target.TestSandbox)
 	}
 
 	hashBool(h, target.NeedsTransitiveDependencies)

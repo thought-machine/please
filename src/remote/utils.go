@@ -335,7 +335,7 @@ func wrap(err error, msg string, args ...interface{}) error {
 // timeout returns either a build or test timeout from a target.
 func timeout(target *core.BuildTarget, test bool) time.Duration {
 	if test {
-		return target.TestTimeout
+		return target.Test.Timeout
 	}
 	return target.BuildTimeout
 }
