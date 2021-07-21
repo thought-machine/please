@@ -499,7 +499,7 @@ go_module(
         "testdata",
         "vendor",
     ],
-    version = "v1.7.0",
+    version = "v1.16.1",
     deps = [":errors"],
 )
 
