@@ -620,8 +620,9 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"revdeps": func() int {
-		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.ReverseDeps(state, state.ExpandLabels(utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
+		labels := utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
+		return runQuery(true, append(labels, core.WholeGraph...), func(state *core.BuildState) {
+			query.ReverseDeps(state, state.ExpandLabels(labels), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
 		})
 	},
 	"somepath": func() int {
