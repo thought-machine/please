@@ -33,6 +33,12 @@ import (
 	"github.com/thought-machine/please/src/metrics"
 )
 
+var downloadErrors = metrics.NewCounter(
+	"remote",
+	"tree_digest_download_eof_errors_total",
+	"Number of times the Unexpected EOF error has been seen during a tree digest download",
+)
+
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"
 
@@ -73,7 +79,7 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	for _, d := range ar.OutputDirectories {
 		tree := &pb.Tree{}
 		if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
-			metrics.DownloadErrorCounterInc()
+			downloadErrors.Inc()
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 
@@ -198,7 +204,7 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 	if c.state.Cache != nil {
 		metadata, err := c.mdStore.retrieveMetadata(c.metadataStoreKey(digest))
 		if err != nil {
-			log.Warningf("Failed to retrieve stored matadata for target %s, %v", target.Label, err)
+			log.Warningf("Failed to retrieve stored metadata for target %s, %v", target.Label, err)
 		}
 		if metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
@@ -593,7 +599,7 @@ func (c *Client) contextWithMetadata(target *core.BuildTarget) context.Context {
 		CorrelatedInvocationsId: c.state.Config.Remote.BuildID,
 		ToolDetails: &pb.ToolDetails{
 			ToolName:    "please",
-			ToolVersion: core.PleaseVersion.String(),
+			ToolVersion: core.PleaseVersion,
 		},
 	})
 	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs(key, string(b)))

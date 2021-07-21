@@ -1,3 +1,5 @@
+subinclude("//build_defs:version")
+
 go_library(
     name = "update",
     srcs = glob(
@@ -28,6 +30,9 @@ go_test(
         ":test_tarball",
         "//src:please",
     ],
+    definitions = {
+        "github.com/thought-machine/please/src/core.PleaseVersion": VERSION,
+    },
     labels = ["xz"],
     resources = ["pubkey.pem"],
     deps = [

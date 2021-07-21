@@ -23,6 +23,7 @@ import (
 	"github.com/thought-machine/please/src/clean"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/exec"
 	"github.com/thought-machine/please/src/export"
 	"github.com/thought-machine/please/src/format"
 	"github.com/thought-machine/please/src/fs"
@@ -33,6 +34,7 @@ import (
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/src/plzinit"
+	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
 	"github.com/thought-machine/please/src/sandbox"
@@ -193,6 +195,17 @@ var opts struct {
 		} `positional-args:"true"`
 		Remote bool `long:"remote" description:"Send targets to be executed remotely."`
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
+
+	Exec struct {
+		Share struct {
+			Network bool `long:"share_network" description:"Share network namespace"`
+			Mount   bool `long:"share_mount" description:"Share mount namespace"`
+		} `group:"Options allowing namespace sharing"`
+		Args struct {
+			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
+			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
+		} `positional-args:"true"`
+	} `command:"exec" description:"Builds and executes a single target in a sandboxed environment"`
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
@@ -453,6 +466,13 @@ var buildFunctions = map[string]func() int{
 		}
 		return toExitCode(success, state)
 	},
+	"exec": func() int {
+		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
+		if !success {
+			return toExitCode(success, state)
+		}
+		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(!opts.Exec.Share.Network, !opts.Exec.Share.Mount))
+	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
@@ -647,10 +667,11 @@ var buildFunctions = map[string]func() int{
 			}
 			return 0
 		}
-		if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
-			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
-		}
 		labels, parseLabels, hidden := query.CompletionLabels(config, fragments, core.RepoRoot)
+		// We have no labels to parse so we're done already
+		if len(parseLabels) == 0 {
+			return 0
+		}
 		if success, state := Please(parseLabels, config, false, false); success {
 			binary := opts.Query.Completions.Cmd == "run"
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
@@ -881,7 +902,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
-	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0
+	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty()
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")

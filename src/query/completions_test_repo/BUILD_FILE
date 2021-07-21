@@ -1,0 +1,4 @@
+genrule(
+    name = "root_target",
+    cmd = "",
+)

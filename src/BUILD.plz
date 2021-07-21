@@ -1,6 +1,11 @@
+subinclude("//build_defs:version")
+
 go_binary(
     name = "please",
     srcs = ["please.go"],
+    definitions = {
+        "github.com/thought-machine/please/src/core.PleaseVersion": VERSION,
+    },
     visibility = ["PUBLIC"],
     deps = [
         "//src/assets",
@@ -9,6 +14,7 @@ go_binary(
         "//src/clean",
         "//src/cli",
         "//src/core",
+        "//src/exec",
         "//src/export",
         "//src/format",
         "//src/fs",
@@ -19,6 +25,7 @@ go_binary(
         "//src/output",
         "//src/plz",
         "//src/plzinit",
+        "//src/process",
         "//src/query",
         "//src/run",
         "//src/sandbox",
