@@ -7,6 +7,7 @@
 package build
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -27,8 +28,8 @@ var KnownFields = map[string]bool{
 	"FileContent":                 true,
 	"IsRemoteFile":                true,
 	"Command":                     true,
-	"Commands":                    true,
-	"TestCommand":                 true,
+	"Test.Commands":                    true,
+	"Test.Command":                 true,
 	"Commands":                true,
 	"NeedsTransitiveDependencies": true,
 	"Local":                       true,
@@ -61,7 +62,7 @@ var KnownFields = map[string]bool{
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
 	"namedData":         true,
-	"Sandbox":       true,
+	"Test.Sandbox":       true,
 	"ContainerSettings": true,
 
 	// These would ideally not contribute to the hash, but we need that at present
@@ -100,6 +101,17 @@ func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
 	typ := val.Elem().Type()
 	for i := 0; i < typ.NumField(); i++ {
 		if field := typ.Field(i); !KnownFields[field.Name] {
+			t.Errorf("Unaccounted field in RuleHash: %s", field.Name)
+		}
+	}
+}
+
+func TestAllTestFieldsArePresentAndAccountedFor(t *testing.T) {
+	target := &core.TestFields{}
+	val := reflect.ValueOf(target)
+	typ := val.Elem().Type()
+	for i := 0; i < typ.NumField(); i++ {
+		if field := typ.Field(i); !KnownFields[fmt.Sprintf("Test.%s", field.Name)] {
 			t.Errorf("Unaccounted field in RuleHash: %s", field.Name)
 		}
 	}

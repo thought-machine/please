@@ -274,7 +274,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 	targets := 0
 	aggregate := core.TestSuite{}
 	for _, target := range state.Graph.AllTargets() {
-		if target.IsTest {
+		if target.IsTest() {
 			aggregate.TestCases = append(aggregate.TestCases, target.Results.TestCases...)
 			aggregate.Duration += target.Results.Duration
 			if len(target.Results.TestCases) > 0 {

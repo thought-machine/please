@@ -92,7 +92,6 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target := core.NewBuildTarget(label)
 	target.Subrepo = s.pkg.Subrepo
 	target.IsBinary = isTruthy(binaryBuildRuleArgIdx)
-	target.IsTest = test
 	if test {
 		target.Test = new(core.TestFields)
 	}

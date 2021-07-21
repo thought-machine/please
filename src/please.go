@@ -636,6 +636,13 @@ var buildFunctions = map[string]func() int{
 	},
 	"alltargets": func() int {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
+			m := new(runtime.MemStats)
+			runtime.ReadMemStats(m)
+			log.Warningf("before gc sys: %v, heap: %v, sys head: %v", b(m.Sys), b(m.HeapInuse), b(m.HeapSys))
+
+			runtime.ReadMemStats(m)
+			log.Warningf("after gc sys: %v, heap: %v, sys head: %v", b(m.Sys), b(m.HeapInuse), b(m.HeapSys))
+
 			query.AllTargets(state.Graph, state.ExpandOriginalLabels(), opts.Query.AllTargets.Hidden)
 		})
 	},
@@ -880,6 +887,20 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 		log.Fatal("Can't pass both --interactive_output and --plain_output")
 	}
 	return interactiveOutput || (!plainOutput && cli.StdErrIsATerminal && verbosity < 4)
+}
+
+func b(b uint64) string {
+	const unit = 1000
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB",
+		float64(b)/float64(div), "kMGTPE"[exp])
 }
 
 // Please starts & runs the main build process through to its completion.

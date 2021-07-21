@@ -116,8 +116,6 @@ type BuildTarget struct {
 	state int32 `print:"false"`
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
 	IsBinary bool `name:"binary"`
-	// True if this target is a test
-	IsTest bool `name:"test"`
 	Test   *TestFields
 	// Indicates that the target can only be depended on by tests or other rules with this set.
 	// Used to restrict non-deployable code and also affects coverage detection.
@@ -377,6 +375,11 @@ func (target *BuildTarget) TestDir(runNumber int) string {
 // TestDirs contains the parent directory of all the test run directories above
 func (target *BuildTarget) TestDirs() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
+}
+
+// IsTest returns whether or not the target is a test target i.e. has its Test field populated
+func (target *BuildTarget) IsTest() bool {
+	return target.Test != nil
 }
 
 // CompleteRun completes a run and returns true if this was the last run
@@ -797,7 +800,7 @@ func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
 		dep := state.Graph.TargetOrDie(d.declared)
 		if !target.CanSee(state, dep) {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
-		} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
+		} else if dep.TestOnly && !(target.IsTest() || target.TestOnly) {
 			if target.Label.isExperimental(state) {
 				log.Warning("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
 			} else {
@@ -999,7 +1002,7 @@ func (target *BuildTarget) HasLabel(label string) bool {
 			return true
 		}
 	}
-	return label == "test" && target.IsTest
+	return label == "test" && target.IsTest()
 }
 
 // PrefixedLabels returns all labels of this target with the given prefix.
@@ -1600,7 +1603,7 @@ func (target *BuildTarget) ShouldShowProgress() bool {
 // ProgressDescription returns a description of what the target is doing as it runs.
 // This is provided as a function to satisfy the process package.
 func (target *BuildTarget) ProgressDescription() string {
-	if target.State() >= Built && target.IsTest {
+	if target.State() >= Built && target.IsTest() {
 		return "testing"
 	}
 	return target.BuildingDescription

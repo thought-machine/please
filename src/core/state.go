@@ -645,7 +645,7 @@ func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel) BuildLabel
 	ret := BuildLabels{}
 	addPackage := func(pkg *Package) {
 		for _, target := range pkg.AllTargets() {
-			if state.ShouldInclude(target) && (!state.NeedTests || target.IsTest) {
+			if state.ShouldInclude(target) && (!state.NeedTests || target.IsTest()) {
 				ret = append(ret, target.Label)
 			}
 		}
@@ -778,7 +778,7 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 		for _, out := range target.DeclaredOutputs() {
 			pkg.MustRegisterOutput(out, target)
 		}
-		if target.IsTest {
+		if target.IsTest() {
 			for _, out := range target.Test.Outputs {
 				if !fs.IsGlob(out) {
 					pkg.MustRegisterOutput(out, target)
@@ -865,7 +865,7 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, rescan, forceB
 	}
 
 	queueAsync := func(shouldBuild bool) {
-		if target.IsTest && state.NeedTests {
+		if target.IsTest() && state.NeedTests {
 			if state.TestSequentially {
 				state.addActiveTargets(2) // One for build & one for test
 			} else {

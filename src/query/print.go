@@ -135,6 +135,11 @@ func (p *printer) PrintTarget() {
 			f[i].printIndex = index
 		}
 	}
+
+	if p.target.IsTest() {
+
+	}
+
 	sort.Sort(f)
 	for _, orderedField := range f {
 		p.printField(t.Field(orderedField.structIndex), v.Field(orderedField.structIndex))
@@ -166,6 +171,14 @@ func (p *printer) findField(field string) reflect.StructField {
 	for i := 0; i < t.NumField(); i++ {
 		if f := t.Field(i); p.fieldName(f) == field {
 			return f
+		}
+	}
+	if p.target.IsTest() {
+		testFields := reflect.ValueOf(p.target.Test).Elem().Type()
+		for i := 0; i < testFields.NumField(); i++ {
+			if f := testFields.Field(i); p.fieldName(f) == field {
+				return f
+			}
 		}
 	}
 	log.Fatalf("Unknown field %s", field)

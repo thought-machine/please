@@ -77,10 +77,10 @@ func TestFilegroupOutput(t *testing.T) {
 func TestTestOutput(t *testing.T) {
 	target := core.NewBuildTarget(core.ParseBuildLabel("//src/query:test_test_output", ""))
 	target.AddSource(src("file.go"))
-	target.IsTest = true
+	target.Test = new(core.TestFields)
 	target.IsBinary = true
 	target.BuildTimeout = 30 * time.Second
-	target.TestTimeout = 60 * time.Second
+	target.Test.Timeout = 60 * time.Second
 	target.Flakiness = 2
 	s := testPrint(target)
 	expected := `  build_rule(
