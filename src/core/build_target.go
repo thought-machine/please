@@ -249,7 +249,7 @@ type PostBuildFunction interface {
 }
 
 type depInfo struct {
-	declared *BuildLabel     // the originally declared dependency
+	declared *BuildLabel    // the originally declared dependency
 	deps     []*BuildTarget // list of actual deps
 	resolved bool           // has the graph resolved it
 	exported bool           // is it an exported dependency
