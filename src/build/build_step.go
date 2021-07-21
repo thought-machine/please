@@ -81,10 +81,7 @@ func validateBuildTargetBeforeBuild(state *core.BuildState, target *core.BuildTa
 	}
 
 	// Check that the build outputs don't belong to another package
-	if err := target.CheckTargetOwnsBuildOutputs(state); err != nil {
-		return err
-	}
-	return nil
+	return target.CheckTargetOwnsBuildOutputs(state)
 }
 
 func findFilegroupSourcesWithTmpDir(target *core.BuildTarget) []core.BuildLabel {
