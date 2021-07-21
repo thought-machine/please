@@ -18,8 +18,8 @@ type TestSuites struct {
 type TestSuite struct {
 	Package    string            // The package name of the test suite (usually the first part of the target label).
 	Name       string            // The name of the test suite (usually the last part of the target label).
-	Cached     bool              // True if the test results were retrieved from cache.
 	Duration   time.Duration     // The length of time it took to run this target (may be different from the sum of times of test cases).
+	Cached     bool              // True if the test results were retrieved from cache.
 	TimedOut   bool              // True if the test failed because we timed it out.
 	TestCases  TestCases         // The test cases that ran during execution of this target.
 	Properties map[string]string // The system properties at the time of the test.

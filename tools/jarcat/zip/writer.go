@@ -35,10 +35,6 @@ type File struct {
 	input    string
 	// Include and Exclude are prefixes of filenames to include or exclude from the zipfile.
 	Include, Exclude []string
-	// Strict controls whether we deny duplicate files or not.
-	// Zipfiles can readily contain duplicates, if this is true we reject them unless they are identical.
-	// If false we allow duplicates and leave it to someone else to handle.
-	Strict bool
 	// RenameDirs is a map of directories to rename, from the old name to the new one.
 	RenameDirs map[string]string
 	// StripPrefix is a prefix that is stripped off any files added with AddFiles.
@@ -49,6 +45,10 @@ type File struct {
 	ExcludeSuffix []string
 	// StoreSuffix is a list of file suffixes that will be stored instead of deflated.
 	StoreSuffix []string
+	// Strict controls whether we deny duplicate files or not.
+	// Zipfiles can readily contain duplicates, if this is true we reject them unless they are identical.
+	// If false we allow duplicates and leave it to someone else to handle.
+	Strict bool
 	// IncludeOther will make the file scan include other files that are not part of a zip file.
 	IncludeOther bool
 	// AddInitPy will make the writer add __init__.py files to all directories that don't already have one on close.
