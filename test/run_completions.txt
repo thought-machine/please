@@ -1,1 +1,2 @@
 //test/completions:binary
+//test/completions:test

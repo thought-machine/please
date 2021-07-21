@@ -18,14 +18,6 @@ plz_e2e_test(
     expect_output_contains = "//test/completion:plz_test_completion_test",
 )
 
-# plz run should not complete tests.
-plz_e2e_test(
-    name = "plz_run_anti_test",
-    cmd = "plz run //test/completion:plz_test_",
-    completion = True,
-    expect_output_doesnt_contain = "//test/completion:plz_test_completion_test",
-)
-
 # plz build should complete libraries
 plz_e2e_test(
     name = "plz_build_lib_test",
