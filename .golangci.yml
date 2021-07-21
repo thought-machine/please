@@ -46,9 +46,9 @@ linters:
     - exportloopref
     - gocritic
     - gofmt
-    - golint
     - misspell
     - prealloc
+    - revive
     - unconvert
     - whitespace
 
