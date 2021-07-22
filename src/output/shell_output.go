@@ -18,6 +18,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/test"
 )
 
@@ -36,14 +37,14 @@ type buildingTargetData struct {
 	Started      time.Time
 	Finished     time.Time
 	Description  string
-	Active       bool
-	Failed       bool
-	Cached       bool
 	Err          error
 	Colour       string
 	Target       *core.BuildTarget
-	LastProgress float32
 	Eta          time.Duration
+	Active       bool
+	Failed       bool
+	Cached       bool
+	LastProgress float32
 }
 
 // MonitorState monitors the build while it's running and prints output.
@@ -509,7 +510,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 			fmt.Printf("\n")
 			argv := []string{"bash", "--noprofile", "--norc", "-o", "pipefail"}
 			log.Debug("Full command: %s", strings.Join(argv, " "))
-			cmd := state.ProcessExecutor.ExecCommand(shouldSandbox, argv[0], argv[1:]...)
+			cmd := state.ProcessExecutor.ExecCommand(process.NewSandboxConfig(shouldSandbox, shouldSandbox), argv[0], argv[1:]...)
 			cmd.Dir = dir
 			cmd.Env = env
 			cmd.Stdin = os.Stdin

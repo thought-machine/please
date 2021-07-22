@@ -113,7 +113,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 			} else {
 				err = fmt.Errorf("%s", r)
 			}
-			log.Debug("%s", debug.Stack())
+			log.Debug("%v:\n %s", err, debug.Stack())
 		}
 	}()
 	return s.interpretStatements(statements), nil // Would have panicked if there was an error

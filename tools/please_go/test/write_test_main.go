@@ -7,8 +7,6 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"path"
-	"path/filepath"
 	"strings"
 	"text/template"
 	"unicode"
@@ -29,7 +27,7 @@ type testDescr struct {
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(importPath, testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark bool) error {
+func WriteTestMain(testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark bool) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
@@ -38,7 +36,7 @@ func WriteTestMain(importPath, testPackage string, sources []string, output stri
 	testDescr.CoverVars = coverVars
 	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || testDescr.Main != "" {
 		// Can't set this if there are no test functions, it'll be an unused import.
-		testDescr.Imports = extraImportPaths(testPackage, testDescr.Package, importPath, testDescr.CoverVars)
+		testDescr.Imports = extraImportPaths(testPackage, testDescr.Package, testDescr.CoverVars)
 	}
 
 	testDescr.Benchmark = benchmark
@@ -54,20 +52,14 @@ func WriteTestMain(importPath, testPackage string, sources []string, output stri
 }
 
 // extraImportPaths returns the set of extra import paths that are needed.
-func extraImportPaths(testPackage, alias, importPath string, coverVars []CoverVar) []string {
+func extraImportPaths(testPackage, alias string, coverVars []CoverVar) []string {
 	ret := make([]string, 0, len(coverVars)+1)
 	ret = append(ret, fmt.Sprintf("%s \"%s\"", alias, testPackage))
 
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)
 		coverVars[i].ImportName = name
-
-		// Import the module's root package via the module name if they're the same name
-		if (v.Dir == "." || v.Dir == "") && v.ImportPath == filepath.Base(importPath) {
-			ret = append(ret, fmt.Sprintf("%s \"%s\"", name, importPath))
-		} else {
-			ret = append(ret, fmt.Sprintf("%s \"%s\"", name, path.Join(importPath, v.ImportPath)))
-		}
+		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, v.ImportPath))
 	}
 	return ret
 }

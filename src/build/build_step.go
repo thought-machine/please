@@ -48,7 +48,7 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 	if err := buildTarget(tid, state, target, remote); err != nil {
 		if errors.Is(err, errStop) {
 			target.SetState(core.Stopped)
-			state.LogBuildResult(tid, target.Label, core.TargetBuildStopped, "Build stopped")
+			state.LogBuildResult(tid, target, core.TargetBuildStopped, "Build stopped")
 			return
 		}
 		state.LogBuildError(tid, label, core.TargetBuildFailed, err, "Build failed: %s", err)
@@ -81,10 +81,7 @@ func validateBuildTargetBeforeBuild(state *core.BuildState, target *core.BuildTa
 	}
 
 	// Check that the build outputs don't belong to another package
-	if err := target.CheckTargetOwnsBuildOutputs(state); err != nil {
-		return err
-	}
-	return nil
+	return target.CheckTargetOwnsBuildOutputs(state)
 }
 
 func findFilegroupSourcesWithTmpDir(target *core.BuildTarget) []core.BuildLabel {
@@ -162,7 +159,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		log.Debug("Finished pre-build function for %s", target.Label)
 	}
 
-	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Preparing...")
+	state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
 	if state.PrepareOnly && state.IsOriginalTarget(target) {
 		return prepareOnly(tid, state, target)
 	}
@@ -219,7 +216,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 					copyFilegroupHashes(state, target)
 				}
 				target.SetState(core.Reused)
-				state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
+				state.LogBuildResult(tid, target, core.TargetCached, "Unchanged")
 				buildLinks(state, target)
 				return nil // Nothing needs to be done.
 			}
@@ -234,10 +231,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 				return err
 			} else if changed {
 				target.SetState(core.Built)
-				state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
+				state.LogBuildResult(tid, target, core.TargetBuilt, "Built")
 			} else {
 				target.SetState(core.Unchanged)
-				state.LogBuildResult(tid, target.Label, core.TargetCached, "Unchanged")
+				state.LogBuildResult(tid, target, core.TargetCached, "Unchanged")
 			}
 			buildLinks(state, target)
 			return nil
@@ -278,12 +275,12 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		if err := target.CheckSecrets(); err != nil {
 			return err
 		}
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Preparing...")
+		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
 		if err := prepareSources(state.Graph, target); err != nil {
 			return fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
 		}
 
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding, target.BuildingDescription)
+		state.LogBuildResult(tid, target, core.TargetBuilding, target.BuildingDescription)
 		metadata, err = buildMaybeRemotely(state, target, cacheKey)
 		if err != nil {
 			return err
@@ -323,10 +320,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	if runRemotely {
 		if metadata.Cached {
 			target.SetState(core.ReusedRemotely)
-			state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Reused existing action")
+			state.LogBuildResult(tid, target, core.TargetBuilt, "Reused existing action")
 		} else {
 			target.SetState(core.BuiltRemotely)
-			state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built remotely")
+			state.LogBuildResult(tid, target, core.TargetBuilt, "Built remotely")
 		}
 		if state.ShouldDownload(target) {
 			if err := state.EnsureDownloaded(target); err != nil {
@@ -339,7 +336,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
 	}
 
-	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Collecting outputs...")
+	state.LogBuildResult(tid, target, core.TargetBuilding, "Collecting outputs...")
 	outs, outputsChanged, err := moveOutputs(state, target)
 	if err != nil {
 		return fmt.Errorf("error moving outputs for target %s: %w", target.Label, err)
@@ -354,7 +351,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	}
 	buildLinks(state, target)
 	if state.Cache != nil {
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Storing...")
+		state.LogBuildResult(tid, target, core.TargetBuilding, "Storing...")
 		newCacheKey := mustShortTargetHash(state, target)
 
 		// If the build could modify the target, store the metadata in the cache based on the original state of the
@@ -376,9 +373,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 	}
 	if outputsChanged {
-		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built")
+		state.LogBuildResult(tid, target, core.TargetBuilt, "Built")
 	} else {
-		state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Built (unchanged)")
+		state.LogBuildResult(tid, target, core.TargetBuilt, "Built (unchanged)")
 	}
 	return nil
 }
@@ -427,10 +424,10 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 	// later tries to add more outputs.
 	if len(target.DeclaredOutputs()) == 0 && len(target.DeclaredNamedOutputs()) == 0 {
 		target.SetState(core.Unchanged)
-		state.LogBuildResult(tid, target.Label, core.TargetCached, "Nothing to do")
+		state.LogBuildResult(tid, target, core.TargetCached, "Nothing to do")
 		return true
 	}
-	state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
+	state.LogBuildResult(tid, target, core.TargetBuilding, "Checking cache...")
 
 	cacheKey := mustShortTargetHash(state, target)
 
@@ -449,10 +446,10 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 			return false
 		} else if oldOutputHash == nil || !bytes.Equal(oldOutputHash, newOutputHash) {
 			target.SetState(core.Cached)
-			state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
+			state.LogBuildResult(tid, target, core.TargetCached, "Cached")
 		} else {
 			target.SetState(core.Unchanged)
-			state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached (unchanged)")
+			state.LogBuildResult(tid, target, core.TargetCached, "Cached (unchanged)")
 		}
 		buildLinks(state, target)
 
@@ -482,7 +479,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	}
 	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
-	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, target.Sandbox, command)
+	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, process.NewSandboxConfig(target.Sandbox, target.Sandbox), command)
 	if err != nil {
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
@@ -770,12 +767,14 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	if err != nil {
 		return nil, err
 	}
+
 	if err = checkRuleHashes(state, target, hash); err != nil {
 		if state.NeedHashesOnly && state.IsOriginalTargetOrParent(target) {
-			return nil, errStop
-		} else if state.VerifyHashes {
-			return nil, err
+			log.Info("Updated hash for %v: %v", target, string(hash))
 		} else {
+			if state.VerifyHashes {
+				return nil, err
+			}
 			log.Warning("%s", err)
 		}
 	}

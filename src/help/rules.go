@@ -139,8 +139,8 @@ type function struct {
 // A functionArg represents a single argument to a function.
 type functionArg struct {
 	Comment    string   `json:"comment,omitempty"`
-	Deprecated bool     `json:"deprecated,omitempty"`
 	Name       string   `json:"name"`
+	Deprecated bool     `json:"deprecated,omitempty"`
 	Required   bool     `json:"required,omitempty"`
 	Types      []string `json:"types"`
 }

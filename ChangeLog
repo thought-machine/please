@@ -1,3 +1,13 @@
+Version 16.2.1
+--------------
+    * Make `pip_library()` more deterministic by stripping debug symbols in C code #1909
+    * Make `plz hash --update` keep going once it updates a hash so it can update multiple
+      in one pass #1919
+    * Apply linker flags to `go_benchmark()` #1924
+    * Fix issue where the cycle detector wasn't detecting cycles correctly #1926
+    * Strip please location from PATH for remote execution #1930
+
+
 Version 16.2.0
 --------------
     * Fixed issue where Please would attempt to use xattrs on unsupported filesystems

@@ -47,15 +47,7 @@ func TestParseTestSourcesFailsGracefully(t *testing.T) {
 }
 
 func TestWriteTestMain(t *testing.T) {
-	err := WriteTestMain(
-		"",
-		"test_pkg",
-		[]string{"tools/please_go/test/test_data/test/example_test.go"},
-		"test.go",
-		false,
-		[]CoverVar{},
-		false,
-	)
+	err := WriteTestMain("test_pkg", []string{"tools/please_go/test/test_data/test/example_test.go"}, "test.go", false, []CoverVar{}, false)
 	assert.NoError(t, err)
 	// It's not really practical to assert the contents of the file in great detail.
 	// We'll do the obvious thing of asserting that it is valid Go source.
@@ -65,20 +57,12 @@ func TestWriteTestMain(t *testing.T) {
 }
 
 func TestWriteTestMainWithCoverage(t *testing.T) {
-	err := WriteTestMain(
-		"",
-		"test_package",
-		[]string{"tools/please_go/test/test_data/test/example_test.go"},
-		"test.go",
-		true,
-		[]CoverVar{{
-			Dir:        "tools/please_go/test/test_data",
-			ImportPath: "core",
-			Var:        "GoCover_lock_go",
-			File:       "tools/please_go/test/test_data/lock.go",
-		}},
-		false,
-	)
+	err := WriteTestMain("test_package", []string{"tools/please_go/test/test_data/test/example_test.go"}, "test.go", true, []CoverVar{{
+		Dir:        "tools/please_go/test/test_data",
+		ImportPath: "core",
+		Var:        "GoCover_lock_go",
+		File:       "tools/please_go/test/test_data/lock.go",
+	}}, false)
 	assert.NoError(t, err)
 	// It's not really practical to assert the contents of the file in great detail.
 	// We'll do the obvious thing of asserting that it is valid Go source.
@@ -88,15 +72,7 @@ func TestWriteTestMainWithCoverage(t *testing.T) {
 }
 
 func TestWriteTestMainWithBenchmark(t *testing.T) {
-	err := WriteTestMain(
-		"",
-		"test_package",
-		[]string{"tools/please_go/test/test_data/bench/example_benchmark_test.go"},
-		"test.go",
-		true,
-		[]CoverVar{},
-		true,
-	)
+	err := WriteTestMain("test_package", []string{"tools/please_go/test/test_data/bench/example_benchmark_test.go"}, "test.go", true, []CoverVar{}, true)
 	assert.NoError(t, err)
 	// It's not really practical to assert the contents of the file in great detail.
 	// We'll do the obvious thing of asserting that it is valid Go source.
@@ -110,7 +86,7 @@ func TestWriteTestMainWithBenchmark(t *testing.T) {
 }
 
 func TestExtraImportPaths(t *testing.T) {
-	assert.Equal(t, extraImportPaths("core", "core", "", []CoverVar{
+	assert.Equal(t, extraImportPaths("core", "core", []CoverVar{
 		{ImportPath: "core"},
 		{ImportPath: "output"},
 	}), []string{
@@ -121,9 +97,9 @@ func TestExtraImportPaths(t *testing.T) {
 }
 
 func TestExtraImportPathsWithImportPath(t *testing.T) {
-	assert.Equal(t, extraImportPaths("core", "core", "github.com/thought-machine/please", []CoverVar{
-		{ImportPath: "src/core"},
-		{ImportPath: "output"},
+	assert.Equal(t, extraImportPaths("core", "core", []CoverVar{
+		{ImportPath: "github.com/thought-machine/please/src/core"},
+		{ImportPath: "github.com/thought-machine/please/output"},
 	}), []string{
 		"core \"core\"",
 		"_cover0 \"github.com/thought-machine/please/src/core\"",
