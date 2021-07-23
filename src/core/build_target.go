@@ -249,7 +249,7 @@ type PostBuildFunction interface {
 }
 
 type depInfo struct {
-	declared BuildLabel     // the originally declared dependency
+	declared *BuildLabel    // the originally declared dependency
 	deps     []*BuildTarget // list of actual deps
 	resolved bool           // has the graph resolved it
 	exported bool           // is it an exported dependency
@@ -489,10 +489,11 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 }
 
 func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo) error {
-	t := graph.WaitForTarget(dep.declared)
+	t := graph.WaitForTarget(*dep.declared)
 	if t == nil {
 		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
 	}
+	dep.declared = &t.Label // saves memory by not storing the label twice once resolved
 
 	labels := t.provideFor(target)
 
@@ -534,7 +535,7 @@ func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, len(target.dependencies))
 	for i, dep := range target.dependencies {
-		ret[i] = dep.declared
+		ret[i] = *dep.declared
 	}
 	sort.Sort(ret)
 	return ret
@@ -546,8 +547,8 @@ func (target *BuildTarget) DeclaredDependenciesStrict() []BuildLabel {
 	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, dep := range target.dependencies {
-		if !dep.exported && !dep.source && !target.IsTool(dep.declared) {
-			ret = append(ret, dep.declared)
+		if !dep.exported && !dep.source && !target.IsTool(*dep.declared) {
+			ret = append(ret, *dep.declared)
 		}
 	}
 	sort.Sort(ret)
@@ -609,7 +610,7 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, info := range target.dependencies {
 		if info.exported {
-			ret = append(ret, info.declared)
+			ret = append(ret, *info.declared)
 		}
 	}
 	return ret
@@ -802,7 +803,7 @@ func (target *BuildTarget) CanSee(state *BuildState, dep *BuildTarget) bool {
 // Returns an error if not, or nil if all's well.
 func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
 	for _, d := range target.dependencies {
-		dep := state.Graph.TargetOrDie(d.declared)
+		dep := state.Graph.TargetOrDie(*d.declared)
 		if !target.CanSee(state, dep) {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
 		} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
@@ -949,7 +950,7 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 	defer target.mutex.Unlock()
 	info := target.dependencyInfo(label)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: label})
+		target.dependencies = append(target.dependencies, depInfo{declared: &label})
 		info = &target.dependencies[len(target.dependencies)-1]
 	}
 	if dep != nil {
@@ -961,7 +962,7 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 // dependencyInfo returns the information about a declared dependency, or nil if the target doesn't have it.
 func (target *BuildTarget) dependencyInfo(label BuildLabel) *depInfo {
 	for i, info := range target.dependencies {
-		if info.declared == label {
+		if *info.declared == label {
 			return &target.dependencies[i]
 		}
 	}
@@ -1431,7 +1432,7 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, 
 	}
 	info := target.dependencyInfo(dep)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported, source: source, internal: internal})
+		target.dependencies = append(target.dependencies, depInfo{declared: &dep, exported: exported, source: source, internal: internal})
 	} else {
 		info.exported = info.exported || exported
 		info.source = info.source && source
