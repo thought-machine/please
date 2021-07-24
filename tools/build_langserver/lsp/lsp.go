@@ -213,10 +213,6 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 	}, nil
 }
 
-func (h *Handler) shutdown(params *struct{}) (*struct{}, error) {
-	return nil, nil
-}
-
 // fromURI converts a DocumentURI to a path.
 func fromURI(uri lsp.DocumentURI) string {
 	if !strings.HasPrefix(string(uri), "file://") {
