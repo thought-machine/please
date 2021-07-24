@@ -17,7 +17,7 @@ type BuildGraph struct {
 	// Map of all currently known targets by their label.
 	targets *targetMap
 	// Map of all currently known packages.
-	packages *cmap.CMap
+	packages *packageMap
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.CMap
 }
@@ -33,13 +33,9 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 // AddPackage adds a new package to the graph with given name.
 func (graph *BuildGraph) AddPackage(pkg *Package) {
 	key := packageKey{Name: pkg.Name, Subrepo: pkg.SubrepoName}
-	graph.packages.Update(key, func(old interface{}) interface{} {
-		if old != nil {
-			panic("Attempt to read existing package: " + key.String())
-		}
-		return pkg
-	})
-	//graph.pendingTargets.NotifyPendingPackageTargets(key)
+	if !graph.packages.Set(key, pkg) {
+		panic("Attempt to re-add existing package: " + key.String())
+	}
 }
 
 // Target retrieves a target from the graph by label
@@ -88,11 +84,8 @@ func (graph *BuildGraph) PackageByLabel(label BuildLabel) *Package {
 
 // Package retrieves a package from the graph by name & subrepo, or nil if it can't be found.
 func (graph *BuildGraph) Package(name, subrepo string) *Package {
-	p, present := graph.packages.GetOK(packageKey{Name: name, Subrepo: subrepo})
-	if !present {
-		return nil
-	}
-	return p.(*Package)
+	p, _ := graph.packages.Get(packageKey{Name: name, Subrepo: subrepo})
+	return p
 }
 
 // PackageOrDie retrieves a package by label, and dies if it can't be found.
@@ -160,10 +153,9 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 // PackageMap returns a copy of the graph's internal map of name to package.
 func (graph *BuildGraph) PackageMap() map[string]*Package {
 	packages := map[string]*Package{}
-	graph.packages.ForEach(func(k, v interface{}) bool {
-		packages[k.(packageKey).String()] = v.(*Package)
-		return true
-	})
+	for _, pkg := range graph.packages.Values() {
+		packages[packageKey{Subrepo: pkg.SubrepoName, Name: pkg.Name}.String()] = pkg
+	}
 	return packages
 }
 
@@ -171,7 +163,7 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
 		targets:        newTargetMap(),
-		packages:       cmap.New(),
+		packages:       newPackageMap(),
 		subrepos:       cmap.New(),
 	}
 	return g
