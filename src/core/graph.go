@@ -9,69 +9,24 @@ import (
 	"sort"
 
 	"github.com/OneOfOne/cmap"
-	"github.com/OneOfOne/cmap/stringcmap"
 )
-
-type pendingTargets struct {
-	m *cmap.CMap
-}
 
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
 	targets *targetMap
-	// Targets that have been depended on by something that we're waiting to appear.
-	pendingTargets pendingTargets
 	// Map of all currently known packages.
 	packages *cmap.CMap
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.CMap
 }
 
-func (p *pendingTargets) getPackage(key packageKey) (ret *stringcmap.LMap) {
-	p.m.Update(key, func(old interface{}) interface{} {
-		if old != nil {
-			ret = old.(*stringcmap.LMap)
-			return old
-		}
-		ret = stringcmap.NewLMap()
-		return ret
-	})
-	return ret
-}
-
-func (p *pendingTargets) GetTargetChannel(label BuildLabel) (ret chan struct{}) {
-	p.getPackage(label.packageKey()).Update(label.Name, func(old interface{}) interface{} {
-		if old != nil {
-			ret = old.(chan struct{})
-			return old
-		}
-		ret = make(chan struct{})
-		return ret
-	})
-	return ret
-}
-
-func (p *pendingTargets) NotifyPendingPackageTargets(key packageKey) {
-	pkg := p.getPackage(key)
-	pkg.ForEach(pkg.Keys(nil), func(_ string, ch interface{}) bool {
-		select {
-		case <-ch.(chan struct{}):
-		default:
-			close(ch.(chan struct{}))
-		}
-		return true
-	})
-}
-
 // AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
-	if !graph.targets.Set(target.Label, target) {
+	if !graph.targets.Set(target) {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
-	// Notify anything that called WaitForTarget
-	close(graph.pendingTargets.GetTargetChannel(target.Label))
 	return target
 }
 
@@ -84,12 +39,12 @@ func (graph *BuildGraph) AddPackage(pkg *Package) {
 		}
 		return pkg
 	})
-	graph.pendingTargets.NotifyPendingPackageTargets(key)
+	//graph.pendingTargets.NotifyPendingPackageTargets(key)
 }
 
 // Target retrieves a target from the graph by label
 func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
-	t, ok := graph.targets.GetOK(label)
+	t, ok := graph.targets.Get(label)
 	if !ok {
 		return nil
 	}
@@ -122,8 +77,7 @@ func (graph *BuildGraph) WaitForTarget(label BuildLabel) *BuildTarget {
 		// Check target again to avoid race conditions
 		return graph.Target(label)
 	}
-	<-graph.pendingTargets.GetTargetChannel(label)
-	return graph.Target(label)
+	return graph.targets.Await(label)
 }
 
 // PackageByLabel retrieves a package from the graph using the appropriate parts of the given label.
@@ -217,7 +171,6 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
 		targets:        newTargetMap(),
-		pendingTargets: pendingTargets{m: cmap.New()},
 		packages:       cmap.New(),
 		subrepos:       cmap.New(),
 	}

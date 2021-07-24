@@ -36,15 +36,22 @@ func newTargetMap() *targetMap {
 
 // Set is the equivalent of `map[key] = val`.
 // It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
-func (cm *targetMap) Set(key BuildLabel, val *BuildTarget) bool {
-	h := hashBuildLabel(key)
-	return cm.shards[h&shardMask].Set(key, val)
+func (cm *targetMap) Set(target *BuildTarget) bool {
+	h := hashBuildLabel(target.Label)
+	return cm.shards[h&shardMask].Set(target)
 }
 
-// GetOK is the equivalent of `val, ok := map[key]`.
-func (cm *targetMap) GetOK(key BuildLabel) (val *BuildTarget, ok bool) {
+// Get is the equivalent of `val, ok := map[key]`.
+func (cm *targetMap) Get(key BuildLabel) (val *BuildTarget, ok bool) {
 	h := hashBuildLabel(key)
-	return cm.shards[h&shardMask].GetOK(key)
+	return cm.shards[h&shardMask].Get(key)
+}
+
+// Await waits for the item with the given key to be added to the map and returns it when so.
+// It's basically like a blocking Get.
+func (cm *targetMap) Await(key BuildLabel) *BuildTarget {
+	h := hashBuildLabel(key)
+	return cm.shards[h&shardMask].Await(key)
 }
 
 // Values returns a slice of all the current values in the map.
@@ -62,47 +69,80 @@ func hashBuildLabel(key BuildLabel) uint32 {
 	return hashers.Fnv32(key.Subrepo) ^ hashers.Fnv32(key.PackageName) ^ hashers.Fnv32(key.Name)
 }
 
+// A buildTargetPair represents a build target & an awaitable channel for one to exist.
+type buildTargetPair struct {
+	Target *BuildTarget
+	Wait   chan struct{}
+}
+
 // targetLMap is a simple sync.RWMutex locked map.
 // Used by targetMap internally for sharding.
 type targetLMap struct {
-	m map[BuildLabel]*BuildTarget
+	m map[BuildLabel]buildTargetPair
 	l sync.RWMutex
 }
 
-// newTargetLMapSize is the equivalent of `m := make(map[BuildLabel]*BuildTarget, cap)`
+// newTargetLMapSize is the equivalent of `m := make(map[BuildLabel]buildTargetPair, cap)`
 func newTargetLMapSize(cap int) *targetLMap {
 	return &targetLMap{
-		m: make(map[BuildLabel]*BuildTarget, cap),
+		m: make(map[BuildLabel]buildTargetPair, cap),
 	}
 }
 
 // Set is the equivalent of `map[key] = val`.
 // It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
-func (lm *targetLMap) Set(key BuildLabel, v *BuildTarget) bool {
+func (lm *targetLMap) Set(target *BuildTarget) bool {
 	lm.l.Lock()
 	defer lm.l.Unlock()
-	if _, present := lm.m[key]; present {
-		return false
+	if existing, present := lm.m[target.Label]; present {
+		if existing.Target != nil {
+			return false  // already added
+		}
+		// Hasn't been added, but something is waiting for it to be.
+		lm.m[target.Label] = buildTargetPair{
+			Target: target,
+			Wait:   existing.Wait,
+		}
+		if existing.Wait != nil {
+			close(existing.Wait)
+		}
+		return true
 	}
-	lm.m[key] = v
+	lm.m[target.Label] = buildTargetPair{Target: target}
 	return true
 }
 
-// GetOK is the equivalent of `val, ok := map[key]`.
-func (lm *targetLMap) GetOK(key BuildLabel) (*BuildTarget, bool) {
+// Get is the equivalent of `val, ok := map[key]`.
+func (lm *targetLMap) Get(key BuildLabel) (*BuildTarget, bool) {
 	lm.l.RLock()
 	defer lm.l.RUnlock()
 	v, ok := lm.m[key]
-	return v, ok
+	return v.Target, ok
 }
 
-// Values returns a copy of all the values currently in the map.
+// Await is like a blocking Get.
+func (lm *targetLMap) Await(key BuildLabel) *BuildTarget {
+	lm.l.Lock()
+	v, ok := lm.m[key]
+	if !ok || v.Wait == nil {
+		v.Wait = make(chan struct{})
+		lm.m[key] = v
+	}
+	lm.l.Unlock()
+	<-v.Wait
+	t, _ := lm.Get(key)
+	return t
+}
+
+// Values returns a copy of all the targets currently in the map.
 func (lm *targetLMap) Values() []*BuildTarget {
 	lm.l.RLock()
 	defer lm.l.RUnlock()
 	ret := make([]*BuildTarget, 0, len(lm.m))
 	for _, v := range lm.m {
-		ret = append(ret, v)
+		if v.Target != nil {
+			ret = append(ret, v.Target)
+		}
 	}
 	return ret
 }
