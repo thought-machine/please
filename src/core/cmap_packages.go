@@ -33,17 +33,11 @@ func (cm *packageMap) Set(key packageKey, pkg *Package) bool {
 	return cm.shards[h&shardMask].Set(key, pkg)
 }
 
-// Get is the equivalent of `val, ok := map[key]`.
-func (cm *packageMap) Get(key packageKey) (val *Package, ok bool) {
+// Get returns the package or, if the package isn't present, a channel that it can be waited on for.
+// Exactly one of the package or channel will be returned.
+func (cm *packageMap) Get(key packageKey) (val *Package, wait <-chan struct{}) {
 	h := hashPackage(key)
 	return cm.shards[h&shardMask].Get(key)
-}
-
-// Await waits for the item with the given key to be added to the map and returns it when so.
-// It's basically like a blocking Get.
-func (cm *packageMap) Await(key packageKey) *Package {
-	h := hashPackage(key)
-	return cm.shards[h&shardMask].Await(key)
 }
 
 // Values returns a slice of all the current values in the map.
@@ -104,26 +98,25 @@ func (lm *packageLMap) Set(key packageKey, pkg *Package) bool {
 	return true
 }
 
-// Get is the equivalent of `val, ok := map[key]`.
-func (lm *packageLMap) Get(key packageKey) (*Package, bool) {
+// Get returns the package or, if the package isn't present, a channel that it can be waited on for.
+// Exactly one of the package or channel will be returned.
+func (lm *packageLMap) Get(key packageKey) (*Package, <-chan struct{}) {
+	// TODO(peterebden): Benchmark whether it's worth having the reader lock or not.
 	lm.l.RLock()
-	defer lm.l.RUnlock()
-	v, ok := lm.m[key]
-	return v.Package, ok
-}
-
-// Await is like a blocking Get.
-func (lm *packageLMap) Await(key packageKey) *Package {
-	lm.l.Lock()
-	v, ok := lm.m[key]
-	if !ok || v.Wait == nil {
-		v.Wait = make(chan struct{})
-		lm.m[key] = v
+	if v, ok := lm.m[key]; ok {
+		lm.l.RUnlock()
+		return v.Package, v.Wait
 	}
-	lm.l.Unlock()
-	<-v.Wait
-	t, _ := lm.Get(key)
-	return t
+	lm.l.RUnlock()
+	lm.l.Lock()
+	defer lm.l.Unlock()
+	// Need to check again; something else could have added this.
+	if v, ok := lm.m[key]; ok {
+		return v.Package, v.Wait
+	}
+	ch := make(chan struct{})
+	lm.m[key] = packagePair{Wait: ch}
+	return nil, ch
 }
 
 // Values returns a copy of all the packages currently in the map.

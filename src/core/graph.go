@@ -40,10 +40,7 @@ func (graph *BuildGraph) AddPackage(pkg *Package) {
 
 // Target retrieves a target from the graph by label
 func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
-	t, ok := graph.targets.Get(label)
-	if !ok {
-		return nil
-	}
+	t, _ := graph.targets.Get(label)
 	return t
 }
 
@@ -67,13 +64,23 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 // WaitForTarget returns the given target, waiting for it to be added if it isn't yet.
 // It returns nil if the target finally turns out not to exist.
 func (graph *BuildGraph) WaitForTarget(label BuildLabel) *BuildTarget {
-	if t := graph.Target(label); t != nil {
+	t, tch := graph.targets.Get(label)
+	if t != nil {
 		return t
-	} else if graph.PackageByLabel(label) != nil {
+	}
+	p, pch := graph.packages.Get(packageKey{Name: label.PackageName, Subrepo: label.Subrepo})
+	if p != nil {
 		// Check target again to avoid race conditions
 		return graph.Target(label)
 	}
-	return graph.targets.Await(label)
+	// Now we need to wait for either (hopefully) the target or its package to exist.
+	// Either the target will, which is fine, or if the package appears but the target doesn't
+	// we will conclude it doesn't exist.
+	select {
+	case <-tch:
+	case <-pch:
+	}
+	return graph.Target(label)
 }
 
 // PackageByLabel retrieves a package from the graph using the appropriate parts of the given label.

@@ -41,17 +41,11 @@ func (cm *targetMap) Set(target *BuildTarget) bool {
 	return cm.shards[h&shardMask].Set(target)
 }
 
-// Get is the equivalent of `val, ok := map[key]`.
-func (cm *targetMap) Get(key BuildLabel) (val *BuildTarget, ok bool) {
+// Get returns the target or, if the target isn't present, a channel that it can be waited on for.
+// Exactly one of the target or channel will be returned.
+func (cm *targetMap) Get(key BuildLabel) (val *BuildTarget, wait <-chan struct{}) {
 	h := hashBuildLabel(key)
 	return cm.shards[h&shardMask].Get(key)
-}
-
-// Await waits for the item with the given key to be added to the map and returns it when so.
-// It's basically like a blocking Get.
-func (cm *targetMap) Await(key BuildLabel) *BuildTarget {
-	h := hashBuildLabel(key)
-	return cm.shards[h&shardMask].Await(key)
 }
 
 // Values returns a slice of all the current values in the map.
@@ -112,26 +106,25 @@ func (lm *targetLMap) Set(target *BuildTarget) bool {
 	return true
 }
 
-// Get is the equivalent of `val, ok := map[key]`.
-func (lm *targetLMap) Get(key BuildLabel) (*BuildTarget, bool) {
+// Get returns the target or, if the target isn't present, a channel that it can be waited on for.
+// Exactly one of the target or channel will be returned.
+func (lm *targetLMap) Get(key BuildLabel) (*BuildTarget, <-chan struct{}) {
+	// TODO(peterebden): Benchmark whether it's worth having the reader lock or not.
 	lm.l.RLock()
-	defer lm.l.RUnlock()
-	v, ok := lm.m[key]
-	return v.Target, ok
-}
-
-// Await is like a blocking Get.
-func (lm *targetLMap) Await(key BuildLabel) *BuildTarget {
-	lm.l.Lock()
-	v, ok := lm.m[key]
-	if !ok || v.Wait == nil {
-		v.Wait = make(chan struct{})
-		lm.m[key] = v
+	if v, ok := lm.m[key]; ok {
+		lm.l.RUnlock()
+		return v.Target, v.Wait
 	}
-	lm.l.Unlock()
-	<-v.Wait
-	t, _ := lm.Get(key)
-	return t
+	lm.l.RUnlock()
+	lm.l.Lock()
+	defer lm.l.Unlock()
+	// Need to check again; something else could have added this.
+	if v, ok := lm.m[key]; ok {
+		return v.Target, v.Wait
+	}
+	ch := make(chan struct{})
+	lm.m[key] = buildTargetPair{Wait: ch}
+	return nil, ch
 }
 
 // Values returns a copy of all the targets currently in the map.
