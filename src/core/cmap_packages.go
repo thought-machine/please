@@ -61,7 +61,7 @@ type packagePair struct {
 	Wait    chan struct{}
 }
 
-// packageLMap is a simple sync.RWMutex locked map.
+// packageLMap is a simple sync.Mutex locked map.
 // Used by packageMap internally for sharding.
 type packageLMap struct {
 	m map[packageKey]packagePair

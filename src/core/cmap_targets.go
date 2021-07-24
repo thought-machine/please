@@ -69,7 +69,7 @@ type buildTargetPair struct {
 	Wait   chan struct{}
 }
 
-// targetLMap is a simple sync.RWMutex locked map.
+// targetLMap is a simple sync.Mutex locked map.
 // Used by targetMap internally for sharding.
 type targetLMap struct {
 	m map[BuildLabel]buildTargetPair
