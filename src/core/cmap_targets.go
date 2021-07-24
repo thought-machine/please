@@ -73,7 +73,7 @@ type buildTargetPair struct {
 // Used by targetMap internally for sharding.
 type targetLMap struct {
 	m map[BuildLabel]buildTargetPair
-	l sync.RWMutex
+	l sync.Mutex
 }
 
 // newTargetLMapSize is the equivalent of `m := make(map[BuildLabel]buildTargetPair, cap)`
@@ -109,15 +109,11 @@ func (lm *targetLMap) Set(target *BuildTarget) bool {
 // Get returns the target or, if the target isn't present, a channel that it can be waited on for.
 // Exactly one of the target or channel will be returned.
 func (lm *targetLMap) Get(key BuildLabel) (*BuildTarget, <-chan struct{}) {
-	// TODO(peterebden): Benchmark whether it's worth having the reader lock or not.
-	lm.l.RLock()
-	if v, ok := lm.m[key]; ok {
-		lm.l.RUnlock()
-		return v.Target, v.Wait
-	}
-	lm.l.RUnlock()
 	lm.l.Lock()
 	defer lm.l.Unlock()
+	if v, ok := lm.m[key]; ok {
+		return v.Target, v.Wait
+	}
 	// Need to check again; something else could have added this.
 	if v, ok := lm.m[key]; ok {
 		return v.Target, v.Wait
@@ -129,8 +125,8 @@ func (lm *targetLMap) Get(key BuildLabel) (*BuildTarget, <-chan struct{}) {
 
 // Values returns a copy of all the targets currently in the map.
 func (lm *targetLMap) Values() []*BuildTarget {
-	lm.l.RLock()
-	defer lm.l.RUnlock()
+	lm.l.Lock()
+	defer lm.l.Unlock()
 	ret := make([]*BuildTarget, 0, len(lm.m))
 	for _, v := range lm.m {
 		if v.Target != nil {

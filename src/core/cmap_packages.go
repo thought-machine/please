@@ -65,7 +65,7 @@ type packagePair struct {
 // Used by packageMap internally for sharding.
 type packageLMap struct {
 	m map[packageKey]packagePair
-	l sync.RWMutex
+	l sync.Mutex
 }
 
 // newPackageLMapSize is the equivalent of `m := make(map[BuildLabel]packagePair, cap)`
@@ -101,16 +101,8 @@ func (lm *packageLMap) Set(key packageKey, pkg *Package) bool {
 // Get returns the package or, if the package isn't present, a channel that it can be waited on for.
 // Exactly one of the package or channel will be returned.
 func (lm *packageLMap) Get(key packageKey) (*Package, <-chan struct{}) {
-	// TODO(peterebden): Benchmark whether it's worth having the reader lock or not.
-	lm.l.RLock()
-	if v, ok := lm.m[key]; ok {
-		lm.l.RUnlock()
-		return v.Package, v.Wait
-	}
-	lm.l.RUnlock()
 	lm.l.Lock()
 	defer lm.l.Unlock()
-	// Need to check again; something else could have added this.
 	if v, ok := lm.m[key]; ok {
 		return v.Package, v.Wait
 	}
@@ -121,8 +113,8 @@ func (lm *packageLMap) Get(key packageKey) (*Package, <-chan struct{}) {
 
 // Values returns a copy of all the packages currently in the map.
 func (lm *packageLMap) Values() []*Package {
-	lm.l.RLock()
-	defer lm.l.RUnlock()
+	lm.l.Lock()
+	defer lm.l.Unlock()
 	ret := make([]*Package, 0, len(lm.m))
 	for _, v := range lm.m {
 		if v.Package != nil {
