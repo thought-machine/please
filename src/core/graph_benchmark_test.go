@@ -6,47 +6,48 @@ import (
 	"testing"
 )
 
-func BenchmarkAddingTargets(b *testing.B) {
-	targets := createTargets(b.N)
-	graph := NewGraph()
-	b.ResetTimer()  // Don't benchmark target creation
-	b.ReportAllocs()
+// Construct one set of targets that are shared between all benchmarks, so we don't have to
+// rebuild them for every benchmark (which messes with timing quite a lot)
+var targets []*BuildTarget
+
+var graph *BuildGraph
+
+const numTargets = 1 << 20
+
+const targetIndexMask = numTargets - 1
+
+func init() {
+	log.Notice("Initialising...")
+	targets = createTargets(numTargets)
+	graph = NewGraph()
 	for _, target := range targets {
+		graph.AddTarget(target)
+	}
+	log.Notice("Initialised targets...")
+}
+
+func BenchmarkAddingTargets(b *testing.B) {
+	graph := NewGraph()
+	b.ResetTimer()  // Don't benchmark graph creation
+	b.ReportAllocs()
+	for _, target := range targets[:b.N] {
 		graph.AddTarget(target)
 	}
 }
 
 func BenchmarkTargetLookup(b *testing.B) {
-	targets := createTargets(b.N)
-	graph := NewGraph()
-	for _, target := range targets {
-		graph.AddTarget(target)
-	}
-	b.ResetTimer()  // Don't benchmark graph creation
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		// Adding this multiplier sucks a bit, but without it the benchmark takes ~1min to
-		// converge; with it it's about a second.
-		for j := 0; j < 100; j++ {
-			graph.TargetOrDie(targets[i].Label)
-		}
+		graph.TargetOrDie(targets[i & targetIndexMask].Label)
 	}
 }
 
-func BenchmarkWaitForTarget(b *testing.B) {
-	targets := createTargets(b.N)
-	graph := NewGraph()
-	for _, target := range targets {
-		graph.AddTarget(target)
-	}
-	b.ResetTimer()  // Don't benchmark graph creation
+// BenchmarkWaitForTargetFast benchmarks the best case of calling WaitForTarget,
+// where the targets already exist, so it should perform identically to BenchmarkTargetLookup.
+func BenchmarkWaitForTargetFast(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		// Adding this multiplier sucks a bit, but without it the benchmark takes ~1min to
-		// converge; with it it's about a second.
-		for j := 0; j < 100; j++ {
-			graph.WaitForTarget(targets[i].Label)
-		}
+		graph.WaitForTarget(targets[i & targetIndexMask].Label)
 	}
 }
 
