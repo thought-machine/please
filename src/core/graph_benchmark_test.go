@@ -49,8 +49,6 @@ func BenchmarkTargetLookup(b *testing.B) {
 // BenchmarkWaitForTargetSlow is a more complex benchmark that tests targets being added as they are
 // being waited on.
 func BenchmarkWaitForTargetSlow(b *testing.B) {
-	b.Skip("Takes several minutes to converge, not on by default")
-
 	const parallelism = 8
 	var wg sync.WaitGroup
 	wg.Add(parallelism * 2)
@@ -67,16 +65,16 @@ func BenchmarkWaitForTargetSlow(b *testing.B) {
 		wg.Done()
 	}
 
-	lookupTargets := func(start int) {
-		for i := start; i < b.N; i += parallelism {
-			graph.WaitForTarget(targets[i].Label)
+	lookupTargets := func() {
+		for _, target := range targets {
+			graph.WaitForTarget(target.Label)
 		}
 		wg.Done()
 	}
 
 	for i := 0; i < parallelism; i++ {
 		go addTargets(i)
-		go lookupTargets(i)
+		go lookupTargets()
 	}
 	wg.Wait()
 }
