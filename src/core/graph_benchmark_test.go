@@ -10,7 +10,7 @@ import (
 func BenchmarkAddingTargets(b *testing.B) {
 	targets := createTargets(b.N)
 	graph := NewGraph()
-	b.ResetTimer()  // Don't benchmark graph creation
+	b.ResetTimer() // Don't benchmark graph creation
 	b.ReportAllocs()
 	for _, target := range targets[:b.N] {
 		graph.AddTarget(target)
@@ -32,7 +32,7 @@ func BenchmarkTargetLookup(b *testing.B) {
 	b.Run("Simple", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			graph.TargetOrDie(targets[i & targetIndexMask].Label)
+			graph.TargetOrDie(targets[i&targetIndexMask].Label)
 		}
 	})
 
@@ -41,7 +41,7 @@ func BenchmarkTargetLookup(b *testing.B) {
 	b.Run("WaitForTargetFast", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			graph.WaitForTarget(targets[i & targetIndexMask].Label)
+			graph.WaitForTarget(targets[i&targetIndexMask].Label)
 		}
 	})
 }
@@ -86,7 +86,7 @@ func createTargets(n int) []*BuildTarget {
 	targets := make([]*BuildTarget, n)
 	seen := map[BuildLabel]bool{}
 
-	rand.Seed(42)  // Make sure it does the same thing every time.
+	rand.Seed(42) // Make sure it does the same thing every time.
 
 	components := []string{
 		"src", "main", "cmd", "tools", "utils", "common", "query", "process", "update",
