@@ -79,23 +79,6 @@ func BenchmarkWaitForTargetSlow(b *testing.B) {
 	wg.Wait()
 }
 
-func BenchmarkWaitForTarget(b *testing.B) {
-	targets := createTargets(b.N)
-	graph := NewGraph()
-	for _, target := range targets {
-		graph.AddTarget(target)
-	}
-	b.ResetTimer()  // Don't benchmark graph creation
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		// Adding this multiplier sucks a bit, but without it the benchmark takes ~1min to
-		// converge; with it it's about a second.
-		for j := 0; j < 100; j++ {
-			graph.WaitForTarget(targets[i].Label)
-		}
-	}
-}
-
 // createTargets creates n randomly named targets.
 func createTargets(n int) []*BuildTarget {
 	targets := make([]*BuildTarget, n)
