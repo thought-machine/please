@@ -93,10 +93,7 @@ func (lm *targetLMap) Set(target *BuildTarget) bool {
 			return false  // already added
 		}
 		// Hasn't been added, but something is waiting for it to be.
-		lm.m[target.Label] = buildTargetPair{
-			Target: target,
-			Wait:   existing.Wait,
-		}
+		lm.m[target.Label] = buildTargetPair{Target: target}
 		if existing.Wait != nil {
 			close(existing.Wait)
 		}

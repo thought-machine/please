@@ -85,10 +85,7 @@ func (lm *packageLMap) Set(key packageKey, pkg *Package) bool {
 			return false  // already added
 		}
 		// Hasn't been added, but something is waiting for it to be.
-		lm.m[key] = packagePair{
-			Package: pkg,
-			Wait:    existing.Wait,
-		}
+		lm.m[key] = packagePair{Package: pkg}
 		if existing.Wait != nil {
 			close(existing.Wait)
 		}
