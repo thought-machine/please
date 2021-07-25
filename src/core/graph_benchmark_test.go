@@ -3,34 +3,80 @@ package core
 import (
 	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 )
 
 func BenchmarkAddingTargets(b *testing.B) {
 	targets := createTargets(b.N)
 	graph := NewGraph()
-	b.ResetTimer()  // Don't benchmark target creation
+	b.ResetTimer()  // Don't benchmark graph creation
 	b.ReportAllocs()
-	for _, target := range targets {
+	for _, target := range targets[:b.N] {
 		graph.AddTarget(target)
 	}
 }
 
 func BenchmarkTargetLookup(b *testing.B) {
-	targets := createTargets(b.N)
+	// Do all the setup in an initial step. This is relatively slow and we don't want it to
+	// count towards the benchmarks themselves.
+	const numTargets = 1 << 20
+	const targetIndexMask = numTargets - 1
+	targets := createTargets(numTargets)
 	graph := NewGraph()
 	for _, target := range targets {
 		graph.AddTarget(target)
 	}
-	b.ResetTimer()  // Don't benchmark graph creation
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		// Adding this multiplier sucks a bit, but without it the benchmark takes ~1min to
-		// converge; with it it's about a second.
-		for j := 0; j < 100; j++ {
-			graph.TargetOrDie(targets[i].Label)
+
+	b.Run("Simple", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			graph.TargetOrDie(targets[i & targetIndexMask].Label)
 		}
+	})
+
+	// This benchmarks the best case of calling WaitForTarget, where the targets already exist,
+	// so it should perform identically to Simple above.
+	b.Run("WaitForTargetFast", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			graph.WaitForTarget(targets[i & targetIndexMask].Label)
+		}
+	})
+}
+
+// BenchmarkWaitForTargetSlow is a more complex benchmark that tests targets being added as they are
+// being waited on.
+func BenchmarkWaitForTargetSlow(b *testing.B) {
+	const parallelism = 8
+	var wg sync.WaitGroup
+	wg.Add(parallelism * 2)
+
+	targets := createTargets(b.N)
+	graph := NewGraph()
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	addTargets := func(start int) {
+		for i := start; i < b.N; i += parallelism {
+			graph.AddTarget(targets[i])
+		}
+		wg.Done()
 	}
+
+	lookupTargets := func(start int) {
+		for i := start; i < b.N; i += parallelism {
+			graph.WaitForTarget(targets[i].Label)
+		}
+		wg.Done()
+	}
+
+	for i := 0; i < parallelism; i++ {
+		go addTargets(i)
+		go lookupTargets(i)
+	}
+	wg.Wait()
 }
 
 func BenchmarkWaitForTarget(b *testing.B) {
