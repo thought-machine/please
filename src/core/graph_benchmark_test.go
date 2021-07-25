@@ -3,30 +3,12 @@ package core
 import (
 	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 )
 
-// Construct one set of targets that are shared between all benchmarks, so we don't have to
-// rebuild them for every benchmark (which messes with timing quite a lot)
-var targets []*BuildTarget
-
-var graph *BuildGraph
-
-const numTargets = 1 << 20
-
-const targetIndexMask = numTargets - 1
-
-func init() {
-	log.Notice("Initialising...")
-	targets = createTargets(numTargets)
-	graph = NewGraph()
-	for _, target := range targets {
-		graph.AddTarget(target)
-	}
-	log.Notice("Initialised targets...")
-}
-
 func BenchmarkAddingTargets(b *testing.B) {
+	targets := createTargets(b.N)
 	graph := NewGraph()
 	b.ResetTimer()  // Don't benchmark graph creation
 	b.ReportAllocs()
@@ -36,19 +18,65 @@ func BenchmarkAddingTargets(b *testing.B) {
 }
 
 func BenchmarkTargetLookup(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		graph.TargetOrDie(targets[i & targetIndexMask].Label)
+	// Do all the setup in an initial step. This is relatively slow and we don't want it to
+	// count towards the benchmarks themselves.
+	const numTargets = 1 << 20
+	const targetIndexMask = numTargets - 1
+	targets := createTargets(numTargets)
+	graph := NewGraph()
+	for _, target := range targets {
+		graph.AddTarget(target)
 	}
+	b.ReportAllocs()
+
+	b.Run("Simple", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			graph.TargetOrDie(targets[i & targetIndexMask].Label)
+		}
+	})
+
+	// This benchmarks the best case of calling WaitForTarget, where the targets already exist,
+	// so it should perform identically to Simple above.
+	b.Run("WaitForTargetFast", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			graph.WaitForTarget(targets[i & targetIndexMask].Label)
+		}
+	})
 }
 
-// BenchmarkWaitForTargetFast benchmarks the best case of calling WaitForTarget,
-// where the targets already exist, so it should perform identically to BenchmarkTargetLookup.
-func BenchmarkWaitForTargetFast(b *testing.B) {
+// BenchmarkWaitForTargetSlow is a more complex benchmark that tests targets being added as they are
+// being waited on.
+func BenchmarkWaitForTargetSlow(b *testing.B) {
+	const parallelism = 8
+	var wg sync.WaitGroup
+	wg.Add(parallelism * 2)
+
+	targets := createTargets(b.N)
+	graph := NewGraph()
+	b.ResetTimer()
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		graph.WaitForTarget(targets[i & targetIndexMask].Label)
+
+	addTargets := func(start int) {
+		for i := start; i < b.N; i += parallelism {
+			graph.AddTarget(targets[i])
+		}
+		wg.Done()
 	}
+
+	lookupTargets := func(start int) {
+		for i := start; i < b.N; i += parallelism {
+			graph.WaitForTarget(targets[i].Label)
+		}
+		wg.Done()
+	}
+
+	for i := 0; i < parallelism; i++ {
+		go addTargets(i)
+		go lookupTargets(i)
+	}
+	wg.Wait()
 }
 
 // createTargets creates n randomly named targets.
