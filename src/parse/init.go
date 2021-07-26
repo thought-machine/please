@@ -118,11 +118,6 @@ func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *co
 	return err
 }
 
-// AspParser returns the underlying asp parser
-func (p *aspParser) AspParser() *asp.Parser {
-	return p.asp
-}
-
 func createBazelSubrepo(state *core.BuildState) {
 	dir := path.Join(core.OutDir, "bazel_tools")
 	state.Graph.AddSubrepo(&core.Subrepo{
