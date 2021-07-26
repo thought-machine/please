@@ -10,9 +10,9 @@ go_library(
         "//src/cli",
         "//src/core",
         "//src/fs",
+        "//src/parse",
         "//src/scm",
         "//src/utils",
-        "//src/parse",
         "//third_party/go:logging",
     ],
 )

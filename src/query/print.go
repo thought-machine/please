@@ -13,7 +13,6 @@ import (
 	"github.com/thought-machine/please/src/parse"
 )
 
-
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
@@ -92,7 +91,7 @@ type printer struct {
 	doneFields     map[string]bool
 	error          bool // true if something went wrong
 	surroundSyntax bool // true if we are quoting strings or surrounding slices with [] etc.
-	fieldOrder 	   map[string]int
+	fieldOrder     map[string]int
 }
 
 // newPrinter creates a new printer instance.
