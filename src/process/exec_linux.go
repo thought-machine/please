@@ -41,11 +41,6 @@ func (e *Executor) ExecCommand(sandbox SandboxConfig, command string, args ...st
 		Setpgid:   true,
 	}
 
-	// We are done here if no sandboxing and/or namespacing is necessary
-	if sandbox == NoSandbox && !shouldNamespace {
-		return cmd
-	}
-
 	// If we have any sort of sandboxing set up, we should always namespace, however we only namespace mount and/or net if
 	// we're sandboxing this rule.
 	if shouldNamespace {
