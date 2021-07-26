@@ -759,9 +759,7 @@ func addData(s *scope, args []pyObject) pyObject {
 	s.Assert(s.Callback, "can only be called from a pre- or post-build callback")
 	target := getTargetPost(s, string(args[0].(pyString)))
 	data := core.ParseBuildLabelContext(string(args[1].(pyString)), s.pkg)
-
-    target.AddDatum(target.Label)
-
+	target.AddDatum(target.Label)
 	// Queue this dependency if it'll be needed.
 	if target.State() > core.Inactive {
 		err := s.state.QueueTarget(data, target.Label, true, false)
