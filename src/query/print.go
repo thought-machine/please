@@ -18,7 +18,7 @@ import (
 // or some similar wrapper rule, but we've lost that information by now.
 func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string) {
 	graph := state.Graph
-	parser := parse.NewAspParser(state)
+	order := parse.NewAspParser(state).BuildRuleArgOrder()
 	for _, target := range targets {
 		t := graph.TargetOrDie(target)
 		if len(labels) > 0 {
@@ -35,9 +35,9 @@ func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []s
 			fmt.Fprintf(os.Stdout, "# %s:\n", target)
 		}
 		if len(fields) > 0 {
-			newPrinter(os.Stdout, t, 0, parser.BuildRuleArgOrder()).PrintFields(fields)
+			newPrinter(os.Stdout, t, 0, order).PrintFields(fields)
 		} else {
-			newPrinter(os.Stdout, t, 0, parser.BuildRuleArgOrder()).PrintTarget()
+			newPrinter(os.Stdout, t, 0, order).PrintTarget()
 		}
 	}
 }
