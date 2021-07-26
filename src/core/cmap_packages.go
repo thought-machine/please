@@ -82,7 +82,7 @@ func (lm *packageLMap) Set(key packageKey, pkg *Package) bool {
 	defer lm.l.Unlock()
 	if existing, present := lm.m[key]; present {
 		if existing.Package != nil {
-			return false  // already added
+			return false // already added
 		}
 		// Hasn't been added, but something is waiting for it to be.
 		lm.m[key] = packagePair{Package: pkg}

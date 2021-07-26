@@ -90,7 +90,7 @@ func (lm *targetLMap) Set(target *BuildTarget) bool {
 	defer lm.l.Unlock()
 	if existing, present := lm.m[target.Label]; present {
 		if existing.Target != nil {
-			return false  // already added
+			return false // already added
 		}
 		// Hasn't been added, but something is waiting for it to be.
 		lm.m[target.Label] = buildTargetPair{Target: target}

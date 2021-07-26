@@ -169,9 +169,9 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // NewGraph constructs and returns a new BuildGraph.
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
-		targets:        newTargetMap(),
-		packages:       newPackageMap(),
-		subrepos:       cmap.New(),
+		targets:  newTargetMap(),
+		packages: newPackageMap(),
+		subrepos: cmap.New(),
 	}
 	return g
 }
