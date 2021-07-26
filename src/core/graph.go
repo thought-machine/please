@@ -9,90 +9,38 @@ import (
 	"sort"
 
 	"github.com/OneOfOne/cmap"
-	"github.com/OneOfOne/cmap/stringcmap"
 )
-
-type pendingTargets struct {
-	m *cmap.CMap
-}
 
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
 	targets *targetMap
-	// Targets that have been depended on by something that we're waiting to appear.
-	pendingTargets pendingTargets
 	// Map of all currently known packages.
-	packages *cmap.CMap
+	packages *packageMap
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.CMap
 }
 
-func (p *pendingTargets) getPackage(key packageKey) (ret *stringcmap.LMap) {
-	p.m.Update(key, func(old interface{}) interface{} {
-		if old != nil {
-			ret = old.(*stringcmap.LMap)
-			return old
-		}
-		ret = stringcmap.NewLMap()
-		return ret
-	})
-	return ret
-}
-
-func (p *pendingTargets) GetTargetChannel(label BuildLabel) (ret chan struct{}) {
-	p.getPackage(label.packageKey()).Update(label.Name, func(old interface{}) interface{} {
-		if old != nil {
-			ret = old.(chan struct{})
-			return old
-		}
-		ret = make(chan struct{})
-		return ret
-	})
-	return ret
-}
-
-func (p *pendingTargets) NotifyPendingPackageTargets(key packageKey) {
-	pkg := p.getPackage(key)
-	pkg.ForEach(pkg.Keys(nil), func(_ string, ch interface{}) bool {
-		select {
-		case <-ch.(chan struct{}):
-		default:
-			close(ch.(chan struct{}))
-		}
-		return true
-	})
-}
-
 // AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
-	if !graph.targets.Set(target.Label, target) {
+	if !graph.targets.Set(target) {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
-	// Notify anything that called WaitForTarget
-	close(graph.pendingTargets.GetTargetChannel(target.Label))
 	return target
 }
 
 // AddPackage adds a new package to the graph with given name.
 func (graph *BuildGraph) AddPackage(pkg *Package) {
 	key := packageKey{Name: pkg.Name, Subrepo: pkg.SubrepoName}
-	graph.packages.Update(key, func(old interface{}) interface{} {
-		if old != nil {
-			panic("Attempt to read existing package: " + key.String())
-		}
-		return pkg
-	})
-	graph.pendingTargets.NotifyPendingPackageTargets(key)
+	if !graph.packages.Set(key, pkg) {
+		panic("Attempt to re-add existing package: " + key.String())
+	}
 }
 
 // Target retrieves a target from the graph by label
 func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
-	t, ok := graph.targets.GetOK(label)
-	if !ok {
-		return nil
-	}
+	t, _ := graph.targets.Get(label)
 	return t
 }
 
@@ -116,13 +64,22 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 // WaitForTarget returns the given target, waiting for it to be added if it isn't yet.
 // It returns nil if the target finally turns out not to exist.
 func (graph *BuildGraph) WaitForTarget(label BuildLabel) *BuildTarget {
-	if t := graph.Target(label); t != nil {
+	t, tch := graph.targets.Get(label)
+	if t != nil {
 		return t
-	} else if graph.PackageByLabel(label) != nil {
+	}
+	p, pch := graph.packages.Get(packageKey{Name: label.PackageName, Subrepo: label.Subrepo})
+	if p != nil {
 		// Check target again to avoid race conditions
 		return graph.Target(label)
 	}
-	<-graph.pendingTargets.GetTargetChannel(label)
+	// Now we need to wait for either (hopefully) the target or its package to exist.
+	// Either the target will, which is fine, or if the package appears but the target doesn't
+	// we will conclude it doesn't exist.
+	select {
+	case <-tch:
+	case <-pch:
+	}
 	return graph.Target(label)
 }
 
@@ -134,11 +91,8 @@ func (graph *BuildGraph) PackageByLabel(label BuildLabel) *Package {
 
 // Package retrieves a package from the graph by name & subrepo, or nil if it can't be found.
 func (graph *BuildGraph) Package(name, subrepo string) *Package {
-	p, present := graph.packages.GetOK(packageKey{Name: name, Subrepo: subrepo})
-	if !present {
-		return nil
-	}
-	return p.(*Package)
+	p, _ := graph.packages.Get(packageKey{Name: name, Subrepo: subrepo})
+	return p
 }
 
 // PackageOrDie retrieves a package by label, and dies if it can't be found.
@@ -206,10 +160,9 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 // PackageMap returns a copy of the graph's internal map of name to package.
 func (graph *BuildGraph) PackageMap() map[string]*Package {
 	packages := map[string]*Package{}
-	graph.packages.ForEach(func(k, v interface{}) bool {
-		packages[k.(packageKey).String()] = v.(*Package)
-		return true
-	})
+	for _, pkg := range graph.packages.Values() {
+		packages[packageKey{Subrepo: pkg.SubrepoName, Name: pkg.Name}.String()] = pkg
+	}
 	return packages
 }
 
@@ -217,8 +170,7 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
 		targets:        newTargetMap(),
-		pendingTargets: pendingTargets{m: cmap.New()},
-		packages:       cmap.New(),
+		packages:       newPackageMap(),
 		subrepos:       cmap.New(),
 	}
 	return g
