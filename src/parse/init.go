@@ -19,7 +19,7 @@ import (
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) {
 	if state.Parser == nil {
-		state.Parser = &aspParser{asp: newAspParser(state)}
+		state.Parser = &aspParser{asp: NewAspParser(state)}
 	}
 }
 
@@ -50,8 +50,8 @@ func buildPreamble(state *core.BuildState, pkg *core.Package) string {
 	return ""
 }
 
-// newAspParser returns a asp.Parser object with all the builtins loaded
-func newAspParser(state *core.BuildState) *asp.Parser {
+// NewAspParser returns a asp.Parser object with all the builtins loaded
+func NewAspParser(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
 	log.Debug("Loading built-in build rules...")
 	dir, _ := rules.AllAssets()
@@ -116,6 +116,11 @@ func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *co
 		state.LogBuildResult(tid, target, core.TargetBuilding, fmt.Sprintf("Finished %s-build function for %s", callbackType, target.Label))
 	}
 	return err
+}
+
+// AspParser returns the underlying asp parser
+func (p *aspParser) AspParser() *asp.Parser {
+	return p.asp
 }
 
 func createBazelSubrepo(state *core.BuildState) {

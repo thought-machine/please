@@ -12,6 +12,7 @@ go_library(
         "//src/fs",
         "//src/scm",
         "//src/utils",
+        "//src/parse",
         "//third_party/go:logging",
     ],
 )
@@ -22,6 +23,7 @@ go_test(
     deps = [
         ":query",
         "//src/core",
+        "//src/parse",
         "//third_party/go:testify",
     ],
 )
