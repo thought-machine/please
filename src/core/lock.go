@@ -42,11 +42,7 @@ func acquireRepoLock(how int) error {
 		return err
 	}
 
-	if err := acquireFileLock(repoLockFile, how, fmt.Sprint(os.Getpid())); err != nil {
-		return err
-	}
-
-	return nil
+	return acquireFileLock(repoLockFile, how, fmt.Sprint(os.Getpid()))
 }
 
 // This acts like a singleton allowing the same file descriptor to used to override a previously set lock
