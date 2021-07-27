@@ -191,11 +191,11 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 			env = append(env, "TEST="+path.Join(testDir, target.Outputs()[0]))
 		}
 	}
-	if len(target.Test.testTools) == 1 {
-		env = append(env, "TOOL="+toolPath(state, target.Test.testTools[0], abs))
+	if len(target.Test.tools) == 1 {
+		env = append(env, "TOOL="+toolPath(state, target.Test.tools[0], abs))
 	}
 	// Named tools as well.
-	for name, tools := range target.Test.namedTestTools {
+	for name, tools := range target.Test.namedTools {
 		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
 	}
 	if len(target.Data) > 0 {
@@ -244,11 +244,11 @@ func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) Build
 	)
 
 	if target.IsTest() {
-		if len(target.Test.testTools) == 1 {
-			env = append(env, "TOOL="+toolPath(state, target.Test.testTools[0], true))
+		if len(target.Test.tools) == 1 {
+			env = append(env, "TOOL="+toolPath(state, target.Test.tools[0], true))
 		}
 		// Named tools as well.
-		for name, tools := range target.Test.namedTestTools {
+		for name, tools := range target.Test.namedTools {
 			env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, true), " "))
 		}
 	}

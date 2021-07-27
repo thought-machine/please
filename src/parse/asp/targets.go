@@ -152,7 +152,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		}
 		target.Test.Timeout = sizeAndTimeout(s, size, args[testTimeoutBuildRuleArgIdx], s.state.Config.Test.Timeout)
 		target.Test.Sandbox = isTruthy(testSandboxBuildRuleArgIdx)
-		target.Test.NoTestOutput = isTruthy(noTestOutputBuildRuleArgIdx)
+		target.Test.NoOutput = isTruthy(noTestOutputBuildRuleArgIdx)
 	}
 	return target
 }

@@ -139,7 +139,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 	if target.NeedCoverage(state) {
 		files = append(files, core.CoverageFile)
 	}
-	if !target.Test.NoTestOutput {
+	if !target.Test.NoOutput {
 		if target.HasLabel(core.TestResultsDirLabel) {
 			dirs = []string{core.TestResultsFile}
 		} else {
@@ -400,7 +400,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	outs := outputsForActionResult(ar)
 	// Test outputs are optional
 	if isTest {
-		if !outs[core.TestResultsFile] && !target.Test.NoTestOutput {
+		if !outs[core.TestResultsFile] && !target.Test.NoOutput {
 			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, core.TestResultsFile, c.actionURL(actionDigest, true))
 		}
 	} else {

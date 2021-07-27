@@ -409,7 +409,7 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 
 	var data [][]byte
 	// If this test is meant to produce an output file and the test ran successfully
-	if !target.Test.NoTestOutput {
+	if !target.Test.NoOutput {
 		d, readErr := readTestResultsDir(path.Join(target.TestDir(run), core.TestResultsFile))
 		if readErr != nil {
 			// If we got an error running the tests, this is probably to be expected and not worth warning about
@@ -474,7 +474,7 @@ func parseTestOutput(stdout string, stderr string, runError error, duration time
 	if len(resultsData) == 0 {
 		if runError == nil {
 			// No output and no execution error and output not expected - OK
-			if target.Test.NoTestOutput {
+			if target.Test.NoOutput {
 				return core.TestSuite{
 					TestCases: []core.TestCase{
 						{

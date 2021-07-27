@@ -63,12 +63,12 @@ type TestFields struct {
 	Sandbox bool `name:"test_sandbox"`
 	// True if the target is a test and has no output file.
 	// Default is false, meaning all tests must produce test.results as output.
-	NoTestOutput bool `name:"no_test_output"`
+	NoOutput bool `name:"no_test_output"`
 	// Like tools but available to the test_cmd instead
-	testTools []BuildInput `name:"test_tools"`
+	tools []BuildInput `name:"test_tools"`
 	// Named test tools, similar to named sources.
-	namedTestTools map[string][]BuildInput `name:"test_tools"`
-	Timeout        time.Duration           `name:"test_timeout"`
+	namedTools map[string][]BuildInput `name:"test_tools"`
+	Timeout    time.Duration           `name:"test_timeout"`
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	Outputs []string `name:"test_outputs"`
@@ -1184,7 +1184,7 @@ func (target *BuildTarget) AddTool(tool BuildInput) {
 
 // AddTestTool adds a new test tool to the target.
 func (target *BuildTarget) AddTestTool(tool BuildInput) {
-	target.Test.testTools = append(target.Test.testTools, tool)
+	target.Test.tools = append(target.Test.tools, tool)
 	if label, ok := tool.Label(); ok {
 		target.AddDependency(label)
 	}
@@ -1192,14 +1192,14 @@ func (target *BuildTarget) AddTestTool(tool BuildInput) {
 
 // AllTestTools returns all the test tool paths for this rule.
 func (target *BuildTarget) AllTestTools() []BuildInput {
-	if target.Test.namedTestTools == nil {
-		return target.Test.testTools
+	if target.Test.namedTools == nil {
+		return target.Test.tools
 	}
-	return target.allBuildInputs(target.Test.testTools, target.Test.namedTestTools)
+	return target.allBuildInputs(target.Test.tools, target.Test.namedTools)
 }
 
 func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
-	return target.Test.namedTestTools
+	return target.Test.namedTools
 }
 
 // AddDatum adds a new item of data to the target.
@@ -1241,10 +1241,10 @@ func (target *BuildTarget) AddNamedTestTool(name string, tool BuildInput) {
 	if target.Test == nil {
 		target.Test = new(TestFields)
 	}
-	if target.Test.namedTestTools == nil {
-		target.Test.namedTestTools = map[string][]BuildInput{name: {tool}}
+	if target.Test.namedTools == nil {
+		target.Test.namedTools = map[string][]BuildInput{name: {tool}}
 	} else {
-		target.Test.namedTestTools[name] = append(target.Test.namedTestTools[name], tool)
+		target.Test.namedTools[name] = append(target.Test.namedTools[name], tool)
 	}
 	if label, ok := tool.Label(); ok {
 		target.AddDependency(label)
@@ -1574,7 +1574,7 @@ func (target *BuildTarget) NeedCoverage(state *BuildState) bool {
 	if target.Test == nil {
 		return false
 	}
-	return state.NeedCoverage && !target.Test.NoTestOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
+	return state.NeedCoverage && !target.Test.NoOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
 }
 
 // Parent finds the parent of a build target, or nil if the target is parentless.

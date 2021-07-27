@@ -22,15 +22,12 @@ var KnownFields = map[string]bool{
 	"Sources":                     true,
 	"NamedSources":                true,
 	"IsBinary":                    true,
-	"IsTest":                      true,
 	"IsFilegroup":                 true,
 	"IsTextFile":                  true,
 	"FileContent":                 true,
 	"IsRemoteFile":                true,
 	"Command":                     true,
-	"Test.Commands":                    true,
-	"Test.Command":                 true,
-	"Commands":                true,
+	"Commands":                    true,
 	"NeedsTransitiveDependencies": true,
 	"Local":                       true,
 	"OptionalOutputs":             true,
@@ -48,21 +45,32 @@ var KnownFields = map[string]bool{
 	"Sandbox":                     true,
 	"Tools":                       true,
 	"namedTools":                  true,
-	"testTools":                   true,
-	"namedTestTools":              true,
 	"Secrets":                     true,
 	"NamedSecrets":                true,
-	"Outputs":                 true,
 	"Stamp":                       true,
 	"OutputDirectories":           true,
 	"ExitOnError":                 true,
 	"EntryPoints":                 true,
 	"Env":                         true,
 
+	// Test fields
+	"Test":            true, // We hash the children of this
+
+	// Contribute to the runtime hash
+	"Test.Sandbox":    true,
+	"Test.Commands":   true,
+	"Test.Command":    true,
+	"Test.tools":      true,
+	"Test.namedTools": true,
+	"Test.Outputs":    true,
+
+	// These don't need to be hashed
+	"Test.NoOutput":   true,
+	"Test.Timeout":    true,
+
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
 	"namedData":         true,
-	"Test.Sandbox":       true,
 	"ContainerSettings": true,
 
 	// These would ideally not contribute to the hash, but we need that at present
@@ -76,9 +84,7 @@ var KnownFields = map[string]bool{
 	"Subrepo":                true,
 	"AddedPostBuild":         true,
 	"Flakiness":              true,
-	"NoTestOutput":           true,
 	"BuildTimeout":           true,
-	"Timeout":            true,
 	"state":                  true,
 	"Results":                true, // Recall that unsuccessful test results aren't cached...
 	"completedRuns":          true,
@@ -112,7 +118,7 @@ func TestAllTestFieldsArePresentAndAccountedFor(t *testing.T) {
 	typ := val.Elem().Type()
 	for i := 0; i < typ.NumField(); i++ {
 		if field := typ.Field(i); !KnownFields[fmt.Sprintf("Test.%s", field.Name)] {
-			t.Errorf("Unaccounted field in RuleHash: %s", field.Name)
+			t.Errorf("Unaccounted field in RuleHash: Test.%s", field.Name)
 		}
 	}
 }
