@@ -56,7 +56,7 @@ func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 	state.Graph.AddTarget(target)
 	if i <= size {
 		if i > 10 {
-			target.Flakiness = i // Stash this here, will be useful later.
+			target.Flakiness = uint8(i) // Stash this here, will be useful later.
 			state.Parser.(*fakeParser).PostBuildFunctions[target] = postBuild
 		}
 		if i < size/10 {
@@ -83,8 +83,8 @@ func postBuild(target *core.BuildTarget, out string) error {
 	if target.Flakiness == 0 {
 		return fmt.Errorf("shouldn't be calling a post-build function on %s", target.Label)
 	}
-	parent := label(target.Flakiness / 10)
-	newTarget := addTarget(state, target.Flakiness+size)
+	parent := label(int(target.Flakiness / 10))
+	newTarget := addTarget(state, int(target.Flakiness)+size)
 
 	// This mimics what interpreter.go does.
 	t := state.Graph.TargetOrDie(parent)

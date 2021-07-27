@@ -179,7 +179,7 @@ type BuildState struct {
 	// True if we have any remote executors configured.
 	anyRemote bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
-	NumTestRuns int
+	NumTestRuns uint16
 	// Experimental directories
 	experimentalLabels []BuildLabel
 	// Various items for tracking progress.
@@ -272,7 +272,7 @@ func (state *BuildState) AddPendingTest(target *BuildTarget) {
 	if state.TestSequentially {
 		state.addPendingTest(target, 1)
 	} else {
-		state.addPendingTest(target, state.NumTestRuns)
+		state.addPendingTest(target, int(state.NumTestRuns))
 	}
 }
 
@@ -870,7 +870,7 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, rescan, forceB
 				state.addActiveTargets(2) // One for build & one for test
 			} else {
 				// Tests count however many times we're going to run them if parallel.
-				state.addActiveTargets(1 + state.NumTestRuns)
+				state.addActiveTargets(int(1 + state.NumTestRuns))
 			}
 		} else {
 			state.addActiveTargets(1)

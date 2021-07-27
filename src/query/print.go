@@ -136,10 +136,7 @@ func (p *printer) PrintTarget() {
 		}
 	}
 
-	if p.target.IsTest() {
-
-	}
-
+	// TODO(jpoole): print test fields
 	sort.Sort(f)
 	for _, orderedField := range f {
 		p.printField(t.Field(orderedField.structIndex), v.Field(orderedField.structIndex))
@@ -232,7 +229,9 @@ func (p *printer) genericPrint(v reflect.Value) (string, bool) {
 	case reflect.Bool:
 		return "True", v.Bool()
 	case reflect.Int, reflect.Int32:
-		return fmt.Sprintf("%d", v.Int()), v.Int() > 0
+		return fmt.Sprintf("%d", v.Int()), true
+	case reflect.Uint8, reflect.Uint16:
+		return fmt.Sprintf("%d", v.Uint()), true
 	case reflect.Struct, reflect.Interface:
 		if stringer, ok := v.Interface().(fmt.Stringer); ok {
 			return p.quote(stringer.String()), true

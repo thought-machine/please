@@ -140,7 +140,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 				if int(i) <= 1 {
 					target.Flakiness = 1
 				} else {
-					target.Flakiness = int(i)
+					target.Flakiness = uint8(i)
 					target.AddLabel("flaky")
 				}
 			}

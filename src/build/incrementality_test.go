@@ -54,7 +54,7 @@ var KnownFields = map[string]bool{
 	"Env":                         true,
 
 	// Test fields
-	"Test":            true, // We hash the children of this
+	"Test": true, // We hash the children of this
 
 	// Contribute to the runtime hash
 	"Test.Sandbox":    true,
@@ -65,8 +65,8 @@ var KnownFields = map[string]bool{
 	"Test.Outputs":    true,
 
 	// These don't need to be hashed
-	"Test.NoOutput":   true,
-	"Test.Timeout":    true,
+	"Test.NoOutput": true,
+	"Test.Timeout":  true,
 
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,

@@ -96,7 +96,7 @@ type BuildTarget struct {
 	// Data files of this rule. Similar to sources but used at runtime, typically by tests.
 	Data []BuildInput `name:"data"`
 	// Data files of this rule by name.
-	namedData  map[string][]BuildInput `name:"data"`
+	namedData map[string][]BuildInput `name:"data"`
 	// Output files of this rule. All are paths relative to this package.
 	outputs []string `name:"outs"`
 	// Named output subsets of this rule. All are paths relative to this package but can be
@@ -112,53 +112,11 @@ type BuildTarget struct {
 	Command string `name:"cmd" hide:"filegroup"`
 	// Per-configuration shell commands to run.
 	Commands map[string]string `name:"cmd" hide:"filegroup"`
-	// Represents the state of this build target (see below)
-	state int32 `print:"false"`
-	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
-	IsBinary bool `name:"binary"`
-	Test   *TestFields
-	// Indicates that the target can only be depended on by tests or other rules with this set.
-	// Used to restrict non-deployable code and also affects coverage detection.
-	TestOnly bool `name:"test_only"`
-	// True if the build action is sandboxed.
-	Sandbox bool
-	// True if this target needs access to its transitive dependencies to build.
-	// This would be false for most 'normal' genrules but true for eg. compiler steps
-	// that need to build in everything.
-	NeedsTransitiveDependencies bool `name:"needs_transitive_deps"`
-	// True if this target blocks recursive exploring for transitive dependencies.
-	// This is typically false for _library rules which aren't complete, and true
-	// for _binary rules which normally are, and genrules where you don't care about
-	// the inputs, only whatever they were turned into.
-	OutputIsComplete bool `name:"output_is_complete"`
-	// If true, the rule is given an env var at build time that contains the hash of its
-	// transitive dependencies, which can be used to identify the output in a predictable way.
-	Stamp bool
-	// If true, the target must be run locally (i.e. is not compatible with remote execution).
-	Local bool
-	// If true, the executed commands will exit whenever an error is encountered (i.e. shells
-	// are executed with -e).
-	ExitOnError bool
-	// If true, the target is needed for a subinclude and therefore we will have to make sure its
-	// outputs are available locally when built.
-	NeededForSubinclude bool `print:"false"`
-	// Marks the target as a filegroup.
-	IsFilegroup bool `print:"false"`
-	// Marks the target as a remote_file.
-	IsRemoteFile bool `print:"false"`
-	// Marks the target as a text_file.
-	IsTextFile bool `print:"false"`
-	// Marks that the target was added in a post-build function.
-	AddedPostBuild bool `print:"false"`
-	// If true, the interactive progress display will try to infer the target's progress
-	// via some heuristics on its output.
-	ShowProgress bool `name:"progress"`
+	Test     *TestFields
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
 	// The results of this test target, if it is one.
 	Results TestSuite `print:"false"`
-	// The number of completed runs
-	completedRuns int `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
 	BuildingDescription string `name:"building_description"`
@@ -196,8 +154,7 @@ type BuildTarget struct {
 	PassEnv *[]string `name:"pass_env"`
 	// Target-specific unsafe environment passthroughs.
 	PassUnsafeEnv *[]string `name:"pass_unsafe_env"`
-	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
-	Flakiness int `name:"flaky"`
+
 	// Timeouts for build/test actions
 	BuildTimeout time.Duration `name:"timeout"`
 	// OutputDirectories are the directories that outputs can be produced into which will be added to the root of the
@@ -214,6 +171,50 @@ type BuildTarget struct {
 	Env map[string]string `name:"env"`
 	// The content of text_file() rules
 	FileContent string `name:"content"`
+	// Represents the state of this build target (see below)
+	state int32 `print:"false"`
+	// The number of completed runs
+	completedRuns uint16 `print:"false"`
+	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
+	Flakiness uint8 `name:"flaky"`
+	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
+	IsBinary bool `name:"binary"`
+	// Indicates that the target can only be depended on by tests or other rules with this set.
+	// Used to restrict non-deployable code and also affects coverage detection.
+	TestOnly bool `name:"test_only"`
+	// True if the build action is sandboxed.
+	Sandbox bool
+	// True if this target needs access to its transitive dependencies to build.
+	// This would be false for most 'normal' genrules but true for eg. compiler steps
+	// that need to build in everything.
+	NeedsTransitiveDependencies bool `name:"needs_transitive_deps"`
+	// True if this target blocks recursive exploring for transitive dependencies.
+	// This is typically false for _library rules which aren't complete, and true
+	// for _binary rules which normally are, and genrules where you don't care about
+	// the inputs, only whatever they were turned into.
+	OutputIsComplete bool `name:"output_is_complete"`
+	// If true, the rule is given an env var at build time that contains the hash of its
+	// transitive dependencies, which can be used to identify the output in a predictable way.
+	Stamp bool
+	// If true, the target must be run locally (i.e. is not compatible with remote execution).
+	Local bool
+	// If true, the executed commands will exit whenever an error is encountered (i.e. shells
+	// are executed with -e).
+	ExitOnError bool
+	// If true, the target is needed for a subinclude and therefore we will have to make sure its
+	// outputs are available locally when built.
+	NeededForSubinclude bool `print:"false"`
+	// Marks the target as a filegroup.
+	IsFilegroup bool `print:"false"`
+	// Marks the target as a remote_file.
+	IsRemoteFile bool `print:"false"`
+	// Marks the target as a text_file.
+	IsTextFile bool `print:"false"`
+	// Marks that the target was added in a post-build function.
+	AddedPostBuild bool `print:"false"`
+	// If true, the interactive progress display will try to infer the target's progress
+	// via some heuristics on its output.
+	ShowProgress bool `name:"progress"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -279,7 +280,7 @@ func (o OutputDirectory) ShouldAddFiles() bool {
 
 // A BuildTargetState tracks the current state of this target in regard to whether it's built
 // or not. Targets only move forwards through this (i.e. the state of a target only ever increases).
-type BuildTargetState int32
+type BuildTargetState uint8
 
 // The available states for a target.
 const (

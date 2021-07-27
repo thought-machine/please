@@ -202,14 +202,14 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			moveAndCacheOutputFiles(&target.Results, coverage)
 		}
 	} else if state.TestSequentially {
-		for run := 1; run <= state.NumTestRuns; run++ {
-			state.LogBuildResult(tid, target, core.TargetTesting, getRunStatus(run, state.NumTestRuns))
+		for run := 1; run <= int(state.NumTestRuns); run++ {
+			state.LogBuildResult(tid, target, core.TargetTesting, getRunStatus(run, int(state.NumTestRuns)))
 			var results core.TestSuite
 			results, coverage = doTest(tid, state, target, runRemotely, 1) // Sequential tests re-use run 1's test dir
 			target.AddTestResults(results)
 		}
 	} else {
-		state.LogBuildResult(tid, target, core.TargetTesting, getRunStatus(run, state.NumTestRuns))
+		state.LogBuildResult(tid, target, core.TargetTesting, getRunStatus(run, int(state.NumTestRuns)))
 		var results core.TestSuite
 		results, coverage = doTest(tid, state, target, runRemotely, run)
 		target.AddTestResults(results)
@@ -244,8 +244,8 @@ func doFlakeRun(tid int, state *core.BuildState, target *core.BuildTarget, runRe
 	results := core.TestSuite{}
 
 	// New group of test cases for each group of flaky runs
-	for flakes := 1; flakes <= target.Flakiness; flakes++ {
-		state.LogBuildResult(tid, target, core.TargetTesting, getFlakeStatus(flakes, target.Flakiness))
+	for flakes := 1; flakes <= int(target.Flakiness); flakes++ {
+		state.LogBuildResult(tid, target, core.TargetTesting, getFlakeStatus(flakes, int(target.Flakiness)))
 
 		testSuite, cov := doTest(tid, state, target, runRemotely, 1) // If we're running flakes, numRuns must be 1
 
