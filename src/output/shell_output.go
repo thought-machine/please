@@ -97,7 +97,7 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 				log.Fatalf("Target %s doesn't exist in build graph", label)
 			} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
 				// Do nothing, we will output about this shortly.
-			} else if state.NeedBuild && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
+			} else if target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
 				log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltTargetsMessage(state.Graph))
 			}
 		}
