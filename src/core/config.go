@@ -575,10 +575,10 @@ type Configuration struct {
 		Name string `help:"The name of the plugin"`
 	} `help:"Set this in your .plzconfig to make the current Please repo a plugin. Add configuration fields with PluginConfig sections"`
 	PluginConfig map[string]*struct{
-		ConfigKey string
-		DefaultValue string
-		Optional bool
-	}
+		ConfigKey string `help:"The key of the config field in the .plzconfig file"`
+		DefaultValue string `help:"The default value for this config field, if it has one"`
+		Optional bool `help:"Whether this config field can be empty"`
+	} `help:"Defines a new config field for a plugin"`
 	Bazel struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`
