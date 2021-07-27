@@ -70,6 +70,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	}
 
 	// Must lock exclusively here so that the update process doesn't race when running two instances simultaneously.
+	// We don't want to release the lock yet since other parts of the code might override it as needed.
 	core.AcquireExclusiveRepoLock()
 
 	// If the destination exists and the user passed --force, remove it to force a redownload.
