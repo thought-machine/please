@@ -240,10 +240,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return nil
 		}
 
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Acquiring file lock...")
+		state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring file lock...")
 		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
 		defer core.ReleaseFileLock(&file)
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Preparing...")
+		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
 
 		if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
 			return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
