@@ -1,0 +1,5 @@
+github_repo(
+    name = "python_rules",
+    repo = "please-build/python-rules",
+    revision = "master",
+)

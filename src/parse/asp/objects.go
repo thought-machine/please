@@ -922,22 +922,29 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 		return
 	}
 
-	config := state.Config.Plugin[pluginName]
-	if config == nil {
-		return
+	extraVals := map[string]string{}
+	if config := state.Config.Plugin[pluginName]; config != nil {
+		extraVals = config.ExtraValues
 	}
 
 	pluginNamespace := pyDict{}
+	contextPackage := &core.Package{SubrepoName: state.CurrentSubrepo}
 
 	configValueDefinitions := state.Config.PluginConfig
 	for key, definition := range configValueDefinitions {
 		// TODO(jpoole): handle repeatable values
-		value, ok := config.ExtraValues[definition.ConfigKey]
+		value, ok := extraVals[definition.ConfigKey]
 		if !ok {
 			value = definition.DefaultValue
 		}
 		if value == "" && !definition.Optional {
 			log.Fatalf("plugin config %v.%v is not optional", pluginName, definition.ConfigKey)
+		}
+
+		// Parse any config values in the current subrepo so @self resolves correctly. If we leave them, @self will
+		// resolve based on the subincluding package which will likely be the host repo.
+		if core.LooksLikeABuildLabel(value) {
+			value = core.ParseBuildLabelContext(value, contextPackage).String()
 		}
 		pluginNamespace[key] = pyString(value)
 	}
@@ -948,7 +955,7 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 type pyFrozenConfig struct{ pyConfig }
 
 // IndexAssign always fails, assignments to a pyFrozenConfig aren't allowed.
-func (c *pyFrozenConfig) IndexAssign(index, value pyObject) {
+func (c *pyFrozenConfig) IndexAssign(_, _ pyObject) {
 	panic("Config object is not assignable in this scope")
 }
 
