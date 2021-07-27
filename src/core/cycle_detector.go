@@ -1,72 +1,69 @@
 package core
 
-import "strings"
-
-type dependencyChain []BuildLabel
-type dependencyLink struct {
-	label BuildLabel
-	dep   BuildLabel
-}
-
-func (c dependencyChain) String() string {
-	labels := make([]string, len(c))
-	for i, l := range c {
-		labels[i] = l.String()
-	}
-	return strings.Join(labels, "\n -> ")
-}
+import (
+	"fmt"
+	"strings"
+)
 
 type cycleDetector struct {
-	deps  map[BuildLabel]BuildLabel
-	queue chan dependencyLink
+	graph *BuildGraph
 }
 
-func newCycleDetector() *cycleDetector {
-	c := new(cycleDetector)
-	c.deps = map[BuildLabel]BuildLabel{}
+// Check runs a single check of the build graph to see if any cycles can be detected.
+// If it finds one an errCycle is returned.
+func (c *cycleDetector) Check() *errCycle {
+	log.Debug("Running cycle detection...")
+	complete := map[*BuildTarget]struct{}{}
+	partial := map[*BuildTarget]struct{}{}
 
-	c.queue = make(chan dependencyLink, 100000)
-
-	return c
-}
-
-// AddDependency queues up another dependency for the cycle detector to check
-func (c *cycleDetector) AddDependency(depending BuildLabel, dep BuildLabel) {
-	go func() { c.queue <- dependencyLink{label: depending, dep: dep} }()
-}
-
-func (c *cycleDetector) buildChain(chain dependencyChain) dependencyChain {
-	if next, ok := c.deps[chain[len(chain)-1]]; ok {
-		if next == chain[0] {
-			return append(chain, next)
+	// visit visits a target and all its transitive dependencies. As each is visited they are marked as
+	// partially visited; when we bottom out a tree successfully we mark it as completely visited (this
+	// saves us from revisiting any node we've successfully visited before).
+	// If a cycle is found it returns a slice of the targets in that cycle, and a bool indicating if the
+	// cycle is complete or not (if not the caller will need to add its node to it as well).
+	var visit func(target *BuildTarget) ([]*BuildTarget, bool)
+	visit = func(target *BuildTarget) ([]*BuildTarget, bool) {
+		if _, present := complete[target]; present {
+			return nil, false
+		} else if _, present := partial[target]; present {
+			return []*BuildTarget{target}, false
 		}
-		return c.buildChain(append(chain, next))
+		partial[target] = struct{}{}
+		for _, dep := range target.Dependencies() {
+			if cycle, done := visit(dep); cycle != nil {
+				if done || target == cycle[len(cycle)-1] {
+					return cycle, true // This target is already in the cycle
+				}
+				return append([]*BuildTarget{target}, cycle...), false
+			}
+		}
+		delete(partial, target)
+		complete[target] = struct{}{}
+		return nil, false
 	}
+
+	for _, target := range c.graph.AllTargets() {
+		if _, present := complete[target]; !present {
+			if cycle, _ := visit(target); cycle != nil {
+				log.Debug("Cycle detection complete, cycle found: %s", cycle)
+				return &errCycle{Cycle: cycle}
+			}
+		}
+	}
+	log.Debug("Cycle detection complete, no cycles found")
 	return nil
 }
 
-// TODO(jpoole) unit tests
-func (c *cycleDetector) checkForCycle(dep, next BuildLabel) dependencyChain {
-	return c.buildChain(dependencyChain{dep, next})
+// An errCycle is emitted when a graph cycle is detected.
+type errCycle struct {
+	Cycle []*BuildTarget
 }
 
-func (c *cycleDetector) addDep(depending BuildLabel, dep BuildLabel) {
-	if cycle := c.checkForCycle(depending, dep); cycle != nil {
-		failWithGraphCycle(cycle)
+func (err *errCycle) Error() string {
+	labels := make([]string, len(err.Cycle))
+	for i, t := range err.Cycle {
+		labels[i] = t.Label.String()
 	}
-	c.deps[depending] = dep
-}
-
-func failWithGraphCycle(cycle dependencyChain) {
-	msg := "Dependency cycle found:\n"
-	msg += cycle.String()
-	log.Fatalf("%s \nSorry, but you'll have to refactor your build files to avoid this cycle.", msg)
-}
-
-func (c *cycleDetector) run() {
-	go func() {
-		for next := range c.queue {
-			c.addDep(next.label, next.dep)
-		}
-	}()
+	labels = append(labels, labels[0])
+	return fmt.Sprintf("Dependency cycle found:\n%s\nSorry, but you'll have to refactor your build files to avoid this cycle", strings.Join(labels, "\n -> "))
 }

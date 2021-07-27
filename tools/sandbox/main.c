@@ -7,6 +7,8 @@
 // support namespaces / cgroups. We still behave similarly otherwise
 // in order for it to be transparent to the rest of the system.
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "tools/sandbox/sandbox.h"
 
 int main(int argc, char* argv[]) {
@@ -16,5 +18,14 @@ int main(int argc, char* argv[]) {
         fputs("Usage: please_sandbox command args...\n", stderr);
         return 1;
     }
-    return contain(&argv[1], true, true);
+
+    // Network namespace is sandboxed by default but it can be opted out if `SHARE_NETWORK=1` env is set
+    const char* share_network_env = getenv("SHARE_NETWORK");
+    const bool unshare_network = share_network_env == NULL || strcmp(share_network_env, "1");
+
+    // Mount namespace is sandboxed by default but it can be opted out if `SHARE_MOUNT=1` env is set
+    const char* share_mount_env = getenv("SHARE_MOUNT");
+    const bool unshare_mount = share_mount_env == NULL || strcmp(share_mount_env, "1");
+
+    return contain(&argv[1], unshare_network, unshare_mount);
 }

@@ -18,6 +18,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/test"
 )
 
@@ -36,14 +37,14 @@ type buildingTargetData struct {
 	Started      time.Time
 	Finished     time.Time
 	Description  string
-	Active       bool
-	Failed       bool
-	Cached       bool
 	Err          error
 	Colour       string
 	Target       *core.BuildTarget
-	LastProgress float32
 	Eta          time.Duration
+	Active       bool
+	Failed       bool
+	Cached       bool
+	LastProgress float32
 }
 
 // MonitorState monitors the build while it's running and prints output.
@@ -89,14 +90,16 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 		printFailedBuildResults(failedNonTests, failedTargetMap, duration)
 		return
 	}
-	// Check all the targets we wanted to build actually have been built.
-	for _, label := range state.ExpandOriginalLabels() {
-		if target := state.Graph.Target(label); target == nil {
-			log.Fatalf("Target %s doesn't exist in build graph", label)
-		} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
-			// Do nothing, we will output about this shortly.
-		} else if state.NeedBuild && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
-			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltTargetsMessage(state.Graph))
+	if state.NeedBuild {
+		// Check all the targets we wanted to build actually have been built.
+		for _, label := range state.ExpandOriginalLabels() {
+			if target := state.Graph.Target(label); target == nil {
+				log.Fatalf("Target %s doesn't exist in build graph", label)
+			} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
+				// Do nothing, we will output about this shortly.
+			} else if target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
+				log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltTargetsMessage(state.Graph))
+			}
 		}
 	}
 	if state.NeedBuild && len(failedNonTests) == 0 {
@@ -509,7 +512,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 			fmt.Printf("\n")
 			argv := []string{"bash", "--noprofile", "--norc", "-o", "pipefail"}
 			log.Debug("Full command: %s", strings.Join(argv, " "))
-			cmd := state.ProcessExecutor.ExecCommand(shouldSandbox, argv[0], argv[1:]...)
+			cmd := state.ProcessExecutor.ExecCommand(process.NewSandboxConfig(shouldSandbox, shouldSandbox), argv[0], argv[1:]...)
 			cmd.Dir = dir
 			cmd.Env = env
 			cmd.Stdin = os.Stdin

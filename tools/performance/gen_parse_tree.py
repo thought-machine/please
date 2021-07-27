@@ -76,7 +76,7 @@ def main(argv):
             continue
         os.makedirs(dir, exist_ok=True)
         base = os.path.basename(dir)
-        filename = os.path.join(dir, 'BUILD')
+        filename = os.path.join(dir, 'BUILD.plz')
         with open(filename, 'w') as f:
             lang = random.choice(LANGUAGES)
             f.write(LANGUAGE_TEMPLATE.format(

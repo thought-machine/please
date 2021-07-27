@@ -43,7 +43,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		return activateTarget(tid, state, pkg, label, dependent, forSubinclude)
 	}
 	// If we get here then it falls to us to parse this package.
-	state.LogBuildResult(tid, label, core.PackageParsing, "Parsing...")
+	state.LogParseResult(tid, label, core.PackageParsing, "Parsing...")
 
 	subrepo, err := checkSubrepo(tid, state, label, dependent, forSubinclude)
 	if err != nil {
@@ -64,7 +64,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	if err != nil {
 		return err
 	}
-	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed package")
+	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
 	return activateTarget(tid, state, pkg, label, dependent, forSubinclude)
 }
 
@@ -134,7 +134,7 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
 		if label.Subrepo == "" && label.PackageName == "" && label.Name == dependent.Subrepo {
 			if subrepo := checkArchSubrepo(state, label.Name); subrepo != nil {
-				state.LogBuildResult(tid, label, core.TargetBuilt, "Instantiated subrepo")
+				state.LogParseResult(tid, label, core.TargetBuilt, "Instantiated subrepo")
 				return nil
 			}
 		}
