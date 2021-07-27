@@ -15,7 +15,6 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/golang/protobuf v1.4.3
 	github.com/google/shlex v0.0.0-20181106134648-c34317bd91bf
-	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.1-0.20190118093823-f849b5445de4
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-retryablehttp v0.6.7
@@ -23,7 +22,6 @@ require (
 	github.com/klauspost/compress v1.12.3
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/manifoldco/promptui v0.3.2
-	github.com/nicksnyder/go-i18n v1.10.1 // indirect
 	github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518
 	github.com/peterebden/gcfg v1.3.0
 	github.com/peterebden/go-cli-init/v3 v3.0.0
@@ -49,7 +47,6 @@ require (
 	golang.org/x/tools v0.0.0-20200825202427-b303f430e36d
 	google.golang.org/genproto v0.0.0-20200904004341-0bd0a958aa1d
 	google.golang.org/grpc v1.31.1
-	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20191105091915-95d230a53780 // indirect
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	lukechampine.com/blake3 v1.1.5
 )
