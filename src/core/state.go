@@ -996,7 +996,6 @@ func (state *BuildState) ForSubrepo(name string) *BuildState {
 	return s
 }
 
-
 // DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
 func (state *BuildState) DownloadInputsIfNeeded(tid int, target *BuildTarget, runtime bool) error {
 	if state.RemoteClient != nil {

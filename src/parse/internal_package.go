@@ -28,7 +28,7 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 
 	data := struct {
 		ToolsURL string
-		Tools            []string
+		Tools    []string
 	}{
 		ToolsURL: url,
 		Tools: []string{
