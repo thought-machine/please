@@ -29,6 +29,8 @@ FLAGS = flags.FLAGS
 def plz() -> list:
     """Returns the plz invocation for a subprocess."""
     return [
+        "/usr/bin/time",
+        "-f", "%e %M",
         FLAGS.plz,
         '--repo_root', FLAGS.root,
         '--num_threads', str(FLAGS.num_threads),
@@ -39,19 +41,28 @@ def plz() -> list:
 def run(i: int):
     """Run once and return the length of time taken."""
     log.info('Run %d of %d', i + 1, FLAGS.number)
-    start = time.time()
-    subprocess.check_call(plz(), stdout=subprocess.DEVNULL)
-    duration = time.time() - start
-    log.info('Complete in %0.2fs', duration)
-    return duration
+    duration, mem = parse_time_output(subprocess.run(plz(), check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE).stderr.decode("utf-8"))
+    log.info('Complete in %0.2fs, using %d KB', duration, mem)
+    return duration, mem
 
+def parse_time_output(output):
+    parts = output.split(" ")
+    return float(parts[0].strip()), int(parts[1].strip())
 
 def main(argv):
     FLAGS.root = os.path.abspath(FLAGS.root)
     results = [run(i) for i in range(FLAGS.number)]
-    results.sort()
-    median = results[len(results)//2]
-    log.info('Complete, median time: %0.2f', median)
+
+    time_results = [time for time, _ in results ]
+    mem_results = [mem for _, mem in results ]
+
+    time_results.sort()
+    median_time = time_results[len(time_results)//2]
+
+    mem_results.sort()
+    median_mem = mem_results[len(mem_results)//2]
+
+    log.info('Complete, median time: %0.2fs, median mem: %0.2f KB', median_time, median_mem)
     log.info('Running again to generate profiling info')
     profile_file = os.path.join(os.getcwd(), 'plz.prof')
     subprocess.check_call(plz() + ['--profile_file', profile_file], stdout=subprocess.DEVNULL)
@@ -61,9 +72,13 @@ def main(argv):
             'revision': FLAGS.revision,
             'timestamp': datetime.datetime.now().isoformat(),
             'parse': {
-                'raw': results,
-                'median': median,
+                'raw': time_results,
+                'median': median_time,
             },
+            'mem': {
+                'raw': mem_results,
+                'median': median_mem,
+            }
         }, f)
         f.write('\n')
 

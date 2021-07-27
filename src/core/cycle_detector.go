@@ -5,100 +5,65 @@ import (
 	"strings"
 )
 
-type dependencyChain []*BuildLabel
-type dependencyLink struct {
-	from *BuildLabel
-	to   *BuildLabel
-}
-
-func (c dependencyChain) String() string {
-	labels := make([]string, len(c))
-	for i, l := range c {
-		labels[i] = l.String()
-	}
-	return strings.Join(labels, "\n -> ")
-}
-
 type cycleDetector struct {
-	deps  map[*BuildLabel][]*BuildLabel
-	queue chan dependencyLink
+	graph *BuildGraph
 }
 
-func newCycleDetector() *cycleDetector {
-	c := new(cycleDetector)
+// Check runs a single check of the build graph to see if any cycles can be detected.
+// If it finds one an errCycle is returned.
+func (c *cycleDetector) Check() *errCycle {
+	log.Debug("Running cycle detection...")
+	complete := map[*BuildTarget]struct{}{}
+	partial := map[*BuildTarget]struct{}{}
 
-	// Set this to an order of magnitude that seems sensible to avoid resizing them rapidly initially
-	c.deps = make(map[*BuildLabel][]*BuildLabel, 1000)
-
-	// Buffer this a little so handle spikes in targets coming in
-	c.queue = make(chan dependencyLink, 1000)
-
-	return c
-}
-
-// AddDependency queues up another dependency for the cycle detector to check
-func (c *cycleDetector) AddDependency(from *BuildLabel, to *BuildLabel) {
-	go func() {
-		c.queue <- dependencyLink{from: from, to: to}
-	}()
-}
-
-// checkForCycle just checks to see if there's a dependency cycle. It doesn't compute the cycle to avoid excess
-// allocations. buildCycle can be used to reconstruct the cycle once one has been found.
-func (c *cycleDetector) checkForCycle(head, tail *BuildLabel) bool {
-	if tailDeps, ok := c.deps[tail]; ok {
-		for _, dep := range tailDeps {
-			if dep == head {
-				// If the tail has a dependency on the head, we've found a cycle
-				return true
+	// visit visits a target and all its transitive dependencies. As each is visited they are marked as
+	// partially visited; when we bottom out a tree successfully we mark it as completely visited (this
+	// saves us from revisiting any node we've successfully visited before).
+	// If a cycle is found it returns a slice of the targets in that cycle, and a bool indicating if the
+	// cycle is complete or not (if not the caller will need to add its node to it as well).
+	var visit func(target *BuildTarget) ([]*BuildTarget, bool)
+	visit = func(target *BuildTarget) ([]*BuildTarget, bool) {
+		if _, present := complete[target]; present {
+			return nil, false
+		} else if _, present := partial[target]; present {
+			return []*BuildTarget{target}, false
+		}
+		partial[target] = struct{}{}
+		for _, dep := range target.Dependencies() {
+			if cycle, done := visit(dep); cycle != nil {
+				if done || target == cycle[len(cycle)-1] {
+					return cycle, true // This target is already in the cycle
+				}
+				return append([]*BuildTarget{target}, cycle...), false
 			}
+		}
+		delete(partial, target)
+		complete[target] = struct{}{}
+		return nil, false
+	}
 
-			if c.checkForCycle(head, dep) {
-				return true
+	for _, target := range c.graph.AllTargets() {
+		if _, present := complete[target]; !present {
+			if cycle, _ := visit(target); cycle != nil {
+				log.Debug("Cycle detection complete, cycle found: %s", cycle)
+				return &errCycle{Cycle: cycle}
 			}
 		}
 	}
-	return false
-}
-
-// buildCycle is used to actually reconstruct the cycle after we've found one
-func (c *cycleDetector) buildCycle(chain []*BuildLabel) []*BuildLabel {
-	tail := chain[len(chain)-1]
-	head := chain[0]
-
-	if tailDeps, ok := c.deps[tail]; ok {
-		for _, dep := range tailDeps {
-			if dep == head {
-				// If the tail has a dependency on the head, we've found a cycle
-				return append(chain, dep)
-			}
-
-			if newChain := c.buildCycle(append(chain, dep)); newChain != nil {
-				return newChain
-			}
-		}
-	}
+	log.Debug("Cycle detection complete, no cycles found")
 	return nil
 }
 
-func (c *cycleDetector) addDep(link dependencyLink) error {
-	if c.checkForCycle(link.from, link.to) {
-		return failWithGraphCycle(c.buildCycle([]*BuildLabel{link.from, link.to}))
+// An errCycle is emitted when a graph cycle is detected.
+type errCycle struct {
+	Cycle []*BuildTarget
+}
+
+func (err *errCycle) Error() string {
+	labels := make([]string, len(err.Cycle))
+	for i, t := range err.Cycle {
+		labels[i] = t.Label.String()
 	}
-	c.deps[link.from] = append(c.deps[link.from], link.to)
-	return nil
-}
-
-func failWithGraphCycle(cycle dependencyChain) error {
-	return fmt.Errorf("%s \nSorry, but you'll have to refactor your build files to avoid this cycle", cycle.String())
-}
-
-func (c *cycleDetector) run() {
-	go func() {
-		for next := range c.queue {
-			if err := c.addDep(next); err != nil {
-				log.Fatalf("Dependency cycle found:\n %v", err)
-			}
-		}
-	}()
+	labels = append(labels, labels[0])
+	return fmt.Sprintf("Dependency cycle found:\n%s\nSorry, but you'll have to refactor your build files to avoid this cycle", strings.Join(labels, "\n -> "))
 }

@@ -14,15 +14,6 @@ func (e *Executor) ExecCommand(sandbox SandboxConfig, command string, args ...st
 	shouldNamespace := e.namespace == NamespaceAlways || (e.namespace == NamespaceSandbox && sandbox != NoSandbox)
 
 	cmd := exec.Command(command, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGHUP,
-		Setpgid:   true,
-	}
-
-	// We are done here if no sandboxing and/or namespacing is necessary
-	if sandbox == NoSandbox && !shouldNamespace {
-		return cmd
-	}
 
 	// If we're sandboxing, run the sandbox tool instead to set up the network, mount, etc.
 	if sandbox != NoSandbox {
@@ -43,6 +34,11 @@ func (e *Executor) ExecCommand(sandbox SandboxConfig, command string, args ...st
 			cmd = exec.Command(e.sandboxTool, args...)
 		}
 		cmd.Env = []string{"SHARE_NETWORK=" + boolToString(!sandbox.Network), "SHARE_MOUNT=" + boolToString(!sandbox.Mount)}
+	}
+
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig: syscall.SIGHUP,
+		Setpgid:   true,
 	}
 
 	// If we have any sort of sandboxing set up, we should always namespace, however we only namespace mount and/or net if
