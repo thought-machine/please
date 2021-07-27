@@ -18,7 +18,7 @@ import (
 // or some similar wrapper rule, but we've lost that information by now.
 func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string) {
 	graph := state.Graph
-	order := parse.NewAspParser(state).BuildRuleArgOrder()
+	order := state.Parser.(*parse.AspParser).Parser.BuildRuleArgOrder()
 	for _, target := range targets {
 		t := graph.TargetOrDie(target)
 		if len(labels) > 0 {

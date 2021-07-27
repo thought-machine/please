@@ -19,13 +19,13 @@ import (
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) {
 	if state.Parser == nil {
-		state.Parser = &aspParser{asp: NewAspParser(state)}
+		state.Parser = &AspParser{Parser: NewAspParser(state)}
 	}
 }
 
-// An aspParser implements the core.Parser interface around our asp package.
-type aspParser struct {
-	asp *asp.Parser
+// AspParser implements the core.Parser interface around our Parser package.
+type AspParser struct {
+	Parser *asp.Parser
 }
 
 func buildPreamble(state *core.BuildState, pkg *core.Package) string {
@@ -76,26 +76,26 @@ func NewAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
-func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
+func (p *AspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
 	if pkg.Name == "" {
-		return p.asp.ParseFile(pkg, filename, "")
+		return p.Parser.ParseFile(pkg, filename, "")
 	}
 
-	return p.asp.ParseFile(pkg, filename, buildPreamble(state, pkg))
+	return p.Parser.ParseFile(pkg, filename, buildPreamble(state, pkg))
 }
 
-func (p *aspParser) ParseReader(state *core.BuildState, pkg *core.Package, reader io.ReadSeeker) error {
-	_, err := p.asp.ParseReader(pkg, reader)
+func (p *AspParser) ParseReader(state *core.BuildState, pkg *core.Package, reader io.ReadSeeker) error {
+	_, err := p.Parser.ParseReader(pkg, reader)
 	return err
 }
 
-func (p *aspParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
+func (p *AspParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
 	return p.runBuildFunction(threadID, state, target, "pre", func() error {
 		return target.PreBuildFunction.Call(target)
 	})
 }
 
-func (p *aspParser) RunPostBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget, output string) error {
+func (p *AspParser) RunPostBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget, output string) error {
 	return p.runBuildFunction(threadID, state, target, "post", func() error {
 		log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, output)
 		return target.PostBuildFunction.Call(target, output)
@@ -103,7 +103,7 @@ func (p *aspParser) RunPostBuildFunction(threadID int, state *core.BuildState, t
 }
 
 // runBuildFunction runs either the pre- or post-build function.
-func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
+func (p *AspParser) runBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(tid, target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
 	pkg := state.SyncParsePackage(target.Label)
 	changed, err := pkg.EnterBuildCallback(f)
