@@ -1,4 +1,5 @@
 // The logic below relies heavily on flock (advisory locks).
+// Race conditions are a possibility given that we need to open files before applying a lock.
 
 package core
 

@@ -944,6 +944,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	// This is useful for things like when plz tries to download and update itself.
 	// 3) A new plz process will have to wait to acquire its shared repo lock, if there's already an existing process with an exclusive repo lock.
 	core.AcquireSharedRepoLock()
+	defer core.ReleaseRepoLock() // We can safely release the lock at this stage.
 
 	core.StoreCurrentOperation()
 	core.CheckXattrsSupported(state)

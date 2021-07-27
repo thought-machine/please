@@ -54,6 +54,9 @@ const TestResultsDirLabel = "test_results_dir"
 // tempOutputSuffix is the suffix we attach to temporary outputs to avoid name clashes.
 const tempOutputSuffix = ".out"
 
+// lockFileSuffix is the suffix we attach to lock files.
+const lockFileSuffix = ".lock"
+
 // A BuildTarget is a representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 type BuildTarget struct {
@@ -353,6 +356,11 @@ func (target *BuildTarget) TmpDir() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+buildDirSuffix)
 }
 
+// BuildLockFile returns the lock filename for this target build stage.
+func (target *BuildTarget) BuildLockFile() string {
+	return target.TmpDir() + lockFileSuffix
+}
+
 // OutDir returns the output directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
 func (target *BuildTarget) OutDir() string {
@@ -368,6 +376,11 @@ func (target *BuildTarget) OutDir() string {
 // and to facilitate containerising tests.
 func (target *BuildTarget) TestDir(runNumber int) string {
 	return path.Join(target.TestDirs(), fmt.Sprint("run_", runNumber))
+}
+
+// TestLockFile returns the lock filename for this target build stage.
+func (target *BuildTarget) TestLockFile(runNumber int) string {
+	return target.TestDir(runNumber) + lockFileSuffix
 }
 
 // TestDirs contains the parent directory of all the test run directories above
