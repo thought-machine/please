@@ -543,7 +543,7 @@ var buildFunctions = map[string]func() int{
 		return 0 // We'd have died already if something was wrong.
 	},
 	"op": func() int {
-		cmd := core.ReadLastOperationOrDie()
+		cmd := core.ReadPreviousOperationOrDie()
 		log.Notice("OP PLZ: %s", strings.Join(cmd, " "))
 		// Annoyingly we don't seem to have any access to execvp() which would be rather useful here...
 		executable, err := os.Executable()
@@ -938,11 +938,14 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 }
 
 func runPlease(state *core.BuildState, targets []core.BuildLabel) {
-	// Acquire the lock before we start building
-	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
-		core.AcquireRepoLock()
-		defer core.ReleaseRepoLock()
-	}
+	// Every plz instance gets a shared repo lock which provides the following:
+	// 1) Multiple plz instances can run concurrently.
+	// 2) If another process tries to obtain an exclusive repo lock, it will have to wait until any existing repo locks are released in other processes.
+	// This is useful for things like when plz tries to download and update itself.
+	// 3) A new plz process will have to wait to acquire its shared repo lock, if there's already an existing process with an exclusive repo lock.
+	core.AcquireSharedRepoLock()
+
+	core.StoreCurrentOperation()
 	core.CheckXattrsSupported(state)
 
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||

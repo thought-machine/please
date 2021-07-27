@@ -179,6 +179,11 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		}
 	}
 
+	state.LogBuildResult(tid, label, core.TargetTesting, "Acquiring file lock...")
+	fd := core.AcquireExclusiveFileLock(target.TestDir(run) + ".lock")
+	defer core.ReleaseFileLock(&fd)
+	state.LogBuildResult(tid, label, core.TargetTesting, "Testing...")
+
 	// Remove any cached test result file.
 	if err := RemoveTestOutputs(target); err != nil {
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to remove test output files")
@@ -365,9 +370,6 @@ func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget, run int
 }
 
 func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte, error) {
-	//core.AcquireFileLock(path.Join(target.TestDir(run), ".lock"))
-	//defer core.ReleaseFileLock(path.Join(target.TestDir(run), ".lock"))
-
 	replacedCmd, env, err := testCommandAndEnv(state, target, run)
 	if err != nil {
 		return nil, err
