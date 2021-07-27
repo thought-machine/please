@@ -356,7 +356,7 @@ func (target *BuildTarget) TmpDir() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+buildDirSuffix)
 }
 
-// BuildLockFile returns the lock filename for this target build stage.
+// BuildLockFile returns the lock filename for the target's build stage.
 func (target *BuildTarget) BuildLockFile() string {
 	return target.TmpDir() + lockFileSuffix
 }
@@ -378,7 +378,7 @@ func (target *BuildTarget) TestDir(runNumber int) string {
 	return path.Join(target.TestDirs(), fmt.Sprint("run_", runNumber))
 }
 
-// TestLockFile returns the lock filename for this target build stage.
+// TestLockFile returns the lock filename for the target's test stage.
 func (target *BuildTarget) TestLockFile(runNumber int) string {
 	return target.TestDir(runNumber) + lockFileSuffix
 }
