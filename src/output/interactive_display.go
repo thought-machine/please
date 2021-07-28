@@ -196,7 +196,6 @@ func (d *displayer) printStat(caption string, stat float64, multiplier int) {
 // Limited-length printf that respects current window width.
 // Output is truncated at the middle to fit within 'cols'.
 func (d *displayer) printf(format string, args ...interface{}) {
-
 	fmt.Fprint(&d.buf, d.lprintfPrepare(d.maxCols, os.Expand(fmt.Sprintf(format, args...), replace)))
 }
 
