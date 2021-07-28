@@ -577,7 +577,7 @@ func (state *BuildState) NumDone() int {
 }
 
 // ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
-// from the set of original labels. This will exclude non-test targets when we're not building for test. 
+// from the set of original labels. This will exclude non-test targets when we're building for test.
 func (state *BuildState) ExpandOriginalLabels() BuildLabels {
 	state.progress.originalTargetMutex.Lock()
 	targets := state.progress.originalTargets[:]
@@ -654,11 +654,11 @@ func (state *BuildState) expandLabels(labels []BuildLabel, justTests bool) Build
 }
 
 // expandOriginalPseudoTarget expands one original pseudo-target (i.e. :all or /...) and sorts it
-func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel, includeTests bool) BuildLabels {
+func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel, justTests bool) BuildLabels {
 	ret := BuildLabels{}
 	addPackage := func(pkg *Package) {
 		for _, target := range pkg.AllTargets() {
-			if state.ShouldInclude(target) && (!includeTests || target.IsTest) {
+			if state.ShouldInclude(target) && (!justTests || target.IsTest) {
 				ret = append(ret, target.Label)
 			}
 		}
