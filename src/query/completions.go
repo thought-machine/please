@@ -12,35 +12,49 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+type CompletionsLabels struct {
+	// Pkgs are any subpackages that are valid completions
+	Pkgs []string
+	// PackageToParse is optionally the package we should include labels from in the completions results
+	PackageToParse string
+	// NamePrefix is the prefix we should use to match the names of labels in the package.
+	NamePrefix string
+	// Hidden is whether we should include hidden targets in the results
+	Hidden bool
+}
+
 // CompletionLabels produces a set of labels that complete a given input.
 // The second return value is a set of labels to parse for (since the original set generally won't turn out to exist).
 // The last return value is true if one or more of the inputs are a "hidden" target
 // (i.e. name begins with an underscore).
-func CompletionLabels(config *core.Configuration, args []string, repoRoot string) ([]core.BuildLabel, []core.BuildLabel, bool) {
-	if len(args) == 0 {
-		getPackagesAndPackageToParse(config, ".", repoRoot)
-		return []core.BuildLabel{{PackageName: "", Name: ""}}, []core.BuildLabel{{PackageName: "", Name: "all"}}, false
+func CompletionLabels(config *core.Configuration, query string, repoRoot string) *CompletionsLabels {
+	if query == "" {
+		pkgs, toParse := getPackagesAndPackageToParse(config, ".", repoRoot)
+		return &CompletionsLabels{
+			Pkgs:           pkgs,
+			PackageToParse: toParse,
+		}
 	}
 
-	query := strings.ReplaceAll(args[0], "\\:", ":")
-	isRootPackage := query == "" || query == "//"
+	query = strings.ReplaceAll(query, "\\:", ":")
 
 	if strings.Contains(query, ":") {
 		parts := strings.Split(query, ":")
-		labels := core.ParseBuildLabels([]string{parts[0] + ":all"})
-		return []core.BuildLabel{{PackageName: labels[0].PackageName, Name: parts[1]}}, labels, strings.Contains(query, ":_")
+		if len(parts) != 2 {
+			log.Fatalf("invalid build label %v", query)
+		}
+		return &CompletionsLabels{
+			PackageToParse: strings.TrimLeft(parts[0], "/"),
+			NamePrefix:     parts[1],
+			Hidden:         strings.HasPrefix(parts[1], "_"),
+		}
 	}
 
 	pkgs, pkg := getPackagesAndPackageToParse(config, query, repoRoot)
-	for _, p := range pkgs {
-		fmt.Printf("//%s\n", p)
+	return &CompletionsLabels{
+		Pkgs:           pkgs,
+		PackageToParse: pkg,
 	}
-	// We matched more than one package so we don't need to complete any actual labels, or we're matching packages only
-	// NB: pkg will be "" for the root package so we should match labels then
-	if !isRootPackage && pkg == "" {
-		return nil, nil, false
-	}
-	return []core.BuildLabel{{PackageName: pkg, Name: ""}}, []core.BuildLabel{{PackageName: pkg, Name: "all"}}, false
 }
 
 // getPackagesAndPackageToParse returns a list of packages that are possible completions and optionally, the package to
@@ -124,23 +138,41 @@ func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoR
 // If 'test' is true it will similarly complete only targets that are tests.
 // If 'hidden' is true then hidden targets (i.e. those with names beginning with an underscore)
 // will be included as well.
-func Completions(graph *core.BuildGraph, labels []core.BuildLabel, binary, test, hidden bool) {
-	for _, label := range labels {
-		count := 0
-		for _, target := range graph.PackageOrDie(label).AllTargets() {
-			if !strings.HasPrefix(target.Label.Name, label.Name) {
-				continue
-			}
-			if (binary && (!target.IsBinary || target.IsTest)) || (test && !target.IsTest) {
-				continue
-			}
-			if hidden || !strings.HasPrefix(target.Label.Name, "_") {
-				fmt.Printf("%s\n", target.Label)
-				count++
-			}
-		}
-		if !binary && ((label.Name != "" && strings.HasPrefix("all", label.Name)) || (label.Name == "" && count > 1)) { //nolint:gocritic
-			fmt.Printf("//%s:all\n", label.PackageName)
+func Completions(graph *core.BuildGraph, packageName, prefix string, pkgs []string, binary, test, hidden bool) {
+	count := printLabelsInPackage(graph, packageName, prefix, binary, test, hidden)
+	// If we're printing binary targets, we might not match any targets in the parsed. If we only matched one other
+	// package, we should try and match binary targets in there.
+	if binary && count == 0 && len(pkgs) == 1 {
+		printLabelsInPackage(graph, pkgs[0], prefix, binary, test, hidden)
+		// This isn't totally correct as we should really recurse the entire algo. This is probably good enough though.
+		fmt.Printf("//%s\n", pkgs[0])
+	} else {
+		for _, pkg := range pkgs {
+			fmt.Printf("//%s\n", pkg)
 		}
 	}
+}
+
+func printLabelsInPackage(graph *core.BuildGraph, packageName, prefix string, binary, test, hidden bool) int {
+	count := 0
+	for _, target := range graph.Package(packageName, "").AllTargets() {
+		if !strings.HasPrefix(target.Label.Name, prefix) {
+			continue
+		}
+		if binary && !target.IsBinary {
+			continue
+		}
+		if test && !target.IsTest {
+			continue
+		}
+		if hidden || !strings.HasPrefix(target.Label.Name, "_") {
+			fmt.Printf("%s\n", target.Label)
+			count++
+		}
+	}
+	if !binary && prefix == "" {
+		fmt.Printf("//%s:all\n", packageName)
+	}
+
+	return count
 }
