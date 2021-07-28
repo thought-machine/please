@@ -73,7 +73,6 @@ func (d *displayer) run(ctx context.Context) {
 			}
 			setWindowTitle(d.state, true)
 			os.Stderr.Write(d.buf.Bytes())
-			os.Stderr.Sync()
 			d.buf.Reset()
 		}
 	}
