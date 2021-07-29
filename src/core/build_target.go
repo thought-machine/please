@@ -408,10 +408,6 @@ func (target *BuildTarget) AddTestResults(results TestSuite) {
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
 
-	if target.Test.Results == nil {
-		target.Test.Results = new(TestSuite)
-	}
-
 	if len(target.Test.Results.TestCases) == 0 {
 		target.Test.Results.Cached = results.Cached // On the first run we take whatever this is
 	} else {
@@ -426,7 +422,7 @@ func (target *BuildTarget) StartTestSuite() {
 	defer target.mutex.Unlock()
 
 	// If the results haven't been set yet, set them
-	if target.Test.Results.Name == "" {
+	if target.Test.Results == nil {
 		target.Test.Results = &TestSuite{
 			Package:   strings.ReplaceAll(target.Label.PackageName, "/", "."),
 			Name:      target.Label.Name,
