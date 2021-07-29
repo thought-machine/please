@@ -53,10 +53,11 @@ func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 	target := core.NewBuildTarget(label(i))
 	target.IsFilegroup = true // Will mean it doesn't have to shell out to anything.
 	target.SetState(core.Active)
+	target.Test = new(core.TestFields)
 	state.Graph.AddTarget(target)
 	if i <= size {
 		if i > 10 {
-			target.Flakiness = uint8(i) // Stash this here, will be useful later.
+			target.Test.Flakiness = uint8(i) // Stash this here, will be useful later.
 			state.Parser.(*fakeParser).PostBuildFunctions[target] = postBuild
 		}
 		if i < size/10 {
@@ -80,11 +81,11 @@ func label(i int) core.BuildLabel {
 // Post-build function that adds new targets & ties in dependencies.
 func postBuild(target *core.BuildTarget, out string) error {
 	// Add a target corresponding to this one to its 'parent'
-	if target.Flakiness == 0 {
+	if target.Test.Flakiness == 0 {
 		return fmt.Errorf("shouldn't be calling a post-build function on %s", target.Label)
 	}
-	parent := label(int(target.Flakiness / 10))
-	newTarget := addTarget(state, int(target.Flakiness)+size)
+	parent := label(int(target.Test.Flakiness / 10))
+	newTarget := addTarget(state, int(target.Test.Flakiness)+size)
 
 	// This mimics what interpreter.go does.
 	t := state.Graph.TargetOrDie(parent)

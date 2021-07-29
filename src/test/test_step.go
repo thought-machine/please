@@ -244,8 +244,8 @@ func doFlakeRun(tid int, state *core.BuildState, target *core.BuildTarget, runRe
 	results := core.TestSuite{}
 
 	// New group of test cases for each group of flaky runs
-	for flakes := 1; flakes <= int(target.Flakiness); flakes++ {
-		state.LogBuildResult(tid, target, core.TargetTesting, getFlakeStatus(flakes, int(target.Flakiness)))
+	for flakes := 1; flakes <= int(target.Test.Flakiness); flakes++ {
+		state.LogBuildResult(tid, target, core.TargetTesting, getFlakeStatus(flakes, int(target.Test.Flakiness)))
 
 		testSuite, cov := doTest(tid, state, target, runRemotely, 1) // If we're running flakes, numRuns must be 1
 
