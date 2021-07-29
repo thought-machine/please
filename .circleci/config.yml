@@ -149,7 +149,7 @@ jobs:
            command: tar -xzf /tmp/workspace/darwin_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch darwin_arm64 -o go.cgoenabled:1 //package:release_files
+           command: ./please/please build -p --profile ci --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
