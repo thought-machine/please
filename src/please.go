@@ -902,20 +902,6 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 	return interactiveOutput || (!plainOutput && cli.StdErrIsATerminal && verbosity < 4)
 }
 
-func b(b uint64) string {
-	const unit = 1000
-	if b < unit {
-		return fmt.Sprintf("%d B", b)
-	}
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB",
-		float64(b)/float64(div), "kMGTPE"[exp])
-}
-
 // Please starts & runs the main build process through to its completion.
 func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
