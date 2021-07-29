@@ -476,7 +476,7 @@ func mustSerialiseResults(graph *core.BuildGraph, storeOutputOnSuccess bool) []b
 	// Collapse any testsuite with the same name
 	xmlSuites := make(map[string]*jUnitXMLTestSuite)
 	for _, target := range graph.AllTargets() {
-		if target.IsTest() {
+		if target.IsTest() && target.Test.Results != nil {
 			testSuite := target.Test.Results
 			if len(testSuite.TestCases) > 0 {
 				xmlTestSuite := toXMLTestSuite(testSuite, storeOutputOnSuccess)
