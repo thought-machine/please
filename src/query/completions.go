@@ -42,7 +42,7 @@ func CompletionLabels(config *core.Configuration, query string, repoRoot string)
 			PackageToParse: strings.TrimLeft(parts[0], "/"),
 			NamePrefix:     parts[1],
 			Hidden:         strings.HasPrefix(parts[1], "_"),
-			IsRoot: isRoot,
+			IsRoot:         isRoot,
 		}
 	}
 
@@ -50,7 +50,7 @@ func CompletionLabels(config *core.Configuration, query string, repoRoot string)
 	return &CompletionsLabels{
 		Pkgs:           pkgs,
 		PackageToParse: pkg,
-		IsRoot: isRoot,
+		IsRoot:         isRoot,
 	}
 }
 
