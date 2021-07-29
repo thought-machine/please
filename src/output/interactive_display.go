@@ -46,6 +46,7 @@ func display(ctx context.Context, state *core.BuildState, buildingTargets []buil
 	// Clear it all out.
 	d.moveToFirstLine()
 	d.printf("${CLEAR_END}")
+	d.flush()
 }
 
 func (d *displayer) run(ctx context.Context) {
@@ -72,8 +73,7 @@ func (d *displayer) run(ctx context.Context) {
 				d.printf("\x1b[%dA", d.lastLines-d.lines) // Move back up again
 			}
 			setWindowTitle(d.state, true)
-			os.Stderr.Write(d.buf.Bytes())
-			d.buf.Reset()
+			d.flush()
 		}
 	}
 }
@@ -197,6 +197,12 @@ func (d *displayer) printStat(caption string, stat float64, multiplier int) {
 // Output is truncated at the middle to fit within 'cols'.
 func (d *displayer) printf(format string, args ...interface{}) {
 	fmt.Fprint(&d.buf, d.lprintfPrepare(d.maxCols, os.Expand(fmt.Sprintf(format, args...), replace)))
+}
+
+// flush prints the current buffer to stderr and resets it.
+func (d *displayer) flush() {
+	os.Stderr.Write(d.buf.Bytes())
+	d.buf.Reset()
 }
 
 func (d *displayer) lprintfPrepare(cols int, s string) string {
