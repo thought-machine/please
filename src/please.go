@@ -637,13 +637,6 @@ var buildFunctions = map[string]func() int{
 	},
 	"alltargets": func() int {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
-			m := new(runtime.MemStats)
-			runtime.ReadMemStats(m)
-			log.Warningf("before gc sys: %v, heap: %v, sys head: %v", b(m.Sys), b(m.HeapInuse), b(m.HeapSys))
-
-			runtime.ReadMemStats(m)
-			log.Warningf("after gc sys: %v, heap: %v, sys head: %v", b(m.Sys), b(m.HeapInuse), b(m.HeapSys))
-
 			query.AllTargets(state.Graph, state.ExpandOriginalLabels(), opts.Query.AllTargets.Hidden)
 		})
 	},
