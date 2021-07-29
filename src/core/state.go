@@ -53,6 +53,8 @@ type Parser interface {
 	RunPreBuildFunction(threadID int, state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
 	RunPostBuildFunction(threadID int, state *BuildState, target *BuildTarget, output string) error
+	// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
+	BuildRuleArgOrder() map[string]int
 }
 
 // A RemoteClient is the interface to a remote execution service.

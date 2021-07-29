@@ -577,20 +577,29 @@ func (*mockCache) Shutdown()                      {}
 type fakeParser struct {
 }
 
+// ParseFile stub
 func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
 	return nil
 }
 
+// ParseReader stub
 func (fake *fakeParser) ParseReader(state *core.BuildState, pkg *core.Package, r io.ReadSeeker) error {
 	return nil
 }
 
+// RunPreBuildFunction stub
 func (fake *fakeParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
 	return target.PreBuildFunction.Call(target)
 }
 
+// RunPostBuildFunction stub
 func (fake *fakeParser) RunPostBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget, output string) error {
 	return target.PostBuildFunction.Call(target, output)
+}
+
+// BuildRuleArgOrder sub
+func (fake *fakeParser) BuildRuleArgOrder() map[string]int {
+	return map[string]int{}
 }
 
 type preBuildFunction func(*core.BuildTarget) error
