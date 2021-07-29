@@ -577,12 +577,20 @@ func (state *BuildState) NumDone() int {
 }
 
 // ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
-// from the set of original labels.
+// from the set of original labels. This will exclude non-test targets when we're building for test.
 func (state *BuildState) ExpandOriginalLabels() BuildLabels {
 	state.progress.originalTargetMutex.Lock()
 	targets := state.progress.originalTargets[:]
 	state.progress.originalTargetMutex.Unlock()
 	return state.ExpandLabels(targets)
+}
+
+// ExpandAllOriginalLabels is the same as ExpandOriginalLabels except it always includes non-test targets
+func (state *BuildState) ExpandAllOriginalLabels() BuildLabels {
+	state.progress.originalTargetMutex.Lock()
+	targets := state.progress.originalTargets[:]
+	state.progress.originalTargetMutex.Unlock()
+	return state.expandLabels(targets, false)
 }
 
 func annotateLabels(labels []BuildLabel) []AnnotatedOutputLabel {
@@ -629,10 +637,15 @@ func (state *BuildState) ExpandMaybeAnnotatedLabels(labels []AnnotatedOutputLabe
 
 // ExpandLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets) from a set of labels.
 func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
+	return state.expandLabels(labels, state.NeedTests)
+}
+
+// ExpandLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets) from a set of labels.
+func (state *BuildState) expandLabels(labels []BuildLabel, justTests bool) BuildLabels {
 	ret := BuildLabels{}
 	for _, label := range labels {
 		if label.IsAllTargets() || label.IsAllSubpackages() {
-			ret = append(ret, state.expandOriginalPseudoTarget(label)...)
+			ret = append(ret, state.expandOriginalPseudoTarget(label, justTests)...)
 		} else {
 			ret = append(ret, label)
 		}
@@ -641,11 +654,11 @@ func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
 }
 
 // expandOriginalPseudoTarget expands one original pseudo-target (i.e. :all or /...) and sorts it
-func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel) BuildLabels {
+func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel, justTests bool) BuildLabels {
 	ret := BuildLabels{}
 	addPackage := func(pkg *Package) {
 		for _, target := range pkg.AllTargets() {
-			if state.ShouldInclude(target) && (!state.NeedTests || target.IsTest) {
+			if state.ShouldInclude(target) && (!justTests || target.IsTest) {
 				ret = append(ret, target.Label)
 			}
 		}
