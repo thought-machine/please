@@ -80,6 +80,12 @@ var specialFields = map[string]func(*printer) (string, bool){
 		}
 		return p.genericPrint(reflect.ValueOf(p.target.Data))
 	},
+	"test": func(p *printer) (string, bool) {
+		if p.target.IsTest() {
+			return "True", p.target.IsTest()
+		}
+		return "", false
+	},
 }
 
 // A printer is responsible for creating the output of 'plz query print'.
@@ -110,6 +116,22 @@ func (p *printer) printf(msg string, args ...interface{}) {
 	fmt.Fprintf(p.w, msg, args...)
 }
 
+func (p *printer) fields(structValue reflect.Value) orderedFields {
+	ret := make(orderedFields, structValue.NumField())
+
+	structType := structValue.Type()
+
+	for i := 0; i< structType.NumField(); i++ {
+		ret[i] = orderedField{
+			order: p.fieldOrder[p.fieldName(structType.Field(i))],
+			field: structType.Field(i),
+			value: structValue.Field(i),
+		}
+	}
+
+	return ret
+}
+
 // PrintTarget prints an entire build target.
 func (p *printer) PrintTarget() {
 	if p.target.IsFilegroup {
@@ -121,21 +143,15 @@ func (p *printer) PrintTarget() {
 	}
 	p.surroundSyntax = true
 	p.indent += 4
-	v := reflect.ValueOf(p.target).Elem()
-	t := v.Type()
-	f := make(orderedFields, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		f[i].structIndex = i
-		f[i].printIndex = i
-		if index, present := p.fieldOrder[p.fieldName(t.Field(i))]; present {
-			f[i].printIndex = index
-		}
+	fields := p.fields(reflect.ValueOf(p.target).Elem())
+
+	if p.target.IsTest() {
+		fields = append(fields, p.fields(reflect.ValueOf(p.target.Test).Elem())...)
 	}
 
-	// TODO(jpoole): print test fields
-	sort.Sort(f)
-	for _, orderedField := range f {
-		p.printField(t.Field(orderedField.structIndex), v.Field(orderedField.structIndex))
+	sort.Sort(fields)
+	for _, orderedField := range fields {
+		p.printField(orderedField.field, orderedField.value)
 	}
 	p.indent -= 4
 	p.printf(")\n\n")
@@ -298,11 +314,13 @@ func (p *printer) surround(prefix, s, suffix, always string) string {
 // An orderedField is used to sort the fields into the order we print them in.
 // This isn't necessarily the same as the order on the struct.
 type orderedField struct {
-	structIndex, printIndex int
+	order int
+	field reflect.StructField
+	value reflect.Value
 }
 
 type orderedFields []orderedField
 
 func (f orderedFields) Len() int           { return len(f) }
 func (f orderedFields) Swap(a, b int)      { f[a], f[b] = f[b], f[a] }
-func (f orderedFields) Less(a, b int) bool { return f[a].printIndex < f[b].printIndex }
+func (f orderedFields) Less(a, b int) bool { return f[a].order < f[b].order }

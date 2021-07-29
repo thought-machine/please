@@ -84,7 +84,7 @@ func TestTestOutput(t *testing.T) {
 	target.IsBinary = true
 	target.BuildTimeout = 30 * time.Second
 	target.Test.Timeout = 60 * time.Second
-	target.Flakiness = 2
+	target.Test.Flakiness = 2
 	s := testPrint(target)
 	expected := `  build_rule(
       name = 'test_test_output',

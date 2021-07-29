@@ -72,6 +72,8 @@ type TestFields struct {
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	Outputs []string `name:"test_outputs"`
+	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
+	Flakiness uint8 `name:"flaky"`
 }
 
 // A BuildTarget is a representation of a build target and all information about it;
@@ -112,7 +114,7 @@ type BuildTarget struct {
 	Command string `name:"cmd" hide:"filegroup"`
 	// Per-configuration shell commands to run.
 	Commands map[string]string `name:"cmd" hide:"filegroup"`
-	Test     *TestFields
+	Test     *TestFields `name:"test"`
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
 	// The results of this test target, if it is one.
@@ -175,8 +177,6 @@ type BuildTarget struct {
 	state int32 `print:"false"`
 	// The number of completed runs
 	completedRuns uint16 `print:"false"`
-	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
-	Flakiness uint8 `name:"flaky"`
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
 	IsBinary bool `name:"binary"`
 	// Indicates that the target can only be depended on by tests or other rules with this set.
