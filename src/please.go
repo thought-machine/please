@@ -678,7 +678,7 @@ var buildFunctions = map[string]func() int{
 
 		completions := query.CompletionLabels(config, qry, core.RepoRoot)
 		// We have no labels to parse so we're done already
-		if completions.PackageToParse == "" && qry != "//" {
+		if completions.PackageToParse == "" && !completions.IsRoot {
 			for _, pkg := range completions.Pkgs {
 				fmt.Printf("//%s\n", pkg)
 			}
