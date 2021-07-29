@@ -21,6 +21,8 @@ type CompletionsLabels struct {
 	NamePrefix string
 	// Hidden is whether we should include hidden targets in the results
 	Hidden bool
+	// IsRoot is whether or not he query matched the root package
+	IsRoot bool
 }
 
 // CompletionLabels produces a set of labels that complete a given input.
@@ -28,15 +30,8 @@ type CompletionsLabels struct {
 // The last return value is true if one or more of the inputs are a "hidden" target
 // (i.e. name begins with an underscore).
 func CompletionLabels(config *core.Configuration, query string, repoRoot string) *CompletionsLabels {
-	if query == "" {
-		pkgs, toParse := getPackagesAndPackageToParse(config, ".", repoRoot)
-		return &CompletionsLabels{
-			Pkgs:           pkgs,
-			PackageToParse: toParse,
-		}
-	}
-
 	query = strings.ReplaceAll(query, "\\:", ":")
+	isRoot := query == "//" || query == ":" || query == "//:"
 
 	if strings.Contains(query, ":") {
 		parts := strings.Split(query, ":")
@@ -47,6 +42,7 @@ func CompletionLabels(config *core.Configuration, query string, repoRoot string)
 			PackageToParse: strings.TrimLeft(parts[0], "/"),
 			NamePrefix:     parts[1],
 			Hidden:         strings.HasPrefix(parts[1], "_"),
+			IsRoot: isRoot,
 		}
 	}
 
@@ -54,6 +50,7 @@ func CompletionLabels(config *core.Configuration, query string, repoRoot string)
 	return &CompletionsLabels{
 		Pkgs:           pkgs,
 		PackageToParse: pkg,
+		IsRoot: isRoot,
 	}
 }
 
