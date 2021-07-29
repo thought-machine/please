@@ -239,11 +239,10 @@ func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) Build
 		env = append(env, "OUT="+outEnv[0])
 	}
 
-	env = append(env,
-		"TOOLS="+strings.Join(toolPaths(state, target.AllTestTools(), true), " "),
-	)
-
 	if target.IsTest() {
+		env = append(env,
+			"TOOLS="+strings.Join(toolPaths(state, target.AllTestTools(), true), " "),
+		)
 		if len(target.Test.tools) == 1 {
 			env = append(env, "TOOL="+toolPath(state, target.Test.tools[0], true))
 		}

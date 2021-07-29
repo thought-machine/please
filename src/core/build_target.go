@@ -114,7 +114,7 @@ type BuildTarget struct {
 	Command string `name:"cmd" hide:"filegroup"`
 	// Per-configuration shell commands to run.
 	Commands map[string]string `name:"cmd" hide:"filegroup"`
-	Test     *TestFields `name:"test"`
+	Test     *TestFields       `name:"test"`
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
 	// The results of this test target, if it is one.

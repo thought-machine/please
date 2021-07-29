@@ -121,7 +121,7 @@ func (p *printer) fields(structValue reflect.Value) orderedFields {
 
 	structType := structValue.Type()
 
-	for i := 0; i< structType.NumField(); i++ {
+	for i := 0; i < structType.NumField(); i++ {
 		ret[i] = orderedField{
 			order: p.fieldOrder[p.fieldName(structType.Field(i))],
 			field: structType.Field(i),
