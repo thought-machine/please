@@ -68,6 +68,7 @@ var KnownFields = map[string]bool{
 	"Test.NoOutput":  true,
 	"Test.Timeout":   true,
 	"Test.Flakiness": true,
+	"Test.Results":   true, // Recall that unsuccessful test results aren't cached...
 
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
@@ -86,7 +87,6 @@ var KnownFields = map[string]bool{
 	"AddedPostBuild":         true,
 	"BuildTimeout":           true,
 	"state":                  true,
-	"Results":                true, // Recall that unsuccessful test results aren't cached...
 	"completedRuns":          true,
 	"BuildingDescription":    true,
 	"ShowProgress":           true,

@@ -174,7 +174,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
 	if state.NumTestRuns == 1 && !runRemotely && !needToRun() {
 		if cachedResults := cachedTestResults(); cachedResults != nil {
-			target.Results = *cachedResults
+			target.Test.Results = cachedResults
 			return
 		}
 	}
@@ -197,9 +197,9 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		results, coverage = doFlakeRun(tid, state, target, runRemotely)
 		target.AddTestResults(results)
 
-		if target.Results.TestCases.AllSucceeded() {
+		if target.Test.Results.TestCases.AllSucceeded() {
 			// Success, store in cache
-			moveAndCacheOutputFiles(&target.Results, coverage)
+			moveAndCacheOutputFiles(target.Test.Results, coverage)
 		}
 	} else if state.TestSequentially {
 		for run := 1; run <= int(state.NumTestRuns); run++ {
@@ -282,28 +282,28 @@ func getRunStatus(run int, numRuns int) string {
 }
 
 func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget, coverage *core.TestCoverage, run int) {
-	if target.Results.TestCases.AllSucceeded() {
+	if target.Test.Results.TestCases.AllSucceeded() {
 		// Clean up the test directory.
 		if state.CleanWorkdirs {
 			if err := fs.ForceRemove(state.ProcessExecutor, target.TestDir(run)); err != nil {
 				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
 			}
 		}
-		logTestSuccess(state, tid, target, &target.Results, coverage)
+		logTestSuccess(state, tid, target, target.Test.Results, coverage)
 		return
 	}
 	var resultErr error
 	var resultMsg string
-	if target.Results.Failures() > 0 {
+	if target.Test.Results.Failures() > 0 {
 		resultMsg = "Tests failed"
-		for _, testCase := range target.Results.TestCases {
+		for _, testCase := range target.Test.Results.TestCases {
 			if len(testCase.Failures()) > 0 {
 				resultErr = fmt.Errorf(testCase.Failures()[0].Failure.Message)
 			}
 		}
-	} else if target.Results.Errors() > 0 {
+	} else if target.Test.Results.Errors() > 0 {
 		resultMsg = "Tests errored"
-		for _, testCase := range target.Results.TestCases {
+		for _, testCase := range target.Test.Results.TestCases {
 			if len(testCase.Errors()) > 0 {
 				resultErr = fmt.Errorf(testCase.Errors()[0].Error.Message)
 			}
@@ -312,7 +312,7 @@ func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget,
 		resultErr = fmt.Errorf("unknown error")
 		resultMsg = "Something went wrong"
 	}
-	state.LogTestResult(tid, target, core.TargetTestFailed, &target.Results, coverage, resultErr, resultMsg)
+	state.LogTestResult(tid, target, core.TargetTestFailed, target.Test.Results, coverage, resultErr, resultMsg)
 }
 
 func logTestSuccess(state *core.BuildState, tid int, target *core.BuildTarget, results *core.TestSuite, coverage *core.TestCoverage) {
@@ -453,7 +453,7 @@ func parseTestOutput(stdout string, stderr string, runError error, duration time
 		return core.TestSuite{
 			TestCases: []core.TestCase{
 				{
-					Name: target.Results.Name,
+					Name: target.Test.Results.Name,
 					Executions: []core.TestExecution{
 						{
 							Duration: &duration,
@@ -479,7 +479,7 @@ func parseTestOutput(stdout string, stderr string, runError error, duration time
 					TestCases: []core.TestCase{
 						{
 							// Need a name so that multiple runs get collated correctly.
-							Name: target.Results.Name,
+							Name: target.Test.Results.Name,
 							Executions: []core.TestExecution{
 								{
 									Duration: &duration,

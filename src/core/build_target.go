@@ -59,21 +59,24 @@ type TestFields struct {
 	Command string `name:"test_cmd"`
 	// Per-configuration test commands to run.
 	Commands map[string]string `name:"test_cmd"`
-	// True if the test action is sandboxed.
-	Sandbox bool `name:"test_sandbox"`
-	// True if the target is a test and has no output file.
-	// Default is false, meaning all tests must produce test.results as output.
-	NoOutput bool `name:"no_test_output"`
+	// The results of this test target, if it is one.
+	Results *TestSuite `print:"false"`
 	// Like tools but available to the test_cmd instead
 	tools []BuildInput `name:"test_tools"`
 	// Named test tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"test_tools"`
-	Timeout    time.Duration           `name:"test_timeout"`
+	// The timeout for the test
+	Timeout time.Duration `name:"test_timeout"`
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
 	Outputs []string `name:"test_outputs"`
 	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
 	Flakiness uint8 `name:"flaky"`
+	// True if the test action is sandboxed.
+	Sandbox bool `name:"test_sandbox"`
+	// True if the target is a test and has no output file.
+	// Default is false, meaning all tests must produce test.results as output.
+	NoOutput bool `name:"no_test_output"`
 }
 
 // A BuildTarget is a representation of a build target and all information about it;
@@ -117,8 +120,6 @@ type BuildTarget struct {
 	Test     *TestFields       `name:"test"`
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
-	// The results of this test target, if it is one.
-	Results TestSuite `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
 	BuildingDescription string `name:"building_description"`
@@ -407,12 +408,16 @@ func (target *BuildTarget) AddTestResults(results TestSuite) {
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
 
-	if len(target.Results.TestCases) == 0 {
-		target.Results.Cached = results.Cached // On the first run we take whatever this is
-	} else {
-		target.Results.Cached = target.Results.Cached && results.Cached
+	if target.Test.Results == nil {
+		target.Test.Results = new(TestSuite)
 	}
-	target.Results.Collapse(results)
+
+	if len(target.Test.Results.TestCases) == 0 {
+		target.Test.Results.Cached = results.Cached // On the first run we take whatever this is
+	} else {
+		target.Test.Results.Cached = target.Test.Results.Cached && results.Cached
+	}
+	target.Test.Results.Collapse(results)
 }
 
 // StartTestSuite sets the initial properties on the result test suite
@@ -421,8 +426,8 @@ func (target *BuildTarget) StartTestSuite() {
 	defer target.mutex.Unlock()
 
 	// If the results haven't been set yet, set them
-	if target.Results.Name == "" {
-		target.Results = TestSuite{
+	if target.Test.Results.Name == "" {
+		target.Test.Results = &TestSuite{
 			Package:   strings.ReplaceAll(target.Label.PackageName, "/", "."),
 			Name:      target.Label.Name,
 			Timestamp: time.Now().Format(time.RFC3339),

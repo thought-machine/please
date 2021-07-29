@@ -199,7 +199,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		failedTargetMap[result.Label] = nil
 	} else if plainOutput && state.ShowTestOutput && result.Status == core.TargetTested && target != nil {
 		// If using interactive output we'll print it afterwards.
-		for _, testCase := range target.Results.TestCases {
+		for _, testCase := range target.Test.Results.TestCases {
 			printf("Finished test %s:\n", testCase.Name)
 			for _, testExecution := range testCase.Executions {
 				showExecutionOutput(testExecution)
@@ -221,12 +221,12 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 			}
 			done[failed] = true
 			target := state.Graph.TargetOrDie(failed)
-			if target.Results.Failures() == 0 && target.Results.Errors() == 0 {
-				if target.Results.TimedOut {
+			if target.Test.Results.Failures() == 0 && target.Test.Results.Errors() == 0 {
+				if target.Test.Results.TimedOut {
 				} else {
 					err := failedTargetsMap[target.Label]
 					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}: %v\n", target.Label, err)
-					target.Results.TestCases = append(target.Results.TestCases, core.TestCase{
+					target.Test.Results.TestCases = append(target.Test.Results.TestCases, core.TestCase{
 						Executions: []core.TestExecution{
 							{
 								Error: &core.TestResultFailure{
@@ -239,9 +239,10 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 					})
 				}
 			} else {
+				results := target.Test.Results
 				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_CYAN}%3d errored${RESET} Took ${BOLD_WHITE}%s${RESET}\n",
-					target.Label, target.Results.Passes(), target.Results.Skips(), target.Results.Failures(), target.Results.Errors(), target.Results.Duration.Round(durationGranularity))
-				for _, failingTestCase := range target.Results.TestCases {
+					target.Label, results.Passes(), results.Skips(), results.Failures(), results.Errors(), results.Duration.Round(durationGranularity))
+				for _, failingTestCase := range results.TestCases {
 					if failingTestCase.Success() != nil {
 						continue
 					}
@@ -274,30 +275,31 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 	}
 	// Print individual test results
 	targets := 0
-	aggregate := core.TestSuite{}
+	aggregate := new(core.TestSuite)
 	for _, target := range state.Graph.AllTargets() {
 		if target.IsTest() {
-			aggregate.TestCases = append(aggregate.TestCases, target.Results.TestCases...)
-			aggregate.Duration += target.Results.Duration
-			if len(target.Results.TestCases) > 0 {
-				if target.Results.Errors() > 0 {
-					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, true))
-				} else if target.Results.Failures() > 0 {
-					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, true))
+			results := target.Test.Results
+			aggregate.TestCases = append(aggregate.TestCases, results.TestCases...)
+			aggregate.Duration += results.Duration
+			if len(results.TestCases) > 0 {
+				if results.Errors() > 0 {
+					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
+				} else if results.Failures() > 0 {
+					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
 				} else if detailed || len(failedTargets) == 0 {
 					// Succeeded or skipped
-					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, true))
+					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
 				}
 				if state.ShowTestOutput || detailed {
 					// Determine max width of test name so we align them
 					width := 0
-					for _, result := range target.Results.TestCases {
+					for _, result := range results.TestCases {
 						if len(result.Name) > width {
 							width = len(result.Name)
 						}
 					}
 					format := fmt.Sprintf("%%-%ds", width+1)
-					for _, result := range target.Results.TestCases {
+					for _, result := range results.TestCases {
 						printf("    %s\n", formatTestCase(result, fmt.Sprintf(format, result.Name), detailed))
 						if len(result.Executions) > 1 {
 							for run, execution := range result.Executions {
@@ -312,7 +314,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 					}
 				}
 				targets++
-			} else if target.Results.TimedOut {
+			} else if results.TimedOut {
 				printf("${RED}%s${RESET} ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
 				targets++
 			}
@@ -416,7 +418,7 @@ func logProgress(ctx context.Context, state *core.BuildState, buildingTargets []
 }
 
 // Produces a string describing the results of one test (or a single aggregation).
-func testResultMessage(results core.TestSuite, showDuration bool) string {
+func testResultMessage(results *core.TestSuite, showDuration bool) string {
 	msg := fmt.Sprintf("%s run", pluralise(results.Tests(), "test", "tests"))
 	if showDuration && results.Duration >= 0.0 {
 		msg += fmt.Sprintf(" in ${BOLD_WHITE}%s${RESET}", results.Duration.Round(testDurationGranularity))

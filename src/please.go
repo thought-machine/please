@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/thought-machine/go-flags"
+	"gopkg.in/op/go-logging.v1"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -13,9 +15,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-
-	"github.com/thought-machine/go-flags"
-	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"
