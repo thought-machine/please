@@ -103,7 +103,8 @@ func (p *aspParser) RunPostBuildFunction(threadID int, state *core.BuildState, t
 	})
 }
 
-func (p *aspParser)  BuildRuleArgOrder() map[string]int {
+// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
+func (p *aspParser) BuildRuleArgOrder() map[string]int {
 	return p.parser.BuildRuleArgOrder()
 }
 
