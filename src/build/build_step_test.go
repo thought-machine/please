@@ -593,6 +593,10 @@ func (fake *fakeParser) RunPostBuildFunction(threadID int, state *core.BuildStat
 	return target.PostBuildFunction.Call(target, output)
 }
 
+func (fake *fakeParser)  BuildRuleArgOrder() map[string]int {
+	return map[string]int{}
+}
+
 type preBuildFunction func(*core.BuildTarget) error
 type postBuildFunction func(*core.BuildTarget, string) error
 

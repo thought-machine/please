@@ -2,6 +2,7 @@ package query
 
 import (
 	"bytes"
+	"github.com/thought-machine/please/src/parse"
 	"strings"
 	"testing"
 	"time"
@@ -9,10 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/parse"
 )
 
-var order = parse.NewAspParser(core.NewDefaultBuildState()).BuildRuleArgOrder()
+var order = parse.InitParser(core.NewDefaultBuildState()).Parser.BuildRuleArgOrder()
 
 func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
 	target := core.BuildTarget{}

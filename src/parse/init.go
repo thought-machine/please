@@ -17,15 +17,16 @@ import (
 )
 
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
-func InitParser(state *core.BuildState) {
+func InitParser(state *core.BuildState) *core.BuildState {
 	if state.Parser == nil {
-		state.Parser = &AspParser{Parser: NewAspParser(state)}
+		state.Parser = &AspParser{parser: newAspParser(state)}
 	}
+	return state
 }
 
-// AspParser implements the core.Parser interface around our Parser package.
+// AspParser implements the core.Parser interface around our parser package.
 type AspParser struct {
-	Parser *asp.Parser
+	parser *asp.Parser
 }
 
 func buildPreamble(state *core.BuildState, pkg *core.Package) string {
@@ -50,8 +51,8 @@ func buildPreamble(state *core.BuildState, pkg *core.Package) string {
 	return ""
 }
 
-// NewAspParser returns a asp.Parser object with all the builtins loaded
-func NewAspParser(state *core.BuildState) *asp.Parser {
+// newAspParser returns a asp.Parser object with all the builtins loaded
+func newAspParser(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
 	log.Debug("Loading built-in build rules...")
 	dir, _ := rules.AllAssets()
@@ -72,20 +73,20 @@ func NewAspParser(state *core.BuildState) *asp.Parser {
 		createBazelSubrepo(state)
 	}
 
-	log.Debug("Parser initialised")
+	log.Debug("parser initialised")
 	return p
 }
 
 func (p *AspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
 	if pkg.Name == "" {
-		return p.Parser.ParseFile(pkg, filename, "")
+		return p.parser.ParseFile(pkg, filename, "")
 	}
 
-	return p.Parser.ParseFile(pkg, filename, buildPreamble(state, pkg))
+	return p.parser.ParseFile(pkg, filename, buildPreamble(state, pkg))
 }
 
 func (p *AspParser) ParseReader(state *core.BuildState, pkg *core.Package, reader io.ReadSeeker) error {
-	_, err := p.Parser.ParseReader(pkg, reader)
+	_, err := p.parser.ParseReader(pkg, reader)
 	return err
 }
 
@@ -100,6 +101,10 @@ func (p *AspParser) RunPostBuildFunction(threadID int, state *core.BuildState, t
 		log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, output)
 		return target.PostBuildFunction.Call(target, output)
 	})
+}
+
+func (p *AspParser)  BuildRuleArgOrder() map[string]int {
+	return p.parser.BuildRuleArgOrder()
 }
 
 // runBuildFunction runs either the pre- or post-build function.

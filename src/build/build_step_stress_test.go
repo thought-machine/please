@@ -116,3 +116,7 @@ func (fake *fakeParser) RunPostBuildFunction(threadID int, state *core.BuildStat
 	}
 	return nil
 }
+
+func (fake *fakeParser)  BuildRuleArgOrder() map[string]int {
+	return map[string]int{}
+}

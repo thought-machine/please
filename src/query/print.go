@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/parse"
 )
 
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
@@ -18,7 +17,7 @@ import (
 // or some similar wrapper rule, but we've lost that information by now.
 func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string) {
 	graph := state.Graph
-	order := state.Parser.(*parse.AspParser).Parser.BuildRuleArgOrder()
+	order := state.Parser.BuildRuleArgOrder()
 	for _, target := range targets {
 		t := graph.TargetOrDie(target)
 		if len(labels) > 0 {
