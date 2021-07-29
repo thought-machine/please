@@ -128,6 +128,9 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	if target.IsBinary {
 		target.AddLabel("bin")
 	}
+	if target.IsRemoteFile {
+		target.AddLabel("remote")
+	}
 	target.Command, target.Commands = decodeCommands(s, args[cmdBuildRuleArgIdx])
 	if test {
 		if flaky := args[flakyBuildRuleArgIdx]; flaky != nil {

@@ -15,7 +15,9 @@ import (
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
-func Print(graph *core.BuildGraph, targets []core.BuildLabel, fields, labels []string) {
+func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string) {
+	graph := state.Graph
+	order := state.Parser.BuildRuleArgOrder()
 	for _, target := range targets {
 		t := graph.TargetOrDie(target)
 		if len(labels) > 0 {
@@ -32,9 +34,9 @@ func Print(graph *core.BuildGraph, targets []core.BuildLabel, fields, labels []s
 			fmt.Fprintf(os.Stdout, "# %s:\n", target)
 		}
 		if len(fields) > 0 {
-			newPrinter(os.Stdout, t, 0).PrintFields(fields)
+			newPrinter(os.Stdout, t, 0, order).PrintFields(fields)
 		} else {
-			newPrinter(os.Stdout, t, 0).PrintTarget()
+			newPrinter(os.Stdout, t, 0, order).PrintTarget()
 		}
 	}
 }
@@ -80,14 +82,6 @@ var specialFields = map[string]func(*printer) (string, bool){
 	},
 }
 
-// fieldPrecedence defines a specific ordering for fields.
-var fieldPrecedence = map[string]int{
-	"name":       -100,
-	"srcs":       -90,
-	"visibility": 90,
-	"deps":       100,
-}
-
 // A printer is responsible for creating the output of 'plz query print'.
 type printer struct {
 	w              io.Writer
@@ -96,15 +90,17 @@ type printer struct {
 	doneFields     map[string]bool
 	error          bool // true if something went wrong
 	surroundSyntax bool // true if we are quoting strings or surrounding slices with [] etc.
+	fieldOrder     map[string]int
 }
 
 // newPrinter creates a new printer instance.
-func newPrinter(w io.Writer, target *core.BuildTarget, indent int) *printer {
+func newPrinter(w io.Writer, target *core.BuildTarget, indent int, order map[string]int) *printer {
 	return &printer{
 		w:          w,
 		target:     target,
 		indent:     indent,
 		doneFields: make(map[string]bool, 50), // Leave enough space for all of BuildTarget's fields.
+		fieldOrder: order,
 	}
 }
 
@@ -131,7 +127,7 @@ func (p *printer) PrintTarget() {
 	for i := 0; i < t.NumField(); i++ {
 		f[i].structIndex = i
 		f[i].printIndex = i
-		if index, present := fieldPrecedence[p.fieldName(t.Field(i))]; present {
+		if index, present := p.fieldOrder[p.fieldName(t.Field(i))]; present {
 			f[i].printIndex = index
 		}
 	}

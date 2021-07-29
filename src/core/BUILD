@@ -189,3 +189,9 @@ benchmark(
     srcs = ["utils_benchmark_test.go"],
     deps = [":core"],
 )
+
+benchmark(
+    name = "graph_benchmark",
+    srcs = ["graph_benchmark_test.go"],
+    deps = [":core"],
+)

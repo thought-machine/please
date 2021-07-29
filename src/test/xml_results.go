@@ -1,4 +1,4 @@
-// Parser for JUnit XML output.
+// parser for JUnit XML output.
 
 package test
 

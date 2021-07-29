@@ -1,4 +1,4 @@
-// Parser for output from Go's testing package.
+// parser for output from Go's testing package.
 //
 // This is a fairly straightforward microformat so pretty easy to parse ourselves.
 // There's at least one package out there to convert it to JUnit XML but not worth

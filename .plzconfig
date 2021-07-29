@@ -31,6 +31,9 @@ protoctool = //third_party/proto:protoc
 protocgoplugin = //third_party/go:protoc-gen-go
 language = go
 
+[parse]
+BlacklistDirs = tree ; The performance test repo
+
 [alias "autofix"]
 desc = Generates generated code and applies lint fixes
 cmd = run //:autofix

@@ -620,8 +620,9 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"revdeps": func() int {
-		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.ReverseDeps(state, state.ExpandLabels(utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
+		labels := utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
+		return runQuery(true, append(labels, core.WholeGraph...), func(state *core.BuildState) {
+			query.ReverseDeps(state, state.ExpandLabels(labels), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
 		})
 	},
 	"somepath": func() int {
@@ -648,7 +649,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"print": func() int {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.Print(state.Graph, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
+			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
 		})
 	},
 	"input": func() int {
@@ -674,15 +675,34 @@ var buildFunctions = map[string]func() int{
 			}
 			return 0
 		}
-		labels, parseLabels, hidden := query.CompletionLabels(config, fragments, core.RepoRoot)
+
+		var qry string
+		if len(fragments) == 0 {
+			qry = "//"
+		} else {
+			qry = fragments[0]
+		}
+
+		completions := query.CompletionLabels(config, qry, core.RepoRoot)
 		// We have no labels to parse so we're done already
-		if len(parseLabels) == 0 {
+		if completions.PackageToParse == "" && qry != "//" {
+			for _, pkg := range completions.Pkgs {
+				fmt.Printf("//%s\n", pkg)
+			}
 			return 0
 		}
-		if success, state := Please(parseLabels, config, false, false); success {
-			binary := opts.Query.Completions.Cmd == "run"
+
+		labelsToParse := []core.BuildLabel{{PackageName: completions.PackageToParse, Name: "all"}}
+		binary := opts.Query.Completions.Cmd == "run"
+
+		// The original pkg might not have binary targets. If we only match one package, we might need to parse that too.
+		if binary && len(completions.Pkgs) == 1 {
+			labelsToParse = append(labelsToParse, core.BuildLabel{PackageName: completions.Pkgs[0], Name: "all"})
+		}
+
+		if success, state := Please(labelsToParse, config, false, false); success {
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
-			query.Completions(state.Graph, labels, binary, test, hidden)
+			query.Completions(state.Graph, completions.PackageToParse, completions.NamePrefix, completions.Pkgs, binary, test, completions.Hidden)
 			return 0
 		}
 		return 1
