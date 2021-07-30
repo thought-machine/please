@@ -90,6 +90,10 @@ func acquireOpenFileLock(filePath string, how int) (*os.File, error) {
 // ReleaseFileLock releases the lock and closes the file handle.
 // Does not die on errors, at this point it wouldn't really do any good.
 func ReleaseFileLock(file *os.File) {
+	if file == nil {
+		return
+	}
+
 	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_UN); err != nil {
 		log.Errorf("Failed to release lock for %s: %s", file.Name(), err) // No point making this fatal really
 	}
