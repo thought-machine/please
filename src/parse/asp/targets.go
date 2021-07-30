@@ -92,9 +92,6 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target := core.NewBuildTarget(label)
 	target.Subrepo = s.pkg.Subrepo
 	target.IsBinary = isTruthy(binaryBuildRuleArgIdx)
-	if test {
-		target.Test = new(core.TestFields)
-	}
 	target.NeedsTransitiveDependencies = isTruthy(needsTransitiveDepsBuildRuleArgIdx)
 	target.OutputIsComplete = isTruthy(outputIsCompleteBuildRuleArgIdx)
 	target.Sandbox = isTruthy(sandboxBuildRuleArgIdx)
@@ -133,6 +130,8 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	}
 	target.Command, target.Commands = decodeCommands(s, args[cmdBuildRuleArgIdx])
 	if test {
+		target.Test = new(core.TestFields)
+
 		if flaky := args[flakyBuildRuleArgIdx]; flaky != nil {
 			if flaky == True {
 				target.Test.Flakiness = defaultFlakiness
@@ -215,12 +214,10 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	}
 	addMaybeNamed(s, "srcs", args[srcsBuildRuleArgIdx], t.AddSource, t.AddNamedSource, false, false)
 	addMaybeNamedOrString(s, "tools", args[toolsBuildRuleArgIdx], t.AddTool, t.AddNamedTool, true, true)
-	addMaybeNamedOrString(s, "test_tools", args[testToolsBuildRuleArgIdx], t.AddTestTool, t.AddNamedTestTool, true, true)
 	addMaybeNamed(s, "system_srcs", args[systemSrcsBuildRuleArgIdx], t.AddSource, nil, true, false)
 	addMaybeNamed(s, "data", args[dataBuildRuleArgIdx], t.AddDatum, t.AddNamedDatum, false, false)
 	addMaybeNamedOutput(s, "outs", args[outsBuildRuleArgIdx], t.AddOutput, t.AddNamedOutput, t, false)
 	addMaybeNamedOutput(s, "optional_outs", args[optionalOutsBuildRuleArgIdx], t.AddOptionalOutput, nil, t, true)
-	addMaybeNamedOutput(s, "test_outputs", args[testOutputsBuildRuleArgIdx], t.AddTestOutput, nil, t, false)
 	addDependencies(s, "deps", args[depsBuildRuleArgIdx], t, false, false)
 	addDependencies(s, "exported_deps", args[exportedDepsBuildRuleArgIdx], t, true, false)
 	addDependencies(s, "internal_deps", args[internalDepsBuildRuleArgIdx], t, false, true)
@@ -240,6 +237,11 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	}
 	if f := callbackFunction(s, "post_build", args[postBuildBuildRuleArgIdx], 2, "arguments"); f != nil {
 		t.PostBuildFunction = &postBuildFunction{f: f, s: s}
+	}
+
+	if t.IsTest() {
+		addMaybeNamedOrString(s, "test_tools", args[testToolsBuildRuleArgIdx], t.AddTestTool, t.AddNamedTestTool, true, true)
+		addMaybeNamedOutput(s, "test_outputs", args[testOutputsBuildRuleArgIdx], t.AddTestOutput, nil, t, false)
 	}
 }
 

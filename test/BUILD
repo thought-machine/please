@@ -473,3 +473,23 @@ plz_e2e_test(
     cmd = "plz --completion_script",
     expect_output_contains = "plz completion",
 )
+
+# This rule being here makes sure than when we parse this file, none of the test fields being set causes a nil pointer
+# even though this target isn't a test.
+build_rule(
+    name = "non_test_target_with_test_fields_set",
+    test_tools = ["go"],
+    test_cmd = "true",
+    test_outputs = ["foo"],
+    labels = ["manual"],
+    test_timeout = 60,
+    flaky = 3,
+    test_sandbox = True,
+    no_test_output = True,
+    test=False,
+)
+
+plz_e2e_test(
+    name = "non_test_target_with_test_fields_set_test",
+    cmd = "plz test //test:non_test_target_with_test_fields_set",
+)
