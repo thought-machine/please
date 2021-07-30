@@ -51,6 +51,6 @@ please_repo_e2e_test(
     expected_output = {
         "_add_data_gen.txt": "testing",
     },
-    plz_command = "plz build //src:_add_data_gen",
+    plz_command = "echo //src:_add_data_gen | plz run - > _add_data_gen.txt",
     repo = "test_repo",
 )
