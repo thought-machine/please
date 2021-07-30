@@ -98,21 +98,30 @@ type fakeParser struct {
 	PostBuildFunctions buildFunctionMap
 }
 
+// ParseFile stub
 func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
 	return nil
 }
 
+// ParseReader stub
 func (fake *fakeParser) ParseReader(state *core.BuildState, pkg *core.Package, r io.ReadSeeker) error {
 	return nil
 }
 
+// RunPreBuildFunction stub
 func (fake *fakeParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
 	return nil
 }
 
+// RunPostBuildFunction stub
 func (fake *fakeParser) RunPostBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget, output string) error {
 	if f, present := fake.PostBuildFunctions[target]; present {
 		return f(target, output)
 	}
 	return nil
+}
+
+// BuildRuleArgOrder stub
+func (fake *fakeParser) BuildRuleArgOrder() map[string]int {
+	return map[string]int{}
 }

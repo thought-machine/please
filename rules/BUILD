@@ -2,7 +2,7 @@ build_defs = glob(["*.build_defs"])
 
 go_library(
     name = "rules",
-    srcs = ["builtin_utils.go"],
+    srcs = ["rules.go"],
     resources = build_defs,
     visibility = ["PUBLIC"],
 )
