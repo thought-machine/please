@@ -1,9 +1,9 @@
 package core
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"syscall"
 	"testing"
 
@@ -43,7 +43,7 @@ func TestAcquireSharedRepoRoot(t *testing.T) {
 	assert.IsType(t, &os.File{}, repoLockFile)
 
 	contents, err := ioutil.ReadFile(repoLockFile.Name())
-	assert.Equal(t, fmt.Sprint(os.Getpid()), string(contents))
+	assert.Equal(t, strconv.Itoa(os.Getpid()), string(contents))
 	assert.NoError(t, err)
 }
 
@@ -54,7 +54,7 @@ func TestAcquireExclusiveRepoRoot(t *testing.T) {
 	assert.IsType(t, &os.File{}, repoLockFile)
 
 	contents, err := ioutil.ReadFile(repoLockFile.Name())
-	assert.Equal(t, fmt.Sprint(os.Getpid()), string(contents))
+	assert.Equal(t, strconv.Itoa(os.Getpid()), string(contents))
 	assert.NoError(t, err)
 }
 
@@ -77,7 +77,7 @@ func TestAcquireSharedRepoRootTwice(t *testing.T) {
 
 	// Keep file descriptor reference alive.
 	processOneRepoLockFile := repoLockFile
-	defer ReleaseFileLock(&processOneRepoLockFile)
+	defer ReleaseFileLock(processOneRepoLockFile)
 
 	// 2nd process.
 	repoLockFile = nil // Reset.
@@ -96,7 +96,7 @@ func TestAcquireSharedAndExclusiveRepoRoot(t *testing.T) {
 
 	// Keep file descriptor reference alive.
 	processOneRepoLockFile := repoLockFile
-	defer ReleaseFileLock(&processOneRepoLockFile)
+	defer ReleaseFileLock(processOneRepoLockFile)
 
 	// 2nd process.
 	repoLockFile = nil // Reset.
@@ -115,7 +115,7 @@ func TestAcquireExclusiveAndSharedRepoRoot(t *testing.T) {
 
 	// Keep file descriptor reference alive.
 	processOneRepoLockFile := repoLockFile
-	defer ReleaseFileLock(&processOneRepoLockFile)
+	defer ReleaseFileLock(processOneRepoLockFile)
 
 	// 2nd process.
 	repoLockFile = nil // Reset.
@@ -135,12 +135,12 @@ func TestReleaseRepoLock(t *testing.T) {
 
 func TestAcquireExclusiveFileLock(t *testing.T) {
 	file := AcquireExclusiveFileLock("path/to/file")
-	defer ReleaseFileLock(&file)
+	defer ReleaseFileLock(file)
 
 	assert.IsType(t, &os.File{}, file)
 
 	contents, err := ioutil.ReadFile("path/to/file")
-	assert.Equal(t, fmt.Sprint(os.Getpid()), string(contents))
+	assert.Equal(t, strconv.Itoa(os.Getpid()), string(contents))
 	assert.NoError(t, err)
 }
 
@@ -152,19 +152,20 @@ func TestAcquireExclusiveFileLockTwice(t *testing.T) {
 
 	// Keep file descriptor reference alive.
 	processOneLockFile := fd1
-	defer ReleaseFileLock(&processOneLockFile)
+	defer ReleaseFileLock(processOneLockFile)
 
 	// 2nd process.
 	// It errors immediately trying to acquire an exclusive lock as the same lock mode was already placed by process 1.
 	fd2, err := acquireOpenFileLock("path/to/file", syscall.LOCK_EX|syscall.LOCK_NB)
 	assert.Error(t, err)
 
-	ReleaseFileLock(&fd2)
+	ReleaseFileLock(fd2)
 }
 
 func TestReleaseFileLock(t *testing.T) {
 	file := AcquireExclusiveFileLock("path/to/file")
 
-	ReleaseFileLock(&file)
-	assert.Nil(t, file)
+	ReleaseFileLock(file)
+	err := file.Close()
+	assert.Error(t, err, "file already closed")
 }

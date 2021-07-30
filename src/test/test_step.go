@@ -181,7 +181,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	state.LogBuildResult(tid, target, core.TargetTesting, "Acquiring file lock...")
 	file := core.AcquireExclusiveFileLock(target.TestLockFile(run))
-	defer core.ReleaseFileLock(&file)
+	defer core.ReleaseFileLock(file)
 	state.LogBuildResult(tid, target, core.TargetTesting, "Testing...")
 
 	// Remove any cached test result file.

@@ -70,8 +70,9 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	}
 
 	// Must lock exclusively here so that the update process doesn't race when running two instances simultaneously.
-	// We don't want to release the lock yet since other parts of the code might override it as needed.
+	// Once we are done we replace/restore the mode to the shared one.
 	core.AcquireExclusiveRepoLock()
+	defer core.AcquireSharedRepoLock()
 
 	// If the destination exists and the user passed --force, remove it to force a redownload.
 	newDir := fs.ExpandHomePath(path.Join(config.Please.Location, config.Please.Version.VersionString()))

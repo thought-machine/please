@@ -1,14 +1,16 @@
 // The logic below relies heavily on flock (advisory locks).
-// Race conditions are a possibility given that we need to open files before applying a lock.
 
 package core
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"strconv"
 	"syscall"
 
 	"github.com/thought-machine/please/src/fs"
+	"gopkg.in/op/go-logging.v1"
 )
 
 const repoLockFilePath = "plz-out/.lock"
@@ -33,7 +35,8 @@ func AcquireExclusiveRepoLock() {
 
 // ReleaseRepoLock releases any lock mode on the repo lock file.
 func ReleaseRepoLock() {
-	ReleaseFileLock(&repoLockFile)
+	ReleaseFileLock(repoLockFile)
+	repoLockFile = nil
 }
 
 // Base function that allows to set up different repo lock modes and facilitate testing.
@@ -42,7 +45,7 @@ func acquireRepoLock(how int) error {
 		return err
 	}
 
-	return acquireFileLock(repoLockFile, how, fmt.Sprint(os.Getpid()))
+	return acquireFileLock(repoLockFile, how, (*logging.Logger).Warning)
 }
 
 // This acts like a singleton allowing the same file descriptor to used to override a previously set lock
@@ -77,7 +80,7 @@ func acquireOpenFileLock(filePath string, how int) (*os.File, error) {
 		return nil, err
 	}
 
-	if err = acquireFileLock(lockFile, how, fmt.Sprint(os.Getpid())); err != nil {
+	if err = acquireFileLock(lockFile, how, (*logging.Logger).Debug); err != nil {
 		return nil, err
 	}
 
@@ -86,22 +89,28 @@ func acquireOpenFileLock(filePath string, how int) (*os.File, error) {
 
 // ReleaseFileLock releases the lock and closes the file handle.
 // Does not die on errors, at this point it wouldn't really do any good.
-func ReleaseFileLock(file **os.File) {
-	if err := syscall.Flock(int((*file).Fd()), syscall.LOCK_UN); err != nil {
-		log.Errorf("Failed to release lock for %s: %w", (*file).Name, err) // No point making this fatal really
+func ReleaseFileLock(file *os.File) {
+	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_UN); err != nil {
+		log.Errorf("Failed to release lock for %s: %s", file.Name(), err) // No point making this fatal really
 	}
-	if err := (*file).Close(); err != nil {
-		log.Errorf("Failed to close lock file %s: %w", (*file).Name, err)
+	if err := file.Close(); err != nil {
+		log.Errorf("Failed to close lock file %s: %s", file.Name(), err)
 	}
-	*file = nil
 }
 
-func acquireFileLock(file *os.File, how int, content string) error {
+type logFunc func(logger *logging.Logger, format string, args ...interface{})
+
+func acquireFileLock(file *os.File, how int, levelLog logFunc) error {
 	// Try a non-blocking acquire first so we can warn the user if we're waiting.
 	log.Debug("Attempting to acquire lock for %s...", file.Name())
 	err := syscall.Flock(int(file.Fd()), how|syscall.LOCK_NB)
 	if err != nil {
-		log.Debug("Looks like another thread has already acquired the lock for %s. Waiting for it to finish...", file.Name())
+		pid, err := ioutil.ReadFile(file.Name())
+		if err != nil || len(pid) == 0 {
+			return fmt.Errorf("Failed to retrieve PID of process holding the lock for %s", file.Name())
+		}
+
+		levelLog(log, "Looks like process with PID %s has already acquired the lock for %s. Waiting for it to finish...", string(pid), file.Name())
 		if err := syscall.Flock(int(file.Fd()), how); err != nil {
 			return fmt.Errorf("Failed to acquire lock for %s: %w", file.Name(), err)
 		}
@@ -110,7 +119,7 @@ func acquireFileLock(file *os.File, how int, content string) error {
 
 	// Record content
 	if err := file.Truncate(0); err == nil {
-		file.WriteAt([]byte(content), 0)
+		file.WriteAt([]byte(strconv.Itoa(os.Getpid())), 0)
 	}
 
 	return nil
