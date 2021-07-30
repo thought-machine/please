@@ -758,16 +758,20 @@ func addDep(s *scope, args []pyObject) pyObject {
 func addData(s *scope, args []pyObject) pyObject {
 	s.Assert(s.Callback, "can only be called from a pre- or post-build callback")
 	target := getTargetPost(s, string(args[0].(pyString)))
-	data := core.ParseBuildLabelContext(string(args[1].(pyString)), s.pkg)
-	target.AddDatum(target.Label)
-	// Queue this dependency if it'll be needed.
-	if target.State() > core.Inactive {
-		err := s.state.QueueTarget(data, target.Label, true, false)
-		s.Assert(err == nil, "%s", err)
+
+	for str := range args[1].(pyList) {
+		data := core.ParseBuildLabelContext(string(str), s.pkg)
+		target.AddDatum(target.Label)
+		// Queue this dependency if it'll be needed.
+		if target.State() > core.Inactive {
+			err := s.state.QueueTarget(data, target.Label, true, false)
+			s.Assert(err == nil, "%s", err)
+		}
 	}
+
 	// TODO(peterebden): Do we even need the following any more?
 	s.pkg.MarkTargetModified(target)
-    return None
+	return None
 }
 
 // addOut adds an output to a target.

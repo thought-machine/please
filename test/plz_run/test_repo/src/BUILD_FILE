@@ -16,3 +16,12 @@ sh_cmd(
     name = "wobble",
     cmd = "sleep 0.1 && echo wobble",
 )
+
+# Test add_data functionality
+genrule(
+    name = "_add_data_gen",
+    cmd = "echo testing > _add_data_gen.txt",
+    binary = True,
+    outs = ["_add_data_gen.txt"],
+    pre_build = lambda name: add_data(name, get_labels(name, 'test:')),
+)
