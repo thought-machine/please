@@ -760,7 +760,7 @@ func addData(s *scope, args []pyObject) pyObject {
 	target := getTargetPost(s, string(args[0].(pyString)))
 
 	for str := range args[1].(pyList) {
-		data := core.ParseBuildLabelContext(string(str), s.pkg)
+		data := core.ParseBuildLabelContext(fmt.Sprint(str), s.pkg)
 		target.AddDatum(target.Label)
 		// Queue this dependency if it'll be needed.
 		if target.State() > core.Inactive {
