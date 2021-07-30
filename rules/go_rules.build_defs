@@ -1558,7 +1558,6 @@ def _set_go_env():
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
     cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
-    warning(CONFIG.GO_C_FLAGS)
     if CONFIG.GO_C_FLAGS:
         cmd = f'{cmd} && export CFLAGS="{CONFIG.GO_C_FLAGS}"'
     if CONFIG.GO_LD_FLAGS:
