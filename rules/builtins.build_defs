@@ -232,7 +232,7 @@ def add_dep(target:str, dep:str, exported:bool=False):
     pass
 def add_exported_dep(target:str, dep:str):
     add_dep(target, dep, True)
-def add_data(target:str, dep_list:list=None):
+def add_data(target:str, deps:str|list|dict):
     pass
 def add_out(target:str, name:str, out:str=''):
     pass

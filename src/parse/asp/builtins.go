@@ -754,18 +754,33 @@ func addDep(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-// addData adds runtime dependencies to target
+func addDataToTargetAndMaybeQueue(s *scope, str string, target *core.BuildTarget) {
+	data := core.ParseBuildLabelContext(fmt.Sprint(str), s.pkg)
+	target.AddDatum(target.Label)
+	// Queue this dependency if it'll be needed.
+	if target.State() > core.Inactive {
+		err := s.state.QueueTarget(data, target.Label, true, false)
+		s.Assert(err == nil, "%s", err)
+	}
+}
+
+// Add runtime dependencies to target
 func addData(s *scope, args []pyObject) pyObject {
 	s.Assert(s.Callback, "can only be called from a pre- or post-build callback")
 	target := getTargetPost(s, string(args[0].(pyString)))
 
-	for str := range args[1].(pyList) {
-		data := core.ParseBuildLabelContext(fmt.Sprint(str), s.pkg)
-		target.AddDatum(target.Label)
-		// Queue this dependency if it'll be needed.
-		if target.State() > core.Inactive {
-			err := s.state.QueueTarget(data, target.Label, true, false)
-			s.Assert(err == nil, "%s", err)
+	// add_data() can take a string, list, or dict
+	if isType(args[1], "string") {
+		addDataToTargetAndMaybeQueue(s, fmt.Sprint(args[1].(pyString)), target)
+	} else if isType(args[1], "list") {
+		for str := range args[1].(pyList) {
+			addDataToTargetAndMaybeQueue(s, fmt.Sprint(str), target)
+		}
+	} else if isType(args[1], "dict") {
+		for _, v := range args[1].(pyDict) {
+			for str := range v.(pyList) {
+				addDataToTargetAndMaybeQueue(s, fmt.Sprint(str), target)
+			}
 		}
 	}
 
