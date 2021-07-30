@@ -159,7 +159,7 @@ func printLabelsInPackage(graph *core.BuildGraph, packageName, prefix string, bi
 		if binary && !target.IsBinary {
 			continue
 		}
-		if test && !target.IsTest {
+		if test && !target.IsTest() {
 			continue
 		}
 		if hidden || !strings.HasPrefix(target.Label.Name, "_") {

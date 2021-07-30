@@ -99,7 +99,7 @@ func TestCheckDependencyVisibility(t *testing.T) {
 	target6 := makeTarget1("//src/test/python:test_lib", "", target5)
 	target6.TestOnly = true
 	target7 := makeTarget1("//src/test/python:test1", "", target5, target4)
-	target7.IsTest = true
+	target7.Test = new(TestFields)
 
 	state := NewDefaultBuildState()
 	state.Graph.AddTarget(target1)
@@ -272,7 +272,7 @@ func TestLabels(t *testing.T) {
 	assert.Equal(t, 2, len(target.Labels))
 	// "test" label is implicit on tests.
 	assert.False(t, target.HasLabel("test"))
-	target.IsTest = true
+	target.Test = new(TestFields)
 	assert.True(t, target.HasLabel("test"))
 }
 
@@ -311,11 +311,12 @@ func TestGetTestCommand(t *testing.T) {
 	state.Config.Build.Config = "dbg"
 	state.Config.Build.FallbackConfig = "opt"
 	target := makeTarget1("//src/core:target1", "PUBLIC")
-	target.TestCommand = "test1"
+	target.Test = new(TestFields)
+	target.Test.Command = "test1"
 	assert.Equal(t, "test1", target.GetTestCommand(state))
 	assert.Panics(t, func() { target.AddTestCommand("opt", "test2") },
 		"Should panic when adding a config command to a target with a command already")
-	target.TestCommand = ""
+	target.Test.Command = ""
 	target.AddTestCommand("opt", "test3")
 	target.AddTestCommand("dbg", "test4")
 	assert.Equal(t, "test4", target.GetTestCommand(state), "Current config is dbg")
