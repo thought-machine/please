@@ -196,7 +196,7 @@ type BuildTarget struct {
 	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
 	Flakiness int `name:"flaky"`
 	// Timeouts for build/test actions
-	BuildTimeout time.Duration `name:"timeout"`
+	BuildTimeout time.Duration `name:"build_timeout"`
 	TestTimeout  time.Duration `name:"test_timeout"`
 	// Extra output files from the test.
 	// These are in addition to the usual test.results output file.
