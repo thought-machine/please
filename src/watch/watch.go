@@ -147,7 +147,7 @@ func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.Bu
 // anyTests returns true if any of the given labels refer to tests.
 func anyTests(state *core.BuildState, labels []core.BuildLabel) bool {
 	for _, l := range labels {
-		if state.Graph.TargetOrDie(l).IsTest {
+		if state.Graph.TargetOrDie(l).IsTest() {
 			return true
 		}
 	}

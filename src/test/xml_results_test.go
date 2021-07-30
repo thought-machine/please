@@ -74,7 +74,8 @@ func TestUploadGzipped(t *testing.T) {
 func xmlTestScenario() *core.BuildTarget {
 	target := core.NewBuildTarget(core.ParseBuildLabel("//src/core:lock_test", ""))
 	duration := 500 * time.Millisecond
-	target.Results = core.TestSuite{
+	target.Test = new(core.TestFields)
+	target.Test.Results = &core.TestSuite{
 		Package:  "src.core",
 		Name:     "lock_test",
 		Duration: 1 * time.Second,
@@ -117,7 +118,6 @@ func xmlTestScenario() *core.BuildTarget {
 			},
 		},
 	}
-	target.IsTest = true
 	return target
 }
 

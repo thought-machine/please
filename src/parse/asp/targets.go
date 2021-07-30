@@ -92,7 +92,6 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target := core.NewBuildTarget(label)
 	target.Subrepo = s.pkg.Subrepo
 	target.IsBinary = isTruthy(binaryBuildRuleArgIdx)
-	target.IsTest = test
 	target.NeedsTransitiveDependencies = isTruthy(needsTransitiveDepsBuildRuleArgIdx)
 	target.OutputIsComplete = isTruthy(outputIsCompleteBuildRuleArgIdx)
 	target.Sandbox = isTruthy(sandboxBuildRuleArgIdx)
@@ -131,29 +130,31 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	}
 	target.Command, target.Commands = decodeCommands(s, args[cmdBuildRuleArgIdx])
 	if test {
+		target.Test = new(core.TestFields)
+
 		if flaky := args[flakyBuildRuleArgIdx]; flaky != nil {
 			if flaky == True {
-				target.Flakiness = defaultFlakiness
+				target.Test.Flakiness = defaultFlakiness
 				target.AddLabel("flaky") // Automatically label flaky tests
 			} else if flaky == False {
-				target.Flakiness = 1
+				target.Test.Flakiness = 1
 			} else if i, ok := flaky.(pyInt); ok {
 				if int(i) <= 1 {
-					target.Flakiness = 1
+					target.Test.Flakiness = 1
 				} else {
-					target.Flakiness = int(i)
+					target.Test.Flakiness = uint8(i)
 					target.AddLabel("flaky")
 				}
 			}
 		} else {
-			target.Flakiness = 1
+			target.Test.Flakiness = 1
 		}
 		if testCmd != nil && testCmd != None {
-			target.TestCommand, target.TestCommands = decodeCommands(s, args[testCMDBuildRuleArgIdx])
+			target.Test.Command, target.Test.Commands = decodeCommands(s, args[testCMDBuildRuleArgIdx])
 		}
-		target.TestTimeout = sizeAndTimeout(s, size, args[testTimeoutBuildRuleArgIdx], s.state.Config.Test.Timeout)
-		target.TestSandbox = isTruthy(testSandboxBuildRuleArgIdx)
-		target.NoTestOutput = isTruthy(noTestOutputBuildRuleArgIdx)
+		target.Test.Timeout = sizeAndTimeout(s, size, args[testTimeoutBuildRuleArgIdx], s.state.Config.Test.Timeout)
+		target.Test.Sandbox = isTruthy(testSandboxBuildRuleArgIdx)
+		target.Test.NoOutput = isTruthy(noTestOutputBuildRuleArgIdx)
 	}
 	return target
 }
@@ -213,12 +214,10 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	}
 	addMaybeNamed(s, "srcs", args[srcsBuildRuleArgIdx], t.AddSource, t.AddNamedSource, false, false)
 	addMaybeNamedOrString(s, "tools", args[toolsBuildRuleArgIdx], t.AddTool, t.AddNamedTool, true, true)
-	addMaybeNamedOrString(s, "test_tools", args[testToolsBuildRuleArgIdx], t.AddTestTool, t.AddNamedTestTool, true, true)
 	addMaybeNamed(s, "system_srcs", args[systemSrcsBuildRuleArgIdx], t.AddSource, nil, true, false)
 	addMaybeNamed(s, "data", args[dataBuildRuleArgIdx], t.AddDatum, t.AddNamedDatum, false, false)
 	addMaybeNamedOutput(s, "outs", args[outsBuildRuleArgIdx], t.AddOutput, t.AddNamedOutput, t, false)
 	addMaybeNamedOutput(s, "optional_outs", args[optionalOutsBuildRuleArgIdx], t.AddOptionalOutput, nil, t, true)
-	addMaybeNamedOutput(s, "test_outputs", args[testOutputsBuildRuleArgIdx], t.AddTestOutput, nil, t, false)
 	addDependencies(s, "deps", args[depsBuildRuleArgIdx], t, false, false)
 	addDependencies(s, "exported_deps", args[exportedDepsBuildRuleArgIdx], t, true, false)
 	addDependencies(s, "internal_deps", args[internalDepsBuildRuleArgIdx], t, false, true)
@@ -238,6 +237,11 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	}
 	if f := callbackFunction(s, "post_build", args[postBuildBuildRuleArgIdx], 2, "arguments"); f != nil {
 		t.PostBuildFunction = &postBuildFunction{f: f, s: s}
+	}
+
+	if t.IsTest() {
+		addMaybeNamedOrString(s, "test_tools", args[testToolsBuildRuleArgIdx], t.AddTestTool, t.AddNamedTestTool, true, true)
+		addMaybeNamedOutput(s, "test_outputs", args[testOutputsBuildRuleArgIdx], t.AddTestOutput, nil, t, false)
 	}
 }
 
