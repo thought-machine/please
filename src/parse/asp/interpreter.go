@@ -1,11 +1,9 @@
 package asp
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"runtime/debug"
-	"runtime/pprof"
 	"strings"
 	"sync"
 
@@ -23,14 +21,12 @@ type interpreter struct {
 	configMutex     sync.RWMutex
 	breakpointMutex sync.Mutex
 	limiter         semaphore
-	profiling       bool
 }
 
 // newInterpreter creates and returns a new interpreter instance.
 // It loads all the builtin rules at this point.
 func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	s := &scope{
-		ctx:    context.Background(),
 		state:  state,
 		locals: map[string]pyObject{},
 	}
@@ -40,7 +36,6 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		subincludes: map[string]pyDict{},
 		config:      map[*core.Configuration]*pyConfig{},
 		limiter:     make(semaphore, state.Config.Parse.NumThreads),
-		profiling:   state.Config.Profiling,
 	}
 	s.interpreter = i
 	s.LoadSingletons(state)
@@ -201,7 +196,6 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 
 // A scope contains all the information about a lexical scope.
 type scope struct {
-	ctx         context.Context
 	interpreter *interpreter
 	state       *core.BuildState
 	pkg         *core.Package
@@ -227,7 +221,6 @@ func (s *scope) NewScope() *scope {
 // hint is a size hint for the new set of locals.
 func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
 	s2 := &scope{
-		ctx:         s.ctx,
 		interpreter: s.interpreter,
 		state:       s.state,
 		pkg:         pkg,
@@ -752,15 +745,7 @@ func (s *scope) callObject(name string, obj pyObject, c *Call) pyObject {
 	if !ok {
 		s.Error("Non-callable object '%s' (is a %s)", name, obj.Type())
 	}
-	if !s.interpreter.profiling {
-		return f.Call(s.ctx, s, c)
-	}
-	// If the CPU profiler is being run, attach the name of the current function in context.
-	var ret pyObject
-	pprof.Do(s.ctx, pprof.Labels("asp:func", f.name), func(ctx context.Context) {
-		ret = f.Call(ctx, s, c)
-	})
-	return ret
+	return f.Call(s, c)
 }
 
 // Constant returns an object from an expression that describes a constant,

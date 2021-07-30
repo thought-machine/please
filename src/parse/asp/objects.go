@@ -1,7 +1,6 @@
 package asp
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"sort"
@@ -605,7 +604,7 @@ func (f *pyFunc) String() string {
 	return fmt.Sprintf("<function %s>", f.name)
 }
 
-func (f *pyFunc) Call(ctx context.Context, s *scope, c *Call) pyObject {
+func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	if f.nativeCode != nil {
 		if f.kwargs {
 			return f.callNative(s.NewScope(), c)
@@ -613,7 +612,6 @@ func (f *pyFunc) Call(ctx context.Context, s *scope, c *Call) pyObject {
 		return f.callNative(s, c)
 	}
 	s2 := f.scope.NewPackagedScope(s.pkg, len(f.args)+1)
-	s2.ctx = ctx
 	s2.config = s.config
 	s2.Set("CONFIG", s.config) // This needs to be copied across too :(
 	s2.Callback = s.Callback
