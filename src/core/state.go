@@ -26,7 +26,7 @@ import (
 var startTime = time.Now()
 
 // cycleCheckDuration is the length of time we allow inactivity for before we trigger cycle detection.
-const cycleCheckDuration = 2 * time.Second
+const cycleCheckDuration = 5 * time.Second
 
 // ParseTask is the type for the parse task queue
 type ParseTask struct {
@@ -215,6 +215,8 @@ type stateProgress struct {
 	results chan *BuildResult
 	// Internal result stream, used to intermediate them for the cycle checker.
 	internalResults chan *BuildResult
+	// The cycle checker itself.
+	cycleDetector cycleDetector
 }
 
 // SystemStats stores information about the system.
@@ -327,6 +329,7 @@ func (state *BuildState) Stop() {
 
 // CloseResults closes the result channels.
 func (state *BuildState) CloseResults() {
+	state.progress.cycleDetector.Stop()
 	if state.progress.results != nil {
 		state.progress.resultOnce.Do(func() {
 			close(state.progress.results)
@@ -547,8 +550,7 @@ func (state *BuildState) forwardResults() {
 
 // checkForCycles is run to detect a cycle in the graph. It converts any returned error into an async error.
 func (state *BuildState) checkForCycles() {
-	cycleDetector := cycleDetector{graph: state.Graph}
-	if err := cycleDetector.Check(); err != nil {
+	if err := state.progress.cycleDetector.Check(); err != nil {
 		state.LogBuildError(0, err.Cycle[0].Label, TargetBuildFailed, err, "")
 		state.Stop()
 	}
@@ -1073,9 +1075,9 @@ func sandboxTool(config *Configuration) string {
 // Everyone should use this rather than attempting to construct it themselves;
 // callers can't initialise all the required private fields.
 func NewBuildState(config *Configuration) *BuildState {
-	// Deliberately ignore the error here so we don't require the sandbox tool until it's needed.
+	graph := NewGraph()
 	state := &BuildState{
-		Graph:               NewGraph(),
+		Graph:               graph,
 		pendingParses:       make(chan ParseTask, 10000),
 		pendingBuilds:       make(chan BuildTask, 1000),
 		pendingRemoteBuilds: make(chan BuildTask, 1000),
@@ -1112,6 +1114,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			packageWaits:    cmap.New(),
 			success:         true,
 			internalResults: make(chan *BuildResult, 1000),
+			cycleDetector:   cycleDetector{graph: graph},
 		},
 	}
 	state.PathHasher = state.Hasher(config.Build.HashFunction)
