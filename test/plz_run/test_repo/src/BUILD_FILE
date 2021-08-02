@@ -20,8 +20,8 @@ sh_cmd(
 # Test add_data functionality
 genrule(
     name = "_add_data_gen",
-    cmd = "echo testing",
-    binary = True,
-    outs = ["banana.txt"],
-    pre_build = lambda name: add_data(name, get_labels(name, 'test:')),
+    cmd = "echo testing > $OUT",
+#    binary = True,
+    outs = ["_add_data_gen.txt"],
+    pre_build = lambda name: add_data(name, "data.txt"),
 )
