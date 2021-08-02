@@ -199,7 +199,7 @@ var opts struct {
 		Share struct {
 			Network bool `long:"share_network" description:"Share network namespace"`
 			Mount   bool `long:"share_mount" description:"Share mount namespace"`
-		} `group:"Options allowing namespace sharing"`
+		} `group:"Options to override mount and network namespacing on linux, if configured"`
 		Args struct {
 			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
 			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
