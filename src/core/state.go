@@ -186,6 +186,8 @@ type BuildState struct {
 	experimentalLabels []BuildLabel
 	// Various items for tracking progress.
 	progress *stateProgress
+	// CurrentSubrepo is the subrepo this state is for or the empty string if it's for the host repo
+	CurrentSubrepo string
 }
 
 // A stateProgress records various points of progress for a State.
@@ -1004,6 +1006,12 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 	*s = *state
 	s.Config = c
 	state.progress.allStates = append(state.progress.allStates, s)
+	return s
+}
+
+func (state *BuildState) ForSubrepo(name string) *BuildState {
+	s := state.ForConfig()
+	s.CurrentSubrepo = name
 	return s
 }
 

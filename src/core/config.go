@@ -384,7 +384,7 @@ func DefaultConfiguration() *Configuration {
 type Configuration struct {
 	Please struct {
 		Version          cli.Version `help:"Defines the version of plz that this repo is supposed to use currently. If it's not present or the version matches the currently running version no special action is taken; otherwise if SelfUpdate is set Please will attempt to download an appropriate version, otherwise it will issue a warning and continue.\n\nNote that if this is not set, you can run plz update to update to the latest version available on the server." var:"PLZ_VERSION"`
-		ToolsURL 	     cli.URL 	 `help:"The URL download the Please tools from. Defaults to download the tools from the current Please versions github releases page."`
+		ToolsURL         cli.URL     `help:"The URL download the Please tools from. Defaults to download the tools from the current Please versions github releases page."`
 		VersionChecksum  []string    `help:"Defines a hex-encoded sha256 checksum that the downloaded version must match. Can be specified multiple times to support different architectures." example:"abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"`
 		Location         string      `help:"Defines the directory Please is installed into.\nDefaults to ~/.please but you might want it to be somewhere else if you're installing via another method (e.g. the debs and install script still use /opt/please)."`
 		SelfUpdate       bool        `help:"Sets whether plz will attempt to update itself when the version set in the config file is different."`
@@ -569,16 +569,16 @@ type Configuration struct {
 		Accept []string `help:"Licences that are accepted in this repository.\nWhen this is empty licences are ignored. As soon as it's set any licence detected or assigned must be accepted explicitly here.\nThere's no fuzzy matching, so some package managers (especially PyPI and Maven, but shockingly not npm which rather nicely uses SPDX) will generate a lot of slightly different spellings of the same thing, which will all have to be accepted here. We'd rather that than trying to 'cleverly' match them which might result in matching the wrong thing."`
 		Reject []string `help:"Licences that are explicitly rejected in this repository.\nAn astute observer will notice that this is not very different to just not adding it to the accept section, but it does have the advantage of explicitly documenting things that the team aren't allowed to use."`
 	} `help:"Please has some limited support for declaring acceptable licences and detecting them from some libraries. You should not rely on this for complete licence compliance, but it can be a useful check to try to ensure that unacceptable licences do not slip in."`
-	Alias map[string]*Alias `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
-	Plugin map[string]*Plugin `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
+	Alias            map[string]*Alias  `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
+	Plugin           map[string]*Plugin `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
 	PluginDefinition struct {
 		Name string `help:"The name of the plugin"`
 	} `help:"Set this in your .plzconfig to make the current Please repo a plugin. Add configuration fields with PluginConfig sections"`
-	PluginConfig map[string]*struct{
-		ConfigKey string
-		DefaultValue string
-		Optional bool
-	}
+	PluginConfig map[string]*struct {
+		ConfigKey    string `help:"The key of the config field in the .plzconfig file"`
+		DefaultValue string `help:"The default value for this config field, if it has one"`
+		Optional     bool   `help:"Whether this config field can be empty"`
+	} `help:"Defines a new config field for a plugin"`
 	Bazel struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`

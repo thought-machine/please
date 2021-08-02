@@ -887,7 +887,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	} else if args[2] != None {
 		root = string(args[2].(pyString))
 	}
-	state := s.state.ForConfig()
+	state := s.state.ForSubrepo(name)
 	if args[3] != None { // arg 3 is the config file to load
 		state = state.ForConfig(path.Join(s.pkg.Name, string(args[3].(pyString))))
 	} else if args[4].IsTruthy() { // arg 4 is bazel_compat
