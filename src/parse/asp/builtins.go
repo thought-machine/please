@@ -769,7 +769,7 @@ func addData(s *scope, args []pyObject) pyObject {
 	s.Assert(s.Callback, "can only be called from a pre- or post-build callback")
 	target := getTargetPost(s, string(args[0].(pyString)))
 
-	// add_data() can take a string, list, or dict
+	// add_data() builtin can take a string, list, or dict
 	if isType(args[1], "string") {
 		addDataToTargetAndMaybeQueue(s, fmt.Sprint(args[1].(pyString)), target)
 	} else if isType(args[1], "list") {
