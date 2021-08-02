@@ -94,7 +94,7 @@ var opts struct {
 	Profile          string `long:"profile_file" hidden:"true" description:"Write profiling output to this file"`
 	MemProfile       string `long:"mem_profile_file" hidden:"true" description:"Write a memory profile to this file"`
 	MutexProfile     string `long:"mutex_profile_file" hidden:"true" description:"Write a contended mutex profile to this file"`
-	GoTraceFile     string `long:"go_trace_file" hidden:"true" description:"Write a go trace profile to this file"`
+	GoTraceFile      string `long:"go_trace_file" hidden:"true" description:"Write a go trace profile to this file"`
 	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
@@ -208,7 +208,7 @@ var opts struct {
 	} `command:"exec" description:"Builds and executes a single target in a sandboxed environment"`
 
 	Clean struct {
-		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
+		NoBackground bool `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
 		Args         struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
 		} `positional-args:"true"`
@@ -1196,6 +1196,26 @@ func unannotateLabels(als []core.AnnotatedOutputLabel) []core.BuildLabel {
 	return labels
 }
 
+func writeGoTraceFile() {
+	if err := runtime.StartTrace(); err != nil {
+		log.Fatalf("failed to start trace: %v", err)
+	}
+
+	f, err := os.Create(opts.GoTraceFile)
+	if err != nil {
+		log.Fatalf("Failed to create trace file: %v", err)
+	}
+	for {
+		data := runtime.ReadTrace()
+		if data == nil {
+			return
+		}
+		if _, err := f.Write(data); err != nil {
+			log.Fatalf("Failed to write trace data: %v", err)
+		}
+	}
+}
+
 // toExitCode returns an integer process exit code based on the outcome of a build.
 // 0 -> success
 // 1 -> general failure (and why is he reading my hard drive?)
@@ -1249,24 +1269,7 @@ func execute(command string) int {
 		}()
 	}
 	if opts.GoTraceFile != "" {
-		if err := runtime.StartTrace(); err != nil {
-			log.Fatalf("failed to start trace: %v", err)
-		}
-		f, err := os.Create(opts.GoTraceFile)
-		if err != nil {
-			log.Fatalf("Failed to create trace file: %v", err)
-		}
-		go func() {
-			for {
-				data := runtime.ReadTrace()
-				if data == nil {
-					return
-				}
-				if _, err := f.Write(data); err != nil {
-					log.Fatalf("Failed to write trace data: %v", err)
-				}
-			}
-		}()
+		go writeGoTraceFile()
 		defer func() {
 			runtime.StopTrace()
 		}()
