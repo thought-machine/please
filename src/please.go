@@ -470,7 +470,9 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(!opts.Exec.Share.Network, !opts.Exec.Share.Mount))
+
+		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
+		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount))
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
