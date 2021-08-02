@@ -972,7 +972,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// Copy with the architecture-specific config file.
 	// This is slightly wrong in that other things (e.g. user-specified command line overrides) should
 	// in fact take priority over this, but that's a lot more fiddly to get right.
-	s := state.ForConfig(".plzconfig_" + arch.String())
+	s := state.forConfig(".plzconfig_" + arch.String())
 	s.Arch = arch
 	return s
 }
@@ -989,8 +989,8 @@ func (state *BuildState) findArch(arch cli.Arch) *BuildState {
 	return nil
 }
 
-// ForConfig creates a copy of this BuildState based on the given config files.
-func (state *BuildState) ForConfig(config ...string) *BuildState {
+// forConfig creates a copy of this BuildState based on the given config files.
+func (state *BuildState) forConfig(config ...string) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	// Duplicate & alter configuration
@@ -1009,8 +1009,14 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 	return s
 }
 
-func (state *BuildState) ForSubrepo(name string) *BuildState {
-	s := state.ForConfig()
+// ForSubrepo creates a new state for the given subrepo
+func (state *BuildState) ForSubrepo(name string, config ...string) *BuildState {
+	for _, s := range state.progress.allStates {
+		if s.CurrentSubrepo == name {
+			return s
+		}
+	}
+	s := state.forConfig(config...)
 	s.CurrentSubrepo = name
 	return s
 }

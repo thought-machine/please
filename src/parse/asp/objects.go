@@ -946,7 +946,7 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 		if core.LooksLikeABuildLabel(value) {
 			value = core.ParseBuildLabelContext(value, contextPackage).String()
 		}
-		pluginNamespace[key] = pyString(value)
+		pluginNamespace[strings.ToUpper(key)] = pyString(value)
 	}
 	c[strings.ToUpper(pluginName)] = pluginNamespace
 }
