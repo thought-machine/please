@@ -69,6 +69,7 @@ func ReleaseRepoLock() {
 	if err := lockFile.Close(); err != nil {
 		log.Errorf("Failed to close lock file: %s", err)
 	}
+	lockFile = nil
 }
 
 // ReadLastOperationOrDie reads the last operation performed from the lock file. Dies if unsuccessful.

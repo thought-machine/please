@@ -185,17 +185,17 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	}
 	if len(target.Outputs()) > 0 {
 		// Bit of a hack; ideally we would be unaware of the sandbox here.
-		if target.TestSandbox && runtime.GOOS == "linux" && !strings.HasPrefix(RepoRoot, "/tmp/") && testDir != "." {
+		if target.Test.Sandbox && runtime.GOOS == "linux" && !strings.HasPrefix(RepoRoot, "/tmp/") && testDir != "." {
 			env = append(env, "TEST="+path.Join(SandboxDir, target.Outputs()[0]))
 		} else {
 			env = append(env, "TEST="+path.Join(testDir, target.Outputs()[0]))
 		}
 	}
-	if len(target.testTools) == 1 {
-		env = append(env, "TOOL="+toolPath(state, target.testTools[0], abs))
+	if len(target.Test.tools) == 1 {
+		env = append(env, "TOOL="+toolPath(state, target.Test.tools[0], abs))
 	}
 	// Named tools as well.
-	for name, tools := range target.namedTestTools {
+	for name, tools := range target.Test.namedTools {
 		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
 	}
 	if len(target.Data) > 0 {
@@ -214,7 +214,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	if state.DebugTests {
 		env = append(env, "DEBUG=true")
 	}
-	if target.TestSandbox && len(state.Config.Sandbox.Dir) > 0 {
+	if target.Test.Sandbox && len(state.Config.Sandbox.Dir) > 0 {
 		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
 	}
 	return withUserProvidedEnv(target, env)
@@ -239,17 +239,19 @@ func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) Build
 		env = append(env, "OUT="+outEnv[0])
 	}
 
-	env = append(env,
-		"TOOLS="+strings.Join(toolPaths(state, target.AllTestTools(), true), " "),
-	)
+	if target.IsTest() {
+		env = append(env,
+			"TOOLS="+strings.Join(toolPaths(state, target.AllTestTools(), true), " "),
+		)
+		if len(target.Test.tools) == 1 {
+			env = append(env, "TOOL="+toolPath(state, target.Test.tools[0], true))
+		}
+		// Named tools as well.
+		for name, tools := range target.Test.namedTools {
+			env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, true), " "))
+		}
+	}
 
-	if len(target.testTools) == 1 {
-		env = append(env, "TOOL="+toolPath(state, target.testTools[0], true))
-	}
-	// Named tools as well.
-	for name, tools := range target.namedTestTools {
-		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, true), " "))
-	}
 	if len(target.Data) > 0 {
 		if inTmpDir {
 			env = append(env, "DATA="+strings.Join(target.AllDataPaths(state.Graph), " "))
@@ -268,6 +270,21 @@ func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) Build
 			env = append(env, "DATA_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
 		}
 	}
+	return withUserProvidedEnv(target, env)
+}
+
+// ExecEnvironment creates the environment variables for a `plz exec`.
+func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) BuildEnv {
+	env := TargetEnvironment(state, target)
+
+	env = append(env, "TMP_DIR="+filepath.Join(RepoRoot, execDir))
+
+	outEnv := target.Outputs()
+	env = append(env, "OUTS="+strings.Join(outEnv, " "))
+	if len(outEnv) == 1 {
+		env = append(env, "OUT="+outEnv[0])
+	}
+
 	return withUserProvidedEnv(target, env)
 }
 

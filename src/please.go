@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/thought-machine/go-flags"
+	"gopkg.in/op/go-logging.v1"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -14,15 +16,13 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/thought-machine/go-flags"
-	"gopkg.in/op/go-logging.v1"
-
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cache"
 	"github.com/thought-machine/please/src/clean"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/exec"
 	"github.com/thought-machine/please/src/export"
 	"github.com/thought-machine/please/src/format"
 	"github.com/thought-machine/please/src/fs"
@@ -33,6 +33,7 @@ import (
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/src/plzinit"
+	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
 	"github.com/thought-machine/please/src/sandbox"
@@ -193,6 +194,17 @@ var opts struct {
 		} `positional-args:"true"`
 		Remote bool `long:"remote" description:"Send targets to be executed remotely."`
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
+
+	Exec struct {
+		Share struct {
+			Network bool `long:"share_network" description:"Share network namespace"`
+			Mount   bool `long:"share_mount" description:"Share mount namespace"`
+		} `group:"Options allowing namespace sharing"`
+		Args struct {
+			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
+			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
+		} `positional-args:"true"`
+	} `command:"exec" description:"Builds and executes a single target in a sandboxed environment"`
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
@@ -453,6 +465,13 @@ var buildFunctions = map[string]func() int{
 		}
 		return toExitCode(success, state)
 	},
+	"exec": func() int {
+		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
+		if !success {
+			return toExitCode(success, state)
+		}
+		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(!opts.Exec.Share.Network, !opts.Exec.Share.Mount))
+	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
@@ -600,8 +619,9 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"revdeps": func() int {
-		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.ReverseDeps(state, state.ExpandLabels(utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
+		labels := utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
+		return runQuery(true, append(labels, core.WholeGraph...), func(state *core.BuildState) {
+			query.ReverseDeps(state, state.ExpandLabels(labels), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
 		})
 	},
 	"somepath": func() int {
@@ -621,7 +641,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"print": func() int {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.Print(state.Graph, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
+			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
 		})
 	},
 	"input": func() int {
@@ -647,14 +667,34 @@ var buildFunctions = map[string]func() int{
 			}
 			return 0
 		}
-		if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
-			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
+
+		var qry string
+		if len(fragments) == 0 {
+			qry = "//"
+		} else {
+			qry = fragments[0]
 		}
-		labels, parseLabels, hidden := query.CompletionLabels(config, fragments, core.RepoRoot)
-		if success, state := Please(parseLabels, config, false, false); success {
-			binary := opts.Query.Completions.Cmd == "run"
+
+		completions := query.CompletionLabels(config, qry, core.RepoRoot)
+		// We have no labels to parse so we're done already
+		if completions.PackageToParse == "" && !completions.IsRoot {
+			for _, pkg := range completions.Pkgs {
+				fmt.Printf("//%s\n", pkg)
+			}
+			return 0
+		}
+
+		labelsToParse := []core.BuildLabel{{PackageName: completions.PackageToParse, Name: "all"}}
+		binary := opts.Query.Completions.Cmd == "run"
+
+		// The original pkg might not have binary targets. If we only match one package, we might need to parse that too.
+		if binary && len(completions.Pkgs) == 1 {
+			labelsToParse = append(labelsToParse, core.BuildLabel{PackageName: completions.Pkgs[0], Name: "all"})
+		}
+
+		if success, state := Please(labelsToParse, config, false, false); success {
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
-			query.Completions(state.Graph, labels, binary, test, hidden)
+			query.Completions(state.Graph, completions.PackageToParse, completions.NamePrefix, completions.Pkgs, binary, test, completions.Hidden)
 			return 0
 		}
 		return 1
@@ -875,13 +915,13 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	}
 	state := core.NewBuildState(config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
-	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)       // Only one of these can be passed
-	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially // Similarly here.
-	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)      // And here
+	state.NumTestRuns = uint16(utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)) // Only one of these can be passed
+	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially   // Similarly here.
+	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)        // And here
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
-	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0
+	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty()
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")

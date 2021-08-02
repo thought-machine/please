@@ -54,6 +54,31 @@ const TestResultsDirLabel = "test_results_dir"
 // tempOutputSuffix is the suffix we attach to temporary outputs to avoid name clashes.
 const tempOutputSuffix = ".out"
 
+type TestFields struct {
+	// Shell command to run for test targets.
+	Command string `name:"test_cmd"`
+	// Per-configuration test commands to run.
+	Commands map[string]string `name:"test_cmd"`
+	// The results of this test target, if it is one.
+	Results *TestSuite `print:"false"`
+	// Like tools but available to the test_cmd instead
+	tools []BuildInput `name:"test_tools"`
+	// Named test tools, similar to named sources.
+	namedTools map[string][]BuildInput `name:"test_tools"`
+	// The timeout for the test
+	Timeout time.Duration `name:"test_timeout"`
+	// Extra output files from the test.
+	// These are in addition to the usual test.results output file.
+	Outputs []string `name:"test_outputs"`
+	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
+	Flakiness uint8 `name:"flaky"`
+	// True if the test action is sandboxed.
+	Sandbox bool `name:"test_sandbox"`
+	// True if the target is a test and has no output file.
+	// Default is false, meaning all tests must produce test.results as output.
+	NoOutput bool `name:"no_test_output"`
+}
+
 // A BuildTarget is a representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 type BuildTarget struct {
@@ -92,63 +117,9 @@ type BuildTarget struct {
 	Command string `name:"cmd" hide:"filegroup"`
 	// Per-configuration shell commands to run.
 	Commands map[string]string `name:"cmd" hide:"filegroup"`
-	// Shell command to run for test targets.
-	TestCommand string `name:"test_cmd"`
-	// Per-configuration test commands to run.
-	TestCommands map[string]string `name:"test_cmd"`
-	// Represents the state of this build target (see below)
-	state int32 `print:"false"`
-	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
-	IsBinary bool `name:"binary"`
-	// True if this target is a test
-	IsTest bool `name:"test"`
-	// Indicates that the target can only be depended on by tests or other rules with this set.
-	// Used to restrict non-deployable code and also affects coverage detection.
-	TestOnly bool `name:"test_only"`
-	// True if the build action is sandboxed.
-	Sandbox bool
-	// True if the test action is sandboxed.
-	TestSandbox bool `name:"test_sandbox"`
-	// True if the target is a test and has no output file.
-	// Default is false, meaning all tests must produce test.results as output.
-	NoTestOutput bool `name:"no_test_output"`
-	// True if this target needs access to its transitive dependencies to build.
-	// This would be false for most 'normal' genrules but true for eg. compiler steps
-	// that need to build in everything.
-	NeedsTransitiveDependencies bool `name:"needs_transitive_deps"`
-	// True if this target blocks recursive exploring for transitive dependencies.
-	// This is typically false for _library rules which aren't complete, and true
-	// for _binary rules which normally are, and genrules where you don't care about
-	// the inputs, only whatever they were turned into.
-	OutputIsComplete bool `name:"output_is_complete"`
-	// If true, the rule is given an env var at build time that contains the hash of its
-	// transitive dependencies, which can be used to identify the output in a predictable way.
-	Stamp bool
-	// If true, the target must be run locally (i.e. is not compatible with remote execution).
-	Local bool
-	// If true, the executed commands will exit whenever an error is encountered (i.e. shells
-	// are executed with -e).
-	ExitOnError bool
-	// If true, the target is needed for a subinclude and therefore we will have to make sure its
-	// outputs are available locally when built.
-	NeededForSubinclude bool `print:"false"`
-	// Marks the target as a filegroup.
-	IsFilegroup bool `print:"false"`
-	// Marks the target as a remote_file.
-	IsRemoteFile bool `print:"false"`
-	// Marks the target as a text_file.
-	IsTextFile bool `print:"false"`
-	// Marks that the target was added in a post-build function.
-	AddedPostBuild bool `print:"false"`
-	// If true, the interactive progress display will try to infer the target's progress
-	// via some heuristics on its output.
-	ShowProgress bool `name:"progress"`
+	Test     *TestFields       `name:"test"`
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
-	// The results of this test target, if it is one.
-	Results TestSuite `print:"false"`
-	// The number of completed runs
-	completedRuns int `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
 	BuildingDescription string `name:"building_description"`
@@ -180,24 +151,15 @@ type BuildTarget struct {
 	// Tools that this rule will use, ie. other rules that it may use at build time which are not
 	// copied into its source directory.
 	Tools []BuildInput
-	// Like tools but available to the test_cmd instead
-	testTools []BuildInput `name:"test_tools"`
 	// Named tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"tools"`
-	// Named test tools, similar to named sources.
-	namedTestTools map[string][]BuildInput `name:"test_tools"`
 	// Target-specific environment passthroughs.
 	PassEnv *[]string `name:"pass_env"`
 	// Target-specific unsafe environment passthroughs.
 	PassUnsafeEnv *[]string `name:"pass_unsafe_env"`
-	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
-	Flakiness int `name:"flaky"`
+
 	// Timeouts for build/test actions
-	BuildTimeout time.Duration `name:"timeout"`
-	TestTimeout  time.Duration `name:"test_timeout"`
-	// Extra output files from the test.
-	// These are in addition to the usual test.results output file.
-	TestOutputs []string `name:"test_outputs"`
+	BuildTimeout time.Duration `name:"build_timeout"`
 	// OutputDirectories are the directories that outputs can be produced into which will be added to the root of the
 	// output for the rule. For example if an output directory "foo" contains "bar.txt" the rule will have the output
 	// "bar.txt"
@@ -212,6 +174,48 @@ type BuildTarget struct {
 	Env map[string]string `name:"env"`
 	// The content of text_file() rules
 	FileContent string `name:"content"`
+	// Represents the state of this build target (see below)
+	state int32 `print:"false"`
+	// The number of completed runs
+	completedRuns uint16 `print:"false"`
+	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
+	IsBinary bool `name:"binary"`
+	// Indicates that the target can only be depended on by tests or other rules with this set.
+	// Used to restrict non-deployable code and also affects coverage detection.
+	TestOnly bool `name:"test_only"`
+	// True if the build action is sandboxed.
+	Sandbox bool
+	// True if this target needs access to its transitive dependencies to build.
+	// This would be false for most 'normal' genrules but true for eg. compiler steps
+	// that need to build in everything.
+	NeedsTransitiveDependencies bool `name:"needs_transitive_deps"`
+	// True if this target blocks recursive exploring for transitive dependencies.
+	// This is typically false for _library rules which aren't complete, and true
+	// for _binary rules which normally are, and genrules where you don't care about
+	// the inputs, only whatever they were turned into.
+	OutputIsComplete bool `name:"output_is_complete"`
+	// If true, the rule is given an env var at build time that contains the hash of its
+	// transitive dependencies, which can be used to identify the output in a predictable way.
+	Stamp bool
+	// If true, the target must be run locally (i.e. is not compatible with remote execution).
+	Local bool
+	// If true, the executed commands will exit whenever an error is encountered (i.e. shells
+	// are executed with -e).
+	ExitOnError bool
+	// If true, the target is needed for a subinclude and therefore we will have to make sure its
+	// outputs are available locally when built.
+	NeededForSubinclude bool `print:"false"`
+	// Marks the target as a filegroup.
+	IsFilegroup bool `print:"false"`
+	// Marks the target as a remote_file.
+	IsRemoteFile bool `print:"false"`
+	// Marks the target as a text_file.
+	IsTextFile bool `print:"false"`
+	// Marks that the target was added in a post-build function.
+	AddedPostBuild bool `print:"false"`
+	// If true, the interactive progress display will try to infer the target's progress
+	// via some heuristics on its output.
+	ShowProgress bool `name:"progress"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -249,7 +253,7 @@ type PostBuildFunction interface {
 }
 
 type depInfo struct {
-	declared BuildLabel     // the originally declared dependency
+	declared *BuildLabel    // the originally declared dependency
 	deps     []*BuildTarget // list of actual deps
 	resolved bool           // has the graph resolved it
 	exported bool           // is it an exported dependency
@@ -277,7 +281,7 @@ func (o OutputDirectory) ShouldAddFiles() bool {
 
 // A BuildTargetState tracks the current state of this target in regard to whether it's built
 // or not. Targets only move forwards through this (i.e. the state of a target only ever increases).
-type BuildTargetState int32
+type BuildTargetState uint8
 
 // The available states for a target.
 const (
@@ -375,6 +379,11 @@ func (target *BuildTarget) TestDirs() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
 }
 
+// IsTest returns whether or not the target is a test target i.e. has its Test field populated
+func (target *BuildTarget) IsTest() bool {
+	return target.Test != nil
+}
+
 // CompleteRun completes a run and returns true if this was the last run
 func (target *BuildTarget) CompleteRun(state *BuildState) bool {
 	target.mutex.Lock()
@@ -399,12 +408,12 @@ func (target *BuildTarget) AddTestResults(results TestSuite) {
 	target.mutex.Lock()
 	defer target.mutex.Unlock()
 
-	if len(target.Results.TestCases) == 0 {
-		target.Results.Cached = results.Cached // On the first run we take whatever this is
+	if len(target.Test.Results.TestCases) == 0 {
+		target.Test.Results.Cached = results.Cached // On the first run we take whatever this is
 	} else {
-		target.Results.Cached = target.Results.Cached && results.Cached
+		target.Test.Results.Cached = target.Test.Results.Cached && results.Cached
 	}
-	target.Results.Collapse(results)
+	target.Test.Results.Collapse(results)
 }
 
 // StartTestSuite sets the initial properties on the result test suite
@@ -413,8 +422,8 @@ func (target *BuildTarget) StartTestSuite() {
 	defer target.mutex.Unlock()
 
 	// If the results haven't been set yet, set them
-	if target.Results.Name == "" {
-		target.Results = TestSuite{
+	if target.Test.Results == nil {
+		target.Test.Results = &TestSuite{
 			Package:   strings.ReplaceAll(target.Label.PackageName, "/", "."),
 			Name:      target.Label.Name,
 			Timestamp: time.Now().Format(time.RFC3339),
@@ -464,12 +473,11 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 // resolveDependencies matches up all declared dependencies to the actual build targets.
 // TODO(peterebden,tatskaari): Work out if we really want to have this and how the suite of *Dependencies functions
 //                             below should behave (preferably nicely).
-// TODO(tatskaari): Work out if we can use a channel instead of a callback.
 func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
 	var g errgroup.Group
 	target.mutex.RLock()
 	for i := range target.dependencies {
-		dep := &target.dependencies[i]
+		dep := &target.dependencies[i] // avoid using a loop variable here as it mutates each iteration
 		if len(dep.deps) > 0 {
 			continue // already done
 		}
@@ -490,23 +498,37 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 }
 
 func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo) error {
-	t := graph.WaitForTarget(dep.declared)
+	t := graph.WaitForTarget(*dep.declared)
 	if t == nil {
 		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
 	}
+	dep.declared = &t.Label // saves memory by not storing the label twice once resolved
+
 	labels := t.provideFor(target)
+
 	if len(labels) == 0 {
+		target.mutex.Lock()
+		defer target.mutex.Unlock()
+
 		// Small optimisation to avoid re-looking-up the same target again.
 		dep.deps = []*BuildTarget{t}
 		return nil
 	}
+
+	deps := make([]*BuildTarget, 0, len(labels))
 	for _, l := range labels {
 		t := graph.WaitForTarget(l)
 		if t == nil {
 			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, t)
 		}
-		dep.deps = append(dep.deps, t)
+		deps = append(deps, t)
 	}
+
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
+
+	dep.deps = deps
+
 	return nil
 }
 
@@ -522,7 +544,7 @@ func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, len(target.dependencies))
 	for i, dep := range target.dependencies {
-		ret[i] = dep.declared
+		ret[i] = *dep.declared
 	}
 	sort.Sort(ret)
 	return ret
@@ -534,8 +556,8 @@ func (target *BuildTarget) DeclaredDependenciesStrict() []BuildLabel {
 	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, dep := range target.dependencies {
-		if !dep.exported && !dep.source && !target.IsTool(dep.declared) {
-			ret = append(ret, dep.declared)
+		if !dep.exported && !dep.source && !target.IsTool(*dep.declared) {
+			ret = append(ret, *dep.declared)
 		}
 	}
 	sort.Sort(ret)
@@ -597,7 +619,7 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, info := range target.dependencies {
 		if info.exported {
-			ret = append(ret, info.declared)
+			ret = append(ret, *info.declared)
 		}
 	}
 	return ret
@@ -790,10 +812,10 @@ func (target *BuildTarget) CanSee(state *BuildState, dep *BuildTarget) bool {
 // Returns an error if not, or nil if all's well.
 func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
 	for _, d := range target.dependencies {
-		dep := state.Graph.TargetOrDie(d.declared)
+		dep := state.Graph.TargetOrDie(*d.declared)
 		if !target.CanSee(state, dep) {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
-		} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
+		} else if dep.TestOnly && !(target.IsTest() || target.TestOnly) {
 			if target.Label.isExperimental(state) {
 				log.Warning("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
 			} else {
@@ -937,7 +959,7 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 	defer target.mutex.Unlock()
 	info := target.dependencyInfo(label)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: label})
+		target.dependencies = append(target.dependencies, depInfo{declared: &label})
 		info = &target.dependencies[len(target.dependencies)-1]
 	}
 	if dep != nil {
@@ -949,7 +971,7 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 // dependencyInfo returns the information about a declared dependency, or nil if the target doesn't have it.
 func (target *BuildTarget) dependencyInfo(label BuildLabel) *depInfo {
 	for i, info := range target.dependencies {
-		if info.declared == label {
+		if *info.declared == label {
 			return &target.dependencies[i]
 		}
 	}
@@ -995,7 +1017,7 @@ func (target *BuildTarget) HasLabel(label string) bool {
 			return true
 		}
 	}
-	return label == "test" && target.IsTest
+	return label == "test" && target.IsTest()
 }
 
 // PrefixedLabels returns all labels of this target with the given prefix.
@@ -1177,7 +1199,7 @@ func (target *BuildTarget) AddTool(tool BuildInput) {
 
 // AddTestTool adds a new test tool to the target.
 func (target *BuildTarget) AddTestTool(tool BuildInput) {
-	target.testTools = append(target.testTools, tool)
+	target.Test.tools = append(target.Test.tools, tool)
 	if label, ok := tool.Label(); ok {
 		target.AddDependency(label)
 	}
@@ -1185,14 +1207,14 @@ func (target *BuildTarget) AddTestTool(tool BuildInput) {
 
 // AllTestTools returns all the test tool paths for this rule.
 func (target *BuildTarget) AllTestTools() []BuildInput {
-	if target.namedTestTools == nil {
-		return target.testTools
+	if target.Test.namedTools == nil {
+		return target.Test.tools
 	}
-	return target.allBuildInputs(target.testTools, target.namedTestTools)
+	return target.allBuildInputs(target.Test.tools, target.Test.namedTools)
 }
 
 func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
-	return target.namedTestTools
+	return target.Test.namedTools
 }
 
 // AddDatum adds a new item of data to the target.
@@ -1231,10 +1253,13 @@ func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
 
 // AddNamedTestTool adds a new tool to the target.
 func (target *BuildTarget) AddNamedTestTool(name string, tool BuildInput) {
-	if target.namedTestTools == nil {
-		target.namedTestTools = map[string][]BuildInput{name: {tool}}
+	if target.Test == nil {
+		target.Test = new(TestFields)
+	}
+	if target.Test.namedTools == nil {
+		target.Test.namedTools = map[string][]BuildInput{name: {tool}}
 	} else {
-		target.namedTestTools[name] = append(target.namedTestTools[name], tool)
+		target.Test.namedTools[name] = append(target.Test.namedTools[name], tool)
 	}
 	if label, ok := tool.Label(); ok {
 		target.AddDependency(label)
@@ -1254,14 +1279,14 @@ func (target *BuildTarget) AddCommand(config, command string) {
 }
 
 // AddTestCommand adds a new config-specific test command to this build target.
-// Adding a general command is still done by simply setting the TestCommand member.
+// Adding a general command is still done by simply setting the Command member.
 func (target *BuildTarget) AddTestCommand(config, command string) {
-	if target.TestCommand != "" {
+	if target.Test.Command != "" {
 		panic(fmt.Sprintf("Adding named test command %s to %s, but it already has a general test command set", config, target.Label))
-	} else if target.TestCommands == nil {
-		target.TestCommands = map[string]string{config: command}
+	} else if target.Test.Commands == nil {
+		target.Test.Commands = map[string]string{config: command}
 	} else {
-		target.TestCommands[config] = command
+		target.Test.Commands[config] = command
 	}
 }
 
@@ -1280,7 +1305,7 @@ func (target *BuildTarget) GetCommandConfig(config string) string {
 
 // GetTestCommand returns the command we should use to test this target for the current config.
 func (target *BuildTarget) GetTestCommand(state *BuildState) string {
-	return target.getCommand(state, target.TestCommands, target.TestCommand)
+	return target.getCommand(state, target.Test.Commands, target.Test.Command)
 }
 
 func (target *BuildTarget) getCommand(state *BuildState, commands map[string]string, singleCommand string) string {
@@ -1419,7 +1444,7 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, 
 	}
 	info := target.dependencyInfo(dep)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported, source: source, internal: internal})
+		target.dependencies = append(target.dependencies, depInfo{declared: &dep, exported: exported, source: source, internal: internal})
 	} else {
 		info.exported = info.exported || exported
 		info.source = info.source && source
@@ -1483,7 +1508,7 @@ func (target *BuildTarget) AddOptionalOutput(output string) {
 
 // AddTestOutput adds a new test output to the target if it's not already there.
 func (target *BuildTarget) AddTestOutput(output string) {
-	target.TestOutputs = target.insert(target.TestOutputs, output)
+	target.Test.Outputs = target.insert(target.Test.Outputs, output)
 }
 
 // AddNamedOutput adds a new output to the target under a named group.
@@ -1561,7 +1586,10 @@ func (target *BuildTarget) StampFileName() string {
 // NeedCoverage returns true if this target should output coverage during a test
 // for a particular invocation.
 func (target *BuildTarget) NeedCoverage(state *BuildState) bool {
-	return state.NeedCoverage && !target.NoTestOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
+	if target.Test == nil {
+		return false
+	}
+	return state.NeedCoverage && !target.Test.NoOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
 }
 
 // Parent finds the parent of a build target, or nil if the target is parentless.
@@ -1590,7 +1618,7 @@ func (target *BuildTarget) ShouldShowProgress() bool {
 // ProgressDescription returns a description of what the target is doing as it runs.
 // This is provided as a function to satisfy the process package.
 func (target *BuildTarget) ProgressDescription() string {
-	if target.State() >= Built && target.IsTest {
+	if target.State() >= Built && target.IsTest() {
 		return "testing"
 	}
 	return target.BuildingDescription

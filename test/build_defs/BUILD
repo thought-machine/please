@@ -8,7 +8,7 @@ sh_binary(
 
 filegroup(
     name = "build_defs",
-    srcs = glob(["*.build_defs"]),
+    srcs = ["test.build_defs"],
 )
 
 filegroup(

@@ -104,14 +104,14 @@ func (backend logBackendFacade) Log(level logging.Level, calldepth int, rec *log
 
 // LogBackend is the backend we use for logging during the interactive console display.
 type LogBackend struct {
-	mutex                                                                 sync.Mutex
-	rows, cols, maxRecords, interactiveRows, maxInteractiveRows, maxLines int
-	output                                                                []string
 	logMessages                                                           *list.List
 	messageHistory                                                        *list.List
-	messageCount                                                          int
 	formatter                                                             logging.Formatter
 	origBackend                                                           logging.Backend
+	output                                                                []string
+	mutex                                                                 sync.Mutex
+	rows, cols, maxRecords, interactiveRows, maxInteractiveRows, maxLines int
+	messageCount                                                          int
 	passthrough                                                           bool
 }
 

@@ -1,3 +1,33 @@
+Version 16.3.0
+--------------
+    * Implemented a `plz exec` subcommand that is designed for used by IDEs to run targets
+      within the hermetic env for debugging and profiling #1917
+    * Allow `system_library()` to take in directories #1931
+    * Some LSP fixes and debug improvements #1937 #1943 #1962
+    * The python behave test runner now checks `$RESULTS_FILE` #1940
+    * Rework the cycle detector to run async only once we detect a deadlock. This also addresses
+      performance problems on large build graphs where the cycle detector was simply too slow. #1936
+    * Fix issue where `plz watch` couldn't acquire the repo lock #1944
+    * CLI completions improvements #1936 #1948
+    * Various performance improvements focussing on memory usage. 16.3.0 now uses 50% less memory
+      and parses the build graph in 75% of the time. #1949 #1947 #1952 #1956 #1921 #1960 #1955
+      #1961 #1964 #1969
+    * `go_mod_download()` and `go_module()` now add the module as a label which can be used to
+      list modules: `plz query print --label go_module: //third_party/go/...` #1954
+    * Add a `remote` label to `remote_file()` #1959
+    * Query revdeps fails fast on targets that don't exist #1953
+
+
+Version 16.2.1
+--------------
+    * Make `pip_library()` more deterministic by stripping debug symbols in C code #1909
+    * Make `plz hash --update` keep going once it updates a hash so it can update multiple
+      in one pass #1919
+    * Apply linker flags to `go_benchmark()` #1924
+    * Fix issue where the cycle detector wasn't detecting cycles correctly #1926
+    * Strip please location from PATH for remote execution #1930
+
+
 Version 16.2.0
 --------------
     * Fixed issue where Please would attempt to use xattrs on unsupported filesystems

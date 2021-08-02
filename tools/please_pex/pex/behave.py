@@ -26,5 +26,5 @@ def run_tests(args=None):
         logging.info('Getting a single feature dir')
         features = get_features_dir()
 
-    args += features + [ '--junit', '--junit-directory', 'test.results']
+    args += features + [ '--junit', '--junit-directory', os.getenv("RESULTS_FILE", 'test.results')]
     main(args)

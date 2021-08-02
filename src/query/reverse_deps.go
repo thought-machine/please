@@ -70,11 +70,11 @@ type revdeps struct {
 	subincludes       map[core.BuildLabel][]*core.Package
 	followSubincludes bool
 
-	// os is the open set of targets to process
-	os *openSet
-
 	// hidden is whether to count hidden targets towards the depth budget
 	hidden bool
+
+	// os is the open set of targets to process
+	os *openSet
 
 	// maxDepth is the depth budget for the search. -1 means unlimited.
 	maxDepth int
