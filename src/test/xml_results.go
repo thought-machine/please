@@ -425,7 +425,7 @@ func SerialiseResultsToXML(target *core.BuildTarget, indent, storeOutputOnSucces
 	if indent {
 		s = "    "
 	}
-	suite := toXMLTestSuite(&target.Results, storeOutputOnSuccess)
+	suite := toXMLTestSuite(target.Test.Results, storeOutputOnSuccess)
 	suites := &jUnitXMLTestSuites{
 		Name:       target.Label.String(),
 		TestSuites: []*jUnitXMLTestSuite{suite},
@@ -476,8 +476,8 @@ func mustSerialiseResults(graph *core.BuildGraph, storeOutputOnSuccess bool) []b
 	// Collapse any testsuite with the same name
 	xmlSuites := make(map[string]*jUnitXMLTestSuite)
 	for _, target := range graph.AllTargets() {
-		if target.IsTest {
-			testSuite := &target.Results
+		if target.IsTest() && target.Test.Results != nil {
+			testSuite := target.Test.Results
 			if len(testSuite.TestCases) > 0 {
 				xmlTestSuite := toXMLTestSuite(testSuite, storeOutputOnSuccess)
 				name := testSuite.JavaStyleName()

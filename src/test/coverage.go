@@ -70,7 +70,7 @@ func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coverageF
 		doneTargets[target] = true
 		for _, path := range target.AllSourcePaths(state.Graph) {
 			if hasCoverageExtension(state, path) {
-				coverageFiles[path] = !target.IsTest && !target.TestOnly // Skip test source files from actual coverage display
+				coverageFiles[path] = !target.IsTest() && !target.TestOnly // Skip test source files from actual coverage display
 			}
 		}
 		if deps {
