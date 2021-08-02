@@ -144,7 +144,7 @@ func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget
 	t.Requires = target.Requires
 	rawHash := append(build.RuleHash(state, target, true, false), state.Hashes.Config...)
 	t.Hash = base64.RawStdEncoding.EncodeToString(rawHash)
-	t.Test = target.IsTest
+	t.Test = target.IsTest()
 	t.Binary = target.IsBinary
 	t.TestOnly = target.TestOnly
 	return t
