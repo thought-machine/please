@@ -1,2 +1,6 @@
 [Parse]
 BuildFileName = BUILD_FILE
+
+[Sandbox]
+build = true
+test = true
