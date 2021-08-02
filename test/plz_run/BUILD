@@ -49,8 +49,8 @@ please_repo_e2e_test(
 please_repo_e2e_test(
     name = "_add_data_test",
     expected_output = {
-        "_add_data_gen.txt": "testing",
+        "_add_data_gen.txt": "data.txt",
     },
-    plz_command = "plz build //src:_add_data_gen",
+    plz_command = "plz query deps //src:_add_data_gen > _add_data_gen.txt",
     repo = "test_repo",
 )
