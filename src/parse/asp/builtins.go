@@ -754,8 +754,8 @@ func addDep(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-func addDataToTargetAndMaybeQueue(s *scope, dataStr string, target *core.BuildTarget) {
-	data := core.NewFileLabel(dataStr, s.pkg)
+func addDataToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, obj pyObject, systemAllowed, tool bool) {
+	data := core.NewFileLabel(string(obj.(pyString)), s.pkg)
 	target.AddDatum(data)
 	// Queue this dependency if it'll be needed.
 	if l, ok := data.Label(); ok && target.State() > core.Inactive {
@@ -767,21 +767,34 @@ func addDataToTargetAndMaybeQueue(s *scope, dataStr string, target *core.BuildTa
 // Add runtime dependencies to target
 func addData(s *scope, args []pyObject) pyObject {
 	s.Assert(s.Callback, "can only be called from a pre- or post-build callback")
-	target := getTargetPost(s, string(args[0].(pyString)))
+
+	label := args[0]
+	target := getTargetPost(s, string(label.(pyString)))
+
+	systemAllowed := true
+	tool := true
 
 	// add_data() builtin can take a string, list, or dict
 	if isType(args[1], "str") {
-		addDataToTargetAndMaybeQueue(s, fmt.Sprint(args[1].(pyString)), target)
+		if bi := ParseBuildInput(s, args[1], string(label.(pyString)), systemAllowed, tool); bi != nil {
+			addDataToTargetAndMaybeQueue(s, target, args[1], systemAllowed, tool)
+		}
 	} else if isType(args[1], "list") {
 		for _, str := range args[1].(pyList) {
-			addDataToTargetAndMaybeQueue(s, fmt.Sprint(str), target)
+			if bi := ParseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
+				addDataToTargetAndMaybeQueue(s, target, args[1], systemAllowed, tool)
+			}
 		}
 	} else if isType(args[1], "dict") {
 		for _, v := range args[1].(pyDict) {
-			for str := range v.(pyList) {
-				addDataToTargetAndMaybeQueue(s, fmt.Sprint(str), target)
+			for _, str := range v.(pyList) {
+				if bi := ParseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
+					addDataToTargetAndMaybeQueue(s, target, args[1], systemAllowed, tool)
+				}
 			}
 		}
+	} else {
+		log.Error("Unrecognised data type passed to add_data")
 	}
 
 	// TODO(peterebden): Do we even need the following any more?
