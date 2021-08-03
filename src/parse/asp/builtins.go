@@ -754,12 +754,12 @@ func addDep(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-func addDataToTargetAndMaybeQueue(s *scope, str string, target *core.BuildTarget) {
-	data := core.ParseBuildLabelContext(fmt.Sprint(str), s.pkg)
-	target.AddDatum(target.Label)
+func addDataToTargetAndMaybeQueue(s *scope, data_str string, target *core.BuildTarget) {
+	data := core.NewFileLabel(data_str, s.pkg)
+	target.AddDatum(data)
 	// Queue this dependency if it'll be needed.
-	if target.State() > core.Inactive {
-		err := s.state.QueueTarget(data, target.Label, true, false)
+	if l, ok := data.Label(); ok && target.State() > core.Inactive {
+		err := s.state.QueueTarget(l, target.Label, true, false)
 		s.Assert(err == nil, "%s", err)
 	}
 }
@@ -770,10 +770,10 @@ func addData(s *scope, args []pyObject) pyObject {
 	target := getTargetPost(s, string(args[0].(pyString)))
 
 	// add_data() builtin can take a string, list, or dict
-	if isType(args[1], "string") {
+	if isType(args[1], "str") {
 		addDataToTargetAndMaybeQueue(s, fmt.Sprint(args[1].(pyString)), target)
 	} else if isType(args[1], "list") {
-		for str := range args[1].(pyList) {
+		for _, str := range args[1].(pyList) {
 			addDataToTargetAndMaybeQueue(s, fmt.Sprint(str), target)
 		}
 	} else if isType(args[1], "dict") {

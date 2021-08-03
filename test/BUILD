@@ -273,21 +273,6 @@ plz_e2e_test(
     expected_failure = True,
 )
 
-# Test add_data functionality
-genrule(
-    name = "_add_data_gen",
-    cmd = "echo hello > _add_data_gen.txt",
-    pre_build = lambda name: add_data(name, "add_data_gen.txt"),
-)
-
-gentest(
-    name = "_add_data_test",
-    data = [":_add_data_gen"],
-    labels = ["manual"],
-    no_test_output = True,
-    test_cmd = "ls test/_add_data_gen.txt",
-)
-
 # Test the add_out functionality which has a subtle dependency on the order
 # we do things relating to the cache.
 genrule(
