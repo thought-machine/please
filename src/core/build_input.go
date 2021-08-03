@@ -18,12 +18,12 @@ type BuildInput interface {
 	FullPaths(graph *BuildGraph) []string
 	// LocalPaths returns paths within the local package
 	LocalPaths(graph *BuildGraph) []string
-	// Label returns the build label associated with this input, or nil if it doesn't have one (eg. it's just a file).
-	Label() *BuildLabel
+	// Label returns the build label associated with this input, or false if it doesn't have one.
+	Label() (BuildLabel, bool)
 	// nonOutputLabel returns the build label associated with this input, or nil if it doesn't have
 	// one or is a specific output of a rule.
 	// This is fiddly enough that we don't want to expose it outside the package right now.
-	nonOutputLabel() *BuildLabel
+	nonOutputLabel() (BuildLabel, bool)
 	// String returns a string representation of this input
 	String() string
 }
@@ -52,12 +52,12 @@ func (label FileLabel) LocalPaths(graph *BuildGraph) []string {
 }
 
 // Label returns the build rule associated with this input. For a FileLabel it's always nil.
-func (label FileLabel) Label() *BuildLabel {
-	return nil
+func (label FileLabel) Label() (BuildLabel, bool) {
+	return BuildLabel{}, false
 }
 
-func (label FileLabel) nonOutputLabel() *BuildLabel {
-	return nil
+func (label FileLabel) nonOutputLabel() (BuildLabel, bool) {
+	return BuildLabel{}, false
 }
 
 // String returns a string representation of this input.
@@ -91,12 +91,12 @@ func (label SubrepoFileLabel) LocalPaths(graph *BuildGraph) []string {
 }
 
 // Label returns the build rule associated with this input. For a SubrepoFileLabel it's always nil.
-func (label SubrepoFileLabel) Label() *BuildLabel {
-	return nil
+func (label SubrepoFileLabel) Label() (BuildLabel, bool) {
+	return BuildLabel{}, false
 }
 
-func (label SubrepoFileLabel) nonOutputLabel() *BuildLabel {
-	return nil
+func (label SubrepoFileLabel) nonOutputLabel() (BuildLabel, bool) {
+	return BuildLabel{}, false
 }
 
 // String returns a string representation of this input.
@@ -138,12 +138,12 @@ func (label SystemFileLabel) LocalPaths(graph *BuildGraph) []string {
 }
 
 // Label returns the build rule associated with this input. For a SystemFileLabel it's always nil.
-func (label SystemFileLabel) Label() *BuildLabel {
-	return nil
+func (label SystemFileLabel) Label() (BuildLabel, bool) {
+	return BuildLabel{}, false
 }
 
-func (label SystemFileLabel) nonOutputLabel() *BuildLabel {
-	return nil
+func (label SystemFileLabel) nonOutputLabel() (BuildLabel, bool) {
+	return BuildLabel{}, false
 }
 
 // String returns a string representation of this input.
@@ -181,12 +181,12 @@ func (label SystemPathLabel) LocalPaths(graph *BuildGraph) []string {
 }
 
 // Label returns the build rule associated with this input. For a SystemPathLabel it's always nil.
-func (label SystemPathLabel) Label() *BuildLabel {
-	return nil
+func (label SystemPathLabel) Label() (BuildLabel, bool) {
+	return BuildLabel{}, false
 }
 
-func (label SystemPathLabel) nonOutputLabel() *BuildLabel {
-	return nil
+func (label SystemPathLabel) nonOutputLabel() (BuildLabel, bool) {
+	return BuildLabel{}, false
 }
 
 // String returns a string representation of this input.
@@ -230,12 +230,12 @@ func (label AnnotatedOutputLabel) LocalPaths(graph *BuildGraph) []string {
 }
 
 // Label returns the build rule associated with this input. For a AnnotatedOutputLabel it's always non-nil.
-func (label AnnotatedOutputLabel) Label() *BuildLabel {
-	return &label.BuildLabel
+func (label AnnotatedOutputLabel) Label() (BuildLabel, bool) {
+	return label.BuildLabel, true
 }
 
-func (label AnnotatedOutputLabel) nonOutputLabel() *BuildLabel {
-	return nil
+func (label AnnotatedOutputLabel) nonOutputLabel() (BuildLabel, bool) {
+	return BuildLabel{}, false
 }
 
 // String returns a string representation of this input.
@@ -294,12 +294,12 @@ func (label URLLabel) LocalPaths(graph *BuildGraph) []string {
 }
 
 // Label returns the build rule associated with this input. For a URLLabel it's always nil.
-func (label URLLabel) Label() *BuildLabel {
-	return nil
+func (label URLLabel) Label() (BuildLabel, bool) {
+	return BuildLabel{}, false
 }
 
-func (label URLLabel) nonOutputLabel() *BuildLabel {
-	return nil
+func (label URLLabel) nonOutputLabel() (BuildLabel, bool) {
+	return BuildLabel{}, false
 }
 
 // String returns a string representation of this input.

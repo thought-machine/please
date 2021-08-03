@@ -206,6 +206,9 @@ func parseBuildLabelSubrepo(target, currentPath string) (string, string, string)
 			return "", target, target
 		}
 	}
+	if strings.ContainsRune(target[:idx], ':') {
+		return "", "", ""
+	}
 	pkg, name, _ := parseBuildLabelParts(target[idx:], currentPath, "")
 	return pkg, name, target[:idx]
 }
@@ -308,12 +311,12 @@ func (label BuildLabel) LocalPaths(graph *BuildGraph) []string {
 }
 
 // Label is an implementation of BuildInput interface. It always returns this label.
-func (label BuildLabel) Label() *BuildLabel {
-	return &label
+func (label BuildLabel) Label() (BuildLabel, bool) {
+	return label, true
 }
 
-func (label BuildLabel) nonOutputLabel() *BuildLabel {
-	return &label
+func (label BuildLabel) nonOutputLabel() (BuildLabel, bool) {
+	return label, true
 }
 
 // UnmarshalFlag unmarshals a build label from a command line flag. Implementation of flags.Unmarshaler interface.
@@ -441,7 +444,7 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	os.Setenv("PLZ_COMPLETE", match)
 	os.Unsetenv("GO_FLAGS_COMPLETION")
 	exec, _ := os.Executable()
-	out, _, err := process.New().ExecWithTimeout(context.Background(), nil, "", os.Environ(), 10*time.Second, false, false, false, false, append([]string{exec}, os.Args[1:]...))
+	out, _, err := process.New().ExecWithTimeout(context.Background(), nil, "", os.Environ(), 10*time.Second, false, false, false, process.NoSandbox, append([]string{exec}, os.Args[1:]...))
 	if err != nil {
 		return nil
 	}

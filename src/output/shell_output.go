@@ -18,6 +18,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/test"
 )
 
@@ -36,14 +37,14 @@ type buildingTargetData struct {
 	Started      time.Time
 	Finished     time.Time
 	Description  string
-	Active       bool
-	Failed       bool
-	Cached       bool
 	Err          error
 	Colour       string
 	Target       *core.BuildTarget
-	LastProgress float32
 	Eta          time.Duration
+	Active       bool
+	Failed       bool
+	Cached       bool
+	LastProgress float32
 }
 
 // MonitorState monitors the build while it's running and prints output.
@@ -89,14 +90,16 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 		printFailedBuildResults(failedNonTests, failedTargetMap, duration)
 		return
 	}
-	// Check all the targets we wanted to build actually have been built.
-	for _, label := range state.ExpandOriginalLabels() {
-		if target := state.Graph.Target(label); target == nil {
-			log.Fatalf("Target %s doesn't exist in build graph", label)
-		} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
-			// Do nothing, we will output about this shortly.
-		} else if state.NeedBuild && target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
-			log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltTargetsMessage(state.Graph))
+	if state.NeedBuild {
+		// Check all the targets we wanted to build actually have been built.
+		for _, label := range state.ExpandOriginalLabels() {
+			if target := state.Graph.Target(label); target == nil {
+				log.Fatalf("Target %s doesn't exist in build graph", label)
+			} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
+				// Do nothing, we will output about this shortly.
+			} else if target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
+				log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltTargetsMessage(state.Graph))
+			}
 		}
 	}
 	if state.NeedBuild && len(failedNonTests) == 0 {
@@ -196,7 +199,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		failedTargetMap[result.Label] = nil
 	} else if plainOutput && state.ShowTestOutput && result.Status == core.TargetTested && target != nil {
 		// If using interactive output we'll print it afterwards.
-		for _, testCase := range target.Results.TestCases {
+		for _, testCase := range target.Test.Results.TestCases {
 			printf("Finished test %s:\n", testCase.Name)
 			for _, testExecution := range testCase.Executions {
 				showExecutionOutput(testExecution)
@@ -218,12 +221,12 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 			}
 			done[failed] = true
 			target := state.Graph.TargetOrDie(failed)
-			if target.Results.Failures() == 0 && target.Results.Errors() == 0 {
-				if target.Results.TimedOut {
+			if target.Test.Results.Failures() == 0 && target.Test.Results.Errors() == 0 {
+				if target.Test.Results.TimedOut {
 				} else {
 					err := failedTargetsMap[target.Label]
 					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}: %v\n", target.Label, err)
-					target.Results.TestCases = append(target.Results.TestCases, core.TestCase{
+					target.Test.Results.TestCases = append(target.Test.Results.TestCases, core.TestCase{
 						Executions: []core.TestExecution{
 							{
 								Error: &core.TestResultFailure{
@@ -236,9 +239,10 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 					})
 				}
 			} else {
+				results := target.Test.Results
 				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_CYAN}%3d errored${RESET} Took ${BOLD_WHITE}%s${RESET}\n",
-					target.Label, target.Results.Passes(), target.Results.Skips(), target.Results.Failures(), target.Results.Errors(), target.Results.Duration.Round(durationGranularity))
-				for _, failingTestCase := range target.Results.TestCases {
+					target.Label, results.Passes(), results.Skips(), results.Failures(), results.Errors(), results.Duration.Round(durationGranularity))
+				for _, failingTestCase := range results.TestCases {
 					if failingTestCase.Success() != nil {
 						continue
 					}
@@ -271,30 +275,31 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 	}
 	// Print individual test results
 	targets := 0
-	aggregate := core.TestSuite{}
+	aggregate := new(core.TestSuite)
 	for _, target := range state.Graph.AllTargets() {
-		if target.IsTest {
-			aggregate.TestCases = append(aggregate.TestCases, target.Results.TestCases...)
-			aggregate.Duration += target.Results.Duration
-			if len(target.Results.TestCases) > 0 {
-				if target.Results.Errors() > 0 {
-					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, true))
-				} else if target.Results.Failures() > 0 {
-					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, true))
+		if target.IsTest() && target.Test.Results != nil {
+			results := target.Test.Results
+			aggregate.TestCases = append(aggregate.TestCases, results.TestCases...)
+			aggregate.Duration += results.Duration
+			if len(results.TestCases) > 0 {
+				if results.Errors() > 0 {
+					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
+				} else if results.Failures() > 0 {
+					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
 				} else if detailed || len(failedTargets) == 0 {
 					// Succeeded or skipped
-					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results, true))
+					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
 				}
 				if state.ShowTestOutput || detailed {
 					// Determine max width of test name so we align them
 					width := 0
-					for _, result := range target.Results.TestCases {
+					for _, result := range results.TestCases {
 						if len(result.Name) > width {
 							width = len(result.Name)
 						}
 					}
 					format := fmt.Sprintf("%%-%ds", width+1)
-					for _, result := range target.Results.TestCases {
+					for _, result := range results.TestCases {
 						printf("    %s\n", formatTestCase(result, fmt.Sprintf(format, result.Name), detailed))
 						if len(result.Executions) > 1 {
 							for run, execution := range result.Executions {
@@ -309,7 +314,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, f
 					}
 				}
 				targets++
-			} else if target.Results.TimedOut {
+			} else if results.TimedOut {
 				printf("${RED}%s${RESET} ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
 				targets++
 			}
@@ -413,7 +418,7 @@ func logProgress(ctx context.Context, state *core.BuildState, buildingTargets []
 }
 
 // Produces a string describing the results of one test (or a single aggregation).
-func testResultMessage(results core.TestSuite, showDuration bool) string {
+func testResultMessage(results *core.TestSuite, showDuration bool) string {
 	msg := fmt.Sprintf("%s run", pluralise(results.Tests(), "test", "tests"))
 	if showDuration && results.Duration >= 0.0 {
 		msg += fmt.Sprintf(" in ${BOLD_WHITE}%s${RESET}", results.Duration.Round(testDurationGranularity))
@@ -490,13 +495,13 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 		target := state.Graph.TargetOrDie(label)
 		cmd := target.GetCommand(state)
 		dir := target.TmpDir()
-		env := core.StampedBuildEnvironment(state, target, nil, path.Join(core.RepoRoot, target.TmpDir()))
+		env := core.StampedBuildEnvironment(state, target, nil, path.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
 		shouldSandbox := target.Sandbox
 		if state.NeedTests {
 			cmd = target.GetTestCommand(state)
 			dir = path.Join(core.RepoRoot, target.TestDir(1))
 			env = core.TestEnvironment(state, target, dir)
-			shouldSandbox = target.TestSandbox
+			shouldSandbox = target.Test.Sandbox
 		}
 		cmd, _ = core.ReplaceSequences(state, target, cmd)
 		env = append(env, "CMD="+cmd)
@@ -509,7 +514,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 			fmt.Printf("\n")
 			argv := []string{"bash", "--noprofile", "--norc", "-o", "pipefail"}
 			log.Debug("Full command: %s", strings.Join(argv, " "))
-			cmd := state.ProcessExecutor.ExecCommand(shouldSandbox, argv[0], argv[1:]...)
+			cmd := state.ProcessExecutor.ExecCommand(process.NewSandboxConfig(shouldSandbox, shouldSandbox), argv[0], argv[1:]...)
 			cmd.Dir = dir
 			cmd.Env = env
 			cmd.Stdin = os.Stdin

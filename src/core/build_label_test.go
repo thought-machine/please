@@ -130,6 +130,11 @@ func TestParseBuildLabelParts(t *testing.T) {
 	assert.Equal(t, subrepo2, "unittest_cpp")
 }
 
+func TestParseSubrepoLabelWithExtraColon(t *testing.T) {
+	_, err := TryParseBuildLabel("///python/psycopg2:psycopg2//:wheel", "", "")
+	assert.Error(t, err)
+}
+
 func TestMain(m *testing.M) {
 	// Used to support TestComplete, the function it's testing re-execs
 	// itself thinking that it's actually plz.

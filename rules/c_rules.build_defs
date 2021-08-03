@@ -187,7 +187,7 @@ def c_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_f
 
 def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compiler_flags:list&cflags&copts=[],
              linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, pkg_config_libs:list=[],
-             pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, includes:list=[], defines:list=[]):
+             pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, includes:list=[], defines:list|dict=[]):
     """Builds a binary from a collection of C rules.
 
     Args:

@@ -33,6 +33,12 @@ import (
 	"github.com/thought-machine/please/src/metrics"
 )
 
+var downloadErrors = metrics.NewCounter(
+	"remote",
+	"tree_digest_download_eof_errors_total",
+	"Number of times the Unexpected EOF error has been seen during a tree digest download",
+)
+
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"
 
@@ -73,7 +79,7 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	for _, d := range ar.OutputDirectories {
 		tree := &pb.Tree{}
 		if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
-			metrics.DownloadErrorCounterInc()
+			downloadErrors.Inc()
 			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 
@@ -198,7 +204,7 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 	if c.state.Cache != nil {
 		metadata, err := c.mdStore.retrieveMetadata(c.metadataStoreKey(digest))
 		if err != nil {
-			log.Warningf("Failed to retrieve stored matadata for target %s, %v", target.Label, err)
+			log.Warningf("Failed to retrieve stored metadata for target %s, %v", target.Label, err)
 		}
 		if metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
@@ -329,7 +335,7 @@ func wrap(err error, msg string, args ...interface{}) error {
 // timeout returns either a build or test timeout from a target.
 func timeout(target *core.BuildTarget, test bool) time.Duration {
 	if test {
-		return target.TestTimeout
+		return target.Test.Timeout
 	}
 	return target.BuildTimeout
 }
@@ -438,9 +444,37 @@ func (b *dirBuilder) walk(name string, ch chan<- *uploadinfo.Entry) *pb.Digest {
 	}
 	// The protocol requires that these are sorted into lexicographic order. Not all servers
 	// necessarily care, but some do, and we should be compliant.
-	sort.Slice(dir.Files, func(i, j int) bool { return dir.Files[i].Name < dir.Files[j].Name })
-	sort.Slice(dir.Directories, func(i, j int) bool { return dir.Directories[i].Name < dir.Directories[j].Name })
-	sort.Slice(dir.Symlinks, func(i, j int) bool { return dir.Symlinks[i].Name < dir.Symlinks[j].Name })
+	files := dir.Files
+	dirs := dir.Directories
+	syms := dir.Symlinks
+	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
+	sort.Slice(dirs, func(i, j int) bool { return dirs[i].Name < dirs[j].Name })
+	sort.Slice(syms, func(i, j int) bool { return syms[i].Name < syms[j].Name })
+
+	// Ensure there are not duplicates in these slices.
+	last := ""
+	dir.Files = files[:0]
+	for _, f := range files {
+		if f.Name != last {
+			dir.Files = append(dir.Files, f)
+			last = f.Name
+		}
+	}
+	dir.Directories = dirs[:0]
+	for _, d := range dirs {
+		if d.Name != last {
+			dir.Directories = append(dir.Directories, d)
+			last = d.Name
+		}
+	}
+	dir.Symlinks = syms[:0]
+	for _, s := range syms {
+		if s.Name != last {
+			dir.Symlinks = append(dir.Symlinks, s)
+			last = s.Name
+		}
+	}
+
 	entry, _ := uploadinfo.EntryFromProto(dir)
 	if ch != nil {
 		ch <- entry
@@ -565,7 +599,7 @@ func (c *Client) contextWithMetadata(target *core.BuildTarget) context.Context {
 		CorrelatedInvocationsId: c.state.Config.Remote.BuildID,
 		ToolDetails: &pb.ToolDetails{
 			ToolName:    "please",
-			ToolVersion: core.PleaseVersion.String(),
+			ToolVersion: core.PleaseVersion,
 		},
 	})
 	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs(key, string(b)))

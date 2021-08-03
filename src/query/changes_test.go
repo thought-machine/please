@@ -86,6 +86,12 @@ func TestChangesIncludesDataDirs(t *testing.T) {
 	assert.EqualValues(t, []core.BuildLabel{t3.Label}, Changes(s, []string{"src/query/test_data/some_dir/test_file1.txt"}, 0))
 }
 
+func TestChangesIncludesRootTarget(t *testing.T) {
+	s := core.NewDefaultBuildState()
+	t1 := addTarget(s, "//:file", nil, "file.go")
+	assert.EqualValues(t, []core.BuildLabel{t1.Label}, Changes(s, []string{"file.go"}, 0))
+}
+
 func addTarget(state *core.BuildState, label string, dep *core.BuildTarget, sources ...string) *core.BuildTarget {
 	t := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 	for _, src := range sources {

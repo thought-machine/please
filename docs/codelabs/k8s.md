@@ -44,7 +44,7 @@ For the sake of this codelabs, we'll make a simple hello world HTTP service in P
 
 ### Initialising the project
 ```
-$ plz init --no_prompt
+$ plz init 
 ```
 
 ### Creating a Python service
@@ -107,7 +107,23 @@ RUN apk update && apk add python3
 Unlike `python_lbrary()` the docker image build rules aren't built in. They are part of the extra rules found in the 
 [pleasings](https://github.com/thought-machine/pleasings/tree/master/docker) repository. 
 
-Let's create `common/docker/BUILD` to build our docker image:
+To use the pleasings rules, we need to add pleasings to our project:
+```
+$ plz init pleasings
+```
+
+This will add the pleasings subrepo to the build graph via the `github_repo()` built in:
+```
+$ cat BUILD
+github_repo(
+  name = "pleasings",
+  repo = "thought-machine/pleasings",
+  revision = "master",
+)
+```
+
+We can then subinclude them via special build labels in the form of `///subrepo_name//some:target`. 
+Let's create `common/docker/BUILD` using these rules to build our docker image:
 
 ```python
 subinclude("///pleasings//docker")
@@ -132,7 +148,7 @@ default-docker-repo = hub.docker.com
 
 
 Oh no! Looks like we missed something. If you've got a docker registry to push to then great otherwise don't worry. This 
-is just used to name the image. Let's set this to something sensible in `.plzbuild`:
+is just used to name the image. Let's set this to something sensible in `.plzconfig`:
 ```
 [buildconfig]
 default-docker-repo = please-examples

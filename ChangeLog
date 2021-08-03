@@ -1,3 +1,85 @@
+Version 16.3.0
+--------------
+    * Implemented a `plz exec` subcommand that is designed for used by IDEs to run targets
+      within the hermetic env for debugging and profiling #1917
+    * Allow `system_library()` to take in directories #1931
+    * Some LSP fixes and debug improvements #1937 #1943 #1962
+    * The python behave test runner now checks `$RESULTS_FILE` #1940
+    * Rework the cycle detector to run async only once we detect a deadlock. This also addresses
+      performance problems on large build graphs where the cycle detector was simply too slow. #1936
+    * Fix issue where `plz watch` couldn't acquire the repo lock #1944
+    * CLI completions improvements #1936 #1948
+    * Various performance improvements focussing on memory usage. 16.3.0 now uses 50% less memory
+      and parses the build graph in 75% of the time. #1949 #1947 #1952 #1956 #1921 #1960 #1955
+      #1961 #1964 #1969
+    * `go_mod_download()` and `go_module()` now add the module as a label which can be used to
+      list modules: `plz query print --label go_module: //third_party/go/...` #1954
+    * Add a `remote` label to `remote_file()` #1959
+    * Query revdeps fails fast on targets that don't exist #1953
+
+
+Version 16.2.1
+--------------
+    * Make `pip_library()` more deterministic by stripping debug symbols in C code #1909
+    * Make `plz hash --update` keep going once it updates a hash so it can update multiple
+      in one pass #1919
+    * Apply linker flags to `go_benchmark()` #1924
+    * Fix issue where the cycle detector wasn't detecting cycles correctly #1926
+    * Strip please location from PATH for remote execution #1930
+
+
+Version 16.2.0
+--------------
+    * Fixed issue where Please would attempt to use xattrs on unsupported filesystems
+      under some circumstances #1866
+    * Fixed issue were Please status output during builds would stop updating after a
+      failure #1868
+    * Various performance work #1847 #1848 #1869 #1872 #1876 #1877 #1881 #1885
+      #1878 #1888
+    * Fixed issue where `post_build` functions would not have config overrides set
+      via `package()` in some circumstances #1871
+    * Added an `is_semver()` builtin to check if a string matches the semver format
+    * `c_binary()` now allows defines to be a dictionary
+    * Applied the correct expected packages to `go tool compile` invocations to address
+      some issues with debug symbols #1896
+    * Added a `gitlab_repo()` rule which works similarly to `github_repo()` #1898
+
+
+Version 16.1.1
+--------------
+    * Fixed an issue where debug symbols didn't work for go targets build with Go 1.15+
+      #1845
+    * Some remote execution small fixes #1838 #1842 #1849
+    * Added zstd support to the jarcat tool #1837
+    * Allow defined on `cc_binary()` to be a dict #1854
+    * Root package is now picked up by `plz query changes` #1855
+    * Check that a target owns it's named inputs #1857
+    * Fixed issue where goland definitions weren't being applied when
+      the binary found linker flags on it's dependencies #1859
+    * Handle the empty string in the `go_module()` install list #1858
+
+
+Version 16.1.0
+--------------
+    * Redesigned the build graph to be more event driven utilise channels and blocking
+      threads to reduce lock contention. #1102 #1781 #1787 #1820 #1803
+    * Add output grouping to `plz run parallel` so that the stdout and stderr can be
+      linked back to the target that generated them afterwards. #1768
+    * Fix issue with `plz watch --run` where it didn't clean up its process properly
+      on restarting #1780
+    * Fix issue with rpartition #1784
+    * Fix non-deterministic hashing of test tools when it's a dictionary #1791
+    * Handle \r in BUILD files #1815
+    * Make go_mod_download() create a dummy go.mod to avoid picking up the main
+      repo's go.mod #1814
+    * Make `plz generate` automatically link generated sources even if we haven't
+      set LinkGeneratedSources in the .plzconfig #1770
+    * Fix some issues around go_module() when compiling binaries #1826
+    * Implement pkg-config for go_module() #1823
+    * Added a `plz query whatinputs` subcommand to find targets that consume a given
+      source file #1825
+
+
 Version 16.0.1
 --------------
     * For remote execution, Please now downloads runtime data for locally

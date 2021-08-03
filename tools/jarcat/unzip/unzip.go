@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
 
 	"github.com/thought-machine/please/third_party/go/zip"
@@ -72,6 +73,13 @@ func (e *extractor) Extract() error {
 	if err := e.extractTar(bzip2.NewReader(f)); err == nil || !isStructuralError(err) {
 		return err
 	}
+	// Finally zstd
+	f.Seek(0, io.SeekStart)
+	if r, err := zstd.NewReader(f); err == nil {
+		if err := e.extractTar(r); err == nil || err != zstd.ErrMagicMismatch {
+			return err
+		}
+	}
 	// Assume uncompressed.
 	f.Seek(0, io.SeekStart)
 	return e.extractTar(f)
@@ -102,7 +110,7 @@ func (e *extractor) extractTar(f io.Reader) error {
 				return err
 			}
 		case tar.TypeReg:
-			if f, err := os.Create(out); err != nil {
+			if f, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE, os.FileMode(hdr.Mode)); err != nil {
 				return err
 			} else if _, err := io.Copy(f, r); err != nil {
 				return err

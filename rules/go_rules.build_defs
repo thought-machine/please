@@ -78,6 +78,22 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         building_description = "Installing...",
     )
 
+def _pkg_sources(name: str, deps: list, test_only:bool):
+    """
+    This rule generates a list of go srcs for any rule in the deps list that is local to this package.
+
+    This is how we avoid transitively depending on all sources for a target in order to compile non-external tests.
+    Without this, we'd have to transitively pull in all third party sources for the rule which is very expensive,
+    especially for remote execution.
+    """
+    package_prefix = "//" + package_name() + ":"
+    return filegroup(
+       name = name,
+       tag = "pkg_srcs",
+       exported_deps = [dep for dep in deps if canonicalise(dep).startswith(package_prefix)],
+       requires = ["go_src"],
+       test_only = test_only,
+   )
 
 def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdrs:list=None, deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
@@ -113,17 +129,13 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
     link_labels = []
     src_labels = []
     private = out.startswith('_')
+    package_path = _get_import_path(package, import_path)
+
 
     # We could just depend on go_src for all our deps but that would mean bringing in srcs for targets outside this
     # package like third party sources which is especially slow on systems with slow syscall performance (macOS)
     if _all_srcs:
-        deps += [filegroup(
-            name = name,
-            tag = "package_srcs",
-            exported_deps = [dep for dep in deps if canonicalise(dep).startswith("//" + package_name() + ":")],
-            requires = ["go_src"],
-            test_only = test_only,
-        )]
+        deps += [_pkg_sources(name, deps, test_only)]
 
     if _generate_import_config:
         import_cfg = build_rule(
@@ -195,6 +207,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             _all_srcs = _all_srcs,
             _generate_import_config=False,
             labels=labels,
+            import_path=package_path,
         )
         asm_rule = build_rule(
             name = name,
@@ -261,16 +274,13 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         outs = [out]
 
 
-    package_path = _get_import_path(import_path)
-    if not package_path.endswith(package):
-        package_path = f"{package_path}/{package}"
     return build_rule(
         name=name,
         srcs=srcs,
         deps=deps,
         internal_deps = [src_rule],
         outs=outs,
-        cmd=_go_library_cmds(complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),
+        cmd=_go_library_cmds(import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),
         visibility=visibility,
         building_description="Compiling...",
         requires=['go'],
@@ -319,19 +329,11 @@ def _trim_import_path(pkg):
     else:
         return pkg
 
-def _write_import_config_cmd(name, import_path):
-    pkg = package_name()
-    import_path = _get_import_path(import_path)
+def _write_import_config_cmd(package, import_path):
+    import_path = _get_import_path(package, import_path)
+    return f"echo packagefile {import_path}=$PKG_DIR/{package}.a >> $OUT"
 
-    if not pkg:
-        return f"echo packagefile {import_path}=$PKG_DIR/{name}.a >> $OUT"
-
-    if pkg.endswith(name):
-        return f'echo packagefile {import_path}=$PKG_DIR/{name}.a >> $OUT'
-    else:
-        return f'echo packagefile {import_path}/{name}=$PKG_DIR/{name}.a > $OUT'
-
-def _get_import_path(import_path):
+def _get_import_path(package="", import_path=""):
     if import_path:
         return import_path
 
@@ -339,11 +341,16 @@ def _get_import_path(import_path):
 
     if CONFIG.GO_IMPORT_PATH:
         if pkg:
-            return f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
+            path = f'{CONFIG.GO_IMPORT_PATH}/{pkg}'
         else:
-            return CONFIG.GO_IMPORT_PATH
+            path = CONFIG.GO_IMPORT_PATH
+    else:
+        path = pkg
 
-    return pkg
+    # TODO(jpoole): this isn't really necessary and isn't how go works. We could probably remove this for v17.
+    if package and not path.endswith(package):
+        return f"{path}/{package}"
+    return path
 
 def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_srcs:list=[], hdrs:list=[],
                 package:str=None, compiler_flags:list&cflags=[], linker_flags:list&ldflags=[], pkg_config:list=[],
@@ -403,7 +410,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
 
     # Resolve the import_path early
     # _write_import_config_cmd won't resolve it again
-    import_path = _get_import_path(import_path)
+    import_path = _get_import_path(package or name, import_path)
 
     cgo_rule = build_rule(
         name = name,
@@ -452,6 +459,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
         complete = False,
         deps = deps,
         _generate_import_config=False,
+        import_path=import_path,
     )
 
     output = package if package else name
@@ -557,6 +565,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         _link_private = True,
         _link_extra = False,
         _generate_import_config=False,
+        import_path="main",
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
     return build_rule(
@@ -575,7 +584,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         visibility=visibility,
         labels=labels,
         requires=['go'],
-        pre_build=_collect_linker_flags(static),
+        pre_build=_collect_linker_flags(static, definitions),
         stamp = stamp,
     )
 
@@ -617,12 +626,13 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
                      definition to the linker.  If set to a dict, each key/value pair is
                      used to contruct the list of definitions passed to the linker.
     """
+    test_package = name + '_lib'
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
         name = '_%s#lib' % name,
         srcs = srcs,
         resources = resources,
-        package = name + ('_lib' if cgo else ''),
+        package = test_package,
         deps = deps,
         _all_srcs=not external,
         labels = labels,
@@ -630,9 +640,12 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         filter_srcs = filter_srcs,
         _link_extra = False,
         complete = False,
-        _generate_import_config=False # This should be generated by the `_replace_test_package` post build function
+        _generate_import_config=False,
+        import_path = test_package,
     )
+
     if cgo:
+        archive_name = test_package + "_cgo"
         lib_rule = _merge_cgo_obj(
             name = name,
             tag='cgo',
@@ -641,27 +654,40 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
             labels = labels + ['link:plz-out/go/pkg/%s_%s' % (CONFIG.OS, CONFIG.ARCH)],
             test_only = True,
             deps = deps,
+            package = archive_name,
         )
+    else:
+        archive_name = test_package
 
+    import_config = build_rule(
+        name=f'_{name}#lib_import_config',
+        cmd = _write_import_config_cmd(archive_name, test_package),
+        outs = [f'{test_package}.importconfig'],
+        visibility = visibility,
+        test_only = True,
+        labels = labels,
+    )
     main_rule = go_test_main(
         name = name,
         _tag = 'main',
         srcs = srcs,
         deps = deps,
         test_only = True,
-        _post_build = lambda name, output: _replace_test_package(name, output, static, definitions=definitions, cgo=cgo),
         labels = labels,
+        test_package = test_package,
+        external = external,
     )
 
-    deps += [lib_rule]
+    deps += [lib_rule, import_config]
     lib_rule = go_library(
         name='_%s#main_lib' % name,
-        srcs=[main_rule],
-        deps=deps,
+        srcs = [main_rule],
+        deps = deps,
         _needs_transitive_deps=CONFIG.BUILD_CONFIG == "cover",
-        test_only=True,
-        _generate_import_config=False,
-        labels=labels,
+        test_only = True,
+        _generate_import_config = False,
+        labels = labels,
+        import_path = "main",
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
@@ -677,27 +703,28 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
             test_cmd += f' && mv {out} $TMP_DIR/{out}'
 
     return build_rule(
-        name=name,
-        srcs=[lib_rule],
-        data=data,
-        deps=deps,
-        outs=[name],
-        tools=tools,
-        cmd=cmds,
-        test_cmd=test_cmd,
-        visibility=visibility,
-        test_sandbox=sandbox,
-        test_timeout=timeout,
+        name = name,
+        srcs = [lib_rule],
+        data = data,
+        deps = deps,
+        outs = [name],
+        tools = tools,
+        cmd = cmds,
+        test_cmd = test_cmd,
+        visibility = visibility,
+        test_sandbox = sandbox,
+        test_timeout = timeout,
         size = size,
-        flaky=flaky,
-        test_outputs=test_outputs,
-        requires=['go', 'test'],
-        labels=labels,
-        binary=True,
-        test=True,
-        building_description="Compiling...",
-        needs_transitive_deps=True,
-        output_is_complete=True,
+        flaky = flaky,
+        test_outputs = test_outputs,
+        requires = ['go', 'test'],
+        labels = labels,
+        binary = True,
+        test = True,
+        building_description = "Compiling...",
+        needs_transitive_deps = True,
+        output_is_complete = True,
+        pre_build = _collect_linker_flags(static, definitions),
     )
 
 
@@ -733,18 +760,29 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
                      used to contruct the list of definitions passed to the linker.
        test_only (bool): If True, is only visible to test rules.
     """
+    test_package = name + '_lib'
     # Unfortunately we have to recompile this to build the test together with its library.
     lib_rule = go_library(
         name = '_%s#lib' % name,
         srcs = srcs,
-        package = name + ('_lib' if cgo else ''),
+        package = test_package,
         deps = deps,
+        _all_srcs=not external,
+        labels = labels,
+        test_only = True,
         filter_srcs = filter_srcs,
-        _all_srcs = not external,
         _link_extra = False,
         complete = False,
-        labels = labels,
-        test_only = test_only,
+        _generate_import_config=False,
+        import_path=test_package,
+    )
+    import_config = build_rule(
+        name=f'_{name}#lib_import_config',
+        cmd = _write_import_config_cmd(test_package, test_package),
+        outs = [f'{test_package}.importconfig'],
+        visibility=visibility,
+        test_only=True,
+        labels=labels,
     )
     if cgo:
         lib_rule = _merge_cgo_obj(
@@ -761,11 +799,12 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         _tag = 'main',
         srcs = srcs,
         deps = deps,
-        benchmark=True,
-        _post_build = lambda name, output: _replace_test_package(name, output, static, definitions=definitions, cgo=cgo),
+        benchmark = True,
         test_only = test_only,
+        test_package = test_package,
+        external = external,
     )
-    deps += [lib_rule]
+    deps += [lib_rule, import_config]
     lib_rule = go_library(
         name='_%s#main_lib' % name,
         srcs=[main_rule],
@@ -773,6 +812,7 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         _generate_import_config=False,
         labels = labels,
         test_only = test_only,
+        import_path="main",
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
@@ -785,8 +825,8 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         tools=tools,
         cmd=cmds,
         visibility=visibility,
-        test_sandbox=sandbox,
-        test_timeout=timeout,
+        sandbox=sandbox,
+        build_timeout=timeout,
         requires=['go', 'test'],
         labels=labels,
         binary=True,
@@ -794,9 +834,10 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
         needs_transitive_deps=True,
         output_is_complete=True,
         test_only=test_only,
+        pre_build = _collect_linker_flags(static, definitions),
     )
 
-def go_test_main(name:str, srcs:list, test_only:bool=False,
+def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False, external=False,
                  deps:list=[], visibility:list=None, _post_build:function=None, _tag=None, benchmark=False,
                  labels:list=[]):
     """Outputs the main file for a Go test.
@@ -808,12 +849,16 @@ def go_test_main(name:str, srcs:list, test_only:bool=False,
     Args:
       name: Name of the rule
       srcs: Source .go files that define the tests.
+      test_package: This is the import path of the package to be tested. Defaults to the import path of the current
+                    directory.
       test_only: If True, can only be consumed by tests (or other test_only rules).
       deps: Any additional dependencies
       visibility: Visibility of the rule.
       labels: Any labels to apply to this rule.
     """
-    cmd = f'"$TOOLS" testmain --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
+    test_package = test_package or _get_import_path()
+    external_flag = " --external" if external else ""
+    cmd = f'"$TOOLS" testmain --test_package "{test_package}"{external_flag} --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
     if benchmark:
         cmd = f'{cmd} --benchmark'
     cmds = {
@@ -908,12 +953,13 @@ def _remove_redundant_outs(outs):
     return [r for r in new_outs.keys() if new_outs[r]]
 
 def _go_install_module(name:str, module:str, install:list, src:str, outs:list, deps:list, binary:bool, visibility:list,
-                       test_only:bool, licences:list, linker_flags:list, env:dict):
+                       test_only:bool, licences:list, linker_flags:list, env:dict, build_tags:list):
+    build_tags = " ".join([f"--build_tag={tag}" for tag in build_tags])
     cmd = [
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"$TOOLS_PLEASE_GO install --trim_path $TMP_DIR --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
+        f"$TOOLS_PLEASE_GO install {build_tags} --trim_path $TMP_DIR --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
         "cat LD_FLAGS",
     ]
 
@@ -1034,7 +1080,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     out = name if not go_path_compatibility else f'src/{module}'
     # TODO(jpoole): write a proper please_go tool for this
     cmds = [
-        _set_go_env(),
+        'echo module please_ignore > go.mod', # stops go reading the main go.mod, and downloading all of those too
         f'$TOOLS_GO mod download -x -modcacherw -json {module}@{version} | tee mod.json',
         'export MOD_DIR=$(cat mod.json | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
         "cp -r $MOD_DIR $OUT",
@@ -1042,6 +1088,8 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
 
     if patch:
         cmds += [f'for p in "$TMP_DIR"/$SRCS_PATCH; do patch -d {out} -p1 < $p; done']
+
+    labels += [f"go_module:{module}@{version}"]
 
     return build_rule(
         name = name,
@@ -1059,7 +1107,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         test_only = test_only,
         # TODO(jpoole): We probably want to somehow link this to the correct place but Please doesn't really facilitate
         #  that right now.
-        labels = labels + ['link:plz-out/go'] if go_path_compatibility else [],
+        labels = labels + ['link:plz-out/go'] if go_path_compatibility else labels,
         hashes = hashes,
         sandbox = False,
         licences = licences,
@@ -1069,7 +1117,8 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
-              licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}, patch:list|str=[]):
+              licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}, patch:list|str=[],
+              build_tags:list=[]):
     """Defines a dependency on a third-party Go module.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -1103,6 +1152,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
                            automatically be collected so this is typically not necessary.
       env (dict): Any env variables to set during build time. This can be useful to set CGO_CFLAGS etc. to control
                   aspects of compilation.
+      build_tags (list): Any build tags to apply to the build context.
     """
     patch = [patch] if isinstance(patch, str) else patch
     if version and download:
@@ -1111,7 +1161,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
     if not download and not version:
         fail("Either version or download should be provided")
 
-    install = [f"{module}/{i}" if i != "." else module for i in install]
+    install = [f"{module}/{i}" if i != "." and i != "" else module for i in install]
 
     if not download:
         download = go_mod_download(
@@ -1160,6 +1210,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         licences = licences,
         linker_flags = linker_flags,
         env = env,
+        build_tags = build_tags,
     )
 
     if binary:
@@ -1512,7 +1563,7 @@ def _set_go_env():
     return cmd
 
 
-def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None):
+def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=True, filter_srcs=True, abi=False, embedcfg=None):
     """Returns the commands to run for building a Go library."""
     filter_cmd = 'export SRCS_GO="$(\"${TOOLS_FILTER}\" ${SRCS_GO})"; ' if filter_srcs else ''
     # Invokes the Go compiler.
@@ -1526,9 +1577,11 @@ def _go_library_cmds(complete=True, all_srcs=False, cover=True, filter_srcs=True
     gen_import_cfg = _set_go_env() + ' && ' + _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"')
     gen_import_cfg += ' && ' + _aggregate_import_cfg_cmd()
     prefix = ('export SRCS_GO="$PKG_DIR/*.go"; ' + gen_import_cfg) if all_srcs else gen_import_cfg
+
+    package_flag = f" -p {import_path}" if import_path else ""
     cmds = {
-        'dbg': f'{prefix}; {filter_cmd}{compile_cmd} -N -l $SRCS_GO',
-        'opt': f'{prefix}; {filter_cmd}{compile_cmd} $SRCS_GO',
+        'dbg': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} -N -l $SRCS_GO',
+        'opt': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} $SRCS_GO',
     }
     if cover:
         cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd} $SRCS_GO'
@@ -1560,7 +1613,7 @@ def _go_binary_cmds(static=False, ldflags='', pkg_config='', definitions=None, g
     elif ldflags or pkg_config:
         flags = f'-extldflags "{ldflags} {pkg_config}"'
     else:
-        flags = f''
+        flags = ''
 
     if len(defs) > 0:
         flags += " " + defs
@@ -1590,12 +1643,12 @@ def _go_import_path_cmd(import_path):
         return ' && ln -s "$TMP_DIR" ' + import_path
 
 
-def _collect_linker_flags(static):
+def _collect_linker_flags(static, definitions):
     """Returns a pre-build function to apply transitive linker flags to a go_binary rule."""
     def collect_linker_flags(name):
         ldflags, pkg_config = _get_ldflags_and_pkgconfig(name)
         if ldflags or pkg_config:
-            cmds, _ =  _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config)
+            cmds, _ =  _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config, definitions=definitions)
             for k, v in cmds.items():
                 set_command(name, k, v)
     return collect_linker_flags
@@ -1608,30 +1661,3 @@ def _get_ldflags_and_pkgconfig(name):
     pkg_config = ' '.join([l[3:] for l in labels if l.startswith('pc:')])
     return (ldflags, f'`pkg-config --libs {pkg_config}`') if pkg_config else (ldflags, '')
 
-def _replace_test_package(name, output, static, definitions, cgo):
-    """Post-build function, called after we template the main function.
-
-    The purpose is to replace the real library with the specific one we've
-    built for this test which has the actual test functions in it.
-    """
-    if not name.endswith('#main') or not name.startswith('_'):
-        fail('unexpected rule name: ' + name)
-    lib = name[:-5] + '#main_lib'
-    new_name = name[1:-5]
-    for line in output:
-        if line.startswith('Package: '):
-            ldflags, pkg_config = _get_ldflags_and_pkgconfig(name)
-            pkg_name = line[9:]
-            pkg_dir = package_name()
-
-            import_dir = _get_import_path(None)
-            import_path = f'{import_dir}/{pkg_name}'
-            import_path = _trim_import_path(import_path)
-            import_config_cmd = f'rm -f $PKG_DIR/{pkg_name}.importconfig && echo packagefile {import_path}=$PKG_DIR/{new_name}.a > {pkg_name}.importconfig'
-
-            binary_cmds, _ = _go_binary_cmds(static=static, ldflags=ldflags, pkg_config=pkg_config, definitions, cgo)
-            for k, v in binary_cmds.items():
-                set_command(new_name, k, f'{import_config_cmd} && {v}')
-
-            for k, v in _go_library_cmds().items():
-                set_command(lib, k, f'{import_config_cmd} && {v}')

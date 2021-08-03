@@ -211,9 +211,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	for _, licence := range target.Licences {
 		h.Write([]byte(licence))
 	}
-	for _, output := range target.TestOutputs {
-		h.Write([]byte(output))
-	}
+
 	for _, output := range target.OptionalOutputs {
 		h.Write([]byte(output))
 	}
@@ -224,21 +222,11 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 		h.Write([]byte(secret))
 	}
 	hashBool(h, target.IsBinary)
-	hashBool(h, target.IsTest)
 	hashOptionalBool(h, target.Sandbox)
 
 	// Note that we only hash the current command here; whatever's set in commands that we're not going
 	// to run is uninteresting to us.
 	h.Write([]byte(target.GetCommand(state)))
-
-	if runtime {
-		// Similarly, we only hash the current command here again.
-		h.Write([]byte(target.GetTestCommand(state)))
-		for _, datum := range target.AllData() {
-			h.Write([]byte(datum.String()))
-		}
-		hashOptionalBool(h, target.TestSandbox)
-	}
 
 	hashBool(h, target.NeedsTransitiveDependencies)
 	hashBool(h, target.OutputIsComplete)
@@ -283,6 +271,20 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	hashMap(h, target.Env)
 
 	h.Write([]byte(target.FileContent))
+
+	// Hash the test and runtime fields
+	if runtime {
+		for _, datum := range target.AllData() {
+			h.Write([]byte(datum.String()))
+		}
+		if target.IsTest() {
+			for _, output := range target.Test.Outputs {
+				h.Write([]byte(output))
+			}
+			hashOptionalBool(h, target.Test.Sandbox)
+			h.Write([]byte(target.GetTestCommand(state)))
+		}
+	}
 
 	return h.Sum(nil)
 }
@@ -498,8 +500,8 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 		fmt.Printf("  Source: %s: %s\n", source.Src, b64(state.PathHasher.MustHash(source.Src)))
 	}
 	for _, tool := range target.AllTools() {
-		if label := tool.Label(); label != nil {
-			fmt.Printf("    Tool: %s: %s\n", *label, b64(mustShortTargetHash(state, state.Graph.TargetOrDie(*label))))
+		if label, ok := tool.Label(); ok {
+			fmt.Printf("    Tool: %s: %s\n", label, b64(mustShortTargetHash(state, state.Graph.TargetOrDie(label))))
 		} else {
 			fmt.Printf("    Tool: %s: %s\n", tool, b64(state.PathHasher.MustHash(tool.FullPaths(state.Graph)[0])))
 		}

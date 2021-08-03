@@ -44,7 +44,11 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 	for _, filename := range files {
 		for dir := filename; dir != "." && dir != "/"; {
 			dir = path.Dir(dir)
-			if pkg := state.Graph.Package(dir, ""); pkg != nil {
+			pkgName := dir
+			if pkgName == "." {
+				pkgName = ""
+			}
+			if pkg := state.Graph.Package(pkgName, ""); pkg != nil {
 				// This is the package closest to the file; it is the only one allowed to consume it directly.
 				for _, t := range pkg.AllTargets() {
 					if t.HasAbsoluteSource(filename) {
@@ -102,7 +106,7 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) (hash []byte, 
 	}()
 	h := sha1.New()
 	for _, tool := range target.AllTools() {
-		if tool.Label() != nil {
+		if _, ok := tool.Label(); ok {
 			continue // Skip in-repo tools, that will be handled via revdeps.
 		}
 		for _, path := range tool.FullPaths(state.Graph) {

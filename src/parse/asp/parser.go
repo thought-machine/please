@@ -1,11 +1,10 @@
-// Package asp implements an experimental BUILD-language parser.
-// Parsing is doing using Participle (github.com/alecthomas/participle) in native Go,
-// with a custom and also native partial Python interpreter.
+// Package asp implements the BUILD language parser for Please.
+// Asp is a syntactic subset of Python, with the lexer, parser and interpreter all
+// implemented natively in Go.
 package asp
 
 import (
 	"bytes"
-	"encoding/gob"
 	"io"
 	"os"
 	"strings"
@@ -16,16 +15,6 @@ import (
 )
 
 var log = logging.MustGetLogger("asp")
-
-func init() {
-	// gob needs to know how to encode and decode our types.
-	gob.Register(False)
-	gob.Register(None)
-	gob.Register(pyInt(0))
-	gob.Register(pyString(""))
-	gob.Register(pyList{})
-	gob.Register(pyDict{})
-}
 
 // A semaphore implements the standard synchronisation mechanism based on a buffered channel.
 type semaphore chan struct{}
@@ -60,7 +49,6 @@ func newParser() *Parser {
 
 // LoadBuiltins instructs the parser to load rules from this file as built-ins.
 // Optionally the file contents can be supplied directly.
-// Also optionally a previously parsed form (acquired from ParseToFile) can be supplied.
 func (p *Parser) LoadBuiltins(filename string, contents []byte) error {
 	var statements []*Statement
 	if len(contents) != 0 {
@@ -122,34 +110,6 @@ func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker) (bool, error) {
 	}
 	_, err = p.interpreter.interpretAll(pkg, stmts)
 	return true, err
-}
-
-// ParseToFile parses the given file and writes a binary form of the result to the output file.
-func (p *Parser) ParseToFile(input, output string) error {
-	p.limiter.Acquire()
-	defer p.limiter.Release()
-
-	stmts, err := p.parse(input)
-	if err != nil {
-		return err
-	}
-	stmts = p.optimise(stmts)
-	p.interpreter.optimiseExpressions(stmts)
-	for _, stmt := range stmts {
-		if stmt.FuncDef != nil {
-			stmt.FuncDef.KeywordsOnly = !whitelistedKwargs(stmt.FuncDef.Name, input)
-			stmt.FuncDef.IsBuiltin = true
-		}
-	}
-	f, err := os.Create(output)
-	if err != nil {
-		return err
-	}
-	encoder := gob.NewEncoder(f)
-	if err := encoder.Encode(stmts); err != nil {
-		return err
-	}
-	return f.Close()
 }
 
 // ParseFileOnly parses the given file but does not interpret it.
@@ -241,6 +201,22 @@ func (p *Parser) optimise(statements []*Statement) []*Statement {
 			}
 		}
 		ret = append(ret, stmt)
+	}
+	return ret
+}
+
+// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
+func (p *Parser) BuildRuleArgOrder() map[string]int {
+	// Find the root scope to avoid cases where build_rule might've been overloaded
+	scope := p.interpreter.scope
+	for s := scope.parent; s != nil; s = s.parent {
+		scope = s
+	}
+	args := scope.locals["build_rule"].(*pyFunc).args
+	ret := make(map[string]int, len(args))
+
+	for order, name := range args {
+		ret[name] = order
 	}
 	return ret
 }

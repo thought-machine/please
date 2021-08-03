@@ -1,25 +1,14 @@
-genrule(
-    name = "version",
-    srcs = {
-        "go": ["version.go"],
-        "version": ["//:version"],
-    },
-    outs = ["versioned.go"],
-    cmd = "sed \"s/1.0.9999/`cat $SRCS_VERSION`/\" $SRCS_GO > \"$OUT\"",
-)
+subinclude("//build_defs:benchmark")
 
 go_library(
     name = "core",
     srcs = glob(
         ["*.go"],
         exclude = [
-            "stub.go",
+            "*_benchmark.go",
             "*_test.go",
-            "version.go",
         ],
-    ) + [
-        ":version",
-    ],
+    ),
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
@@ -34,7 +23,6 @@ go_library(
         "//third_party/go:godirwalk",
         "//third_party/go:logging",
         "//third_party/go:psutil",
-        "//third_party/go:semver",
         "//third_party/go:shlex",
         "//third_party/go:xattr",
     ],
@@ -179,4 +167,31 @@ go_test(
         ":core",
         "//third_party/go:testify",
     ],
+)
+
+go_test(
+    name = "cycle_detector_test",
+    srcs = ["cycle_detector_test.go"],
+    deps = [
+        ":core",
+        "//third_party/go:testify",
+    ],
+)
+
+benchmark(
+    name = "build_target_benchmark",
+    srcs = ["build_target_benchmark_test.go"],
+    deps = [":core"],
+)
+
+benchmark(
+    name = "utils_benchmark",
+    srcs = ["utils_benchmark_test.go"],
+    deps = [":core"],
+)
+
+benchmark(
+    name = "graph_benchmark",
+    srcs = ["graph_benchmark_test.go"],
+    deps = [":core"],
 )

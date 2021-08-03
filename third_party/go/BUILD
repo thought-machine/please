@@ -28,7 +28,19 @@ go_module(
         "cast5",
     ],
     module = "golang.org/x/crypto",
-    version = "7b85b097bf7527677d54d3220065e966a0e3b613",
+    version = "a769d52b0f97a420f3dcafc17f8b3384217859a2",
+    deps = [
+        ":xterm",
+    ],
+)
+
+go_module(
+    name = "xterm",
+    module = "golang.org/x/term",
+    version = "6886f2dfbf5b25f595b4fe4279c49956e867c59b",
+    deps = [
+        ":xsys",
+    ],
 )
 
 go_module(
@@ -103,7 +115,7 @@ go_module(
     name = "net",
     install = ["..."],
     module = "golang.org/x/net",
-    version = "136a25c244d3019482a795d728110278d6ba09a4",
+    version = "853a461950ffd0dac439017081f0f3bd9242bb17",
     deps = [
         ":text",
         ":xcrypto",
@@ -117,6 +129,7 @@ go_module(
         "go/loader",
         "go/buildutil",
         "go/ast/astutil",
+        "benchmark/parse",
     ],
     module = "golang.org/x/tools",
     version = "2ae76fd1560b622911f444c1e66b70a857e1de67",
@@ -446,7 +459,7 @@ go_module(
     name = "xsys",
     install = ["..."],
     module = "golang.org/x/sys",
-    version = "v0.0.0-20210415045647-66c3f260301c",
+    version = "0f9fa26af87c481a6877a4ca1330699ba9a30673",
 )
 
 go_mod_download(
@@ -498,7 +511,7 @@ go_module(
         "testdata",
         "vendor",
     ],
-    version = "v1.7.0",
+    version = "v1.16.1",
     deps = [":errors"],
 )
 
@@ -855,13 +868,20 @@ go_module(
     ],
     licences = ["Apache 2.0"],
     module = "github.com/prometheus/client_golang",
-    version = "v1.0.0",
+    version = "v1.11.0",
     deps = [
         ":prometheus_common",
         ":prometheus_model",
         ":prometheus_procfs",
         ":quantile",
+        ":xxhash",
     ],
+)
+
+go_module(
+    name = "xxhash",
+    module = "github.com/cespare/xxhash/v2",
+    version = "v2.1.1",
 )
 
 go_module(
@@ -883,7 +903,7 @@ go_module(
         "internal/bitbucket.org/ww/goautoneg",
     ],
     module = "github.com/prometheus/common",
-    version = "v0.19.0",
+    version = "v0.26.0",
     deps = [
         ":pbutil",
         ":prometheus_model",

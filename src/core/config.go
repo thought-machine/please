@@ -409,7 +409,7 @@ type Configuration struct {
 		MaxWorkers   int    `help:"Maximum number of worker rows to display at any one time."`
 		ColourScheme string `help:"Shell colour scheme mode, dark or light. Defaults to dark"`
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
-	Colours map[string]string `help:"Colour code overrides in interactive output. These correspond to requirements on each target."`
+	Colours map[string]string `help:"Colour code overrides for the targets in interactive output. These colours are map labels on targets to colours e.g. go -> ${YELLOW}."`
 	Build   struct {
 		Arch                 cli.Arch     `help:"The target architecture to compile for. Defaults to the host architecture."`
 		Timeout              cli.Duration `help:"Default timeout for build actions. Default is ten minutes."`
@@ -478,9 +478,9 @@ type Configuration struct {
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
-		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to a reasonably obvious set for the builtin rules including .go, .py, .java, etc."`
+		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to .go, .py, .java, .tsx, .ts, .js, .cc, .h, and .c"`
 		ExcludeExtension []string `help:"Extensions of files to exclude from coverage.\nTypically this is for generated code; the default is to exclude protobuf extensions like .pb.go, _pb2.py, etc."`
-	}
+	} `help:"Configuration relating to coverage reports."`
 	Gc struct {
 		Keep      []BuildLabel `help:"Marks targets that gc should always keep. Can include meta-targets such as //test/... and //docs:all."`
 		KeepLabel []string     `help:"Defines a target label to be kept; for example, if you set this to go, no Go targets would ever be considered for deletion." example:"go"`

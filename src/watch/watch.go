@@ -118,7 +118,7 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 }
 
 func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.BuildInput, dirs map[string]struct{}, files cmap.ConcurrentMap) {
-	if source.Label() == nil {
+	if _, ok := source.Label(); !ok {
 		for _, src := range source.Paths(state.Graph) {
 			if err := fs.Walk(src, func(src string, isDir bool) error {
 				files.Set(src, struct{}{})
@@ -147,7 +147,7 @@ func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.Bu
 // anyTests returns true if any of the given labels refer to tests.
 func anyTests(state *core.BuildState, labels []core.BuildLabel) bool {
 	for _, l := range labels {
-		if state.Graph.TargetOrDie(l).IsTest {
+		if state.Graph.TargetOrDie(l).IsTest() {
 			return true
 		}
 	}

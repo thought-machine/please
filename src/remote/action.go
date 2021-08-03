@@ -128,18 +128,18 @@ func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.Bu
 	// We generate the stamp ourselves from the input root.
 	// TODO(peterebden): it should include the target properties too...
 	hash := c.sum(mustMarshal(inputRoot))
-	return core.StampedBuildEnvironment(state, target, hash, ".")
+	return core.StampedBuildEnvironment(state, target, hash, ".", stamp && target.Stamp)
 }
 
 // buildTestCommand builds a command for a target when testing.
 func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarget) (*pb.Command, error) {
 	// TODO(peterebden): Remove all this nonsense once API v2.1 is released.
-	files := target.TestOutputs
+	files := target.Test.Outputs
 	dirs := []string{}
 	if target.NeedCoverage(state) {
 		files = append(files, core.CoverageFile)
 	}
-	if !target.NoTestOutput {
+	if !target.Test.NoOutput {
 		if target.HasLabel(core.TestResultsDirLabel) {
 			dirs = []string{core.TestResultsFile}
 		} else {
@@ -164,7 +164,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 			},
 		},
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, "."), target.TestSandbox),
+		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, "."), target.Test.Sandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
@@ -201,24 +201,24 @@ func (c *Client) uploadInputs(ch chan<- *uploadinfo.Entry, target *core.BuildTar
 func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
 	b := newDirBuilder(c)
 	for input := range c.state.IterInputs(target, isTest) {
-		if l := input.Label(); l != nil {
-			o := c.targetOutputs(*l)
+		if l, ok := input.Label(); ok {
+			o := c.targetOutputs(l)
 			if o == nil {
-				if dep := c.state.Graph.TargetOrDie(*l); dep.Local {
+				if dep := c.state.Graph.TargetOrDie(l); dep.Local {
 					// We have built this locally, need to upload its outputs
 					if err := c.uploadLocalTarget(dep); err != nil {
 						return nil, err
 					}
-					o = c.targetOutputs(*l)
+					o = c.targetOutputs(l)
 				} else {
 					// Classic "we shouldn't get here" stuff
-					return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", *l)
+					return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", l)
 				}
 			}
 			pkgName := l.PackageName
 			if target.IsFilegroup {
 				pkgName = target.Label.PackageName
-			} else if isTest && *l == target.Label {
+			} else if isTest && l == target.Label {
 				// At test time the target itself is put at the root rather than in the normal dir.
 				// This is just How Things Are, so mimic it here.
 				pkgName = "."
@@ -283,6 +283,7 @@ func (c *Client) addChildDirs(b *dirBuilder, name string, dg *pb.Digest) error {
 	d.Directories = append(d.Directories, dir.Directories...)
 	d.Files = append(d.Files, dir.Files...)
 	d.Symlinks = append(d.Symlinks, dir.Symlinks...)
+	d.NodeProperties = dir.NodeProperties
 	for _, subdir := range dir.Directories {
 		if err := c.addChildDirs(b, path.Join(name, subdir.Name), subdir.Digest); err != nil {
 			return err
@@ -399,16 +400,11 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	outs := outputsForActionResult(ar)
 	// Test outputs are optional
 	if isTest {
-		if !outs[core.TestResultsFile] && !target.NoTestOutput {
+		if !outs[core.TestResultsFile] && !target.Test.NoOutput {
 			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, core.TestResultsFile, c.actionURL(actionDigest, true))
 		}
 	} else {
-		for _, out := range command.OutputFiles {
-			if !outs[out] {
-				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
-			}
-		}
-		for _, out := range command.OutputDirectories {
+		for _, out := range command.OutputPaths {
 			if !outs[out] {
 				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
 			}
@@ -520,9 +516,23 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 	vars := make([]*pb.Command_EnvironmentVariable, len(env))
 	for i, e := range env {
 		idx := strings.IndexByte(e, '=')
+		name := e[:idx]
+		v := e[idx+1:]
+		if name == "PATH" {
+			// Strip out anything prefixed with the local user's home directory; it can't be
+			// useful remotely but will affect determinism of the action.
+			parts := strings.Split(v, ":")
+			replaced := make([]string, 0, len(parts))
+			for _, part := range parts {
+				if !strings.HasPrefix(part, c.userHome) {
+					replaced = append(replaced, part)
+				}
+			}
+			v = strings.Join(replaced, ":")
+		}
 		vars[i] = &pb.Command_EnvironmentVariable{
-			Name:  e[:idx],
-			Value: e[idx+1:],
+			Name:  name,
+			Value: v,
 		}
 	}
 	return vars

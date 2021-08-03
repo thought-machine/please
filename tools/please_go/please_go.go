@@ -16,27 +16,30 @@ import (
 var opts = struct {
 	Usage string
 
-	PleaseGoInstall struct {
-		SrcRoot      string `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
-		ModuleName   string `short:"n" long:"module_name" description:"The name of the module" required:"true"`
-		ImportConfig string `short:"i" long:"importcfg" description:"The import config for the modules dependencies" required:"true"`
-		LDFlags      string `short:"l" long:"ld_flags" description:"The file to write linker flags to" default:"LD_FLAGS"`
-		GoTool       string `short:"g" long:"go_tool" description:"The location of the go binary" default:"go"`
-		CCTool       string `short:"c" long:"cc_tool" description:"The c compiler to use"`
-		Out          string `short:"o" long:"out" description:"The output directory to put compiled artifacts in" required:"true"`
-		TrimPath     string `short:"t" long:"trim_path" description:"Removes prefix from recorded source file paths."`
-		Args         struct {
+	Install struct {
+		BuildTags         []string `long:"build_tag" description:"Any build tags to apply to the build"`
+		SrcRoot           string   `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
+		ModuleName        string   `short:"n" long:"module_name" description:"The name of the module" required:"true"`
+		ImportConfig      string   `short:"i" long:"importcfg" description:"The import config for the modules dependencies" required:"true"`
+		LDFlags           string   `short:"l" long:"ld_flags" description:"The file to write linker flags to" default:"LD_FLAGS"`
+		GoTool            string   `short:"g" long:"go_tool" description:"The location of the go binary" default:"go"`
+		CCTool            string   `short:"c" long:"cc_tool" description:"The c compiler to use"`
+		Out               string   `short:"o" long:"out" description:"The output directory to put compiled artifacts in" required:"true"`
+		TrimPath          string   `short:"t" long:"trim_path" description:"Removes prefix from recorded source file paths."`
+		PackageConfigTool string   `short:"p" long:"pkg_config_tool" description:"The path to the pkg config" default:"pkg-config"`
+		Args              struct {
 			Packages []string `positional-arg-name:"packages" description:"The packages to compile"`
 		} `positional-args:"true" required:"true"`
 	} `command:"install" alias:"i" description:"Compile a go module similarly to 'go install'"`
 	Test struct {
-		Dir        string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
-		Exclude    []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
-		Output     string   `short:"o" long:"output" description:"Output filename" required:"true"`
-		Package    string   `short:"p" long:"package" description:"Package containing this test" env:"PKG_DIR"`
-		ImportPath string   `short:"i" long:"import_path" description:"Full import path to the package"`
-		Benchmark  bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
-		Args       struct {
+		Dir         string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
+		Exclude     []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
+		Output      string   `short:"o" long:"output" description:"Output filename" required:"true"`
+		TestPackage string   `short:"t" long:"test_package" description:"The import path of the test package"`
+		ImportPath  string   `short:"i" long:"import_path" description:"Full import path to the package"`
+		Benchmark   bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
+		External    bool     `short:"e" long:"external" description:"Whether the test package is external"`
+		Args        struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
 	} `command:"testmain" alias:"t" description:"Generates a go main package to run the tests in a package."`
@@ -59,16 +62,18 @@ a go import config just like 'go tool compile/link -importcfg'.
 var subCommands = map[string]func() int{
 	"install": func() int {
 		pleaseGoInstall := install.New(
-			opts.PleaseGoInstall.SrcRoot,
-			opts.PleaseGoInstall.ModuleName,
-			opts.PleaseGoInstall.ImportConfig,
-			opts.PleaseGoInstall.LDFlags,
-			mustResolvePath(opts.PleaseGoInstall.GoTool),
-			mustResolvePath(opts.PleaseGoInstall.CCTool),
-			opts.PleaseGoInstall.Out,
-			opts.PleaseGoInstall.TrimPath,
+			opts.Install.BuildTags,
+			opts.Install.SrcRoot,
+			opts.Install.ModuleName,
+			opts.Install.ImportConfig,
+			opts.Install.LDFlags,
+			mustResolvePath(opts.Install.GoTool),
+			mustResolvePath(opts.Install.CCTool),
+			opts.Install.PackageConfigTool,
+			opts.Install.Out,
+			opts.Install.TrimPath,
 		)
-		if err := pleaseGoInstall.Install(opts.PleaseGoInstall.Args.Packages); err != nil {
+		if err := pleaseGoInstall.Install(opts.Install.Args.Packages); err != nil {
 			log.Fatal(err)
 		}
 		return 0
@@ -77,11 +82,12 @@ var subCommands = map[string]func() int{
 		test.PleaseGoTest(
 			opts.Test.Dir,
 			opts.Test.ImportPath,
-			opts.Test.Package,
+			opts.Test.TestPackage,
 			opts.Test.Output,
 			opts.Test.Args.Sources,
 			opts.Test.Exclude,
 			opts.Test.Benchmark,
+			opts.Test.External,
 		)
 		return 0
 	},

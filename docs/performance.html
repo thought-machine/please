@@ -1,0 +1,162 @@
+<h1 class="title-1">Performance</h1>
+Please does away with upfront analysis phases, and instead opts to analyse the build graph on the fly. Performance
+is integral to this approach, so we need some way to track it. Plotted here are some graphs of benchmarks we run against
+each commit. These are used to identify any regressions to performance we may introduce, and to verify any optimisation
+efforts have been successful.
+
+<p class="red">This page is a work in progress and will be improved over time as we implement more benchmarks.</p>
+
+<h2 class="title-2">Overall parse performance</h2>
+<p>This benchmark aims to provide a good indicator of the overall parse performance of Please. This
+    benchmark covers parsing and executing BUILD files, adding targets to the graph, and resolving
+    dependencies. The test measures the time to analyse a large (~300,000 targets) synthetic graph.
+    This is primarily a benchmark of asp, the core build graph and relevant parts of the Go runtime,
+    but touches on everything relating to analysing the build graph.</p>
+<p>This benchmark is ran five times. Plotted is the average (mean) time for each run, with the ranges representing the
+    minimum and maximum times.</p>
+<div id="parse_chart" style="width: 100%; height: 400px"></div>
+
+<h2 class="title-2">Peak memory usage</h2>
+<p>Comparing memory utilisation in Please with Bazel is difficult because the runtimes have very different memory
+    models. Bazel runs on the JVM so has a predetermined maximum heap size that is configurable through JVM options, and
+    The JVM doesn't generally return memory back to the OS once it has been allocated. This means that tweaking this
+    value is very important. The Golang runtime, on the other hand, is able to resize the heap up and down, limited only
+    by the physical memory available. Golang also more readily frees memory back to the OS over time.</p>
+<p>Additionally, Bazel performs a full graph analysis phase before a build, whereas Please rarely analyses the whole
+    build graph. During a build, packages are parsed on demand, and targets are queued for build as soon as they have
+    been parsed. This means that Please generally uses less memory during build when compared to querying the graph.</p>
+<p>Regardless, graphed here is the peak resident memory allocated by the OS to the Please process during the same parse
+    performance test above. This has been measured using
+    <a class="copy-link" href="https://man7.org/linux/man-pages/man1/time.1.html">time</a>. The actual heap size is
+    usually much smaller than this as once Please has stopped interpreting the BUILD files, that memory will be
+    eventually be returned to the OS over time.
+<div id="mem_chart" style="width: 100%; height: 400px"></div>
+
+<h2 class="title-2">Provide for performance</h2>
+<p>At the core of resolving dependencies for targets is the <code class="code">provideFor()</code> method. This method
+    resolves named dependencies, handling the require/provide semantics where necessary. It is called every time a target
+    depends on another, so is critical to the performance of Please.</p>
+<p>The benchmark is ran millions of times per commit and the average (median) result is plotted here. There are four
+    series to this graph:</p>
+<ul class="bulleted-list pl2">
+    <li><span><strong>Control</strong> - Control case where the target provides nothing, avoiding the require/provide codepath</span></li>
+    <li><span><strong>No match</strong> - The target provides something, but it doesn't match the dependant targets require list</span></li>
+    <li><span><strong>One match</strong> - The target provided one target to the dependant target</span></li>
+    <li><span><strong>Two match</strong> - The target provided two targets to the dependant target</span></li>
+</ul>
+<p>There are very few cases where a target will provide more than a couple of targets, so the time complexity of this
+    method as the number of matches increases isn't a big concern.</p>
+<p>For more information on the require/provide mechanism, see the docs <a class="copy-link" href="/require_provide.html">here</a>.</p>
+<div id="build_target_chart" style="width: 100%; height: 400px"></div>
+
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script type="text/javascript">
+    google.charts.load('current', {'packages':['corechart']});
+    google.charts.setOnLoadCallback(drawCharts);
+
+    function drawCharts() {
+        fetch('/performance/all_results.jsonl', {
+            method: 'GET',
+            cache: 'no-cache',
+            redirect: 'follow',
+        }).then(response => response.text().then(text => {
+            const results = text.trim().split('\n').map(JSON.parse);
+            const timeData = new google.visualization.DataTable({
+                cols: [
+                    {id: 'revision', label: 'Revision', type: 'string'},
+                    {id: 'time', label: 'Time (s)', type: 'number'},
+                    {id: 'time-min', label: 'Min', type: 'number', role: 'interval'},
+                    {id: 'time-max', label: 'Max', type: 'number', role: 'interval'},
+                    {id: 'style', label: 'Style', type: 'string', role: 'style'},
+                ],
+                rows: results.map(r => ({c:[
+                    {v: r.revision.substring(0, 7)}, // short hash
+                    {v: r.parse.median},
+                    {v: Math.min(...r.parse.raw)},
+                    {v: Math.max(...r.parse.raw)},
+                    {v: 'color: #02e68f;'},
+                ]})),
+            });
+
+            const memData = new google.visualization.DataTable({
+                cols: [
+                    {id: 'revision', label: 'Revision', type: 'string'},
+                    {id: 'mem', label: 'Memory (GB)', type: 'number'},
+                    {id: 'mem-min', label: 'Min', type: 'number', role: 'interval'},
+                    {id: 'mem-max', label: 'Max', type: 'number', role: 'interval'},
+                    {id: 'style', label: 'Style', type: 'string', role: 'style'},
+                ],
+                rows: results.filter(r => r.mem !== undefined).map(r => ({c:[
+                    {v: r.revision.substring(0, 7)}, // short hash
+                    {v: r.mem.median / 1000000},
+                    {v: Math.min(...r.mem.raw) / 1000000},
+                    {v: Math.max(...r.mem.raw) / 1000000},
+                    {v: 'color: #02e68f;'},
+                ]})),
+            });
+
+            const parseChart = new google.visualization.LineChart(document.getElementById('parse_chart'));
+            parseChart.draw(timeData, {
+                title: 'Parse Time (seconds)',
+                titleTextStyle: {color: 'white'},
+                curveType: 'none',
+                legend: { position: 'none' },
+                vAxis: { minValue: 0, textStyle: {color: 'white'}},
+                hAxis: { textStyle: {color: 'white'}},
+                backgroundColor: '#202328',
+                lineWidth: 3,
+            });
+
+            const memChart = new google.visualization.LineChart(document.getElementById('mem_chart'));
+            memChart.draw(memData, {
+                title: 'Memory usage (Gigabytes)',
+                titleTextStyle: {color: 'white'},
+                curveType: 'none',
+                legend: { position: 'none' },
+                vAxis: { minValue: 0, textStyle: {color: 'white'}},
+                hAxis: { textStyle: {color: 'white'}},
+                backgroundColor: '#202328',
+                lineWidth: 3,
+            });
+        }));
+
+        fetch('/performance/build_target_benchmark_all_results.jsonl', {
+            method: 'GET',
+            cache: 'no-cache',
+            redirect: 'follow',
+        }).then(response => response.text().then(text => {
+            const results = text.trim().split('\n').map(JSON.parse);
+
+
+            const dt = new google.visualization.DataTable({
+                cols: [
+                    {id: 'Revision', label: 'Revision', type: 'string'},
+                    {id: 'control', label: 'Control', type: 'number'},
+                    {id: 'no-match', label: 'No match', type: 'number'},
+                    {id: 'one-match', label: 'One match', type: 'number'},
+                    {id: 'two-matches', label: 'Two matches', type: 'number'},
+                    {id: 'style', label: 'Style', type: 'string', role: 'style'},
+                ],
+                rows: results.map(r => ({c:[
+                        {v: r.Revision.substring(0, 7)}, // short hash
+                        {v: r.Set["BenchmarkProvideFor/Simple-36"][0].NsPerOp},
+                        {v: r.Set["BenchmarkProvideFor/NoMatch-36"][0].NsPerOp},
+                        {v: r.Set["BenchmarkProvideFor/OneMatch-36"][0].NsPerOp},
+                        {v: r.Set["BenchmarkProvideFor/TwoMatches-36"][0].NsPerOp},
+                        {v: 'color: #02e68f;'},
+                    ]})),
+            });
+            const chart = new google.visualization.LineChart(document.getElementById('build_target_chart'));
+            chart.draw(dt, {
+                title: 'Provide for (ns/op)',
+                titleTextStyle: {color: 'white'},
+                curveType: 'none',
+                legend: { position: 'none' },
+                vAxis: { minValue: 0, textStyle: {color: 'white'}},
+                hAxis: { textStyle: {color: 'white'}},
+                backgroundColor: '#202328',
+                lineWidth: 3,
+            });
+        }));
+    }
+</script>

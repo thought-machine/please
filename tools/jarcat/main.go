@@ -66,7 +66,6 @@ var opts = struct {
 		Out                   string            `short:"o" long:"output" env:"OUT" description:"Output filename" required:"true"`
 		Suffix                []string          `short:"s" long:"suffix" default:".jar" description:"Suffix of files to include"`
 		ExcludeSuffix         []string          `short:"e" long:"exclude_suffix" description:"Suffix of files to exclude"`
-		ExcludeJavaPrefixes   bool              `short:"j" long:"exclude_java_prefixes" description:"Use default Java exclusions"`
 		ExcludeTools          []string          `long:"exclude_tools" env:"TOOLS" env-delim:" " description:"Tools to exclude from the generated zipfile"`
 		ExcludeInternalPrefix []string          `short:"x" long:"exclude_internal_prefix" description:"Prefix of files to exclude"`
 		IncludeInternalPrefix []string          `short:"t" long:"include_internal_prefix" description:"Prefix of files to include"`
@@ -77,6 +76,7 @@ var opts = struct {
 		MainClass             string            `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
 		Manifest              string            `long:"manifest" description:"Use the given file as a Java manifest"`
 		Align                 int               `short:"a" long:"align" description:"Align zip members to a multiple of this number of bytes."`
+		ExcludeJavaPrefixes   bool              `short:"j" long:"exclude_java_prefixes" description:"Use default Java exclusions"`
 		Strict                bool              `long:"strict" description:"Disallow duplicate files"`
 		IncludeOther          bool              `long:"include_other" description:"Add files that are not jar files as well"`
 		AddInitPy             bool              `long:"add_init_py" description:"Adds __init__.py files to all directories"`
@@ -91,10 +91,10 @@ var opts = struct {
 	Tar struct {
 		Gzip        bool     `short:"z" long:"gzip" description:"Apply gzip compression to the tar file."`
 		Xzip        bool     `short:"x" long:"xzip" description:"Apply gzip compression to the tar file."`
+		Flatten     bool     `long:"flatten" description:"Whether to flatten internal tar structure."`
 		Out         string   `short:"o" long:"output" env:"OUT" description:"Output filename" required:"true"`
 		Srcs        []string `long:"srcs" env:"SRCS" env-delim:" " description:"Source files for the tarball."`
 		Prefix      string   `long:"prefix" description:"Prefix all entries with this directory name."`
-		Flatten     bool     `long:"flatten" description:"Whether to flatten internal tar structure."`
 		StripPrefix string   `long:"strip-prefix" description:"Prefix to remove from files. Only affects non-flattened tarballs."`
 	} `command:"tar" alias:"t" description:"Builds a tarball instead of a zipfile."`
 

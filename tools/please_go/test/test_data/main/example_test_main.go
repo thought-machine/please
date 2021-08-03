@@ -14,16 +14,16 @@ import (
 
 func TestParseSourceBuildLabel(t *testing.T) {
 	src := parseSource("//src/parse/test_data/test_subfolder4:test_py", "src/parse")
-	label := src.Label()
-	assert.NotNil(t, label)
+	label, ok := src.Label()
+	assert.True(t, ok)
 	assert.Equal(t, label.PackageName, "src/parse/test_data/test_subfolder4")
 	assert.Equal(t, label.Name, "test_py")
 }
 
 func TestParseSourceRelativeBuildLabel(t *testing.T) {
 	src := parseSource(":builtin_rules", "src/parse")
-	label := src.Label()
-	assert.NotNil(t, label)
+	label, ok := src.Label()
+	assert.True(t, ok)
 	assert.Equal(t, "src/parse", label.PackageName)
 	assert.Equal(t, "builtin_rules", label.Name)
 }
@@ -31,7 +31,8 @@ func TestParseSourceRelativeBuildLabel(t *testing.T) {
 // Test parsing from a subdirectory that does not contain a build file.
 func TestParseSourceFromSubdirectory(t *testing.T) {
 	src := parseSource("test_subfolder3/test_py", "src/parse/test_data")
-	assert.Nil(t, src.Label())
+	_, ok := src.Label()
+	assert.False(t, ok)
 	paths := src.Paths(nil)
 	assert.Equal(t, 1, len(paths))
 	assert.Equal(t, "src/parse/test_data/test_subfolder3/test_py", paths[0])

@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/thought-machine/please/src/sandbox"
+	"github.com/thought-machine/go-flags"
+	"gopkg.in/op/go-logging.v1"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -15,15 +16,13 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/thought-machine/go-flags"
-	"gopkg.in/op/go-logging.v1"
-
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cache"
 	"github.com/thought-machine/please/src/clean"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/exec"
 	"github.com/thought-machine/please/src/export"
 	"github.com/thought-machine/please/src/format"
 	"github.com/thought-machine/please/src/fs"
@@ -34,8 +33,10 @@ import (
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/src/plzinit"
+	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/query"
 	"github.com/thought-machine/please/src/run"
+	"github.com/thought-machine/please/src/sandbox"
 	"github.com/thought-machine/please/src/scm"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
@@ -93,6 +94,7 @@ var opts struct {
 	Profile          string `long:"profile_file" hidden:"true" description:"Write profiling output to this file"`
 	MemProfile       string `long:"mem_profile_file" hidden:"true" description:"Write a memory profile to this file"`
 	MutexProfile     string `long:"mutex_profile_file" hidden:"true" description:"Write a contended mutex profile to this file"`
+	GoTraceFile      string `long:"go_trace_file" hidden:"true" description:"Write a go trace profile to this file"`
 	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
@@ -193,6 +195,17 @@ var opts struct {
 		} `positional-args:"true"`
 		Remote bool `long:"remote" description:"Send targets to be executed remotely."`
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
+
+	Exec struct {
+		Share struct {
+			Network bool `long:"share_network" description:"Share network namespace"`
+			Mount   bool `long:"share_mount" description:"Share mount namespace"`
+		} `group:"Options to override mount and network namespacing on linux, if configured"`
+		Args struct {
+			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
+			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
+		} `positional-args:"true"`
+	} `command:"exec" description:"Builds and executes a single target in a sandboxed environment"`
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
@@ -341,6 +354,13 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to render graph for"`
 			} `positional-args:"true"`
 		} `command:"graph" description:"Prints a JSON representation of the build graph."`
+		WhatInputs struct {
+			Hidden    bool `long:"hidden" short:"h" description:"Output internal / hidden targets too."`
+			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
+			Args      struct {
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to query as sources to targets" required:"true"`
+			} `positional-args:"true" required:"true"`
+		} `command:"whatinputs" description:"Prints out target(s) with provided file(s) as inputs"`
 		WhatOutputs struct {
 			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
 			Args      struct {
@@ -446,6 +466,15 @@ var buildFunctions = map[string]func() int{
 		}
 		return toExitCode(success, state)
 	},
+	"exec": func() int {
+		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
+		if !success {
+			return toExitCode(success, state)
+		}
+
+		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
+		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount))
+	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
@@ -459,7 +488,7 @@ var buildFunctions = map[string]func() int{
 
 			annotatedOutputLabels := state.ExpandOriginalMaybeAnnotatedLabels([]core.AnnotatedOutputLabel{opts.Run.Args.Target})
 			if len(annotatedOutputLabels) != 1 {
-				log.Fatalf("%v expanded to too many targets: %v", opts.Run.Args.Target, annotatedOutputLabels)
+				log.Fatalf("%v expanded to more than one target. If you want to run multiple targets, use `plz run parallel %v` or `plz run sequential %v`. ", opts.Run.Args.Target, opts.Run.Args.Target, opts.Run.Args.Target)
 			}
 
 			run.Run(state, annotatedOutputLabels[0], opts.Run.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir, opts.Run.Cmd)
@@ -523,7 +552,7 @@ var buildFunctions = map[string]func() int{
 		if err == nil {
 			err = syscall.Exec(executable, append([]string{executable}, cmd...), os.Environ())
 		}
-		log.Fatalf("SORRY OP: %s", err) // On success Exec never returns.
+		log.Fatalf("SORRY OP: %s", err) // On success Run never returns.
 		return 1
 	},
 	"gc": func() int {
@@ -593,8 +622,9 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"revdeps": func() int {
-		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.ReverseDeps(state, state.ExpandLabels(utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
+		labels := utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
+		return runQuery(true, append(labels, core.WholeGraph...), func(state *core.BuildState) {
+			query.ReverseDeps(state, state.ExpandLabels(labels), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
 		})
 	},
 	"somepath": func() int {
@@ -614,7 +644,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"print": func() int {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.Print(state.Graph, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
+			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
 		})
 	},
 	"input": func() int {
@@ -640,14 +670,34 @@ var buildFunctions = map[string]func() int{
 			}
 			return 0
 		}
-		if len(fragments) == 0 || len(fragments) == 1 && strings.Trim(fragments[0], "/ ") == "" {
-			os.Exit(0) // Don't do anything for empty completion, it's normally too slow.
+
+		var qry string
+		if len(fragments) == 0 {
+			qry = "//"
+		} else {
+			qry = fragments[0]
 		}
-		labels, parseLabels, hidden := query.CompletionLabels(config, fragments, core.RepoRoot)
-		if success, state := Please(parseLabels, config, false, false); success {
-			binary := opts.Query.Completions.Cmd == "run"
+
+		completions := query.CompletionLabels(config, qry, core.RepoRoot)
+		// We have no labels to parse so we're done already
+		if completions.PackageToParse == "" && !completions.IsRoot {
+			for _, pkg := range completions.Pkgs {
+				fmt.Printf("//%s\n", pkg)
+			}
+			return 0
+		}
+
+		labelsToParse := []core.BuildLabel{{PackageName: completions.PackageToParse, Name: "all"}}
+		binary := opts.Query.Completions.Cmd == "run"
+
+		// The original pkg might not have binary targets. If we only match one package, we might need to parse that too.
+		if binary && len(completions.Pkgs) == 1 {
+			labelsToParse = append(labelsToParse, core.BuildLabel{PackageName: completions.Pkgs[0], Name: "all"})
+		}
+
+		if success, state := Please(labelsToParse, config, false, false); success {
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
-			query.Completions(state.Graph, labels, binary, test, hidden)
+			query.Completions(state.Graph, completions.PackageToParse, completions.NamePrefix, completions.Pkgs, binary, test, completions.Hidden)
 			return 0
 		}
 		return 1
@@ -659,6 +709,18 @@ var buildFunctions = map[string]func() int{
 				targets = opts.Query.Graph.Args.Targets // It special-cases doing the full graph.
 			}
 			query.Graph(state, state.ExpandLabels(targets))
+		})
+	},
+	"whatinputs": func() int {
+		files := opts.Query.WhatInputs.Args.Files.Get()
+		// We only need this to retrieve the BuildFileName
+		state := core.NewBuildState(config)
+		labels := make([]core.BuildLabel, 0, len(files))
+		for _, file := range files {
+			labels = append(labels, core.FindOwningPackage(state, file))
+		}
+		return runQuery(true, labels, func(state *core.BuildState) {
+			query.WhatInputs(state.Graph, files, opts.Query.WhatInputs.Hidden, opts.Query.WhatInputs.EchoFiles)
 		})
 	},
 	"whatoutputs": func() int {
@@ -778,13 +840,16 @@ var buildFunctions = map[string]func() int{
 
 		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
 			if opts.Codegen.Gitignore != "" {
-				if !state.Config.Build.LinkGeneratedSources {
-					log.Warning("You're updating a .gitignore with generated sources but Please isn't configured to link generated sources. See `plz help LinkGeneratedSources` for more information. ")
-				}
 				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Codegen.Gitignore)
 				if err != nil {
 					log.Fatalf("failed to update gitignore: %v", err)
 				}
+			}
+
+			// This may seem counter intuitive but if this was set, we would've linked during the build.
+			// If we've opted to not automatically link generated sources during the build, we should link them now.
+			if !state.Config.Build.LinkGeneratedSources {
+				generate.LinkGeneratedSources(state.Graph, state.ExpandOriginalLabels())
 			}
 			return 0
 		}
@@ -853,13 +918,13 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	}
 	state := core.NewBuildState(config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
-	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)       // Only one of these can be passed
-	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially // Similarly here.
-	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)      // And here
+	state.NumTestRuns = uint16(utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)) // Only one of these can be passed
+	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially   // Similarly here.
+	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)        // And here
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
-	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0
+	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty()
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
@@ -889,15 +954,19 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	}
 
 	runPlease(state, targets)
+	if state.RemoteClient != nil && !opts.Run.Remote {
+		defer state.RemoteClient.Disconnect()
+	}
 	return state.Successful(), state
 }
 
 func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	// Acquire the lock before we start building
 	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
-		core.AcquireRepoLock(state)
+		core.AcquireRepoLock()
 		defer core.ReleaseRepoLock()
 	}
+	core.CheckXattrsSupported(state)
 
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
 		(len(targets) == 1 && !targets[0].IsAllTargets() &&
@@ -1129,6 +1198,28 @@ func unannotateLabels(als []core.AnnotatedOutputLabel) []core.BuildLabel {
 	return labels
 }
 
+func writeGoTraceFile() {
+	if err := runtime.StartTrace(); err != nil {
+		log.Fatalf("failed to start trace: %v", err)
+	}
+
+	f, err := os.Create(opts.GoTraceFile)
+	if err != nil {
+		log.Fatalf("Failed to create trace file: %v", err)
+	}
+	defer f.Close()
+
+	for {
+		data := runtime.ReadTrace()
+		if data == nil {
+			return
+		}
+		if _, err := f.Write(data); err != nil {
+			log.Fatalf("Failed to write trace data: %v", err)
+		}
+	}
+}
+
 // toExitCode returns an integer process exit code based on the outcome of a build.
 // 0 -> success
 // 1 -> general failure (and why is he reading my hard drive?)
@@ -1179,6 +1270,12 @@ func execute(command string) int {
 		defer f.Close()
 		defer func() {
 			pprof.Lookup("mutex").WriteTo(f, 0)
+		}()
+	}
+	if opts.GoTraceFile != "" {
+		go writeGoTraceFile()
+		defer func() {
+			runtime.StopTrace()
 		}()
 	}
 	defer worker.StopAll()

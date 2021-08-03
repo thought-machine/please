@@ -1,0 +1,14 @@
+def _prebuild(x):
+    assert CONFIG.GO_TOOL == "foo"
+
+def _postbuild(x, y):
+    assert CONFIG.GO_TOOL == "foo"
+
+def build_foo(name):
+    return build_rule(
+        name = name,
+        cmd = "true",
+        pre_build = _prebuild,
+        post_build = _postbuild,
+    )
+

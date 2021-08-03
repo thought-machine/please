@@ -26,21 +26,24 @@ func (pos Position) String() string {
 // support backoff (i.e. if an earlier entry matches to its completion but can't consume
 // following tokens, it doesn't then make another choice :( )
 type Statement struct {
-	Pos     Position
-	EndPos  Position
-	FuncDef *FuncDef
-	For     *ForStatement
-	If      *IfStatement
-	Return  *ReturnStatement
-	Raise   *Expression // Deprecated
-	Assert  *struct {
-		Expr    *Expression
-		Message *Expression
-	}
+	Pos      Position
+	EndPos   Position
+	FuncDef  *FuncDef
+	For      *ForStatement
+	If       *IfStatement
+	Return   *ReturnStatement
+	Raise    *Expression // Deprecated
+	Assert   *AssertStatement
 	Ident    *IdentStatement
 	Literal  *Expression
 	Pass     bool
 	Continue bool
+}
+
+// An AssertStatement implements the 'assert' statement.
+type AssertStatement struct {
+	Expr    *Expression
+	Message *Expression
 }
 
 // A ReturnStatement implements the Python 'return' statement.
@@ -76,13 +79,16 @@ type ForStatement struct {
 
 // An IfStatement implements the if-elif-else statement.
 type IfStatement struct {
+	Condition      Expression
+	Statements     []*Statement
+	Elif           []IfStatementElif
+	ElseStatements []*Statement
+}
+
+// An IfStatementElif holds an elif clause in the if-elif-else statement.
+type IfStatementElif struct {
 	Condition  Expression
 	Statements []*Statement
-	Elif       []struct {
-		Condition  Expression
-		Statements []*Statement
-	}
-	ElseStatements []*Statement
 }
 
 // An Argument represents an argument to a function definition.
@@ -131,10 +137,13 @@ type OpExpression struct {
 type ValueExpression struct {
 	String  string
 	FString *FString
-	Int     *struct {
-		Int int
-	} // Should just be *int, but https://github.com/golang/go/issues/23498 :(
-	Bool     string
+	// These are true if this represents one of the boolean singletons
+	True  bool
+	False bool
+	None  bool
+	// True if the Int field is set; this helps us distinguish values of 0.
+	IsInt    bool
+	Int      int
 	List     *List
 	Dict     *Dict
 	Tuple    *List
@@ -145,16 +154,19 @@ type ValueExpression struct {
 	Call     *Call
 }
 
-// A FString represents a minimal version of a Python literal format string.
+// An FString represents a minimal version of a Python literal format string.
 // Note that we only support a very small subset of what Python allows there; essentially only
 // variable substitution, which gives a much simpler AST structure here.
 type FString struct {
-	Vars []struct {
-		Prefix string // Preceding string bit
-		Var    string // Variable name to interpolate
-		Config string // Config variable to look up
-	}
+	Vars   []FStringVar
 	Suffix string // Following string bit
+}
+
+// An FStringVar represents a single variable in an FString.
+type FStringVar struct {
+	Prefix string // Preceding string bit
+	Var    string // Variable name to interpolate
+	Config string // Config variable to look up
 }
 
 // A UnaryOp represents a unary operation - in our case the only ones we support are negation and not.
@@ -167,16 +179,22 @@ type UnaryOp struct {
 // starts off with a variable name). It is a little fiddly due to parser limitations.
 type IdentStatement struct {
 	Name   string
-	Unpack *struct {
-		Names []string
-		Expr  *Expression
-	}
-	Index *struct {
-		Expr      *Expression
-		Assign    *Expression
-		AugAssign *Expression
-	}
+	Unpack *IdentStatementUnpack
+	Index  *IdentStatementIndex
 	Action *IdentStatementAction
+}
+
+// An IdentStatementUnpack implements unpacking on an IdentStatement.
+type IdentStatementUnpack struct {
+	Names []string
+	Expr  *Expression
+}
+
+// An IdentStatementIndex implements indexing on an IdentStatement.
+type IdentStatementIndex struct {
+	Expr      *Expression
+	Assign    *Expression
+	AugAssign *Expression
 }
 
 // An IdentStatementAction implements actions on an IdentStatement.
@@ -193,10 +211,13 @@ type IdentExpr struct {
 	Pos    Position
 	EndPos Position
 	Name   string
-	Action []struct {
-		Property *IdentExpr
-		Call     *Call
-	}
+	Action []IdentExprAction
+}
+
+// An IdentExprAction represents an Action within an IdentExpr.
+type IdentExprAction struct {
+	Property *IdentExpr
+	Call     *Call
 }
 
 // A Call represents a call site of a function.
@@ -246,11 +267,14 @@ type InlineIf struct {
 type Comprehension struct {
 	Names  []string
 	Expr   *Expression
-	Second *struct {
-		Names []string
-		Expr  *Expression
-	}
-	If *Expression
+	Second *SecondComprehension
+	If     *Expression
+}
+
+// A SecondComprehension represents a second 'for' clause in a list or dict comprehension.
+type SecondComprehension struct {
+	Names []string
+	Expr  *Expression
 }
 
 // A Lambda is the inline lambda function.

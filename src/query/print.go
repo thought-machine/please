@@ -15,7 +15,9 @@ import (
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
-func Print(graph *core.BuildGraph, targets []core.BuildLabel, fields, labels []string) {
+func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string) {
+	graph := state.Graph
+	order := state.Parser.BuildRuleArgOrder()
 	for _, target := range targets {
 		t := graph.TargetOrDie(target)
 		if len(labels) > 0 {
@@ -32,9 +34,9 @@ func Print(graph *core.BuildGraph, targets []core.BuildLabel, fields, labels []s
 			fmt.Fprintf(os.Stdout, "# %s:\n", target)
 		}
 		if len(fields) > 0 {
-			newPrinter(os.Stdout, t, 0).PrintFields(fields)
+			newPrinter(os.Stdout, t, 0, order).PrintFields(fields)
 		} else {
-			newPrinter(os.Stdout, t, 0).PrintTarget()
+			newPrinter(os.Stdout, t, 0, order).PrintTarget()
 		}
 	}
 }
@@ -70,7 +72,7 @@ var specialFields = map[string]func(*printer) (string, bool){
 		if tools := p.target.NamedTestTools(); len(tools) > 0 {
 			return p.genericPrint(reflect.ValueOf(tools))
 		}
-		return p.genericPrint(reflect.ValueOf(p.target.TestTools()))
+		return p.genericPrint(reflect.ValueOf(p.target.AllTestTools()))
 	},
 	"data": func(p *printer) (string, bool) {
 		if data := p.target.NamedData(); len(data) > 0 {
@@ -78,14 +80,12 @@ var specialFields = map[string]func(*printer) (string, bool){
 		}
 		return p.genericPrint(reflect.ValueOf(p.target.Data))
 	},
-}
-
-// fieldPrecedence defines a specific ordering for fields.
-var fieldPrecedence = map[string]int{
-	"name":       -100,
-	"srcs":       -90,
-	"visibility": 90,
-	"deps":       100,
+	"test": func(p *printer) (string, bool) {
+		if p.target.IsTest() {
+			return "True", p.target.IsTest()
+		}
+		return "", false
+	},
 }
 
 // A printer is responsible for creating the output of 'plz query print'.
@@ -96,15 +96,17 @@ type printer struct {
 	doneFields     map[string]bool
 	error          bool // true if something went wrong
 	surroundSyntax bool // true if we are quoting strings or surrounding slices with [] etc.
+	fieldOrder     map[string]int
 }
 
 // newPrinter creates a new printer instance.
-func newPrinter(w io.Writer, target *core.BuildTarget, indent int) *printer {
+func newPrinter(w io.Writer, target *core.BuildTarget, indent int, order map[string]int) *printer {
 	return &printer{
 		w:          w,
 		target:     target,
 		indent:     indent,
 		doneFields: make(map[string]bool, 50), // Leave enough space for all of BuildTarget's fields.
+		fieldOrder: order,
 	}
 }
 
@@ -112,6 +114,22 @@ func newPrinter(w io.Writer, target *core.BuildTarget, indent int) *printer {
 func (p *printer) printf(msg string, args ...interface{}) {
 	fmt.Fprint(p.w, strings.Repeat(" ", p.indent))
 	fmt.Fprintf(p.w, msg, args...)
+}
+
+func (p *printer) fields(structValue reflect.Value) orderedFields {
+	ret := make(orderedFields, structValue.NumField())
+
+	structType := structValue.Type()
+
+	for i := 0; i < structType.NumField(); i++ {
+		ret[i] = orderedField{
+			order: p.fieldOrder[p.fieldName(structType.Field(i))],
+			field: structType.Field(i),
+			value: structValue.Field(i),
+		}
+	}
+
+	return ret
 }
 
 // PrintTarget prints an entire build target.
@@ -125,19 +143,15 @@ func (p *printer) PrintTarget() {
 	}
 	p.surroundSyntax = true
 	p.indent += 4
-	v := reflect.ValueOf(p.target).Elem()
-	t := v.Type()
-	f := make(orderedFields, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		f[i].structIndex = i
-		f[i].printIndex = i
-		if index, present := fieldPrecedence[p.fieldName(t.Field(i))]; present {
-			f[i].printIndex = index
-		}
+	fields := p.fields(reflect.ValueOf(p.target).Elem())
+
+	if p.target.IsTest() {
+		fields = append(fields, p.fields(reflect.ValueOf(p.target.Test).Elem())...)
 	}
-	sort.Sort(f)
-	for _, orderedField := range f {
-		p.printField(t.Field(orderedField.structIndex), v.Field(orderedField.structIndex))
+
+	sort.Sort(fields)
+	for _, orderedField := range fields {
+		p.printField(orderedField.field, orderedField.value)
 	}
 	p.indent -= 4
 	p.printf(")\n\n")
@@ -166,6 +180,14 @@ func (p *printer) findField(field string) reflect.StructField {
 	for i := 0; i < t.NumField(); i++ {
 		if f := t.Field(i); p.fieldName(f) == field {
 			return f
+		}
+	}
+	if p.target.IsTest() {
+		testFields := reflect.ValueOf(p.target.Test).Elem().Type()
+		for i := 0; i < testFields.NumField(); i++ {
+			if f := testFields.Field(i); p.fieldName(f) == field {
+				return f
+			}
 		}
 	}
 	log.Fatalf("Unknown field %s", field)
@@ -219,7 +241,9 @@ func (p *printer) genericPrint(v reflect.Value) (string, bool) {
 	case reflect.Bool:
 		return "True", v.Bool()
 	case reflect.Int, reflect.Int32:
-		return fmt.Sprintf("%d", v.Int()), v.Int() > 0
+		return fmt.Sprintf("%d", v.Int()), true
+	case reflect.Uint8, reflect.Uint16:
+		return fmt.Sprintf("%d", v.Uint()), true
 	case reflect.Struct, reflect.Interface:
 		if stringer, ok := v.Interface().(fmt.Stringer); ok {
 			return p.quote(stringer.String()), true
@@ -290,11 +314,13 @@ func (p *printer) surround(prefix, s, suffix, always string) string {
 // An orderedField is used to sort the fields into the order we print them in.
 // This isn't necessarily the same as the order on the struct.
 type orderedField struct {
-	structIndex, printIndex int
+	order int
+	field reflect.StructField
+	value reflect.Value
 }
 
 type orderedFields []orderedField
 
 func (f orderedFields) Len() int           { return len(f) }
 func (f orderedFields) Swap(a, b int)      { f[a], f[b] = f[b], f[a] }
-func (f orderedFields) Less(a, b int) bool { return f[a].printIndex < f[b].printIndex }
+func (f orderedFields) Less(a, b int) bool { return f[a].order < f[b].order }
