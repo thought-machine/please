@@ -283,7 +283,7 @@ func addMaybeNamed(s *scope, name string, obj pyObject, anon func(core.BuildInpu
 	}
 	if l, ok := asList(obj); ok {
 		for _, li := range l {
-			if bi := parseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
+			if bi := ParseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
 				anon(bi)
 			}
 		}
@@ -293,14 +293,14 @@ func addMaybeNamed(s *scope, name string, obj pyObject, anon func(core.BuildInpu
 			if v != None {
 				if l, ok := asList(v); ok {
 					for _, li := range l {
-						if bi := parseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
+						if bi := ParseBuildInput(s, li, name, systemAllowed, tool); bi != nil {
 							named(k, bi)
 						}
 					}
 					continue
 				}
 				if str, ok := asString(v); ok {
-					if bi := parseBuildInput(s, str, name, systemAllowed, tool); bi != nil {
+					if bi := ParseBuildInput(s, str, name, systemAllowed, tool); bi != nil {
 						named(k, bi)
 					}
 					continue
@@ -319,7 +319,7 @@ func addMaybeNamedOrString(s *scope, name string, obj pyObject, anon func(core.B
 		return
 	}
 	if str, ok := asString(obj); ok {
-		if bi := parseBuildInput(s, str, name, systemAllowed, tool); bi != nil {
+		if bi := ParseBuildInput(s, str, name, systemAllowed, tool); bi != nil {
 			anon(bi)
 		}
 		return
@@ -461,7 +461,7 @@ func parseVisibility(s *scope, vis string) core.BuildLabel {
 	return l
 }
 
-func parseBuildInput(s *scope, in pyObject, name string, systemAllowed, tool bool) core.BuildInput {
+func ParseBuildInput(s *scope, in pyObject, name string, systemAllowed, tool bool) core.BuildInput {
 	src, ok := in.(pyString)
 	if !ok {
 		s.Assert(in == None, "Items in %s must be strings", name)
