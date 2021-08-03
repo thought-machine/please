@@ -804,7 +804,7 @@ func addData(s *scope, args []pyObject) pyObject {
 			}
 		}
 	} else {
-		log.Error("Unrecognised data type passed to add_data")
+		log.Fatal("Unrecognised data type passed to add_data")
 	}
 
 	// TODO(peterebden): Do we even need the following any more?
