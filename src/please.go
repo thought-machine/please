@@ -1205,6 +1205,8 @@ func writeGoTraceFile() {
 	if err != nil {
 		log.Fatalf("Failed to create trace file: %v", err)
 	}
+	defer f.Close()
+
 	for {
 		data := runtime.ReadTrace()
 		if data == nil {
