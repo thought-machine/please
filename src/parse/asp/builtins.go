@@ -754,8 +754,8 @@ func addDep(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-func addDataToTargetAndMaybeQueue(s *scope, data_str string, target *core.BuildTarget) {
-	data := core.NewFileLabel(data_str, s.pkg)
+func addDataToTargetAndMaybeQueue(s *scope, dataStr string, target *core.BuildTarget) {
+	data := core.NewFileLabel(dataStr, s.pkg)
 	target.AddDatum(data)
 	// Queue this dependency if it'll be needed.
 	if l, ok := data.Label(); ok && target.State() > core.Inactive {
