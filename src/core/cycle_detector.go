@@ -6,12 +6,16 @@ import (
 )
 
 type cycleDetector struct {
-	graph *BuildGraph
+	graph   *BuildGraph
+	stopped bool
 }
 
 // Check runs a single check of the build graph to see if any cycles can be detected.
 // If it finds one an errCycle is returned.
 func (c *cycleDetector) Check() *errCycle {
+	if c.stopped {
+		return nil
+	}
 	log.Debug("Running cycle detection...")
 	complete := map[*BuildTarget]struct{}{}
 	partial := map[*BuildTarget]struct{}{}
@@ -23,7 +27,9 @@ func (c *cycleDetector) Check() *errCycle {
 	// cycle is complete or not (if not the caller will need to add its node to it as well).
 	var visit func(target *BuildTarget) ([]*BuildTarget, bool)
 	visit = func(target *BuildTarget) ([]*BuildTarget, bool) {
-		if _, present := complete[target]; present {
+		if c.stopped {
+			return nil, false
+		} else if _, present := complete[target]; present {
 			return nil, false
 		} else if _, present := partial[target]; present {
 			return []*BuildTarget{target}, false
@@ -43,6 +49,10 @@ func (c *cycleDetector) Check() *errCycle {
 	}
 
 	for _, target := range c.graph.AllTargets() {
+		if c.stopped {
+			log.Debug("Cycle detection terminated")
+			return nil
+		}
 		if _, present := complete[target]; !present {
 			if cycle, _ := visit(target); cycle != nil {
 				log.Debug("Cycle detection complete, cycle found: %s", cycle)
@@ -52,6 +62,11 @@ func (c *cycleDetector) Check() *errCycle {
 	}
 	log.Debug("Cycle detection complete, no cycles found")
 	return nil
+}
+
+// Stop stops any existing run of the cycle detector.
+func (c *cycleDetector) Stop() {
+	c.stopped = true
 }
 
 // An errCycle is emitted when a graph cycle is detected.
