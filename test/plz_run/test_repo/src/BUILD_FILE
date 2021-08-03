@@ -17,22 +17,6 @@ sh_cmd(
     cmd = "sleep 0.1 && echo wobble",
 )
 
-## Test add_data functionality
-#build_rule(
-#    name = "_add_data_gen",
-##    deps = [":temp"],
-#    test = True,
-#    test_cmd = "echo $DATA > $OUT",
-#    outs = ["_add_data_gen.txt"],
-#    pre_build = lambda name: add_data(name, ":temp"),
-#)
-#
-#genrule(
-#    name = "temp",
-#    cmd = "touch $OUT",
-#    outs = ["foo.temp"],
-#)
-
 # Test add_data functionality
 build_rule(
     name = "_add_data_rule",
