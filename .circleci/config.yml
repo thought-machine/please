@@ -133,20 +133,20 @@ jobs:
        - save_cache:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
-
    build-darwin-arm64:
      working_directory: ~/please
-     macos:
-       xcode: "12.0.0"
+     docker:
+       - image: thoughtmachine/please_ubuntu:20210720
+     resource_class: large
      steps:
        - checkout
        - attach_workspace:
            at: /tmp/workspace
        - restore_cache:
-           key: go-darwin-arm64-v2-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-v1-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Extract plz
-           command: tar -xzf /tmp/workspace/darwin_amd64/please_*.tar.gz
+           command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
            command: ./please/please build -p --profile ci --arch darwin_arm64 //package:release_files
@@ -314,10 +314,10 @@ workflows:
             - build-alpine
             - build-linux
             - build-linux-alt
-      - build-darwin-arm64:
-          requires:
-            - build-darwin
       - build-freebsd:
+          requires:
+            - build-alpine
+      - build-darwin-arm64:
           requires:
             - build-alpine
       - test-rex:
