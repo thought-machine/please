@@ -781,8 +781,8 @@ func addData(s *scope, args []pyObject) pyObject {
 	label := args[0]
 	target := getTargetPost(s, string(label.(pyString)))
 
-	systemAllowed := true
-	tool := true
+	systemAllowed := false
+	tool := false
 
 	// add_data() builtin can take a string, list, or dict
 	if isType(args[1], "str") {
