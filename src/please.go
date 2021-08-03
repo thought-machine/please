@@ -199,7 +199,7 @@ var opts struct {
 		Share struct {
 			Network bool `long:"share_network" description:"Share network namespace"`
 			Mount   bool `long:"share_mount" description:"Share mount namespace"`
-		} `group:"Options allowing namespace sharing"`
+		} `group:"Options to override mount and network namespacing on linux, if configured"`
 		Args struct {
 			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
 			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
@@ -470,7 +470,9 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(!opts.Exec.Share.Network, !opts.Exec.Share.Mount))
+
+		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
+		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount))
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
