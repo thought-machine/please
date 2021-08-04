@@ -754,8 +754,7 @@ func addDep(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, obj pyObject, systemAllowed, tool bool) {
-	datum := core.NewFileLabel(string(obj.(pyString)), s.pkg)
+func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, datum core.BuildInput, systemAllowed, tool bool) {
 	target.AddDatum(datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
@@ -764,8 +763,7 @@ func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, obj pyObj
 	}
 }
 
-func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.BuildTarget, obj pyObject, systemAllowed, tool bool) {
-	datum := core.NewFileLabel(string(obj.(pyString)), s.pkg)
+func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.BuildTarget, datum core.BuildInput, systemAllowed, tool bool) {
 	target.AddNamedDatum(name, datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
@@ -787,19 +785,19 @@ func addData(s *scope, args []pyObject) pyObject {
 	// add_data() builtin can take a string, list, or dict
 	if isType(args[1], "str") {
 		if bi := ParseBuildInput(s, args[1], string(label.(pyString)), systemAllowed, tool); bi != nil {
-			addDatumToTargetAndMaybeQueue(s, target, args[1], systemAllowed, tool)
+			addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
 		}
 	} else if isType(args[1], "list") {
 		for _, str := range args[1].(pyList) {
 			if bi := ParseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
-				addDatumToTargetAndMaybeQueue(s, target, str, systemAllowed, tool)
+				addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
 			}
 		}
 	} else if isType(args[1], "dict") {
 		for name, v := range args[1].(pyDict) {
 			for _, str := range v.(pyList) {
 				if bi := ParseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
-					addNamedDatumToTargetAndMaybeQueue(s, name, target, str, systemAllowed, tool)
+					addNamedDatumToTargetAndMaybeQueue(s, name, target, bi, systemAllowed, tool)
 				}
 			}
 		}
