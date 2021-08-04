@@ -784,19 +784,19 @@ func addData(s *scope, args []pyObject) pyObject {
 
 	// add_data() builtin can take a string, list, or dict
 	if isType(args[1], "str") {
-		if bi := ParseBuildInput(s, args[1], string(label.(pyString)), systemAllowed, tool); bi != nil {
+		if bi := parseBuildInput(s, args[1], string(label.(pyString)), systemAllowed, tool); bi != nil {
 			addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
 		}
 	} else if isType(args[1], "list") {
 		for _, str := range args[1].(pyList) {
-			if bi := ParseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
+			if bi := parseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
 				addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
 			}
 		}
 	} else if isType(args[1], "dict") {
 		for name, v := range args[1].(pyDict) {
 			for _, str := range v.(pyList) {
-				if bi := ParseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
+				if bi := parseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
 					addNamedDatumToTargetAndMaybeQueue(s, name, target, bi, systemAllowed, tool)
 				}
 			}
