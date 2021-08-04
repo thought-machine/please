@@ -331,16 +331,6 @@ plz_e2e_test(
     pre_cmd = "mv test/cycle/TEST_BUILD test/cycle/BUILD",
 )
 
-plz_e2e_test(
-    name = "verify_outputs_test",
-    timeout = 30,
-    cmd = "plz test //plz-out/tmp/test/verify_outputs_test._test/run_1/test/verify_outputs:all",
-    data = ["verify_outputs/TEST_BUILD"],
-    expect_output_contains = "Target //plz-out/tmp/test/verify_outputs_test._test/run_1/test/verify_outputs:file-out outputs files into the directory foo, which is separately output by //plz-out/tmp/test/verify_outputs_test._test/run_1/test/verify_outputs:dir-out.",
-    expected_failure = True,
-    pre_cmd = "mv test/verify_outputs/TEST_BUILD test/verify_outputs/BUILD",
-)
-
 # Used manually for testing the test flakiness stuff.
 python_test(
     name = "flaky_test",
@@ -488,15 +478,15 @@ plz_e2e_test(
 # even though this target isn't a test.
 build_rule(
     name = "non_test_target_with_test_fields_set",
-    test_tools = ["go"],
+    flaky = 3,
+    labels = ["manual"],
+    no_test_output = True,
+    test = False,
     test_cmd = "true",
     test_outputs = ["foo"],
-    labels = ["manual"],
-    test_timeout = 60,
-    flaky = 3,
     test_sandbox = True,
-    no_test_output = True,
-    test=False,
+    test_timeout = 60,
+    test_tools = ["go"],
 )
 
 plz_e2e_test(

@@ -789,16 +789,16 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 		// parsed yet - recall filegroups are a special case for this since they don't
 		// explicitly declare their outputs but can re-output other rules' outputs.
 		for _, src := range target.AllLocalSources() {
-			pkg.MustRegisterOutput(src, target)
+			pkg.MustRegisterOutput(state, src, target)
 		}
 	} else {
 		for _, out := range target.DeclaredOutputs() {
-			pkg.MustRegisterOutput(out, target)
+			pkg.MustRegisterOutput(state, out, target)
 		}
 		if target.IsTest() {
 			for _, out := range target.Test.Outputs {
 				if !fs.IsGlob(out) {
-					pkg.MustRegisterOutput(out, target)
+					pkg.MustRegisterOutput(state, out, target)
 				}
 			}
 		}

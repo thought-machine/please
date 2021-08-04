@@ -17,19 +17,90 @@ func TestRegisterSubinclude(t *testing.T) {
 }
 
 func TestRegisterOutput(t *testing.T) {
+	state := NewDefaultBuildState()
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
 	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
 	pkg := NewPackage("src/core")
 	target1.Sources = append(target1.Sources, FileLabel{File: "file1.go"})
 	target2.Sources = append(target2.Sources, FileLabel{File: "file2.go"})
 	target2.AddNamedSource("go", FileLabel{File: "file1.go"})
-	pkg.RegisterOutput("file1.go", target1)
-	pkg.RegisterOutput("file2.go", target2)
-	// Doesn't panic because it's a source of both rules, so we assume it's a filegroup.
-	pkg.RegisterOutput("file1.go", target2)
 
-	pkg.RegisterOutput("file3.go", target1)
-	assert.Error(t, pkg.RegisterOutput("file3.go", target2))
+	assert.NoError(t, pkg.RegisterOutput(state, "file1.go", target1))
+	assert.NoError(t, pkg.RegisterOutput(state, "file2.go", target2))
+	assert.Error(t, pkg.RegisterOutput(state, "file1.go", target2))
+
+	assert.NoError(t, pkg.RegisterOutput(state, "file3.go", target1))
+	assert.Error(t, pkg.RegisterOutput(state, "file3.go", target2))
+}
+
+func TestRegisterOutputNonFilegroupTargets(t *testing.T) {
+	state := NewDefaultBuildState()
+	state.Config.FeatureFlags.PackageOutputsStrictness = true
+
+	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
+	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
+	pkg := NewPackage("src/core")
+
+	assert.NoError(t, pkg.RegisterOutput(state, "file.go", target1))
+	assert.Error(t, pkg.RegisterOutput(state, "file.go", target2))
+}
+
+func TestRegisterOutputFilegroupAndNonFilegroupTargets(t *testing.T) {
+	state := NewDefaultBuildState()
+	state.Config.FeatureFlags.PackageOutputsStrictness = true
+
+	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
+	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
+	target2.IsFilegroup = true
+	pkg := NewPackage("src/core")
+
+	assert.NoError(t, pkg.RegisterOutput(state, "file1.go", target1))
+	assert.Error(t, pkg.RegisterOutput(state, "file1.go", target2))
+
+	assert.NoError(t, pkg.RegisterOutput(state, "file2.go", target2))
+	assert.Error(t, pkg.RegisterOutput(state, "file2.go", target1))
+}
+
+func TestRegisterOutputFilegroupTargets(t *testing.T) {
+	state := NewDefaultBuildState()
+	state.Config.FeatureFlags.PackageOutputsStrictness = true
+
+	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
+	target1.IsFilegroup = true
+	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
+	target2.IsFilegroup = true
+	pkg := NewPackage("src/core")
+
+	// The same local file can be registered if coming from filegroups
+	assert.NoError(t, pkg.RegisterOutput(state, "file.go", target1))
+	assert.NoError(t, pkg.RegisterOutput(state, "file.go", target2))
+}
+
+func TestRegisterOutputFileInOutputDirectory(t *testing.T) {
+	state := NewDefaultBuildState()
+	state.Config.FeatureFlags.PackageOutputsStrictness = true
+
+	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
+	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
+	pkg := NewPackage("src/core")
+
+	// Don't allow the existence of target that outputs a file into a directory that is output by another target.
+	assert.NoError(t, pkg.RegisterOutput(state, "dir1/file.go", target1))
+	assert.Error(t, pkg.RegisterOutput(state, "dir1", target2))
+	_, present := pkg.Outputs["dir1"]
+	assert.False(t, present)
+
+	// Same thing as above with a different register order.
+	assert.NoError(t, pkg.RegisterOutput(state, "dir2", target1))
+	assert.Error(t, pkg.RegisterOutput(state, "dir2/file.go", target2))
+	_, present = pkg.Outputs["dir2/file.go"]
+	assert.False(t, present)
+
+	// This is fixed by adding a dependency
+	target2.AddDependency(target1.Label)
+	assert.NoError(t, pkg.RegisterOutput(state, "dir2/file.go", target2))
+	_, present = pkg.Outputs["dir2/file.go"]
+	assert.True(t, present)
 }
 
 func TestAllChildren(t *testing.T) {
@@ -62,14 +133,15 @@ func TestIsIncludedIn(t *testing.T) {
 }
 
 func TestVerifyOutputs(t *testing.T) {
+	state := NewDefaultBuildState()
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
 	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
 	pkg := NewPackage("src/core")
 	pkg.AddTarget(target1)
 	pkg.AddTarget(target2)
-	pkg.MustRegisterOutput("dir/file1.go", target1)
-	pkg.MustRegisterOutput("dir", target2)
-	assert.Error(t, pkg.verifyOutputs())
+	pkg.MustRegisterOutput(state, "dir/file1.go", target1)
+	pkg.MustRegisterOutput(state, "dir", target2)
+	assert.Equal(t, 1, len(pkg.verifyOutputs()))
 	target1.AddDependency(target2.Label)
-	assert.NoError(t, pkg.verifyOutputs())
+	assert.Equal(t, 0, len(pkg.verifyOutputs()))
 }

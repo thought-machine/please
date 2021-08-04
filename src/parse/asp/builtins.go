@@ -760,13 +760,13 @@ func addOut(s *scope, args []pyObject) pyObject {
 	out := string(args[2].(pyString))
 	if out == "" {
 		target.AddOutput(name)
-		s.pkg.MustRegisterOutput(name, target)
+		s.pkg.MustRegisterOutput(s.state, name, target)
 	} else {
 		_, ok := target.EntryPoints[name]
 		s.NAssert(ok, "Named outputs can't have the same name as entry points")
 
 		target.AddNamedOutput(name, out)
-		s.pkg.MustRegisterOutput(out, target)
+		s.pkg.MustRegisterOutput(s.state, out, target)
 	}
 	return None
 }
