@@ -875,7 +875,7 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceB
 }
 
 func (state *BuildState) QueueTestTarget(target *BuildTarget) {
-	go state.queueTestTarget(target)
+	state.queueTestTarget(target)
 }
 
 func (state *BuildState) queueTestTarget(target *BuildTarget) {
