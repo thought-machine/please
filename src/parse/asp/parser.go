@@ -205,6 +205,22 @@ func (p *Parser) optimise(statements []*Statement) []*Statement {
 	return ret
 }
 
+// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
+func (p *Parser) BuildRuleArgOrder() map[string]int {
+	// Find the root scope to avoid cases where build_rule might've been overloaded
+	scope := p.interpreter.scope
+	for s := scope.parent; s != nil; s = s.parent {
+		scope = s
+	}
+	args := scope.locals["build_rule"].(*pyFunc).args
+	ret := make(map[string]int, len(args))
+
+	for order, name := range args {
+		ret[name] = order
+	}
+	return ret
+}
+
 // whitelistedKwargs returns true if the given built-in function name is allowed to
 // be called as non-kwargs.
 // TODO(peterebden): Come up with a syntax that exposes this directly in the file.

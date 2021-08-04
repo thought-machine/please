@@ -26,7 +26,7 @@ import (
 var startTime = time.Now()
 
 // cycleCheckDuration is the length of time we allow inactivity for before we trigger cycle detection.
-const cycleCheckDuration = 2 * time.Second
+const cycleCheckDuration = 5 * time.Second
 
 // ParseTask is the type for the parse task queue
 type ParseTask struct {
@@ -53,6 +53,8 @@ type Parser interface {
 	RunPreBuildFunction(threadID int, state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
 	RunPostBuildFunction(threadID int, state *BuildState, target *BuildTarget, output string) error
+	// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
+	BuildRuleArgOrder() map[string]int
 }
 
 // A RemoteClient is the interface to a remote execution service.
@@ -179,7 +181,7 @@ type BuildState struct {
 	// True if we have any remote executors configured.
 	anyRemote bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
-	NumTestRuns int
+	NumTestRuns uint16
 	// Experimental directories
 	experimentalLabels []BuildLabel
 	// Various items for tracking progress.
@@ -213,6 +215,8 @@ type stateProgress struct {
 	results chan *BuildResult
 	// Internal result stream, used to intermediate them for the cycle checker.
 	internalResults chan *BuildResult
+	// The cycle checker itself.
+	cycleDetector cycleDetector
 }
 
 // SystemStats stores information about the system.
@@ -272,7 +276,7 @@ func (state *BuildState) AddPendingTest(target *BuildTarget) {
 	if state.TestSequentially {
 		state.addPendingTest(target, 1)
 	} else {
-		state.addPendingTest(target, state.NumTestRuns)
+		state.addPendingTest(target, int(state.NumTestRuns))
 	}
 }
 
@@ -325,6 +329,7 @@ func (state *BuildState) Stop() {
 
 // CloseResults closes the result channels.
 func (state *BuildState) CloseResults() {
+	state.progress.cycleDetector.Stop()
 	if state.progress.results != nil {
 		state.progress.resultOnce.Do(func() {
 			close(state.progress.results)
@@ -545,8 +550,7 @@ func (state *BuildState) forwardResults() {
 
 // checkForCycles is run to detect a cycle in the graph. It converts any returned error into an async error.
 func (state *BuildState) checkForCycles() {
-	cycleDetector := cycleDetector{graph: state.Graph}
-	if err := cycleDetector.Check(); err != nil {
+	if err := state.progress.cycleDetector.Check(); err != nil {
 		state.LogBuildError(0, err.Cycle[0].Label, TargetBuildFailed, err, "")
 		state.Stop()
 	}
@@ -577,12 +581,20 @@ func (state *BuildState) NumDone() int {
 }
 
 // ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
-// from the set of original labels.
+// from the set of original labels. This will exclude non-test targets when we're building for test.
 func (state *BuildState) ExpandOriginalLabels() BuildLabels {
 	state.progress.originalTargetMutex.Lock()
 	targets := state.progress.originalTargets[:]
 	state.progress.originalTargetMutex.Unlock()
 	return state.ExpandLabels(targets)
+}
+
+// ExpandAllOriginalLabels is the same as ExpandOriginalLabels except it always includes non-test targets
+func (state *BuildState) ExpandAllOriginalLabels() BuildLabels {
+	state.progress.originalTargetMutex.Lock()
+	targets := state.progress.originalTargets[:]
+	state.progress.originalTargetMutex.Unlock()
+	return state.expandLabels(targets, false)
 }
 
 func annotateLabels(labels []BuildLabel) []AnnotatedOutputLabel {
@@ -629,10 +641,15 @@ func (state *BuildState) ExpandMaybeAnnotatedLabels(labels []AnnotatedOutputLabe
 
 // ExpandLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets) from a set of labels.
 func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
+	return state.expandLabels(labels, state.NeedTests)
+}
+
+// ExpandLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets) from a set of labels.
+func (state *BuildState) expandLabels(labels []BuildLabel, justTests bool) BuildLabels {
 	ret := BuildLabels{}
 	for _, label := range labels {
 		if label.IsAllTargets() || label.IsAllSubpackages() {
-			ret = append(ret, state.expandOriginalPseudoTarget(label)...)
+			ret = append(ret, state.expandOriginalPseudoTarget(label, justTests)...)
 		} else {
 			ret = append(ret, label)
 		}
@@ -641,11 +658,11 @@ func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
 }
 
 // expandOriginalPseudoTarget expands one original pseudo-target (i.e. :all or /...) and sorts it
-func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel) BuildLabels {
+func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel, justTests bool) BuildLabels {
 	ret := BuildLabels{}
 	addPackage := func(pkg *Package) {
 		for _, target := range pkg.AllTargets() {
-			if state.ShouldInclude(target) && (!state.NeedTests || target.IsTest) {
+			if state.ShouldInclude(target) && (!justTests || target.IsTest()) {
 				ret = append(ret, target.Label)
 			}
 		}
@@ -778,9 +795,11 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 		for _, out := range target.DeclaredOutputs() {
 			pkg.MustRegisterOutput(out, target)
 		}
-		for _, out := range target.TestOutputs {
-			if !fs.IsGlob(out) {
-				pkg.MustRegisterOutput(out, target)
+		if target.IsTest() {
+			for _, out := range target.Test.Outputs {
+				if !fs.IsGlob(out) {
+					pkg.MustRegisterOutput(out, target)
+				}
 			}
 		}
 	}
@@ -863,12 +882,12 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, rescan, forceB
 	}
 
 	queueAsync := func(shouldBuild bool) {
-		if target.IsTest && state.NeedTests {
+		if target.IsTest() && state.NeedTests {
 			if state.TestSequentially {
 				state.addActiveTargets(2) // One for build & one for test
 			} else {
 				// Tests count however many times we're going to run them if parallel.
-				state.addActiveTargets(1 + state.NumTestRuns)
+				state.addActiveTargets(int(1 + state.NumTestRuns))
 			}
 		} else {
 			state.addActiveTargets(1)
@@ -1058,9 +1077,9 @@ func sandboxTool(config *Configuration) string {
 // Everyone should use this rather than attempting to construct it themselves;
 // callers can't initialise all the required private fields.
 func NewBuildState(config *Configuration) *BuildState {
-	// Deliberately ignore the error here so we don't require the sandbox tool until it's needed.
+	graph := NewGraph()
 	state := &BuildState{
-		Graph:               NewGraph(),
+		Graph:               graph,
 		pendingParses:       make(chan ParseTask, 10000),
 		pendingBuilds:       make(chan BuildTask, 1000),
 		pendingRemoteBuilds: make(chan BuildTask, 1000),
@@ -1097,6 +1116,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			packageWaits:    cmap.New(),
 			success:         true,
 			internalResults: make(chan *BuildResult, 1000),
+			cycleDetector:   cycleDetector{graph: graph},
 		},
 	}
 	state.PathHasher = state.Hasher(config.Build.HashFunction)

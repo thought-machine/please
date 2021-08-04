@@ -2,6 +2,7 @@ package query
 
 import (
 	"bytes"
+	"github.com/thought-machine/please/src/parse"
 	"strings"
 	"testing"
 	"time"
@@ -11,10 +12,12 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+var order = parse.InitParser(core.NewDefaultBuildState()).Parser.BuildRuleArgOrder()
+
 func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
 	target := core.BuildTarget{}
 	var buf bytes.Buffer
-	p := newPrinter(&buf, &target, 0)
+	p := newPrinter(&buf, &target, 0, order)
 	p.PrintTarget()
 	assert.False(t, p.error, "Appears we do not know how to print some fields")
 }
@@ -34,6 +37,7 @@ func TestPrintOutput(t *testing.T) {
 	s := testPrint(target)
 	expected := `  build_rule(
       name = 'test_print_output',
+      cmd = 'cp $SRCS $OUTS',
       srcs = [
           'file.go',
           '//src/query:target1',
@@ -45,9 +49,8 @@ func TestPrintOutput(t *testing.T) {
           'out1.go',
           'out2.go',
       ],
-      cmd = 'cp $SRCS $OUTS',
-      binary = True,
       tools = ['//tools:tool1'],
+      binary = True,
   )
 
 `
@@ -77,11 +80,11 @@ func TestFilegroupOutput(t *testing.T) {
 func TestTestOutput(t *testing.T) {
 	target := core.NewBuildTarget(core.ParseBuildLabel("//src/query:test_test_output", ""))
 	target.AddSource(src("file.go"))
-	target.IsTest = true
+	target.Test = new(core.TestFields)
 	target.IsBinary = true
 	target.BuildTimeout = 30 * time.Second
-	target.TestTimeout = 60 * time.Second
-	target.Flakiness = 2
+	target.Test.Timeout = 60 * time.Second
+	target.Test.Flakiness = 2
 	s := testPrint(target)
 	expected := `  build_rule(
       name = 'test_test_output',
@@ -89,7 +92,7 @@ func TestTestOutput(t *testing.T) {
       binary = True,
       test = True,
       flaky = 2,
-      timeout = 30,
+      build_timeout = 30,
       test_timeout = 60,
   )
 
@@ -131,13 +134,13 @@ func TestPrintFields(t *testing.T) {
 
 func testPrint(target *core.BuildTarget) string {
 	var buf bytes.Buffer
-	newPrinter(&buf, target, 2).PrintTarget()
+	newPrinter(&buf, target, 2, order).PrintTarget()
 	return buf.String()
 }
 
 func testPrintFields(target *core.BuildTarget, fields []string) string {
 	var buf bytes.Buffer
-	newPrinter(&buf, target, 0).PrintFields(fields)
+	newPrinter(&buf, target, 0, order).PrintFields(fields)
 	return buf.String()
 }
 

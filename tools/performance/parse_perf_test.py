@@ -45,9 +45,22 @@ def run(i: int):
     log.info('Complete in %0.2fs, using %d KB', duration, mem)
     return duration, mem
 
+
 def parse_time_output(output):
     parts = output.split(" ")
     return float(parts[0].strip()), int(parts[1].strip())
+
+
+def read_cpu_info():
+    """Return the CPU model number & number of CPUs."""
+    try:
+        with open('/proc/cpuinfo') as f:
+            models = [line[line.index(':')+2:] for line in f if line.startswith('model name')]
+        return models[0].strip(), len(models)
+    except:
+        log.exception('Failed to read CPU info')
+        return '', 0
+
 
 def main(argv):
     FLAGS.root = os.path.abspath(FLAGS.root)
@@ -66,6 +79,8 @@ def main(argv):
     log.info('Running again to generate profiling info')
     profile_file = os.path.join(os.getcwd(), 'plz.prof')
     subprocess.check_call(plz() + ['--profile_file', profile_file], stdout=subprocess.DEVNULL)
+    log.info('Reading CPU info')
+    cpu_model, num_cpus = read_cpu_info()
     log.info('Generating results')
     with open(FLAGS.output, 'w') as f:
         json.dump({
@@ -78,7 +93,11 @@ def main(argv):
             'mem': {
                 'raw': mem_results,
                 'median': median_mem,
-            }
+            },
+            'cpu': {
+                'model': cpu_model,
+                'num': num_cpus,
+            },
         }, f)
         f.write('\n')
 

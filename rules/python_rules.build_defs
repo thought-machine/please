@@ -218,7 +218,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
-    which is run to execute the tests. The tests are run via either unittest or pytest, depending
+    which is run to execute the tests. The tests are run via either unittest, pytest, or behave, depending
     on which is set for the test runner, which can be configured either via the python_test_runner
     package property or python.testrunner in the config.
 

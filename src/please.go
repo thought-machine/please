@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/thought-machine/go-flags"
+	"gopkg.in/op/go-logging.v1"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -13,9 +15,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-
-	"github.com/thought-machine/go-flags"
-	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"
@@ -95,6 +94,7 @@ var opts struct {
 	Profile          string `long:"profile_file" hidden:"true" description:"Write profiling output to this file"`
 	MemProfile       string `long:"mem_profile_file" hidden:"true" description:"Write a memory profile to this file"`
 	MutexProfile     string `long:"mutex_profile_file" hidden:"true" description:"Write a contended mutex profile to this file"`
+	GoTraceFile      string `long:"go_trace_file" hidden:"true" description:"Write a go trace profile to this file"`
 	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
@@ -200,7 +200,7 @@ var opts struct {
 		Share struct {
 			Network bool `long:"share_network" description:"Share network namespace"`
 			Mount   bool `long:"share_mount" description:"Share mount namespace"`
-		} `group:"Options allowing namespace sharing"`
+		} `group:"Options to override mount and network namespacing on linux, if configured"`
 		Args struct {
 			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
 			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
@@ -471,7 +471,9 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(!opts.Exec.Share.Network, !opts.Exec.Share.Mount))
+
+		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
+		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount))
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
@@ -642,7 +644,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"print": func() int {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.Print(state.Graph, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
+			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
 		})
 	},
 	"input": func() int {
@@ -668,15 +670,34 @@ var buildFunctions = map[string]func() int{
 			}
 			return 0
 		}
-		labels, parseLabels, hidden := query.CompletionLabels(config, fragments, core.RepoRoot)
+
+		var qry string
+		if len(fragments) == 0 {
+			qry = "//"
+		} else {
+			qry = fragments[0]
+		}
+
+		completions := query.CompletionLabels(config, qry, core.RepoRoot)
 		// We have no labels to parse so we're done already
-		if len(parseLabels) == 0 {
+		if completions.PackageToParse == "" && !completions.IsRoot {
+			for _, pkg := range completions.Pkgs {
+				fmt.Printf("//%s\n", pkg)
+			}
 			return 0
 		}
-		if success, state := Please(parseLabels, config, false, false); success {
-			binary := opts.Query.Completions.Cmd == "run"
+
+		labelsToParse := []core.BuildLabel{{PackageName: completions.PackageToParse, Name: "all"}}
+		binary := opts.Query.Completions.Cmd == "run"
+
+		// The original pkg might not have binary targets. If we only match one package, we might need to parse that too.
+		if binary && len(completions.Pkgs) == 1 {
+			labelsToParse = append(labelsToParse, core.BuildLabel{PackageName: completions.Pkgs[0], Name: "all"})
+		}
+
+		if success, state := Please(labelsToParse, config, false, false); success {
 			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
-			query.Completions(state.Graph, labels, binary, test, hidden)
+			query.Completions(state.Graph, completions.PackageToParse, completions.NamePrefix, completions.Pkgs, binary, test, completions.Hidden)
 			return 0
 		}
 		return 1
@@ -897,9 +918,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	}
 	state := core.NewBuildState(config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
-	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)       // Only one of these can be passed
-	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially // Similarly here.
-	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)      // And here
+	state.NumTestRuns = uint16(utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)) // Only one of these can be passed
+	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially   // Similarly here.
+	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)        // And here
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
@@ -1177,6 +1198,28 @@ func unannotateLabels(als []core.AnnotatedOutputLabel) []core.BuildLabel {
 	return labels
 }
 
+func writeGoTraceFile() {
+	if err := runtime.StartTrace(); err != nil {
+		log.Fatalf("failed to start trace: %v", err)
+	}
+
+	f, err := os.Create(opts.GoTraceFile)
+	if err != nil {
+		log.Fatalf("Failed to create trace file: %v", err)
+	}
+	defer f.Close()
+
+	for {
+		data := runtime.ReadTrace()
+		if data == nil {
+			return
+		}
+		if _, err := f.Write(data); err != nil {
+			log.Fatalf("Failed to write trace data: %v", err)
+		}
+	}
+}
+
 // toExitCode returns an integer process exit code based on the outcome of a build.
 // 0 -> success
 // 1 -> general failure (and why is he reading my hard drive?)
@@ -1227,6 +1270,12 @@ func execute(command string) int {
 		defer f.Close()
 		defer func() {
 			pprof.Lookup("mutex").WriteTo(f, 0)
+		}()
+	}
+	if opts.GoTraceFile != "" {
+		go writeGoTraceFile()
+		defer func() {
+			runtime.StopTrace()
 		}()
 	}
 	defer worker.StopAll()
