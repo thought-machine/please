@@ -110,11 +110,12 @@ func acquireFileLock(file *os.File, how int, levelLog logFunc) error {
 	err := syscall.Flock(int(file.Fd()), how|syscall.LOCK_NB)
 	if err != nil {
 		pid, err := ioutil.ReadFile(file.Name())
-		if err != nil || len(pid) == 0 {
-			return fmt.Errorf("Failed to retrieve PID of process holding the lock for %s", file.Name())
+		if err == nil && len(pid) > 0 {
+			levelLog(log, "Looks like process with PID %s has already acquired the lock for %s. Waiting for it to finish...", string(pid), file.Name())
+		} else {
+			levelLog(log, "Looks like another process has already acquired the lock for %s. Waiting for it to finish...", file.Name())
 		}
 
-		levelLog(log, "Looks like process with PID %s has already acquired the lock for %s. Waiting for it to finish...", string(pid), file.Name())
 		if err := syscall.Flock(int(file.Fd()), how); err != nil {
 			return fmt.Errorf("Failed to acquire lock for %s: %w", file.Name(), err)
 		}

@@ -240,7 +240,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return nil
 		}
 
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring file lock...")
+		state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring target lock...")
 		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
 		defer core.ReleaseFileLock(file)
 		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
