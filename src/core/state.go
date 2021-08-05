@@ -875,6 +875,7 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceB
 }
 
 func (state *BuildState) QueueTestTarget(target *BuildTarget) {
+	// TODO: Can this be made async?
 	state.queueTestTarget(target)
 }
 
