@@ -191,8 +191,8 @@ python_wheel(
         "_pytest",
         "pytest",
     ],
-    hashes = ["975a427a35084c82ff6661fcb7594201cb74a5a8"],
-    version = "5.3.5",
+    hashes = ["cb1b6342414fa7649bcb4596248f82fc34b0c1dcc709072c1d1456c9288654b9"],
+    version = "5.4.3",
     deps = [
         ":attrs",
         ":funcsigs",
