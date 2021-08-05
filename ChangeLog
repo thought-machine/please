@@ -1,3 +1,15 @@
+Version 16.4.0
+--------------
+    * Fixed issue where coverage was missing some files. Please now adds in 0% coverage
+      for lines found in non-test files that are included in the original targets passed
+      in on the command line #1975
+    * Reduced the size of a build target in memory #1951
+    * Added `--go_trace_file` to write a trace file that can be opened with `go tool trace`
+      #1987
+    * Added a new `add_data()` builtin that can be used to add data to a target in a pre or
+      post build function #1973
+
+
 Version 16.3.0
 --------------
     * Implemented a `plz exec` subcommand that is designed for used by IDEs to run targets
