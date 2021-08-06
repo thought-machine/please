@@ -1,7 +1,6 @@
 version: 2.1
 jobs:
    build-alpine:
-     working_directory: ~/please
      docker:
        - image: thoughtmachine/please_alpine:20210406
      resource_class: large
@@ -47,7 +46,6 @@ jobs:
            paths: [ ".plz-cache/test/java_rules/java_toolchain" ]
 
    build-linux:
-     working_directory: ~/please
      docker:
        - image: thoughtmachine/please_ubuntu:20210720
      resource_class: large
@@ -98,7 +96,6 @@ jobs:
            paths: [ ".plz-cache/test/java_rules/java_toolchain" ]
 
    build-linux-alt:
-     working_directory: ~/please
      docker:
        - image: thoughtmachine/please_ubuntu_alt:20210316
      resource_class: large
@@ -137,7 +134,6 @@ jobs:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
    build-darwin-arm64:
-     working_directory: ~/please
      docker:
        - image: thoughtmachine/please_ubuntu:20210720
      resource_class: large
@@ -165,7 +161,6 @@ jobs:
            paths: [ ".plz-cache/third_party/go" ]
 
    build-freebsd:
-     working_directory: ~/please
      docker:
        - image: thoughtmachine/please_freebsd_builder:20200820
      resource_class: large
@@ -241,7 +236,6 @@ jobs:
            paths: [ ".plz-cache/test/java_rules/java_toolchain" ]
 
    test-rex:
-     working_directory: ~/please
      docker:
        - image: thoughtmachine/please_ubuntu:20210720
      resource_class: large
@@ -258,7 +252,6 @@ jobs:
            path: plz-out/log
 
    test-http-cache:
-     working_directory: ~/please
      docker:
        - image: thoughtmachine/please_ubuntu:20210720
      resource_class: large
