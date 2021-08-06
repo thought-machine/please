@@ -745,10 +745,6 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
 func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarget {
 	if t := state.Graph.Target(l); t != nil {
 		if s := t.State(); s >= Built && s != Failed {
-			// Ensure we have downloaded its outputs if needed.
-			// This is a bit fiddly but works around the case where we already built it but
-			// didn't download, and now have found we need to.
-			state.mustEnsureDownloaded(t)
 			return t
 		}
 	}
@@ -765,9 +761,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 	if ch != nil {
 		// Something's already registered for this, get on the train
 		<-ch
-		t := state.Graph.Target(l)
-		state.mustEnsureDownloaded(t)
-		return t
+		return state.Graph.Target(l)
 	}
 	if err := state.queueTarget(l, dependent, false, true, true); err != nil {
 		log.Fatalf("%v", err)
@@ -833,11 +827,13 @@ func (state *BuildState) EnsureDownloaded(target *BuildTarget) error {
 	return nil
 }
 
-// mustEnsureDownloaded is like EnsureDownloaded but panics on error.
-func (state *BuildState) mustEnsureDownloaded(target *BuildTarget) {
+// WaitForTargetAndEnsureDownload waits for the target to be built and then downloads it if executing remotely
+func (state *BuildState) WaitForTargetAndEnsureDownload(l, dependent BuildLabel) *BuildTarget {
+	target := state.WaitForBuiltTarget(l, dependent)
 	if err := state.EnsureDownloaded(target); err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to download target outputs: %w", err))
 	}
+	return target
 }
 
 // QueueTarget adds a single target to the build queue.

@@ -9,9 +9,9 @@ if CONFIG.OS == "linux":
             "output": "Dial error: ",
         },
         expected_failure = True,
+        labels = ["manual"],
         plz_command = "plz exec --profile sandbox --share_mount //:network_test 2>output",
         repo = "test_repo",
-        labels = ["manual"],
     )
 
     please_repo_e2e_test(
@@ -19,9 +19,9 @@ if CONFIG.OS == "linux":
         expect_output_doesnt_contain = {
             "output": "Dial error: ",
         },
+        labels = ["manual"],
         plz_command = "plz exec --profile sandbox --share_mount --share_network //:network_test 2>output",
         repo = "test_repo",
-        labels = ["manual"],
     )
 
     please_repo_e2e_test(
@@ -29,11 +29,10 @@ if CONFIG.OS == "linux":
         expect_output_contains = {
             "output": "test/plz_exec/test_repo/plz-out/exec",
         },
+        labels = ["manual"],
         plz_command = "plz exec --profile sandbox --share_mount //:hello_world -- pwd >output",
         repo = "test_repo",
-        labels = ["manual"],
     )
-
 
 please_repo_e2e_test(
     name = "binary_target",

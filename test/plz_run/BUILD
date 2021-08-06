@@ -58,4 +58,3 @@ please_repo_e2e_test(
     plz_command = "plz test //src:_add_data_file_and_target",
     repo = "test_repo",
 )
-
