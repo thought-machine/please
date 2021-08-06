@@ -5,6 +5,7 @@ jobs:
      docker:
        - image: thoughtmachine/please_alpine:20210406
      resource_class: large
+     working_directory: /mnt/ramdisk
      environment:
        PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
      steps:
@@ -50,6 +51,7 @@ jobs:
      docker:
        - image: thoughtmachine/please_ubuntu:20210720
      resource_class: large
+     working_directory: /mnt/ramdisk
      environment:
        PLZ_ARGS: "-p --profile ci"
      steps:
@@ -100,6 +102,7 @@ jobs:
      docker:
        - image: thoughtmachine/please_ubuntu_alt:20210316
      resource_class: large
+     working_directory: /mnt/ramdisk
      environment:
        PLZ_ARGS: "-p -c cover --profile ci-alt"
        PLZ_COVER: "cover --nocoverage_report"
@@ -138,6 +141,7 @@ jobs:
      docker:
        - image: thoughtmachine/please_ubuntu:20210720
      resource_class: large
+     working_directory: /mnt/ramdisk
      steps:
        - checkout
        - attach_workspace:
@@ -165,6 +169,7 @@ jobs:
      docker:
        - image: thoughtmachine/please_freebsd_builder:20200820
      resource_class: large
+     working_directory: /mnt/ramdisk
      steps:
        - checkout
        - attach_workspace:
@@ -257,6 +262,7 @@ jobs:
      docker:
        - image: thoughtmachine/please_ubuntu:20210720
      resource_class: large
+     working_directory: /mnt/ramdisk
      steps:
        - checkout
        - attach_workspace:
@@ -272,6 +278,7 @@ jobs:
    release:
      docker:
        - image: thoughtmachine/please_docs:20200930
+     working_directory: /mnt/ramdisk
      steps:
        - attach_workspace:
            at: /tmp/workspace
@@ -284,6 +291,7 @@ jobs:
    release-s3:
      docker:
        - image: thoughtmachine/please_docs:20200930
+     working_directory: /mnt/ramdisk
      steps:
        - checkout
        - attach_workspace:
@@ -294,6 +302,7 @@ jobs:
    perf-test:
      docker:
        - image: thoughtmachine/please_ubuntu:20210720
+     working_directory: /mnt/ramdisk
      resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
      steps:
        - checkout
