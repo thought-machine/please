@@ -50,6 +50,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "get_labels", getLabels)
 	setNativeCode(s, "add_label", addLabel)
 	setNativeCode(s, "add_dep", addDep)
+	setNativeCode(s, "add_data", addData)
 	setNativeCode(s, "add_out", addOut)
 	setNativeCode(s, "get_outs", getOuts)
 	setNativeCode(s, "add_licence", addLicence)
@@ -748,6 +749,63 @@ func addDep(s *scope, args []pyObject) pyObject {
 		err := s.state.QueueTarget(dep, target.Label, true, false)
 		s.Assert(err == nil, "%s", err)
 	}
+	// TODO(peterebden): Do we even need the following any more?
+	s.pkg.MarkTargetModified(target)
+	return None
+}
+
+func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, datum core.BuildInput, systemAllowed, tool bool) {
+	target.AddDatum(datum)
+	// Queue this dependency if it'll be needed.
+	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
+		err := s.state.QueueTarget(l, target.Label, true, false)
+		s.Assert(err == nil, "%s", err)
+	}
+}
+
+func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.BuildTarget, datum core.BuildInput, systemAllowed, tool bool) {
+	target.AddNamedDatum(name, datum)
+	// Queue this dependency if it'll be needed.
+	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
+		err := s.state.QueueTarget(l, target.Label, true, false)
+		s.Assert(err == nil, "%s", err)
+	}
+}
+
+// Add runtime dependencies to target
+func addData(s *scope, args []pyObject) pyObject {
+	s.Assert(s.Callback, "can only be called from a pre- or post-build callback")
+
+	label := args[0]
+	datum := args[1]
+	target := getTargetPost(s, string(label.(pyString)))
+
+	systemAllowed := false
+	tool := false
+
+	// add_data() builtin can take a string, list, or dict
+	if isType(datum, "str") {
+		if bi := parseBuildInput(s, datum, string(label.(pyString)), systemAllowed, tool); bi != nil {
+			addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
+		}
+	} else if isType(datum, "list") {
+		for _, str := range datum.(pyList) {
+			if bi := parseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
+				addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
+			}
+		}
+	} else if isType(datum, "dict") {
+		for name, v := range datum.(pyDict) {
+			for _, str := range v.(pyList) {
+				if bi := parseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
+					addNamedDatumToTargetAndMaybeQueue(s, name, target, bi, systemAllowed, tool)
+				}
+			}
+		}
+	} else {
+		log.Fatal("Unrecognised data type passed to add_data")
+	}
+
 	// TODO(peterebden): Do we even need the following any more?
 	s.pkg.MarkTargetModified(target)
 	return None
