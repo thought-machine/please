@@ -1,3 +1,9 @@
+Version 16.4.1
+--------------
+    * Fixed panic when downloading outputs for stamped targets that were retrived from
+      the cache #1994
+
+
 Version 16.4.0
 --------------
     * Fixed issue where coverage was missing some files. Please now adds in 0% coverage
