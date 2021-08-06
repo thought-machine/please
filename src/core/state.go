@@ -743,6 +743,11 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
 func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarget {
+	if t := state.Graph.Target(l); t != nil {
+		if s := t.State(); s >= Built && s != Failed {
+			return t
+		}
+	}
 	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
 	var ch chan struct{}
@@ -756,8 +761,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 	if ch != nil {
 		// Something's already registered for this, get on the train
 		<-ch
-		t := state.Graph.Target(l)
-		return t
+		return state.Graph.Target(l)
 	}
 	if err := state.queueTarget(l, dependent, false, true, true); err != nil {
 		log.Fatalf("%v", err)
