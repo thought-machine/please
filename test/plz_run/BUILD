@@ -44,3 +44,18 @@ please_repo_e2e_test(
     plz_command = "echo //src:wibble //src:wobble | plz run sequential - > wibble.txt",
     repo = "test_repo",
 )
+
+# Test add_data functionality with a dummy file
+please_repo_e2e_test(
+    name = "_add_data_file_test",
+    plz_command = "plz test //src:_add_data_file",
+    repo = "test_repo",
+)
+
+# Test add_data functionality with a file and a build target
+please_repo_e2e_test(
+    name = "_add_data_target_test",
+    plz_command = "plz test //src:_add_data_file_and_target",
+    repo = "test_repo",
+)
+

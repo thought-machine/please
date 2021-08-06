@@ -874,6 +874,20 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, rescan, forceB
 	return nil
 }
 
+func (state *BuildState) QueueTestTarget(target *BuildTarget) {
+	// TODO: Can this be made async?
+	state.queueTestTarget(target)
+}
+
+func (state *BuildState) queueTestTarget(target *BuildTarget) {
+	for _, data := range target.AllData() {
+		if l, ok := data.Label(); ok {
+			state.WaitForBuiltTarget(l, target.Label)
+		}
+	}
+	state.AddPendingTest(target)
+}
+
 // queueResolvedTarget is like queueTarget but once we have a resolved target.
 func (state *BuildState) queueResolvedTarget(target *BuildTarget, rescan, forceBuild, neededForSubinclude bool) error {
 	target.NeededForSubinclude = target.NeededForSubinclude || neededForSubinclude
