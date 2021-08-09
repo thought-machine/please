@@ -299,6 +299,10 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			}
 		}
 
+		if f := os.Getenv("CFLAGS"); f != "" {
+			cFlags = append(cFlags, f)
+		}
+
 		cFiles := pkg.CFiles
 
 		cgoGoFiles, cgoCFiles, err := install.tc.CGO(pkg.Dir, workDir, cFlags, pkg.CgoFiles)
