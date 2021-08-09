@@ -80,8 +80,8 @@ func (tc *Toolchain) Pack(dir, archive string, objFiles []string) error {
 }
 
 // Link will link the archive into an executable
-func (tc *Toolchain) Link(archive, out, importcfg, flags string) error {
-	return tc.Exec.Run("%s tool link -extld %s -extldflags \"$(cat %s)\" -importcfg %s -o %s %s", tc.GoTool, tc.CcTool, flags, importcfg, out, archive)
+func (tc *Toolchain) Link(archive, out, importcfg string, ldFlags []string) error {
+	return tc.Exec.Run("%s tool link -extld %s -extldflags \"%s\" -importcfg %s -o %s %s", tc.GoTool, tc.CcTool, strings.Join(ldFlags, " "), importcfg, out, archive)
 }
 
 // Symabis will generate the asm header as well as the abi symbol file for the provided asm files.
