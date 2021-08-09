@@ -679,29 +679,27 @@ var buildFunctions = map[string]func() int{
 			qry = fragments[0]
 		}
 
-		completions := query.CompletionLabels(config, qry, core.RepoRoot)
-		// We have no labels to parse so we're done already
-		if completions.PackageToParse == "" && !completions.IsRoot {
-			for _, pkg := range completions.Pkgs {
-				fmt.Printf("//%s\n", pkg)
+		completions, labels := getCompletions(qry)
+
+		// Rerun the completions if we didn't match any labels and matched just one package
+		for len(completions.Pkgs) == 1 && len(labels) == 0 {
+			oldPackage := completions.Pkgs[0]
+			completions, labels = getCompletions("//" + completions.Pkgs[0])
+			// We really matched no labels so we should stop
+			if len(completions.Pkgs) == 1 && completions.Pkgs[0] == oldPackage {
+				break
 			}
-			return 0
 		}
 
-		labelsToParse := []core.BuildLabel{{PackageName: completions.PackageToParse, Name: "all"}}
-		binary := opts.Query.Completions.Cmd == "run"
-
-		// The original pkg might not have binary targets. If we only match one package, we might need to parse that too.
-		if binary && len(completions.Pkgs) == 1 {
-			labelsToParse = append(labelsToParse, core.BuildLabel{PackageName: completions.Pkgs[0], Name: "all"})
+		abs := strings.HasPrefix(qry, "//")
+		for _, l := range labels {
+			query.PrintCompletion(l, abs)
+		}
+		for _, p := range completions.Pkgs {
+			query.PrintCompletion(p, abs)
 		}
 
-		if success, state := Please(labelsToParse, config, false, false); success {
-			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
-			query.Completions(state.Graph, completions.PackageToParse, completions.NamePrefix, completions.Pkgs, binary, test, completions.Hidden)
-			return 0
-		}
-		return 1
+		return 0
 	},
 	"graph": func() int {
 		targets := opts.Query.Graph.Args.Targets
@@ -1109,6 +1107,23 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	// Regardless of what happened, always exit with 0 at this point.
 	os.Exit(0)
 }
+
+func getCompletions(qry string) (*query.CompletionPackages, []string) {
+	binary := opts.Query.Completions.Cmd == "run"
+	isTest := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
+
+	completions := query.CompletePackages(config, qry)
+
+	if completions.PackageToParse != "" || completions.IsRoot {
+		labelsToParse := []core.BuildLabel{{PackageName: completions.PackageToParse, Name: "all"}}
+		if success, state := Please(labelsToParse, config, false, false); success {
+			return completions, query.Completions(state.Graph, completions, binary, isTest, completions.Hidden)
+		}
+	}
+	return completions, nil
+}
+
+
 
 func initBuild(args []string) string {
 	if len(args) > 1 && (args[1] == "sandbox") {

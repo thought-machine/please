@@ -229,7 +229,7 @@ func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 	// Deliberately leave this till after the above to facilitate the --repo_root flag.
 	if subdir == "" {
 		MustFindRepoRoot()
-		subdir = initialPackage
+		subdir = InitialPackagePath
 	}
 	if startsWithColon {
 		return TryParseBuildLabel(target, subdir, "")

@@ -57,3 +57,11 @@ plz_e2e_test(
     completion = True,
     expect_output_contains = "test/completion/bin.cc",
 )
+
+# plz test should be able to complete tests in this directory
+plz_e2e_test(
+    name = "plz_test_completion_test_nested",
+    cmd = "plz test //test/completion/",
+    completion = True,
+    expect_output_contains = "//test/completion/binary_only/binary_only/tests:test",
+)

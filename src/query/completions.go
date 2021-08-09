@@ -12,7 +12,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-type CompletionsLabels struct {
+type CompletionPackages struct {
 	// Pkgs are any subpackages that are valid completions
 	Pkgs []string
 	// PackageToParse is optionally the package we should include labels from in the completions results
@@ -25,20 +25,25 @@ type CompletionsLabels struct {
 	IsRoot bool
 }
 
-// CompletionLabels produces a set of labels that complete a given input.
-// The second return value is a set of labels to parse for (since the original set generally won't turn out to exist).
-// The last return value is true if one or more of the inputs are a "hidden" target
-// (i.e. name begins with an underscore).
-func CompletionLabels(config *core.Configuration, query string, repoRoot string) *CompletionsLabels {
+// CompletePackages produces a set of packages that are valid for a given input
+func CompletePackages(config *core.Configuration, query string) *CompletionPackages {
+	if !strings.HasPrefix(query, "//") && core.RepoRoot != core.InitialWorkingDir {
+		if strings.HasPrefix(query, ":") {
+			query = fmt.Sprintf("//%s%s", core.InitialPackagePath, query)
+		} else {
+			query = "//" + filepath.Join(core.InitialPackagePath, query)
+		}
+	}
 	query = strings.ReplaceAll(query, "\\:", ":")
-	isRoot := query == "//" || query == ":" || query == "//:"
+	isRoot := query == "//" || strings.HasPrefix(query, "//:") || strings.HasPrefix(query, ":")
+
 
 	if strings.Contains(query, ":") {
 		parts := strings.Split(query, ":")
 		if len(parts) != 2 {
 			log.Fatalf("invalid build label %v", query)
 		}
-		return &CompletionsLabels{
+		return &CompletionPackages{
 			PackageToParse: strings.TrimLeft(parts[0], "/"),
 			NamePrefix:     parts[1],
 			Hidden:         strings.HasPrefix(parts[1], "_"),
@@ -46,22 +51,31 @@ func CompletionLabels(config *core.Configuration, query string, repoRoot string)
 		}
 	}
 
-	pkgs, pkg := getPackagesAndPackageToParse(config, query, repoRoot)
-	return &CompletionsLabels{
+	pkgs, pkg := getPackagesAndPackageToParse(config, query)
+	return &CompletionPackages{
 		Pkgs:           pkgs,
 		PackageToParse: pkg,
 		IsRoot:         isRoot,
 	}
 }
 
+func getWorkingDir(repoRoot string) string {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	return strings.TrimPrefix(repoRoot, wd)
+}
+
 // getPackagesAndPackageToParse returns a list of packages that are possible completions and optionally, the package to
 // parse if we should include it's labels as well.
-func getPackagesAndPackageToParse(config *core.Configuration, query, repoRoot string) ([]string, string) {
+func getPackagesAndPackageToParse(config *core.Configuration, query string) ([]string, string) {
 	// Whether we need to include build labels or just the packages in the results
 	packageOnly := strings.HasSuffix(query, "/") && query != "//"
 
 	query = strings.Trim(query, "/")
-	root := path.Join(repoRoot, query)
+	root := path.Join(core.RepoRoot, query)
 	currentPackage := query
 	prefix := ""
 	if !core.PathExists(root) {
@@ -75,7 +89,7 @@ func getPackagesAndPackageToParse(config *core.Configuration, query, repoRoot st
 	for pkg := range utils.FindAllSubpackages(config, currentPackage, "") {
 		allPackages = append(allPackages, pkg)
 	}
-	pkgs, pkg := getAllCompletions(config, currentPackage, prefix, repoRoot, allPackages, packageOnly)
+	pkgs, pkg := getAllCompletions(config, currentPackage, prefix, allPackages, packageOnly)
 	if packageOnly && pkg == currentPackage || !fs.IsPackage(config.Parse.BuildFileName, pkg) {
 		return pkgs, ""
 	}
@@ -92,9 +106,9 @@ func containsPackage(dir string, allPackages []string) bool {
 }
 
 // getAllCompletions essentially the same as getPackagesAndPackageToParse without the setup
-func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoRoot string, allPackages []string, skipSelf bool) ([]string, string) {
+func getAllCompletions(config *core.Configuration, currentPackage, prefix string, allPackages []string, skipSelf bool) ([]string, string) {
 	var packages []string
-	root := path.Join(repoRoot, currentPackage)
+	root := path.Join(core.RepoRoot, currentPackage)
 
 	dirEntries, err := os.ReadDir(root)
 	if err != nil {
@@ -115,7 +129,7 @@ func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoR
 		if !skipSelf && prefix == "" && fs.IsPackage(config.Parse.BuildFileName, currentPackage) {
 			return packages, currentPackage
 		}
-		pkgs, pkg := getAllCompletions(config, packages[0], "", repoRoot, allPackages, false)
+		pkgs, pkg := getAllCompletions(config, packages[0], "", allPackages, false)
 		// If we again matched a package exactly, use that one
 		if pkg != "" {
 			return pkgs, pkg
@@ -135,23 +149,18 @@ func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoR
 // If 'test' is true it will similarly complete only targets that are tests.
 // If 'hidden' is true then hidden targets (i.e. those with names beginning with an underscore)
 // will be included as well.
-func Completions(graph *core.BuildGraph, packageName, prefix string, pkgs []string, binary, test, hidden bool) {
-	count := printLabelsInPackage(graph, packageName, prefix, binary, test, hidden)
+func Completions(graph *core.BuildGraph, completions *CompletionPackages, binary, test, hidden bool) []string {
+	labels := labelsInPackage(graph, completions.PackageToParse, completions.NamePrefix, binary, test, hidden)
 	// If we're printing binary targets, we might not match any targets in the parsed. If we only matched one other
 	// package, we should try and match binary targets in there.
-	if binary && count == 0 && len(pkgs) == 1 {
-		printLabelsInPackage(graph, pkgs[0], prefix, binary, test, hidden)
-		// This isn't totally correct as we should really recurse the entire algo. This is probably good enough though.
-		fmt.Printf("//%s\n", pkgs[0])
-	} else {
-		for _, pkg := range pkgs {
-			fmt.Printf("//%s\n", pkg)
-		}
+	if binary && len(labels) == 0 && len(completions.Pkgs) == 1 {
+		return labelsInPackage(graph, completions.Pkgs[0], completions.NamePrefix, binary, test, hidden)
 	}
+	return labels
 }
 
-func printLabelsInPackage(graph *core.BuildGraph, packageName, prefix string, binary, test, hidden bool) int {
-	count := 0
+func labelsInPackage(graph *core.BuildGraph, packageName, prefix string, binary, test, hidden bool) []string {
+	ret := make([]string, 0)
 	for _, target := range graph.Package(packageName, "").AllTargets() {
 		if !strings.HasPrefix(target.Label.Name, prefix) {
 			continue
@@ -163,13 +172,25 @@ func printLabelsInPackage(graph *core.BuildGraph, packageName, prefix string, bi
 			continue
 		}
 		if hidden || !strings.HasPrefix(target.Label.Name, "_") {
-			fmt.Printf("%s\n", target.Label)
-			count++
+			ret = append(ret, target.Label.String())
 		}
 	}
-	if !binary && prefix == "" {
-		fmt.Printf("//%s:all\n", packageName)
+	if !binary && prefix == "" && len(ret) > 1 {
+		ret = append(ret, fmt.Sprintf("//%s:all", packageName))
 	}
 
-	return count
+	return ret
+}
+// PrintCompletion prints completions relative to the working package, formatting them based on whether the initial
+// query was absolute i.e. started with "//"
+func PrintCompletion(completion string, abs bool) {
+	if abs {
+		if strings.HasPrefix(completion, "//") {
+			fmt.Println(completion)
+		} else {
+			fmt.Printf("//%s\n", completion)
+		}
+	} else {
+		fmt.Println(strings.TrimLeft(strings.TrimPrefix(strings.TrimPrefix(completion, "//"), core.InitialPackagePath), "/"))
+	}
 }
