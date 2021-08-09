@@ -112,7 +112,9 @@ func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarge
 	revdeps := make(map[core.BuildLabel][]*core.BuildTarget, len(targets))
 	for _, t := range targets {
 		for _, d := range t.DeclaredDependencies() {
-			revdeps[d] = append(revdeps[d], t)
+			for _, p := range graph.TargetOrDie(d).ProvideFor(t) {
+				revdeps[d] = append(revdeps[d], graph.TargetOrDie(p))
+			}
 		}
 	}
 	return revdeps
