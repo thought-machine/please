@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/thought-machine/go-flags"
+	"gopkg.in/op/go-logging.v1"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -13,9 +15,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-
-	"github.com/thought-machine/go-flags"
-	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"
@@ -95,6 +94,7 @@ var opts struct {
 	Profile          string `long:"profile_file" hidden:"true" description:"Write profiling output to this file"`
 	MemProfile       string `long:"mem_profile_file" hidden:"true" description:"Write a memory profile to this file"`
 	MutexProfile     string `long:"mutex_profile_file" hidden:"true" description:"Write a contended mutex profile to this file"`
+	GoTraceFile      string `long:"go_trace_file" hidden:"true" description:"Write a go trace profile to this file"`
 	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
@@ -200,7 +200,7 @@ var opts struct {
 		Share struct {
 			Network bool `long:"share_network" description:"Share network namespace"`
 			Mount   bool `long:"share_mount" description:"Share mount namespace"`
-		} `group:"Options allowing namespace sharing"`
+		} `group:"Options to override mount and network namespacing on linux, if configured"`
 		Args struct {
 			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
 			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
@@ -315,7 +315,8 @@ var opts struct {
 			} `positional-args:"true" required:"true"`
 		} `command:"revdeps" alias:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
 		SomePath struct {
-			Args struct {
+			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
+			Args   struct {
 				Target1 core.BuildLabel `positional-arg-name:"target1" description:"First build target" required:"true"`
 				Target2 core.BuildLabel `positional-arg-name:"target2" description:"Second build target" required:"true"`
 			} `positional-args:"true" required:"true"`
@@ -471,7 +472,9 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(!opts.Exec.Share.Network, !opts.Exec.Share.Mount))
+
+		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
+		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount))
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
@@ -543,7 +546,7 @@ var buildFunctions = map[string]func() int{
 		return 0 // We'd have died already if something was wrong.
 	},
 	"op": func() int {
-		cmd := core.ReadLastOperationOrDie()
+		cmd := core.ReadPreviousOperationOrDie()
 		log.Notice("OP PLZ: %s", strings.Join(cmd, " "))
 		// Annoyingly we don't seem to have any access to execvp() which would be rather useful here...
 		executable, err := os.Executable()
@@ -629,7 +632,7 @@ var buildFunctions = map[string]func() int{
 		a := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
 		b := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
 		return runQuery(true, append(a, b...), func(state *core.BuildState) {
-			if err := query.SomePath(state.Graph, a, b); err != nil {
+			if err := query.SomePath(state.Graph, a, b, opts.Query.SomePath.Hidden); err != nil {
 				fmt.Printf("%s\n", err)
 				os.Exit(1)
 			}
@@ -678,7 +681,7 @@ var buildFunctions = map[string]func() int{
 
 		completions := query.CompletionLabels(config, qry, core.RepoRoot)
 		// We have no labels to parse so we're done already
-		if completions.PackageToParse == "" && qry != "//" {
+		if completions.PackageToParse == "" && !completions.IsRoot {
 			for _, pkg := range completions.Pkgs {
 				fmt.Printf("//%s\n", pkg)
 			}
@@ -916,9 +919,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	}
 	state := core.NewBuildState(config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
-	state.NumTestRuns = utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)       // Only one of these can be passed
-	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially // Similarly here.
-	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)      // And here
+	state.NumTestRuns = uint16(utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)) // Only one of these can be passed
+	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially   // Similarly here.
+	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)        // And here
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
@@ -959,11 +962,15 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 }
 
 func runPlease(state *core.BuildState, targets []core.BuildLabel) {
-	// Acquire the lock before we start building
-	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
-		core.AcquireRepoLock()
-		defer core.ReleaseRepoLock()
-	}
+	// Every plz instance gets a shared repo lock which provides the following:
+	// 1) Multiple plz instances can run concurrently.
+	// 2) If another process tries to obtain an exclusive repo lock, it will have to wait until any existing repo locks are released in other processes.
+	// This is useful for things like when plz tries to download and update itself.
+	// 3) A new plz process will have to wait to acquire its shared repo lock, if there's already an existing process with an exclusive repo lock.
+	core.AcquireSharedRepoLock()
+	defer core.ReleaseRepoLock() // We can safely release the lock at this stage.
+
+	core.StoreCurrentOperation()
 	core.CheckXattrsSupported(state)
 
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
@@ -1196,6 +1203,28 @@ func unannotateLabels(als []core.AnnotatedOutputLabel) []core.BuildLabel {
 	return labels
 }
 
+func writeGoTraceFile() {
+	if err := runtime.StartTrace(); err != nil {
+		log.Fatalf("failed to start trace: %v", err)
+	}
+
+	f, err := os.Create(opts.GoTraceFile)
+	if err != nil {
+		log.Fatalf("Failed to create trace file: %v", err)
+	}
+	defer f.Close()
+
+	for {
+		data := runtime.ReadTrace()
+		if data == nil {
+			return
+		}
+		if _, err := f.Write(data); err != nil {
+			log.Fatalf("Failed to write trace data: %v", err)
+		}
+	}
+}
+
 // toExitCode returns an integer process exit code based on the outcome of a build.
 // 0 -> success
 // 1 -> general failure (and why is he reading my hard drive?)
@@ -1246,6 +1275,12 @@ func execute(command string) int {
 		defer f.Close()
 		defer func() {
 			pprof.Lookup("mutex").WriteTo(f, 0)
+		}()
+	}
+	if opts.GoTraceFile != "" {
+		go writeGoTraceFile()
+		defer func() {
+			runtime.StopTrace()
 		}()
 	}
 	defer worker.StopAll()

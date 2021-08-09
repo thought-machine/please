@@ -45,6 +45,8 @@ func (label BuildLabel) String() string {
 	zero := BuildLabel{}
 	if label == zero {
 		return ""
+	} else if label == OriginalTarget {
+		return "command-line targets"
 	}
 	s := "//" + label.PackageName
 	if label.Subrepo != "" {

@@ -133,7 +133,6 @@ jobs:
        - save_cache:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
-
    build-darwin-arm64:
      working_directory: ~/please
      macos:

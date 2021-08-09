@@ -51,10 +51,12 @@ func makeState(config *core.Configuration) (*core.BuildState, []core.AnnotatedOu
 	target1 := core.NewBuildTarget(core.ParseBuildLabel("//:true", ""))
 	target1.IsBinary = true
 	target1.AddOutput("true")
+	target1.Test = new(core.TestFields)
 	state.Graph.AddTarget(target1)
 	target2 := core.NewBuildTarget(core.ParseBuildLabel("//:false", ""))
 	target2.IsBinary = true
 	target2.AddOutput("false")
+	target2.Test = new(core.TestFields)
 	state.Graph.AddTarget(target2)
 	return state, annotate([]core.BuildLabel{target1.Label}), annotate([]core.BuildLabel{target1.Label, target2.Label})
 }
