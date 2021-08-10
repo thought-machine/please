@@ -27,15 +27,6 @@ func TestEnsureDir(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestOpenDirFile(t *testing.T) {
-	_, err := os.OpenFile("dir/file", os.O_RDWR|os.O_CREATE, 0644)
-	assert.Error(t, err)
-
-	file, err := OpenDirFile("dir/file", os.O_RDWR|os.O_CREATE, 0644)
-	assert.IsType(t, &os.File{}, file)
-	assert.NoError(t, err)
-}
-
 func TestIsPackage(t *testing.T) {
 	isPackage := IsPackage([]string{"TEST_BUILD"}, "src/fs/test_data/test_subfolder1")
 	assert.False(t, isPackage)

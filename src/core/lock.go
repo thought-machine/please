@@ -1,140 +1,98 @@
-// The logic below relies heavily on flock (advisory locks).
+// Contains utility functions for managing an exclusive lock file.
+// Based on flock() underneath so
 
 package core
 
 import (
-	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
-	"strconv"
+	"path"
+	"strings"
 	"syscall"
 
-	"github.com/thought-machine/please/src/fs"
-	"gopkg.in/op/go-logging.v1"
+	"github.com/pkg/xattr"
 )
 
-const repoLockFilePath = "plz-out/.lock"
+const lockFilePath = "plz-out/.lock"
 
-var repoLockFile *os.File
+var lockFile *os.File
 
-// AcquireSharedRepoLock acquires a shared lock on the repo lock file. The file descriptor is reused if already opened
-// allowing its lock mode to be replaced. Dies if the lock cannot be successfully acquired.
-func AcquireSharedRepoLock() {
-	if err := acquireRepoLock(syscall.LOCK_SH); err != nil {
-		log.Fatal(err)
-	}
-}
-
-// AcquireExclusiveRepoLock acquires an exclusive lock on the repo lock file. The file descriptor is reused if already opened
-// allowing its lock mode to be replaced. Dies if the lock cannot be successfully acquired.
-func AcquireExclusiveRepoLock() {
-	if err := acquireRepoLock(syscall.LOCK_EX); err != nil {
-		log.Fatal(err)
-	}
-}
-
-// ReleaseRepoLock releases any lock mode on the repo lock file.
-func ReleaseRepoLock() {
-	ReleaseFileLock(repoLockFile)
-	repoLockFile = nil
-}
-
-// Base function that allows to set up different repo lock modes and facilitate testing.
-func acquireRepoLock(how int) error {
-	if err := openRepoLockFile(); err != nil {
-		return err
-	}
-
-	return acquireFileLock(repoLockFile, how, (*logging.Logger).Warning)
-}
-
-// This acts like a singleton allowing the same file descriptor to used to override a previously set lock
-// (from shared to exclusive and vice-versa) within the same process.
-func openRepoLockFile() error {
-	// Already opened
-	if repoLockFile != nil {
-		return nil
-	}
-
-	var err error
-	if repoLockFile, err = openLockFile(repoLockFilePath); err != nil {
-		return err
-	}
-	return nil
-}
-
-// AcquireExclusiveFileLock opens a file to acquire an exclusive lock.
+// AcquireRepoLock opens the lock file and acquires the lock.
 // Dies if the lock cannot be successfully acquired.
-func AcquireExclusiveFileLock(filePath string) *os.File {
-	lockFile, err := acquireOpenFileLock(filePath, syscall.LOCK_EX)
-	if err != nil {
-		log.Fatal(err)
+func AcquireRepoLock() {
+	// There is of course technically a bit of a race condition between the file & flock operations here,
+	// but it shouldn't matter much since we're trying to mutually exclude plz processes started by the user
+	// which (one hopes) they wouldn't normally do simultaneously.
+	openLockFile()
+	// Try a non-blocking acquire first so we can warn the user if we're waiting.
+	log.Debug("Attempting to acquire lock %s...", lockFilePath)
+	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err == nil {
+		log.Debug("Acquired lock %s", lockFilePath)
+	} else {
+		log.Warning("Looks like another plz is already running in this repo. Waiting for it to finish...")
+		if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
+			log.Fatalf("Failed to acquire lock: %s", err)
+		}
 	}
-	return lockFile
+
+	// Record the operation performed.
+	if _, err := lockFile.Seek(0, io.SeekStart); err == nil {
+		if n, err := lockFile.Write([]byte(strings.Join(os.Args[1:], " ") + "\n")); err == nil {
+			lockFile.Truncate(int64(n))
+		}
+	}
 }
 
-// Base function that allows to set up different lock modes and facilitate testing.
-func acquireOpenFileLock(filePath string, how int) (*os.File, error) {
-	lockFile, err := openLockFile(filePath)
-	if err != nil {
-		return nil, err
+func CheckXattrsSupported(state *BuildState) {
+	// Quick test of xattrs; we don't keep trying to use them if they fail here.
+	if state.XattrsSupported {
+		// This creates the lockfile if it doesn't exist
+		openLockFile()
+		if err := xattr.Set(lockFilePath, "user.plz_build", []byte("lock")); err != nil {
+			log.Warning("xattrs are not supported on this filesystem, using fallbacks")
+			state.DisableXattrs()
+		}
 	}
-
-	if err = acquireFileLock(lockFile, how, (*logging.Logger).Debug); err != nil {
-		return nil, err
-	}
-
-	return lockFile, nil
 }
 
-// ReleaseFileLock releases the lock and closes the file handle.
+// ReleaseRepoLock releases the lock and closes the file handle.
 // Does not die on errors, at this point it wouldn't really do any good.
-func ReleaseFileLock(file *os.File) {
-	if file == nil {
+func ReleaseRepoLock() {
+	if lockFile == nil {
+		log.Errorf("Lock file not acquired!")
+		return
+	}
+	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN); err != nil {
+		log.Errorf("Failed to release lock: %s", err) // No point making this fatal really
+	}
+	if err := lockFile.Close(); err != nil {
+		log.Errorf("Failed to close lock file: %s", err)
+	}
+	lockFile = nil
+}
+
+// ReadLastOperationOrDie reads the last operation performed from the lock file. Dies if unsuccessful.
+func ReadLastOperationOrDie() []string {
+	contents, err := ioutil.ReadFile(lockFilePath)
+	if err != nil || len(contents) == 0 {
+		log.Fatalf("Sorry OP, can't read previous operation :(")
+	}
+	return strings.Split(strings.TrimSpace(string(contents)), " ")
+}
+
+func openLockFile() {
+	if lockFile != nil {
 		return
 	}
 
-	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_UN); err != nil {
-		log.Errorf("Failed to release lock for %s: %s", file.Name(), err) // No point making this fatal really
+	var err error
+	os.MkdirAll(path.Dir(lockFilePath), DirPermissions)
+	// TODO(pebers): This doesn't seem quite as intended, I think the file still gets truncated sometimes.
+	//               Not sure why since I'm not passing O_TRUNC...
+	if lockFile, err = os.OpenFile(lockFilePath, os.O_RDWR|os.O_CREATE, 0644); err != nil && !os.IsNotExist(err) {
+		log.Fatalf("Failed to acquire lock: %s", err)
+	} else if lockFile, err = os.Create(lockFilePath); err != nil {
+		log.Fatalf("Failed to create lock: %v", err)
 	}
-	if err := file.Close(); err != nil {
-		log.Errorf("Failed to close lock file %s: %s", file.Name(), err)
-	}
-}
-
-type logFunc func(logger *logging.Logger, format string, args ...interface{})
-
-func acquireFileLock(file *os.File, how int, levelLog logFunc) error {
-	// Try a non-blocking acquire first so we can warn the user if we're waiting.
-	log.Debug("Attempting to acquire lock for %s...", file.Name())
-	err := syscall.Flock(int(file.Fd()), how|syscall.LOCK_NB)
-	if err != nil {
-		pid, err := ioutil.ReadFile(file.Name())
-		if err == nil && len(pid) > 0 {
-			levelLog(log, "Looks like process with PID %s has already acquired the lock for %s. Waiting for it to finish...", string(pid), file.Name())
-		} else {
-			levelLog(log, "Looks like another process has already acquired the lock for %s. Waiting for it to finish...", file.Name())
-		}
-
-		if err := syscall.Flock(int(file.Fd()), how); err != nil {
-			return fmt.Errorf("Failed to acquire lock for %s: %w", file.Name(), err)
-		}
-	}
-	log.Debug("Acquired lock for %s", file.Name())
-
-	// Record content
-	if err := file.Truncate(0); err == nil {
-		file.WriteAt([]byte(strconv.Itoa(os.Getpid())), 0)
-	}
-
-	return nil
-}
-
-// Try to open a file for locking
-func openLockFile(filePath string) (*os.File, error) {
-	lockFile, err := fs.OpenDirFile(filePath, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to open %s to acquire lock: %w", filePath, err)
-	}
-	return lockFile, nil
 }
