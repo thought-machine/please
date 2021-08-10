@@ -93,6 +93,9 @@ func getPackagesAndPackageToParse(config *core.Configuration, query string) ([]s
 	if packageOnly && pkg == currentPackage || !fs.IsPackage(config.Parse.BuildFileName, pkg) {
 		return pkgs, ""
 	}
+	if pkg == "." {
+		pkg = ""
+	}
 	return pkgs, pkg
 }
 
