@@ -27,7 +27,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/nicksnyder/go-i18n v1.10.1 // indirect
 	github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518
-	github.com/peterebden/gcfg v1.3.0
+	github.com/please-build/gcfg v1.3.1
 	github.com/peterebden/go-cli-init/v2 v2.0.1
 	github.com/peterebden/go-cli-init/v3 v3.0.0
 	github.com/peterebden/go-cli-init/v4 v4.0.0
