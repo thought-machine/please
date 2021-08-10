@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/google/shlex"
-	"github.com/peterebden/gcfg"
+	"github.com/please-build/gcfg"
 	"github.com/thought-machine/go-flags"
 
 	"github.com/thought-machine/please/src/cli"
