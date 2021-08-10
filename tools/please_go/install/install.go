@@ -49,9 +49,8 @@ func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags,
 		trimPath:         trimPath,
 		collectedLdFlags: map[string]struct{}{},
 
-		additionalLDFlags:          ldFlags,
-		additionalCFlags:          cFlags,
-
+		additionalLDFlags: ldFlags,
+		additionalCFlags:  cFlags,
 
 		tc: &toolchain.Toolchain{
 			CcTool:        ccTool,
