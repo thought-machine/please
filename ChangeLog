@@ -1,3 +1,9 @@
+Version 16.4.2
+--------------
+    * Honour require/provide for `plz query revdeps` and `plz query changes` #1997
+    * Fix `plz tool langserver` #1999
+
+
 Version 16.4.1
 --------------
     * Fixed panic when downloading outputs for stamped targets that were retrived from
