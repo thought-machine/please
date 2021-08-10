@@ -315,7 +315,8 @@ var opts struct {
 			} `positional-args:"true" required:"true"`
 		} `command:"revdeps" alias:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
 		SomePath struct {
-			Args struct {
+			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
+			Args   struct {
 				Target1 core.BuildLabel `positional-arg-name:"target1" description:"First build target" required:"true"`
 				Target2 core.BuildLabel `positional-arg-name:"target2" description:"Second build target" required:"true"`
 			} `positional-args:"true" required:"true"`
@@ -545,7 +546,7 @@ var buildFunctions = map[string]func() int{
 		return 0 // We'd have died already if something was wrong.
 	},
 	"op": func() int {
-		cmd := core.ReadLastOperationOrDie()
+		cmd := core.ReadPreviousOperationOrDie()
 		log.Notice("OP PLZ: %s", strings.Join(cmd, " "))
 		// Annoyingly we don't seem to have any access to execvp() which would be rather useful here...
 		executable, err := os.Executable()
@@ -631,7 +632,7 @@ var buildFunctions = map[string]func() int{
 		a := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
 		b := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
 		return runQuery(true, append(a, b...), func(state *core.BuildState) {
-			if err := query.SomePath(state.Graph, a, b); err != nil {
+			if err := query.SomePath(state.Graph, a, b, opts.Query.SomePath.Hidden); err != nil {
 				fmt.Printf("%s\n", err)
 				os.Exit(1)
 			}
@@ -961,11 +962,15 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 }
 
 func runPlease(state *core.BuildState, targets []core.BuildLabel) {
-	// Acquire the lock before we start building
-	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
-		core.AcquireRepoLock()
-		defer core.ReleaseRepoLock()
-	}
+	// Every plz instance gets a shared repo lock which provides the following:
+	// 1) Multiple plz instances can run concurrently.
+	// 2) If another process tries to obtain an exclusive repo lock, it will have to wait until any existing repo locks are released in other processes.
+	// This is useful for things like when plz tries to download and update itself.
+	// 3) A new plz process will have to wait to acquire its shared repo lock, if there's already an existing process with an exclusive repo lock.
+	core.AcquireSharedRepoLock()
+	defer core.ReleaseRepoLock() // We can safely release the lock at this stage.
+
+	core.StoreCurrentOperation()
 	core.CheckXattrsSupported(state)
 
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
