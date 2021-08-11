@@ -116,15 +116,6 @@ go_test(
 )
 
 go_test(
-    name = "previous_op_test",
-    srcs = ["previous_op_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
     name = "build_label_test",
     srcs = ["build_label_test.go"],
     deps = [

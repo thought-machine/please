@@ -239,12 +239,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			buildLinks(state, target)
 			return nil
 		}
-
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring target lock...")
-		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
-		defer core.ReleaseFileLock(file)
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
-
 		if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
 			return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
 		}
