@@ -12,7 +12,7 @@ type subincludeResult struct {
 
 // A subincludeMap stores the results of subinclude calls in a way that they
 // can be waited on.
-type subincludeMap struct{
+type subincludeMap struct {
 	m map[string]subincludeResult
 	l sync.Mutex
 }
