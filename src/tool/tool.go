@@ -5,17 +5,17 @@
 package tool
 
 import (
-	"os"
-	"path/filepath"
+	//"os"
+	//"path/filepath"
 	"sort"
 	"strings"
-	"syscall"
+	//"syscall"
 
 	"github.com/thought-machine/go-flags"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/fs"
+	//"github.com/thought-machine/please/src/fs"
 )
 
 var log = logging.MustGetLogger("tool")
@@ -26,7 +26,7 @@ type Tool string
 // Complete suggests completions for a partial tool name.
 func (tool Tool) Complete(match string) []flags.Completion {
 	ret := []flags.Completion{}
-	for k := range matchingTools(core.DefaultConfiguration(), match) {
+	for k := range MatchingTools(core.DefaultConfiguration(), match) {
 		ret = append(ret, flags.Completion{Item: k})
 	}
 	return ret
@@ -34,33 +34,16 @@ func (tool Tool) Complete(match string) []flags.Completion {
 
 // Run runs one of the sub-tools.
 func Run(config *core.Configuration, tool Tool, args []string) {
-	tools := matchingTools(config, string(tool))
+	log.Warning("I'm in tool.Run()")
+	tools := MatchingTools(config, string(tool))
 	if len(tools) != 1 {
-		log.Fatalf("Unknown tool: %s. Must be one of [%s]", tool, strings.Join(allToolNames(config, ""), ", "))
+		log.Fatalf("Unknown tool: %s. Must be one of [%s]", tool, strings.Join(AllToolNames(config, ""), ", "))
 	}
-	target := fs.ExpandHomePath(tools[allToolNames(config, string(tool))[0]])
-	if !core.LooksLikeABuildLabel(target) {
-		if !filepath.IsAbs(target) {
-			t, err := core.LookBuildPath(target, config)
-			if err != nil {
-				log.Fatalf("%s", err)
-			}
-			target = t
-		}
-		// Hopefully we have an absolute path now, so let's run it.
-		err := syscall.Exec(target, append([]string{target}, args...), os.Environ())
-		log.Fatalf("Failed to exec %s: %s", target, err) // Always a failure, exec never returns.
-	}
-	// The tool is allowed to be an in-repo target. In that case it's essentially equivalent to "plz run".
-	// We have to re-exec ourselves in such a case since we don't know enough about it to run it now.
-	plz, _ := os.Executable()
-	args = append([]string{os.Args[0], "run", target, "--"}, args...)
-	err := syscall.Exec(plz, args, os.Environ())
-	log.Fatalf("Failed to exec %s run %s: %s", plz, target, err) // Always a failure, exec never returns.
+
 }
 
-// matchingTools returns a set of matching tools for a string prefix.
-func matchingTools(config *core.Configuration, prefix string) map[string]string {
+// MatchingTools returns a set of matching tools for a string prefix.
+func MatchingTools(config *core.Configuration, prefix string) map[string]string {
 	knownTools := map[string]string{
 		"jarcat":      config.Java.JarCatTool,
 		"javacworker": config.Java.JavacWorker,
@@ -79,12 +62,16 @@ func matchingTools(config *core.Configuration, prefix string) map[string]string 
 	return ret
 }
 
-// allToolNames returns the names of all available tools.
-func allToolNames(config *core.Configuration, prefix string) []string {
+// AllToolNames returns the names of all available tools.
+func AllToolNames(config *core.Configuration, prefix string) []string {
 	ret := []string{}
-	for k := range matchingTools(config, prefix) {
+	for k := range MatchingTools(config, prefix) {
 		ret = append(ret, k)
 	}
 	sort.Strings(ret)
 	return ret
+}
+
+func (tool Tool) AsString() string {
+	return string(tool)
 }

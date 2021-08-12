@@ -35,8 +35,11 @@ const (
 
 // Run implements the running part of 'plz run'.
 func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, remote, env, inTmp bool, dir, overrideCmd string) {
+	log.Warning("Preparing run...")
 	prepareRun()
+	log.Warning("done.")
 
+	log.Warning("Starting run with label %s", label)
 	run(context.Background(), state, label, args, false, false, remote, env, false, inTmp, dir, overrideCmd)
 }
 
