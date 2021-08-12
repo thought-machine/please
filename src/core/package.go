@@ -30,10 +30,6 @@ type Package struct {
 	Outputs map[string]*BuildTarget
 	// Protects access to above
 	mutex sync.RWMutex
-	// Used to arbitrate a single post-build function running at a time.
-	// It would be sort of conceptually nice if they ran simultaneously but it'd
-	// be far too hard to ensure consistency in any case where they can interact with one another.
-	buildCallbackMutex sync.Mutex
 }
 
 // NewPackage constructs a new package with the given name.
