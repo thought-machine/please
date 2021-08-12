@@ -171,6 +171,12 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		return !retrieveFromCache(state, target, hash, files)
 	}
 
+	// Wait if another process is currently testing this target
+	state.LogBuildResult(tid, target, core.TargetTesting, "Acquiring target lock...")
+	file := core.AcquireExclusiveFileLock(target.TestLockFile(run))
+	defer core.ReleaseFileLock(file)
+	state.LogBuildResult(tid, target, core.TargetTesting, "Testing...")
+
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
 	if state.NumTestRuns == 1 && !runRemotely && !needToRun() {
 		if cachedResults := cachedTestResults(); cachedResults != nil {
