@@ -14,3 +14,7 @@ DefaultValue = fooc
 [PluginConfig "module_path"]
 ConfigKey = ModulePath
 Optional = false
+
+[PluginConfig "compile_flags"]
+ConfigKey = CompileFlag
+Repeatable = true

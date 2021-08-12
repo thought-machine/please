@@ -6,7 +6,6 @@ please_repo_e2e_test(
     repo = "test_repo",
 )
 
-
 please_repo_e2e_test(
     name = "plugin_test_non_optional_config",
     plz_command = "plz build //test:foo_lib",

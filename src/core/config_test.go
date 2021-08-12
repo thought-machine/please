@@ -360,5 +360,5 @@ func TestGetTags(t *testing.T) {
 func TestPluginConfig(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/plugin.plzconfig"}, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, "fooc", config.Plugin["foo"].ExtraValues["FoocTool"])
+	assert.Equal(t, []string{"fooc"}, config.Plugin["foo"].ExtraValues["fooctool"])
 }
