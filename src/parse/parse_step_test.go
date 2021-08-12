@@ -103,7 +103,7 @@ func TestAddDepRescan(t *testing.T) {
 	assertPendingBuilds(t, state) // Note that the earlier call to assertPendingBuilds cleared it.
 
 	// Now running this should activate it
-	rescanDeps(state, map[*core.BuildTarget]struct{}{target1: {}})
+	//rescanDeps(state, map[*core.BuildTarget]struct{}{target1: {}})
 	time.Sleep(time.Millisecond * 100)
 
 	assertPendingBuilds(t, state, "//package1:target4")
