@@ -111,6 +111,7 @@ func (p *aspParser) BuildRuleArgOrder() map[string]int {
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(tid, target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
+	state.SyncParsePackage(target.Label)
 	if err := f(); err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)
 		return err
