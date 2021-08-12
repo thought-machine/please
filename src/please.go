@@ -408,7 +408,7 @@ var opts struct {
 // Functions are called after args are parsed and return true for success.
 var buildFunctions = map[string]func() int{
 	"build": func() int {
-		log.Warning("opts.Build.Args.Targets=%s", opts.Build.Args.Targets)
+		log.Warning("Sam: opts.Build.Args.Targets=%s", opts.Build.Args.Targets)
 		success, state := runBuild(opts.Build.Args.Targets, true, false, false)
 		return toExitCode(success, state)
 	},
@@ -478,7 +478,7 @@ var buildFunctions = map[string]func() int{
 		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount))
 	},
 	"run": func() int {
-		log.Warning("Hi doing the old Run code path")
+		log.Warning("Sam: Hi doing the old Run code path")
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
 			if opts.Run.InWD {
@@ -867,15 +867,16 @@ var buildFunctions = map[string]func() int{
 	},
 }
 
+// Check if tool is given as label or path and then run
 func CheckIsLabelOrPathAndRun(config *core.Configuration, _tool tool.Tool, args []string) {
-	log.Warning("Hi I'm in CheckIsLabelOrPathAndRun()")
+	log.Warning("Sam: Hi I'm in CheckIsLabelOrPathAndRun()")
 	tools := tool.MatchingTools(config, string(_tool))
-	log.Warning("tools=%s", tools)
+	log.Warning("Sam: tools=%s", tools)
 	target := fs.ExpandHomePath(tools[tool.AllToolNames(config, string(_tool))[0]])
 	label := core.ParseBuildLabels([]string{target})
-	log.Warning("target=%s", target)
+	log.Warning("Sam: target=%s", target)
 	if !core.LooksLikeABuildLabel(target) {
-		log.Warning("Code path 1")
+		log.Warning("Sam: Code path 1")
 		if !filepath.IsAbs(target) {
 			t, err := core.LookBuildPath(target, config)
 			if err != nil {
@@ -887,7 +888,7 @@ func CheckIsLabelOrPathAndRun(config *core.Configuration, _tool tool.Tool, args 
 		if success, state := runBuild(label, true, false, false); success {
 			var dir string
 			if opts.Run.InWD {
-				log.Warning("Changed dir to originalWorkingDirectory")
+				log.Warning("Sam: Changed dir to originalWorkingDirectory")
 				dir = originalWorkingDirectory
 			}
 
@@ -902,7 +903,7 @@ func CheckIsLabelOrPathAndRun(config *core.Configuration, _tool tool.Tool, args 
 		//		err := syscall.Exec(target, append([]string{target}, args...), os.Environ())
 		//		log.Fatalf("Failed to exec %s: %s", target, err) // Always a failure, exec never returns.
 	}
-	log.Warning("Code path 2")
+	log.Warning("Sam: Code path 2")
 	// The tool is allowed to be an in-repo target. In that case it's essentially equivalent to "plz run".
 	// We have to re-exec ourselves in such a case since we don't know enough about it to run it now.
 	//	plz, _ := os.Executable()
@@ -964,8 +965,8 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 
 // Please starts & runs the main build process through to its completion.
 func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
-	log.Warning("In Please()")
-	log.Warning("targets=%s", targets)
+	log.Warning("Sam: In Please()")
+	log.Warning("Sam: targets=%s", targets)
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 		config.Parse.NumThreads = opts.BuildFlags.NumThreads
@@ -1048,7 +1049,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		output.MonitorState(ctx, state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
-	log.Warning("Calling plz.Run() with targets=%s", targets)
+	log.Warning("Sam: Calling plz.Run() with targets=%s", targets)
 	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
 	cancel()
 	wg.Wait()
@@ -1093,29 +1094,29 @@ func readConfig(forceUpdate bool) *core.Configuration {
 // Runs the actual build
 // Which phases get run are controlled by shouldBuild and shouldTest.
 func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) (bool, *core.BuildState) {
-	log.Warning("Hi I'm in runBuild")
+	log.Warning("Sam: Hi I'm in runBuild")
 	if !isQuery {
-		log.Warning("!isQuery")
+		log.Warning("Sam: !isQuery")
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
 	}
 	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !utils.ReadingStdin(targets) {
-		log.Warning("if stat...")
+		log.Warning("Sam: if stat...")
 		if len(targets) == 0 {
 			// Assume they want us to read from stdin since nothing else was given.
 			targets = []core.BuildLabel{core.BuildLabelStdin}
 		}
 	}
-	log.Warning("targets=%s", targets)
-	log.Warning("len(targets)==%d", len(targets))
+	log.Warning("Sam: targets=%s", targets)
+	log.Warning("Sam: len(targets)==%d", len(targets))
 	//FIXME: len(targets) gives 1 even if the list is empty...
 	if len(targets) == 0 {
-		log.Warning("len(targets) == 0")
+		log.Warning("Sam: len(targets) == 0")
 		targets = core.InitialPackage()
 	}
-	log.Warning("targets=%s", targets)
-	//	log.Warning("config=%s", config)
-	log.Warning("shouldBuild=%s", shouldBuild)
-	log.Warning("shouldTest=%s", shouldTest)
+	log.Warning("Sam: targets=%s", targets)
+	//	log.Warning("Sam: config=%s", config)
+	log.Warning("Sam: shouldBuild=%s", shouldBuild)
+	log.Warning("Sam: shouldTest=%s", shouldTest)
 	return Please(targets, config, shouldBuild, shouldTest)
 }
 

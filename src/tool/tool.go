@@ -71,7 +71,3 @@ func AllToolNames(config *core.Configuration, prefix string) []string {
 	sort.Strings(ret)
 	return ret
 }
-
-func (tool Tool) AsString() string {
-	return string(tool)
-}
