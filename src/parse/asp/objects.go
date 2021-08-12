@@ -929,11 +929,12 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 
 	pluginNamespace := pyDict{}
 	contextPackage := &core.Package{SubrepoName: state.CurrentSubrepo}
-
+	log.Warning("Loading config ")
 	configValueDefinitions := state.Config.PluginConfig
 	for key, definition := range configValueDefinitions {
 		// TODO(jpoole): handle repeatable values
-		value, ok := extraVals[definition.ConfigKey]
+		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
+		log.Warningf("value for %v is %v\n %v", strings.ToLower(definition.ConfigKey), value, extraVals)
 		if !ok {
 			value = definition.DefaultValue
 		}

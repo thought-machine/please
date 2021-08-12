@@ -771,14 +771,14 @@ var buildFunctions = map[string]func() int{
 		if err := scm.Checkout(opts.Query.Changes.Since); err != nil {
 			log.Fatalf("%s", err)
 		}
-		readConfig(false)
+		readConfig()
 		_, before := runBuild(core.WholeGraph, false, false, false)
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
 		if err := scm.Checkout(original); err != nil {
 			log.Fatalf("%s", err)
 		}
-		readConfig(false)
+		readConfig()
 		success, after := runBuild(core.WholeGraph, false, false, false)
 		if !success {
 			return 1
@@ -1008,7 +1008,7 @@ func testTargets(target core.BuildLabel, args []string, failed bool, resultsFile
 }
 
 // readConfig reads the initial configuration files
-func readConfig(forceUpdate bool) *core.Configuration {
+func readConfig() *core.Configuration {
 	cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
@@ -1075,7 +1075,7 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	if opts.FeatureFlags.NoHashVerification {
 		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
 	}
-	config := readConfig(forceUpdate)
+	config := readConfig()
 	// Now apply any flags that override this
 	config.Profiling = opts.Profile != ""
 	if opts.Update.Latest || opts.Update.LatestPrerelease {

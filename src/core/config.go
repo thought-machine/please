@@ -64,6 +64,7 @@ func readConfigFile(config *Configuration, filename string) error {
 	} else {
 		log.Debug("Read config from %s", filename)
 	}
+	normalisePluginConfigKeys(config)
 	return nil
 }
 
@@ -245,6 +246,17 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,
 	})
+}
+
+// normalisePluginConfigKeys converts all config for plugins to lower case
+func normalisePluginConfigKeys(config *Configuration) {
+	for _, plugin := range config.Plugin {
+		newExtraValues := make(map[string]string, len(plugin.ExtraValues))
+		for k, v := range plugin.ExtraValues {
+			newExtraValues[strings.ToLower(k)] = v
+		}
+		plugin.ExtraValues = newExtraValues
+	}
 }
 
 // setDefault sets a slice of strings in the config if the set one is empty.
@@ -739,6 +751,11 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		split := strings.Split(strings.ToLower(k), ".")
 		if len(split) != 2 {
 			return fmt.Errorf("Bad option format: %s", k)
+		}
+		if plugin, ok := config.Plugin[split[0]]; ok {
+			log.Warningf("Setting config value %v to %v", split[1], v)
+			plugin.ExtraValues[strings.ToLower(split[1])] = v
+			return nil
 		}
 		field := elem.FieldByNameFunc(match(split[0]))
 		if !field.IsValid() {
