@@ -179,6 +179,12 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return err
 		}
 	} else {
+		// Wait if another process is currently building this target
+		state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring target lock...")
+		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
+		defer core.ReleaseFileLock(file)
+		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
+
 		// Ensure we have downloaded any previous dependencies if that's relevant.
 		if err := state.DownloadInputsIfNeeded(tid, target, false); err != nil {
 			return err
@@ -239,11 +245,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			buildLinks(state, target)
 			return nil
 		}
-
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring target lock...")
-		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
-		defer core.ReleaseFileLock(file)
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
 
 		if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
 			return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
