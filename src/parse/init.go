@@ -115,7 +115,7 @@ func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *co
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)
 		return err
 	}
-	state.LogBuildResult(tid, target.Label, core.TargetBuilding, fmt.Sprintf("Finished %s-build function for %s", callbackType, target.Label))
+	state.LogBuildResult(tid, target, core.TargetBuilding, fmt.Sprintf("Finished %s-build function for %s", callbackType, target.Label))
 	return nil
 }
 
