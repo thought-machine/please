@@ -5,17 +5,17 @@
 package tool
 
 import (
-	// "os"
-	// "path/filepath"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
-	// "syscall"
+	"syscall"
 
 	"github.com/thought-machine/go-flags"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
-	// "github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/fs"
 )
 
 var log = logging.MustGetLogger("tool")
@@ -38,7 +38,17 @@ func Run(config *core.Configuration, tool Tool, args []string) {
 	if len(tools) != 1 {
 		log.Fatalf("Unknown tool: %s. Must be one of [%s]", tool, strings.Join(AllToolNames(config, ""), ", "))
 	}
-
+	target := fs.ExpandHomePath(tools[AllToolNames(config, string(tool))[0]])
+	if !filepath.IsAbs(target) {
+		t, err := core.LookBuildPath(target, config)
+		if err != nil {
+			log.Fatalf("%s", err)
+		}
+		target = t
+	}
+	// Hopefully we have an absolute path now, so let's run it.
+	err := syscall.Exec(target, append([]string{target}, args...), os.Environ())
+	log.Fatalf("Failed to exec %s: %s", target, err) // Always a failure, exec never returns.
 }
 
 // MatchingTools returns a set of matching tools for a string prefix.

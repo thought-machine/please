@@ -617,7 +617,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"tool": func() int {
 		//tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args.AsStrings())
-		CheckIsLabelOrPathAndRun(config, opts.Tool.Args.Tool, opts.Tool.Args.Args.AsStrings())
+		checkIsLabelOrPathAndRun(config, opts.Tool.Args.Tool, opts.Tool.Args.Args.AsStrings())
 		return 1 // If the function returns (which it shouldn't), something went wrong.
 	},
 	"deps": func() int {
@@ -868,7 +868,7 @@ var buildFunctions = map[string]func() int{
 }
 
 // Check if tool is given as label or path and then run
-func CheckIsLabelOrPathAndRun(config *core.Configuration, _tool tool.Tool, args []string) {
+func checkIsLabelOrPathAndRun(config *core.Configuration, _tool tool.Tool, args []string) {
 
 	tools := tool.MatchingTools(config, string(_tool))
 
@@ -876,32 +876,7 @@ func CheckIsLabelOrPathAndRun(config *core.Configuration, _tool tool.Tool, args 
 	label := core.ParseBuildLabels([]string{target})
 
 	if !core.LooksLikeABuildLabel(target) {
-
-		if !filepath.IsAbs(target) {
-			t, err := core.LookBuildPath(target, config)
-			if err != nil {
-				log.Fatalf("%s", err)
-			}
-			target = t
-		}
-		// Hopefully we have an absolute path now, so let's run it.
-		if success, state := runBuild(label, true, false, false); success {
-			var dir string
-			if opts.Run.InWD {
-
-				dir = originalWorkingDirectory
-			}
-
-			annotatedOutputLabels := core.AnnotateLabels(label)
-			//			annotatedOutputLabels := state.ExpandOriginalMaybeAnnotatedLabels([]core.AnnotatedOutputLabel{opts.Tool.Args.Tool})
-			if len(annotatedOutputLabels) != 1 {
-				log.Fatalf("%v expanded to more than one target. If you want to run multiple targets, use `plz run parallel %v` or `plz run sequential %v`. ", opts.Run.Args.Target, opts.Run.Args.Target, opts.Run.Args.Target)
-			}
-
-			run.Run(state, annotatedOutputLabels[0], opts.Tool.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir, opts.Run.Cmd)
-		}
-		//		err := syscall.Exec(target, append([]string{target}, args...), os.Environ())
-		//		log.Fatalf("Failed to exec %s: %s", target, err) // Always a failure, exec never returns.
+		tool.Run(config, _tool, opts.Tool.Args.Args.AsStrings())
 	}
 
 	// The tool is allowed to be an in-repo target. In that case it's essentially equivalent to "plz run".
@@ -914,12 +889,8 @@ func CheckIsLabelOrPathAndRun(config *core.Configuration, _tool tool.Tool, args 
 
 	if success, state := runBuild(label, true, false, false); success {
 		var dir string
-		if opts.Run.InWD {
-			dir = originalWorkingDirectory
-		}
 		annotatedOutputLabels := core.AnnotateLabels(label)
-
-		run.Run(state, annotatedOutputLabels[0], opts.Tool.Args.Args.AsStrings(), opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir, opts.Run.Cmd)
+		run.Run(state, annotatedOutputLabels[0], opts.Tool.Args.Args.AsStrings(), false, false, false, dir, "")
 	}
 }
 
