@@ -937,7 +937,6 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 
 // Please starts & runs the main build process through to its completion.
 func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
-
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 		config.Parse.NumThreads = opts.BuildFlags.NumThreads
@@ -1020,7 +1019,6 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		output.MonitorState(ctx, state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
-
 	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
 	cancel()
 	wg.Wait()
@@ -1065,25 +1063,19 @@ func readConfig(forceUpdate bool) *core.Configuration {
 // Runs the actual build
 // Which phases get run are controlled by shouldBuild and shouldTest.
 func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) (bool, *core.BuildState) {
-
 	if !isQuery {
-
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
 	}
 	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !utils.ReadingStdin(targets) {
-
 		if len(targets) == 0 {
 			// Assume they want us to read from stdin since nothing else was given.
 			targets = []core.BuildLabel{core.BuildLabelStdin}
 		}
 	}
-
 	//FIXME: len(targets) gives 1 even if the list is empty...
 	if len(targets) == 0 {
-
 		targets = core.InitialPackage()
 	}
-
 	return Please(targets, config, shouldBuild, shouldTest)
 }
 
