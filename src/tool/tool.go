@@ -34,7 +34,6 @@ func (tool Tool) Complete(match string) []flags.Completion {
 
 // Run runs one of the sub-tools.
 func Run(config *core.Configuration, tool Tool, args []string) {
-//	log.Warning("Sam: I'm in tool.Run()")
 	tools := MatchingTools(config, string(tool))
 	if len(tools) != 1 {
 		log.Fatalf("Unknown tool: %s. Must be one of [%s]", tool, strings.Join(AllToolNames(config, ""), ", "))
