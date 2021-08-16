@@ -408,7 +408,6 @@ var opts struct {
 // Functions are called after args are parsed and return true for success.
 var buildFunctions = map[string]func() int{
 	"build": func() int {
-
 		success, state := runBuild(opts.Build.Args.Targets, true, false, false)
 		return toExitCode(success, state)
 	},
@@ -478,7 +477,6 @@ var buildFunctions = map[string]func() int{
 		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount))
 	},
 	"run": func() int {
-
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
 			if opts.Run.InWD {
@@ -616,7 +614,6 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(help.Help(string(opts.Help.Args.Topic)), nil)
 	},
 	"tool": func() int {
-		//tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args.AsStrings())
 		runTool(opts.Tool.Args.Tool)
 		return 1 // If the function returns (which it shouldn't), something went wrong.
 	},
