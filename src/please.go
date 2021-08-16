@@ -868,17 +868,18 @@ var buildFunctions = map[string]func() int{
 }
 
 // Check if tool is given as label or path and then run
-func checkIsLabelOrPathAndRun(config *core.Configuration, _tool tool.Tool) {
-	t, ok := tool.MatchingTool(config, string(_tool))
+func checkIsLabelOrPathAndRun( _tool tool.Tool) {
+	c := core.DefaultConfiguration()
+	if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
+		c = cfg
+	}
+	t, ok := tool.MatchingTool(c, string(_tool))
 	if !ok {
 		log.Fatalf("unknown tool %v", t)
 	}
 
 	if !core.LooksLikeABuildLabel(t) {
-		if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
-			config = cfg
-		}
-		tool.Run(config, tool.Tool(t), opts.Tool.Args.Args.AsStrings())
+		tool.Run(c, tool.Tool(t), opts.Tool.Args.Args.AsStrings())
 	}
 
 	label := core.ParseBuildLabels([]string{t})
