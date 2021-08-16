@@ -20,7 +20,7 @@ import (
 )
 
 var client = &http.Client{
-	Timeout: 5*time.Minute,
+	Timeout: time.Minute,
 }
 
 func looksLikeJUnitXMLTestResults(b []byte) bool {
