@@ -617,7 +617,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"tool": func() int {
 		//tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args.AsStrings())
-		checkIsLabelOrPathAndRun(config, opts.Tool.Args.Tool, opts.Tool.Args.Args.AsStrings())
+		checkIsLabelOrPathAndRun(config, opts.Tool.Args.Tool)
 		return 1 // If the function returns (which it shouldn't), something went wrong.
 	},
 	"deps": func() int {
@@ -778,14 +778,14 @@ var buildFunctions = map[string]func() int{
 		if err := scm.Checkout(opts.Query.Changes.Since); err != nil {
 			log.Fatalf("%s", err)
 		}
-		readConfig(false)
+		readConfig()
 		_, before := runBuild(core.WholeGraph, false, false, false)
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
 		if err := scm.Checkout(original); err != nil {
 			log.Fatalf("%s", err)
 		}
-		readConfig(false)
+		readConfig()
 		success, after := runBuild(core.WholeGraph, false, false, false)
 		if !success {
 			return 1
@@ -868,16 +868,17 @@ var buildFunctions = map[string]func() int{
 }
 
 // Check if tool is given as label or path and then run
-func checkIsLabelOrPathAndRun(config *core.Configuration, _tool tool.Tool, args []string) {
-
-	tools := tool.MatchingTools(config, string(_tool))
-
-	target := fs.ExpandHomePath(tools[tool.AllToolNames(config, string(_tool))[0]])
-	label := core.ParseBuildLabels([]string{target})
-
-	if !core.LooksLikeABuildLabel(target) {
-		tool.Run(config, _tool, opts.Tool.Args.Args.AsStrings())
+func checkIsLabelOrPathAndRun(config *core.Configuration, _tool tool.Tool) {
+	t, ok := tool.MatchingTool(config, string(_tool))
+	if !ok {
+		log.Fatalf("unknown tool %v", t)
 	}
+
+	if !core.LooksLikeABuildLabel(t) {
+		tool.Run(config, tool.Tool(t), opts.Tool.Args.Args.AsStrings())
+	}
+
+	label := core.ParseBuildLabels([]string{t})
 
 	// The tool is allowed to be an in-repo target. In that case it's essentially equivalent to "plz run".
 	// We have to re-exec ourselves in such a case since we don't know enough about it to run it now.
@@ -1046,7 +1047,7 @@ func testTargets(target core.BuildLabel, args []string, failed bool, resultsFile
 }
 
 // readConfig reads the initial configuration files
-func readConfig(forceUpdate bool) *core.Configuration {
+func readConfig() *core.Configuration {
 	cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
@@ -1114,7 +1115,7 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	if opts.FeatureFlags.NoHashVerification {
 		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
 	}
-	config := readConfig(forceUpdate)
+	config := readConfig()
 	// Now apply any flags that override this
 	config.Profiling = opts.Profile != ""
 	if opts.Update.Latest || opts.Update.LatestPrerelease {
@@ -1193,11 +1194,6 @@ func initBuild(args []string) string {
 			cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args)
 		}
 		config = core.DefaultConfiguration()
-		if command == "tool" {
-			if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
-				config = cfg
-			}
-		}
 		os.Exit(buildFunctions[command]())
 	} else if opts.OutputFlags.CompletionScript {
 		fmt.Printf("%s\n", string(assets.PlzComplete))

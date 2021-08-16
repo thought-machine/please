@@ -26,7 +26,7 @@ type Tool string
 // Complete suggests completions for a partial tool name.
 func (tool Tool) Complete(match string) []flags.Completion {
 	ret := []flags.Completion{}
-	for k := range MatchingTools(core.DefaultConfiguration(), match) {
+	for k := range matchingTools(core.DefaultConfiguration(), match) {
 		ret = append(ret, flags.Completion{Item: k})
 	}
 	return ret
@@ -34,11 +34,7 @@ func (tool Tool) Complete(match string) []flags.Completion {
 
 // Run runs one of the sub-tools.
 func Run(config *core.Configuration, tool Tool, args []string) {
-	tools := MatchingTools(config, string(tool))
-	if len(tools) != 1 {
-		log.Fatalf("Unknown tool: %s. Must be one of [%s]", tool, strings.Join(AllToolNames(config, ""), ", "))
-	}
-	target := fs.ExpandHomePath(tools[AllToolNames(config, string(tool))[0]])
+	target := fs.ExpandHomePath(string(tool))
 	if !filepath.IsAbs(target) {
 		t, err := core.LookBuildPath(target, config)
 		if err != nil {
@@ -51,9 +47,8 @@ func Run(config *core.Configuration, tool Tool, args []string) {
 	log.Fatalf("Failed to exec %s: %s", target, err) // Always a failure, exec never returns.
 }
 
-// MatchingTools returns a set of matching tools for a string prefix.
-func MatchingTools(config *core.Configuration, prefix string) map[string]string {
-	knownTools := map[string]string{
+func knownTools(config *core.Configuration) map[string]string {
+	return map[string]string{
 		"jarcat":      config.Java.JarCatTool,
 		"javacworker": config.Java.JavacWorker,
 		"junitrunner": config.Java.JUnitRunner,
@@ -62,8 +57,12 @@ func MatchingTools(config *core.Configuration, prefix string) map[string]string 
 		"pex":         config.Python.PexTool,
 		"sandbox":     "please_sandbox",
 	}
+}
+
+// matchingTools returns a set of matching tools for a string prefix.
+func matchingTools(config *core.Configuration, prefix string) map[string]string {
 	ret := map[string]string{}
-	for k, v := range knownTools {
+	for k, v := range knownTools(config) {
 		if strings.HasPrefix(k, prefix) {
 			ret[k] = v
 		}
@@ -71,10 +70,15 @@ func MatchingTools(config *core.Configuration, prefix string) map[string]string 
 	return ret
 }
 
+func MatchingTool(config *core.Configuration, tool string) (string, bool) {
+	tool, ok := knownTools(config)[tool]
+	return tool, ok
+}
+
 // AllToolNames returns the names of all available tools.
 func AllToolNames(config *core.Configuration, prefix string) []string {
 	ret := []string{}
-	for k := range MatchingTools(config, prefix) {
+	for k := range matchingTools(config, prefix) {
 		ret = append(ret, k)
 	}
 	sort.Strings(ret)
