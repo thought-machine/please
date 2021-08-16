@@ -875,19 +875,17 @@ func checkIsLabelOrPathAndRun(config *core.Configuration, _tool tool.Tool) {
 	}
 
 	if !core.LooksLikeABuildLabel(t) {
+		if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
+			config = cfg
+		}
 		tool.Run(config, tool.Tool(t), opts.Tool.Args.Args.AsStrings())
 	}
 
 	label := core.ParseBuildLabels([]string{t})
 
-	// The tool is allowed to be an in-repo target. In that case it's essentially equivalent to "plz run".
-	// We have to re-exec ourselves in such a case since we don't know enough about it to run it now.
-	//	plz, _ := os.Executable()
-	//	args = append([]string{os.Args[0], "run", target, "--"}, args...)
-	//Run()
-	//	err := syscall.Exec(plz, args, os.Environ())
-	//	log.Fatalf("Failed to exec %s run %s: %s", plz, target, err) // Always a failure, exec never returns.
-
+	// We skip loading the repo config in init for `plz tool` to allow this command to work outside of a repo root. If
+	// the tool looks like a build label, we need to set the repo root now.
+	config = readConfigAndSetRoot(false)
 	if success, state := runBuild(label, true, false, false); success {
 		var dir string
 		annotatedOutputLabels := core.AnnotateLabels(label)
