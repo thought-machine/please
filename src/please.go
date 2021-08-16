@@ -617,7 +617,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"tool": func() int {
 		//tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args.AsStrings())
-		checkIsLabelOrPathAndRun(config, opts.Tool.Args.Tool)
+		runTool(opts.Tool.Args.Tool)
 		return 1 // If the function returns (which it shouldn't), something went wrong.
 	},
 	"deps": func() int {
@@ -868,7 +868,7 @@ var buildFunctions = map[string]func() int{
 }
 
 // Check if tool is given as label or path and then run
-func checkIsLabelOrPathAndRun( _tool tool.Tool) {
+func runTool(_tool tool.Tool) {
 	c := core.DefaultConfiguration()
 	if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
 		c = cfg
