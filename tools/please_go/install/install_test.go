@@ -19,7 +19,7 @@ func TestMissingImport(t *testing.T) {
 	install, stdOut, _ := newInstall()
 	err := install.Install([]string{"missing_import"})
 	require.Error(t, err)
-	assert.Equal(t, "_build/example.com/missing_import/missing_import.go:3:8: can't find import: \"github.com/doesnt-exist\"\n", stdOut.String())
+	assert.Equal(t, "_build/example.com/missing_import/missing_import.go:3:8: could not import \"github.com/doesnt-exist\": open : no such file or directory\n", stdOut.String())
 }
 
 func TestNoSources(t *testing.T) {
