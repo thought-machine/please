@@ -885,9 +885,8 @@ func runTool(_tool tool.Tool) {
 	// the tool looks like a build label, we need to set the repo root now.
 	config = readConfigAndSetRoot(false)
 	if success, state := runBuild(label, true, false, false); success {
-		var dir string
 		annotatedOutputLabels := core.AnnotateLabels(label)
-		run.Run(state, annotatedOutputLabels[0], opts.Tool.Args.Args.AsStrings(), false, false, false, dir, "")
+		run.Run(state, annotatedOutputLabels[0], opts.Tool.Args.Args.AsStrings(), false, false, false, "", "")
 	}
 }
 
