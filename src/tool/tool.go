@@ -34,34 +34,21 @@ func (tool Tool) Complete(match string) []flags.Completion {
 
 // Run runs one of the sub-tools.
 func Run(config *core.Configuration, tool Tool, args []string) {
-	tools := matchingTools(config, string(tool))
-	if len(tools) != 1 {
-		log.Fatalf("Unknown tool: %s. Must be one of [%s]", tool, strings.Join(allToolNames(config, ""), ", "))
-	}
-	target := fs.ExpandHomePath(tools[allToolNames(config, string(tool))[0]])
-	if !core.LooksLikeABuildLabel(target) {
-		if !filepath.IsAbs(target) {
-			t, err := core.LookBuildPath(target, config)
-			if err != nil {
-				log.Fatalf("%s", err)
-			}
-			target = t
+	target := fs.ExpandHomePath(string(tool))
+	if !filepath.IsAbs(target) {
+		t, err := core.LookBuildPath(target, config)
+		if err != nil {
+			log.Fatalf("%s", err)
 		}
-		// Hopefully we have an absolute path now, so let's run it.
-		err := syscall.Exec(target, append([]string{target}, args...), os.Environ())
-		log.Fatalf("Failed to exec %s: %s", target, err) // Always a failure, exec never returns.
+		target = t
 	}
-	// The tool is allowed to be an in-repo target. In that case it's essentially equivalent to "plz run".
-	// We have to re-exec ourselves in such a case since we don't know enough about it to run it now.
-	plz, _ := os.Executable()
-	args = append([]string{os.Args[0], "run", target, "--"}, args...)
-	err := syscall.Exec(plz, args, os.Environ())
-	log.Fatalf("Failed to exec %s run %s: %s", plz, target, err) // Always a failure, exec never returns.
+	// Hopefully we have an absolute path now, so let's run it.
+	err := syscall.Exec(target, append([]string{target}, args...), os.Environ())
+	log.Fatalf("Failed to exec %s: %s", target, err) // Always a failure, exec never returns.
 }
 
-// matchingTools returns a set of matching tools for a string prefix.
-func matchingTools(config *core.Configuration, prefix string) map[string]string {
-	knownTools := map[string]string{
+func knownTools(config *core.Configuration) map[string]string {
+	return map[string]string{
 		"jarcat":      config.Java.JarCatTool,
 		"javacworker": config.Java.JavacWorker,
 		"junitrunner": config.Java.JUnitRunner,
@@ -70,13 +57,25 @@ func matchingTools(config *core.Configuration, prefix string) map[string]string 
 		"pex":         config.Python.PexTool,
 		"sandbox":     "please_sandbox",
 	}
+}
+
+// matchingTools returns a set of matching tools for a string prefix.
+func matchingTools(config *core.Configuration, prefix string) map[string]string {
 	ret := map[string]string{}
-	for k, v := range knownTools {
+	for k, v := range knownTools(config) {
 		if strings.HasPrefix(k, prefix) {
 			ret[k] = v
 		}
 	}
 	return ret
+}
+
+func MatchingTool(config *core.Configuration, tool string) (string, bool) {
+	tool, ok := knownTools(config)[tool]
+	if !ok {
+		log.Fatalf("Unknown tool %s, must be one of [%s]", tool, strings.Join(allToolNames(config, ""), ", "))
+	}
+	return tool, ok
 }
 
 // allToolNames returns the names of all available tools.
