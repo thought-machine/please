@@ -362,6 +362,7 @@ def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
         visibility = visibility,
         test_only = test_only,
         sandbox = False,
+        local = True,
     )
 
 
