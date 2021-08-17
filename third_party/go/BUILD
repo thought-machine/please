@@ -6,8 +6,8 @@ package(jarcat_tool = "//:jarcat_unzip")
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "e638a506c8bb4fe9f6686489cd7640ffe15c3a5119c3a783eaee373f4fa520d6",  # darwin_arm64
-        "8b6c8c0cccc8b685f857c50a511adb497a3a5cdd5b8970f03f95aa3f02bce404",  # darwin_amd64
+        "da4e3e3c194bf9eed081de8842a157120ef44a7a8d7c820201adae7b0e28b20b",  # darwin_arm64
+        "355bd544ce08d7d484d9d7de05a71b5c6f5bc10aa4b316688c2192aeb3dacfd1",  # darwin_amd64
         "6bf89fc4f5ad763871cf7eac80a2d594492de7a818303283f1366a7f6a30372d",  # linux_amd64
         "15c184c83d99441d719da201b26256455eee85a808747c404b4183e9aa6c64b4",  # freebsd_amd64
     ],
