@@ -22,5 +22,5 @@ func TestMatchingTools(t *testing.T) {
 func TestAllToolNames(t *testing.T) {
 	c, err := core.ReadConfigFiles(nil, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"jarcat", "javacworker"}, AllToolNames(c, "ja"))
+	assert.Equal(t, []string{"jarcat", "javacworker"}, allToolNames(c, "ja"))
 }

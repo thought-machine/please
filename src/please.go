@@ -614,8 +614,7 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(help.Help(string(opts.Help.Args.Topic)), nil)
 	},
 	"tool": func() int {
-		runTool(opts.Tool.Args.Tool)
-		return 1 // If the function returns (which it shouldn't), something went wrong.
+		return runTool(opts.Tool.Args.Tool)
 	},
 	"deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
@@ -865,15 +864,12 @@ var buildFunctions = map[string]func() int{
 }
 
 // Check if tool is given as label or path and then run
-func runTool(_tool tool.Tool) {
+func runTool(_tool tool.Tool) int {
 	c := core.DefaultConfiguration()
 	if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
 		c = cfg
 	}
-	t, ok := tool.MatchingTool(c, string(_tool))
-	if !ok {
-		log.Fatalf("unknown tool %v", t)
-	}
+	t, _ := tool.MatchingTool(c, string(_tool))
 
 	if !core.LooksLikeABuildLabel(t) {
 		tool.Run(c, tool.Tool(t), opts.Tool.Args.Args.AsStrings())
@@ -888,6 +884,8 @@ func runTool(_tool tool.Tool) {
 		annotatedOutputLabels := core.AnnotateLabels(label)
 		run.Run(state, annotatedOutputLabels[0], opts.Tool.Args.Args.AsStrings(), false, false, false, "", "")
 	}
+	// If all went well, we shouldn't get here.
+	return 1
 }
 
 // ConfigOverrides are used to implement completion on the -o flag.

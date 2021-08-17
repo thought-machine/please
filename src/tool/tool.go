@@ -72,11 +72,14 @@ func matchingTools(config *core.Configuration, prefix string) map[string]string 
 
 func MatchingTool(config *core.Configuration, tool string) (string, bool) {
 	tool, ok := knownTools(config)[tool]
+	if !ok {
+		log.Fatalf("Unknown tool %s, must be one of [%s]", tool, strings.Join(allToolNames(config, ""), ", "))
+	}
 	return tool, ok
 }
 
-// AllToolNames returns the names of all available tools.
-func AllToolNames(config *core.Configuration, prefix string) []string {
+// allToolNames returns the names of all available tools.
+func allToolNames(config *core.Configuration, prefix string) []string {
 	ret := []string{}
 	for k := range matchingTools(config, prefix) {
 		ret = append(ret, k)
