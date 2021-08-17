@@ -94,9 +94,9 @@ func getPackagesAndPackageToParse(config *core.Configuration, query string) ([]s
 	if info, err := os.Lstat(root); err != nil || !info.IsDir() {
 		_, prefix = path.Split(root)
 		currentPackage = path.Dir(query)
-	} else {
-		root, prefix := filepath.Split(query)
+	} else if !strings.HasSuffix(query, "/") {
 		// If we match a package directly but that's also a prefix for another package, we should return those packages
+		root, prefix := filepath.Split(query)
 		packages := findPrefixedPackages(config, root, prefix)
 		if len(packages) > 1 {
 			return packages, ""
