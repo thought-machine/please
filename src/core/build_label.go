@@ -450,10 +450,10 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	if err != nil {
 		return nil
 	}
-	ret := []flags.Completion{}
+	var ret []flags.Completion
 	for _, line := range strings.Split(string(out), "\n") {
 		if line != "" {
-			ret = append(ret, flags.Completion{Item: line})
+			ret = append(ret, flags.Completion{Item: line, Description: "BuildLabel"})
 		}
 	}
 	return ret

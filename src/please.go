@@ -1094,7 +1094,7 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	cli.InitLogging(cli.MinVerbosity) // Ensure this is quiet
 	opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
-	if len(items) > 0 && strings.HasPrefix(items[0].Item, "//") {
+	if len(items) > 0 && items[0].Description == "BuildLabel" {
 		// Don't muck around with the config if we're predicting build labels.
 		cli.PrintCompletions(items)
 	} else if config := readConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
