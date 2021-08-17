@@ -176,8 +176,9 @@ func Completions(graph *core.BuildGraph, completions *CompletionPackages, binary
 }
 
 func labelsInPackage(graph *core.BuildGraph, packageName, prefix string, binary, test, hidden bool) []string {
-	ret := make([]string, 0)
-	for _, target := range graph.Package(packageName, "").AllTargets() {
+	ts := graph.Package(packageName, "").AllTargets()
+	ret := make([]string, 0, len(ts))
+	for _, target := range ts {
 		if !strings.HasPrefix(target.Label.Name, prefix) {
 			continue
 		}
