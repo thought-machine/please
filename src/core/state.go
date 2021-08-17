@@ -597,7 +597,7 @@ func (state *BuildState) ExpandAllOriginalLabels() BuildLabels {
 	return state.expandLabels(targets, false)
 }
 
-func annotateLabels(labels []BuildLabel) []AnnotatedOutputLabel {
+func AnnotateLabels(labels []BuildLabel) []AnnotatedOutputLabel {
 	ret := make([]AnnotatedOutputLabel, len(labels))
 	for i, l := range labels {
 		ret[i] = AnnotatedOutputLabel{BuildLabel: l}
@@ -618,7 +618,7 @@ func readingStdinAnnotated(labels []AnnotatedOutputLabel) bool {
 // be passed to it.
 func (state *BuildState) ExpandOriginalMaybeAnnotatedLabels(args []AnnotatedOutputLabel) []AnnotatedOutputLabel {
 	if readingStdinAnnotated(args) {
-		args = annotateLabels(state.ExpandOriginalLabels())
+		args = AnnotateLabels(state.ExpandOriginalLabels())
 	}
 	return state.ExpandMaybeAnnotatedLabels(args)
 }
