@@ -1123,8 +1123,6 @@ func getCompletions(qry string) (*query.CompletionPackages, []string) {
 	return completions, nil
 }
 
-
-
 func initBuild(args []string) string {
 	if len(args) > 1 && (args[1] == "sandbox") {
 		// Shortcut these as they're special commands used for please sandboxing

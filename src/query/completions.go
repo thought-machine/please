@@ -37,7 +37,6 @@ func CompletePackages(config *core.Configuration, query string) *CompletionPacka
 	query = strings.ReplaceAll(query, "\\:", ":")
 	isRoot := query == "//" || strings.HasPrefix(query, "//:") || strings.HasPrefix(query, ":")
 
-
 	if strings.Contains(query, ":") {
 		parts := strings.Split(query, ":")
 		if len(parts) != 2 {
@@ -57,15 +56,6 @@ func CompletePackages(config *core.Configuration, query string) *CompletionPacka
 		PackageToParse: pkg,
 		IsRoot:         isRoot,
 	}
-}
-
-func getWorkingDir(repoRoot string) string {
-	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
-	return strings.TrimPrefix(repoRoot, wd)
 }
 
 // getPackagesAndPackageToParse returns a list of packages that are possible completions and optionally, the package to
@@ -184,6 +174,7 @@ func labelsInPackage(graph *core.BuildGraph, packageName, prefix string, binary,
 
 	return ret
 }
+
 // PrintCompletion prints completions relative to the working package, formatting them based on whether the initial
 // query was absolute i.e. started with "//"
 func PrintCompletion(completion string, abs bool) {
