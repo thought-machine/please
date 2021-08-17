@@ -3,7 +3,6 @@ package query
 import (
 	"fmt"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/utils"
 	"os"
 	"path"
 	"path/filepath"
@@ -73,13 +72,7 @@ func getPackagesAndPackageToParse(config *core.Configuration, query string) ([]s
 		currentPackage = path.Dir(query)
 	}
 
-	// TODO(jpoole): We currently walk the entire file tree trying to discover BUILD files whereas we can probably just
-	// 	walk until we find the first ones in each branch and build a trie. This seems fast enough for now though.
-	allPackages := make([]string, 0, 10)
-	for pkg := range utils.FindAllSubpackages(config, currentPackage, "") {
-		allPackages = append(allPackages, pkg)
-	}
-	pkgs, pkg := getAllCompletions(config, currentPackage, prefix, allPackages, packageOnly)
+	pkgs, pkg := getAllCompletions(config, currentPackage, prefix, packageOnly)
 	if packageOnly && pkg == currentPackage || !fs.IsPackage(config.Parse.BuildFileName, pkg) {
 		return pkgs, ""
 	}
@@ -89,17 +82,47 @@ func getPackagesAndPackageToParse(config *core.Configuration, query string) ([]s
 	return pkgs, pkg
 }
 
-func containsPackage(dir string, allPackages []string) bool {
-	for _, pkg := range allPackages {
-		if strings.HasPrefix(pkg, dir) {
+func isExcluded(config *core.Configuration, dir string) bool {
+	if dir == "plz-out" {
+		return true
+	}
+	for _, blacklisted := range config.Parse.BlacklistDirs {
+		if filepath.Base(dir) == blacklisted {
 			return true
 		}
 	}
 	return false
 }
 
+// containsPackage does a breadth first search for build files returning when it encounters the first BUILD file
+func containsPackage(config *core.Configuration, dir string) bool {
+	dirQueue := []string{dir}
+	for len(dirQueue) > 0 {
+		dir, dirQueue = dirQueue[0], dirQueue[1:]
+		if isExcluded(config, dir) {
+			continue
+		}
+
+		infos, err := os.ReadDir(dir)
+		if err != nil {
+			log.Fatalf("failed to find subpackages: %v", err)
+		}
+
+		for _, info := range infos {
+			if info.IsDir() {
+				dirQueue = append(dirQueue, filepath.Join(dir, info.Name()))
+			}
+			if config.IsABuildFile(info.Name()) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // getAllCompletions essentially the same as getPackagesAndPackageToParse without the setup
-func getAllCompletions(config *core.Configuration, currentPackage, prefix string, allPackages []string, skipSelf bool) ([]string, string) {
+func getAllCompletions(config *core.Configuration, currentPackage, prefix string, skipSelf bool) ([]string, string) {
 	var packages []string
 	root := path.Join(core.RepoRoot, currentPackage)
 
@@ -111,7 +134,7 @@ func getAllCompletions(config *core.Configuration, currentPackage, prefix string
 	for _, entry := range dirEntries {
 		if entry.IsDir() && strings.HasPrefix(entry.Name(), prefix) {
 			pkgName := filepath.Join(currentPackage, entry.Name())
-			if containsPackage(pkgName, allPackages) {
+			if containsPackage(config, pkgName) {
 				packages = append(packages, pkgName)
 			}
 		}
@@ -122,7 +145,7 @@ func getAllCompletions(config *core.Configuration, currentPackage, prefix string
 		if !skipSelf && prefix == "" && fs.IsPackage(config.Parse.BuildFileName, currentPackage) {
 			return packages, currentPackage
 		}
-		pkgs, pkg := getAllCompletions(config, packages[0], "", allPackages, false)
+		pkgs, pkg := getAllCompletions(config, packages[0], "", false)
 		// If we again matched a package exactly, use that one
 		if pkg != "" {
 			return pkgs, pkg
