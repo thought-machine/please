@@ -1,3 +1,13 @@
+Version 16.5.0
+--------------
+    * Singleflight all subincludes removing any potential for lockups #2002
+    * Implemented target level locking enabling multiple please instances to
+      build at the same time #2004
+    * Set a timeout on test result uploading #2008
+    * Updated to use go 1.17. This should be transparent to any users. #2010
+    * Various fixes and improvements around bash completions #1998 #2013
+
+
 Version 16.4.2
 --------------
     * Honour require/provide for `plz query revdeps` and `plz query changes` #1997
