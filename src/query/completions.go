@@ -57,6 +57,30 @@ func CompletePackages(config *core.Configuration, query string) *CompletionPacka
 	}
 }
 
+// findPrefixedPackages finds any packages that match a prefix in a directory e.g. src/plz matches src/plz, and
+// src/plzinit
+func findPrefixedPackages(config *core.Configuration, root, prefix string) []string {
+	if root == "" {
+		root = "."
+	}
+	dirs, err := os.ReadDir(root)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	var matchedPkgs []string
+	for _, d := range dirs {
+		if d.IsDir() && strings.HasPrefix(d.Name(), prefix) {
+			p := filepath.Join(root, d.Name())
+			if containsPackage(config, p) {
+				matchedPkgs = append(matchedPkgs, p)
+			}
+		}
+	}
+
+	return matchedPkgs
+}
+
 // getPackagesAndPackageToParse returns a list of packages that are possible completions and optionally, the package to
 // parse if we should include it's labels as well.
 func getPackagesAndPackageToParse(config *core.Configuration, query string) ([]string, string) {
@@ -67,9 +91,16 @@ func getPackagesAndPackageToParse(config *core.Configuration, query string) ([]s
 	root := path.Join(core.RepoRoot, query)
 	currentPackage := query
 	prefix := ""
-	if !core.PathExists(root) {
+	if info, err := os.Lstat(root); err != nil || !info.IsDir() {
 		_, prefix = path.Split(root)
 		currentPackage = path.Dir(query)
+	} else if !packageOnly {
+		// If we match a package directly but that's also a prefix for another package, we should return those packages
+		root, prefix := filepath.Split(query)
+		packages := findPrefixedPackages(config, root, prefix)
+		if len(packages) > 1 {
+			return packages, ""
+		}
 	}
 
 	pkgs, pkg := getAllCompletions(config, currentPackage, prefix, packageOnly)
@@ -123,22 +154,7 @@ func containsPackage(config *core.Configuration, dir string) bool {
 
 // getAllCompletions essentially the same as getPackagesAndPackageToParse without the setup
 func getAllCompletions(config *core.Configuration, currentPackage, prefix string, skipSelf bool) ([]string, string) {
-	var packages []string
-	root := path.Join(core.RepoRoot, currentPackage)
-
-	dirEntries, err := os.ReadDir(root)
-	if err != nil {
-		log.Fatalf("failed to check for packages: %v", err)
-	}
-
-	for _, entry := range dirEntries {
-		if entry.IsDir() && strings.HasPrefix(entry.Name(), prefix) {
-			pkgName := filepath.Join(currentPackage, entry.Name())
-			if containsPackage(config, pkgName) {
-				packages = append(packages, pkgName)
-			}
-		}
-	}
+	packages := findPrefixedPackages(config, currentPackage, prefix)
 
 	// If we match just one package, return all the immediate subpackages, and return the single package we matched
 	if len(packages) == 1 {
