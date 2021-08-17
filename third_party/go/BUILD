@@ -12,7 +12,7 @@ go_toolchain(
         "40b03216f6945fb6883a50604fc7f409a83f62171607229a9c598e701e684f8a",  # freebsd_amd64
     ],
     strip_srcs = True,
-    version = "1.16",
+    version = "1.17",
 )
 
 go_module(
