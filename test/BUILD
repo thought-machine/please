@@ -504,8 +504,8 @@ plz_e2e_test(
 # These test that local is forced to be True if there are any system_srcs set
 build_rule(
     name = "test_system_library",
-    system_srcs = ["foo"],
     local = False,
+    system_srcs = ["foo"],
 )
 
 plz_e2e_test(
