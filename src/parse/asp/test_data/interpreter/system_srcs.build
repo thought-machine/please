@@ -1,0 +1,6 @@
+build_rule(
+    name = "sys_lib",
+    cmd = "touch foo",
+    local = False,
+    system_srcs = ["foo"],
+)

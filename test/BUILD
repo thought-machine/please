@@ -500,17 +500,3 @@ plz_e2e_test(
     name = "non_test_target_with_test_fields_set_test",
     cmd = "plz test //test:non_test_target_with_test_fields_set",
 )
-
-# These test that local is forced to be True if there are any system_srcs set
-build_rule(
-    name = "test_system_library",
-    cmd = "touch foo",
-    local = False,
-    system_srcs = ["foo"],
-)
-
-plz_e2e_test(
-    name = "test_force_local_true_if_system_srcs",
-    cmd = "plz query print //test:test_system_library | grep local",
-    expect_output_contains = "True",
-)
