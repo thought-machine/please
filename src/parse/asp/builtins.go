@@ -166,7 +166,7 @@ func buildRule(s *scope, args []pyObject) pyObject {
 
 	// Don't want to remote execute a target if we need system sources
 	if args[systemSrcsBuildRuleArgIdx] != nil {
-		args[localBuildRuleArgIdx] = pyString(string("True"))
+		args[localBuildRuleArgIdx] = pyString("True")
 	}
 
 	target := createTarget(s, args)
