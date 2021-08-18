@@ -163,6 +163,12 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	args[licencesBuildRuleArgIdx] = defaultFromConfig(s.config, args[licencesBuildRuleArgIdx], "DEFAULT_LICENCES")
 	args[sandboxBuildRuleArgIdx] = defaultFromConfig(s.config, args[sandboxBuildRuleArgIdx], "BUILD_SANDBOX")
 	args[testSandboxBuildRuleArgIdx] = defaultFromConfig(s.config, args[testSandboxBuildRuleArgIdx], "TEST_SANDBOX")
+
+	// Don't want to remote execute a target if we need system sources
+	if args[systemSrcsBuildRuleArgIdx] != nil {
+		args[localBuildRuleArgIdx] = pyString(string("True"))
+	}
+
 	target := createTarget(s, args)
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
 	populateTarget(s, target, args)
