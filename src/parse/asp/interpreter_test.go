@@ -80,8 +80,9 @@ func TestInterpreterInterpreterOperators(t *testing.T) {
 func TestSetLocalTrueIfSystemSrcs(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/system_srcs.build")
 	require.NoError(t, err)
-	assert.Equal(t, 1, s.pkg.NumTargets())
-	assert.Equal(t, s.pkg.Target("sys_lib").Local, true)
+	assert.Equal(t, 2, s.pkg.NumTargets())
+	assert.Equal(t, s.pkg.Target("system_srcs_set").Local, true)
+	assert.Equal(t, s.pkg.Target("system_srcs_unset").Local, false)
 }
 
 func TestInterpreterInterpolation(t *testing.T) {

@@ -165,7 +165,7 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	args[testSandboxBuildRuleArgIdx] = defaultFromConfig(s.config, args[testSandboxBuildRuleArgIdx], "TEST_SANDBOX")
 
 	// Don't want to remote execute a target if we need system sources
-	if args[systemSrcsBuildRuleArgIdx] != nil {
+	if args[systemSrcsBuildRuleArgIdx] != None {
 		args[localBuildRuleArgIdx] = pyString("True")
 	}
 
