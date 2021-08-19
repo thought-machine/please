@@ -1,3 +1,8 @@
+Version 16.5.1
+--------------
+    * Fix nil pointer when tests fail in certain ways #2016
+
+
 Version 16.5.0
 --------------
     * Singleflight all subincludes removing any potential for lockups #2002
