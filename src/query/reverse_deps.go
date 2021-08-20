@@ -70,11 +70,11 @@ type revdeps struct {
 	subincludes       map[core.BuildLabel][]*core.Package
 	followSubincludes bool
 
-	// os is the open set of targets to process
-	os *openSet
-
 	// hidden is whether to count hidden targets towards the depth budget
 	hidden bool
+
+	// os is the open set of targets to process
+	os *openSet
 
 	// maxDepth is the depth budget for the search. -1 means unlimited.
 	maxDepth int
@@ -112,7 +112,13 @@ func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarge
 	revdeps := make(map[core.BuildLabel][]*core.BuildTarget, len(targets))
 	for _, t := range targets {
 		for _, d := range t.DeclaredDependencies() {
-			revdeps[d] = append(revdeps[d], t)
+			if t2 := graph.Target(d); t2 == nil {
+				revdeps[d] = append(revdeps[d], t2)
+			} else {
+				for _, p := range t2.ProvideFor(t) {
+					revdeps[p] = append(revdeps[p], t)
+				}
+			}
 		}
 	}
 	return revdeps

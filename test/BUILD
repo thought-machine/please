@@ -38,6 +38,13 @@ plz_e2e_test(
     expected_output = "query_somepath_nopath_test.txt",
 )
 
+plz_e2e_test(
+    name = "query_somepath_hidden_test",
+    cmd = "HIDDEN=$(plz query somepath //tools/build_langserver:build_langserver //tools/build_langserver/lsp:all --hidden | wc -l); \
+           NOTHIDDEN=$(plz query somepath //tools/build_langserver:build_langserver //tools/build_langserver/lsp:all | wc -l); \
+           if [ $HIDDEN > $NOTHIDDEN ]; then exit 0; else exit 1; fi",
+)
+
 # Tests that targets can only use other targets that they depend on.
 plz_e2e_test(
     name = "dep_required_test",
@@ -472,4 +479,24 @@ plz_e2e_test(
     name = "completion_test",
     cmd = "plz --completion_script",
     expect_output_contains = "plz completion",
+)
+
+# This rule being here makes sure than when we parse this file, none of the test fields being set causes a nil pointer
+# even though this target isn't a test.
+build_rule(
+    name = "non_test_target_with_test_fields_set",
+    flaky = 3,
+    labels = ["manual"],
+    no_test_output = True,
+    test = False,
+    test_cmd = "true",
+    test_outputs = ["foo"],
+    test_sandbox = True,
+    test_timeout = 60,
+    test_tools = ["go"],
+)
+
+plz_e2e_test(
+    name = "non_test_target_with_test_fields_set_test",
+    cmd = "plz test //test:non_test_target_with_test_fields_set",
 )

@@ -132,10 +132,15 @@ filegroup(
     visibility = ["//docs/..."],
 )
 
+results_files = [
+    "all_results",
+    "build_target_benchmark_all_results",
+]
+
 genrule(
     name = "performance_data",
-    outs = ["performance/all_results.jsonl"],
-    cmd = "curl https://get.please.build/performance/all_results.jsonl > $OUT",
+    outs = [f"performance/{file}.jsonl" for file in results_files],
+    cmd = [f"curl https://please.build/performance/{file}.jsonl > performance/{file}.jsonl" for file in results_files],
 )
 
 # Convenient for popping open the docs in a browser after building (must use 'plz run').

@@ -43,14 +43,14 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		return activateTarget(tid, state, pkg, label, dependent, forSubinclude)
 	}
 	// If we get here then it falls to us to parse this package.
-	state.LogBuildResult(tid, label, core.PackageParsing, "Parsing...")
+	state.LogParseResult(tid, label, core.PackageParsing, "Parsing...")
 
 	subrepo, err := checkSubrepo(tid, state, label, dependent, forSubinclude)
 	if err != nil {
 		return err
 	} else if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
-		state.WaitForBuiltTarget(subrepo.Target.Label, label)
+		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label)
 	}
 	// Subrepo & nothing else means we just want to ensure that subrepo is present.
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
@@ -61,7 +61,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	if err != nil {
 		return err
 	}
-	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed package")
+	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
 	return activateTarget(tid, state, pkg, label, dependent, forSubinclude)
 }
 
@@ -129,7 +129,7 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
 		if label.Subrepo == "" && label.PackageName == "" && label.Name == dependent.Subrepo {
 			if subrepo := checkArchSubrepo(state, label.Name); subrepo != nil {
-				state.LogBuildResult(tid, label, core.TargetBuilt, "Instantiated subrepo")
+				state.LogParseResult(tid, label, core.TargetBuilt, "Instantiated subrepo")
 				return nil
 			}
 		}
@@ -156,8 +156,8 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 				if state.ShouldInclude(target) && !target.AddedPostBuild {
 					// Must always do this for coverage because we need to calculate sources of
 					// non-test targets later on.
-					if !state.NeedTests || target.IsTest || state.NeedCoverage {
-						if err := state.QueueTarget(target.Label, dependent, false, dependent.IsAllTargets()); err != nil {
+					if !state.NeedTests || target.IsTest() || state.NeedCoverage {
+						if err := state.QueueTarget(target.Label, dependent, dependent.IsAllTargets()); err != nil {
 							return err
 						}
 					}
@@ -167,7 +167,7 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 	} else {
 		for _, l := range state.Graph.DependentTargets(dependent, label) {
 			// We use :all to indicate a dependency needed for parse.
-			if err := state.QueueTarget(l, dependent, false, forSubinclude || dependent.IsAllTargets()); err != nil {
+			if err := state.QueueTarget(l, dependent, forSubinclude || dependent.IsAllTargets()); err != nil {
 				return err
 			}
 		}
@@ -240,18 +240,6 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 		}
 	}
 	return "", pkgName
-}
-
-func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) error {
-	// Run over all the changed targets in this package and ensure that any newly added dependencies enter the build queue.
-	for target := range changed {
-		if s := target.State(); s < core.Built && s > core.Inactive {
-			if err := state.QueueTarget(target.Label, core.OriginalTarget, true, false); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // exportFile adds a single-file export target. This is primarily used for Bazel compat.

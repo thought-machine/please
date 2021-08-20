@@ -81,7 +81,7 @@ func (h *Handler) findLabel(currentPath, label string) lsp.Location {
 	}
 
 	pkg := h.state.Graph.PackageByLabel(l)
-	uri := lsp.DocumentURI("file://" + pkg.Filename)
+	uri := lsp.DocumentURI("file://" + path.Join(h.root, pkg.Filename))
 	loc := lsp.Location{URI: uri}
 	doc, err := h.maybeOpenDoc(uri)
 	if err != nil {

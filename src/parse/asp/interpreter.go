@@ -17,9 +17,8 @@ import (
 type interpreter struct {
 	scope           *scope
 	parser          *Parser
-	subincludes     map[string]pyDict
+	subincludes     subincludeMap
 	config          map[*core.Configuration]*pyConfig
-	mutex           sync.RWMutex
 	configMutex     sync.RWMutex
 	breakpointMutex sync.Mutex
 	limiter         semaphore
@@ -37,7 +36,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	i := &interpreter{
 		scope:       s,
 		parser:      p,
-		subincludes: map[string]pyDict{},
+		subincludes: subincludeMap{m: map[string]subincludeResult{}},
 		config:      map[*core.Configuration]*pyConfig{},
 		limiter:     make(semaphore, state.Config.Parse.NumThreads),
 		profiling:   state.Config.Profiling,
@@ -113,7 +112,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 			} else {
 				err = fmt.Errorf("%s", r)
 			}
-			log.Debug("%s", debug.Stack())
+			log.Debug("%v:\n %s", err, debug.Stack())
 		}
 	}()
 	return s.interpretStatements(statements), nil // Would have panicked if there was an error
@@ -121,16 +120,17 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 
 // Subinclude returns the global values corresponding to subincluding the given file.
 func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.Package) pyDict {
-	i.mutex.RLock()
-	globals, present := i.subincludes[path]
-	i.mutex.RUnlock()
-	if present {
+	globals, wait, first := i.subincludes.Get(path)
+	if globals != nil {
+		return globals
+	} else if !first {
+		i.limiter.Release()
+		defer i.limiter.Acquire()
+		<-wait
+		globals, _, _ := i.subincludes.Get(path)
 		return globals
 	}
-	// If we get here, it's not been subincluded already. Parse it now.
-	// Note that there is a race here whereby it's possible for two packages to parse the same
-	// subinclude simultaneously - this doesn't matter since they'll get different but equivalent
-	// scopes, and sooner or later things will sort themselves out.
+	// If we get here, it falls to us to parse this.
 	stmts, err := i.parser.parse(path)
 	if err != nil {
 		panic(err) // We're already inside another interpreter, which will handle this for us.
@@ -148,10 +148,8 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.P
 	if s.config.overlay == nil {
 		delete(locals, "CONFIG") // Config doesn't have any local modifications
 	}
-	i.mutex.Lock()
-	defer i.mutex.Unlock()
-	i.subincludes[path] = locals
-	return s.locals
+	i.subincludes.Set(path, locals)
+	return locals
 }
 
 // getConfig returns a new configuration object for the given configuration object.

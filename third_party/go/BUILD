@@ -6,13 +6,13 @@ package(jarcat_tool = "//:jarcat_unzip")
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "4dac57c00168d30bbd02d95131d5de9ca88e04f2c5a29a404576f30ae9b54810",  # darwin_arm64
-        "6000a9522975d116bf76044967d7e69e04e982e9625330d9a539a8b45395f9a8",  # darwin_amd64
-        "013a489ebb3e24ef3d915abe5b94c3286c070dfe0818d5bca8108f1d6e8440d2",  # linux_amd64
-        "40b03216f6945fb6883a50604fc7f409a83f62171607229a9c598e701e684f8a",  # freebsd_amd64
+        "da4e3e3c194bf9eed081de8842a157120ef44a7a8d7c820201adae7b0e28b20b",  # darwin_arm64
+        "355bd544ce08d7d484d9d7de05a71b5c6f5bc10aa4b316688c2192aeb3dacfd1",  # darwin_amd64
+        "6bf89fc4f5ad763871cf7eac80a2d594492de7a818303283f1366a7f6a30372d",  # linux_amd64
+        "15c184c83d99441d719da201b26256455eee85a808747c404b4183e9aa6c64b4",  # freebsd_amd64
     ],
     strip_srcs = True,
-    version = "1.16",
+    version = "1.17",
 )
 
 go_module(
@@ -28,7 +28,19 @@ go_module(
         "cast5",
     ],
     module = "golang.org/x/crypto",
-    version = "7b85b097bf7527677d54d3220065e966a0e3b613",
+    version = "a769d52b0f97a420f3dcafc17f8b3384217859a2",
+    deps = [
+        ":xterm",
+    ],
+)
+
+go_module(
+    name = "xterm",
+    module = "golang.org/x/term",
+    version = "6886f2dfbf5b25f595b4fe4279c49956e867c59b",
+    deps = [
+        ":xsys",
+    ],
 )
 
 go_module(
@@ -103,7 +115,7 @@ go_module(
     name = "net",
     install = ["..."],
     module = "golang.org/x/net",
-    version = "136a25c244d3019482a795d728110278d6ba09a4",
+    version = "853a461950ffd0dac439017081f0f3bd9242bb17",
     deps = [
         ":text",
         ":xcrypto",
@@ -447,7 +459,7 @@ go_module(
     name = "xsys",
     install = ["..."],
     module = "golang.org/x/sys",
-    version = "v0.0.0-20210415045647-66c3f260301c",
+    version = "0f9fa26af87c481a6877a4ca1330699ba9a30673",
 )
 
 go_mod_download(
@@ -499,7 +511,7 @@ go_module(
         "testdata",
         "vendor",
     ],
-    version = "v1.7.0",
+    version = "v1.16.1",
     deps = [":errors"],
 )
 

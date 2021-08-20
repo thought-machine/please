@@ -13,9 +13,9 @@ import (
 // Note that it is fairly hardcoded to our use case right now (i.e. downloading Please tarballs),
 // it probably doesn't generalise perfectly to things of arbitrary sizes.
 type progressReader struct {
+	reader                    io.ReadCloser
 	message                   string
 	current, last, max, width int
-	reader                    io.ReadCloser
 	interactive               bool
 }
 

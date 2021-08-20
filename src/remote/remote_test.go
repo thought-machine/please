@@ -104,9 +104,9 @@ func TestExecuteTest(t *testing.T) {
 	c := newClientInstance("test")
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target3"})
 	target.AddOutput("remote_test")
-	target.TestTimeout = time.Minute
-	target.TestCommand = "$TEST"
-	target.IsTest = true
+	target.Test = new(core.TestFields)
+	target.Test.Timeout = time.Minute
+	target.Test.Command = "$TEST"
 	target.IsBinary = true
 	target.SetState(core.Building)
 	err := c.Store(target)
@@ -126,9 +126,9 @@ func TestExecuteTestWithCoverage(t *testing.T) {
 	c.state.NeedCoverage = true // bit of a hack but we need to turn this on somehow
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target4"})
 	target.AddOutput("remote_test")
-	target.TestTimeout = time.Minute
-	target.TestCommand = "$TEST"
-	target.IsTest = true
+	target.Test = new(core.TestFields)
+	target.Test.Timeout = time.Minute
+	target.Test.Command = "$TEST"
 	target.IsBinary = true
 	err := c.Store(target)
 	assert.NoError(t, err)

@@ -17,15 +17,16 @@ import (
 )
 
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
-func InitParser(state *core.BuildState) {
+func InitParser(state *core.BuildState) *core.BuildState {
 	if state.Parser == nil {
-		state.Parser = &aspParser{asp: newAspParser(state)}
+		state.Parser = &aspParser{parser: newAspParser(state)}
 	}
+	return state
 }
 
-// An aspParser implements the core.Parser interface around our asp package.
+// aspParser implements the core.Parser interface around our parser package.
 type aspParser struct {
-	asp *asp.Parser
+	parser *asp.Parser
 }
 
 func buildPreamble(state *core.BuildState, pkg *core.Package) string {
@@ -72,20 +73,20 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 		createBazelSubrepo(state)
 	}
 
-	log.Debug("Parser initialised")
+	log.Debug("parser initialised")
 	return p
 }
 
 func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
 	if pkg.Name == "" {
-		return p.asp.ParseFile(pkg, filename, "")
+		return p.parser.ParseFile(pkg, filename, "")
 	}
 
-	return p.asp.ParseFile(pkg, filename, buildPreamble(state, pkg))
+	return p.parser.ParseFile(pkg, filename, buildPreamble(state, pkg))
 }
 
 func (p *aspParser) ParseReader(state *core.BuildState, pkg *core.Package, reader io.ReadSeeker) error {
-	_, err := p.asp.ParseReader(pkg, reader)
+	_, err := p.parser.ParseReader(pkg, reader)
 	return err
 }
 
@@ -102,20 +103,21 @@ func (p *aspParser) RunPostBuildFunction(threadID int, state *core.BuildState, t
 	})
 }
 
+// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
+func (p *aspParser) BuildRuleArgOrder() map[string]int {
+	return p.parser.BuildRuleArgOrder()
+}
+
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
-	state.LogBuildResult(tid, target.Label, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
-	pkg := state.SyncParsePackage(target.Label)
-	changed, err := pkg.EnterBuildCallback(f)
-	if err != nil {
+	state.LogBuildResult(tid, target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
+	state.SyncParsePackage(target.Label)
+	if err := f(); err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)
-	} else {
-		if err := rescanDeps(state, changed); err != nil {
-			return err
-		}
-		state.LogBuildResult(tid, target.Label, core.TargetBuilding, fmt.Sprintf("Finished %s-build function for %s", callbackType, target.Label))
+		return err
 	}
-	return err
+	state.LogBuildResult(tid, target, core.TargetBuilding, fmt.Sprintf("Finished %s-build function for %s", callbackType, target.Label))
+	return nil
 }
 
 func createBazelSubrepo(state *core.BuildState) {

@@ -134,12 +134,12 @@ func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.Bu
 // buildTestCommand builds a command for a target when testing.
 func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarget) (*pb.Command, error) {
 	// TODO(peterebden): Remove all this nonsense once API v2.1 is released.
-	files := target.TestOutputs
+	files := target.Test.Outputs
 	dirs := []string{}
 	if target.NeedCoverage(state) {
 		files = append(files, core.CoverageFile)
 	}
-	if !target.NoTestOutput {
+	if !target.Test.NoOutput {
 		if target.HasLabel(core.TestResultsDirLabel) {
 			dirs = []string{core.TestResultsFile}
 		} else {
@@ -164,7 +164,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 			},
 		},
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, "."), target.TestSandbox),
+		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, "."), target.Test.Sandbox),
 		OutputFiles:          files,
 		OutputDirectories:    dirs,
 		OutputPaths:          append(files, dirs...),
@@ -400,16 +400,11 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	outs := outputsForActionResult(ar)
 	// Test outputs are optional
 	if isTest {
-		if !outs[core.TestResultsFile] && !target.NoTestOutput {
+		if !outs[core.TestResultsFile] && !target.Test.NoOutput {
 			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, core.TestResultsFile, c.actionURL(actionDigest, true))
 		}
 	} else {
-		for _, out := range command.OutputFiles {
-			if !outs[out] {
-				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
-			}
-		}
-		for _, out := range command.OutputDirectories {
+		for _, out := range command.OutputPaths {
 			if !outs[out] {
 				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
 			}
@@ -521,9 +516,23 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 	vars := make([]*pb.Command_EnvironmentVariable, len(env))
 	for i, e := range env {
 		idx := strings.IndexByte(e, '=')
+		name := e[:idx]
+		v := e[idx+1:]
+		if name == "PATH" {
+			// Strip out anything prefixed with the local user's home directory; it can't be
+			// useful remotely but will affect determinism of the action.
+			parts := strings.Split(v, ":")
+			replaced := make([]string, 0, len(parts))
+			for _, part := range parts {
+				if !strings.HasPrefix(part, c.userHome) {
+					replaced = append(replaced, part)
+				}
+			}
+			v = strings.Join(replaced, ":")
+		}
 		vars[i] = &pb.Command_EnvironmentVariable{
-			Name:  e[:idx],
-			Value: e[idx+1:],
+			Name:  name,
+			Value: v,
 		}
 	}
 	return vars

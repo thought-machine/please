@@ -15,13 +15,13 @@ import (
 // RepoRoot is the root of the Please repository
 var RepoRoot string
 
-// initialWorkingDir is the directory we began in. Early on we chdir() to the repo root but for
+// InitialWorkingDir is the directory we began in. Early on we chdir() to the repo root but for
 // some things we need to remember this.
-var initialWorkingDir string
+var InitialWorkingDir string
 
-// initialPackage is the initial subdir of the working directory, ie. what package did we start in.
-// This is similar but not identical to initialWorkingDir.
-var initialPackage string
+// InitialPackagePath is the initial subdir of the working directory, ie. what package did we start in.
+// This is similar but not identical to InitialWorkingDir.
+var InitialPackagePath string
 
 // usingBazelWorkspace is true if we detected a Bazel WORKSPACE file to find our repo root.
 var usingBazelWorkspace bool
@@ -32,8 +32,8 @@ const DirPermissions = os.ModeDir | 0775
 // FindRepoRoot returns the root directory of the current repo and sets the initial working dir.
 // It returns true if the repo root was found.
 func FindRepoRoot() bool {
-	initialWorkingDir, _ = os.Getwd()
-	RepoRoot, initialPackage = getRepoRoot(ConfigFileName)
+	InitialWorkingDir, _ = os.Getwd()
+	RepoRoot, InitialPackagePath = getRepoRoot(ConfigFileName)
 	return RepoRoot != ""
 }
 
@@ -45,7 +45,7 @@ func MustFindRepoRoot() string {
 	} else if FindRepoRoot() {
 		return RepoRoot
 	}
-	RepoRoot, initialPackage = getRepoRoot("WORKSPACE")
+	RepoRoot, InitialPackagePath = getRepoRoot("WORKSPACE")
 	if RepoRoot != "" {
 		log.Warning("No .plzconfig file found to define the repo root.")
 		log.Warning("Falling back to Bazel WORKSPACE at %s", path.Join(RepoRoot, "WORKSPACE"))
@@ -72,7 +72,7 @@ func InitialPackage() []BuildLabel {
 	// It's possible to start off in directories that aren't legal package names, because
 	// our package naming is stricter than directory naming requirements.
 	// In that case move up until we find somewhere we can run from.
-	dir := initialPackage
+	dir := InitialPackagePath
 	for dir != "." {
 		if label, err := TryNewBuildLabel(dir, "test"); err == nil {
 			label.Name = "..."
@@ -104,13 +104,13 @@ func getRepoRoot(filename string) (string, string) {
 // StartedAtRepoRoot returns true if the build was initiated from the repo root.
 // Used to provide slightly nicer output in some places.
 func StartedAtRepoRoot() bool {
-	return RepoRoot == initialWorkingDir
+	return RepoRoot == InitialWorkingDir
 }
 
 // ReturnToInitialWorkingDir changes directory back to where plz was first started from.
 func ReturnToInitialWorkingDir() {
-	if err := os.Chdir(initialWorkingDir); err != nil {
-		log.Error("Failed to change directory to %s: %s", initialWorkingDir, err)
+	if err := os.Chdir(InitialWorkingDir); err != nil {
+		log.Error("Failed to change directory to %s: %s", InitialWorkingDir, err)
 	}
 }
 
@@ -255,10 +255,12 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 			}
 		}
 
-		for _, tool := range target.AllTestTools() {
-			fullPaths := tool.FullPaths(graph)
-			for i, dataPath := range tool.Paths(graph) {
-				pushOut(fullPaths[i], dataPath)
+		if target.Test != nil {
+			for _, tool := range target.AllTestTools() {
+				fullPaths := tool.FullPaths(graph)
+				for i, dataPath := range tool.Paths(graph) {
+					pushOut(fullPaths[i], dataPath)
+				}
 			}
 		}
 
