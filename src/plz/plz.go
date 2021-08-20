@@ -127,7 +127,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		}
 		for _, target := range state.ExpandLabels(preTargets) {
 			log.Debug("Waiting for pre-target %s...", target)
-			state.WaitForBuiltTarget(target, targets[0])
+			state.WaitForTargetAndEnsureDownload(target, targets[0])
 			log.Debug("Pre-target %s built, continuing...", target)
 		}
 	}
@@ -152,7 +152,7 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 		dir := target.PackageName
 		prefix := ""
 		if target.Subrepo != "" {
-			state.WaitForBuiltTarget(target.SubrepoLabel(), target)
+			state.WaitForTargetAndEnsureDownload(target.SubrepoLabel(), target)
 			subrepo := state.Graph.SubrepoOrDie(target.Subrepo)
 			dir = subrepo.Dir(dir)
 			prefix = subrepo.Dir(prefix)

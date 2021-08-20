@@ -16,3 +16,27 @@ sh_cmd(
     name = "wobble",
     cmd = "sleep 0.1 && echo wobble",
 )
+
+# Test add_data functionality with a file
+build_rule(
+    name = "_add_data_file",
+    test = True,
+    no_test_output = True,
+    test_cmd = "if [ $DATA != $PKG_DIR/dummydata.txt ]; then exit 1; else exit 0; fi;",
+    pre_build = lambda name: add_data(name, "dummydata.txt"),
+)
+
+# Test add_data functionality with a file and a build target
+build_rule(
+    name = "_add_data_file_and_target",
+    test = True,
+    no_test_output = True,
+    test_cmd = 'if [ "$DATA" != "$PKG_DIR/dummydata.txt $PKG_DIR/foo.txt" ]; then exit 1; else exit 0; fi;',
+    pre_build = lambda name: add_data(name, [ "dummydata.txt", ":_add_data_target" ])
+)
+
+genrule(
+    name = "_add_data_target",
+    cmd = "touch $OUT",
+    outs = ["foo.txt"],
+)
