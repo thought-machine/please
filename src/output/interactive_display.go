@@ -2,7 +2,6 @@ package output
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -18,74 +17,94 @@ import (
 // (note that most terminals do for compatibility; some report as xterm-color, hence HasPrefix)
 var terminalClaimsToBeXterm = strings.HasPrefix(os.Getenv("TERM"), "xterm")
 
-type displayer struct {
+// A displayer is the interface to display things on screen while a build is running.
+type displayer interface {
+	Update(targets []buildingTarget)
+	Close()
+	Frequency() time.Duration
+}
+
+func setupDisplayer(state *core.BuildState, plain bool) displayer {
+	if plain {
+		return &plainDisplay{state: state}
+	}
+	cli.CurrentBackend.SetPassthrough(false, state.Config.Display.MaxWorkers)
+	defer cli.CurrentBackend.SetPassthrough(true, state.Config.Display.MaxWorkers)
+	return &interactiveDisplay{
+		state:      state,
+		numWorkers: state.Config.Please.NumThreads,
+		maxWorkers: state.Config.Display.MaxWorkers,
+		numRemote:  state.Config.NumRemoteExecutors(),
+		stats:      state.Config.Display.SystemStats,
+	}
+}
+
+type plainDisplay struct {
+	state *core.BuildState
+}
+
+func (d *plainDisplay) Update(targets []buildingTarget) {
+	busy := 0
+	for _, t := range targets {
+		if t.Active {
+			busy++
+		}
+	}
+	log.Notice("Build running for %s, %d / %d tasks done, %s busy", time.Since(d.state.StartTime).Round(time.Second), d.state.NumDone(), d.state.NumActive(), pluralise(busy, "worker", "workers"))
+}
+
+func (d *plainDisplay) Frequency() time.Duration {
+	return 10 * time.Second
+}
+
+func (d *plainDisplay) Close() {}
+
+type interactiveDisplay struct {
 	state                                               *core.BuildState
-	targets                                             []buildingTarget
 	numWorkers, maxWorkers, numRemote, maxRows, maxCols int
 	stats                                               bool
 	lines, lastLines                                    int // mutable - records how many rows we've printed this time
 	buf, lineBuf                                        bytes.Buffer
 }
 
-func display(ctx context.Context, state *core.BuildState, buildingTargets []buildingTarget) {
-	cli.CurrentBackend.SetPassthrough(false, state.Config.Display.MaxWorkers)
-	defer cli.CurrentBackend.SetPassthrough(true, state.Config.Display.MaxWorkers)
-
-	d := &displayer{
-		state:      state,
-		targets:    buildingTargets,
-		numWorkers: state.Config.Please.NumThreads,
-		maxWorkers: state.Config.Display.MaxWorkers,
-		numRemote:  state.Config.NumRemoteExecutors(),
-		stats:      state.Config.Display.SystemStats,
-	}
-
-	d.printLines()
-	d.run(ctx)
-	setWindowTitle(state, false)
-	// Clear it all out.
+func (d *interactiveDisplay) Close() {
+	setWindowTitle(d.state, false)
 	d.moveToFirstLine()
 	d.printf("${CLEAR_END}")
 	d.flush()
 }
 
-func (d *displayer) run(ctx context.Context) {
-	ticker := time.NewTicker(50 * time.Millisecond)
-	defer ticker.Stop()
-	done := ctx.Done()
-	for {
-		select {
-		case <-done:
-			return
-		case <-ticker.C:
-			d.maxRows, d.maxCols = cli.CurrentBackend.MaxDimensions()
-			d.moveToFirstLine()
-			d.printLines()
-			for _, line := range cli.CurrentBackend.Output() {
-				d.printf("${ERASE_AFTER}%s\n", line)
-				d.lines++
-			}
-			// Clean out any lines that were visible last time but are not now.
-			if d.lines < d.lastLines {
-				for i := d.lines; i < d.lastLines; i++ {
-					d.printf("${ERASE_AFTER}\n")
-				}
-				d.printf("\x1b[%dA", d.lastLines-d.lines) // Move back up again
-			}
-			setWindowTitle(d.state, true)
-			d.flush()
-		}
+func (d *interactiveDisplay) Frequency() time.Duration {
+	return 50 * time.Millisecond
+}
+
+func (d *interactiveDisplay) Update(targets []buildingTarget) {
+	d.maxRows, d.maxCols = cli.CurrentBackend.MaxDimensions()
+	d.moveToFirstLine()
+	d.printLines(targets)
+	for _, line := range cli.CurrentBackend.Output() {
+		d.printf("${ERASE_AFTER}%s\n", line)
+		d.lines++
 	}
+	// Clean out any lines that were visible last time but are not now.
+	if d.lines < d.lastLines {
+		for i := d.lines; i < d.lastLines; i++ {
+			d.printf("${ERASE_AFTER}\n")
+		}
+		d.printf("\x1b[%dA", d.lastLines-d.lines) // Move back up again
+	}
+	setWindowTitle(d.state, true)
+	d.flush()
 }
 
 // moveToFirstLine resets back to the first line.
-func (d *displayer) moveToFirstLine() {
+func (d *interactiveDisplay) moveToFirstLine() {
 	d.printf("\x1b[%dA", d.lines)
 	d.lastLines = d.lines
 	d.lines = 0
 }
 
-func (d *displayer) printLines() {
+func (d *interactiveDisplay) printLines(targets []buildingTarget) {
 	now := time.Now()
 	d.printf("Building [%d/%d, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), time.Since(d.state.StartTime).Seconds())
 	d.lines++
@@ -106,15 +125,15 @@ func (d *displayer) printLines() {
 	workers := 0
 	anyRemote := d.numRemote > 0
 	for i := 0; i < d.numWorkers && i < d.maxRows && workers < d.maxWorkers; i++ {
-		workers += d.printRow(i, now, anyRemote)
+		workers += d.printRow(&targets[i], now, anyRemote)
 		d.lines++
 	}
 	if anyRemote {
-		active := d.numRemoteActive()
+		active := d.numRemoteActive(targets)
 		d.printf("Remote processes [%3d/%3d active]:   ${ERASE_AFTER}\n", active, d.numRemote)
 		d.lines++
 		for i := 0; i < d.numRemote && d.lines < d.maxRows && workers < d.maxWorkers; i++ {
-			workers += d.printRow(d.numWorkers+i, now, true)
+			workers += d.printRow(&targets[d.numWorkers+i], now, true)
 			d.lines++
 		}
 		if workers < active {
@@ -125,30 +144,25 @@ func (d *displayer) printLines() {
 	d.printf("${RESET}")
 }
 
-func (d *displayer) numRemoteActive() int {
+func (d *interactiveDisplay) numRemoteActive(targets []buildingTarget) int {
 	count := 0
 	for i := 0; i < d.numRemote; i++ {
-		if d.targets[d.numWorkers+i].Active {
+		if targets[d.numWorkers+i].Active {
 			count++
 		}
 	}
 	return count
 }
 
-func (d *displayer) printRow(i int, now time.Time, remote bool) int {
-	d.targets[i].Lock()
-	// Take a local copy of the structure, which isn't *that* big, so we don't need to retain the lock
-	// while we do potentially blocking things like printing.
-	target := d.targets[i].buildingTargetData
-	d.targets[i].Unlock()
+func (d *interactiveDisplay) printRow(target *buildingTarget, now time.Time, remote bool) int {
 	label := target.Label.Parent()
 	duration := now.Sub(target.Started).Seconds()
 	if target.Active && target.Target != nil && target.Target.ShowProgress && target.Target.Progress > 0.0 {
 		if target.Target.Progress > 1.0 && target.Target.Progress < 100.0 && target.Target.Progress != target.LastProgress {
 			proportionDone := target.Target.Progress / 100.0
 			perPercent := float32(duration) / proportionDone
-			d.targets[i].Eta = time.Duration(perPercent * (1.0 - proportionDone) * float32(time.Second)).Truncate(time.Second)
-			d.targets[i].LastProgress = target.Target.Progress
+			target.Eta = time.Duration(perPercent * (1.0 - proportionDone) * float32(time.Second)).Truncate(time.Second)
+			target.LastProgress = target.Target.Progress
 		}
 		if target.Eta > 0 {
 			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, est %s remaining)${ERASE_AFTER}\n",
@@ -183,7 +197,7 @@ func (d *displayer) printRow(i int, now time.Time, remote bool) int {
 }
 
 // printStat prints a single statistic with appropriate colours.
-func (d *displayer) printStat(caption string, stat float64, multiplier int) {
+func (d *interactiveDisplay) printStat(caption string, stat float64, multiplier int) {
 	colour := "${BOLD_GREEN}"
 	if stat > 80.0*float64(multiplier) {
 		colour = "${BOLD_RED}"
@@ -195,17 +209,17 @@ func (d *displayer) printStat(caption string, stat float64, multiplier int) {
 
 // Limited-length printf that respects current window width.
 // Output is truncated at the middle to fit within 'cols'.
-func (d *displayer) printf(format string, args ...interface{}) {
+func (d *interactiveDisplay) printf(format string, args ...interface{}) {
 	fmt.Fprint(&d.buf, d.lprintfPrepare(d.maxCols, os.Expand(fmt.Sprintf(format, args...), replace)))
 }
 
 // flush prints the current buffer to stderr and resets it.
-func (d *displayer) flush() {
+func (d *interactiveDisplay) flush() {
 	os.Stderr.Write(d.buf.Bytes())
 	d.buf.Reset()
 }
 
-func (d *displayer) lprintfPrepare(cols int, s string) string {
+func (d *interactiveDisplay) lprintfPrepare(cols int, s string) string {
 	if len(s) < cols {
 		return s // it's short enough, nice and simple
 	}

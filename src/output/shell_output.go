@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/thought-machine/please/src/cli"
@@ -28,11 +27,6 @@ const testDurationGranularity = time.Millisecond
 
 // Used to track currently building targets.
 type buildingTarget struct {
-	sync.Mutex
-	buildingTargetData
-}
-
-type buildingTargetData struct {
 	Label        core.BuildLabel
 	Started      time.Time
 	Finished     time.Time
@@ -59,32 +53,38 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 		printf("%s\n", state.Config.Please.Motd[r.Intn(len(state.Config.Please.Motd))])
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel() // not really necessary but keeps linter happy
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		if plainOutput {
-			logProgress(ctx, state, buildingTargets)
-		} else {
-			display(ctx, state, buildingTargets)
-		}
-		wg.Done()
-	}()
+	tw := newTraceWriter(traceFile)
+	defer tw.Close()
+
+	displayer := setupDisplayer(state, plainOutput)
+	t := time.NewTicker(displayer.Frequency())
+	done := ctx.Done()
+	results := state.Results()
+	defer t.Stop()
 	failedTargets := []core.BuildLabel{}
 	failedNonTests := []core.BuildLabel{}
-	tw := newTraceWriter(traceFile)
-	for result := range state.Results() {
+loop:
+	for {
+		select {
+		case result := <-results:
+			if state.DebugTests && result.Status == core.TargetTesting {
+				break loop // We now stop the interactive display to allow it to be debugged
+			}
+			processResult(state, result, buildingTargets, plainOutput, &failedTargets, &failedNonTests, failedTargetMap, tw, streamTestResults)
+		case <-done:
+			break loop
+		case <-t.C:
+			displayer.Update(buildingTargets)
+		}
+	}
+	// Make sure we exhaust any other results on this channel.
+	for result := range results {
 		if state.DebugTests && result.Status == core.TargetTesting {
-			cancel() // signals the interactive display goroutines to stop
+			break // We now stop the interactive display to allow it to be debugged
 		}
 		processResult(state, result, buildingTargets, plainOutput, &failedTargets, &failedNonTests, failedTargetMap, tw, streamTestResults)
 	}
-	<-ctx.Done()
-	wg.Wait()
-	if err := tw.Close(); err != nil {
-		log.Error("Failed to write trace data: %s", err)
-	}
+
 	duration := time.Since(state.StartTime).Round(durationGranularity)
 	if len(failedNonTests) > 0 { // Something failed in the build step.
 		printFailedBuildResults(failedNonTests, failedTargetMap, duration)
@@ -396,27 +396,6 @@ func maybeToString(duration *time.Duration) string {
 	return fmt.Sprintf(" ${BOLD_WHITE}%s${RESET}", duration.Round(testDurationGranularity))
 }
 
-// logProgress continually logs progress messages every 10s explaining where we're up to.
-func logProgress(ctx context.Context, state *core.BuildState, buildingTargets []buildingTarget) {
-	done := ctx.Done()
-	t := time.NewTicker(10 * time.Second)
-	defer t.Stop()
-	for {
-		select {
-		case <-t.C:
-			busy := 0
-			for i := 0; i < len(buildingTargets); i++ {
-				if buildingTargets[i].Active {
-					busy++
-				}
-			}
-			log.Notice("Build running for %s, %d / %d tasks done, %s busy", time.Since(state.StartTime).Round(time.Second), state.NumDone(), state.NumActive(), pluralise(busy, "worker", "workers"))
-		case <-done:
-			return
-		}
-	}
-}
-
 // Produces a string describing the results of one test (or a single aggregation).
 func testResultMessage(results *core.TestSuite, showDuration bool) string {
 	msg := fmt.Sprintf("%s run", pluralise(results.Tests(), "test", "tests"))
@@ -571,8 +550,6 @@ func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buil
 }
 
 func updateTarget2(target *buildingTarget, label core.BuildLabel, active bool, failed bool, cached bool, description string, err error, colour string, t *core.BuildTarget) {
-	target.Lock()
-	defer target.Unlock()
 	target.Label = label
 	target.Description = description
 	if !target.Active {
