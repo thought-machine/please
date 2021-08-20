@@ -1363,6 +1363,28 @@
     </li>
     <li>
       <div>
+        <h3 class="mt1 f6 lh-title" id="python.usepackageroot">UsePackageRoot</h3>
+
+        <p>
+          It makes all the python modules to be built at the top level in the
+          .pex file instead of replicating the package path they reside
+          in.<br/>
+          This way, imports to workspace python modules are regular
+          imports, as if the modules were locally installed into the python
+          environment.<br/>
+          This import behavior is similar to a
+          <code class="code">pip_library</code>
+          module, that was configured with the
+          <a href="#python.moduledir">ModuleDir</a>.
+          However this setting applies for all the python packages, be it an external
+          <code class="code">pip_library</code>
+          or a local
+          <code class="code">python_library</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
         <h3 class="mt1 f6 lh-title" id="python.defaultpiprepo">DefaultPipRepo</h3>
 
         <p>

@@ -16,7 +16,7 @@ a target which has only had small changes.
 
 def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visibility:list=None,
                    test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[], interpreter:str=None,
-                   strip:bool=False, strip_package_name:bool=CONFIG.PYTHON_STRIP_PLEASE_PACKAGE_NAMES):
+                   strip:bool=False, use_package_root:bool=CONFIG.PYTHON_USE_PACKAGE_ROOT):
     """Generates a Python library target, which collects Python files for use by dependent rules.
 
     Note that each python_library performs some pre-zipping of its inputs before they're combined
@@ -48,7 +48,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
     if srcs or resources:
         cmd = '$TOOLS_JARCAT z -d -o ${OUTS} -i .'
 
-        if strip_package_name:
+        if use_package_root:
             cmd += ' -r $PKG:.'
 
         interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
@@ -100,7 +100,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
 
 def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
                   data:list=None, visibility:list=None, test_only:bool=False, zip_safe:bool=None,
-                  site:bool=False, strip:bool=False, strip_package_name:bool=CONFIG.PYTHON_STRIP_PLEASE_PACKAGE_NAMES,
+                  site:bool=False, strip:bool=False, use_package_root:bool=CONFIG.PYTHON_USE_PACKAGE_ROOT,
                   interpreter:str=None, shebang:str='', labels:list&features&tags=[]):
     """Generates a Python binary target.
 
@@ -141,7 +141,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     if site:
         cmd += ' -S'
 
-    if strip_package_name:
+    if use_package_root:
         cmd += ' --strip_package_name=$PKG'
 
     assert main not in srcs, "main file should not be included in srcs"
@@ -154,7 +154,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         deps=deps,
         visibility=visibility,
         test_only=test_only,
-        strip_package_name=strip_package_name,
+        use_package_root=use_package_root,
     )
 
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
@@ -178,7 +178,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
 
-    if strip_package_name:
+    if use_package_root:
         cmd += ' -r $PKG:.'
 
     if strip:
@@ -214,7 +214,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
                 labels:list&features&tags=[], size:str=None, flags:str='', visibility:list=None,
                 sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
                 test_outputs:list=None, zip_safe:bool=None, interpreter:str=None, site:bool=False,
-                test_runner:str=None, strip_package_name:bool=CONFIG.PYTHON_STRIP_PLEASE_PACKAGE_NAMES):
+                test_runner:str=None, use_package_root:bool=CONFIG.PYTHON_USE_PACKAGE_ROOT):
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
@@ -301,7 +301,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         test_only=True,
         visibility=visibility,
         labels = labels,
-        strip_package_name = strip_package_name,
+        use_package_root = use_package_root,
     )
 
     deps = [pex_rule, lib_rule]
@@ -342,7 +342,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
                 test_only:bool&testonly=False, deps:list=[], post_install_commands:list=None,
                 install_subdirectory:str=None, repo:str=None, use_pypi:bool=None, patch:str|list=None,
                 visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None,
-                strip:list=[], strip_package_name:bool=CONFIG.PYTHON_STRIP_PLEASE_PACKAGE_NAMES):
+                strip:list=[], use_package_root:bool=CONFIG.PYTHON_USE_PACKAGE_ROOT):
     """Provides a build rule for third-party dependencies to be installed by pip.
 
     Args:
@@ -466,7 +466,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
                  post_install_commands:list=None, patch:str|list=None, licences:list=None,
                  test_only:bool&testonly=False, repo:str=None, zip_safe:bool=True, visibility:list=None,
                  deps:list=[], name_scheme:str=None, strip:list=['*.pyc', 'tests'],
-                 strip_package_name:bool=CONFIG.PYTHON_STRIP_PLEASE_PACKAGE_NAMES):
+                 use_package_root:bool=CONFIG.PYTHON_USE_PACKAGE_ROOT):
     """Downloads a Python wheel and extracts it.
 
     This is a lightweight pip-free alternative to pip_library which supports cross-compiling.
@@ -551,7 +551,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
 
     cmd += ['$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
 
-    if strip_package_name:
+    if use_package_root:
         cmd += ' -r $PKG:.'
 
     label = f'whl:{package_name}=={version}'
