@@ -78,60 +78,6 @@ func TestAddParseDep(t *testing.T) {
 	assert.Equal(t, 2, state.NumActive())
 }
 
-func TestAddDepRescan(t *testing.T) {
-	t.Skip("Not convinced this test is a good reflection of reality")
-	// Simulate a post-build function and rescan.
-	state := makeState(true, true)
-	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
-
-	time.Sleep(time.Millisecond * 100)
-
-	assertPendingBuilds(t, state, "//package2:target2") // This is the only candidate target
-	assertPendingParses(t, state)                       // None, we have both packages already
-	assert.Equal(t, 6, state.NumActive())
-
-	// Add new target & dep to target1
-	target4 := makeTarget("//package1:target4")
-	state.Graph.Package("package1", "").AddTarget(target4)
-	state.Graph.AddTarget(target4)
-	target1 := state.Graph.TargetOrDie(buildLabel("//package1:target1"))
-	target1.AddDependency(buildLabel("//package1:target4"))
-
-	// Fake test: calling this now should have no effect because rescan is not true.
-	state.QueueTarget(buildLabel("//package1:target1"), core.OriginalTarget, false)
-	assertPendingParses(t, state)
-	assertPendingBuilds(t, state) // Note that the earlier call to assertPendingBuilds cleared it.
-
-	// Now running this should activate it
-	// rescanDeps(state, map[*core.BuildTarget]struct{}{target1: {}})
-	time.Sleep(time.Millisecond * 100)
-
-	assertPendingBuilds(t, state, "//package1:target4")
-	assertPendingParses(t, state)
-}
-
-func TestAddParseDepDeferred(t *testing.T) {
-	t.Skip("Not convinced this test is a good reflection of reality")
-	// Similar to TestAddParseDep but where we scan the package once and come back later because
-	// something else asserts a dependency on it.
-	state := makeState(true, true)
-	state.NeedBuild = false
-	assert.Equal(t, 1, state.NumActive())
-	activateTarget(tid, state, nil, buildLabel("//package2:target2"), core.OriginalTarget, false)
-	time.Sleep(time.Millisecond * 100)
-
-	assertPendingParses(t, state)
-	assertPendingBuilds(t, state) // Not yet.
-
-	// Now the undefer kicks off...
-	activateTarget(tid, state, nil, buildLabel("//package2:target2"), buildLabel("//package1:all"), false)
-	time.Sleep(time.Millisecond * 100)
-
-	assertPendingBuilds(t, state, "//package2:target2") // This time!
-	assertPendingParses(t, state)
-	assert.Equal(t, 2, state.NumActive())
-}
-
 func makeTarget(label string, deps ...string) *core.BuildTarget {
 	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 	for _, dep := range deps {
