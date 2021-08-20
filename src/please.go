@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/thought-machine/go-flags"
-	"gopkg.in/op/go-logging.v1"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -15,6 +13,9 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	"github.com/thought-machine/go-flags"
+	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"
@@ -445,6 +446,7 @@ var buildFunctions = map[string]func() int{
 		success, state := doTest(targets, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
+		test.RemovePathsFromCoverage(state.Coverage, state.Config.Cover.ExcludePath)
 
 		var stats *test.IncrementalStats
 		if opts.Cover.Incremental {

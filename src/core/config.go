@@ -480,6 +480,7 @@ type Configuration struct {
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to .go, .py, .java, .tsx, .ts, .js, .cc, .h, and .c"`
 		ExcludeExtension []string `help:"Extensions of files to exclude from coverage.\nTypically this is for generated code; the default is to exclude protobuf extensions like .pb.go, _pb2.py, etc."`
+		ExcludePath      []string `help:"Path of fiels to exclude from coverage.\nTypically this is for generated code and it is useful when there is no other discrimination possible."`
 	} `help:"Configuration relating to coverage reports."`
 	Gc struct {
 		Keep      []BuildLabel `help:"Marks targets that gc should always keep. Can include meta-targets such as //test/... and //docs:all."`

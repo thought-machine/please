@@ -267,6 +267,23 @@ func removeFilesFromCoverage(files map[string][]core.LineCoverage, extensions []
 	}
 }
 
+func RemovePathsFromCoverage(coverage core.TestCoverage, paths []string) {
+	for _, files := range coverage.Tests {
+		removePathsFromCoverage(files, paths)
+	}
+	removePathsFromCoverage(coverage.Files, paths)
+}
+
+func removePathsFromCoverage(files map[string][]core.LineCoverage, paths []string) {
+	for filename := range files {
+		for _, path := range paths {
+			if strings.HasPrefix(filename, path) {
+				delete(files, filename)
+			}
+		}
+	}
+}
+
 // CalculateIncrementalStats works out incremental coverage statistics based on a set of changed lines from files.
 func CalculateIncrementalStats(state *core.BuildState, lines map[string][]int) *IncrementalStats {
 	return calculateIncrementalStats(state, state.Coverage, lines, collectCoverageFiles(state, true))
