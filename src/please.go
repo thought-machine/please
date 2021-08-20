@@ -1006,13 +1006,11 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	state.Results() // important this is called now, don't ask...
 	var wg sync.WaitGroup
 	wg.Add(1)
-	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		output.MonitorState(ctx, state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
 	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
-	cancel()
 	wg.Wait()
 }
 

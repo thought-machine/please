@@ -4,7 +4,6 @@ package output
 
 import (
 	"bufio"
-	"context"
 	"encoding/hex"
 	"fmt"
 	"math/rand"
@@ -41,9 +40,9 @@ type buildingTarget struct {
 	LastProgress float32
 }
 
-// MonitorState monitors the build while it's running and prints output.
-// The caller must cancel the given context once they want this function to stop displaying things.
-func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, detailedTests, streamTestResults bool, traceFile string) {
+// MonitorState monitors the build while it's running and prints output until the results
+// channel of state has completed.
+func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTestResults bool, traceFile string) {
 	initPrintf(state.Config)
 	failedTargetMap := map[core.BuildLabel]error{}
 	buildingTargets := make([]buildingTarget, state.Config.Please.NumThreads+state.Config.NumRemoteExecutors())
@@ -58,7 +57,6 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 
 	displayer := setupDisplayer(state, plainOutput)
 	t := time.NewTicker(displayer.Frequency())
-	done := ctx.Done()
 	results := state.Results()
 	defer t.Stop()
 	failedTargets := []core.BuildLabel{}
@@ -66,24 +64,16 @@ func MonitorState(ctx context.Context, state *core.BuildState, plainOutput, deta
 loop:
 	for {
 		select {
-		case result := <-results:
-			if state.DebugTests && result.Status == core.TargetTesting {
-				break loop // We now stop the interactive display to allow it to be debugged
+		case result, ok := <-results:
+			if !ok || (state.DebugTests && result.Status == core.TargetTesting) {
+				break loop
 			}
 			processResult(state, result, buildingTargets, plainOutput, &failedTargets, &failedNonTests, failedTargetMap, tw, streamTestResults)
-		case <-done:
-			break loop
 		case <-t.C:
 			displayer.Update(buildingTargets)
 		}
 	}
-	// Make sure we exhaust any other results on this channel.
-	for result := range results {
-		if state.DebugTests && result.Status == core.TargetTesting {
-			break // We now stop the interactive display to allow it to be debugged
-		}
-		processResult(state, result, buildingTargets, plainOutput, &failedTargets, &failedNonTests, failedTargetMap, tw, streamTestResults)
-	}
+	displayer.Close()
 
 	duration := time.Since(state.StartTime).Round(durationGranularity)
 	if len(failedNonTests) > 0 { // Something failed in the build step.
