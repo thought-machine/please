@@ -169,7 +169,6 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	s.state.AddTarget(s.pkg, target)
 	if s.Callback {
 		target.AddedPostBuild = true
-		s.pkg.MarkTargetModified(target)
 	}
 	return pyString(":" + target.Label.Name)
 }
@@ -747,11 +746,9 @@ func addDep(s *scope, args []pyObject) pyObject {
 	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Queue this dependency if it'll be needed.
 	if target.State() > core.Inactive {
-		err := s.state.QueueTarget(dep, target.Label, true, false)
+		err := s.state.QueueTarget(dep, target.Label, false)
 		s.Assert(err == nil, "%s", err)
 	}
-	// TODO(peterebden): Do we even need the following any more?
-	s.pkg.MarkTargetModified(target)
 	return None
 }
 
@@ -759,7 +756,7 @@ func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, datum cor
 	target.AddDatum(datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, true, false)
+		err := s.state.QueueTarget(l, target.Label, false)
 		s.Assert(err == nil, "%s", err)
 	}
 }
@@ -768,7 +765,7 @@ func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.Buil
 	target.AddNamedDatum(name, datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, true, false)
+		err := s.state.QueueTarget(l, target.Label, false)
 		s.Assert(err == nil, "%s", err)
 	}
 }
@@ -806,9 +803,6 @@ func addData(s *scope, args []pyObject) pyObject {
 	} else {
 		log.Fatal("Unrecognised data type passed to add_data")
 	}
-
-	// TODO(peterebden): Do we even need the following any more?
-	s.pkg.MarkTargetModified(target)
 	return None
 }
 
