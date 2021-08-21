@@ -439,7 +439,10 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
     )
 
     # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
-    cmd = f'$TOOLS_JARCAT z --suffix="" --exclude_suffix=whl --include_other -i . -r $PKG/{name}:.'
+    if use_package_root:
+        cmd = f'$TOOLS_JARCAT z --suffix="" --exclude_suffix=whl --include_other -i . -r $PKG/{name}:.'
+    else:
+        cmd = f'$TOOLS_JARCAT z --suffix="" --exclude_suffix=whl --include_other -i . -r $PKG/{name}:$PKG'
 
     if not licences:
         cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
