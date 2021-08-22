@@ -2,10 +2,10 @@ import time
 import unittest
 
 
-class TensorflowTest(unittest.TestCase):
+class CxOracleTest(unittest.TestCase):
 
     def test_import(self):
         start = time.time()
         import cx_Oracle
         end = time.time()
-        print('Imported tensorflow version %s in %0.2fs' % (cx_Oracle.__version__, end - start))
+        print('Imported cx_Oracle version %s in %0.2fs' % (cx_Oracle.__version__, end - start))
