@@ -21,7 +21,8 @@ var opts = struct {
 		SrcRoot           string   `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
 		ModuleName        string   `short:"n" long:"module_name" description:"The name of the module" required:"true"`
 		ImportConfig      string   `short:"i" long:"importcfg" description:"The import config for the modules dependencies" required:"true"`
-		LDFlags           string   `short:"l" long:"ld_flags" description:"The file to write linker flags to" default:"LD_FLAGS"`
+		LDFlags           string   `long:"ld_flags" description:"Any additional flags to apply to the C linker" env:"LDFLAGS"`
+		CFlags            string   `long:"c_flags" description:"Any additional flags to apply when compiling C" env:"CFLAGS"`
 		GoTool            string   `short:"g" long:"go_tool" description:"The location of the go binary" default:"go"`
 		CCTool            string   `short:"c" long:"cc_tool" description:"The c compiler to use"`
 		Out               string   `short:"o" long:"out" description:"The output directory to put compiled artifacts in" required:"true"`
@@ -67,6 +68,7 @@ var subCommands = map[string]func() int{
 			opts.Install.ModuleName,
 			opts.Install.ImportConfig,
 			opts.Install.LDFlags,
+			opts.Install.CFlags,
 			mustResolvePath(opts.Install.GoTool),
 			mustResolvePath(opts.Install.CCTool),
 			opts.Install.PackageConfigTool,
