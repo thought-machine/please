@@ -267,17 +267,17 @@ func removeFilesFromCoverage(files map[string][]core.LineCoverage, extensions []
 	}
 }
 
-func RemovePathsFromCoverage(coverage core.TestCoverage, paths []string) {
+func RemoveGlobsFromCoverage(coverage core.TestCoverage, globs []string) {
 	for _, files := range coverage.Tests {
-		removePathsFromCoverage(files, paths)
+		removeGlobsFromCoverage(files, globs)
 	}
-	removePathsFromCoverage(coverage.Files, paths)
+	removeGlobsFromCoverage(coverage.Files, globs)
 }
 
-func removePathsFromCoverage(files map[string][]core.LineCoverage, paths []string) {
+func removeGlobsFromCoverage(files map[string][]core.LineCoverage, globs []string) {
 	for filename := range files {
-		for _, path := range paths {
-			if strings.HasPrefix(filename, path) {
+		for _, glob := range globs {
+			if ok, _ := filepath.Match(glob, filename); ok {
 				delete(files, filename)
 			}
 		}
