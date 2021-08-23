@@ -26,7 +26,7 @@ type buildingTarget struct {
 type buildingTargets struct {
 	plain          bool
 	state          *core.BuildState
-	Targets        []buildingTarget
+	targets        []buildingTarget
 	FailedTargets  map[core.BuildLabel]error
 	FailedNonTests []core.BuildLabel
 }
@@ -35,16 +35,22 @@ func newBuildingTargets(state *core.BuildState, plainOutput bool) *buildingTarge
 	return &buildingTargets{
 		plain:         plainOutput,
 		state:         state,
-		Targets:       make([]buildingTarget, state.Config.Please.NumThreads+state.Config.NumRemoteExecutors()),
+		targets:       make([]buildingTarget, state.Config.Please.NumThreads+state.Config.NumRemoteExecutors()),
 		FailedTargets: map[core.BuildLabel]error{},
 	}
+}
+
+// Targets returns the set of currently known building targets, split into local and remote.
+func (bt *buildingTargets) Targets() (local []buildingTarget, remote []buildingTarget) {
+	n := bt.state.Config.Please.NumThreads
+	return bt.targets[:n], bt.targets[n:]
 }
 
 // ProcessResult updates with a single result.
 // It returns the label that was in this slot previously.
 func (bt *buildingTargets) ProcessResult(result *core.BuildResult) core.BuildLabel {
 	label := result.Label
-	prev := bt.Targets[result.ThreadID].Label
+	prev := bt.targets[result.ThreadID].Label
 	if !result.Status.IsParse() { // Parse tasks happen on a different set of threads.
 		bt.updateTarget(result, bt.state.Graph.TargetOrDie(label))
 	}
@@ -79,7 +85,7 @@ func (bt *buildingTargets) ProcessResult(result *core.BuildResult) core.BuildLab
 
 // updateTarget updates a single target with a new result.
 func (bt *buildingTargets) updateTarget(result *core.BuildResult, t *core.BuildTarget) {
-	target := &bt.Targets[result.ThreadID]
+	target := &bt.targets[result.ThreadID]
 	target.Label = result.Label
 	target.Description = result.Description
 	active := result.Status.IsActive()

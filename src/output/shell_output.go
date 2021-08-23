@@ -62,7 +62,7 @@ loop:
 				os.Stdout.Write([]byte{'\n'})
 			}
 		case <-t.C:
-			displayer.Update(bt.Targets)
+			displayer.Update(bt.Targets())
 		}
 	}
 	displayer.Close()
