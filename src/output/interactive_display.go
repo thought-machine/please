@@ -29,7 +29,6 @@ func setupDisplayer(state *core.BuildState, plain bool) displayer {
 		return &plainDisplay{state: state}
 	}
 	cli.CurrentBackend.SetPassthrough(false, state.Config.Display.MaxWorkers)
-	defer cli.CurrentBackend.SetPassthrough(true, state.Config.Display.MaxWorkers)
 	return &interactiveDisplay{
 		state:      state,
 		numWorkers: state.Config.Please.NumThreads,
@@ -78,6 +77,7 @@ func (d *interactiveDisplay) Close() {
 	d.moveToFirstLine()
 	d.printf("${CLEAR_END}")
 	d.flush()
+	cli.CurrentBackend.SetPassthrough(true, d.state.Config.Display.MaxWorkers)
 }
 
 func (d *interactiveDisplay) Frequency() time.Duration {
