@@ -1189,9 +1189,9 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         else:
             for i in install:
                 if i == module or i == f"{module}/.":
-                    outs = [archive_name(module)]
+                    outs += [archive_name(module)]
                 elif i == "...":
-                    outs = [module]
+                    outs += [module]
                 elif i.endswith("/..."):
                     outs += [i.removesuffix("/...")]
                 else:
