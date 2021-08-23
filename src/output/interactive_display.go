@@ -99,9 +99,11 @@ func (d *interactiveDisplay) Update(targets []buildingTarget) {
 
 // moveToFirstLine resets back to the first line.
 func (d *interactiveDisplay) moveToFirstLine() {
-	d.printf("\x1b[%dA", d.lines)
-	d.lastLines = d.lines
-	d.lines = 0
+	if d.lines > 0 {
+		d.printf("\x1b[%dA", d.lines)
+		d.lastLines = d.lines
+		d.lines = 0
+	}
 }
 
 func (d *interactiveDisplay) printLines(targets []buildingTarget) {
