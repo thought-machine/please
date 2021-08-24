@@ -19,7 +19,7 @@ var terminalClaimsToBeXterm = strings.HasPrefix(os.Getenv("TERM"), "xterm")
 
 // A displayer is the interface to display things on screen while a build is running.
 type displayer interface {
-	Update(targets []buildingTarget)
+	Update(local, remote []buildingTarget)
 	Close()
 	Frequency() time.Duration
 }
@@ -29,7 +29,6 @@ func setupDisplayer(state *core.BuildState, plain bool) displayer {
 		return &plainDisplay{state: state}
 	}
 	cli.CurrentBackend.SetPassthrough(false, state.Config.Display.MaxWorkers)
-	defer cli.CurrentBackend.SetPassthrough(true, state.Config.Display.MaxWorkers)
 	return &interactiveDisplay{
 		state:      state,
 		numWorkers: state.Config.Please.NumThreads,
@@ -43,14 +42,20 @@ type plainDisplay struct {
 	state *core.BuildState
 }
 
-func (d *plainDisplay) Update(targets []buildingTarget) {
+func (d *plainDisplay) Update(local, remote []buildingTarget) {
+	localbusy := countActive(local)
+	remotebusy := countActive(remote)
+	log.Notice("Build running for %s, %d / %d tasks done, %s busy", time.Since(d.state.StartTime).Round(time.Second), d.state.NumDone(), d.state.NumActive(), pluralise(localbusy+remotebusy, "worker", "workers"))
+}
+
+func countActive(targets []buildingTarget) int {
 	busy := 0
 	for _, t := range targets {
 		if t.Active {
 			busy++
 		}
 	}
-	log.Notice("Build running for %s, %d / %d tasks done, %s busy", time.Since(d.state.StartTime).Round(time.Second), d.state.NumDone(), d.state.NumActive(), pluralise(busy, "worker", "workers"))
+	return busy
 }
 
 func (d *plainDisplay) Frequency() time.Duration {
@@ -72,16 +77,17 @@ func (d *interactiveDisplay) Close() {
 	d.moveToFirstLine()
 	d.printf("${CLEAR_END}")
 	d.flush()
+	cli.CurrentBackend.SetPassthrough(true, d.state.Config.Display.MaxWorkers)
 }
 
 func (d *interactiveDisplay) Frequency() time.Duration {
 	return 50 * time.Millisecond
 }
 
-func (d *interactiveDisplay) Update(targets []buildingTarget) {
+func (d *interactiveDisplay) Update(local, remote []buildingTarget) {
 	d.maxRows, d.maxCols = cli.CurrentBackend.MaxDimensions()
 	d.moveToFirstLine()
-	d.printLines(targets)
+	d.printLines(local, remote)
 	for _, line := range cli.CurrentBackend.Output() {
 		d.printf("${ERASE_AFTER}%s\n", line)
 		d.lines++
@@ -99,12 +105,14 @@ func (d *interactiveDisplay) Update(targets []buildingTarget) {
 
 // moveToFirstLine resets back to the first line.
 func (d *interactiveDisplay) moveToFirstLine() {
-	d.printf("\x1b[%dA", d.lines)
-	d.lastLines = d.lines
-	d.lines = 0
+	if d.lines > 0 {
+		d.printf("\x1b[%dA", d.lines)
+		d.lastLines = d.lines
+		d.lines = 0
+	}
 }
 
-func (d *interactiveDisplay) printLines(targets []buildingTarget) {
+func (d *interactiveDisplay) printLines(local, remote []buildingTarget) {
 	now := time.Now()
 	d.printf("Building [%d/%d, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), time.Since(d.state.StartTime).Seconds())
 	d.lines++
@@ -125,15 +133,15 @@ func (d *interactiveDisplay) printLines(targets []buildingTarget) {
 	workers := 0
 	anyRemote := d.numRemote > 0
 	for i := 0; i < d.numWorkers && i < d.maxRows && workers < d.maxWorkers; i++ {
-		workers += d.printRow(&targets[i], now, anyRemote)
+		workers += d.printRow(&local[i], now, anyRemote)
 		d.lines++
 	}
 	if anyRemote {
-		active := d.numRemoteActive(targets)
+		active := countActive(remote)
 		d.printf("Remote processes [%3d/%3d active]:   ${ERASE_AFTER}\n", active, d.numRemote)
 		d.lines++
 		for i := 0; i < d.numRemote && d.lines < d.maxRows && workers < d.maxWorkers; i++ {
-			workers += d.printRow(&targets[d.numWorkers+i], now, true)
+			workers += d.printRow(&remote[i], now, true)
 			d.lines++
 		}
 		if workers < active {
@@ -142,16 +150,6 @@ func (d *interactiveDisplay) printLines(targets []buildingTarget) {
 		}
 	}
 	d.printf("${RESET}")
-}
-
-func (d *interactiveDisplay) numRemoteActive(targets []buildingTarget) int {
-	count := 0
-	for i := 0; i < d.numRemote; i++ {
-		if targets[d.numWorkers+i].Active {
-			count++
-		}
-	}
-	return count
 }
 
 func (d *interactiveDisplay) printRow(target *buildingTarget, now time.Time, remote bool) int {
