@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"go/build"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/thought-machine/please/tools/please_go/install/exec"
 )
+var versionRegex = regexp.MustCompile("go version go1.([0-9]+).+")
 
 type Toolchain struct {
 	CcTool        string
@@ -115,6 +118,15 @@ func (tc *Toolchain) Asm(sourceDir, objectDir, trimpath string, asmFiles []strin
 	}
 
 	return objFiles, nil
+}
+
+func (tc *Toolchain) GoMinorVersion() (int, error) {
+	out, err := tc.Exec.CombinedOutput(tc.GoTool, "version")
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.Atoi(string(versionRegex.FindSubmatch(out)[1]))
 }
 
 func (tc *Toolchain) PkgConfigCFlags(cfgs []string) ([]string, error) {
