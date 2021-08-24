@@ -8,3 +8,14 @@ go_library(
         "//tools/please_go/install/exec",
     ],
 )
+
+go_test(
+    name = "toolchain_test",
+    srcs = ["toolchain_test.go"],
+    deps = [
+        "//third_party/go:testify",
+        ":toolchain",
+    ],
+    data = ["//third_party/go:toolchain|go"],
+    labels = ["no-musl"],
+)
