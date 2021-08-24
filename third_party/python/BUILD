@@ -448,3 +448,9 @@ pip_library(
     name = "progress",
     version = "1.5",
 )
+
+pip_library(
+    name = "cx_oracle",
+    package_name = "cx-Oracle",
+    version = "8.2.1"
+)

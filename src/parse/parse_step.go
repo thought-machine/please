@@ -50,7 +50,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		return err
 	} else if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
-		state.WaitForBuiltTarget(subrepo.Target.Label, label)
+		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label)
 	}
 	// Subrepo & nothing else means we just want to ensure that subrepo is present.
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
@@ -157,7 +157,7 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 					// Must always do this for coverage because we need to calculate sources of
 					// non-test targets later on.
 					if !state.NeedTests || target.IsTest() || state.NeedCoverage {
-						if err := state.QueueTarget(target.Label, dependent, false, dependent.IsAllTargets()); err != nil {
+						if err := state.QueueTarget(target.Label, dependent, dependent.IsAllTargets()); err != nil {
 							return err
 						}
 					}
@@ -167,7 +167,7 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 	} else {
 		for _, l := range state.Graph.DependentTargets(dependent, label) {
 			// We use :all to indicate a dependency needed for parse.
-			if err := state.QueueTarget(l, dependent, false, forSubinclude || dependent.IsAllTargets()); err != nil {
+			if err := state.QueueTarget(l, dependent, forSubinclude || dependent.IsAllTargets()); err != nil {
 				return err
 			}
 		}
@@ -242,18 +242,6 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 		}
 	}
 	return "", pkgName
-}
-
-func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) error {
-	// Run over all the changed targets in this package and ensure that any newly added dependencies enter the build queue.
-	for target := range changed {
-		if s := target.State(); s < core.Built && s > core.Inactive {
-			if err := state.QueueTarget(target.Label, core.OriginalTarget, true, false); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // exportFile adds a single-file export target. This is primarily used for Bazel compat.

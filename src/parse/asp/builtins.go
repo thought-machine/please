@@ -50,6 +50,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "get_labels", getLabels)
 	setNativeCode(s, "add_label", addLabel)
 	setNativeCode(s, "add_dep", addDep)
+	setNativeCode(s, "add_data", addData)
 	setNativeCode(s, "add_out", addOut)
 	setNativeCode(s, "get_outs", getOuts)
 	setNativeCode(s, "add_licence", addLicence)
@@ -168,7 +169,6 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	s.state.AddTarget(s.pkg, target)
 	if s.Callback {
 		target.AddedPostBuild = true
-		s.pkg.MarkTargetModified(target)
 	}
 	return pyString(":" + target.Label.Name)
 }
@@ -230,11 +230,12 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-func (s *scope) WaitForBuiltTargetWithoutLimiter(l, dependent core.BuildLabel) *core.BuildTarget {
+// WaitForSubincludedTarget drops the interpreter lock and waits for the subincluded target to be built
+func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) *core.BuildTarget {
 	s.interpreter.limiter.Release()
 	defer s.interpreter.limiter.Acquire()
 
-	return s.state.WaitForBuiltTarget(l, dependent)
+	return s.state.WaitForTargetAndEnsureDownload(l, dependent)
 }
 
 // builtinFail raises an immediate error that can't be intercepted.
@@ -280,7 +281,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	// When this happens, both parse thread "WaitForBuiltTarget" expecting the other to queue the target to be built.
 	//
 	// By parsing the package first, the subrepo package's subinclude will queue the subrepo target to be built before
-	// we call WaitForBuiltTargetWithoutLimiter below avoiding the lockup.
+	// we call WaitForSubincludedTarget below avoiding the lockup.
 	if l.Subrepo != "" && l.SubrepoLabel().PackageName != s.contextPkg.Name && l.Subrepo != s.contextPkg.SubrepoName {
 		subrepoPackageLabel := core.BuildLabel{
 			PackageName: l.SubrepoLabel().PackageName,
@@ -291,7 +292,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	}
 	// Temporarily release the parallelism limiter; this is important to keep us from deadlocking
 	// all available parser threads (easy to happen if they're all waiting on a single target which now can't start)
-	t := s.WaitForBuiltTargetWithoutLimiter(l, pkgLabel)
+	t := s.WaitForSubincludedTarget(l, pkgLabel)
 	// This is not quite right, if you subinclude from another subinclude we can basically
 	// lose track of it later on. It's hard to know what better to do at this point though.
 	s.contextPkg.RegisterSubinclude(l)
@@ -745,11 +746,63 @@ func addDep(s *scope, args []pyObject) pyObject {
 	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Queue this dependency if it'll be needed.
 	if target.State() > core.Inactive {
-		err := s.state.QueueTarget(dep, target.Label, true, false)
+		err := s.state.QueueTarget(dep, target.Label, false)
 		s.Assert(err == nil, "%s", err)
 	}
-	// TODO(peterebden): Do we even need the following any more?
-	s.pkg.MarkTargetModified(target)
+	return None
+}
+
+func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, datum core.BuildInput, systemAllowed, tool bool) {
+	target.AddDatum(datum)
+	// Queue this dependency if it'll be needed.
+	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
+		err := s.state.QueueTarget(l, target.Label, false)
+		s.Assert(err == nil, "%s", err)
+	}
+}
+
+func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.BuildTarget, datum core.BuildInput, systemAllowed, tool bool) {
+	target.AddNamedDatum(name, datum)
+	// Queue this dependency if it'll be needed.
+	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
+		err := s.state.QueueTarget(l, target.Label, false)
+		s.Assert(err == nil, "%s", err)
+	}
+}
+
+// Add runtime dependencies to target
+func addData(s *scope, args []pyObject) pyObject {
+	s.Assert(s.Callback, "can only be called from a pre- or post-build callback")
+
+	label := args[0]
+	datum := args[1]
+	target := getTargetPost(s, string(label.(pyString)))
+
+	systemAllowed := false
+	tool := false
+
+	// add_data() builtin can take a string, list, or dict
+	if isType(datum, "str") {
+		if bi := parseBuildInput(s, datum, string(label.(pyString)), systemAllowed, tool); bi != nil {
+			addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
+		}
+	} else if isType(datum, "list") {
+		for _, str := range datum.(pyList) {
+			if bi := parseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
+				addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
+			}
+		}
+	} else if isType(datum, "dict") {
+		for name, v := range datum.(pyDict) {
+			for _, str := range v.(pyList) {
+				if bi := parseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
+					addNamedDatumToTargetAndMaybeQueue(s, name, target, bi, systemAllowed, tool)
+				}
+			}
+		}
+	} else {
+		log.Fatal("Unrecognised data type passed to add_data")
+	}
 	return None
 }
 

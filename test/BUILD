@@ -38,6 +38,13 @@ plz_e2e_test(
     expected_output = "query_somepath_nopath_test.txt",
 )
 
+plz_e2e_test(
+    name = "query_somepath_hidden_test",
+    cmd = "HIDDEN=$(plz query somepath //tools/build_langserver:build_langserver //tools/build_langserver/lsp:all --hidden | wc -l); \
+           NOTHIDDEN=$(plz query somepath //tools/build_langserver:build_langserver //tools/build_langserver/lsp:all | wc -l); \
+           if [ $HIDDEN > $NOTHIDDEN ]; then exit 0; else exit 1; fi",
+)
+
 # Tests that targets can only use other targets that they depend on.
 plz_e2e_test(
     name = "dep_required_test",

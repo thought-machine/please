@@ -8,7 +8,7 @@ import (
 
 // SomePath finds and returns a path between two targets, or between one and a set of targets.
 // Useful for a "why on earth do I depend on this thing" type query.
-func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) error {
+func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel, showHidden bool) error {
 	s := somepath{
 		graph: graph,
 		memo:  map[core.BuildLabel]map[core.BuildLabel]struct{}{},
@@ -17,7 +17,7 @@ func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel) error {
 		for _, l2 := range expandAllTargets(graph, to) {
 			if path := s.SomePath(l1, l2); len(path) != 0 {
 				fmt.Println("Found path:")
-				for _, l := range filterPath(path) {
+				for _, l := range filterPath(path, showHidden) {
 					fmt.Printf("  %s\n", l)
 				}
 				return nil
@@ -87,7 +87,12 @@ func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen m
 }
 
 // filterPath filters out any internal targets on a path between two targets.
-func filterPath(path []core.BuildLabel) []core.BuildLabel {
+func filterPath(path []core.BuildLabel, showHidden bool) []core.BuildLabel {
+	// If --hidden flag passed, do not filter out any targets
+	if showHidden {
+		return path
+	}
+
 	ret := []core.BuildLabel{path[0]}
 	last := path[0]
 	for _, l := range path {

@@ -19,6 +19,10 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+var client = &http.Client{
+	Timeout: time.Minute,
+}
+
 func looksLikeJUnitXMLTestResults(b []byte) bool {
 	return bytes.HasPrefix(b, []byte{'<', '?', 'x', 'm', 'l'}) || bytes.HasPrefix(b, []byte{'<', 't', 'e', 's', 't'})
 }
@@ -457,7 +461,7 @@ func uploadResults(target *core.BuildTarget, url string, gzipped, storeOutputOnS
 	}
 	req.Header["Content-Type"] = []string{"application/xml"}
 	req.Header["Content-Encoding"] = []string{enc}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("Failed to upload test results: %s", err)
 	}
