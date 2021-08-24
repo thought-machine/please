@@ -79,6 +79,13 @@ type walkedDir struct {
 	fileNames, subPackages []string
 }
 
+func Match(glob, path string) (bool, error) {
+	matcher, err := patternToMatcher(".", glob)
+	if err != nil {
+		return false, err
+	}
+	return matcher.Match(path)
+}
 // NewGlobber creates a new Globber. You should call this rather than creating one directly (or use Glob() if you don't care).
 func NewGlobber(buildFileNames []string) *Globber {
 	return &Globber{

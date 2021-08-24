@@ -445,8 +445,8 @@ var buildFunctions = map[string]func() int{
 		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
 		success, state := doTest(targets, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
-		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
-		test.RemoveGlobsFromCoverage(state.Coverage, state.Config.Cover.ExcludeGlob)
+		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension, state.Config.Cover.ExcludeGlob)
+
 
 		var stats *test.IncrementalStats
 		if opts.Cover.Incremental {
