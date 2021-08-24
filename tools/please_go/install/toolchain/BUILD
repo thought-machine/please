@@ -17,4 +17,5 @@ go_test(
         ":toolchain",
     ],
     data = ["//third_party/go:toolchain|go"],
+    labels = ["no-musl"],
 )
