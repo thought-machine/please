@@ -111,10 +111,6 @@ func (lm *targetLMap) Get(key BuildLabel) (*BuildTarget, <-chan struct{}) {
 	if v, ok := lm.m[key]; ok {
 		return v.Target, v.Wait
 	}
-	// Need to check again; something else could have added this.
-	if v, ok := lm.m[key]; ok {
-		return v.Target, v.Wait
-	}
 	ch := make(chan struct{})
 	lm.m[key] = buildTargetPair{Wait: ch}
 	return nil, ch

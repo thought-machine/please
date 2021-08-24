@@ -98,7 +98,7 @@ func TestAddDepsToTarget(t *testing.T) {
 	target1 := addTargetDeps(state, pkg, "//src/core:target1", "//src/core:target2")
 	target2 := addTargetDeps(state, pkg, "//src/core:target2")
 	state.Graph.AddPackage(pkg)
-	state.QueueTarget(target1.Label, OriginalTarget, false, false)
+	state.QueueTarget(target1.Label, OriginalTarget, false)
 	task := <-builds
 	assert.Equal(t, target2.Label, task)
 	// Now simulate target2 being built and adding a new dep to target1 in its post-build function.

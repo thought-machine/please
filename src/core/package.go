@@ -30,12 +30,6 @@ type Package struct {
 	Outputs map[string]*BuildTarget
 	// Protects access to above
 	mutex sync.RWMutex
-	// Targets whose dependencies got modified during a pre or post-build function.
-	modifiedTargets map[*BuildTarget]struct{}
-	// Used to arbitrate a single post-build function running at a time.
-	// It would be sort of conceptually nice if they ran simultaneously but it'd
-	// be far too hard to ensure consistency in any case where they can interact with one another.
-	buildCallbackMutex sync.Mutex
 }
 
 // NewPackage constructs a new package with the given name.
@@ -179,26 +173,6 @@ func (pkg *Package) AllChildren(target *BuildTarget) []*BuildTarget {
 // e.g. //src/... includes the packages src and src/core but not src2.
 func (pkg *Package) IsIncludedIn(label BuildLabel) bool {
 	return pkg.Name == label.PackageName || strings.HasPrefix(pkg.Name, label.PackageName+"/")
-}
-
-// EnterBuildCallback is used to arbitrate access to build callbacks & track changes to targets.
-// The supplied function will be called & a set of modified targets, along with any errors, is returned.
-func (pkg *Package) EnterBuildCallback(f func() error) (map[*BuildTarget]struct{}, error) {
-	pkg.buildCallbackMutex.Lock()
-	defer pkg.buildCallbackMutex.Unlock()
-	m := map[*BuildTarget]struct{}{}
-	pkg.modifiedTargets = m
-	err := f()
-	pkg.modifiedTargets = nil
-	return m, err
-}
-
-// MarkTargetModified marks a single target as being modified during a pre- or post- build function.
-// Correct usage of EnterBuildCallback must have been observed.
-func (pkg *Package) MarkTargetModified(target *BuildTarget) {
-	if pkg.modifiedTargets != nil {
-		pkg.modifiedTargets[target] = struct{}{}
-	}
 }
 
 // Label returns a build label uniquely identifying this package.
