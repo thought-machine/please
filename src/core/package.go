@@ -148,22 +148,6 @@ func (pkg *Package) RegisterOutput(state *BuildState, fileName string, target *B
 		}
 	}
 
-	if state.Config.FeatureFlags.PackageOutputsStrictness {
-		// Taking the new output file into account, check that if there are targets that output into a subdirectory, that subdirectory isn't created by another target.
-		outputs := make(map[string]*BuildTarget)
-		for f, t := range pkg.Outputs {
-			outputs[f] = t
-		}
-		outputs[fileName] = target
-		for filename, target := range outputs {
-			for dir := path.Dir(filename); dir != "."; dir = path.Dir(dir) {
-				if target2, present := outputs[dir]; present && target2 != target && !target.HasDependency(target2.Label.Parent()) {
-					return fmt.Errorf("Target %s outputs files into the directory %s, which is separately output by %s. You need to add a dependency to fix this", target.Label, dir, target2.Label)
-				}
-			}
-		}
-	}
-
 	pkg.Outputs[fileName] = target
 
 	return nil
@@ -201,13 +185,20 @@ func (pkg *Package) Label() BuildLabel {
 	return BuildLabel{Subrepo: pkg.SubrepoName, PackageName: pkg.Name, Name: "all"}
 }
 
-// VerifyOutputs checks all files output from this package and verifies that they're all OK;
+// EnsureOutputs checks all files output from this package and verifies that they're all OK;
 // notably it checks that if targets that output into a subdirectory, that subdirectory isn't
 // created by another target. That kind of thing can lead to subtle and annoying bugs.
-// It logs detected warnings to stdout.
+func (pkg *Package) EnsureOutputs() {
+	issues := pkg.verifyOutputs()
+	if len(issues) > 0 {
+		log.Fatalf("%s: %s", pkg.Filename, issues[0])
+	}
+}
+
+// It logs detected issues as warnings to stdout.
 func (pkg *Package) VerifyOutputs() {
-	for _, warning := range pkg.verifyOutputs() {
-		log.Warning("%s: %s", pkg.Filename, warning)
+	for _, issue := range pkg.verifyOutputs() {
+		log.Warning("%s: %s", pkg.Filename, issue)
 	}
 }
 

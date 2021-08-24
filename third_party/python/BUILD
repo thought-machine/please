@@ -452,5 +452,5 @@ pip_library(
 pip_library(
     name = "cx_oracle",
     package_name = "cx-Oracle",
-    version = "8.2.1"
+    version = "8.2.1",
 )

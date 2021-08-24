@@ -76,33 +76,6 @@ func TestRegisterOutputFilegroupTargets(t *testing.T) {
 	assert.NoError(t, pkg.RegisterOutput(state, "file.go", target2))
 }
 
-func TestRegisterOutputFileInOutputDirectory(t *testing.T) {
-	state := NewDefaultBuildState()
-	state.Config.FeatureFlags.PackageOutputsStrictness = true
-
-	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
-	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
-	pkg := NewPackage("src/core")
-
-	// Don't allow the existence of target that outputs a file into a directory that is output by another target.
-	assert.NoError(t, pkg.RegisterOutput(state, "dir1/file.go", target1))
-	assert.Error(t, pkg.RegisterOutput(state, "dir1", target2))
-	_, present := pkg.Outputs["dir1"]
-	assert.False(t, present)
-
-	// Same thing as above with a different register order.
-	assert.NoError(t, pkg.RegisterOutput(state, "dir2", target1))
-	assert.Error(t, pkg.RegisterOutput(state, "dir2/file.go", target2))
-	_, present = pkg.Outputs["dir2/file.go"]
-	assert.False(t, present)
-
-	// This is fixed by adding a dependency
-	target2.AddDependency(target1.Label)
-	assert.NoError(t, pkg.RegisterOutput(state, "dir2/file.go", target2))
-	_, present = pkg.Outputs["dir2/file.go"]
-	assert.True(t, present)
-}
-
 func TestAllChildren(t *testing.T) {
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
 	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
