@@ -270,7 +270,6 @@ func removeFilesFromCoverage(files map[string][]core.LineCoverage, extensions []
 	}
 }
 
-
 func removeGlobsFromCoverage(files map[string][]core.LineCoverage, globs []string) {
 	for filename := range files {
 		for _, glob := range globs {

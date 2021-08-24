@@ -447,7 +447,6 @@ var buildFunctions = map[string]func() int{
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension, state.Config.Cover.ExcludeGlob)
 
-
 		var stats *test.IncrementalStats
 		if opts.Cover.Incremental {
 			lines, err := scm.NewFallback(core.RepoRoot).ChangedLines()
