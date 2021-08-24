@@ -10,6 +10,7 @@ import (
 
 	"github.com/thought-machine/please/tools/please_go/install/exec"
 )
+
 var versionRegex = regexp.MustCompile("go version go1.([0-9]+).+")
 
 type Toolchain struct {

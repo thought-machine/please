@@ -54,7 +54,6 @@ func (install *PleaseGoInstall) mustSetBuildContext(tags []string) {
 
 // New creates a new PleaseGoInstall
 func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags, goTool, ccTool, pkgConfTool, out, trimPath string) *PleaseGoInstall {
-
 	i := &PleaseGoInstall{
 		srcRoot:          srcRoot,
 		moduleName:       moduleName,
