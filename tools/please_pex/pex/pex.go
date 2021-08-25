@@ -25,7 +25,6 @@ type Writer struct {
 	shebang          string
 	realEntryPoint   string
 	pexStamp         string
-	stripPackageName string
 	testSrcs         []string
 	includeLibs      []string
 	testRunner       string
