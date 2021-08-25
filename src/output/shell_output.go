@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -24,43 +25,27 @@ import (
 const durationGranularity = 10 * time.Millisecond
 const testDurationGranularity = time.Millisecond
 
-// Used to track currently building targets.
-type buildingTarget struct {
-	Label        core.BuildLabel
-	Started      time.Time
-	Finished     time.Time
-	Description  string
-	Err          error
-	Colour       string
-	Target       *core.BuildTarget
-	Eta          time.Duration
-	Active       bool
-	Failed       bool
-	Cached       bool
-	LastProgress float32
-}
-
 // MonitorState monitors the build while it's running and prints output until the results
 // channel of state has completed.
 func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTestResults bool, traceFile string) {
 	initPrintf(state.Config)
-	failedTargetMap := map[core.BuildLabel]error{}
-	buildingTargets := make([]buildingTarget, state.Config.Please.NumThreads+state.Config.NumRemoteExecutors())
 
 	if len(state.Config.Please.Motd) != 0 {
 		r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
 		printf("%s\n", state.Config.Please.Motd[r.Intn(len(state.Config.Please.Motd))])
 	}
 
-	tw := newTraceWriter(traceFile)
-	defer tw.Close()
+	var tw *traceWriter
+	if traceFile != "" {
+		tw = newTraceWriter(traceFile)
+		defer tw.Close()
+	}
 
 	displayer := setupDisplayer(state, plainOutput)
 	t := time.NewTicker(displayer.Frequency())
-	results := state.Results()
 	defer t.Stop()
-	failedTargets := []core.BuildLabel{}
-	failedNonTests := []core.BuildLabel{}
+	results := state.Results()
+	bt := newBuildingTargets(state, plainOutput)
 loop:
 	for {
 		select {
@@ -68,16 +53,23 @@ loop:
 			if !ok || (state.DebugTests && result.Status == core.TargetTesting) {
 				break loop
 			}
-			processResult(state, result, buildingTargets, plainOutput, &failedTargets, &failedNonTests, failedTargetMap, tw, streamTestResults)
+			prev := bt.ProcessResult(result)
+			if tw != nil && !result.Status.IsParse() {
+				tw.AddTrace(result, prev, result.Status.IsActive())
+			}
+			if streamTestResults && (result.Status == core.TargetTested || result.Status == core.TargetTestFailed) {
+				os.Stdout.Write(test.SerialiseResultsToXML(state.Graph.TargetOrDie(result.Label), false, state.Config.Test.StoreTestOutputOnSuccess))
+				os.Stdout.Write([]byte{'\n'})
+			}
 		case <-t.C:
-			displayer.Update(buildingTargets)
+			displayer.Update(bt.Targets())
 		}
 	}
 	displayer.Close()
 
 	duration := time.Since(state.StartTime).Round(durationGranularity)
-	if len(failedNonTests) > 0 { // Something failed in the build step.
-		printFailedBuildResults(failedNonTests, failedTargetMap, duration)
+	if len(bt.FailedNonTests) > 0 { // Something failed in the build step.
+		printFailedBuildResults(bt.FailedNonTests, bt.FailedTargets, duration)
 		return
 	}
 	if state.NeedBuild {
@@ -87,16 +79,16 @@ loop:
 				log.Fatalf("Target %s doesn't exist in build graph", label)
 			} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
 				// Do nothing, we will output about this shortly.
-			} else if target.State() < core.Built && len(failedTargetMap) == 0 && !target.AddedPostBuild {
+			} else if target.State() < core.Built && len(bt.FailedTargets) == 0 && !target.AddedPostBuild {
 				log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltTargetsMessage(state.Graph))
 			}
 		}
 	}
-	if state.NeedBuild && len(failedNonTests) == 0 {
+	if state.NeedBuild && len(bt.FailedNonTests) == 0 {
 		if state.PrepareOnly || state.PrepareShell {
 			printTempDirs(state, duration)
 		} else if state.NeedTests { // Got to the test phase, report their results.
-			printTestResults(state, failedTargets, failedTargetMap, duration, detailedTests)
+			printTestResults(state, bt.FailedTargets, duration, detailedTests)
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
 		} else if !state.NeedRun { // Must be plz build or similar, report build outputs.
@@ -153,68 +145,19 @@ func yesNo(b bool) string {
 	return "no"
 }
 
-func processResult(state *core.BuildState, result *core.BuildResult, buildingTargets []buildingTarget, plainOutput bool,
-	failedTargets, failedNonTests *[]core.BuildLabel, failedTargetMap map[core.BuildLabel]error, tw *traceWriter, streamTestResults bool) {
-	label := result.Label
-	active := result.Status.IsActive()
-	failed := result.Status.IsFailure()
-	cached := result.Status == core.TargetCached || result.Tests.Cached
-	stopped := result.Status == core.TargetBuildStopped
-	parse := result.Status == core.PackageParsing || result.Status == core.PackageParsed || result.Status == core.ParseFailed
-	// Parse events can overlap in weird ways that mess up the display.
-	if !parse {
-		tw.AddTrace(result, buildingTargets[result.ThreadID].Label, active)
-	}
-	target := state.Graph.Target(label)
-	if !parse { // Parse tasks happen on a different set of threads.
-		updateTarget(state, plainOutput, &buildingTargets[result.ThreadID], label, active, failed, cached, result.Description, result.Err, targetColour(target), target)
-	}
-	if failed {
-		failedTargetMap[label] = result.Err
-		// Don't stop here after test failure, aggregate them for later.
-		if result.Status != core.TargetTestFailed {
-			// Reset colour so the entire compiler error output doesn't appear red.
-			log.Errorf("%s failed:\x1b[0m\n%s", result.Label, shortError(result.Err))
-			state.Stop()
-		} else if msg := shortError(result.Err); msg != "" {
-			log.Errorf("%s failed: %s", result.Label, msg)
-		} else {
-			log.Errorf("%s failed", result.Label)
-		}
-		*failedTargets = append(*failedTargets, label)
-		if result.Status != core.TargetTestFailed {
-			*failedNonTests = append(*failedNonTests, label)
-		}
-	} else if stopped {
-		failedTargetMap[result.Label] = nil
-	} else if plainOutput && state.ShowTestOutput && result.Status == core.TargetTested && target != nil {
-		// If using interactive output we'll print it afterwards.
-		for _, testCase := range target.Test.Results.TestCases {
-			printf("Finished test %s:\n", testCase.Name)
-			for _, testExecution := range testCase.Executions {
-				showExecutionOutput(testExecution)
-			}
-		}
-	}
-	if streamTestResults && (result.Status == core.TargetTested || result.Status == core.TargetTestFailed) {
-		os.Stdout.Write(test.SerialiseResultsToXML(target, false, state.Config.Test.StoreTestOutputOnSuccess))
-		os.Stdout.Write([]byte{'\n'})
-	}
-}
-
-func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, failedTargetsMap map[core.BuildLabel]error, duration time.Duration, detailed bool) {
+func printTestResults(state *core.BuildState, failedTargets map[core.BuildLabel]error, duration time.Duration, detailed bool) {
 	if len(failedTargets) > 0 {
-		done := map[core.BuildLabel]bool{}
-		for _, failed := range failedTargets {
-			if done[failed] {
-				continue
-			}
-			done[failed] = true
+		targets := make(core.BuildLabels, 0, len(failedTargets))
+		for t := range failedTargets {
+			targets = append(targets, t)
+		}
+		sort.Sort(targets)
+		for _, failed := range targets {
 			target := state.Graph.TargetOrDie(failed)
 			if target.Test.Results.Failures() == 0 && target.Test.Results.Errors() == 0 {
 				if target.Test.Results.TimedOut {
 				} else {
-					err := failedTargetsMap[target.Label]
+					err := failedTargets[failed]
 					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}: %v\n", target.Label, err)
 					target.Test.Results.TestCases = append(target.Test.Results.TestCases, core.TestCase{
 						Executions: []core.TestExecution{
@@ -524,57 +467,6 @@ func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap ma
 			printf("    ${BOLD_RED}%s${RESET}\n", label)
 		}
 	}
-}
-
-func updateTarget(state *core.BuildState, plainOutput bool, buildingTarget *buildingTarget, label core.BuildLabel,
-	active bool, failed bool, cached bool, description string, err error, colour string, target *core.BuildTarget) {
-	updateTarget2(buildingTarget, label, active, failed, cached, description, err, colour, target)
-	if plainOutput {
-		if !active {
-			active := pluralise(state.NumActive(), "task", "tasks")
-			log.Info("[%d/%s] %s: %s [%3.1fs]", state.NumDone(), active, label.String(), description, time.Since(buildingTarget.Started).Seconds())
-		} else {
-			log.Info("%s: %s", label.String(), description)
-		}
-	}
-}
-
-func updateTarget2(target *buildingTarget, label core.BuildLabel, active bool, failed bool, cached bool, description string, err error, colour string, t *core.BuildTarget) {
-	target.Label = label
-	target.Description = description
-	if !target.Active {
-		// Starting to build now.
-		target.Started = time.Now()
-		target.Finished = target.Started
-	} else if !active {
-		// finished building
-		target.Finished = time.Now()
-	}
-	target.Active = active
-	target.Failed = failed
-	target.Cached = cached
-	target.Err = err
-	target.Colour = colour
-	target.Target = t
-}
-
-func targetColour(target *core.BuildTarget) string {
-	if target == nil {
-		return "${BOLD_CYAN}" // unknown
-	} else if target.IsBinary {
-		return "${BOLD}" + targetColour2(target)
-	} else {
-		return targetColour2(target)
-	}
-}
-
-func targetColour2(target *core.BuildTarget) string {
-	for _, require := range target.Requires {
-		if colour, present := replacements[require]; present {
-			return colour
-		}
-	}
-	return "${WHITE}"
 }
 
 // Since this is a gentleman's build tool, we'll make an effort to get plurals correct

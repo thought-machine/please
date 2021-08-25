@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"go/build"
+	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/thought-machine/please/tools/please_go/install/exec"
@@ -35,13 +37,24 @@ type PleaseGoInstall struct {
 	collectedLdFlags map[string]struct{}
 }
 
+func (install *PleaseGoInstall) mustSetBuildContext(tags []string) {
+	install.buildContext = build.Default
+	install.buildContext.BuildTags = append(install.buildContext.BuildTags, tags...)
+
+	version, err := install.tc.GoMinorVersion()
+	if err != nil {
+		log.Fatalf("failed to determine go version: %v", err)
+	}
+
+	install.buildContext.ReleaseTags = []string{}
+	for i := 1; i <= version; i++ {
+		install.buildContext.ReleaseTags = append(install.buildContext.ReleaseTags, "go1."+strconv.Itoa(i))
+	}
+}
+
 // New creates a new PleaseGoInstall
 func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags, goTool, ccTool, pkgConfTool, out, trimPath string) *PleaseGoInstall {
-	ctx := build.Default
-	ctx.BuildTags = append(ctx.BuildTags, buildTags...)
-
-	return &PleaseGoInstall{
-		buildContext:     ctx,
+	i := &PleaseGoInstall{
 		srcRoot:          srcRoot,
 		moduleName:       moduleName,
 		importConfig:     importConfig,
@@ -59,6 +72,8 @@ func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags,
 			Exec:          &exec.Executor{Stdout: os.Stdout, Stderr: os.Stderr},
 		},
 	}
+	i.mustSetBuildContext(buildTags)
+	return i
 }
 
 // Install will compile the provided packages. Packages can be wildcards i.e. `foo/...` which compiles all packages

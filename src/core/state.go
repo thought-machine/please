@@ -1190,13 +1190,18 @@ func (s BuildResultStatus) Category() string {
 	switch s {
 	case PackageParsing, PackageParsed, ParseFailed:
 		return "Parse"
-	case TargetBuilding, TargetBuildStopped, TargetBuilt, TargetBuildFailed:
+	case TargetBuilding, TargetBuildStopped, TargetBuilt, TargetCached, TargetBuildFailed:
 		return "Build"
 	case TargetTesting, TargetTestStopped, TargetTested, TargetTestFailed:
 		return "Test"
 	default:
 		return "Other"
 	}
+}
+
+// IsParse returns true if this status is a parse event
+func (s BuildResultStatus) IsParse() bool {
+	return s == PackageParsing || s == PackageParsed || s == ParseFailed
 }
 
 // IsFailure returns true if this status represents a failure.

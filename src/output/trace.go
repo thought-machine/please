@@ -26,9 +26,6 @@ type traceWriter struct {
 // newTraceWriter returns a new traceWriter writing to the given file.
 // The filename may be empty in which case it will silently discard all information given.
 func newTraceWriter(filename string) *traceWriter {
-	if filename == "" {
-		return &traceWriter{}
-	}
 	f, err := os.Create(filename)
 	if err != nil {
 		log.Errorf("Couldn't create trace file: %s", err)
@@ -46,9 +43,7 @@ func newTraceWriter(filename string) *traceWriter {
 
 // Close closes this write and any associated files.
 func (tw *traceWriter) Close() error {
-	if tw.b == nil {
-		return nil
-	} else if _, err := tw.b.Write([]byte{'\n', ']', '\n'}); err != nil {
+	if _, err := tw.b.Write([]byte{'\n', ']', '\n'}); err != nil {
 		return err
 	} else if err := tw.b.Flush(); err != nil {
 		return err
@@ -59,9 +54,7 @@ func (tw *traceWriter) Close() error {
 // AddTrace adds a single trace to this writer.
 func (tw *traceWriter) AddTrace(result *core.BuildResult, previous core.BuildLabel, active bool) {
 	// It's a bit fiddly to keep all the phases in line here.
-	if tw.b == nil {
-		return
-	} else if !active {
+	if !active {
 		tw.writeEvent(result, "E")
 	} else if result.Label != previous {
 		tw.writeEvent(result, "B")
