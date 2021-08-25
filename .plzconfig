@@ -23,7 +23,7 @@ TestMain = ///pleasings//cc:unittest_main
 
 [java]
 javacworker = //tools/java:javac_worker
-junitrunner = //tools/java:junit_runner
+junitrunner = //tools/java:junit5_runner
 jarcattool = @//tools/jarcat
 
 [proto]
@@ -85,3 +85,4 @@ accept = notice
 
 [featureflags]
 JavaBinaryExecutableByDefault = true
+UseJunit5Runner = true

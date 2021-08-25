@@ -317,15 +317,18 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
     )
     # As above, would be nicer if we could make the jars self-executing again.
     cmd, tools = _jarcat_cmd('build.please.main.TestMain')
-    tools['junit'] = [CONFIG.JUNIT_RUNNER]
 
     if toolchain:
         java = f'{toolchain}|java'
     else:
         java = 'java'
 
-    cmd = 'ln -s "$(if [ -f "$TOOLS_JUNIT" ]; then echo "$TOOLS_JUNIT"; else echo "$(which "$TOOLS_JUNIT")"; fi)" . && ' + cmd
-    test_cmd = f'$TOOLS_JAVA -Dbuild.please.testpackage={test_package} {jvm_args} -jar $(location :{name}) {flags}'
+    if CONFIG.FF_USE_JUNIT5_RUNNER:
+        test_cmd = f'$TOOLS_JAVA -Dbuild.please.testpackage={test_package} {jvm_args} -jar $TOOLS_JUNIT --config=junit.platform.output.capture.stderr=true --config=junit.platform.output.capture.stdout=true --classpath $TEST --scan-classpath --reports-dir=$RESULTS_FILE {flags}'
+    else:
+        tools['junit'] = [CONFIG.JUNIT_RUNNER]
+        cmd = 'ln -s "$(if [ -f "$TOOLS_JUNIT" ]; then echo "$TOOLS_JUNIT"; else echo "$(which "$TOOLS_JUNIT")"; fi)" . && ' + cmd
+        test_cmd = f'$TOOLS_JAVA -Dbuild.please.testpackage={test_package} {jvm_args} -jar $(location :{name}) {flags}'
 
     deps = [lib_rule]
     if worker:
@@ -336,7 +339,7 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
         name=name,
         cmd=cmd,
         test_cmd=test_cmd,
-        test_tools= {"JAVA": [java]},
+        test_tools= {"JAVA": [java], "JUNIT": [CONFIG.JUNIT_RUNNER]} if CONFIG.FF_USE_JUNIT5_RUNNER else {"JAVA": [java]},
         data=data,
         outs=[name + '.jar'],
         deps=deps,

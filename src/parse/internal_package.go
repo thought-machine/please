@@ -37,6 +37,7 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 			"jarcat",
 			"javac_worker",
 			"junit_runner.jar",
+			"junit5_runner.jar",
 			"please_go",
 			"please_go_embed",
 			"please_go_filter",

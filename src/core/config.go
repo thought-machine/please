@@ -373,7 +373,11 @@ func DefaultConfiguration() *Configuration {
 	config.Python.PexTool = "//_please:please_pex"
 	config.Java.JavacWorker = "//_please:javac_worker"
 	config.Java.JarCatTool = "//_please:jarcat"
-	config.Java.JUnitRunner = "//_please:junit_runner"
+	if config.FeatureFlags.UseJunit5Runner {
+		config.Java.JUnitRunner = "//_please:junit5_runner"
+	} else {
+		config.Java.JUnitRunner = "//_please:junit_runner"
+	}
 
 	return &config
 }
@@ -588,6 +592,7 @@ type Configuration struct {
 	FeatureFlags struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
+		UseJunit5Runner	  			  bool `help:"Use the official junit5 runner rather than the Please junit_runner" var:"FF_USE_JUNIT5_RUNNER"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string `help:"The gateway URL to push prometheus updates to."`
