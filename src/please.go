@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/thought-machine/go-flags"
+	"go.uber.org/automaxprocs/maxprocs"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/assets"
@@ -1186,6 +1187,9 @@ func initBuild(args []string) string {
 	}
 	// Init logging, but don't do file output until we've chdir'd.
 	cli.InitLogging(opts.OutputFlags.Verbosity)
+	if _, err := maxprocs.Set(maxprocs.Logger(log.Info), maxprocs.Min(opts.BuildFlags.NumThreads)); err != nil {
+		log.Error("Failed to set GOMAXPROCS: %s", err)
+	}
 
 	command := cli.ActiveCommand(parser.Command)
 	if opts.Complete != "" {

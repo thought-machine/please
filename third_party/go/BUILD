@@ -939,3 +939,13 @@ go_module(
     module = "github.com/beorn7/perks",
     version = "v1.0.1",
 )
+
+go_module(
+    name = "automaxprocs",
+    install = [
+        "...",
+    ],
+    licences = ["MIT"],
+    module = "go.uber.org/automaxprocs",
+    version = "v1.4.0",
+)
