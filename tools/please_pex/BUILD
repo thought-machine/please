@@ -64,3 +64,22 @@ python_test(
         "//third_party/python:requests",
     ],
 )
+
+python_library(
+    name = "pex_root_test_lib",
+    srcs = ["pex_root_test_lib.py"],
+    deps = [
+        "//third_party/python:certifi",
+    ],
+    use_package_root=True,
+)
+
+python_test(
+    name = "pex_import_using_root_test",
+    srcs = ["pex_import_using_root_test.py"],
+    deps = [
+        "//third_party/python/root:six",
+        ":pex_root_test_lib",
+    ],
+)
+
