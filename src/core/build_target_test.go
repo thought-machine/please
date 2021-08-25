@@ -523,12 +523,12 @@ func TestNamedOutputs(t *testing.T) {
 	assert.Equal(t, []string{"hdrs", "srcs"}, target.DeclaredOutputNames())
 }
 
-func TestAllLocalSources(t *testing.T) {
+func TestAllLocalSourcePaths(t *testing.T) {
 	target := makeTarget1("//src/core:target1", "")
 	target.AddSource(FileLabel{File: "target1.go", Package: "src/core"})
 	target.AddSource(BuildLabel{Name: "target2", PackageName: "src/core"})
 	target.AddSource(SystemFileLabel{Path: "/usr/bin/bash"})
-	assert.Equal(t, []string{"src/core/target1.go"}, target.AllLocalSources())
+	assert.Equal(t, []string{"src/core/target1.go"}, target.AllLocalSourcePaths())
 }
 
 func TestAllURLs(t *testing.T) {

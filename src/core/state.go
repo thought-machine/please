@@ -782,7 +782,7 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 		// It's difficult to handle non-file sources because we don't know if they're
 		// parsed yet - recall filegroups are a special case for this since they don't
 		// explicitly declare their outputs but can re-output other rules' outputs.
-		for _, src := range target.AllLocalSources() {
+		for _, src := range target.AllLocalSourceLocalPaths() {
 			pkg.MustRegisterOutput(state, src, target)
 		}
 	} else {
