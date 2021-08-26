@@ -552,10 +552,10 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     if post_install_commands:
         cmd += post_install_commands
 
-    jarcat_command = '$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])
-
     if use_package_root:
-        jarcat_command += ' -r $PKG:.'
+        jarcat_command = '$TOOL z -d -i ' + ' -i '.join(outs or [name])
+    else:
+        jarcat_command = '$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])
 
     cmd += [jarcat_command]
 
@@ -563,7 +563,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
 
     wheel_rule = build_rule(
         name = name,
-        tag = 'wheel',
+        tag = None if use_package_root else 'wheel',
         cmd = ' && '.join(cmd),
         outs = [name + '.pex.zip'],
         srcs = {
@@ -580,6 +580,9 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         sandbox = False,
         labels = ['py:zip-unsafe', label] if not zip_safe else [label],
     )
+
+    if use_package_root:
+        return wheel_rule
 
     cmd = '$TOOL x $SRCS -s $PKG_DIR'
 
