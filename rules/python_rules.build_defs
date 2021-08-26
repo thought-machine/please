@@ -552,10 +552,12 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     if post_install_commands:
         cmd += post_install_commands
 
-    cmd += ['$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
+    jarcat_command = '$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])
 
     if use_package_root:
-        cmd += ' -r $PKG:.'
+        jarcat_command += ' -r $PKG:.'
+
+    cmd += [jarcat_command]
 
     label = f'whl:{package_name}=={version}'
 
@@ -578,12 +580,15 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         sandbox = False,
         labels = ['py:zip-unsafe', label] if not zip_safe else [label],
     )
+
     cmd = '$TOOL x $SRCS -s $PKG_DIR'
+
     if outs:
         # Hacky solution to handle things being in subdirectories in awkward ways.
         before, _, after = outs[0].partition('/')
         if after:
             cmd = f'rm -rf {before} && {cmd}'
+
     return build_rule(
         name = name,
         srcs = [wheel_rule],

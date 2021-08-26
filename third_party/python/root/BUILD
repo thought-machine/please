@@ -17,11 +17,13 @@ python_wheel(
     outs = ["six.py"],
     hashes = ["5a5d393fb2591037184a11b8dc40dc677bfd8c53"],
     version = "1.14.0",
+    use_package_root=True,
 )
 
 python_wheel(
     name = "certifi",
     hashes = ["adeac89bf3f6089e98e78b474cf4f5107b659e22"],
     version = "2019.11.28",
+    use_package_root=True,
 )
 

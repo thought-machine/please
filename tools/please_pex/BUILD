@@ -69,7 +69,7 @@ python_library(
     name = "pex_root_test_lib",
     srcs = ["pex_root_test_lib.py"],
     deps = [
-        "//third_party/python:certifi",
+        "//third_party/python/root:certifi",
     ],
     use_package_root=True,
 )
@@ -81,5 +81,6 @@ python_test(
         "//third_party/python/root:six",
         ":pex_root_test_lib",
     ],
+    use_package_root=True,
 )
 
