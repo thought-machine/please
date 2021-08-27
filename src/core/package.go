@@ -185,12 +185,11 @@ func (pkg *Package) Label() BuildLabel {
 	return BuildLabel{Subrepo: pkg.SubrepoName, PackageName: pkg.Name, Name: "all"}
 }
 
-// EnsureOutputs checks all files output from this package and verifies that they're all OK;
+// MustVerifyOutputs checks all files output from this package and verifies that they're all OK;
 // notably it checks that if targets that output into a subdirectory, that subdirectory isn't
 // created by another target. That kind of thing can lead to subtle and annoying bugs.
-func (pkg *Package) EnsureOutputs() {
-	issues := pkg.verifyOutputs()
-	if len(issues) > 0 {
+func (pkg *Package) MustVerifyOutputs() {
+	if issues := pkg.verifyOutputs(); len(issues) > 0 {
 		log.Fatalf("%s: %s", pkg.Filename, issues[0])
 	}
 }
