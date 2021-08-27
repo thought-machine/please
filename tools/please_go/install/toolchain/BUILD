@@ -12,10 +12,10 @@ go_library(
 go_test(
     name = "toolchain_test",
     srcs = ["toolchain_test.go"],
-    deps = [
-        "//third_party/go:testify",
-        ":toolchain",
-    ],
     data = ["//third_party/go:toolchain|go"],
     labels = ["no-musl"],
+    deps = [
+        ":toolchain",
+        "//third_party/go:testify",
+    ],
 )
