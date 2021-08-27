@@ -216,9 +216,8 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 	// Verifies some details of the output files. This can only be perfomed after the whole package has been parsed as
 	// it guarantees that all necessary information between targets has been retrieved.
 	if state.Config.FeatureFlags.PackageOutputsStrictness {
-		pkg.MustVerifyOutputs()
+		go pkg.MustVerifyOutputs()
 	} else {
-		// Don't need to wait for this since it only issues warnings.
 		go pkg.VerifyOutputs()
 	}
 
