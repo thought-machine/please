@@ -571,9 +571,14 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
 
     label = f'whl:{package_name}=={version}'
 
+    # If we're using the package root for output, the later subfolder
+    # processing isn't required anymore, so we can just return the result
+    # of this rule.
     wheel_rule = build_rule(
         name = name,
         tag = None if use_package_root else 'wheel',
+        hashes = hashes if use_package_root else None,
+        visibility = visibility if use_package_root else None,
         cmd = ' && '.join(cmd),
         outs = [name + '.pex.zip'],
         srcs = {
