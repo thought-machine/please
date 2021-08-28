@@ -91,6 +91,22 @@ func TestExpandOriginalLabelsOrdering(t *testing.T) {
 	assert.Equal(t, expected, state.ExpandOriginalLabels())
 }
 
+func TestAddTargetFilegroupPackageOutputs(t *testing.T) {
+	state := NewDefaultBuildState()
+
+	pkg := NewPackage("src/core")
+	target := NewBuildTarget(ParseBuildLabel("//src/core:test", ""))
+	target.IsFilegroup = true
+	target.AddSource(NewFileLabel("file.txt", pkg))
+	pkg.AddTarget(target)
+
+	state.AddTarget(pkg, target)
+	assert.Len(t, pkg.Outputs, 1)
+	// This tests that the output shouldn't include the package name
+	_, exists := pkg.Outputs["file.txt"]
+	assert.True(t, exists)
+}
+
 func TestAddDepsToTarget(t *testing.T) {
 	state := NewDefaultBuildState()
 	_, builds, _, _, _ := state.TaskQueues() //nolint:dogsled

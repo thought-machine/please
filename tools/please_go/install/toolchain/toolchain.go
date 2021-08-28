@@ -4,10 +4,14 @@ import (
 	"fmt"
 	"go/build"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/thought-machine/please/tools/please_go/install/exec"
 )
+
+var versionRegex = regexp.MustCompile("go version go1.([0-9]+).+")
 
 type Toolchain struct {
 	CcTool        string
@@ -80,8 +84,8 @@ func (tc *Toolchain) Pack(dir, archive string, objFiles []string) error {
 }
 
 // Link will link the archive into an executable
-func (tc *Toolchain) Link(archive, out, importcfg, flags string) error {
-	return tc.Exec.Run("%s tool link -extld %s -extldflags \"$(cat %s)\" -importcfg %s -o %s %s", tc.GoTool, tc.CcTool, flags, importcfg, out, archive)
+func (tc *Toolchain) Link(archive, out, importcfg string, ldFlags []string) error {
+	return tc.Exec.Run("%s tool link -extld %s -extldflags \"%s\" -importcfg %s -o %s %s", tc.GoTool, tc.CcTool, strings.Join(ldFlags, " "), importcfg, out, archive)
 }
 
 // Symabis will generate the asm header as well as the abi symbol file for the provided asm files.
@@ -115,6 +119,15 @@ func (tc *Toolchain) Asm(sourceDir, objectDir, trimpath string, asmFiles []strin
 	}
 
 	return objFiles, nil
+}
+
+func (tc *Toolchain) GoMinorVersion() (int, error) {
+	out, err := tc.Exec.CombinedOutput(tc.GoTool, "version")
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.Atoi(string(versionRegex.FindSubmatch(out)[1]))
 }
 
 func (tc *Toolchain) PkgConfigCFlags(cfgs []string) ([]string, error) {

@@ -34,7 +34,7 @@ func WhatInputs(graph *core.BuildGraph, files []string, hidden, printFiles bool)
 func whatInputs(targets []*core.BuildTarget, file string, hidden bool) []core.BuildLabel {
 	labels := make(map[core.BuildLabel]struct{})
 	for _, target := range targets {
-		for _, source := range target.AllLocalSources() {
+		for _, source := range target.AllLocalSourcePaths() {
 			if source == file {
 				label := target.Label
 				if !hidden {

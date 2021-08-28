@@ -163,6 +163,12 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	args[licencesBuildRuleArgIdx] = defaultFromConfig(s.config, args[licencesBuildRuleArgIdx], "DEFAULT_LICENCES")
 	args[sandboxBuildRuleArgIdx] = defaultFromConfig(s.config, args[sandboxBuildRuleArgIdx], "BUILD_SANDBOX")
 	args[testSandboxBuildRuleArgIdx] = defaultFromConfig(s.config, args[testSandboxBuildRuleArgIdx], "TEST_SANDBOX")
+
+	// Don't want to remote execute a target if we need system sources
+	if args[systemSrcsBuildRuleArgIdx] != None {
+		args[localBuildRuleArgIdx] = pyString("True")
+	}
+
 	target := createTarget(s, args)
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
 	populateTarget(s, target, args)
@@ -813,13 +819,13 @@ func addOut(s *scope, args []pyObject) pyObject {
 	out := string(args[2].(pyString))
 	if out == "" {
 		target.AddOutput(name)
-		s.pkg.MustRegisterOutput(name, target)
+		s.pkg.MustRegisterOutput(s.state, name, target)
 	} else {
 		_, ok := target.EntryPoints[name]
 		s.NAssert(ok, "Named outputs can't have the same name as entry points")
 
 		target.AddNamedOutput(name, out)
-		s.pkg.MustRegisterOutput(out, target)
+		s.pkg.MustRegisterOutput(s.state, out, target)
 	}
 	return None
 }

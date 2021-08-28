@@ -36,6 +36,7 @@ go_binary(
         "//src/utils",
         "//src/watch",
         "//src/worker",
+        "//third_party/go:automaxprocs",
         "//third_party/go:go-flags",
         "//third_party/go:logging",
     ],

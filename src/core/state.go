@@ -782,17 +782,17 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 		// It's difficult to handle non-file sources because we don't know if they're
 		// parsed yet - recall filegroups are a special case for this since they don't
 		// explicitly declare their outputs but can re-output other rules' outputs.
-		for _, src := range target.AllLocalSources() {
-			pkg.MustRegisterOutput(src, target)
+		for _, src := range target.AllLocalSourceLocalPaths() {
+			pkg.MustRegisterOutput(state, src, target)
 		}
 	} else {
 		for _, out := range target.DeclaredOutputs() {
-			pkg.MustRegisterOutput(out, target)
+			pkg.MustRegisterOutput(state, out, target)
 		}
 		if target.IsTest() {
 			for _, out := range target.Test.Outputs {
 				if !fs.IsGlob(out) {
-					pkg.MustRegisterOutput(out, target)
+					pkg.MustRegisterOutput(state, out, target)
 				}
 			}
 		}
@@ -1190,13 +1190,18 @@ func (s BuildResultStatus) Category() string {
 	switch s {
 	case PackageParsing, PackageParsed, ParseFailed:
 		return "Parse"
-	case TargetBuilding, TargetBuildStopped, TargetBuilt, TargetBuildFailed:
+	case TargetBuilding, TargetBuildStopped, TargetBuilt, TargetCached, TargetBuildFailed:
 		return "Build"
 	case TargetTesting, TargetTestStopped, TargetTested, TargetTestFailed:
 		return "Test"
 	default:
 		return "Other"
 	}
+}
+
+// IsParse returns true if this status is a parse event
+func (s BuildResultStatus) IsParse() bool {
+	return s == PackageParsing || s == PackageParsed || s == ParseFailed
 }
 
 // IsFailure returns true if this status represents a failure.

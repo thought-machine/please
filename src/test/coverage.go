@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/thought-machine/please/src/fs"
+
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 )
@@ -250,11 +252,13 @@ type IncrementalStats struct {
 }
 
 // RemoveFilesFromCoverage removes any files with extensions matching the given set from coverage.
-func RemoveFilesFromCoverage(coverage core.TestCoverage, extensions []string) {
+func RemoveFilesFromCoverage(coverage core.TestCoverage, extensions []string, globs []string) {
 	for _, files := range coverage.Tests {
 		removeFilesFromCoverage(files, extensions)
+		removeGlobsFromCoverage(files, globs)
 	}
 	removeFilesFromCoverage(coverage.Files, extensions)
+	removeGlobsFromCoverage(coverage.Files, globs)
 }
 
 func removeFilesFromCoverage(files map[string][]core.LineCoverage, extensions []string) {
@@ -267,17 +271,10 @@ func removeFilesFromCoverage(files map[string][]core.LineCoverage, extensions []
 	}
 }
 
-func RemoveGlobsFromCoverage(coverage core.TestCoverage, globs []string) {
-	for _, files := range coverage.Tests {
-		removeGlobsFromCoverage(files, globs)
-	}
-	removeGlobsFromCoverage(coverage.Files, globs)
-}
-
 func removeGlobsFromCoverage(files map[string][]core.LineCoverage, globs []string) {
 	for filename := range files {
 		for _, glob := range globs {
-			if ok, _ := filepath.Match(glob, filename); ok {
+			if ok, _ := fs.Match(glob, filename); ok {
 				delete(files, filename)
 			}
 		}
