@@ -42,9 +42,11 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
                          'pypy' or whatever.
       strip (bool): If True, the original sources are stripped and only bytecode is output.
       labels (list): Any labels to apply to this rule.
+      use_package_root (bool): If True, the current package location is not used as the python module name.
     """
     if not zip_safe:
         labels += ['py:zip-unsafe']
+
     if srcs or resources:
         cmd = '$TOOLS_JARCAT z -d -o ${OUTS} -i .'
 
@@ -100,8 +102,8 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
 
 def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
                   data:list=None, visibility:list=None, test_only:bool=False, zip_safe:bool=None,
-                  site:bool=False, strip:bool=False, use_package_root:bool=CONFIG.PYTHON_USE_PACKAGE_ROOT,
-                  interpreter:str=None, shebang:str='', labels:list&features&tags=[]):
+                  site:bool=False, strip:bool=False, interpreter:str=None, shebang:str='',
+                  labels:list&features&tags=[], use_package_root:bool=CONFIG.PYTHON_USE_PACKAGE_ROOT):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -132,17 +134,20 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
       shebang (str): Exact shebang to apply to the generated file. By default we will
                      determine something appropriate for the given interpreter.
       labels (list): Labels to apply to this rule.
+      use_package_root (bool): If True, the current package location is not used as the python module name.
     """
     shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     zipsafe_flag = '' if zip_safe is False else '--zip_safe'
-    cmd = '$TOOLS_PEX -s "%s" -m "%s" %s --interpreter_options="%s" --stamp="$RULE_HASH"' % (
-        shebang, CONFIG.PYTHON_MODULE_DIR, zipsafe_flag, CONFIG.PYTHON_INTERPRETER_OPTIONS)
+    cmd = '$TOOLS_PEX -s "%s" %s --interpreter_options="%s" --stamp="$RULE_HASH"' % (
+        shebang, zipsafe_flag, CONFIG.PYTHON_INTERPRETER_OPTIONS)
 
     if site:
         cmd += ' -S'
 
     if use_package_root:
         cmd += ' --strip_package_name=$PKG'
+    else:
+        cmd += ' -m "%s"' % CONFIG.PYTHON_MODULE_DIR
 
     assert main not in srcs, "main file should not be included in srcs"
 
@@ -176,10 +181,12 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         test_only=test_only,
     )
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
-    cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
+    cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --strict'
 
     if use_package_root:
         cmd += ' -r $PKG:.'
+    else:
+        cmd += ' --add_init_py'
 
     if strip:
         cmd += ' --strip_py'
@@ -250,6 +257,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
                    started with the -S flag to avoid importing site.
       test_runner (str): Specify which Python test runner to use for these tests. One of
                          `unittest`, `pytest`, or a custom test runner entry point.
+      use_package_root (bool): If True, the current package location is not used as the python module name.
     """
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     test_runner = test_runner or CONFIG.PYTHON_TEST_RUNNER
@@ -363,6 +371,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
       licences (list): Licences this rule is subject to. Default attempts to detect from package metadata.
       pip_flags (str): List of additional flags to pass to pip.
       strip (list): Files to strip after install. Note that these are done at any level.
+      use_package_root (bool): If True, the current package location is not used as the python module name.
     """
     pip_target_dir = "pip_install"
 
@@ -500,6 +509,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
       name_scheme (str): The templatized wheel naming scheme (available template variables
                          are `url_base`, `package_name`, `initial`, and `version`).
       strip (list): Files to strip after install. Note that these are done at any level.
+      use_package_root (bool): If True, the current package location is not used as the python module name.
     """
     package_name = package_name or name.replace('-', '_')
     initial = package_name[0]
