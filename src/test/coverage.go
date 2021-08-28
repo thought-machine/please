@@ -6,12 +6,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/thought-machine/please/src/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/thought-machine/please/src/fs"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
