@@ -1033,6 +1033,18 @@
         </p>
       </div>
     </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cover.excludeglob">
+          ExcludeGlob<span class="normal">(repeated string)</span>
+        </h3>
+
+        <p>
+          Exclude glob pattern from coverage. <br />
+          Typically this is for generated code and it is useful when there is no other discrimination possible.
+        </p>
+      </div>
+    </li>
   </ul>
 </section>
 
@@ -1288,6 +1300,18 @@
       <div>
         <h3 class="mt1 f6 lh-title" id="go.embedtool">EmbdedTool</h3>
         <p>{{ index .ConfigHelpText "go.embedtool" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.cflags">CFalgs</h3>
+        <p>{{ index .ConfigHelpText "go.cflags" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.ldflags">LDFlags</h3>
+        <p>{{ index .ConfigHelpText "go.ldflags" }}</p>
       </div>
     </li>
   </ul>

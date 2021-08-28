@@ -397,9 +397,12 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
 
     pip_tool = "$TOOLS_PIP" if CONFIG.PIP_TOOL else '$TOOLS_PYTHON -m pip'
 
+    # Unset these compiler and linker flags as macOS doesn't have all these options.
+    pip_compile_flags = 'CFLAGS=" -Wl,--build-id=none -g0 " LDFLAGS=" -Wl,--build-id=none"' if CONFIG.HOSTOS != 'darwin' else 'CFLAGS=" -g0"'
+
     pip_cmd = (
         f'mkdir {pip_target_dir} && '
-        f'PIP_CONFIG_FILE=/dev/null  CFLAGS=" -Wl,--build-id=none -g0 " LDFLAGS=" -Wl,--build-id=none " {pip_tool} install --isolated --no-deps --prefix= --no-compile '
+        f'PIP_CONFIG_FILE=/dev/null {pip_compile_flags} {pip_tool} install --isolated --no-deps --prefix= --no-compile '
         f'--no-cache-dir --default-timeout=60 --target={target}'
     )
 

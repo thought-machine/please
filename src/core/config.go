@@ -480,6 +480,7 @@ type Configuration struct {
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to .go, .py, .java, .tsx, .ts, .js, .cc, .h, and .c"`
 		ExcludeExtension []string `help:"Extensions of files to exclude from coverage.\nTypically this is for generated code; the default is to exclude protobuf extensions like .pb.go, _pb2.py, etc."`
+		ExcludeGlob      []string `help:"Exclude glob patterns from coverage.\nTypically this is for generated code and it is useful when there is no other discrimination possible."`
 	} `help:"Configuration relating to coverage reports."`
 	Gc struct {
 		Keep      []BuildLabel `help:"Marks targets that gc should always keep. Can include meta-targets such as //test/... and //docs:all."`
@@ -497,6 +498,8 @@ type Configuration struct {
 		EmbedTool        string `help:"Sets the location of the please_go_embed tool that is used to parse //go:embed directives." var:"GO_EMBED_TOOL"`
 		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
 		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
+		CFlags           string `help:"Sets the CFLAGS env var for go rules." var:"GO_C_FLAGS"`
+		LDFlags          string `help:"Sets the LDFLAGS env var for go rules." var:"GO_LD_FLAGS"`
 	} `help:"Please has built-in support for compiling Go, and of course is written in Go itself.\nSee the config subfields or the Go rules themselves for more information.\n\nNote that Please is a bit more flexible than Go about directory layout - for example, it is possible to have multiple packages in a directory, but it's not a good idea to push this too far since Go's directory layout is inextricably linked with its import paths."`
 	Python struct {
 		PipTool             string   `help:"The tool that is invoked during pip_library rules." var:"PIP_TOOL"`
@@ -586,6 +589,7 @@ type Configuration struct {
 	FeatureFlags struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
+		PackageOutputsStrictness      bool `help:"Prevents certain combinations of target outputs within a package that result in nondeterminist behaviour"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string `help:"The gateway URL to push prometheus updates to."`

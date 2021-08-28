@@ -76,6 +76,15 @@ func TestInterpreterInterpreterOperators(t *testing.T) {
 	assert.True(t, s.Lookup("z").IsTruthy())
 }
 
+// Test that local is forced to be True if there are any system_srcs set
+func TestSetLocalTrueIfSystemSrcs(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/system_srcs.build")
+	require.NoError(t, err)
+	assert.Equal(t, 2, s.pkg.NumTargets())
+	assert.Equal(t, s.pkg.Target("system_srcs_set").Local, true)
+	assert.Equal(t, s.pkg.Target("system_srcs_unset").Local, false)
+}
+
 func TestInterpreterInterpolation(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/interpolation.build")
 	require.NoError(t, err)

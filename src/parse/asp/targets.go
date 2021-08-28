@@ -339,7 +339,7 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 				s.Assert(ok, "outs must be strings")
 				anon(string(out))
 				if !optional || !strings.HasPrefix(string(out), "*") {
-					s.pkg.MustRegisterOutput(string(out), t)
+					s.pkg.MustRegisterOutput(s.state, string(out), t)
 				}
 			}
 		}
@@ -354,7 +354,7 @@ func addMaybeNamedOutput(s *scope, name string, obj pyObject, anon func(string),
 					s.Assert(ok, "outs must be strings")
 					named(k, string(out))
 					if !optional || !strings.HasPrefix(string(out), "*") {
-						s.pkg.MustRegisterOutput(string(out), t)
+						s.pkg.MustRegisterOutput(s.state, string(out), t)
 					}
 				}
 			}

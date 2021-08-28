@@ -9,6 +9,7 @@ import (
 )
 
 func makeTarget2(g *core.BuildGraph, label string, filegroup bool, outputs ...string) *core.BuildTarget {
+	s := core.NewDefaultBuildState()
 	l := core.ParseBuildLabel(label, "")
 	t := core.NewBuildTarget(l)
 
@@ -25,7 +26,7 @@ func makeTarget2(g *core.BuildGraph, label string, filegroup bool, outputs ...st
 	} else {
 		for _, out := range outputs {
 			t.AddOutput(out)
-			p.MustRegisterOutput(out, t)
+			p.MustRegisterOutput(s, out, t)
 		}
 	}
 	p.AddTarget(t)

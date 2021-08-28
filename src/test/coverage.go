@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/thought-machine/please/src/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -250,17 +251,29 @@ type IncrementalStats struct {
 }
 
 // RemoveFilesFromCoverage removes any files with extensions matching the given set from coverage.
-func RemoveFilesFromCoverage(coverage core.TestCoverage, extensions []string) {
+func RemoveFilesFromCoverage(coverage core.TestCoverage, extensions []string, globs []string) {
 	for _, files := range coverage.Tests {
 		removeFilesFromCoverage(files, extensions)
+		removeGlobsFromCoverage(files, globs)
 	}
 	removeFilesFromCoverage(coverage.Files, extensions)
+	removeGlobsFromCoverage(coverage.Files, globs)
 }
 
 func removeFilesFromCoverage(files map[string][]core.LineCoverage, extensions []string) {
 	for filename := range files {
 		for _, ext := range extensions {
 			if strings.HasSuffix(filename, ext) {
+				delete(files, filename)
+			}
+		}
+	}
+}
+
+func removeGlobsFromCoverage(files map[string][]core.LineCoverage, globs []string) {
+	for filename := range files {
+		for _, glob := range globs {
+			if ok, _ := fs.Match(glob, filename); ok {
 				delete(files, filename)
 			}
 		}

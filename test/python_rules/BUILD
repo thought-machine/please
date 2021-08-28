@@ -215,3 +215,13 @@ plz_e2e_test(
     labels = ["py3"],
     deps = ["//third_party/python:grpcio"],
 )
+
+python_test(
+    name = "cx_oracle_darwin_build_test",
+    srcs = ["cx_oracle_darwin_build_test.py"],
+    labels = [
+        "py3",
+        "pip",
+    ],
+    deps = ["//third_party/python:cx_oracle"],
+)
