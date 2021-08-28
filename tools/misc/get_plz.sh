@@ -16,7 +16,17 @@ else
     exit 1
 fi
 
-PLEASE_URL="https://get.please.build/${GOOS}_amd64/${VERSION}/please_${VERSION}.tar.gz"
+ARCH=`uname -m`
+if [ "$ARCH" = "x86_64" ]; then 
+    ARCH="amd64"
+elif [ "$ARCH" = "arm64" ]; then
+    ARCH="amd64"
+else
+    echo "Unsupported cpu arch $ARCH"
+    exit 1
+fi
+
+PLEASE_URL="https://get.please.build/${GOOS}_${ARCH}/${VERSION}/please_${VERSION}.tar.gz"
 
 LOCATION="${HOME}/.please"
 DIR="${LOCATION}/${VERSION}"
