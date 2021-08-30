@@ -140,12 +140,12 @@ func mountSandboxDirs() error {
 
 // loUp brings up the loopback network interface.
 func loUp() error {
-	sock, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0);
+	sock, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
 	if err != nil {
 		return err
 	}
 	defer unix.Close(sock)
-	ifreq, err := unix.NewIfreq("lo");
+	ifreq, err := unix.NewIfreq("lo")
 	if err != nil {
 		return err
 	}
