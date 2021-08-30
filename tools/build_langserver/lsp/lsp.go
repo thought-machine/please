@@ -108,6 +108,30 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 			log.Fatalf("No active connection to shut down")
 		}
 		return nil, nil
+	case "textDocument/didOpen":
+		didOpenParams := &lsp.DidOpenTextDocumentParams{}
+		if err := json.Unmarshal(*params, didOpenParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return nil, h.didOpen(didOpenParams)
+	case "textDocument/didChange":
+		didChangeParams := &lsp.DidChangeTextDocumentParams{}
+		if err := json.Unmarshal(*params, didChangeParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return nil, h.didChange(didChangeParams)
+	case "textDocument/didSave":
+		didSaveParams := &lsp.DidSaveTextDocumentParams{}
+		if err := json.Unmarshal(*params, didSaveParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return nil, h.didSave(didSaveParams)
+	case "textDocument/didClose":
+		didCloseParams := &lsp.DidCloseTextDocumentParams{}
+		if err := json.Unmarshal(*params, didCloseParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return nil, h.didClose(didCloseParams)
 	case "textDocument/formatting":
 		formattingParams := &lsp.DocumentFormattingParams{}
 		if err := json.Unmarshal(*params, formattingParams); err != nil {
@@ -150,30 +174,6 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 			return nil, err
 		}
 		return resp, nil
-	case "textDocument/didOpen":
-		didOpenParams := &lsp.DidOpenTextDocumentParams{}
-		if err := json.Unmarshal(*params, didOpenParams); err != nil {
-			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
-		}
-		return nil, h.didOpen(didOpenParams)
-	case "textDocument/didChange":
-		didChangeParams := &lsp.DidChangeTextDocumentParams{}
-		if err := json.Unmarshal(*params, didChangeParams); err != nil {
-			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
-		}
-		return nil, h.didChange(didChangeParams)
-	case "textDocument/didSave":
-		didSaveParams := &lsp.DidSaveTextDocumentParams{}
-		if err := json.Unmarshal(*params, didSaveParams); err != nil {
-			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
-		}
-		return nil, h.didSave(didSaveParams)
-	case "textDocument/didClose":
-		didCloseParams := &lsp.DidCloseTextDocumentParams{}
-		if err := json.Unmarshal(*params, didCloseParams); err != nil {
-			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
-		}
-		return nil, h.didClose(didCloseParams)
 	default:
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound}
 	}
