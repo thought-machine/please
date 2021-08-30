@@ -47,9 +47,9 @@ func (d *doc) SetText(text string) {
 	d.Content = strings.Split(text, "\n")
 }
 
-func (h *Handler) didOpen(params *lsp.DidOpenTextDocumentParams) (*struct{}, error) {
+func (h *Handler) didOpen(params *lsp.DidOpenTextDocumentParams) error {
 	_, err := h.open(params.TextDocument.URI, params.TextDocument.Text)
-	return nil, err
+	return err
 }
 
 func (h *Handler) open(uri lsp.DocumentURI, content string) (*doc, error) {
@@ -131,33 +131,33 @@ func (h *Handler) doc(uri lsp.DocumentURI) *doc {
 	panic("Unknown document " + string(uri))
 }
 
-func (h *Handler) didChange(params *lsp.DidChangeTextDocumentParams) (*struct{}, error) {
+func (h *Handler) didChange(params *lsp.DidChangeTextDocumentParams) error {
 	doc := h.doc(params.TextDocument.URI)
 	// Synchronise changes into the doc's contents
 	for _, change := range params.ContentChanges {
 		if change.Range != nil {
-			return nil, fmt.Errorf("non-incremental change received")
+			return fmt.Errorf("non-incremental change received")
 		}
 		doc.SetText(change.Text)
 		go h.parse(doc, change.Text)
 	}
-	return nil, nil
+	return nil
 }
 
-func (h *Handler) didSave(params *lsp.DidSaveTextDocumentParams) (*struct{}, error) {
+func (h *Handler) didSave(params *lsp.DidSaveTextDocumentParams) error {
 	// TODO(peterebden): There should be a 'Text' property on the params that we can
 	//                   sync from. It's in the spec but doesn't seem to be in go-lsp.
-	return nil, nil
+	return nil
 }
 
-func (h *Handler) didClose(params *lsp.DidCloseTextDocumentParams) (*struct{}, error) {
+func (h *Handler) didClose(params *lsp.DidCloseTextDocumentParams) error {
 	d := h.doc(params.TextDocument.URI)
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 	delete(h.docs, d.Filename)
 	close(d.Diagnostics)
 	// TODO(peterebden): At this point we should re-parse this package into the graph.
-	return nil, nil
+	return nil
 }
 
 func (h *Handler) formatting(params *lsp.DocumentFormattingParams) ([]*lsp.TextEdit, error) {
