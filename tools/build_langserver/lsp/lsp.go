@@ -87,11 +87,7 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 		if err := json.Unmarshal(*params, initializeParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		resp, err := h.initialize(initializeParams)
-		if resp == nil {
-			return nil, err
-		}
-		return resp, nil
+		return h.initialize(initializeParams)
 	case "initialized":
 		// Not doing anything here. Unsure right now what this is really for.
 		return nil, nil
@@ -137,31 +133,19 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 		if err := json.Unmarshal(*params, formattingParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		resp, err := h.formatting(formattingParams)
-		if resp == nil {
-			return nil, err
-		}
-		return resp, nil
+		return h.formatting(formattingParams)
 	case "textDocument/completion":
 		completionParams := &lsp.CompletionParams{}
 		if err := json.Unmarshal(*params, completionParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		resp, err := h.completion(completionParams)
-		if resp == nil {
-			return nil, err
-		}
-		return resp, nil
+		return h.completion(completionParams)
 	case "textDocument/documentSymbol":
 		symbolParams := &lsp.DocumentSymbolParams{}
 		if err := json.Unmarshal(*params, symbolParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		resp, err := h.symbols(symbolParams)
-		if resp == nil {
-			return nil, err
-		}
-		return resp, nil
+		return h.symbols(symbolParams)
 	case "textDocument/declaration":
 		fallthrough
 	case "textDocument/definition":
@@ -169,11 +153,7 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 		if err := json.Unmarshal(*params, positionParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		resp, err := h.definition(positionParams)
-		if resp == nil {
-			return nil, err
-		}
-		return resp, nil
+		return h.definition(positionParams)
 	default:
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound}
 	}
