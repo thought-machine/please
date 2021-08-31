@@ -87,7 +87,7 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 		if err := json.Unmarshal(*params, initializeParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		res, err = h.initialize(initializeParams)
+		return h.initialize(initializeParams)
 	case "initialized":
 		// Not doing anything here. Unsure right now what this is really for.
 		return nil, nil
@@ -109,43 +109,43 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 		if err := json.Unmarshal(*params, didOpenParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		res, err = h.didOpen(didOpenParams)
+		return nil, h.didOpen(didOpenParams)
 	case "textDocument/didChange":
 		didChangeParams := &lsp.DidChangeTextDocumentParams{}
 		if err := json.Unmarshal(*params, didChangeParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		res, err = h.didChange(didChangeParams)
+		return nil, h.didChange(didChangeParams)
 	case "textDocument/didSave":
 		didSaveParams := &lsp.DidSaveTextDocumentParams{}
 		if err := json.Unmarshal(*params, didSaveParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		res, err = h.didSave(didSaveParams)
+		return nil, h.didSave(didSaveParams)
 	case "textDocument/didClose":
 		didCloseParams := &lsp.DidCloseTextDocumentParams{}
 		if err := json.Unmarshal(*params, didCloseParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		res, err = h.didClose(didCloseParams)
+		return nil, h.didClose(didCloseParams)
 	case "textDocument/formatting":
 		formattingParams := &lsp.DocumentFormattingParams{}
 		if err := json.Unmarshal(*params, formattingParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		res, err = h.formatting(formattingParams)
+		return h.formatting(formattingParams)
 	case "textDocument/completion":
 		completionParams := &lsp.CompletionParams{}
 		if err := json.Unmarshal(*params, completionParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		res, err = h.completion(completionParams)
+		return h.completion(completionParams)
 	case "textDocument/documentSymbol":
 		symbolParams := &lsp.DocumentSymbolParams{}
 		if err := json.Unmarshal(*params, symbolParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		res, err = h.symbols(symbolParams)
+		return h.symbols(symbolParams)
 	case "textDocument/declaration":
 		fallthrough
 	case "textDocument/definition":
@@ -153,16 +153,10 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 		if err := json.Unmarshal(*params, positionParams); err != nil {
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
-		res, err = h.definition(positionParams)
+		return h.definition(positionParams)
 	default:
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound}
 	}
-
-	if err != nil {
-		log.Warning("Error from handler for %s: %s", method, err)
-		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInternalError, Message: err.Error()}
-	}
-	return res, nil
 }
 
 func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResult, error) {
