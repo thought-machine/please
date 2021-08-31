@@ -20,7 +20,7 @@ ARCH=`uname -m`
 if [ "$ARCH" = "x86_64" ]; then 
     ARCH="amd64"
 elif [ "$ARCH" = "arm64" ]; then
-    ARCH="amd64"
+    :
 else
     echo "Unsupported cpu arch $ARCH"
     exit 1
