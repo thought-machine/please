@@ -577,8 +577,9 @@ go_module(
 
 go_module(
     name = "cli-init",
-    module = "github.com/peterebden/go-cli-init/v3",
-    version = "v3.0.0",
+    install = ["..."],
+    module = "github.com/peterebden/go-cli-init/v4",
+    version = "v4.0.0",
     deps = [
         ":go-flags",
         ":humanize",
