@@ -1139,7 +1139,7 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 
 // Capture aliases from config file and print to the help output
 func additionalUsageInfo(parser *flags.Parser) {
-	log.Warningf("Hey I'm in additionalUsageInfo")
+	log.Debugf("Begin additionalUsageInfo()")
 	cli.InitLogging(cli.MinVerbosity)
 	if config := readConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
 		parser.ParseArgs(os.Args[1:])
