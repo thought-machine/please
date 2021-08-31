@@ -1137,6 +1137,15 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	os.Exit(0)
 }
 
+// Capture aliases from config file and print to the help output
+func additionalUsageInfo(parser *flags.Parser) {
+	log.Warningf("Hey I'm in additionalUsageInfo")
+	cli.InitLogging(cli.MinVerbosity)
+	if config := readConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
+		parser.ParseArgs(os.Args[1:])
+	}
+}
+
 func getCompletions(qry string) (*query.CompletionPackages, []string) {
 	binary := opts.Query.Completions.Cmd == "run"
 	isTest := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
@@ -1161,7 +1170,7 @@ func initBuild(args []string) string {
 	if _, present := os.LookupEnv("GO_FLAGS_COMPLETION"); present {
 		cli.InitLogging(cli.MinVerbosity)
 	}
-	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions)
+	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions, additionalUsageInfo)
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
 	if opts.HelpFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)

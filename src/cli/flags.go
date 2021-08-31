@@ -11,7 +11,7 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/dustin/go-humanize"
-	"github.com/peterebden/go-cli-init/v3"
+	cli "github.com/peterebden/go-cli-init/v4"
 	"github.com/thought-machine/go-flags"
 )
 
@@ -40,8 +40,8 @@ func ParseFlagsFromArgsOrDie(appname string, data interface{}, args []string) st
 
 // ParseFlags parses the app's flags and returns the parser, any extra arguments, and any error encountered.
 // It may exit if certain options are encountered (eg. --help).
-func ParseFlags(appname string, data interface{}, args []string, opts flags.Options, completionHandler cli.CompletionHandler) (*flags.Parser, []string, error) {
-	return cli.ParseFlags(appname, data, args, opts, completionHandler)
+func ParseFlags(appname string, data interface{}, args []string, opts flags.Options, completionHandler cli.CompletionHandler, additionalUsageInfo cli.AdditionalUsageInfo) (*flags.Parser, []string, error) {
+	return cli.ParseFlags(appname, data, args, opts, completionHandler, additionalUsageInfo)
 }
 
 // PrintCompletions prints a set of completions to stdout.
