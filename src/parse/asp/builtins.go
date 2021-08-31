@@ -163,13 +163,18 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	args[licencesBuildRuleArgIdx] = defaultFromConfig(s.config, args[licencesBuildRuleArgIdx], "DEFAULT_LICENCES")
 	args[sandboxBuildRuleArgIdx] = defaultFromConfig(s.config, args[sandboxBuildRuleArgIdx], "BUILD_SANDBOX")
 	args[testSandboxBuildRuleArgIdx] = defaultFromConfig(s.config, args[testSandboxBuildRuleArgIdx], "TEST_SANDBOX")
+
+	// Don't want to remote execute a target if we need system sources
+	if args[systemSrcsBuildRuleArgIdx] != None {
+		args[localBuildRuleArgIdx] = pyString("True")
+	}
+
 	target := createTarget(s, args)
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
 	populateTarget(s, target, args)
 	s.state.AddTarget(s.pkg, target)
 	if s.Callback {
 		target.AddedPostBuild = true
-		s.pkg.MarkTargetModified(target)
 	}
 	return pyString(":" + target.Label.Name)
 }
@@ -747,11 +752,9 @@ func addDep(s *scope, args []pyObject) pyObject {
 	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Queue this dependency if it'll be needed.
 	if target.State() > core.Inactive {
-		err := s.state.QueueTarget(dep, target.Label, true, false)
+		err := s.state.QueueTarget(dep, target.Label, false)
 		s.Assert(err == nil, "%s", err)
 	}
-	// TODO(peterebden): Do we even need the following any more?
-	s.pkg.MarkTargetModified(target)
 	return None
 }
 
@@ -759,7 +762,7 @@ func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, datum cor
 	target.AddDatum(datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, true, false)
+		err := s.state.QueueTarget(l, target.Label, false)
 		s.Assert(err == nil, "%s", err)
 	}
 }
@@ -768,7 +771,7 @@ func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.Buil
 	target.AddNamedDatum(name, datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, true, false)
+		err := s.state.QueueTarget(l, target.Label, false)
 		s.Assert(err == nil, "%s", err)
 	}
 }
@@ -806,9 +809,6 @@ func addData(s *scope, args []pyObject) pyObject {
 	} else {
 		log.Fatal("Unrecognised data type passed to add_data")
 	}
-
-	// TODO(peterebden): Do we even need the following any more?
-	s.pkg.MarkTargetModified(target)
 	return None
 }
 
@@ -819,13 +819,13 @@ func addOut(s *scope, args []pyObject) pyObject {
 	out := string(args[2].(pyString))
 	if out == "" {
 		target.AddOutput(name)
-		s.pkg.MustRegisterOutput(name, target)
+		s.pkg.MustRegisterOutput(s.state, name, target)
 	} else {
 		_, ok := target.EntryPoints[name]
 		s.NAssert(ok, "Named outputs can't have the same name as entry points")
 
 		target.AddNamedOutput(name, out)
-		s.pkg.MustRegisterOutput(out, target)
+		s.pkg.MustRegisterOutput(s.state, out, target)
 	}
 	return None
 }

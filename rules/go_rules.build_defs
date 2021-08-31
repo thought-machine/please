@@ -50,7 +50,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         architectures += [f'{CONFIG.TARGET_OS}_{CONFIG.TARGET_ARCH}']
 
     if architectures and CONFIG.CGO_ENABLED == "1":
-        cmd += f" && export CGO_ENABLED={CONFIG.CGO_ENABLED} && export CC=$TOOLS_CC"
+        cmd += f" && export CGO_ENABLED={CONFIG.CGO_ENABLED} && export CFLAGS=\"{CONFIG.GO_C_FLAGS}\" && export CC=$TOOLS_CC"
 
     for arch in architectures:
         goos, _, goarch = arch.partition("_")
@@ -847,14 +847,15 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
     a separate go_library rule.
 
     Args:
-      name: Name of the rule
-      srcs: Source .go files that define the tests.
-      test_package: This is the import path of the package to be tested. Defaults to the import path of the current
+      name (str): Name of the rule
+      srcs (list): Source .go files that define the tests.
+      test_package (str): This is the import path of the package to be tested. Defaults to the import path of the current
                     directory.
-      test_only: If True, can only be consumed by tests (or other test_only rules).
-      deps: Any additional dependencies
-      visibility: Visibility of the rule.
-      labels: Any labels to apply to this rule.
+      test_only (bool): If True, can only be consumed by tests (or other test_only rules).
+      deps (list): Any additional dependencies
+      visibility (list): Visibility of the rule.
+      benchmark (bool): If True, it will run benchmarks instead of tests.
+      labels (list): Any labels to apply to this rule.
     """
     test_package = test_package or _get_import_path()
     external_flag = " --external" if external else ""
@@ -959,7 +960,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         _set_go_env(),
         _generate_pkg_import_cfg_cmd("goroot.importconfig", '"$GOROOT"'),
         _aggregate_import_cfg_cmd(),
-        f"$TOOLS_PLEASE_GO install {build_tags} --trim_path $TMP_DIR --src_root=$(location {src}) --ld_flags=LD_FLAGS --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
+        f"$TOOLS_PLEASE_GO install {build_tags} --trim_path $TMP_DIR --src_root=$(location {src}) --module_name={module} --importcfg=importconfig --go_tool=$TOOLS_GO --cc_tool=$TOOLS_CC --out=pkg/{CONFIG.GOOS}_{CONFIG.GOARCH} " + " ".join(install),
         "cat LD_FLAGS",
     ]
 
@@ -1189,9 +1190,9 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         else:
             for i in install:
                 if i == module or i == f"{module}/.":
-                    outs = [archive_name(module)]
+                    outs += [archive_name(module)]
                 elif i == "...":
-                    outs = [module]
+                    outs += [module]
                 elif i.endswith("/..."):
                     outs += [i.removesuffix("/...")]
                 else:
@@ -1558,8 +1559,13 @@ def _set_go_env():
     else:
         go_root = '$("$TOOLS_GO" env GOROOT)'
     cmd = f'export GOPATH=$TMP_DIR && export GOROOT={go_root}'
+    if CONFIG.GO_C_FLAGS:
+        cmd = f'{cmd} && export CFLAGS="{CONFIG.GO_C_FLAGS}"'
+    if CONFIG.GO_LD_FLAGS:
+        cmd = f'{cmd} && export LDFLAGS="{CONFIG.GO_LD_FLAGS}"'
     if CONFIG.CGO_ENABLED:
         return f'export CGO_ENABLED={CONFIG.CGO_ENABLED} && {cmd}'
+
     return cmd
 
 

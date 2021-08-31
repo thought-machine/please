@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/thought-machine/go-flags"
-	"gopkg.in/op/go-logging.v1"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -15,6 +13,10 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	"github.com/thought-machine/go-flags"
+	"go.uber.org/automaxprocs/maxprocs"
+	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"
@@ -444,7 +446,7 @@ var buildFunctions = map[string]func() int{
 		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
 		success, state := doTest(targets, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
-		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
+		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension, state.Config.Cover.ExcludeGlob)
 
 		var stats *test.IncrementalStats
 		if opts.Cover.Incremental {
@@ -1006,13 +1008,11 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	state.Results() // important this is called now, don't ask...
 	var wg sync.WaitGroup
 	wg.Add(1)
-	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		output.MonitorState(ctx, state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
 	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
-	cancel()
 	wg.Wait()
 }
 
@@ -1196,6 +1196,9 @@ func initBuild(args []string) string {
 	}
 	// Init logging, but don't do file output until we've chdir'd.
 	cli.InitLogging(opts.OutputFlags.Verbosity)
+	if _, err := maxprocs.Set(maxprocs.Logger(log.Info), maxprocs.Min(opts.BuildFlags.NumThreads)); err != nil {
+		log.Error("Failed to set GOMAXPROCS: %s", err)
+	}
 
 	command := cli.ActiveCommand(parser.Command)
 	if opts.Complete != "" {

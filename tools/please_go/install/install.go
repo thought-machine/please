@@ -4,13 +4,17 @@ import (
 	"bufio"
 	"fmt"
 	"go/build"
+	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/thought-machine/please/tools/please_go/install/exec"
 	"github.com/thought-machine/please/tools/please_go/install/toolchain"
 )
+
+const ldFlagsFile = "LD_FLAGS"
 
 // PleaseGoInstall implements functionality similar to `go install` however it works with import configs to avoid a
 // dependence on the GO_PATH, go.mod or other go build concepts.
@@ -19,9 +23,11 @@ type PleaseGoInstall struct {
 	srcRoot      string
 	moduleName   string
 	importConfig string
-	ldFlags      string
 	outDir       string
 	trimPath     string
+
+	additionalLDFlags string
+	additionalCFlags  string
 
 	tc *toolchain.Toolchain
 
@@ -31,20 +37,33 @@ type PleaseGoInstall struct {
 	collectedLdFlags map[string]struct{}
 }
 
-// New creates a new PleaseGoInstall
-func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, goTool, ccTool, pkgConfTool, out, trimPath string) *PleaseGoInstall {
-	ctx := build.Default
-	ctx.BuildTags = append(ctx.BuildTags, buildTags...)
+func (install *PleaseGoInstall) mustSetBuildContext(tags []string) {
+	install.buildContext = build.Default
+	install.buildContext.BuildTags = append(install.buildContext.BuildTags, tags...)
 
-	return &PleaseGoInstall{
-		buildContext:     ctx,
+	version, err := install.tc.GoMinorVersion()
+	if err != nil {
+		log.Fatalf("failed to determine go version: %v", err)
+	}
+
+	install.buildContext.ReleaseTags = []string{}
+	for i := 1; i <= version; i++ {
+		install.buildContext.ReleaseTags = append(install.buildContext.ReleaseTags, "go1."+strconv.Itoa(i))
+	}
+}
+
+// New creates a new PleaseGoInstall
+func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags, goTool, ccTool, pkgConfTool, out, trimPath string) *PleaseGoInstall {
+	i := &PleaseGoInstall{
 		srcRoot:          srcRoot,
 		moduleName:       moduleName,
 		importConfig:     importConfig,
-		ldFlags:          ldFlags,
 		outDir:           out,
 		trimPath:         trimPath,
 		collectedLdFlags: map[string]struct{}{},
+
+		additionalLDFlags: ldFlags,
+		additionalCFlags:  cFlags,
 
 		tc: &toolchain.Toolchain{
 			CcTool:        ccTool,
@@ -53,6 +72,8 @@ func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, goTool,
 			Exec:          &exec.Executor{Stdout: os.Stdout, Stderr: os.Stderr},
 		},
 	}
+	i.mustSetBuildContext(buildTags)
+	return i
 }
 
 // Install will compile the provided packages. Packages can be wildcards i.e. `foo/...` which compiles all packages
@@ -100,17 +121,22 @@ func (install *PleaseGoInstall) Install(packages []string) error {
 }
 
 func (install *PleaseGoInstall) writeLDFlags() error {
-	ldFlags := make([]string, 0, len(install.collectedLdFlags))
-	for flag := range install.collectedLdFlags {
-		ldFlags = append(ldFlags, flag)
+	flagFile, err := os.Create(ldFlagsFile)
+	if err != nil {
+		return err
 	}
+	defer flagFile.Close()
 
-	if len(ldFlags) > 0 {
-		if err := install.tc.Exec.Run("echo -n \"%s\" >> %s", strings.Join(ldFlags, " "), install.ldFlags); err != nil {
-			return err
-		}
+	_, err = flagFile.WriteString(strings.Join(install.ldFlags(), " "))
+	return err
+}
+
+func (install *PleaseGoInstall) ldFlags() []string {
+	flags := make([]string, 0, len(install.collectedLdFlags))
+	for flag := range install.collectedLdFlags {
+		flags = append(flags, flag)
 	}
-	return nil
+	return flags
 }
 
 func (install *PleaseGoInstall) linkPackage(target string) error {
@@ -118,7 +144,12 @@ func (install *PleaseGoInstall) linkPackage(target string) error {
 	filename := strings.TrimSuffix(filepath.Base(out), ".a")
 	binName := filepath.Join(install.outDir, "bin", filename)
 
-	return install.tc.Link(out, binName, install.importConfig, install.ldFlags)
+	flags := install.ldFlags()
+	if f := install.additionalLDFlags; f != "" {
+		flags = append(flags, f)
+	}
+
+	return install.tc.Link(out, binName, install.importConfig, flags)
 }
 
 // compileAll walks the provided directory looking for go packages to compile. Unlike compile(), this will skip any
@@ -152,7 +183,7 @@ func (install *PleaseGoInstall) initBuildEnv() error {
 	if err := install.tc.Exec.Run("mkdir -p %s\n", filepath.Join(install.outDir, "bin")); err != nil {
 		return err
 	}
-	return install.tc.Exec.Run("touch %s", install.ldFlags)
+	return install.tc.Exec.Run("touch %s", ldFlagsFile)
 }
 
 // pkgDir returns the file path to the given target package
@@ -297,6 +328,10 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			if len(pkgConfLDFlags) > 0 {
 				fmt.Fprintf(os.Stderr, "------ ***** ------ ld flags for %s: %s\n", target, strings.Join(pkgConfLDFlags, " "))
 			}
+		}
+
+		if f := install.additionalCFlags; f != "" {
+			cFlags = append(cFlags, f)
 		}
 
 		cFiles := pkg.CFiles

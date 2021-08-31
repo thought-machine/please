@@ -30,12 +30,6 @@ type Package struct {
 	Outputs map[string]*BuildTarget
 	// Protects access to above
 	mutex sync.RWMutex
-	// Targets whose dependencies got modified during a pre or post-build function.
-	modifiedTargets map[*BuildTarget]struct{}
-	// Used to arbitrate a single post-build function running at a time.
-	// It would be sort of conceptually nice if they ran simultaneously but it'd
-	// be far too hard to ensure consistency in any case where they can interact with one another.
-	buildCallbackMutex sync.Mutex
 }
 
 // NewPackage constructs a new package with the given name.
@@ -134,29 +128,34 @@ func (pkg *Package) HasOutput(output string) bool {
 
 // RegisterOutput registers a new output file in the map.
 // Returns an error if the file has already been registered.
-func (pkg *Package) RegisterOutput(fileName string, target *BuildTarget) error {
+func (pkg *Package) RegisterOutput(state *BuildState, fileName string, target *BuildTarget) error {
 	pkg.mutex.Lock()
 	defer pkg.mutex.Unlock()
+
 	originalFileName := fileName
 	if target.IsBinary {
 		fileName = ":_bin_" + fileName // Add some arbitrary prefix so they don't clash.
 	}
+
 	if existing, present := pkg.Outputs[fileName]; present && existing != target {
-		if existing.IsFilegroup && !target.IsFilegroup {
-			// Update the existing one with this, the registered outputs should prefer non-filegroup targets.
-			pkg.Outputs[fileName] = target
-		} else if !target.IsFilegroup && !existing.IsFilegroup {
-			return fmt.Errorf("rules %s and %s in %s both attempt to output the same file: %s",
-				existing.Label, target.Label, pkg.Filename, originalFileName)
+		// Only local files are available as outputs to filegroups at this stage, so unless both targets are filegroups
+		// then the same output isn't allowed.
+		if !target.IsFilegroup || !existing.IsFilegroup {
+			// TODO(tiagovtristao): This condition exists for backwards compatibility and can be _fully_ deleted when the FF is removed.
+			if state.Config.FeatureFlags.PackageOutputsStrictness || !target.IsFilegroup && !existing.IsFilegroup {
+				return fmt.Errorf("rules %s and %s in %s both attempt to output the same file: %s", existing.Label, target.Label, pkg.Filename, originalFileName)
+			}
 		}
 	}
+
 	pkg.Outputs[fileName] = target
+
 	return nil
 }
 
 // MustRegisterOutput registers a new output file and panics if it's already been registered.
-func (pkg *Package) MustRegisterOutput(fileName string, target *BuildTarget) {
-	if err := pkg.RegisterOutput(fileName, target); err != nil {
+func (pkg *Package) MustRegisterOutput(state *BuildState, fileName string, target *BuildTarget) {
+	if err := pkg.RegisterOutput(state, fileName, target); err != nil {
 		panic(err)
 	}
 }
@@ -181,38 +180,24 @@ func (pkg *Package) IsIncludedIn(label BuildLabel) bool {
 	return pkg.Name == label.PackageName || strings.HasPrefix(pkg.Name, label.PackageName+"/")
 }
 
-// EnterBuildCallback is used to arbitrate access to build callbacks & track changes to targets.
-// The supplied function will be called & a set of modified targets, along with any errors, is returned.
-func (pkg *Package) EnterBuildCallback(f func() error) (map[*BuildTarget]struct{}, error) {
-	pkg.buildCallbackMutex.Lock()
-	defer pkg.buildCallbackMutex.Unlock()
-	m := map[*BuildTarget]struct{}{}
-	pkg.modifiedTargets = m
-	err := f()
-	pkg.modifiedTargets = nil
-	return m, err
-}
-
-// MarkTargetModified marks a single target as being modified during a pre- or post- build function.
-// Correct usage of EnterBuildCallback must have been observed.
-func (pkg *Package) MarkTargetModified(target *BuildTarget) {
-	if pkg.modifiedTargets != nil {
-		pkg.modifiedTargets[target] = struct{}{}
-	}
-}
-
 // Label returns a build label uniquely identifying this package.
 func (pkg *Package) Label() BuildLabel {
 	return BuildLabel{Subrepo: pkg.SubrepoName, PackageName: pkg.Name, Name: "all"}
 }
 
-// VerifyOutputs checks all files output from this package and verifies that they're all OK;
+// MustVerifyOutputs checks all files output from this package and verifies that they're all OK;
 // notably it checks that if targets that output into a subdirectory, that subdirectory isn't
 // created by another target. That kind of thing can lead to subtle and annoying bugs.
-// It logs detected warnings to stdout.
+func (pkg *Package) MustVerifyOutputs() {
+	if issues := pkg.verifyOutputs(); len(issues) > 0 {
+		log.Fatalf("%s: %s", pkg.Filename, issues[0])
+	}
+}
+
+// It logs detected issues as warnings to stdout.
 func (pkg *Package) VerifyOutputs() {
-	for _, warning := range pkg.verifyOutputs() {
-		log.Warning("%s: %s", pkg.Filename, warning)
+	for _, issue := range pkg.verifyOutputs() {
+		log.Warning("%s: %s", pkg.Filename, issue)
 	}
 }
 

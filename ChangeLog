@@ -1,3 +1,19 @@
+Version 16.6.0
+--------------
+    * Fixed issue with `go_module()` where adding the root package removed
+      all other items in the install list that came before #2019
+    * Fixed the linker flags in `pip_library()` for macOS #2015
+    * Added `ExcludeGlob` config option to the `[Cover]` section that
+      excludes files from coverage based on a glob pattern #2020 #2023
+    * Fix issue with `go_module()` where the incorrect release flags
+      were being applied when filtering third party go sourcews #2024
+
+
+Version 16.5.1
+--------------
+    * Fix nil pointer when tests fail in certain ways #2016
+
+
 Version 16.5.0
 --------------
     * Singleflight all subincludes removing any potential for lockups #2002
