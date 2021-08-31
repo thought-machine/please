@@ -609,7 +609,7 @@ func subrepoName(s *scope, args []pyObject) pyObject {
 
 func canonicalise(s *scope, args []pyObject) pyObject {
 	s.Assert(s.pkg != nil, "Cannot call canonicalise() from this context")
-	label := core.ParseBuildLabel(string(args[0].(pyString)), s.pkg.Name)
+	label := core.ParseAnnotatedBuildLabel(string(args[0].(pyString)), s.pkg.Name)
 	return pyString(label.String())
 }
 
