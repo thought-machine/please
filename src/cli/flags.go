@@ -11,7 +11,8 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/dustin/go-humanize"
-	cli "github.com/peterebden/go-cli-init/flags/v4"
+	cli "github.com/peterebden/go-cli-init/v4/flags"
+	clilogging "github.com/peterebden/go-cli-init/v4/logging"
 	"github.com/thought-machine/go-flags"
 )
 
@@ -19,10 +20,10 @@ import (
 const GiByte = humanize.GiByte
 
 // MinVerbosity is the minimum verbosity we support.
-const MinVerbosity = cli.MinVerbosity
+const MinVerbosity = clilogging.MinVerbosity
 
 // MaxVerbosity is the maximum verbosity we support.
-const MaxVerbosity = cli.MaxVerbosity
+const MaxVerbosity = clilogging.MaxVerbosity
 
 // ParseFlagsOrDie parses the app's flags and dies if unsuccessful.
 // Also dies if any unexpected arguments are passed.
