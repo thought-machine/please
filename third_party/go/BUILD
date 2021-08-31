@@ -555,7 +555,7 @@ go_module(
 go_module(
     name = "jsonrpc2",
     module = "github.com/sourcegraph/jsonrpc2",
-    version = "549eb959f029d014d623104d40ab966d159a92de",
+    version = "v0.1.0",
 )
 
 go_module(
