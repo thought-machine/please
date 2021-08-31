@@ -7,6 +7,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/mattn/go-sqlite3"
 	"github.com/peterebden/go-cli-init/v2"
+	"github.com/google/licenseclassifier/licenses"
 )
 
 func TestCLIImport(t *testing.T) {
@@ -23,4 +24,8 @@ func TestSQLLite3(t *testing.T) {
 
 func TestSnappy(t *testing.T) {
 	_ = snappy.MaxEncodedLen(1234)
+}
+
+func TestLicenseClassifier(t *testing.T) {
+	_, _ = licenses.ReadLicenseFile("nonsense")
 }

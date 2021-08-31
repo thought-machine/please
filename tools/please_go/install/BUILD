@@ -10,6 +10,7 @@ go_library(
     deps = [
         "//tools/please_go/install/exec",
         "//tools/please_go/install/toolchain",
+        "//tools/please_go_embed/embed",
     ],
 )
 
