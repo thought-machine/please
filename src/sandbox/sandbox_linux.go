@@ -9,10 +9,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/thought-machine/please/src/core"
+	"golang.org/x/sys/unix"
 
-	// #include "sandbox.h"
-	"C"
+	"github.com/thought-machine/please/src/core"
 )
 
 // mdLazytime is the bit for lazily flushing disk writes.
@@ -62,8 +61,8 @@ func Sandbox(args []string) error {
 	}
 
 	if unshareNetwork {
-		if i := C.lo_up(); i < 0 {
-			return fmt.Errorf("Failed to bring loopback interface up")
+		if err := loUp(); err != nil {
+			return fmt.Errorf("Failed to bring loopback interface up: %s", err)
 		}
 	}
 
@@ -137,4 +136,22 @@ func mountSandboxDirs() error {
 	}
 
 	return os.Unsetenv(sandboxDirsVar)
+}
+
+// loUp brings up the loopback network interface.
+func loUp() error {
+	sock, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
+	if err != nil {
+		return err
+	}
+	defer unix.Close(sock)
+	ifreq, err := unix.NewIfreq("lo")
+	if err != nil {
+		return err
+	}
+	if err := unix.IoctlIfreq(sock, unix.SIOCGIFFLAGS, ifreq); err != nil {
+		return err
+	}
+	ifreq.SetUint32(ifreq.Uint32() | unix.IFF_UP)
+	return unix.IoctlIfreq(sock, unix.SIOCSIFFLAGS, ifreq)
 }
