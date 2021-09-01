@@ -43,7 +43,7 @@ func (tc *Toolchain) CGO(sourceDir string, objectDir string, cFlags []string, cg
 		cFiles = append(cFiles, strings.TrimSuffix(cgoFile, ".go")+".cgo2.c")
 	}
 
-	if err := tc.Exec.Run("(cd %s; %s tool cgo -objdir $OLDPWD/%s -- %s %s)", sourceDir, tc.GoTool, objectDir, strings.Join(cFlags, " "), paths(cgoFiles)); err != nil {
+	if err := tc.Exec.Run("%s tool cgo -objdir %s -srcdir %s -- %s %s", tc.GoTool, objectDir, sourceDir, strings.Join(cFlags, " "), paths(cgoFiles)); err != nil {
 		return nil, nil, err
 	}
 
