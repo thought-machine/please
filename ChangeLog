@@ -1,3 +1,14 @@
+Version 16.6.1
+--------------
+    * Rules with system sources now run locally by default #2011
+    * Improve validation around rule outputs to avoid race conditions.
+      This change is gated behind the `FeatureFlags.PackageOutputsStrictness`.
+      #1816
+    * Fix problem in the language server that was causing issues on startup
+      #2029
+    * Fix issues with `#cgo` directive in `go_module()` rules #2038
+
+
 Version 16.6.0
 --------------
     * Fixed issue with `go_module()` where adding the root package removed
