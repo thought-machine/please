@@ -1,0 +1,11 @@
+build_rule(
+    name = "system_srcs_set",
+    cmd = "touch foo",
+    local = False,
+    system_srcs = ["foo"],
+)
+
+build_rule(
+    name = "system_srcs_unset",
+    local = False,
+)

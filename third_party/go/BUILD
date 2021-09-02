@@ -459,7 +459,7 @@ go_module(
     name = "xsys",
     install = ["..."],
     module = "golang.org/x/sys",
-    version = "0f9fa26af87c481a6877a4ca1330699ba9a30673",
+    version = "63515b42dcdf9544f4e6a02fd7632793fde2f72d",
 )
 
 go_mod_download(
@@ -555,7 +555,7 @@ go_module(
 go_module(
     name = "jsonrpc2",
     module = "github.com/sourcegraph/jsonrpc2",
-    version = "549eb959f029d014d623104d40ab966d159a92de",
+    version = "v0.1.0",
 )
 
 go_module(
@@ -938,4 +938,14 @@ go_module(
     install = ["quantile"],
     module = "github.com/beorn7/perks",
     version = "v1.0.1",
+)
+
+go_module(
+    name = "automaxprocs",
+    install = [
+        "...",
+    ],
+    licences = ["MIT"],
+    module = "go.uber.org/automaxprocs",
+    version = "v1.4.0",
 )

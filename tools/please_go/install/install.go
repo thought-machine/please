@@ -234,8 +234,7 @@ func (install *PleaseGoInstall) importDir(target string) (*build.Package, error)
 	if _, err := os.Lstat(pkgDir); os.IsNotExist(err) {
 		pkgDir = filepath.Dir(pkgDir)
 	}
-
-	return install.buildContext.ImportDir(pkgDir, build.ImportComment)
+	return install.buildContext.ImportDir(filepath.Join(os.Getenv("TMP_DIR"), pkgDir), build.ImportComment)
 }
 
 func (install *PleaseGoInstall) compile(from []string, target string) error {

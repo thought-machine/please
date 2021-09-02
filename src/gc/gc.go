@@ -126,7 +126,7 @@ func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []co
 	// we're not deleting could still use the sources of the targets that we are.
 	keepSrcs := map[string]bool{}
 	for target := range keepTargets {
-		for _, src := range target.AllLocalSources() {
+		for _, src := range target.AllLocalSourcePaths() {
 			keepSrcs[src] = true
 		}
 	}
@@ -135,7 +135,7 @@ func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []co
 	for _, target := range graph.AllTargets() {
 		if sibling := gcSibling(graph, target); !sibling.HasParent() && !keepTargets[sibling] && isIncluded(sibling, filter) {
 			ret = append(ret, target.Label)
-			for _, src := range target.AllLocalSources() {
+			for _, src := range target.AllLocalSourcePaths() {
 				if !keepSrcs[src] {
 					retSrcs = append(retSrcs, src)
 				}
