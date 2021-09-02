@@ -1074,7 +1074,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 
 var originalWorkingDirectory string
 
-// Probably need a comment here but not sure if this function is quite right
+// readConfigAndSetRoot returns an error if we can't find a repo root
 func readConfigAndSetRoot(forceUpdate bool) (*core.Configuration, error) {
 	if core.FindRepoRoot() {
 		return mustReadConfigAndSetRoot(forceUpdate), nil
