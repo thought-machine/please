@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/peterebden/go-cli-init/v3"
+	"github.com/peterebden/go-cli-init/v4/flags"
 )
 
 // TODO(jpoole): maybe we should just have an order field in the MD?
@@ -70,7 +70,7 @@ var opts = struct {
 }{}
 
 func main() {
-	cli.ParseFlagsOrDie("Codelab template", &opts)
+	flags.ParseFlagsOrDie("Codelab template", &opts)
 
 	tmplName := path.Base(opts.Template)
 

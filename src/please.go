@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"net/http"
@@ -1138,12 +1139,10 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 }
 
 // Capture aliases from config file and print to the help output
-func additionalUsageInfo(parser *flags.Parser) {
-	log.Debugf("Begin additionalUsageInfo()")
+func additionalUsageInfo(parser *flags.Parser, wr *bufio.Writer) {
 	cli.InitLogging(cli.MinVerbosity)
-	if config := readConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
-		parser.ParseArgs(os.Args[1:])
-	}
+	config := readConfigAndSetRoot(false)
+	config.PrintAliases(wr)
 }
 
 func getCompletions(qry string) (*query.CompletionPackages, []string) {
@@ -1209,7 +1208,7 @@ func initBuild(args []string) string {
 	} else if command == "help" || command == "follow" || command == "init" || command == "config" || command == "tool" {
 		// These commands don't use a config file, allowing them to be run outside a repo.
 		if flagsErr != nil { // This error otherwise doesn't get checked until later.
-			cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args)
+			cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args, additionalUsageInfo)
 		}
 		config = core.DefaultConfiguration()
 		os.Exit(buildFunctions[command]())
@@ -1229,7 +1228,7 @@ func initBuild(args []string) string {
 	// can affect how we parse otherwise illegal flag combinations.
 	if (flagsErr != nil || len(extraArgs) > 0) && command != "completions" {
 		args := config.UpdateArgsWithAliases(os.Args)
-		command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args)
+		command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
 	}
 
 	if opts.ProfilePort != 0 {

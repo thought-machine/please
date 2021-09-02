@@ -29,14 +29,14 @@ const MaxVerbosity = clilogging.MaxVerbosity
 // Also dies if any unexpected arguments are passed.
 // It returns the active command if there is one.
 func ParseFlagsOrDie(appname string, data interface{}) string {
-	return cli.ParseFlagsOrDie(appname, data)
+	return cli.ParseFlagsOrDie(appname, data, nil)
 }
 
 // ParseFlagsFromArgsOrDie is similar to ParseFlagsOrDie but allows control over the
 // flags passed.
 // It returns the active command if there is one.
-func ParseFlagsFromArgsOrDie(appname string, data interface{}, args []string) string {
-	return cli.ParseFlagsFromArgsOrDie(appname, data, args)
+func ParseFlagsFromArgsOrDie(appname string, data interface{}, args []string, additionalUsageInfo cli.AdditionalUsageInfo) string {
+	return cli.ParseFlagsFromArgsOrDie(appname, data, args, additionalUsageInfo)
 }
 
 // ParseFlags parses the app's flags and returns the parser, any extra arguments, and any error encountered.
