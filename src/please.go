@@ -1079,7 +1079,7 @@ func readConfigAndSetRoot(forceUpdate bool) (*core.Configuration, error) {
 	if core.FindRepoRoot() {
 		return mustReadConfigAndSetRoot(forceUpdate), nil
 	}
-	return nil, fmt.Errorf("Not in a please repo")
+	return nil, fmt.Errorf("failed to locate repo root")
 }
 
 // mustReadConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
