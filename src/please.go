@@ -880,7 +880,7 @@ func runTool(_tool tool.Tool) int {
 
 	// We skip loading the repo config in init for `plz tool` to allow this command to work outside of a repo root. If
 	// the tool looks like a build label, we need to set the repo root now.
-	config = readConfigAndSetRoot(false)
+	config = mustReadConfigAndSetRoot(false)
 	if success, state := runBuild(label, true, false, false); success {
 		annotatedOutputLabels := core.AnnotateLabels(label)
 		run.Run(state, annotatedOutputLabels[0], opts.Tool.Args.Args.AsStrings(), false, false, false, "", "")
@@ -1074,8 +1074,16 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 
 var originalWorkingDirectory string
 
-// readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
-func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
+// Probably need a comment here but not sure if this function is quite right
+func readConfigAndSetRoot(forceUpdate bool) (*core.Configuration, error) {
+	if core.FindRepoRoot() {
+		return mustReadConfigAndSetRoot(forceUpdate), nil
+	}
+	return nil, fmt.Errorf("Not in a please repo")
+}
+
+// mustReadConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
+func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	if opts.BuildFlags.RepoRoot == "" {
 		log.Debug("Found repo root at %s", core.MustFindRepoRoot())
 	} else {
@@ -1127,7 +1135,7 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	if len(items) > 0 && items[0].Description == "BuildLabel" {
 		// Don't muck around with the config if we're predicting build labels.
 		cli.PrintCompletions(items)
-	} else if config := readConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
+	} else if config := mustReadConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
 		// Run again without this registered as a completion handler
 		parser.CompletionHandler = nil
 		parser.ParseArgs(os.Args[1:])
@@ -1141,8 +1149,9 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 // Capture aliases from config file and print to the help output
 func additionalUsageInfo(parser *flags.Parser, wr *bufio.Writer) {
 	cli.InitLogging(cli.MinVerbosity)
-	config := readConfigAndSetRoot(false)
-	config.PrintAliases(wr)
+	if config, err := readConfigAndSetRoot(false); err == nil {
+		config.PrintAliases(wr)
+	}
 }
 
 func getCompletions(qry string) (*query.CompletionPackages, []string) {
@@ -1217,7 +1226,7 @@ func initBuild(args []string) string {
 		os.Exit(0)
 	}
 	// Read the config now
-	config = readConfigAndSetRoot(command == "update")
+	config = mustReadConfigAndSetRoot(command == "update")
 	if parser.Command.Active != nil && parser.Command.Active.Name == "query" {
 		// Query commands don't need either of these set.
 		opts.OutputFlags.PlainOutput = true
