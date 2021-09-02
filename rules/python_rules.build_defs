@@ -519,6 +519,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         _tag = 'download',
         out = name + '.whl',
         url = urls,
+        hashes = hashes if CONFIG.FF_PYTHON_WHEEL_HASHING else None,
         licences = licences if licences else None,
     )
 
@@ -566,7 +567,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     return build_rule(
         name = name,
         srcs = [wheel_rule],
-        hashes = hashes,  # TODO(peterebden): Move this onto wheel_rule when we're willing to break hash compatibility.
+        hashes = None if CONFIG.FF_PYTHON_WHEEL_HASHING else hashes,
         outs = outs or [name],
         tools = [CONFIG.JARCAT_TOOL],
         cmd = cmd,
