@@ -6,11 +6,11 @@ import (
 	"github.com/DataDog/zstd"
 	"github.com/golang/snappy"
 	"github.com/mattn/go-sqlite3"
-	"github.com/peterebden/go-cli-init/v2"
+	"github.com/peterebden/go-cli-init/v5/logging"
 )
 
 func TestCLIImport(t *testing.T) {
-	cli.MustGetLogger()
+	logging.MustGetLogger()
 }
 
 func TestZSTImport(t *testing.T) {

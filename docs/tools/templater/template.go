@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/peterebden/go-cli-init/v4/flags"
+	"github.com/peterebden/go-cli-init/v5/flags"
 )
 
 var shapes = []string{

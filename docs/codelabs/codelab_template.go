@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/peterebden/go-cli-init/v4/flags"
+	"github.com/peterebden/go-cli-init/v5/flags"
 )
 
 // TODO(jpoole): maybe we should just have an order field in the MD?

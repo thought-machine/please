@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	cli "github.com/peterebden/go-cli-init/v4/logging"
+	cli "github.com/peterebden/go-cli-init/v5/logging"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/op/go-logging.v1"
 )

@@ -11,8 +11,8 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/dustin/go-humanize"
-	cli "github.com/peterebden/go-cli-init/v4/flags"
-	clilogging "github.com/peterebden/go-cli-init/v4/logging"
+	cli "github.com/peterebden/go-cli-init/v5/flags"
+	clilogging "github.com/peterebden/go-cli-init/v5/logging"
 	"github.com/thought-machine/go-flags"
 )
 
