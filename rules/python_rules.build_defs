@@ -37,9 +37,8 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
                        (the most obvious reason not is when it contains .so modules).
                        See python_binary for more information.
       labels (list): Labels to apply to this rule.
-      interpreter (str): The Python interpreter to use. Defaults to the config setting
-                         which is normally just 'python', but could be 'python3' or
-                         'pypy' or whatever.
+      interpreter (str): The Python interpreter to use. Defaults to the value of the
+                         Python.DefaultInterpreter setting.
       strip (bool): If True, the original sources are stripped and only bytecode is output.
       labels (list): Any labels to apply to this rule.
     """
@@ -122,14 +121,14 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
       strip (bool): Strips source code from the output .pex file, leaving just bytecode.
       site (bool): Allows the Python interpreter to import site; conversely if False, it will be
                    started with the -S flag to avoid importing site.
-      interpreter (str): The Python interpreter to use. Defaults to the config setting
-                         which is normally just 'python', but could be 'python3' or
-                         'pypy' or whatever.
+      interpreter (str): The Python interpreter to use. Defaults to the value of the
+                         Python.DefaultInterpreter setting.
       shebang (str): Exact shebang to apply to the generated file. By default we will
                      determine something appropriate for the given interpreter.
       labels (list): Labels to apply to this rule.
     """
-    shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
+    interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
+    shebang = shebang or _interpreter_cmd(interpreter)
     zipsafe_flag = '' if zip_safe is False else '--zip_safe'
     cmd = '$TOOLS_PEX -s "%s" -m "%s" %s --interpreter_options="%s" --stamp="$RULE_HASH"' % (
         shebang, CONFIG.PYTHON_MODULE_DIR, zipsafe_flag, CONFIG.PYTHON_INTERPRETER_OPTIONS)
@@ -161,7 +160,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         needs_transitive_deps=True,  # Needed so we can find anything with zip_safe=False on it.
         output_is_complete=True,
         tools={
-            'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+            'interpreter': [interpreter],
             'pex': [CONFIG.PEX_TOOL],
         },
         test_only=test_only,
@@ -182,7 +181,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         output_is_complete=True,
         building_description="Creating pex...",
         visibility=visibility,
-        requires=['py', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+        requires=['py', interpreter],
         tools=[CONFIG.JARCAT_TOOL],
         # This makes the python_library rule the dependency for other python_library or
         # python_test rules that try to import it. Does mean that they cannot collect a .pex
@@ -229,9 +228,8 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
                        If set to explicitly True or False, the output will be marked
                        appropriately; by default it will be safe unless any of the
                        transitive dependencies are themselves marked as not zip-safe.
-      interpreter (str): The Python interpreter to use. Defaults to the config setting
-                         which is normally just 'python', but could be 'python3' or
-                        'pypy' or whatever.
+      interpreter (str): The Python interpreter to use. Defaults to the value of the
+                         Python.DefaultInterpreter setting.
       site (bool): Allows the Python interpreter to import site; conversely if False, it will be
                    started with the -S flag to avoid importing site.
       test_runner (str): Specify which Python test runner to use for these tests. One of
@@ -240,7 +238,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     test_runner = test_runner or CONFIG.PYTHON_TEST_RUNNER
     cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$RULE_HASH"' % (
-        interpreter, CONFIG.PYTHON_MODULE_DIR, test_runner,
+        _interpreter_cmd(interpreter), CONFIG.PYTHON_MODULE_DIR, test_runner,
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
@@ -270,7 +268,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         pre_build=_handle_zip_safe,
         deps=deps,
         tools={
-            'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+            'interpreter': [interpreter],
             'pex': [CONFIG.PEX_TOOL],
         },
         labels = labels,
@@ -318,7 +316,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         size = size,
         flaky=flaky,
         test_outputs=test_outputs,
-        requires=['py', 'test', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+        requires=['py', 'test', interpreter],
         tools=[CONFIG.JARCAT_TOOL],
     )
 
@@ -577,6 +575,10 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         labels = [label],
         provides = {'py': wheel_rule},
     )
+
+
+def _interpreter_cmd(interpreter:str):
+    return f'$(out {interpreter})' if interpreter.startswith('//') or interpreter.startswith(':') else interpreter
 
 
 def _patch_cmd(patch):
