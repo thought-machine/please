@@ -200,25 +200,29 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		}
 	}
 
+	// Ensure `config.Please.Location` is expanded to its full path
 	if config.Please.Location == "" {
+		defaultPleaseLocation := fs.ExpandHomePath("~/.please")
 		// Determine the location based off where we're running from.
 		if exec, err := fs.Executable(); err != nil {
 			log.Warning("Can't determine current executable: %s", err)
-			config.Please.Location = "~/.please"
-		} else if strings.HasPrefix(exec, fs.ExpandHomePath("~/.please")) {
+			config.Please.Location = defaultPleaseLocation
+		} else if strings.HasPrefix(exec, defaultPleaseLocation) {
 			// Paths within ~/.please are managed by us and have symlinks to subdirectories
 			// that we don't want to follow.
-			config.Please.Location = "~/.please"
+			config.Please.Location = defaultPleaseLocation
 		} else if deref, err := filepath.EvalSymlinks(exec); err != nil {
 			log.Warning("Can't dereference %s: %s", exec, err)
-			config.Please.Location = "~/.please"
+			config.Please.Location = defaultPleaseLocation
 		} else {
 			config.Please.Location = path.Dir(deref)
 		}
+	} else {
+		config.Please.Location = fs.ExpandHomePath(config.Please.Location)
+		if !filepath.IsAbs(config.Please.Location) {
+			config.Please.Location = filepath.Join(RepoRoot, config.Please.Location)
+		}
 	}
-
-	config.HomeDir = os.Getenv("HOME")
-	config.PleaseLocation = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir)
 
 	// If the HTTP proxy config is set and there is no env var overriding it, set it now
 	// so various other libraries will honour it.
@@ -575,10 +579,6 @@ type Configuration struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`
 
-	// HomeDir is not a config setting but is used to construct the path.
-	HomeDir string
-	// Similarly this is a fully expanded form of Please.Location
-	PleaseLocation string
 	// buildEnvStored is a cached form of BuildEnv.
 	buildEnvStored *storedBuildEnv
 	// Profiling can be set to true by a caller to enable CPU profiling in any areas that might
@@ -669,7 +669,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 			if v, isSet := os.LookupEnv(k); isSet {
 				if k == "PATH" {
 					// plz's install location always needs to be on the path.
-					v = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir) + ":" + v
+					v = config.Please.Location + ":" + v
 					includePath = false // skip this in a bit
 				}
 				env = append(env, k+"="+v)
@@ -681,7 +681,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 		if v, isSet := os.LookupEnv(k); isSet {
 			if k == "PATH" {
 				// plz's install location always needs to be on the path.
-				v = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir) + ":" + v
+				v = config.Please.Location + ":" + v
 				includePath = false // skip this in a bit
 			}
 			env = append(env, k+"="+v)
@@ -692,7 +692,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env = append(env, "PATH="+fs.ExpandHomePathTo(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":"), config.HomeDir))
+		env = append(env, "PATH="+strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":"))
 	}
 
 	sort.Strings(env)
