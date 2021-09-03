@@ -3,14 +3,13 @@ package help
 import (
 	"fmt"
 	"reflect"
-	"regexp"
 	"runtime"
 	"strings"
 
 	"github.com/thought-machine/please/src/core"
 )
 
-var urlRegex = regexp.MustCompile("https?://[^ ]+[^.]")
+var urlRegex = core.DeferredRegexp{Re: "https?://[^ ]+[^.]"}
 
 // ExampleValue returns an example value for a config field based on its type.
 func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options string) string {
