@@ -148,7 +148,7 @@ jobs:
            command: tar -xzf /tmp/workspace/darwin_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang -o "go.cflags:-target arm64-apple-macos11" //package:release_files
+           command: ./please/please build -p --profile ci --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang -o "go.cflags:-target arm64-apple-macos11" -o please.location:./please //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -175,7 +175,7 @@ jobs:
            command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch freebsd_amd64 //package:release_files
+           command: ./please/please build -p --profile ci --arch freebsd_amd64 -o please.location:./please //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
