@@ -60,28 +60,47 @@ import (
 	"regexp"
 	"runtime/debug"
 	"strings"
+	"sync"
 
 	"github.com/thought-machine/please/src/fs"
 )
 
-var locationReplacement = regexp.MustCompile(`\$\(location ([^\)]+)\)`)
-var locationsReplacement = regexp.MustCompile(`\$\(locations ([^\)]+)\)`)
-var exeReplacement = regexp.MustCompile(`\$\(exe ([^\)]+)\)`)
-var outExeReplacement = regexp.MustCompile(`\$\(out_exe ([^\)]+)\)`)
-var outReplacement = regexp.MustCompile(`\$\(out_location ([^\)]+)\)`)
-var outsReplacement = regexp.MustCompile(`\$\(out_locations ([^\)]+)\)`)
-var dirReplacement = regexp.MustCompile(`\$\(dir ([^\)]+)\)`)
-var outDirReplacement = regexp.MustCompile(`\$\(out_dir ([^\)]+)\)`)
-var hashReplacement = regexp.MustCompile(`\$\(hash ([^\)]+)\)`)
-var workerReplacement = regexp.MustCompile(`^(.*)\$\(worker ([^\)]+)\) *([^&]*)(?: *&& *(.*))?$`)
+var locationReplacement *regexp.Regexp
+var locationsReplacement *regexp.Regexp
+var exeReplacement *regexp.Regexp
+var outExeReplacement *regexp.Regexp
+var outReplacement *regexp.Regexp
+var outsReplacement *regexp.Regexp
+var dirReplacement *regexp.Regexp
+var outDirReplacement *regexp.Regexp
+var hashReplacement *regexp.Regexp
+var workerReplacement *regexp.Regexp
+var regexpsOnce sync.Once
+
+func initRegexps() {
+	regexpsOnce.Do(func() {
+		locationReplacement = regexp.MustCompile(`\$\(location ([^\)]+)\)`)
+		locationsReplacement = regexp.MustCompile(`\$\(locations ([^\)]+)\)`)
+		exeReplacement = regexp.MustCompile(`\$\(exe ([^\)]+)\)`)
+		outExeReplacement = regexp.MustCompile(`\$\(out_exe ([^\)]+)\)`)
+		outReplacement = regexp.MustCompile(`\$\(out_location ([^\)]+)\)`)
+		outsReplacement = regexp.MustCompile(`\$\(out_locations ([^\)]+)\)`)
+		dirReplacement = regexp.MustCompile(`\$\(dir ([^\)]+)\)`)
+		outDirReplacement = regexp.MustCompile(`\$\(out_dir ([^\)]+)\)`)
+		hashReplacement = regexp.MustCompile(`\$\(hash ([^\)]+)\)`)
+		workerReplacement = regexp.MustCompile(`^(.*)\$\(worker ([^\)]+)\) *([^&]*)(?: *&& *(.*))?$`)
+	})
+}
 
 // ReplaceSequences replaces escape sequences in the given string.
 func ReplaceSequences(state *BuildState, target *BuildTarget, command string) (string, error) {
+	initRegexps()
 	return replaceSequencesInternal(state, target, command, false)
 }
 
 // ReplaceTestSequences replaces escape sequences in the given string when running a test.
 func ReplaceTestSequences(state *BuildState, target *BuildTarget, command string) (string, error) {
+	initRegexps()
 	if command == "" {
 		// An empty test command implies running the test binary.
 		return replaceSequencesInternal(state, target, fmt.Sprintf("$(exe :%s)", target.Label.Name), true)
@@ -94,11 +113,13 @@ func ReplaceTestSequences(state *BuildState, target *BuildTarget, command string
 
 // TestWorkerCommand returns the worker & its arguments (if any) for a test, and the command to run for the test itself.
 func TestWorkerCommand(state *BuildState, target *BuildTarget) (string, string, string, error) {
+	initRegexps()
 	return workerAndArgs(state, target, target.GetTestCommand(state))
 }
 
 // WorkerCommandAndArgs returns the worker & its command (if any) and subsequent local command for the rule.
 func WorkerCommandAndArgs(state *BuildState, target *BuildTarget) (string, string, string, error) {
+	initRegexps()
 	return workerAndArgs(state, target, target.GetCommand(state))
 }
 

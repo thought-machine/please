@@ -12,16 +12,23 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/thought-machine/please/src/core"
 )
 
 // Not sure what the -6 suffixes are about.
-var testStart = regexp.MustCompile(`^=== RUN (.*)(?:-6)?$`)
-var testResult = regexp.MustCompile(`^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \(([0-9]+\.[0-9]+)s\)$`)
+var testStart *regexp.Regexp
+var testResult *regexp.Regexp
+var regexOnce sync.Once
 
 func parseGoTestResults(data []byte) (core.TestSuite, error) {
+	regexOnce.Do(func() {
+		testStart = regexp.MustCompile(`^=== RUN (.*)(?:-6)?$`)
+		testResult = regexp.MustCompile(`^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \(([0-9]+\.[0-9]+)s\)$`)
+	})
+
 	results := core.TestSuite{}
 	lines := bytes.Split(data, []byte{'\n'})
 	testsStarted := map[string]bool{}
