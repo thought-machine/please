@@ -25,9 +25,6 @@ var log = logging.MustGetLogger("cli")
 // StdErrIsATerminal is true if the process' stderr is an interactive TTY.
 var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
 
-// StdOutIsATerminal is true if the process' stdout is an interactive TTY.
-var StdOutIsATerminal = terminal.IsTerminal(int(os.Stdout.Fd()))
-
 // ShowColouredOutput tracks whether we are displaying coloured output or not.
 var ShowColouredOutput = StdErrIsATerminal
 
