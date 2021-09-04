@@ -27,11 +27,12 @@ func Sandbox(args []string) error {
 	if len(args) < 2 {
 		return fmt.Errorf("incorrect number of args to call plz sandbox")
 	}
-	cmd := exec.Command(args[0], args[1:]...)
 
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
+	env := os.Environ()
+	cmd, err := exec.LookPath(args[0])
+	if err != nil {
+		return fmt.Errorf("Failed to lookup %s on path: %s", args[0], err)
+	}
 
 	unshareMount := os.Getenv("SHARE_MOUNT") != "1"
 	unshareNetwork := os.Getenv("SHARE_NETWORK") != "1"
@@ -50,11 +51,11 @@ func Sandbox(args []string) error {
 			return fmt.Errorf("Failed to mount over sandboxed dirs: %w", err)
 		}
 
-		if err := rewriteEnvVars(tmpDirEnv, sandboxMountDir); err != nil {
-			return err
-		}
+		rewriteEnvVars(env, tmpDirEnv, sandboxMountDir)
 
-		cmd.Dir = sandboxMountDir
+		if err := os.Chdir(sandboxMountDir); err != nil {
+			return fmt.Errorf("Failed to chdir to %s: %s", sandboxMountDir, err)
+		}
 
 		if err := mountProc(); err != nil {
 			return err
@@ -66,22 +67,19 @@ func Sandbox(args []string) error {
 			return fmt.Errorf("Failed to bring loopback interface up: %s", err)
 		}
 	}
-
-	return cmd.Run()
+	err = syscall.Exec(cmd, args, env)
+	return fmt.Errorf("Failed to exec %s: %s", cmd, err)
 }
 
-func rewriteEnvVars(from, to string) error {
-	for _, envVar := range os.Environ() {
+func rewriteEnvVars(env []string, from, to string) {
+	for i, envVar := range env {
 		if strings.Contains(envVar, from) {
 			parts := strings.Split(envVar, "=")
 			key := parts[0]
 			value := strings.TrimPrefix(envVar, key+"=")
-			if err := os.Setenv(key, strings.ReplaceAll(value, from, to)); err != nil {
-				return err
-			}
+			env[i] = key + "=" + strings.ReplaceAll(value, from, to)
 		}
 	}
-	return nil
 }
 
 func sandboxDir(dir string) error {

@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/peterebden/go-cli-init/v3"
+	"github.com/peterebden/go-deferred-regex"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/op/go-logging.v1"
 )
@@ -31,7 +32,7 @@ var StdOutIsATerminal = terminal.IsTerminal(int(os.Stdout.Fd()))
 var ShowColouredOutput = StdErrIsATerminal
 
 // StripAnsi is a regex to find & replace ANSI console escape sequences.
-var StripAnsi = regexp.MustCompile("\x1b[^m]+m")
+var StripAnsi = deferredregex.DeferredRegex{Re: "\x1b[^m]+m"}
 
 // logLevel is the current verbosity level that is set.
 var logLevel = logging.WARNING
