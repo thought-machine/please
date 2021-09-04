@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -16,7 +17,9 @@ import (
 )
 
 func TestPlzConfigWorking(t *testing.T) {
+	RepoRoot = "/repo/root"
 	config, err := ReadConfigFiles([]string{"src/core/test_data/working.plzconfig"}, nil)
+
 	assert.NoError(t, err)
 	assert.Equal(t, "pexmabob", config.Python.PexTool)
 	assert.Equal(t, "javac", config.Java.JavacTool)
@@ -25,6 +28,7 @@ func TestPlzConfigWorking(t *testing.T) {
 	assert.Equal(t, "8", config.Java.SourceLevel)
 	assert.Equal(t, "7", config.Java.TargetLevel)
 	assert.Equal(t, "10", config.Java.ReleaseLevel)
+	assert.Equal(t, "/repo/root/plz-out/please", config.Please.Location)
 }
 
 func TestPlzConfigFailing(t *testing.T) {
@@ -150,6 +154,24 @@ func TestConfigOverrideOptions(t *testing.T) {
 	assert.Equal(t, "sha256", config.Build.HashFunction)
 	err = config.ApplyOverrides(map[string]string{"build/hashfunction": "md5"})
 	assert.Error(t, err)
+}
+
+func TestPleaseRelativeLocationOverride(t *testing.T) {
+	RepoRoot = "/repo/root"
+	config := DefaultConfiguration()
+
+	err := config.ApplyOverrides(map[string]string{"please.location": "./plz-out/please"})
+	assert.NoError(t, err)
+	assert.Equal(t, "/repo/root/plz-out/please", config.Please.Location)
+}
+
+func TestPleaseTildeLocationOverride(t *testing.T) {
+	config := DefaultConfiguration()
+	home := os.Getenv("HOME")
+
+	err := config.ApplyOverrides(map[string]string{"please.location": "~/please-location"})
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(home, "please-location"), config.Please.Location)
 }
 
 func TestReadSemver(t *testing.T) {
@@ -355,4 +377,24 @@ func TestGetTags(t *testing.T) {
 
 	assert.Equal(t, "Version", tags["PLZ_VERSION"].Name)
 	assert.True(t, tags["PLZ_VERSION"].Type == reflect.TypeOf(cli.Version{}))
+}
+
+func TestEnsurePleaseLocation(t *testing.T) {
+	config := DefaultConfiguration()
+
+	// Empty please location config resolves to this executable's directory
+	config.Please.Location = ""
+	config.EnsurePleaseLocation()
+	assert.Equal(t, os.Getenv("PWD"), config.Please.Location)
+
+	// Expands ~
+	config.Please.Location = "~"
+	config.EnsurePleaseLocation()
+	assert.Equal(t, os.Getenv("HOME"), config.Please.Location)
+
+	// Resolves relative path to repo root
+	RepoRoot = "/repo/root"
+	config.Please.Location = "./plz-out/please"
+	config.EnsurePleaseLocation()
+	assert.Equal(t, "/repo/root/plz-out/please", config.Please.Location)
 }

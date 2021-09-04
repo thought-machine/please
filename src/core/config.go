@@ -200,29 +200,8 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		}
 	}
 
-	// Ensure `config.Please.Location` is expanded to its full path
-	if config.Please.Location == "" {
-		defaultPleaseLocation := fs.ExpandHomePath("~/.please")
-		// Determine the location based off where we're running from.
-		if exec, err := fs.Executable(); err != nil {
-			log.Warning("Can't determine current executable: %s", err)
-			config.Please.Location = defaultPleaseLocation
-		} else if strings.HasPrefix(exec, defaultPleaseLocation) {
-			// Paths within ~/.please are managed by us and have symlinks to subdirectories
-			// that we don't want to follow.
-			config.Please.Location = defaultPleaseLocation
-		} else if deref, err := filepath.EvalSymlinks(exec); err != nil {
-			log.Warning("Can't dereference %s: %s", exec, err)
-			config.Please.Location = defaultPleaseLocation
-		} else {
-			config.Please.Location = path.Dir(deref)
-		}
-	} else {
-		config.Please.Location = fs.ExpandHomePath(config.Please.Location)
-		if !filepath.IsAbs(config.Please.Location) {
-			config.Please.Location = filepath.Join(RepoRoot, config.Please.Location)
-		}
-	}
+	// Resolve the full path to its location.
+	config.EnsurePleaseLocation()
 
 	// If the HTTP proxy config is set and there is no env var overriding it, set it now
 	// so various other libraries will honour it.
@@ -649,6 +628,33 @@ func (config *Configuration) GetBuildEnv() []string {
 	return config.buildEnvStored.Env
 }
 
+// EnsurePleaseLocation will resolve `config.Please.Location` to a full path location where it is to be found.
+func (config *Configuration) EnsurePleaseLocation() {
+	defaultPleaseLocation := fs.ExpandHomePath("~/.please")
+
+	if config.Please.Location == "" {
+		// Determine the location based off where we're running from.
+		if exec, err := fs.Executable(); err != nil {
+			log.Warning("Can't determine current executable: %s", err)
+			config.Please.Location = defaultPleaseLocation
+		} else if strings.HasPrefix(exec, defaultPleaseLocation) {
+			// Paths within ~/.please are managed by us and have symlinks to subdirectories
+			// that we don't want to follow.
+			config.Please.Location = defaultPleaseLocation
+		} else if deref, err := filepath.EvalSymlinks(exec); err != nil {
+			log.Warning("Can't dereference %s: %s", exec, err)
+			config.Please.Location = defaultPleaseLocation
+		} else {
+			config.Please.Location = path.Dir(deref)
+		}
+	} else {
+		config.Please.Location = fs.ExpandHomePath(config.Please.Location)
+		if !filepath.IsAbs(config.Please.Location) {
+			config.Please.Location = filepath.Join(RepoRoot, config.Please.Location)
+		}
+	}
+}
+
 // Path returns the slice of strings corresponding to the PATH env var.
 func (config *Configuration) Path() []string {
 	config.GetBuildEnv() // ensure it is initialised
@@ -794,6 +800,10 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 			return fmt.Errorf("Can't override config field %s (is %s)", k, field.Kind())
 		}
 	}
+
+	// Resolve the full path to its location.
+	config.EnsurePleaseLocation()
+
 	return nil
 }
 
