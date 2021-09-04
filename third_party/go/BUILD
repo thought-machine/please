@@ -953,5 +953,5 @@ go_module(
 go_module(
     name = "deferred_regex",
     module = "github.com/peterebden/go-deferred-regex",
-    version = "f9c6e8d832d09876481dff858a3f51a067786d3d",
+    version = "v1.0.0",
 )
