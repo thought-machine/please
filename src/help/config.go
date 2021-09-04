@@ -6,10 +6,12 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/peterebden/go-deferred-regex"
+
 	"github.com/thought-machine/please/src/core"
 )
 
-var urlRegex = core.DeferredRegexp{Re: "https?://[^ ]+[^.]"}
+var urlRegex = deferredregex.DeferredRegex{Re: "https?://[^ ]+[^.]"}
 
 // ExampleValue returns an example value for a config field based on its type.
 func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options string) string {

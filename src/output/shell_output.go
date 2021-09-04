@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/peterebden/go-deferred-regex"
+
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/process"
@@ -603,7 +605,7 @@ func colouriseError(err error) error {
 }
 
 // errorMessageRe is a regex to find lines that look like they're specifying a file.
-var errorMessageRe = core.DeferredRegexp{Re: `^([^ ]+\.[^: /]+):([0-9]+):(?:([0-9]+):)? *(?:([a-z-_ ]+):)? (.*)$`}
+var errorMessageRe = deferredregex.DeferredRegex{Re: `^([^ ]+\.[^: /]+):([0-9]+):(?:([0-9]+):)? *(?:([a-z-_ ]+):)? (.*)$`}
 
 // unbuiltTargetsMessage returns a message for any targets that are supposed to build but haven't yet.
 func unbuiltTargetsMessage(graph *core.BuildGraph) string {

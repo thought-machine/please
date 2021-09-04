@@ -949,3 +949,9 @@ go_module(
     module = "go.uber.org/automaxprocs",
     version = "v1.4.0",
 )
+
+go_module(
+    name = "deferred_regex",
+    module = "github.com/peterebden/go-deferred-regex",
+    version = "f9c6e8d832d09876481dff858a3f51a067786d3d",
+)
