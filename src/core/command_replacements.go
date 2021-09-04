@@ -60,19 +60,21 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/peterebden/go-deferred-regex"
+
 	"github.com/thought-machine/please/src/fs"
 )
 
-var locationReplacement = DeferredRegexp{Re: `\$\(location ([^\)]+)\)`}
-var locationsReplacement = DeferredRegexp{Re: `\$\(locations ([^\)]+)\)`}
-var exeReplacement = DeferredRegexp{Re: `\$\(exe ([^\)]+)\)`}
-var outExeReplacement = DeferredRegexp{Re: `\$\(out_exe ([^\)]+)\)`}
-var outReplacement = DeferredRegexp{Re: `\$\(out_location ([^\)]+)\)`}
-var outsReplacement = DeferredRegexp{Re: `\$\(out_locations ([^\)]+)\)`}
-var dirReplacement = DeferredRegexp{Re: `\$\(dir ([^\)]+)\)`}
-var outDirReplacement = DeferredRegexp{Re: `\$\(out_dir ([^\)]+)\)`}
-var hashReplacement = DeferredRegexp{Re: `\$\(hash ([^\)]+)\)`}
-var workerReplacement = DeferredRegexp{Re: `^(.*)\$\(worker ([^\)]+)\) *([^&]*)(?: *&& *(.*))?$`}
+var locationReplacement = deferredregex.DeferredRegex{Re: `\$\(location ([^\)]+)\)`}
+var locationsReplacement = deferredregex.DeferredRegex{Re: `\$\(locations ([^\)]+)\)`}
+var exeReplacement = deferredregex.DeferredRegex{Re: `\$\(exe ([^\)]+)\)`}
+var outExeReplacement = deferredregex.DeferredRegex{Re: `\$\(out_exe ([^\)]+)\)`}
+var outReplacement = deferredregex.DeferredRegex{Re: `\$\(out_location ([^\)]+)\)`}
+var outsReplacement = deferredregex.DeferredRegex{Re: `\$\(out_locations ([^\)]+)\)`}
+var dirReplacement = deferredregex.DeferredRegex{Re: `\$\(dir ([^\)]+)\)`}
+var outDirReplacement = deferredregex.DeferredRegex{Re: `\$\(out_dir ([^\)]+)\)`}
+var hashReplacement = deferredregex.DeferredRegex{Re: `\$\(hash ([^\)]+)\)`}
+var workerReplacement = deferredregex.DeferredRegex{Re: `^(.*)\$\(worker ([^\)]+)\) *([^&]*)(?: *&& *(.*))?$`}
 
 // ReplaceSequences replaces escape sequences in the given string.
 func ReplaceSequences(state *BuildState, target *BuildTarget, command string) (string, error) {

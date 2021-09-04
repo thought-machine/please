@@ -13,12 +13,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/peterebden/go-deferred-regex"
+
 	"github.com/thought-machine/please/src/core"
 )
 
 // Not sure what the -6 suffixes are about.
-var testStart = core.DeferredRegexp{Re: `^=== RUN (.*)(?:-6)?$`}
-var testResult = core.DeferredRegexp{Re: `^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \(([0-9]+\.[0-9]+)s\)$`}
+var testStart = deferredregex.DeferredRegex{Re: `^=== RUN (.*)(?:-6)?$`}
+var testResult = deferredregex.DeferredRegex{Re: `^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \(([0-9]+\.[0-9]+)s\)$`}
 
 func parseGoTestResults(data []byte) (core.TestSuite, error) {
 	results := core.TestSuite{}
