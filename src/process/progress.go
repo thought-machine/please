@@ -2,8 +2,9 @@ package process
 
 import (
 	"io"
-	"regexp"
 	"strconv"
+
+	"github.com/peterebden/go-deferred-regex"
 )
 
 // A progressWriter implements progress display for a target; when it's written to
@@ -15,7 +16,7 @@ type progressWriter struct {
 	p *float32
 }
 
-var progressRegex = regexp.MustCompile(`\[ *([0-9]+)%\]`)
+var progressRegex = deferredregex.DeferredRegex{Re: `\[ *([0-9]+)%\]`}
 
 func newProgressWriter(t Target, p *float32, w io.Writer) io.Writer {
 	return &progressWriter{t: t, p: p, w: w}
