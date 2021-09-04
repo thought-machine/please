@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -166,12 +165,13 @@ func TestPleaseRelativeLocationOverride(t *testing.T) {
 }
 
 func TestPleaseTildeLocationOverride(t *testing.T) {
+	t.Setenv("HOME", "/path/to/home")
+
 	config := DefaultConfiguration()
-	home := os.Getenv("HOME")
 
 	err := config.ApplyOverrides(map[string]string{"please.location": "~/please-location"})
 	assert.NoError(t, err)
-	assert.Equal(t, filepath.Join(home, "please-location"), config.Please.Location)
+	assert.Equal(t, "/path/to/home/please-location", config.Please.Location)
 }
 
 func TestReadSemver(t *testing.T) {
@@ -380,6 +380,8 @@ func TestGetTags(t *testing.T) {
 }
 
 func TestEnsurePleaseLocation(t *testing.T) {
+	t.Setenv("HOME", "/path/to/home")
+
 	config := DefaultConfiguration()
 
 	// Empty please location config resolves to this executable's directory
@@ -390,7 +392,7 @@ func TestEnsurePleaseLocation(t *testing.T) {
 	// Expands ~
 	config.Please.Location = "~"
 	config.EnsurePleaseLocation()
-	assert.Equal(t, os.Getenv("HOME"), config.Please.Location)
+	assert.Equal(t, "/path/to/home", config.Please.Location)
 
 	// Resolves relative path to repo root
 	RepoRoot = "/repo/root"

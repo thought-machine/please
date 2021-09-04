@@ -6,12 +6,11 @@ import (
 	"strings"
 )
 
-var home = os.Getenv("HOME")
 var homeRex = regexp.MustCompile("(?:^|:)(~(?:[/:]|$))")
 
 // ExpandHomePath expands all prefixes of ~ without a user specifier to $HOME.
 func ExpandHomePath(path string) string {
-	return ExpandHomePathTo(path, home)
+	return ExpandHomePathTo(path, os.Getenv("HOME"))
 }
 
 // ExpandHomePathTo expands all prefixes of ~ without a user specifier to the given string.
