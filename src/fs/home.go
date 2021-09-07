@@ -2,12 +2,13 @@ package fs
 
 import (
 	"os"
-	"regexp"
 	"strings"
+
+	"github.com/peterebden/go-deferred-regex"
 )
 
 var home = os.Getenv("HOME")
-var homeRex = regexp.MustCompile("(?:^|:)(~(?:[/:]|$))")
+var homeRex = deferredregex.DeferredRegex{Re: "(?:^|:)(~(?:[/:]|$))"}
 
 // ExpandHomePath expands all prefixes of ~ without a user specifier to $HOME.
 func ExpandHomePath(path string) string {
