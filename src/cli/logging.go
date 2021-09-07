@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/peterebden/go-cli-init/v3"
-	"github.com/peterebden/go-deferred-regex"
+	cli "github.com/peterebden/go-cli-init/v5/logging"
+  "github.com/peterebden/go-deferred-regex"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/op/go-logging.v1"
 )

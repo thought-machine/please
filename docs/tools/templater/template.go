@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/peterebden/go-cli-init/v3"
+	"github.com/peterebden/go-cli-init/v5/flags"
 )
 
 var shapes = []string{
@@ -106,7 +106,7 @@ var opts struct {
 }
 
 func main() {
-	cli.ParseFlagsOrDie("Docs template", &opts)
+	flags.ParseFlagsOrDie("Docs template", &opts)
 
 	if opts.Filename == "" {
 		opts.Filename = strings.TrimPrefix(opts.In, "docs/")
