@@ -2,6 +2,7 @@ package install
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"go/build"
 	"log"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/thought-machine/please/tools/please_go/install/exec"
 	"github.com/thought-machine/please/tools/please_go/install/toolchain"
+	"github.com/thought-machine/please/tools/please_go_embed/embed"
 )
 
 const ldFlagsFile = "LD_FLAGS"
@@ -196,6 +198,7 @@ func (install *PleaseGoInstall) parseImportConfig() error {
 	install.compiledPackages = map[string]string{
 		"unsafe": "", // Not sure how many other packages like this I need to handle
 		"C":      "", // Pseudo-package for cgo symbols
+		"embed":  "", // Another psudo package
 	}
 
 	if install.importConfig != "" {
@@ -290,6 +293,23 @@ func outPath(outDir, target string) string {
 	return filepath.Join(outDir, filepath.Dir(target), dirName, dirName+".a")
 }
 
+func writeEmbedConfig(pkg *build.Package, path string) error {
+	cfg := &embed.Cfg{
+		Patterns: map[string][]string{},
+		Files:    map[string]string{},
+	}
+
+	if err := cfg.AddPackage(pkg); err != nil {
+		return err
+	}
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, data, 0666)
+}
+
 func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package) error {
 	if len(pkg.GoFiles)+len(pkg.CgoFiles) == 0 {
 		return nil
@@ -351,13 +371,21 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 		objFiles = append(objFiles, cObjFiles...)
 	}
 
+	embedConfig := ""
+	if len(pkg.EmbedPatterns) > 0 {
+		embedConfig = filepath.Join(workDir, "embed.cfg")
+		if err := writeEmbedConfig(pkg, embedConfig); err != nil {
+			return fmt.Errorf("failed to write embed config: %v", err)
+		}
+	}
+
 	if len(pkg.SFiles) > 0 {
 		asmH, symabis, err := install.tc.Symabis(pkg.Dir, workDir, pkg.SFiles)
 		if err != nil {
 			return err
 		}
 
-		if err := install.tc.GoAsmCompile(workDir, install.importConfig, out, install.trimPath, goFiles, asmH, symabis); err != nil {
+		if err := install.tc.GoAsmCompile(workDir, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis); err != nil {
 			return err
 		}
 
@@ -368,7 +396,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 
 		objFiles = append(objFiles, asmObjFiles...)
 	} else {
-		err := install.tc.GoCompile(workDir, install.importConfig, out, install.trimPath, goFiles)
+		err := install.tc.GoCompile(workDir, install.importConfig, out, install.trimPath, embedConfig, goFiles)
 		if err != nil {
 			return err
 		}

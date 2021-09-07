@@ -1,7 +1,7 @@
 go_library(
     name = "embed",
     srcs = ["embed.go"],
-    visibility = ["//tools/please_go_embed/..."],
+    visibility = ["//tools/..."],
 )
 
 go_test(
