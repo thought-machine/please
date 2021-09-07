@@ -70,7 +70,7 @@ var opts = struct {
 }{}
 
 func main() {
-	flags.ParseFlagsOrDie("Codelab template", &opts)
+	flags.ParseFlagsOrDie("Codelab template", &opts, nil)
 
 	tmplName := path.Base(opts.Template)
 

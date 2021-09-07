@@ -106,7 +106,7 @@ var opts struct {
 }
 
 func main() {
-	flags.ParseFlagsOrDie("Docs template", &opts)
+	flags.ParseFlagsOrDie("Docs template", &opts, nil)
 
 	if opts.Filename == "" {
 		opts.Filename = strings.TrimPrefix(opts.In, "docs/")

@@ -31,7 +31,7 @@ require (
 	github.com/peterebden/go-cli-init/v2 v2.0.1
 	github.com/peterebden/go-cli-init/v3 v3.0.0
 	github.com/peterebden/go-cli-init/v4 v4.0.0
-  github.com/peterebden/go-cli-init/v5 v5.0.1
+	github.com/peterebden/go-cli-init/v5 v5.0.1
 	github.com/peterebden/go-deferred-regex v1.0.0 // indirect
 	github.com/peterebden/go-sri v1.0.0
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a

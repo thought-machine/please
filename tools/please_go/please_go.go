@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/peterebden/go-cli-init/v4/flags"
+	"github.com/peterebden/go-cli-init/v5/flags"
 
 	"github.com/thought-machine/please/tools/please_go/godeps"
 	"github.com/thought-machine/please/tools/please_go/install"
@@ -100,7 +100,7 @@ var subCommands = map[string]func() int{
 }
 
 func main() {
-	command := flags.ParseFlagsOrDie("please-go", &opts)
+	command := flags.ParseFlagsOrDie("please-go", &opts, nil)
 	os.Exit(subCommands[command]())
 }
 

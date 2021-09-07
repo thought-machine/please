@@ -578,8 +578,8 @@ go_module(
 go_module(
     name = "cli-init",
     install = ["..."],
-    module = "github.com/peterebden/go-cli-init/v4",
-    version = "v4.0.0",
+    module = "github.com/peterebden/go-cli-init/v5",
+    version = "v5.0.1",
     deps = [
         ":go-flags",
         ":humanize",

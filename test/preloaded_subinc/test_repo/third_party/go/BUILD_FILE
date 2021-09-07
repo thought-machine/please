@@ -3,7 +3,7 @@ package(default_visibility = ["PUBLIC"])
 go_module(
     name = "cli-init",
     module = "github.com/peterebden/go-cli-init/v5", # Handles module major versions correctly
-    version = "v2.0.1",
+    version = "v5.0.1",
     install = ["..."],
     deps = [
         ":go-flags",

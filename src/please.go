@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -1147,7 +1147,7 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 }
 
 // Capture aliases from config file and print to the help output
-func additionalUsageInfo(parser *flags.Parser, wr *bufio.Writer) {
+func additionalUsageInfo(parser *flags.Parser, wr io.Writer) {
 	cli.InitLogging(cli.MinVerbosity)
 	if config, err := readConfigAndSetRoot(false); err == nil {
 		config.PrintAliases(wr)
