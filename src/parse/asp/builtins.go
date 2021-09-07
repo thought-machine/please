@@ -1009,11 +1009,13 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 			},
 		}
 		if input, err := prompt.Run(); err != nil {
-			if err == io.EOF {
+			if err == io.EOF || err.Error() == "^D" {
 				break
 			} else if err.Error() != "^C" {
 				log.Error("%s", err)
 			}
+		} else if input == "exit" {
+			break
 		} else if stmts, err := s.interpreter.parser.ParseData([]byte(input), "<stdin>"); err != nil {
 			log.Error("Syntax error: %s", err)
 		} else if ret, err := interpretStatements(stmts); err != nil {
