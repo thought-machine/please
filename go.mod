@@ -1,7 +1,6 @@
 module github.com/thought-machine/please
 
 require (
-	github.com/DataDog/zstd v1.4.8
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/OneOfOne/cmap v0.0.0-20170825200327-ccaef7657ab8
 	github.com/ProtonMail/go-crypto v0.0.0-20210329181949-3900d675f39b
@@ -15,7 +14,6 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/golang/protobuf v1.4.3
-	github.com/golang/snappy v0.0.3
 	github.com/google/shlex v0.0.0-20181106134648-c34317bd91bf
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.1-0.20190118093823-f849b5445de4
 	github.com/hashicorp/go-multierror v1.0.0
@@ -24,15 +22,13 @@ require (
 	github.com/klauspost/compress v1.12.3
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/manifoldco/promptui v0.3.2
-	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/nicksnyder/go-i18n v1.10.1 // indirect
 	github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518
 	github.com/peterebden/gcfg v1.3.0
-	github.com/peterebden/go-cli-init/v2 v2.0.1
 	github.com/peterebden/go-cli-init/v3 v3.0.0
 	github.com/peterebden/go-cli-init/v4 v4.0.0
 	github.com/peterebden/go-cli-init/v5 v5.0.2
-	github.com/peterebden/go-deferred-regex v1.0.0 // indirect
+	github.com/peterebden/go-deferred-regex v1.0.0
 	github.com/peterebden/go-sri v1.0.0
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
 	github.com/pkg/xattr v0.4.0
@@ -46,11 +42,11 @@ require (
 	github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e
 	github.com/thought-machine/go-flags v1.6.0
 	github.com/ulikunitz/xz v0.5.8
-	go.uber.org/automaxprocs v1.4.0 // indirect
+	go.uber.org/automaxprocs v1.4.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
-	golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf // indirect
+	golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/tools v0.0.0-20200825202427-b303f430e36d
 	google.golang.org/genproto v0.0.0-20200904004341-0bd0a958aa1d
