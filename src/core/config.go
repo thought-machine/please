@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/google/shlex"
-	"github.com/peterebden/gcfg"
+	"github.com/please-build/gcfg"
 	"github.com/thought-machine/go-flags"
 
 	"github.com/thought-machine/please/src/cli"
@@ -64,6 +64,7 @@ func readConfigFile(config *Configuration, filename string) error {
 	} else {
 		log.Debug("Read config from %s", filename)
 	}
+	normalisePluginConfigKeys(config)
 	return nil
 }
 
@@ -228,6 +229,17 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,
 	})
+}
+
+// normalisePluginConfigKeys converts all config for plugins to lower case
+func normalisePluginConfigKeys(config *Configuration) {
+	for _, plugin := range config.Plugin {
+		newExtraValues := make(map[string][]string, len(plugin.ExtraValues))
+		for k, v := range plugin.ExtraValues {
+			newExtraValues[strings.ToLower(k)] = v
+		}
+		plugin.ExtraValues = newExtraValues
+	}
 }
 
 // setDefault sets a slice of strings in the config if the set one is empty.
@@ -562,8 +574,9 @@ type Configuration struct {
 	} `help:"Set this in your .plzconfig to make the current Please repo a plugin. Add configuration fields with PluginConfig sections"`
 	PluginConfig map[string]*struct {
 		ConfigKey    string `help:"The key of the config field in the .plzconfig file"`
-		DefaultValue string `help:"The default value for this config field, if it has one"`
+		DefaultValue []string `help:"The default value for this config field, if it has one"`
 		Optional     bool   `help:"Whether this config field can be empty"`
+		Repeatable   bool   `help:"Whether this config field can be empty"`
 	} `help:"Defines a new config field for a plugin"`
 	Bazel struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
@@ -596,7 +609,7 @@ type Alias struct {
 }
 
 type Plugin struct {
-	ExtraValues map[string]string `help:"A section of arbitrary key-value properties for the plugin."`
+	ExtraValues map[string][]string `help:"A section of arbitrary key-value properties for the plugin." gcfg:"extra_values"`
 }
 
 // A Size represents a named size in the config.
@@ -750,6 +763,11 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		split := strings.Split(strings.ToLower(k), ".")
 		if len(split) != 2 {
 			return fmt.Errorf("Bad option format: %s", k)
+		}
+		if plugin, ok := config.Plugin[split[0]]; ok {
+			log.Warningf("Setting config value %v to %v", split[1], v)
+			plugin.ExtraValues[strings.ToLower(split[1])] = []string{v}
+			return nil
 		}
 		field := elem.FieldByNameFunc(match(split[0]))
 		if !field.IsValid() {

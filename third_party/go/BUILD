@@ -72,11 +72,11 @@ go_module(
 
 go_module(
     name = "gcfg",
-    download = "//third_party/go/github_repos:my_gcfg",
     install = [
         "...",
     ],
-    module = "github.com/peterebden/gcfg",
+    module = "github.com/please-build/gcfg",
+    version = "v1.4.0",
     deps = [
         ":warnings",
     ],

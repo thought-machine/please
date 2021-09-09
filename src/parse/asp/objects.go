@@ -922,31 +922,46 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 		return
 	}
 
-	extraVals := map[string]string{}
+	extraVals := map[string][]string{}
 	if config := state.Config.Plugin[pluginName]; config != nil {
 		extraVals = config.ExtraValues
 	}
 
 	pluginNamespace := pyDict{}
 	contextPackage := &core.Package{SubrepoName: state.CurrentSubrepo}
-
+	log.Warning("Loading config ")
 	configValueDefinitions := state.Config.PluginConfig
 	for key, definition := range configValueDefinitions {
-		// TODO(jpoole): handle repeatable values
-		value, ok := extraVals[definition.ConfigKey]
+
+		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
+		log.Warningf("value for %v is %v\n %v", strings.ToLower(definition.ConfigKey), value, extraVals)
 		if !ok {
 			value = definition.DefaultValue
 		}
-		if value == "" && !definition.Optional {
-			log.Fatalf("plugin config %v.%v is not optional", pluginName, definition.ConfigKey)
+		if len(value) == 0 && !definition.Optional {
+			log.Fatalf("plugin config %v.%v is not optional %v", pluginName, definition.ConfigKey, extraVals)
+		}
+
+		if !definition.Repeatable && len(value) > 1 {
+			log.Fatalf("plugin config %v.%v is not repeatable", pluginName, definition.ConfigKey)
 		}
 
 		// Parse any config values in the current subrepo so @self resolves correctly. If we leave them, @self will
 		// resolve based on the subincluding package which will likely be the host repo.
-		if core.LooksLikeABuildLabel(value) {
-			value = core.ParseBuildLabelContext(value, contextPackage).String()
+		for i, v := range value {
+			if core.LooksLikeABuildLabel(v) {
+				value[i] = core.ParseBuildLabelContext(v, contextPackage).String()
+			}
 		}
-		pluginNamespace[strings.ToUpper(key)] = pyString(value)
+		if definition.Repeatable {
+			l := make(pyList, 0, len(value))
+			for _, v :=  range value {
+				l = append(l, pyString(v))
+			}
+			pluginNamespace[strings.ToUpper(key)] = l
+		} else {
+			pluginNamespace[strings.ToUpper(key)] = pyString(value[0])
+		}
 	}
 	c[strings.ToUpper(pluginName)] = pluginNamespace
 }
