@@ -3,7 +3,7 @@ package(please_go_tool = "please_go")
 go_module(
     name = "go-flags",
     module = "github.com/thought-machine/go-flags",
-    version = "daa3266d8f7781fc22a8e2de27496c1f6cf2d3b5",
+    version = "v1.6.0",
     deps = [":xsys"],
 )
 
