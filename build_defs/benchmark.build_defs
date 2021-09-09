@@ -10,10 +10,13 @@ def benchmark(name:str, srcs:list, deps:list=[], data:list=[], visibility:list=N
     results = build_rule(
         name = name,
         tag = "results",
-        srcs = [benchmark_rule],
+        srcs = {
+            'bin': [benchmark_rule],
+            'data': data,
+        },
         tools = ["//tools/performance/benchmark"],
         outs = [f"{name}.json"],
-        cmd = f"$SRC | $TOOL --revision {CONFIG.BENCHMARK_REVISION} > $OUT",
+        cmd = f"$SRCS_BIN | $TOOL --revision {CONFIG.BENCHMARK_REVISION} > $OUT",
         labels = ["link:plz-out/benchmarks", "benchmark"] + labels,
         test_only = True,
     )

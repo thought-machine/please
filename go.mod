@@ -31,6 +31,7 @@ require (
 	github.com/peterebden/go-cli-init/v2 v2.0.1
 	github.com/peterebden/go-cli-init/v3 v3.0.0
 	github.com/peterebden/go-cli-init/v4 v4.0.0
+	github.com/peterebden/go-deferred-regex v1.0.0 // indirect
 	github.com/peterebden/go-sri v1.0.0
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
 	github.com/pkg/xattr v0.4.0
@@ -48,7 +49,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
+	golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/tools v0.0.0-20200825202427-b303f430e36d
 	google.golang.org/genproto v0.0.0-20200904004341-0bd0a958aa1d

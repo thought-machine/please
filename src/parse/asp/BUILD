@@ -1,3 +1,5 @@
+subinclude("//build_defs:benchmark")
+
 go_library(
     name = "asp",
     srcs = glob(
@@ -74,7 +76,7 @@ go_test(
     ],
 )
 
-go_benchmark(
+benchmark(
     name = "interpreter_benchmark",
     srcs = ["interpreter_benchmark.go"],
     data = ["test_data"],

@@ -117,7 +117,7 @@ int mount_tmp(char** argv0) {
       char *token = strtok(dirs, ",");
       while(token) {
         if (mount("tmpfs", token, "tmpfs", flags | MS_RDONLY, NULL) != 0) {
-          if (errno == ENOTDIR) {
+          if (errno == ENOENT || errno == ENOTDIR) {
             // This isn't fatal, it's OK for them not to exist (in that case we just have nothing to sandbox).
             fprintf(stderr, "Not mounting over %s since it isn't a directory\n", token);
           } else {

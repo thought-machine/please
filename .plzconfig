@@ -85,4 +85,5 @@ accept = notice
 
 [featureflags]
 JavaBinaryExecutableByDefault = true
+PackageOutputsStrictness = true
 UseJunit5Runner = true
