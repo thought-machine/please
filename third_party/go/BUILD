@@ -158,7 +158,7 @@ go_module(
     name = "grpc",
     exported_deps = [
         ":net",
-        ":protobuf",
+        ":protobuf-go",
     ],
     install = [
         ".",
@@ -196,8 +196,8 @@ go_module(
     deps = [
         ":cmp",
         ":genproto_rpc",
-        ":github_protobuf",
         ":oauth2",
+        ":protobuf",
         ":uuid",
         ":xsys",
     ],
@@ -218,7 +218,7 @@ go_module(
     ],
     module = "google.golang.org/genproto",
     deps = [
-        ":protobuf",
+        ":protobuf-go",
     ],
 )
 
@@ -233,7 +233,7 @@ go_module(
     module = "google.golang.org/genproto",
     deps = [
         ":grpc",
-        ":protobuf",
+        ":protobuf-go",
     ],
 )
 
@@ -249,27 +249,35 @@ go_module(
     ],
 )
 
+go_mod_download(
+    name = "protobuf_download",
+    module = "github.com/golang/protobuf",
+    version = "v1.4.3",
+)
+
 go_module(
-    name = "github_protobuf",
+    name = "protobuf",
+    download = ":protobuf_download",
     exported_deps = [
-        ":protobuf",
+        ":protobuf-go",
     ],
     install = ["..."],
     module = "github.com/golang/protobuf",
-    version = "v1.4.3",
-    visibility = [],
 )
 
 go_module(
     name = "protoc-gen-go",
     binary = True,
-    install = ["cmd/protoc-gen-go"],
-    module = "google.golang.org/protobuf",
-    version = "v1.25.0",
+    download = ":protobuf_download",
+    install = ["protoc-gen-go"],
+    module = "github.com/golang/protobuf",
+    deps = [
+        ":protobuf",
+    ],
 )
 
 go_module(
-    name = "protobuf",
+    name = "protobuf-go",
     install = ["..."],
     module = "google.golang.org/protobuf",
     version = "v1.25.0",
@@ -292,7 +300,7 @@ go_module(
     version = "v1.1.0",
     deps = [
         ":grpc",
-        ":protobuf",
+        ":protobuf-go",
     ],
 )
 
@@ -381,7 +389,7 @@ go_module(
     version = "fa8fef87dcecac0bda02d36abb3c790ab9e0030b",
     deps = [
         ":grpc",
-        ":protobuf",
+        ":protobuf-go",
     ],
 )
 
@@ -553,7 +561,7 @@ go_module(
     install = ["..."],
     module = "github.com/bazelbuild/buildtools",
     deps = [
-        ":github_protobuf",
+        ":protobuf",
         ":skylark",
     ],
 )
@@ -620,7 +628,7 @@ go_module(
     deps = [
         ":genproto_api",
         ":grpc",
-        ":protobuf",
+        ":protobuf-go",
     ],
 )
 
@@ -639,7 +647,7 @@ go_module(
         ":grpc",
         ":oauth2",
         ":pborman_uuid",
-        ":protobuf",
+        ":protobuf-go",
         ":remote-apis",
         ":zstd",
         ":zstdpool",
@@ -900,7 +908,7 @@ go_module(
     licences = ["Apache 2.0"],
     module = "github.com/prometheus/client_model",
     version = "v0.2.0",
-    deps = [":github_protobuf"],
+    deps = [":protobuf"],
 )
 
 go_module(
@@ -938,7 +946,7 @@ go_module(
     install = ["pbutil"],
     module = "github.com/matttproud/golang_protobuf_extensions",
     version = "v1.0.1",
-    deps = [":github_protobuf"],
+    deps = [":protobuf"],
 )
 
 go_module(
