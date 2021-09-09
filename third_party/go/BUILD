@@ -249,29 +249,23 @@ go_module(
     ],
 )
 
-go_mod_download(
-    name = "protobuf_download",
-    module = "github.com/golang/protobuf",
-    version = "v1.4.3",
-)
-
 go_module(
     name = "protobuf",
-    download = ":protobuf_download",
     exported_deps = [
         ":protobuf-go",
     ],
     install = ["..."],
     module = "github.com/golang/protobuf",
+    version = "v1.4.3",
+    visibility = [],
 )
 
 go_module(
     name = "protoc-gen-go",
     binary = True,
-    download = ":protobuf_download",
-    install = ["protoc-gen-go"],
-    module = "github.com/golang/protobuf",
-    deps = [":protobuf-go"],
+    install = ["cmd/protoc-gen-go"],
+    module = "google.golang.org/protobuf",
+    version = "v1.25.0",
 )
 
 go_module(
