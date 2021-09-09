@@ -9,7 +9,6 @@ import (
 	"os"
 	"regexp"
 	"testing"
-	"time"
 
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -17,7 +16,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/peterebden/go-sri"
 	bs "google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/genproto/googleapis/longrunning"
@@ -25,6 +23,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -248,14 +247,6 @@ func (s *testServer) QueryWriteStatus(ctx context.Context, req *bs.QueryWriteSta
 	return nil, status.Errorf(codes.NotFound, "resource %s not found", req.ResourceName)
 }
 
-// toTimestamp converts a time.Time into a protobuf timestamp
-func toTimestamp(t time.Time) *timestamp.Timestamp {
-	return &timestamp.Timestamp{
-		Seconds: t.Unix(),
-		Nanos:   int32(t.Nanosecond()),
-	}
-}
-
 func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteServer) error {
 	mm := func(msg proto.Message) *any.Any {
 		a, _ := ptypes.MarshalAny(msg)
@@ -267,21 +258,21 @@ func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteSer
 			Stage: pb.ExecutionStage_CACHE_CHECK,
 		}),
 	})
-	queued := toTimestamp(time.Now())
+	queued := timestamppb.Now()
 	srv.Send(&longrunning.Operation{
 		Name: "geoff",
 		Metadata: mm(&pb.ExecuteOperationMetadata{
 			Stage: pb.ExecutionStage_QUEUED,
 		}),
 	})
-	start := toTimestamp(time.Now())
+	start := timestamppb.Now()
 	srv.Send(&longrunning.Operation{
 		Name: "geoff",
 		Metadata: mm(&pb.ExecuteOperationMetadata{
 			Stage: pb.ExecutionStage_EXECUTING,
 		}),
 	})
-	completed := toTimestamp(time.Now())
+	completed := timestamppb.Now()
 
 	// Keep stdout as a blob to force the client to download it.
 	s.blobs["5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"] = []byte("hello\n")
