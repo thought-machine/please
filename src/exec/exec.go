@@ -31,12 +31,12 @@ func Exec(state *core.BuildState, label core.BuildLabel, dir string, overrideCmd
 	return 0
 }
 
-func exec(state *core.BuildState, target *core.BuildTarget, dir string, overrideCmdArgs []string, sandbox process.SandboxConfig) error {
+func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir string, overrideCmdArgs []string, sandbox process.SandboxConfig) error {
 	if !target.IsBinary && len(overrideCmdArgs) == 0 {
 		return fmt.Errorf("Either the target needs to be a binary or an override command must be provided")
 	}
 
-	runtimeDir, err := prepareRuntimeDir(state, target, dir)
+	err := prepareRuntimeDir(state, target, runtimeDir)
 	if err != nil {
 		return err
 	}
@@ -69,24 +69,24 @@ func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArg
 }
 
 // TODO(tiagovtristao): We might want to find a better way of reusing this logic, since it's similarly used in a couple of places already.
-func prepareRuntimeDir(state *core.BuildState, target *core.BuildTarget, dir string) (string, error) {
+func prepareRuntimeDir(state *core.BuildState, target *core.BuildTarget, dir string) error {
 	if err := fs.ForceRemove(state.ProcessExecutor, dir); err != nil {
-		return dir, err
+		return err
 	}
 
 	if err := os.MkdirAll(dir, fs.DirPermissions); err != nil {
-		return dir, err
+		return err
 	}
 
 	if err := state.EnsureDownloaded(target); err != nil {
-		return dir, err
+		return err
 	}
 
 	for out := range core.IterRuntimeFiles(state.Graph, target, true, dir) {
 		if err := core.PrepareSourcePair(out); err != nil {
-			return dir, err
+			return err
 		}
 	}
 
-	return dir, nil
+	return nil
 }
