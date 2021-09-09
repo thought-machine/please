@@ -23,7 +23,6 @@ import (
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/genproto/googleapis/longrunning"
@@ -32,6 +31,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
@@ -213,7 +213,7 @@ func (c *Client) initExec() error {
 	if caps == nil {
 		return fmt.Errorf("Cache capabilities not supported by server (we do not support execution-only servers)")
 	}
-	if err := c.chooseDigest(caps.DigestFunction); err != nil {
+	if err := c.chooseDigest(caps.DigestFunctions); err != nil {
 		return err
 	}
 	c.maxBlobBatchSize = caps.MaxBatchTotalSizeBytes
@@ -700,7 +700,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		return nil, nil, convertError(result.Error)
 	case *longrunning.Operation_Response:
 		response := &pb.ExecuteResponse{}
-		if err := ptypes.UnmarshalAny(result.Response, response); err != nil {
+		if err := result.Response.UnmarshalTo(response); err != nil {
 			log.Error("Failed to deserialise execution response: %s", err)
 			return nil, nil, err
 		}
@@ -810,7 +810,7 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 	urls := target.AllURLs(c.state)
 	req := &fpb.FetchBlobRequest{
 		InstanceName: c.instance,
-		Timeout:      ptypes.DurationProto(target.BuildTimeout),
+		Timeout:      durationpb.New(target.BuildTimeout),
 		Uris:         urls,
 	}
 	if c.state.VerifyHashes && (!c.state.NeedHashesOnly || !c.state.IsOriginalTargetOrParent(target)) {

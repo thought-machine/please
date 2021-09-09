@@ -237,6 +237,18 @@ go_module(
     ],
 )
 
+go_module(
+    name = "bundler",
+    install = [
+        "support/bundler",
+    ],
+    module = "google.golang.org/api",
+    version = "v0.56.0",
+    deps = [
+        ":errgroup",
+    ],
+)
+
 go_mod_download(
     name = "protobuf_download",
     module = "github.com/golang/protobuf",
@@ -518,7 +530,7 @@ go_module(
 go_module(
     name = "errors",
     module = "github.com/pkg/errors",
-    version = "30136e27e2ac8d167177e8a583aa4c3fea5be833",
+    version = "v0.9.1",
 )
 
 go_module(
@@ -610,7 +622,7 @@ go_module(
     name = "remote-apis",
     install = ["build/..."],
     module = "github.com/bazelbuild/remote-apis",
-    version = "9e72daff42c941baaf43a4c370e2607a984c58a7",
+    version = "3e816456ee28f01ab2e0abf72306c1f340c7b229",
     deps = [
         ":genproto_api",
         ":grpc",
@@ -622,8 +634,9 @@ go_module(
     name = "remote-apis-sdks",
     install = ["go/..."],
     module = "github.com/bazelbuild/remote-apis-sdks",
-    version = "fdb5dae38ca890ae7311dc0d320e2d327df10485",
+    version = "ddba20599b6eafae1669d4da1aa4772fb8c80efd",
     deps = [
+        ":bundler",
         ":cmp",
         ":errgroup",
         ":errors",

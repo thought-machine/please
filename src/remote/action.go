@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/command"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
@@ -471,7 +472,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 
 // uploadLocalTarget uploads the outputs of a target that was built locally.
 func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
-	m, ar, err := c.client.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), filemetadata.NewNoopCache())
+	m, ar, err := c.client.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), filemetadata.NewNoopCache(), command.PreserveSymlink)
 	if err != nil {
 		return err
 	}
