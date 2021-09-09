@@ -201,25 +201,8 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		}
 	}
 
-	if config.Please.Location == "" {
-		// Determine the location based off where we're running from.
-		if exec, err := fs.Executable(); err != nil {
-			log.Warning("Can't determine current executable: %s", err)
-			config.Please.Location = "~/.please"
-		} else if strings.HasPrefix(exec, fs.ExpandHomePath("~/.please")) {
-			// Paths within ~/.please are managed by us and have symlinks to subdirectories
-			// that we don't want to follow.
-			config.Please.Location = "~/.please"
-		} else if deref, err := filepath.EvalSymlinks(exec); err != nil {
-			log.Warning("Can't dereference %s: %s", exec, err)
-			config.Please.Location = "~/.please"
-		} else {
-			config.Please.Location = path.Dir(deref)
-		}
-	}
-
-	config.HomeDir = os.Getenv("HOME")
-	config.PleaseLocation = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir)
+	// Resolve the full path to its location.
+	config.EnsurePleaseLocation()
 
 	// If the HTTP proxy config is set and there is no env var overriding it, set it now
 	// so various other libraries will honour it.
@@ -482,6 +465,7 @@ type Configuration struct {
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to .go, .py, .java, .tsx, .ts, .js, .cc, .h, and .c"`
 		ExcludeExtension []string `help:"Extensions of files to exclude from coverage.\nTypically this is for generated code; the default is to exclude protobuf extensions like .pb.go, _pb2.py, etc."`
+		ExcludeGlob      []string `help:"Exclude glob patterns from coverage.\nTypically this is for generated code and it is useful when there is no other discrimination possible."`
 	} `help:"Configuration relating to coverage reports."`
 	Gc struct {
 		Keep      []BuildLabel `help:"Marks targets that gc should always keep. Can include meta-targets such as //test/... and //docs:all."`
@@ -499,6 +483,8 @@ type Configuration struct {
 		EmbedTool        string `help:"Sets the location of the please_go_embed tool that is used to parse //go:embed directives." var:"GO_EMBED_TOOL"`
 		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
 		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
+		CFlags           string `help:"Sets the CFLAGS env var for go rules." var:"GO_C_FLAGS"`
+		LDFlags          string `help:"Sets the LDFLAGS env var for go rules." var:"GO_LD_FLAGS"`
 	} `help:"Please has built-in support for compiling Go, and of course is written in Go itself.\nSee the config subfields or the Go rules themselves for more information.\n\nNote that Please is a bit more flexible than Go about directory layout - for example, it is possible to have multiple packages in a directory, but it's not a good idea to push this too far since Go's directory layout is inextricably linked with its import paths."`
 	Python struct {
 		PipTool             string   `help:"The tool that is invoked during pip_library rules." var:"PIP_TOOL"`
@@ -583,10 +569,6 @@ type Configuration struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`
 
-	// HomeDir is not a config setting but is used to construct the path.
-	HomeDir string
-	// Similarly this is a fully expanded form of Please.Location
-	PleaseLocation string
 	// buildEnvStored is a cached form of BuildEnv.
 	buildEnvStored *storedBuildEnv
 	// Profiling can be set to true by a caller to enable CPU profiling in any areas that might
@@ -596,6 +578,8 @@ type Configuration struct {
 	FeatureFlags struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
+		PackageOutputsStrictness      bool `help:"Prevents certain combinations of target outputs within a package that result in nondeterminist behaviour"`
+		PythonWheelHashing            bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string `help:"The gateway URL to push prometheus updates to."`
@@ -660,6 +644,33 @@ func (config *Configuration) GetBuildEnv() []string {
 	return config.buildEnvStored.Env
 }
 
+// EnsurePleaseLocation will resolve `config.Please.Location` to a full path location where it is to be found.
+func (config *Configuration) EnsurePleaseLocation() {
+	defaultPleaseLocation := fs.ExpandHomePath("~/.please")
+
+	if config.Please.Location == "" {
+		// Determine the location based off where we're running from.
+		if exec, err := fs.Executable(); err != nil {
+			log.Warning("Can't determine current executable: %s", err)
+			config.Please.Location = defaultPleaseLocation
+		} else if strings.HasPrefix(exec, defaultPleaseLocation) {
+			// Paths within ~/.please are managed by us and have symlinks to subdirectories
+			// that we don't want to follow.
+			config.Please.Location = defaultPleaseLocation
+		} else if deref, err := filepath.EvalSymlinks(exec); err != nil {
+			log.Warning("Can't dereference %s: %s", exec, err)
+			config.Please.Location = defaultPleaseLocation
+		} else {
+			config.Please.Location = path.Dir(deref)
+		}
+	} else {
+		config.Please.Location = fs.ExpandHomePath(config.Please.Location)
+		if !filepath.IsAbs(config.Please.Location) {
+			config.Please.Location = filepath.Join(RepoRoot, config.Please.Location)
+		}
+	}
+}
+
 // Path returns the slice of strings corresponding to the PATH env var.
 func (config *Configuration) Path() []string {
 	config.GetBuildEnv() // ensure it is initialised
@@ -680,7 +691,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 			if v, isSet := os.LookupEnv(k); isSet {
 				if k == "PATH" {
 					// plz's install location always needs to be on the path.
-					v = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir) + ":" + v
+					v = config.Please.Location + ":" + v
 					includePath = false // skip this in a bit
 				}
 				env = append(env, k+"="+v)
@@ -692,7 +703,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 		if v, isSet := os.LookupEnv(k); isSet {
 			if k == "PATH" {
 				// plz's install location always needs to be on the path.
-				v = fs.ExpandHomePathTo(config.Please.Location, config.HomeDir) + ":" + v
+				v = config.Please.Location + ":" + v
 				includePath = false // skip this in a bit
 			}
 			env = append(env, k+"="+v)
@@ -703,7 +714,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env = append(env, "PATH="+fs.ExpandHomePathTo(strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":"), config.HomeDir))
+		env = append(env, "PATH="+strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":"))
 	}
 
 	sort.Strings(env)
@@ -805,6 +816,10 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 			return fmt.Errorf("Can't override config field %s (is %s)", k, field.Kind())
 		}
 	}
+
+	// Resolve the full path to its location.
+	config.EnsurePleaseLocation()
+
 	return nil
 }
 

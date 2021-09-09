@@ -7,6 +7,7 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
+        "//third_party/go:deferred_regex",
         "//third_party/go:logging",
     ],
 )

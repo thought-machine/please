@@ -15,8 +15,8 @@ a target which has only had small changes.
 
 
 def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visibility:list=None,
-                   test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[], interpreter:str=None,
-                   strip:bool=False):
+                   test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[],
+                   interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER, strip:bool=False):
     """Generates a Python library target, which collects Python files for use by dependent rules.
 
     Note that each python_library performs some pre-zipping of its inputs before they're combined
@@ -37,9 +37,8 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
                        (the most obvious reason not is when it contains .so modules).
                        See python_binary for more information.
       labels (list): Labels to apply to this rule.
-      interpreter (str): The Python interpreter to use. Defaults to the config setting
-                         which is normally just 'python', but could be 'python3' or
-                         'pypy' or whatever.
+      interpreter (str): The Python interpreter to use. Defaults to the value of the
+                         Python.DefaultInterpreter setting.
       strip (bool): If True, the original sources are stripped and only bytecode is output.
       labels (list): Any labels to apply to this rule.
     """
@@ -47,7 +46,6 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
         labels += ['py:zip-unsafe']
     if srcs or resources:
         cmd = '$TOOLS_JARCAT z -d -o ${OUTS} -i .'
-        interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
         if srcs:
             # This is a bit of a hack, but rather annoying. We want to put bytecode in its 'legacy' location
             # in python3 because zipimport doesn't look in __pycache__. Unfortunately the flag doesn't exist
@@ -96,8 +94,8 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
 
 def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
                   data:list=None, visibility:list=None, test_only:bool=False, zip_safe:bool=None,
-                  site:bool=False, strip:bool=False,
-                  interpreter:str=None, shebang:str='', labels:list&features&tags=[]):
+                  site:bool=False, strip:bool=False, interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER,
+                  shebang:str='', labels:list&features&tags=[]):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
@@ -122,14 +120,13 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
       strip (bool): Strips source code from the output .pex file, leaving just bytecode.
       site (bool): Allows the Python interpreter to import site; conversely if False, it will be
                    started with the -S flag to avoid importing site.
-      interpreter (str): The Python interpreter to use. Defaults to the config setting
-                         which is normally just 'python', but could be 'python3' or
-                         'pypy' or whatever.
+      interpreter (str): The Python interpreter to use. Defaults to the value of the
+                         Python.DefaultInterpreter setting.
       shebang (str): Exact shebang to apply to the generated file. By default we will
                      determine something appropriate for the given interpreter.
       labels (list): Labels to apply to this rule.
     """
-    shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
+    shebang = shebang or _interpreter_cmd(interpreter)
     zipsafe_flag = '' if zip_safe is False else '--zip_safe'
     cmd = '$TOOLS_PEX -s "%s" -m "%s" %s --interpreter_options="%s" --stamp="$RULE_HASH"' % (
         shebang, CONFIG.PYTHON_MODULE_DIR, zipsafe_flag, CONFIG.PYTHON_INTERPRETER_OPTIONS)
@@ -161,7 +158,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         needs_transitive_deps=True,  # Needed so we can find anything with zip_safe=False on it.
         output_is_complete=True,
         tools={
-            'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+            'interpreter': [interpreter],
             'pex': [CONFIG.PEX_TOOL],
         },
         test_only=test_only,
@@ -182,7 +179,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         output_is_complete=True,
         building_description="Creating pex...",
         visibility=visibility,
-        requires=['py', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+        requires=['py', interpreter],
         tools=[CONFIG.JARCAT_TOOL],
         # This makes the python_library rule the dependency for other python_library or
         # python_test rules that try to import it. Does mean that they cannot collect a .pex
@@ -199,8 +196,8 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
 def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:list=[], worker:str='',
                 labels:list&features&tags=[], size:str=None, flags:str='', visibility:list=None,
                 sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
-                test_outputs:list=None, zip_safe:bool=None, interpreter:str=None, site:bool=False,
-                test_runner:str=None):
+                test_outputs:list=None, zip_safe:bool=None, interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER,
+                site:bool=False, test_runner:str=None):
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
@@ -229,18 +226,16 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
                        If set to explicitly True or False, the output will be marked
                        appropriately; by default it will be safe unless any of the
                        transitive dependencies are themselves marked as not zip-safe.
-      interpreter (str): The Python interpreter to use. Defaults to the config setting
-                         which is normally just 'python', but could be 'python3' or
-                        'pypy' or whatever.
+      interpreter (str): The Python interpreter to use. Defaults to the value of the
+                         Python.DefaultInterpreter setting.
       site (bool): Allows the Python interpreter to import site; conversely if False, it will be
                    started with the -S flag to avoid importing site.
       test_runner (str): Specify which Python test runner to use for these tests. One of
                          `unittest`, `pytest`, or a custom test runner entry point.
     """
-    interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     test_runner = test_runner or CONFIG.PYTHON_TEST_RUNNER
     cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$RULE_HASH"' % (
-        interpreter, CONFIG.PYTHON_MODULE_DIR, test_runner,
+        _interpreter_cmd(interpreter), CONFIG.PYTHON_MODULE_DIR, test_runner,
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
@@ -270,7 +265,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         pre_build=_handle_zip_safe,
         deps=deps,
         tools={
-            'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+            'interpreter': [interpreter],
             'pex': [CONFIG.PEX_TOOL],
         },
         labels = labels,
@@ -318,7 +313,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         size = size,
         flaky=flaky,
         test_outputs=test_outputs,
-        requires=['py', 'test', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+        requires=['py', 'test', interpreter],
         tools=[CONFIG.JARCAT_TOOL],
     )
 
@@ -373,9 +368,12 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
 
     pip_tool = "$TOOLS_PIP" if CONFIG.PIP_TOOL else '$TOOLS_PYTHON -m pip'
 
+    # Unset these compiler and linker flags as macOS doesn't have all these options.
+    pip_compile_flags = 'CFLAGS=" -Wl,--build-id=none -g0 " LDFLAGS=" -Wl,--build-id=none"' if CONFIG.HOSTOS != 'darwin' else 'CFLAGS=" -g0"'
+
     pip_cmd = (
         f'mkdir {pip_target_dir} && '
-        f'PIP_CONFIG_FILE=/dev/null  CFLAGS=" -Wl,--build-id=none -g0 " LDFLAGS=" -Wl,--build-id=none " {pip_tool} install --isolated --no-deps --prefix= --no-compile '
+        f'PIP_CONFIG_FILE=/dev/null {pip_compile_flags} {pip_tool} install --isolated --no-deps --prefix= --no-compile '
         f'--no-cache-dir --default-timeout=60 --target={target}'
     )
 
@@ -516,6 +514,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         _tag = 'download',
         out = name + '.whl',
         url = urls,
+        hashes = hashes if CONFIG.FF_PYTHON_WHEEL_HASHING else None,
         licences = licences if licences else None,
     )
 
@@ -563,7 +562,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     return build_rule(
         name = name,
         srcs = [wheel_rule],
-        hashes = hashes,  # TODO(peterebden): Move this onto wheel_rule when we're willing to break hash compatibility.
+        hashes = None if CONFIG.FF_PYTHON_WHEEL_HASHING else hashes,
         outs = outs or [name],
         tools = [CONFIG.JARCAT_TOOL],
         cmd = cmd,
@@ -574,6 +573,10 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         labels = [label],
         provides = {'py': wheel_rule},
     )
+
+
+def _interpreter_cmd(interpreter:str):
+    return f'$(out {interpreter})' if interpreter.startswith('//') or interpreter.startswith(':') else interpreter
 
 
 def _patch_cmd(patch):

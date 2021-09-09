@@ -380,6 +380,7 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 		if err != nil {
 			return nil, nil, nil, err
 		} else if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, false, needStdout); metadata != nil {
+			c.unstampedBuildActionDigests.Put(target.Label, digest)
 			return metadata, ar, digest, nil
 		}
 		unstampedDigest = digest

@@ -1,3 +1,6 @@
+[please]
+location = ./plz-out/please
+
 [python]
 pextool = pexmabob
 

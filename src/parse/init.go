@@ -111,17 +111,13 @@ func (p *aspParser) BuildRuleArgOrder() map[string]int {
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(tid, target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
-	pkg := state.SyncParsePackage(target.Label)
-	changed, err := pkg.EnterBuildCallback(f)
-	if err != nil {
+	state.SyncParsePackage(target.Label)
+	if err := f(); err != nil {
 		state.LogBuildError(tid, target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)
-	} else {
-		if err := rescanDeps(state, changed); err != nil {
-			return err
-		}
-		state.LogBuildResult(tid, target, core.TargetBuilding, fmt.Sprintf("Finished %s-build function for %s", callbackType, target.Label))
+		return err
 	}
-	return err
+	state.LogBuildResult(tid, target, core.TargetBuilding, fmt.Sprintf("Finished %s-build function for %s", callbackType, target.Label))
+	return nil
 }
 
 func createBazelSubrepo(state *core.BuildState) {

@@ -1,3 +1,78 @@
+Version 16.7.0
+--------------
+    * Sandbox tool now ignored missing directories in `SANDBOX_DIRS`
+      #2041
+    * Allow `Python.DefaultInterpretor` to be a build label #2045
+    * Fix the install script to download arm architectures #2030
+    * Handle annotated labels in `canonicalise()` #2037
+    * Handle relative paths in `Please.Location` #2046
+    * Apply hashes to the download rule in `python_wheel()` instead of the
+      output rule. This feature is gated behind a feature flag for backwards
+      compatibility. #2042
+    * Handle go1.16 embeds in `go_module()` #2036
+
+
+Version 16.6.1
+--------------
+    * Rules with system sources now run locally by default #2011
+    * Improve validation around rule outputs to avoid race conditions.
+      This change is gated behind the `FeatureFlags.PackageOutputsStrictness`.
+      #1816
+    * Fix problem in the language server that was causing issues on startup
+      #2029
+    * Fix issues with `#cgo` directive in `go_module()` rules #2038
+
+
+Version 16.6.0
+--------------
+    * Fixed issue with `go_module()` where adding the root package removed
+      all other items in the install list that came before #2019
+    * Fixed the linker flags in `pip_library()` for macOS #2015
+    * Added `ExcludeGlob` config option to the `[Cover]` section that
+      excludes files from coverage based on a glob pattern #2020 #2023
+    * Fix issue with `go_module()` where the incorrect release flags
+      were being applied when filtering third party go sourcews #2024
+
+
+Version 16.5.1
+--------------
+    * Fix nil pointer when tests fail in certain ways #2016
+
+
+Version 16.5.0
+--------------
+    * Singleflight all subincludes removing any potential for lockups #2002
+    * Implemented target level locking enabling multiple please instances to
+      build at the same time #2004
+    * Set a timeout on test result uploading #2008
+    * Updated to use go 1.17. This should be transparent to any users. #2010
+    * Various fixes and improvements around bash completions #1998 #2013
+
+
+Version 16.4.2
+--------------
+    * Honour require/provide for `plz query revdeps` and `plz query changes` #1997
+    * Fix `plz tool langserver` #1999
+
+
+Version 16.4.1
+--------------
+    * Fixed panic when downloading outputs for stamped targets that were retrived from
+      the cache #1994
+
+
+Version 16.4.0
+--------------
+    * Fixed issue where coverage was missing some files. Please now adds in 0% coverage
+      for lines found in non-test files that are included in the original targets passed
+      in on the command line #1975
+    * Reduced the size of a build target in memory #1951
+    * Added `--go_trace_file` to write a trace file that can be opened with `go tool trace`
+      #1987
+    * Added a new `add_data()` builtin that can be used to add data to a target in a pre or
+      post build function #1973
+
+
 Version 16.3.0
 --------------
     * Implemented a `plz exec` subcommand that is designed for used by IDEs to run targets

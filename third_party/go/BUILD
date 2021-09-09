@@ -6,13 +6,13 @@ package(jarcat_tool = "//:jarcat_unzip")
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "4dac57c00168d30bbd02d95131d5de9ca88e04f2c5a29a404576f30ae9b54810",  # darwin_arm64
-        "6000a9522975d116bf76044967d7e69e04e982e9625330d9a539a8b45395f9a8",  # darwin_amd64
-        "013a489ebb3e24ef3d915abe5b94c3286c070dfe0818d5bca8108f1d6e8440d2",  # linux_amd64
-        "40b03216f6945fb6883a50604fc7f409a83f62171607229a9c598e701e684f8a",  # freebsd_amd64
+        "da4e3e3c194bf9eed081de8842a157120ef44a7a8d7c820201adae7b0e28b20b",  # darwin_arm64
+        "355bd544ce08d7d484d9d7de05a71b5c6f5bc10aa4b316688c2192aeb3dacfd1",  # darwin_amd64
+        "6bf89fc4f5ad763871cf7eac80a2d594492de7a818303283f1366a7f6a30372d",  # linux_amd64
+        "15c184c83d99441d719da201b26256455eee85a808747c404b4183e9aa6c64b4",  # freebsd_amd64
     ],
     strip_srcs = True,
-    version = "1.16",
+    version = "1.17",
 )
 
 go_module(
@@ -459,7 +459,7 @@ go_module(
     name = "xsys",
     install = ["..."],
     module = "golang.org/x/sys",
-    version = "0f9fa26af87c481a6877a4ca1330699ba9a30673",
+    version = "63515b42dcdf9544f4e6a02fd7632793fde2f72d",
 )
 
 go_mod_download(
@@ -555,7 +555,7 @@ go_module(
 go_module(
     name = "jsonrpc2",
     module = "github.com/sourcegraph/jsonrpc2",
-    version = "549eb959f029d014d623104d40ab966d159a92de",
+    version = "v0.1.0",
 )
 
 go_module(
@@ -938,4 +938,20 @@ go_module(
     install = ["quantile"],
     module = "github.com/beorn7/perks",
     version = "v1.0.1",
+)
+
+go_module(
+    name = "automaxprocs",
+    install = [
+        "...",
+    ],
+    licences = ["MIT"],
+    module = "go.uber.org/automaxprocs",
+    version = "v1.4.0",
+)
+
+go_module(
+    name = "deferred_regex",
+    module = "github.com/peterebden/go-deferred-regex",
+    version = "v1.0.0",
 )

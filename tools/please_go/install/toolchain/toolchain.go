@@ -4,10 +4,14 @@ import (
 	"fmt"
 	"go/build"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/thought-machine/please/tools/please_go/install/exec"
 )
+
+var versionRegex = regexp.MustCompile("go version go1.([0-9]+).+")
 
 type Toolchain struct {
 	CcTool        string
@@ -47,19 +51,25 @@ func (tc *Toolchain) CGO(sourceDir string, objectDir string, cFlags []string, cg
 }
 
 // GoCompile will compile the go sources and the generated .cgo1.go sources for the CGO files (if any)
-func (tc *Toolchain) GoCompile(dir, importcfg, out, trimpath string, goFiles []string) error {
+func (tc *Toolchain) GoCompile(dir, importcfg, out, trimpath, embedCfg string, goFiles []string) error {
 	if trimpath != "" {
 		trimpath = fmt.Sprintf("-trimpath %s", trimpath)
 	}
-	return tc.Exec.Run("%s tool compile -pack %s -importcfg %s -o %s %s", tc.GoTool, trimpath, importcfg, out, FullPaths(goFiles, dir))
+	if embedCfg != "" {
+		embedCfg = fmt.Sprintf("-embedcfg %s", embedCfg)
+	}
+	return tc.Exec.Run("%s tool compile -pack %s %s -importcfg %s -o %s %s", tc.GoTool, trimpath, embedCfg, importcfg, out, FullPaths(goFiles, dir))
 }
 
 // GoAsmCompile will compile the go sources linking to the the abi symbols generated from symabis()
-func (tc *Toolchain) GoAsmCompile(dir, importcfg, out, trimpath string, goFiles []string, asmH, symabys string) error {
+func (tc *Toolchain) GoAsmCompile(dir, importcfg, out, trimpath, embedCfg string, goFiles []string, asmH, symabys string) error {
 	if trimpath != "" {
 		trimpath = fmt.Sprintf("-trimpath %s", trimpath)
 	}
-	return tc.Exec.Run("%s tool compile -pack %s -importcfg %s -asmhdr %s -symabis %s -o %s %s", tc.GoTool, trimpath, importcfg, asmH, symabys, out, FullPaths(goFiles, dir))
+	if embedCfg != "" {
+		embedCfg = fmt.Sprintf("-embedcfg %s", embedCfg)
+	}
+	return tc.Exec.Run("%s tool compile -pack %s %s -importcfg %s -asmhdr %s -symabis %s -o %s %s", tc.GoTool, embedCfg, trimpath, importcfg, asmH, symabys, out, FullPaths(goFiles, dir))
 }
 
 // CCompile will compile c sources and return the object files that will be generated
@@ -80,8 +90,8 @@ func (tc *Toolchain) Pack(dir, archive string, objFiles []string) error {
 }
 
 // Link will link the archive into an executable
-func (tc *Toolchain) Link(archive, out, importcfg, flags string) error {
-	return tc.Exec.Run("%s tool link -extld %s -extldflags \"$(cat %s)\" -importcfg %s -o %s %s", tc.GoTool, tc.CcTool, flags, importcfg, out, archive)
+func (tc *Toolchain) Link(archive, out, importcfg string, ldFlags []string) error {
+	return tc.Exec.Run("%s tool link -extld %s -extldflags \"%s\" -importcfg %s -o %s %s", tc.GoTool, tc.CcTool, strings.Join(ldFlags, " "), importcfg, out, archive)
 }
 
 // Symabis will generate the asm header as well as the abi symbol file for the provided asm files.
@@ -115,6 +125,15 @@ func (tc *Toolchain) Asm(sourceDir, objectDir, trimpath string, asmFiles []strin
 	}
 
 	return objFiles, nil
+}
+
+func (tc *Toolchain) GoMinorVersion() (int, error) {
+	out, err := tc.Exec.CombinedOutput(tc.GoTool, "version")
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.Atoi(string(versionRegex.FindSubmatch(out)[1]))
 }
 
 func (tc *Toolchain) PkgConfigCFlags(cfgs []string) ([]string, error) {

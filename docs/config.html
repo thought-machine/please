@@ -1136,6 +1136,18 @@
         </p>
       </div>
     </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cover.excludeglob">
+          ExcludeGlob<span class="normal">(repeated string)</span>
+        </h3>
+
+        <p>
+          Exclude glob pattern from coverage. <br />
+          Typically this is for generated code and it is useful when there is no other discrimination possible.
+        </p>
+      </div>
+    </li>
   </ul>
 </section>
 
@@ -1393,6 +1405,18 @@
         <p>{{ index .ConfigHelpText "go.embedtool" }}</p>
       </div>
     </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.cflags">CFalgs</h3>
+        <p>{{ index .ConfigHelpText "go.cflags" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="go.ldflags">LDFlags</h3>
+        <p>{{ index .ConfigHelpText "go.ldflags" }}</p>
+      </div>
+    </li>
   </ul>
 </section>
 
@@ -1430,8 +1454,9 @@
         <p>
           The interpreter used for <code class="code">python_binary</code> and
           <code class="code">python_test</code> rules when none is specified on
-          the rule itself. Defaults to <code class="code">python3</code> but you
-          could of course set it to <code class="code">pypy</code>.
+          the rule itself. This can also be the name of a build target, in which
+          case the generated binary should accept the same command line options
+          as the Python interpreter. Defaults to <code class="code">python3</code>.
         </p>
       </div>
     </li>

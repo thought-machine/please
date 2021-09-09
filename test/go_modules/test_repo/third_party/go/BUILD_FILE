@@ -88,3 +88,13 @@ go_module(
     module = "github.com/dvyukov/go-fuzz",
     deps = [":go-fuzz-compile"],
 )
+
+go_module(
+    name = "licenseclassifier",
+    module = "github.com/google/licenseclassifier",
+    version = "v0.0.0-20210722185704-3043a050f148",
+    install = [
+        "licenses",
+    ],
+    licences = ["Apache-2.0"]
+)

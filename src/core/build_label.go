@@ -45,6 +45,8 @@ func (label BuildLabel) String() string {
 	zero := BuildLabel{}
 	if label == zero {
 		return ""
+	} else if label == OriginalTarget {
+		return "command-line targets"
 	}
 	s := "//" + label.PackageName
 	if label.Subrepo != "" {
@@ -131,6 +133,19 @@ func ParseBuildLabel(target, currentPath string) BuildLabel {
 		panic(err)
 	}
 	return label
+}
+
+func ParseAnnotatedBuildLabel(target, currentPath string) AnnotatedOutputLabel {
+	parts := strings.Split(target, "|")
+	l := ParseBuildLabel(parts[0], currentPath)
+	annotation := ""
+	if len(parts) == 2 {
+		annotation = parts[1]
+	}
+	return AnnotatedOutputLabel{
+		BuildLabel: l,
+		Annotation: annotation,
+	}
 }
 
 // TryParseBuildLabel attempts to parse a single build label from a string. Returns an error if unsuccessful.
@@ -232,7 +247,7 @@ func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 	// Deliberately leave this till after the above to facilitate the --repo_root flag.
 	if subdir == "" {
 		MustFindRepoRoot()
-		subdir = initialPackage
+		subdir = InitialPackagePath
 	}
 	if startsWithColon {
 		return TryParseBuildLabel(target, subdir, "")
@@ -453,10 +468,10 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	if err != nil {
 		return nil
 	}
-	ret := []flags.Completion{}
+	var ret []flags.Completion
 	for _, line := range strings.Split(string(out), "\n") {
 		if line != "" {
-			ret = append(ret, flags.Completion{Item: line})
+			ret = append(ret, flags.Completion{Item: line, Description: "BuildLabel"})
 		}
 	}
 	return ret

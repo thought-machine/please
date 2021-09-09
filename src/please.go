@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/thought-machine/go-flags"
-	"gopkg.in/op/go-logging.v1"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -15,6 +13,10 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	"github.com/thought-machine/go-flags"
+	"go.uber.org/automaxprocs/maxprocs"
+	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"
@@ -94,6 +96,7 @@ var opts struct {
 	Profile          string `long:"profile_file" hidden:"true" description:"Write profiling output to this file"`
 	MemProfile       string `long:"mem_profile_file" hidden:"true" description:"Write a memory profile to this file"`
 	MutexProfile     string `long:"mutex_profile_file" hidden:"true" description:"Write a contended mutex profile to this file"`
+	GoTraceFile      string `long:"go_trace_file" hidden:"true" description:"Write a go trace profile to this file"`
 	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
@@ -199,7 +202,7 @@ var opts struct {
 		Share struct {
 			Network bool `long:"share_network" description:"Share network namespace"`
 			Mount   bool `long:"share_mount" description:"Share mount namespace"`
-		} `group:"Options allowing namespace sharing"`
+		} `group:"Options to override mount and network namespacing on linux, if configured"`
 		Args struct {
 			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
 			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
@@ -314,7 +317,8 @@ var opts struct {
 			} `positional-args:"true" required:"true"`
 		} `command:"revdeps" alias:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
 		SomePath struct {
-			Args struct {
+			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
+			Args   struct {
 				Target1 core.BuildLabel `positional-arg-name:"target1" description:"First build target" required:"true"`
 				Target2 core.BuildLabel `positional-arg-name:"target2" description:"Second build target" required:"true"`
 			} `positional-args:"true" required:"true"`
@@ -442,7 +446,7 @@ var buildFunctions = map[string]func() int{
 		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
 		success, state := doTest(targets, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
-		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension)
+		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension, state.Config.Cover.ExcludeGlob)
 
 		var stats *test.IncrementalStats
 		if opts.Cover.Incremental {
@@ -470,7 +474,9 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(!opts.Exec.Share.Network, !opts.Exec.Share.Mount))
+
+		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
+		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount))
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
@@ -542,7 +548,7 @@ var buildFunctions = map[string]func() int{
 		return 0 // We'd have died already if something was wrong.
 	},
 	"op": func() int {
-		cmd := core.ReadLastOperationOrDie()
+		cmd := core.ReadPreviousOperationOrDie()
 		log.Notice("OP PLZ: %s", strings.Join(cmd, " "))
 		// Annoyingly we don't seem to have any access to execvp() which would be rather useful here...
 		executable, err := os.Executable()
@@ -610,8 +616,7 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(help.Help(string(opts.Help.Args.Topic)), nil)
 	},
 	"tool": func() int {
-		tool.Run(config, opts.Tool.Args.Tool, opts.Tool.Args.Args.AsStrings())
-		return 1 // If the function returns (which it shouldn't), something went wrong.
+		return runTool(opts.Tool.Args.Tool)
 	},
 	"deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
@@ -628,7 +633,7 @@ var buildFunctions = map[string]func() int{
 		a := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
 		b := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
 		return runQuery(true, append(a, b...), func(state *core.BuildState) {
-			if err := query.SomePath(state.Graph, a, b); err != nil {
+			if err := query.SomePath(state.Graph, a, b, opts.Query.SomePath.Hidden); err != nil {
 				fmt.Printf("%s\n", err)
 				os.Exit(1)
 			}
@@ -675,29 +680,27 @@ var buildFunctions = map[string]func() int{
 			qry = fragments[0]
 		}
 
-		completions := query.CompletionLabels(config, qry, core.RepoRoot)
-		// We have no labels to parse so we're done already
-		if completions.PackageToParse == "" && !completions.IsRoot {
-			for _, pkg := range completions.Pkgs {
-				fmt.Printf("//%s\n", pkg)
+		completions, labels := getCompletions(qry)
+
+		// Rerun the completions if we didn't match any labels and matched just one package
+		for len(completions.Pkgs) == 1 && len(labels) == 0 {
+			oldPackage := completions.Pkgs[0]
+			completions, labels = getCompletions("//" + completions.Pkgs[0])
+			// We really matched no labels so we should stop
+			if len(completions.Pkgs) == 1 && completions.Pkgs[0] == oldPackage {
+				break
 			}
-			return 0
 		}
 
-		labelsToParse := []core.BuildLabel{{PackageName: completions.PackageToParse, Name: "all"}}
-		binary := opts.Query.Completions.Cmd == "run"
-
-		// The original pkg might not have binary targets. If we only match one package, we might need to parse that too.
-		if binary && len(completions.Pkgs) == 1 {
-			labelsToParse = append(labelsToParse, core.BuildLabel{PackageName: completions.Pkgs[0], Name: "all"})
+		abs := strings.HasPrefix(qry, "//")
+		for _, l := range labels {
+			query.PrintCompletion(l, abs)
+		}
+		for _, p := range completions.Pkgs {
+			query.PrintCompletion(p, abs)
 		}
 
-		if success, state := Please(labelsToParse, config, false, false); success {
-			test := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
-			query.Completions(state.Graph, completions.PackageToParse, completions.NamePrefix, completions.Pkgs, binary, test, completions.Hidden)
-			return 0
-		}
-		return 1
+		return 0
 	},
 	"graph": func() int {
 		targets := opts.Query.Graph.Args.Targets
@@ -771,14 +774,14 @@ var buildFunctions = map[string]func() int{
 		if err := scm.Checkout(opts.Query.Changes.Since); err != nil {
 			log.Fatalf("%s", err)
 		}
-		readConfig(false)
+		readConfig()
 		_, before := runBuild(core.WholeGraph, false, false, false)
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
 		if err := scm.Checkout(original); err != nil {
 			log.Fatalf("%s", err)
 		}
-		readConfig(false)
+		readConfig()
 		success, after := runBuild(core.WholeGraph, false, false, false)
 		if !success {
 			return 1
@@ -860,6 +863,31 @@ var buildFunctions = map[string]func() int{
 	},
 }
 
+// Check if tool is given as label or path and then run
+func runTool(_tool tool.Tool) int {
+	c := core.DefaultConfiguration()
+	if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
+		c = cfg
+	}
+	t, _ := tool.MatchingTool(c, string(_tool))
+
+	if !core.LooksLikeABuildLabel(t) {
+		tool.Run(c, tool.Tool(t), opts.Tool.Args.Args.AsStrings())
+	}
+
+	label := core.ParseBuildLabels([]string{t})
+
+	// We skip loading the repo config in init for `plz tool` to allow this command to work outside of a repo root. If
+	// the tool looks like a build label, we need to set the repo root now.
+	config = readConfigAndSetRoot(false)
+	if success, state := runBuild(label, true, false, false); success {
+		annotatedOutputLabels := core.AnnotateLabels(label)
+		run.Run(state, annotatedOutputLabels[0], opts.Tool.Args.Args.AsStrings(), false, false, false, "", "")
+	}
+	// If all went well, we shouldn't get here.
+	return 1
+}
+
 // ConfigOverrides are used to implement completion on the -o flag.
 type ConfigOverrides map[string]string
 
@@ -921,7 +949,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
-	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty()
+	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || opts.Tool.Args.Tool != ""
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
@@ -958,11 +986,15 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 }
 
 func runPlease(state *core.BuildState, targets []core.BuildLabel) {
-	// Acquire the lock before we start building
-	if (state.NeedBuild || state.NeedTests) && !opts.FeatureFlags.NoLock {
-		core.AcquireRepoLock()
-		defer core.ReleaseRepoLock()
-	}
+	// Every plz instance gets a shared repo lock which provides the following:
+	// 1) Multiple plz instances can run concurrently.
+	// 2) If another process tries to obtain an exclusive repo lock, it will have to wait until any existing repo locks are released in other processes.
+	// This is useful for things like when plz tries to download and update itself.
+	// 3) A new plz process will have to wait to acquire its shared repo lock, if there's already an existing process with an exclusive repo lock.
+	core.AcquireSharedRepoLock()
+	defer core.ReleaseRepoLock() // We can safely release the lock at this stage.
+
+	core.StoreCurrentOperation()
 	core.CheckXattrsSupported(state)
 
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
@@ -976,13 +1008,11 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	state.Results() // important this is called now, don't ask...
 	var wg sync.WaitGroup
 	wg.Add(1)
-	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		output.MonitorState(ctx, state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
 	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
-	cancel()
 	wg.Wait()
 }
 
@@ -1008,7 +1038,7 @@ func testTargets(target core.BuildLabel, args []string, failed bool, resultsFile
 }
 
 // readConfig reads the initial configuration files
-func readConfig(forceUpdate bool) *core.Configuration {
+func readConfig() *core.Configuration {
 	cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
@@ -1034,6 +1064,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 			targets = []core.BuildLabel{core.BuildLabelStdin}
 		}
 	}
+	//FIXME: len(targets) gives 1 even if the list is empty...
 	if len(targets) == 0 {
 		targets = core.InitialPackage()
 	}
@@ -1075,7 +1106,7 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	if opts.FeatureFlags.NoHashVerification {
 		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
 	}
-	config := readConfig(forceUpdate)
+	config := readConfig()
 	// Now apply any flags that override this
 	config.Profiling = opts.Profile != ""
 	if opts.Update.Latest || opts.Update.LatestPrerelease {
@@ -1092,7 +1123,7 @@ func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	cli.InitLogging(cli.MinVerbosity) // Ensure this is quiet
 	opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
-	if len(items) > 0 && strings.HasPrefix(items[0].Item, "//") {
+	if len(items) > 0 && items[0].Description == "BuildLabel" {
 		// Don't muck around with the config if we're predicting build labels.
 		cli.PrintCompletions(items)
 	} else if config := readConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
@@ -1104,6 +1135,21 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	}
 	// Regardless of what happened, always exit with 0 at this point.
 	os.Exit(0)
+}
+
+func getCompletions(qry string) (*query.CompletionPackages, []string) {
+	binary := opts.Query.Completions.Cmd == "run"
+	isTest := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
+
+	completions := query.CompletePackages(config, qry)
+
+	if completions.PackageToParse != "" || completions.IsRoot {
+		labelsToParse := []core.BuildLabel{{PackageName: completions.PackageToParse, Name: "all"}}
+		if success, state := Please(labelsToParse, config, false, false); success {
+			return completions, query.Completions(state.Graph, completions, binary, isTest, completions.Hidden)
+		}
+	}
+	return completions, nil
 }
 
 func initBuild(args []string) string {
@@ -1141,6 +1187,9 @@ func initBuild(args []string) string {
 	}
 	// Init logging, but don't do file output until we've chdir'd.
 	cli.InitLogging(opts.OutputFlags.Verbosity)
+	if _, err := maxprocs.Set(maxprocs.Logger(log.Info), maxprocs.Min(opts.BuildFlags.NumThreads)); err != nil {
+		log.Error("Failed to set GOMAXPROCS: %s", err)
+	}
 
 	command := cli.ActiveCommand(parser.Command)
 	if opts.Complete != "" {
@@ -1154,11 +1203,6 @@ func initBuild(args []string) string {
 			cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args)
 		}
 		config = core.DefaultConfiguration()
-		if command == "tool" {
-			if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
-				config = cfg
-			}
-		}
 		os.Exit(buildFunctions[command]())
 	} else if opts.OutputFlags.CompletionScript {
 		fmt.Printf("%s\n", string(assets.PlzComplete))
@@ -1193,6 +1237,28 @@ func unannotateLabels(als []core.AnnotatedOutputLabel) []core.BuildLabel {
 		labels[i] = al.BuildLabel
 	}
 	return labels
+}
+
+func writeGoTraceFile() {
+	if err := runtime.StartTrace(); err != nil {
+		log.Fatalf("failed to start trace: %v", err)
+	}
+
+	f, err := os.Create(opts.GoTraceFile)
+	if err != nil {
+		log.Fatalf("Failed to create trace file: %v", err)
+	}
+	defer f.Close()
+
+	for {
+		data := runtime.ReadTrace()
+		if data == nil {
+			return
+		}
+		if _, err := f.Write(data); err != nil {
+			log.Fatalf("Failed to write trace data: %v", err)
+		}
+	}
 }
 
 // toExitCode returns an integer process exit code based on the outcome of a build.
@@ -1245,6 +1311,12 @@ func execute(command string) int {
 		defer f.Close()
 		defer func() {
 			pprof.Lookup("mutex").WriteTo(f, 0)
+		}()
+	}
+	if opts.GoTraceFile != "" {
+		go writeGoTraceFile()
+		defer func() {
+			runtime.StopTrace()
 		}()
 	}
 	defer worker.StopAll()

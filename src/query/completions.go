@@ -3,7 +3,6 @@ package query
 import (
 	"fmt"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/utils"
 	"os"
 	"path"
 	"path/filepath"
@@ -12,7 +11,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-type CompletionsLabels struct {
+type CompletionPackages struct {
 	// Pkgs are any subpackages that are valid completions
 	Pkgs []string
 	// PackageToParse is optionally the package we should include labels from in the completions results
@@ -25,20 +24,24 @@ type CompletionsLabels struct {
 	IsRoot bool
 }
 
-// CompletionLabels produces a set of labels that complete a given input.
-// The second return value is a set of labels to parse for (since the original set generally won't turn out to exist).
-// The last return value is true if one or more of the inputs are a "hidden" target
-// (i.e. name begins with an underscore).
-func CompletionLabels(config *core.Configuration, query string, repoRoot string) *CompletionsLabels {
+// CompletePackages produces a set of packages that are valid for a given input
+func CompletePackages(config *core.Configuration, query string) *CompletionPackages {
+	if !strings.HasPrefix(query, "//") && core.RepoRoot != core.InitialWorkingDir {
+		if strings.HasPrefix(query, ":") {
+			query = fmt.Sprintf("//%s%s", core.InitialPackagePath, query)
+		} else {
+			query = "//" + filepath.Join(core.InitialPackagePath, query)
+		}
+	}
 	query = strings.ReplaceAll(query, "\\:", ":")
-	isRoot := query == "//" || query == ":" || query == "//:"
+	isRoot := query == "//" || strings.HasPrefix(query, "//:") || strings.HasPrefix(query, ":")
 
 	if strings.Contains(query, ":") {
 		parts := strings.Split(query, ":")
 		if len(parts) != 2 {
 			log.Fatalf("invalid build label %v", query)
 		}
-		return &CompletionsLabels{
+		return &CompletionPackages{
 			PackageToParse: strings.TrimLeft(parts[0], "/"),
 			NamePrefix:     parts[1],
 			Hidden:         strings.HasPrefix(parts[1], "_"),
@@ -46,76 +49,119 @@ func CompletionLabels(config *core.Configuration, query string, repoRoot string)
 		}
 	}
 
-	pkgs, pkg := getPackagesAndPackageToParse(config, query, repoRoot)
-	return &CompletionsLabels{
+	pkgs, pkg := getPackagesAndPackageToParse(config, query)
+	return &CompletionPackages{
 		Pkgs:           pkgs,
 		PackageToParse: pkg,
 		IsRoot:         isRoot,
 	}
 }
 
+// findPrefixedPackages finds any packages that match a prefix in a directory e.g. src/plz matches src/plz, and
+// src/plzinit
+func findPrefixedPackages(config *core.Configuration, root, prefix string) []string {
+	if root == "" {
+		root = "."
+	}
+	dirs, err := os.ReadDir(root)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	var matchedPkgs []string
+	for _, d := range dirs {
+		if d.IsDir() && strings.HasPrefix(d.Name(), prefix) {
+			p := filepath.Join(root, d.Name())
+			if containsPackage(config, p) {
+				matchedPkgs = append(matchedPkgs, p)
+			}
+		}
+	}
+
+	return matchedPkgs
+}
+
 // getPackagesAndPackageToParse returns a list of packages that are possible completions and optionally, the package to
 // parse if we should include it's labels as well.
-func getPackagesAndPackageToParse(config *core.Configuration, query, repoRoot string) ([]string, string) {
+func getPackagesAndPackageToParse(config *core.Configuration, query string) ([]string, string) {
 	// Whether we need to include build labels or just the packages in the results
 	packageOnly := strings.HasSuffix(query, "/") && query != "//"
 
 	query = strings.Trim(query, "/")
-	root := path.Join(repoRoot, query)
+	root := path.Join(core.RepoRoot, query)
 	currentPackage := query
 	prefix := ""
-	if !core.PathExists(root) {
+	if info, err := os.Lstat(root); err != nil || !info.IsDir() {
 		_, prefix = path.Split(root)
 		currentPackage = path.Dir(query)
+	} else if !packageOnly {
+		// If we match a package directly but that's also a prefix for another package, we should return those packages
+		root, prefix := filepath.Split(query)
+		packages := findPrefixedPackages(config, root, prefix)
+		if len(packages) > 1 {
+			return packages, ""
+		}
 	}
 
-	// TODO(jpoole): We currently walk the entire file tree trying to discover BUILD files whereas we can probably just
-	// 	walk until we find the first ones in each branch and build a trie. This seems fast enough for now though.
-	allPackages := make([]string, 0, 10)
-	for pkg := range utils.FindAllSubpackages(config, currentPackage, "") {
-		allPackages = append(allPackages, pkg)
-	}
-	pkgs, pkg := getAllCompletions(config, currentPackage, prefix, repoRoot, allPackages, packageOnly)
+	pkgs, pkg := getAllCompletions(config, currentPackage, prefix, packageOnly)
 	if packageOnly && pkg == currentPackage || !fs.IsPackage(config.Parse.BuildFileName, pkg) {
 		return pkgs, ""
+	}
+	if pkg == "." {
+		pkg = ""
 	}
 	return pkgs, pkg
 }
 
-func containsPackage(dir string, allPackages []string) bool {
-	for _, pkg := range allPackages {
-		if strings.HasPrefix(pkg, dir) {
+func isExcluded(config *core.Configuration, dir string) bool {
+	if dir == "plz-out" {
+		return true
+	}
+	for _, blacklisted := range config.Parse.BlacklistDirs {
+		if filepath.Base(dir) == blacklisted {
 			return true
 		}
 	}
 	return false
 }
 
-// getAllCompletions essentially the same as getPackagesAndPackageToParse without the setup
-func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoRoot string, allPackages []string, skipSelf bool) ([]string, string) {
-	var packages []string
-	root := path.Join(repoRoot, currentPackage)
+// containsPackage does a breadth first search for build files returning when it encounters the first BUILD file
+func containsPackage(config *core.Configuration, dir string) bool {
+	dirQueue := []string{dir}
+	for len(dirQueue) > 0 {
+		dir, dirQueue = dirQueue[0], dirQueue[1:]
+		if isExcluded(config, dir) {
+			continue
+		}
 
-	dirEntries, err := os.ReadDir(root)
-	if err != nil {
-		log.Fatalf("failed to check for packages: %v", err)
-	}
+		infos, err := os.ReadDir(dir)
+		if err != nil {
+			log.Fatalf("failed to find subpackages: %v", err)
+		}
 
-	for _, entry := range dirEntries {
-		if entry.IsDir() && strings.HasPrefix(entry.Name(), prefix) {
-			pkgName := filepath.Join(currentPackage, entry.Name())
-			if containsPackage(pkgName, allPackages) {
-				packages = append(packages, pkgName)
+		for _, info := range infos {
+			if info.IsDir() {
+				dirQueue = append(dirQueue, filepath.Join(dir, info.Name()))
+			}
+			if config.IsABuildFile(info.Name()) {
+				return true
 			}
 		}
 	}
+
+	return false
+}
+
+// getAllCompletions essentially the same as getPackagesAndPackageToParse without the setup
+func getAllCompletions(config *core.Configuration, currentPackage, prefix string, skipSelf bool) ([]string, string) {
+	packages := findPrefixedPackages(config, currentPackage, prefix)
 
 	// If we match just one package, return all the immediate subpackages, and return the single package we matched
 	if len(packages) == 1 {
 		if !skipSelf && prefix == "" && fs.IsPackage(config.Parse.BuildFileName, currentPackage) {
 			return packages, currentPackage
 		}
-		pkgs, pkg := getAllCompletions(config, packages[0], "", repoRoot, allPackages, false)
+		pkgs, pkg := getAllCompletions(config, packages[0], "", false)
 		// If we again matched a package exactly, use that one
 		if pkg != "" {
 			return pkgs, pkg
@@ -135,24 +181,20 @@ func getAllCompletions(config *core.Configuration, currentPackage, prefix, repoR
 // If 'test' is true it will similarly complete only targets that are tests.
 // If 'hidden' is true then hidden targets (i.e. those with names beginning with an underscore)
 // will be included as well.
-func Completions(graph *core.BuildGraph, packageName, prefix string, pkgs []string, binary, test, hidden bool) {
-	count := printLabelsInPackage(graph, packageName, prefix, binary, test, hidden)
+func Completions(graph *core.BuildGraph, completions *CompletionPackages, binary, test, hidden bool) []string {
+	labels := labelsInPackage(graph, completions.PackageToParse, completions.NamePrefix, binary, test, hidden)
 	// If we're printing binary targets, we might not match any targets in the parsed. If we only matched one other
 	// package, we should try and match binary targets in there.
-	if binary && count == 0 && len(pkgs) == 1 {
-		printLabelsInPackage(graph, pkgs[0], prefix, binary, test, hidden)
-		// This isn't totally correct as we should really recurse the entire algo. This is probably good enough though.
-		fmt.Printf("//%s\n", pkgs[0])
-	} else {
-		for _, pkg := range pkgs {
-			fmt.Printf("//%s\n", pkg)
-		}
+	if binary && len(labels) == 0 && len(completions.Pkgs) == 1 {
+		return labelsInPackage(graph, completions.Pkgs[0], completions.NamePrefix, binary, test, hidden)
 	}
+	return labels
 }
 
-func printLabelsInPackage(graph *core.BuildGraph, packageName, prefix string, binary, test, hidden bool) int {
-	count := 0
-	for _, target := range graph.Package(packageName, "").AllTargets() {
+func labelsInPackage(graph *core.BuildGraph, packageName, prefix string, binary, test, hidden bool) []string {
+	ts := graph.Package(packageName, "").AllTargets()
+	ret := make([]string, 0, len(ts))
+	for _, target := range ts {
 		if !strings.HasPrefix(target.Label.Name, prefix) {
 			continue
 		}
@@ -163,13 +205,26 @@ func printLabelsInPackage(graph *core.BuildGraph, packageName, prefix string, bi
 			continue
 		}
 		if hidden || !strings.HasPrefix(target.Label.Name, "_") {
-			fmt.Printf("%s\n", target.Label)
-			count++
+			ret = append(ret, target.Label.String())
 		}
 	}
-	if !binary && prefix == "" {
-		fmt.Printf("//%s:all\n", packageName)
+	if !binary && prefix == "" && len(ret) > 1 {
+		ret = append(ret, fmt.Sprintf("//%s:all", packageName))
 	}
 
-	return count
+	return ret
+}
+
+// PrintCompletion prints completions relative to the working package, formatting them based on whether the initial
+// query was absolute i.e. started with "//"
+func PrintCompletion(completion string, abs bool) {
+	if abs {
+		if strings.HasPrefix(completion, "//") {
+			fmt.Println(completion)
+		} else {
+			fmt.Printf("//%s\n", completion)
+		}
+	} else {
+		fmt.Println(strings.TrimLeft(strings.TrimPrefix(strings.TrimPrefix(completion, "//"), core.InitialPackagePath), "/"))
+	}
 }

@@ -12,11 +12,6 @@ import (
 	"archive/tar"
 	"bufio"
 	"fmt"
-	"github.com/coreos/go-semver/semver"
-	"github.com/hashicorp/go-retryablehttp"
-	"github.com/thought-machine/please/src/utils"
-	"github.com/ulikunitz/xz"
-	"gopkg.in/op/go-logging.v1"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -27,6 +22,12 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/coreos/go-semver/semver"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/thought-machine/please/src/utils"
+	"github.com/ulikunitz/xz"
+	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -68,13 +69,13 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 		fmt.Fprintf(os.Stderr, "%s Please from version %s to %s", word, pleaseVersion(), config.Please.Version.VersionString())
 	}
 
-	// Must lock here so that the update process doesn't race when running two instances
-	// simultaneously.
-	core.AcquireRepoLock()
-	defer core.ReleaseRepoLock()
+	// Must lock exclusively here so that the update process doesn't race when running two instances simultaneously.
+	// Once we are done we replace/restore the mode to the shared one.
+	core.AcquireExclusiveRepoLock()
+	defer core.AcquireSharedRepoLock()
 
 	// If the destination exists and the user passed --force, remove it to force a redownload.
-	newDir := fs.ExpandHomePath(path.Join(config.Please.Location, config.Please.Version.VersionString()))
+	newDir := path.Join(config.Please.Location, config.Please.Version.VersionString())
 	if forceUpdate && core.PathExists(newDir) {
 		if err := os.RemoveAll(newDir); err != nil {
 			log.Fatalf("Failed to remove existing directory: %s", err)
@@ -185,7 +186,6 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, pre
 // downloadAndLinkPlease downloads a new Please version and links it into place, if needed.
 // It returns the new location and dies on failure.
 func downloadAndLinkPlease(config *core.Configuration, verify bool, progress bool) string {
-	config.Please.Location = fs.ExpandHomePath(config.Please.Location)
 	newPlease := path.Join(config.Please.Location, config.Please.Version.VersionString(), "please")
 
 	if !core.PathExists(newPlease) {
