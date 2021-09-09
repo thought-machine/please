@@ -33,7 +33,7 @@ fi
 rm -rf tree
 
 echo "Running benchmarks..."
-plz build -i benchmark -p -v notice -o "buildconfig.benchmark-revision:${CIRCLE_SHA1}"
+plz build -i benchmark -p -v notice -o please.location:$DIR -o "buildconfig.benchmark-revision:${CIRCLE_SHA1}"
 
 for RESULT in plz-out/benchmarks/*.json; do
   BENCHMARK_NAME=${RESULT%.json}
