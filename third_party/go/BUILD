@@ -206,7 +206,7 @@ go_module(
 go_mod_download(
     name = "genproto_download",
     module = "google.golang.org/genproto",
-    version = "v0.0.0-20210315173758-2651cd453018",
+    version = "v0.0.0-20210903162649-d08c68adba83",
 )
 
 # genproto stuff for grpc to resolve cyclic deps
@@ -218,7 +218,7 @@ go_module(
     ],
     module = "google.golang.org/genproto",
     deps = [
-        ":protobuf",
+        ":protobuf-go",
     ],
 )
 
@@ -233,7 +233,7 @@ go_module(
     module = "google.golang.org/genproto",
     deps = [
         ":grpc",
-        ":protobuf",
+        ":protobuf-go",
     ],
 )
 
