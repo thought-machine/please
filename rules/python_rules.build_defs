@@ -494,10 +494,6 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         urls += [scheme.format(url_base=url_base, package_name=package_name, initial=initial, version=version)
                  for scheme in CONFIG.PYTHON_WHEEL_NAME_SCHEME]
     else:
-        index = CONFIG.DEFAULT_WHEEL_INDEX
-        package_json_url = ['{index}/{package_name}/{version}/json'.format(index=index,
-                                                                           package_name=package_name,
-                                                                           version=version)
         # Populate urls using a reasonable set of possible wheel naming schemes.
         # Look for an arch-specific wheel first; in some cases there can be both (e.g. protobuf
         # has optional arch-specific bits) and we prefer the one with the cool stuff.
