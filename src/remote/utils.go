@@ -19,12 +19,12 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
-	"github.com/golang/protobuf/proto"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -155,11 +155,9 @@ func maybeGetOutDir(dir string, outDirs []core.OutputDirectory) core.OutputDirec
 
 // digestMessage calculates the digest of a protobuf in SHA-256 mode.
 func (c *Client) digestMessage(msg proto.Message) *pb.Digest {
-	d, err := digest.NewFromMessage(msg)
-	if err != nil {
-		panic(err)
-	}
-	return d.ToProto()
+	// Can't use NewFromMessage because remote-apis-sdks is still using the older interface.
+	blob, _ := proto.Marshal(msg)
+	return digest.NewFromBlob(blob).ToProto()
 }
 
 // wrapActionErr wraps an error with information about the action related to it.
