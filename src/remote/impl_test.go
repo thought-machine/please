@@ -13,9 +13,6 @@ import (
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/any"
 	"github.com/peterebden/go-sri"
 	bs "google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/genproto/googleapis/longrunning"
@@ -23,6 +20,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/thought-machine/please/src/core"
@@ -248,8 +247,9 @@ func (s *testServer) QueryWriteStatus(ctx context.Context, req *bs.QueryWriteSta
 }
 
 func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteServer) error {
-	mm := func(msg proto.Message) *any.Any {
-		a, _ := ptypes.MarshalAny(msg)
+	mm := func(msg protoreflect.ProtoMessage) *anypb.Any {
+		a := &anypb.Any{}
+		a.MarshalFrom(msg)
 		return a
 	}
 	srv.Send(&longrunning.Operation{
