@@ -200,8 +200,8 @@ var opts struct {
 
 	Exec struct {
 		Output struct {
-			OutputPath string `long:"output_path" description:"The path to the directory to save outputs into" default:"."`
-			Output []string `long:"out" description:"A file or folder relative to the working directory to save to the output path"`
+			OutputPath string   `long:"output_path" description:"The path to the directory to save outputs into" default:"."`
+			Output     []string `long:"out" description:"A file or folder relative to the working directory to save to the output path"`
 		} `group:"Options controlling what files to save from the working directory and where to save them"`
 		Share struct {
 			Network bool `long:"share_network" description:"Share network namespace"`
