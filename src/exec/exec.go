@@ -19,9 +19,9 @@ import (
 var log = logging.MustGetLogger("exec")
 
 // Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
-func Exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []string, sandbox process.SandboxConfig) int {
+func Exec(state *core.BuildState, label core.BuildLabel, dir string, overrideCmdArgs []string, sandbox process.SandboxConfig) int {
 	target := state.Graph.TargetOrDie(label)
-	if err := exec(state, target, overrideCmdArgs, sandbox); err != nil {
+	if err := exec(state, target, dir, overrideCmdArgs, sandbox); err != nil {
 		log.Error("Command execution failed: %s", err)
 		if exitError, ok := err.(*osExec.ExitError); ok {
 			return exitError.ExitCode()
@@ -31,12 +31,12 @@ func Exec(state *core.BuildState, label core.BuildLabel, overrideCmdArgs []strin
 	return 0
 }
 
-func exec(state *core.BuildState, target *core.BuildTarget, overrideCmdArgs []string, sandbox process.SandboxConfig) error {
+func exec(state *core.BuildState, target *core.BuildTarget, dir string, overrideCmdArgs []string, sandbox process.SandboxConfig) error {
 	if !target.IsBinary && len(overrideCmdArgs) == 0 {
 		return fmt.Errorf("Either the target needs to be a binary or an override command must be provided")
 	}
 
-	runtimeDir, err := prepareRuntimeDir(state, target)
+	runtimeDir, err := prepareRuntimeDir(state, target, dir)
 	if err != nil {
 		return err
 	}
@@ -69,9 +69,7 @@ func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArg
 }
 
 // TODO(tiagovtristao): We might want to find a better way of reusing this logic, since it's similarly used in a couple of places already.
-func prepareRuntimeDir(state *core.BuildState, target *core.BuildTarget) (string, error) {
-	dir := filepath.Join(core.OutDir, "exec", target.Label.Subrepo, target.Label.PackageName)
-
+func prepareRuntimeDir(state *core.BuildState, target *core.BuildTarget, dir string) (string, error) {
 	if err := fs.ForceRemove(state.ProcessExecutor, dir); err != nil {
 		return dir, err
 	}
