@@ -16,7 +16,7 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -44,7 +44,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb
 		actionEntry, actionDigest := c.protoEntry(&pb.Action{
 			CommandDigest:   commandDigest,
 			InputRootDigest: inputRootDigest,
-			Timeout:         ptypes.DurationProto(timeout(target, isTest)),
+			Timeout:         durationpb.New(timeout(target, isTest)),
 			Platform:        c.targetPlatformProperties(target),
 		})
 		ch <- actionEntry
@@ -69,7 +69,7 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 	actionDigest := c.digestMessage(&pb.Action{
 		CommandDigest:   commandDigest,
 		InputRootDigest: inputRootDigest,
-		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
+		Timeout:         durationpb.New(timeout(target, isTest)),
 		Platform:        c.targetPlatformProperties(target),
 	})
 	return command, actionDigest, nil

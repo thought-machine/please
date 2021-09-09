@@ -51,6 +51,7 @@ require (
 	golang.org/x/tools v0.0.0-20200825202427-b303f430e36d
 	google.golang.org/genproto v0.0.0-20200904004341-0bd0a958aa1d
 	google.golang.org/grpc v1.31.1
+	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20191105091915-95d230a53780 // indirect
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	lukechampine.com/blake3 v1.1.5
