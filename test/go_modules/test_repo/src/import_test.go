@@ -5,9 +5,9 @@ import (
 
 	"github.com/DataDog/zstd"
 	"github.com/golang/snappy"
+	"github.com/google/licenseclassifier/licenses"
 	"github.com/mattn/go-sqlite3"
 	"github.com/peterebden/go-cli-init/v2"
-	"github.com/google/licenseclassifier/licenses"
 )
 
 func TestCLIImport(t *testing.T) {

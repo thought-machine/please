@@ -397,6 +397,8 @@ github.com/peterebden/go-cli-init/v3 v3.0.0 h1:OuPbAWsZ+5ChJNTcbWBFgHyuHkkFJCvsT
 github.com/peterebden/go-cli-init/v3 v3.0.0/go.mod h1:E8DpXYHJznMKpoeY2KgmQapSXBZEWqQ/WAblwEG7RWo=
 github.com/peterebden/go-cli-init/v4 v4.0.0 h1:Vo4VO3Uc7l5FX4iIrDY8kvGkv7Q+FOKi8kjoOBaTqOU=
 github.com/peterebden/go-cli-init/v4 v4.0.0/go.mod h1:/IxPVIqMNfdW6QXCapCvM5S87yqWC0v2r0zV60pzp28=
+github.com/peterebden/go-cli-init/v5 v5.0.2 h1:pXasis4UilcxH30E6oFySvDaLe/vFwxxcUkFrartUEo=
+github.com/peterebden/go-cli-init/v5 v5.0.2/go.mod h1:eMlHtRSy41LqxcnCkSzUwSNS5QvpTUBFtnUKl04tNlo=
 github.com/peterebden/go-deferred-regex v1.0.0 h1:diO8oF3YcM4GkIFuv/DflfAYfx5SWBPff3Yh120PaFk=
 github.com/peterebden/go-deferred-regex v1.0.0/go.mod h1:EhIu4zsN+60671cx29rzxPSIEnDd2vOia4RFSOaYpRI=
 github.com/peterebden/go-sri v1.0.0 h1:Ew88r4WD4H5K/UgsHxzhm0du8iUSH1uRIp2uscYeqe8=
@@ -494,6 +496,8 @@ github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e h1:
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e/go.mod h1:XDKHRm5ThF8YJjx001LtgelzsoaEcvnA7lVWz9EeX3g=
 github.com/thought-machine/go-flags v1.5.0 h1:w0TqJzliGoemL/byvtrHyneTtiWjVDUJxbejnCxg1pw=
 github.com/thought-machine/go-flags v1.5.0/go.mod h1:+r2g8uGwgGM7IGZzmMS97mKBFLDbW6vgFO1jxp0rDmg=
+github.com/thought-machine/go-flags v1.6.0 h1:r6hUwmL9E/OUO28YxvxMyTUZ5sxVy8VYj5Oui0h22VU=
+github.com/thought-machine/go-flags v1.6.0/go.mod h1:+r2g8uGwgGM7IGZzmMS97mKBFLDbW6vgFO1jxp0rDmg=
 github.com/tklauser/go-sysconf v0.3.4 h1:HT8SVixZd3IzLdfs/xlpq0jeSfTX57g1v6wB1EuzV7M=
 github.com/tklauser/go-sysconf v0.3.4/go.mod h1:Cl2c8ZRWfHD5IrfHo9VN+FX9kCFjIOyVklgXycLB6ek=
 github.com/tklauser/numcpus v0.2.1 h1:ct88eFm+Q7m2ZfXJdan1xYoXKlmwsfP+k88q05KvlZc=

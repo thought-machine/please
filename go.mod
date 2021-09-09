@@ -27,6 +27,7 @@ require (
 	github.com/peterebden/gcfg v1.3.0
 	github.com/peterebden/go-cli-init/v3 v3.0.0
 	github.com/peterebden/go-cli-init/v4 v4.0.0
+	github.com/peterebden/go-cli-init/v5 v5.0.2
 	github.com/peterebden/go-deferred-regex v1.0.0
 	github.com/peterebden/go-sri v1.0.0
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
@@ -39,7 +40,7 @@ require (
 	github.com/streamrail/concurrent-map v0.0.0-20160823150647-8bf1e9bacbf6
 	github.com/stretchr/testify v1.6.1
 	github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e
-	github.com/thought-machine/go-flags v1.5.0
+	github.com/thought-machine/go-flags v1.6.0
 	github.com/ulikunitz/xz v0.5.8
 	go.uber.org/automaxprocs v1.4.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
