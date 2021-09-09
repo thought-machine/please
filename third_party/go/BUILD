@@ -553,7 +553,7 @@ go_module(
     install = ["..."],
     module = "github.com/bazelbuild/buildtools",
     deps = [
-        ":protobuf",
+        ":github_protobuf",
         ":skylark",
     ],
 )
