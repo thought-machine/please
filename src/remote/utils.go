@@ -20,8 +20,6 @@ import (
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -286,13 +284,6 @@ func printVer(v *semver.SemVer) string {
 		msg += "-" + v.Prerelease
 	}
 	return msg
-}
-
-// toTime converts a protobuf timestamp into a time.Time.
-// It's like the ptypes one but we ignore errors (we don't generally care that much)
-func toTime(ts *timestamp.Timestamp) time.Time {
-	t, _ := ptypes.Timestamp(ts)
-	return t
 }
 
 // IsNotFound returns true if a given error is a "not found" error (which may be treated

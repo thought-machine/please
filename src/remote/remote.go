@@ -782,10 +782,10 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 
 func logResponseTimings(target *core.BuildTarget, ar *pb.ActionResult) {
 	if ar != nil && ar.ExecutionMetadata != nil {
-		startTime := toTime(ar.ExecutionMetadata.ExecutionStartTimestamp)
-		endTime := toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp)
-		inputFetchStartTime := toTime(ar.ExecutionMetadata.InputFetchStartTimestamp)
-		inputFetchEndTime := toTime(ar.ExecutionMetadata.InputFetchCompletedTimestamp)
+		startTime := ar.ExecutionMetadata.ExecutionStartTimestamp.AsTime()
+		endTime := ar.ExecutionMetadata.ExecutionCompletedTimestamp.AsTime()
+		inputFetchStartTime := ar.ExecutionMetadata.InputFetchStartTimestamp.AsTime()
+		inputFetchEndTime := ar.ExecutionMetadata.InputFetchCompletedTimestamp.AsTime()
 		log.Debug("Completed remote build action for %s; input fetch %s, build time %s", target, inputFetchEndTime.Sub(inputFetchStartTime), endTime.Sub(startTime))
 	}
 }
