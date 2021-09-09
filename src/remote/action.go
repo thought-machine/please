@@ -16,7 +16,7 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/thought-machine/please/src/core"
@@ -540,6 +540,8 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 }
 
 func (c *Client) protoEntry(msg proto.Message) (*uploadinfo.Entry, *pb.Digest) {
-	entry, _ := uploadinfo.EntryFromProto(msg)
+	// Can't use EntryFromProto since it's still on the older proto interface.
+	blob, _ := proto.Marshal(msg)
+	entry := uploadinfo.EntryFromBlob(blob)
 	return entry, entry.Digest.ToProto()
 }
