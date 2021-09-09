@@ -306,7 +306,6 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
-	config.Python.DefaultIndex = "https://pypi.org/pypi"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.DisableVendorFlags = false
 	config.Python.TestRunner = "unittest"
