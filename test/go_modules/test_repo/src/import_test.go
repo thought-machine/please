@@ -7,11 +7,11 @@ import (
 	"github.com/golang/snappy"
 	"github.com/google/licenseclassifier/licenses"
 	"github.com/mattn/go-sqlite3"
-	"github.com/peterebden/go-cli-init/v5/logging"
+	"github.com/peterebden/go-cli-init/v2"
 )
 
 func TestCLIImport(t *testing.T) {
-	logging.MustGetLogger()
+	cli.MustGetLogger()
 }
 
 func TestZSTImport(t *testing.T) {
