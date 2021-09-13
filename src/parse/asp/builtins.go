@@ -615,7 +615,7 @@ func subrepoName(s *scope, args []pyObject) pyObject {
 
 func canonicalise(s *scope, args []pyObject) pyObject {
 	s.Assert(s.pkg != nil, "Cannot call canonicalise() from this context")
-	label := core.ParseBuildLabel(string(args[0].(pyString)), s.pkg.Name)
+	label := core.ParseAnnotatedBuildLabel(string(args[0].(pyString)), s.pkg.Name)
 	return pyString(label.String())
 }
 
@@ -1009,11 +1009,13 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 			},
 		}
 		if input, err := prompt.Run(); err != nil {
-			if err == io.EOF {
+			if err == io.EOF || err.Error() == "^D" {
 				break
 			} else if err.Error() != "^C" {
 				log.Error("%s", err)
 			}
+		} else if input == "exit" {
+			break
 		} else if stmts, err := s.interpreter.parser.ParseData([]byte(input), "<stdin>"); err != nil {
 			log.Error("Syntax error: %s", err)
 		} else if ret, err := interpretStatements(stmts); err != nil {

@@ -135,6 +135,19 @@ func ParseBuildLabel(target, currentPath string) BuildLabel {
 	return label
 }
 
+func ParseAnnotatedBuildLabel(target, currentPath string) AnnotatedOutputLabel {
+	parts := strings.Split(target, "|")
+	l := ParseBuildLabel(parts[0], currentPath)
+	annotation := ""
+	if len(parts) == 2 {
+		annotation = parts[1]
+	}
+	return AnnotatedOutputLabel{
+		BuildLabel: l,
+		Annotation: annotation,
+	}
+}
+
 // TryParseBuildLabel attempts to parse a single build label from a string. Returns an error if unsuccessful.
 func TryParseBuildLabel(target, currentPath, subrepo string) (BuildLabel, error) {
 	if pkg, name, subrepo := parseBuildLabelParts(target, currentPath, subrepo); name != "" {

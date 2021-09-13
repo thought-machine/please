@@ -1,3 +1,6 @@
+[please]
+location = ./plz-out/please
+
 [python]
 ; We use the in-repo please_pex tool to build other pexes within this repo.
 ; Other projects using Please wouldn't normally need to do anything like this.
@@ -86,4 +89,5 @@ accept = notice
 [featureflags]
 JavaBinaryExecutableByDefault = true
 PackageOutputsStrictness = true
+PythonWheelHashing = true
 UseJunit5Runner = true
