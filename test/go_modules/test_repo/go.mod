@@ -1,1 +1,1 @@
-module example
+module module_test
