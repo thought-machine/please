@@ -26,6 +26,7 @@ maven_jar(
 java_test(
     name = "mvn_classifier_test",
     srcs = ["test/build/please/java/test/MvnClassifierTest.java"],
+    test_package = "build.please.java.test",
     deps = [
         ":logback-core-tests",
         "//third_party/java:junit",

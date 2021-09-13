@@ -324,7 +324,8 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
         java = 'java'
 
     if CONFIG.FF_USE_JUNIT5_RUNNER:
-        test_cmd = f'$TOOLS_JAVA -Dbuild.please.testpackage={test_package} {jvm_args} -jar $TOOLS_JUNIT --config=junit.platform.output.capture.stderr=true --config=junit.platform.output.capture.stdout=true --classpath $TEST --scan-classpath --reports-dir=$RESULTS_FILE {flags}'
+        scan_flag = f"--select-package={test_package}" if test_package else "--scan_classpath"
+        test_cmd = f'$TOOLS_JAVA {jvm_args} -jar $TOOLS_JUNIT --config=junit.platform.output.capture.stderr=true --config=junit.platform.output.capture.stdout=true --classpath $TEST {scan_flag} --reports-dir=$RESULTS_FILE {flags}'
     else:
         tools['junit'] = [CONFIG.JUNIT_RUNNER]
         cmd = 'ln -s "$(if [ -f "$TOOLS_JUNIT" ]; then echo "$TOOLS_JUNIT"; else echo "$(which "$TOOLS_JUNIT")"; fi)" . && ' + cmd
