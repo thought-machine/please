@@ -352,10 +352,6 @@ github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518 h1:9STHW4sf/R/S5lZO2
 github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518/go.mod h1:DXUmO42mqfooJ6lehFb2HmbAhpP/2YJmRTpgkJu9khg=
 github.com/peterebden/gcfg v1.3.0 h1:cXPrg3yRF5HTK3tBfIk+AJy10BZKRnBbb34FHklJzn8=
 github.com/peterebden/gcfg v1.3.0/go.mod h1:VDdZttqmD3nudN3emvXYhkgOqqyYhWjnPIcEoIxNlTE=
-github.com/peterebden/go-cli-init/v3 v3.0.0 h1:OuPbAWsZ+5ChJNTcbWBFgHyuHkkFJCvsTFF9mGQBiK8=
-github.com/peterebden/go-cli-init/v3 v3.0.0/go.mod h1:E8DpXYHJznMKpoeY2KgmQapSXBZEWqQ/WAblwEG7RWo=
-github.com/peterebden/go-cli-init/v4 v4.0.0 h1:Vo4VO3Uc7l5FX4iIrDY8kvGkv7Q+FOKi8kjoOBaTqOU=
-github.com/peterebden/go-cli-init/v4 v4.0.0/go.mod h1:/IxPVIqMNfdW6QXCapCvM5S87yqWC0v2r0zV60pzp28=
 github.com/peterebden/go-cli-init/v5 v5.0.2 h1:pXasis4UilcxH30E6oFySvDaLe/vFwxxcUkFrartUEo=
 github.com/peterebden/go-cli-init/v5 v5.0.2/go.mod h1:eMlHtRSy41LqxcnCkSzUwSNS5QvpTUBFtnUKl04tNlo=
 github.com/peterebden/go-deferred-regex v1.0.0 h1:diO8oF3YcM4GkIFuv/DflfAYfx5SWBPff3Yh120PaFk=
@@ -447,8 +443,6 @@ github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e h1:T5PdfK/M1xyrHwynxMIVMWLS7f/qHwfslZphxtGnw7s=
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e/go.mod h1:XDKHRm5ThF8YJjx001LtgelzsoaEcvnA7lVWz9EeX3g=
-github.com/thought-machine/go-flags v1.5.0 h1:w0TqJzliGoemL/byvtrHyneTtiWjVDUJxbejnCxg1pw=
-github.com/thought-machine/go-flags v1.5.0/go.mod h1:+r2g8uGwgGM7IGZzmMS97mKBFLDbW6vgFO1jxp0rDmg=
 github.com/thought-machine/go-flags v1.6.0 h1:r6hUwmL9E/OUO28YxvxMyTUZ5sxVy8VYj5Oui0h22VU=
 github.com/thought-machine/go-flags v1.6.0/go.mod h1:+r2g8uGwgGM7IGZzmMS97mKBFLDbW6vgFO1jxp0rDmg=
 github.com/tklauser/go-sysconf v0.3.4 h1:HT8SVixZd3IzLdfs/xlpq0jeSfTX57g1v6wB1EuzV7M=

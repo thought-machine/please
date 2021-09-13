@@ -13,8 +13,6 @@ require (
 	github.com/djherbis/atime v1.0.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fsnotify/fsnotify v1.4.7
-	github.com/golang/protobuf v1.4.3
-	github.com/golang/snappy v0.0.3
 	github.com/google/shlex v0.0.0-20181106134648-c34317bd91bf
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.1-0.20190118093823-f849b5445de4
 	github.com/hashicorp/go-multierror v1.0.0
@@ -26,8 +24,6 @@ require (
 	github.com/nicksnyder/go-i18n v1.10.1 // indirect
 	github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518
 	github.com/peterebden/gcfg v1.3.0
-	github.com/peterebden/go-cli-init/v3 v3.0.0
-	github.com/peterebden/go-cli-init/v4 v4.0.0
 	github.com/peterebden/go-cli-init/v5 v5.0.2
 	github.com/peterebden/go-deferred-regex v1.0.0
 	github.com/peterebden/go-sri v1.0.0
