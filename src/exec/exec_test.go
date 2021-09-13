@@ -16,7 +16,7 @@ import (
 func TestNoBinaryTargetNoOverrideCommand(t *testing.T) {
 	target := core.NewBuildTarget(core.NewBuildLabel("pkg", "t"))
 
-	err := exec(core.NewDefaultBuildState(), target, nil, process.NoSandbox)
+	err := exec(core.NewDefaultBuildState(), target, ".", nil, process.NoSandbox)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "target needs to be a binary")
 }
@@ -36,9 +36,8 @@ func TestPrepareRuntimeDir(t *testing.T) {
 	}
 	build.Build(0, state, target.Label, false)
 
-	dir, err := prepareRuntimeDir(state, target)
+	err := prepareRuntimeDir(state, target, "plz-out/exec/pkg")
 	assert.Nil(t, err)
-	assert.Equal(t, "plz-out/exec/pkg", dir)
 	assert.True(t, fs.FileExists("plz-out/exec/pkg/file1"))
 }
 
@@ -96,7 +95,7 @@ func TestExec(t *testing.T) {
 	target := core.NewBuildTarget(core.NewBuildLabel("pkg", "t"))
 	state.Graph.AddTarget(target)
 
-	err := exec(state, target, []string{"echo", "foo"}, process.NoSandbox)
+	err := exec(state, target, "test", []string{"echo", "foo"}, process.NoSandbox)
 	assert.Nil(t, err)
 }
 
@@ -105,6 +104,6 @@ func TestCommandExitCode(t *testing.T) {
 	target := core.NewBuildTarget(core.NewBuildLabel("pkg", "t"))
 	state.Graph.AddTarget(target)
 
-	exitCode := Exec(state, target.Label, []string{"exit", "5"}, process.NoSandbox)
+	exitCode := Exec(state, target.Label, "test", []string{"exit", "5"}, process.NoSandbox)
 	assert.Equal(t, 5, exitCode)
 }

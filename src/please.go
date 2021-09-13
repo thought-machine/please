@@ -200,6 +200,10 @@ var opts struct {
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
 
 	Exec struct {
+		Output struct {
+			OutputPath string   `long:"output_path" description:"The path to the directory to save outputs into" default:"."`
+			Output     []string `long:"out" description:"A file or folder relative to the working directory to save to the output path"`
+		} `group:"Options controlling what files to save from the working directory and where to save them"`
 		Share struct {
 			Network bool `long:"share_network" description:"Share network namespace"`
 			Mount   bool `long:"share_mount" description:"Share mount namespace"`
@@ -477,7 +481,24 @@ var buildFunctions = map[string]func() int{
 		}
 
 		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
-		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount))
+		dir := filepath.Join(core.OutDir, "exec", opts.Exec.Args.Target.Subrepo, opts.Exec.Args.Target.PackageName)
+		if code := exec.Exec(state, opts.Exec.Args.Target, dir, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
+			return code
+		}
+
+		for _, out := range opts.Exec.Output.Output {
+			from := filepath.Join(dir, out)
+			to := filepath.Join(opts.Exec.Output.OutputPath, out)
+
+			if err := fs.EnsureDir(to); err != nil {
+				log.Fatalf("%v", err)
+			}
+
+			if err := fs.RecursiveLink(from, to, 0644); err != nil {
+				log.Fatalf("failed to move output: %v", err)
+			}
+		}
+		return 0
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
