@@ -324,7 +324,7 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
         java = 'java'
 
     if CONFIG.FF_USE_JUNIT5_RUNNER:
-        scan_flag = f"--select-package={test_package}" if test_package else "--scan_classpath"
+        scan_flag = f"--select-package={test_package}" if test_package else "--scan-classpath"
         test_cmd = f'$TOOLS_JAVA {jvm_args} -jar $TOOLS_JUNIT --config=junit.platform.output.capture.stderr=true --config=junit.platform.output.capture.stdout=true --classpath $TEST {scan_flag} --reports-dir=$RESULTS_FILE {flags}'
     else:
         tools['junit'] = [CONFIG.JUNIT_RUNNER]
