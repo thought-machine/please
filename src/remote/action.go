@@ -11,12 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/command"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -44,7 +45,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb
 		actionEntry, actionDigest := c.protoEntry(&pb.Action{
 			CommandDigest:   commandDigest,
 			InputRootDigest: inputRootDigest,
-			Timeout:         ptypes.DurationProto(timeout(target, isTest)),
+			Timeout:         durationpb.New(timeout(target, isTest)),
 			Platform:        c.targetPlatformProperties(target),
 		})
 		ch <- actionEntry
@@ -69,7 +70,7 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 	actionDigest := c.digestMessage(&pb.Action{
 		CommandDigest:   commandDigest,
 		InputRootDigest: inputRootDigest,
-		Timeout:         ptypes.DurationProto(timeout(target, isTest)),
+		Timeout:         durationpb.New(timeout(target, isTest)),
 		Platform:        c.targetPlatformProperties(target),
 	})
 	return command, actionDigest, nil
@@ -471,7 +472,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 
 // uploadLocalTarget uploads the outputs of a target that was built locally.
 func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
-	m, ar, err := c.client.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), filemetadata.NewNoopCache())
+	m, ar, err := c.client.ComputeOutputsToUpload(target.OutDir(), target.Outputs(), filemetadata.NewNoopCache(), command.PreserveSymlink)
 	if err != nil {
 		return err
 	}
@@ -539,6 +540,8 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 }
 
 func (c *Client) protoEntry(msg proto.Message) (*uploadinfo.Entry, *pb.Digest) {
-	entry, _ := uploadinfo.EntryFromProto(msg)
+	// Can't use EntryFromProto since it's still on the older proto interface.
+	blob, _ := proto.Marshal(msg)
+	entry := uploadinfo.EntryFromBlob(blob)
 	return entry, entry.Digest.ToProto()
 }
