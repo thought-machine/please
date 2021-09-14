@@ -75,7 +75,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	defer core.AcquireSharedRepoLock()
 
 	// If the destination exists and the user passed --force, remove it to force a redownload.
-	newDir := fs.ExpandHomePath(path.Join(config.Please.Location, config.Please.Version.VersionString()))
+	newDir := path.Join(config.Please.Location, config.Please.Version.VersionString())
 	if forceUpdate && core.PathExists(newDir) {
 		if err := os.RemoveAll(newDir); err != nil {
 			log.Fatalf("Failed to remove existing directory: %s", err)
@@ -186,7 +186,6 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, pre
 // downloadAndLinkPlease downloads a new Please version and links it into place, if needed.
 // It returns the new location and dies on failure.
 func downloadAndLinkPlease(config *core.Configuration, verify bool, progress bool) string {
-	config.Please.Location = fs.ExpandHomePath(config.Please.Location)
 	newPlease := path.Join(config.Please.Location, config.Please.Version.VersionString(), "please")
 
 	if !core.PathExists(newPlease) {

@@ -1,4 +1,4 @@
-// Package gotest contains utilities used by plz_go_test.
+// Package test contains utilities used by plz_go_test.
 package test
 
 import (

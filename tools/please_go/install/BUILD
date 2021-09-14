@@ -1,6 +1,3 @@
-# We want to work out the of the test_data dir and this makes it slightly easier
-package(go_test_root_compat = True)
-
 go_library(
     name = "install",
     srcs = [
@@ -10,6 +7,7 @@ go_library(
     deps = [
         "//tools/please_go/install/exec",
         "//tools/please_go/install/toolchain",
+        "//tools/please_go_embed/embed",
     ],
 )
 

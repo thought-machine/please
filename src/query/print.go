@@ -41,51 +41,55 @@ func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []s
 	}
 }
 
-// specialFields is a mapping of field name -> any special casing relating to how to print it.
-var specialFields = map[string]func(*printer) (string, bool){
-	"name": func(p *printer) (string, bool) {
-		return "'" + p.target.Label.Name + "'", true
-	},
-	"building_description": func(p *printer) (string, bool) {
-		s, ok := p.genericPrint(reflect.ValueOf(p.target.BuildingDescription))
-		return s, ok && p.target.BuildingDescription != core.DefaultBuildingDescription
-	},
-	"deps": func(p *printer) (string, bool) {
-		return p.genericPrint(reflect.ValueOf(p.target.DeclaredDependenciesStrict()))
-	},
-	"exported_deps": func(p *printer) (string, bool) {
-		return p.genericPrint(reflect.ValueOf(p.target.ExportedDependencies()))
-	},
-	"visibility": func(p *printer) (string, bool) {
-		if len(p.target.Visibility) == 1 && p.target.Visibility[0] == core.WholeGraph[0] {
-			return "['PUBLIC']", true
-		}
-		return p.genericPrint(reflect.ValueOf(p.target.Visibility))
-	},
-	"tools": func(p *printer) (string, bool) {
-		if tools := p.target.AllNamedTools(); len(tools) > 0 {
-			return p.genericPrint(reflect.ValueOf(tools))
-		}
-		return p.genericPrint(reflect.ValueOf(p.target.AllTools()))
-	},
-	"test_tools": func(p *printer) (string, bool) {
-		if tools := p.target.NamedTestTools(); len(tools) > 0 {
-			return p.genericPrint(reflect.ValueOf(tools))
-		}
-		return p.genericPrint(reflect.ValueOf(p.target.AllTestTools()))
-	},
-	"data": func(p *printer) (string, bool) {
-		if data := p.target.NamedData(); len(data) > 0 {
-			return p.genericPrint(reflect.ValueOf(data))
-		}
-		return p.genericPrint(reflect.ValueOf(p.target.Data))
-	},
-	"test": func(p *printer) (string, bool) {
-		if p.target.IsTest() {
-			return "True", p.target.IsTest()
-		}
-		return "", false
-	},
+// A specialFieldsMap is a mapping of field name -> any special casing relating to how to print it.
+type specialFieldsMap map[string]func(*printer) (string, bool)
+
+func specialFields() specialFieldsMap {
+	return specialFieldsMap{
+		"name": func(p *printer) (string, bool) {
+			return "'" + p.target.Label.Name + "'", true
+		},
+		"building_description": func(p *printer) (string, bool) {
+			s, ok := p.genericPrint(reflect.ValueOf(p.target.BuildingDescription))
+			return s, ok && p.target.BuildingDescription != core.DefaultBuildingDescription
+		},
+		"deps": func(p *printer) (string, bool) {
+			return p.genericPrint(reflect.ValueOf(p.target.DeclaredDependenciesStrict()))
+		},
+		"exported_deps": func(p *printer) (string, bool) {
+			return p.genericPrint(reflect.ValueOf(p.target.ExportedDependencies()))
+		},
+		"visibility": func(p *printer) (string, bool) {
+			if len(p.target.Visibility) == 1 && p.target.Visibility[0] == core.WholeGraph[0] {
+				return "['PUBLIC']", true
+			}
+			return p.genericPrint(reflect.ValueOf(p.target.Visibility))
+		},
+		"tools": func(p *printer) (string, bool) {
+			if tools := p.target.AllNamedTools(); len(tools) > 0 {
+				return p.genericPrint(reflect.ValueOf(tools))
+			}
+			return p.genericPrint(reflect.ValueOf(p.target.AllTools()))
+		},
+		"test_tools": func(p *printer) (string, bool) {
+			if tools := p.target.NamedTestTools(); len(tools) > 0 {
+				return p.genericPrint(reflect.ValueOf(tools))
+			}
+			return p.genericPrint(reflect.ValueOf(p.target.AllTestTools()))
+		},
+		"data": func(p *printer) (string, bool) {
+			if data := p.target.NamedData(); len(data) > 0 {
+				return p.genericPrint(reflect.ValueOf(data))
+			}
+			return p.genericPrint(reflect.ValueOf(p.target.Data))
+		},
+		"test": func(p *printer) (string, bool) {
+			if p.target.IsTest() {
+				return "True", p.target.IsTest()
+			}
+			return "", false
+		},
+	}
 }
 
 // A printer is responsible for creating the output of 'plz query print'.
@@ -97,16 +101,18 @@ type printer struct {
 	error          bool // true if something went wrong
 	surroundSyntax bool // true if we are quoting strings or surrounding slices with [] etc.
 	fieldOrder     map[string]int
+	specialFields  specialFieldsMap
 }
 
 // newPrinter creates a new printer instance.
 func newPrinter(w io.Writer, target *core.BuildTarget, indent int, order map[string]int) *printer {
 	return &printer{
-		w:          w,
-		target:     target,
-		indent:     indent,
-		doneFields: make(map[string]bool, 50), // Leave enough space for all of BuildTarget's fields.
-		fieldOrder: order,
+		w:             w,
+		target:        target,
+		indent:        indent,
+		doneFields:    make(map[string]bool, 50), // Leave enough space for all of BuildTarget's fields.
+		fieldOrder:    order,
+		specialFields: specialFields(),
 	}
 }
 
@@ -223,7 +229,7 @@ func (p *printer) shouldPrintField(f reflect.StructField, v reflect.Value) (stri
 	if p.doneFields[name] {
 		return "", false
 	}
-	if customFunc, present := specialFields[name]; present {
+	if customFunc, present := p.specialFields[name]; present {
 		return customFunc(p)
 	}
 	return p.genericPrint(v)

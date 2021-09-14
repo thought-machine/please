@@ -30,7 +30,7 @@ func TestNoSources(t *testing.T) {
 
 	err := install.Install([]string{"no_sources"})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to compile example.com/no_sources: no buildable Go source files in test_data/example.com/no_sources")
+	assert.Contains(t, err.Error(), "failed to compile example.com/no_sources: no buildable Go source files")
 }
 
 func TestLocalImports(t *testing.T) {
@@ -44,7 +44,7 @@ func TestLocalImports(t *testing.T) {
 }
 
 func newInstall() (*PleaseGoInstall, *bytes.Buffer, *bytes.Buffer) {
-	install := New([]string{}, "test_data/example.com", "example.com", "test_data/empty.importcfg", "", "", "go", "cc", "pkg-config", "out", "")
+	install := New([]string{}, "tools/please_go/install/test_data/example.com", "example.com", "tools/please_go/install/test_data/empty.importcfg", "", "", "go", "cc", "pkg-config", "out", "")
 
 	stdOut := &bytes.Buffer{}
 	stdIn := &bytes.Buffer{}
@@ -56,7 +56,7 @@ func newInstall() (*PleaseGoInstall, *bytes.Buffer, *bytes.Buffer) {
 }
 
 func TestMain(m *testing.M) {
-	f, err := os.Create("test_data/empty.importcfg")
+	f, err := os.Create("tools/please_go/install/test_data/empty.importcfg")
 	if err != nil {
 		panic(err)
 	}

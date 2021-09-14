@@ -16,7 +16,7 @@ export PATH="$DIR:$PATH"
 
 # Start the servers in the background
 echo "Starting servers..."
-plz run parallel -p -v notice --colour --detach -o build.passenv:PATH //test/remote:run_elan //test/remote:run_zeal //test/remote:run_mettle
+plz run parallel -p -v notice --colour --detach -o please.location:$DIR -o build.passenv:PATH //test/remote:run_elan //test/remote:run_zeal //test/remote:run_mettle
 
 echo "Waiting for servers to come up..."
 # Give the servers a chance to start up.

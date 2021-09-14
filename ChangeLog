@@ -1,3 +1,28 @@
+Version 16.7.0
+--------------
+    * Sandbox tool now ignored missing directories in `SANDBOX_DIRS`
+      #2041
+    * Allow `Python.DefaultInterpretor` to be a build label #2045
+    * Fix the install script to download arm architectures #2030
+    * Handle annotated labels in `canonicalise()` #2037
+    * Handle relative paths in `Please.Location` #2046
+    * Apply hashes to the download rule in `python_wheel()` instead of the
+      output rule. This feature is gated behind a feature flag for backwards
+      compatibility. #2042
+    * Handle go1.16 embeds in `go_module()` #2036
+
+
+Version 16.6.1
+--------------
+    * Rules with system sources now run locally by default #2011
+    * Improve validation around rule outputs to avoid race conditions.
+      This change is gated behind the `FeatureFlags.PackageOutputsStrictness`.
+      #1816
+    * Fix problem in the language server that was causing issues on startup
+      #2029
+    * Fix issues with `#cgo` directive in `go_module()` rules #2038
+
+
 Version 16.6.0
 --------------
     * Fixed issue with `go_module()` where adding the root package removed
