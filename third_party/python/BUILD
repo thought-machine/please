@@ -12,11 +12,6 @@ package(
 )
 
 python_wheel(
-    name = "distlib",
-    version = "0.3.2",
-)
-
-python_wheel(
     name = "xmlrunner",
     package_name = "unittest_xml_reporting",
     hashes = ["530e703bf8f90a867ce42a524fc4cc99c50c0a1522ce7bd010a783698bd4cac9"],
