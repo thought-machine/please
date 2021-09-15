@@ -78,7 +78,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to download test inputs")
 			return
 		}
-		if err := prepareTestDir(state, target, run); err != nil {
+		if err := core.PrepareRuntimeDir(state, target, target.TestDir(run)); err != nil {
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to prepare test directory")
 			return
 		}
@@ -340,24 +340,6 @@ func pluralise(word string, quantity int) string {
 	return word + "s"
 }
 
-func prepareTestDir(state *core.BuildState, target *core.BuildTarget, run int) error {
-	if err := fs.ForceRemove(state.ProcessExecutor, target.TestDir(run)); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(target.TestDir(run), core.DirPermissions); err != nil {
-		return err
-	}
-	if err := state.EnsureDownloaded(target); err != nil {
-		return err
-	}
-	for out := range core.IterRuntimeFiles(state.Graph, target, true, target.TestDir(run)) {
-		if err := core.PrepareSourcePair(out); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // testCommandAndEnv returns the test command & environment for a target.
 func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget, run int) (string, []string, error) {
 	replacedCmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
@@ -376,7 +358,7 @@ func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte,
 		return nil, err
 	}
 	log.Debugf("Running test %s#%d\nENVIRONMENT:\n%s\n%s", target.Label, run, strings.Join(env, "\n"), replacedCmd)
-	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, target.TestDir(run), env, target.Test.Timeout, state.ShowAllOutput, process.NewSandboxConfig(target.Test.Sandbox, target.Test.Sandbox), replacedCmd, state.DebugTests)
+	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, target.TestDir(run), env, target.Test.Timeout, state.ShowAllOutput, true, process.NewSandboxConfig(target.Test.Sandbox, target.Test.Sandbox), replacedCmd, state.DebugTests)
 	return stderr, err
 }
 
@@ -431,7 +413,7 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 
 // prepareAndRunTest sets up a test directory and runs the test.
 func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget, run int) (stdout []byte, err error) {
-	if err = prepareTestDir(state, target, run); err != nil {
+	if err = core.PrepareRuntimeDir(state, target, target.TestDir(run)); err != nil {
 		state.LogBuildError(tid, target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
 		return []byte{}, err
 	}

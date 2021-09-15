@@ -530,9 +530,17 @@ go_module(
 
 go_module(
     name = "skylark",
-    install = ["syntax"],
+    install = [
+        "internal/compile",
+        "resolve",
+        "syntax",
+        "internal/spell",
+        "starlark",
+    ],
+    licences = ["BSD 3-Clause"],
     module = "go.starlark.net",
-    version = "v0.0.0-20210126161401-bc864be25151",
+    version = "v0.0.0-20210223155950-e043a3d3c984",
+    deps = [":xsys"],
 )
 
 go_mod_download(
@@ -793,10 +801,16 @@ go_module(
     version = "7894d8ab8bfebee68b6c32bacec8f5189b45c67f",
 )
 
-go_module(
-    name = "blackfriday",
+go_mod_download(
+    name = "blackfriday_download",
     module = "gopkg.in/russross/blackfriday.v2",
     version = "v2.0.1",
+)
+
+go_module(
+    name = "blackfriday",
+    download = ":blackfriday_download",
+    module = "gopkg.in/russross/blackfriday.v2",
     deps = [":sanitized_anchor_name"],
 )
 
@@ -955,4 +969,131 @@ go_module(
     name = "deferred_regex",
     module = "github.com/peterebden/go-deferred-regex",
     version = "v1.0.0",
+)
+
+go_module(
+    name = "logrus",
+    licences = ["MIT"],
+    module = "github.com/sirupsen/logrus",
+    version = "v1.6.0",
+    deps = [":xsys"],
+)
+
+go_module(
+    name = "cobra",
+    install = [
+        "doc",
+        ".",
+    ],
+    licences = ["Apache 2.0"],
+    module = "github.com/spf13/cobra",
+    version = "v1.1.3",
+    deps = [
+        ":md2man",
+        ":pflag",
+        ":yaml.v2",
+    ],
+)
+
+go_module(
+    name = "yaml.v2",
+    licences = ["Apache 2.0"],
+    module = "gopkg.in/yaml.v2",
+    version = "v2.4.0",
+)
+
+go_module(
+    name = "golang-lru",
+    install = ["simplelru"],
+    licences = ["MPL-2.0"],
+    module = "github.com/hashicorp/golang-lru",
+    version = "v0.5.4",
+)
+
+go_module(
+    name = "dlv",
+    binary = True,
+    install = [
+        "cmd/dlv",
+    ],
+    licences = ["MIT"],
+    module = "github.com/go-delve/delve",
+    version = "v1.7.1",
+    deps = [
+        ":argv",
+        ":cobra",
+        ":go-dap",
+        ":go-isatty",
+        ":golang-lru",
+        ":liner",
+        ":logrus",
+        ":skylark",
+        ":tools",
+        ":trie",
+        ":xarch",
+        ":xsys",
+        ":yaml.v2",
+    ],
+)
+
+go_module(
+    name = "github.blackfriday",
+    download = ":blackfriday_download",
+    module = "github.com/russross/blackfriday/v2",
+    deps = [":sanitized_anchor_name"],
+)
+
+go_module(
+    name = "md2man",
+    install = ["md2man"],
+    licences = ["MIT"],
+    module = "github.com/cpuguy83/go-md2man/v2",
+    version = "v2.0.0",
+    deps = [":github.blackfriday"],
+)
+
+go_module(
+    name = "pflag",
+    licences = ["BSD 3-Clause"],
+    module = "github.com/spf13/pflag",
+    version = "v1.0.5",
+)
+
+go_module(
+    name = "xarch",
+    install = [
+        "x86/x86asm",
+        "arm64/arm64asm",
+    ],
+    licences = ["BSD 3-Clause"],
+    module = "golang.org/x/arch",
+    version = "v0.0.0-20190927153633-4e8777c89be4",
+)
+
+go_module(
+    name = "liner",
+    licences = ["MIT"],
+    module = "github.com/peterh/liner",
+    version = "v0.0.0-20170317030525-88609521dc4b",
+)
+
+go_module(
+    name = "argv",
+    licences = ["MIT"],
+    module = "github.com/cosiner/argv",
+    version = "v0.1.0",
+)
+
+go_module(
+    name = "trie",
+    licences = ["MIT"],
+    module = "github.com/derekparker/trie",
+    version = "v0.0.0-20200317170641-1fdf38b7b0e9",
+)
+
+go_module(
+    name = "go-dap",
+    licences = ["Apache 2.0"],
+    module = "github.com/google/go-dap",
+    version = "v0.5.0",
 )

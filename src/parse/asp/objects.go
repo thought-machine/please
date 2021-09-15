@@ -911,6 +911,13 @@ func newConfig(state *core.BuildState) *pyConfig {
 	c["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
 	c["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 
+	if debug := state.Debug; debug != nil {
+		c["DEBUG"] = pyDict{
+			"DEBUGGER": pyString(debug.Debugger),
+			"PORT":     pyInt(debug.Port),
+		}
+	}
+
 	return &pyConfig{base: c}
 }
 

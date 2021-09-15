@@ -25,6 +25,7 @@ import (
 	"github.com/thought-machine/please/src/clean"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/debug"
 	"github.com/thought-machine/please/src/exec"
 	"github.com/thought-machine/please/src/export"
 	"github.com/thought-machine/please/src/format"
@@ -167,6 +168,15 @@ var opts struct {
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
 		} `positional-args:"true"`
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
+
+	Debug struct {
+		Debugger string `short:"d" long:"debugger" description:"TODO"`
+		Port     int    `short:"p" long:"port" description:"TODO"`
+		Args     struct {
+			Target core.BuildLabel `positional-arg-name:"target" description:"TODO"`
+			Args   []string        `positional-arg-name:"arguments" description:"TODO"`
+		} `positional-args:"true"`
+	} `command:"debug" description:"TODO"`
 
 	Run struct {
 		Env        bool   `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
@@ -474,6 +484,14 @@ var buildFunctions = map[string]func() int{
 		}
 		return toExitCode(success, state)
 	},
+	"debug": func() int {
+		success, state := runBuild([]core.BuildLabel{opts.Debug.Args.Target}, true, false, false)
+		if !success {
+			return toExitCode(success, state)
+		}
+
+		return debug.Debug(state, opts.Debug.Args.Target)
+	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
 		if !success {
@@ -482,7 +500,7 @@ var buildFunctions = map[string]func() int{
 
 		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
 		dir := filepath.Join(core.OutDir, "exec", opts.Exec.Args.Target.Subrepo, opts.Exec.Args.Target.PackageName)
-		if code := exec.Exec(state, opts.Exec.Args.Target, dir, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
+		if code := exec.Exec(state, opts.Exec.Args.Target, dir, opts.Exec.Args.OverrideCommandArgs, false, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
 			return code
 		}
 
@@ -957,10 +975,11 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 		config.Parse.NumThreads = opts.BuildFlags.NumThreads
 	}
+	debug := !opts.Debug.Args.Target.IsEmpty()
 	debugTests := opts.Test.Debug || opts.Cover.Debug
 	if opts.BuildFlags.Config != "" {
 		config.Build.Config = opts.BuildFlags.Config
-	} else if debugTests {
+	} else if debug || debugTests {
 		config.Build.Config = "dbg"
 	}
 	state := core.NewBuildState(config)
@@ -990,6 +1009,12 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if opts.BuildFlags.Arch.OS != "" {
 		state.TargetArch = opts.BuildFlags.Arch
+	}
+	if debug {
+		state.Debug = &core.Debug{
+			Debugger: opts.Debug.Debugger,
+			Port:     opts.Debug.Port,
+		}
 	}
 
 	if state.DebugTests && len(targets) != 1 {

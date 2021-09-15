@@ -18,6 +18,7 @@ const (
 	nameBuildRuleArgIdx = iota
 	cmdBuildRuleArgIdx
 	testCMDBuildRuleArgIdx
+	debugCMDBuildRuleArgIdx
 	srcsBuildRuleArgIdx
 	dataBuildRuleArgIdx
 	outsBuildRuleArgIdx
@@ -26,6 +27,7 @@ const (
 	secretsBuildRuleArgIdx
 	toolsBuildRuleArgIdx
 	testToolsBuildRuleArgIdx
+	debugToolsBuildRuleArgIdx
 	labelsBuildRuleArgIdx
 	visibilityBuildRuleArgIdx
 	hashesBuildRuleArgIdx
@@ -156,6 +158,10 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.Test.Sandbox = isTruthy(testSandboxBuildRuleArgIdx)
 		target.Test.NoOutput = isTruthy(noTestOutputBuildRuleArgIdx)
 	}
+	if s.state.Debug != nil {
+		target.Debug = new(core.DebugFields)
+		target.Debug.Command, _ = decodeCommands(s, args[debugCMDBuildRuleArgIdx])
+	}
 	return target
 }
 
@@ -242,6 +248,10 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	if t.IsTest() {
 		addMaybeNamedOrString(s, "test_tools", args[testToolsBuildRuleArgIdx], t.AddTestTool, t.AddNamedTestTool, true, true)
 		addMaybeNamedOutput(s, "test_outputs", args[testOutputsBuildRuleArgIdx], t.AddTestOutput, nil, t, false)
+	}
+
+	if t.Debug != nil {
+		addMaybeNamedOrString(s, "debug_tools", args[debugToolsBuildRuleArgIdx], t.AddDebugTool, t.AddNamedTestTool, true, true)
 	}
 }
 

@@ -43,6 +43,12 @@ type TestTask struct {
 	Run   int
 }
 
+// Debug is the type for debugging a target
+type Debug struct {
+	Debugger string
+	Port     int
+}
+
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
@@ -174,6 +180,8 @@ type BuildState struct {
 	ShowTestOutput bool
 	// True to print all output of all tasks to stderr.
 	ShowAllOutput bool
+	// Set when a debugging session against a target is requested.
+	Debug *Debug
 	// True to attach a debugger on test failure.
 	DebugTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).

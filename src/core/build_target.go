@@ -82,6 +82,15 @@ type TestFields struct {
 	NoOutput bool `name:"no_test_output"`
 }
 
+type DebugFields struct {
+	// Shell command to debug targets.
+	Command string `name:"debug_cmd"`
+	// Like tools but available to the debug_cmd instead
+	tools []BuildInput `name:"debug_tools"`
+	// Named debug tools, similar to named sources.
+	namedTools map[string][]BuildInput `name:"debug_tools"`
+}
+
 // A BuildTarget is a representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 type BuildTarget struct {
@@ -120,7 +129,10 @@ type BuildTarget struct {
 	Command string `name:"cmd" hide:"filegroup"`
 	// Per-configuration shell commands to run.
 	Commands map[string]string `name:"cmd" hide:"filegroup"`
-	Test     *TestFields       `name:"test"`
+	// Test related fields.
+	Test *TestFields `name:"test"`
+	// Debug related.
+	Debug *DebugFields
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
 	// Description displayed while the command is building.
@@ -1218,6 +1230,14 @@ func (target *BuildTarget) AddTestTool(tool BuildInput) {
 	}
 }
 
+// AddDebugTool adds a new debug tool to the target.
+func (target *BuildTarget) AddDebugTool(tool BuildInput) {
+	target.Debug.tools = append(target.Debug.tools, tool)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
+	}
+}
+
 // AllTestTools returns all the test tool paths for this rule.
 func (target *BuildTarget) AllTestTools() []BuildInput {
 	if target.Test.namedTools == nil {
@@ -1226,8 +1246,22 @@ func (target *BuildTarget) AllTestTools() []BuildInput {
 	return target.allBuildInputs(target.Test.tools, target.Test.namedTools)
 }
 
+// TestTools returns all unnamed test tools
+func (target *BuildTarget) TestTools() []BuildInput {
+	return target.Test.tools
+}
+
+// NamedTestTools returns all named test tools
 func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
 	return target.Test.namedTools
+}
+
+// AllDebugTools returns all the debug tool paths for this rule.
+func (target *BuildTarget) AllDebugTools() []BuildInput {
+	if target.Debug.namedTools == nil {
+		return target.Debug.tools
+	}
+	return target.allBuildInputs(target.Debug.tools, target.Debug.namedTools)
 }
 
 // AddDatum adds a new item of data to the target.
@@ -1273,6 +1307,21 @@ func (target *BuildTarget) AddNamedTestTool(name string, tool BuildInput) {
 		target.Test.namedTools = map[string][]BuildInput{name: {tool}}
 	} else {
 		target.Test.namedTools[name] = append(target.Test.namedTools[name], tool)
+	}
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
+	}
+}
+
+// AddNamedDebugTool adds a new tool to the target.
+func (target *BuildTarget) AddNamedDebugTool(name string, tool BuildInput) {
+	if target.Debug == nil {
+		target.Debug = new(DebugFields)
+	}
+	if target.Debug.namedTools == nil {
+		target.Debug.namedTools = map[string][]BuildInput{name: {tool}}
+	} else {
+		target.Debug.namedTools[name] = append(target.Debug.namedTools[name], tool)
 	}
 	if label, ok := tool.Label(); ok {
 		target.AddDependency(label)

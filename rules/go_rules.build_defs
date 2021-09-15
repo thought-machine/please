@@ -568,6 +568,12 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         import_path="main",
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
+
+    debug_cmd = "$TOOL exec ./$OUT"
+    if CONFIG.get("DEBUG") and CONFIG.DEBUG.PORT:
+        port = CONFIG.DEBUG.PORT
+        debug_cmd = f"{debug_cmd} --headless=true --listen=localhost:{port} --api-version=2"
+
     return build_rule(
         name=name,
         srcs=[lib],
@@ -575,12 +581,14 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         data=data,
         outs=[out or name],
         cmd=cmds,
+        debug_cmd=debug_cmd,
         building_description="Linking...",
         needs_transitive_deps=True,
         binary=True,
         output_is_complete=True,
         test_only=test_only,
         tools=tools,
+        debug_tools=CONFIG.DELVE_TOOL,
         visibility=visibility,
         labels=labels,
         requires=['go'],
@@ -702,6 +710,11 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         for out in test_outputs:
             test_cmd += f' && mv {out} $TMP_DIR/{out}'
 
+    debug_cmd = "$TOOL exec ./$TEST"
+    if CONFIG.get("DEBUG") and CONFIG.DEBUG.PORT:
+        port = CONFIG.DEBUG.PORT
+        debug_cmd = f"{debug_cmd} --headless=true --listen=localhost:{port} --api-version=2"
+
     return build_rule(
         name = name,
         srcs = [lib_rule],
@@ -709,8 +722,10 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         deps = deps,
         outs = [name],
         tools = tools,
+        debug_tools = CONFIG.DELVE_TOOL,
         cmd = cmds,
         test_cmd = test_cmd,
+        debug_cmd = debug_cmd,
         visibility = visibility,
         test_sandbox = sandbox,
         test_timeout = timeout,
