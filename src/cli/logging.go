@@ -203,6 +203,7 @@ func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int)
 	backend.passthrough = passthrough
 	backend.interactiveRows = interactiveRows
 	backend.messageHistory = list.New()
+	backend.messageCount = 0
 	backend.mutex.Unlock()
 	if passthrough {
 		go notifyOnWindowResize(backend.recalcWindowSize)
