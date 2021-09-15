@@ -1204,6 +1204,9 @@ func initBuild(args []string) string {
 	if opts.HelpFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
 		os.Exit(0) // Ignore other flags if --version was passed.
+	} else if opts.HelpFlags.Help {
+		parser.WriteHelp(os.Stderr)
+		os.Exit(0)
 	}
 	if opts.OutputFlags.Colour {
 		cli.ShowColouredOutput = true
