@@ -11,7 +11,8 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/dustin/go-humanize"
-	"github.com/peterebden/go-cli-init/v3"
+	cli "github.com/peterebden/go-cli-init/v5/flags"
+	clilogging "github.com/peterebden/go-cli-init/v5/logging"
 	"github.com/thought-machine/go-flags"
 )
 
@@ -19,29 +20,29 @@ import (
 const GiByte = humanize.GiByte
 
 // MinVerbosity is the minimum verbosity we support.
-const MinVerbosity = cli.MinVerbosity
+const MinVerbosity = clilogging.MinVerbosity
 
 // MaxVerbosity is the maximum verbosity we support.
-const MaxVerbosity = cli.MaxVerbosity
+const MaxVerbosity = clilogging.MaxVerbosity
 
 // ParseFlagsOrDie parses the app's flags and dies if unsuccessful.
 // Also dies if any unexpected arguments are passed.
 // It returns the active command if there is one.
 func ParseFlagsOrDie(appname string, data interface{}) string {
-	return cli.ParseFlagsOrDie(appname, data)
+	return cli.ParseFlagsOrDie(appname, data, nil)
 }
 
 // ParseFlagsFromArgsOrDie is similar to ParseFlagsOrDie but allows control over the
 // flags passed.
 // It returns the active command if there is one.
-func ParseFlagsFromArgsOrDie(appname string, data interface{}, args []string) string {
-	return cli.ParseFlagsFromArgsOrDie(appname, data, args)
+func ParseFlagsFromArgsOrDie(appname string, data interface{}, args []string, additionalUsageInfo cli.AdditionalUsageInfo) string {
+	return cli.ParseFlagsFromArgsOrDie(appname, data, args, additionalUsageInfo)
 }
 
 // ParseFlags parses the app's flags and returns the parser, any extra arguments, and any error encountered.
 // It may exit if certain options are encountered (eg. --help).
-func ParseFlags(appname string, data interface{}, args []string, opts flags.Options, completionHandler cli.CompletionHandler) (*flags.Parser, []string, error) {
-	return cli.ParseFlags(appname, data, args, opts, completionHandler)
+func ParseFlags(appname string, data interface{}, args []string, opts flags.Options, completionHandler cli.CompletionHandler, additionalUsageInfo cli.AdditionalUsageInfo) (*flags.Parser, []string, error) {
+	return cli.ParseFlags(appname, data, args, opts, completionHandler, additionalUsageInfo)
 }
 
 // PrintCompletions prints a set of completions to stdout.
