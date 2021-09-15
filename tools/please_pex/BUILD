@@ -35,7 +35,6 @@ genrule(
         "//third_party/python:packaging",
         "//third_party/python:importlib_metadata",
         "//third_party/python:zipp",
-        "//third_party/python:distlib",
     ],
     outs = ["please_pex"],
     binary = True,

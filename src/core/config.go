@@ -354,6 +354,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.PleaseGoTool = "//_please:please_go"
 	config.Go.EmbedTool = "//_please:please_go_embed"
 	config.Python.PexTool = "//_please:please_pex"
+	config.Python.WheelResolverTool = "//_please:wheel_resolver"
 	config.Java.JavacWorker = "//_please:javac_worker"
 	config.Java.JarCatTool = "//_please:jarcat"
 	config.Java.JUnitRunner = "//_please:junit_runner"
@@ -488,6 +489,7 @@ type Configuration struct {
 		PipTool             string   `help:"The tool that is invoked during pip_library rules." var:"PIP_TOOL"`
 		PipFlags            string   `help:"Additional flags to pass to pip invocations in pip_library rules." var:"PIP_FLAGS"`
 		PexTool             string   `help:"The tool that's invoked to build pexes. Defaults to please_pex in the install directory." var:"PEX_TOOL"`
+		WheelResolverTool   string   `help:"The tool invoked to resolve python wheel urls." var:"WHEEL_RESOLVER"`
 		DefaultInterpreter  string   `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to, say, pypy." var:"DEFAULT_PYTHON_INTERPRETER"`
 		TestRunner          string   `help:"The test runner used to discover & run Python tests; one of unittest, pytest or behave, or a custom import path to bring your own." var:"PYTHON_TEST_RUNNER"`
 		TestRunnerBootstrap string   `help:"Target providing test-runner library and its transitive dependencies. Injects plz-provided bootstraps if not given." var:"PYTHON_TEST_RUNNER_BOOTSTRAP"`
