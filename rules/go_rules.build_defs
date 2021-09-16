@@ -553,9 +553,10 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
       stamp (bool): Allows this rule to gain access to information about SCM revision etc
                     via env vars. These can be useful to pass into `definitions`.
     """
+    _srcs = srcs or [name + '.go']
     lib = go_library(
         name=f'_{name}#lib',
-        srcs=srcs or [name + '.go'],
+        srcs=_srcs,
         resources = resources,
         filter_srcs=filter_srcs,
         asm_srcs=asm_srcs,
@@ -569,16 +570,13 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
 
-    debug_cmd = "$TOOL exec ./$OUT"
-    if CONFIG.get("DEBUG") and CONFIG.DEBUG.PORT:
-        port = CONFIG.DEBUG.PORT
-        debug_cmd = f"{debug_cmd} --headless=true --listen=localhost:{port} --api-version=2"
+    debug_cmd, _data, debug_tools = _debug_cmd(_srcs, data)
 
     return build_rule(
         name=name,
         srcs=[lib],
         deps=deps,
-        data=data,
+        data=_data,
         outs=[out or name],
         cmd=cmds,
         debug_cmd=debug_cmd,
@@ -588,7 +586,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         output_is_complete=True,
         test_only=test_only,
         tools=tools,
-        debug_tools=CONFIG.DELVE_TOOL,
+        debug_tools=debug_tools,
         visibility=visibility,
         labels=labels,
         requires=['go'],
@@ -608,7 +606,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
       name (str): Name of the rule.
       srcs (list): Go source files to compile.
       resources (list): Files to embed in the library using //go:embed directives.
-      data (list): Runtime data files for the test.
+      data (list|dict): Runtime data files for the test.
       deps (list): Dependencies
       worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
       visibility (list): Visibility specification
@@ -710,19 +708,16 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         for out in test_outputs:
             test_cmd += f' && mv {out} $TMP_DIR/{out}'
 
-    debug_cmd = "$TOOL exec ./$TEST"
-    if CONFIG.get("DEBUG") and CONFIG.DEBUG.PORT:
-        port = CONFIG.DEBUG.PORT
-        debug_cmd = f"{debug_cmd} --headless=true --listen=localhost:{port} --api-version=2"
+    debug_cmd, _data, debug_tools = _debug_cmd(srcs, data, True)
 
     return build_rule(
         name = name,
         srcs = [lib_rule],
-        data = data,
+        data = _data,
         deps = deps,
         outs = [name],
         tools = tools,
-        debug_tools = CONFIG.DELVE_TOOL,
+        debug_tools = debug_tools,
         cmd = cmds,
         test_cmd = test_cmd,
         debug_cmd = debug_cmd,
@@ -1681,4 +1676,30 @@ def _get_ldflags_and_pkgconfig(name):
     ldflags = ' '.join([l[3:] for l in labels if l.startswith('ld:')])
     pkg_config = ' '.join([l[3:] for l in labels if l.startswith('pc:')])
     return (ldflags, f'`pkg-config --libs {pkg_config}`') if pkg_config else (ldflags, '')
+
+
+def _debug_cmd(srcs:list=[], data:list|dict=None, test:bool=False):
+    if not CONFIG.get("DEBUG"):
+        return "", data, None
+
+    debug_binary = "./$TEST" if test else "./$OUT"
+
+    # Default debug command.
+    cmd = f"$TOOLS_DLV exec {debug_binary} --check-go-version=false"
+    tools = {
+        'dlv': CONFIG.DELVE_TOOL
+    }
+
+    port = CONFIG.DEBUG.PORT
+    if not port:
+        # A CLI debug session needs access to the source files for improved UX.
+        data = srcs if not data else data + srcs if isinstance(data, list) else data | {'srcs': srcs }
+    else:
+        # Start a debug session where clients (i.e. IDEs) can connect to instead.
+        cmd = f"{cmd} --headless=true --listen=localhost:{port} --api-version=2"
+
+    # Allow positional arguments.
+    cmd = f"{cmd} --"
+
+    return cmd, data, tools
 

@@ -204,6 +204,9 @@ func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) Bui
 		"TMP_DIR="+execDir,
 		"TMPDIR="+execDir,
 		"HOME="+execDir,
+		// This is used by programs that use display terminals for correct handling
+		// of input and output in the terminal where the program is run.
+		"TERM="+os.Getenv("TERM"),
 	)
 
 	outEnv := target.Outputs()

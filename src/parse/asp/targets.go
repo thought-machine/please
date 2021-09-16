@@ -251,7 +251,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	}
 
 	if t.Debug != nil {
-		addMaybeNamedOrString(s, "debug_tools", args[debugToolsBuildRuleArgIdx], t.AddDebugTool, t.AddNamedTestTool, true, true)
+		addMaybeNamedOrString(s, "debug_tools", args[debugToolsBuildRuleArgIdx], t.AddDebugTool, t.AddNamedDebugTool, true, true)
 	}
 }
 
