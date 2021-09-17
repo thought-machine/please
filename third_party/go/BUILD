@@ -973,3 +973,11 @@ go_module(
     module = "github.com/peterebden/go-deferred-regex",
     version = "v1.0.0",
 )
+
+go_module(
+    name = "snappy",
+    licences = ["BSD-3-Clause"],
+    module = "github.com/golang/snappy",
+    version = "v0.0.3",
+    visibility = ["PUBLIC"],
+)
