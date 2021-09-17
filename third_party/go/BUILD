@@ -207,7 +207,7 @@ go_mod_download(
     name = "genproto_download",
     licences = ["Apache-2.0"],
     module = "google.golang.org/genproto",
-    version = "v0.0.0-20210506142907-4a47615972c2",
+    version = "v0.0.0-20210903162649-d08c68adba83",
 )
 
 # genproto stuff for grpc to resolve cyclic deps
@@ -972,12 +972,4 @@ go_module(
     name = "deferred_regex",
     module = "github.com/peterebden/go-deferred-regex",
     version = "v1.0.0",
-)
-
-go_module(
-    name = "snappy",
-    licences = ["BSD-3-Clause"],
-    module = "github.com/golang/snappy",
-    version = "v0.0.3",
-    visibility = ["PUBLIC"],
 )
