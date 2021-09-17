@@ -23,6 +23,7 @@ require (
 	github.com/manifoldco/promptui v0.3.2
 	github.com/nicksnyder/go-i18n v1.10.1 // indirect
 	github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518
+	github.com/peterebden/buildtools v0.0.0-20201001123124-f7a36c689cc9 // indirect
 	github.com/peterebden/gcfg v1.3.0
 	github.com/peterebden/go-cli-init/v5 v5.0.2
 	github.com/peterebden/go-deferred-regex v1.0.0
@@ -30,6 +31,7 @@ require (
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
 	github.com/pkg/xattr v0.4.0
 	github.com/prometheus/client_golang v1.10.0
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.21.2
 	github.com/sourcegraph/go-diff v0.5.1
 	github.com/sourcegraph/go-lsp v0.0.0-20181119182933-0c7d621186c1
@@ -48,6 +50,7 @@ require (
 	golang.org/x/tools v0.1.0
 	google.golang.org/genproto v0.0.0-20210506142907-4a47615972c2
 	google.golang.org/grpc v1.37.0
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0 // indirect
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20191105091915-95d230a53780 // indirect
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473

@@ -205,8 +205,9 @@ go_module(
 
 go_mod_download(
     name = "genproto_download",
+    licences = ["Apache-2.0"],
     module = "google.golang.org/genproto",
-    version = "v0.0.0-20210903162649-d08c68adba83",
+    version = "v0.0.0-20210506142907-4a47615972c2",
 )
 
 # genproto stuff for grpc to resolve cyclic deps
@@ -251,8 +252,9 @@ go_module(
 
 go_mod_download(
     name = "protobuf_download",
+    licences = ["BSD-3-Clause"],
     module = "github.com/golang/protobuf",
-    version = "v1.4.3",
+    version = "v1.5.2",
 )
 
 go_module(
