@@ -49,6 +49,19 @@
     >
     though.
   </p>
+
+  <p>
+    When running inside WSL, make sure drvfs is mounting your windows partitions with
+    the metadata option. You can configure this inside <pre><code class="code">/etc/wsl.conf</code></pre>:
+      <pre class="code-container">
+        <!-- prettier-ignore -->
+        <code>
+        [automount]
+        options = "metadata"
+        </code>
+      </pre>
+  </p>
+
 </section>
 
 <section class="mt4">
