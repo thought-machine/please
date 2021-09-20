@@ -447,7 +447,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
 def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
                  post_install_commands:list=None, patch:str|list=None, licences:list=None,
                  test_only:bool&testonly=False, repo:str=None, zip_safe:bool=True, visibility:list=None,
-                 deps:list=[], name_scheme:str=None, strip:list=['*.pyc', 'tests']):
+                 deps:list=[], name_scheme:str=None, strip:list=['*.pyc', 'tests'], tool:str=None):
     """Downloads a Python wheel and extracts it.
 
     This is a lightweight pip-free alternative to pip_library which supports cross-compiling.
@@ -502,21 +502,38 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
                                                                                     initial=initial,
                                                                                     version=version),
                  '{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                    package_name=package_name,                                                                                   initial=initial,
+                                                                                    package_name=package_name,
+                                                                                    initial=initial,
                                                                                     version=version),
                  '{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
                                                                   package_name=package_name,
                                                                   initial=initial,
                                                                   version=version)]
 
-    file_rule = remote_file(
-        name = name,
-        _tag = 'download',
-        out = name + '.whl',
-        url = urls,
-        hashes = hashes if CONFIG.FF_PYTHON_WHEEL_HASHING else None,
-        licences = licences if licences else None,
-    )
+    file_rule = None
+    if tool:
+        cmd = 'URL=$($TOOL ' + package_name + ' ' + version + '); wget -q --method=HEAD $URL && wget -O $OUTS $URL'
+
+        file_rule = build_rule(
+            name = name,
+            tag = 'download',
+            outs = [name + '.whl'],
+            cmd = cmd,
+            tools = [tool],
+            hashes = hashes if CONFIG.FF_PYTHON_WHEEL_HASHING else None,
+            licences = licences if licences else None,
+            building_description = 'Fetching with wheel tool...',
+        )
+
+    else:
+        file_rule = remote_file(
+            name = name,
+            _tag = 'download',
+            out = name + '.whl',
+            url = urls,
+            hashes = hashes if CONFIG.FF_PYTHON_WHEEL_HASHING else None,
+            licences = licences if licences else None,
+        )
 
     cmd = ['$TOOL x $SRCS_SRC']
 
