@@ -811,13 +811,6 @@ go_module(
 )
 
 go_module(
-    name = "blackfriday",
-    module = "gopkg.in/russross/blackfriday.v2",
-    version = "v2.0.1",
-    deps = [":sanitized_anchor_name"],
-)
-
-go_module(
     name = "sanitized_anchor_name",
     module = "github.com/shurcooL/sanitized_anchor_name",
     version = "v1.0.0",
@@ -826,11 +819,9 @@ go_module(
 go_module(
     name = "claat",
     binary = True,
-    install = ["claat"],
-    module = "github.com/googlecodelabs/tools",
-    version = "v2.2.4",
+    module = "github.com/googlecodelabs/tools/claat",
+    version = "d1177395e3b81a4343239d474f328ba42a4d9901",
     deps = [
-        ":blackfriday",
         ":csslex",
         ":goldmark",
         ":oauth2",
