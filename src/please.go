@@ -1205,14 +1205,7 @@ func initBuild(args []string) string {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
 		os.Exit(0) // Ignore other flags if --version was passed.
 	} else if opts.HelpFlags.Help {
-		// Attempt to read config files to produce help for aliases.
-		cli.InitLogging(cli.MinVerbosity)
 		parser.WriteHelp(os.Stderr)
-		if cli.ActiveCommand(parser.Command) == "please" && core.FindRepoRoot() {
-			if config, err := core.ReadDefaultConfigFiles(nil); err == nil {
-				config.PrintAliases(os.Stderr)
-			}
-		}
 		os.Exit(0)
 	}
 	if opts.OutputFlags.Colour {
