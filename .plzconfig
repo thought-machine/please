@@ -85,7 +85,6 @@ accept = Artistic License
 accept = ISC
 # Not really a licence, but Bazel projects commonly describe things this way.
 accept = notice
-accept = Python license
 
 [featureflags]
 JavaBinaryExecutableByDefault = true
