@@ -50,6 +50,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e
 	github.com/thought-machine/go-flags v1.6.0
+	github.com/tklauser/numcpus v0.2.1 // indirect
 	github.com/ulikunitz/xz v0.5.8
 	github.com/x1ddos/csslex v0.0.0-20160125172232-7894d8ab8bfe // indirect
 	github.com/yuin/goldmark v1.4.1 // indirect

@@ -19,12 +19,11 @@ remote_file(
     ),
 )
 
-
 GO_DEPS_VERSION = "v0.3.0"
 
 # TODO(jpoole): this should support other platforms than just linux_amd64
 remote_file(
     name = "go-deps",
-    url = f"https://github.com/Tatskaari/go-deps/releases/download/{GO_DEPS_VERSION}/go-deps",
     binary = True,
+    url = f"https://github.com/Tatskaari/go-deps/releases/download/{GO_DEPS_VERSION}/go-deps",
 )
