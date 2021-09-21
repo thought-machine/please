@@ -570,7 +570,8 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
 
-    debug_cmd, _data, debug_tools = _debug_cmd(_srcs, data)
+    debug_cmd, debug_data, debug_tools = _debug_cmd(_srcs)
+    _data = data + debug_data if data else debug_data
 
     return build_rule(
         name=name,
@@ -708,7 +709,8 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         for out in test_outputs:
             test_cmd += f' && mv {out} $TMP_DIR/{out}'
 
-    debug_cmd, _data, debug_tools = _debug_cmd(srcs, data, True)
+    debug_cmd, debug_data, debug_tools = _debug_cmd(srcs, True)
+    _data = debug_data if not data else data + debug_data if isinstance(data, list) else data | {'srcs': debug_data}
 
     return build_rule(
         name = name,
@@ -1678,27 +1680,28 @@ def _get_ldflags_and_pkgconfig(name):
     return (ldflags, f'`pkg-config --libs {pkg_config}`') if pkg_config else (ldflags, '')
 
 
-def _debug_cmd(srcs:list=[], data:list|dict=None, test:bool=False):
+def _debug_cmd(srcs:list=[], test:bool=False):
     if not CONFIG.get("DEBUG"):
-        return "", data, None
+        return "", [], None
 
     debug_binary = "./$TEST" if test else "./$OUT"
 
     # Default debug command.
-    cmd = f"$TOOLS_DLV exec {debug_binary} --check-go-version=false"
+    cmd = f"$TOOLS_DLV exec {debug_binary} --check-go-version=false" # TODO: Delete the check flag
+    # A CLI debug session needs access to the source files for improved UX.
+    data = [src for src in srcs]
     tools = {
         'dlv': CONFIG.DELVE_TOOL
     }
 
     port = CONFIG.DEBUG.PORT
-    if not port:
-        # A CLI debug session needs access to the source files for improved UX.
-        data = srcs if not data else data + srcs if isinstance(data, list) else data | {'srcs': srcs }
-    else:
+    if port:
         # Start a debug session where clients (i.e. IDEs) can connect to instead.
         cmd = f"{cmd} --headless=true --listen=localhost:{port} --api-version=2"
+        # The client will usually have access to the source files.
+        data = []
 
-    # Allow positional arguments.
+    # Allow for positional arguments.
     cmd = f"{cmd} --"
 
     return cmd, data, tools

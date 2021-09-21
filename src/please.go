@@ -490,7 +490,7 @@ var buildFunctions = map[string]func() int{
 			return toExitCode(success, state)
 		}
 
-		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args)
+		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Port, opts.Debug.Args.Args)
 	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
