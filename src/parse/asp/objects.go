@@ -936,11 +936,11 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 			value = definition.DefaultValue
 		}
 		if len(value) == 0 && !definition.Optional {
-			log.Fatalf("plugin config %v.%v is not optional %v", pluginName, definition.ConfigKey, extraVals)
+			log.Fatalf("pluginConfig config %v.%v is not optional %v", pluginName, definition.ConfigKey, extraVals)
 		}
 
 		if !definition.Repeatable && len(value) > 1 {
-			log.Fatalf("plugin config %v.%v is not repeatable", pluginName, definition.ConfigKey)
+			log.Fatalf("pluginConfig config %v.%v is not repeatable", pluginName, definition.ConfigKey)
 		}
 
 		// Parse any config values in the current subrepo so @self resolves correctly. If we leave them, @self will

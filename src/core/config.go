@@ -928,6 +928,15 @@ func (config *Configuration) NumRemoteExecutors() int {
 	return config.Remote.NumExecutors
 }
 
+func (config *Configuration) GetPlugin(name string) *Plugin {
+	for k, v := range config.Plugin {
+		if strings.ToUpper(k) == strings.ToUpper(name) {
+			return v
+		}
+	}
+	return nil
+}
+
 // A ConfigProfile is a string that knows how to handle completions given all the possible config file locations.
 type ConfigProfile string
 
