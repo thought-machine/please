@@ -870,10 +870,12 @@ func (config *Configuration) PrintAliases(w io.Writer) {
 		}
 	}
 	sort.Strings(names)
-	w.Write([]byte("\nAvailable commands for this repository:\n"))
-	tmpl := fmt.Sprintf("  %%-%ds  %%s\n", maxlen)
-	for _, name := range names {
-		fmt.Fprintf(w, tmpl, name, aliases[name].Desc)
+	if len(names) > 0 {
+		w.Write([]byte("\nAvailable commands for this repository:\n"))
+		tmpl := fmt.Sprintf("  %%-%ds  %%s\n", maxlen)
+		for _, name := range names {
+			fmt.Fprintf(w, tmpl, name, aliases[name].Desc)
+		}
 	}
 }
 
