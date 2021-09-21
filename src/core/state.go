@@ -186,6 +186,8 @@ type BuildState struct {
 	experimentalLabels []BuildLabel
 	// Various items for tracking progress.
 	progress *stateProgress
+	// CurrentSubrepo is the subrepo this state is for or the empty string if it's for the host repo
+	CurrentSubrepo string
 }
 
 // A stateProgress records various points of progress for a State.
@@ -980,7 +982,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// Copy with the architecture-specific config file.
 	// This is slightly wrong in that other things (e.g. user-specified command line overrides) should
 	// in fact take priority over this, but that's a lot more fiddly to get right.
-	s := state.ForConfig(".plzconfig_" + arch.String())
+	s := state.forConfig(".plzconfig_" + arch.String())
 	s.Arch = arch
 	return s
 }
@@ -997,8 +999,8 @@ func (state *BuildState) findArch(arch cli.Arch) *BuildState {
 	return nil
 }
 
-// ForConfig creates a copy of this BuildState based on the given config files.
-func (state *BuildState) ForConfig(config ...string) *BuildState {
+// forConfig creates a copy of this BuildState based on the given config files.
+func (state *BuildState) forConfig(config ...string) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	// Duplicate & alter configuration
@@ -1014,6 +1016,18 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 	*s = *state
 	s.Config = c
 	state.progress.allStates = append(state.progress.allStates, s)
+	return s
+}
+
+// ForSubrepo creates a new state for the given subrepo
+func (state *BuildState) ForSubrepo(name string, config ...string) *BuildState {
+	for _, s := range state.progress.allStates {
+		if s.CurrentSubrepo == name {
+			return s
+		}
+	}
+	s := state.forConfig(config...)
+	s.CurrentSubrepo = name
 	return s
 }
 

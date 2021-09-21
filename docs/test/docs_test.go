@@ -83,6 +83,8 @@ var ignoreConfigFields = map[string]struct{} {
 	"profiling": {},
 	"buildenvstored": {},
 	"pleaselocation": {},
+	"plugin.extravalues": {},
+	"plugindefinition.name": {},
 }
 
 // IDs in the html that are for other purposes other than documenting config.
