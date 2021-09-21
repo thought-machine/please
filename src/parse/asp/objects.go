@@ -932,10 +932,9 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 	log.Warning("Loading config ")
 	configValueDefinitions := state.Config.PluginConfig
 	for key, definition := range configValueDefinitions {
-
 		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
-		log.Warningf("value for %v is %v\n %v", strings.ToLower(definition.ConfigKey), value, extraVals)
 		if !ok {
+			log.Warningf("setting default value %v => %v", key, definition.DefaultValue)
 			value = definition.DefaultValue
 		}
 		if len(value) == 0 && !definition.Optional {
@@ -960,7 +959,11 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 			}
 			pluginNamespace[strings.ToUpper(key)] = l
 		} else {
-			pluginNamespace[strings.ToUpper(key)] = pyString(value[0])
+			if len(value) != 0 {
+				pluginNamespace[strings.ToUpper(key)] = pyString(value[0])
+			} else {
+				pluginNamespace[strings.ToUpper(key)] = pyNone{}
+			}
 		}
 	}
 	c[strings.ToUpper(pluginName)] = pluginNamespace

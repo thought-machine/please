@@ -29,6 +29,7 @@ require (
 	github.com/peterebden/go-sri v1.0.0
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
 	github.com/pkg/xattr v0.4.0
+	github.com/please-build/gcfg v1.4.0 // indirect
 	github.com/prometheus/client_golang v1.10.0
 	github.com/shirou/gopsutil/v3 v3.21.2
 	github.com/sourcegraph/go-diff v0.5.1
