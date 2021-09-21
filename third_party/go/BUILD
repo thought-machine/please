@@ -101,7 +101,7 @@ go_module(
 go_module(
     name = "go-flags",
     module = "github.com/thought-machine/go-flags",
-    version = "v1.5.0",
+    version = "v1.6.0",
     deps = [":xsys"],
 )
 
@@ -206,7 +206,7 @@ go_module(
 go_mod_download(
     name = "genproto_download",
     module = "google.golang.org/genproto",
-    version = "v0.0.0-20210315173758-2651cd453018",
+    version = "v0.0.0-20210903162649-d08c68adba83",
 )
 
 # genproto stuff for grpc to resolve cyclic deps
@@ -218,7 +218,7 @@ go_module(
     ],
     module = "google.golang.org/genproto",
     deps = [
-        ":protobuf",
+        ":protobuf-go",
     ],
 )
 
@@ -233,7 +233,19 @@ go_module(
     module = "google.golang.org/genproto",
     deps = [
         ":grpc",
-        ":protobuf",
+        ":protobuf-go",
+    ],
+)
+
+go_module(
+    name = "bundler",
+    install = [
+        "support/bundler",
+    ],
+    module = "google.golang.org/api",
+    version = "v0.56.0",
+    deps = [
+        ":errgroup",
     ],
 )
 
@@ -259,7 +271,9 @@ go_module(
     download = ":protobuf_download",
     install = ["protoc-gen-go"],
     module = "github.com/golang/protobuf",
-    deps = [":protobuf-go"],
+    deps = [
+        ":protobuf",
+    ],
 )
 
 go_module(
@@ -286,7 +300,7 @@ go_module(
     version = "v1.1.0",
     deps = [
         ":grpc",
-        ":protobuf",
+        ":protobuf-go",
     ],
 )
 
@@ -375,7 +389,7 @@ go_module(
     version = "fa8fef87dcecac0bda02d36abb3c790ab9e0030b",
     deps = [
         ":grpc",
-        ":protobuf",
+        ":protobuf-go",
     ],
 )
 
@@ -518,7 +532,7 @@ go_module(
 go_module(
     name = "errors",
     module = "github.com/pkg/errors",
-    version = "30136e27e2ac8d167177e8a583aa4c3fea5be833",
+    version = "v0.9.1",
 )
 
 go_module(
@@ -577,8 +591,9 @@ go_module(
 
 go_module(
     name = "cli-init",
-    module = "github.com/peterebden/go-cli-init/v3",
-    version = "v3.0.0",
+    install = ["..."],
+    module = "github.com/peterebden/go-cli-init/v5",
+    version = "v5.0.2",
     deps = [
         ":go-flags",
         ":humanize",
@@ -609,11 +624,11 @@ go_module(
     name = "remote-apis",
     install = ["build/..."],
     module = "github.com/bazelbuild/remote-apis",
-    version = "9e72daff42c941baaf43a4c370e2607a984c58a7",
+    version = "3e816456ee28f01ab2e0abf72306c1f340c7b229",
     deps = [
         ":genproto_api",
         ":grpc",
-        ":protobuf",
+        ":protobuf-go",
     ],
 )
 
@@ -621,8 +636,9 @@ go_module(
     name = "remote-apis-sdks",
     install = ["go/..."],
     module = "github.com/bazelbuild/remote-apis-sdks",
-    version = "fdb5dae38ca890ae7311dc0d320e2d327df10485",
+    version = "ddba20599b6eafae1669d4da1aa4772fb8c80efd",
     deps = [
+        ":bundler",
         ":cmp",
         ":errgroup",
         ":errors",
@@ -631,7 +647,7 @@ go_module(
         ":grpc",
         ":oauth2",
         ":pborman_uuid",
-        ":protobuf",
+        ":protobuf-go",
         ":remote-apis",
         ":zstd",
         ":zstdpool",

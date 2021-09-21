@@ -21,9 +21,9 @@ func StoreCurrentOperation() {
 
 	previousOp := strings.Join(os.Args[1:], " ")
 	if err := file.Truncate(0); err != nil {
-		log.Errorf("Unable to truncate %s to store current operation: %w", previousOpFilePath, err)
+		log.Errorf("Unable to truncate %s to store current operation: %s", previousOpFilePath, err)
 	} else if _, err := file.WriteAt([]byte(previousOp+"\n"), 0); err != nil {
-		log.Errorf("Unable to store current operation to  %s: %w", previousOpFilePath, err)
+		log.Errorf("Unable to store current operation to  %s: %s", previousOpFilePath, err)
 	}
 
 	if err := file.Close(); err != nil {

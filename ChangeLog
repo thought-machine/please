@@ -1,3 +1,13 @@
+Version 16.8.0
+--------------
+    * BUILD files can now be added as sources to rules #2056
+    * Aliases are now added to help text when printing usage info
+      #2035
+    * Outputs can now be saved from `plz exec` #2060
+    * The wrapper script now looks at more than just .plzconfig
+      to determine the Please version and download location #2065
+
+
 Version 16.7.0
 --------------
     * Sandbox tool now ignored missing directories in `SANDBOX_DIRS`

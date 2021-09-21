@@ -3,7 +3,7 @@ package(please_go_tool = "please_go")
 go_module(
     name = "go-flags",
     module = "github.com/thought-machine/go-flags",
-    version = "v1.5.0",
+    version = "v1.6.0",
     deps = [":xsys"],
 )
 
@@ -23,8 +23,8 @@ go_module(
 go_module(
     name = "flags",
     install = ["flags"],
-    module = "github.com/peterebden/go-cli-init/v4",
-    version = "v4.0.0",
+    module = "github.com/peterebden/go-cli-init/v5",
+    version = "v5.0.2",
     deps = [
         ":go-flags",
         ":humanize",

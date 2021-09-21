@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/peterebden/go-cli-init/v3"
+	cli "github.com/peterebden/go-cli-init/v5/logging"
 	"github.com/peterebden/go-deferred-regex"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/op/go-logging.v1"
@@ -202,6 +202,8 @@ func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int)
 	backend.mutex.Lock()
 	backend.passthrough = passthrough
 	backend.interactiveRows = interactiveRows
+	backend.messageHistory = list.New()
+	backend.messageCount = 0
 	backend.mutex.Unlock()
 	if passthrough {
 		go notifyOnWindowResize(backend.recalcWindowSize)

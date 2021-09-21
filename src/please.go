@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -199,6 +200,10 @@ var opts struct {
 	} `command:"run" subcommands-optional:"true" description:"Builds and runs a single target"`
 
 	Exec struct {
+		Output struct {
+			OutputPath string   `long:"output_path" description:"The path to the directory to save outputs into" default:"."`
+			Output     []string `long:"out" description:"A file or folder relative to the working directory to save to the output path"`
+		} `group:"Options controlling what files to save from the working directory and where to save them"`
 		Share struct {
 			Network bool `long:"share_network" description:"Share network namespace"`
 			Mount   bool `long:"share_mount" description:"Share mount namespace"`
@@ -476,7 +481,24 @@ var buildFunctions = map[string]func() int{
 		}
 
 		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
-		return exec.Exec(state, opts.Exec.Args.Target, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount))
+		dir := filepath.Join(core.OutDir, "exec", opts.Exec.Args.Target.Subrepo, opts.Exec.Args.Target.PackageName)
+		if code := exec.Exec(state, opts.Exec.Args.Target, dir, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
+			return code
+		}
+
+		for _, out := range opts.Exec.Output.Output {
+			from := filepath.Join(dir, out)
+			to := filepath.Join(opts.Exec.Output.OutputPath, out)
+
+			if err := fs.EnsureDir(to); err != nil {
+				log.Fatalf("%v", err)
+			}
+
+			if err := fs.RecursiveLink(from, to, 0644); err != nil {
+				log.Fatalf("failed to move output: %v", err)
+			}
+		}
+		return 0
 	},
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
@@ -879,7 +901,7 @@ func runTool(_tool tool.Tool) int {
 
 	// We skip loading the repo config in init for `plz tool` to allow this command to work outside of a repo root. If
 	// the tool looks like a build label, we need to set the repo root now.
-	config = readConfigAndSetRoot(false)
+	config = mustReadConfigAndSetRoot(false)
 	if success, state := runBuild(label, true, false, false); success {
 		annotatedOutputLabels := core.AnnotateLabels(label)
 		run.Run(state, annotatedOutputLabels[0], opts.Tool.Args.Args.AsStrings(), false, false, false, "", "")
@@ -1073,8 +1095,16 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 
 var originalWorkingDirectory string
 
-// readConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
-func readConfigAndSetRoot(forceUpdate bool) *core.Configuration {
+// readConfigAndSetRoot returns an error if we can't find a repo root
+func readConfigAndSetRoot(forceUpdate bool) (*core.Configuration, error) {
+	if core.FindRepoRoot() {
+		return mustReadConfigAndSetRoot(forceUpdate), nil
+	}
+	return nil, fmt.Errorf("failed to locate repo root")
+}
+
+// mustReadConfigAndSetRoot reads the .plzconfig files and moves to the repo root.
+func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	if opts.BuildFlags.RepoRoot == "" {
 		log.Debug("Found repo root at %s", core.MustFindRepoRoot())
 	} else {
@@ -1126,7 +1156,7 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	if len(items) > 0 && items[0].Description == "BuildLabel" {
 		// Don't muck around with the config if we're predicting build labels.
 		cli.PrintCompletions(items)
-	} else if config := readConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
+	} else if config := mustReadConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
 		// Run again without this registered as a completion handler
 		parser.CompletionHandler = nil
 		parser.ParseArgs(os.Args[1:])
@@ -1135,6 +1165,14 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	}
 	// Regardless of what happened, always exit with 0 at this point.
 	os.Exit(0)
+}
+
+// Capture aliases from config file and print to the help output
+func additionalUsageInfo(parser *flags.Parser, wr io.Writer) {
+	cli.InitLogging(cli.MinVerbosity)
+	if config, err := readConfigAndSetRoot(false); err == nil {
+		config.PrintAliases(wr)
+	}
 }
 
 func getCompletions(qry string) (*query.CompletionPackages, []string) {
@@ -1161,20 +1199,13 @@ func initBuild(args []string) string {
 	if _, present := os.LookupEnv("GO_FLAGS_COMPLETION"); present {
 		cli.InitLogging(cli.MinVerbosity)
 	}
-	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions)
+	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions, additionalUsageInfo)
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
 	if opts.HelpFlags.Version {
 		fmt.Printf("Please version %s\n", core.PleaseVersion)
 		os.Exit(0) // Ignore other flags if --version was passed.
 	} else if opts.HelpFlags.Help {
-		// Attempt to read config files to produce help for aliases.
-		cli.InitLogging(cli.MinVerbosity)
 		parser.WriteHelp(os.Stderr)
-		if cli.ActiveCommand(parser.Command) == "please" && core.FindRepoRoot() {
-			if config, err := core.ReadDefaultConfigFiles(nil); err == nil {
-				config.PrintAliases(os.Stderr)
-			}
-		}
 		os.Exit(0)
 	}
 	if opts.OutputFlags.Colour {
@@ -1200,7 +1231,7 @@ func initBuild(args []string) string {
 	} else if command == "help" || command == "follow" || command == "init" || command == "config" || command == "tool" {
 		// These commands don't use a config file, allowing them to be run outside a repo.
 		if flagsErr != nil { // This error otherwise doesn't get checked until later.
-			cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args)
+			cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args, additionalUsageInfo)
 		}
 		config = core.DefaultConfiguration()
 		os.Exit(buildFunctions[command]())
@@ -1209,7 +1240,7 @@ func initBuild(args []string) string {
 		os.Exit(0)
 	}
 	// Read the config now
-	config = readConfigAndSetRoot(command == "update")
+	config = mustReadConfigAndSetRoot(command == "update")
 	if parser.Command.Active != nil && parser.Command.Active.Name == "query" {
 		// Query commands don't need either of these set.
 		opts.OutputFlags.PlainOutput = true
@@ -1220,7 +1251,7 @@ func initBuild(args []string) string {
 	// can affect how we parse otherwise illegal flag combinations.
 	if (flagsErr != nil || len(extraArgs) > 0) && command != "completions" {
 		args := config.UpdateArgsWithAliases(os.Args)
-		command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args)
+		command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
 	}
 
 	if opts.ProfilePort != 0 {

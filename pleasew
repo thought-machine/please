@@ -7,8 +7,30 @@ YELLOW="\x1B[33m"
 RESET="\x1B[0m"
 
 DEFAULT_URL_BASE="https://get.please.build"
+
+OS="$(uname)"
+# Don't have any builds other than amd64 at the moment.
+ARCH="amd64"
+
+# Check PLZ_CONFIG_PROFILE or fall back to arguments for a profile.
+PROFILE="${PLZ_CONFIG_PROFILE:-$(sed -E 's/.*--profile[= ]([^ ]+).*/\1/g' <<< "$*")}"
+
+# Config files on order of precedence high to low.
+CONFIGS=(
+  ".plzconfig.local"
+  ".plzconfig_${OS}_${ARCH}"
+  "${PROFILE:+.plzconfig.$PROFILE}"
+  ".plzconfig"
+  "$HOME/.config/please/plzconfig"
+  "/etc/please/plzconfig"
+)
+
+function read_config() {
+   grep -i "$1" "${CONFIGS[@]}" 2>/dev/null | head -n 1
+}
+
 # We might already have it downloaded...
-LOCATION=$(grep -i "^location" .plzconfig 2>/dev/null | cut -d '=' -f 2 | tr -d ' ')
+LOCATION="$(read_config "^location" | cut -d '=' -f 2 | tr -d ' ')"
 if [ -z "$LOCATION" ]; then
     if [ -z "$HOME" ]; then
         echo -e >&2 "${RED}\$HOME not set, not sure where to look for Please.${RESET}"
@@ -25,13 +47,13 @@ if [ -f "$TARGET" ]; then
     exec "$TARGET" ${PLZ_ARGS:-} "$@"
 fi
 
-URL_BASE="$(grep -i "^downloadlocation" .plzconfig | cut -d '=' -f 2 | tr -d ' ')"
+URL_BASE="$(read_config "^downloadlocation" | cut -d '=' -f 2 | tr -d ' ')"
 if [ -z "$URL_BASE" ]; then
     URL_BASE=$DEFAULT_URL_BASE
 fi
 URL_BASE="${URL_BASE%/}"
 
-VERSION="$(grep -i "^version[^a-z]" .plzconfig)"
+VERSION="$(read_config "^version[^a-z]")"
 VERSION="${VERSION#*=}"    # Strip until after first =
 VERSION="${VERSION/ /}"    # Remove all spaces
 VERSION="${VERSION#>=}"    # Strip any initial >=
@@ -42,7 +64,6 @@ fi
 
 # Find the os / arch to download. You can do this quite nicely with go env
 # but we use this script on machines that don't necessarily have Go itself.
-OS=$(uname)
 if [ "$OS" = "Linux" ]; then
     GOOS="linux"
 elif [ "$OS" = "Darwin" ]; then
@@ -51,8 +72,6 @@ else
     echo -e >&2 "${RED}Unknown operating system $OS${RESET}"
     exit 1
 fi
-# Don't have any builds other than amd64 at the moment.
-ARCH="amd64"
 
 PLEASE_URL="${URL_BASE}/${GOOS}_${ARCH}/${VERSION}/please_${VERSION}.tar.xz"
 DIR="${LOCATION}/${VERSION}"
