@@ -1,0 +1,20 @@
+[Parse]
+BuildFileName = BUILD.plugin
+
+[PluginDefinition]
+name = foo
+
+[Plugin "Foo"]
+ModulePath = something
+
+[PluginConfig "fooc_tool"]
+ConfigKey = FoocTool
+DefaultValue = fooc
+
+[PluginConfig "module_path"]
+ConfigKey = ModulePath
+Optional = false
+
+[PluginConfig "compile_flags"]
+ConfigKey = CompileFlag
+Repeatable = true

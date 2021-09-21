@@ -1,0 +1,6 @@
+subinclude("@foo//build_defs:foolang")
+
+foolang_library(
+    name = "foo_lib",
+    srcs = ["test.foo"],
+)

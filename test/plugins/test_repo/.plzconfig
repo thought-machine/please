@@ -1,0 +1,4 @@
+[Plugin "foo"]
+FoocTool = @foo//tools/fooc
+CompileFlag = --flag1
+CompileFlag = --flag2

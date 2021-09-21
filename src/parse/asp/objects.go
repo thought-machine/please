@@ -911,14 +911,69 @@ func newConfig(state *core.BuildState) *pyConfig {
 	c["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
 	c["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 
+	loadPluginConfig(state, c)
+
 	return &pyConfig{base: c}
+}
+
+func loadPluginConfig(state *core.BuildState, c pyDict) {
+	pluginName := state.Config.PluginDefinition.Name
+	if pluginName == "" {
+		return
+	}
+
+	extraVals := map[string][]string{}
+	if config := state.Config.Plugin[pluginName]; config != nil {
+		extraVals = config.ExtraValues
+	}
+
+	pluginNamespace := pyDict{}
+	contextPackage := &core.Package{SubrepoName: state.CurrentSubrepo}
+	log.Warning("Loading config ")
+	configValueDefinitions := state.Config.PluginConfig
+	for key, definition := range configValueDefinitions {
+		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
+		if !ok {
+			log.Warningf("setting default value %v => %v", key, definition.DefaultValue)
+			value = definition.DefaultValue
+		}
+		if len(value) == 0 && !definition.Optional {
+			log.Fatalf("plugin config %v.%v is not optional %v", pluginName, definition.ConfigKey, extraVals)
+		}
+
+		if !definition.Repeatable && len(value) > 1 {
+			log.Fatalf("plugin config %v.%v is not repeatable", pluginName, definition.ConfigKey)
+		}
+
+		// Parse any config values in the current subrepo so @self resolves correctly. If we leave them, @self will
+		// resolve based on the subincluding package which will likely be the host repo.
+		for i, v := range value {
+			if core.LooksLikeABuildLabel(v) {
+				value[i] = core.ParseBuildLabelContext(v, contextPackage).String()
+			}
+		}
+		if definition.Repeatable {
+			l := make(pyList, 0, len(value))
+			for _, v := range value {
+				l = append(l, pyString(v))
+			}
+			pluginNamespace[strings.ToUpper(key)] = l
+		} else {
+			if len(value) != 0 {
+				pluginNamespace[strings.ToUpper(key)] = pyString(value[0])
+			} else {
+				pluginNamespace[strings.ToUpper(key)] = pyNone{}
+			}
+		}
+	}
+	c[strings.ToUpper(pluginName)] = pluginNamespace
 }
 
 // A pyFrozenConfig is a config object that disallows further updates.
 type pyFrozenConfig struct{ pyConfig }
 
 // IndexAssign always fails, assignments to a pyFrozenConfig aren't allowed.
-func (c *pyFrozenConfig) IndexAssign(index, value pyObject) {
+func (c *pyFrozenConfig) IndexAssign(_, _ pyObject) {
 	panic("Config object is not assignable in this scope")
 }
 

@@ -1,0 +1,2 @@
+[Parse]
+BuildFileName = BUILD # We override this in the e2e test profile and the subrepo has BUILD files not BUILD_FILE
