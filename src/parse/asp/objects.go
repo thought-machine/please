@@ -954,7 +954,7 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 		}
 		if definition.Repeatable {
 			l := make(pyList, 0, len(value))
-			for _, v :=  range value {
+			for _, v := range value {
 				l = append(l, pyString(v))
 			}
 			pluginNamespace[strings.ToUpper(key)] = l

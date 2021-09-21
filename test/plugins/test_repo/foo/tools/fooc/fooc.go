@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-// A dummy compiler. Just hashes the input but is meant to be come sort of language compiler
+// A dummy compiler. Just hashes the input but is meant to be some sort of language compiler
 func main() {
 	out := ""
 	flag1 := false
