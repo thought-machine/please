@@ -40,9 +40,16 @@ func buildPreamble(state *core.BuildState, pkg *core.Package) string {
 	subincludes := make([]string, 0, len(state.Config.Parse.PreloadSubincludes))
 	for _, inc := range state.Config.Parse.PreloadSubincludes {
 		l := core.ParseBuildLabel(inc, pkg.Name)
-		if l.Subrepo == "" || l.SubrepoLabel().PackageName != pkg.Name {
-			subincludes = append(subincludes, fmt.Sprintf("\"%s\"", inc))
+		if l.Subrepo == pkg.SubrepoName {
+			if pkg.SubrepoName == "" && l.PackageName == pkg.Name {
+				// We're in the package that contains the subinclude target. Skip.
+				continue
+			} else if l.SubrepoLabel().PackageName == pkg.Name {
+				// We're in the package that contains the subrepo of the subinclude target. Skip.
+				continue
+			}
 		}
+		subincludes = append(subincludes, fmt.Sprintf("\"%s\"", inc))
 	}
 
 	if len(subincludes) > 0 {
