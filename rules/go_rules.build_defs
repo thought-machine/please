@@ -1680,12 +1680,12 @@ def _get_ldflags_and_pkgconfig(name):
     return (ldflags, f'`pkg-config --libs {pkg_config}`') if pkg_config else (ldflags, '')
 
 
-def _debug_cmd(cmd:str, flags:str, srcs:list):
+def _debug_cmd(bin:str, args:str, srcs:list):
     if not CONFIG.get("DEBUG"):
         return "", [], None
 
     # Default debug command.
-    cmd = f"$TOOLS_DLV exec {cmd} --check-go-version=false" # TODO: Delete the check flag
+    cmd = f"$TOOLS_DLV exec {bin} --check-go-version=false" # TODO: Delete the check flag
     # A CLI debug session needs access to the source files for improved UX.
     data = [src for src in srcs]
     tools = {
@@ -1699,8 +1699,7 @@ def _debug_cmd(cmd:str, flags:str, srcs:list):
         # The client will usually have access to the source files.
         data = []
 
-    # Allow for positional arguments.
-    cmd = f"{cmd} -- {flags}"
+    cmd = f"{cmd} -- {args}"
 
     return cmd, data, tools
 
