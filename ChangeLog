@@ -1,3 +1,11 @@
+Version 16.9.0
+--------------
+    * Fix issue where aliases were being printed multiple times #2070
+    * Fix issue where messages were being printed incorrectly during a
+      `plz watch` #2066
+    * Implemented the plugins API as described in #1843 #1925
+
+
 Version 16.8.0
 --------------
     * BUILD files can now be added as sources to rules #2056
