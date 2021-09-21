@@ -170,13 +170,13 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Debug struct {
-		Debugger string `short:"d" long:"debugger" description:"TODO"`
-		Port     int    `short:"p" long:"port" description:"TODO"`
+		Debugger string `short:"d" long:"debugger" description:"Name of supported debugger"`
+		Port     int    `short:"p" long:"port" description:"Debugging server listen port"`
 		Args     struct {
-			Target core.BuildLabel `positional-arg-name:"target" description:"TODO"`
-			Args   []string        `positional-arg-name:"arguments" description:"TODO"`
+			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
+			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target"`
 		} `positional-args:"true"`
-	} `command:"debug" description:"TODO"`
+	} `command:"debug" description:"Starts a debug session on the given target if supported by its build definition."`
 
 	Run struct {
 		Env        bool   `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`

@@ -70,6 +70,12 @@ var KnownFields = map[string]bool{
 	"Test.Flakiness": true,
 	"Test.Results":   true, // Recall that unsuccessful test results aren't cached...
 
+	// Debug fields don't contribute to any hash
+	"Debug":            true,
+	"Debug.Command":    true,
+	"Debug.tools":      true,
+	"Debug.namedTools": true,
+
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
 	"namedData":         true,
@@ -113,12 +119,23 @@ func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
 }
 
 func TestAllTestFieldsArePresentAndAccountedFor(t *testing.T) {
-	target := &core.TestFields{}
-	val := reflect.ValueOf(target)
+	fields := &core.TestFields{}
+	val := reflect.ValueOf(fields)
 	typ := val.Elem().Type()
 	for i := 0; i < typ.NumField(); i++ {
 		if field := typ.Field(i); !KnownFields[fmt.Sprintf("Test.%s", field.Name)] {
 			t.Errorf("Unaccounted field in RuleHash: Test.%s", field.Name)
+		}
+	}
+}
+
+func TestAllDebugFieldsArePresentAndAccountedFor(t *testing.T) {
+	fields := &core.DebugFields{}
+	val := reflect.ValueOf(fields)
+	typ := val.Elem().Type()
+	for i := 0; i < typ.NumField(); i++ {
+		if field := typ.Field(i); !KnownFields[fmt.Sprintf("Debug.%s", field.Name)] {
+			t.Errorf("Unaccounted field in RuleHash: Debug.%s", field.Name)
 		}
 	}
 }

@@ -18,7 +18,7 @@ func Debug(state *core.BuildState, label core.BuildLabel, port int, args []strin
 	env := []string{}
 	if target.IsTest() {
 		sandbox = target.Test.Sandbox
-		env = append(env,"TESTS=" + strings.Join(args, " "))
+		env = append(env, "TESTS="+strings.Join(args, " "))
 	}
 	cmd := append(strings.Split(target.Debug.Command, " "), args...)
 
