@@ -929,12 +929,10 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 
 	pluginNamespace := pyDict{}
 	contextPackage := &core.Package{SubrepoName: state.CurrentSubrepo}
-	log.Warning("Loading config ")
 	configValueDefinitions := state.Config.PluginConfig
 	for key, definition := range configValueDefinitions {
 		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
 		if !ok {
-			log.Warningf("setting default value %v => %v", key, definition.DefaultValue)
 			value = definition.DefaultValue
 		}
 		if len(value) == 0 && !definition.Optional {
