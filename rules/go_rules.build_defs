@@ -1680,7 +1680,7 @@ def _get_ldflags_and_pkgconfig(name):
     return (ldflags, f'`pkg-config --libs {pkg_config}`') if pkg_config else (ldflags, '')
 
 
-def _debug_cmd(cmd:str, flags:str="", srcs:list):
+def _debug_cmd(cmd:str, flags:str, srcs:list):
     if not CONFIG.get("DEBUG"):
         return "", [], None
 
