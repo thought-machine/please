@@ -134,7 +134,7 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
 		if label.Subrepo == "" && label.PackageName == "" && label.Name == dependent.Subrepo {
 			if subrepo := checkArchSubrepo(state, label.Name); subrepo != nil {
-				state.LogParseResult(tid, label, core.TargetBuilt, "Instantiated subrepo")
+				state.ArchSubrepoInitialised(label)
 				return nil
 			}
 		}
