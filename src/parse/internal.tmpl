@@ -1,6 +1,6 @@
 remote_file(
     name = "download",
-    url = f"{{ .DownloadLocation }}/{{ .OS }}_{{ .Arch }}/{{ .PLZVersion }}/please_tools_{{ .PLZVersion }}.tar.xz",
+    url = f"{{ .ToolsURL }}",
 )
 
 # Can't use extract = True, as that would depend on :jarcat

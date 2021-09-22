@@ -3,6 +3,7 @@ package parse
 import (
 	"bytes"
 	_ "embed" // needed to use //go:embed
+	"fmt"
 	"runtime"
 	"text/template"
 
@@ -11,7 +12,6 @@ import (
 
 const InternalPackageName = "_please"
 
-// TODO(jpoole): make langserver configurable
 //go:embed internal.tmpl
 var internalPackageTemplateStr string
 
@@ -21,17 +21,16 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 		return "", err
 	}
 
+	url := config.Please.ToolsURL.String()
+	if url == "" {
+		url = fmt.Sprintf("%s/%s_%s/%s/please_tools_%s.tar.xz", config.Please.DownloadLocation, runtime.GOOS, runtime.GOARCH, core.PleaseVersion, core.PleaseVersion)
+	}
+
 	data := struct {
-		PLZVersion       string
-		OS               string
-		Arch             string
-		DownloadLocation string
-		Tools            []string
+		ToolsURL string
+		Tools    []string
 	}{
-		PLZVersion:       core.PleaseVersion,
-		OS:               runtime.GOOS,
-		Arch:             runtime.GOARCH,
-		DownloadLocation: config.Please.DownloadLocation.String(),
+		ToolsURL: url,
 		Tools: []string{
 			"build_langserver",
 			"jarcat",

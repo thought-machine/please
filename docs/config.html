@@ -212,6 +212,15 @@
     </li>
     <li>
       <div>
+        <h3 class="mt1 f6 lh-title" id="please.toolsurl">ToolsUrl</h3>
+
+        <p>
+          {{ index .ConfigHelpText "please.toolsurl" }}
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
         <h3 class="mt1 f6 lh-title" id="please.motd">MOTD</h3>
 
         <p>
@@ -346,6 +355,110 @@
       </div>
     </li>
   </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="plugindefinition" class="title-2">[PluginDefinition]</h2>
+  <p class="red">
+    This feature is still experimental; some aspects may not work fully or at all
+    just yet. Proceed with caution!
+  </p>
+
+  <p>Used in repos that implement a Please plugin. By adding this section to your <code class="code">.plzconfig</code>,
+    your project can be included as a plugin in other Please repos.
+  </p>
+
+  <p>The following sets up a plugin with ID foo.</p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code>
+    [PluginDefinition]
+    Name = foo
+
+    [PluginConfig "foo_tool"]
+    ConfigKey = FooTool
+    ; @self resolves to the subrepo for this plugin
+    DefaultValue = @self//tools:foo
+    </code>
+  </pre>
+
+  <p>Another Please repo can then override these values as such:</p>
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code>
+    [Plugin "foo"]
+    FooTool = foo_tool
+    </code>
+  </pre>
+
+  <p>This config value is then available to the build definitions as <code class="code">CONFIG.FOO.FOO_TOOL</code>.</p>
+</section>
+
+<section class="mt4">
+  <h2 id="pluginconfig" class="title-2">[PluginConfig "config_key"]</h2>
+  <p class="red">
+    This feature is still experimental; some aspects may not work fully or at all
+    just yet. Proceed with caution!
+  </p>
+
+  <p>Used in conjunction with <a href="#plugindefinition" class="copy-link">[PluginDefinition]</a> to define configuration
+    values for a plugin.
+  </p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="pluginconfig.configkey">
+          ConfigKey
+        </h3>
+        <p>
+          The key consumers of this plugin will use to set this value in their
+          <a href="#plugin" class="copy-link">[Plugin]</a> section.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="pluginconfig.defaultvalue">
+          DefaultValue
+        </h3>
+        <p>
+          The default value for this config value, if any.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="pluginconfig.optional">
+          Optional <span class="normal">(bool)</span>
+        </h3>
+        <p>
+          If true, this config value may be empty.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="pluginconfig.repeatable">
+          Repeatable <span class="normal">(bool)</span>
+        </h3>
+        <p>
+          If true, this config value may be repeated.
+        </p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="plugin" class="title-2">[Plugin "plugin-id"]</h2>
+  <p class="red">
+    This feature is still experimental; some aspects may not work fully or at all
+    just yet. Proceed with caution!
+  </p>
+
+  <p>This section can be used to define configuration specific to a plugin identified by its ID.</p>
 </section>
 
 <section class="mt4">

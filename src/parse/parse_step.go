@@ -51,6 +51,9 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	} else if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
 		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label)
+		if err := subrepo.LoadSubrepoConfig(); err != nil {
+			return err
+		}
 	}
 	// Subrepo & nothing else means we just want to ensure that subrepo is present.
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
@@ -83,6 +86,8 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 		if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, "", label); err != nil {
 			return nil, err
 		} else if !handled {
+			// They may have meant a subrepo that was defined in the dependent label's subrepo rather than the host
+			// repo
 			if _, err := parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label); err != nil {
 				return nil, err
 			}

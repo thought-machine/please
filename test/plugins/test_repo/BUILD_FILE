@@ -1,0 +1,9 @@
+filegroup(
+    name = "foo",
+    srcs = ["foo"],
+)
+
+subrepo(
+    name = "foo",
+    dep = ":foo",
+)
