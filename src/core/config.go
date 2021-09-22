@@ -928,9 +928,10 @@ func (config *Configuration) NumRemoteExecutors() int {
 	return config.Remote.NumExecutors
 }
 
+// GetPlugin gets the plugin config for a given plugin name in a case insensitive way
 func (config *Configuration) GetPlugin(name string) *Plugin {
 	for k, v := range config.Plugin {
-		if strings.ToUpper(k) == strings.ToUpper(name) {
+		if strings.EqualFold(k, name) {
 			return v
 		}
 	}
