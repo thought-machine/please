@@ -463,7 +463,7 @@ func (state *BuildState) LogBuildResult(tid int, target *BuildTarget, status Bui
 	}
 }
 
-// ArchSubrepoInitialised closes the pending target channel for the non-existant arch subrepo psudo-target
+// ArchSubrepoInitialised closes the pending target channel for the non-existent arch subrepo psudo-target
 func (state *BuildState) ArchSubrepoInitialised(subrepoLabel BuildLabel) {
 	// We may have parse tasks waiting for this guy to build, check for them.
 	if ch, present := state.progress.pendingTargets.GetOK(subrepoLabel); present {
