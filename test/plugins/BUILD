@@ -8,7 +8,7 @@ please_repo_e2e_test(
 
 please_repo_e2e_test(
     name = "plugin_test_non_optional_config",
+    expected_failure = True,
     plz_command = "plz build //test:foo_lib",
     repo = "test_repo",
-    expected_failure = True,
 )

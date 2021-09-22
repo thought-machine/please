@@ -131,7 +131,7 @@ type BuildTarget struct {
 	Commands map[string]string `name:"cmd" hide:"filegroup"`
 	// Test related fields.
 	Test *TestFields `name:"test"`
-	// Debug related.
+	// Debug related fields.
 	Debug *DebugFields
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
@@ -1244,11 +1244,6 @@ func (target *BuildTarget) AllTestTools() []BuildInput {
 		return target.Test.tools
 	}
 	return target.allBuildInputs(target.Test.tools, target.Test.namedTools)
-}
-
-// TestTools returns all unnamed test tools
-func (target *BuildTarget) TestTools() []BuildInput {
-	return target.Test.tools
 }
 
 // NamedTestTools returns all named test tools

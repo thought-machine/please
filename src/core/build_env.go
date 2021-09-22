@@ -103,7 +103,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
 	}
 	// Tools
-	env = append(env, toolsEnv(state, target.Tools, target.namedTools, abs)...)
+	env = append(env, toolsEnv(state, target.AllTools(), target.namedTools, abs)...)
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
 		secrets := "SECRETS=" + fs.ExpandHomePath(strings.Join(target.Secrets, ":"))
@@ -210,10 +210,10 @@ func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) Bui
 	)
 
 	outEnv := target.Outputs()
+	// OUTS/OUT environment variables being always set is for backwards-compatibility.
+	// Ideally, if the target is a test these variables shouldn't be set.
 	env = append(env, "OUTS="+strings.Join(outEnv, " "))
 	if len(outEnv) == 1 {
-		// This is for backward-compatibility. Ideally, if the target is a test
-		// then only `TEST` needs to be set
 		env = append(env, "OUT="+resolveOut(outEnv[0], ".", target.Sandbox))
 		if target.IsTest() {
 			env = append(env, "TEST="+resolveOut(outEnv[0], ".", target.Test.Sandbox))
@@ -230,10 +230,10 @@ func RuntimeEnvironment(state *BuildState, target *BuildTarget, abs, inTmpDir bo
 
 	if target.Debug != nil {
 		// Debug tools
-		env = append(env, toolsEnv(state, target.Debug.tools, target.Debug.namedTools, abs)...)
+		env = append(env, toolsEnv(state, target.AllDebugTools(), target.Debug.namedTools, abs)...)
 	} else if target.IsTest() {
 		// Test tools
-		env = append(env, toolsEnv(state, target.TestTools(), target.NamedTestTools(), abs)...)
+		env = append(env, toolsEnv(state, target.AllTestTools(), target.NamedTestTools(), abs)...)
 	}
 
 	// Data

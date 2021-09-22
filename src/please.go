@@ -490,7 +490,7 @@ var buildFunctions = map[string]func() int{
 			return toExitCode(success, state)
 		}
 
-		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Port, opts.Debug.Args.Args)
+		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Port != 0, opts.Debug.Args.Args)
 	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
@@ -990,7 +990,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
-	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || opts.Tool.Args.Tool != ""
+	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || !opts.Debug.Args.Target.IsEmpty() || opts.Tool.Args.Tool != ""
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
