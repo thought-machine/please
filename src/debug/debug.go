@@ -19,7 +19,7 @@ func Debug(state *core.BuildState, label core.BuildLabel, port bool, args []stri
 		log.Fatalf("The build definition used by %s doesn't appear to support debugging yet", target.Label)
 	}
 
-	// Runtime directory
+	// Runtime directory.
 	dir := filepath.Join(core.OutDir, "debug", target.Label.Subrepo, target.Label.PackageName)
 
 	sandbox := target.Sandbox
@@ -32,7 +32,7 @@ func Debug(state *core.BuildState, label core.BuildLabel, port bool, args []stri
 	cmd := append(strings.Split(target.Debug.Command, " "), args...)
 
 	// The value of `port` takes priority in deciding whether the network namespace should
-	// be shared or not, otherwise clients (i.e. IDEs) can't connect to the debugger.
+	// be shared or not, otherwise clients (i.e. IDEs) might not be able to connect to the debugger.
 	shareNetwork := port || !sandbox
 
 	return exec.Exec(state, label, dir, env, cmd, !port, process.NewSandboxConfig(!shareNetwork, sandbox))
