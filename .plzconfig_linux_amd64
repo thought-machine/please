@@ -1,5 +1,2 @@
 [java]
 toolchain = //tools/java:toolchain
-
-[build]
-path = /home/ttristao/go/bin:/usr/bin:/bin
