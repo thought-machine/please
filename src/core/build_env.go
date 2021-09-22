@@ -252,12 +252,12 @@ func resolveOut(out string, dir string, sandbox bool) string {
 }
 
 // Creates tool-related env variables
-func toolsEnv(state *BuildState, tools []BuildInput, namedTools map[string][]BuildInput, abs bool) BuildEnv {
+func toolsEnv(state *BuildState, allTools []BuildInput, namedTools map[string][]BuildInput, abs bool) BuildEnv {
 	env := BuildEnv{
-		"TOOLS=" + strings.Join(toolPaths(state, tools, abs), " "),
+		"TOOLS=" + strings.Join(toolPaths(state, allTools, abs), " "),
 	}
-	if len(tools) == 1 {
-		env = append(env, "TOOL="+toolPath(state, tools[0], abs))
+	if len(allTools) == 1 {
+		env = append(env, "TOOL="+toolPath(state, allTools[0], abs))
 	}
 	for name, tools := range namedTools {
 		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
