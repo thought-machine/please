@@ -978,10 +978,11 @@ func toPyObject(key, val, toType string) pyObject {
 	}
 
 	if toType == "bool" {
-		if val == "true" || val == "True" {
+		val = strings.ToLower(val)
+		if val == "true" || val == "yes" || val == "on" {
 			return pyBool(true)
 		}
-		if val == "false" || val == "False" {
+		if val == "false" || val == "no" || val == "off" {
 			return pyBool(false)
 		}
 		log.Fatalf("%s: Invalid boolean value %v", key, val)
