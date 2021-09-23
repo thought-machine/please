@@ -570,7 +570,8 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
 
-    debug_cmd, debug_data, debug_tools = _debug_cmd("./$OUT", "", _srcs + deps)
+    # TODO(tiagovtristao): Find a way to include the original deps' sources too
+    debug_cmd, debug_data, debug_tools = _debug_cmd("./$OUT", "", _srcs)
     _data = data + debug_data if data else debug_data
 
     return build_rule(
@@ -709,7 +710,8 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         for out in test_outputs:
             test_cmd += f' && mv {out} $TMP_DIR/{out}'
 
-    debug_cmd, debug_data, debug_tools = _debug_cmd("./$TEST", flags, srcs + deps)
+    # TODO(tiagovtristao): Find a way to include the original deps' sources too
+    debug_cmd, debug_data, debug_tools = _debug_cmd("./$TEST", flags, srcs)
     _data = debug_data if not data else data + debug_data if isinstance(data, list) else data | {'srcs': debug_data}
 
     return build_rule(
