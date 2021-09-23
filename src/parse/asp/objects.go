@@ -958,11 +958,11 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 			}
 			pluginNamespace[strings.ToUpper(key)] = l
 		} else {
+			val := ""
 			if len(value) == 1 {
-				pluginNamespace[strings.ToUpper(key)] = toPyObject(fullConfigKey, value[0], definition.Type)
-			} else {
-				pluginNamespace[strings.ToUpper(key)] = pyNone{}
+				val = value[0]
 			}
+			pluginNamespace[strings.ToUpper(key)] = toPyObject(fullConfigKey, val, definition.Type)
 		}
 	}
 	c[strings.ToUpper(pluginName)] = pluginNamespace
@@ -973,22 +973,22 @@ func toPyObject(key, val, toType string) pyObject {
 		return pyString(val)
 	}
 
-	if val == "" {
-		return pyNone{}
-	}
-
 	if toType == "bool" {
 		val = strings.ToLower(val)
 		if val == "true" || val == "yes" || val == "on" {
 			return pyBool(true)
 		}
-		if val == "false" || val == "no" || val == "off" {
+		if val == "false" || val == "no" || val == "off" || val == "" {
 			return pyBool(false)
 		}
 		log.Fatalf("%s: Invalid boolean value %v", key, val)
 	}
 
 	if toType == "int" {
+		if val == "" {
+			return pyInt(0)
+		}
+
 		i, err := strconv.Atoi(val)
 		if err != nil {
 			log.Fatalf("%s: Invalid int value %v", key, val)
