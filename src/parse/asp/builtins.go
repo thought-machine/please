@@ -201,10 +201,8 @@ func pkg(s *scope, args []pyObject) pyObject {
 		configVal := s.config.Get(k, nil)
 		s.Assert(configVal != nil, "error calling package(): %s is not a known config value", k)
 
-		// Merge the config value together for plugins
-		if plugin := s.state.Config.GetPlugin(k); plugin != nil {
-			dict, ok := v.(pyDict)
-			s.Assert(ok, "error calling package(): %s is a plugin so that argument should be a dict", k)
+		// Merge the config value together for dictionaries
+		if dict, ok := v.(pyDict); ok {
 			for k, v := range dict {
 				configVal.IndexAssign(pyString(k), v)
 			}
