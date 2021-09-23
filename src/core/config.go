@@ -928,16 +928,6 @@ func (config *Configuration) NumRemoteExecutors() int {
 	return config.Remote.NumExecutors
 }
 
-// GetPlugin gets the plugin config for a given plugin name in a case insensitive way
-func (config *Configuration) GetPlugin(name string) *Plugin {
-	for k, v := range config.Plugin {
-		if strings.EqualFold(k, name) {
-			return v
-		}
-	}
-	return nil
-}
-
 // A ConfigProfile is a string that knows how to handle completions given all the possible config file locations.
 type ConfigProfile string
 
