@@ -931,16 +931,17 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 	contextPackage := &core.Package{SubrepoName: state.CurrentSubrepo}
 	configValueDefinitions := state.Config.PluginConfig
 	for key, definition := range configValueDefinitions {
+		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, definition.ConfigKey)
 		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
 		if !ok {
 			value = definition.DefaultValue
 		}
 		if len(value) == 0 && !definition.Optional {
-			log.Fatalf("plugin config %v.%v is not optional %v", pluginName, definition.ConfigKey, extraVals)
+			log.Fatalf("plugin config %s is not optional %v", fullConfigKey, extraVals)
 		}
 
 		if !definition.Repeatable && len(value) > 1 {
-			log.Fatalf("plugin config %v.%v is not repeatable", pluginName, definition.ConfigKey)
+			log.Fatalf("plugin config %v is not repeatable", fullConfigKey)
 		}
 
 		// Parse any config values in the current subrepo so @self resolves correctly. If we leave them, @self will
@@ -953,18 +954,49 @@ func loadPluginConfig(state *core.BuildState, c pyDict) {
 		if definition.Repeatable {
 			l := make(pyList, 0, len(value))
 			for _, v := range value {
-				l = append(l, pyString(v))
+				l = append(l, toPyObject(fullConfigKey, v, definition.Type))
 			}
 			pluginNamespace[strings.ToUpper(key)] = l
 		} else {
-			if len(value) != 0 {
-				pluginNamespace[strings.ToUpper(key)] = pyString(value[0])
+			if len(value) == 1 {
+				pluginNamespace[strings.ToUpper(key)] = toPyObject(fullConfigKey, value[0], definition.Type)
 			} else {
 				pluginNamespace[strings.ToUpper(key)] = pyNone{}
 			}
 		}
 	}
 	c[strings.ToUpper(pluginName)] = pluginNamespace
+}
+
+func toPyObject(key, val, toType string) pyObject {
+	if toType == "" || toType == "str" {
+		return pyString(val)
+	}
+
+	if val == "" {
+		return pyNone{}
+	}
+
+	if toType == "bool" {
+		if val == "true" || val == "True" {
+			return pyBool(true)
+		}
+		if val == "false" || val == "False" {
+			return pyBool(false)
+		}
+		log.Fatalf("%s: Invalid boolean value %v", key, val)
+	}
+
+	if toType == "int" {
+		i, err := strconv.Atoi(val)
+		if err != nil {
+			log.Fatalf("%s: Invalid int value %v", key, val)
+		}
+		return pyInt(i)
+	}
+
+	log.Fatalf("%s: invalid config type %v", key, toType)
+	return pyNone{}
 }
 
 // A pyFrozenConfig is a config object that disallows further updates.
