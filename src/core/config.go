@@ -766,7 +766,6 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 			return fmt.Errorf("Bad option format: %s", k)
 		}
 		if plugin, ok := config.Plugin[split[0]]; ok {
-			log.Warningf("Setting config value %v to %v", split[1], v)
 			plugin.ExtraValues[strings.ToLower(split[1])] = []string{v}
 			return nil
 		}
