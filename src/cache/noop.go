@@ -5,18 +5,17 @@ import (
 )
 
 type noopCache struct {
+}
+
+func (n *noopCache) Store(*core.BuildTarget, []byte, []string) {
 
 }
 
-func (n *noopCache) Store(target *core.BuildTarget, key []byte, files []string) {
-
-}
-
-func (n *noopCache) Retrieve(target *core.BuildTarget, key []byte, files []string) bool {
+func (n *noopCache) Retrieve(*core.BuildTarget, []byte, []string) bool {
 	return false
 }
 
-func (n *noopCache) Clean(target *core.BuildTarget) {
+func (n *noopCache) Clean(*core.BuildTarget) {
 }
 
 func (n *noopCache) CleanAll() {
@@ -24,4 +23,3 @@ func (n *noopCache) CleanAll() {
 
 func (n *noopCache) Shutdown() {
 }
-
