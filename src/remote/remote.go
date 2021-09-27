@@ -683,6 +683,8 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		ActionDigest:    digest,
 		SkipCacheLookup: skipCacheLookup,
 	}, updateProgress)
+	log.Debug("completed ExecuteAndWaitProgress() for %v", target.Label)
+
 	if err != nil {
 		// Handle timing issues if we try to resume an execution as it fails. If we get a
 		// "not found" we might find that it's already been completed and we can't resume.

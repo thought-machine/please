@@ -198,7 +198,21 @@ func pkg(s *scope, args []pyObject) pyObject {
 	s.Assert(s.pkg.NumTargets() == 0, "package() must be called before any build targets are defined")
 	for k, v := range s.locals {
 		k = strings.ToUpper(k)
-		s.Assert(s.config.Get(k, nil) != nil, "error calling package(): %s is not a known config value", k)
+		configVal := s.config.Get(k, nil)
+		s.Assert(configVal != nil, "error calling package(): %s is not a known config value", k)
+
+		// Merge in the existing config for dictionaries
+		if dict, ok := v.(pyDict); ok {
+			if existing, ok := configVal.(pyDict); ok {
+				for k, v := range existing {
+					if _, ok := dict[k]; !ok {
+						dict.IndexAssign(pyString(k), v)
+					}
+				}
+			} else {
+				s.Error("error calling package(): can't assign a dict to %s as it's not a dict", k)
+			}
+		}
 		s.config.IndexAssign(pyString(k), v)
 	}
 	return None

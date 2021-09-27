@@ -33,8 +33,8 @@ import (
 
 var downloadErrors = metrics.NewCounter(
 	"remote",
-	"tree_digest_download_eof_errors_total",
-	"Number of times the Unexpected EOF error has been seen during a tree digest download",
+	"tree_digest_download_errors_total",
+	"Number of times the an error has been seen during a tree digest download",
 )
 
 // xattrName is the name we use to record attributes on files.

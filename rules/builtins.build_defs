@@ -108,7 +108,6 @@ def glob(include:list, exclude:list&excludes=[], hidden:bool=CONFIG.BAZEL_COMPAT
 def package():
     pass
 
-
 def sorted(seq:list) -> list:
     pass
 

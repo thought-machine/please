@@ -578,7 +578,8 @@ type Configuration struct {
 		ConfigKey    string   `help:"The key of the config field in the .plzconfig file"`
 		DefaultValue []string `help:"The default value for this config field, if it has one"`
 		Optional     bool     `help:"Whether this config field can be empty"`
-		Repeatable   bool     `help:"Whether this config field can be empty"`
+		Repeatable   bool     `help:"Whether this config field can be repeated"`
+		Type         string   `help:"What type to bind this config as e.g. str, bool, or int. Default str."`
 	} `help:"Defines a new config field for a plugin"`
 	Bazel struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
@@ -767,7 +768,6 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 			return fmt.Errorf("Bad option format: %s", k)
 		}
 		if plugin, ok := config.Plugin[split[0]]; ok {
-			log.Warningf("Setting config value %v to %v", split[1], v)
 			plugin.ExtraValues[strings.ToLower(split[1])] = []string{v}
 			return nil
 		}
