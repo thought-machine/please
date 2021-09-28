@@ -172,7 +172,7 @@ var opts struct {
 		Env        bool   `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
 		Rebuild    bool   `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
 		InWD       bool   `long:"in_wd" description:"When running locally, stay in the original working directory."`
-		WD         string `long:"wd" description: "The working directory in which to run the target."`
+		WD         string `long:"wd" description:"The working directory in which to run the target."`
 		InTempDir  bool   `long:"in_tmp_dir" description:"Runs in a temp directory, setting env variables and copying in runtime data similar to tests."`
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
