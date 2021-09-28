@@ -65,6 +65,6 @@ please_repo_e2e_test(
     expected_output = {
         "test_wd/guava.txt": "guava",
     },
-    plz_command = "plz run --wd test_wd //src:create_file",
+    plz_command = "mkdir test_wd; plz run --wd test_wd //src:create_file",
     repo = "test_repo",
 )
