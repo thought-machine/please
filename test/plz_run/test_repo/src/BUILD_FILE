@@ -43,5 +43,5 @@ genrule(
 
 sh_cmd(
     name = "create_file",
-    cmd = "echo guava > guava.txt",
+    cmd = "echo guava >> guava.txt",
 )

@@ -68,3 +68,13 @@ please_repo_e2e_test(
     plz_command = "mkdir test_wd; plz run --wd test_wd //src:create_file",
     repo = "test_repo",
 )
+
+# Test that --wd=. and --in_wd work the same
+please_repo_e2e_test(
+    name = "test_wd_here_works_like_in_wd",
+    expected_output = {
+        "guava.txt": "guava\nguava",
+    },
+    plz_command = "plz run --wd=. //src:create_file; plz run --in_wd //src:create_file",
+    repo = "test_repo",
+)
