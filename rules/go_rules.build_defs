@@ -28,6 +28,9 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
                          improve performance, especially for remote execution. This doesn't work with go_get() however
                          it is recommended to set this to True if you're using go_module() exclusively.
     """
+    if CONFIG.BUILD_CONFIG == "dbg":
+        strip_srcs = False
+
     if url and version:
         fail("Either version or url should be provided but not both")
 
