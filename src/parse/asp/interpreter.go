@@ -477,7 +477,7 @@ func (s *scope) interpretIs(obj pyObject, op OpExpression) pyObject {
 	}
 }
 
-func (s *scope) negate(obj pyObject) pyBool {
+func (s *scope) negate(obj pyObject) pyObject {
 	if obj.IsTruthy() {
 		return False
 	}
