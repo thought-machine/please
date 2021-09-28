@@ -6,7 +6,7 @@ import "embed"
 var builtins embed.FS
 
 // AllAssets returns all assets embedded into the binary
-func AllAssets() ([]string, error) {
+func AllAssets(excludes map[string]struct{}) ([]string, error) {
 	assets, err := builtins.ReadDir(".")
 	if err != nil {
 		return nil, err
@@ -14,7 +14,9 @@ func AllAssets() ([]string, error) {
 
 	var filepaths []string
 	for _, entry := range assets {
-		filepaths = append(filepaths, entry.Name())
+		if _, ok := excludes[entry.Name()]; !ok {
+			filepaths = append(filepaths, entry.Name())
+		}
 	}
 
 	return filepaths, nil
