@@ -1007,6 +1007,8 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		log.Fatal("Can't use both --in_temp_dir and --wd at the same time")
 	} else if opts.Run.InTempDir && opts.Run.InWD {
 		log.Fatal("Can't use both --in_temp_dir and --in_wd at the same time")
+	} else if opts.Run.WD != "" && opts.Run.InWD {
+		log.Fatal("Can't use both --in_wd and --wd at the same time. --in_wd is deprecated in favour of --wd.")
 	}
 
 	runPlease(state, targets)
