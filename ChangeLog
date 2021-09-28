@@ -1,3 +1,10 @@
+Version 16.10.1
+--------------
+    * Fix nil pointer when no cache is set up #2092
+    * Add feature flags for the java and python language plugins
+      to exclude these builtins #2098
+
+
 Version 16.10.0
 --------------
     * Fix lockup when cross compiling with --arch #2085
