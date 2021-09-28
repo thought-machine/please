@@ -42,6 +42,6 @@ genrule(
 )
 
 sh_cmd(
-    name = "create_file",
+    name = "write_to_file",
     cmd = "echo guava >> guava.txt",
 )
