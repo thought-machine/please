@@ -40,3 +40,8 @@ genrule(
     cmd = "touch $OUT",
     outs = ["foo.txt"],
 )
+
+sh_cmd(
+    name = "create_file",
+    cmd = "echo guava > guava.txt",
+)

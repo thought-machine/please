@@ -58,3 +58,13 @@ please_repo_e2e_test(
     plz_command = "plz test //src:_add_data_file_and_target",
     repo = "test_repo",
 )
+
+# Test --wd flag changes directory and outputs there
+please_repo_e2e_test(
+    name = "test_wd_flag",
+    expected_output = {
+        "test_wd/guava.txt": "guava",
+    },
+    plz_command = "plz run --wd test_wd //src:create_file",
+    repo = "test_repo",
+)
