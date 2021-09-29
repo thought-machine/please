@@ -5,10 +5,10 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	cmap "github.com/streamrail/concurrent-map"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
@@ -35,8 +35,8 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 		log.Fatalf("Error setting up watcher: %s", err)
 	}
 	// This sets up the actual watches. It must be done in a separate goroutine.
-	files := cmap.New()
-	go startWatching(watcher, state, labels, files)
+	var files sync.Map
+	go startWatching(watcher, state, labels, &files)
 
 	parentCtx, cancelParent := context.WithCancel(context.Background())
 	cli.AtExit(func() {
@@ -56,7 +56,7 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 		select {
 		case event := <-watcher.Events:
 			log.Info("Event: %s", event)
-			if !files.Has(event.Name) {
+			if _, ok := files.Load(event.Name); !ok {
 				log.Notice("Skipping notification for %s", event.Name)
 				continue
 			}
@@ -80,7 +80,7 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 	}
 }
 
-func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []core.BuildLabel, files cmap.ConcurrentMap) {
+func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []core.BuildLabel, files *sync.Map) {
 	// Deduplicate seen targets & sources.
 	targets := map[*core.BuildTarget]struct{}{}
 	dirs := map[string]struct{}{}
@@ -117,13 +117,13 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 	fmt.Println("And now my watch begins...")
 }
 
-func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.BuildInput, dirs map[string]struct{}, files cmap.ConcurrentMap) {
+func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.BuildInput, dirs map[string]struct{}, files sync.Map) {
 	if _, ok := source.Label(); !ok {
 		for _, src := range source.Paths(state.Graph) {
 			if err := fs.Walk(src, func(src string, isDir bool) error {
 				files.Set(src, struct{}{})
 				if !path.IsAbs(src) {
-					files.Set("./"+src, struct{}{})
+					files.Store("./"+src, struct{}{})
 				}
 				dir := src
 				if !isDir {
