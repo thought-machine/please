@@ -632,14 +632,19 @@ func (f *pyFunc) Call(ctx context.Context, s *scope, c *Call) pyObject {
 		if a.Name != "" { // Named argument
 			name := a.Name
 			idx, present := f.argIndices[name]
-			s.Assert(present || f.kwargs, "Unknown argument to %s: %s", f.name, name)
+			if !present && !f.kwargs {
+				s.Error("Unknown argument to %s: %s", f.name, name)
+			}
 			if present {
 				name = f.args[idx]
 			}
 			s2.Set(name, f.validateType(s, idx, &a.Value))
 		} else {
-			s.NAssert(i >= len(f.args), "Too many arguments to %s", f.name)
-			s.NAssert(f.kwargsonly, "Function %s can only be called with keyword arguments", f.name)
+			if i >= len(f.args) {
+				s.Error("Too many arguments to %s", f.name)
+			} else if f.kwargsonly {
+				s.Error("Function %s can only be called with keyword arguments", f.name)
+			}
 			s2.Set(f.args[i], f.validateType(s, i, &a.Value))
 		}
 	}
