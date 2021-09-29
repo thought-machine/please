@@ -702,7 +702,11 @@ func (f *pyFunc) defaultArg(s *scope, i int, arg string) pyObject {
 	if f.constants[i] != nil {
 		return f.constants[i]
 	}
-	s.Assert(f.defaults != nil && f.defaults[i] != nil, "Missing required argument to %s: %s", f.name, arg)
+	// Deliberately does not use Assert since it doesn't get inlined here (weirdly it does
+	// in _many_ other places) and this function is pretty hot.
+	if f.defaults == nil || f.defaults[i] == nil {
+		s.Error("Missing required argument to %s: %s", f.name, arg)
+	}
 	return s.interpretExpression(f.defaults[i])
 }
 
