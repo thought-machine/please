@@ -56,7 +56,7 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 		select {
 		case event := <-watcher.Events:
 			log.Info("Event: %s", event)
-			if _, ok := files.Load(event.Name); !ok {
+			if _, present := files.Load(event.Name); !present {
 				log.Notice("Skipping notification for %s", event.Name)
 				continue
 			}
@@ -101,9 +101,9 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 			startWatch(dep)
 		}
 		pkg := state.Graph.PackageOrDie(target.Label)
-		if !files.Has(pkg.Filename) {
+		if _, present := files.Load(pkg.Filename); !present {
 			log.Notice("Adding watch on %s", pkg.Filename)
-			files.Set(pkg.Filename, struct{}{})
+			files.Store(pkg.Filename, struct{}{})
 		}
 		for _, subinclude := range pkg.Subincludes {
 			startWatch(state.Graph.TargetOrDie(subinclude))
@@ -117,11 +117,11 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 	fmt.Println("And now my watch begins...")
 }
 
-func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.BuildInput, dirs map[string]struct{}, files sync.Map) {
+func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.BuildInput, dirs map[string]struct{}, files *sync.Map) {
 	if _, ok := source.Label(); !ok {
 		for _, src := range source.Paths(state.Graph) {
 			if err := fs.Walk(src, func(src string, isDir bool) error {
-				files.Set(src, struct{}{})
+				files.Store(src, struct{}{})
 				if !path.IsAbs(src) {
 					files.Store("./"+src, struct{}{})
 				}
