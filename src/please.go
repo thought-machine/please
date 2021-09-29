@@ -505,7 +505,7 @@ var buildFunctions = map[string]func() int{
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
-				dir = getAbsolutePath(opts.Run.WD)
+				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
 			} else if opts.Run.InWD {
 				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
@@ -528,7 +528,7 @@ var buildFunctions = map[string]func() int{
 		if success, state := runBuild(unannotateLabels(opts.Run.Parallel.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
-				dir = getAbsolutePath(opts.Run.WD)
+				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
 			} else if opts.Run.InWD {
 				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
@@ -547,7 +547,7 @@ var buildFunctions = map[string]func() int{
 		if success, state := runBuild(unannotateLabels(opts.Run.Sequential.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
-				dir = getAbsolutePath(opts.Run.WD)
+				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
 			} else if opts.Run.InWD {
 				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
@@ -929,9 +929,9 @@ func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
 }
 
 // Get an absolute path from a relative path.
-func getAbsolutePath(path string) string {
+func getAbsolutePath(path string, here string) string {
 	if path[0] != '/' && path[0] != '~' {
-		return "/" + originalWorkingDirectory + "/" + path
+		return here + "/" + path
 	}
 	return path
 }
