@@ -38,8 +38,8 @@ type pyBool bool
 
 // True and False are the singletons representing those values.
 var (
-	True  pyBool = true
-	False pyBool = false
+	True  pyObject = pyBool(true)
+	False pyObject = pyBool(false)
 )
 
 // newPyBool creates a new bool. It's a minor optimisation to treat them as singletons
@@ -88,7 +88,7 @@ func (b pyBool) MarshalJSON() ([]byte, error) {
 type pyNone struct{}
 
 // None is the singleton representing None; there can be only one etc.
-var None = pyNone{}
+var None pyObject = pyNone{}
 
 func (n pyNone) Type() string {
 	return "none"
