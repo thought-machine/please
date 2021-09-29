@@ -306,6 +306,8 @@ func (s pyString) String() string {
 
 type pyList []pyObject
 
+var emptyList pyObject = make(pyList, 0, 0)  // want this to explicitly have zero capacity
+
 func (l pyList) Type() string {
 	return "list"
 }

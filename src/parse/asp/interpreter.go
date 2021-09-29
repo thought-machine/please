@@ -524,6 +524,10 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 	} else if expr.None {
 		return None
 	} else if expr.List != nil {
+		// Special-case the empty list (which is a fairly common and safe case)
+		if expr.List.Comprehension == nil && len(expr.List.Values) == 0 {
+			return emptyList
+		}
 		return s.interpretList(expr.List)
 	} else if expr.Dict != nil {
 		return s.interpretDict(expr.Dict)
