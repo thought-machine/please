@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -530,6 +531,7 @@ type pyFunc struct {
 	constants  []pyObject
 	types      [][]string
 	code       []*Statement
+	argPool    *sync.Pool
 	// If the function is implemented natively, this is the pointer to its real code.
 	nativeCode func(*scope, []pyObject) pyObject
 	// If the function has been bound as a member function, this is the implicit self argument.
@@ -662,7 +664,18 @@ func (f *pyFunc) Call(ctx context.Context, s *scope, c *Call) pyObject {
 // For performance reasons these are done differently - rather then receiving a pointer to a scope
 // they receive their arguments as a slice, in which unpassed arguments are nil.
 func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
-	args := make([]pyObject, len(f.args))
+	var args []pyObject
+	if f.argPool != nil && !f.varargs && !f.kwargs {
+		args = f.argPool.Get().([]pyObject)
+		defer func() {
+			for i := range args {
+				args[i] = nil
+			}
+			f.argPool.Put(args)
+		}()
+	} else {
+		args = make([]pyObject, len(f.args))
+	}
 	offset := 0
 	if f.self != nil {
 		args[0] = f.self

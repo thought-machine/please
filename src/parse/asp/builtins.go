@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
@@ -130,6 +131,11 @@ func setNativeCode(s *scope, name string, code nativeFunc) *pyFunc {
 	f := s.Lookup(name).(*pyFunc)
 	f.nativeCode = code
 	f.code = nil // Might as well save a little memory here
+	f.argPool = &sync.Pool{
+		New: func() interface{} {
+			return make([]pyObject, len(f.args))
+		},
+	}
 	return f
 }
 
