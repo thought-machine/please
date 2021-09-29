@@ -510,6 +510,7 @@ var buildFunctions = map[string]func() int{
 					dir = originalWorkingDirectory
 				}
 			} else if opts.Run.InWD {
+				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
 			}
 
@@ -535,6 +536,7 @@ var buildFunctions = map[string]func() int{
 					dir = originalWorkingDirectory
 				}
 			} else if opts.Run.InWD {
+				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
 			}
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
@@ -556,6 +558,7 @@ var buildFunctions = map[string]func() int{
 					dir = originalWorkingDirectory
 				}
 			} else if opts.Run.InWD {
+				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
 			}
 
