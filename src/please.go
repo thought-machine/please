@@ -505,10 +505,7 @@ var buildFunctions = map[string]func() int{
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
-				dir = opts.Run.WD
-				if dir == "." {
-					dir = originalWorkingDirectory
-				}
+				dir = getAbsolutePath(opts.Run.WD)
 			} else if opts.Run.InWD {
 				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
@@ -531,10 +528,7 @@ var buildFunctions = map[string]func() int{
 		if success, state := runBuild(unannotateLabels(opts.Run.Parallel.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
-				dir = opts.Run.WD
-				if dir == "." {
-					dir = originalWorkingDirectory
-				}
+				dir = getAbsolutePath(opts.Run.WD)
 			} else if opts.Run.InWD {
 				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
@@ -553,10 +547,7 @@ var buildFunctions = map[string]func() int{
 		if success, state := runBuild(unannotateLabels(opts.Run.Sequential.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
-				dir = opts.Run.WD
-				if dir == "." {
-					dir = originalWorkingDirectory
-				}
+				dir = getAbsolutePath(opts.Run.WD)
 			} else if opts.Run.InWD {
 				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
@@ -935,6 +926,14 @@ type ConfigOverrides map[string]string
 // Complete implements the flags.Completer interface.
 func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
 	return core.DefaultConfiguration().Completions(match)
+}
+
+// Get an absolute path from a relative path.
+func getAbsolutePath(path string) string {
+	if path[0] != '/' && path[0] != '~' {
+		return "/" + originalWorkingDirectory + "/" + path
+	}
+	return path
 }
 
 // Used above as a convenience wrapper for query functions.
