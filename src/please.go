@@ -506,6 +506,9 @@ var buildFunctions = map[string]func() int{
 			var dir string
 			if opts.Run.WD != "" {
 				dir = opts.Run.WD
+				if dir == "." {
+					dir = originalWorkingDirectory
+				}
 			} else if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
@@ -528,6 +531,9 @@ var buildFunctions = map[string]func() int{
 			var dir string
 			if opts.Run.WD != "" {
 				dir = opts.Run.WD
+				if dir == "." {
+					dir = originalWorkingDirectory
+				}
 			} else if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
@@ -546,6 +552,9 @@ var buildFunctions = map[string]func() int{
 			var dir string
 			if opts.Run.WD != "" {
 				dir = opts.Run.WD
+				if dir == "." {
+					dir = originalWorkingDirectory
+				}
 			} else if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
