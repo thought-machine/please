@@ -255,22 +255,29 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 			}
 		}
 
-		if target.Debug != nil {
-			for _, tool := range target.AllDebugTools() {
-				fullPaths := tool.FullPaths(graph)
-				for i, dataPath := range tool.Paths(graph) {
-					pushOut(fullPaths[i], dataPath)
-				}
-			}
-		} else if target.Test != nil {
+		if target.Test != nil {
 			for _, tool := range target.AllTestTools() {
 				fullPaths := tool.FullPaths(graph)
-				for i, dataPath := range tool.Paths(graph) {
-					pushOut(fullPaths[i], dataPath)
+				for i, toolPath := range tool.Paths(graph) {
+					pushOut(fullPaths[i], toolPath)
 				}
 			}
 		}
 
+		if target.Debug != nil {
+			for _, data := range target.AllDebugData() {
+				fullPaths := data.FullPaths(graph)
+				for i, dataPath := range data.Paths(graph) {
+					pushOut(fullPaths[i], dataPath)
+				}
+			}
+			for _, tool := range target.AllDebugTools() {
+				fullPaths := tool.FullPaths(graph)
+				for i, toolPath := range tool.Paths(graph) {
+					pushOut(fullPaths[i], toolPath)
+				}
+			}
+		}
 		close(ch)
 	}()
 	return ch

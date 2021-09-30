@@ -16,6 +16,7 @@ import (
 	"github.com/thought-machine/please/tools/please_go_embed/embed"
 )
 
+const baseWorkDir = "_build"
 const ldFlagsFile = "LD_FLAGS"
 
 // PleaseGoInstall implements functionality similar to `go install` however it works with import configs to avoid a
@@ -61,7 +62,7 @@ func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags,
 		moduleName:       moduleName,
 		importConfig:     importConfig,
 		outDir:           out,
-		trimPath:         trimPath,
+		trimPath:         filepath.Join(trimPath, baseWorkDir),
 		collectedLdFlags: map[string]struct{}{},
 
 		additionalLDFlags: ldFlags,
@@ -316,7 +317,12 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 	}
 
 	out := outPath(install.outDir, target)
-	workDir := fmt.Sprintf("_build/%s", target)
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Unable to find working directory: %s", err)
+	}
+	relativePkgDir := strings.TrimPrefix(pkg.Dir, wd)
+	workDir := filepath.Join(baseWorkDir, relativePkgDir)
 
 	if err := install.prepWorkdir(pkg, workDir, out); err != nil {
 		return fmt.Errorf("failed to prepare working directory for %s: %w", target, err)
@@ -385,7 +391,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			return err
 		}
 
-		if err := install.tc.GoAsmCompile(workDir, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis); err != nil {
+		if err := install.tc.GoAsmCompile(workDir, target, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis); err != nil {
 			return err
 		}
 
@@ -396,7 +402,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 
 		objFiles = append(objFiles, asmObjFiles...)
 	} else {
-		err := install.tc.GoCompile(workDir, install.importConfig, out, install.trimPath, embedConfig, goFiles)
+		err := install.tc.GoCompile(workDir, target, install.importConfig, out, install.trimPath, embedConfig, goFiles)
 		if err != nil {
 			return err
 		}

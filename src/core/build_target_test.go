@@ -361,8 +361,8 @@ func TestAllDataNamed(t *testing.T) {
 	target.AddNamedDatum("hdrs", FileLabel{File: "file.h"})
 
 	assert.ElementsMatch(t, []BuildInput{FileLabel{File: "file.c"}, FileLabel{File: "file.h"}}, target.AllData())
-	assert.Equal(t, target.namedData["c"], []BuildInput{FileLabel{File: "file.c"}})
-	assert.Equal(t, target.namedData["hdrs"], []BuildInput{FileLabel{File: "file.h"}})
+	assert.Equal(t, target.NamedData["c"], []BuildInput{FileLabel{File: "file.c"}})
+	assert.Equal(t, target.NamedData["hdrs"], []BuildInput{FileLabel{File: "file.h"}})
 }
 
 func TestToolPath(t *testing.T) {

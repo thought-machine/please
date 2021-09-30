@@ -21,6 +21,7 @@ const (
 	debugCMDBuildRuleArgIdx
 	srcsBuildRuleArgIdx
 	dataBuildRuleArgIdx
+	debugDataBuildRuleArgIdx
 	outsBuildRuleArgIdx
 	depsBuildRuleArgIdx
 	exportedDepsBuildRuleArgIdx
@@ -251,6 +252,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	}
 
 	if t.Debug != nil {
+		addMaybeNamed(s, "debug_data", args[debugDataBuildRuleArgIdx], t.AddDebugDatum, t.AddDebugNamedDatum, false, false)
 		addMaybeNamedOrString(s, "debug_tools", args[debugToolsBuildRuleArgIdx], t.AddDebugTool, t.AddNamedDebugTool, true, true)
 	}
 }

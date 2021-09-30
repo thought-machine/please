@@ -73,12 +73,14 @@ var KnownFields = map[string]bool{
 	// Debug fields don't contribute to any hash
 	"Debug":            true,
 	"Debug.Command":    true,
+	"Debug.data":       true,
+	"Debug.namedData":  true,
 	"Debug.tools":      true,
 	"Debug.namedTools": true,
 
 	// These only contribute to the runtime hash, not at build time.
 	"Data":              true,
-	"namedData":         true,
+	"NamedData":         true,
 	"ContainerSettings": true,
 
 	// These would ideally not contribute to the hash, but we need that at present

@@ -103,7 +103,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
 	}
 	// Tools
-	env = append(env, toolsEnv(state, target.AllTools(), target.namedTools, abs)...)
+	env = append(env, toolsEnv(state, target.AllTools(), target.namedTools, "", abs)...)
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
 		secrets := "SECRETS=" + fs.ExpandHomePath(strings.Join(target.Secrets, ":"))
@@ -228,16 +228,21 @@ func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) Bui
 func RuntimeEnvironment(state *BuildState, target *BuildTarget, abs, inTmpDir bool) BuildEnv {
 	env := TargetEnvironment(state, target)
 
-	if target.Debug != nil {
-		// Debug tools
-		env = append(env, toolsEnv(state, target.AllDebugTools(), target.Debug.namedTools, abs)...)
-	} else if target.IsTest() {
+	// Data
+	env = append(env, dataEnv(state, target.AllData(), target.NamedData, "", inTmpDir)...)
+
+	if target.IsTest() {
 		// Test tools
-		env = append(env, toolsEnv(state, target.AllTestTools(), target.NamedTestTools(), abs)...)
+		env = append(env, toolsEnv(state, target.AllTestTools(), target.NamedTestTools(), "", abs)...)
 	}
 
-	// Data
-	env = append(env, dataEnv(state, target, inTmpDir)...)
+	if target.Debug != nil {
+		prefix := "DEBUG_"
+		// Debug data
+		env = append(env, dataEnv(state, target.AllDebugData(), target.DebugNamedData(), prefix, inTmpDir)...)
+		// Debug tools
+		env = append(env, toolsEnv(state, target.AllDebugTools(), target.Debug.namedTools, prefix, abs)...)
+	}
 
 	return env
 }
@@ -252,47 +257,38 @@ func resolveOut(out string, dir string, sandbox bool) string {
 }
 
 // Creates tool-related env variables
-func toolsEnv(state *BuildState, allTools []BuildInput, namedTools map[string][]BuildInput, abs bool) BuildEnv {
+func toolsEnv(state *BuildState, allTools []BuildInput, namedTools map[string][]BuildInput, prefix string, abs bool) BuildEnv {
 	env := BuildEnv{
-		"TOOLS=" + strings.Join(toolPaths(state, allTools, abs), " "),
+		prefix + "TOOLS=" + strings.Join(toolPaths(state, allTools, abs), " "),
 	}
 	if len(allTools) == 1 {
-		env = append(env, "TOOL="+toolPath(state, allTools[0], abs))
+		env = append(env, prefix+"TOOL="+toolPath(state, allTools[0], abs))
 	}
 	for name, tools := range namedTools {
-		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
+		env = append(env, prefix+"TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
 	}
 	return env
 }
 
 // Creates data-related env variables
-func dataEnv(state *BuildState, target *BuildTarget, inTmpDir bool) BuildEnv {
-	var env BuildEnv
-	if len(target.Data) > 0 {
-		if inTmpDir {
-			env = append(env, "DATA="+strings.Join(target.AllDataPaths(state.Graph), " "))
-		} else {
-			env = append(env, "DATA="+strings.Join(runtimeDataPaths(state.Graph, target.AllData()), " "))
-		}
+func dataEnv(state *BuildState, allData []BuildInput, namedData map[string][]BuildInput, prefix string, inTmpDir bool) BuildEnv {
+	env := BuildEnv{
+		prefix + "DATA=" + strings.Join(runtimeDataPaths(state.Graph, allData, !inTmpDir), " "),
 	}
-	if target.namedData != nil {
-		for name, data := range target.namedData {
-			var paths []string
-			if inTmpDir {
-				paths = target.SourcePaths(state.Graph, data)
-			} else {
-				paths = runtimeDataPaths(state.Graph, data)
-			}
-			env = append(env, "DATA_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
-		}
+	for name, data := range namedData {
+		env = append(env, prefix+"DATA_"+strings.ToUpper(name)+"="+strings.Join(runtimeDataPaths(state.Graph, data, !inTmpDir), " "))
 	}
 	return env
 }
 
-func runtimeDataPaths(graph *BuildGraph, data []BuildInput) []string {
+func runtimeDataPaths(graph *BuildGraph, data []BuildInput, fullPath bool) []string {
 	paths := make([]string, 0, len(data))
 	for _, in := range data {
-		paths = append(paths, in.FullPaths(graph)...)
+		if fullPath {
+			paths = append(paths, in.FullPaths(graph)...)
+		} else {
+			paths = append(paths, in.Paths(graph)...)
+		}
 	}
 	return paths
 }

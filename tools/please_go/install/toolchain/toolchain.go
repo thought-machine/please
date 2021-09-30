@@ -51,25 +51,25 @@ func (tc *Toolchain) CGO(sourceDir string, objectDir string, cFlags []string, cg
 }
 
 // GoCompile will compile the go sources and the generated .cgo1.go sources for the CGO files (if any)
-func (tc *Toolchain) GoCompile(dir, importcfg, out, trimpath, embedCfg string, goFiles []string) error {
+func (tc *Toolchain) GoCompile(dir, importpath, importcfg, out, trimpath, embedCfg string, goFiles []string) error {
 	if trimpath != "" {
 		trimpath = fmt.Sprintf("-trimpath %s", trimpath)
 	}
 	if embedCfg != "" {
 		embedCfg = fmt.Sprintf("-embedcfg %s", embedCfg)
 	}
-	return tc.Exec.Run("%s tool compile -pack %s %s -importcfg %s -o %s %s", tc.GoTool, trimpath, embedCfg, importcfg, out, FullPaths(goFiles, dir))
+	return tc.Exec.Run("%s tool compile -pack %s %s -importcfg %s -p %s -o %s %s", tc.GoTool, trimpath, embedCfg, importcfg, importpath, out, FullPaths(goFiles, dir))
 }
 
 // GoAsmCompile will compile the go sources linking to the the abi symbols generated from symabis()
-func (tc *Toolchain) GoAsmCompile(dir, importcfg, out, trimpath, embedCfg string, goFiles []string, asmH, symabys string) error {
+func (tc *Toolchain) GoAsmCompile(dir, importpath, importcfg, out, trimpath, embedCfg string, goFiles []string, asmH, symabys string) error {
 	if trimpath != "" {
 		trimpath = fmt.Sprintf("-trimpath %s", trimpath)
 	}
 	if embedCfg != "" {
 		embedCfg = fmt.Sprintf("-embedcfg %s", embedCfg)
 	}
-	return tc.Exec.Run("%s tool compile -pack %s %s -importcfg %s -asmhdr %s -symabis %s -o %s %s", tc.GoTool, embedCfg, trimpath, importcfg, asmH, symabys, out, FullPaths(goFiles, dir))
+	return tc.Exec.Run("%s tool compile -pack %s %s -importcfg %s -asmhdr %s -symabis %s -p %s -o %s %s", tc.GoTool, embedCfg, trimpath, importcfg, asmH, symabys, importpath, out, FullPaths(goFiles, dir))
 }
 
 // CCompile will compile c sources and return the object files that will be generated
