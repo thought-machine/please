@@ -181,7 +181,8 @@ var opts struct {
 	Run struct {
 		Env        bool   `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
 		Rebuild    bool   `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
-		InWD       bool   `long:"in_wd" description:"When running locally, stay in the original working directory."`
+		InWD       bool   `long:"in_wd" description:"Deprecated in favour of --wd=/path/to/this/directory. When running locally, stay in the original working directory."`
+		WD         string `long:"wd" description:"The working directory in which to run the target."`
 		InTempDir  bool   `long:"in_tmp_dir" description:"Runs in a temp directory, setting env variables and copying in runtime data similar to tests."`
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
@@ -521,7 +522,9 @@ var buildFunctions = map[string]func() int{
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
-			if opts.Run.InWD {
+			if opts.Run.WD != "" {
+				dir = opts.Run.WD
+			} else if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
 
@@ -541,7 +544,9 @@ var buildFunctions = map[string]func() int{
 	"parallel": func() int {
 		if success, state := runBuild(unannotateLabels(opts.Run.Parallel.PositionalArgs.Targets), true, false, false); success {
 			var dir string
-			if opts.Run.InWD {
+			if opts.Run.WD != "" {
+				dir = opts.Run.WD
+			} else if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
@@ -557,7 +562,9 @@ var buildFunctions = map[string]func() int{
 	"sequential": func() int {
 		if success, state := runBuild(unannotateLabels(opts.Run.Sequential.PositionalArgs.Targets), true, false, false); success {
 			var dir string
-			if opts.Run.InWD {
+			if opts.Run.WD != "" {
+				dir = opts.Run.WD
+			} else if opts.Run.InWD {
 				dir = originalWorkingDirectory
 			}
 
@@ -1021,8 +1028,12 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
 
-	if opts.Run.InTempDir && opts.Run.InWD {
+	if opts.Run.InTempDir && opts.Run.WD != "" {
+		log.Fatal("Can't use both --in_temp_dir and --wd at the same time")
+	} else if opts.Run.InTempDir && opts.Run.InWD {
 		log.Fatal("Can't use both --in_temp_dir and --in_wd at the same time")
+	} else if opts.Run.WD != "" && opts.Run.InWD {
+		log.Fatal("Can't use both --in_wd and --wd at the same time. --in_wd is deprecated in favour of --wd.")
 	}
 
 	runPlease(state, targets)

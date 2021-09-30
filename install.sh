@@ -12,6 +12,15 @@ if [ ! -f plz-out/bin/src/please ]; then
 fi
 
 DEST="${HOME}/.please"
+
+# Try to read the local config, if it exists.
+if [ -f .plzconfig.local ]; then
+    if grep -i '^location' .plzconfig.local > /dev/null; then
+        DEST="`grep -i '^location' .plzconfig.local | cut -d '=' -f 2 | tr -d ' '`"
+    fi
+fi
+
+
 mkdir -p ${DEST}
 OUTPUTS="`plz-out/bin/src/please query outputs //package:installed_files`"
 for OUTPUT in $OUTPUTS; do
@@ -23,7 +32,7 @@ done
 ln -sf "${DEST}/please" "${DEST}/plz"
 chmod 0664 "${DEST}/junit_runner.jar"
 
-echo "Please installed"
+echo "Please installed into $DEST"
 
 if ! hash plz 2>/dev/null; then
     echo "You might want to run ln -s ~/.please/please /usr/local/bin/plz or add ~/.please to your PATH."

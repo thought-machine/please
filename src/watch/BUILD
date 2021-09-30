@@ -7,7 +7,6 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/run",
-        "//third_party/go:concurrent-map",
         "//third_party/go:fsnotify",
         "//third_party/go:logging",
     ],

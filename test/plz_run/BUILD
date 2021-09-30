@@ -58,3 +58,23 @@ please_repo_e2e_test(
     plz_command = "plz test //src:_add_data_file_and_target",
     repo = "test_repo",
 )
+
+# Test --wd flag changes directory and outputs there
+please_repo_e2e_test(
+    name = "test_wd_flag",
+    expected_output = {
+        "test_wd/guava.txt": "guava",
+    },
+    plz_command = "mkdir test_wd; plz run --wd test_wd //src:write_to_file",
+    repo = "test_repo",
+)
+
+# Test that --wd=. and --in_wd work the same
+please_repo_e2e_test(
+    name = "test_wd_here_works_like_in_wd",
+    expected_output = {
+        "guava.txt": "guava\nguava",
+    },
+    plz_command = "plz run --wd=. //src:write_to_file; plz run --in_wd //src:write_to_file",
+    repo = "test_repo",
+)

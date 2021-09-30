@@ -72,7 +72,7 @@ const (
 // createTarget creates a new build target as part of build_rule().
 func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	isTruthy := func(i int) bool {
-		return args[i] != nil && args[i] != None && (args[i] == &True || args[i].IsTruthy())
+		return args[i] != nil && args[i] != None && args[i].IsTruthy()
 	}
 	name := string(args[nameBuildRuleArgIdx].(pyString))
 	testCmd := args[testCMDBuildRuleArgIdx]

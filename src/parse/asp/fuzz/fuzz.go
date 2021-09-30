@@ -62,7 +62,7 @@ func isWhitelisted(err error) bool {
 func Fuzz(data []byte) int {
 	// This lot is copied from src/parse/init.go to load all the builtins.
 	p := asp.NewParser(core.NewDefaultBuildState())
-	dir, _ := rules.AllAssets()
+	dir, _ := rules.AllAssets(map[string]struct{}{})
 	sort.Strings(dir)
 	for _, filename := range dir {
 		src, _ := rules.ReadAsset(filename)
