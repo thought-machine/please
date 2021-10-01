@@ -1020,14 +1020,31 @@ func (state *BuildState) findArch(arch cli.Arch) *BuildState {
 	return nil
 }
 
+func copyPlugin(plugin Plugin) *Plugin {
+	values := map[string][]string{}
+	for k, v := range plugin.ExtraValues {
+		values[k] = v
+	}
+	plugin.ExtraValues = values
+	return &plugin
+}
+
+func copyConfig(config Configuration) *Configuration {
+	config.buildEnvStored = &storedBuildEnv{}
+	plugins := map[string]*Plugin{}
+	for name, plugin := range config.Plugin {
+		plugins[name] = copyPlugin(*plugin)
+	}
+	config.Plugin = plugins
+	return &config
+}
+
 // forConfig creates a copy of this BuildState based on the given config files.
 func (state *BuildState) forConfig(config ...string) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	// Duplicate & alter configuration
-	c := &Configuration{}
-	*c = *state.Config
-	c.buildEnvStored = &storedBuildEnv{}
+	c := copyConfig(*state.Config)
 	for _, filename := range config {
 		if err := readConfigFile(c, filename); err != nil {
 			log.Fatalf("Failed to read config file %s: %s", filename, err)

@@ -915,25 +915,25 @@ func newConfig(state *core.BuildState) *pyConfig {
 	c["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
 	c["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 
-	loadPluginConfig(state, c)
+	loadPluginConfig(state.Config, state, c)
 
 	return &pyConfig{base: c}
 }
 
-func loadPluginConfig(state *core.BuildState, c pyDict) {
-	pluginName := state.Config.PluginDefinition.Name
+func loadPluginConfig(subrepoConfig *core.Configuration, packageState *core.BuildState, c pyDict) {
+	pluginName := subrepoConfig.PluginDefinition.Name
 	if pluginName == "" {
 		return
 	}
 
 	extraVals := map[string][]string{}
-	if config := state.Config.Plugin[pluginName]; config != nil {
+	if config := packageState.Config.Plugin[pluginName]; config != nil {
 		extraVals = config.ExtraValues
 	}
 
 	pluginNamespace := pyDict{}
-	contextPackage := &core.Package{SubrepoName: state.CurrentSubrepo}
-	configValueDefinitions := state.Config.PluginConfig
+	contextPackage := &core.Package{SubrepoName: packageState.CurrentSubrepo}
+	configValueDefinitions := subrepoConfig.PluginConfig
 	for key, definition := range configValueDefinitions {
 		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, definition.ConfigKey)
 		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]

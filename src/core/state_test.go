@@ -149,3 +149,18 @@ func addTargetDeps(state *BuildState, pkg *Package, name string, deps ...string)
 	state.Graph.AddTarget(target)
 	return target
 }
+
+
+func TestCopyPlugin(t *testing.T) {
+	plugin := &Plugin{
+		ExtraValues: map[string][]string{
+			"foo": {"foo"},
+		},
+	}
+
+	newPlugin := copyPlugin(*plugin)
+
+	newPlugin.ExtraValues["foo"] = []string{"bar"}
+
+	assert.NotEqual(t, plugin.ExtraValues["foo"], newPlugin.ExtraValues["foo"])
+}
