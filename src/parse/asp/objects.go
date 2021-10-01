@@ -307,7 +307,7 @@ func (s pyString) String() string {
 
 type pyList []pyObject
 
-var emptyList pyObject = make(pyList, 0, 0)  // want this to explicitly have zero capacity
+var emptyList pyObject = make(pyList, 0, 0) // want this to explicitly have zero capacity
 
 func (l pyList) Type() string {
 	return "list"
@@ -670,7 +670,7 @@ func (f *pyFunc) Call(ctx context.Context, s *scope, c *Call) pyObject {
 // they receive their arguments as a slice, in which unpassed arguments are nil.
 func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
 	var args []pyObject
-	if f.argPool != nil && !f.varargs && !f.kwargs {
+	if f.argPool != nil {
 		args = f.argPool.Get().([]pyObject)
 		defer func() {
 			for i := range args {
