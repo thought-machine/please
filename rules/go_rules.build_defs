@@ -1711,15 +1711,15 @@ def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], de
     port = CONFIG.DEBUG.PORT
     if not port:
         # A CLI debug session needs access to the source files for improved UX.
-        debug_srcs_out = f"_{name}_debug_srcs"
+        debug_srcs_tar = f"_{name}_debug_srcs.tar"
         data = [
             build_rule(
                 name = name,
                 tag = "debug_srcs",
                 srcs = srcs,
-                # Grab all sources into a directory.
-                cmd = "find . -name \"*.go\" | cut -c 3- | xargs -I {} sh -c 'mkdir -p $OUTS/$(dirname {}) && cp {} $OUTS/$(dirname {})'",
-                outs = [debug_srcs_out],
+                # Archive all sources.
+                cmd = f"find . -name \"*.go\" | tar -cf {debug_srcs_tar} -T -",
+                outs = [debug_srcs_tar],
                 deps = deps,
                 test_only = test_only,
                 requires = ["go_src"],
@@ -1727,7 +1727,7 @@ def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], de
             )
         ]
         # Extract sources before running the debugger.
-        cmd = f"cp -R $PKG_DIR/{debug_srcs_out}/* . && {cmd}"
+        cmd = f"tar -xf $PKG_DIR/{debug_srcs_tar} && {cmd}"
     else:
         # Start a debug session where clients (i.e. IDEs) can connect to instead.
         cmd = f"{cmd} --headless=true --listen=localhost:{port} --api-version=2"
