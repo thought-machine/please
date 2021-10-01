@@ -450,14 +450,6 @@ go_module(
 )
 
 go_module(
-    name = "concurrent-map",
-    licences = ["MIT"],
-    module = "github.com/streamrail/concurrent-map",
-    version = "v0.0.0-20160823150647-8bf1e9bacbf6",
-    visibility = ["PUBLIC"],
-)
-
-go_module(
     name = "grpc-middleware",
     install = [
         "retry",

@@ -201,14 +201,19 @@ func pkg(s *scope, args []pyObject) pyObject {
 		configVal := s.config.Get(k, nil)
 		s.Assert(configVal != nil, "error calling package(): %s is not a known config value", k)
 
-		// Merge the config value together for dictionaries
+		// Merge in the existing config for dictionaries
 		if dict, ok := v.(pyDict); ok {
-			for k, v := range dict {
-				configVal.IndexAssign(pyString(k), v)
+			if existing, ok := configVal.(pyDict); ok {
+				for k, v := range existing {
+					if _, ok := dict[k]; !ok {
+						dict.IndexAssign(pyString(k), v)
+					}
+				}
+			} else {
+				s.Error("error calling package(): can't assign a dict to %s as it's not a dict", k)
 			}
-		} else {
-			s.config.IndexAssign(pyString(k), v)
 		}
+		s.config.IndexAssign(pyString(k), v)
 	}
 	return None
 }

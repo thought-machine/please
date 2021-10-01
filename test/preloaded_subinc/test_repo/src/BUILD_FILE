@@ -4,3 +4,5 @@ k8s_config(
         "service.yaml",
     ],
 )
+
+foo()

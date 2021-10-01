@@ -19,7 +19,7 @@ remote_file(
     ),
 )
 
-GO_DEPS_VERSION = "v0.3.0"
+GO_DEPS_VERSION = "v0.3.1"
 
 # TODO(jpoole): this should support other platforms than just linux_amd64
 remote_file(

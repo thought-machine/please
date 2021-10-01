@@ -1,3 +1,20 @@
+Version 16.10.1
+--------------
+    * Fix nil pointer when no cache is set up #2092
+    * Add feature flags for the java and python language plugins
+      to exclude these builtins #2098
+
+
+Version 16.10.0
+--------------
+    * Fix lockup when cross compiling with --arch #2085
+    * Enable overriding plugin config via `package()` #2083
+    * Add types to plugin config values #2086
+    * Deprecated `--in_wd` in favour of `--wd` which can take any
+      arbitrary path #2095
+    * Fix issue with multiple preloaded subincludes #2082
+
+
 Version 16.9.0
 --------------
     * Fix issue where aliases were being printed multiple times #2070
