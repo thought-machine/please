@@ -321,6 +321,8 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 	if err != nil {
 		log.Fatalf("Unable to find working directory: %s", err)
 	}
+	// We want `workDir` to maintain the same directory structure as `pkg.Dir`.
+	// This will ensure that source file location point to the right place when debugging.
 	relativePkgDir := strings.TrimPrefix(pkg.Dir, wd)
 	workDir := filepath.Join(baseWorkDir, relativePkgDir)
 
