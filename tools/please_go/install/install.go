@@ -385,13 +385,18 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 		}
 	}
 
+	importPath := target
+	if pkg.IsCommand() {
+		importPath = "main"
+	}
+
 	if len(pkg.SFiles) > 0 {
 		asmH, symabis, err := install.tc.Symabis(pkg.Dir, workDir, pkg.SFiles)
 		if err != nil {
 			return err
 		}
 
-		if err := install.tc.GoAsmCompile(workDir, target, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis); err != nil {
+		if err := install.tc.GoAsmCompile(workDir, importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis); err != nil {
 			return err
 		}
 
@@ -402,7 +407,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 
 		objFiles = append(objFiles, asmObjFiles...)
 	} else {
-		err := install.tc.GoCompile(workDir, target, install.importConfig, out, install.trimPath, embedConfig, goFiles)
+		err := install.tc.GoCompile(workDir, importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles)
 		if err != nil {
 			return err
 		}

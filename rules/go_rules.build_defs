@@ -1693,7 +1693,7 @@ def _debug_cmd(name:str, bin:str, flags:str, srcs:list, deps:list, test_only:boo
     port = CONFIG.DEBUG.PORT
     if not port:
         # A CLI debug session needs access to the source files for improved UX.
-        debug_srcs_out = f"{name}_debug_srcs"
+        debug_srcs_out = f"_{name}_debug_srcs"
         data = [
             build_rule(
                 name = name,

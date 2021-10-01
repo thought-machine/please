@@ -20,8 +20,8 @@ func TestMissingImport(t *testing.T) {
 	err := install.Install([]string{"missing_import"})
 	require.Error(t, err)
 	assert.Contains(t, []string{
-		"_build/example.com/missing_import/missing_import.go:3:8: could not import \"github.com/doesnt-exist\": open : no such file or directory\n", // go 1.17
-		"_build/example.com/missing_import/missing_import.go:3:8: can't find import: \"github.com/doesnt-exist\"\n",                                 // go 1.16
+		"_build/tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:8: could not import \"github.com/doesnt-exist\": open : no such file or directory\n", // go 1.17
+		"_build/tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:8: can't find import: \"github.com/doesnt-exist\"\n",                                 // go 1.16
 	}, stdOut.String())
 }
 
