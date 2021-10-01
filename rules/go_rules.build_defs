@@ -570,7 +570,13 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
 
-    debug_cmd, debug_data, debug_tools = _debug_cmd(name, "./$OUT", "", _srcs, deps, test_only)
+    debug_cmd, debug_data, debug_tools = _debug_cmd(
+        name=name,
+        bin="./$OUT",
+        srcs=_srcs,
+        deps=deps,
+        test_only=test_only,
+    )
 
     return build_rule(
         name=name,
@@ -698,9 +704,10 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
-    test_cmd = '$TEST %s 2>&1 | tee $TMP_DIR/test.results' % flags
+    test_cmd = f'$TEST {flags} 2>&1 | tee $TMP_DIR/test.results'
+    worker_cmd = f'$(worker {worker})'
     if worker:
-        test_cmd = f'$(worker {worker}) && {test_cmd} '
+        test_cmd = f'{worker_cmd} && {test_cmd} '
         deps += [worker]
 
     if CONFIG.GO_TEST_ROOT_COMPAT:
@@ -709,7 +716,15 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         for out in test_outputs:
             test_cmd += f' && mv {out} $TMP_DIR/{out}'
 
-    debug_cmd, debug_data, debug_tools = _debug_cmd(name, "./$TEST", flags, srcs + [main_rule], deps, True)
+    debug_cmd, debug_data, debug_tools = _debug_cmd(
+        name = name,
+        bin = "./$TEST",
+        flags = flags,
+        pre_cmd = worker_cmd if worker else "",
+        srcs = srcs + [main_rule],
+        deps = deps,
+        test_only = True
+    )
 
     return build_rule(
         name = name,
@@ -1680,7 +1695,7 @@ def _get_ldflags_and_pkgconfig(name):
     return (ldflags, f'`pkg-config --libs {pkg_config}`') if pkg_config else (ldflags, '')
 
 
-def _debug_cmd(name:str, bin:str, flags:str, srcs:list, deps:list, test_only:bool):
+def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], deps:list=[], test_only:bool=False):
     if not CONFIG.get("DEBUG"):
         return "", None, None
 
@@ -1689,6 +1704,9 @@ def _debug_cmd(name:str, bin:str, flags:str, srcs:list, deps:list, test_only:boo
     tools = {
         'dlv': CONFIG.DELVE_TOOL
     }
+
+    if pre_cmd:
+        cmd = f"{pre_cmd} && {cmd}"
 
     port = CONFIG.DEBUG.PORT
     if not port:
