@@ -431,10 +431,14 @@ func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarg
 func addStrings(s *scope, name string, obj pyObject, f func(string)) {
 	if obj != nil && obj != None {
 		l, ok := asList(obj)
-		s.Assert(ok, "Argument %s must be a list, not %s", name, obj.Type())
+		if !ok {
+			s.Error("Argument %s must be a list, not %s", name, obj.Type())
+		}
 		for _, li := range l {
 			str, ok := li.(pyString)
-			s.Assert(ok || li == None, "%s must be strings", name)
+			if !ok && li != None {
+				s.Error("%s must be strings", name)
+			}
 			if str != "" && li != None {
 				f(string(str))
 			}

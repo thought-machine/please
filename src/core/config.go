@@ -617,6 +617,15 @@ type Plugin struct {
 	ExtraValues map[string][]string `help:"A section of arbitrary key-value properties for the plugin." gcfg:"extra_values"`
 }
 
+func (plugin Plugin) copyPlugin() *Plugin {
+	values := map[string][]string{}
+	for k, v := range plugin.ExtraValues {
+		values[k] = v
+	}
+	plugin.ExtraValues = values
+	return &plugin
+}
+
 // A Size represents a named size in the config.
 type Size struct {
 	Timeout     cli.Duration `help:"Timeout for targets of this size"`
@@ -930,6 +939,16 @@ func (config *Configuration) NumRemoteExecutors() int {
 		return 0
 	}
 	return config.Remote.NumExecutors
+}
+
+func (config Configuration) copyConfig() *Configuration {
+	config.buildEnvStored = &storedBuildEnv{}
+	plugins := map[string]*Plugin{}
+	for name, plugin := range config.Plugin {
+		plugins[name] = plugin.copyPlugin()
+	}
+	config.Plugin = plugins
+	return &config
 }
 
 // A ConfigProfile is a string that knows how to handle completions given all the possible config file locations.
