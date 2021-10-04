@@ -215,13 +215,18 @@ func pkg(s *scope, args []pyObject) pyObject {
 		s.Assert(configVal != nil, "error calling package(): %s is not a known config value", k)
 
 		// Merge in the existing config for dictionaries
-		if dict, ok := v.(pyDict); ok {
-			if existing, ok := configVal.(pyDict); ok {
-				for k, v := range existing {
-					if _, ok := dict[k]; !ok {
-						dict.IndexAssign(pyString(k), v)
+		if overrides, ok := v.(pyDict); ok {
+			if pluginConfig, ok := configVal.(pyDict); ok {
+				newPluginConfig := pluginConfig.Copy()
+				for pluginKey, override := range overrides {
+					pluginKey = strings.ToUpper(pluginKey)
+					if _, ok := newPluginConfig[pluginKey]; !ok {
+						s.Error("error calling package(): %s.%s is not a known config value", k, pluginKey)
 					}
+
+					newPluginConfig.IndexAssign(pyString(pluginKey), override)
 				}
+				v = newPluginConfig
 			} else {
 				s.Error("error calling package(): can't assign a dict to %s as it's not a dict", k)
 			}
