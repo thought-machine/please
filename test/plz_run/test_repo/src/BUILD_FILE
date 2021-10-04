@@ -42,6 +42,11 @@ genrule(
 )
 
 sh_cmd(
-    name = "write_to_file",
-    cmd = "echo guava >> guava.txt",
+    name = "write_guava_to_file",
+    cmd = "echo guava >> fruit.txt",
+)
+
+sh_cmd(
+    name = "write_peach_to_file",
+    cmd = "echo peach >> fruit.txt",
 )

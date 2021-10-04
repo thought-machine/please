@@ -63,9 +63,19 @@ please_repo_e2e_test(
 please_repo_e2e_test(
     name = "test_wd_flag",
     expected_output = {
-        "test_wd/guava.txt": "guava",
+        "test_wd/fruit.txt": "guava",
     },
-    plz_command = "mkdir test_wd; plz run --wd test_wd //src:write_to_file",
+    plz_command = "mkdir test_wd; plz run --wd test_wd //src:write_guava_to_file",
+    repo = "test_repo",
+)
+
+# Test --wd works with relative paths
+please_repo_e2e_test(
+    name = "test_wd_relative_paths",
+    expected_output = {
+        "path/to/some/dir/fruit.txt": "guava",
+    },
+    plz_command = "mkdir -p path/to/some/dir/ && cd path/to && plz run --wd ./some/dir //src:write_guava_to_file && cd -",
     repo = "test_repo",
 )
 
@@ -73,8 +83,8 @@ please_repo_e2e_test(
 please_repo_e2e_test(
     name = "test_wd_here_works_like_in_wd",
     expected_output = {
-        "guava.txt": "guava\nguava",
+        "somedir/fruit.txt": "guava\npeach",
     },
-    plz_command = "plz run --wd=. //src:write_to_file; plz run --in_wd //src:write_to_file",
+    plz_command = "mkdir somedir && cd somedir && plz run --wd=. //src:write_guava_to_file && plz run --in_wd //src:write_peach_to_file && cd -",
     repo = "test_repo",
 )

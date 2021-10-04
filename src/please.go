@@ -523,8 +523,9 @@ var buildFunctions = map[string]func() int{
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
-				dir = opts.Run.WD
+				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
 			} else if opts.Run.InWD {
+				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
 			}
 
@@ -545,8 +546,9 @@ var buildFunctions = map[string]func() int{
 		if success, state := runBuild(unannotateLabels(opts.Run.Parallel.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
-				dir = opts.Run.WD
+				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
 			} else if opts.Run.InWD {
+				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
 			}
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
@@ -563,8 +565,9 @@ var buildFunctions = map[string]func() int{
 		if success, state := runBuild(unannotateLabels(opts.Run.Sequential.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
-				dir = opts.Run.WD
+				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
 			} else if opts.Run.InWD {
+				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
 			}
 
@@ -941,6 +944,14 @@ type ConfigOverrides map[string]string
 // Complete implements the flags.Completer interface.
 func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
 	return core.DefaultConfiguration().Completions(match)
+}
+
+// Get an absolute path from a relative path.
+func getAbsolutePath(path string, here string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(here, path)
 }
 
 // Used above as a convenience wrapper for query functions.
