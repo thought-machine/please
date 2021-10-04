@@ -1025,9 +1025,7 @@ func (state *BuildState) forConfig(config ...string) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	// Duplicate & alter configuration
-	c := &Configuration{}
-	*c = *state.Config
-	c.buildEnvStored = &storedBuildEnv{}
+	c := state.Config.copyConfig()
 	for _, filename := range config {
 		if err := readConfigFile(c, filename); err != nil {
 			log.Fatalf("Failed to read config file %s: %s", filename, err)
