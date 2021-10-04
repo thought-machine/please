@@ -157,7 +157,9 @@ func TestCopyPlugin(t *testing.T) {
 		},
 	}
 
-	newPlugin := copyPlugin(*plugin)
+	newPlugin := plugin.copyPlugin()
+
+	assert.False(t, plugin == newPlugin)
 
 	newPlugin.ExtraValues["foo"] = []string{"bar"}
 
