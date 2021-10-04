@@ -1,3 +1,18 @@
+Version 16.11.0
+--------------
+    * Fix some bugs around plugin configuration #2111 #2107
+    * Implemented a `plz debug` command that can be used to invoke
+      an interactive debugger, or a remote debugger via the `--port`
+      flag. This command only works for `go_binary()` and `go_test()`
+      commands right now but a python implementation is on the way.
+      #2069
+    * Fixed some issues around marking sources as done when preparing
+      inputs for a build action. This resolves some issues where certain
+      inputs were unexpectedly missing from the build directory. #2091
+    * Fixed issue with `plz run --wd=.` where relative paths were being
+      evaluated relative to the repo root not the working directory #2103
+
+
 Version 16.10.1
 --------------
     * Fix nil pointer when no cache is set up #2092
