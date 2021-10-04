@@ -110,7 +110,7 @@ func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) erro
 	if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
 		return err
 	}
-	if err := prepareSources(state.Graph, target); err != nil {
+	if err := prepareSources(state, state.Graph, target); err != nil {
 		return err
 	}
 	// This is important to catch errors here where we will recover the panic, rather
@@ -283,7 +283,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return err
 		}
 		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
-		if err := prepareSources(state.Graph, target); err != nil {
+		if err := prepareSources(state, state.Graph, target); err != nil {
 			return fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
 		}
 
@@ -564,8 +564,8 @@ func prepareDirectory(executor *process.Executor, directory string, remove bool)
 }
 
 // Symlinks the source files of this rule into its temp directory.
-func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
-	for source := range core.IterSources(graph, target, false) {
+func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core.BuildTarget) error {
+	for source := range core.IterSources(state, graph, target, false) {
 		if err := core.PrepareSourcePair(source); err != nil {
 			return err
 		}

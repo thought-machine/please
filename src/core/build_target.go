@@ -625,13 +625,13 @@ func (target *BuildTarget) ExternalDependencies() []*BuildTarget {
 	return ret
 }
 
-// BuildDependencies returns the build-time dependencies of this target (i.e. not data and not internal).
-func (target *BuildTarget) BuildDependencies() []*BuildTarget {
+// BuildDependencies returns the build-time dependencies of this target (i.e. not data, internal nor source).
+func (target *BuildTarget) BuildDependencies(state *BuildState) []*BuildTarget {
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
-		if !deps.data && !deps.internal {
+		if !deps.data && !deps.internal && (!state.Config.FeatureFlags.NoIterSourcesMarked || !deps.source) {
 			for _, dep := range deps.deps {
 				ret = append(ret, dep)
 			}

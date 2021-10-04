@@ -34,9 +34,12 @@ func TestCollapseHash2(t *testing.T) {
 }
 
 func TestIterSources(t *testing.T) {
+	state := NewDefaultBuildState()
+	state.Config.FeatureFlags.NoIterSourcesMarked = true
+
 	graph := buildGraph()
 	iterSources := func(label string) []SourcePair {
-		return toSlice(IterSources(graph, graph.TargetOrDie(ParseBuildLabel(label, "")), false))
+		return toSlice(IterSources(state, graph, graph.TargetOrDie(ParseBuildLabel(label, "")), false))
 	}
 
 	assert.Equal(t, []SourcePair{
@@ -71,6 +74,7 @@ func TestIterSources(t *testing.T) {
 
 	assert.Equal(t, []SourcePair{
 		{"src/parse/target1.go", "plz-out/tmp/src/parse/target1._build/src/parse/target1.go"},
+		{"plz-out/gen/src/build/target3.a", "plz-out/tmp/src/parse/target1._build/src/build/target3.a"},
 		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/parse/target1._build/src/core/target2.a"},
 		{"plz-out/gen/src/core/target1.a", "plz-out/tmp/src/parse/target1._build/src/core/target1.a"},
 	}, iterSources("//src/parse:target1"))
@@ -149,7 +153,8 @@ func buildGraph() *BuildGraph {
 	mt("//src/build:target1", "//src/core:target1")
 	mt("//src/output:output1", "//src/build:target1")
 	mt("//src/output:output2", "//src/output:output1", "//src/core:target2")
-	t1 := mt("//src/parse:target1", "//src/core:target2")
+	mt("//src/build:target3").AddSource(ParseBuildLabel("//src/core:target2", ""))
+	t1 := mt("//src/parse:target1", "//src/build:target3", "//src/core:target2")
 	t1.NeedsTransitiveDependencies = true
 	t1.OutputIsComplete = true
 	mt("//src/parse:target2", "//src/parse:target1")
