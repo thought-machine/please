@@ -1417,7 +1417,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         test_only = test_only,
         cmd = _generate_pkg_import_cfg_cmd('"$OUT"', '"$PKG_DIR"', True),
         outs = [f'{name}.importconfig'],
-        output_is_complete = True,
+        output_is_complete = True if CONFIG.FF_NO_ITER_SOURCES_MARKED else False,
     )
     exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
 

@@ -122,12 +122,12 @@ type SourcePair struct{ Src, Tmp string }
 // and rules that require transitive dependencies.
 // Yielded values are pairs of the original source location and its temporary location for this rule.
 // If includeTools is true it yields the target's tools as well.
-func IterSources(graph *BuildGraph, target *BuildTarget, includeTools bool) <-chan SourcePair {
+func IterSources(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools bool) <-chan SourcePair {
 	ch := make(chan SourcePair)
 	done := map[string]bool{}
 	tmpDir := target.TmpDir()
 	go func() {
-		for input := range IterInputs(graph, target, includeTools, false) {
+		for input := range IterInputs(state, graph, target, includeTools, false) {
 			fullPaths := input.FullPaths(graph)
 			for i, sourcePath := range input.Paths(graph) {
 				if tmpPath := path.Join(tmpDir, sourcePath); !done[tmpPath] {
@@ -142,7 +142,7 @@ func IterSources(graph *BuildGraph, target *BuildTarget, includeTools bool) <-ch
 }
 
 // IterInputs iterates all the inputs for a target.
-func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnly bool) <-chan BuildInput {
+func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnly bool) <-chan BuildInput {
 	ch := make(chan BuildInput)
 	done := map[BuildLabel]bool{}
 	var inner func(dependency *BuildTarget)
@@ -150,9 +150,17 @@ func IterInputs(graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnl
 		if dependency != target {
 			ch <- dependency.Label
 		}
+		if !state.Config.FeatureFlags.NoIterSourcesMarked {
+			// All the sources of this target now count as done
+			for _, src := range dependency.AllSources() {
+				if label, ok := src.Label(); ok && dependency.IsSourceOnlyDep(label) {
+					done[label] = true
+				}
+			}
+		}
 		done[dependency.Label] = true
 		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
-			for _, dep := range dependency.BuildDependencies() {
+			for _, dep := range dependency.BuildDependencies(state) {
 				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
 					if !done[dep2] && !dependency.IsTool(dep2) {
 						inner(graph.TargetOrDie(dep2))

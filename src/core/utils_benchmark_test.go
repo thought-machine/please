@@ -14,7 +14,7 @@ func BenchmarkIterInputsControl(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		for range IterInputs(state.Graph, target, true, false) {
+		for range IterInputs(state, state.Graph, target, true, false) {
 		}
 	}
 }
@@ -46,7 +46,7 @@ func BenchmarkIterInputsSimple(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		for range IterInputs(state.Graph, target, true, false) {
+		for range IterInputs(state, state.Graph, target, true, false) {
 		}
 	}
 }
@@ -80,7 +80,7 @@ func BenchmarkIterInputsNamedSources(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		for range IterInputs(state.Graph, target, true, false) {
+		for range IterInputs(state, state.Graph, target, true, false) {
 		}
 	}
 }

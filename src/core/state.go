@@ -1073,7 +1073,7 @@ func (state *BuildState) DownloadInputsIfNeeded(tid int, target *BuildTarget, ru
 // IterInputs returns a channel that iterates all the input files needed for a target.
 func (state *BuildState) IterInputs(target *BuildTarget, test bool) <-chan BuildInput {
 	if !test {
-		return IterInputs(state.Graph, target, true, target.IsFilegroup)
+		return IterInputs(state, state.Graph, target, true, target.IsFilegroup)
 	}
 	ch := make(chan BuildInput)
 	go func() {

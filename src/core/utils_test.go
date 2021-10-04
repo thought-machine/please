@@ -34,9 +34,12 @@ func TestCollapseHash2(t *testing.T) {
 }
 
 func TestIterSources(t *testing.T) {
+	state := NewDefaultBuildState()
+	state.Config.FeatureFlags.NoIterSourcesMarked = true
+
 	graph := buildGraph()
 	iterSources := func(label string) []SourcePair {
-		return toSlice(IterSources(graph, graph.TargetOrDie(ParseBuildLabel(label, "")), false))
+		return toSlice(IterSources(state, graph, graph.TargetOrDie(ParseBuildLabel(label, "")), false))
 	}
 
 	assert.Equal(t, []SourcePair{
