@@ -21,7 +21,7 @@ func main() {
 	srcs := flag.Args()
 
 	hash := sha1.New()
-	if !flag1 || !flag2{
+	if !flag1 || !flag2 {
 		panic("Did not specify compiler flags")
 	}
 

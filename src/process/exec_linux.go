@@ -10,7 +10,7 @@ import (
 // We set Pdeathsig to try to make sure commands don't outlive us if we die.
 // N.B. This does not start the command - the caller must handle that (or use one
 //      of the other functions which are higher-level interfaces).
-func (e *Executor) ExecCommand(sandbox SandboxConfig, command string, args ...string) *exec.Cmd {
+func (e *Executor) ExecCommand(sandbox SandboxConfig, foreground bool, command string, args ...string) *exec.Cmd {
 	shouldNamespace := e.namespace == NamespaceAlways || (e.namespace == NamespaceSandbox && sandbox != NoSandbox)
 
 	cmd := exec.Command(command, args...)
@@ -37,8 +37,9 @@ func (e *Executor) ExecCommand(sandbox SandboxConfig, command string, args ...st
 	}
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGHUP,
-		Setpgid:   true,
+		Pdeathsig:  syscall.SIGHUP,
+		Setpgid:    true,
+		Foreground: foreground,
 	}
 
 	// If we have any sort of sandboxing set up, we should always namespace, however we only namespace mount and/or net if

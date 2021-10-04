@@ -258,12 +258,26 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 		if target.Test != nil {
 			for _, tool := range target.AllTestTools() {
 				fullPaths := tool.FullPaths(graph)
-				for i, dataPath := range tool.Paths(graph) {
-					pushOut(fullPaths[i], dataPath)
+				for i, toolPath := range tool.Paths(graph) {
+					pushOut(fullPaths[i], toolPath)
 				}
 			}
 		}
 
+		if target.Debug != nil {
+			for _, data := range target.AllDebugData() {
+				fullPaths := data.FullPaths(graph)
+				for i, dataPath := range data.Paths(graph) {
+					pushOut(fullPaths[i], dataPath)
+				}
+			}
+			for _, tool := range target.AllDebugTools() {
+				fullPaths := tool.FullPaths(graph)
+				for i, toolPath := range tool.Paths(graph) {
+					pushOut(fullPaths[i], toolPath)
+				}
+			}
+		}
 		close(ch)
 	}()
 	return ch
@@ -346,6 +360,29 @@ func PrepareSourcePair(pair SourcePair) error {
 		return PrepareSource(pair.Src, pair.Tmp)
 	}
 	return PrepareSource(path.Join(RepoRoot, pair.Src), pair.Tmp)
+}
+
+// PrepareRuntimeDir prepares a directory with a target's runtime data for a command to be run on.
+func PrepareRuntimeDir(state *BuildState, target *BuildTarget, dir string) error {
+	if err := fs.ForceRemove(state.ProcessExecutor, dir); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(dir, fs.DirPermissions); err != nil {
+		return err
+	}
+
+	if err := state.EnsureDownloaded(target); err != nil {
+		return err
+	}
+
+	for out := range IterRuntimeFiles(state.Graph, target, true, dir) {
+		if err := PrepareSourcePair(out); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // CollapseHash combines our usual four-part hash into one by XOR'ing them together.

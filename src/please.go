@@ -25,6 +25,7 @@ import (
 	"github.com/thought-machine/please/src/clean"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/debug"
 	"github.com/thought-machine/please/src/exec"
 	"github.com/thought-machine/please/src/export"
 	"github.com/thought-machine/please/src/format"
@@ -167,6 +168,15 @@ var opts struct {
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
 		} `positional-args:"true"`
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
+
+	Debug struct {
+		Debugger string `short:"d" long:"debugger" description:"Name of supported debugger"`
+		Port     int    `short:"p" long:"port" description:"Debugging server listen port"`
+		Args     struct {
+			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
+			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target"`
+		} `positional-args:"true"`
+	} `command:"debug" description:"Starts a debug session on the given target if supported by its build definition."`
 
 	Run struct {
 		Env        bool   `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
@@ -475,6 +485,14 @@ var buildFunctions = map[string]func() int{
 		}
 		return toExitCode(success, state)
 	},
+	"debug": func() int {
+		success, state := runBuild([]core.BuildLabel{opts.Debug.Args.Target}, true, false, false)
+		if !success {
+			return toExitCode(success, state)
+		}
+
+		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Port != 0, opts.Debug.Args.Args)
+	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
 		if !success {
@@ -483,7 +501,7 @@ var buildFunctions = map[string]func() int{
 
 		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
 		dir := filepath.Join(core.OutDir, "exec", opts.Exec.Args.Target.Subrepo, opts.Exec.Args.Target.PackageName)
-		if code := exec.Exec(state, opts.Exec.Args.Target, dir, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
+		if code := exec.Exec(state, opts.Exec.Args.Target, dir, nil, opts.Exec.Args.OverrideCommandArgs, false, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
 			return code
 		}
 
@@ -964,10 +982,11 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 		config.Parse.NumThreads = opts.BuildFlags.NumThreads
 	}
+	debug := !opts.Debug.Args.Target.IsEmpty()
 	debugTests := opts.Test.Debug || opts.Cover.Debug
 	if opts.BuildFlags.Config != "" {
 		config.Build.Config = opts.BuildFlags.Config
-	} else if debugTests {
+	} else if debug || debugTests {
 		config.Build.Config = "dbg"
 	}
 	state := core.NewBuildState(config)
@@ -978,7 +997,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
-	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || opts.Tool.Args.Tool != ""
+	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || opts.Tool.Args.Tool != "" || debug
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
@@ -997,6 +1016,12 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if opts.BuildFlags.Arch.OS != "" {
 		state.TargetArch = opts.BuildFlags.Arch
+	}
+	if debug {
+		state.Debug = &core.Debug{
+			Debugger: opts.Debug.Debugger,
+			Port:     opts.Debug.Port,
+		}
 	}
 
 	if state.DebugTests && len(targets) != 1 {

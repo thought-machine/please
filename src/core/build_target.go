@@ -82,6 +82,19 @@ type TestFields struct {
 	NoOutput bool `name:"no_test_output"`
 }
 
+type DebugFields struct {
+	// Shell command to debug this rule.
+	Command string `name:"debug_cmd"`
+	// Debug data files of this rule.
+	data []BuildInput `name:"debug_data"`
+	// Debug data files of this rule by name.
+	namedData map[string][]BuildInput `name:"debug_data"`
+	// Tools available to the debug_cmd.
+	tools []BuildInput `name:"debug_tools"`
+	// Tools available to the debug_cmd by name.
+	namedTools map[string][]BuildInput `name:"debug_tools"`
+}
+
 // A BuildTarget is a representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 type BuildTarget struct {
@@ -104,7 +117,7 @@ type BuildTarget struct {
 	// Data files of this rule. Similar to sources but used at runtime, typically by tests.
 	Data []BuildInput `name:"data"`
 	// Data files of this rule by name.
-	namedData map[string][]BuildInput `name:"data"`
+	NamedData map[string][]BuildInput `name:"data"`
 	// Output files of this rule. All are paths relative to this package.
 	outputs []string `name:"outs"`
 	// Named output subsets of this rule. All are paths relative to this package but can be
@@ -120,7 +133,10 @@ type BuildTarget struct {
 	Command string `name:"cmd" hide:"filegroup"`
 	// Per-configuration shell commands to run.
 	Commands map[string]string `name:"cmd" hide:"filegroup"`
-	Test     *TestFields       `name:"test"`
+	// Test related fields.
+	Test *TestFields `name:"test"`
+	// Debug related fields.
+	Debug *DebugFields
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
 	// Description displayed while the command is building.
@@ -1186,20 +1202,18 @@ func (target *BuildTarget) addSecret(secrets []string, secret string) []string {
 // two conceptually different kinds of input.
 func (target *BuildTarget) AddNamedSource(name string, source BuildInput) {
 	if target.NamedSources == nil {
-		target.NamedSources = map[string][]BuildInput{name: target.addSource(nil, source)}
-	} else {
-		target.NamedSources[name] = target.addSource(target.NamedSources[name], source)
+		target.NamedSources = make(map[string][]BuildInput)
 	}
+	target.NamedSources[name] = target.addSource(target.NamedSources[name], source)
 }
 
 // AddNamedSecret adds a secret to the target which is tagged with a particular name.
 // These will be made available in the environment at runtime, with key-format "SECRETS_<NAME>".
 func (target *BuildTarget) AddNamedSecret(name string, secret string) {
 	if target.NamedSecrets == nil {
-		target.NamedSecrets = map[string][]string{name: target.addSecret(nil, secret)}
-	} else {
-		target.NamedSecrets[name] = target.addSecret(target.NamedSecrets[name], secret)
+		target.NamedSecrets = make(map[string][]string)
 	}
+	target.NamedSecrets[name] = target.addSecret(target.NamedSecrets[name], secret)
 }
 
 // AddTool adds a new tool to the target.
@@ -1218,6 +1232,17 @@ func (target *BuildTarget) AddTestTool(tool BuildInput) {
 	}
 }
 
+// AddDebugTool adds a new tool for debugging the target.
+func (target *BuildTarget) AddDebugTool(tool BuildInput) {
+	if target.Debug == nil {
+		target.Debug = new(DebugFields)
+	}
+	target.Debug.tools = append(target.Debug.tools, tool)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
+	}
+}
+
 // AllTestTools returns all the test tool paths for this rule.
 func (target *BuildTarget) AllTestTools() []BuildInput {
 	if target.Test.namedTools == nil {
@@ -1226,8 +1251,20 @@ func (target *BuildTarget) AllTestTools() []BuildInput {
 	return target.allBuildInputs(target.Test.tools, target.Test.namedTools)
 }
 
+// NamedTestTools returns all named test tools
 func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
 	return target.Test.namedTools
+}
+
+// AllDebugTools returns all the debug tool paths for this rule.
+func (target *BuildTarget) AllDebugTools() []BuildInput {
+	if target.Debug == nil {
+		return nil
+	}
+	if target.Debug.namedTools == nil {
+		return target.Debug.tools
+	}
+	return target.allBuildInputs(target.Debug.tools, target.Debug.namedTools)
 }
 
 // AddDatum adds a new item of data to the target.
@@ -1241,11 +1278,37 @@ func (target *BuildTarget) AddDatum(datum BuildInput) {
 
 // AddNamedDatum adds a data file to the target which is tagged with a particular name.
 func (target *BuildTarget) AddNamedDatum(name string, datum BuildInput) {
-	if target.namedData == nil {
-		target.namedData = map[string][]BuildInput{name: {datum}}
-	} else {
-		target.namedData[name] = append(target.namedData[name], datum)
+	if target.NamedData == nil {
+		target.NamedData = make(map[string][]BuildInput)
 	}
+	target.NamedData[name] = append(target.NamedData[name], datum)
+	if label, ok := datum.Label(); ok {
+		target.AddDependency(label)
+		target.dependencyInfo(label).data = true
+	}
+}
+
+// AddDebugDatum adds a new item of debug data to the target.
+func (target *BuildTarget) AddDebugDatum(datum BuildInput) {
+	if target.Debug == nil {
+		target.Debug = new(DebugFields)
+	}
+	target.Debug.data = append(target.Debug.data, datum)
+	if label, ok := datum.Label(); ok {
+		target.AddDependency(label)
+		target.dependencyInfo(label).data = true
+	}
+}
+
+// AddDebugNamedDatum adds a new item of debug data to the target which is tagged with a particular name.
+func (target *BuildTarget) AddDebugNamedDatum(name string, datum BuildInput) {
+	if target.Debug == nil {
+		target.Debug = new(DebugFields)
+	}
+	if target.Debug.namedData == nil {
+		target.Debug.namedData = make(map[string][]BuildInput)
+	}
+	target.Debug.namedData[name] = append(target.Debug.namedData[name], datum)
 	if label, ok := datum.Label(); ok {
 		target.AddDependency(label)
 		target.dependencyInfo(label).data = true
@@ -1255,25 +1318,37 @@ func (target *BuildTarget) AddNamedDatum(name string, datum BuildInput) {
 // AddNamedTool adds a new tool to the target.
 func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
 	if target.namedTools == nil {
-		target.namedTools = map[string][]BuildInput{name: {tool}}
-	} else {
-		target.namedTools[name] = append(target.namedTools[name], tool)
+		target.namedTools = make(map[string][]BuildInput)
 	}
+	target.namedTools[name] = append(target.namedTools[name], tool)
 	if label, ok := tool.Label(); ok {
 		target.AddDependency(label)
 	}
 }
 
-// AddNamedTestTool adds a new tool to the target.
+// AddNamedTestTool adds a new test tool to the target.
 func (target *BuildTarget) AddNamedTestTool(name string, tool BuildInput) {
 	if target.Test == nil {
 		target.Test = new(TestFields)
 	}
 	if target.Test.namedTools == nil {
-		target.Test.namedTools = map[string][]BuildInput{name: {tool}}
-	} else {
-		target.Test.namedTools[name] = append(target.Test.namedTools[name], tool)
+		target.Test.namedTools = make(map[string][]BuildInput)
 	}
+	target.Test.namedTools[name] = append(target.Test.namedTools[name], tool)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
+	}
+}
+
+// AddNamedDebugTool adds a new debug tool to the target.
+func (target *BuildTarget) AddNamedDebugTool(name string, tool BuildInput) {
+	if target.Debug == nil {
+		target.Debug = new(DebugFields)
+	}
+	if target.Debug.namedTools == nil {
+		target.Debug.namedTools = make(map[string][]BuildInput)
+	}
+	target.Debug.namedTools[name] = append(target.Debug.namedTools[name], tool)
 	if label, ok := tool.Label(); ok {
 		target.AddDependency(label)
 	}
@@ -1404,26 +1479,40 @@ func (target *BuildTarget) HasAbsoluteSource(source string) bool {
 	return target.HasSource(strings.TrimPrefix(source, target.Label.PackageName+"/"))
 }
 
-// AllData returns all the sources of this rule.
+// AllData returns all the runtime data of this rule.
 func (target *BuildTarget) AllData() []BuildInput {
-	if target.namedData == nil {
+	if target.NamedData == nil {
 		return target.Data
 	}
 
-	return target.allBuildInputs(target.Data, target.namedData)
+	return target.allBuildInputs(target.Data, target.NamedData)
 }
 
-func (target *BuildTarget) NamedData() map[string][]BuildInput {
-	return target.namedData
-}
-
-// AllDataPaths returns the paths for all the data of this target.
-func (target *BuildTarget) AllDataPaths(graph *BuildGraph) []string {
-	ret := make([]string, 0, len(target.Data))
-	for _, datum := range target.AllData() {
-		ret = append(ret, target.sourcePaths(graph, datum, BuildInput.Paths)...)
+// AllDebugData returns all the data for debugging this rule.
+func (target *BuildTarget) AllDebugData() []BuildInput {
+	if target.Debug == nil {
+		return nil
 	}
-	return ret
+	if target.Debug.namedData == nil {
+		return target.Debug.data
+	}
+	return target.allBuildInputs(target.Debug.data, target.Debug.namedData)
+}
+
+// DebugData returns unnamed data for debugging this rule.
+func (target *BuildTarget) DebugData() []BuildInput {
+	if target.Debug == nil {
+		return nil
+	}
+	return target.Debug.data
+}
+
+// DebugNamedData returns named data for debugging this rule.
+func (target *BuildTarget) DebugNamedData() map[string][]BuildInput {
+	if target.Debug == nil {
+		return nil
+	}
+	return target.Debug.namedData
 }
 
 // AllTools returns all the tools for this rule in some canonical order.
@@ -1536,8 +1625,7 @@ func (target *BuildTarget) AddTestOutput(output string) {
 // No attempt to deduplicate against unnamed outputs is currently made.
 func (target *BuildTarget) AddNamedOutput(name, output string) {
 	if target.namedOutputs == nil {
-		target.namedOutputs = map[string][]string{name: target.insert(nil, output)}
-		return
+		target.namedOutputs = make(map[string][]string)
 	}
 	target.namedOutputs[name] = target.insert(target.namedOutputs[name], output)
 }

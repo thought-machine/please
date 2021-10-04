@@ -197,7 +197,7 @@ func ForceRemove(exec *process.Executor, path string) error {
 		return nil
 	}
 
-	cmd := exec.ExecCommand(process.NoSandbox, "rm", "-rf", path)
+	cmd := exec.ExecCommand(process.NoSandbox, false, "rm", "-rf", path)
 
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to remove %s: %w\nOutput: %s", path, err, string(out))
