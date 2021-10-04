@@ -930,10 +930,10 @@ func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
 
 // Get an absolute path from a relative path.
 func getAbsolutePath(path string, here string) string {
-	if path[0] != '/' && path[0] != '~' {
-		return here + "/" + path
+	if filepath.IsAbs(path) {
+		return path
 	}
-	return path
+	return filepath.Join(here, path)
 }
 
 // Used above as a convenience wrapper for query functions.
