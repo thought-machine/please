@@ -1,3 +1,35 @@
+Version 16.11.0
+--------------
+    * Fix some bugs around plugin configuration #2111 #2107
+    * Implemented a `plz debug` command that can be used to invoke
+      an interactive debugger, or a remote debugger via the `--port`
+      flag. This command only works for `go_binary()` and `go_test()`
+      commands right now but a python implementation is on the way.
+      #2069
+    * Fixed some issues around marking sources as done when preparing
+      inputs for a build action. This resolves some issues where certain
+      inputs were unexpectedly missing from the build directory. #2091
+    * Fixed issue with `plz run --wd=.` where relative paths were being
+      evaluated relative to the repo root not the working directory #2103
+
+
+Version 16.10.1
+--------------
+    * Fix nil pointer when no cache is set up #2092
+    * Add feature flags for the java and python language plugins
+      to exclude these builtins #2098
+
+
+Version 16.10.0
+--------------
+    * Fix lockup when cross compiling with --arch #2085
+    * Enable overriding plugin config via `package()` #2083
+    * Add types to plugin config values #2086
+    * Deprecated `--in_wd` in favour of `--wd` which can take any
+      arbitrary path #2095
+    * Fix issue with multiple preloaded subincludes #2082
+
+
 Version 16.9.0
 --------------
     * Fix issue where aliases were being printed multiple times #2070

@@ -18,14 +18,17 @@ const (
 	nameBuildRuleArgIdx = iota
 	cmdBuildRuleArgIdx
 	testCMDBuildRuleArgIdx
+	debugCMDBuildRuleArgIdx
 	srcsBuildRuleArgIdx
 	dataBuildRuleArgIdx
+	debugDataBuildRuleArgIdx
 	outsBuildRuleArgIdx
 	depsBuildRuleArgIdx
 	exportedDepsBuildRuleArgIdx
 	secretsBuildRuleArgIdx
 	toolsBuildRuleArgIdx
 	testToolsBuildRuleArgIdx
+	debugToolsBuildRuleArgIdx
 	labelsBuildRuleArgIdx
 	visibilityBuildRuleArgIdx
 	hashesBuildRuleArgIdx
@@ -69,7 +72,7 @@ const (
 // createTarget creates a new build target as part of build_rule().
 func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	isTruthy := func(i int) bool {
-		return args[i] != nil && args[i] != None && (args[i] == &True || args[i].IsTruthy())
+		return args[i] != nil && args[i] != None && args[i].IsTruthy()
 	}
 	name := string(args[nameBuildRuleArgIdx].(pyString))
 	testCmd := args[testCMDBuildRuleArgIdx]
@@ -155,6 +158,10 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.Test.Timeout = sizeAndTimeout(s, size, args[testTimeoutBuildRuleArgIdx], s.state.Config.Test.Timeout)
 		target.Test.Sandbox = isTruthy(testSandboxBuildRuleArgIdx)
 		target.Test.NoOutput = isTruthy(noTestOutputBuildRuleArgIdx)
+	}
+	if s.state.Debug != nil {
+		target.Debug = new(core.DebugFields)
+		target.Debug.Command, _ = decodeCommands(s, args[debugCMDBuildRuleArgIdx])
 	}
 	return target
 }
@@ -242,6 +249,11 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	if t.IsTest() {
 		addMaybeNamedOrString(s, "test_tools", args[testToolsBuildRuleArgIdx], t.AddTestTool, t.AddNamedTestTool, true, true)
 		addMaybeNamedOutput(s, "test_outputs", args[testOutputsBuildRuleArgIdx], t.AddTestOutput, nil, t, false)
+	}
+
+	if t.Debug != nil {
+		addMaybeNamed(s, "debug_data", args[debugDataBuildRuleArgIdx], t.AddDebugDatum, t.AddDebugNamedDatum, false, false)
+		addMaybeNamedOrString(s, "debug_tools", args[debugToolsBuildRuleArgIdx], t.AddDebugTool, t.AddNamedDebugTool, true, true)
 	}
 }
 
@@ -419,10 +431,14 @@ func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarg
 func addStrings(s *scope, name string, obj pyObject, f func(string)) {
 	if obj != nil && obj != None {
 		l, ok := asList(obj)
-		s.Assert(ok, "Argument %s must be a list, not %s", name, obj.Type())
+		if !ok {
+			s.Error("Argument %s must be a list, not %s", name, obj.Type())
+		}
 		for _, li := range l {
 			str, ok := li.(pyString)
-			s.Assert(ok || li == None, "%s must be strings", name)
+			if !ok && li != None {
+				s.Error("%s must be strings", name)
+			}
 			if str != "" && li != None {
 				f(string(str))
 			}

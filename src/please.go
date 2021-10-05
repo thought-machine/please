@@ -25,6 +25,7 @@ import (
 	"github.com/thought-machine/please/src/clean"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/debug"
 	"github.com/thought-machine/please/src/exec"
 	"github.com/thought-machine/please/src/export"
 	"github.com/thought-machine/please/src/format"
@@ -168,10 +169,20 @@ var opts struct {
 		} `positional-args:"true"`
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
+	Debug struct {
+		Debugger string `short:"d" long:"debugger" description:"Name of supported debugger"`
+		Port     int    `short:"p" long:"port" description:"Debugging server listen port"`
+		Args     struct {
+			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
+			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target"`
+		} `positional-args:"true"`
+	} `command:"debug" description:"Starts a debug session on the given target if supported by its build definition."`
+
 	Run struct {
 		Env        bool   `long:"env" description:"Overrides environment variables (e.g. PATH) in the new process."`
 		Rebuild    bool   `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
-		InWD       bool   `long:"in_wd" description:"When running locally, stay in the original working directory."`
+		InWD       bool   `long:"in_wd" description:"Deprecated in favour of --wd=/path/to/this/directory. When running locally, stay in the original working directory."`
+		WD         string `long:"wd" description:"The working directory in which to run the target."`
 		InTempDir  bool   `long:"in_tmp_dir" description:"Runs in a temp directory, setting env variables and copying in runtime data similar to tests."`
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
@@ -474,6 +485,14 @@ var buildFunctions = map[string]func() int{
 		}
 		return toExitCode(success, state)
 	},
+	"debug": func() int {
+		success, state := runBuild([]core.BuildLabel{opts.Debug.Args.Target}, true, false, false)
+		if !success {
+			return toExitCode(success, state)
+		}
+
+		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Port != 0, opts.Debug.Args.Args)
+	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
 		if !success {
@@ -482,7 +501,7 @@ var buildFunctions = map[string]func() int{
 
 		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
 		dir := filepath.Join(core.OutDir, "exec", opts.Exec.Args.Target.Subrepo, opts.Exec.Args.Target.PackageName)
-		if code := exec.Exec(state, opts.Exec.Args.Target, dir, opts.Exec.Args.OverrideCommandArgs, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
+		if code := exec.Exec(state, opts.Exec.Args.Target, dir, nil, opts.Exec.Args.OverrideCommandArgs, false, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
 			return code
 		}
 
@@ -503,7 +522,10 @@ var buildFunctions = map[string]func() int{
 	"run": func() int {
 		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
 			var dir string
-			if opts.Run.InWD {
+			if opts.Run.WD != "" {
+				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
+			} else if opts.Run.InWD {
+				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
 			}
 
@@ -523,7 +545,10 @@ var buildFunctions = map[string]func() int{
 	"parallel": func() int {
 		if success, state := runBuild(unannotateLabels(opts.Run.Parallel.PositionalArgs.Targets), true, false, false); success {
 			var dir string
-			if opts.Run.InWD {
+			if opts.Run.WD != "" {
+				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
+			} else if opts.Run.InWD {
+				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
 			}
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
@@ -539,7 +564,10 @@ var buildFunctions = map[string]func() int{
 	"sequential": func() int {
 		if success, state := runBuild(unannotateLabels(opts.Run.Sequential.PositionalArgs.Targets), true, false, false); success {
 			var dir string
-			if opts.Run.InWD {
+			if opts.Run.WD != "" {
+				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
+			} else if opts.Run.InWD {
+				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
 			}
 
@@ -918,6 +946,14 @@ func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
 	return core.DefaultConfiguration().Completions(match)
 }
 
+// Get an absolute path from a relative path.
+func getAbsolutePath(path string, here string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(here, path)
+}
+
 // Used above as a convenience wrapper for query functions.
 func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state *core.BuildState)) int {
 	if !needFullParse {
@@ -957,10 +993,11 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 		config.Parse.NumThreads = opts.BuildFlags.NumThreads
 	}
+	debug := !opts.Debug.Args.Target.IsEmpty()
 	debugTests := opts.Test.Debug || opts.Cover.Debug
 	if opts.BuildFlags.Config != "" {
 		config.Build.Config = opts.BuildFlags.Config
-	} else if debugTests {
+	} else if debug || debugTests {
 		config.Build.Config = "dbg"
 	}
 	state := core.NewBuildState(config)
@@ -971,7 +1008,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
-	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || opts.Tool.Args.Tool != ""
+	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || opts.Tool.Args.Tool != "" || debug
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
@@ -991,13 +1028,23 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	if opts.BuildFlags.Arch.OS != "" {
 		state.TargetArch = opts.BuildFlags.Arch
 	}
+	if debug {
+		state.Debug = &core.Debug{
+			Debugger: opts.Debug.Debugger,
+			Port:     opts.Debug.Port,
+		}
+	}
 
 	if state.DebugTests && len(targets) != 1 {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
 
-	if opts.Run.InTempDir && opts.Run.InWD {
+	if opts.Run.InTempDir && opts.Run.WD != "" {
+		log.Fatal("Can't use both --in_temp_dir and --wd at the same time")
+	} else if opts.Run.InTempDir && opts.Run.InWD {
 		log.Fatal("Can't use both --in_temp_dir and --in_wd at the same time")
+	} else if opts.Run.WD != "" && opts.Run.InWD {
+		log.Fatal("Can't use both --in_wd and --wd at the same time. --in_wd is deprecated in favour of --wd.")
 	}
 
 	runPlease(state, targets)

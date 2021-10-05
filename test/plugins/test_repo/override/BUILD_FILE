@@ -1,6 +1,6 @@
 subinclude("@foo//build_defs:foolang")
 
-package(foo = {"FOOC_TOOL": "overriden"})
+package(foo = {"fooc_tool": "overriden"})
 
 genrule(
     name = "override_test",

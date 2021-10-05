@@ -319,6 +319,7 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
+	config.Go.DelveTool = "dlv"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.DisableVendorFlags = false
 	config.Python.TestRunner = "unittest"
@@ -493,6 +494,7 @@ type Configuration struct {
 		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
 		PleaseGoTool     string `help:"Sets the location of the please_go tool that is used to compile and test go code." var:"PLEASE_GO_TOOL"`
 		EmbedTool        string `help:"Sets the location of the please_go_embed tool that is used to parse //go:embed directives." var:"GO_EMBED_TOOL"`
+		DelveTool        string `help:"Sets the location of the Delve tool that is used for debugging Go code." var:"DELVE_TOOL"`
 		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
 		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
 		CFlags           string `help:"Sets the CFLAGS env var for go rules." var:"GO_C_FLAGS"`
@@ -594,6 +596,9 @@ type Configuration struct {
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
 		PackageOutputsStrictness      bool `help:"Prevents certain combinations of target outputs within a package that result in nondeterminist behaviour"`
 		PythonWheelHashing            bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
+		NoIterSourcesMarked           bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
+		ExcludePythonRules            bool `help:"Whether to include the python rules or use the plugin"`
+		ExcludeJavaRules              bool `help:"Whether to include the java rules or use the plugin"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string `help:"The gateway URL to push prometheus updates to."`
@@ -611,6 +616,15 @@ type Alias struct {
 
 type Plugin struct {
 	ExtraValues map[string][]string `help:"A section of arbitrary key-value properties for the plugin." gcfg:"extra_values"`
+}
+
+func (plugin Plugin) copyPlugin() *Plugin {
+	values := map[string][]string{}
+	for k, v := range plugin.ExtraValues {
+		values[k] = v
+	}
+	plugin.ExtraValues = values
+	return &plugin
 }
 
 // A Size represents a named size in the config.
@@ -926,6 +940,16 @@ func (config *Configuration) NumRemoteExecutors() int {
 		return 0
 	}
 	return config.Remote.NumExecutors
+}
+
+func (config Configuration) copyConfig() *Configuration {
+	config.buildEnvStored = &storedBuildEnv{}
+	plugins := map[string]*Plugin{}
+	for name, plugin := range config.Plugin {
+		plugins[name] = plugin.copyPlugin()
+	}
+	config.Plugin = plugins
+	return &config
 }
 
 // A ConfigProfile is a string that knows how to handle completions given all the possible config file locations.

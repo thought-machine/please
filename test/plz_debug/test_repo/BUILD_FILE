@@ -1,0 +1,14 @@
+# Dummy build rule used to show that the debug fields work as expected.
+build_rule(
+    name = "hello_world",
+    cmd = {
+        'dbg': "echo 'hello world' > $OUT",
+    },
+    outs = ["out"],
+    debug_cmd = "$DEBUG_TOOLS_CAT $OUT $DEBUG_DATA",
+    debug_data = ["file1.txt"],
+    debug_tools = {
+        'cat': 'cat'
+    },
+    binary = True,
+)

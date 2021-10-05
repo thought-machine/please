@@ -110,7 +110,7 @@ func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) erro
 	if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
 		return err
 	}
-	if err := prepareSources(state.Graph, target); err != nil {
+	if err := prepareSources(state, state.Graph, target); err != nil {
 		return err
 	}
 	// This is important to catch errors here where we will recover the panic, rather
@@ -283,7 +283,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return err
 		}
 		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
-		if err := prepareSources(state.Graph, target); err != nil {
+		if err := prepareSources(state, state.Graph, target); err != nil {
 			return fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
 		}
 
@@ -486,7 +486,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	}
 	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
-	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, process.NewSandboxConfig(target.Sandbox, target.Sandbox), command)
+	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), command)
 	if err != nil {
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
@@ -564,8 +564,8 @@ func prepareDirectory(executor *process.Executor, directory string, remove bool)
 }
 
 // Symlinks the source files of this rule into its temp directory.
-func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
-	for source := range core.IterSources(graph, target, false) {
+func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core.BuildTarget) error {
+	for source := range core.IterSources(state, graph, target, false) {
 		if err := core.PrepareSourcePair(source); err != nil {
 			return err
 		}

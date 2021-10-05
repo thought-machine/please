@@ -105,19 +105,6 @@ go_module(
 )
 
 go_module(
-    name = "go-bindata",
-    binary = True,
-    install = [
-        "go-bindata",
-        ".",
-    ],
-    module = "github.com/kevinburke/go-bindata",
-    strip = ["testdata"],
-    version = "v3.22.0+incompatible",
-    visibility = ["PUBLIC"],
-)
-
-go_module(
     name = "go-flags",
     licences = ["BSD-3-Clause"],
     module = "github.com/thought-machine/go-flags",
@@ -450,14 +437,6 @@ go_module(
 )
 
 go_module(
-    name = "concurrent-map",
-    licences = ["MIT"],
-    module = "github.com/streamrail/concurrent-map",
-    version = "v0.0.0-20160823150647-8bf1e9bacbf6",
-    visibility = ["PUBLIC"],
-)
-
-go_module(
     name = "grpc-middleware",
     install = [
         "retry",
@@ -571,58 +550,6 @@ go_module(
     install = ["..."],
     module = "golang.org/x/sys",
     version = "v0.0.0-20210823070655-63515b42dcdf",
-)
-
-go_mod_download(
-    name = "go-fuzz-download",
-    module = "github.com/dvyukov/go-fuzz",
-    version = "v0.0.0-20210914135545-4980593459a1",
-)
-
-go_module(
-    name = "go-fuzz-build",
-    binary = True,
-    download = ":go-fuzz-download",
-    install = [
-        "go-fuzz-build",
-        "go-fuzz/internal/pcg",
-        "go-fuzz/versifier",
-        "internal/go-fuzz-types",
-    ],
-    module = "github.com/dvyukov/go-fuzz",
-    deps = [":tools"],
-)
-
-go_module(
-    name = "go-fuzz",
-    download = ":go-fuzz-download",
-    exported_deps = [":go-fuzz-build"],
-    install = [
-        "go-fuzz-defs",
-        "go-fuzz-dep",
-        "go-fuzz",
-    ],
-    module = "github.com/dvyukov/go-fuzz",
-    visibility = ["PUBLIC"],
-    deps = [
-        ":go-bindata-assetfs",
-        ":tools",
-        ":writerset",
-    ],
-)
-
-go_module(
-    name = "writerset",
-    module = "github.com/stephens2424/writerset",
-    version = "v1.0.2",
-    visibility = ["PUBLIC"],
-)
-
-go_module(
-    name = "go-bindata-assetfs",
-    module = "github.com/elazarl/go-bindata-assetfs",
-    version = "v1.0.1",
-    visibility = ["PUBLIC"],
 )
 
 go_module(

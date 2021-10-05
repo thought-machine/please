@@ -78,7 +78,7 @@ func specialFields() specialFieldsMap {
 			return p.genericPrint(reflect.ValueOf(p.target.AllTestTools()))
 		},
 		"data": func(p *printer) (string, bool) {
-			if data := p.target.NamedData(); len(data) > 0 {
+			if data := p.target.NamedData; len(data) > 0 {
 				return p.genericPrint(reflect.ValueOf(data))
 			}
 			return p.genericPrint(reflect.ValueOf(p.target.Data))

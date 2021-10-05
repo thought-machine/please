@@ -43,6 +43,12 @@ type TestTask struct {
 	Run   int
 }
 
+// Debug is the type for debugging a target
+type Debug struct {
+	Debugger string
+	Port     int
+}
+
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
@@ -174,6 +180,8 @@ type BuildState struct {
 	ShowTestOutput bool
 	// True to print all output of all tasks to stderr.
 	ShowAllOutput bool
+	// Set when a debugging session against a target is requested.
+	Debug *Debug
 	// True to attach a debugger on test failure.
 	DebugTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
@@ -188,6 +196,19 @@ type BuildState struct {
 	progress *stateProgress
 	// CurrentSubrepo is the subrepo this state is for or the empty string if it's for the host repo
 	CurrentSubrepo string
+}
+
+// ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
+func (state *BuildState) ExcludedBuiltinRules() map[string]struct{} {
+	// TODO(jpoole): remove this function, including the changes to rules.AllAssets() in v17
+	ret := map[string]struct{}{}
+	if state.Config.FeatureFlags.ExcludePythonRules {
+		ret["python_rules.build_defs"] = struct{}{}
+	}
+	if state.Config.FeatureFlags.ExcludeJavaRules {
+		ret["java_rules.build_defs"] = struct{}{}
+	}
+	return ret
 }
 
 // A stateProgress records various points of progress for a State.
@@ -1012,9 +1033,7 @@ func (state *BuildState) forConfig(config ...string) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	// Duplicate & alter configuration
-	c := &Configuration{}
-	*c = *state.Config
-	c.buildEnvStored = &storedBuildEnv{}
+	c := state.Config.copyConfig()
 	for _, filename := range config {
 		if err := readConfigFile(c, filename); err != nil {
 			log.Fatalf("Failed to read config file %s: %s", filename, err)
@@ -1060,7 +1079,7 @@ func (state *BuildState) DownloadInputsIfNeeded(tid int, target *BuildTarget, ru
 // IterInputs returns a channel that iterates all the input files needed for a target.
 func (state *BuildState) IterInputs(target *BuildTarget, test bool) <-chan BuildInput {
 	if !test {
-		return IterInputs(state.Graph, target, true, target.IsFilegroup)
+		return IterInputs(state, state.Graph, target, true, target.IsFilegroup)
 	}
 	ch := make(chan BuildInput)
 	go func() {

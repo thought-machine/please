@@ -97,3 +97,4 @@ accept = notice
 JavaBinaryExecutableByDefault = true
 PackageOutputsStrictness = true
 PythonWheelHashing = true
+NoIterSourcesMarked = true

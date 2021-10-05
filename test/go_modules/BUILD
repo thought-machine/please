@@ -28,7 +28,7 @@ please_repo_e2e_test(
     tools = {"go": ["//third_party/go:toolchain|go"]},
 )
 
-target = "darwin_amd64" if CONFIG.OS == "linux_amd64" else "linux_amd64"
+target = "darwin_amd64" if CONFIG.OS == "linux" else "linux_amd64"
 
 please_repo_e2e_test(
     name = "cross_compile_test",
@@ -36,6 +36,6 @@ please_repo_e2e_test(
         "no_cirrus",
         "no-musl",
     ],
-    plz_command = f"plz -o go.gotool:'//tools/go:toolchain|go' -o go.cgoenabled:1 build --arch {target} //src/binary",
+    plz_command = f"plz -o go.gotool:'//tools/go:toolchain|go' build --arch {target} //src/binary",
     repo = "test_repo",
 )
