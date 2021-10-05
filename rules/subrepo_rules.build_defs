@@ -99,7 +99,7 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
     else:
         cmd = '$TOOL x $SRCS_REMOTE -o "$OUT"'
     if strip_build:
-        cmd += ' && find . -name BUILD | xargs rm -f'
+        cmd += ' && find . ' + ' -o '.join([f'-name {name}' for name in CONFIG.BUILD_FILE_NAMES + ["WORKSPACE"]]) + ' | xargs rm -f'
     if build_file:
         cmd += ' && mv $SRCS_BUILD "$OUT/' + CONFIG.BUILD_FILE_NAMES[0] + '"'
     elif build_file_content:
