@@ -529,11 +529,12 @@ func glob(s *scope, args []pyObject) pyObject {
 	include := asStringList(s, args[0], "include")
 	exclude := asStringList(s, args[1], "exclude")
 	hidden := args[2].IsTruthy()
+	includeSymlinks := args[3].IsTruthy()
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
 	if s.globber == nil {
 		s.globber = fs.NewGlobber(s.state.Config.Parse.BuildFileName)
 	}
-	return fromStringList(s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden))
+	return fromStringList(s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks))
 }
 
 func asStringList(s *scope, arg pyObject, name string) []string {

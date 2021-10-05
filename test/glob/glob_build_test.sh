@@ -5,6 +5,11 @@ if [ -f test/glob/BUILD ]; then
     exit 1
 fi
 
+if [ ! -f test/glob/test.txt.symlink ]; then
+    echo "Should be able to glob the symlink file"
+    exit 1
+fi
+
 if [ ! -f test/glob/test.txt ]; then
     echo "Should be able to glob the .txt file"
     exit 1

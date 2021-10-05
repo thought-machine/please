@@ -13,7 +13,7 @@ import (
 var buildFileNames = []string{"TEST_BUILD", "BUILD"}
 
 func glob(rootPath string, glob string, excludes []string, includeHidden bool) ([]string, error) {
-	return NewGlobber(buildFileNames).glob(rootPath, glob, excludes, includeHidden)
+	return NewGlobber(buildFileNames).glob(rootPath, glob, excludes, includeHidden, true)
 }
 
 func TestCanGlobFileAtRootWithDoubleStar(t *testing.T) {

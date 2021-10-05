@@ -177,8 +177,8 @@ func (hasher *PathHasher) hash(path string, store, read bool) ([]byte, error) {
 		}
 		return h.Sum(nil), nil
 	} else if err == nil && info.IsDir() {
-		err = WalkMode(path, func(p string, isDir bool, mode os.FileMode) error {
-			if mode&os.ModeSymlink != 0 {
+		err = WalkMode(path, func(p string, mode Mode) error {
+			if mode.IsSymlink() {
 				// Is a symlink, must verify that it's not absolute.
 				deref, err := os.Readlink(p)
 				if err != nil {
@@ -193,7 +193,7 @@ func (hasher *PathHasher) hash(path string, store, read bool) ([]byte, error) {
 				// Just write something to the hash indicating that we found something here,
 				// otherwise rules might be marked as unchanged if they added additional symlinks.
 				h.Write(boolTrueHashValue)
-			} else if !isDir {
+			} else if !mode.IsDir() {
 				return hasher.fileHash(h, p)
 			}
 			return nil
