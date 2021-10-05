@@ -1000,7 +1000,7 @@ func buildLinks(state *core.BuildState, target *core.BuildTarget) {
 	buildLinksOfType(state, target, "link:", false, os.Symlink)
 	buildLinksOfType(state, target, "hlink:", false, os.Link)
 
-	// Directly link to the path on the link for these (i.e. don't appent out to the destination dir)
+	// Directly link to the path of the label for these (i.e. don't append out to the destination dir)
 	buildLinksOfType(state, target, "dlink:", true, os.Symlink)
 	buildLinksOfType(state, target, "dhlink:", true, os.Link)
 

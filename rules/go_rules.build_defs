@@ -1133,8 +1133,6 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         cmd = ' && '.join(cmds),
         requires = ['go_src'],
         test_only = test_only,
-        # TODO(jpoole): We probably want to somehow link this to the correct place but Please doesn't really facilitate
-        #  that right now.
         labels = labels + ['link:plz-out/go'] if go_path_compatibility else labels + [f'dlink:plz-out/go/src/{module}'],
         hashes = hashes,
         sandbox = False,
