@@ -500,3 +500,9 @@ plz_e2e_test(
     name = "non_test_target_with_test_fields_set_test",
     cmd = "plz test //test:non_test_target_with_test_fields_set",
 )
+
+plz_e2e_test(
+    name = "message_line_wrap",
+    cmd = "plz run //src:please -- --version",
+    expected_failure = True,
+)

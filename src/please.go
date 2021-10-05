@@ -1077,6 +1077,7 @@ func readConfig() *core.Configuration {
 // Runs the actual build
 // Which phases get run are controlled by shouldBuild and shouldTest.
 func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) (bool, *core.BuildState) {
+	log.Warning("\nabcdefghijklmnopqrstuvwxyz2\nabcdefghijklmnopqrstuvwxyz3\nabcdefghijklmnopqrstuvwxyz4\nabcdefghijklmnopqrstuvwxyz5\nabcdefghijklmnopqrstuvwxyz6\nabcdefghijklmnopqrstuvwxyz7\nabcdefghijklmnopqrstuvwxyz8\nabcdefghijklmnopqrstuvwxyz9\nabcdefghijklmnopqrstuvwxyz10\nabcdefghijklmnopqrstuvwxyz11\nabcdefghijklmnopqrstuvwxyz12\nabcdefghijklmnopqrstuvwxyz13\nabcdefghijklmnopqrstuvwxyz14\nabcdefghijklmnopqrstuvwxyz15\nabcdefghijklmnopqrstuvwxyz16\nabcdefghijklmnopqrstuvwxyz17\nabcdefghijklmnopqrstuvwxyz18\nabcdefghijklmnopqrstuvwxyz19\nabcdefghijklmnopqrstuvwxyz20")
 	if !isQuery {
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
 	}
