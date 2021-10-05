@@ -11,7 +11,7 @@ go_toolchain(
         "6bf89fc4f5ad763871cf7eac80a2d594492de7a818303283f1366a7f6a30372d",  # linux_amd64
         "15c184c83d99441d719da201b26256455eee85a808747c404b4183e9aa6c64b4",  # freebsd_amd64
     ],
-    strip_srcs = True,
+    strip_srcs = CONFIG.BUILD_CONFIG != "dbg",
     version = "1.17",
 )
 
