@@ -1,6 +1,8 @@
 Version 15.17.1
 --------------
-    * Update to use `github.com/ProtonMail/go-crypto/openpgp` for verification
+    * Update to use `github.com/ProtonMail/go-crypto/openpgp` for verification.
+      This is needed to update from v15 to v16.8.0+ as we now include the
+      issuers fingerprint subpacket in the signature headers now #2120
 
 
 Version 15.17.1
