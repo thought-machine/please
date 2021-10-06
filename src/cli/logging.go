@@ -187,7 +187,7 @@ func (backend *LogBackend) calcOutput() []string {
 func (backend *LogBackend) GetMessageHistory() ([]string, int, int) {
 	ret := make([]string, 0, backend.messageHistory.Len())
 	for e := backend.messageHistory.Front(); e != nil; e = e.Next() {
-		msg := backend.lineWrap(e.Value.(string))
+		msg := reverse(backend.lineWrap(e.Value.(string)))
 		ret = append(ret, msg...)
 	}
 	if backend.messageCount > messageHistoryMaxSize {
@@ -198,12 +198,14 @@ func (backend *LogBackend) GetMessageHistory() ([]string, int, int) {
 
 // SetPassthrough sets whether we are "passing through" log messages or not, i.e. whether they go straight to
 // the normal log output or are stored in here.
-func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int) {
+func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int, clearMessageHistory bool) {
 	backend.mutex.Lock()
 	backend.passthrough = passthrough
 	backend.interactiveRows = interactiveRows
-	backend.messageHistory = list.New()
-	backend.messageCount = 0
+	if clearMessageHistory {
+		backend.messageHistory = list.New()
+		backend.messageCount = 0
+	}
 	backend.mutex.Unlock()
 	if passthrough {
 		go notifyOnWindowResize(backend.recalcWindowSize)
