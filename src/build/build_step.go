@@ -110,7 +110,7 @@ func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) erro
 	if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
 		return err
 	}
-	if err := prepareSources(state.Graph, target); err != nil {
+	if err := prepareSources(state, state.Graph, target); err != nil {
 		return err
 	}
 	// This is important to catch errors here where we will recover the panic, rather
@@ -283,7 +283,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return err
 		}
 		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
-		if err := prepareSources(state.Graph, target); err != nil {
+		if err := prepareSources(state, state.Graph, target); err != nil {
 			return fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
 		}
 
@@ -486,7 +486,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	}
 	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
-	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, process.NewSandboxConfig(target.Sandbox, target.Sandbox), command)
+	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), command)
 	if err != nil {
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
@@ -564,8 +564,8 @@ func prepareDirectory(executor *process.Executor, directory string, remove bool)
 }
 
 // Symlinks the source files of this rule into its temp directory.
-func prepareSources(graph *core.BuildGraph, target *core.BuildTarget) error {
-	for source := range core.IterSources(graph, target, false) {
+func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core.BuildTarget) error {
+	for source := range core.IterSources(state, graph, target, false) {
 		if err := core.PrepareSourcePair(source); err != nil {
 			return err
 		}
@@ -997,8 +997,12 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 // buildLinks builds links from the given target if it's labelled appropriately.
 // For example, Go targets may link themselves into plz-out/go/src etc.
 func buildLinks(state *core.BuildState, target *core.BuildTarget) {
-	buildLinksOfType(state, target, "link:", os.Symlink)
-	buildLinksOfType(state, target, "hlink:", os.Link)
+	buildLinksOfType(state, target, "link:", false, os.Symlink)
+	buildLinksOfType(state, target, "hlink:", false, os.Link)
+
+	// Directly link to the path of the label for these (i.e. don't append out to the destination dir)
+	buildLinksOfType(state, target, "dlink:", true, os.Symlink)
+	buildLinksOfType(state, target, "dhlink:", true, os.Link)
 
 	if state.Config.Build.LinkGeneratedSources && target.HasLabel("codegen") {
 		for _, out := range target.Outputs() {
@@ -1009,14 +1013,18 @@ func buildLinks(state *core.BuildState, target *core.BuildTarget) {
 	}
 }
 
-func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix string, f fs.LinkFunc) {
+func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix string, direct bool, f fs.LinkFunc) {
 	if labels := target.PrefixedLabels(prefix); len(labels) > 0 {
 		env := core.TargetEnvironment(state, target)
 		for _, dest := range labels {
 			destDir := path.Join(core.RepoRoot, os.Expand(dest, env.ReplaceEnvironment))
 			srcDir := path.Join(core.RepoRoot, target.OutDir())
 			for _, out := range target.Outputs() {
-				fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), f)
+				if direct {
+					fs.LinkIfNotExists(path.Join(srcDir, out), destDir, f)
+				} else {
+					fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), f)
+				}
 			}
 		}
 	}

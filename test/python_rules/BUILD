@@ -11,6 +11,7 @@ python_library(
     name = "proto_lib",
     srcs = ["proto_lib.py"],
     resources = [":test_proto"],
+    deps = [":test_proto"],
 )
 
 python_test(

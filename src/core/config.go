@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/google/shlex"
-	"github.com/peterebden/gcfg"
+	"github.com/please-build/gcfg"
 	"github.com/thought-machine/go-flags"
 
 	"github.com/thought-machine/please/src/cli"
@@ -52,6 +52,7 @@ const UserConfigFileName = "~/.config/please/plzconfig"
 // DefaultPath is the default location please looks for programs in
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
+// readConfigFile reads a single config file into the config struct
 func readConfigFile(config *Configuration, filename string) error {
 	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
@@ -63,6 +64,7 @@ func readConfigFile(config *Configuration, filename string) error {
 	} else {
 		log.Debug("Read config from %s", filename)
 	}
+	normalisePluginConfigKeys(config)
 	return nil
 }
 
@@ -229,6 +231,17 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	})
 }
 
+// normalisePluginConfigKeys converts all config for plugins to lower case
+func normalisePluginConfigKeys(config *Configuration) {
+	for _, plugin := range config.Plugin {
+		newExtraValues := make(map[string][]string, len(plugin.ExtraValues))
+		for k, v := range plugin.ExtraValues {
+			newExtraValues[strings.ToLower(k)] = v
+		}
+		plugin.ExtraValues = newExtraValues
+	}
+}
+
 // setDefault sets a slice of strings in the config if the set one is empty.
 func setDefault(conf *[]string, def ...string) {
 	if len(*conf) == 0 {
@@ -306,6 +319,7 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
+	config.Go.DelveTool = "dlv"
 	config.Python.DefaultInterpreter = "python3"
 	config.Python.DisableVendorFlags = false
 	config.Python.TestRunner = "unittest"
@@ -366,6 +380,7 @@ func DefaultConfiguration() *Configuration {
 type Configuration struct {
 	Please struct {
 		Version          cli.Version `help:"Defines the version of plz that this repo is supposed to use currently. If it's not present or the version matches the currently running version no special action is taken; otherwise if SelfUpdate is set Please will attempt to download an appropriate version, otherwise it will issue a warning and continue.\n\nNote that if this is not set, you can run plz update to update to the latest version available on the server." var:"PLZ_VERSION"`
+		ToolsURL         cli.URL     `help:"The URL download the Please tools from. Defaults to download the tools from the current Please versions github releases page."`
 		VersionChecksum  []string    `help:"Defines a hex-encoded sha256 checksum that the downloaded version must match. Can be specified multiple times to support different architectures." example:"abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"`
 		Location         string      `help:"Defines the directory Please is installed into.\nDefaults to ~/.please but you might want it to be somewhere else if you're installing via another method (e.g. the debs and install script still use /opt/please)."`
 		SelfUpdate       bool        `help:"Sets whether plz will attempt to update itself when the version set in the config file is different."`
@@ -479,6 +494,7 @@ type Configuration struct {
 		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
 		PleaseGoTool     string `help:"Sets the location of the please_go tool that is used to compile and test go code." var:"PLEASE_GO_TOOL"`
 		EmbedTool        string `help:"Sets the location of the please_go_embed tool that is used to parse //go:embed directives." var:"GO_EMBED_TOOL"`
+		DelveTool        string `help:"Sets the location of the Delve tool that is used for debugging Go code." var:"DELVE_TOOL"`
 		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
 		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
 		CFlags           string `help:"Sets the CFLAGS env var for go rules." var:"GO_C_FLAGS"`
@@ -554,7 +570,18 @@ type Configuration struct {
 		Accept []string `help:"Licences that are accepted in this repository.\nWhen this is empty licences are ignored. As soon as it's set any licence detected or assigned must be accepted explicitly here.\nThere's no fuzzy matching, so some package managers (especially PyPI and Maven, but shockingly not npm which rather nicely uses SPDX) will generate a lot of slightly different spellings of the same thing, which will all have to be accepted here. We'd rather that than trying to 'cleverly' match them which might result in matching the wrong thing."`
 		Reject []string `help:"Licences that are explicitly rejected in this repository.\nAn astute observer will notice that this is not very different to just not adding it to the accept section, but it does have the advantage of explicitly documenting things that the team aren't allowed to use."`
 	} `help:"Please has some limited support for declaring acceptable licences and detecting them from some libraries. You should not rely on this for complete licence compliance, but it can be a useful check to try to ensure that unacceptable licences do not slip in."`
-	Alias map[string]*Alias `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
+	Alias            map[string]*Alias  `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
+	Plugin           map[string]*Plugin `help:"Used to define configuration for a Please plugin."`
+	PluginDefinition struct {
+		Name string `help:"The name of the plugin"`
+	} `help:"Set this in your .plzconfig to make the current Please repo a plugin. Add configuration fields with PluginConfig sections"`
+	PluginConfig map[string]*struct {
+		ConfigKey    string   `help:"The key of the config field in the .plzconfig file"`
+		DefaultValue []string `help:"The default value for this config field, if it has one"`
+		Optional     bool     `help:"Whether this config field can be empty"`
+		Repeatable   bool     `help:"Whether this config field can be repeated"`
+		Type         string   `help:"What type to bind this config as e.g. str, bool, or int. Default str."`
+	} `help:"Defines a new config field for a plugin"`
 	Bazel struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`
@@ -570,6 +597,9 @@ type Configuration struct {
 		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
 		PackageOutputsStrictness      bool `help:"Prevents certain combinations of target outputs within a package that result in nondeterminist behaviour"`
 		PythonWheelHashing            bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
+		NoIterSourcesMarked           bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
+		ExcludePythonRules            bool `help:"Whether to include the python rules or use the plugin"`
+		ExcludeJavaRules              bool `help:"Whether to include the java rules or use the plugin"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string `help:"The gateway URL to push prometheus updates to."`
@@ -583,6 +613,19 @@ type Alias struct {
 	Subcommand       []string `help:"Known subcommands of this command"`
 	Flag             []string `help:"Known flags of this command"`
 	PositionalLabels bool     `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
+}
+
+type Plugin struct {
+	ExtraValues map[string][]string `help:"A section of arbitrary key-value properties for the plugin." gcfg:"extra_values"`
+}
+
+func (plugin Plugin) copyPlugin() *Plugin {
+	values := map[string][]string{}
+	for k, v := range plugin.ExtraValues {
+		values[k] = v
+	}
+	plugin.ExtraValues = values
+	return &plugin
 }
 
 // A Size represents a named size in the config.
@@ -737,6 +780,10 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		if len(split) != 2 {
 			return fmt.Errorf("Bad option format: %s", k)
 		}
+		if plugin, ok := config.Plugin[split[0]]; ok {
+			plugin.ExtraValues[strings.ToLower(split[1])] = []string{v}
+			return nil
+		}
 		field := elem.FieldByNameFunc(match(split[0]))
 		if !field.IsValid() {
 			return fmt.Errorf("Unknown config field: %s", split[0])
@@ -869,10 +916,12 @@ func (config *Configuration) PrintAliases(w io.Writer) {
 		}
 	}
 	sort.Strings(names)
-	w.Write([]byte("\nAvailable commands for this repository:\n"))
-	tmpl := fmt.Sprintf("  %%-%ds  %%s\n", maxlen)
-	for _, name := range names {
-		fmt.Fprintf(w, tmpl, name, aliases[name].Desc)
+	if len(names) > 0 {
+		w.Write([]byte("\nAvailable commands for this repository:\n"))
+		tmpl := fmt.Sprintf("  %%-%ds  %%s\n", maxlen)
+		for _, name := range names {
+			fmt.Fprintf(w, tmpl, name, aliases[name].Desc)
+		}
 	}
 }
 
@@ -892,6 +941,16 @@ func (config *Configuration) NumRemoteExecutors() int {
 		return 0
 	}
 	return config.Remote.NumExecutors
+}
+
+func (config Configuration) copyConfig() *Configuration {
+	config.buildEnvStored = &storedBuildEnv{}
+	plugins := map[string]*Plugin{}
+	for name, plugin := range config.Plugin {
+		plugins[name] = plugin.copyPlugin()
+	}
+	config.Plugin = plugins
+	return &config
 }
 
 // A ConfigProfile is a string that knows how to handle completions given all the possible config file locations.

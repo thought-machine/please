@@ -183,10 +183,10 @@ func parseBuildLabelParts(target, currentPath, subrepo string) (string, string, 
 		return currentPath, target[1:], ""
 	} else if target[0] == '@' {
 		// @subrepo//pkg:target or @subrepo:target syntax
-		return parseBuildLabelSubrepo(target[1:], currentPath)
+		return parseBuildLabelSubrepo(target[1:], currentPath, subrepo)
 	} else if strings.HasPrefix(target, "///") {
 		// ///subrepo/pkg:target syntax.
-		return parseBuildLabelSubrepo(target[3:], currentPath)
+		return parseBuildLabelSubrepo(target[3:], currentPath, subrepo)
 	} else if target[0] != '/' || target[1] != '/' {
 		return "", "", ""
 	} else if idx := strings.IndexRune(target, ':'); idx != -1 {
@@ -210,7 +210,7 @@ func parseBuildLabelParts(target, currentPath, subrepo string) (string, string, 
 }
 
 // parseBuildLabelSubrepo parses a build label that began with a subrepo symbol (either @ or ///).
-func parseBuildLabelSubrepo(target, currentPath string) (string, string, string) {
+func parseBuildLabelSubrepo(target, currentPath, currentSubrepo string) (string, string, string) {
 	idx := strings.Index(target, "//")
 	if idx == -1 {
 		// if subrepo and target are the same name, then @subrepo syntax will also suffice
@@ -225,7 +225,12 @@ func parseBuildLabelSubrepo(target, currentPath string) (string, string, string)
 		return "", "", ""
 	}
 	pkg, name, _ := parseBuildLabelParts(target[idx:], currentPath, "")
-	return pkg, name, target[:idx]
+
+	subrepo := target[:idx]
+	if subrepo == "self" {
+		subrepo = currentSubrepo
+	}
+	return pkg, name, subrepo
 }
 
 // As above, but allows parsing of relative labels (eg. rules:python_rules)
@@ -459,7 +464,7 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	os.Setenv("PLZ_COMPLETE", match)
 	os.Unsetenv("GO_FLAGS_COMPLETION")
 	exec, _ := os.Executable()
-	out, _, err := process.New().ExecWithTimeout(context.Background(), nil, "", os.Environ(), 10*time.Second, false, false, false, process.NoSandbox, append([]string{exec}, os.Args[1:]...))
+	out, _, err := process.New().ExecWithTimeout(context.Background(), nil, "", os.Environ(), 10*time.Second, false, false, false, false, process.NoSandbox, append([]string{exec}, os.Args[1:]...))
 	if err != nil {
 		return nil
 	}

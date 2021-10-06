@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
@@ -26,23 +27,25 @@ type nativeFunc func(*scope, []pyObject) pyObject
 
 // registerBuiltins sets up the "special" builtins that map to native code.
 func registerBuiltins(s *scope) {
+	const varargs = true
+	const kwargs = true
 	setNativeCode(s, "build_rule", buildRule)
 	setNativeCode(s, "subrepo", subrepo)
 	setNativeCode(s, "fail", builtinFail)
-	setNativeCode(s, "subinclude", subinclude).varargs = true
-	setNativeCode(s, "load", bazelLoad).varargs = true
-	setNativeCode(s, "package", pkg).kwargs = true
+	setNativeCode(s, "subinclude", subinclude, varargs)
+	setNativeCode(s, "load", bazelLoad, varargs)
+	setNativeCode(s, "package", pkg, false, kwargs)
 	setNativeCode(s, "sorted", sorted)
 	setNativeCode(s, "isinstance", isinstance)
 	setNativeCode(s, "range", pyRange)
 	setNativeCode(s, "enumerate", enumerate)
-	setNativeCode(s, "zip", zip).varargs = true
+	setNativeCode(s, "zip", zip, varargs)
 	setNativeCode(s, "len", lenFunc)
 	setNativeCode(s, "glob", glob)
 	setNativeCode(s, "bool", boolType)
 	setNativeCode(s, "int", intType)
 	setNativeCode(s, "str", strType)
-	setNativeCode(s, "join_path", joinPath).varargs = true
+	setNativeCode(s, "join_path", joinPath, varargs)
 	setNativeCode(s, "get_base_path", packageName)
 	setNativeCode(s, "package_name", packageName)
 	setNativeCode(s, "subrepo_name", subrepoName)
@@ -126,10 +129,20 @@ func registerSubincludePackage(s *scope) {
 	f.types = buildRule.types
 }
 
-func setNativeCode(s *scope, name string, code nativeFunc) *pyFunc {
+func setNativeCode(s *scope, name string, code nativeFunc, flags ...bool) *pyFunc {
 	f := s.Lookup(name).(*pyFunc)
 	f.nativeCode = code
 	f.code = nil // Might as well save a little memory here
+	if len(flags) != 0 {
+		f.varargs = flags[0]
+		f.kwargs = len(flags) > 1 && flags[1]
+	} else {
+		f.argPool = &sync.Pool{
+			New: func() interface{} {
+				return make([]pyObject, len(f.args))
+			},
+		}
+	}
 	return f
 }
 
@@ -198,7 +211,26 @@ func pkg(s *scope, args []pyObject) pyObject {
 	s.Assert(s.pkg.NumTargets() == 0, "package() must be called before any build targets are defined")
 	for k, v := range s.locals {
 		k = strings.ToUpper(k)
-		s.Assert(s.config.Get(k, nil) != nil, "error calling package(): %s is not a known config value", k)
+		configVal := s.config.Get(k, nil)
+		s.Assert(configVal != nil, "error calling package(): %s is not a known config value", k)
+
+		// Merge in the existing config for dictionaries
+		if overrides, ok := v.(pyDict); ok {
+			if pluginConfig, ok := configVal.(pyDict); ok {
+				newPluginConfig := pluginConfig.Copy()
+				for pluginKey, override := range overrides {
+					pluginKey = strings.ToUpper(pluginKey)
+					if _, ok := newPluginConfig[pluginKey]; !ok {
+						s.Error("error calling package(): %s.%s is not a known config value", k, pluginKey)
+					}
+
+					newPluginConfig.IndexAssign(pyString(pluginKey), override)
+				}
+				v = newPluginConfig
+			} else {
+				s.Error("error calling package(): can't assign a dict to %s as it's not a dict", k)
+			}
+		}
 		s.config.IndexAssign(pyString(k), v)
 	}
 	return None
@@ -946,13 +978,15 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	} else if args[2] != None {
 		root = string(args[2].(pyString))
 	}
-	state := s.state
+	var state *core.BuildState
 	if args[3] != None { // arg 3 is the config file to load
-		state = state.ForConfig(path.Join(s.pkg.Name, string(args[3].(pyString))))
+		state = s.state.ForSubrepo(name, path.Join(s.pkg.Name, string(args[3].(pyString))))
 	} else if args[4].IsTruthy() { // arg 4 is bazel_compat
-		state = state.ForConfig()
+		state = s.state.ForSubrepo(name)
 		state.Config.Bazel.Compatibility = true
 		state.Config.Parse.BuildFileName = append(state.Config.Parse.BuildFileName, "BUILD.bazel")
+	} else {
+		state = s.state.ForSubrepo(name)
 	}
 
 	isCrossCompile := s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile

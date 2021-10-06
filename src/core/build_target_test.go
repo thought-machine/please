@@ -361,8 +361,8 @@ func TestAllDataNamed(t *testing.T) {
 	target.AddNamedDatum("hdrs", FileLabel{File: "file.h"})
 
 	assert.ElementsMatch(t, []BuildInput{FileLabel{File: "file.c"}, FileLabel{File: "file.h"}}, target.AllData())
-	assert.Equal(t, target.namedData["c"], []BuildInput{FileLabel{File: "file.c"}})
-	assert.Equal(t, target.namedData["hdrs"], []BuildInput{FileLabel{File: "file.h"}})
+	assert.Equal(t, target.NamedData["c"], []BuildInput{FileLabel{File: "file.c"}})
+	assert.Equal(t, target.NamedData["hdrs"], []BuildInput{FileLabel{File: "file.h"}})
 }
 
 func TestToolPath(t *testing.T) {
@@ -401,13 +401,14 @@ func TestDependencies(t *testing.T) {
 }
 
 func TestBuildDependencies(t *testing.T) {
+	state := NewDefaultBuildState()
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "", target1)
 	target3 := makeTarget1("//src/core:target3", "", target2)
 	target3.AddDatum(target1.Label)
-	assert.Equal(t, []*BuildTarget{}, target1.BuildDependencies())
-	assert.Equal(t, []*BuildTarget{target1}, target2.BuildDependencies())
-	assert.Equal(t, []*BuildTarget{target2}, target3.BuildDependencies())
+	assert.Equal(t, []*BuildTarget{}, target1.BuildDependencies(state))
+	assert.Equal(t, []*BuildTarget{target1}, target2.BuildDependencies(state))
+	assert.Equal(t, []*BuildTarget{target2}, target3.BuildDependencies(state))
 }
 
 func TestDeclaredDependenciesStrict(t *testing.T) {

@@ -52,7 +52,9 @@ func (bt *buildingTargets) ProcessResult(result *core.BuildResult) core.BuildLab
 	label := result.Label
 	prev := bt.targets[result.ThreadID].Label
 	if !result.Status.IsParse() { // Parse tasks happen on a different set of threads.
-		bt.updateTarget(result, bt.state.Graph.TargetOrDie(label))
+		if t := bt.state.Graph.Target(label); t != nil {
+			bt.updateTarget(result, t)
+		}
 	}
 	if result.Status.IsFailure() {
 		bt.FailedTargets[label] = result.Err

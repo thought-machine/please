@@ -553,9 +553,10 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
       stamp (bool): Allows this rule to gain access to information about SCM revision etc
                     via env vars. These can be useful to pass into `definitions`.
     """
+    _srcs = srcs or [name + '.go']
     lib = go_library(
         name=f'_{name}#lib',
-        srcs=srcs or [name + '.go'],
+        srcs=_srcs,
         resources = resources,
         filter_srcs=filter_srcs,
         asm_srcs=asm_srcs,
@@ -568,19 +569,31 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         import_path="main",
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions)
+
+    debug_cmd, debug_data, debug_tools = _debug_cmd(
+        name=name,
+        bin="./$OUT",
+        srcs=_srcs,
+        deps=deps,
+        test_only=test_only,
+    )
+
     return build_rule(
         name=name,
         srcs=[lib],
         deps=deps,
         data=data,
+        debug_data=debug_data,
         outs=[out or name],
         cmd=cmds,
+        debug_cmd=debug_cmd,
         building_description="Linking...",
         needs_transitive_deps=True,
         binary=True,
         output_is_complete=True,
         test_only=test_only,
         tools=tools,
+        debug_tools=debug_tools,
         visibility=visibility,
         labels=labels,
         requires=['go'],
@@ -600,7 +613,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
       name (str): Name of the rule.
       srcs (list): Go source files to compile.
       resources (list): Files to embed in the library using //go:embed directives.
-      data (list): Runtime data files for the test.
+      data (list|dict): Runtime data files for the test.
       deps (list): Dependencies
       worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
       visibility (list): Visibility specification
@@ -691,9 +704,10 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     )
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
-    test_cmd = '$TEST %s 2>&1 | tee $TMP_DIR/test.results' % flags
+    test_cmd = f'$TEST {flags} 2>&1 | tee $TMP_DIR/test.results'
+    worker_cmd = f'$(worker {worker})'
     if worker:
-        test_cmd = f'$(worker {worker}) && {test_cmd} '
+        test_cmd = f'{worker_cmd} && {test_cmd} '
         deps += [worker]
 
     if CONFIG.GO_TEST_ROOT_COMPAT:
@@ -702,15 +716,28 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         for out in test_outputs:
             test_cmd += f' && mv {out} $TMP_DIR/{out}'
 
+    debug_cmd, debug_data, debug_tools = _debug_cmd(
+        name = name,
+        bin = "./$TEST",
+        flags = flags,
+        pre_cmd = worker_cmd if worker else "",
+        srcs = srcs + [main_rule],
+        deps = deps,
+        test_only = True
+    )
+
     return build_rule(
         name = name,
         srcs = [lib_rule],
         data = data,
+        debug_data = debug_data,
         deps = deps,
         outs = [name],
         tools = tools,
+        debug_tools = debug_tools,
         cmd = cmds,
         test_cmd = test_cmd,
+        debug_cmd = debug_cmd,
         visibility = visibility,
         test_sandbox = sandbox,
         test_timeout = timeout,
@@ -1106,9 +1133,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
         cmd = ' && '.join(cmds),
         requires = ['go_src'],
         test_only = test_only,
-        # TODO(jpoole): We probably want to somehow link this to the correct place but Please doesn't really facilitate
-        #  that right now.
-        labels = labels + ['link:plz-out/go'] if go_path_compatibility else labels,
+        labels = labels + ['link:plz-out/go'] if go_path_compatibility else labels + [f'dlink:plz-out/go/src/{module}'],
         hashes = hashes,
         sandbox = False,
         licences = licences,
@@ -1417,6 +1442,7 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         test_only = test_only,
         cmd = _generate_pkg_import_cfg_cmd('"$OUT"', '"$PKG_DIR"', True),
         outs = [f'{name}.importconfig'],
+        output_is_complete = CONFIG.FF_NO_ITER_SOURCES_MARKED,
     )
     exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
 
@@ -1666,4 +1692,46 @@ def _get_ldflags_and_pkgconfig(name):
     ldflags = ' '.join([l[3:] for l in labels if l.startswith('ld:')])
     pkg_config = ' '.join([l[3:] for l in labels if l.startswith('pc:')])
     return (ldflags, f'`pkg-config --libs {pkg_config}`') if pkg_config else (ldflags, '')
+
+
+def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], deps:list=[], test_only:bool=False):
+    if not CONFIG.get("DEBUG"):
+        return "", None, None
+
+    cmd = f"$DEBUG_TOOLS_DLV exec {bin}"
+    data = []
+    tools = {
+        'dlv': CONFIG.DELVE_TOOL
+    }
+
+    if pre_cmd:
+        cmd = f"{pre_cmd} && {cmd}"
+
+    port = CONFIG.DEBUG.PORT
+    if not port:
+        # A CLI debug session needs access to the source files for improved UX.
+        debug_srcs_tar = f"_{name}_debug_srcs.tar"
+        data = [
+            build_rule(
+                name = name,
+                tag = "debug_srcs",
+                srcs = srcs,
+                # Archive all sources.
+                cmd = f"find . -name \"*.go\" | tar -cf {debug_srcs_tar} -T -",
+                outs = [debug_srcs_tar],
+                deps = deps,
+                test_only = test_only,
+                requires = ["go_src"],
+                needs_transitive_deps = True,
+            )
+        ]
+        # Extract sources before running the debugger.
+        cmd = f"tar -xf $PKG_DIR/{debug_srcs_tar} && {cmd}"
+    else:
+        # Start a debug session where clients (i.e. IDEs) can connect to instead.
+        cmd = f"{cmd} --headless=true --listen=localhost:{port} --api-version=2"
+
+    cmd = f"{cmd} -- {flags}"
+
+    return cmd, data, tools
 

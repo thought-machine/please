@@ -139,6 +139,10 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.P
 	s := i.scope.NewScope()
 	s.contextPkg = pkg
 	s.subincludeLabel = &label
+	if label.Subrepo != "" {
+		subrepo := i.scope.state.Graph.SubrepoOrDie(label.Subrepo)
+		loadPluginConfig(subrepo.State.Config, s.state, s.config.base)
+	}
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
 	s.Set("CONFIG", s.config)
@@ -473,7 +477,7 @@ func (s *scope) interpretIs(obj pyObject, op OpExpression) pyObject {
 	}
 }
 
-func (s *scope) negate(obj pyObject) pyBool {
+func (s *scope) negate(obj pyObject) pyObject {
 	if obj.IsTruthy() {
 		return False
 	}
@@ -520,6 +524,10 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 	} else if expr.None {
 		return None
 	} else if expr.List != nil {
+		// Special-case the empty list (which is a fairly common and safe case)
+		if expr.List.Comprehension == nil && len(expr.List.Values) == 0 {
+			return emptyList
+		}
 		return s.interpretList(expr.List)
 	} else if expr.Dict != nil {
 		return s.interpretDict(expr.Dict)

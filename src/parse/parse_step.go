@@ -51,6 +51,9 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	} else if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
 		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label)
+		if err := subrepo.LoadSubrepoConfig(); err != nil {
+			return err
+		}
 	}
 	// Subrepo & nothing else means we just want to ensure that subrepo is present.
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
@@ -83,6 +86,8 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 		if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, "", label); err != nil {
 			return nil, err
 		} else if !handled {
+			// They may have meant a subrepo that was defined in the dependent label's subrepo rather than the host
+			// repo
 			if _, err := parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label); err != nil {
 				return nil, err
 			}
@@ -101,7 +106,7 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 		return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
 	}
 	// For local subincludes, the subrepo has to already be defined at this point in the BUILD file
-	return nil, fmt.Errorf("%s -> %s", dependent, label)
+	return nil, fmt.Errorf("Subrepo %v is not defined yet. It must appear before it is used by subinclude()", sl)
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.
@@ -129,7 +134,7 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
 		if label.Subrepo == "" && label.PackageName == "" && label.Name == dependent.Subrepo {
 			if subrepo := checkArchSubrepo(state, label.Name); subrepo != nil {
-				state.LogParseResult(tid, label, core.TargetBuilt, "Instantiated subrepo")
+				state.ArchSubrepoInitialised(label)
 				return nil
 			}
 		}

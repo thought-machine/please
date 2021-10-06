@@ -1,0 +1,5 @@
+github_repo(
+    name = "python_rules",
+    repo = "please-build/python-rules",
+    revision = "001ec3a0928d8b7ec20edc4a4c013c2024410066",
+)

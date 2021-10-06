@@ -427,7 +427,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 			fmt.Printf("\n")
 			argv := []string{"bash", "--noprofile", "--norc", "-o", "pipefail"}
 			log.Debug("Full command: %s", strings.Join(argv, " "))
-			cmd := state.ProcessExecutor.ExecCommand(process.NewSandboxConfig(shouldSandbox, shouldSandbox), argv[0], argv[1:]...)
+			cmd := state.ProcessExecutor.ExecCommand(process.NewSandboxConfig(shouldSandbox, shouldSandbox), false, argv[0], argv[1:]...)
 			cmd.Dir = dir
 			cmd.Env = env
 			cmd.Stdin = os.Stdin

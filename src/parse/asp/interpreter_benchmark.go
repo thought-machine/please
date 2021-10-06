@@ -13,7 +13,7 @@ func BenchmarkParseFile(b *testing.B) {
 	b.ReportAllocs()
 	state := core.NewDefaultBuildState()
 	parser := NewParser(state)
-	dir, _ := rules.AllAssets()
+	dir, _ := rules.AllAssets(map[string]struct{}{})
 	sort.Strings(dir)
 	for _, filename := range dir {
 		src, _ := rules.ReadAsset(filename)

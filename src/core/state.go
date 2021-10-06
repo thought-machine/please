@@ -43,6 +43,12 @@ type TestTask struct {
 	Run   int
 }
 
+// Debug is the type for debugging a target
+type Debug struct {
+	Debugger string
+	Port     int
+}
+
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
@@ -174,6 +180,8 @@ type BuildState struct {
 	ShowTestOutput bool
 	// True to print all output of all tasks to stderr.
 	ShowAllOutput bool
+	// Set when a debugging session against a target is requested.
+	Debug *Debug
 	// True to attach a debugger on test failure.
 	DebugTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
@@ -186,6 +194,21 @@ type BuildState struct {
 	experimentalLabels []BuildLabel
 	// Various items for tracking progress.
 	progress *stateProgress
+	// CurrentSubrepo is the subrepo this state is for or the empty string if it's for the host repo
+	CurrentSubrepo string
+}
+
+// ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
+func (state *BuildState) ExcludedBuiltinRules() map[string]struct{} {
+	// TODO(jpoole): remove this function, including the changes to rules.AllAssets() in v17
+	ret := map[string]struct{}{}
+	if state.Config.FeatureFlags.ExcludePythonRules {
+		ret["python_rules.build_defs"] = struct{}{}
+	}
+	if state.Config.FeatureFlags.ExcludeJavaRules {
+		ret["java_rules.build_defs"] = struct{}{}
+	}
+	return ret
 }
 
 // A stateProgress records various points of progress for a State.
@@ -458,6 +481,14 @@ func (state *BuildState) LogBuildResult(tid int, target *BuildTarget, status Bui
 		if ch, present := state.progress.pendingTargets.GetOK(target.Label); present {
 			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
 		}
+	}
+}
+
+// ArchSubrepoInitialised closes the pending target channel for the non-existent arch subrepo psudo-target
+func (state *BuildState) ArchSubrepoInitialised(subrepoLabel BuildLabel) {
+	// We may have parse tasks waiting for this guy to build, check for them.
+	if ch, present := state.progress.pendingTargets.GetOK(subrepoLabel); present {
+		close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
 	}
 }
 
@@ -980,7 +1011,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// Copy with the architecture-specific config file.
 	// This is slightly wrong in that other things (e.g. user-specified command line overrides) should
 	// in fact take priority over this, but that's a lot more fiddly to get right.
-	s := state.ForConfig(".plzconfig_" + arch.String())
+	s := state.forConfig(".plzconfig_" + arch.String())
 	s.Arch = arch
 	return s
 }
@@ -997,14 +1028,12 @@ func (state *BuildState) findArch(arch cli.Arch) *BuildState {
 	return nil
 }
 
-// ForConfig creates a copy of this BuildState based on the given config files.
-func (state *BuildState) ForConfig(config ...string) *BuildState {
+// forConfig creates a copy of this BuildState based on the given config files.
+func (state *BuildState) forConfig(config ...string) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	// Duplicate & alter configuration
-	c := &Configuration{}
-	*c = *state.Config
-	c.buildEnvStored = &storedBuildEnv{}
+	c := state.Config.copyConfig()
 	for _, filename := range config {
 		if err := readConfigFile(c, filename); err != nil {
 			log.Fatalf("Failed to read config file %s: %s", filename, err)
@@ -1014,6 +1043,18 @@ func (state *BuildState) ForConfig(config ...string) *BuildState {
 	*s = *state
 	s.Config = c
 	state.progress.allStates = append(state.progress.allStates, s)
+	return s
+}
+
+// ForSubrepo creates a new state for the given subrepo
+func (state *BuildState) ForSubrepo(name string, config ...string) *BuildState {
+	for _, s := range state.progress.allStates {
+		if s.CurrentSubrepo == name {
+			return s
+		}
+	}
+	s := state.forConfig(config...)
+	s.CurrentSubrepo = name
 	return s
 }
 
@@ -1038,7 +1079,7 @@ func (state *BuildState) DownloadInputsIfNeeded(tid int, target *BuildTarget, ru
 // IterInputs returns a channel that iterates all the input files needed for a target.
 func (state *BuildState) IterInputs(target *BuildTarget, test bool) <-chan BuildInput {
 	if !test {
-		return IterInputs(state.Graph, target, true, target.IsFilegroup)
+		return IterInputs(state, state.Graph, target, true, target.IsFilegroup)
 	}
 	ch := make(chan BuildInput)
 	go func() {

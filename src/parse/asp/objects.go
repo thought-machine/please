@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -38,8 +39,8 @@ type pyBool bool
 
 // True and False are the singletons representing those values.
 var (
-	True  pyBool = true
-	False pyBool = false
+	True  pyObject = pyBool(true)
+	False pyObject = pyBool(false)
 )
 
 // newPyBool creates a new bool. It's a minor optimisation to treat them as singletons
@@ -88,7 +89,7 @@ func (b pyBool) MarshalJSON() ([]byte, error) {
 type pyNone struct{}
 
 // None is the singleton representing None; there can be only one etc.
-var None = pyNone{}
+var None pyObject = pyNone{}
 
 func (n pyNone) Type() string {
 	return "none"
@@ -305,6 +306,8 @@ func (s pyString) String() string {
 }
 
 type pyList []pyObject
+
+var emptyList pyObject = make(pyList, 0) // want this to explicitly have zero capacity
 
 func (l pyList) Type() string {
 	return "list"
@@ -528,6 +531,7 @@ type pyFunc struct {
 	constants  []pyObject
 	types      [][]string
 	code       []*Statement
+	argPool    *sync.Pool
 	// If the function is implemented natively, this is the pointer to its real code.
 	nativeCode func(*scope, []pyObject) pyObject
 	// If the function has been bound as a member function, this is the implicit self argument.
@@ -628,14 +632,19 @@ func (f *pyFunc) Call(ctx context.Context, s *scope, c *Call) pyObject {
 		if a.Name != "" { // Named argument
 			name := a.Name
 			idx, present := f.argIndices[name]
-			s.Assert(present || f.kwargs, "Unknown argument to %s: %s", f.name, name)
+			if !present && !f.kwargs {
+				s.Error("Unknown argument to %s: %s", f.name, name)
+			}
 			if present {
 				name = f.args[idx]
 			}
 			s2.Set(name, f.validateType(s, idx, &a.Value))
 		} else {
-			s.NAssert(i >= len(f.args), "Too many arguments to %s", f.name)
-			s.NAssert(f.kwargsonly, "Function %s can only be called with keyword arguments", f.name)
+			if i >= len(f.args) {
+				s.Error("Too many arguments to %s", f.name)
+			} else if f.kwargsonly {
+				s.Error("Function %s can only be called with keyword arguments", f.name)
+			}
 			s2.Set(f.args[i], f.validateType(s, i, &a.Value))
 		}
 	}
@@ -660,7 +669,18 @@ func (f *pyFunc) Call(ctx context.Context, s *scope, c *Call) pyObject {
 // For performance reasons these are done differently - rather then receiving a pointer to a scope
 // they receive their arguments as a slice, in which unpassed arguments are nil.
 func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
-	args := make([]pyObject, len(f.args))
+	var args []pyObject
+	if f.argPool != nil {
+		args = f.argPool.Get().([]pyObject)
+		defer func() {
+			for i := range args {
+				args[i] = nil
+			}
+			f.argPool.Put(args) //nolint:staticcheck
+		}()
+	} else {
+		args = make([]pyObject, len(f.args))
+	}
 	offset := 0
 	if f.self != nil {
 		args[0] = f.self
@@ -679,7 +699,9 @@ func (f *pyFunc) callNative(s *scope, c *Call) pyObject {
 			s.Assert(f.varargs, "Too many arguments to %s", f.name)
 			args = append(args, s.interpretExpression(&a.Value))
 		} else {
-			s.NAssert(f.kwargsonly, "Function %s can only be called with keyword arguments", f.name)
+			if f.kwargsonly {
+				s.Error("Function %s can only be called with keyword arguments", f.name)
+			}
 			if i+offset >= len(args) {
 				args = append(args, f.validateType(s, i+offset, &a.Value))
 			} else {
@@ -702,7 +724,11 @@ func (f *pyFunc) defaultArg(s *scope, i int, arg string) pyObject {
 	if f.constants[i] != nil {
 		return f.constants[i]
 	}
-	s.Assert(f.defaults != nil && f.defaults[i] != nil, "Missing required argument to %s: %s", f.name, arg)
+	// Deliberately does not use Assert since it doesn't get inlined here (weirdly it does
+	// in _many_ other places) and this function is pretty hot.
+	if f.defaults == nil || f.defaults[i] == nil {
+		s.Error("Missing required argument to %s: %s", f.name, arg)
+	}
 	return s.interpretExpression(f.defaults[i])
 }
 
@@ -911,14 +937,107 @@ func newConfig(state *core.BuildState) *pyConfig {
 	c["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
 	c["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 
+	if debug := state.Debug; debug != nil {
+		c["DEBUG"] = pyDict{
+			"DEBUGGER": pyString(debug.Debugger),
+			"PORT":     pyInt(debug.Port),
+		}
+	}
+
+	loadPluginConfig(state.Config, state, c)
+
 	return &pyConfig{base: c}
+}
+
+func loadPluginConfig(subrepoConfig *core.Configuration, packageState *core.BuildState, c pyDict) {
+	pluginName := subrepoConfig.PluginDefinition.Name
+	if pluginName == "" {
+		return
+	}
+
+	extraVals := map[string][]string{}
+	if config := packageState.Config.Plugin[pluginName]; config != nil {
+		extraVals = config.ExtraValues
+	}
+
+	pluginNamespace := pyDict{}
+	contextPackage := &core.Package{SubrepoName: packageState.CurrentSubrepo}
+	configValueDefinitions := subrepoConfig.PluginConfig
+	for key, definition := range configValueDefinitions {
+		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, definition.ConfigKey)
+		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
+		if !ok {
+			value = definition.DefaultValue
+		}
+		if len(value) == 0 && !definition.Optional {
+			log.Fatalf("plugin config %s is not optional %v", fullConfigKey, extraVals)
+		}
+
+		if !definition.Repeatable && len(value) > 1 {
+			log.Fatalf("plugin config %v is not repeatable", fullConfigKey)
+		}
+
+		// Parse any config values in the current subrepo so @self resolves correctly. If we leave them, @self will
+		// resolve based on the subincluding package which will likely be the host repo.
+		for i, v := range value {
+			if core.LooksLikeABuildLabel(v) {
+				value[i] = core.ParseBuildLabelContext(v, contextPackage).String()
+			}
+		}
+		if definition.Repeatable {
+			l := make(pyList, 0, len(value))
+			for _, v := range value {
+				l = append(l, toPyObject(fullConfigKey, v, definition.Type))
+			}
+			pluginNamespace[strings.ToUpper(key)] = l
+		} else {
+			val := ""
+			if len(value) == 1 {
+				val = value[0]
+			}
+			pluginNamespace[strings.ToUpper(key)] = toPyObject(fullConfigKey, val, definition.Type)
+		}
+	}
+	c[strings.ToUpper(pluginName)] = pluginNamespace
+}
+
+func toPyObject(key, val, toType string) pyObject {
+	if toType == "" || toType == "str" {
+		return pyString(val)
+	}
+
+	if toType == "bool" {
+		val = strings.ToLower(val)
+		if val == "true" || val == "yes" || val == "on" {
+			return pyBool(true)
+		}
+		if val == "false" || val == "no" || val == "off" || val == "" {
+			return pyBool(false)
+		}
+		log.Fatalf("%s: Invalid boolean value %v", key, val)
+	}
+
+	if toType == "int" {
+		if val == "" {
+			return pyInt(0)
+		}
+
+		i, err := strconv.Atoi(val)
+		if err != nil {
+			log.Fatalf("%s: Invalid int value %v", key, val)
+		}
+		return pyInt(i)
+	}
+
+	log.Fatalf("%s: invalid config type %v", key, toType)
+	return pyNone{}
 }
 
 // A pyFrozenConfig is a config object that disallows further updates.
 type pyFrozenConfig struct{ pyConfig }
 
 // IndexAssign always fails, assignments to a pyFrozenConfig aren't allowed.
-func (c *pyFrozenConfig) IndexAssign(index, value pyObject) {
+func (c *pyFrozenConfig) IndexAssign(_, _ pyObject) {
 	panic("Config object is not assignable in this scope")
 }
 
