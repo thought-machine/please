@@ -17,16 +17,26 @@ go_module(
 go_module(
     name = "xcrypto",
     install = [
-        "ssh/terminal",
         "cast5",
-
-        # TODO(jpoole): consider if requiring this to be explicit is a good idea or if we should do the
-        # `openpgp/openpgp.a` "hack" here
+        "curve25519",
+        "curve25519/internal/field",
+        "ed25519",
+        "ssh/terminal",
         "openpgp/...",
         "openpgp",
     ],
     module = "golang.org/x/crypto",
-    version = "7b85b097bf7527677d54d3220065e966a0e3b613",
+    version = "v0.0.0-20210920023735-84f357641f63",
+    visibility = ["PUBLIC"],
+    deps = [":xterm"],
+)
+
+go_module(
+    name = "xterm",
+    module = "golang.org/x/term",
+    version = "v0.0.0-20210615171337-6886f2dfbf5b",
+    visibility = ["PUBLIC"],
+    deps = [":xsys"],
 )
 
 go_module(
@@ -213,6 +223,32 @@ go_mod_download(
     name = "protobuf_download",
     module = "github.com/golang/protobuf",
     version = "v1.4.3",
+)
+
+go_module(
+    name = "go-crypto",
+    install = [
+        "bitcurves",
+        "brainpool",
+        "eax",
+        "internal/byteutil",
+        "ocb",
+        "openpgp",
+        "openpgp/aes/keywrap",
+        "openpgp/armor",
+        "openpgp/ecdh",
+        "openpgp/elgamal",
+        "openpgp/errors",
+        "openpgp/internal/algorithm",
+        "openpgp/internal/ecc",
+        "openpgp/internal/encoding",
+        "openpgp/packet",
+        "openpgp/s2k",
+    ],
+    module = "github.com/ProtonMail/go-crypto",
+    version = "v0.0.0-20210920135941-2c5829bbf927",
+    visibility = ["PUBLIC"],
+    deps = [":xcrypto"],
 )
 
 go_module(

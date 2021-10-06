@@ -10,8 +10,8 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/thought-machine/please/src/cli"
-	"golang.org/x/crypto/openpgp"
 )
 
 // identity is the signing identity of this key.
@@ -24,7 +24,7 @@ func verifySignature(signed, signature io.Reader) bool {
 	if err != nil {
 		log.Fatalf("%s", err) // Shouldn't happen
 	}
-	signer, err := openpgp.CheckArmoredDetachedSignature(entities, signed, signature)
+	signer, err := openpgp.CheckArmoredDetachedSignature(entities, signed, signature, nil)
 	if err != nil {
 		log.Error("Bad signature: %s", err)
 		return false
