@@ -997,8 +997,12 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 // buildLinks builds links from the given target if it's labelled appropriately.
 // For example, Go targets may link themselves into plz-out/go/src etc.
 func buildLinks(state *core.BuildState, target *core.BuildTarget) {
-	buildLinksOfType(state, target, "link:", os.Symlink)
-	buildLinksOfType(state, target, "hlink:", os.Link)
+	buildLinksOfType(state, target, "link:", false, os.Symlink)
+	buildLinksOfType(state, target, "hlink:", false, os.Link)
+
+	// Directly link to the path of the label for these (i.e. don't append out to the destination dir)
+	buildLinksOfType(state, target, "dlink:", true, os.Symlink)
+	buildLinksOfType(state, target, "dhlink:", true, os.Link)
 
 	if state.Config.Build.LinkGeneratedSources && target.HasLabel("codegen") {
 		for _, out := range target.Outputs() {
@@ -1009,14 +1013,18 @@ func buildLinks(state *core.BuildState, target *core.BuildTarget) {
 	}
 }
 
-func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix string, f fs.LinkFunc) {
+func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix string, direct bool, f fs.LinkFunc) {
 	if labels := target.PrefixedLabels(prefix); len(labels) > 0 {
 		env := core.TargetEnvironment(state, target)
 		for _, dest := range labels {
 			destDir := path.Join(core.RepoRoot, os.Expand(dest, env.ReplaceEnvironment))
 			srcDir := path.Join(core.RepoRoot, target.OutDir())
 			for _, out := range target.Outputs() {
-				fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), f)
+				if direct {
+					fs.LinkIfNotExists(path.Join(srcDir, out), destDir, f)
+				} else {
+					fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), f)
+				}
 			}
 		}
 	}
