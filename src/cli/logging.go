@@ -198,11 +198,11 @@ func (backend *LogBackend) GetMessageHistory() ([]string, int, int) {
 
 // SetPassthrough sets whether we are "passing through" log messages or not, i.e. whether they go straight to
 // the normal log output or are stored in here.
-func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int, watch bool) {
+func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int, clearMessageHistory bool) {
 	backend.mutex.Lock()
 	backend.passthrough = passthrough
 	backend.interactiveRows = interactiveRows
-	if watch {
+	if clearMessageHistory {
 		backend.messageHistory = list.New()
 		backend.messageCount = 0
 	}
