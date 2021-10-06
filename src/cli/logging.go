@@ -187,7 +187,7 @@ func (backend *LogBackend) calcOutput() []string {
 func (backend *LogBackend) GetMessageHistory() ([]string, int, int) {
 	ret := make([]string, 0, backend.messageHistory.Len())
 	for e := backend.messageHistory.Front(); e != nil; e = e.Next() {
-		msg := backend.lineWrap(e.Value.(string))
+		msg := reverse(backend.lineWrap(e.Value.(string)))
 		ret = append(ret, msg...)
 	}
 	if backend.messageCount > messageHistoryMaxSize {
