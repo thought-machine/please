@@ -1133,7 +1133,6 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 			targets = []core.BuildLabel{core.BuildLabelStdin}
 		}
 	}
-	//FIXME: len(targets) gives 1 even if the list is empty...
 	if len(targets) == 0 {
 		targets = core.InitialPackage()
 	}
