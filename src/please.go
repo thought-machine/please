@@ -1013,8 +1013,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
 	}
-	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell != ""
-	state.PrepareShell = opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
+	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
 	state.Watch = len(opts.Watch.Args.Targets) > 0
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
@@ -1070,6 +1069,8 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		(len(targets) == 1 && !targets[0].IsAllTargets() &&
 			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
+	shell := opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
+	shellRun := opts.Build.Shell == "run" || opts.Test.Shell == "run" || opts.Cover.Shell == "run"
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
 	state.Cache = cache.NewCache(state)
 
@@ -1078,7 +1079,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		output.MonitorState(state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, !pretty, detailedTests, streamTests, shell, shellRun, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
 	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
