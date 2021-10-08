@@ -2,6 +2,7 @@ module github.com/thought-machine/please
 
 require (
 	github.com/DataDog/zstd v1.4.5
+	github.com/ProtonMail/go-crypto v0.0.0-20210920160938-87db9fbc61c7 // indirect
 	github.com/Songmu/prompter v0.0.0-20181014095714-d227c68538bd // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/Workiva/go-datastructures v1.0.50
@@ -47,8 +48,9 @@ require (
 	github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e
 	github.com/thought-machine/go-flags v1.5.0
 	github.com/ulikunitz/xz v0.5.6
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/net v0.0.0-20200904194848-62affa334b73
+	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
+	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43 // indirect
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/tools v0.0.0-20200825202427-b303f430e36d // indirect
 	google.golang.org/genproto v0.0.0-20200904004341-0bd0a958aa1d
@@ -58,4 +60,4 @@ require (
 	lukechampine.com/blake3 v1.1.4
 )
 
-go 1.13
+go 1.16

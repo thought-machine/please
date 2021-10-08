@@ -14,7 +14,7 @@ go_library(
         "//third_party/go:go-retryablehttp",
         "//third_party/go:logging",
         "//third_party/go:semver",
-        "//third_party/go:xcrypto",
+        "//third_party/go:go-crypto",
         "//third_party/go:xz",
     ],
 )
