@@ -1,4 +1,4 @@
-Version 15.17.1
+Version 15.17.2
 --------------
     * Update to use `github.com/ProtonMail/go-crypto/openpgp` for verification.
       This is needed to update from v15 to v16.8.0+ as we now include the
