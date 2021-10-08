@@ -210,11 +210,11 @@ func (f *File) AddZipFile(filepath string) error {
 }
 
 // walk is a callback to walk a file tree and add all files found in it.
-func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
-	if path != f.input && (mode&os.ModeSymlink) != 0 {
+func (f *File) walk(path string, mode fs.Mode) error {
+	if path != f.input && mode.IsSymlink() {
 		if resolved, err := filepath.EvalSymlinks(path); err != nil {
 			return err
-		} else if isDir {
+		} else if mode.IsDir() {
 			// TODO(peterebden): Is this case still needed?
 			return fs.WalkMode(resolved, f.walk)
 		}
@@ -222,7 +222,7 @@ func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
 	for _, excl := range f.Exclude {
 		if path == excl {
 			log.Debug("Excluding %s", path)
-			if isDir {
+			if mode.IsDir() {
 				return filepath.SkipDir
 			}
 			return nil
@@ -230,7 +230,7 @@ func (f *File) walk(path string, isDir bool, mode os.FileMode) error {
 	}
 	if samePaths(path, f.filename) {
 		return nil
-	} else if !isDir {
+	} else if !mode.IsDir() {
 		if !f.matchesSuffix(path, f.ExcludeSuffix) {
 			if f.matchesSuffix(path, f.Suffix) {
 				log.Debug("Adding zip file %s", path)
