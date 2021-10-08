@@ -24,11 +24,10 @@ go_module(
     version = "v1.0.0",
 )
 
-# Can interop with go_get() rules
-go_get(
+go_module(
     name = "logging",
-    get = "gopkg.in/op/go-logging.v1", # Handles vanity imports nicely
-    revision = "b2cb9fa56473e98db8caba80237377e83fe44db5",
+    module = "gopkg.in/op/go-logging.v1",
+    version = "b2cb9fa56473e98db8caba80237377e83fe44db5",
 )
 
 go_module(
