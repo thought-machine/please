@@ -865,8 +865,8 @@ def go_benchmark(name:str, srcs:list, data:list|dict=None, deps:list=[], visibil
     )
 
 def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False, external=False,
-                 deps:list=[], visibility:list=None, _post_build:function=None, _tag=None, benchmark=False,
-                 labels:list=[]):
+                 deps:list=[], visibility:list=None, _post_build:function=None, _tag=None, benchmark:bool=False,
+                 cover:bool=True, labels:list=[]):
     """Outputs the main file for a Go test.
 
     This essentially does the test discovery and templates out the entry point from it. Note that
@@ -882,8 +882,13 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
       deps (list): Any additional dependencies
       visibility (list): Visibility of the rule.
       benchmark (bool): If True, it will run benchmarks instead of tests.
+      cover (bool): Indicates whether this library should be considered for coverage annotations.
+                    Libraries are only annotated when using `plz cover` (or `plz build -c cover`),
+                    but if this is false they never will be. Can be useful for e.g. third-party
+                    code that you never want to be instrumented.
       labels (list): Any labels to apply to this rule.
     """
+    cover = cover and (CONFIG.BUILD_CONFIG == "cover")
     test_package = test_package or _get_import_path()
     external_flag = " --external" if external else ""
     cmd = f'"$TOOLS" testmain --test_package "{test_package}"{external_flag} --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
@@ -904,8 +909,8 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
         outs = [name + '_main.go'],
         deps = deps,
         cmd = cmds,
-        needs_transitive_deps = CONFIG.BUILD_CONFIG == "cover",  # Need all dependencies to template coverage variables
-        requires = ['go', 'go_src'] if CONFIG.BUILD_CONFIG == "cover" else ['go'],
+        needs_transitive_deps = cover,  # Need all dependencies to template coverage variables
+        requires = ['go', 'go_src'] if cover else ['go'],
         test_only = test_only,
         tools = [CONFIG.PLEASE_GO_TOOL],
         post_build = _post_build,
@@ -1734,4 +1739,3 @@ def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], de
     cmd = f"{cmd} -- {flags}"
 
     return cmd, data, tools
-
