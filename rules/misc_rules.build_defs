@@ -369,7 +369,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
                 visibility:list=None, licences:list=None, test_only:bool&testonly=False,
                 labels:list=[], deps:list=None, exported_deps:list=None,
                 extract:bool=False, strip_prefix:str='', _tag:str='',exported_files=[],
-                entry_points:dict={}):
+                entry_points:dict={}, username:str=None, password_file:str=None):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -389,6 +389,8 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
                       tar format.
       strip_prefix (str): When extracting, strip this prefix from the extracted files.
       exported_files (list): A list of files to export from the archive when extracting.
+      username (str): Username for accessing a private file or repo
+      password_file (str): A file on disk that contains a password or access token
     """
     if extract:
         if out:
@@ -444,11 +446,19 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
 
     urls = [url] if isinstance(url, str) else url
     url = urls[0]
+
+    cmd = "curl --url "
+    cmd += url
+    if username and password_file:
+        cmd += " --user " + username + ":" + "$(cat " + password_file + ")"
+
+    cmd += " -o $OUTS"
+
     return build_rule(
         name = name,
         tag = _tag,
-        cmd = '',
-        _urls = urls,
+        cmd = cmd if username and password_file else '',
+        _urls = urls if not username and not password_file else None,
         outs = [out or url[url.rfind('/') + 1:]],
         binary = binary,
         visibility = visibility,
