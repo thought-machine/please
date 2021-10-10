@@ -944,6 +944,11 @@ func (config *Configuration) NumRemoteExecutors() int {
 }
 
 func (config Configuration) copyConfig() *Configuration {
+	buildConfig := config.BuildConfig
+	config.BuildConfig = make(map[string]string, len(buildConfig))
+	for k, v := range buildConfig {
+		config.BuildConfig[k] = v
+	}
 	config.buildEnvStored = &storedBuildEnv{}
 	plugins := map[string]*Plugin{}
 	for name, plugin := range config.Plugin {
