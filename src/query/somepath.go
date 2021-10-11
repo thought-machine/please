@@ -103,7 +103,8 @@ func filterPath(path []core.BuildLabel, showHidden bool) []core.BuildLabel {
 	ret := []core.BuildLabel{path[0]}
 	last := path[0]
 	for _, l := range path {
-		if l.Parent() != last {
+		l = l.Parent()
+		if l != last {
 			ret = append(ret, l)
 			last = l
 		}
