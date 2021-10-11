@@ -396,7 +396,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
       username (str): Username for accessing a private file or repo.
       password_file (str): A file on disk that contains a password or access token.
       headers (dict): Headers to pass to curl.
-      secret_headers (dict): Headers contained in secrets files to pass to curl.
+      secret_headers (dict): Headers contained in files to pass to curl.
     """
     if extract:
         if out:
@@ -467,7 +467,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         for header in headers.items():
             header_flag += [f' --header "{header}: {headers[header]}"']
         for header in secret_headers.items():
-            header_flag += [f' --header "{header}: {headers[header]}"']
+            header_flag += [f' --header "{header}: $(cat {headers[header]})"']
 
         # Authentication info
         user_info = f'--user {username}:$(cat {password_file})' if auth else None
