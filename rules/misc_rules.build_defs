@@ -455,29 +455,36 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
 
     urls_str = ' '.join(url) if isinstance(url, list) else url
 
+    auth = username and password_file
+    curl = auth or headers or secret_headers
     header_flag = []
-    for header in headers.items():
-        header_flag += [f' --header "{header}: {headers[header]}"']
-    for header in secret_headers.items():
-        header_flag += [f' --header "{header}: {headers[header]}"']
+    cmd = ''
 
-    # Check http response
-    check_url = f'curl -s -o /dev/null -I {header_flag} -w %{{http_code}}'
+    if curl:
+        for header in headers.items():
+            header_flag += [f' --header "{header}: {headers[header]}"']
+        for header in secret_headers.items():
+            header_flag += [f' --header "{header}: {headers[header]}"']
 
-    # Download file
-    user_info = f'--user {username}:$(cat {password_file})'
-    curl_url = f'curl {user_info} {header_flag} -o $OUTS --url'
+        # Authentication info
+        user_info = f'--user {username}:$(cat {password_file})' if auth else None
 
-    # Download first url that succeeds
-    cmd = f'for URL in {urls_str}; do '
-    cmd += f'STATUS=$({check_url} $URL);'
-    cmd += f'[ $STATUS -lt 400 ] && {curl_url} $URL && break; done;'
+        # Check http response
+        check_url = f'curl -s -o /dev/null -I {header_flag} {user_info} -w %{{http_code}}'
+
+        # Download file
+        fetch_url = f'curl --anyauth {user_info} {header_flag} -o $OUTS --url'
+
+        # Download first url that succeeds
+        cmd = f'for URL in {urls_str}; do '
+        cmd += f'STATUS=$({check_url} $URL);'
+        cmd += f'[ $STATUS -lt 400 ] && {fetch_url} $URL && break; done;'
 
     return build_rule(
         name = name,
         tag = _tag,
-        cmd = '' if not username and password_file else cmd,
-        _urls = urls if not username and not password_file else None,
+        cmd = '' if not curl else cmd,
+        _urls = urls if not curl else None,
         outs = [out or url[url.rfind('/') + 1:]],
         binary = binary,
         visibility = visibility,
