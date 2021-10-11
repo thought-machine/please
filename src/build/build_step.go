@@ -160,7 +160,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	}
 
 	state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
-	if state.PrepareOnly && state.IsOriginalTarget(target) {
+	if state.PrepareOnly && state.IsOriginalTarget(target) && !state.NeedTests {
 		return prepareOnly(tid, state, target)
 	}
 

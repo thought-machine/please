@@ -28,7 +28,7 @@ const testDurationGranularity = time.Millisecond
 
 // MonitorState monitors the build while it's running and prints output until the results
 // channel of state has completed.
-func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTestResults bool, traceFile string) {
+func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTestResults, shell, shellRun bool, traceFile string) {
 	initPrintf(state.Config)
 
 	if len(state.Config.Please.Motd) != 0 {
@@ -78,7 +78,7 @@ loop:
 		for _, label := range state.ExpandOriginalLabels() {
 			if target := state.Graph.Target(label); target == nil {
 				log.Fatalf("Target %s doesn't exist in build graph", label)
-			} else if (state.NeedHashesOnly || state.PrepareOnly || state.PrepareShell) && target.State() == core.Stopped {
+			} else if (state.NeedHashesOnly || state.PrepareOnly || shell) && target.State() == core.Stopped {
 				// Do nothing, we will output about this shortly.
 			} else if target.State() < core.Built && len(bt.FailedTargets) == 0 && !target.AddedPostBuild {
 				log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltTargetsMessage(state.Graph))
@@ -86,8 +86,8 @@ loop:
 		}
 	}
 	if state.NeedBuild && len(bt.FailedNonTests) == 0 {
-		if state.PrepareOnly || state.PrepareShell {
-			printTempDirs(state, duration)
+		if state.PrepareOnly || shell {
+			printTempDirs(state, duration, shell, shellRun)
 		} else if state.NeedTests { // Got to the test phase, report their results.
 			printTestResults(state, bt.FailedTargets, duration, detailedTests)
 		} else if state.NeedHashesOnly {
@@ -401,7 +401,7 @@ func printHashes(state *core.BuildState, duration time.Duration) {
 	}
 }
 
-func printTempDirs(state *core.BuildState, duration time.Duration) {
+func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellRun bool) {
 	fmt.Printf("Temp directories prepared, total time %s:\n", duration)
 	state = state.ForArch(state.TargetArch)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
@@ -420,12 +420,15 @@ func printTempDirs(state *core.BuildState, duration time.Duration) {
 		env = append(env, "CMD="+cmd)
 		fmt.Printf("  %s: %s\n", label, dir)
 		fmt.Printf("    Command: %s\n", cmd)
-		if !state.PrepareShell {
+		if !shell {
 			// This isn't very useful if we're opening a shell (since then the vars will be set anyway)
 			fmt.Printf("   Expanded: %s\n", os.Expand(cmd, env.ReplaceEnvironment))
 		} else {
 			fmt.Printf("\n")
 			argv := []string{"bash", "--noprofile", "--norc", "-o", "pipefail"}
+			if shellRun {
+				argv = append(argv, "-c", cmd)
+			}
 			log.Debug("Full command: %s", strings.Join(argv, " "))
 			cmd := state.ProcessExecutor.ExecCommand(process.NewSandboxConfig(shouldSandbox, shouldSandbox), false, argv[0], argv[1:]...)
 			cmd.Dir = dir

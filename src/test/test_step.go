@@ -73,7 +73,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	needCoverage := target.NeedCoverage(state)
 
 	// If the user passed --shell then just prepare the directory.
-	if state.PrepareShell {
+	if state.PrepareOnly {
 		if err := state.DownloadInputsIfNeeded(tid, target, true); err != nil {
 			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to download test inputs")
 			return
