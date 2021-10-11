@@ -10,8 +10,9 @@ import (
 // Useful for a "why on earth do I depend on this thing" type query.
 func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel, showHidden bool) error {
 	s := somepath{
-		graph: graph,
-		memo:  map[core.BuildLabel]map[core.BuildLabel]struct{}{},
+		graph:  graph,
+		hidden: showHidden,
+		memo:   map[core.BuildLabel]map[core.BuildLabel]struct{}{},
 	}
 	for _, l1 := range expandAllTargets(graph, from) {
 		for _, l2 := range expandAllTargets(graph, to) {
@@ -46,8 +47,9 @@ func expandAllTargets(graph *core.BuildGraph, labels []core.BuildLabel) []core.B
 }
 
 type somepath struct {
-	graph *core.BuildGraph
-	memo  map[core.BuildLabel]map[core.BuildLabel]struct{}
+	graph  *core.BuildGraph
+	hidden bool
+	memo   map[core.BuildLabel]map[core.BuildLabel]struct{}
 }
 
 func (s *somepath) SomePath(target1, target2 core.BuildLabel) []core.BuildLabel {
@@ -64,13 +66,13 @@ func (s *somepath) somePath(target1, target2 core.BuildLabel) []core.BuildLabel 
 		m = map[core.BuildLabel]struct{}{}
 		s.memo[target2] = m
 	}
-	return somePath(s.graph, s.graph.TargetOrDie(target1), s.graph.TargetOrDie(target2), m)
+	return somePath(s.graph, s.hidden, s.graph.TargetOrDie(target1), s.graph.TargetOrDie(target2), m)
 }
 
-func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
+func somePath(graph *core.BuildGraph, hidden bool, target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
 	if target1.Label == target2.Label {
 		return []core.BuildLabel{target1.Label}
-	} else if target1.Parent(graph) == target2 {
+	} else if !hidden && target1.Parent(graph) == target2 {
 		// If there's some path to the parent of the named target, count that. This is usually what you want e.g. in the
 		// case of protos where the named target is just a filegroup that isn't actually depended on after the
 		// require/provide is resolved.
@@ -81,7 +83,7 @@ func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen m
 	for _, dep := range target1.DeclaredDependencies() {
 		if t := graph.Target(dep); t != nil {
 			for _, l := range t.ProvideFor(target1) {
-				if path := somePath(graph, graph.TargetOrDie(l), target2, seen); len(path) != 0 {
+				if path := somePath(graph, hidden, graph.TargetOrDie(l), target2, seen); len(path) != 0 {
 					return append([]core.BuildLabel{target1.Label}, path...)
 				}
 			}
