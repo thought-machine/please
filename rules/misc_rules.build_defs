@@ -393,10 +393,10 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
                       tar format.
       strip_prefix (str): When extracting, strip this prefix from the extracted files.
       exported_files (list): A list of files to export from the archive when extracting.
-      username (str): Username for accessing a private file or repo
-      password_file (str): A file on disk that contains a password or access token
-      headers (dict): Headers to pass to curl
-      secret_headers (dict): Headers contained in secrets files to pass to curl
+      username (str): Username for accessing a private file or repo.
+      password_file (str): A file on disk that contains a password or access token.
+      headers (dict): Headers to pass to curl.
+      secret_headers (dict): Headers contained in secrets files to pass to curl.
     """
     if extract:
         if out:
