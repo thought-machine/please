@@ -68,18 +68,3 @@ gentest(
         "SHELL": "bash",
     },
 )
-
-gentest(
-    name = "remote_file_test",
-    srcs = [":private_repo"],
-    no_test_output = True,
-    test_cmd = 'true',
-    labels = ['manual'],
-)
-
-remote_file(
-    name = "private_repo",
-    url = "https://github.com/thought-machine/phacsimile/raw/master/tmgonduit/tmgonduit.go",
-    username = "username",
-    password_file = "~/secrets/secret1.txt",
-)
