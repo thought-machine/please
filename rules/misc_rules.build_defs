@@ -452,16 +452,18 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
 
     urls = [url] if isinstance(url, str) else url
     url = urls[0]
-    check_url = f'curl -s -o /dev/null -I -w "%\{http_code\}"'
 
-    cmd = f'for URL in {' '.join(url)}; do '
+    urls_str = ' '.join(url) if isinstance(url, list) else url
+    check_url = f'curl -s -o /dev/null -I -w %{{http_code}}'
+
+    cmd = f'for URL in {urls_str}; do '
     cmd += f'STATUS=$({check_url} $URL);'
     cmd += f'[ $STATUS -lt 400 ] && curl --url $URL --user {username}:$(cat {password_file}) -o $OUTS && break; done;'
 
     return build_rule(
         name = name,
         tag = _tag,
-        cmd = cmd if username and password_file else '',
+        cmd = '' if not username and password_file else cmd,
         _urls = urls if not username and not password_file else None,
         outs = [out or url[url.rfind('/') + 1:]],
         binary = binary,
