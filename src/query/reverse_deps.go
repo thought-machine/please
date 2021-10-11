@@ -128,11 +128,22 @@ func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarge
 func FindRevdeps(state *core.BuildState, targets core.BuildLabels, hidden, followSubincludes bool, depth int) map[*core.BuildTarget]struct{} {
 	r := newRevdeps(state.Graph, hidden, followSubincludes, depth)
 	// Initialise the open set with the original targets
-	for _, t := range targets {
+	for _, label := range targets {
+		target := state.Graph.TargetOrDie(label)
 		r.os.Push(&node{
-			target: state.Graph.TargetOrDie(t),
+			target: target,
 			depth:  0,
 		})
+		if !hidden && !label.IsHidden() {
+			for _, child := range state.Graph.PackageByLabel(label).AllTargets() {
+				if child.Parent(state.Graph) == target {
+					r.os.Push(&node{
+						target: child,
+						depth:  0,
+					})
+				}
+			}
+		}
 	}
 	return r.findRevdeps(state)
 }

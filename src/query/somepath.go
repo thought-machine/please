@@ -70,6 +70,11 @@ func (s *somepath) somePath(target1, target2 core.BuildLabel) []core.BuildLabel 
 func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
 	if target1.Label == target2.Label {
 		return []core.BuildLabel{target1.Label}
+	} else if target1.Parent(graph) == target2 {
+		// If there's some path to the parent of the named target, count that. This is usually what you want e.g. in the
+		// case of protos where the named target is just a filegroup that isn't actually depended on after the
+		// require/provide is resolved.
+		return []core.BuildLabel{target1.Label}
 	} else if _, present := seen[target1.Label]; present {
 		return nil
 	}
