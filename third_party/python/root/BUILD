@@ -15,14 +15,14 @@ package(
 python_wheel(
     name = "six",
     outs = ["six.py"],
-    hashes = ["320b38e70e46b596b690a1306a50acab712de044"],
+    hashes = ["2cd93ac244981391a35b1e0017eecf90c8a962cd67cfde1c947303025961e055"],
     version = "1.14.0",
     use_package_root=True,
 )
 
 python_wheel(
     name = "certifi",
-    hashes = ["69dd32ce9d78c634665e2ee8cc5706aa1f6b2e62"],
+    hashes = ["e553ccb88a45bbef1d25ae65ad32b86e0ad3c6eff94f4b50a3976fccc8e49ab6"],
     version = "2019.11.28",
     use_package_root=True,
 )
