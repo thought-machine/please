@@ -104,11 +104,11 @@ var opts struct {
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
 
 	Build struct {
-		Prepare    bool `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
-		Shell      bool `long:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
-		Rebuild    bool `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
-		NoDownload bool `long:"nodownload" hidden:"true" description:"Don't download outputs after building. Only applies when using remote build execution."`
-		Download   bool `long:"download" hidden:"true" description:"Force download of all outputs regardless of original target spec. Only applies when using remote build execution."`
+		Prepare    bool   `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
+		Shell      string `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
+		Rebuild    bool   `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
+		NoDownload bool   `long:"nodownload" hidden:"true" description:"Don't download outputs after building. Only applies when using remote build execution."`
+		Download   bool   `long:"download" hidden:"true" description:"Force download of all outputs regardless of original target spec. Only applies when using remote build execution."`
 		Args       struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to build"`
 		} `positional-args:"true" required:"true"`
@@ -133,7 +133,7 @@ var opts struct {
 		Debug           bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Failed          bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
 		Detailed        bool         `long:"detailed" description:"Prints more detailed output after tests."`
-		Shell           bool         `long:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
+		Shell           string       `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
 		StreamResults   bool         `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
@@ -161,7 +161,7 @@ var opts struct {
 		Debug               bool          `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
 		Failed              bool          `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
 		Detailed            bool          `long:"detailed" description:"Prints more detailed output after tests."`
-		Shell               bool          `long:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
+		Shell               string        `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
 		StreamResults       bool          `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		Args                struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
@@ -477,7 +477,7 @@ var buildFunctions = map[string]func() int{
 
 		if opts.Cover.LineCoverageReport {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile.AsStrings())
-		} else if !opts.Cover.NoCoverageReport && !opts.Cover.Shell {
+		} else if !opts.Cover.NoCoverageReport && opts.Cover.Shell == "" {
 			output.PrintCoverage(state, opts.Cover.IncludeFile.AsStrings())
 		}
 		if opts.Cover.Incremental {
@@ -1013,8 +1013,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
 	}
-	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell
-	state.PrepareShell = opts.Build.Shell || opts.Test.Shell || opts.Cover.Shell
+	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
 	state.Watch = len(opts.Watch.Args.Targets) > 0
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
@@ -1070,6 +1069,8 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		(len(targets) == 1 && !targets[0].IsAllTargets() &&
 			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
+	shell := opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
+	shellRun := opts.Build.Shell == "run" || opts.Test.Shell == "run" || opts.Cover.Shell == "run"
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
 	state.Cache = cache.NewCache(state)
 
@@ -1078,7 +1079,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		output.MonitorState(state, !pretty, detailedTests, streamTests, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, !pretty, detailedTests, streamTests, shell, shellRun, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
 	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
@@ -1133,7 +1134,6 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 			targets = []core.BuildLabel{core.BuildLabelStdin}
 		}
 	}
-	//FIXME: len(targets) gives 1 even if the list is empty...
 	if len(targets) == 0 {
 		targets = core.InitialPackage()
 	}

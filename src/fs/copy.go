@@ -49,12 +49,12 @@ func RecursiveCopyOrLinkFile(from string, to string, mode os.FileMode, link, fal
 		return err
 	}
 	if info.IsDir() {
-		return WalkMode(from, func(name string, isDir bool, fileMode os.FileMode) error {
+		return WalkMode(from, func(name string, fileMode Mode) error {
 			dest := path.Join(to, name[len(from):])
-			if isDir {
+			if fileMode.IsDir() {
 				return os.MkdirAll(dest, DirPermissions)
 			}
-			return CopyOrLinkFile(name, dest, fileMode, mode, link, fallback)
+			return CopyOrLinkFile(name, dest, fileMode.ModeType(), mode, link, fallback)
 		})
 	}
 	return CopyOrLinkFile(from, to, info.Mode(), mode, link, fallback)
