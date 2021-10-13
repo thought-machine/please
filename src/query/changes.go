@@ -102,7 +102,7 @@ func targetChanged(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget) bool {
 	if err1 != nil || err2 != nil {
 		if err1 != nil && err2 != nil {
 			return err1.Error() != err2.Error()
-		} 
+		}
 		return true
 	}
 
