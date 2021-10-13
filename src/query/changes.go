@@ -96,22 +96,17 @@ func targetChanged(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget) bool {
 	}
 	h1, err1 := sourceHash(s1, t1)
 	h2, err2 := sourceHash(s2, t2)
-	if !bytes.Equal(h1, h2) {
-		return true
-	}
 
 	// If there are source hash errors and they are different from each other
 	// then the target is considered to have changed.
-	switch {
-	case err1 == nil && err2 == nil:
-		return false
-	case err1 != nil && err2 == nil:
-		fallthrough
-	case err1 == nil && err2 != nil:
+	if err1 != nil || err2 != nil {
+		if err1 != nil && err2 != nil {
+			return err1.Error() != err2.Error()
+		} 
 		return true
-	default:
-		return err1.Error() != err2.Error()
 	}
+
+	return !bytes.Equal(h1, h2)
 }
 
 // sourceHash performs a partial source hash on a target to determine if it's changed.
