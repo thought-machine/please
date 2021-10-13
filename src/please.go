@@ -821,6 +821,7 @@ var buildFunctions = map[string]func() int{
 		}
 		original := scm.CurrentRevIdentifier()
 		files := scm.ChangedFiles(opts.Query.Changes.Since, true, "")
+		log.Debugf("Number of changed files: %d", len(files))
 		if err := scm.Checkout(opts.Query.Changes.Since); err != nil {
 			log.Fatalf("%s", err)
 		}

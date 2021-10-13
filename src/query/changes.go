@@ -17,6 +17,8 @@ import (
 func DiffGraphs(before, after *core.BuildState, files []string, level int) core.BuildLabels {
 	log.Notice("Calculating difference...")
 	changed := diffGraphs(before, after)
+	log.Debugf("Number of changed targets on a non-recursive diff between before and after build graphs: %d", len(changed))
+
 	log.Info("Including changed files...")
 	return changedTargets(after, files, changed, level)
 }
@@ -30,6 +32,8 @@ func Changes(state *core.BuildState, files []string, level int) core.BuildLabels
 // diffGraphs performs a non-recursive diff of two build graphs.
 func diffGraphs(before, after *core.BuildState) map[*core.BuildTarget]struct{} {
 	configChanged := !bytes.Equal(before.Hashes.Config, after.Hashes.Config)
+	log.Debugf("Has config changed between before and after build states: %v", configChanged)
+
 	changed := map[*core.BuildTarget]struct{}{}
 	for _, afterTarget := range after.Graph.AllTargets() {
 		if beforeTarget := before.Graph.Target(afterTarget.Label); beforeTarget == nil || targetChanged(before, after, beforeTarget, afterTarget) || configChanged {
@@ -92,7 +96,22 @@ func targetChanged(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget) bool {
 	}
 	h1, err1 := sourceHash(s1, t1)
 	h2, err2 := sourceHash(s2, t2)
-	return !bytes.Equal(h1, h2) || err1 != nil || err2 != nil
+	if !bytes.Equal(h1, h2) {
+		return true
+	}
+
+	// If there are source hash errors and they are different from each other
+	// then the target is considered to have changed.
+	switch {
+	case err1 == nil && err2 == nil:
+		return false
+	case err1 != nil && err2 == nil:
+		fallthrough
+	case err1 == nil && err2 != nil:
+		return true
+	default:
+		return err1.Error() != err2.Error()
+	}
 }
 
 // sourceHash performs a partial source hash on a target to determine if it's changed.
