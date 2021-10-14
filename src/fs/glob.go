@@ -107,6 +107,8 @@ func (globber *Globber) Glob(rootPath string, includes, excludes []string, inclu
 		matches, err := globber.glob(rootPath, include, excludes, includeHidden, includeSymlinks)
 		if err != nil {
 			panic(fmt.Errorf("error globbing files with %v: %v", include, err))
+		} else if len(matches) == 0 {
+			panic(fmt.Errorf("No matches found for this glob"))
 		}
 		// Remove the root path from the returned files and add them to the output
 		for _, filename := range matches {
