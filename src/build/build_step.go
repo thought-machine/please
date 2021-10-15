@@ -878,13 +878,7 @@ func (h *targetHasher) SetHash(target *core.BuildTarget, hash []byte) {
 // outputHash calculates the output hash for a target, choosing an appropriate strategy.
 func (h *targetHasher) outputHash(target *core.BuildTarget) ([]byte, error) {
 	outs := target.FullOutputs()
-
-	// We must combine for sha1 for backwards compatibility
-	// TODO(jpoole): remove this special case in v16
-	mustCombine := h.State.Config.Build.HashFunction == "sha1" && !h.State.Config.FeatureFlags.SingleSHA1Hash
-	combine := len(outs) != 1 || mustCombine
-
-	if !combine && fs.FileExists(outs[0]) {
+	if len(outs) == 1 && fs.FileExists(outs[0]) {
 		return outputHash(target, outs, h.State.PathHasher, nil)
 	}
 	return outputHash(target, outs, h.State.PathHasher, h.State.PathHasher.NewHash)
@@ -937,14 +931,6 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 	validHashes, valid := checkRuleHashesOfType(target, hashes, outputs, state.OutputHashCheckers(), combine)
 	if valid {
 		return nil
-	}
-
-	// TODO(jpoole): remove this special case for sha1 once v16 is released
-	if !state.Config.FeatureFlags.SingleSHA1Hash {
-		// Always allow both the combined and non-combined sha1 hash for backwards compatibility
-		if _, valid := checkRuleHashesOfType(target, hashes, outputs, []*fs.PathHasher{state.Hasher("sha1")}, !combine); valid {
-			return nil
-		}
 	}
 	if len(target.Hashes) == 1 {
 		return fmt.Errorf("Bad output hash for rule %s, expected %s, but was: \n\t%s",

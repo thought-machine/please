@@ -346,9 +346,9 @@ func TestOutputHash(t *testing.T) {
 func TestCheckRuleHashes(t *testing.T) {
 	state, target := newState("//package3:target1")
 	target.AddOutput("file1")
-	target.Hashes = []string{"6c6d66a0852b49cdeeb0e183b4f10b0309c5dd4a"}
 
-	// This is the normal sha1-with-combine hash calculation
+	// This is the normal sha1 hash calculation with no combining.
+	target.Hashes = []string{"dba7673010f19a94af4345453005933fd511bea9"}
 	b, _ := state.TargetHasher.OutputHash(target)
 	err := checkRuleHashes(state, target, b)
 	assert.NoError(t, err)
@@ -459,25 +459,16 @@ func TestBuildMetadatafileIsCreated(t *testing.T) {
 // Should return the hash of the first item
 func TestSha1SingleHash(t *testing.T) {
 	testCases := []struct {
-		name             string
-		algorithm        string
-		sha1ForceCombine bool
-		fooHash          string
-		fooAndBarHash    string
+		name          string
+		algorithm     string
+		fooHash       string
+		fooAndBarHash string
 	}{
 		{
-			name:             "sha1 no combine",
-			algorithm:        "sha1",
-			sha1ForceCombine: false,
-			fooHash:          "0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
-			fooAndBarHash:    "4030c3573bf908b75420818b8c0b041443a3f21e",
-		},
-		{
-			name:             "sha1 force combine",
-			algorithm:        "sha1",
-			sha1ForceCombine: true,
-			fooHash:          "a7880a3d0e9799a88cf18ac67cb3ee19a7e43190",
-			fooAndBarHash:    "4030c3573bf908b75420818b8c0b041443a3f21e",
+			name:          "sha1 no combine",
+			algorithm:     "sha1",
+			fooHash:       "0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
+			fooAndBarHash: "4030c3573bf908b75420818b8c0b041443a3f21e",
 		},
 		{
 			name:          "sha256",
@@ -507,7 +498,7 @@ func TestSha1SingleHash(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name+" foo", func(t *testing.T) {
-			state, target := newStateWithHashFunc("//hash_test:hash_test", test.algorithm, test.sha1ForceCombine)
+			state, target := newStateWithHashFunc("//hash_test:hash_test", test.algorithm)
 
 			target.AddOutput("foo.txt")
 
@@ -516,7 +507,7 @@ func TestSha1SingleHash(t *testing.T) {
 			assert.Equal(t, test.fooHash, hex.EncodeToString(h))
 		})
 		t.Run(test.name+" foo and bar", func(t *testing.T) {
-			state, target := newStateWithHashFunc("//hash_test:hash_test", test.algorithm, test.sha1ForceCombine)
+			state, target := newStateWithHashFunc("//hash_test:hash_test", test.algorithm)
 
 			target.AddOutput("foo.txt")
 			target.AddOutput("bar.txt")
@@ -528,29 +519,9 @@ func TestSha1SingleHash(t *testing.T) {
 	}
 }
 
-func newStateWithHashCheckers(label, hashFunction string, hashCheckers ...string) (*core.BuildState, *core.BuildTarget) {
-	config, _ := core.ReadConfigFiles(nil, nil)
-	if hashFunction != "" {
-		config.Build.HashFunction = hashFunction
-	}
-	if len(hashCheckers) > 0 {
-		config.Build.HashCheckers = hashCheckers
-	}
-	state := core.NewBuildState(config)
-	state.Config.Parse.BuildFileName = []string{"BUILD_FILE"}
-	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
-	target.Command = fmt.Sprintf("echo 'output of %s' > $OUT", target.Label)
-	target.BuildTimeout = 100 * time.Second
-	state.Graph.AddTarget(target)
-	state.Parser = &fakeParser{}
-	Init(state)
-	return state, target
-}
-
-func newStateWithHashFunc(label, hashFunc string, sha1ForceCombine bool) (*core.BuildState, *core.BuildTarget) {
+func newStateWithHashFunc(label, hashFunc string) (*core.BuildState, *core.BuildTarget) {
 	config, _ := core.ReadConfigFiles(nil, nil)
 	config.Build.HashFunction = hashFunc
-	config.FeatureFlags.SingleSHA1Hash = !sha1ForceCombine
 	state := core.NewBuildState(config)
 	state.Config.Parse.BuildFileName = []string{"BUILD_FILE"}
 	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
