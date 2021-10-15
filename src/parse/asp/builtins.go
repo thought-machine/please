@@ -534,7 +534,12 @@ func glob(s *scope, args []pyObject) pyObject {
 	if s.globber == nil {
 		s.globber = fs.NewGlobber(s.state.Config.Parse.BuildFileName)
 	}
-	return fromStringList(s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks))
+
+	glob := s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks)
+	if len(glob) == 0 {
+		panic(fmt.Errorf("No matches found for this glob"))
+	}
+	return fromStringList(glob)
 }
 
 func asStringList(s *scope, arg pyObject, name string) []string {
