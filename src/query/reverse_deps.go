@@ -14,7 +14,7 @@ func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hi
 	ls := make(core.BuildLabels, 0, len(targets))
 
 	for target := range targets {
- 		if state.ShouldInclude(target) {
+		if state.ShouldInclude(target) {
 			ls = append(ls, target.Label)
 		}
 	}
