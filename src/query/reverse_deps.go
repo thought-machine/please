@@ -14,7 +14,7 @@ func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hi
 	ls := make(core.BuildLabels, 0, len(targets))
 
 	for target := range targets {
-		if state.ShouldInclude(target) {
+ 		if state.ShouldInclude(target) {
 			ls = append(ls, target.Label)
 		}
 	}
@@ -183,10 +183,13 @@ func (r *revdeps) findRevdeps(state *core.BuildState) map[*core.BuildTarget]stru
 			}
 
 			if next.depth < r.maxDepth || r.maxDepth == -1 {
-				if r.hidden || !t.Label.IsHidden() {
-					ret[t] = struct{}{}
-				} else if parent := t.Parent(state.Graph); parent != nil {
-					ret[parent] = struct{}{}
+				// This excluded  dependencies between hidden rules and their parent for when hidden is false.
+				if depth > 0 {
+					if r.hidden || !t.Label.IsHidden() {
+						ret[t] = struct{}{}
+					} else if parent := t.Parent(state.Graph); parent != nil {
+						ret[parent] = struct{}{}
+					}
 				}
 
 				r.os.Push(&node{
