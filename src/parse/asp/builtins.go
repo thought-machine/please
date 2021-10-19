@@ -536,7 +536,7 @@ func glob(s *scope, args []pyObject) pyObject {
 	}
 
 	glob := s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks)
-	if len(glob) == 0 {
+	if CONFIG.FF_PANIC_ON_BAD_GLOB && len(glob) == 0 {
 		panic(fmt.Errorf("No matches found for this glob"))
 	}
 	return fromStringList(glob)
