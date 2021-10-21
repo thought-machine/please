@@ -1,3 +1,10 @@
+Version 16.12.1
+--------------
+    * Downgrade ProtonMails go-crypto because the newer versions have
+      started adding subpackets to the signature that cause older
+      versions of Please to fail to verify the signature #2138
+
+
 Version 16.12.0
 --------------
     * Implemented direct link label, and used this to link go sources
