@@ -1,5 +1,12 @@
 Version 16.11.0
 --------------
+    * Downgrade ProtonMails go-crypto because the newer versions have
+      started adding subpackets to the signature that cause older
+      versions of Please to fail to verify the signature #2138
+
+
+Version 16.11.0
+--------------
     * Fix some bugs around plugin configuration #2111 #2107
     * Implemented a `plz debug` command that can be used to invoke
       an interactive debugger, or a remote debugger via the `--port`
