@@ -98,4 +98,4 @@ JavaBinaryExecutableByDefault = true
 PackageOutputsStrictness = true
 PythonWheelHashing = true
 NoIterSourcesMarked = true
-PanicOnBadGlob = false
+FailOnBadGlob = false
