@@ -571,13 +571,19 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
 
     label = f'whl:{package_name}=={version}'
 
+
+    if use_package_root and not CONFIG.FF_PYTHON_WHEEL_HASHING:
+        wheel_rule_hashes = hashes
+    else:
+        wheel_rule_hashes = None
+
     # If we're using the package root for output, the later subfolder
     # processing isn't required anymore, so we can just return the result
     # of this rule.
     wheel_rule = build_rule(
         name = name,
         tag = None if use_package_root else 'wheel',
-        hashes = hashes if use_package_root else None,
+        hashes = wheel_rule_hashes,
         visibility = visibility if use_package_root else None,
         cmd = ' && '.join(cmd),
         outs = [name + '.pex.zip'],
