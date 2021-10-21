@@ -600,7 +600,7 @@ type Configuration struct {
 		ExcludePythonRules            bool `help:"Whether to include the python rules or use the plugin"`
 		ExcludeJavaRules              bool `help:"Whether to include the java rules or use the plugin"`
 		ExcludeSymlinksInGlob         bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
-		PanicOnBadGlob                bool `help:"Panic if parser finds a glob that doesn't match anything"`
+		PanicOnBadGlob                bool `help:"Panic if parser finds a glob that doesn't match anything" var:"FF_FAIL_ON_BAD_GLOB"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string `help:"The gateway URL to push prometheus updates to."`
