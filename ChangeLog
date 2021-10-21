@@ -1,8 +1,24 @@
-Version 16.11.0
+Version 16.12.1
 --------------
     * Downgrade ProtonMails go-crypto because the newer versions have
       started adding subpackets to the signature that cause older
       versions of Please to fail to verify the signature #2138
+
+
+Version 16.12.0
+--------------
+    * Implemented direct link label, and used this to link go sources
+      from `go_module()` to `plz-out/go` #2118
+    * Strip all `BUILD` files, including `WORKSPACE` in `new_http_archive()`,
+      not just `BUILD`. This is used by `github_repo()` #2117
+    * Fix display issue with multi-line error messages #2119
+    * Exclude symlinks from globs by default. This is feature is gated
+      behind the `ExcludeSymlinksInGlob` feature flag #2052
+    * Fix issue where unrecognised config was being treated as fatal #2126
+    * Implement `--shell=run` which will immediately run the build/test
+      command #2123
+    * Exclude the location of the Please executable from the remote
+      PATH #2136
 
 
 Version 16.11.0
