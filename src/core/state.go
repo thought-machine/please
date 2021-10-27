@@ -181,7 +181,7 @@ type BuildState struct {
 	// Set when a debugging session against a target is requested.
 	Debug *Debug
 	// True to attach a debugger on test failure.
-	DebugTests bool
+	DebugFailingTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
 	XattrsSupported bool
 	// True if we have any remote executors configured.

@@ -249,6 +249,13 @@ class ModuleDirImport(object):
         return module.__loader__.get_code(fullname)
 
 
+def add_module_dir_to_sys_path(dirname):
+    """Adds the given dirname to sys.path if it's nonempty."""
+    if dirname:
+        sys.path = sys.path[:1] + [os.path.join(sys.path[0], dirname)] + sys.path[1:]
+        sys.meta_path.insert(0, ModuleDirImport(dirname))
+
+
 def pex_basepath(temp=False):
     if temp:
         import tempfile
@@ -342,20 +349,20 @@ def profile(filename):
     return _profile
 
 
-def interact(main):
-    """If PEX_INTERPRETER is set, then starts an interactive console, otherwise runs main()."""
-    if os.environ.get('PEX_INTERPRETER', '0') != '0':
-        import code
-        code.interact()
-    else:
-        return main()
+# This must be redefined/implemented when the pex is built for debugging.
+# The `DEBUG_PORT` environment variable should be used if the debugger is
+# to be used as a server.
+def start_debugger():
+    pass
 
 
 def main():
     """Runs the 'real' entry point of the pex.
 
-    N.B. This gets redefined by test_main to run tests instead.
+    N.B. This gets redefined by pex_test_main to run tests instead.
     """
+    # Starts a debugging session, if defined, before running the entry point.
+    start_debugger()
     # Must run this as __main__ so it executes its own __name__ == '__main__' block.
     runpy.run_module(ENTRY_POINT, run_name='__main__')
     return 0  # unless some other exception gets raised, we're successful.
