@@ -199,12 +199,16 @@ type BuildState struct {
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
 func (state *BuildState) ExcludedBuiltinRules() map[string]struct{} {
 	// TODO(jpoole): remove this function, including the changes to rules.AllAssets() in v17
-	ret := map[string]struct{}{}
+	ret := make(map[string]struct{}, 4)
 	if state.Config.FeatureFlags.ExcludePythonRules {
 		ret["python_rules.build_defs"] = struct{}{}
 	}
 	if state.Config.FeatureFlags.ExcludeJavaRules {
 		ret["java_rules.build_defs"] = struct{}{}
+	}
+	if state.Config.FeatureFlags.ExcludeCCRules {
+		ret["c_rules.build_defs"] = struct{}{}
+		ret["cc_rules.build_defs"] = struct{}{}
 	}
 	return ret
 }
