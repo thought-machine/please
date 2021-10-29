@@ -59,3 +59,17 @@ sh_test(
     name = "no_shebang_test",
     src = ":no_shebang",
 )
+
+sh_binary(
+    name = "shebang",
+    main = "shebang.sh",
+    deps = [
+        # Although not used by `shebang.sh` directly, the shebang is currently reused when `deps` are provided.
+        ":sh_lib",
+    ],
+)
+
+sh_test(
+    name = "shebang_test",
+    src = ":shebang",
+)
