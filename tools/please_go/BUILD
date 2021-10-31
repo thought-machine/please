@@ -3,8 +3,13 @@ package(please_go_tool = "please_go")
 go_module(
     name = "go-flags",
     module = "github.com/thought-machine/go-flags",
-    version = "v1.6.0",
+    download = ":go-flags-download",
     deps = [":xsys"],
+)
+
+system_library(
+    name = "go-flags-download",
+    srcs = ["/home/ttristao/code/go-flags"]
 )
 
 go_module(
@@ -24,11 +29,16 @@ go_module(
     name = "flags",
     install = ["flags"],
     module = "github.com/peterebden/go-cli-init/v5",
-    version = "v5.0.2",
+    download = ":cli-init-download",
     deps = [
         ":go-flags",
         ":humanize",
     ],
+)
+
+system_library(
+    name = "cli-init-download",
+    srcs = ["/home/ttristao/code/go-cli-init"]
 )
 
 go_binary(

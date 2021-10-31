@@ -542,7 +542,7 @@ var buildFunctions = map[string]func() int{
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
-	"parallel": func() int {
+	"run.parallel": func() int {
 		if success, state := runBuild(unannotateLabels(opts.Run.Parallel.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
@@ -561,7 +561,7 @@ var buildFunctions = map[string]func() int{
 		}
 		return 1
 	},
-	"sequential": func() int {
+	"run.sequential": func() int {
 		if success, state := runBuild(unannotateLabels(opts.Run.Sequential.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
@@ -638,7 +638,7 @@ var buildFunctions = map[string]func() int{
 
 		return 0
 	},
-	"config": func() int {
+	"init.config": func() int {
 		if opts.Init.Config.User {
 			plzinit.InitConfigFile(fs.ExpandHomePath(core.UserConfigFileName), opts.Init.Config.Args.Options)
 		} else if opts.Init.Config.Local {
@@ -655,7 +655,7 @@ var buildFunctions = map[string]func() int{
 		}
 		return toExitCode(success, state)
 	},
-	"outputs": func() int {
+	"export.outputs": func() int {
 		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false, true)
 		if success {
 			export.Outputs(state, opts.Export.Output, state.ExpandOriginalLabels())
@@ -668,18 +668,18 @@ var buildFunctions = map[string]func() int{
 	"tool": func() int {
 		return runTool(opts.Tool.Args.Tool)
 	},
-	"deps": func() int {
+	"query.deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
 			query.Deps(state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level)
 		})
 	},
-	"revdeps": func() int {
+	"query.revdeps": func() int {
 		labels := utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
 		return runQuery(true, append(labels, core.WholeGraph...), func(state *core.BuildState) {
 			query.ReverseDeps(state, state.ExpandLabels(labels), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
 		})
 	},
-	"somepath": func() int {
+	"query.somepath": func() int {
 		a := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
 		b := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
 		return runQuery(true, append(a, b...), func(state *core.BuildState) {
@@ -689,27 +689,27 @@ var buildFunctions = map[string]func() int{
 			}
 		})
 	},
-	"alltargets": func() int {
+	"query.alltargets": func() int {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
 			query.AllTargets(state.Graph, state.ExpandOriginalLabels(), opts.Query.AllTargets.Hidden)
 		})
 	},
-	"print": func() int {
+	"query.print": func() int {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
 			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
 		})
 	},
-	"input": func() int {
+	"query.input": func() int {
 		return runQuery(true, opts.Query.Input.Args.Targets, func(state *core.BuildState) {
 			query.TargetInputs(state.Graph, state.ExpandOriginalLabels())
 		})
 	},
-	"output": func() int {
+	"query.output": func() int {
 		return runQuery(true, opts.Query.Output.Args.Targets, func(state *core.BuildState) {
 			query.TargetOutputs(state.Graph, state.ExpandOriginalLabels())
 		})
 	},
-	"completions": func() int {
+	"query.completions": func() int {
 		// Somewhat fiddly because the inputs are not necessarily well-formed at this point.
 		opts.ParsePackageOnly = true
 		fragments := opts.Query.Completions.Args.Fragments.Get()
@@ -752,7 +752,7 @@ var buildFunctions = map[string]func() int{
 
 		return 0
 	},
-	"graph": func() int {
+	"query.graph": func() int {
 		targets := opts.Query.Graph.Args.Targets
 		return runQuery(true, targets, func(state *core.BuildState) {
 			if len(opts.Query.Graph.Args.Targets) == 0 {
@@ -761,7 +761,7 @@ var buildFunctions = map[string]func() int{
 			query.Graph(state, state.ExpandLabels(targets))
 		})
 	},
-	"whatinputs": func() int {
+	"query.whatinputs": func() int {
 		files := opts.Query.WhatInputs.Args.Files.Get()
 		// We only need this to retrieve the BuildFileName
 		state := core.NewBuildState(config)
@@ -773,16 +773,16 @@ var buildFunctions = map[string]func() int{
 			query.WhatInputs(state.Graph, files, opts.Query.WhatInputs.Hidden, opts.Query.WhatInputs.EchoFiles)
 		})
 	},
-	"whatoutputs": func() int {
+	"query.whatoutputs": func() int {
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
 			query.WhatOutputs(state.Graph, opts.Query.WhatOutputs.Args.Files.Get(), opts.Query.WhatOutputs.EchoFiles)
 		})
 	},
-	"rules": func() int {
+	"query.rules": func() int {
 		help.PrintRuleArgs()
 		return 0
 	},
-	"changes": func() int {
+	"query.changes": func() int {
 		// query changes always excludes 'manual' targets.
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
 		level := opts.Query.Changes.Level // -2 means unset -1 means all transitive
@@ -841,7 +841,7 @@ var buildFunctions = map[string]func() int{
 		}
 		return 0
 	},
-	"roots": func() int {
+	"query.roots": func() int {
 		return runQuery(true, opts.Query.Roots.Args.Targets, func(state *core.BuildState) {
 			query.Roots(state.Graph, state.ExpandOriginalLabels(), opts.Query.Roots.Hidden)
 		})
@@ -853,18 +853,18 @@ var buildFunctions = map[string]func() int{
 		watch.Watch(state, state.ExpandOriginalLabels(), runPlease)
 		return toExitCode(success, state)
 	},
-	"filter": func() int {
+	"query.filter": func() int {
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
 			query.Filter(state, state.ExpandOriginalLabels(), opts.Query.Filter.Hidden)
 		})
 	},
-	"pleasings": func() int {
+	"init.pleasings": func() int {
 		if err := plzinit.InitPleasings(opts.Init.Pleasings.Location, opts.Init.Pleasings.PrintOnly, opts.Init.Pleasings.Revision); err != nil {
 			log.Fatalf("failed to write pleasings subrepo file: %v", err)
 		}
 		return 0
 	},
-	"pleasew": func() int {
+	"init.pleasew": func() int {
 		plzinit.InitWrapperScript()
 		return 0
 	},
@@ -1274,7 +1274,7 @@ func initBuild(args []string) string {
 		// Completion via PLZ_COMPLETE env var sidesteps other commands
 		opts.Query.Completions.Cmd = command
 		opts.Query.Completions.Args.Fragments = []string{opts.Complete}
-		command = "completions"
+		command = "query.completions"
 	} else if command == "help" || command == "follow" || command == "init" || command == "config" || command == "tool" {
 		// These commands don't use a config file, allowing them to be run outside a repo.
 		if flagsErr != nil { // This error otherwise doesn't get checked until later.
@@ -1296,7 +1296,7 @@ func initBuild(args []string) string {
 
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
-	if (flagsErr != nil || len(extraArgs) > 0) && command != "completions" {
+	if (flagsErr != nil || len(extraArgs) > 0) && command != "query.completions" {
 		args := config.UpdateArgsWithAliases(os.Args)
 		command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
 	}
