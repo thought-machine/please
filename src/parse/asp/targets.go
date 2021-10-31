@@ -38,7 +38,6 @@ const (
 	buildingDescriptionBuildRuleArgIdx
 	needsTransitiveDepsBuildRuleArgIdx
 	outputIsCompleteBuildRuleArgIdx
-	_
 	sandboxBuildRuleArgIdx
 	testSandboxBuildRuleArgIdx
 	noTestOutputBuildRuleArgIdx
@@ -62,7 +61,6 @@ const (
 	passEnvBuildRuleArgIdx
 	localBuildRuleArgIdx
 	outDirsBuildRuleArgIdx
-	_
 	exitOnErrorArgIdx
 	entryPointsArgIdx
 	envArgIdx
