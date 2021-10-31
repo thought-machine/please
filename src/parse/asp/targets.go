@@ -65,6 +65,7 @@ const (
 	entryPointsArgIdx
 	envArgIdx
 	fileContentArgIdx
+	subrepoArgIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -93,6 +94,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target := core.NewBuildTarget(label)
 	target.Subrepo = s.pkg.Subrepo
 	target.IsBinary = isTruthy(binaryBuildRuleArgIdx)
+	target.IsSubrepo = isTruthy(subrepoArgIdx)
 	target.NeedsTransitiveDependencies = isTruthy(needsTransitiveDepsBuildRuleArgIdx)
 	target.OutputIsComplete = isTruthy(outputIsCompleteBuildRuleArgIdx)
 	target.Sandbox = isTruthy(sandboxBuildRuleArgIdx)

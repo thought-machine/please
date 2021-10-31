@@ -222,6 +222,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 		h.Write([]byte(secret))
 	}
 	hashBool(h, target.IsBinary)
+	hashOptionalBool(h, target.IsSubrepo)
 	hashOptionalBool(h, target.Sandbox)
 
 	// Note that we only hash the current command here; whatever's set in commands that we're not going
