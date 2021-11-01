@@ -1114,10 +1114,11 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     # TODO(jpoole): write a proper please_go tool for this
     cmds = [
         'echo module please_ignore > go.mod', # stops go reading the main go.mod, and downloading all of those too
+        'export export GOPATH="$PWD/go_mod_download_folder"', # avoid conflict on "go" folder
         f'$TOOLS_GO mod download -x -modcacherw -json {module}@{version} | tee mod.json',
         'export MOD_DIR=$(cat mod.json | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
-        "cp -r $MOD_DIR $OUT",
-    ] + [f'rm -rf $OUT/{s}' for s in strip]
+        'cp -r "$MOD_DIR" "$OUT"'
+    ] + [f'rm -rf "$OUT/{s}"' for s in strip]
 
     if patch:
         cmds += [f'for p in "$TMP_DIR"/$SRCS_PATCH; do patch -d {out} -p1 < $p; done']
