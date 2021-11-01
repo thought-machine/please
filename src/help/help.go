@@ -11,7 +11,6 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/parse/asp"
-	"github.com/thought-machine/please/src/utils"
 )
 
 const topicsHelpMessage = `
@@ -86,7 +85,7 @@ func helpFromBuildRule(f *asp.FuncDef) string {
 
 // suggest looks through all known help topics and tries to make a suggestion about what the user might have meant.
 func suggest(topic string) string {
-	return utils.PrettyPrintSuggestion(topic, allTopics(""), maxSuggestionDistance)
+	return cli.PrettyPrintSuggestion(topic, allTopics(""), maxSuggestionDistance)
 }
 
 // allTopics returns all the possible topics to get help on.
