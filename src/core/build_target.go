@@ -29,7 +29,7 @@ const GenDir string = "plz-out/gen"
 const BinDir string = "plz-out/bin"
 
 // SubrepoDir is the output directory for targets that define subrepos.
-const SubrepoDir = "plz-out/sub"
+const SubrepoDir = "plz-out/subrepos"
 
 // DefaultBuildingDescription is the default description for targets when they're building.
 const DefaultBuildingDescription = "Building..."
