@@ -25,7 +25,6 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/thought-machine/please/src/utils"
 	"github.com/ulikunitz/xz"
 	"gopkg.in/op/go-logging.v1"
 
@@ -58,7 +57,7 @@ func pleaseVersion() semver.Version {
 // will always update even if the version exists.
 func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify, progress, prerelease bool) {
 	httpClient = retryablehttp.NewClient()
-	httpClient.Logger = &utils.HTTPLogWrapper{Logger: log}
+	httpClient.Logger = log
 
 	if !shouldUpdate(config, updatesEnabled, updateCommand, prerelease) && !forceUpdate {
 		clean(config, updateCommand)
