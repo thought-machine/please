@@ -159,7 +159,8 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 			prefix = subrepo.Dir(prefix)
 		}
 		for filename := range FindAllBuildFiles(state.Config, dir, "") {
-			l := core.NewBuildLabel(strings.TrimLeft(strings.TrimPrefix(path.Dir(filename), prefix), "/"), "all")
+			dirname, _ := path.Split(filename)
+			l := core.NewBuildLabel(strings.TrimLeft(strings.TrimPrefix(strings.TrimRight(dirname, "/"), prefix), "/"), "all")
 			l.Subrepo = target.Subrepo
 			state.AddOriginalTarget(l, addToList)
 		}
