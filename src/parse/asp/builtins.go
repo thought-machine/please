@@ -975,7 +975,12 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	if dep != "" {
 		// N.B. The target must be already registered on this package.
 		target = s.pkg.TargetOrDie(core.ParseBuildLabelContext(dep, s.pkg).Name)
-		root = path.Join(target.OutDir(), name)
+		if len(target.Outputs()) == 1 {
+			root = path.Join(target.OutDir(), target.Outputs()[0])
+		} else {
+			// TODO(jpoole): perhaps this should be a fatal error?
+			root = path.Join(target.OutDir(), name)
+		}
 	} else if args[2] != None {
 		root = string(args[2].(pyString))
 	}
