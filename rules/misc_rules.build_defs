@@ -373,9 +373,6 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
                 headers:dict={}, secret_headers:dict={}):
     """Defines a rule to fetch a file over HTTP(S).
 
-    Ultimately want to leave curl behind and do the downloading internally. For the moment,
-    we're relying on curl to do authentication stuff for private repos etc.
-
     Args:
       name (str): Name of the rule
       url (str | list): URL or URLs to fetch. If multiple are passed then they will be tried
