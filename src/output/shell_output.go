@@ -415,6 +415,9 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 			dir = path.Join(core.RepoRoot, target.TestDir(1))
 			env = core.TestEnvironment(state, target, dir)
 			shouldSandbox = target.Test.Sandbox
+			if len(state.TestArgs) > 0 {
+				env = append(env, "TESTS="+strings.Join(state.TestArgs, " "))
+			}
 		}
 		cmd, _ = core.ReplaceSequences(state, target, cmd)
 		env = append(env, "CMD="+cmd)
