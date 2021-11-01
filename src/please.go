@@ -45,7 +45,6 @@ import (
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
 	"github.com/thought-machine/please/src/update"
-	"github.com/thought-machine/please/src/utils"
 	"github.com/thought-machine/please/src/watch"
 	"github.com/thought-machine/please/src/worker"
 )
@@ -674,14 +673,14 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"revdeps": func() int {
-		labels := utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
+		labels := plz.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
 		return runQuery(true, append(labels, core.WholeGraph...), func(state *core.BuildState) {
 			query.ReverseDeps(state, state.ExpandLabels(labels), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
 		})
 	},
 	"somepath": func() int {
-		a := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
-		b := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
+		a := plz.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
+		b := plz.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
 		return runQuery(true, append(a, b...), func(state *core.BuildState) {
 			if err := query.SomePath(state.Graph, a, b, opts.Query.SomePath.Hidden); err != nil {
 				fmt.Printf("%s\n", err)
@@ -1002,9 +1001,13 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	}
 	state := core.NewBuildState(config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
-	state.NumTestRuns = uint16(utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)) // Only one of these can be passed
-	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially   // Similarly here.
-	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)        // And here
+	// Only one of these two can be passed
+	state.NumTestRuns = uint16(opts.Test.NumRuns)
+	if opts.Cover.NumRuns > opts.Test.NumRuns {
+		state.NumTestRuns = uint16(opts.Cover.NumRuns)
+	}
+	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially // Similarly here.
+	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)      // And here
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
@@ -1128,7 +1131,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 	if !isQuery {
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
 	}
-	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !utils.ReadingStdin(targets) {
+	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !plz.ReadingStdin(targets) {
 		if len(targets) == 0 {
 			// Assume they want us to read from stdin since nothing else was given.
 			targets = []core.BuildLabel{core.BuildLabelStdin}

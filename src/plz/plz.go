@@ -138,7 +138,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 }
 
 func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addToList bool, arch cli.Arch) {
-	for _, target := range utils.ReadStdinLabels(targets) {
+	for _, target := range ReadStdinLabels(targets) {
 		findOriginalTask(state, target, addToList, arch)
 	}
 }
@@ -201,4 +201,33 @@ func FindAllBuildFiles(config *core.Configuration, rootPath, prefix string) <-ch
 		close(ch)
 	}()
 	return ch
+}
+
+// ReadingStdin returns true if any of the given build labels are reading from stdin.
+func ReadingStdin(labels []core.BuildLabel) bool {
+	for _, l := range labels {
+		if l == core.BuildLabelStdin {
+			return true
+		}
+	}
+	return false
+}
+
+// ReadStdinLabels reads any of the given labels from stdin, if any of them indicate it
+// (i.e. if ReadingStdin(labels) is true, otherwise it just returns them.
+func ReadStdinLabels(labels []core.BuildLabel) []core.BuildLabel {
+	if !ReadingStdin(labels) {
+		return labels
+	}
+	ret := []core.BuildLabel{}
+	for _, l := range labels {
+		if l == core.BuildLabelStdin {
+			for s := range cli.ReadStdin() {
+				ret = append(ret, core.ParseBuildLabels([]string{s})...)
+			}
+		} else {
+			ret = append(ret, l)
+		}
+	}
+	return ret
 }

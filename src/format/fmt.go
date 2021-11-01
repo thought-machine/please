@@ -15,7 +15,6 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/plz"
-	"github.com/thought-machine/please/src/utils"
 )
 
 var log = logging.MustGetLogger("format")
