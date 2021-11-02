@@ -175,8 +175,8 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	if target.HasLabel("cc") {
 		env = append(env, "GCNO_DIR="+path.Join(RepoRoot, GenDir, target.Label.PackageName))
 	}
-	if state.DebugTests {
-		env = append(env, "DEBUG=true")
+	if state.DebugFailingTests {
+		env = append(env, "DEBUG_TEST_FAILURE=true")
 	}
 	if target.Test.Sandbox && len(state.Config.Sandbox.Dir) > 0 {
 		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))

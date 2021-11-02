@@ -51,7 +51,7 @@ loop:
 	for {
 		select {
 		case result, ok := <-results:
-			if !ok || (state.DebugTests && result.Status == core.TargetTesting) {
+			if !ok || (state.DebugFailingTests && result.Status == core.TargetTesting) {
 				break loop
 			}
 			prev := bt.ProcessResult(result)

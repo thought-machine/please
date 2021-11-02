@@ -122,18 +122,18 @@ var opts struct {
 	} `command:"hash" description:"Calculates hash for one or more targets"`
 
 	Test struct {
-		FailingTestsOk  bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
-		NumRuns         int          `long:"num_runs" short:"n" default:"1" description:"Number of times to run each test target."`
-		Rerun           bool         `long:"rerun" description:"Rerun the test even if the hash hasn't changed."`
-		Sequentially    bool         `long:"sequentially" description:"Whether to run multiple runs of the same test sequentially"`
-		TestResultsFile cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
-		SurefireDir     cli.Filepath `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
-		ShowOutput      bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
-		Debug           bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
-		Failed          bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
-		Detailed        bool         `long:"detailed" description:"Prints more detailed output after tests."`
-		Shell           string       `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
-		StreamResults   bool         `long:"stream_results" description:"Prints test results on stdout as they are run."`
+		FailingTestsOk   bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		NumRuns          int          `long:"num_runs" short:"n" default:"1" description:"Number of times to run each test target."`
+		Rerun            bool         `long:"rerun" description:"Rerun the test even if the hash hasn't changed."`
+		Sequentially     bool         `long:"sequentially" description:"Whether to run multiple runs of the same test sequentially"`
+		TestResultsFile  cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		SurefireDir      cli.Filepath `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
+		ShowOutput       bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
+		DebugFailingTest bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest). Implies -c dbg unless otherwise set."`
+		Failed           bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
+		Detailed         bool         `long:"detailed" description:"Prints more detailed output after tests."`
+		Shell            string       `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
+		StreamResults    bool         `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -157,7 +157,7 @@ var opts struct {
 		CoverageXMLReport   cli.Filepath  `long:"coverage_xml_report" default:"plz-out/log/coverage.xml" description:"XML File to write combined coverage results to."`
 		Incremental         bool          `short:"i" long:"incremental" description:"Calculates summary statistics for incremental coverage, i.e. stats for just the lines currently modified."`
 		ShowOutput          bool          `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
-		Debug               bool          `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
+		DebugFailingTest    bool          `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest). Implies -c dbg unless otherwise set."`
 		Failed              bool          `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
 		Detailed            bool          `long:"detailed" description:"Prints more detailed output after tests."`
 		Shell               string        `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
@@ -993,10 +993,10 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		config.Parse.NumThreads = opts.BuildFlags.NumThreads
 	}
 	debug := !opts.Debug.Args.Target.IsEmpty()
-	debugTests := opts.Test.Debug || opts.Cover.Debug
+	debugFailingTests := opts.Test.DebugFailingTest || opts.Cover.DebugFailingTest
 	if opts.BuildFlags.Config != "" {
 		config.Build.Config = opts.BuildFlags.Config
-	} else if debug || debugTests {
+	} else if debug || debugFailingTests {
 		config.Build.Config = "dbg"
 	}
 	state := core.NewBuildState(config)
@@ -1022,7 +1022,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
 	state.ForceRerun = opts.Test.Rerun || opts.Cover.Rerun
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
-	state.DebugTests = debugTests
+	state.DebugFailingTests = debugFailingTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
 	state.DownloadOutputs = (!opts.Build.NoDownload && !opts.Run.Remote && len(targets) > 0 && (!targets[0].IsAllSubpackages() || len(opts.BuildFlags.Include) > 0)) || opts.Build.Download
@@ -1037,7 +1037,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		}
 	}
 
-	if state.DebugTests && len(targets) != 1 {
+	if state.DebugFailingTests && len(targets) != 1 {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
 
