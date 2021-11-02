@@ -30,7 +30,7 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518
 	github.com/peterebden/gcfg v1.3.0 // indirect
-	github.com/peterebden/go-cli-init/v5 v5.0.2
+	github.com/peterebden/go-cli-init/v5 v5.1.0
 	github.com/peterebden/go-deferred-regex v1.0.0
 	github.com/peterebden/go-sri v1.1.1
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a

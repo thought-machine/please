@@ -1,6 +1,8 @@
 package plz
 
 import (
+	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -14,7 +16,6 @@ import (
 	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/remote"
 	"github.com/thought-machine/please/src/test"
-	"github.com/thought-machine/please/src/utils"
 )
 
 var log = logging.MustGetLogger("plz")
@@ -137,7 +138,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 }
 
 func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addToList bool, arch cli.Arch) {
-	for _, target := range utils.ReadStdinLabels(targets) {
+	for _, target := range ReadStdinLabels(targets) {
 		findOriginalTask(state, target, addToList, arch)
 	}
 }
@@ -157,12 +158,77 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 			dir = subrepo.Dir(dir)
 			prefix = subrepo.Dir(prefix)
 		}
-		for pkg := range utils.FindAllSubpackages(state.Config, dir, "") {
-			l := core.NewBuildLabel(strings.TrimLeft(strings.TrimPrefix(pkg, prefix), "/"), "all")
+		for filename := range FindAllBuildFiles(state.Config, dir, "") {
+			dirname, _ := path.Split(filename)
+			l := core.NewBuildLabel(strings.TrimLeft(strings.TrimPrefix(strings.TrimRight(dirname, "/"), prefix), "/"), "all")
 			l.Subrepo = target.Subrepo
 			state.AddOriginalTarget(l, addToList)
 		}
 	} else {
 		state.AddOriginalTarget(target, addToList)
 	}
+}
+
+// FindAllBuildFiles finds all BUILD files under a particular path.
+// Used to implement rules with ... where we need to know all possible packages
+// under that location.
+func FindAllBuildFiles(config *core.Configuration, rootPath, prefix string) <-chan string {
+	ch := make(chan string)
+	go func() {
+		if rootPath == "" {
+			rootPath = "."
+		}
+		if err := fs.Walk(rootPath, func(name string, isDir bool) error {
+			basename := path.Base(name)
+			if basename == core.OutDir || (isDir && strings.HasPrefix(basename, ".") && name != ".") {
+				return filepath.SkipDir // Don't walk output or hidden directories
+			} else if isDir && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {
+				return filepath.SkipDir // Skip any directory without the prefix we're after (but not any directory beneath that)
+			} else if config.IsABuildFile(basename) && !isDir {
+				ch <- name
+			} else if cli.ContainsString(name, config.Parse.ExperimentalDir) {
+				return filepath.SkipDir // Skip the experimental directory if it's set
+			}
+			// Check against blacklist
+			for _, dir := range config.Parse.BlacklistDirs {
+				if dir == basename || strings.HasPrefix(name, dir) {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Fatalf("Failed to walk tree under %s; %s\n", rootPath, err)
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+// ReadingStdin returns true if any of the given build labels are reading from stdin.
+func ReadingStdin(labels []core.BuildLabel) bool {
+	for _, l := range labels {
+		if l == core.BuildLabelStdin {
+			return true
+		}
+	}
+	return false
+}
+
+// ReadStdinLabels reads any of the given labels from stdin, if any of them indicate it
+// (i.e. if ReadingStdin(labels) is true, otherwise it just returns them.
+func ReadStdinLabels(labels []core.BuildLabel) []core.BuildLabel {
+	if !ReadingStdin(labels) {
+		return labels
+	}
+	ret := []core.BuildLabel{}
+	for _, l := range labels {
+		if l == core.BuildLabelStdin {
+			for s := range cli.ReadStdin() {
+				ret = append(ret, core.ParseBuildLabels([]string{s})...)
+			}
+		} else {
+			ret = append(ret, l)
+		}
+	}
+	return ret
 }

@@ -16,10 +16,10 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/process"
-	"github.com/thought-machine/please/src/utils"
 )
 
 type httpCache struct {
@@ -229,7 +229,7 @@ func newHTTPCache(config *core.Configuration) *httpCache {
 			HTTPClient: &http.Client{
 				Timeout: time.Duration(config.Cache.HTTPTimeout),
 			},
-			Logger:       &utils.HTTPLogWrapper{Logger: log},
+			Logger:       &cli.HTTPLogWrapper{Log: log},
 			RetryWaitMin: 1 * time.Second,
 			RetryWaitMax: 30 * time.Second,
 			RetryMax:     config.Cache.HTTPRetry,
