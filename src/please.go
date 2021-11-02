@@ -1272,7 +1272,7 @@ func initBuild(args []string) string {
 		log.Error("Failed to set GOMAXPROCS: %s", err)
 	}
 
-	command := cli.ActiveCommand(parser.Command)
+	command := cli.ActiveFullCommand(parser.Command)
 	if opts.Complete != "" {
 		// Completion via PLZ_COMPLETE env var sidesteps other commands
 		opts.Query.Completions.Cmd = command
