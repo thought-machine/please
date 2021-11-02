@@ -104,7 +104,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     metadata for it and concatenates them all together.
 
     This target can be debugged via:
-        plz debug [--debugger=[gdb|debugpy]] [--port] //:target
+        plz debug [--debugger=[pdb|debugpy]] [--port] //:target
 
     Args:
       name (str): Name of the rule.
@@ -216,7 +216,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     package property or python.testrunner in the config.
 
     This target can be debugged via:
-        plz debug [--debugger=[gdb|debugpy]] [--port] //:target
+        plz debug [--debugger=[pdb|debugpy]] [--port] //:target
 
     Args:
       name (str): Name of the rule.
@@ -654,9 +654,7 @@ def _debug_cmd(bin:str, flags:str=''):
         fail("The 'debugpy' debugger works in server mode only. The --port flag must be provided")
 
     # `DEBUG_PORT` is read by the pex generated for debuggers that support server mode.
-    cmd = f"{bin}" if not port else f"DEBUG_PORT={port} {bin}"
-
-    cmd = f"{cmd} {flags}"
+    cmd = f"{bin} {flags}" if not port else f"DEBUG_PORT={port} {bin} {flags}"
 
     return cmd, debugger
 
