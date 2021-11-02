@@ -123,9 +123,6 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
       package (str): The package as it would appear at the top of the go source files. Defaults
                      to name.
     """
-    if CONFIG.FF_FAIL_ON_BAD_GLOB and srcs == []:
-        fail(f'No srcs found for target {name}.')
-
     cover = cover and CONFIG.BUILD_CONFIG == "cover"
     package = package or name
     out = package + '.a'
