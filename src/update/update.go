@@ -107,6 +107,7 @@ func printMilestoneMessage(pleaseVersion string) {
 	resp, err := httpClient.Head(milestoneURL)
 	if err != nil {
 		log.Warningf("Failed to check for milestone update: %v", err)
+		return
 	}
 
 	defer resp.Body.Close()
