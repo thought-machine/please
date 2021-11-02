@@ -530,14 +530,15 @@ func glob(s *scope, args []pyObject) pyObject {
 	exclude := asStringList(s, args[1], "exclude")
 	hidden := args[2].IsTruthy()
 	includeSymlinks := args[3].IsTruthy()
+	allowEmpty := args[4].IsTruthy()
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
 	if s.globber == nil {
 		s.globber = fs.NewGlobber(s.state.Config.Parse.BuildFileName)
 	}
 
 	glob := s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks)
-	if s.state.Config.FeatureFlags.FailOnBadGlob && len(glob) == 0 {
-		log.Fatalf("No matches found for glob: %v", glob)
+	if s.state.Config.FeatureFlags.FailOnBadGlob && !allowEmpty && len(glob) == 0 {
+		log.Fatalf("No matches found for glob \"%v\" in file %v", include, s.pkg.Filename)
 	}
 	return fromStringList(glob)
 }
