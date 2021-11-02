@@ -13,7 +13,6 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/process",
-        "//src/utils",
         "//src/worker",
         "//third_party/go:cover",
         "//third_party/go:deferred_regex",
