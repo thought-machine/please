@@ -57,7 +57,7 @@ func pleaseVersion() semver.Version {
 // will always update even if the version exists.
 func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify, progress, prerelease bool) {
 	httpClient = retryablehttp.NewClient()
-	httpClient.Logger = log
+	httpClient.Logger = &cli.HTTPLogWrapper{Log: log}
 
 	if !shouldUpdate(config, updatesEnabled, updateCommand, prerelease) && !forceUpdate {
 		clean(config, updateCommand)
