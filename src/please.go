@@ -647,6 +647,16 @@ var buildFunctions = map[string]func() int{
 		}
 		return 0
 	},
+	"init.pleasings": func() int {
+		if err := plzinit.InitPleasings(opts.Init.Pleasings.Location, opts.Init.Pleasings.PrintOnly, opts.Init.Pleasings.Revision); err != nil {
+			log.Fatalf("failed to write pleasings subrepo file: %v", err)
+		}
+		return 0
+	},
+	"init.pleasew": func() int {
+		plzinit.InitWrapperScript()
+		return 0
+	},
 	"export": func() int {
 		success, state := runBuild(opts.Export.Args.Targets, false, false, false)
 		if success {
@@ -845,27 +855,17 @@ var buildFunctions = map[string]func() int{
 			query.Roots(state.Graph, state.ExpandOriginalLabels(), opts.Query.Roots.Hidden)
 		})
 	},
+	"query.filter": func() int {
+		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
+			query.Filter(state, state.ExpandOriginalLabels(), opts.Query.Filter.Hidden)
+		})
+	},
 	"watch": func() int {
 		// Don't ask it to test now since we don't know if any of them are tests yet.
 		success, state := runBuild(opts.Watch.Args.Targets, true, false, false)
 		state.NeedRun = opts.Watch.Run
 		watch.Watch(state, state.ExpandOriginalLabels(), runPlease)
 		return toExitCode(success, state)
-	},
-	"query.filter": func() int {
-		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
-			query.Filter(state, state.ExpandOriginalLabels(), opts.Query.Filter.Hidden)
-		})
-	},
-	"init.pleasings": func() int {
-		if err := plzinit.InitPleasings(opts.Init.Pleasings.Location, opts.Init.Pleasings.PrintOnly, opts.Init.Pleasings.Revision); err != nil {
-			log.Fatalf("failed to write pleasings subrepo file: %v", err)
-		}
-		return 0
-	},
-	"init.pleasew": func() int {
-		plzinit.InitWrapperScript()
-		return 0
 	},
 	"generate": func() int {
 		opts.BuildFlags.Include = append(opts.BuildFlags.Include, "codegen")
