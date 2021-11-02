@@ -62,7 +62,4 @@ require (
 	lukechampine.com/blake3 v1.1.5
 )
 
-replace github.com/thought-machine/go-flags v1.6.0 => /home/ttristao/code/go-flags
-replace github.com/peterebden/go-cli-init/v5 v5.0.2 => /home/ttristao/code/go-cli-init
-
 go 1.16

@@ -104,15 +104,11 @@ go_module(
 
 go_module(
     name = "go-flags",
-    download = ":go-flags-download",
+    licences = ["BSD-3-Clause"],
     module = "github.com/thought-machine/go-flags",
+    version = "v1.6.0",
     visibility = ["PUBLIC"],
     deps = [":xsys"],
-)
-
-system_library(
-    name = "go-flags-download",
-    srcs = ["/home/ttristao/code/go-flags"]
 )
 
 go_module(
@@ -641,19 +637,14 @@ go_module(
 go_module(
     name = "cli-init",
     install = ["..."],
-    download = ":cli-init-download",
     module = "github.com/peterebden/go-cli-init/v5",
+    version = "v5.1.0",
     deps = [
         ":go-flags",
         ":humanize",
         ":logging",
         ":xcrypto",
     ],
-)
-
-system_library(
-    name = "cli-init-download",
-    srcs = ["/home/ttristao/code/go-cli-init"]
 )
 
 go_module(
