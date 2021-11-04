@@ -1,0 +1,4 @@
+[alias "zhep"]
+desc = Zhep is a set of useful tools.
+config = src/zhep.aliasconfig
+flag = --help

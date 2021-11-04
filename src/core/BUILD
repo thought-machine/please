@@ -32,7 +32,10 @@ go_library(
 go_test(
     name = "config_test",
     srcs = ["config_test.go"],
-    data = glob(["test_data/*.plzconfig*"]),
+    data = glob([
+        "test_data/*.plzconfig*",
+        "test_data/*.aliasconfig",
+        ]),
     filter_srcs = False,  # As above
     deps = [
         ":core",

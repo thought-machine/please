@@ -316,7 +316,7 @@ func TestUpdateArgsWithQuotedAliases(t *testing.T) {
 func TestParseNewFormatAliases(t *testing.T) {
 	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, 2, len(c.Alias))
+	assert.Equal(t, 3, len(c.Alias))
 	a := c.Alias["auth"]
 	assert.Equal(t, "run //infra:auth --", a.Cmd)
 	assert.EqualValues(t, []string{"gcp", "aws k8s", "aws ecr"}, a.Subcommand)
@@ -357,6 +357,22 @@ func TestAttachAliasFlags(t *testing.T) {
 	_, err = p.ParseArgs([]string{"plz", "query", "ow"})
 	assert.NoError(t, err)
 	assert.EqualValues(t, []string{"owners"}, completions)
+
+	_, err = p.ParseArgs([]string{"plz", "z"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, []string{"zhep"}, completions)
+
+	_, err = p.ParseArgs([]string{"plz", "zhep", "me"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, []string{"meme"}, completions)
+
+	_, err = p.ParseArgs([]string{"plz", "zhep", "psql", "--db_o"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, []string{"--db_one"}, completions)
+
+	_, err = p.ParseArgs([]string{"plz", "zhep", "psql", "a"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, []string{"aws"}, completions)
 }
 
 func TestPrintAliases(t *testing.T) {
@@ -368,6 +384,7 @@ func TestPrintAliases(t *testing.T) {
 Available commands for this repository:
   auth          Authenticates you.
   query owners  Queries owners of a thing.
+  zhep          Zhep is a set of useful tools.
 `, buf.String())
 }
 

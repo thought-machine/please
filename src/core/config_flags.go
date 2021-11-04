@@ -9,6 +9,7 @@ import (
 // AttachAliasFlags attaches the alias flags to the given flag parser.
 // It returns true if any modifications were made.
 func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
+	config.MustReadAliasConfigs()
 	for name, alias := range config.Alias {
 		cmd := parser.Command
 		fields := strings.Fields(name)

@@ -1,0 +1,4 @@
+[alias "meme"]
+cmd = "run //src:such_wow"
+desc = Generates a meme.
+flag = --doge

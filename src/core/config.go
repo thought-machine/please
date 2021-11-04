@@ -613,6 +613,7 @@ type Alias struct {
 	Subcommand       []string `help:"Known subcommands of this command"`
 	Flag             []string `help:"Known flags of this command"`
 	PositionalLabels bool     `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
+	Config           string   `help:"Location of additional config file where additional aliases are defined."`
 }
 
 type Plugin struct {
@@ -882,6 +883,7 @@ func (config *Configuration) Completions(prefix string) []flags.Completion {
 
 // UpdateArgsWithAliases applies the aliases in this config to the given set of arguments.
 func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
+	config.MustReadAliasConfigs()
 	for idx, arg := range args[1:] {
 		// Please should not touch anything that comes after `--`
 		if arg == "--" {
@@ -921,6 +923,33 @@ func (config *Configuration) PrintAliases(w io.Writer) {
 		tmpl := fmt.Sprintf("  %%-%ds  %%s\n", maxlen)
 		for _, name := range names {
 			fmt.Fprintf(w, tmpl, name, aliases[name].Desc)
+		}
+	}
+}
+
+// ReadAliasConfigFile reads a single alias config file into the *Alias struct in *Configuration
+func (config *Configuration) ReadAliasConfigFile(location string) error {
+	log.Info("Attempting to read alias config from %s...", location)
+	if err := gcfg.ReadFileInto(config, location); err != nil && os.IsNotExist(err) {
+		return nil // It's not an error to not have the file at all.
+	} else if gcfg.FatalOnly(err) != nil {
+		return err
+	} else if err != nil {
+		log.Warning("Error in alias config file: %s", err)
+	} else {
+		log.Debug("Read alias config from %s", location)
+	}
+	return nil
+}
+
+// MustReadAliasConfigs reads all specified alias config locations and merges them into config.
+func (config *Configuration) MustReadAliasConfigs() {
+	for _, alias := range config.Alias {
+		if alias.Config != "" {
+			err := config.ReadAliasConfigFile(alias.Config)
+			if err != nil {
+				log.Fatalf("Error reading alias config file: %s", err)
+			}
 		}
 	}
 }

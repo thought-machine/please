@@ -10,3 +10,7 @@ flag = --repo
 [alias "query owners"]
 cmd = run //query:owners --
 desc = Queries owners of a thing.
+
+[alias "zhep"]
+desc = Zhep is a set of useful tools.
+config = src/core/test_data/zhep.aliasconfig

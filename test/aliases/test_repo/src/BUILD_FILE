@@ -1,0 +1,4 @@
+sh_cmd(
+    name = "such_wow",
+    cmd = "echo \"wow\"",
+)
