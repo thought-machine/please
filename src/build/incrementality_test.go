@@ -22,6 +22,7 @@ var KnownFields = map[string]bool{
 	"Sources":                     true,
 	"NamedSources":                true,
 	"IsBinary":                    true,
+	"IsSubrepo":                   true,
 	"IsFilegroup":                 true,
 	"IsTextFile":                  true,
 	"FileContent":                 true,

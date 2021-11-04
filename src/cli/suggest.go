@@ -1,4 +1,4 @@
-package utils
+package cli
 
 import (
 	"sort"
@@ -9,14 +9,14 @@ import (
 // Suggest implements levenshtein-based suggestions on a sequence of items.
 func Suggest(needle string, haystack []string, maxSuggestionDistance int) []string {
 	r := []rune(needle)
-	options := make(suggestions, 0, len(haystack))
+	options := make([]suggestion, 0, len(haystack))
 	for _, straw := range haystack {
 		distance := levenshtein.DistanceForStrings(r, []rune(straw), levenshtein.DefaultOptions)
 		if len(straw) > 0 && distance <= maxSuggestionDistance {
 			options = append(options, suggestion{s: straw, dist: distance})
 		}
 	}
-	sort.Sort(options)
+	sort.Slice(options, func(i, j int) bool { return options[i].dist < options[j].dist })
 	ret := make([]string, len(options))
 	for i, o := range options {
 		ret[i] = o.s
@@ -50,8 +50,3 @@ type suggestion struct {
 	s    string
 	dist int
 }
-type suggestions []suggestion
-
-func (s suggestions) Len() int           { return len(s) }
-func (s suggestions) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s suggestions) Less(i, j int) bool { return s[i].dist < s[j].dist }

@@ -525,7 +525,7 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 			parts := strings.Split(v, ":")
 			replaced := make([]string, 0, len(parts))
 			for _, part := range parts {
-				if !strings.HasPrefix(part, c.userHome) {
+				if part != c.state.Config.Please.Location && !strings.HasPrefix(part, c.userHome) {
 					replaced = append(replaced, part)
 				}
 			}

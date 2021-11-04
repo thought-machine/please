@@ -103,6 +103,9 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     by the dependent python_library rules, and this rule simply builds the
     metadata for it and concatenates them all together.
 
+    This target can be debugged via:
+        plz debug [--debugger=[pdb|debugpy]] [--port] //:target
+
     Args:
       name (str): Name of the rule.
       main (str): Python file which is the entry point and __main__ module.
@@ -145,6 +148,12 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         test_only=test_only,
     )
 
+    debug_cmd, debugger = _debug_cmd("./$OUT")
+    if debug_cmd:
+        if debugger == "debugpy":
+            cmd = cmd.replace(' --zip_safe', '')
+        cmd = f"{cmd} -d={debugger}"
+
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
     pex_rule = build_rule(
         name = name,
@@ -174,6 +183,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         outs=[out or (name + '.pex')],
         data=data,
         cmd=cmd,
+        debug_cmd=debug_cmd,
         needs_transitive_deps=True,
         binary=True,
         output_is_complete=True,
@@ -204,6 +214,9 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     which is run to execute the tests. The tests are run via either unittest, pytest, or behave, depending
     on which is set for the test runner, which can be configured either via the python_test_runner
     package property or python.testrunner in the config.
+
+    This target can be debugged via:
+        plz debug [--debugger=[pdb|debugpy]] [--port] //:target
 
     Args:
       name (str): Name of the rule.
@@ -239,6 +252,12 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
+
+    debug_cmd, debugger = _debug_cmd("./$TEST", flags)
+    if debug_cmd:
+        if debugger == "debugpy":
+            cmd = cmd.replace(' --zip_safe', '')
+        cmd = f"{cmd} -d={debugger}"
 
     # If the config specifies a PYTHON_TEST_RUNNER_BOOTSTRAP target, then this ought to contain
     # the test-runner library (e.g. pytest), and its transitive dependencies. In this case, we just
@@ -288,8 +307,11 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
 
     test_cmd = f'$TEST {flags}'
     if worker:
-        test_cmd = f'$(worker {worker}) && {test_cmd} '
+        worker_cmd = f'$(worker {worker})'
+        test_cmd = f'{worker_cmd} && {test_cmd} '
+        debug_cmd = f'{worker_cmd} && {debug_cmd}'
         deps += [worker]
+
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     return build_rule(
         name=name,
@@ -302,6 +324,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         labels=labels + ['test_results_dir'],
         cmd='$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
         test_cmd=test_cmd,
+        debug_cmd=debug_cmd,
         needs_transitive_deps=True,
         output_is_complete=True,
         binary=True,
@@ -599,6 +622,7 @@ def _handle_zip_safe(name):
     if has_label(name, 'py:zip-unsafe'):
         set_command(name, get_command(name).replace(' --zip_safe', ''))
 
+
 def _add_licences(name, output):
     """Annotates a pip_library rule with detected licences after download."""
     found = False
@@ -614,6 +638,26 @@ def _add_licences(name, output):
             found = True
     if not found:
         log.warning('No licence found for %s, should add licences = [...] to the rule', name.lstrip('_').split('#')[0])
+
+
+# `pdb` and `debugpy` are the current debuggers supported by the pex tool.
+def _debug_cmd(bin:str, flags:str=''):
+    if not CONFIG.get("DEBUG"):
+        return "", ""
+
+    debugger = CONFIG.DEBUG.DEBUGGER or "pdb"
+    port = CONFIG.DEBUG.PORT
+
+    if debugger == "pdb" and port:
+        fail("The 'pdb' debugger can't be used in server mode")
+    elif debugger == "debugpy" and not port:
+        fail("The 'debugpy' debugger works in server mode only. The --port flag must be provided")
+
+    # `DEBUG_PORT` is read by the pex generated for debuggers that support server mode.
+    cmd = f"{bin} {flags}" if not port else f"DEBUG_PORT={port} {bin} {flags}"
+
+    return cmd, debugger
+
 
 if CONFIG.BAZEL_COMPATIBILITY:
     py_library = python_library
