@@ -184,7 +184,11 @@ func toPythonPath(p string, stripPackageName string) string {
 	ext := path.Ext(p)
 	modulePath := strings.ReplaceAll(p[:len(p)-len(ext)], "/", ".")
 
-	if stripPackageName != "" && strings.HasPrefix(p, stripPackageName) {
+	if stripPackageName == "" {
+		return modulePath
+	}
+
+	if strings.HasPrefix(p, stripPackageName+"/") || p == stripPackageName {
 		return modulePath[len(stripPackageName)+1:]
 	}
 
