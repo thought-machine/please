@@ -1149,7 +1149,7 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
               visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
               licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}, patch:list|str=[],
-              build_tags:list=[]):
+              build_tags:list=[], export_sources=False):
     """Defines a dependency on a third-party Go module.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -1184,6 +1184,8 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
       env (dict): Any env variables to set during build time. This can be useful to set CGO_CFLAGS etc. to control
                   aspects of compilation.
       build_tags (list): Any build tags to apply to the build context.
+      export_sources (bool): exports the sources so they're accessable during linking. This can be useful if any of
+                             the linker flags reference the sources. 
     """
     patch = [patch] if isinstance(patch, str) else patch
     if version and download:
@@ -1257,6 +1259,9 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         outs = [f'{name}.importconfig'],
     )
     exported_deps = exported_deps + [import_config] if exported_deps else [import_config]
+    
+    if export_sources:
+        exported_deps += [download]
 
     return filegroup(
         name = name,

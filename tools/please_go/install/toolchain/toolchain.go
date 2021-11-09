@@ -79,15 +79,30 @@ func (tc *Toolchain) GoAsmCompile(dir, importpath, importcfg, out, trimpath, emb
 }
 
 // CCompile will compile c sources and return the object files that will be generated
-func (tc *Toolchain) CCompile(dir string, cFiles []string, cFlags []string) ([]string, error) {
-	objFiles := make([]string, len(cFiles))
+func (tc *Toolchain) CCompile(dir string, cFiles, ccFiles, cFlags, ccFlags []string) ([]string, error) {
+	objFiles := make([]string, 0, len(cFiles) + len(ccFiles))
 
-	for i, cFile := range cFiles {
-		objFiles[i] = strings.TrimSuffix(cFile, ".c") + ".o"
+	for _, cFile := range cFiles {
+		objFiles = append(objFiles, strings.TrimSuffix(cFile, ".c") + ".o")
 	}
 
-	err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I . _cgo_export.c %s)", dir, tc.CcTool, strings.Join(cFlags, " "), paths(cFiles))
-	return objFiles, err
+	for _, ccFile := range ccFiles {
+		objFiles = append(objFiles, strings.TrimSuffix(ccFile, ".cc") + ".o")
+	}
+
+	if len(cFiles) > 0 {
+		err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I . _cgo_export.c %s)", dir, tc.CcTool, strings.Join(cFlags, " "), paths(cFiles))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(ccFiles) > 0 {
+		err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I . %s)", dir, tc.CcTool, strings.Join(append(cFlags, ccFlags...), " "), paths(ccFiles))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return objFiles, nil
 }
 
 // Pack will add the object files in dir to the archive

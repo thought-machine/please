@@ -273,7 +273,7 @@ func (install *PleaseGoInstall) compile(from []string, target string) error {
 }
 
 func (install *PleaseGoInstall) prepWorkdir(pkg *build.Package, workDir, out string) error {
-	allSrcs := append(append(pkg.CFiles, pkg.GoFiles...), pkg.HFiles...)
+	allSrcs := append(append(append(pkg.CFiles, pkg.CXXFiles...), pkg.GoFiles...), pkg.HFiles...)
 
 	if err := install.tc.Exec.Run("mkdir -p %s", workDir); err != nil {
 		return err
@@ -335,6 +335,11 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 	var objFiles []string
 
 	ldFlags := pkg.CgoLDFLAGS
+
+	if len(pkg.CXXFiles) > 0 {
+		ldFlags = append(ldFlags, "-lstdc++")
+	}
+
 	if len(pkg.CgoFiles) > 0 {
 		cFlags := pkg.CgoCFLAGS
 
@@ -361,7 +366,6 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			cFlags = append(cFlags, f)
 		}
 
-		cFiles := pkg.CFiles
 
 		cgoGoFiles, cgoCFiles, err := install.tc.CGO(pkg.Dir, workDir, cFlags, pkg.CgoFiles)
 		if err != nil {
@@ -369,9 +373,9 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 		}
 
 		goFiles = append(goFiles, cgoGoFiles...)
-		cFiles = append(cFiles, cgoCFiles...)
+		cFiles := append(pkg.CFiles, cgoCFiles...)
 
-		cObjFiles, err := install.tc.CCompile(workDir, cFiles, cFlags)
+		cObjFiles, err := install.tc.CCompile(workDir, cFiles, pkg.CXXFiles, cFlags, pkg.CgoCXXFLAGS)
 		if err != nil {
 			return err
 		}
