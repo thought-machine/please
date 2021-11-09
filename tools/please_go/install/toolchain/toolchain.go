@@ -82,12 +82,8 @@ func (tc *Toolchain) GoAsmCompile(dir, importpath, importcfg, out, trimpath, emb
 func (tc *Toolchain) CCompile(dir string, cFiles, ccFiles, cFlags, ccFlags []string) ([]string, error) {
 	objFiles := make([]string, 0, len(cFiles) + len(ccFiles))
 
-	for _, cFile := range cFiles {
-		objFiles = append(objFiles, strings.TrimSuffix(cFile, ".c") + ".o")
-	}
-
-	for _, ccFile := range ccFiles {
-		objFiles = append(objFiles, strings.TrimSuffix(ccFile, ".cc") + ".o")
+	for _, cFile := range append(cFiles, ccFiles...) {
+		objFiles = append(objFiles, strings.TrimSuffix(cFile, filepath.Ext(cFile)) + ".o")
 	}
 
 	if len(cFiles) > 0 {
