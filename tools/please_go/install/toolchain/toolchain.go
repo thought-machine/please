@@ -86,12 +86,11 @@ func (tc *Toolchain) CCompile(dir string, cFiles, ccFiles, cFlags, ccFlags []str
 		objFiles = append(objFiles, strings.TrimSuffix(cFile, filepath.Ext(cFile))+".o")
 	}
 
-	if len(cFiles) > 0 {
-		err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I . _cgo_export.c %s)", dir, tc.CcTool, strings.Join(cFlags, " "), paths(cFiles))
-		if err != nil {
-			return nil, err
-		}
+	err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I . _cgo_export.c %s)", dir, tc.CcTool, strings.Join(cFlags, " "), paths(cFiles))
+	if err != nil {
+		return nil, err
 	}
+
 	if len(ccFiles) > 0 {
 		err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I . %s)", dir, tc.CcTool, strings.Join(append(cFlags, ccFlags...), " "), paths(ccFiles))
 		if err != nil {
