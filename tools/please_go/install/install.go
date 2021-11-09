@@ -366,7 +366,6 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			cFlags = append(cFlags, f)
 		}
 
-
 		cgoGoFiles, cgoCFiles, err := install.tc.CGO(pkg.Dir, workDir, cFlags, pkg.CgoFiles)
 		if err != nil {
 			return err

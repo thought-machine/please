@@ -80,10 +80,10 @@ func (tc *Toolchain) GoAsmCompile(dir, importpath, importcfg, out, trimpath, emb
 
 // CCompile will compile c sources and return the object files that will be generated
 func (tc *Toolchain) CCompile(dir string, cFiles, ccFiles, cFlags, ccFlags []string) ([]string, error) {
-	objFiles := make([]string, 0, len(cFiles) + len(ccFiles))
+	objFiles := make([]string, 0, len(cFiles)+len(ccFiles))
 
 	for _, cFile := range append(cFiles, ccFiles...) {
-		objFiles = append(objFiles, strings.TrimSuffix(cFile, filepath.Ext(cFile)) + ".o")
+		objFiles = append(objFiles, strings.TrimSuffix(cFile, filepath.Ext(cFile))+".o")
 	}
 
 	if len(cFiles) > 0 {
