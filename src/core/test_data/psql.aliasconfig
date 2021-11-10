@@ -1,0 +1,17 @@
+[command]
+cmd = run //infra/psql:connect --
+
+[subcommand "filter"]
+Desc = Filters results.
+Config = src/core/test_data/filter.aliasconfig
+
+[nestedflag "aws"]
+ShortDescription = Connects to an AWS DB.
+Option = db_one
+Option = db_two
+
+[nestedflag "gcp"]
+ShortDescription = Connects to GCP DB.
+Option = db_a
+Option = db_b
+Option = db_c

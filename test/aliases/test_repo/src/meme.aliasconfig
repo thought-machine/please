@@ -1,0 +1,11 @@
+[command]
+cmd = "run //src:such_wow"
+
+[nestedflag "doge"]
+ShortDescription = Specifies a doge meme.
+Option = big
+Option = small
+
+[nestedflag "nocreate"]
+ShortDescription = Whether to create the directory if it doesn't exist.
+Boolean = True

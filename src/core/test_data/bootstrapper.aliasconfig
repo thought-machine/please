@@ -1,0 +1,18 @@
+[command]
+cmd = //tools/service_bootstrapper --
+
+[nestedflag "language"]
+ShortDescription = The language to generate skeleton files for.
+option = java
+option = go
+
+[nestedflag "nocreate"]
+ShortDescription = Whether to create the directory if it doesn't exist.
+boolean = True
+
+[nestedflag "directory"]
+positional = filepath
+
+[subcommand "proto"]
+ShortDescription = Bootstraps a grpc endpoint.
+config = src/core/test_data/proto.config

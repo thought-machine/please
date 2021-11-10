@@ -1221,7 +1221,6 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 func additionalUsageInfo(parser *flags.Parser, wr io.Writer) {
 	cli.InitLogging(cli.MinVerbosity)
 	if config, err := readConfigAndSetRoot(false); err == nil {
-		config.MustReadAliasConfigs()
 		config.PrintAliases(wr)
 	}
 }

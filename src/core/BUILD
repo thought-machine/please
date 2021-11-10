@@ -35,6 +35,7 @@ go_test(
     data = glob([
         "test_data/*.plzconfig*",
         "test_data/*.aliasconfig",
+        "test_data/*.config"
         ]),
     filter_srcs = False,  # As above
     deps = [

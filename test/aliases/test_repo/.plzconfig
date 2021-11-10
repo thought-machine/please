@@ -1,4 +1,3 @@
-[alias "zhep"]
-desc = Zhep is a set of useful tools.
-config = src/zhep.aliasconfig
-flag = --help
+[alias "meme"]
+desc = Generates a meme.
+config = src/meme.aliasconfig

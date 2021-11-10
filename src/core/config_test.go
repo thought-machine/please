@@ -289,6 +289,7 @@ func TestUpdateArgsWithAliases(t *testing.T) {
 	c.Alias = map[string]*Alias{
 		"deploy": {Cmd: "run //deploy:deployer --"},
 		"mytool": {Cmd: "run //mytool:tool --"},
+		"meme": {Config: "src/core/test_data/meme.aliasconfig"},
 	}
 
 	args := c.UpdateArgsWithAliases([]string{"plz", "run", "//src/tools:tool"})
@@ -302,6 +303,9 @@ func TestUpdateArgsWithAliases(t *testing.T) {
 
 	args = c.UpdateArgsWithAliases([]string{"plz", "mytool", "deploy", "something"})
 	assert.EqualValues(t, []string{"plz", "run", "//mytool:tool", "--", "deploy", "something"}, args)
+
+	args = c.UpdateArgsWithAliases([]string{"plz", "meme"})
+	assert.EqualValues(t, []string{"plz", "run", "//corp/meme:cli", "--", "create"}, args)
 }
 
 func TestUpdateArgsWithQuotedAliases(t *testing.T) {
@@ -316,7 +320,7 @@ func TestUpdateArgsWithQuotedAliases(t *testing.T) {
 func TestParseNewFormatAliases(t *testing.T) {
 	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, 3, len(c.Alias))
+	assert.Equal(t, 5, len(c.Alias))
 	a := c.Alias["auth"]
 	assert.Equal(t, "run //infra:auth --", a.Cmd)
 	assert.EqualValues(t, []string{"gcp", "aws k8s", "aws ecr"}, a.Subcommand)
@@ -358,21 +362,25 @@ func TestAttachAliasFlags(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, []string{"owners"}, completions)
 
-	_, err = p.ParseArgs([]string{"plz", "z"})
-	assert.NoError(t, err)
-	assert.EqualValues(t, []string{"zhep"}, completions)
-
-	_, err = p.ParseArgs([]string{"plz", "zhep", "me"})
+	_, err = p.ParseArgs([]string{"plz", "me"})
 	assert.NoError(t, err)
 	assert.EqualValues(t, []string{"meme"}, completions)
 
-	_, err = p.ParseArgs([]string{"plz", "zhep", "psql", "--db_o"})
+	_, err = p.ParseArgs([]string{"plz", "psql", "--gcp", "--db_o"})
 	assert.NoError(t, err)
 	assert.EqualValues(t, []string{"--db_one"}, completions)
 
-	_, err = p.ParseArgs([]string{"plz", "zhep", "psql", "a"})
+	_, err = p.ParseArgs([]string{"plz", "psql", "--a"})
 	assert.NoError(t, err)
-	assert.EqualValues(t, []string{"aws"}, completions)
+	assert.EqualValues(t, []string{"--aws"}, completions)
+
+	_, err = p.ParseArgs([]string{"plz", "bootstrapper", "--language", "--ja"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, []string{"--java"}, completions)
+
+	_, err = p.ParseArgs([]string{"plz", "bootstrapper", "--proto", "--to"})
+	assert.NoError(t, err)
+	assert.EqualValues(t, []string{"--token"}, completions)
 }
 
 func TestPrintAliases(t *testing.T) {
@@ -383,8 +391,10 @@ func TestPrintAliases(t *testing.T) {
 	assert.Equal(t, `
 Available commands for this repository:
   auth          Authenticates you.
+  bootstrapper  It pulls boots up by the straps.
+  meme          Generates a meme.
+  pqsl          Connects to the DB.
   query owners  Queries owners of a thing.
-  zhep          Zhep is a set of useful tools.
 `, buf.String())
 }
 
@@ -416,6 +426,15 @@ func TestEnsurePleaseLocation(t *testing.T) {
 	config.Please.Location = "./plz-out/please"
 	config.EnsurePleaseLocation()
 	assert.Equal(t, "/repo/root/plz-out/please", config.Please.Location)
+}
+
+func TestReadAliasConfig(t *testing.T) {
+	ac := new(AliasConfig)
+	readAliasConfigFile(ac, "src/core/test_data/meme.aliasconfig")
+	expectedCommand := &Command{ Cmd: "run //corp/meme:cli -- create" }
+	expectedCmd := "run //corp/meme:cli -- create"
+	assert.Equal(t, expectedCommand, &ac.Command)
+	assert.Equal(t, expectedCmd, ac.Command.Cmd)
 }
 
 func TestPluginConfig(t *testing.T) {

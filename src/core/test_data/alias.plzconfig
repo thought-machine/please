@@ -11,6 +11,14 @@ flag = --repo
 cmd = run //query:owners --
 desc = Queries owners of a thing.
 
-[alias "zhep"]
-desc = Zhep is a set of useful tools.
-config = src/core/test_data/zhep.aliasconfig
+[alias "meme"]
+desc = Generates a meme.
+config = src/core/test_data/meme.aliasconfig
+
+[alias "pqsl"]
+desc = Connects to the DB.
+config = src/core/test_data/psql.aliasconfig
+
+[alias "bootstrapper"]
+desc = It pulls boots up by the straps.
+config = src/core/test_data/bootstrapper.aliasconfig

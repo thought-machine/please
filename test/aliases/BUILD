@@ -9,7 +9,6 @@ please_repo_e2e_test(
     repo = "test_repo",
 )
 
-
 please_repo_e2e_test(
     name = "alias_config_completion_test",
     expect_output_contains = {
@@ -24,6 +23,6 @@ please_repo_e2e_test(
     expect_output_contains = {
         "output": "Generates a meme.",
     },
-    plz_command = "plz zhep --help >output",
+    plz_command = "plz meme --help >output",
     repo = "test_repo",
 )

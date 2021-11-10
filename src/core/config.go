@@ -613,8 +613,29 @@ type Alias struct {
 	Desc             string   `help:"Description of this alias"`
 	Subcommand       []string `help:"Known subcommands of this command"`
 	Flag             []string `help:"Known flags of this command"`
+	NestedFlag       map[string]*Flag `help:"Known flags of this command and their related fields"`
 	PositionalLabels bool     `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
 	Config           string   `help:"Location of additional config file where additional aliases are defined."`
+}
+
+// An AliasConfig represents options and subcommands for a command, and supports nesting of subcommands.
+type AliasConfig struct {
+	Command Command `help:"Command section for this alias."`
+	NestedFlag map[string]*Flag `help:"Known flags of this command and their related fields"`
+	Subcommand map[string]*Alias `help:"Known subcommands of this command and their related fields"`
+}
+
+// A Command represents the command section of an alias config.
+type Command struct{
+	Cmd string `help:"Command to run for this alias."`
+}
+
+// A Flag represents options for a command.
+type Flag struct{
+	ShortDescription string `help:"Description of this flag"`
+	Boolean bool
+	Positional string
+	Option []string
 }
 
 type Plugin struct {
@@ -884,7 +905,6 @@ func (config *Configuration) Completions(prefix string) []flags.Completion {
 
 // UpdateArgsWithAliases applies the aliases in this config to the given set of arguments.
 func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
-	config.MustReadAliasConfigs()
 	for idx, arg := range args[1:] {
 		// Please should not touch anything that comes after `--`
 		if arg == "--" {
@@ -892,6 +912,11 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 		}
 		for k, v := range config.Alias {
 			if arg == k {
+				if v.Config != "" {
+					ac := &AliasConfig{}
+					readAliasConfigFile(ac, v.Config)
+					v.Cmd = ac.Command.Cmd
+				}
 				// We could insert every token in v into os.Args at this point and then we could have
 				// aliases defined in terms of other aliases but that seems rather like overkill so just
 				// stick the replacement in wholesale instead.
@@ -928,31 +953,58 @@ func (config *Configuration) PrintAliases(w io.Writer) {
 	}
 }
 
-// ReadAliasConfigFile reads a single alias config file into the *Alias struct in *Configuration
-func (config *Configuration) ReadAliasConfigFile(location string) error {
-	log.Info("Attempting to read alias config from %s...", location)
-	if err := gcfg.ReadFileInto(config, location); err != nil && os.IsNotExist(err) {
+// Command retrieves an alias config, constructs a Command from it, and adds it to the parser
+func (a Alias) Command(name string, cmd *flags.Command)  {
+	ac := &AliasConfig{}
+	readAliasConfigFile(ac, a.Config)
+
+	// Add alias command and flags
+	var data interface{} = &struct{}{}
+	cmd.AddCommand(name, name, a.Desc, data)
+	addFlags(ac.NestedFlag, cmd)
+
+	// Recurse through nested subcommands
+	for name, subcommand := range ac.Subcommand {
+		if subcommand.Config != ""{
+			subcommand.Command(name, cmd)
+		}
+       	cmd = addSubcommand(cmd, name, subcommand.Desc, subcommand.PositionalLabels)
+		addFlags(subcommand.NestedFlag, cmd)
+	}
+}
+
+func addFlags(aliasFlags map[string]*Flag, cmd *flags.Command) {
+	for name, flag := range aliasFlags {
+		var f = struct {
+			Data bool `short:"d"`
+		}{}
+		option := &flags.Option{
+			Description: flag.ShortDescription,
+			LongName: strings.TrimLeft(name, "-"),
+		}
+       	g, err := cmd.AddGroup(name+" option", "", &f)
+		if err != nil {
+			log.Warning("Error adding option group: %s", err)
+		}
+		g.AddOption(option, &f.Data)
+		for _, optionString := range flag.Option{
+			g.AddOption(&flags.Option{LongName: optionString}, &f.Data)
+		}
+	}
+}
+
+func readAliasConfigFile(ac *AliasConfig, location string) error {
+	log.Info("Attempting to read config from %s...", location)
+	if err := gcfg.ReadFileInto(ac, location); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
 	} else if gcfg.FatalOnly(err) != nil {
 		return err
 	} else if err != nil {
-		log.Warning("Error in alias config file: %s", err)
+		log.Warning("Error in config file: %s", err)
 	} else {
-		log.Debug("Read alias config from %s", location)
+		log.Debug("Read config from %s", location)
 	}
 	return nil
-}
-
-// MustReadAliasConfigs reads all specified alias config locations and merges them into config.
-func (config *Configuration) MustReadAliasConfigs() {
-	for _, alias := range config.Alias {
-		if alias.Config != "" {
-			err := config.ReadAliasConfigFile(alias.Config)
-			if err != nil {
-				log.Fatalf("Error reading alias config file: %s", err)
-			}
-		}
-	}
 }
 
 // IsABuildFile returns true if given filename is a build file name.
