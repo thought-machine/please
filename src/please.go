@@ -414,7 +414,7 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
 	} `command:"query" description:"Queries information about the build graph"`
-	Codegen struct {
+	Generate struct {
 		Gitignore string `long:"update_gitignore" description:"The gitignore file to write the generated sources to"`
 		Args      struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
@@ -871,8 +871,8 @@ var buildFunctions = map[string]func() int{
 	"generate": func() int {
 		opts.BuildFlags.Include = append(opts.BuildFlags.Include, "codegen")
 
-		if opts.Codegen.Gitignore != "" {
-			pkg := filepath.Dir(opts.Codegen.Gitignore)
+		if opts.Generate.Gitignore != "" {
+			pkg := filepath.Dir(opts.Generate.Gitignore)
 			if pkg == "." {
 				pkg = ""
 			}
@@ -881,25 +881,25 @@ var buildFunctions = map[string]func() int{
 				Name:        "...",
 			}
 
-			if len(opts.Codegen.Args.Targets) != 0 {
+			if len(opts.Generate.Args.Targets) != 0 {
 				log.Warning("You've provided targets, and a gitignore to update. Ignoring the provided targets and building %v", target)
 			}
 
-			opts.Codegen.Args.Targets = []core.BuildLabel{target}
+			opts.Generate.Args.Targets = []core.BuildLabel{target}
 		}
 
-		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
-			if opts.Codegen.Gitignore != "" {
-				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Codegen.Gitignore)
+		if success, state := runBuild(opts.Generate.Args.Targets, true, false, true); success {
+			if opts.Generate.Gitignore != "" {
+				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Generate.Gitignore)
 				if err != nil {
 					log.Fatalf("failed to update gitignore: %v", err)
 				}
 			}
 
-			// This may seem counter intuitive but if this was set, we would've linked during the build.
+			// This may seem counterintuitive but if this was set, we would've linked during the build.
 			// If we've opted to not automatically link generated sources during the build, we should link them now.
-			if !state.Config.Build.LinkGeneratedSources {
-				generate.LinkGeneratedSources(state.Graph, state.ExpandOriginalLabels())
+			if !state.Config.ShouldLinkGeneratedSources() {
+				generate.LinkGeneratedSources(state, state.ExpandOriginalLabels())
 			}
 			return 0
 		}

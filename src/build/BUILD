@@ -10,6 +10,7 @@ go_library(
         "//src/fs",
         "//src/process",
         "//src/worker",
+        "//src/generate",
         "//third_party/go:go-multierror",
         "//third_party/go:logging",
         "//third_party/go:protobuf",
