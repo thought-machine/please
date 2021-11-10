@@ -289,7 +289,7 @@ func TestUpdateArgsWithAliases(t *testing.T) {
 	c.Alias = map[string]*Alias{
 		"deploy": {Cmd: "run //deploy:deployer --"},
 		"mytool": {Cmd: "run //mytool:tool --"},
-		"meme": {Config: "src/core/test_data/meme.aliasconfig"},
+		"meme":   {Config: "src/core/test_data/meme.aliasconfig"},
 	}
 
 	args := c.UpdateArgsWithAliases([]string{"plz", "run", "//src/tools:tool"})
@@ -431,7 +431,7 @@ func TestEnsurePleaseLocation(t *testing.T) {
 func TestReadAliasConfig(t *testing.T) {
 	ac := new(AliasConfig)
 	readAliasConfigFile(ac, "src/core/test_data/meme.aliasconfig")
-	expectedCommand := &Command{ Cmd: "run //corp/meme:cli -- create" }
+	expectedCommand := &Command{Cmd: "run //corp/meme:cli -- create"}
 	expectedCmd := "run //corp/meme:cli -- create"
 	assert.Equal(t, expectedCommand, &ac.Command)
 	assert.Equal(t, expectedCmd, ac.Command.Cmd)

@@ -609,33 +609,33 @@ type Configuration struct {
 
 // An Alias represents aliases in the config.
 type Alias struct {
-	Cmd              string   `help:"Command to run for this alias."`
-	Desc             string   `help:"Description of this alias"`
-	Subcommand       []string `help:"Known subcommands of this command"`
-	Flag             []string `help:"Known flags of this command"`
+	Cmd              string           `help:"Command to run for this alias."`
+	Desc             string           `help:"Description of this alias"`
+	Subcommand       []string         `help:"Known subcommands of this command"`
+	Flag             []string         `help:"Known flags of this command"`
 	NestedFlag       map[string]*Flag `help:"Known flags of this command and their related fields"`
-	PositionalLabels bool     `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
-	Config           string   `help:"Location of additional config file where additional aliases are defined."`
+	PositionalLabels bool             `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
+	Config           string           `help:"Location of additional config file where additional aliases are defined."`
 }
 
 // An AliasConfig represents options and subcommands for a command, and supports nesting of subcommands.
 type AliasConfig struct {
-	Command Command `help:"Command section for this alias."`
-	NestedFlag map[string]*Flag `help:"Known flags of this command and their related fields"`
+	Command    Command           `help:"Command section for this alias."`
+	NestedFlag map[string]*Flag  `help:"Known flags of this command and their related fields"`
 	Subcommand map[string]*Alias `help:"Known subcommands of this command and their related fields"`
 }
 
 // A Command represents the command section of an alias config.
-type Command struct{
+type Command struct {
 	Cmd string `help:"Command to run for this alias."`
 }
 
 // A Flag represents options for a command.
-type Flag struct{
+type Flag struct {
 	ShortDescription string `help:"Description of this flag"`
-	Boolean bool
-	Positional string
-	Option []string
+	Boolean          bool
+	Positional       string
+	Option           []string
 }
 
 type Plugin struct {
@@ -954,7 +954,7 @@ func (config *Configuration) PrintAliases(w io.Writer) {
 }
 
 // Command retrieves an alias config, constructs a Command from it, and adds it to the parser
-func (a Alias) Command(name string, cmd *flags.Command)  {
+func (a Alias) Command(name string, cmd *flags.Command) {
 	ac := &AliasConfig{}
 	readAliasConfigFile(ac, a.Config)
 
@@ -965,10 +965,10 @@ func (a Alias) Command(name string, cmd *flags.Command)  {
 
 	// Recurse through nested subcommands
 	for name, subcommand := range ac.Subcommand {
-		if subcommand.Config != ""{
+		if subcommand.Config != "" {
 			subcommand.Command(name, cmd)
 		}
-       	cmd = addSubcommand(cmd, name, subcommand.Desc, subcommand.PositionalLabels)
+		cmd = addSubcommand(cmd, name, subcommand.Desc, subcommand.PositionalLabels)
 		addFlags(subcommand.NestedFlag, cmd)
 	}
 }
@@ -980,14 +980,14 @@ func addFlags(aliasFlags map[string]*Flag, cmd *flags.Command) {
 		}{}
 		option := &flags.Option{
 			Description: flag.ShortDescription,
-			LongName: strings.TrimLeft(name, "-"),
+			LongName:    strings.TrimLeft(name, "-"),
 		}
-       	g, err := cmd.AddGroup(name+" option", "", &f)
+		g, err := cmd.AddGroup(name+" option", "", &f)
 		if err != nil {
 			log.Warning("Error adding option group: %s", err)
 		}
 		g.AddOption(option, &f.Data)
-		for _, optionString := range flag.Option{
+		for _, optionString := range flag.Option {
 			g.AddOption(&flags.Option{LongName: optionString}, &f.Data)
 		}
 	}
