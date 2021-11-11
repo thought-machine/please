@@ -654,13 +654,17 @@
           generated with <code>plz generate --update_gitignore .gitignore</code>. This can help with getting Please to
           work with IDEs and tooling. This can be set to <code class="code">hard</code> to generate hard links.
         </p>
+        <p>
+          Generated sources are identified by rules with the <code class="code">codegen</code> label.
+        </p>
       </div>
     </li>
     <li>
       <div>
         <h3 class="mt1 f6 lh-title" id="build.updategitignore">UpdateGitignore</h3>
         <p>
-          When set, Please will update the nearest <code class="code">.gitignore</code> automatically during builds.
+          When set, Please will update the nearest <code class="code">.gitignore</code> with generated sources
+          automatically during builds. This must be used in conjunction with LinkGeneratedSources.
         </p>
       </div>
     </li>
