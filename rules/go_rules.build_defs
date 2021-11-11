@@ -1114,10 +1114,11 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     # TODO(jpoole): write a proper please_go tool for this
     cmds = [
         'echo module please_ignore > go.mod', # stops go reading the main go.mod, and downloading all of those too
+        'export export GOPATH="$PWD/go_mod_download_folder"', # avoid conflict on "go" folder
         f'$TOOLS_GO mod download -x -modcacherw -json {module}@{version} | tee mod.json',
         'export MOD_DIR=$(cat mod.json | ' 'awk -F\\" \'/"Dir": / { print $4 }\')',
-        "cp -r $MOD_DIR $OUT",
-    ] + [f'rm -rf $OUT/{s}' for s in strip]
+        'cp -r "$MOD_DIR" "$OUT"'
+    ] + [f'rm -rf "$OUT/{s}"' for s in strip]
 
     if patch:
         cmds += [f'for p in "$TMP_DIR"/$SRCS_PATCH; do patch -d {out} -p1 < $p; done']
@@ -1699,43 +1700,43 @@ def _get_ldflags_and_pkgconfig(name):
     return (ldflags, f'`pkg-config --libs {pkg_config}`') if pkg_config else (ldflags, '')
 
 
+# `dlv` is currently the only debugger supported.
 def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], deps:list=[], test_only:bool=False):
     if not CONFIG.get("DEBUG"):
         return "", None, None
 
+    # Delve command.
     cmd = f"$DEBUG_TOOLS_DLV exec {bin}"
-    data = []
     tools = {
         'dlv': CONFIG.DELVE_TOOL
     }
 
-    if pre_cmd:
-        cmd = f"{pre_cmd} && {cmd}"
-
     port = CONFIG.DEBUG.PORT
-    if not port:
-        # A CLI debug session needs access to the source files for improved UX.
-        debug_srcs_tar = f"_{name}_debug_srcs.tar"
-        data = [
-            build_rule(
-                name = name,
-                tag = "debug_srcs",
-                srcs = srcs,
-                # Archive all sources.
-                cmd = f"find . -name \"*.go\" | tar -cf {debug_srcs_tar} -T -",
-                outs = [debug_srcs_tar],
-                deps = deps,
-                test_only = test_only,
-                requires = ["go_src"],
-                needs_transitive_deps = True,
-            )
-        ]
-        # Extract sources before running the debugger.
-        cmd = f"tar -xf $PKG_DIR/{debug_srcs_tar} && {cmd}"
-    else:
+    if port:
         # Start a debug session where clients (i.e. IDEs) can connect to instead.
-        cmd = f"{cmd} --headless=true --listen=localhost:{port} --api-version=2"
+        cmd = f"{cmd} --headless=true --listen=localhost:{port} --api-version=2 --check-go-version=false"
 
     cmd = f"{cmd} -- {flags}"
+
+    # Make sources available to the debugger.
+    debug_srcs_tar = f"_{name}_debug_srcs.tar"
+    data = [
+        build_rule(
+            name = name,
+            tag = "debug_srcs",
+            srcs = srcs,
+            # Archive all sources.
+            cmd = f"find . -name \"*.go\" | tar -cf {debug_srcs_tar} -T -",
+            outs = [debug_srcs_tar],
+            deps = deps,
+            test_only = test_only,
+            requires = ["go_src"],
+            needs_transitive_deps = True,
+        )
+    ]
+    cmd = f"tar -xf $PKG_DIR/{debug_srcs_tar} && {cmd}"
+
+    if pre_cmd:
+        cmd = f"{pre_cmd} && {cmd}"
 
     return cmd, data, tools

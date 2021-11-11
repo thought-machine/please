@@ -23,6 +23,7 @@ var opts = struct {
 	Stamp              string        `long:"stamp" description:"Unique value used to derive cache directory for pex"`
 	InterpreterOptions string        `long:"interpreter_options" description:"Options-string to pass to the python interpreter"`
 	Test               bool          `short:"t" long:"test" description:"True if we're to build a test"`
+	Debug              pex.Debugger  `short:"d" long:"debug" optional:"true" optional-value:"pdb" choice:"pdb" choice:"debugpy" description:"Debugger to generate a debugging pex"`
 	Site               bool          `short:"S" long:"site" description:"Allow the pex to import site at startup"`
 	ZipSafe            bool          `long:"zip_safe" description:"Marks this pex as zip-safe"`
 	AddTestRunnerDeps  bool          `long:"add_test_runner_deps" description:"True if test-runner dependencies should be baked into test binaries"`
@@ -47,6 +48,9 @@ func main() {
 	}
 	if opts.Test {
 		w.SetTest(opts.TestSrcs, opts.TestRunner, opts.AddTestRunnerDeps)
+	}
+	if len(opts.Debug) > 0 {
+		w.SetDebugger(opts.Debug)
 	}
 	if err := w.Write(opts.Out, opts.ModuleDir); err != nil {
 		log.Fatalf("%s", err)

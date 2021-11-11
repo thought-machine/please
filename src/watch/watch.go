@@ -165,7 +165,7 @@ func build(ctx context.Context, state *core.BuildState, labels []core.BuildLabel
 	ns.NeedRun = state.NeedRun
 	ns.Watch = true
 	ns.CleanWorkdirs = state.CleanWorkdirs
-	ns.DebugTests = state.DebugTests
+	ns.DebugFailingTests = state.DebugFailingTests
 	ns.ShowAllOutput = state.ShowAllOutput
 	ns.StartTime = time.Now()
 	callback(ns, labels)
