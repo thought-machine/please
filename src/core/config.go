@@ -632,10 +632,10 @@ type Command struct {
 
 // A Flag represents options for a command.
 type Flag struct {
-	ShortDescription string `help:"Description of this flag"`
-	Boolean          bool
-	Positional       string
-	Option           []string
+	ShortDescription string   `help:"Description of this flag"`
+	Boolean          bool     `help:"Available option type for this flag"`
+	Positional       string   `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
+	Option           []string `help:"Known options of this flag"`
 }
 
 type Plugin struct {

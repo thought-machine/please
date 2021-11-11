@@ -1239,6 +1239,27 @@
     </li>
     <li>
       <div>
+        <h3 class="mt1 f6 lh-title" id="alias.nestedflag">
+          NestedFlag <span class="normal">(map string repeated string)</span>
+        </h3>
+        <p>
+          Any flags of this alias with nested config fields. Used for tab completion.
+        </p>
+      </div>
+    </li>
+    <li>
+      <li>
+        <div>
+          <h3 class="mt1 f6 lh-title" id="alias.nestedflag.shortdescription">
+            ShortDescription <span class="normal">(string)</span>
+          </h3>
+          <p>
+            Description of this flag.
+          </p>
+        </div>
+      </li>
+      <li>
+      <div>
         <h3 class="mt1 f6 lh-title" id="alias.positionallabels">
           PositionalLabels <span class="normal">(repeated string)</span>
         </h3>
@@ -1257,12 +1278,12 @@
       <div>
         <h3 class="mt1 f6 lh-title" id="alias.config"></h3>
         <p>
-          Location of additional config file from which additional aliases are loaded.
+          Location of additional config file from which field values for this alias are loaded.
         </p>
       </div>
     </li>
   </ul>
-  <h4 class="title-3">Example</h4>
+  <h4 class="title-3">Example - Repeated Section</h4>
   <p>
     An alias to run <code class="code">//deployment:deployer</code> with the form
     <code class="code">plz deploy prod --force //my:target</code> would look
@@ -1285,7 +1306,7 @@
 
   <p>
     The subcommand, flags, and positionallabels values are optional. They aren't
-    enforced in anyway but instead provide tab-completion through the standard
+    enforced in any way but instead provide tab-completion through the standard
     Please completions. The <code class="code">positionallabels</code> field
     adds tab-completion for build labels to the alias which can be useful for
     those that operate on build targets.
@@ -1304,14 +1325,67 @@
   </pre>
 
   <p>
-    Aliases for personal use can be added to your local (personal) please
-    configuration i.e. <code class="code">.plzconfig.local</code>.
+    To specify alias fields in a separate file, and allow them to be imported,
+    specify the file location in  in the <code class="code">config</code>
+    field in the config.
+  </p>
+
+  <h4 class="title-3">Example - Separate File</h4>
+  <p>
+    An alias to run <code class="code">//deployment:deployer</code> with the form
+    <code class="code">plz deploy prod --force //my:target</code> using a separate
+    alias config file, would look like this in the config:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code>
+    [alias "deploy"]
+    desc = Deploys the code.
+    config = //path
+    </code>
+  </pre>
+
+  <p>
+    And it could look like this in the separate config file:
+  </p>
+
+  <pre class="code-container">
+    <!-- prettier-ignore -->
+    <code>
+    [command]
+    Cmd = run //deployment:deployer --
+
+    [subcommand "dev"]
+    ShortDescription = Deploy to development environment.
+
+    [subcommand "prod"]
+    ShortDescription = Deploy to production environment.
+
+    [subcommand "real prod"]
+    ShortDescription = Deploy to actual for reals production environment.
+    config = //path
+
+    [nestedflag --force]
+    ShortDescription = Skip checks.
+    PositionalLabels = true
+
+    [nestedflag -f]
+    Option = fast
+    Option = lightspeed
+
+    </code>
+  </pre>
+
+  <p>
+    Config fields <code class="code">command</code>, <code class="code">subcommand</code>,
+    and <code class="code">nestedflag</code> are each grouped their own section.
+    Subcommands can specify their config elsewhere, and nesting of subcommands is supported.
   </p>
 
   <p>
-    To group aliases and import them, specify them in a file, and using a
-    single alias, specify the file location in  in the <code class="code">config</code>
-    field in the config.
+    Aliases for personal use can be added to your local (personal) please
+    configuration i.e. <code class="code">.plzconfig.local</code>.
   </p>
 
 </section>
