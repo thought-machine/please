@@ -59,9 +59,10 @@ func LinkGeneratedSources(state *core.BuildState, labels []core.BuildLabel) {
 				fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), linker)
 			}
 			if state.Config.Build.UpdateGitignore {
-				UpdateGitignore(state.Graph, labels, vcs.FindClosestIgnoreFile(target.Label.PackageDir()))
+				if err := UpdateGitignore(state.Graph, labels, vcs.FindClosestIgnoreFile(target.Label.PackageDir())); err != nil {
+					log.Warningf("failed to link generated sources: %v", err)
+				}
 			}
 		}
-
 	}
 }

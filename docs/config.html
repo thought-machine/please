@@ -650,10 +650,17 @@
         <h3 class="mt1 f6 lh-title" id="build.linkgeneratedsources">LinkGeneratedSources</h3>
 
         <p>
-          When set, Please will link generated sources back into the source tree. A
-          <code>.gitignore</code> can be generated with
-          <code>plz generate --update_gitignore .gitignore</code>. This can help with
-          getting Please to work with IDEs and tooling.
+          When set, Please will link generated sources back into the source tree. A <code>.gitignore</code> can be
+          generated with <code>plz generate --update_gitignore .gitignore</code>. This can help with getting Please to
+          work with IDEs and tooling. This can be set to <code class="code">hard</code> to generate hard links.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="build.updategitignore">UpdateGitignore</h3>
+        <p>
+          When set, Please will update the nearest <code class="code">.gitignore</code> automatically during builds.
         </p>
       </div>
     </li>

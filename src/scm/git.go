@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -30,7 +29,7 @@ type git struct {
 
 type gitIgnore struct {
 	*os.File
-	entries map[string]struct{}
+	entries      map[string]struct{}
 	hasDoNotEdit bool
 }
 
@@ -128,7 +127,7 @@ func openGitignore(file string) (*gitIgnore, error) {
 	}
 
 	ignoreFile := &gitIgnore{
-		File:         f,
+		File:    f,
 		entries: map[string]struct{}{},
 	}
 
@@ -144,7 +143,6 @@ func openGitignore(file string) (*gitIgnore, error) {
 	return ignoreFile, nil
 }
 
-
 func (g *git) IgnoreFiles(path string, files []string) error {
 	// If we're generating the ignore in the root of the project, we should ignore some Please stuff too
 	if filepath.Dir(path) == "." && files == nil {
@@ -158,7 +156,7 @@ func (g *git) IgnoreFiles(path string, files []string) error {
 
 	defer ignore.Close()
 
-	var newLines []string
+	newLines := make([]string, 0, len(files))
 	for _, file := range files {
 		if _, ok := ignore.entries[file]; ok {
 			continue
@@ -167,11 +165,10 @@ func (g *git) IgnoreFiles(path string, files []string) error {
 	}
 
 	if len(newLines) > 0 && !ignore.hasDoNotEdit {
-		if _, err := fmt.Fprintln(ignore, "\n" + pleaseDoNotEdit); err != nil {
+		if _, err := fmt.Fprintln(ignore, "\n"+pleaseDoNotEdit); err != nil {
 			return err
 		}
 	}
-	sort.Strings(newLines)
 	for _, line := range newLines {
 		if _, err := fmt.Fprintln(ignore, line); err != nil {
 			return err
@@ -191,7 +188,6 @@ func (g *git) FindClosestIgnoreFile(path string) string {
 	}
 	return g.FindClosestIgnoreFile(filepath.Dir(path))
 }
-
 
 func (g *git) Remove(names []string) error {
 	cmd := exec.Command("git", append([]string{"rm", "-q"}, names...)...)
