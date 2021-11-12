@@ -40,6 +40,7 @@ type TaskType uint8
 const (
 	BuildTask TaskType = 0
 	TestTask  TaskType = 1
+	LintTask  TaskType = 2
 )
 
 // A Task is the type for the queue of build/test tasks.
@@ -157,6 +158,8 @@ type BuildState struct {
 	NeedBuild bool
 	// True if we're running tests. False if we're only building or parsing.
 	NeedTests bool
+	// Trus if we're running linters. False if we're only building or parsing.
+	NeedLint bool
 	// True if we will run targets at the end of the build.
 	NeedRun bool
 	// True if we want to calculate target hashes (ie. 'plz hash').
@@ -286,17 +289,18 @@ func (state *BuildState) addPendingParse(label, dependent BuildLabel, forSubincl
 	}()
 }
 
-// addPendingBuild adds a task for a pending build of a target.
-func (state *BuildState) addPendingBuild(target *BuildTarget) {
+// addPendingTask adds a pending task for a target.
+func (state *BuildState) addPendingTask(target *BuildTarget, taskType TaskType) {
 	atomic.AddInt64(&state.progress.numPending, 1)
 	go func() {
 		defer func() {
 			recover() // Prevent death on 'send on closed channel'
 		}()
+		task := Task{Label: target.Label, Type: taskType}
 		if state.anyRemote && !target.Local {
-			state.pendingRemoteActions <- Task{Label: target.Label, Type: BuildTask}
+			state.pendingRemoteActions <- task
 		} else {
-			state.pendingActions <- Task{Label: target.Label, Type: BuildTask}
+			state.pendingActions <- task
 		}
 	}()
 }
@@ -983,7 +987,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		if !called {
 			// We are now ready to go, we have nothing to wait for.
 			if building && target.SyncUpdateState(Active, Pending) {
-				state.addPendingBuild(target)
+				state.addPendingTask(target, BuildTask)
 			}
 			return
 		}

@@ -143,9 +143,9 @@ var opts struct {
 
 	Lint struct {
 		Args struct {
-			Files []string `positional-arg-name:"files" description:"Files to lint"`
+			Targets []core.BuildLabel `positional-arg-name:"target" required:"true" description:"Targets to lint"`
 		} `positional-args:"true"`
-	}
+	} `command:"lint" description:"Runs linters against one or more targets"`
 
 	Cover struct {
 		active              bool          `no-flag:"true"`
@@ -1023,6 +1023,8 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
+	// TODO(peterebden): This should get passed through like shouldBuild and shouldTest
+	state.NeedLint = len(opts.Lint.Args.Targets) > 0
 	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || opts.Tool.Args.Tool != "" || debug
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	if opts.Build.Prepare {
