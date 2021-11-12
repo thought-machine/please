@@ -141,6 +141,12 @@ var opts struct {
 		} `positional-args:"true"`
 	} `command:"test" description:"Builds and tests one or more targets"`
 
+	Lint struct {
+		Args struct {
+			Files []string `positional-arg-name:"files" description:"Files to lint"`
+		} `positional-args:"true"`
+	}
+
 	Cover struct {
 		active              bool          `no-flag:"true"`
 		FailingTestsOk      bool          `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
