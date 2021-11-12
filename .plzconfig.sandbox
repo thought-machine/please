@@ -1,5 +1,5 @@
-[sandbox]
-build = true
-test = true
-namespace = never
-tool = please_sandbox
+[Sandbox]
+Build = true
+Test = true
+AlwaysSandboxMount = true
+Tool = ; This should become the default in v17

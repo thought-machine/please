@@ -33,21 +33,20 @@ type Executor struct {
 	// Whether we should set up linux namespaces at all
 	namespace NamespacingPolicy
 	// The tool that will do the network/mount sandboxing
-	sandboxTool      string
-	usePleaseSandbox bool
-	processes        map[*exec.Cmd]*os.Process
-	mutex            sync.Mutex
+	sandboxTool        string
+	usePleaseSandbox   bool
+	alwaysSandboxMount bool
+	processes          map[*exec.Cmd]*os.Process
+	mutex              sync.Mutex
 }
 
-func NewSandboxingExecutor(usePleaseSandbox bool, namespace NamespacingPolicy, sandboxTool string) *Executor {
-	if usePleaseSandbox {
-		log.Warning("The please built in sandboxing is experimental and may not work as expected. Caveat usor!")
-	}
+func NewSandboxingExecutor(usePleaseSandbox, alwaysSandboxMount bool, namespace NamespacingPolicy, sandboxTool string) *Executor {
 	o := &Executor{
-		namespace:        namespace,
-		usePleaseSandbox: usePleaseSandbox,
-		sandboxTool:      sandboxTool,
-		processes:        map[*exec.Cmd]*os.Process{},
+		namespace:          namespace,
+		usePleaseSandbox:   usePleaseSandbox,
+		alwaysSandboxMount: alwaysSandboxMount,
+		sandboxTool:        sandboxTool,
+		processes:          map[*exec.Cmd]*os.Process{},
 	}
 	cli.AtExit(o.killAll) // Kill any subprocess if we are ourselves killed
 	return o
@@ -55,7 +54,7 @@ func NewSandboxingExecutor(usePleaseSandbox bool, namespace NamespacingPolicy, s
 
 // New returns a new Executor.
 func New() *Executor {
-	return NewSandboxingExecutor(false, NamespaceNever, "")
+	return NewSandboxingExecutor(false, false, NamespaceNever, "")
 }
 
 // SandboxConfig contains what namespaces should be sandboxed
@@ -95,6 +94,7 @@ func (e *Executor) ExecWithTimeout(ctx context.Context, target Target, dir strin
 	// control over how the process gets terminated.
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
 	cmd := e.ExecCommand(sandbox, foreground, argv[0], argv[1:]...)
 	cmd.Dir = dir
 	cmd.Env = append(cmd.Env, env...)

@@ -95,7 +95,7 @@ func getOrStartWorker(state *core.BuildState, worker string) (*workerServer, err
 		worker = path
 	}
 	cmd := state.ProcessExecutor.ExecCommand(process.NoSandbox, false, worker)
-	cmd.Env = core.GeneralBuildEnvironment(state)
+	cmd.Env = append(core.GeneralBuildEnvironment(state), cmd.Env...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
