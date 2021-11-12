@@ -7,6 +7,7 @@ go_library(
         "//src/cli",
         "//src/core",
         "//src/fs",
+        "//src/lint",
         "//src/metrics",
         "//src/parse",
         "//src/remote",

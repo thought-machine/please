@@ -12,6 +12,7 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/lint"
 	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/remote"
@@ -92,6 +93,8 @@ func doTasks(tid int, state *core.BuildState, actions <-chan core.Task, remote b
 			test.Test(tid, state, task.Label, remote, int(task.Run))
 		case core.BuildTask:
 			build.Build(tid, state, task.Label, remote)
+		case core.LintTask:
+			lint.Lint(tid, state, task.Label, remote)
 		}
 		state.TaskDone()
 	}
