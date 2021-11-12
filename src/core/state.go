@@ -34,10 +34,18 @@ type ParseTask struct {
 	ForSubinclude    bool
 }
 
+// A TaskType identifies whether a task is a build or test action.
+type TaskType uint16
+
+const (
+	BuildTask TaskType = 0
+	TestTask  TaskType = 1
+)
+
 // A Task is the type for the queue of build/test tasks.
 type Task struct {
 	Label BuildLabel
-	Test  bool  // True if this task is a test
+	Type  TaskType
 	Run   int32 // Only present for tests (the run of a build is always zero)
 }
 
@@ -286,9 +294,9 @@ func (state *BuildState) addPendingBuild(target *BuildTarget) {
 			recover() // Prevent death on 'send on closed channel'
 		}()
 		if state.anyRemote && !target.Local {
-			state.pendingRemoteActions <- Task{Label: target.Label}
+			state.pendingRemoteActions <- Task{Label: target.Label, Type: BuildTask}
 		} else {
-			state.pendingActions <- Task{Label: target.Label}
+			state.pendingActions <- Task{Label: target.Label, Type: BuildTask}
 		}
 	}()
 }
@@ -313,7 +321,7 @@ func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
 			ch = state.pendingRemoteActions
 		}
 		for run := 1; run <= numRuns; run++ {
-			ch <- Task{Label: target.Label, Run: int32(run), Test: true}
+			ch <- Task{Label: target.Label, Run: int32(run), Type: TestTask}
 		}
 	}()
 }
