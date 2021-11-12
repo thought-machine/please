@@ -30,7 +30,8 @@ def c_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:l
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config. Again, the ldflags
                               will be picked up by cc_binary or cc_test rules.
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`.
-      includes (list): List of include directories to be added to the compiler's path.
+      includes (list): List of include directories to be added to the compiler's path. Dependent rules will include
+                       these directories as well.
       defines (list | dict): List of tokens to define in the preprocessor.
                              Alternatively can be a dict of name -> value to define, in which case
                              values are surrounded by quotes.
@@ -84,7 +85,8 @@ def c_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None
                               will be picked up by cc_binary or cc_test rules.
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`. Again, the ldflags
                               will be picked up by cc_binary or cc_test rules.
-      includes (list): List of include directories to be added to the compiler's path.
+      includes (list): List of include directories to be added to the compiler's path. Dependent rules will include
+                       these directories as well.
       defines (list | dict): List of tokens to define in the preprocessor.
                              Alternatively can be a dict of name -> value to define, in which case
                              values are surrounded by quotes.
@@ -166,7 +168,8 @@ def c_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_f
       test_only (bool): If True, is only available to other test rules.
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
-      includes (list): Include directories to be added to the compiler's lookup path.
+      includes (list): Include directories to be added to the compiler's lookup path. Dependent rules will include
+                       these directories as well.
     """
     return cc_shared_object(
         name = name,
