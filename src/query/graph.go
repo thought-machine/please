@@ -50,6 +50,7 @@ type JSONTarget struct {
 	Data     []string `json:"data,omitempty" note:"corresponds to data in rule declaration"`
 	Labels   []string `json:"labels,omitempty" note:"corresponds to labels in rule declaration"`
 	Requires []string `json:"requires,omitempty" note:"corresponds to requires in rule declaration"`
+	Command  string   `json:"command,omitempty" note:"the currently active command of the target. not present on filegroup or remote_file actions"`
 	Hash     string   `json:"hash" note:"partial hash of target, does not include source hash"`
 	Test     bool     `json:"test,omitempty" note:"true if target is a test"`
 	Binary   bool     `json:"binary,omitempty" note:"true if target is a binary"`
@@ -163,6 +164,9 @@ func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget
 	}
 	t.Labels = target.Labels
 	t.Requires = target.Requires
+	if !target.IsFilegroup && !target.IsRemoteFile {
+		t.Command = target.GetCommand(state)
+	}
 	rawHash := append(build.RuleHash(state, target, true, false), state.Hashes.Config...)
 	t.Hash = base64.RawStdEncoding.EncodeToString(rawHash)
 	t.Test = target.IsTest()
