@@ -43,19 +43,19 @@ type JSONPackage struct {
 
 // JSONTarget is an alternate representation of a build target
 type JSONTarget struct {
-	Inputs   []string `json:"inputs,omitempty" note:"declared inputs of target"`
-	Outputs  []string `json:"outs,omitempty" note:"corresponds to outs in rule declaration"`
+	Inputs   []string    `json:"inputs,omitempty" note:"declared inputs of target"`
+	Outputs  []string    `json:"outs,omitempty" note:"corresponds to outs in rule declaration"`
 	Sources  interface{} `json:"srcs,omitempty" note:"corresponds to srcs in rule declaration"`
 	Tools    interface{} `json:"tools,omitempty" note:"corresponds to tools in rule declaration"`
-	Deps     []string `json:"deps,omitempty" note:"corresponds to deps in rule declaration"`
-	Data     []string `json:"data,omitempty" note:"corresponds to data in rule declaration"`
-	Labels   []string `json:"labels,omitempty" note:"corresponds to labels in rule declaration"`
-	Requires []string `json:"requires,omitempty" note:"corresponds to requires in rule declaration"`
-	Command  string   `json:"command,omitempty" note:"the currently active command of the target. not present on filegroup or remote_file actions"`
-	Hash     string   `json:"hash" note:"partial hash of target, does not include source hash"`
-	Test     bool     `json:"test,omitempty" note:"true if target is a test"`
-	Binary   bool     `json:"binary,omitempty" note:"true if target is a binary"`
-	TestOnly bool     `json:"test_only,omitempty" note:"true if target should be restricted to test code"`
+	Deps     []string    `json:"deps,omitempty" note:"corresponds to deps in rule declaration"`
+	Data     []string    `json:"data,omitempty" note:"corresponds to data in rule declaration"`
+	Labels   []string    `json:"labels,omitempty" note:"corresponds to labels in rule declaration"`
+	Requires []string    `json:"requires,omitempty" note:"corresponds to requires in rule declaration"`
+	Command  string      `json:"command,omitempty" note:"the currently active command of the target. not present on filegroup or remote_file actions"`
+	Hash     string      `json:"hash" note:"partial hash of target, does not include source hash"`
+	Test     bool        `json:"test,omitempty" note:"true if target is a test"`
+	Binary   bool        `json:"binary,omitempty" note:"true if target is a binary"`
+	TestOnly bool        `json:"test_only,omitempty" note:"true if target should be restricted to test code"`
 }
 
 func makeJSONGraph(state *core.BuildState, targets []core.BuildLabel) *JSONGraph {
