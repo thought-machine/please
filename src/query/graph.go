@@ -46,6 +46,7 @@ type JSONTarget struct {
 	Inputs   []string `json:"inputs,omitempty" note:"declared inputs of target"`
 	Outputs  []string `json:"outs,omitempty" note:"corresponds to outs in rule declaration"`
 	Sources  interface{} `json:"srcs,omitempty" note:"corresponds to srcs in rule declaration"`
+	Tools    interface{} `json:"tools,omitempty" note:"corresponds to tools in rule declaration"`
 	Deps     []string `json:"deps,omitempty" note:"corresponds to deps in rule declaration"`
 	Data     []string `json:"data,omitempty" note:"corresponds to data in rule declaration"`
 	Labels   []string `json:"labels,omitempty" note:"corresponds to labels in rule declaration"`
@@ -146,19 +147,9 @@ func makeJSONPackage(state *core.BuildState, pkg *core.Package) JSONPackage {
 }
 
 func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget {
-	t := JSONTarget{}
-	if len(target.NamedSources) == 0 {
-		t.Sources = target.AllSourcePaths(state.Graph)
-	} else {
-		namedSrcs := map[string][]string{}
-		for name, srcs := range target.NamedSources {
-			s := make([]string, 0, len(srcs))
-			for _, x := range srcs {
-				s = append(s, x.Paths(state.Graph)...)
-			}
-			namedSrcs[name] = s
-		}
-		t.Sources = namedSrcs
+	t := JSONTarget{
+		Sources: makeJSONInputField(state.Graph, target.AllSourcePaths(state.Graph), target.NamedSources),
+		Tools:   makeJSONInputField(state.Graph, buildInputsToStrings(state.Graph, target.AllTools()), target.AllNamedTools()),
 	}
 	for in := range core.IterSources(state, state.Graph, target, false) {
 		t.Inputs = append(t.Inputs, in.Src)
@@ -184,4 +175,28 @@ func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget
 	t.Binary = target.IsBinary
 	t.TestOnly = target.TestOnly
 	return t
+}
+
+// makeJSONInputField takes a named and unnamed field (e.g. srcs or tools) and returns an
+// appropriate representation.
+func makeJSONInputField(graph *core.BuildGraph, unnamed []string, named map[string][]core.BuildInput) interface{} {
+	if len(named) == 0 {
+		if len(unnamed) == 0 {
+			return nil
+		}
+		return unnamed
+	}
+	namedInputs := make(map[string][]string, len(named))
+	for name, srcs := range named {
+		namedInputs[name] = buildInputsToStrings(graph, srcs)
+	}
+	return namedInputs
+}
+
+func buildInputsToStrings(graph *core.BuildGraph, inputs []core.BuildInput) []string {
+	s := make([]string, 0, len(inputs))
+	for _, x := range inputs {
+		s = append(s, x.Paths(graph)...)
+	}
+	return s
 }
