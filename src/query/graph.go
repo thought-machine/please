@@ -120,7 +120,11 @@ func makeJSONPackage(state *core.BuildState, pkg *core.Package) JSONPackage {
 	for _, target := range pkg.AllTargets() {
 		targets[target.Label.Name] = makeJSONTarget(state, target)
 	}
-	return JSONPackage{name: pkg.Name, Targets: targets}
+	name := pkg.Name
+	if pkg.SubrepoName != "" {
+		name = "///" + pkg.SubrepoName + "//" + pkg.Name
+	}
+	return JSONPackage{name: name, Targets: targets}
 }
 
 func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget {
