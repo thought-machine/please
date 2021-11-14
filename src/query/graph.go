@@ -101,10 +101,11 @@ func addJSONTarget(state *core.BuildState, ret *JSONGraph, label core.BuildLabel
 		return
 	}
 	target := state.Graph.TargetOrDie(label)
-	if _, present := ret.Packages[label.PackageName]; present {
-		ret.Packages[label.PackageName].Targets[label.Name] = makeJSONTarget(state, target)
+	pkgName := packageName(label.PackageName, label.Subrepo)
+	if _, present := ret.Packages[pkgName]; present {
+		ret.Packages[pkgName].Targets[label.Name] = makeJSONTarget(state, target)
 	} else {
-		ret.Packages[label.PackageName] = JSONPackage{
+		ret.Packages[pkgName] = JSONPackage{
 			Targets: map[string]JSONTarget{
 				label.Name: makeJSONTarget(state, target),
 			},
@@ -120,11 +121,14 @@ func makeJSONPackage(state *core.BuildState, pkg *core.Package) JSONPackage {
 	for _, target := range pkg.AllTargets() {
 		targets[target.Label.Name] = makeJSONTarget(state, target)
 	}
-	name := pkg.Name
-	if pkg.SubrepoName != "" {
-		name = "///" + pkg.SubrepoName + "//" + pkg.Name
+	return JSONPackage{name: packageName(pkg.Name, pkg.SubrepoName), Targets: targets}
+}
+
+func packageName(pkg, subrepo string) string {
+	if subrepo != "" {
+		return "///" + subrepo + "//" + pkg
 	}
-	return JSONPackage{name: name, Targets: targets}
+	return pkg
 }
 
 func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget {
