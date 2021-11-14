@@ -45,7 +45,7 @@ type JSONPackage struct {
 type JSONTarget struct {
 	Inputs   []string `json:"inputs,omitempty" note:"declared inputs of target"`
 	Outputs  []string `json:"outs,omitempty" note:"corresponds to outs in rule declaration"`
-	Sources  []string `json:"srcs,omitempty" note:"corresponds to srcs in rule declaration"`
+	Sources  interface{} `json:"srcs,omitempty" note:"corresponds to srcs in rule declaration"`
 	Deps     []string `json:"deps,omitempty" note:"corresponds to deps in rule declaration"`
 	Data     []string `json:"data,omitempty" note:"corresponds to data in rule declaration"`
 	Labels   []string `json:"labels,omitempty" note:"corresponds to labels in rule declaration"`
@@ -146,8 +146,19 @@ func makeJSONPackage(state *core.BuildState, pkg *core.Package) JSONPackage {
 }
 
 func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget {
-	t := JSONTarget{
-		Sources: target.AllSourcePaths(state.Graph),
+	t := JSONTarget{}
+	if len(target.NamedSources) == 0 {
+		t.Sources = target.AllSourcePaths(state.Graph)
+	} else {
+		namedSrcs := map[string][]string{}
+		for name, srcs := range target.NamedSources {
+			s := make([]string, 0, len(srcs))
+			for _, x := range srcs {
+				s = append(s, x.Paths(state.Graph)...)
+			}
+			namedSrcs[name] = s
+		}
+		t.Sources = namedSrcs
 	}
 	for in := range core.IterSources(state, state.Graph, target, false) {
 		t.Inputs = append(t.Inputs, in.Src)
