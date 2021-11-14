@@ -31,11 +31,13 @@ func Graph(state *core.BuildState, targets []core.BuildLabel) {
 // to the structures in core (also those ones can't be printed as JSON directly).
 type JSONGraph struct {
 	Packages map[string]JSONPackage `json:"packages"`
+	Subrepos map[string]*JSONGraph  `json:"subrepos,omitempty"`
 }
 
 // JSONPackage is an alternate representation of a build package
 type JSONPackage struct {
 	name    string
+	subrepo string
 	Targets map[string]JSONTarget `json:"targets"`
 }
 
@@ -55,10 +57,13 @@ type JSONTarget struct {
 }
 
 func makeJSONGraph(state *core.BuildState, targets []core.BuildLabel) *JSONGraph {
-	ret := JSONGraph{Packages: map[string]JSONPackage{}}
+	ret := JSONGraph{
+		Packages: map[string]JSONPackage{},
+		Subrepos: map[string]*JSONGraph{},
+	}
 	if len(targets) == 0 {
 		for pkg := range makeAllPackages(state) {
-			ret.Packages[pkg.name] = pkg
+			ret.Subrepo(pkg.subrepo).Packages[pkg.name] = pkg
 		}
 	} else {
 		done := map[core.BuildLabel]struct{}{}
@@ -67,6 +72,21 @@ func makeJSONGraph(state *core.BuildState, targets []core.BuildLabel) *JSONGraph
 		}
 	}
 	return &ret
+}
+
+// Subrepo returns a subrepo for the given name. If it's empty the top-level repo is returned.
+func (graph *JSONGraph) Subrepo(name string) *JSONGraph {
+	if name == "" {
+		return graph
+	} else if subrepo, present := graph.Subrepos[name]; present {
+		return subrepo
+	}
+	subrepo := &JSONGraph{
+		Packages: map[string]JSONPackage{},
+		Subrepos: map[string]*JSONGraph{},
+	}
+	graph.Subrepos[name] = subrepo
+	return subrepo
 }
 
 // makeAllPackages constructs all the JSONPackage objects for this graph in parallel.
@@ -88,7 +108,7 @@ func makeAllPackages(state *core.BuildState) <-chan JSONPackage {
 	return ch
 }
 
-func addJSONTarget(state *core.BuildState, ret *JSONGraph, label core.BuildLabel, done map[core.BuildLabel]struct{}) {
+func addJSONTarget(state *core.BuildState, graph *JSONGraph, label core.BuildLabel, done map[core.BuildLabel]struct{}) {
 	if _, present := done[label]; present {
 		return
 	}
@@ -96,23 +116,23 @@ func addJSONTarget(state *core.BuildState, ret *JSONGraph, label core.BuildLabel
 	if label.IsAllTargets() {
 		pkg := state.Graph.PackageOrDie(label)
 		for _, target := range pkg.AllTargets() {
-			addJSONTarget(state, ret, target.Label, done)
+			addJSONTarget(state, graph, target.Label, done)
 		}
 		return
 	}
 	target := state.Graph.TargetOrDie(label)
-	pkgName := packageName(label.PackageName, label.Subrepo)
-	if _, present := ret.Packages[pkgName]; present {
-		ret.Packages[pkgName].Targets[label.Name] = makeJSONTarget(state, target)
+	repo := graph.Subrepo(label.Subrepo)
+	if _, present := repo.Packages[label.PackageName]; present {
+		repo.Packages[label.PackageName].Targets[label.Name] = makeJSONTarget(state, target)
 	} else {
-		ret.Packages[pkgName] = JSONPackage{
+		repo.Packages[label.PackageName] = JSONPackage{
 			Targets: map[string]JSONTarget{
 				label.Name: makeJSONTarget(state, target),
 			},
 		}
 	}
 	for _, dep := range target.Dependencies() {
-		addJSONTarget(state, ret, dep.Label, done)
+		addJSONTarget(state, graph, dep.Label, done)
 	}
 }
 
@@ -121,14 +141,7 @@ func makeJSONPackage(state *core.BuildState, pkg *core.Package) JSONPackage {
 	for _, target := range pkg.AllTargets() {
 		targets[target.Label.Name] = makeJSONTarget(state, target)
 	}
-	return JSONPackage{name: packageName(pkg.Name, pkg.SubrepoName), Targets: targets}
-}
-
-func packageName(pkg, subrepo string) string {
-	if subrepo != "" {
-		return "///" + subrepo + "//" + pkg
-	}
-	return pkg
+	return JSONPackage{name: pkg.Name, subrepo: pkg.SubrepoName, Targets: targets}
 }
 
 func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget {
