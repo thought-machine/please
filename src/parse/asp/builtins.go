@@ -731,9 +731,12 @@ func addLabel(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all bool) pyObject {
+func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all, transitive bool) pyObject {
 	if target.State() < minState {
 		log.Fatalf("get_labels called on a target that is not yet built: %s", target.Label)
+	}
+	if all && !transitive {
+		log.Fatalf("get_labels can't be called with all set to true when transitive is set to False")
 	}
 	labels := map[string]bool{}
 	done := map[*core.BuildTarget]bool{}
@@ -743,6 +746,9 @@ func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.Bu
 			if strings.HasPrefix(label, prefix) {
 				labels[strings.TrimSpace(strings.TrimPrefix(label, prefix))] = true
 			}
+		}
+		if !transitive {
+			return
 		}
 		done[t] = true
 		if !t.OutputIsComplete || t == target || all {
