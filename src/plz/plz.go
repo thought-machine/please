@@ -91,12 +91,14 @@ func doTasks(tid int, state *core.BuildState, actions <-chan core.Task, remote b
 		switch task.Type {
 		case core.TestTask:
 			test.Test(tid, state, task.Label, remote, int(task.Run))
+			state.TaskDone()
 		case core.BuildTask:
 			build.Build(tid, state, task.Label, remote)
+			state.TaskDone()
 		case core.LintTask:
-			lint.Lint(tid, state, task.Label, remote)
+			lint.Lint(tid, state, task.Label, remote, task.Linter)
+			// Slightly awkwardly, lint handles TaskDone itself to avoid races.
 		}
-		state.TaskDone()
 	}
 }
 

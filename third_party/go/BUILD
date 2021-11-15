@@ -1063,7 +1063,7 @@ go_module(
     name = "deferred_regex",
     licences = ["Apache-2.0"],
     module = "github.com/peterebden/go-deferred-regex",
-    version = "v1.0.0",
+    version = "v1.1.0",
     visibility = ["PUBLIC"],
 )
 

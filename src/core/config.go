@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/google/shlex"
+	"github.com/peterebden/go-deferred-regex"
 	"github.com/please-build/gcfg"
 	gcfgtypes "github.com/please-build/gcfg/types"
 	"github.com/thought-machine/go-flags"
@@ -567,6 +568,9 @@ type Configuration struct {
 		GoGrpcDep        string   `help:"An in-repo dependency that's applied to any Go gRPC libraries." var:"GRPC_GO_DEP"`
 		ProtocFlag       []string `help:"Flags to pass to protoc i.e. the location of well known types. Can be repeated." var:"PROTOC_FLAGS"`
 	} `help:"Please has built-in support for compiling protocol buffers, which are a form of codegen to define common data types which can be serialised and communicated between different languages.\nSee https://developers.google.com/protocol-buffers/ for more information.\n\nThere is also support for gRPC, which is an implementation of protobuf's RPC framework. See http://www.grpc.io/ for more information.\n\nNote that you must have the protocol buffers compiler (and gRPC plugins, if needed) installed on your machine to make use of these rules."`
+
+	Linter map[string]*Linter `help:"Please has support for linters via the 'plz lint' command. These are defined in the plzconfig file and apply to each relevant target, producing a unified set of recommendations.\n\nSee https://please.build/linters.html for more detailed information."`
+
 	Licences struct {
 		Accept []string `help:"Licences that are accepted in this repository.\nWhen this is empty licences are ignored. As soon as it's set any licence detected or assigned must be accepted explicitly here.\nThere's no fuzzy matching, so some package managers (especially PyPI and Maven, but shockingly not npm which rather nicely uses SPDX) will generate a lot of slightly different spellings of the same thing, which will all have to be accepted here. We'd rather that than trying to 'cleverly' match them which might result in matching the wrong thing."`
 		Reject []string `help:"Licences that are explicitly rejected in this repository.\nAn astute observer will notice that this is not very different to just not adding it to the accept section, but it does have the advantage of explicitly documenting things that the team aren't allowed to use."`
@@ -982,4 +986,12 @@ func (profile ConfigProfile) Complete(match string) (completions []flags.Complet
 		}
 	}
 	return completions
+}
+
+// A Linter is a subsection of the config dealing with a specific linter.
+type Linter struct {
+	Include []deferredregex.DeferredRegex `help:"Regexes defining source files that this linter applies to."`
+	Exclude []deferredregex.DeferredRegex `help:"Regexes defining source files that this linter does not apply to. Takes priority over include."`
+	Target  BuildLabel                    `help:"Build target to invoke for this linter"`
+	Command string                        `help:"Command line for this linter. If 'target' is given then this becomes additional flags to it, otherwise it's the full command run."`
 }

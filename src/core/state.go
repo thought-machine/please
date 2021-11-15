@@ -45,9 +45,10 @@ const (
 
 // A Task is the type for the queue of build/test tasks.
 type Task struct {
-	Label BuildLabel
-	Type  TaskType
-	Run   uint32 // Only present for tests (the run of a build is always zero)
+	Label  BuildLabel
+	Type   TaskType
+	Run    int32  // Only present for tests (the run of a build is always zero)
+	Linter string // Only present for lint tasks
 }
 
 // Debug is the type for debugging a target
@@ -290,13 +291,12 @@ func (state *BuildState) addPendingParse(label, dependent BuildLabel, forSubincl
 }
 
 // addPendingTask adds a pending task for a target.
-func (state *BuildState) addPendingTask(target *BuildTarget, taskType TaskType) {
+func (state *BuildState) addPendingTask(target *BuildTarget, task Task) {
 	atomic.AddInt64(&state.progress.numPending, 1)
 	go func() {
 		defer func() {
 			recover() // Prevent death on 'send on closed channel'
 		}()
-		task := Task{Label: target.Label, Type: taskType}
 		if state.anyRemote && !target.Local {
 			state.pendingRemoteActions <- task
 		} else {
@@ -312,6 +312,11 @@ func (state *BuildState) AddPendingTest(target *BuildTarget) {
 	} else {
 		state.addPendingTest(target, int(state.NumTestRuns))
 	}
+}
+
+// AddPendingLint adds a task to lint a target.
+func (state *BuildState) AddPendingLint(target *BuildTarget, linter string) {
+	state.addPendingTask(target, Task{Label: target.Label, Type: LintTask, Linter: linter})
 }
 
 func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
@@ -788,7 +793,6 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 			return t
 		}
 	}
-	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
 	var ch chan struct{}
 	state.progress.pendingTargets.Update(l, func(old interface{}) interface{} {
@@ -869,6 +873,7 @@ func (state *BuildState) EnsureDownloaded(target *BuildTarget) error {
 
 // WaitForTargetAndEnsureDownload waits for the target to be built and then downloads it if executing remotely
 func (state *BuildState) WaitForTargetAndEnsureDownload(l, dependent BuildLabel) *BuildTarget {
+	dependent.Name = "all" // Every target in this package depends on this one.
 	target := state.WaitForBuiltTarget(l, dependent)
 	if err := state.EnsureDownloaded(target); err != nil {
 		panic(fmt.Errorf("failed to download target outputs: %w", err))
@@ -969,6 +974,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 			return
 		}
 	}
+	linting := state.NeedLint
 	for {
 		called := false
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
@@ -986,8 +992,13 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		}
 		if !called {
 			// We are now ready to go, we have nothing to wait for.
-			if building && target.SyncUpdateState(Active, Pending) {
-				state.addPendingTask(target, BuildTask)
+			if (building || linting) && target.SyncUpdateState(Active, Pending) {
+				if building {
+					state.addPendingTask(target, Task{Label: target.Label, Type: BuildTask})
+				}
+				if linting {
+					state.addPendingTask(target, Task{Label: target.Label, Type: LintTask})
+				}
 			}
 			return
 		}
@@ -1231,6 +1242,9 @@ const (
 	TargetTestStopped
 	TargetTested
 	TargetTestFailed
+	TargetLinting
+	TargetLinted
+	TargetLintFailed
 )
 
 // Category returns the broad area that this event represents in the tasks we perform for a target.
@@ -1242,6 +1256,8 @@ func (s BuildResultStatus) Category() string {
 		return "Build"
 	case TargetTesting, TargetTestStopped, TargetTested, TargetTestFailed:
 		return "Test"
+	case TargetLinting, TargetLinted, TargetLintFailed:
+		return "Lint"
 	default:
 		return "Other"
 	}
@@ -1254,10 +1270,10 @@ func (s BuildResultStatus) IsParse() bool {
 
 // IsFailure returns true if this status represents a failure.
 func (s BuildResultStatus) IsFailure() bool {
-	return s == ParseFailed || s == TargetBuildFailed || s == TargetTestFailed
+	return s == ParseFailed || s == TargetBuildFailed || s == TargetTestFailed || s == TargetLintFailed
 }
 
 // IsActive returns true if this status represents a target that is not yet finished.
 func (s BuildResultStatus) IsActive() bool {
-	return s == PackageParsing || s == TargetBuilding || s == TargetTesting
+	return s == PackageParsing || s == TargetBuilding || s == TargetTesting || s == TargetLinting
 }
