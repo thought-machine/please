@@ -625,14 +625,23 @@ func joinPath(s *scope, args []pyObject) pyObject {
 }
 
 func packageName(s *scope, args []pyObject) pyObject {
+	pkg := ""
 	if s.pkg != nil {
-		return pyString(s.pkg.Name)
+		pkg = s.pkg.Name
 	}
 	if s.subincludeLabel != nil {
-		return pyString(s.subincludeLabel.PackageName)
+		pkg = s.subincludeLabel.PackageName
 	}
-	s.Error("you cannot call package_name() from this context")
-	return nil
+
+	if pkg == "" {
+		s.Error("you cannot call package_name() from this context")
+	}
+
+	if label, ok := args[0].(pyString); ok && label != "" {
+		return pyString(core.ParseAnnotatedBuildLabel(label.String(), pkg).PackageName)
+	}
+
+	return pyString(pkg)
 }
 
 func subrepoName(s *scope, args []pyObject) pyObject {
@@ -706,12 +715,13 @@ func getLabels(s *scope, args []pyObject) pyObject {
 	name := string(args[0].(pyString))
 	prefix := string(args[1].(pyString))
 	all := args[2].IsTruthy()
+	transitive := args[3].IsTruthy()
 	if core.LooksLikeABuildLabel(name) {
 		label := core.ParseBuildLabel(name, s.pkg.Name)
-		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built, all)
+		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built, all, transitive)
 	}
 	target := getTargetPost(s, name)
-	return getLabelsInternal(target, prefix, core.Building, all)
+	return getLabelsInternal(target, prefix, core.Building, all, transitive)
 }
 
 // addLabel adds a set of labels to the named rule
