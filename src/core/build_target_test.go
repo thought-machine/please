@@ -31,6 +31,16 @@ func TestTmpDirSubrepo(t *testing.T) {
 	assert.Equal(t, "plz-out/tmp/test_x86/mickey/donald/goofy._build", target.TmpDir())
 }
 
+func TestLintDir(t *testing.T) {
+	target := makeTarget1("//mickey/donald:goofy", "")
+	assert.Equal(t, "plz-out/tmp/mickey/donald/goofy._gofmt", target.LintDir("gofmt"))
+}
+
+func TestLintDirSubrepo(t *testing.T) {
+	target := makeTarget1("@test_x86//mickey/donald:goofy", "")
+	assert.Equal(t, "plz-out/tmp/test_x86/mickey/donald/goofy._gofmt", target.LintDir("gofmt"))
+}
+
 func TestOutDirSubrepo(t *testing.T) {
 	target := makeTarget1("@test_x86//mickey/donald:goofy", "")
 	assert.Equal(t, "plz-out/gen/test_x86/mickey/donald", target.OutDir())

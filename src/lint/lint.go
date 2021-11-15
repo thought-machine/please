@@ -99,8 +99,21 @@ func matchOne(regexes []deferredregex.DeferredRegex, src core.BuildInput) bool {
 // lint performs the logic of linting a single target.
 func lint(tid int, state *core.BuildState, target *core.BuildTarget, remote bool, linterName string) error {
 	linter := state.Config.Linter[linterName]
-	linterTarget := state.Graph.TargetOrDie(linter.Target)
-	log.Debug("target %s", linterTarget)
+	state.LogBuildResult(tid, target, core.TargetLinting, fmt.Sprintf("Preparing to run %s...", linterName))
+
+	tmpDir := target.LintDir(linterName)
+	if err := prepareDirectory(state, tmpDir); err != nil {
+		return err
+	}
+	if err := prepareSources(state, state.Graph, target, tmpDir); err != nil {
+		return err
+	}
+	if !linter.Target.IsEmpty() {
+		if err := prepareSources(state, state.Graph, state.Graph.TargetOrDie(linter.Target), tmpDir); err != nil {
+			return err
+		}
+	}
+
 	state.LogBuildResult(tid, target, core.TargetLinting, fmt.Sprintf("Running %s...", linterName))
 	time.Sleep(10 * time.Second)
 	state.LogBuildResult(tid, target, core.TargetLinted, fmt.Sprintf("Finished %s", linterName))

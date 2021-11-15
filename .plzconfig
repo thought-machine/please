@@ -60,9 +60,9 @@ subcommand = test
 subcommand = build
 positionallabels = true
 
-[alias "lint"]
-desc = Runs the linters for this repo
-cmd = run //tools/misc:lint -p --
+[linter "gofmt"]
+cmd = gofmt -s
+include = .*.go$
 
 [alias "go-get"]
 desc = Runs the go deps tool to install new dependencies into the repo

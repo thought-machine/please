@@ -993,5 +993,5 @@ type Linter struct {
 	Include []deferredregex.DeferredRegex `help:"Regexes defining source files that this linter applies to."`
 	Exclude []deferredregex.DeferredRegex `help:"Regexes defining source files that this linter does not apply to. Takes priority over include."`
 	Target  BuildLabel                    `help:"Build target to invoke for this linter"`
-	Command string                        `help:"Command line for this linter. If 'target' is given then this becomes additional flags to it, otherwise it's the full command run."`
+	Cmd     string                        `help:"Command line for this linter. If 'target' is given then this becomes additional flags to it, otherwise it's the full command run."`
 }

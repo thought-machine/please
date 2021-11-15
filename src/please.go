@@ -453,6 +453,10 @@ var buildFunctions = map[string]func() int{
 		}
 		return toExitCode(success, state)
 	},
+	"lint": func() int {
+		success, state := runBuild(opts.Lint.Args.Targets, true, false, false)
+		return toExitCode(success, state)
+	},
 	"test": func() int {
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args, opts.Test.Failed, opts.Test.TestResultsFile)
 		success, state := doTest(targets, opts.Test.SurefireDir, opts.Test.TestResultsFile)

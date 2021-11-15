@@ -123,9 +123,14 @@ type SourcePair struct{ Src, Tmp string }
 // Yielded values are pairs of the original source location and its temporary location for this rule.
 // If includeTools is true it yields the target's tools as well.
 func IterSources(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools bool) <-chan SourcePair {
+	return IterSources2(state, graph, target, includeTools, target.TmpDir())
+}
+
+// IterSources2 is like IterSources but allows specifying the tmp dir.
+// TODO(peterebden): Get rid of this and force everything to pass it.
+func IterSources2(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools bool, tmpDir string) <-chan SourcePair {
 	ch := make(chan SourcePair)
 	done := map[string]bool{}
-	tmpDir := target.TmpDir()
 	go func() {
 		for input := range IterInputs(state, graph, target, includeTools, false) {
 			fullPaths := input.FullPaths(graph)

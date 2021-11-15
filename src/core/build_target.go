@@ -372,13 +372,19 @@ func (target *BuildTarget) String() string {
 	return target.Label.String()
 }
 
-// TmpDir returns the temporary working directory for this target, eg.
+// TmpDir returns the temporary working directory for this target, e.g.
 // //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy._build
 // Note the extra subdirectory to keep rules separate from one another, and the .build suffix
 // to attempt to keep rules from duplicating the names of sub-packages; obviously that is not
 // 100% reliable but we don't have a better solution right now.
 func (target *BuildTarget) TmpDir() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+buildDirSuffix)
+}
+
+// LintDir returns the temporary lint directory for this target, e.g.
+// gofmt //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy._gofmt
+func (target *BuildTarget) LintDir(linter string) string {
+	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+"._"+linter)
 }
 
 // BuildLockFile returns the lock filename for the target's build stage.
