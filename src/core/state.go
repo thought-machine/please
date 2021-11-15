@@ -996,7 +996,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 				if building {
 					state.addPendingTask(target, Task{Label: target.Label, Type: BuildTask})
 				}
-				if linting {
+				if linting && state.IsOriginalTarget(target) {
 					state.addPendingTask(target, Task{Label: target.Label, Type: LintTask})
 				}
 			}
