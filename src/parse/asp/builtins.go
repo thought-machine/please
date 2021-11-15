@@ -628,13 +628,11 @@ func packageName(s *scope, args []pyObject) pyObject {
 	pkg := ""
 	if s.pkg != nil {
 		pkg = s.pkg.Name
-	}
-	if s.subincludeLabel != nil {
+	} else if s.subincludeLabel != nil {
 		pkg = s.subincludeLabel.PackageName
-	}
-
-	if pkg == "" {
+	} else {
 		s.Error("you cannot call package_name() from this context")
+		return nil
 	}
 
 	if label, ok := args[0].(pyString); ok && label != "" {
