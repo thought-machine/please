@@ -425,7 +425,7 @@ type Configuration struct {
 		HTTPProxy            cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
 		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256"`
 		ExitOnError          bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
-		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. Defaults to false. Set to hard for hardlinks and soft or true for symlinks." var:"LINK_GEN_SOURCES"`
+		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)" var:"LINK_GEN_SOURCES"`
 		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
@@ -814,7 +814,7 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 				field.Set(reflect.ValueOf(v))
 			}
 		case reflect.Bool:
-			v, _ := gcfgtypes.ParseBool(strings.ToLower(v))
+			v, _ := gcfgtypes.ParseBool(v)
 			field.SetBool(v)
 		case reflect.Int:
 			i, err := strconv.Atoi(v)
@@ -946,7 +946,7 @@ func (config *Configuration) NumRemoteExecutors() int {
 
 func (config *Configuration) ShouldLinkGeneratedSources() bool {
 	isTruthy, _ := gcfgtypes.ParseBool(config.Build.LinkGeneratedSources)
-	return config.Build.LinkGeneratedSources == "hard" || isTruthy
+	return config.Build.LinkGeneratedSources == "hard" || config.Build.LinkGeneratedSources == "soft" || isTruthy
 }
 
 func (config Configuration) copyConfig() *Configuration {
