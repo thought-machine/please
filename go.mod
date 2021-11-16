@@ -29,13 +29,12 @@ require (
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/peterebden/ar v0.0.0-20181115090543-a0ae3a11a518
-	github.com/peterebden/gcfg v1.3.0 // indirect
 	github.com/peterebden/go-cli-init/v5 v5.1.0
 	github.com/peterebden/go-deferred-regex v1.0.0
 	github.com/peterebden/go-sri v1.1.1
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
 	github.com/pkg/xattr v0.4.3
-	github.com/please-build/gcfg v1.4.0
+	github.com/please-build/gcfg v1.5.0
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.30.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.21.8
@@ -61,5 +60,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	lukechampine.com/blake3 v1.1.5
 )
+
+replace github.com/please-build/gcfg v1.5.0 => /home/ttristao/code/gcfg
 
 go 1.16

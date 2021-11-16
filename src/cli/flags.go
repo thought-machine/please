@@ -137,6 +137,11 @@ func MustNewVersion(in string) *Version {
 	return v
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
+func (v Version) MarshalText() ([]byte, error) {
+	return []byte(v.String()), nil
+}
+
 // UnmarshalText implements the encoding.TextUnmarshaler interface
 func (v *Version) UnmarshalText(text []byte) error {
 	return v.UnmarshalFlag(string(text))
@@ -233,6 +238,11 @@ func HostArch() Arch {
 // String prints this Arch to its string representation.
 func (arch *Arch) String() string {
 	return arch.OS + "_" + arch.Arch
+}
+
+// MarshalText implements the encoding.TextMarshaler interface.
+func (arch Arch) MarshalText() ([]byte, error) {
+	return []byte(arch.String()), nil
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface

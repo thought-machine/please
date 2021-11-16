@@ -412,7 +412,11 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
-	} `command:"query" description:"Queries information about the build graph"`
+		Config struct {
+			Option string `long:"option" description:"TODO."`
+			Json bool `long:"json" description:"Output as JSON."`
+		} `command:"config" description:"Prints the configuration settings"`
+	} `command:"query" description:"Queries information about the build state"`
 	Codegen struct {
 		Gitignore string `long:"update_gitignore" description:"The gitignore file to write the generated sources to"`
 		Args      struct {
@@ -859,6 +863,10 @@ var buildFunctions = map[string]func() int{
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
 			query.Filter(state, state.ExpandOriginalLabels(), opts.Query.Filter.Hidden)
 		})
+	},
+	"query.config": func() int {
+		query.Config(config, opts.Query.Config.Option, opts.Query.Config.Json)
+		return 0
 	},
 	"watch": func() int {
 		// Don't ask it to test now since we don't know if any of them are tests yet.
