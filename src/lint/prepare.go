@@ -43,13 +43,12 @@ func prepareOutputs(state *core.BuildState, target *core.BuildTarget, tmpDir str
 
 // command returns the command we'd run for a linter.
 func command(graph *core.BuildGraph, linter *core.Linter) (string, error) {
-	cmd := linter.Cmd + " $SRCS"
 	if linter.Target.IsEmpty() {
-		return cmd, nil
+		return linter.Cmd, nil
 	}
 	outs := graph.TargetOrDie(linter.Target).Outputs()
 	if len(outs) == 0 {
 		return "", fmt.Errorf("Target %s cannot be used as a linter, it has no outputs", linter.Target)
 	}
-	return outs[0] + " " + cmd, nil
+	return outs[0] + " " + linter.Cmd, nil
 }

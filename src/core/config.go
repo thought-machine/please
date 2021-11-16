@@ -990,8 +990,9 @@ func (profile ConfigProfile) Complete(match string) (completions []flags.Complet
 
 // A Linter is a subsection of the config dealing with a specific linter.
 type Linter struct {
-	Include []deferredregex.DeferredRegex `help:"Regexes defining source files that this linter applies to."`
-	Exclude []deferredregex.DeferredRegex `help:"Regexes defining source files that this linter does not apply to. Takes priority over include."`
-	Target  BuildLabel                    `help:"Build target to invoke for this linter"`
-	Cmd     string                        `help:"Command line for this linter. If 'target' is given then this becomes additional flags to it, otherwise it's the full command run."`
+	Include  []deferredregex.DeferredRegex `help:"Regexes defining source files that this linter applies to."`
+	Exclude  []deferredregex.DeferredRegex `help:"Regexes defining source files that this linter does not apply to. Takes priority over include."`
+	Target   BuildLabel                    `help:"Build target to invoke for this linter"`
+	Cmd      string                        `help:"Command line for this linter. If 'target' is given then this becomes additional flags to it, otherwise it's the full command run."`
+	Reformat bool                          `help:"True if this linter's output reformats files"`
 }
