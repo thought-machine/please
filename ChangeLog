@@ -1,3 +1,20 @@
+Version 16.14.0
+--------------
+    * The `query revdeps` and `query somepath` subcommands now handle
+      indirect dependencies (i.e. require/provide) between targets
+      better when not including hidden targets #2127
+    * Fix issue where we were de-duplicating linker flags for `go_module()`
+      #2127
+    * Some improvements to the builtin functions: `get_labels()` now has
+      a `transitive` parameter that can be used to opt out of getting
+      labels on transitive dependencies, and `package_name()` now has a label
+      parameter that can be used to get the package of a specific label.
+      #2170
+    * Some improvements to `plz generate` and `LinkGeneratedSources` to
+      opt to use hard links, or automatically update the `.gitignore`
+      during builds #2163
+
+
 Version 16.13.0
 --------------
     * Some fixes around subrepos and cross compiling #2134 #2148
