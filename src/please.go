@@ -412,6 +412,8 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
+		RepoRoot struct {
+		} `command:"reporoot" alias:"repo_root" description:"Output the root of the current Please repo"`
 	} `command:"query" description:"Queries information about the build graph"`
 	Generate struct {
 		Gitignore string `long:"update_gitignore" description:"The gitignore file to write the generated sources to"`
@@ -859,6 +861,10 @@ var buildFunctions = map[string]func() int{
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
 			query.Filter(state, state.ExpandOriginalLabels(), opts.Query.Filter.Hidden)
 		})
+	},
+	"query.reporoot": func() int {
+		fmt.Println(core.RepoRoot)
+		return 0
 	},
 	"watch": func() int {
 		// Don't ask it to test now since we don't know if any of them are tests yet.
