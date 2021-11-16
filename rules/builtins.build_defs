@@ -124,9 +124,9 @@ def config_get(self:config, key:str, default=None) -> config:
     pass
 
 
-def get_base_path() -> str:
+def get_base_path(label:str=None) -> str:
     pass
-def package_name() -> str:
+def package_name(label:str=None) -> str:
     pass
 def subrepo_name() -> str:
     pass
@@ -222,7 +222,7 @@ ValueError = _deprecated_exception
 
 
 # Post-build callback functions.
-def get_labels(name:str, prefix:str, all:bool=False) -> list:
+def get_labels(name:str, prefix:str, all:bool=False, transitive=True) -> list:
     pass
 def has_label(name:str, prefix:str, all:bool=False) -> bool:
     return len(get_labels(name, prefix, all)) > 0
