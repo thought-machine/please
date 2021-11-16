@@ -101,7 +101,7 @@ func lint(tid int, state *core.BuildState, target *core.BuildTarget, remote bool
 	linter := state.Config.Linter[linterName]
 	state.LogBuildResult(tid, target, core.TargetLinting, fmt.Sprintf("Preparing to run %s...", linterName))
 
-	tmpDir := target.LintDir(linterName)
+	tmpDir := path.Join(core.RepoRoot, target.LintDir(linterName))
 	if err := prepareDirectory(state, tmpDir); err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func lint(tid int, state *core.BuildState, target *core.BuildTarget, remote bool
 		return err
 	}
 	if !linter.Target.IsEmpty() {
-		if err := prepareSources(state, state.Graph, state.Graph.TargetOrDie(linter.Target), tmpDir); err != nil {
+		if err := prepareOutputs(state, state.Graph.TargetOrDie(linter.Target), tmpDir); err != nil {
 			return err
 		}
 	}
@@ -122,9 +122,9 @@ func lint(tid int, state *core.BuildState, target *core.BuildTarget, remote bool
 	}
 	env := core.BuildEnvironment(state, target, tmpDir)
 	log.Debug("Linting target %s\nENVIRONMENT:\n%s\n%s", target, env, cmd)
-	out, _, err := state.ProcessExecutor.ExecWithTimeoutShell(target, tmpDir, env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), cmd)
+	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, tmpDir, env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), cmd)
 	if err != nil {
-		return fmt.Errorf("Failed to lint %s: %s", target, err)
+		return fmt.Errorf("Failed to lint %s: %s\n%s", target, err, combined)
 	}
 	out = out
 	state.LogBuildResult(tid, target, core.TargetLinted, fmt.Sprintf("Finished %s", linterName))

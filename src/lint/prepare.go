@@ -3,6 +3,7 @@ package lint
 import (
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -19,10 +20,21 @@ func prepareDirectory(state *core.BuildState, directory string) error {
 	return os.MkdirAll(directory, core.DirPermissions)
 }
 
-// Symlinks the source files of this rule into its temp directory.
+// Links the source files of this rule into its temp directory.
 func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core.BuildTarget, tmpDir string) error {
 	for source := range core.IterSources2(state, graph, target, false, tmpDir) {
 		if err := core.PrepareSourcePair(source); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Links the output files of this rule into a temp directory.
+func prepareOutputs(state *core.BuildState, target *core.BuildTarget, tmpDir string) error {
+	outDir := target.OutDir()
+	for _, out := range target.Outputs() {
+		if err := core.PrepareSourcePair(core.SourcePair{Src: path.Join(outDir, out), Tmp: path.Join(tmpDir, out)}); err != nil {
 			return err
 		}
 	}
