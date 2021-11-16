@@ -98,6 +98,11 @@ type DebugFields struct {
 	namedTools map[string][]BuildInput `name:"debug_tools"`
 }
 
+type LintFields struct {
+	// Results from any linters run
+	Results []LintResult `print:"false"`
+}
+
 // A BuildTarget is a representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 type BuildTarget struct {
@@ -140,6 +145,8 @@ type BuildTarget struct {
 	Test *TestFields `name:"test"`
 	// Debug related fields.
 	Debug *DebugFields
+	// Lint related fields
+	Lint *LintFields
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
 	// Description displayed while the command is building.
@@ -456,6 +463,17 @@ func (target *BuildTarget) AddTestResults(results TestSuite) {
 		target.Test.Results.Cached = target.Test.Results.Cached && results.Cached
 	}
 	target.Test.Results.Collapse(results)
+}
+
+// AddLintResults adds linter results to the target
+func (target *BuildTarget) AddLintResults(results []LintResult) {
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
+	if target.Lint == nil {
+		target.Lint = &LintFields{Results: results}
+	} else {
+		target.Lint.Results = append(target.Lint.Results, results...)
+	}
 }
 
 // StartTestSuite sets the initial properties on the result test suite
