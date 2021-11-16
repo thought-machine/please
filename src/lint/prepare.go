@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/thought-machine/please/src/core"
@@ -26,4 +27,17 @@ func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core
 		}
 	}
 	return nil
+}
+
+// command returns the command we'd run for a linter.
+func command(graph *core.BuildGraph, linter *core.Linter) (string, error) {
+	cmd := linter.Cmd + " $SRCS"
+	if linter.Target.IsEmpty() {
+		return cmd, nil
+	}
+	outs := graph.TargetOrDie(linter.Target).Outputs()
+	if len(outs) == 0 {
+		return "", fmt.Errorf("Target %s cannot be used as a linter, it has no outputs", linter.Target)
+	}
+	return outs[0] + " " + cmd, nil
 }

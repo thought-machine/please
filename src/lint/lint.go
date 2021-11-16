@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"path"
 	"sync"
-	"time"
 
 	"github.com/peterebden/go-deferred-regex"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/process"
 )
 
 var log = logging.MustGetLogger("lint")
@@ -115,7 +115,18 @@ func lint(tid int, state *core.BuildState, target *core.BuildTarget, remote bool
 	}
 
 	state.LogBuildResult(tid, target, core.TargetLinting, fmt.Sprintf("Running %s...", linterName))
-	time.Sleep(10 * time.Second)
+
+	cmd, err := command(state.Graph, linter)
+	if err != nil {
+		return err
+	}
+	env := core.BuildEnvironment(state, target, tmpDir)
+	log.Debug("Linting target %s\nENVIRONMENT:\n%s\n%s", target, env, cmd)
+	out, _, err := state.ProcessExecutor.ExecWithTimeoutShell(target, tmpDir, env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), cmd)
+	if err != nil {
+		return fmt.Errorf("Failed to lint %s: %s", target, err)
+	}
+	out = out
 	state.LogBuildResult(tid, target, core.TargetLinted, fmt.Sprintf("Finished %s", linterName))
 	return nil
 }
