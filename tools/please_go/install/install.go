@@ -37,7 +37,7 @@ type PleaseGoInstall struct {
 	compiledPackages map[string]string
 
 	// A set of flags we from pkg-config or #cgo comments
-	collectedLdFlags map[string]struct{}
+	collectedLdFlags []string
 }
 
 func (install *PleaseGoInstall) mustSetBuildContext(tags []string) {
@@ -58,12 +58,11 @@ func (install *PleaseGoInstall) mustSetBuildContext(tags []string) {
 // New creates a new PleaseGoInstall
 func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags, goTool, ccTool, pkgConfTool, out, trimPath string) *PleaseGoInstall {
 	i := &PleaseGoInstall{
-		srcRoot:          srcRoot,
-		moduleName:       moduleName,
-		importConfig:     importConfig,
-		outDir:           out,
-		trimPath:         filepath.Join(trimPath, baseWorkDir),
-		collectedLdFlags: map[string]struct{}{},
+		srcRoot:      srcRoot,
+		moduleName:   moduleName,
+		importConfig: importConfig,
+		outDir:       out,
+		trimPath:     filepath.Join(trimPath, baseWorkDir),
 
 		additionalLDFlags: ldFlags,
 		additionalCFlags:  cFlags,
@@ -130,16 +129,8 @@ func (install *PleaseGoInstall) writeLDFlags() error {
 	}
 	defer flagFile.Close()
 
-	_, err = flagFile.WriteString(strings.Join(install.ldFlags(), " "))
+	_, err = flagFile.WriteString(strings.Join(install.collectedLdFlags, " "))
 	return err
-}
-
-func (install *PleaseGoInstall) ldFlags() []string {
-	flags := make([]string, 0, len(install.collectedLdFlags))
-	for flag := range install.collectedLdFlags {
-		flags = append(flags, flag)
-	}
-	return flags
 }
 
 func (install *PleaseGoInstall) linkPackage(target string) error {
@@ -147,12 +138,7 @@ func (install *PleaseGoInstall) linkPackage(target string) error {
 	filename := strings.TrimSuffix(filepath.Base(out), ".a")
 	binName := filepath.Join(install.outDir, "bin", filename)
 
-	flags := install.ldFlags()
-	if f := install.additionalLDFlags; f != "" {
-		flags = append(flags, f)
-	}
-
-	return install.tc.Link(out, binName, install.importConfig, flags)
+	return install.tc.Link(out, binName, install.importConfig, install.collectedLdFlags)
 }
 
 // compileAll walks the provided directory looking for go packages to compile. Unlike compile(), this will skip any
@@ -336,10 +322,6 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 
 	ldFlags := pkg.CgoLDFLAGS
 
-	if len(pkg.CXXFiles) > 0 {
-		ldFlags = append(ldFlags, "-lstdc++")
-	}
-
 	if len(pkg.CgoFiles) > 0 {
 		cFlags := pkg.CgoCFLAGS
 
@@ -429,9 +411,8 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 		return err
 	}
 
-	for _, f := range ldFlags {
-		install.collectedLdFlags[f] = struct{}{}
-	}
+	install.collectedLdFlags = append(install.collectedLdFlags, ldFlags...)
+
 	install.compiledPackages[target] = out
 	return nil
 }
