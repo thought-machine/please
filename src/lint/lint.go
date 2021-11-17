@@ -153,12 +153,27 @@ func runLintOnce(state *core.BuildState, target *core.BuildTarget, tmpDir, linte
 	}
 	if !linter.Reformat {
 		target.AddLintResults(parseLintLines(linter, linterName, string(out)))
+		state.LintFailed = true
 		return nil
+	} else if state.WriteLinterSuggestions {
+		// Rewrite the linter output into the file. Note that this doesn't set state.LintFailed
+		// having failed so the exit code is 0 if all the linters rewrote their suggestions.
+		return os.WriteFile(srcs[0], out, fileMode(srcs[0]))
 	}
+
 	existing, err := os.ReadFile(srcs[0])
 	if err != nil {
 		return err
 	}
 	target.AddLintResults(computeDiffs(linterName, srcs[0], string(existing), string(out)))
+	state.LintFailed = true
 	return nil
+}
+
+// fileMode returns the mode we should write a file in.
+func fileMode(filename string) os.FileMode {
+	if info, err := os.Stat(filename); err == nil {
+		return info.Mode()
+	}
+	return 0644 // Just assume this, we'll probably fail to write it in a sec if we couldn't stat() it.
 }

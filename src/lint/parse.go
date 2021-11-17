@@ -70,6 +70,7 @@ func computeDiffs(linterName, filename, before, after string) []core.LintResult 
 			File:     filename,
 			Line:     hunk.FromLine,
 			Patch:    fmt.Sprintf("%s", u),
+			Message:  "Not in expected format",
 		}
 	}
 	return results

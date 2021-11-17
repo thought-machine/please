@@ -152,6 +152,8 @@ type BuildState struct {
 	BuildFailed bool
 	// True if >= 1 target has failed test cases
 	TestFailed bool
+	// True if >= 1 target has open lint warnings
+	LintFailed bool
 	// True if tests should calculate coverage metrics
 	NeedCoverage bool
 	// True if we intend to build targets. False if we're just parsing
@@ -193,6 +195,8 @@ type BuildState struct {
 	DebugFailingTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
 	XattrsSupported bool
+	// True if we would rewrite any autoformat suggestions from linters.
+	WriteLinterSuggestions bool
 	// True if we have any remote executors configured.
 	anyRemote bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.

@@ -142,7 +142,9 @@ var opts struct {
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Lint struct {
-		Args struct {
+		JSON  bool `short:"j" long:"json" description:"Output lint results as JSON lines (default is human-readable)"`
+		Write bool `short:"w" long:"write" description:"Automatically rewrite files in-place from linter suggestions"`
+		Args  struct {
 			Targets []core.BuildLabel `positional-arg-name:"target" required:"true" description:"Targets to lint"`
 		} `positional-args:"true"`
 	} `command:"lint" description:"Runs linters against one or more targets"`
@@ -455,7 +457,8 @@ var buildFunctions = map[string]func() int{
 	},
 	"lint": func() int {
 		success, state := runBuild(opts.Lint.Args.Targets, true, false, false)
-		return toExitCode(success, state)
+		output.PrintLintResults(state, opts.Lint.JSON)
+		return toExitCode(success && state.LintFailed, state)
 	},
 	"test": func() int {
 		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args, opts.Test.Failed, opts.Test.TestResultsFile)
@@ -1043,6 +1046,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.DebugFailingTests = debugFailingTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
+	state.WriteLinterSuggestions = opts.Lint.Write
 	state.DownloadOutputs = (!opts.Build.NoDownload && !opts.Run.Remote && len(targets) > 0 && (!targets[0].IsAllSubpackages() || len(opts.BuildFlags.Include) > 0)) || opts.Build.Download
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if opts.BuildFlags.Arch.OS != "" {

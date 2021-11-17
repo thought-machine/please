@@ -5,12 +5,14 @@ package output
 import (
 	"bufio"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -92,7 +94,7 @@ loop:
 			printTestResults(state, bt.FailedTargets, duration, detailedTests)
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
-		} else if !state.NeedRun { // Must be plz build or similar, report build outputs.
+		} else if !state.NeedRun && !state.NeedLint { // Must be plz build or similar, report build outputs.
 			printBuildResults(state, duration)
 		}
 		msgs, totalMessages, actualMessages := cli.CurrentBackend.GetMessageHistory()
@@ -386,6 +388,60 @@ func printBuildResults(state *core.BuildState, duration time.Duration) {
 		for _, result := range buildResult(target) {
 			fmt.Printf("  %s\n", result)
 		}
+	}
+}
+
+// PrintLintResults prints all known lint results, either in JSON or human-readable.
+func PrintLintResults(state *core.BuildState, inJSON bool) {
+	for _, label := range state.ExpandVisibleOriginalTargets() {
+		if target := state.Graph.TargetOrDie(label); target.Lint != nil {
+			sort.Slice(target.Lint.Results, func(i, j int) bool { return target.Lint.Results[i].Line < target.Lint.Results[j].Line })
+			for _, r := range target.Lint.Results {
+				if inJSON {
+					b, _ := json.Marshal(r)
+					os.Stdout.Write(b)
+					os.Stdout.Write([]byte{'\n'})
+					continue
+				}
+				code := r.Code
+				if code != "" {
+					code = ":" + code
+				}
+				printf("${BOLD_WHITE}%s:%s%s${RESET} ${BOLD_RED}%s%s${RESET}: ${RED}%s${RESET}\n", r.File, lintNumber(r.Line), lintNumber(r.Col), r.Linter, code, r.Message)
+				if r.Patch != "" {
+					for _, line := range strings.Split(r.Patch, "\n") {
+						printf(patchLineColour(line)+"%s${RESET}\n", line)
+					}
+				}
+			}
+		}
+	}
+}
+
+// lintNumber converts an optional line or column number to a string, adding a colon if non-zero.
+func lintNumber(i int) string {
+	if i == 0 {
+		return ""
+	}
+	return strconv.Itoa(i) + ":"
+}
+
+// patchLineColour returns the colour we should prefix a single line of a unified diff in.
+func patchLineColour(line string) string {
+	if len(line) == 0 {
+		return ""
+	} else if strings.HasPrefix(line, "---") || strings.HasPrefix(line, "+++") {
+		return "${BOLD_WHITE}"
+	} else if strings.HasPrefix(line, "@@") {
+		return "${YELLOW}"
+	}
+	switch line[0] {
+	case '-':
+		return "${RED}"
+	case '+':
+		return "${GREEN}"
+	default:
+		return "${GREY}"
 	}
 }
 

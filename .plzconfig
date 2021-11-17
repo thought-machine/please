@@ -61,8 +61,9 @@ subcommand = build
 positionallabels = true
 
 [linter "gofmt"]
-cmd = gofmt -s
+cmd = gofmt -s $SRCS
 include = .*.go$
+reformat = true
 
 [alias "go-get"]
 desc = Runs the go deps tool to install new dependencies into the repo
