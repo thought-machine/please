@@ -393,6 +393,11 @@ func printBuildResults(state *core.BuildState, duration time.Duration) {
 
 // PrintLintResults prints all known lint results, either in JSON or human-readable.
 func PrintLintResults(state *core.BuildState, inJSON bool) {
+	if !state.LintFailed {
+		log.Notice("No lint errors to report!")
+		return
+	}
+	printf("${BOLD_WHITE}Linter run complete, errors reported:${RESET}\n")
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		if target := state.Graph.TargetOrDie(label); target.Lint != nil {
 			sort.Slice(target.Lint.Results, func(i, j int) bool { return target.Lint.Results[i].Line < target.Lint.Results[j].Line })

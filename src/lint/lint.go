@@ -2,6 +2,7 @@
 package lint
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path"
@@ -164,6 +165,8 @@ func runLintOnce(state *core.BuildState, target *core.BuildTarget, tmpDir, linte
 	existing, err := os.ReadFile(srcs[0])
 	if err != nil {
 		return err
+	} else if bytes.Equal(existing, out) {
+		return nil
 	}
 	target.AddLintResults(computeDiffs(linterName, srcs[0], string(existing), string(out)))
 	state.LintFailed = true

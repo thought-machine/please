@@ -56,9 +56,6 @@ func parseLintLine(linter *core.Linter, linterName, line string) core.LintResult
 }
 
 func computeDiffs(linterName, filename, before, after string) []core.LintResult {
-	if before == after {
-		return nil
-	}
 	edits := myers.ComputeEdits(span.URIFromPath(filename), before, after)
 	unified := gotextdiff.ToUnified(filename, filename, before, edits)
 	results := make([]core.LintResult, len(unified.Hunks))
