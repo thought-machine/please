@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"os"
 	"testing"
 
 	"github.com/peterebden/go-deferred-regex"
@@ -23,4 +24,26 @@ func TestParseLintLine(t *testing.T) {
 		Col:     2,
 		Message: "`y` is unused",
 	}}, parseLintLines(linter, "golangci-lint", in))
+}
+
+func TestParseRewrites(t *testing.T) {
+	mustReadFile := func(filename string) string {
+		b, err := os.ReadFile(filename)
+		assert.NoError(t, err)
+		return string(b)
+	}
+
+	before := mustReadFile("src/lint/test_data/test.go")
+	after := mustReadFile("src/lint/test_data/rewritten.go")
+	patch := mustReadFile("src/lint/test_data/patch.diff")
+
+	assert.Equal(t, []core.LintResult{
+		{
+			Linter:   "gofmt",
+			File:     "src/lint/test_data/test.go",
+			Line:     2,
+			Patch:    patch,
+			Severity: "autoformat",
+		},
+	}, computeDiffs("gofmt", "src/lint/test_data/test.go", before, after))
 }

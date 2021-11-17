@@ -10,6 +10,7 @@ go_library(
         "//src/fs",
         "//src/process",
         "//third_party/go:deferred_regex",
+        "//third_party/go:gotextdiff",
         "//third_party/go:logging",
     ],
 )
@@ -17,6 +18,7 @@ go_library(
 go_test(
     name = "lint_test",
     srcs = glob(["*_test.go"]),
+    data = ["test_data"],
     deps = [
         ":lint",
         "//src/core",

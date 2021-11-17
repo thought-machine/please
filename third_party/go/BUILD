@@ -1081,3 +1081,15 @@ go_module(
     version = "v0.5.0",
     visibility = ["PUBLIC"],
 )
+
+go_module(
+    name = "gotextdiff",
+    install = [
+        ".",
+        "myers",
+        "span",
+    ],
+    module = "github.com/hexops/gotextdiff",
+    version = "v1.0.3",
+    visibility = ["PUBLIC"],
+)

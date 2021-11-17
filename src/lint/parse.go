@@ -6,6 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hexops/gotextdiff"
+	"github.com/hexops/gotextdiff/myers"
+	"github.com/hexops/gotextdiff/span"
+
 	"github.com/thought-machine/please/src/core"
 )
 
@@ -49,4 +53,24 @@ func parseLintLine(linter *core.Linter, linterName, line string) core.LintResult
 		}
 	}
 	return result
+}
+
+func computeDiffs(linterName, filename, before, after string) []core.LintResult {
+	if before == after {
+		return nil
+	}
+	edits := myers.ComputeEdits(span.URIFromPath(filename), before, after)
+	unified := gotextdiff.ToUnified(filename, filename, before, edits)
+	results := make([]core.LintResult, len(unified.Hunks))
+	for i, hunk := range unified.Hunks {
+		u := gotextdiff.Unified{From: filename, To: filename, Hunks: []*gotextdiff.Hunk{hunk}}
+		results[i] = core.LintResult{
+			Linter:   linterName,
+			Severity: "autoformat",
+			File:     filename,
+			Line:     hunk.FromLine,
+			Patch:    fmt.Sprintf("%s", u),
+		}
+	}
+	return results
 }

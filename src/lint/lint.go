@@ -3,6 +3,7 @@ package lint
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"sync"
 
@@ -146,15 +147,18 @@ func runLintOnce(state *core.BuildState, target *core.BuildTarget, tmpDir, linte
 	}
 	env := core.LintEnvironment(state, target, tmpDir, srcs)
 	log.Debug("Linting target %s\nENVIRONMENT:\n%s\n%s", target, env, cmd)
-	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, tmpDir, env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), cmd)
+	out, _, err := state.ProcessExecutor.ExecWithTimeoutShell(target, tmpDir, env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), cmd)
 	if err == nil && len(out) == 0 {
 		return nil // assume everything is successful
 	}
-	target.AddLintResults(parseLintLines(linter, linterName, string(out)))
-
-	if err != nil {
-		return fmt.Errorf("Failed to lint %s: %s\n%s", target, err, combined)
+	if !linter.Reformat {
+		target.AddLintResults(parseLintLines(linter, linterName, string(out)))
+		return nil
 	}
-	out = out
+	existing, err := os.ReadFile(srcs[0])
+	if err != nil {
+		return err
+	}
+	target.AddLintResults(computeDiffs(linterName, srcs[0], string(existing), string(out)))
 	return nil
 }
