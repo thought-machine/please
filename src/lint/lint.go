@@ -98,6 +98,7 @@ func matchOne(regexes []deferredregex.DeferredRegex, src core.BuildInput) bool {
 
 // lint performs the logic of linting a single target.
 func lint(tid int, state *core.BuildState, target *core.BuildTarget, remote bool, linterName string) error {
+	// TODO(peterebden): Remote execution support.
 	linter := state.Config.Linter[linterName]
 	state.LogBuildResult(tid, target, core.TargetLinting, fmt.Sprintf("Preparing to run %s...", linterName))
 
@@ -115,18 +116,45 @@ func lint(tid int, state *core.BuildState, target *core.BuildTarget, remote bool
 	}
 
 	state.LogBuildResult(tid, target, core.TargetLinting, fmt.Sprintf("Running %s...", linterName))
+	if err := runLint(state, target, tmpDir, linterName, linter); err != nil {
+		return err
+	}
+	state.LogBuildResult(tid, target, core.TargetLinted, fmt.Sprintf("Finished %s", linterName))
+	return nil
+}
 
+// runLint runs the linter over a prepared temp dir.
+func runLint(state *core.BuildState, target *core.BuildTarget, tmpDir, linterName string, linter *core.Linter) error {
+	srcs := target.AllSourcePaths(state.Graph)
+	if !linter.Reformat {
+		return runLintOnce(state, target, tmpDir, linterName, linter, srcs)
+	}
+	// Reformatting linters want to see each file individually.
+	for _, src := range srcs {
+		if err := runLintOnce(state, target, tmpDir, linterName, linter, []string{src}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// runLintOnce runs a linter command once on a prepared temp dir.
+func runLintOnce(state *core.BuildState, target *core.BuildTarget, tmpDir, linterName string, linter *core.Linter, srcs []string) error {
 	cmd, err := command(state.Graph, linter)
 	if err != nil {
 		return err
 	}
-	env := core.BuildEnvironment(state, target, tmpDir)
+	env := core.LintEnvironment(state, target, tmpDir, srcs)
 	log.Debug("Linting target %s\nENVIRONMENT:\n%s\n%s", target, env, cmd)
 	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, tmpDir, env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), cmd)
+	if err == nil && len(out) == 0 {
+		return nil // assume everything is successful
+	}
+	target.AddLintResults(parseLintLines(linter, linterName, string(out)))
+
 	if err != nil {
 		return fmt.Errorf("Failed to lint %s: %s\n%s", target, err, combined)
 	}
 	out = out
-	state.LogBuildResult(tid, target, core.TargetLinted, fmt.Sprintf("Finished %s", linterName))
 	return nil
 }

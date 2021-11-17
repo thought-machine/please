@@ -13,3 +13,14 @@ go_library(
         "//third_party/go:logging",
     ],
 )
+
+go_test(
+    name = "lint_test",
+    srcs = glob(["*_test.go"]),
+    deps = [
+        ":lint",
+        "//src/core",
+        "//third_party/go:deferred_regex",
+        "//third_party/go:testify",
+    ],
+)

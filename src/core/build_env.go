@@ -131,6 +131,27 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	return withUserProvidedEnv(target, env)
 }
 
+// LintEnvironment creates the shell env vars to be passed into the exec.Command calls used
+// when linting a target.
+func LintEnvironment(state *BuildState, target *BuildTarget, tmpDir string, sources []string) BuildEnv {
+	env := TargetEnvironment(state, target)
+	env = append(env,
+		"TMP_DIR="+tmpDir,
+		"TMPDIR="+tmpDir,
+		"SRCS="+strings.Join(sources, " "),
+		"HOME="+tmpDir,
+		// Set a consistent hash seed for Python. Important for build determinism.
+		"PYTHONHASHSEED=42",
+	)
+	if len(sources) == 1 {
+		env = append(env, "SRC="+sources[0])
+	}
+	if target.Sandbox && len(state.Config.Sandbox.Dir) > 0 {
+		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
+	}
+	return env
+}
+
 // userEnv adds the env variables passed to the build rule to the build env
 // Sadly this can't be done as part of TargetEnv() target env as this requires the other
 // env vars are set so they can be substituted.
