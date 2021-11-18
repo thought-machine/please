@@ -111,7 +111,7 @@ func lint(tid int, state *core.BuildState, target *core.BuildTarget, remote bool
 	if err := prepareDirectory(state, tmpDir); err != nil {
 		return err
 	}
-	if err := prepareSources(state, state.Graph, target, tmpDir); err != nil {
+	if err := prepareSources(state, state.Graph, target, tmpDir, linter.TransitiveInputs); err != nil {
 		return err
 	}
 	if !linter.Target.IsEmpty() {

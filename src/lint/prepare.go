@@ -21,8 +21,8 @@ func prepareDirectory(state *core.BuildState, directory string) error {
 }
 
 // Links the source files of this rule into its temp directory.
-func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core.BuildTarget, tmpDir string) error {
-	for source := range core.IterSources2(state, graph, target, false, tmpDir) {
+func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core.BuildTarget, tmpDir string, transitive bool) error {
+	for source := range core.IterSources2(state, graph, target, false, transitive, tmpDir) {
 		if err := core.PrepareSourcePair(source); err != nil {
 			return err
 		}

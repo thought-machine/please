@@ -123,16 +123,16 @@ type SourcePair struct{ Src, Tmp string }
 // Yielded values are pairs of the original source location and its temporary location for this rule.
 // If includeTools is true it yields the target's tools as well.
 func IterSources(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools bool) <-chan SourcePair {
-	return IterSources2(state, graph, target, includeTools, target.TmpDir())
+	return IterSources2(state, graph, target, includeTools, false, target.TmpDir())
 }
 
 // IterSources2 is like IterSources but allows specifying the tmp dir.
 // TODO(peterebden): Get rid of this and force everything to pass it.
-func IterSources2(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools bool, tmpDir string) <-chan SourcePair {
+func IterSources2(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools, transitive bool, tmpDir string) <-chan SourcePair {
 	ch := make(chan SourcePair)
 	done := map[string]bool{}
 	go func() {
-		for input := range IterInputs(state, graph, target, includeTools, false) {
+		for input := range IterInputs2(state, graph, target, includeTools, false, transitive) {
 			fullPaths := input.FullPaths(graph)
 			for i, sourcePath := range input.Paths(graph) {
 				if tmpPath := path.Join(tmpDir, sourcePath); !done[tmpPath] {
@@ -148,6 +148,12 @@ func IterSources2(state *BuildState, graph *BuildGraph, target *BuildTarget, inc
 
 // IterInputs iterates all the inputs for a target.
 func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnly bool) <-chan BuildInput {
+	return IterInputs2(state, graph, target, includeTools, sourcesOnly, target.NeedsTransitiveDependencies)
+}
+
+// IterInputs2 is like IterInputs but allows specifying whether transitive inputs are needed.
+// TODO(peterebden): Clean this up too.
+func IterInputs2(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnly, transitive bool) <-chan BuildInput {
 	ch := make(chan BuildInput)
 	done := map[BuildLabel]bool{}
 	var inner func(dependency *BuildTarget)
@@ -164,7 +170,7 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 			}
 		}
 		done[dependency.Label] = true
-		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
+		if target == dependency || (transitive && !dependency.OutputIsComplete) {
 			for _, dep := range dependency.BuildDependencies(state) {
 				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
 					if !done[dep2] && !dependency.IsTool(dep2) {
