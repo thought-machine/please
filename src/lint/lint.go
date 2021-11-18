@@ -148,10 +148,13 @@ func runLintOnce(state *core.BuildState, target *core.BuildTarget, tmpDir, linte
 	}
 	env := core.LintEnvironment(state, target, tmpDir, srcs)
 	log.Debug("Linting target %s\nENVIRONMENT:\n%s\n%s", target, env, cmd)
-	out, _, err := state.ProcessExecutor.ExecWithTimeoutShell(target, tmpDir, env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), cmd)
-	if err == nil && len(out) == 0 {
+	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, tmpDir, env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), cmd)
+	if trimmed := bytes.TrimSpace(out); err == nil && len(trimmed) == 0 {
 		return nil // assume everything is successful
+	} else if err != nil && len(trimmed) == 0 {
+		return fmt.Errorf("Failed to run %s: %s", linterName, combined)
 	}
+
 	if !linter.Reformat {
 		target.AddLintResults(parseLintLines(linter, linterName, string(out)))
 		state.LintFailed = true

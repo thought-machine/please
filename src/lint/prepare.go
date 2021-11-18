@@ -34,7 +34,7 @@ func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core
 func prepareOutputs(state *core.BuildState, target *core.BuildTarget, tmpDir string) error {
 	outDir := target.OutDir()
 	for _, out := range target.Outputs() {
-		if err := core.PrepareSourcePair(core.SourcePair{Src: path.Join(outDir, out), Tmp: path.Join(tmpDir, out)}); err != nil {
+		if err := core.PrepareSourcePair(core.SourcePair{Src: path.Join(outDir, out), Tmp: path.Join(tmpDir, target.Label.PackageName, out)}); err != nil {
 			return err
 		}
 	}
@@ -50,5 +50,5 @@ func command(graph *core.BuildGraph, linter *core.Linter) (string, error) {
 	if len(outs) == 0 {
 		return "", fmt.Errorf("Target %s cannot be used as a linter, it has no outputs", linter.Target)
 	}
-	return outs[0] + " " + linter.Cmd, nil
+	return path.Join(linter.Target.PackageName, outs[0]) + " " + linter.Cmd, nil
 }

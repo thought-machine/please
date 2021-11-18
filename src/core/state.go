@@ -797,6 +797,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 			return t
 		}
 	}
+	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
 	var ch chan struct{}
 	state.progress.pendingTargets.Update(l, func(old interface{}) interface{} {
@@ -877,7 +878,6 @@ func (state *BuildState) EnsureDownloaded(target *BuildTarget) error {
 
 // WaitForTargetAndEnsureDownload waits for the target to be built and then downloads it if executing remotely
 func (state *BuildState) WaitForTargetAndEnsureDownload(l, dependent BuildLabel) *BuildTarget {
-	dependent.Name = "all" // Every target in this package depends on this one.
 	target := state.WaitForBuiltTarget(l, dependent)
 	if err := state.EnsureDownloaded(target); err != nil {
 		panic(fmt.Errorf("failed to download target outputs: %w", err))
