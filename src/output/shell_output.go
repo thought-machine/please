@@ -398,7 +398,7 @@ func PrintLintResults(state *core.BuildState, inJSON bool) {
 		return
 	}
 	printf("${BOLD_WHITE}Linter run complete, errors reported:${RESET}\n")
-	for _, label := range state.ExpandVisibleOriginalTargets() {
+	for _, label := range state.ExpandOriginalLabels() {
 		if target := state.Graph.TargetOrDie(label); target.Lint != nil {
 			sort.Slice(target.Lint.Results, func(i, j int) bool { return target.Lint.Results[i].Line < target.Lint.Results[j].Line })
 			for _, r := range target.Lint.Results {
