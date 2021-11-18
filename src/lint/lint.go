@@ -50,7 +50,7 @@ func dispatchLintTasks(state *core.BuildState, target *core.BuildTarget) {
 				defer wg.Done()
 				if !linter.Target.IsEmpty() {
 					// Need to wait for this thing to be ready.
-					state.WaitForBuiltTarget(linter.Target, target.Label)
+					state.WaitForTargetAndEnsureDownload(linter.Target, target.Label)
 				}
 				state.AddPendingLint(target, name)
 			}(name, linter, target)
@@ -100,6 +100,10 @@ func matchOne(regexes []deferredregex.DeferredRegex, src core.BuildInput) bool {
 // lint performs the logic of linting a single target.
 func lint(tid int, state *core.BuildState, target *core.BuildTarget, remote bool, linterName string) error {
 	// TODO(peterebden): Remote execution support.
+	if err := state.EnsureDownloaded(target); err != nil {
+		return err
+	}
+
 	linter := state.Config.Linter[linterName]
 	state.LogBuildResult(tid, target, core.TargetLinting, fmt.Sprintf("Preparing to run %s...", linterName))
 
