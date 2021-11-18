@@ -38,6 +38,14 @@ func prepareOutputs(state *core.BuildState, target *core.BuildTarget, tmpDir str
 			return err
 		}
 	}
+	for _, data := range target.AllData() {
+		fullPaths := data.FullPaths(state.Graph)
+		for i, dataPath := range data.Paths(state.Graph) {
+			if err := core.PrepareSourcePair(core.SourcePair{Src: fullPaths[i], Tmp: path.Join(tmpDir, dataPath)}); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
