@@ -27,7 +27,6 @@ func Lint(tid int, state *core.BuildState, label core.BuildLabel, remote bool, l
 		dispatchLintTasks(state, target)
 		return
 	}
-	defer state.TaskDone()
 	if err := lint(tid, state, target, remote, linter); err != nil {
 		state.LogBuildError(tid, label, core.TargetLintFailed, err, "Lint failed: %s", err)
 	}
@@ -149,6 +148,7 @@ func runLintOnce(state *core.BuildState, target *core.BuildTarget, tmpDir, linte
 	env := core.LintEnvironment(state, target, tmpDir, srcs)
 	log.Debug("Linting target %s\nENVIRONMENT:\n%s\n%s", target, env, cmd)
 	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, tmpDir, env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), cmd)
+	log.Debug("Linter output for %s / %s: %s", target, linterName, combined)
 	if trimmed := bytes.TrimSpace(out); err == nil && len(trimmed) == 0 {
 		return nil // assume everything is successful
 	} else if err != nil && len(trimmed) == 0 {

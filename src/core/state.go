@@ -1001,6 +1001,8 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 					state.addPendingTask(target, Task{Label: target.Label, Type: BuildTask})
 				}
 				if linting && state.IsOriginalTarget(target) {
+					// This is a bit ugly but pairs with additional work done in the lint package.
+					atomic.AddInt64(&state.progress.numPending, 1)
 					state.addPendingTask(target, Task{Label: target.Label, Type: LintTask})
 				}
 			}
