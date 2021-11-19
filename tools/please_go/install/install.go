@@ -217,6 +217,7 @@ func checkCycle(path []string, next string) ([]string, error) {
 
 func (install *PleaseGoInstall) importDir(target string) (*build.Package, error) {
 	pkgDir := install.pkgDir(target)
+	// TODO(jpoole): is this really the right thing to do? I think this is a please specific "bug"?
 	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
 	if _, err := os.Lstat(pkgDir); os.IsNotExist(err) {
 		pkgDir = filepath.Dir(pkgDir)
