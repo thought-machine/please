@@ -119,6 +119,11 @@ func lint(tid int, state *core.BuildState, target *core.BuildTarget, remote bool
 			return err
 		}
 	}
+	if state.PrepareOnly {
+		target.SetState(core.Stopped)
+		state.LogBuildResult(tid, target, core.TargetLintStopped, "Lint stopped")
+		return nil
+	}
 
 	state.LogBuildResult(tid, target, core.TargetLinting, fmt.Sprintf("Running %s...", linterName))
 	if err := runLint(state, target, tmpDir, linterName, linter); err != nil {

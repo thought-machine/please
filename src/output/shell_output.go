@@ -479,6 +479,11 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 			if len(state.TestArgs) > 0 {
 				env = append(env, "TESTS="+strings.Join(state.TestArgs, " "))
 			}
+		} else if state.NeedLint {
+			// TODO(peterebden): This is really not working well. We don't know most of what we need here.
+			cmd = ""
+			dir = path.Join(core.RepoRoot, target.LintDir("lint"))
+			env = core.LintEnvironment(state, target, dir, target.AllSourcePaths(state.Graph))
 		}
 		cmd, _ = core.ReplaceSequences(state, target, cmd)
 		env = append(env, "CMD="+cmd)

@@ -1251,6 +1251,7 @@ const (
 	TargetLinting
 	TargetLinted
 	TargetLintFailed
+	TargetLintStopped
 )
 
 // Category returns the broad area that this event represents in the tasks we perform for a target.

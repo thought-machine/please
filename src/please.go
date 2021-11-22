@@ -142,8 +142,9 @@ var opts struct {
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Lint struct {
-		JSON  bool `short:"j" long:"json" description:"Output lint results as JSON lines (default is human-readable)"`
-		Write bool `short:"w" long:"write" description:"Automatically rewrite files in-place from linter suggestions"`
+		JSON  bool   `short:"j" long:"json" description:"Output lint results as JSON lines (default is human-readable)"`
+		Write bool   `short:"w" long:"write" description:"Automatically rewrite files in-place from linter suggestions"`
+		Shell string `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the lint directory with the appropriate environment variables."`
 		Args  struct {
 			Targets []core.BuildLabel `positional-arg-name:"target" required:"true" description:"Targets to lint"`
 		} `positional-args:"true"`
@@ -1037,7 +1038,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
 	}
-	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
+	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != "" || opts.Lint.Shell != ""
 	state.Watch = len(opts.Watch.Args.Targets) > 0
 	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
@@ -1094,8 +1095,8 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		(len(targets) == 1 && !targets[0].IsAllTargets() &&
 			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
 	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
-	shell := opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
-	shellRun := opts.Build.Shell == "run" || opts.Test.Shell == "run" || opts.Cover.Shell == "run"
+	shell := opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != "" || opts.Lint.Shell != ""
+	shellRun := opts.Build.Shell == "run" || opts.Test.Shell == "run" || opts.Cover.Shell == "run" || opts.Lint.Shell == "run"
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
 	state.Cache = cache.NewCache(state)
 

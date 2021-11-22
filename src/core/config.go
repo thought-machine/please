@@ -997,4 +997,5 @@ type Linter struct {
 	Cmd              string                        `help:"Command line for this linter. If 'target' is given then this becomes additional flags to it, otherwise it's the full command run."`
 	Reformat         bool                          `help:"True if this linter's output reformats files"`
 	TransitiveInputs bool                          `help:"True if this linter requires all transitive inputs to the target to be available"`
+	CreateInitPy     bool                          `help:"True to create __init__.py files in all directories"`
 }
