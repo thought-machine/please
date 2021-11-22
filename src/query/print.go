@@ -192,10 +192,10 @@ func (p *printer) findField(field string) reflect.StructField {
 		resIndex := -1
 		for i := 0; i < v.NumField(); i++ {
 			if f := t.Field(i); p.fieldName(f) == fieldName {
-				if resIndex == -1 {
-					resIndex = i
-				} else if v.Field(resIndex).IsZero() && !v.Field(i).IsZero() {
+				if !v.Field(i).IsZero() {
 					return t.Field(i), true
+				} else if resIndex == -1 {
+					resIndex = i
 				}
 			}
 		}
