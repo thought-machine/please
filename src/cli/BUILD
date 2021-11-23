@@ -10,6 +10,7 @@ go_library(
         "//third_party/go:deferred_regex",
         "//third_party/go:go-flags",
         "//third_party/go:humanize",
+        "//third_party/go:levenshtein",
         "//third_party/go:logging",
         "//third_party/go:promptui",
         "//third_party/go:semver",

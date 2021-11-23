@@ -1,6 +1,7 @@
 package query
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -15,11 +16,18 @@ import (
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
-func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string) {
+func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string, outputJSON bool) {
 	graph := state.Graph
 	order := state.Parser.BuildRuleArgOrder()
+	ts := map[string]JSONTarget{}
 	for _, target := range targets {
 		t := graph.TargetOrDie(target)
+
+		if outputJSON {
+			ts[target.String()] = makeJSONTarget(state, t)
+			continue
+		}
+
 		if len(labels) > 0 {
 			for _, prefix := range labels {
 				for _, label := range t.Labels {
@@ -37,6 +45,14 @@ func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []s
 			newPrinter(os.Stdout, t, 0, order).PrintFields(fields)
 		} else {
 			newPrinter(os.Stdout, t, 0, order).PrintTarget()
+		}
+	}
+
+	if outputJSON {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "    ")
+		if err := enc.Encode(ts); err != nil {
+			panic(err)
 		}
 	}
 }
@@ -182,20 +198,37 @@ func (p *printer) PrintFields(fields []string) bool {
 // This isn't as simple as using reflect.Value.FieldByName since the print names
 // are different to the actual struct names.
 func (p *printer) findField(field string) reflect.StructField {
-	t := reflect.ValueOf(p.target).Elem().Type()
-	for i := 0; i < t.NumField(); i++ {
-		if f := t.Field(i); p.fieldName(f) == field {
+	// There isn't a 1-1 mapping between the field and its structure. Internally, we use
+	// things like named vs unnamed structures which reflect the same field from the user
+	// perspective. The function below takes that into consideration.
+	findFieldStruct := func(value interface{}, fieldName string) (reflect.StructField, bool) {
+		v := reflect.ValueOf(value).Elem()
+		t := v.Type()
+
+		resIndex := -1
+		for i := 0; i < v.NumField(); i++ {
+			if f := t.Field(i); p.fieldName(f) == fieldName {
+				if !v.Field(i).IsZero() {
+					return t.Field(i), true
+				} else if resIndex == -1 {
+					resIndex = i
+				}
+			}
+		}
+		if resIndex >= 0 {
+			return t.Field(resIndex), true
+		}
+		return reflect.StructField{}, false
+	}
+
+	if f, ok := findFieldStruct(p.target, field); ok {
+		return f
+	} else if p.target.IsTest() {
+		if f, ok := findFieldStruct(p.target.Test, field); ok {
 			return f
 		}
 	}
-	if p.target.IsTest() {
-		testFields := reflect.ValueOf(p.target.Test).Elem().Type()
-		for i := 0; i < testFields.NumField(); i++ {
-			if f := testFields.Field(i); p.fieldName(f) == field {
-				return f
-			}
-		}
-	}
+
 	log.Fatalf("Unknown field %s", field)
 	return reflect.StructField{}
 }

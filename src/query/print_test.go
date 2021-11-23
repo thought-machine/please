@@ -132,6 +132,22 @@ func TestPrintFields(t *testing.T) {
 	assert.Equal(t, "go\ntest\n", s)
 }
 
+func TestPrintSourcesField(t *testing.T) {
+	target := core.NewBuildTarget(core.ParseBuildLabel("//src/query:test_print_fields", ""))
+	target.AddSource(core.FileLabel{File: "file1", Package: "src/query"})
+
+	s := testPrintFields(target, []string{"srcs"})
+	assert.Equal(t, "file1\n", s)
+}
+
+func TestPrintNamedSourcesField(t *testing.T) {
+	target := core.NewBuildTarget(core.ParseBuildLabel("//src/query:test_print_fields", ""))
+	target.AddNamedSource("foo", core.FileLabel{File: "file1", Package: "src/query"})
+
+	s := testPrintFields(target, []string{"srcs"})
+	assert.Equal(t, "foo: file1\n", s)
+}
+
 func testPrint(target *core.BuildTarget) string {
 	var buf bytes.Buffer
 	newPrinter(&buf, target, 2, order).PrintTarget()

@@ -104,6 +104,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     # This is the final rule that directs dependencies to the appropriate language.
     return filegroup(
         name = name,
+        srcs = srcs,
         deps = provides.values(),
         provides = provides,
         visibility = visibility,

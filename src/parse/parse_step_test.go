@@ -132,10 +132,10 @@ func assertPendingBuilds(t *testing.T, state *core.BuildState, targets ...string
 }
 
 func getAllPending(state *core.BuildState) ([]string, []string) {
-	parses, builds, _, tests, _ := state.TaskQueues()
+	parses, builds, _ := state.TaskQueues()
 	state.Stop()
 	var pendingParses, pendingBuilds []string
-	for parses != nil || builds != nil || tests != nil {
+	for parses != nil || builds != nil {
 		select {
 		case p, ok := <-parses:
 			if !ok {
@@ -143,17 +143,12 @@ func getAllPending(state *core.BuildState) ([]string, []string) {
 				break
 			}
 			pendingParses = append(pendingParses, p.Label.String())
-		case l, ok := <-builds:
+		case t, ok := <-builds:
 			if !ok {
 				builds = nil
 				break
 			}
-			pendingBuilds = append(pendingBuilds, l.String())
-		case _, ok := <-tests:
-			if !ok {
-				tests = nil
-				break
-			}
+			pendingBuilds = append(pendingBuilds, t.Label.String())
 		}
 	}
 	return pendingParses, pendingBuilds

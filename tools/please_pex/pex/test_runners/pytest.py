@@ -28,7 +28,7 @@ def run_tests(args):
     os.mkdir(results_file)
     args += ['--junitxml', os.path.join(results_file, 'results.xml')] + TEST_NAMES
 
-    if os.environ.get('DEBUG'):
+    if os.environ.get('DEBUG_TEST_FAILURE'):
         args.append('--pdb')
 
     return main(args)
