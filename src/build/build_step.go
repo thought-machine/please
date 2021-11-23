@@ -25,6 +25,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/generate"
 	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/worker"
 )
@@ -1004,12 +1005,8 @@ func buildLinks(state *core.BuildState, target *core.BuildTarget) {
 	buildLinksOfType(state, target, "dlink:", true, os.Symlink)
 	buildLinksOfType(state, target, "dhlink:", true, os.Link)
 
-	if state.Config.Build.LinkGeneratedSources && target.HasLabel("codegen") {
-		for _, out := range target.Outputs() {
-			destDir := path.Join(core.RepoRoot, target.Label.PackageDir())
-			srcDir := path.Join(core.RepoRoot, target.OutDir())
-			fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), os.Symlink)
-		}
+	if state.Config.ShouldLinkGeneratedSources() && target.HasLabel("codegen") {
+		generate.LinkGeneratedSources(state, []core.BuildLabel{target.Label})
 	}
 }
 

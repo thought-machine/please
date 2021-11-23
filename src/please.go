@@ -412,12 +412,19 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
+<<<<<<< HEAD
 		Config struct {
 			Option string `long:"option" description:"TODO."`
 			Json bool `long:"json" description:"Output as JSON."`
 		} `command:"config" description:"Prints the configuration settings"`
 	} `command:"query" description:"Queries information about the build state"`
 	Codegen struct {
+=======
+		RepoRoot struct {
+		} `command:"reporoot" alias:"repo_root" description:"Output the root of the current Please repo"`
+	} `command:"query" description:"Queries information about the build graph"`
+	Generate struct {
+>>>>>>> upstream/master
 		Gitignore string `long:"update_gitignore" description:"The gitignore file to write the generated sources to"`
 		Args      struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
@@ -868,6 +875,10 @@ var buildFunctions = map[string]func() int{
 		query.Config(config, opts.Query.Config.Option, opts.Query.Config.Json)
 		return 0
 	},
+	"query.reporoot": func() int {
+		fmt.Println(core.RepoRoot)
+		return 0
+	},
 	"watch": func() int {
 		// Don't ask it to test now since we don't know if any of them are tests yet.
 		success, state := runBuild(opts.Watch.Args.Targets, true, false, false)
@@ -878,8 +889,8 @@ var buildFunctions = map[string]func() int{
 	"generate": func() int {
 		opts.BuildFlags.Include = append(opts.BuildFlags.Include, "codegen")
 
-		if opts.Codegen.Gitignore != "" {
-			pkg := filepath.Dir(opts.Codegen.Gitignore)
+		if opts.Generate.Gitignore != "" {
+			pkg := filepath.Dir(opts.Generate.Gitignore)
 			if pkg == "." {
 				pkg = ""
 			}
@@ -888,25 +899,25 @@ var buildFunctions = map[string]func() int{
 				Name:        "...",
 			}
 
-			if len(opts.Codegen.Args.Targets) != 0 {
+			if len(opts.Generate.Args.Targets) != 0 {
 				log.Warning("You've provided targets, and a gitignore to update. Ignoring the provided targets and building %v", target)
 			}
 
-			opts.Codegen.Args.Targets = []core.BuildLabel{target}
+			opts.Generate.Args.Targets = []core.BuildLabel{target}
 		}
 
-		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
-			if opts.Codegen.Gitignore != "" {
-				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Codegen.Gitignore)
+		if success, state := runBuild(opts.Generate.Args.Targets, true, false, true); success {
+			if opts.Generate.Gitignore != "" {
+				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Generate.Gitignore)
 				if err != nil {
 					log.Fatalf("failed to update gitignore: %v", err)
 				}
 			}
 
-			// This may seem counter intuitive but if this was set, we would've linked during the build.
+			// This may seem counterintuitive but if this was set, we would've linked during the build.
 			// If we've opted to not automatically link generated sources during the build, we should link them now.
-			if !state.Config.Build.LinkGeneratedSources {
-				generate.LinkGeneratedSources(state.Graph, state.ExpandOriginalLabels())
+			if !state.Config.ShouldLinkGeneratedSources() {
+				generate.LinkGeneratedSources(state, state.ExpandOriginalLabels())
 			}
 			return 0
 		}

@@ -22,6 +22,15 @@ go_library(
 )
 
 go_test(
+    name = "builtins_test",
+    srcs = ["builtins_test.go"],
+    deps = [
+        ":asp",
+        "//third_party/go:testify",
+    ],
+)
+
+go_test(
     name = "parser_test",
     srcs = ["parser_test.go"],
     data = ["test_data"],

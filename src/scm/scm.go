@@ -22,8 +22,10 @@ type SCM interface {
 	ChangesIn(diffSpec string, relativeTo string) []string
 	// ChangedFiles returns a list of modified files since the given commit, optionally including untracked files.
 	ChangedFiles(fromCommit string, includeUntracked bool, relativeTo string) []string
-	// IgnoreFile marks a file to be ignored by the SCM.
+	// IgnoreFiles marks a file to be ignored by the SCM.
 	IgnoreFiles(gitignore string, files []string) error
+	// IgnoreFileName gets the ignore file name for the version control system
+	FindClosestIgnoreFile(path string) string
 	// Remove deletes the given files from the SCM.
 	Remove(names []string) error
 	// ChangedLines returns the set of lines that have been modified,
