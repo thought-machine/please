@@ -202,6 +202,12 @@ func (f *File) AddZipFile(filepath string) error {
 		// Unsure if this is a limitation of the format or a problem of those tools.
 		rf.Flags = 0
 		f.addExistingFile(rf.Name, filepath, rf.CompressedSize64, rf.UncompressedSize64, rf.CRC32)
+		if isDir {
+			if _, err := f.w.CreateHeader(&rf.FileHeader); err != nil {
+				return err
+			}
+			continue
+		}
 		if err := f.w.Copy(rf); err != nil {
 			return err
 		}
