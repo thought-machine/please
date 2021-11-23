@@ -23,6 +23,7 @@ import (
 var log = logging.MustGetLogger("zip")
 var modTime = time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
 var modTimeBytes = timeToBytes(modTime)
+
 // Equivalent to the above for the legacy DOS fields.
 const modTimeDOS = 10785
 
@@ -32,11 +33,11 @@ const fileHeaderLen = 30
 
 // A File represents an output zipfile.
 type File struct {
-	f        io.WriteCloser
-	w        *zip.Writer
+	f              io.WriteCloser
+	w              *zip.Writer
 	preambleLength int
-	filename string
-	input    string
+	filename       string
+	input          string
 	// Include and Exclude are prefixes of filenames to include or exclude from the zipfile.
 	Include, Exclude []string
 	// RenameDirs is a map of directories to rename, from the old name to the new one.
