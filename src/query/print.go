@@ -1,6 +1,7 @@
 package query
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -15,11 +16,18 @@ import (
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
-func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string) {
+func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string, outputJSON bool) {
 	graph := state.Graph
 	order := state.Parser.BuildRuleArgOrder()
+	ts := map[string]JSONTarget{}
 	for _, target := range targets {
 		t := graph.TargetOrDie(target)
+
+		if outputJSON {
+			ts[target.String()] = makeJSONTarget(state, t)
+			continue
+		}
+
 		if len(labels) > 0 {
 			for _, prefix := range labels {
 				for _, label := range t.Labels {
@@ -37,6 +45,14 @@ func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []s
 			newPrinter(os.Stdout, t, 0, order).PrintFields(fields)
 		} else {
 			newPrinter(os.Stdout, t, 0, order).PrintTarget()
+		}
+	}
+
+	if outputJSON {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "    ")
+		if err := enc.Encode(ts); err != nil {
+			panic(err)
 		}
 	}
 }
