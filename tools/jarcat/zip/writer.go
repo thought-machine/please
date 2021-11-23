@@ -537,45 +537,6 @@ func (f *File) zeroPycTimestamp(contents []byte, offset int) {
 	contents[offset+3] = b[3]
 }
 
-type nopCloser struct {
-	io.Writer
-}
-
-func (w nopCloser) Close() error {
-	return nil
-}
-
-// fixedCrc32 implements a Hash32 interface that just writes out a predetermined value.
-// this is really cheating of course but serves our purposes here.
-type fixedCrc32 struct {
-	value uint32
-}
-
-func (crc fixedCrc32) Write(p []byte) (n int, err error) {
-	return len(p), nil
-}
-
-func (crc fixedCrc32) Sum(b []byte) []byte {
-	buf := make([]byte, 4)
-	binary.LittleEndian.PutUint32(buf, crc.value)
-	return b
-}
-
-func (crc fixedCrc32) Sum32() uint32 {
-	return crc.value
-}
-
-func (crc fixedCrc32) Reset() {
-}
-
-func (crc fixedCrc32) Size() int {
-	return 32
-}
-
-func (crc fixedCrc32) BlockSize() int {
-	return 32
-}
-
 // timeToBytes converts a time to the byte format that gets written into Extra.
 // The logic is based on archive/zip since there isn't a convenient way to get at it
 // otherwise when using Copy() (but modified so as not to copy the writeBuf type)
