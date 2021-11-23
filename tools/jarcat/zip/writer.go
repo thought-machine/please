@@ -57,8 +57,6 @@ type File struct {
 	StripPy bool
 	// DirEntries makes the writer add empty directory entries.
 	DirEntries bool
-	// Align aligns entries to a multiple of this many bytes.
-	Align int
 	// Prefix stores all files with this prefix.
 	Prefix string
 	// files tracks the files that we've written so far.
@@ -194,15 +192,7 @@ func (f *File) AddZipFile(filepath string) error {
 		// Unsure if this is a limitation of the format or a problem of those tools.
 		rf.Flags = 0
 		f.addExistingFile(rf.Name, filepath, rf.CompressedSize64, rf.UncompressedSize64, rf.CRC32)
-
-		start, err := rf.DataOffset()
-		if err != nil {
-			return err
-		}
-		if _, err := r2.Seek(start, 0); err != nil {
-			return err
-		}
-		if err := f.addFile(&rf.FileHeader, r2, rf.CRC32); err != nil {
+		if err := f.w.Copy(rf); err != nil {
 			return err
 		}
 	}
@@ -435,19 +425,6 @@ func (f *File) handleConcatenatedFiles() error {
 	return nil
 }
 
-// addFile writes a file to the new writer.
-func (f *File) addFile(fh *zip.FileHeader, r io.Reader, crc uint32) error {
-	f.align(fh)
-	fh.Flags = 0 // we're not writing a data descriptor after the file
-	comp := func(w io.Writer) (io.WriteCloser, error) { return nopCloser{w}, nil }
-	fh.SetModTime(modTime)
-	fw, err := f.w.CreateHeaderWithCompressor(fh, comp, fixedCrc32{value: crc})
-	if err == nil {
-		_, err = io.CopyN(fw, r, int64(fh.CompressedSize64))
-	}
-	return err
-}
-
 // WriteFile writes a complete file to the writer.
 func (f *File) WriteFile(filename string, data []byte, mode os.FileMode) error {
 	filename = path.Join(f.Prefix, filename)
@@ -465,7 +442,6 @@ func (f *File) WriteFile(filename string, data []byte, mode os.FileMode) error {
 		}
 	}
 
-	f.align(&fh)
 	if fw, err := f.w.CreateHeader(&fh); err != nil {
 		return err
 	} else if _, err := fw.Write(data); err != nil {
@@ -473,19 +449,6 @@ func (f *File) WriteFile(filename string, data []byte, mode os.FileMode) error {
 	}
 	f.addExistingFile(filename, filename, 0, 0, 0)
 	return nil
-}
-
-// align writes any necessary bytes to align the next file.
-func (f *File) align(h *zip.FileHeader) {
-	if f.Align != 0 && h.Method == zip.Store {
-		// We have to allow space for writing the header, so we predict what the offset will be after it.
-		fileStart := f.w.Offset() + fileHeaderLen + len(h.Name) + len(h.Extra)
-		if overlap := fileStart % f.Align; overlap != 0 {
-			if err := f.w.WriteRaw(bytes.Repeat([]byte{0}, f.Align-overlap)); err != nil {
-				log.Error("Failed to pad file: %s", err)
-			}
-		}
-	}
 }
 
 // WriteDir writes a directory entry to the writer.

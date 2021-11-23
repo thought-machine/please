@@ -75,7 +75,6 @@ var opts = struct {
 		PreambleFile          string            `long:"preamble_file" description:"Concatenate zip file onto the end of this file"`
 		MainClass             string            `short:"m" long:"main_class" description:"Write a Java manifest file containing the given main class."`
 		Manifest              string            `long:"manifest" description:"Use the given file as a Java manifest"`
-		Align                 int               `short:"a" long:"align" description:"Align zip members to a multiple of this number of bytes."`
 		ExcludeJavaPrefixes   bool              `short:"j" long:"exclude_java_prefixes" description:"Use default Java exclusions"`
 		Strict                bool              `long:"strict" description:"Disallow duplicate files"`
 		IncludeOther          bool              `long:"include_other" description:"Add files that are not jar files as well"`
@@ -201,7 +200,6 @@ func main() {
 	f.AddInitPy = opts.Zip.AddInitPy
 	f.StripPy = opts.Zip.StripPy
 	f.DirEntries = !opts.Zip.NoDirEntries
-	f.Align = opts.Zip.Align
 	f.Prefix = opts.Zip.Prefix
 
 	wd, err := os.Getwd()
