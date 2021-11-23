@@ -22,6 +22,9 @@ import (
 
 var log = logging.MustGetLogger("zip")
 var modTime = time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
+var modTimeBytes = timeToBytes(modTime)
+// Equivalent to the above for the legacy DOS fields.
+const modTimeDOS = 10785
 
 // fileHeaderLen is the length of a file header in a zipfile.
 // We need to know this to adjust alignment.
@@ -189,6 +192,12 @@ func (f *File) AddZipFile(filepath string) error {
 				continue
 			}
 		}
+		// Zero out all the modified times. Note that Modified itself is actually stored
+		// in the Extra field.
+		bytes.Replace(rf.Extra, timeToBytes(rf.Modified), modTimeBytes, 1)
+		rf.Modified = modTime
+		rf.ModifiedDate = modTimeDOS
+		rf.ModifiedTime = 0
 		// Java tools don't seem to like writing a data descriptor for stored items.
 		// Unsure if this is a limitation of the format or a problem of those tools.
 		rf.Flags = 0
@@ -559,4 +568,17 @@ func (crc fixedCrc32) Size() int {
 
 func (crc fixedCrc32) BlockSize() int {
 	return 32
+}
+
+// timeToBytes converts a time to the byte format that gets written into Extra.
+// The logic is based on archive/zip since there isn't a convenient way to get at it
+// otherwise when using Copy() (but modified so as not to copy the writeBuf type)
+func timeToBytes(modTime time.Time) []byte {
+	mt := uint32(modTime.Unix())
+	var b [9]byte
+	binary.LittleEndian.PutUint16(b[0:], 0x5455)
+	binary.LittleEndian.PutUint16(b[2:], 5)
+	b[4] = 1
+	binary.LittleEndian.PutUint32(b[5:], mt)
+	return b[:]
 }
