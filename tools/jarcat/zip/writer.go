@@ -31,6 +31,7 @@ const fileHeaderLen = 30
 type File struct {
 	f        io.WriteCloser
 	w        *zip.Writer
+	preambleLength int
 	filename string
 	input    string
 	// Include and Exclude are prefixes of filenames to include or exclude from the zipfile.
@@ -469,7 +470,10 @@ func (f *File) WriteDir(filename string) error {
 
 // WritePreamble writes a preamble to the zipfile.
 func (f *File) WritePreamble(preamble []byte) error {
-	return f.w.WriteRaw(preamble)
+	f.preambleLength += len(preamble)
+	f.w.SetOffset(int64(f.preambleLength))
+	_, err := f.f.Write(preamble)
+	return err
 }
 
 // StripBytecodeTimestamp strips a timestamp from a .pyc or .pyo file.
