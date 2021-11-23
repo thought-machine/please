@@ -34,13 +34,19 @@ type ParseTask struct {
 	ForSubinclude    bool
 }
 
-// BuildTask is the type for the build task queue
-type BuildTask = BuildLabel
+// A TaskType identifies whether a task is a build or test action.
+type TaskType uint8
 
-// TestTask is the type for the test task queue
-type TestTask struct {
+const (
+	BuildTask TaskType = 0
+	TestTask  TaskType = 1
+)
+
+// A Task is the type for the queue of build/test tasks.
+type Task struct {
 	Label BuildLabel
-	Run   int
+	Type  TaskType
+	Run   uint32 // Only present for tests (the run of a build is always zero)
 }
 
 // Debug is the type for debugging a target
@@ -97,9 +103,8 @@ type TargetHasher interface {
 type BuildState struct {
 	Graph *BuildGraph
 	// Streams of pending tasks
-	pendingParses                      chan ParseTask
-	pendingBuilds, pendingRemoteBuilds chan BuildTask
-	pendingTests, pendingRemoteTests   chan TestTask
+	pendingParses                        chan ParseTask
+	pendingActions, pendingRemoteActions chan Task
 	// Timestamp that the build is considered to start at.
 	StartTime time.Time
 	// Various system statistics. Mostly used during remote communication.
@@ -181,7 +186,7 @@ type BuildState struct {
 	// Set when a debugging session against a target is requested.
 	Debug *Debug
 	// True to attach a debugger on test failure.
-	DebugTests bool
+	DebugFailingTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
 	XattrsSupported bool
 	// True if we have any remote executors configured.
@@ -289,9 +294,9 @@ func (state *BuildState) addPendingBuild(target *BuildTarget) {
 			recover() // Prevent death on 'send on closed channel'
 		}()
 		if state.anyRemote && !target.Local {
-			state.pendingRemoteBuilds <- target.Label
+			state.pendingRemoteActions <- Task{Label: target.Label, Type: BuildTask}
 		} else {
-			state.pendingBuilds <- target.Label
+			state.pendingActions <- Task{Label: target.Label, Type: BuildTask}
 		}
 	}()
 }
@@ -311,19 +316,19 @@ func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
 		defer func() {
 			recover() // Prevent death on 'send on closed channel'
 		}()
-		ch := state.pendingTests
+		ch := state.pendingActions
 		if state.anyRemote && !target.Local {
-			ch = state.pendingRemoteTests
+			ch = state.pendingRemoteActions
 		}
 		for run := 1; run <= numRuns; run++ {
-			ch <- TestTask{Label: target.Label, Run: run}
+			ch <- Task{Label: target.Label, Run: uint32(run), Type: TestTask}
 		}
 	}()
 }
 
 // TaskQueues returns a set of channels to listen on for tasks of various types.
-func (state *BuildState) TaskQueues() (parses <-chan ParseTask, builds, remoteBuilds <-chan BuildTask, tests, remoteTests <-chan TestTask) {
-	return state.pendingParses, state.pendingBuilds, state.pendingRemoteBuilds, state.pendingTests, state.pendingRemoteTests
+func (state *BuildState) TaskQueues() (parses <-chan ParseTask, actions, remoteActions <-chan Task) {
+	return state.pendingParses, state.pendingActions, state.pendingRemoteActions
 }
 
 // TaskDone indicates that a single task is finished. Should be called after one is finished with
@@ -345,10 +350,8 @@ func (state *BuildState) taskDone(wasSynthetic bool) {
 func (state *BuildState) Stop() {
 	state.progress.closeOnce.Do(func() {
 		close(state.pendingParses)
-		close(state.pendingBuilds)
-		close(state.pendingRemoteBuilds)
-		close(state.pendingTests)
-		close(state.pendingRemoteTests)
+		close(state.pendingActions)
+		close(state.pendingRemoteActions)
 	})
 }
 
@@ -1132,12 +1135,10 @@ func sandboxTool(config *Configuration) string {
 func NewBuildState(config *Configuration) *BuildState {
 	graph := NewGraph()
 	state := &BuildState{
-		Graph:               graph,
-		pendingParses:       make(chan ParseTask, 10000),
-		pendingBuilds:       make(chan BuildTask, 1000),
-		pendingRemoteBuilds: make(chan BuildTask, 1000),
-		pendingTests:        make(chan TestTask, 1000),
-		pendingRemoteTests:  make(chan TestTask, 1000),
+		Graph:                graph,
+		pendingParses:        make(chan ParseTask, 10000),
+		pendingActions:       make(chan Task, 1000),
+		pendingRemoteActions: make(chan Task, 1000),
 		hashers: map[string]*fs.PathHasher{
 			// For compatibility reasons the sha1 hasher has no suffix.
 			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, "sha1"),

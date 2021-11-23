@@ -57,6 +57,11 @@ func ActiveCommand(command *flags.Command) string {
 	return cli.ActiveCommand(command)
 }
 
+// ActiveFullCommand returns the full name of the currently active command.
+func ActiveFullCommand(command *flags.Command) string {
+	return cli.ActiveFullCommand(command)
+}
+
 // A ByteSize is used for flags that represent some quantity of bytes that can be
 // passed as human-readable quantities (eg. "10G").
 type ByteSize uint64

@@ -28,6 +28,9 @@ const GenDir string = "plz-out/gen"
 // BinDir is the output directory for binary targets.
 const BinDir string = "plz-out/bin"
 
+// SubrepoDir is the output directory for targets that define subrepos.
+const SubrepoDir = "plz-out/subrepos"
+
 // DefaultBuildingDescription is the default description for targets when they're building.
 const DefaultBuildingDescription = "Building..."
 
@@ -199,6 +202,8 @@ type BuildTarget struct {
 	completedRuns uint16 `print:"false"`
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
 	IsBinary bool `name:"binary"`
+	// True if this target is an input for a subrepo; if so outputs will appear in plz-out/sub.
+	IsSubrepo bool `name:"subrepo"`
 	// Indicates that the target can only be depended on by tests or other rules with this set.
 	// Used to restrict non-deployable code and also affects coverage detection.
 	TestOnly bool `name:"test_only"`
@@ -384,7 +389,9 @@ func (target *BuildTarget) BuildLockFile() string {
 // OutDir returns the output directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
 func (target *BuildTarget) OutDir() string {
-	if target.IsBinary {
+	if target.IsSubrepo {
+		return path.Join(SubrepoDir, target.Label.Subrepo, target.Label.PackageName)
+	} else if target.IsBinary {
 		return path.Join(BinDir, target.Label.Subrepo, target.Label.PackageName)
 	}
 	return path.Join(GenDir, target.Label.Subrepo, target.Label.PackageName)

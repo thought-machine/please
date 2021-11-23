@@ -42,7 +42,7 @@ def main():
         cov.start()
         result = run_tests(args)
         cov.stop()
-        omissions = ['*/third_party/*', '*/.bootstrap/*', '*/test_main.py']
+        omissions = ['*/third_party/*', '*/.bootstrap/*']
         # Exclude test code from coverage itself.
         omissions.extend('*/%s.py' % module.replace('.', '/') for module in args)
         import coverage
@@ -54,4 +54,6 @@ def main():
             sys.stderr.write('Failed to calculate coverage: %s' % err)
         return result
     else:
+        # Starts a debugging session, if defined, before running the tests.
+        start_debugger()
         return run_tests(args)

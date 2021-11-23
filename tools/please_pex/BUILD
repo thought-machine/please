@@ -17,6 +17,7 @@ genrule(
         "//third_party/python:six",
         "//third_party/python:xmlrunner",
         "//third_party/python:coverage",
+        "//third_party/python:debugpy",
         "//third_party/python:pytest",
         "//third_party/python:py",
         "//third_party/python:pluggy",

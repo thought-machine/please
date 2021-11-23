@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/utils"
 )
 
 // Max levenshtein distance that we'll suggest at.
@@ -19,7 +19,7 @@ func suggestTargets(pkg *core.Package, label, dependent core.BuildLabel) string 
 	for _, t := range pkg.AllTargets() {
 		haystack = append(haystack, fmt.Sprintf("//%s:%s", pkg.Name, t.Label.Name))
 	}
-	msg := utils.PrettyPrintSuggestion(label.String(), haystack, maxSuggestionDistance)
+	msg := cli.PrettyPrintSuggestion(label.String(), haystack, maxSuggestionDistance)
 	if pkg.Name != dependent.PackageName {
 		return msg
 	}

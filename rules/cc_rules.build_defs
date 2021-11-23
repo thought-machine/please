@@ -318,9 +318,9 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
     """
     provides = None
-    if srcs:
+    if srcs or hdrs:
         lib_rule = cc_library(
-            name = f'_{name}#lib',
+            name = f'_{name}#lib' if srcs else f'_{name}#lib_hdrs',
             srcs = srcs,
             hdrs = hdrs,
             compiler_flags = compiler_flags,
@@ -331,7 +331,7 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
             pkg_config_cflags = pkg_config_cflags,
             _c=_c,
         )
-        deps += [lib_rule, f':_{name}#lib_hdrs']
+        deps += [lib_rule, f':_{name}#lib_hdrs'] if srcs else [lib_rule]
         provides = {
             'cc_hdrs': f':_{name}#lib_hdrs',
             'cc': ':' + name,

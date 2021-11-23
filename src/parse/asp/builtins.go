@@ -625,14 +625,21 @@ func joinPath(s *scope, args []pyObject) pyObject {
 }
 
 func packageName(s *scope, args []pyObject) pyObject {
+	pkg := ""
 	if s.pkg != nil {
-		return pyString(s.pkg.Name)
+		pkg = s.pkg.Name
+	} else if s.subincludeLabel != nil {
+		pkg = s.subincludeLabel.PackageName
+	} else {
+		s.Error("you cannot call package_name() from this context")
+		return nil
 	}
-	if s.subincludeLabel != nil {
-		return pyString(s.subincludeLabel.PackageName)
+
+	if label, ok := args[0].(pyString); ok && label != "" {
+		return pyString(core.ParseAnnotatedBuildLabel(label.String(), pkg).PackageName)
 	}
-	s.Error("you cannot call package_name() from this context")
-	return nil
+
+	return pyString(pkg)
 }
 
 func subrepoName(s *scope, args []pyObject) pyObject {
@@ -706,12 +713,13 @@ func getLabels(s *scope, args []pyObject) pyObject {
 	name := string(args[0].(pyString))
 	prefix := string(args[1].(pyString))
 	all := args[2].IsTruthy()
+	transitive := args[3].IsTruthy()
 	if core.LooksLikeABuildLabel(name) {
 		label := core.ParseBuildLabel(name, s.pkg.Name)
-		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built, all)
+		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built, all, transitive)
 	}
 	target := getTargetPost(s, name)
-	return getLabelsInternal(target, prefix, core.Building, all)
+	return getLabelsInternal(target, prefix, core.Building, all, transitive)
 }
 
 // addLabel adds a set of labels to the named rule
@@ -731,9 +739,12 @@ func addLabel(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all bool) pyObject {
+func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all, transitive bool) pyObject {
 	if target.State() < minState {
 		log.Fatalf("get_labels called on a target that is not yet built: %s", target.Label)
+	}
+	if all && !transitive {
+		log.Fatalf("get_labels can't be called with all set to true when transitive is set to False")
 	}
 	labels := map[string]bool{}
 	done := map[*core.BuildTarget]bool{}
@@ -743,6 +754,9 @@ func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.Bu
 			if strings.HasPrefix(label, prefix) {
 				labels[strings.TrimSpace(strings.TrimPrefix(label, prefix))] = true
 			}
+		}
+		if !transitive {
+			return
 		}
 		done[t] = true
 		if !t.OutputIsComplete || t == target || all {

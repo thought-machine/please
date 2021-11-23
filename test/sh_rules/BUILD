@@ -45,3 +45,31 @@ sh_test(
     name = "sh_cmd_unexpanded_test",
     src = ":sh_cmd_unexpanded",
 )
+
+sh_binary(
+    name = "no_shebang",
+    main = "no_shebang.sh",
+    deps = [
+        # Although not used by `no_shebang.sh` directly, the shebang is currently reused when `deps` are provided.
+        ":sh_lib",
+    ],
+)
+
+sh_test(
+    name = "no_shebang_test",
+    src = ":no_shebang",
+)
+
+sh_binary(
+    name = "shebang",
+    main = "shebang.sh",
+    deps = [
+        # Although not used by `shebang.sh` directly, the shebang is currently reused when `deps` are provided.
+        ":sh_lib",
+    ],
+)
+
+sh_test(
+    name = "shebang_test",
+    src = ":shebang",
+)
