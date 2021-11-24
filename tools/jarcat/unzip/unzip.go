@@ -5,6 +5,7 @@ package unzip
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/bzip2"
 	"compress/gzip"
 	"fmt"
@@ -16,8 +17,6 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
-
-	"github.com/thought-machine/please/third_party/go/zip"
 )
 
 // concurrency controls the maximum level of concurrency we'll allow.
