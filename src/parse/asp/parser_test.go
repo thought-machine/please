@@ -481,20 +481,47 @@ func TestOptimise(t *testing.T) {
 }
 
 func TestMultilineStringQuotes(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/multiline_string_quotes.build")
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(statements))
-	assert.NotNil(t, statements[0].Ident)
-	assert.NotNil(t, statements[0].Ident.Action)
-	assert.NotNil(t, statements[0].Ident.Action.Assign)
-	expected := `"
-#include "UnitTest++/UnitTest++.h"
-"`
-	assert.Equal(t, expected, statements[0].Ident.Action.Assign.Val.String)
+	for _, test := range []struct {
+		Path     string
+		Expected string
+	}{
+		{
+			Path:     "src/parse/asp/test_data/multiline_string_single_in_single.build",
+			Expected: `"
+multiline string containing 'single quotes'
+"`,
+		},
+		{
+			Path:     "src/parse/asp/test_data/multiline_string_double_in_single.build",
+			Expected: `"
+multiline string containing "double quotes"
+"`,
+		},
+		{
+			Path:     "src/parse/asp/test_data/multiline_string_single_in_double.build",
+			Expected: `"
+multiline string containing 'single quotes'
+"`,
+		},
+		{
+			Path:     "src/parse/asp/test_data/multiline_string_double_in_double.build",
+			Expected: `"
+multiline string containing "double quotes"
+"`,
+		},
+	} {
+		statements, err := newParser().parse(test.Path)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(statements))
+		assert.NotNil(t, statements[0].Ident)
+		assert.NotNil(t, statements[0].Ident.Action)
+		assert.NotNil(t, statements[0].Ident.Action.Assign)
+		assert.Equal(t, test.Expected, statements[0].Ident.Action.Assign.Val.String)
 
-	// TODO(BNM): It would be nice if we can get the actual EndPos for the multiline
-	// assert.Equal(t, 4, statements[0].EndPos.Column)
-	// assert.Equal(t, 3, statements[0].EndPos.Line)
+		// TODO(BNM): It would be nice if we can get the actual EndPos for the multiline
+		// assert.Equal(t, 4, statements[0].EndPos.Column)
+		// assert.Equal(t, 3, statements[0].EndPos.Line)
+	}
 }
 
 func TestExample0(t *testing.T) {
