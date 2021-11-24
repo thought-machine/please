@@ -347,8 +347,8 @@ def _get_import_path(package="", import_path=""):
     else:
         path = pkg
 
-    # TODO(jpoole): this isn't really necessary and isn't how go works. We could probably remove this for v17.
-    if package and not path.endswith(package):
+    # TODO(jpoole): remove this flag in v17
+    if not CONFIG.FF_GO_DONT_COLLAPSE_IMPORT_PATHS and package and not path.endswith(package):
         return f"{path}/{package}"
     return path
 
