@@ -253,12 +253,12 @@ func (l *lex) nextToken() Token {
 		return l.consumePossiblyTripleQuotedString(next, pos, rawString, fString)
 	case '(', '[', '{':
 		l.braces++
-		return Token{Type: rune(next), Value: string(next), Pos: pos}
+		return Token{Type: next, Value: string(next), Pos: pos}
 	case ')', ']', '}':
 		if l.braces > 0 { // Don't let it go negative, it fouls things up
 			l.braces--
 		}
-		return Token{Type: rune(next), Value: string(next), Pos: pos}
+		return Token{Type: next, Value: string(next), Pos: pos}
 	case '=', '!', '+', '<', '>':
 		// Look ahead one byte to see if this is an augmented assignment or comparison.
 		if l.currentRune == '=' {
@@ -267,7 +267,7 @@ func (l *lex) nextToken() Token {
 		}
 		fallthrough
 	case ',', '.', '%', '*', '|', '&', ':', '/':
-		return Token{Type: rune(next), Value: string(next), Pos: pos}
+		return Token{Type: next, Value: string(next), Pos: pos}
 	case '#':
 		// Comment character, consume to end of line.
 		for l.currentRune != '\n' && l.currentRune != 0 {
@@ -279,7 +279,7 @@ func (l *lex) nextToken() Token {
 		if l.currentRune >= '0' && l.currentRune <= '9' {
 			return l.consumeInteger(next, pos)
 		}
-		return Token{Type: rune(next), Value: string(next), Pos: pos}
+		return Token{Type: next, Value: string(next), Pos: pos}
 	case '\t':
 		fail(pos, "Tabs are not permitted in BUILD files, use space-based indentation instead")
 	default:
