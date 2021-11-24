@@ -215,6 +215,9 @@ func (state *BuildState) ExcludedBuiltinRules() map[string]struct{} {
 		ret["c_rules.build_defs"] = struct{}{}
 		ret["cc_rules.build_defs"] = struct{}{}
 	}
+	if state.Config.FeatureFlags.ExcludeProtoRules {
+		ret["proto_rules.build_defs"] = struct{}{}
+	}
 	return ret
 }
 
