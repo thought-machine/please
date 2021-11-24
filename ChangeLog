@@ -1,3 +1,14 @@
+Version 16.15.0
+--------------
+    * Added `plz query reporoot` command #2173
+    * Fixed issue where named fields (e.g. srcs, and outputs) didn't appear
+      in `plz query print` #2174
+    * Add the subrepo name to labels in `plz query graph` #2168
+    * Add `--json` flag to `plz query print` to output the target in json format
+      #2176
+    * `cc_static_library()` now exposes headers to dependant targets #2179
+
+
 Version 16.14.0
 --------------
     * The `query revdeps` and `query somepath` subcommands now handle
