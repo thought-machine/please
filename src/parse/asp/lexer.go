@@ -64,7 +64,7 @@ func newLexer(r io.Reader) *lex {
 		filename: NameOfReader(r),
 		indents:  []int{0},
 	}
-	l.nextByte, _ = l.reader.ReadByte()
+	l.nextRune, _, _ = l.reader.ReadRune()
 	l.readNextByte()
 	l.Next() // Initial value is zero, this forces it to populate itself.
 	// Discard any leading newlines, they are just an annoyance.
@@ -79,7 +79,7 @@ type lex struct {
 	// The reader we're lexing
 	reader *bufio.Reader
 	// the current and next bytes from pos
-	currentByte, nextByte byte
+	currentRune, nextRune rune
 	// Positional information about where we are in the file
 	pos, line, col int
 	// The current level of indentation we're on in the file
@@ -102,25 +102,25 @@ type lex struct {
 // readNextByte updates the current and next byte fields by consuming from the underlying reader
 func (l *lex) readNextByte() {
 	var err error
-	l.currentByte = l.nextByte
-	l.nextByte, err = l.reader.ReadByte()
+	l.currentRune = l.nextRune
+	l.nextRune, _, err = l.reader.ReadRune()
 
 	if err != nil {
 		if err != io.EOF {
 			fail(Position{Filename: l.filename, Offset: l.pos, Line: l.line, Column: l.col}, err.Error())
 		}
 
-		if l.currentByte != '\n' {
+		if l.currentRune != '\n' {
 			// If the file doesn't end in a newline, we will reject it with an "unexpected end of file"
 			// error. That's a bit crap so quietly fix it up here.
-			l.nextByte = '\n'
+			l.nextRune = '\n'
 		} else {
-			l.nextByte = 0 // This essentially null terminates the file which is useful later on
+			l.nextRune = 0 // This essentially null terminates the file which is useful later on
 		}
 	}
 }
 
-// advance reads moves to the next position in the reader, updating nextByte and currentByte
+// advance reads moves to the next position in the reader, updating nextRune and currentRune
 func (l *lex) advance() {
 	l.col++
 	l.pos++
@@ -174,11 +174,11 @@ func (l *lex) Next() Token {
 // named call arguments. It returns true if the token after next is an assign operator.
 func (l *lex) AssignFollows() bool {
 	l.stripSpaces()
-	return l.currentByte == '=' && l.nextByte != '='
+	return l.currentRune == '=' && l.nextRune != '='
 }
 
 func (l *lex) stripSpaces() {
-	for l.currentByte == ' ' {
+	for l.currentRune == ' ' {
 		l.advance()
 	}
 }
@@ -197,12 +197,12 @@ func (l *lex) nextToken() Token {
 		l.unindents--
 		return Token{Type: Unindent, Pos: pos}
 	}
-	next := l.currentByte
-	rawString := next == 'r' && (l.nextByte == '"' || l.nextByte == '\'')
-	fString := next == 'f' && (l.nextByte == '"' || l.nextByte == '\'')
+	next := l.currentRune
+	rawString := next == 'r' && (l.nextRune == '"' || l.nextRune == '\'')
+	fString := next == 'f' && (l.nextRune == '"' || l.nextRune == '\'')
 	if rawString || fString {
 		l.advance()
-		next = l.currentByte
+		next = l.currentRune
 	} else if (next >= 'a' && next <= 'z') || (next >= 'A' && next <= 'Z') || next == '_' || next >= utf8.RuneSelf {
 		return l.consumeIdent(pos)
 	}
@@ -219,11 +219,11 @@ func (l *lex) nextToken() Token {
 		l.line++
 		l.col = 0
 		indent := 0
-		for l.currentByte == ' ' {
+		for l.currentRune == ' ' {
 			l.advance()
 			indent++
 		}
-		if l.currentByte == '\n' {
+		if l.currentRune == '\n' {
 			return l.nextToken()
 		}
 		if l.braces == 0 {
@@ -261,22 +261,22 @@ func (l *lex) nextToken() Token {
 		return Token{Type: rune(next), Value: string(next), Pos: pos}
 	case '=', '!', '+', '<', '>':
 		// Look ahead one byte to see if this is an augmented assignment or comparison.
-		if l.currentByte == '=' {
+		if l.currentRune == '=' {
 			l.advance()
-			return Token{Type: LexOperator, Value: string([]byte{next, '='}), Pos: pos}
+			return Token{Type: LexOperator, Value: string([]rune{next, '='}), Pos: pos}
 		}
 		fallthrough
 	case ',', '.', '%', '*', '|', '&', ':', '/':
 		return Token{Type: rune(next), Value: string(next), Pos: pos}
 	case '#':
 		// Comment character, consume to end of line.
-		for l.currentByte != '\n' && l.currentByte != 0 {
+		for l.currentRune != '\n' && l.currentRune != 0 {
 			l.advance()
 		}
 		return l.nextToken() // Comments aren't tokens themselves.
 	case '-':
 		// We lex unary - with the integer if possible.
-		if l.currentByte >= '0' && l.currentByte <= '9' {
+		if l.currentRune >= '0' && l.currentRune <= '9' {
 			return l.consumeInteger(next, pos)
 		}
 		return Token{Type: rune(next), Value: string(next), Pos: pos}
@@ -289,19 +289,20 @@ func (l *lex) nextToken() Token {
 }
 
 // consumeInteger consumes all characters until the end of an integer literal is reached.
-func (l *lex) consumeInteger(initial byte, pos Position) Token {
+func (l *lex) consumeInteger(initial rune, pos Position) Token {
 	value := make([]byte, 1, 10)
-	value[0] = initial
-	for next := l.currentByte; next >= '0' && next <= '9'; next = l.currentByte {
+
+	value[0] = byte(initial)
+	for next := l.currentRune; next >= '0' && next <= '9'; next = l.currentRune {
 		l.advance()
-		value = append(value, next)
+		value = append(value, byte(next))
 	}
 	return Token{Type: Int, Value: string(value), Pos: pos}
 }
 
 // consumePossiblyTripleQuotedString consumes all characters until the end of a string token.
-func (l *lex) consumePossiblyTripleQuotedString(quote byte, pos Position, raw, fString bool) Token {
-	if l.currentByte == quote && l.nextByte == quote {
+func (l *lex) consumePossiblyTripleQuotedString(quote rune, pos Position, raw, fString bool) Token {
+	if l.currentRune == quote && l.nextRune == quote {
 		l.advance() // Jump over initial quote
 		l.advance()
 		return l.consumeString(quote, pos, true, raw, fString)
@@ -310,12 +311,12 @@ func (l *lex) consumePossiblyTripleQuotedString(quote byte, pos Position, raw, f
 }
 
 // consumeString consumes all characters until the end of a string literal is reached.
-func (l *lex) consumeString(quote byte, pos Position, multiline, raw, fString bool) Token {
-	value := make([]byte, 1, 100) // 100 chars is typically enough for a single string literal.
+func (l *lex) consumeString(quote rune, pos Position, multiline, raw, fString bool) Token {
+	value := make([]rune, 1, 100) // 100 chars is typically enough for a single string literal.
 	value[0] = '"'
 	escaped := false
 	for {
-		next := l.currentByte
+		next := l.currentRune
 		l.advance()
 		if escaped {
 			if next == 'n' {
@@ -333,7 +334,7 @@ func (l *lex) consumeString(quote byte, pos Position, multiline, raw, fString bo
 		}
 		switch next {
 		case quote:
-			if !multiline || (l.currentByte == quote && l.nextByte == quote) {
+			if !multiline || (l.currentRune == quote && l.nextRune == quote) {
 				value = append(value, '"')
 				if multiline {
 					l.advance()
@@ -372,32 +373,16 @@ func (l *lex) consumeString(quote byte, pos Position, multiline, raw, fString bo
 func (l *lex) consumeIdent(pos Position) Token {
 	s := make([]rune, 0, 100)
 	for {
-		c := rune(l.currentByte)
-		if c >= utf8.RuneSelf {
-			// Multi-byte encoded in utf-8.
-			r, n, err := l.reader.ReadRune()
-			if err != nil {
-				fail(pos, "Unexpected error decoding Unicode identifier %v", err)
-			}
-			c = r
-			l.pos += n
-			l.col += n
-			if !unicode.IsLetter(c) && !unicode.IsDigit(c) {
-				fail(pos, "Illegal Unicode identifier %c", c)
-			}
-			s = append(s, c)
-			continue
-		}
+		c := l.currentRune
 
-		switch c {
-		case ' ':
+		if c == ' ' {
 			l.advance()
 			// End of identifier, but no unconsuming needed.
 			return Token{Type: Ident, Value: string(s), Pos: pos}
-		case '_', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		} else if c == '_' || unicode.IsLetter(c) || unicode.IsDigit(c) {
 			l.advance()
 			s = append(s, c)
-		default:
+		} else {
 			// End of identifier.
 			return Token{Type: Ident, Value: string(s), Pos: pos}
 		}

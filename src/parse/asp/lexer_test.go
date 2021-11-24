@@ -56,10 +56,10 @@ func TestLexFunction(t *testing.T) {
 func TestLexUnicode(t *testing.T) {
 	l := newLexer(strings.NewReader("懂了吗 你愁脸 有没有"))
 	assertToken(t, l.Next(), Ident, "懂了吗", 1, 1, 1)
-	assertToken(t, l.Next(), Ident, "你愁脸", 1, 11, 11)
-	assertToken(t, l.Next(), Ident, "有没有", 1, 21, 21)
-	assertToken(t, l.Next(), EOL, "", 1, 30, 30)
-	assertToken(t, l.Next(), EOF, "", 2, 1, 31)
+	assertToken(t, l.Next(), Ident, "你愁脸", 1, 5, 5)
+	assertToken(t, l.Next(), Ident, "有没有", 1, 9, 9)
+	assertToken(t, l.Next(), EOL, "", 1, 12, 12)
+	assertToken(t, l.Next(), EOF, "", 2, 1, 13)
 }
 
 func TestLexString(t *testing.T) {
