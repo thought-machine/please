@@ -87,15 +87,10 @@ go_module(
         "...",
     ],
     module = "github.com/please-build/gcfg",
-    download = ":d",
+    version = "v1.6.0",
     deps = [
         ":warnings",
     ],
-)
-
-system_library(
-    name = "d",
-    srcs = ["/home/ttristao/code/gcfg"],
 )
 
 go_module(

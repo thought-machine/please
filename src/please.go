@@ -412,19 +412,14 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
-<<<<<<< HEAD
-		Config struct {
-			Option string `long:"option" description:"TODO."`
-			Json bool `long:"json" description:"Output as JSON."`
-		} `command:"config" description:"Prints the configuration settings"`
-	} `command:"query" description:"Queries information about the build state"`
-	Codegen struct {
-=======
 		RepoRoot struct {
 		} `command:"reporoot" alias:"repo_root" description:"Output the root of the current Please repo"`
-	} `command:"query" description:"Queries information about the build graph"`
+		Config struct {
+			Options []string `long:"option" description:"Print specific option."`
+			JSON    bool     `long:"json" description:"Output as JSON."`
+		} `command:"config" description:"Prints the configuration settings"`
+	} `command:"query" description:"Queries information about the build state"`
 	Generate struct {
->>>>>>> upstream/master
 		Gitignore string `long:"update_gitignore" description:"The gitignore file to write the generated sources to"`
 		Args      struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
@@ -871,12 +866,19 @@ var buildFunctions = map[string]func() int{
 			query.Filter(state, state.ExpandOriginalLabels(), opts.Query.Filter.Hidden)
 		})
 	},
-	"query.config": func() int {
-		query.Config(config, opts.Query.Config.Option, opts.Query.Config.Json)
-		return 0
-	},
 	"query.reporoot": func() int {
 		fmt.Println(core.RepoRoot)
+		return 0
+	},
+	"query.config": func() int {
+		if opts.Query.Config.JSON {
+			if len(opts.Query.Config.Options) > 0 {
+				log.Fatal("The --option flag isn't available with the --json flag")
+			}
+			query.ConfigJSON(config)
+		} else {
+			query.Config(config, opts.Query.Config.Options)
+		}
 		return 0
 	},
 	"watch": func() int {

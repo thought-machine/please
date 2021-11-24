@@ -34,7 +34,7 @@ require (
 	github.com/peterebden/go-sri v1.1.1
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
 	github.com/pkg/xattr v0.4.3
-	github.com/please-build/gcfg v1.5.0
+	github.com/please-build/gcfg v1.6.0
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.30.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.21.8
@@ -60,7 +60,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	lukechampine.com/blake3 v1.1.5
 )
-
-replace github.com/please-build/gcfg v1.5.0 => /home/ttristao/code/gcfg
 
 go 1.16
