@@ -318,8 +318,8 @@ func (l *lex) consumeString(quote byte, pos Position, multiline, raw, fString bo
 		}
 		switch c {
 		case quote:
-			s = append(s, '"')
 			if !multiline || (l.b[l.i] == quote && l.b[l.i+1] == quote) {
+				s = append(s, '"')
 				if multiline {
 					l.i += 2
 					l.col += 2
@@ -330,6 +330,7 @@ func (l *lex) consumeString(quote byte, pos Position, multiline, raw, fString bo
 				}
 				return token
 			}
+			s = append(s, c)
 		case '\n':
 			if multiline {
 				l.line++
