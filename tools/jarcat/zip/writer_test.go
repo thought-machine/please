@@ -119,7 +119,9 @@ func TestStoreSuffix(t *testing.T) {
 	f := NewFile("test_store_suffix.zip", false)
 	f.Suffix = []string{"zip"}
 	f.StoreSuffix = []string{"png"}
-	//f.Align = 4
+	// Removed since we can no longer align items within the archive. The rest of the
+	// test is still valid though.
+	// f.Align = 4
 	f.IncludeOther = true
 	err := f.AddFiles("tools/jarcat/zip/test_data")
 	require.NoError(t, err)

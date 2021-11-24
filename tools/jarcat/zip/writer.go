@@ -27,10 +27,6 @@ var modTimeBytes = timeToBytes(modTime)
 // Equivalent to the above for the legacy DOS fields.
 const modTimeDOS = 10785
 
-// fileHeaderLen is the length of a file header in a zipfile.
-// We need to know this to adjust alignment.
-const fileHeaderLen = 30
-
 // A File represents an output zipfile.
 type File struct {
 	f              io.WriteCloser
