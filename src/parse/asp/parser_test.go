@@ -486,25 +486,25 @@ func TestMultilineStringQuotes(t *testing.T) {
 		Expected string
 	}{
 		{
-			Path:     "src/parse/asp/test_data/multiline_string_single_in_single.build",
+			Path: "src/parse/asp/test_data/multiline_string_single_in_single.build",
 			Expected: `"
 multiline string containing 'single quotes'
 "`,
 		},
 		{
-			Path:     "src/parse/asp/test_data/multiline_string_double_in_single.build",
+			Path: "src/parse/asp/test_data/multiline_string_double_in_single.build",
 			Expected: `"
 multiline string containing "double quotes"
 "`,
 		},
 		{
-			Path:     "src/parse/asp/test_data/multiline_string_single_in_double.build",
+			Path: "src/parse/asp/test_data/multiline_string_single_in_double.build",
 			Expected: `"
 multiline string containing 'single quotes'
 "`,
 		},
 		{
-			Path:     "src/parse/asp/test_data/multiline_string_double_in_double.build",
+			Path: "src/parse/asp/test_data/multiline_string_double_in_double.build",
 			Expected: `"
 multiline string containing "double quotes"
 "`,
