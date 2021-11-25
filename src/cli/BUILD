@@ -36,13 +36,3 @@ go_test(
         "//third_party/go:testify",
     ],
 )
-
-go_test(
-    name = "stdin_test",
-    srcs = ["stdin_test.go"],
-    data = ["test_data"],
-    deps = [
-        ":cli",
-        "//third_party/go:testify",
-    ],
-)
