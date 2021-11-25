@@ -25,6 +25,7 @@ const (
 	outsBuildRuleArgIdx
 	depsBuildRuleArgIdx
 	exportedDepsBuildRuleArgIdx
+	exportsBuildRuleArgsIdx
 	secretsBuildRuleArgIdx
 	toolsBuildRuleArgIdx
 	testToolsBuildRuleArgIdx
@@ -228,6 +229,9 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addDependencies(s, "deps", args[depsBuildRuleArgIdx], t, false, false)
 	addDependencies(s, "exported_deps", args[exportedDepsBuildRuleArgIdx], t, true, false)
 	addDependencies(s, "internal_deps", args[internalDepsBuildRuleArgIdx], t, false, true)
+	addStrings(s, "exports", args[exportsBuildRuleArgsIdx], func(export string) {
+		t.AddExport(core.ParseBuildLabelContext(export, s.pkg))
+	})
 	addStrings(s, "labels", args[labelsBuildRuleArgIdx], t.AddLabel)
 	addStrings(s, "hashes", args[hashesBuildRuleArgIdx], t.AddHash)
 	addStrings(s, "licences", args[licencesBuildRuleArgIdx], t.AddLicence)

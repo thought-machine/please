@@ -111,6 +111,8 @@ type BuildTarget struct {
 	// Maps the original declaration to whatever dependencies actually got attached,
 	// which may be more than one in some cases. Also contains info about exporting etc.
 	dependencies []depInfo `name:"deps"`
+	// Exports are any targets that dependees of this target should also depend on
+	Exports []BuildLabel `name:"exports"`
 	// List of build target patterns that can use this build target.
 	Visibility []BuildLabel
 	// Source files of this rule. Can refer to build rules themselves.
@@ -546,6 +548,12 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 		target.mutex.Lock()
 		defer target.mutex.Unlock()
 
+		for _, l := range t.Exports {
+			if l != target.Label {
+				target.AddDependency(l)
+			}
+		}
+
 		// Small optimisation to avoid re-looking-up the same target again.
 		dep.deps = []*BuildTarget{t}
 		return nil
@@ -557,6 +565,20 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 		if t == nil {
 			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, t)
 		}
+
+		if len(t.Exports) > 0 {
+			func(){
+				target.mutex.Lock()
+				defer target.mutex.Unlock()
+
+				for _, l := range t.Exports {
+					if l != target.Label {
+						target.AddDependency(l)
+					}
+				}
+			}()
+		}
+
 		deps = append(deps, t)
 	}
 
@@ -1764,6 +1786,10 @@ func (target *BuildTarget) AddOutputDirectory(dir string) {
 // GetFileContent returns the file content, expanding it if it needs to
 func (target *BuildTarget) GetFileContent(state *BuildState) (string, error) {
 	return ReplaceSequences(state, target, target.FileContent)
+}
+
+func (target *BuildTarget) AddExport(l BuildLabel) {
+	target.Exports = append(target.Exports, l)
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.
