@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"gopkg.in/op/go-logging.v1"
+	"github.com/peterebden/go-cli-init/v5/flags"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli"
@@ -214,7 +215,7 @@ func ReadStdinLabels(labels []core.BuildLabel) []core.BuildLabel {
 	ret := []core.BuildLabel{}
 	for _, l := range labels {
 		if l == core.BuildLabelStdin {
-			for s := range cli.ReadStdin() {
+			for s := range flags.ReadStdin() {
 				ret = append(ret, core.ParseBuildLabels([]string{s})...)
 			}
 		} else {
