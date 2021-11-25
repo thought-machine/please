@@ -250,6 +250,8 @@ github.com/peterebden/gcfg v1.3.0 h1:cXPrg3yRF5HTK3tBfIk+AJy10BZKRnBbb34FHklJzn8
 github.com/peterebden/gcfg v1.3.0/go.mod h1:VDdZttqmD3nudN3emvXYhkgOqqyYhWjnPIcEoIxNlTE=
 github.com/peterebden/go-cli-init/v5 v5.1.0 h1:uZA7+xCzH1/dL0EPZCPOXmHIXWmzJ4ckP3Okj8zwtQ0=
 github.com/peterebden/go-cli-init/v5 v5.1.0/go.mod h1:CAwh3oj26LCNv9zLsWCDWlPnERwAeQTDsHTSGqobV3Q=
+github.com/peterebden/go-cli-init/v5 v5.2.0 h1:T4WfGF+XjYCdVR4Y9KcTRVGpY5f6UelP0WDNuvn3Twc=
+github.com/peterebden/go-cli-init/v5 v5.2.0/go.mod h1:CAwh3oj26LCNv9zLsWCDWlPnERwAeQTDsHTSGqobV3Q=
 github.com/peterebden/go-deferred-regex v1.0.0 h1:diO8oF3YcM4GkIFuv/DflfAYfx5SWBPff3Yh120PaFk=
 github.com/peterebden/go-deferred-regex v1.0.0/go.mod h1:EhIu4zsN+60671cx29rzxPSIEnDd2vOia4RFSOaYpRI=
 github.com/peterebden/go-sri v1.1.1 h1:KK8yZ5/NX8YzWUY9QvhrP220QsvEKANLLAgvw35AkyU=
