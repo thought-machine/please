@@ -370,7 +370,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.EmbedTool = "//_please:please_go_embed"
 	config.Python.PexTool = "//_please:please_pex"
 	config.Java.JavacWorker = "//_please:javac_worker"
-	config.Java.JarCatTool = "//_please:jarcat"
+	config.Java.JarCatTool = "//_please:arcat"
 	config.Java.JUnitRunner = "//_please:junit_runner"
 
 	return &config
