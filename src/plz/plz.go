@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.in/op/go-logging.v1"
 	"github.com/peterebden/go-cli-init/v5/flags"
+	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli"
