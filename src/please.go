@@ -415,8 +415,10 @@ var opts struct {
 		RepoRoot struct {
 		} `command:"reporoot" alias:"repo_root" description:"Output the root of the current Please repo"`
 		Config struct {
-			Options []string `long:"option" description:"Print specific option."`
-			JSON    bool     `long:"json" description:"Output as JSON."`
+			JSON bool `long:"json" description:"Output as JSON."`
+			Args struct {
+				Options []string `positional-arg-name:"options" description:"Print specific options."`
+			} `positional-args:"true"`
 		} `command:"config" description:"Prints the configuration settings"`
 	} `command:"query" description:"Queries information about the build state"`
 	Generate struct {
@@ -872,12 +874,12 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.config": func() int {
 		if opts.Query.Config.JSON {
-			if len(opts.Query.Config.Options) > 0 {
+			if len(opts.Query.Config.Args.Options) > 0 {
 				log.Fatal("The --option flag isn't available with the --json flag")
 			}
 			query.ConfigJSON(config)
 		} else {
-			query.Config(config, opts.Query.Config.Options)
+			query.Config(config, opts.Query.Config.Args.Options)
 		}
 		return 0
 	},
