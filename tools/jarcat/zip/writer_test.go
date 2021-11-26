@@ -3,7 +3,6 @@ package zip
 import (
 	"archive/zip"
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -115,26 +114,14 @@ func assertExpected(t *testing.T, filename string, alignment int) {
 	}
 }
 
-func TestAlignment(t *testing.T) {
-	for _, align := range []int{2, 4, 8, 12, 32} {
-		t.Run(fmt.Sprintf("%dByte", align), func(t *testing.T) {
-			filename := fmt.Sprintf("test_alignment_%d.zip", align)
-			f := NewFile(filename, false)
-			f.Align = align
-			err := f.AddFiles("tools/jarcat/zip/test_data_2")
-			require.NoError(t, err)
-			f.Close()
-			assertExpected(t, filename, align)
-		})
-	}
-}
-
 func TestStoreSuffix(t *testing.T) {
 	// This is a sort of Android-esque example (storing PNGs at 4-byte alignment)
 	f := NewFile("test_store_suffix.zip", false)
 	f.Suffix = []string{"zip"}
 	f.StoreSuffix = []string{"png"}
-	f.Align = 4
+	// Removed since we can no longer align items within the archive. The rest of the
+	// test is still valid though.
+	// f.Align = 4
 	f.IncludeOther = true
 	err := f.AddFiles("tools/jarcat/zip/test_data")
 	require.NoError(t, err)

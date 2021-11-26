@@ -302,3 +302,11 @@ func (arch *Arch) GoArch() string {
 	}
 	return arch.Arch
 }
+
+// ContainsString returns true if the given slice contains an individual string.
+func ContainsString(needle string, haystack []string) bool {
+	return cli.ContainsString(needle, haystack)
+}
+
+// StdinStrings is an alias to the cli-init package.
+type StdinStrings = cli.StdinStrings

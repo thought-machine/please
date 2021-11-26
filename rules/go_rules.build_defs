@@ -1267,7 +1267,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             "go": f":{name}", # provide the filegroup otherwise exported deps don't work
             "go_src": download,
         },
-        labels = [f"go_package:{i}" for i in install],
+        labels = [f"go_package:{i}" for i in install] + [f"go_module:{module}"],
         visibility = visibility,
         needs_transitive_deps = True,
         test_only = test_only,

@@ -5,7 +5,6 @@ go_library(
     deps = [
         "//third_party/go:xz",
         "//third_party/go:zstd",
-        "//third_party/go/zip",
     ],
 )
 
