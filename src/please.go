@@ -222,7 +222,7 @@ var opts struct {
 			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
 			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
 		} `positional-args:"true"`
-	} `command:"exec" description:"Builds and executes a single target in a sandboxed environment"`
+	} `command:"exec" description:"Executes a single target in a sandboxed environment, if configured to be built the same way"`
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
