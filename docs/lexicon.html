@@ -1112,6 +1112,34 @@
   </section>
 
   <section class="mt4">
+    <h3 class="title-3" id="tag">
+      tag
+    </h3>
+
+    <code class="code-signature">tag(name, tag)</code>
+
+    <p>Tags a build label name with a given tag. This can be useful to keep following the intermediate build target
+      naming convention when a build definition doesn't expose the <code class="code">tag</code> parameter.</p>
+
+    <p>For example:</p>
+
+    <ul class="bulleted-list">
+      <li>
+        <span
+        ><code class="code">tag("name", "foo")</code> -&gt;
+          <code class="code">"_name#foo"</code>
+        </span>
+      </li>
+      <li>
+        <span
+        ><code class="code">tag("_name#foo", "bar")</code> -&gt;
+          <code class="code">"_name#foo_bar"</code>
+        </span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="mt4">
     <h3 class="title-3" id="fail">
       fail
     </h3>

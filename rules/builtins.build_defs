@@ -16,7 +16,6 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', debug_cmd:str=''
                _subrepo:bool=False):
     pass
 
-
 def len(obj:list|dict|str) -> int:
     pass
 def enumerate(seq:list):
@@ -138,6 +137,15 @@ def canonicalise(label:str) -> str:
       //package:target -> //package:target
       //package -> //package:package
       :target -> //current_package:target
+    """
+    pass
+
+def tag(name:str, tag:str):
+    """Applies a tag to a build target name, similar to the `tag` param on build_rule().
+
+    For example:
+        tag("name", "foo") -> "_name#foo"
+        tag("_name#foo", "bar") -> "_name#foo_bar"
     """
     pass
 
