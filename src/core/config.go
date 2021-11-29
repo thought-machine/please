@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/google/shlex"
 	"github.com/please-build/gcfg"
 	gcfgtypes "github.com/please-build/gcfg/types"
@@ -65,8 +66,21 @@ func readConfigFile(config *Configuration, filename string) error {
 	} else {
 		log.Debug("Read config from %s", filename)
 	}
+	checkPluginVersionRequirements(config)
 	normalisePluginConfigKeys(config)
 	return nil
+}
+
+func checkPluginVersionRequirements(config *Configuration) {
+	if config.PluginDefinition.Name != "" {
+		currentPlzVersion := *semver.New(PleaseVersion)
+		// Get plugin config version requirement which may or may not exist
+		pluginVerReq := config.Please.Version.Version
+
+		if currentPlzVersion != pluginVerReq {
+			log.Warning("Plugin %v requires plz version %v", config.PluginDefinition.Name, pluginVerReq)
+		}
+	}
 }
 
 // ReadDefaultConfigFiles reads all the config files from the default locations and
