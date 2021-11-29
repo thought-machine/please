@@ -4,7 +4,6 @@ filegroup(
     name = "tools",
     srcs = [
         "//tools/build_langserver",
-        "//tools/jarcat",
         "//tools/java:javac_worker",
         "//tools/java:junit_runner",
         "//tools/please_go",
@@ -62,18 +61,9 @@ genrule(
     cmd = "cp $SRC $OUT",
 )
 
-genrule(
-    name = "jarcat",
-    srcs = ["//tools/jarcat"],
-    outs = ["jarcat_" + VERSION],
-    binary = True,
-    cmd = "cp $SRC $OUT",
-)
-
 filegroup(
     name = "release_files",
     srcs = [
-        ":jarcat",
         ":please",
         ":please_tarball",
         ":please_tarball_xz",
