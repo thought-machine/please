@@ -77,8 +77,8 @@ func checkPluginVersionRequirements(config *Configuration) {
 		// Get plugin config version requirement which may or may not exist
 		pluginVerReq := config.Please.Version.Version
 
-		if currentPlzVersion != pluginVerReq {
-			log.Warning("Plugin %v requires plz version %v", config.PluginDefinition.Name, pluginVerReq)
+		if currentPlzVersion.LessThan(pluginVerReq) {
+			log.Warningf("Plugin \"%v\" requires Please version %v", config.PluginDefinition.Name, pluginVerReq)
 		}
 	}
 }

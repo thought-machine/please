@@ -1,5 +1,6 @@
 [please]
 location = ./plz-out/please
+version = 16.13.0
 
 [python]
 ; We use the in-repo please_pex tool to build other pexes within this repo.
