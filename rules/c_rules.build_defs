@@ -8,7 +8,7 @@ you must pay attention to interoperability when needed (e.g. 'extern "C"' and so
 """
 
 
-def c_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:list=[],
+def c_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:list=[], deps:list=[],
               visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=[],
               linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], pkg_config_cflags:list=[],
               includes:list=[], defines:list|dict=[], alwayslink:bool=False):
@@ -17,6 +17,8 @@ def c_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:l
     Args:
       name (str): Name of the rule
       srcs (list): C source files to compile.
+      out (str): Name of the output library. Defaults to lib<name>.a (or just <name>.a if name already
+                 begins with 'lib').
       hdrs (list): Header files. These will be made available to dependent rules, so the distinction
                    between srcs and hdrs is important.
       private_hdrs (list): Header files that are available only to this rule and not exported to
@@ -41,6 +43,7 @@ def c_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:l
     return cc_library(
         name = name,
         srcs = srcs,
+        out = out,
         hdrs = hdrs,
         private_hdrs = private_hdrs,
         deps = deps,
@@ -112,8 +115,9 @@ def c_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None
     )
 
 
-def c_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-                     deps:list=[], visibility:list=None, test_only:bool&testonly=False, pkg_config_libs:list=[], pkg_config_cflags:list=[]):
+def c_static_library(name:str, srcs:list=[], out:str='', hdrs:list=[], compiler_flags:list&cflags&copts=[],
+                     linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None,
+                     test_only:bool&testonly=False, pkg_config_libs:list=[], pkg_config_cflags:list=[]):
     """Generates a C static library (.a).
 
     This is essentially just a collection of other c_library rules into a single archive.
@@ -123,6 +127,8 @@ def c_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&c
     Args:
       name (str): Name of the rule
       srcs (list): C or C++ source files to compile.
+      out (str): Name of the output library. Defaults to lib<name>.a (or just <name>.a if name already
+                 begins with 'lib').
       hdrs (list): Header files.
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker.
@@ -136,6 +142,7 @@ def c_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&c
     return cc_static_library(
         name = name,
         srcs = srcs,
+        out = out,
         hdrs = hdrs,
         deps = deps,
         visibility = visibility,
