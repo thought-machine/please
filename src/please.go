@@ -1061,7 +1061,8 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		}
 	}
 
-	if state.DebugFailingTests && (len(targets) != 1 || (len(targets) == 1 && targets[0].Name == "...")) {
+	// Only one target that is _not_ named "all" or "..." is allowed with debug test.
+	if state.DebugFailingTests && (len(targets) != 1 || (len(targets) == 1 && (targets[0].IsAllTargets() || targets[0].IsAllSubpackages()))) {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
 
