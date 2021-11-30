@@ -10,8 +10,8 @@ please_repo_e2e_test(
     repo = "test_repo",
 )
 
-plz_e2e_test(
-    name = "plugin_version_test",
-    cmd = "plz test -o please.location:$TMP_DIR/$(dir //package:installed_files) //src:all",
-    expect_output_contains = "Warning",
-)
+# plz_e2e_test(
+#     name = "plugin_version_test",
+#     cmd = "plz test -o please.location:$TMP_DIR/$(dir //package:installed_files) //src:all",
+#     expect_output_contains = "Warning",
+# )
