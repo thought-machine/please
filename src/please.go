@@ -345,6 +345,7 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"alltargets" description:"Lists all targets in the graph"`
 		Print struct {
+			JSON   bool     `long:"json" description:"Print the targets as json rather than python"`
 			Fields []string `short:"f" long:"field" description:"Individual fields to print of the target"`
 			Labels []string `short:"l" long:"label" description:"Prints all labels with the given prefix (with the prefix stripped off). Overrides --field."`
 			Args   struct {
@@ -412,8 +413,16 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
-	} `command:"query" description:"Queries information about the build graph"`
-	Codegen struct {
+		RepoRoot struct {
+		} `command:"reporoot" alias:"repo_root" description:"Output the root of the current Please repo"`
+		Config struct {
+			JSON bool `long:"json" description:"Output as JSON."`
+			Args struct {
+				Options []string `positional-arg-name:"options" description:"Print specific options."`
+			} `positional-args:"true"`
+		} `command:"config" description:"Prints the configuration settings"`
+	} `command:"query" description:"Queries information about the build state"`
+	Generate struct {
 		Gitignore string `long:"update_gitignore" description:"The gitignore file to write the generated sources to"`
 		Args      struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
@@ -705,7 +714,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.print": func() int {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
+			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels, opts.Query.Print.JSON)
 		})
 	},
 	"query.input": func() int {
@@ -860,6 +869,21 @@ var buildFunctions = map[string]func() int{
 			query.Filter(state, state.ExpandOriginalLabels(), opts.Query.Filter.Hidden)
 		})
 	},
+	"query.reporoot": func() int {
+		fmt.Println(core.RepoRoot)
+		return 0
+	},
+	"query.config": func() int {
+		if opts.Query.Config.JSON {
+			if len(opts.Query.Config.Args.Options) > 0 {
+				log.Fatal("The --option flag isn't available with the --json flag")
+			}
+			query.ConfigJSON(config)
+		} else {
+			query.Config(config, opts.Query.Config.Args.Options)
+		}
+		return 0
+	},
 	"watch": func() int {
 		// Don't ask it to test now since we don't know if any of them are tests yet.
 		success, state := runBuild(opts.Watch.Args.Targets, true, false, false)
@@ -870,8 +894,8 @@ var buildFunctions = map[string]func() int{
 	"generate": func() int {
 		opts.BuildFlags.Include = append(opts.BuildFlags.Include, "codegen")
 
-		if opts.Codegen.Gitignore != "" {
-			pkg := filepath.Dir(opts.Codegen.Gitignore)
+		if opts.Generate.Gitignore != "" {
+			pkg := filepath.Dir(opts.Generate.Gitignore)
 			if pkg == "." {
 				pkg = ""
 			}
@@ -880,25 +904,25 @@ var buildFunctions = map[string]func() int{
 				Name:        "...",
 			}
 
-			if len(opts.Codegen.Args.Targets) != 0 {
+			if len(opts.Generate.Args.Targets) != 0 {
 				log.Warning("You've provided targets, and a gitignore to update. Ignoring the provided targets and building %v", target)
 			}
 
-			opts.Codegen.Args.Targets = []core.BuildLabel{target}
+			opts.Generate.Args.Targets = []core.BuildLabel{target}
 		}
 
-		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
-			if opts.Codegen.Gitignore != "" {
-				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Codegen.Gitignore)
+		if success, state := runBuild(opts.Generate.Args.Targets, true, false, true); success {
+			if opts.Generate.Gitignore != "" {
+				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Generate.Gitignore)
 				if err != nil {
 					log.Fatalf("failed to update gitignore: %v", err)
 				}
 			}
 
-			// This may seem counter intuitive but if this was set, we would've linked during the build.
+			// This may seem counterintuitive but if this was set, we would've linked during the build.
 			// If we've opted to not automatically link generated sources during the build, we should link them now.
-			if !state.Config.Build.LinkGeneratedSources {
-				generate.LinkGeneratedSources(state.Graph, state.ExpandOriginalLabels())
+			if !state.Config.ShouldLinkGeneratedSources() {
+				generate.LinkGeneratedSources(state, state.ExpandOriginalLabels())
 			}
 			return 0
 		}

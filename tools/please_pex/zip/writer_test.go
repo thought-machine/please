@@ -3,7 +3,6 @@ package zip
 import (
 	"archive/zip"
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -18,7 +17,7 @@ var expectedModTime = time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
 func TestAddZipFile(t *testing.T) {
 	// Have to write an actual file for zip.OpenReader to use later.
 	f := NewFile("add_zip_file_test.zip", false)
-	err := f.AddZipFile("tools/jarcat/zip/test_data/test.zip")
+	err := f.AddZipFile("tools/please_pex/zip/test_data/test.zip")
 	require.NoError(t, err)
 	f.Close()
 	assertExpected(t, "add_zip_file_test.zip", 0)
@@ -55,17 +54,17 @@ func TestAddZipFileConcatenatesSpecialFiles(t *testing.T) {
 		r := require.New(t)
 		f := NewFile("zip_files_with_reference_conf.zip", false)
 
-		err := f.AddZipFile("tools/jarcat/zip/test_data_3/z1.zip")
+		err := f.AddZipFile("tools/please_pex/zip/test_data_3/z1.zip")
 		r.NoError(err)
-		err = f.AddZipFile("tools/jarcat/zip/test_data_3/z2.zip")
+		err = f.AddZipFile("tools/please_pex/zip/test_data_3/z2.zip")
 		r.NoError(err)
 		f.Close()
 
 		actualContents, err := getZipContents("zip_files_with_reference_conf.zip")
 		r.NoError(err)
-		z1Contents, err := getZipContents("tools/jarcat/zip/test_data_3/z1.zip")
+		z1Contents, err := getZipContents("tools/please_pex/zip/test_data_3/z1.zip")
 		r.NoError(err)
-		z2Contents, err := getZipContents("tools/jarcat/zip/test_data_3/z2.zip")
+		z2Contents, err := getZipContents("tools/please_pex/zip/test_data_3/z2.zip")
 		r.NoError(err)
 		expectedRefConf := append(z1Contents["reference.conf"], z2Contents["reference.conf"]...)
 		r.EqualValues(actualContents["reference.conf"], expectedRefConf)
@@ -79,9 +78,9 @@ func TestAddZipFileConcatenatesSpecialFiles(t *testing.T) {
 func TestAddFiles(t *testing.T) {
 	f := NewFile("add_files_test.zip", false)
 	f.Suffix = []string{"zip"}
-	err := f.AddFiles("tools/jarcat/zip/test_data")
+	err := f.AddFiles("tools/please_pex/zip/test_data")
 	require.NoError(t, err)
-	err = f.AddFiles("tools/jarcat/zip/test_data_2")
+	err = f.AddFiles("tools/please_pex/zip/test_data_2")
 	require.NoError(t, err)
 	f.Close()
 	assertExpected(t, "add_files_test.zip", 0)
@@ -115,30 +114,18 @@ func assertExpected(t *testing.T, filename string, alignment int) {
 	}
 }
 
-func TestAlignment(t *testing.T) {
-	for _, align := range []int{2, 4, 8, 12, 32} {
-		t.Run(fmt.Sprintf("%dByte", align), func(t *testing.T) {
-			filename := fmt.Sprintf("test_alignment_%d.zip", align)
-			f := NewFile(filename, false)
-			f.Align = align
-			err := f.AddFiles("tools/jarcat/zip/test_data_2")
-			require.NoError(t, err)
-			f.Close()
-			assertExpected(t, filename, align)
-		})
-	}
-}
-
 func TestStoreSuffix(t *testing.T) {
 	// This is a sort of Android-esque example (storing PNGs at 4-byte alignment)
 	f := NewFile("test_store_suffix.zip", false)
 	f.Suffix = []string{"zip"}
 	f.StoreSuffix = []string{"png"}
-	f.Align = 4
+	// Removed since we can no longer align items within the archive. The rest of the
+	// test is still valid though.
+	// f.Align = 4
 	f.IncludeOther = true
-	err := f.AddFiles("tools/jarcat/zip/test_data")
+	err := f.AddFiles("tools/please_pex/zip/test_data")
 	require.NoError(t, err)
-	err = f.AddFiles("tools/jarcat/zip/test_data_2")
+	err = f.AddFiles("tools/please_pex/zip/test_data_2")
 	require.NoError(t, err)
 	f.Close()
 
@@ -147,7 +134,7 @@ func TestStoreSuffix(t *testing.T) {
 	defer r.Close()
 	assert.Equal(t, 3, len(r.File))
 	png := r.File[0]
-	assert.Equal(t, "tools/jarcat/zip/test_data/kitten.png", png.Name)
+	assert.Equal(t, "tools/please_pex/zip/test_data/kitten.png", png.Name)
 	assert.Equal(t, zip.Store, png.Method)
 }
 

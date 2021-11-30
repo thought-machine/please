@@ -1027,10 +1027,9 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
     )
 
 def _add_ld_flags(name:str, stdout:list):
-    flags = [f"cc:ld:{f}" for f in " ".join(stdout).split(" ") if f]
-
-    for f in flags:
-        add_label(name, f)
+    stdout = " ".join(stdout)
+    if stdout:
+        add_label(name, f"cc:ld:{stdout}")
 
 
 def _go_install(name:str, get_roots:list, install:list, binary:bool, srcs:list, outs:list, deps:list, test_only:bool,
@@ -1268,7 +1267,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             "go": f":{name}", # provide the filegroup otherwise exported deps don't work
             "go_src": download,
         },
-        labels = [f"go_package:{i}" for i in install],
+        labels = [f"go_package:{i}" for i in install] + [f"go_module:{module}"],
         visibility = visibility,
         needs_transitive_deps = True,
         test_only = test_only,
