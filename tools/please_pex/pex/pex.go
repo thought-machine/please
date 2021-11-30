@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/thought-machine/please/tools/jarcat/zip"
+	"github.com/thought-machine/please/tools/please_pex/zip"
 )
 
 const testRunnersDir = "test_runners"
