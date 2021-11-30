@@ -1061,7 +1061,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		}
 	}
 
-	if state.DebugFailingTests && len(targets) != 1 {
+	if state.DebugFailingTests && (len(targets) != 1 || (len(targets) == 1 && targets[0].Name == "...")) {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
 
