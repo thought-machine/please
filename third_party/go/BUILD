@@ -1,8 +1,5 @@
 package(default_visibility = ["PUBLIC"])
 
-# This is needed to break a circular dependency.
-package(jarcat_tool = "//:jarcat_unzip")
-
 go_toolchain(
     name = "toolchain",
     hashes = [
