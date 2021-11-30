@@ -4,6 +4,6 @@ go_library(
     resources = glob(["**/*.py"]),
     visibility = ["//tools/please_pex:all"],
     deps = [
-        "//tools/jarcat/zip",
+        "//tools/please_pex/zip",
     ],
 )

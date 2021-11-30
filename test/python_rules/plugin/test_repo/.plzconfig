@@ -7,8 +7,5 @@ BuildFileName = BUILD # We override this in the e2e test profile and the subrepo
 [Java]
 JarcatTool = jarcat
 
-[PluginDefinition]
-Name = zebra
-
 [Plugin "python"]
 PexTool = please_pex
