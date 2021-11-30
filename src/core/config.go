@@ -55,7 +55,7 @@ const UserConfigFileName = "~/.config/please/plzconfig"
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
 // readConfigFile reads a single config file into the config struct
-func readConfigFile(config *Configuration, filename string) error {
+func readConfigFile(config *Configuration, filename string, subrepo bool) error {
 	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
@@ -66,8 +66,12 @@ func readConfigFile(config *Configuration, filename string) error {
 	} else {
 		log.Debug("Read config from %s", filename)
 	}
-	checkPluginVersionRequirements(config)
-	normalisePluginConfigKeys(config)
+
+	if subrepo {
+		checkPluginVersionRequirements(config)
+		normalisePluginConfigKeys(config)
+	}
+
 	return nil
 }
 
@@ -137,11 +141,11 @@ func defaultConfigFiles() []string {
 func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, error) {
 	config := DefaultConfiguration()
 	for _, filename := range filenames {
-		if err := readConfigFile(config, filename); err != nil {
+		if err := readConfigFile(config, filename, false); err != nil {
 			return config, err
 		}
 		for _, profile := range profiles {
-			if err := readConfigFile(config, filename+"."+profile); err != nil {
+			if err := readConfigFile(config, filename+"."+profile, false); err != nil {
 				return config, err
 			}
 		}

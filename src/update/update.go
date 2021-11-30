@@ -59,8 +59,6 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	httpClient = retryablehttp.NewClient()
 	httpClient.Logger = &cli.HTTPLogWrapper{Log: log}
 
-	// Emit a warning if the current plz version does not satisfy any version requirements in any config files
-
 	if !shouldUpdate(config, updatesEnabled, updateCommand, prerelease) && !forceUpdate {
 		clean(config, updateCommand)
 		return
