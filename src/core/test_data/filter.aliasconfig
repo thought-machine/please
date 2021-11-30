@@ -1,5 +1,5 @@
 [command]
-cmd = run //infra/psql:filter --
+Cmd = run //infra/psql:filter --
 
-[nestedflag "newest"]
-ShortDescription = Filter by most recent.
+[flag "newest"]
+Description = Filter by most recent.

@@ -1225,6 +1225,22 @@ func additionalUsageInfo(parser *flags.Parser, wr io.Writer) {
 	}
 }
 
+func printUsage(parser *flags.Parser, extraArgs []string, err error) {
+	if err != nil && parser == nil {
+		// Most likely this is something structurally wrong with the flags setup.
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	} else if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		parser.WriteHelp(os.Stderr)
+		os.Exit(1)
+	} else if len(extraArgs) > 0 {
+		parser.WriteHelp(os.Stderr)
+		fmt.Fprintf(os.Stderr, "Unknown option %s\n", extraArgs)
+		os.Exit(1)
+	}
+}
+
 func getCompletions(qry string) (*query.CompletionPackages, []string) {
 	binary := opts.Query.Completions.Cmd == "run"
 	isTest := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
@@ -1300,8 +1316,34 @@ func initBuild(args []string) string {
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
 	if (flagsErr != nil || len(extraArgs) > 0) && command != "query.completions" {
-		args := config.UpdateArgsWithAliases(os.Args)
-		command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
+		if len(os.Args) > 1 {
+			if alias, ok := config.Alias[os.Args[1]]; ok {
+				parser = flags.NewNamedParser(os.Args[0], 0)
+				if alias.Config != "" {
+					cmd, err := alias.Command(os.Args[1], alias.Config, alias.Desc, parser.Command)
+					if err != nil {
+						log.Error("Failed to parse config at location %s: %s", alias.Config, err)
+					}
+					parser.Command = cmd
+
+					for _, arg := range os.Args[1:] {
+						if arg == "--help" {
+							parser.WriteHelp(os.Stderr)
+							os.Exit(0)
+						}
+					}
+
+					extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
+				}
+				if flagsErr != nil {
+					printUsage(parser, extraArgs, flagsErr)
+					os.Exit(1)
+				} else {
+					args := config.UpdateArgsWithAliases(os.Args)
+					command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
+				}
+			}
+		}
 	}
 
 	if opts.ProfilePort != 0 {

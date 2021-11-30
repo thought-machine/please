@@ -10,6 +10,7 @@ import (
 // It returns true if any modifications were made.
 func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
 	for name, alias := range config.Alias {
+		var err error
 		cmd := parser.Command
 		if alias.Config == "" {
 			fields := strings.Fields(name)
@@ -28,7 +29,14 @@ func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
 				}
 			}
 		} else {
-			alias.Command(name, cmd)
+			// throw exception if any fields other than desc and config exist in this alias
+			if alias.Cmd != "" || len(alias.Subcommand) != 0 || len(alias.Flag) != 0 {
+				log.Errorf("Alias config field duplication for alias %s: use one method of specification", name)
+			}
+			cmd, err = alias.Command(name, alias.Config, alias.Desc, cmd)
+			if err != nil {
+				log.Errorf("Error parsing alias config %v", err)
+			}
 		}
 	}
 	return len(config.Alias) > 0

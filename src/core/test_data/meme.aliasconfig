@@ -1,11 +1,11 @@
 [command]
 cmd = run //corp/meme:cli -- create
 
-[nestedflag "doge"]
-ShortDescription = Specifies a doge meme.
+[flag "doge"]
+Description = Specifies a doge meme.
 Option = big
 Option = small
 
-[nestedflag "nocreate"]
-ShortDescription = Whether to create the directory if it doesn't exist.
+[flag "nocreate"]
+Description = Whether to create the directory if it doesn't exist.
 Boolean = True

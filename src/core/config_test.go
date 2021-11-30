@@ -304,8 +304,8 @@ func TestUpdateArgsWithAliases(t *testing.T) {
 	args = c.UpdateArgsWithAliases([]string{"plz", "mytool", "deploy", "something"})
 	assert.EqualValues(t, []string{"plz", "run", "//mytool:tool", "--", "deploy", "something"}, args)
 
-	args = c.UpdateArgsWithAliases([]string{"plz", "meme"})
-	assert.EqualValues(t, []string{"plz", "run", "//corp/meme:cli", "--", "create"}, args)
+	args = c.UpdateArgsWithAliases([]string{"plz", "meme", "--doge", "big"})
+	assert.EqualValues(t, []string{"plz", "run", "//corp/meme:cli", "--", "create", "--doge", "big"}, args)
 }
 
 func TestUpdateArgsWithQuotedAliases(t *testing.T) {
@@ -366,19 +366,11 @@ func TestAttachAliasFlags(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, []string{"meme"}, completions)
 
-	_, err = p.ParseArgs([]string{"plz", "psql", "--gcp", "--db_o"})
+	_, err = p.ParseArgs([]string{"plz", "bootstrapper", "--l"})
 	assert.NoError(t, err)
-	assert.EqualValues(t, []string{"--db_one"}, completions)
+	assert.EqualValues(t, []string{"--language"}, completions)
 
-	_, err = p.ParseArgs([]string{"plz", "psql", "--a"})
-	assert.NoError(t, err)
-	assert.EqualValues(t, []string{"--aws"}, completions)
-
-	_, err = p.ParseArgs([]string{"plz", "bootstrapper", "--language", "--ja"})
-	assert.NoError(t, err)
-	assert.EqualValues(t, []string{"--java"}, completions)
-
-	_, err = p.ParseArgs([]string{"plz", "bootstrapper", "--proto", "--to"})
+	_, err = p.ParseArgs([]string{"plz", "bootstrapper", "proto", "--to"})
 	assert.NoError(t, err)
 	assert.EqualValues(t, []string{"--token"}, completions)
 }
@@ -431,7 +423,7 @@ func TestEnsurePleaseLocation(t *testing.T) {
 func TestReadAliasConfig(t *testing.T) {
 	ac := new(AliasConfig)
 	readAliasConfigFile(ac, "src/core/test_data/meme.aliasconfig")
-	expectedCommand := &Command{Cmd: "run //corp/meme:cli -- create"}
+	expectedCommand := &CommandSection{Cmd: "run //corp/meme:cli -- create"}
 	expectedCmd := "run //corp/meme:cli -- create"
 	assert.Equal(t, expectedCommand, &ac.Command)
 	assert.Equal(t, expectedCmd, ac.Command.Cmd)

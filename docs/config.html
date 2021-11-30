@@ -1239,60 +1239,6 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title" id="alias.nestedflag">
-          NestedFlag <span class="normal">(map string repeated string)</span>
-        </h3>
-        <p>
-          Any flags of this alias with nested config fields. Used for tab completion.
-        </p>
-      </div>
-    </li>
-    <li>
-      <li>
-        <div>
-          <h3 class="mt1 f6 lh-title" id="alias.nestedflag.shortdescription">
-            ShortDescription <span class="normal">(string)</span>
-          </h3>
-          <p>
-            Description of this flag.
-          </p>
-        </div>
-      </li>
-      <li>
-      <div>
-        <div>
-          <h3 class="mt1 f6 lh-title" id="alias.nestedflag.boolean">
-            Boolean <span class="normal">(bool)</span>
-          </h3>
-          <p>
-            Boolean option type for this flag.
-          </p>
-        </div>
-      </li>
-      <li>
-      <div>
-        <div>
-          <h3 class="mt1 f6 lh-title" id="alias.nestedflag.positional">
-            Positional <span class="normal">(bool)</span>
-          </h3>
-          <p>
-            Treats positional arguments after commands as build labels for the purpose of tab completion.
-          </p>
-        </div>
-      </li>
-      <li>
-      <div>
-        <div>
-          <h3 class="mt1 f6 lh-title" id="alias.nestedflag.option">
-            Option <span class="normal">(repeated string)</span>
-          </h3>
-          <p>
-            Known options of this flag.
-          </p>
-        </div>
-      </li>
-      <li>
-      <div>
         <h3 class="mt1 f6 lh-title" id="alias.positionallabels">
           PositionalLabels <span class="normal">(repeated string)</span>
         </h3>
@@ -1374,8 +1320,8 @@
     <!-- prettier-ignore -->
     <code>
     [alias "deploy"]
-    desc = Deploys the code.
-    config = //path
+    Desc = Deploys the code.
+    Config = //path
     </code>
   </pre>
 
@@ -1390,20 +1336,20 @@
     Cmd = run //deployment:deployer --
 
     [subcommand "dev"]
-    ShortDescription = Deploy to development environment.
+    Description = Deploy to development environment.
 
     [subcommand "prod"]
-    ShortDescription = Deploy to production environment.
+    Description = Deploy to production environment.
 
     [subcommand "real prod"]
-    ShortDescription = Deploy to actual for reals production environment.
-    config = //path
+    Description = Deploy to actual for reals production environment.
+    Config = //path
 
-    [nestedflag --force]
-    ShortDescription = Skip checks.
+    [flag "force"]
+    Description = Skip checks.
     PositionalLabels = true
 
-    [nestedflag -f]
+    [flag "f"]
     Option = fast
     Option = lightspeed
 
@@ -1412,7 +1358,7 @@
 
   <p>
     Config fields <code class="code">command</code>, <code class="code">subcommand</code>,
-    and <code class="code">nestedflag</code> are each grouped their own section.
+    and <code class="code">flag</code> are each grouped in their own section.
     Subcommands can specify their config elsewhere, and nesting of subcommands is supported.
   </p>
 

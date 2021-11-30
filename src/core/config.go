@@ -609,33 +609,36 @@ type Configuration struct {
 
 // An Alias represents aliases in the config.
 type Alias struct {
-	Cmd              string           `help:"Command to run for this alias."`
-	Desc             string           `help:"Description of this alias"`
-	Subcommand       []string         `help:"Known subcommands of this command"`
-	Flag             []string         `help:"Known flags of this command"`
-	NestedFlag       map[string]*Flag `help:"Known flags of this command and their related fields"`
-	PositionalLabels bool             `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
-	Config           string           `help:"Location of additional config file where additional aliases are defined."`
+	Cmd              string   `help:"Command to run for this alias."`
+	Desc             string   `help:"Description of this alias"`
+	Subcommand       []string `help:"Known subcommands of this command"`
+	Flag             []string `help:"Known flags of this command"`
+	PositionalLabels bool     `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
+	Config           string   `help:"Location of additional config file where alias fields are defined."`
 }
 
 // An AliasConfig represents options and subcommands for a command, and supports nesting of subcommands.
 type AliasConfig struct {
-	Command    Command           `help:"Command section for this alias."`
-	NestedFlag map[string]*Flag  `help:"Known flags of this command and their related fields"`
-	Subcommand map[string]*Alias `help:"Known subcommands of this command and their related fields"`
+	Command     CommandSection          `help:"Command section for this alias."`
+	Usage       string                  `help:"Usage for this alias."`
+	Description string                  `help:"Description of this command"`
+	Flag        map[string]*Flag        `help:"Known flags of this command and their related fields"`
+	Positional  bool                    `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
+	Subcommand  map[string]*AliasConfig `help:"Known subcommands of this command and their related fields"`
+	Config      string                  `help:"Location of additional config file where nested alias fields are defined."`
 }
 
-// A Command represents the command section of an alias config.
-type Command struct {
+// A CommandSection represents the command section of an alias config.
+type CommandSection struct {
 	Cmd string `help:"Command to run for this alias."`
 }
 
 // A Flag represents options for a command.
 type Flag struct {
-	ShortDescription string   `help:"Description of this flag"`
-	Boolean          bool     `help:"Available option type for this flag"`
-	Positional       string   `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
-	Option           []string `help:"Known options of this flag"`
+	Description string   `help:"Description of this flag"`
+	Boolean     bool     `help:"Available option type for this flag"`
+	Positional  string   `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
+	Option      []string `help:"Known options of this flag"`
 }
 
 type Plugin struct {
@@ -914,7 +917,10 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 			if arg == k {
 				if v.Config != "" {
 					ac := &AliasConfig{}
-					readAliasConfigFile(ac, v.Config)
+					err := readAliasConfigFile(ac, v.Config)
+					if err != nil {
+						log.Fatalf("Unable to read alias config file for %s: %s", k, err)
+					}
 					v.Cmd = ac.Command.Cmd
 				}
 				// We could insert every token in v into os.Args at this point and then we could have
@@ -953,42 +959,62 @@ func (config *Configuration) PrintAliases(w io.Writer) {
 	}
 }
 
-// Command retrieves an alias config, constructs a Command from it, and adds it to the parser
-func (a Alias) Command(name string, cmd *flags.Command) {
+// Command retrieves an alias config and constructs a Command from it
+func (a Alias) Command(name string, location string, description string, cmd *flags.Command) (*flags.Command, error) {
 	ac := &AliasConfig{}
-	readAliasConfigFile(ac, a.Config)
+	err := readAliasConfigFile(ac, location)
+	if err != nil {
+		return nil, err
+	}
+	if ac.Command.Cmd == "" {
+		cmd.SubcommandsOptional = false
+	}
 
 	// Add alias command and flags
 	var data interface{} = &struct{}{}
-	cmd.AddCommand(name, name, a.Desc, data)
-	addFlags(ac.NestedFlag, cmd)
+	if cmd.FindOptionByLongName(name) == nil {
+		cmd, err = cmd.AddCommand(name, name, description, data)
+		if err != nil {
+			return nil, fmt.Errorf("Could not add command %s: %v", name, err)
+		}
+		addFlags(ac.Flag, cmd)
+	}
 
 	// Recurse through nested subcommands
 	for name, subcommand := range ac.Subcommand {
 		if subcommand.Config != "" {
-			subcommand.Command(name, cmd)
+			cmd, err = a.Command(name, subcommand.Config, subcommand.Description, cmd)
+			if err != nil {
+				return nil, fmt.Errorf("Could not add command %s: %v", name, err)
+			}
+		} else {
+			cmd = addSubcommand(cmd, name, subcommand.Description, subcommand.Positional)
+			addFlags(subcommand.Flag, cmd)
 		}
-		cmd = addSubcommand(cmd, name, subcommand.Desc, subcommand.PositionalLabels)
-		addFlags(subcommand.NestedFlag, cmd)
 	}
+	return cmd, err
 }
 
+// add Flags and their Options to the Command
 func addFlags(aliasFlags map[string]*Flag, cmd *flags.Command) {
-	for name, flag := range aliasFlags {
-		var f = struct {
-			Data bool `short:"d"`
-		}{}
-		option := &flags.Option{
-			Description: flag.ShortDescription,
-			LongName:    strings.TrimLeft(name, "-"),
-		}
-		g, err := cmd.AddGroup(name+" option", "", &f)
-		if err != nil {
-			log.Warning("Error adding option group: %s", err)
-		}
-		g.AddOption(option, &f.Data)
-		for _, optionString := range flag.Option {
-			g.AddOption(&flags.Option{LongName: optionString}, &f.Data)
+	for name, aliasFlag := range aliasFlags {
+		if existing := cmd.FindOptionByLongName(name); existing != nil {
+			break
+		} else {
+			var f = struct {
+				Data bool
+			}{}
+			flag := &flags.Option{
+				Description: aliasFlag.Description,
+				LongName:    strings.TrimLeft(name, "-"),
+			}
+			if len(aliasFlag.Option) > 0 {
+				for _, option := range aliasFlag.Option {
+					flag.Choices = append(flag.Choices, option)
+				}
+			}
+
+			cmd.AddOption(flag, &f.Data)
 		}
 	}
 }
@@ -996,7 +1022,7 @@ func addFlags(aliasFlags map[string]*Flag, cmd *flags.Command) {
 func readAliasConfigFile(ac *AliasConfig, location string) error {
 	log.Info("Attempting to read config from %s...", location)
 	if err := gcfg.ReadFileInto(ac, location); err != nil && os.IsNotExist(err) {
-		return nil // It's not an error to not have the file at all.
+		return fmt.Errorf("Alias config not found at %s: %s", location, err)
 	} else if gcfg.FatalOnly(err) != nil {
 		return err
 	} else if err != nil {
