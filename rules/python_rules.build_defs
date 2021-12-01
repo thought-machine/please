@@ -367,7 +367,6 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
       pip_flags (str): List of additional flags to pass to pip.
       strip (list): Files to strip after install. Note that these are done at any level.
     """
-    pip_target_dir = "pip_install"
 
     package_name = package_name or name
     package_name = f'{package_name}=={version}'
@@ -385,7 +384,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
         else:
             repo_flag = '-f ' + repo
 
-    target = f"{pip_target_dir}/{name}"
+    target = "pip_install"
     if install_subdirectory:
         target += '/' + install_subdirectory
 
@@ -395,7 +394,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
     pip_compile_flags = 'CFLAGS=" -Wl,--build-id=none -g0 " LDFLAGS=" -Wl,--build-id=none"' if CONFIG.HOSTOS != 'darwin' else 'CFLAGS=" -g0"'
 
     pip_cmd = (
-        f'mkdir {pip_target_dir} && '
+        f'mkdir pip_install && '
         f'PIP_CONFIG_FILE=/dev/null {pip_compile_flags} {pip_tool} install --isolated --no-deps --prefix= --no-compile '
         f'--no-cache-dir --default-timeout=60 --target={target}'
     )
@@ -437,11 +436,12 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
         tag = "srcs",
         cmd = pip_cmd,
         test_only = test_only,
-        output_dirs = [pip_target_dir],
+        output_dirs = ["pip_install"],
         srcs = patches if patch else [],
         building_description = 'Fetching...',
         tools = tools,
         sandbox = False,
+        labels = ["link:plz-out/python/venv"],
     )
 
     # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
@@ -593,7 +593,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         visibility = visibility,
         licences = licences,
         test_only = test_only,
-        labels = [label],
+        labels = [label] + ["link:plz-out/python/venv"],
         provides = {'py': wheel_rule},
     )
 
