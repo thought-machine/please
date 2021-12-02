@@ -370,7 +370,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.EmbedTool = "//_please:please_go_embed"
 	config.Python.PexTool = "//_please:please_pex"
 	config.Java.JavacWorker = "//_please:javac_worker"
-	config.Java.JarCatTool = "//_please:jarcat"
+	config.Java.JarCatTool = "//_please:arcat"
 	config.Java.JUnitRunner = "//_please:junit_runner"
 
 	return &config
@@ -522,8 +522,8 @@ type Configuration struct {
 		JlinkTool          string    `help:"Defines the tool used for the Java linker. Defaults to jlink." var:"JLINK_TOOL"`
 		JavaHome           string    `help:"Defines the path of the Java Home folder." var:"JAVA_HOME"`
 		JavacWorker        string    `help:"Defines the tool used for the Java persistent compiler. This is significantly (approx 4x) faster for large Java trees than invoking javac separately each time. Default to javac_worker in the install directory, but can be switched off to fall back to javactool and separate invocation." var:"JAVAC_WORKER"`
-		JarCatTool         string    `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary, java_test and various other rules. Defaults to jarcat in the Please install directory." var:"JARCAT_TOOL"`
-		JUnitRunner        string    `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.\nDefaults to junit_runner.jar in the Please install directory." var:"JUNIT_RUNNER"`
+		JarCatTool         string    `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary, java_test and various other rules. Defaults to arcat in the internal //_please package." var:"JARCAT_TOOL"`
+		JUnitRunner        string    `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.\nDefaults to junit_runner.jar in the internal //_please package." var:"JUNIT_RUNNER"`
 		DefaultTestPackage string    `help:"The Java classpath to search for functions annotated with @Test. If not specified the compiled sources will be searched for files named *Test.java." var:"DEFAULT_TEST_PACKAGE"`
 		ReleaseLevel       string    `help:"The default Java release level when compiling.\nSourceLevel and TargetLevel are ignored if this is set. Bear in mind that this flag is only supported in Java version 9+." var:"JAVA_RELEASE_LEVEL"`
 		SourceLevel        string    `help:"The default Java source level when compiling. Defaults to 8." var:"JAVA_SOURCE_LEVEL"`
@@ -602,6 +602,7 @@ type Configuration struct {
 		ExcludePythonRules            bool `help:"Whether to include the python rules or use the plugin"`
 		ExcludeJavaRules              bool `help:"Whether to include the java rules or use the plugin"`
 		ExcludeCCRules                bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
+		ExcludeProtoRules             bool `help:"Whether to include the proto rules or require use of the plugin"`
 		ExcludeSymlinksInGlob         bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {

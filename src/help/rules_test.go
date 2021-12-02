@@ -25,7 +25,7 @@ func TestRuleArgs(t *testing.T) {
 	assert.False(t, arg.Deprecated)
 	assert.Equal(t, []string{"str"}, arg.Types)
 	assert.Equal(t, "Name of the rule", arg.Comment)
-	arg = rule.Args[2]
+	arg = rule.Args[3]
 	assert.Equal(t, "hdrs", arg.Name)
 	assert.False(t, arg.Required)
 	assert.False(t, arg.Deprecated)

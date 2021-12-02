@@ -30,6 +30,7 @@ func registerBuiltins(s *scope) {
 	const varargs = true
 	const kwargs = true
 	setNativeCode(s, "build_rule", buildRule)
+	setNativeCode(s, "tag", tag)
 	setNativeCode(s, "subrepo", subrepo)
 	setNativeCode(s, "fail", builtinFail)
 	setNativeCode(s, "subinclude", subinclude, varargs)
@@ -234,6 +235,13 @@ func pkg(s *scope, args []pyObject) pyObject {
 		s.config.IndexAssign(pyString(k), v)
 	}
 	return None
+}
+
+func tag(s *scope, args []pyObject) pyObject {
+	name := args[0].String()
+	tag := args[1].String()
+
+	return pyString(tagName(name, tag))
 }
 
 // tagName applies the given tag to a target name.
