@@ -128,8 +128,9 @@ func TestPrintFields(t *testing.T) {
 	target := core.NewBuildTarget(core.ParseBuildLabel("//src/query:test_print_fields", ""))
 	target.AddLabel("go")
 	target.AddLabel("test")
-	s := testPrintFields(target, []string{"labels"})
-	assert.Equal(t, "go\ntest\n", s)
+	target.Test = &core.TestFields{Sandbox: true}
+	s := testPrintFields(target, []string{"labels", "test_sandbox"})
+	assert.Equal(t, "go\ntest\nTrue\n", s)
 }
 
 func TestPrintSourcesField(t *testing.T) {
