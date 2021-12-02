@@ -964,11 +964,12 @@ func loadPluginConfig(subrepoConfig *core.Configuration, packageState *core.Buil
 	contextPackage := &core.Package{SubrepoName: packageState.CurrentSubrepo}
 	configValueDefinitions := subrepoConfig.PluginConfig
 	for key, definition := range configValueDefinitions {
-		if definition.ConfigKey == "" {
-			definition.ConfigKey = strings.ReplaceAll(key, "_", "")
+		configKey := definition.ConfigKey
+		if configKey == "" {
+			configKey = strings.ReplaceAll(key, "_", "")
 		}
-		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, definition.ConfigKey)
-		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
+		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, configKey)
+		value, ok := extraVals[strings.ToLower(configKey)]
 		if !ok {
 			value = definition.DefaultValue
 		}
