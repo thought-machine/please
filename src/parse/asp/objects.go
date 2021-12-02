@@ -967,6 +967,9 @@ func loadPluginConfig(subrepoConfig *core.Configuration, packageState *core.Buil
 	configValueDefinitions := subrepoConfig.PluginConfig
 	for key, definition := range configValueDefinitions {
 		log.Warning("key=%v\tdefinition=%v", key, definition)
+		if definition.ConfigKey == "" {
+			definition.ConfigKey = strings.Trim(key, "_")
+		}
 		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, definition.ConfigKey)
 		log.Warning("fullConfigKey=%v", fullConfigKey)
 		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
