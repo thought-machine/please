@@ -944,7 +944,6 @@ func newConfig(state *core.BuildState) *pyConfig {
 		}
 	}
 
-	log.Warning("Calling loadPluginConfig from newConfig")
 	loadPluginConfig(state.Config, state, c)
 
 	return &pyConfig{base: c}
@@ -958,7 +957,6 @@ func loadPluginConfig(subrepoConfig *core.Configuration, packageState *core.Buil
 
 	extraVals := map[string][]string{}
 	if config := packageState.Config.Plugin[pluginName]; config != nil {
-		log.Warning("config!=nil, pluginName=%v", pluginName)
 		extraVals = config.ExtraValues
 	}
 
@@ -966,12 +964,10 @@ func loadPluginConfig(subrepoConfig *core.Configuration, packageState *core.Buil
 	contextPackage := &core.Package{SubrepoName: packageState.CurrentSubrepo}
 	configValueDefinitions := subrepoConfig.PluginConfig
 	for key, definition := range configValueDefinitions {
-		log.Warning("key=%v\tdefinition=%v", key, definition)
 		if definition.ConfigKey == "" {
 			definition.ConfigKey = strings.Trim(key, "_")
 		}
 		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, definition.ConfigKey)
-		log.Warning("fullConfigKey=%v", fullConfigKey)
 		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
 		if !ok {
 			value = definition.DefaultValue
