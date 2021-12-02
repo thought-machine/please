@@ -141,6 +141,7 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.P
 	s.subincludeLabel = &label
 	if label.Subrepo != "" {
 		subrepo := i.scope.state.Graph.SubrepoOrDie(label.Subrepo)
+		log.Warning("Calling loadPluginConfig from Subinclude")
 		loadPluginConfig(subrepo.State.Config, s.state, s.config.base)
 	}
 	// Scope needs a local version of CONFIG
