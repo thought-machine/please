@@ -1043,7 +1043,7 @@ func (state *BuildState) forConfig(config ...string) *BuildState {
 	// Duplicate & alter configuration
 	c := state.Config.copyConfig()
 	for _, filename := range config {
-		if err := readConfigFile(c, filename); err != nil {
+		if err := readConfigFile(c, filename, false); err != nil {
 			log.Fatalf("Failed to read config file %s: %s", filename, err)
 		}
 	}
