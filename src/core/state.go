@@ -687,7 +687,7 @@ func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
 func (state *BuildState) expandLabels(labels []BuildLabel, justTests bool) BuildLabels {
 	ret := BuildLabels{}
 	for _, label := range labels {
-		if label.IsAllTargets() || label.IsAllSubpackages() {
+		if label.IsAll() {
 			ret = append(ret, state.expandOriginalPseudoTarget(label, justTests)...)
 		} else {
 			ret = append(ret, label)
