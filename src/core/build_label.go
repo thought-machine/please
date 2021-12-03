@@ -280,9 +280,9 @@ func (label BuildLabel) IsAllTargets() bool {
 	return label.Name == "all"
 }
 
-// IsAll returns true if either the liable ends in ... or in all.
+// IsPseudoTarget returns true if either the liable ends in ... or in all.
 // It is useful to check if a liable potentially references more than one target.
-func (label BuildLabel) IsAll() bool {
+func (label BuildLabel) IsPseudoTarget() bool {
 	return label.IsAllSubpackages() || label.IsAllTargets()
 }
 
