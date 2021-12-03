@@ -1,0 +1,3 @@
+s = """
+multiline string containing "double quotes"
+"""

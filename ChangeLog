@@ -1,3 +1,29 @@
+Version 16.16.0
+--------------
+    * Added `plz query config` which can be used to retrieve what the value
+      a config field has from the variaous places Please loads `.plzconfig`
+      files #2190
+    * Fix test fields not appearing for `plz query print` when using `--fields`
+      #2200
+    * Fix missing signatures on darwin_arm64 release #2208
+
+
+Version 16.15.1
+--------------
+    * Preserve original quotes in multi-line strings #2184
+
+
+Version 16.15.0
+--------------
+    * Added `plz query reporoot` command #2173
+    * Fixed issue where named fields (e.g. srcs, and outputs) didn't appear
+      in `plz query print` #2174
+    * Add the subrepo name to labels in `plz query graph` #2168
+    * Add `--json` flag to `plz query print` to output the target in json format
+      #2176
+    * `cc_static_library()` now exposes headers to dependant targets #2179
+
+
 Version 16.14.0
 --------------
     * The `query revdeps` and `query somepath` subcommands now handle

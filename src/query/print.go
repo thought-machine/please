@@ -181,10 +181,9 @@ func (p *printer) PrintTarget() {
 
 // PrintFields prints a subset of fields of a build target.
 func (p *printer) PrintFields(fields []string) bool {
-	v := reflect.ValueOf(p.target).Elem()
 	for _, field := range fields {
-		f := p.findField(field)
-		if contents, shouldPrint := p.shouldPrintField(f, v.FieldByIndex(f.Index)); shouldPrint {
+		fieldStruct, fieldValue := p.findField(field)
+		if contents, shouldPrint := p.shouldPrintField(fieldStruct, fieldValue); shouldPrint {
 			if !strings.HasSuffix(contents, "\n") {
 				contents += "\n"
 			}
@@ -194,14 +193,14 @@ func (p *printer) PrintFields(fields []string) bool {
 	return p.error
 }
 
-// findField returns the field which would print with the given name.
+// findField returns the field (and value) which would print with the given name.
 // This isn't as simple as using reflect.Value.FieldByName since the print names
 // are different to the actual struct names.
-func (p *printer) findField(field string) reflect.StructField {
+func (p *printer) findField(field string) (reflect.StructField, reflect.Value) {
 	// There isn't a 1-1 mapping between the field and its structure. Internally, we use
 	// things like named vs unnamed structures which reflect the same field from the user
 	// perspective. The function below takes that into consideration.
-	findFieldStruct := func(value interface{}, fieldName string) (reflect.StructField, bool) {
+	innerFindField := func(value interface{}, fieldName string) (reflect.StructField, reflect.Value, bool) {
 		v := reflect.ValueOf(value).Elem()
 		t := v.Type()
 
@@ -209,28 +208,28 @@ func (p *printer) findField(field string) reflect.StructField {
 		for i := 0; i < v.NumField(); i++ {
 			if f := t.Field(i); p.fieldName(f) == fieldName {
 				if !v.Field(i).IsZero() {
-					return t.Field(i), true
+					return t.Field(i), v.Field(i), true
 				} else if resIndex == -1 {
 					resIndex = i
 				}
 			}
 		}
 		if resIndex >= 0 {
-			return t.Field(resIndex), true
+			return t.Field(resIndex), v.Field(resIndex), true
 		}
-		return reflect.StructField{}, false
+		return reflect.StructField{}, reflect.Value{}, false
 	}
 
-	if f, ok := findFieldStruct(p.target, field); ok {
-		return f
+	if fieldStruct, fieldValue, ok := innerFindField(p.target, field); ok {
+		return fieldStruct, fieldValue
 	} else if p.target.IsTest() {
-		if f, ok := findFieldStruct(p.target.Test, field); ok {
-			return f
+		if fieldStruct, fieldValue, ok := innerFindField(p.target.Test, field); ok {
+			return fieldStruct, fieldValue
 		}
 	}
 
 	log.Fatalf("Unknown field %s", field)
-	return reflect.StructField{}
+	return reflect.StructField{}, reflect.Value{}
 }
 
 // fieldName returns the name we'll use to print a field.

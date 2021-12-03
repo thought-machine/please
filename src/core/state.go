@@ -215,6 +215,9 @@ func (state *BuildState) ExcludedBuiltinRules() map[string]struct{} {
 		ret["c_rules.build_defs"] = struct{}{}
 		ret["cc_rules.build_defs"] = struct{}{}
 	}
+	if state.Config.FeatureFlags.ExcludeProtoRules {
+		ret["proto_rules.build_defs"] = struct{}{}
+	}
 	return ret
 }
 
@@ -1040,7 +1043,7 @@ func (state *BuildState) forConfig(config ...string) *BuildState {
 	// Duplicate & alter configuration
 	c := state.Config.copyConfig()
 	for _, filename := range config {
-		if err := readConfigFile(c, filename); err != nil {
+		if err := readConfigFile(c, filename, false); err != nil {
 			log.Fatalf("Failed to read config file %s: %s", filename, err)
 		}
 	}

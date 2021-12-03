@@ -137,6 +137,11 @@ func MustNewVersion(in string) *Version {
 	return v
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
+func (v Version) MarshalText() ([]byte, error) {
+	return []byte(v.String()), nil
+}
+
 // UnmarshalText implements the encoding.TextUnmarshaler interface
 func (v *Version) UnmarshalText(text []byte) error {
 	return v.UnmarshalFlag(string(text))
@@ -235,6 +240,11 @@ func (arch *Arch) String() string {
 	return arch.OS + "_" + arch.Arch
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
+func (arch Arch) MarshalText() ([]byte, error) {
+	return []byte(arch.String()), nil
+}
+
 // UnmarshalText implements the encoding.TextUnmarshaler interface
 func (arch *Arch) UnmarshalText(text []byte) error {
 	return arch.UnmarshalFlag(string(text))
@@ -292,3 +302,11 @@ func (arch *Arch) GoArch() string {
 	}
 	return arch.Arch
 }
+
+// ContainsString returns true if the given slice contains an individual string.
+func ContainsString(needle string, haystack []string) bool {
+	return cli.ContainsString(needle, haystack)
+}
+
+// StdinStrings is an alias to the cli-init package.
+type StdinStrings = cli.StdinStrings

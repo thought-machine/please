@@ -1,8 +1,5 @@
 package(default_visibility = ["PUBLIC"])
 
-# This is needed to break a circular dependency.
-package(jarcat_tool = "//:jarcat_unzip")
-
 go_toolchain(
     name = "toolchain",
     hashes = [
@@ -87,7 +84,7 @@ go_module(
         "...",
     ],
     module = "github.com/please-build/gcfg",
-    version = "v1.4.1",
+    version = "v1.6.0",
     deps = [
         ":warnings",
     ],
@@ -638,7 +635,7 @@ go_module(
     name = "cli-init",
     install = ["..."],
     module = "github.com/peterebden/go-cli-init/v5",
-    version = "v5.1.0",
+    version = "v5.2.0",
     deps = [
         ":go-flags",
         ":humanize",

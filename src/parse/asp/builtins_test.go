@@ -46,3 +46,11 @@ func TestGetLabels(t *testing.T) {
 	assert.Len(t, ls, 1)
 	assert.Equal(t, pyString("-pthread"), ls[0])
 }
+
+func TestTag(t *testing.T) {
+	res := tag(nil, []pyObject{pyString("name"), pyString("foo")})
+	assert.Equal(t, res.String(), "_name#foo")
+
+	res = tag(nil, []pyObject{res, pyString("bar")})
+	assert.Equal(t, res.String(), "_name#foo_bar")
+}
