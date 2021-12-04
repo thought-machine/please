@@ -13,11 +13,15 @@ if __name__ == '__main__':
     # If PEX_INTERPRETER is set, then it starts an interactive console.
     if os.environ.get('PEX_INTERPRETER', '0') != '0':
         import code
-        resutl = code.interact()
+        result = code.interact()
     # If PEX_PROFILE_FILENAME is set, then it collects profile information into the filename.
     elif os.environ.get('PEX_PROFILE_FILENAME'):
         with profile(os.environ['PEX_PROFILE_FILENAME'])():
             result = run()
+    # If PEX_EXPLODE_ONLY is set, then it only extracts the contents for access.
+    elif os.environ.get('PEX_EXPLODE_ONLY', '0') != '0':
+        with explode_zip()():
+            result = 0
     else:
         result = run()
 

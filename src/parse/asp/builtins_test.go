@@ -54,3 +54,23 @@ func TestTag(t *testing.T) {
 	res = tag(nil, []pyObject{res, pyString("bar")})
 	assert.Equal(t, res.String(), "_name#foo_bar")
 }
+
+func TestIsNotDebugLabel(t *testing.T) {
+	s := &scope{
+		pkg:    &core.Package{Name: "path/to/package"},
+		config: &pyConfig{},
+	}
+	assert.Equal(t, False, isDebugLabel(s, []pyObject{pyString("test")}))
+}
+
+func TestIsDebugLabel(t *testing.T) {
+	s := &scope{
+		pkg: &core.Package{Name: "path/to/package"},
+		config: &pyConfig{base: pyDict{
+			"DEBUG": pyDict{
+				"LABEL": pyString("//path/to/package:test"),
+			},
+		}},
+	}
+	assert.Equal(t, True, isDebugLabel(s, []pyObject{pyString("test")}))
+}

@@ -576,7 +576,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         srcs=_srcs,
         deps=deps,
         test_only=test_only,
-    )
+    ) if is_debug_label(name) else ("", None, None)
 
     return build_rule(
         name=name,
@@ -724,7 +724,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         srcs = srcs + [main_rule],
         deps = deps,
         test_only = True
-    )
+    ) if is_debug_label(name) else ("", None, None)
 
     return build_rule(
         name = name,
@@ -1701,9 +1701,6 @@ def _get_ldflags_and_pkgconfig(name):
 
 # `dlv` is currently the only debugger supported.
 def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], deps:list=[], test_only:bool=False):
-    if not CONFIG.get("DEBUG"):
-        return "", None, None
-
     # Delve command.
     cmd = f"$DEBUG_TOOLS_DLV exec {bin}"
     tools = {
@@ -1718,7 +1715,7 @@ def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], de
     cmd = f"{cmd} -- {flags}"
 
     # Make sources available to the debugger.
-    debug_srcs_tar = f"_{name}_debug_srcs.tar"
+    debug_srcs_tar = f".{name}_debug_srcs.tar"
     data = [
         build_rule(
             name = name,

@@ -148,11 +148,10 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         test_only=test_only,
     )
 
-    debug_cmd, debugger = _debug_cmd("./$OUT")
+    debug_cmd, debugger = _debug_cmd("./$OUT") if is_debug_label(name) else ("", "")
     if debug_cmd:
-        if debugger == "debugpy":
-            cmd = cmd.replace(' --zip_safe', '')
-        cmd = f"{cmd} -d={debugger}"
+        # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
+        cmd = f'{cmd} -d={debugger}'.replace(' --zip_safe', '')
 
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
     pex_rule = build_rule(
@@ -253,11 +252,10 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     if site:
         cmd += ' -S'
 
-    debug_cmd, debugger = _debug_cmd("./$TEST", flags)
+    debug_cmd, debugger = _debug_cmd("./$TEST", flags) if is_debug_label(name) else ("", "")
     if debug_cmd:
-        if debugger == "debugpy":
-            cmd = cmd.replace(' --zip_safe', '')
-        cmd = f"{cmd} -d={debugger}"
+        # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
+        cmd = f'{cmd} -d={debugger}'.replace(' --zip_safe', '')
 
     # If the config specifies a PYTHON_TEST_RUNNER_BOOTSTRAP target, then this ought to contain
     # the test-runner library (e.g. pytest), and its transitive dependencies. In this case, we just
@@ -642,9 +640,6 @@ def _add_licences(name, output):
 
 # `pdb` and `debugpy` are the current debuggers supported by the pex tool.
 def _debug_cmd(bin:str, flags:str=''):
-    if not CONFIG.get("DEBUG"):
-        return "", ""
-
     debugger = CONFIG.DEBUG.DEBUGGER or "pdb"
     port = CONFIG.DEBUG.PORT
 

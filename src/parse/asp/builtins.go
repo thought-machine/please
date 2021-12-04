@@ -63,6 +63,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
 	setNativeCode(s, "breakpoint", breakpoint)
+	setNativeCode(s, "is_debug_label", isDebugLabel)
 	setNativeCode(s, "is_semver", isSemver)
 	setNativeCode(s, "semver_check", semverCheck)
 	stringMethods = map[string]*pyFunc{
@@ -1090,6 +1091,23 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 	}
 	fmt.Printf("Debugger exited, continuing...\n")
 	return None
+}
+
+// Checks whether a rule's name within a given package matches the label passed to the
+// plz debug command. This is used to modify the build definition logic for that specific
+// label to make it debuggable.
+func isDebugLabel(s *scope, args []pyObject) pyObject {
+	debugConfig := s.config.Get("DEBUG", None)
+	if debugConfig == None {
+		return False
+	}
+
+	name := string(args[0].(pyString))
+	debugLabel := string(debugConfig.Property("LABEL").(pyString))
+	if core.NewBuildLabel(s.pkg.Name, name) == core.ParseBuildLabel(debugLabel, "") {
+		return True
+	}
+	return False
 }
 
 func isSemver(s *scope, args []pyObject) pyObject {

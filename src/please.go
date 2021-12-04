@@ -169,9 +169,10 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Debug struct {
-		Debugger string `short:"d" long:"debugger" description:"Name of supported debugger"`
-		Port     int    `short:"p" long:"port" description:"Debugging server listen port"`
-		Args     struct {
+		Debugger  string `short:"d" long:"debugger" description:"Name of supported debugger"`
+		Port      int    `short:"p" long:"port" description:"Debugging server listen port"`
+		BuildOnly bool   `long:"build_only" description:"Only builds the artifacts skipping the debug session."`
+		Args      struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target"`
 		} `positional-args:"true"`
@@ -499,7 +500,10 @@ var buildFunctions = map[string]func() int{
 			return toExitCode(success, state)
 		}
 
-		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Port != 0, opts.Debug.Args.Args)
+		if !opts.Debug.BuildOnly {
+			return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Port != 0, opts.Debug.Args.Args)
+		}
+		return 0
 	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
@@ -1058,6 +1062,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		state.Debug = &core.Debug{
 			Debugger: opts.Debug.Debugger,
 			Port:     opts.Debug.Port,
+			Label:    opts.Debug.Args.Target,
 		}
 	}
 

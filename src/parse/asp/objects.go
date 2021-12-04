@@ -941,6 +941,7 @@ func newConfig(state *core.BuildState) *pyConfig {
 		c["DEBUG"] = pyDict{
 			"DEBUGGER": pyString(debug.Debugger),
 			"PORT":     pyInt(debug.Port),
+			"LABEL":    pyString(debug.Label.String()),
 		}
 	}
 

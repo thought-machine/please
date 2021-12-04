@@ -53,6 +53,7 @@ type Task struct {
 type Debug struct {
 	Debugger string
 	Port     int
+	Label    BuildLabel
 }
 
 // A Parser is the interface to reading and interacting with BUILD files.
