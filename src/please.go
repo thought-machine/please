@@ -1061,7 +1061,8 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		}
 	}
 
-	if state.DebugFailingTests && len(targets) != 1 {
+	// Only one target that is _not_ named "all" or "..." is allowed with debug test.
+	if state.DebugFailingTests && (len(targets) != 1 || (len(targets) == 1 && (targets[0].IsPseudoTarget()))) {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
 
@@ -1093,8 +1094,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	core.CheckXattrsSupported(state)
 
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
-		(len(targets) == 1 && !targets[0].IsAllTargets() &&
-			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
+		(len(targets) == 1 && !targets[0].IsPseudoTarget() && targets[0] != core.BuildLabelStdin))
 	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
 	shell := opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
 	shellRun := opts.Build.Shell == "run" || opts.Test.Shell == "run" || opts.Cover.Shell == "run"

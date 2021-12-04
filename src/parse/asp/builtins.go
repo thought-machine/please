@@ -319,7 +319,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		// This is a subinclude in the same package, check the target exists.
 		s.NAssert(s.contextPkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
-	s.NAssert(l.IsAllTargets() || l.IsAllSubpackages(), "Can't pass :all or /... to subinclude()")
+	s.NAssert(l.IsPseudoTarget(), "Can't pass :all or /... to subinclude()")
 
 	// If we're including from a subrepo, or if we're in a subrepo and including from a different subrepo, make sure
 	// that package is parsed to avoid locking. Locks can occur when the target's package also subincludes that target.
