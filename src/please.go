@@ -169,10 +169,8 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Debug struct {
-		Debugger  string `short:"d" long:"debugger" description:"Name of supported debugger"`
-		Port      int    `short:"p" long:"port" description:"Debugging server listen port"`
-		BuildOnly bool   `long:"build_only" description:"Only builds the artifacts skipping the debug session."`
-		Args      struct {
+		Port int `short:"p" long:"port" description:"Debugging server port"`
+		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target"`
 		} `positional-args:"true"`
@@ -500,10 +498,7 @@ var buildFunctions = map[string]func() int{
 			return toExitCode(success, state)
 		}
 
-		if !opts.Debug.BuildOnly {
-			return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Port != 0, opts.Debug.Args.Args)
-		}
-		return 0
+		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Port != 0, opts.Debug.Args.Args)
 	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
@@ -1050,6 +1045,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
 	state.ForceRerun = opts.Test.Rerun || opts.Cover.Rerun
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
+	state.DebugPort = opts.Debug.Port
 	state.DebugFailingTests = debugFailingTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
@@ -1057,13 +1053,6 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if opts.BuildFlags.Arch.OS != "" {
 		state.TargetArch = opts.BuildFlags.Arch
-	}
-	if debug {
-		state.Debug = &core.Debug{
-			Debugger: opts.Debug.Debugger,
-			Port:     opts.Debug.Port,
-			Label:    opts.Debug.Args.Target,
-		}
 	}
 
 	// Only one target that is _not_ named "all" or "..." is allowed with debug test.

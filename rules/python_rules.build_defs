@@ -104,7 +104,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     metadata for it and concatenates them all together.
 
     This target can be debugged via:
-        plz debug [--debugger=[pdb|debugpy]] [--port] //:target
+        plz debug [-o python.debugger:[pdb|debugpy]] [--port] //:target
 
     Args:
       name (str): Name of the rule.
@@ -136,6 +136,10 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     if site:
         cmd += ' -S'
 
+    if CONFIG.BUILD_CONFIG == 'dbg':
+        # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
+        cmd = f'{cmd} -d={CONFIG.PYTHON_DEBUGGER}'.replace(' --zip_safe', '')
+
     assert main not in srcs, "main file should not be included in srcs"
 
     lib_rule = python_library(
@@ -147,11 +151,6 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         visibility=visibility,
         test_only=test_only,
     )
-
-    debug_cmd, debugger = _debug_cmd("./$OUT") if is_debug_label(name) else ("", "")
-    if debug_cmd:
-        # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
-        cmd = f'{cmd} -d={debugger}'.replace(' --zip_safe', '')
 
     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
     pex_rule = build_rule(
@@ -171,10 +170,13 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         },
         test_only=test_only,
     )
+
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
     if strip:
         cmd += ' --strip_py'
+    debug_cmd = _debug_cmd("./$OUT")
+
     return build_rule(
         name=name,
         srcs=[pex_rule],
@@ -215,7 +217,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     package property or python.testrunner in the config.
 
     This target can be debugged via:
-        plz debug [--debugger=[pdb|debugpy]] [--port] //:target
+        plz debug [-o python.debugger:[pdb|debugpy]] [--port] //:target
 
     Args:
       name (str): Name of the rule.
@@ -252,10 +254,9 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     if site:
         cmd += ' -S'
 
-    debug_cmd, debugger = _debug_cmd("./$TEST", flags) if is_debug_label(name) else ("", "")
-    if debug_cmd:
+    if CONFIG.BUILD_CONFIG == 'dbg':
         # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
-        cmd = f'{cmd} -d={debugger}'.replace(' --zip_safe', '')
+        cmd = f'{cmd} -d={CONFIG.PYTHON_DEBUGGER}'.replace(' --zip_safe', '')
 
     # If the config specifies a PYTHON_TEST_RUNNER_BOOTSTRAP target, then this ought to contain
     # the test-runner library (e.g. pytest), and its transitive dependencies. In this case, we just
@@ -304,6 +305,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     deps = [pex_rule, lib_rule]
 
     test_cmd = f'$TEST {flags}'
+    debug_cmd = _debug_cmd("./$TEST", flags)
     if worker:
         worker_cmd = f'$(worker {worker})'
         test_cmd = f'{worker_cmd} && {test_cmd} '
@@ -640,18 +642,8 @@ def _add_licences(name, output):
 
 # `pdb` and `debugpy` are the current debuggers supported by the pex tool.
 def _debug_cmd(bin:str, flags:str=''):
-    debugger = CONFIG.DEBUG.DEBUGGER or "pdb"
-    port = CONFIG.DEBUG.PORT
-
-    if debugger == "pdb" and port:
-        fail("The 'pdb' debugger can't be used in server mode")
-    elif debugger == "debugpy" and not port:
-        fail("The 'debugpy' debugger works in server mode only. The --port flag must be provided")
-
     # `DEBUG_PORT` is read by the pex generated for debuggers that support server mode.
-    cmd = f"{bin} {flags}" if not port else f"DEBUG_PORT={port} {bin} {flags}"
-
-    return cmd, debugger
+    return f"{bin} {flags}" if not CONFIG.DEBUG_PORT else f"DEBUG_PORT={CONFIG.DEBUG_PORT} {bin} {flags}"
 
 
 if CONFIG.BAZEL_COMPATIBILITY:

@@ -263,19 +263,14 @@ def licenses(licences):
     assert CONFIG.BAZEL_COMPATIBILITY, 'licenses() can only be called in Bazel compat mode'
     package(default_licences = licences)
 
+
 def json(value) -> str:
     """Returns a JSON-formatted representation of a plz value"""
     pass
 
+
 def breakpoint():
     """Breaks into an interactive debugging session."""
-    pass
-
-def is_debug_label(name:str) -> bool:
-    """Checks whether a rule's name within a given package matches the label passed to the
-    plz debug command. This is used to modify the build definition logic for that specific
-    label to make it debuggable.
-    """
     pass
 
 def is_semver(s:str) -> bool:
