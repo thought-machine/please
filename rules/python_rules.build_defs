@@ -175,6 +175,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
     if strip:
         cmd += ' --strip_py'
+
     debug_cmd = _debug_cmd("./$OUT")
 
     return build_rule(
@@ -305,12 +306,16 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     deps = [pex_rule, lib_rule]
 
     test_cmd = f'$TEST {flags}'
-    debug_cmd = _debug_cmd("./$TEST", flags)
-    if worker:
-        worker_cmd = f'$(worker {worker})'
+    worker_cmd = f'$(worker {worker})' if worker else ""
+    if worker_cmd:
         test_cmd = f'{worker_cmd} && {test_cmd} '
-        debug_cmd = f'{worker_cmd} && {debug_cmd}'
         deps += [worker]
+
+    debug_cmd = _debug_cmd(
+        bin = "./$TEST",
+        flags = flags,
+        pre_cmd = worker_cmd,
+    )
 
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     return build_rule(
@@ -640,10 +645,18 @@ def _add_licences(name, output):
         log.warning('No licence found for %s, should add licences = [...] to the rule', name.lstrip('_').split('#')[0])
 
 
-# `pdb` and `debugpy` are the current debuggers supported by the pex tool.
-def _debug_cmd(bin:str, flags:str=''):
-    # `DEBUG_PORT` is read by the pex generated for debuggers that support server mode.
-    return f"{bin} {flags}" if not CONFIG.DEBUG_PORT else f"DEBUG_PORT={CONFIG.DEBUG_PORT} {bin} {flags}"
+# `pdb` and `debugpy` are the current debuggers supported by the PEX tool.
+def _debug_cmd(bin:str, flags:str='', pre_cmd:str=''):
+    if CONFIG.BUILD_CONFIG != 'dbg':
+        return ""
+
+    # `DEBUG_PORT` is read by the PEX generated for debuggers that support server mode.
+    cmd = f"{bin} {flags}" if not CONFIG.DEBUG_PORT else f"DEBUG_PORT={CONFIG.DEBUG_PORT} {bin} {flags}"
+
+    if pre_cmd:
+        cmd = f"{pre_cmd} && {cmd}"
+
+    return cmd
 
 
 if CONFIG.BAZEL_COMPATIBILITY:
