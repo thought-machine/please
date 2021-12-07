@@ -1,5 +1,5 @@
-def run():
-    if not ZIP_SAFE:
+def run(explode=False):
+    if explode or not ZIP_SAFE:
         with explode_zip()():
             add_module_dir_to_sys_path(MODULE_DIR)
             return main()
@@ -10,6 +10,9 @@ def run():
 
 
 if __name__ == '__main__':
+    # If PEX_EXPLODE is set, then it should always be exploded.
+    explode = os.environ.get('PEX_EXPLODE', '0') != '0'
+
     # If PEX_INTERPRETER is set, then it starts an interactive console.
     if os.environ.get('PEX_INTERPRETER', '0') != '0':
         import code
@@ -17,12 +20,8 @@ if __name__ == '__main__':
     # If PEX_PROFILE_FILENAME is set, then it collects profile information into the filename.
     elif os.environ.get('PEX_PROFILE_FILENAME'):
         with profile(os.environ['PEX_PROFILE_FILENAME'])():
-            result = run()
-    # If PEX_EXPLODE_ONLY is set, then it only extracts the contents for access.
-    elif os.environ.get('PEX_EXPLODE_ONLY', '0') != '0':
-        with explode_zip()():
-            result = 0
+            result = run(explode)
     else:
-        result = run()
+        result = run(explode)
 
     sys.exit(result)
