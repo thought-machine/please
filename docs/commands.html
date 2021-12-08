@@ -660,10 +660,11 @@
   <h2 id="exec" class="title-2">plz exec</h2>
 
   <p>
-    This command is similar to <code class="code">plz run</code>, but defaults
-    to executing the binary target result in a sandboxed environment if that's
-    the environment where it was built on. This is desirable in situations where
-    the execution side-effects shouldn't propagate to the host system.
+    This command executes the target in a hermetic build environment, as opposed
+    to the <code class="code">plz run</code> command. This allows for uses cases,
+    such as: debugging/profiling programs that may require a predictable environment,
+    or running E2E tests reliant on external state which doesn't fit with Please's
+    caching approach.
   </p>
 
   <p>
