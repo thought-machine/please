@@ -304,7 +304,10 @@ func DefaultConfiguration() *Configuration {
 	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.NumOldVersions = 10
 	config.Please.NumThreads = runtime.NumCPU() + 2
-	config.Please.PluginRepositories = []string{"https://github.com/{owner}/{plugin}/archive/{revision}.zip"}
+	config.Please.PluginRepo = []string{
+		"https://github.com/{owner}/{plugin}/archive/{revision}.zip",
+		"https://github.com/{owner}/{plugin}-rules/archive/{revision}.zip",
+	}
 	config.Parse.NumThreads = config.Please.NumThreads
 	config.Parse.GitFunctions = true
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
@@ -399,18 +402,18 @@ func DefaultConfiguration() *Configuration {
 // This is parsed from .plzconfig etc; we also auto-generate help messages from its tags.
 type Configuration struct {
 	Please struct {
-		Version            cli.Version `help:"Defines the version of plz that this repo is supposed to use currently. If it's not present or the version matches the currently running version no special action is taken; otherwise if SelfUpdate is set Please will attempt to download an appropriate version, otherwise it will issue a warning and continue.\n\nNote that if this is not set, you can run plz update to update to the latest version available on the server." var:"PLZ_VERSION"`
-		ToolsURL           cli.URL     `help:"The URL download the Please tools from. Defaults to download the tools from the current Please versions github releases page."`
-		VersionChecksum    []string    `help:"Defines a hex-encoded sha256 checksum that the downloaded version must match. Can be specified multiple times to support different architectures." example:"abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"`
-		Location           string      `help:"Defines the directory Please is installed into.\nDefaults to ~/.please but you might want it to be somewhere else if you're installing via another method (e.g. the debs and install script still use /opt/please)."`
-		SelfUpdate         bool        `help:"Sets whether plz will attempt to update itself when the version set in the config file is different."`
-		DownloadLocation   cli.URL     `help:"Defines the location to download Please from when self-updating. Defaults to the Please web server, but you can point it to some location of your own if you prefer to keep traffic within your network or use home-grown versions."`
-		NumOldVersions     int         `help:"Number of old versions to keep from autoupdates."`
-		Autoclean          bool        `help:"Automatically clean stale versions without prompting"`
-		NumThreads         int         `help:"Number of parallel build operations to run.\nIs overridden by the equivalent command-line flag, if that's passed." example:"6"`
-		Motd               []string    `help:"Message of the day; is displayed once at the top during builds. If multiple are given, one is randomly chosen."`
-		DefaultRepo        string      `help:"Location of the default repository; this is used if plz is invoked when not inside a repo, it changes to that directory then does its thing."`
-		PluginRepositories []string    `help:"A list of template URLS used to download plugins from. The download should be an archive e.g. .tar.gz, or .zip. Templatized variables should be surrounded in curly braces, and the available options are: owner, revision and plugin. Defaults to github and gitlab." example:"https://gitlab.you.org/{owner}/{plugin}/-/archive/{revision}/{plugin}-{revision}.zip" var:"PLUGIN_REPOS"`
+		Version          cli.Version `help:"Defines the version of plz that this repo is supposed to use currently. If it's not present or the version matches the currently running version no special action is taken; otherwise if SelfUpdate is set Please will attempt to download an appropriate version, otherwise it will issue a warning and continue.\n\nNote that if this is not set, you can run plz update to update to the latest version available on the server." var:"PLZ_VERSION"`
+		ToolsURL         cli.URL     `help:"The URL download the Please tools from. Defaults to download the tools from the current Please versions github releases page."`
+		VersionChecksum  []string    `help:"Defines a hex-encoded sha256 checksum that the downloaded version must match. Can be specified multiple times to support different architectures." example:"abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"`
+		Location         string      `help:"Defines the directory Please is installed into.\nDefaults to ~/.please but you might want it to be somewhere else if you're installing via another method (e.g. the debs and install script still use /opt/please)."`
+		SelfUpdate       bool        `help:"Sets whether plz will attempt to update itself when the version set in the config file is different."`
+		DownloadLocation cli.URL     `help:"Defines the location to download Please from when self-updating. Defaults to the Please web server, but you can point it to some location of your own if you prefer to keep traffic within your network or use home-grown versions."`
+		NumOldVersions   int         `help:"Number of old versions to keep from autoupdates."`
+		Autoclean        bool        `help:"Automatically clean stale versions without prompting"`
+		NumThreads       int         `help:"Number of parallel build operations to run.\nIs overridden by the equivalent command-line flag, if that's passed." example:"6"`
+		Motd             []string    `help:"Message of the day; is displayed once at the top during builds. If multiple are given, one is randomly chosen."`
+		DefaultRepo      string      `help:"Location of the default repository; this is used if plz is invoked when not inside a repo, it changes to that directory then does its thing."`
+		PluginRepo       []string    `help:"A list of template URLS used to download plugins from. The download should be an archive e.g. .tar.gz, or .zip. Templatized variables should be surrounded in curly braces, and the available options are: owner, revision and plugin. Defaults to github and gitlab." example:"https://gitlab.you.org/{owner}/{plugin}/-/archive/{revision}/{plugin}-{revision}.zip" var:"PLUGIN_REPOS"`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Parse struct {
 		ExperimentalDir    []string `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
