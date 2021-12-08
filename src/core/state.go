@@ -1019,7 +1019,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// Copy with the architecture-specific config file.
 	// This is slightly wrong in that other things (e.g. user-specified command line overrides) should
 	// in fact take priority over this, but that's a lot more fiddly to get right.
-	s := state.forConfig(".plzconfig_" + arch.String())
+	s := state.forConfig(state.Config.copyConfig(), ".plzconfig_" + arch.String())
 	s.Arch = arch
 	return s
 }
@@ -1037,19 +1037,19 @@ func (state *BuildState) findArch(arch cli.Arch) *BuildState {
 }
 
 // forConfig creates a copy of this BuildState based on the given config files.
-func (state *BuildState) forConfig(config ...string) *BuildState {
+func (state *BuildState) forConfig(config *Configuration, configFiles ...string) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	// Duplicate & alter configuration
-	c := state.Config.copyConfig()
-	for _, filename := range config {
-		if err := readConfigFile(c, filename, false); err != nil {
+
+	for _, filename := range configFiles {
+		if err := readConfigFile(config, filename, false); err != nil {
 			log.Fatalf("Failed to read config file %s: %s", filename, err)
 		}
 	}
 	s := &BuildState{}
 	*s = *state
-	s.Config = c
+	s.Config = config
 	state.progress.allStates = append(state.progress.allStates, s)
 	return s
 }
@@ -1061,8 +1061,18 @@ func (state *BuildState) ForSubrepo(name string, config ...string) *BuildState {
 			return s
 		}
 	}
-	s := state.forConfig(config...)
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
+
+	c, err := ReadConfigFiles(config, nil)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	s := &BuildState{}
+	*s = *state
+	s.Config = c
 	s.CurrentSubrepo = name
+	state.progress.allStates = append(state.progress.allStates, s)
 	return s
 }
 

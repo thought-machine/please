@@ -944,31 +944,46 @@ func newConfig(state *core.BuildState) *pyConfig {
 		}
 	}
 
-	loadPluginConfig(state.Config, state, c)
+	loadPluginConfig(state, state, c)
 
 	return &pyConfig{base: c}
 }
 
-func loadPluginConfig(subrepoConfig *core.Configuration, packageState *core.BuildState, c pyDict) {
-	pluginName := subrepoConfig.PluginDefinition.Name
+func resolveSelf(values []string, subrepo string) []string {
+	pkg := &core.Package{SubrepoName: subrepo}
+	ret := make([]string, len(values))
+	for i, v := range values {
+		if core.LooksLikeABuildLabel(v) {
+			v = core.ParseBuildLabelContext(v, pkg).String()
+		}
+		ret[i] = v
+	}
+	return ret
+}
+
+func loadPluginConfig(subrepoState *core.BuildState, pkgState *core.BuildState, c pyDict) {
+	pluginName := subrepoState.Config.PluginDefinition.Name
 	if pluginName == "" {
-		return
+		return // Subrepo is not a plugin. Stop here.
 	}
 
 	extraVals := map[string][]string{}
-	if config := packageState.Config.Plugin[pluginName]; config != nil {
+	if config := pkgState.Config.Plugin[pluginName]; config != nil {
 		extraVals = config.ExtraValues
 	}
 
 	pluginNamespace := pyDict{}
-	contextPackage := &core.Package{SubrepoName: packageState.CurrentSubrepo}
-	configValueDefinitions := subrepoConfig.PluginConfig
+	configValueDefinitions := subrepoState.Config.PluginConfig
 	for key, definition := range configValueDefinitions {
 		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, definition.ConfigKey)
 		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
 		if !ok {
-			value = definition.DefaultValue
+			// The default values are defined in the subrepo so should be parsed in that context
+			value = resolveSelf(definition.DefaultValue, subrepoState.CurrentSubrepo)
+		} else {
+			value = resolveSelf(value, pkgState.CurrentSubrepo)
 		}
+
 		if len(value) == 0 && !definition.Optional {
 			log.Fatalf("plugin config %s is not optional %v", fullConfigKey, extraVals)
 		}
@@ -977,13 +992,6 @@ func loadPluginConfig(subrepoConfig *core.Configuration, packageState *core.Buil
 			log.Fatalf("plugin config %v is not repeatable", fullConfigKey)
 		}
 
-		// Parse any config values in the current subrepo so @self resolves correctly. If we leave them, @self will
-		// resolve based on the subincluding package which will likely be the host repo.
-		for i, v := range value {
-			if core.LooksLikeABuildLabel(v) {
-				value[i] = core.ParseBuildLabelContext(v, contextPackage).String()
-			}
-		}
 		if definition.Repeatable {
 			l := make(pyList, 0, len(value))
 			for _, v := range value {
