@@ -39,20 +39,16 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
     lang_plugins = sorted(languages.items())
     plugins = [plugin for _, plugin in lang_plugins]
 
-    # TODO(jpoole): Move this to a language["label_generator"](srcs) lambda in v17
+    # TODO(jpoole): Remove this once we drop support for the old unified grpc+proto plugin. We should be able to set
+    #   `option go_package = ...; on the proto and rely on import configs after that.
     if 'go' in languages:
-        import_path = get_base_path()
-        pkg_dir = import_path
-
-        if root_dir:
-            import_path = import_path.removeprefix(root_dir + "/")
-            pkg_dir = pkg_dir.removeprefix(root_dir + "/")
-
+        base_path = get_base_path()
+        diff_pkg = basename(base_path) != name
         if CONFIG.GO_IMPORT_PATH:
-            import_path = join_path(CONFIG.GO_IMPORT_PATH, import_path)
-
-        labels += [f'proto:go-map: {pkg_dir}/{src}={import_path}' for src in srcs
-                   if not src.startswith(':') and not src.startswith('/')]
+            base_path = join_path(CONFIG.GO_IMPORT_PATH, base_path)
+        labels += [f'proto:go-map: {base_path}/{src}={base_path}/{name}' for src in srcs
+                   if not src.startswith(':') and not src.startswith('/') and
+                   (src != (name + '.proto') or len(srcs) > 1 or diff_pkg)]
 
     # Plugins can declare their own pre-build functions. If there are any, we need to apply them all in sequence.
     pre_build_functions = [plugin['pre_build'] for plugin in plugins if plugin['pre_build']]
@@ -404,9 +400,6 @@ def _protoc_rule(name, srcs, deps, language, plugin, protoc_flags, root_dir, pre
             tools[tool_name] = tool
     else:
         tools[language] = plugin_tools
-
-
-
 
     flags = [' '.join(plugin['protoc_flags'])] + CONFIG.PROTOC_FLAGS
 
