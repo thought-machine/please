@@ -447,6 +447,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
         building_description = 'Fetching...',
         tools = tools,
         sandbox = False,
+        labels = ["dlink:plz-out/python/venv"]
     )
 
     # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
@@ -598,7 +599,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         visibility = visibility,
         licences = licences,
         test_only = test_only,
-        labels = [label],
+        labels = [label] + ["link:plz-out/python/venv"],
         provides = {'py': wheel_rule},
     )
 
