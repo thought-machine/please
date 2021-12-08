@@ -48,7 +48,7 @@ func (s *Subrepo) Dir(dir string) string {
 // it's not done up front.
 func (s *Subrepo) LoadSubrepoConfig() (err error) {
 	s.loadConfig.Do(func() {
-		err = readConfigFile(s.State.Config, filepath.Join(s.Root, ".plzconfig"))
+		err = readConfigFile(s.State.Config, filepath.Join(s.Root, ".plzconfig"), true)
 	})
 	return
 }

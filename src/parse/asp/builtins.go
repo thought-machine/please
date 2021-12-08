@@ -30,6 +30,7 @@ func registerBuiltins(s *scope) {
 	const varargs = true
 	const kwargs = true
 	setNativeCode(s, "build_rule", buildRule)
+	setNativeCode(s, "tag", tag)
 	setNativeCode(s, "subrepo", subrepo)
 	setNativeCode(s, "fail", builtinFail)
 	setNativeCode(s, "subinclude", subinclude, varargs)
@@ -236,6 +237,13 @@ func pkg(s *scope, args []pyObject) pyObject {
 	return None
 }
 
+func tag(s *scope, args []pyObject) pyObject {
+	name := args[0].String()
+	tag := args[1].String()
+
+	return pyString(tagName(name, tag))
+}
+
 // tagName applies the given tag to a target name.
 func tagName(name, tag string) string {
 	if name[0] != '_' {
@@ -311,7 +319,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		// This is a subinclude in the same package, check the target exists.
 		s.NAssert(s.contextPkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
-	s.NAssert(l.IsAllTargets() || l.IsAllSubpackages(), "Can't pass :all or /... to subinclude()")
+	s.NAssert(l.IsPseudoTarget(), "Can't pass :all or /... to subinclude()")
 
 	// If we're including from a subrepo, or if we're in a subrepo and including from a different subrepo, make sure
 	// that package is parsed to avoid locking. Locks can occur when the target's package also subincludes that target.
