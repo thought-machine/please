@@ -950,11 +950,15 @@ func newConfig(state *core.BuildState) *pyConfig {
 }
 
 func resolveSelf(values []string, subrepo string) []string {
-	pkg := &core.Package{SubrepoName: subrepo}
 	ret := make([]string, len(values))
 	for i, v := range values {
 		if core.LooksLikeABuildLabel(v) {
-			v = core.ParseBuildLabelContext(v, pkg).String()
+			l := core.ParseBuildLabel(v, "")
+			if l.Subrepo == "self" {
+				l.Subrepo = subrepo
+			}
+			// Force the full build label including empty subrepo so this is portable
+			v = fmt.Sprintf("///%v//%v:%v", l.Subrepo, l.PackageName, l.Name)
 		}
 		ret[i] = v
 	}

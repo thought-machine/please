@@ -987,11 +987,22 @@ func selectTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	return subincludeTarget(s, l)
 }
 
+const (
+	NameSubrepoArgIdx = iota
+	DepSubrepoArgIdx
+	PathSubrepoArgIdx
+	ConfigSubrepoArgIdx
+	BazelCompatSubrepoArgIdx
+	ArchSubrepoArgIdx
+	InheritConfigSubrepoArgIdx
+)
+
 // subrepo implements the subrepo() builtin that adds a new repository.
 func subrepo(s *scope, args []pyObject) pyObject {
 	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this context")
-	name := string(args[0].(pyString))
-	dep := string(args[1].(pyString))
+	name := string(args[NameSubrepoArgIdx].(pyString))
+	dep := string(args[DepSubrepoArgIdx].(pyString))
+	inheritHostConfig := args[InheritConfigSubrepoArgIdx].IsTruthy()
 	var target *core.BuildTarget
 	root := name
 	if dep != "" {
@@ -1003,24 +1014,24 @@ func subrepo(s *scope, args []pyObject) pyObject {
 			// TODO(jpoole): perhaps this should be a fatal error?
 			root = path.Join(target.OutDir(), name)
 		}
-	} else if args[2] != None {
-		root = string(args[2].(pyString))
+	} else if args[PathSubrepoArgIdx] != None {
+		root = string(args[PathSubrepoArgIdx].(pyString))
 	}
 	var state *core.BuildState
-	if args[3] != None { // arg 3 is the config file to load
-		state = s.state.ForSubrepo(name, path.Join(s.pkg.Name, string(args[3].(pyString))))
-	} else if args[4].IsTruthy() { // arg 4 is bazel_compat
-		state = s.state.ForSubrepo(name)
+	if args[ConfigSubrepoArgIdx] != None {
+		state = s.state.ForSubrepo(name, inheritHostConfig, path.Join(s.pkg.Name, string(args[ConfigSubrepoArgIdx].(pyString))))
+	} else if args[BazelCompatSubrepoArgIdx].IsTruthy() {
+		state = s.state.ForSubrepo(name, inheritHostConfig)
 		state.Config.Bazel.Compatibility = true
 		state.Config.Parse.BuildFileName = append(state.Config.Parse.BuildFileName, "BUILD.bazel")
 	} else {
-		state = s.state.ForSubrepo(name)
+		state = s.state.ForSubrepo(name, inheritHostConfig)
 	}
 
 	isCrossCompile := s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile
 	arch := cli.HostArch()
-	if args[5] != None { // arg 5 is arch-string, for arch-subrepos.
-		givenArch := string(args[5].(pyString))
+	if args[ArchSubrepoArgIdx] != None { // arg 5 is arch-string, for arch-subrepos.
+		givenArch := string(args[ArchSubrepoArgIdx].(pyString))
 		if err := arch.UnmarshalFlag(givenArch); err != nil {
 			log.Fatalf("Could not interpret architecture '%s' for subrepo '%s'", givenArch, name)
 		}
