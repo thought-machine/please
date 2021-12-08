@@ -13,7 +13,7 @@ import (
 
 var log = logging.MustGetLogger("debug")
 
-func Debug(state *core.BuildState, label core.BuildLabel, port bool, args []string) int {
+func Debug(state *core.BuildState, label core.BuildLabel, args []string) int {
 	target := state.Graph.TargetOrDie(label)
 	if len(target.Debug.Command) == 0 {
 		log.Fatalf("The build definition used by %s doesn't appear to support debugging yet", target.Label)
@@ -33,7 +33,7 @@ func Debug(state *core.BuildState, label core.BuildLabel, port bool, args []stri
 
 	// The value of `port` takes priority in deciding whether the network namespace should
 	// be shared or not, otherwise clients (i.e. IDEs) might not be able to connect to the debugger.
-	shareNetwork := port || !sandbox
+	shareNetwork := state.DebugPort != 0 || !sandbox
 
-	return exec.Exec(state, label, dir, env, cmd, !port, process.NewSandboxConfig(!shareNetwork, sandbox))
+	return exec.Exec(state, label, dir, env, cmd, state.DebugPort == 0, process.NewSandboxConfig(!shareNetwork, sandbox))
 }

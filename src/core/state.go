@@ -49,12 +49,6 @@ type Task struct {
 	Run   uint32 // Only present for tests (the run of a build is always zero)
 }
 
-// Debug is the type for debugging a target
-type Debug struct {
-	Debugger string
-	Port     int
-}
-
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
@@ -183,8 +177,8 @@ type BuildState struct {
 	ShowTestOutput bool
 	// True to print all output of all tasks to stderr.
 	ShowAllOutput bool
-	// Set when a debugging session against a target is requested.
-	Debug *Debug
+	// Port specified when debugging a target in server mode.
+	DebugPort int
 	// True to attach a debugger on test failure.
 	DebugFailingTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
@@ -687,7 +681,7 @@ func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
 func (state *BuildState) expandLabels(labels []BuildLabel, justTests bool) BuildLabels {
 	ret := BuildLabels{}
 	for _, label := range labels {
-		if label.IsAllTargets() || label.IsAllSubpackages() {
+		if label.IsPseudoTarget() {
 			ret = append(ret, state.expandOriginalPseudoTarget(label, justTests)...)
 		} else {
 			ret = append(ret, label)
@@ -1043,7 +1037,7 @@ func (state *BuildState) forConfig(config ...string) *BuildState {
 	// Duplicate & alter configuration
 	c := state.Config.copyConfig()
 	for _, filename := range config {
-		if err := readConfigFile(c, filename); err != nil {
+		if err := readConfigFile(c, filename, false); err != nil {
 			log.Fatalf("Failed to read config file %s: %s", filename, err)
 		}
 	}
