@@ -170,7 +170,7 @@ var opts struct {
 
 	Debug struct {
 		Debugger string `short:"d" long:"debugger" description:"Name of supported debugger"`
-		Port     int    `short:"p" long:"port" description:"Debugging server listen port"`
+		Port     int    `short:"p" long:"port" description:"Debugging server port"`
 		Args     struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target"`
@@ -494,12 +494,15 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"debug": func() int {
+		if len(opts.Debug.Debugger) > 0 {
+			log.Warningf("--debugger has been deprecated in favour of build rule specific config fields and will be removed in v17.")
+		}
+
 		success, state := runBuild([]core.BuildLabel{opts.Debug.Args.Target}, true, false, false)
 		if !success {
 			return toExitCode(success, state)
 		}
-
-		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Port != 0, opts.Debug.Args.Args)
+		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args)
 	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
@@ -1046,6 +1049,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
 	state.ForceRerun = opts.Test.Rerun || opts.Cover.Rerun
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
+	state.DebugPort = opts.Debug.Port
 	state.DebugFailingTests = debugFailingTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
@@ -1053,12 +1057,6 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if opts.BuildFlags.Arch.OS != "" {
 		state.TargetArch = opts.BuildFlags.Arch
-	}
-	if debug {
-		state.Debug = &core.Debug{
-			Debugger: opts.Debug.Debugger,
-			Port:     opts.Debug.Port,
-		}
 	}
 
 	// Only one target that is _not_ named "all" or "..." is allowed with debug test.
