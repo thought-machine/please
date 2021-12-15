@@ -11,8 +11,6 @@ import (
 	"text/template"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/thought-machine/please/tools/please_go/install/toolchain"
 )
 
 type testDescr struct {
@@ -30,7 +28,7 @@ type testDescr struct {
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(goTool, testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark bool) error {
+func WriteTestMain(testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark, hasFuzz bool) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
@@ -43,13 +41,7 @@ func WriteTestMain(goTool, testPackage string, sources []string, output string, 
 	}
 
 	testDescr.Benchmark = benchmark
-
-	tc := toolchain.Toolchain{GoTool: goTool}
-	minor, err := tc.GoMinorVersion()
-	if err != nil {
-		return err
-	}
-	testDescr.HasFuzz = minor >= 18
+	testDescr.HasFuzz = hasFuzz
 
 	f, err := os.Create(output)
 	if err != nil {
