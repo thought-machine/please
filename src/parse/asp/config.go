@@ -56,19 +56,7 @@ func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
 			for j := 0; j < field.NumField(); j++ {
 				subfieldType := field.Type().Field(j)
 				if varName := subfieldType.Tag.Get("var"); varName != "" {
-					// Only load into the config if we shouldn't inherit from the parent state, or if the parent config
-					// doesn't contain the value (because it's the host repo)
-					if _, ok := base[varName]; !ok {
-						//TODO(jpoole): handle relative build labels
-						base[varName] = valueToPyObject(field.Field(j))
-					} else if subfieldType.Tag.Get("inherit") == "false" {
-						// TODO(jpoole): this requires some thought. In this setup it's no possible to unset config
-						// 	fields that are set in the host repo.
-						v := valueToPyObject(field.Field(j))
-						if v != None {
-							base[varName] = valueToPyObject(field.Field(j))
-						}
-					}
+					base[varName] = valueToPyObject(field.Field(j))
 				}
 			}
 		}
