@@ -29,18 +29,32 @@ type Hasher[K any] interface {
     Hash(k K) uint32
 }
 
+// NewHasher creates a hasher from the given function.
+func NewHasher[K any](f func(key K) uint32) Hasher[K] {
+	return hasher[K]{f: f}
+}
+
+type hasher[K any] struct {
+	f func(K) uint32
+}
+
+func (h hasher[K]) Hash(k K) uint32 {
+	return h.f(k)
+}
+
 // New creates a new Map using the given hasher to hash items in it.
 // The shard count must be a power of 2; it will panic if not.
 // Higher shard counts will improve concurrency but consume more memory.
 // The DefaultShardCount of 256 is reasonable for a large map.
-func New[K comparable, V any, H Hasher[K]](shardCount uint32) *Map[K, V, H] {
+func New[K comparable, V any, H Hasher[K]](shardCount uint32, hasher H) *Map[K, V, H] {
 	mask := shardCount - 1
 	if (shardCount & mask) != 0 {
 		panic(fmt.Sprintf("Shard count %d is not a power of 2", shardCount))
 	}
 	m := &Map[K, V, H]{
 		shards: make([]shard[K, V], shardCount),
-		mask: mask,
+		mask:   mask,
+		hasher: hasher,
 	}
 	for i := range m.shards {
 		m.shards[i].m = map[K]awaitableValue[V]{}
