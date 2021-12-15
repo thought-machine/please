@@ -7,6 +7,9 @@ go_library(
         "gotest.go",
         "write_test_main.go",
     ],
+    deps = [
+        "//tools/please_go/install/toolchain",
+    ],
     visibility = ["//tools/please_go/..."],
 )
 

@@ -894,7 +894,7 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
     test_package = test_package or _get_import_path()
     external_flag = " --external" if external else ""
 
-    cmd = f'"$TOOLS" testmain --test_package "{test_package}"{external_flag} --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
+    cmd = f'"$TOOLS_PLZ" testmain --test_package "{test_package}"{external_flag} --import_path "{CONFIG.GO_IMPORT_PATH}" --go_tool "$TOOLS_GO" -o $OUT'
     # TODO(jpoole): remove this in v17
     if CONFIG.FF_GO_DONT_COLLAPSE_IMPORT_PATHS:
         cmd = f"FF_GO_DONT_COLLAPSE_IMPORT_PATHS=true {cmd}"
@@ -918,7 +918,10 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
         needs_transitive_deps = cover,  # Need all dependencies to template coverage variables
         requires = ['go', 'go_src'] if cover else ['go'],
         test_only = test_only,
-        tools = [CONFIG.PLEASE_GO_TOOL],
+        tools = {
+            'plz': [CONFIG.PLEASE_GO_TOOL],
+            'go': [CONFIG.GO_TOOL],
+        },
         post_build = _post_build,
         visibility = visibility,
         labels = labels,
