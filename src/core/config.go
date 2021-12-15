@@ -347,6 +347,7 @@ func DefaultConfiguration() *Configuration {
 	config.Python.DisableVendorFlags = false
 	config.Python.TestRunner = "unittest"
 	config.Python.TestRunnerBootstrap = ""
+	config.Python.Debugger = "pdb"
 	config.Python.UsePyPI = true
 	config.Python.InterpreterOptions = ""
 	config.Python.PipFlags = ""
@@ -532,6 +533,7 @@ type Configuration struct {
 		DefaultInterpreter  string   `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to, say, pypy." var:"DEFAULT_PYTHON_INTERPRETER"`
 		TestRunner          string   `help:"The test runner used to discover & run Python tests; one of unittest, pytest or behave, or a custom import path to bring your own." var:"PYTHON_TEST_RUNNER" inherit:"false"`
 		TestRunnerBootstrap string   `help:"Target providing test-runner library and its transitive dependencies. Injects plz-provided bootstraps if not given." var:"PYTHON_TEST_RUNNER_BOOTSTRAP" inherit:"false"`
+		Debugger            string   `help:"Sets what debugger to use to debug Python binaries. The available options are: 'pdb' (default) and 'debugpy'." var:"PYTHON_DEBUGGER"`
 		ModuleDir           string   `help:"Defines a directory containing modules from which they can be imported at the top level.\nBy default this is empty but by convention we define our pip_library rules in third_party/python and set this appropriately. Hence any of those third-party libraries that try something like import six will have it work as they expect, even though it's actually in a different location within the .pex." var:"PYTHON_MODULE_DIR" inherit:"false"`
 		DefaultPipRepo      cli.URL  `help:"Defines a location for a pip repo to download wheels from.\nBy default pip_library uses PyPI (although see below on that) but you may well want to use this define another location to upload your own wheels to.\nIs overridden by the repo argument to pip_library." var:"PYTHON_DEFAULT_PIP_REPO"`
 		WheelRepo           cli.URL  `help:"Defines a location for a remote repo that python_wheel rules will download from. See python_wheel for more information." var:"PYTHON_WHEEL_REPO"`

@@ -638,7 +638,8 @@
           Activates sandboxing for build actions, which isolates them
           from network access, IPC and some aspects of the filesystem. Currently
           only works on Linux. Defaults to <code class="code">False</code>.<br />
-          <span class="red">Deprecated from v16: use <a href="#sandbox">sandbox.build</a> instead.
+          <span class="red">Deprecated from v16: use <a class="copy-link" href="#sandbox"
+          >sandbox.build</a> instead.
         </p>
       </div>
     </li>
@@ -1087,7 +1088,8 @@
           Activates sandboxing for tests, which isolates them from
           network access, IPC and some aspects of the filesystem. Currently only
           works on Linux. Defaults to <code class="code">False</code>.
-          <span class="red">Deprecated from v16: use <a href="#sandbox">sandbox.test</a> instead.
+          <span class="red">Deprecated from v16: use <a class="copy-link" href="#sandbox"
+          >sandbox.test</a> instead.
         </p>
       </div>
     </li>
@@ -1524,6 +1526,18 @@
     </li>
     <li>
       <div>
+        <h3 class="mt1 f6 lh-title" id="python.testrunnerbootstrap">TestRunnerBootstrap</h3>
+        <p>{{ index .ConfigHelpText "python.testrunnerbootstrap" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="python.debugger">Debugger</h3>
+        <p>{{ index .ConfigHelpText "python.debugger" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
         <h3 class="mt1 f6 lh-title" id="python.moduledir">ModuleDir</h3>
 
         <p>
@@ -1617,12 +1631,6 @@
       <div>
         <h3 class="mt1 f6 lh-title" id="python.pipflags">PipFlags</h3>
         <p>{{ index .ConfigHelpText "python.pipflags" }}</p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title" id="python.testrunnerbootstrap">TestRunnerBootstrap</h3>
-        <p>{{ index .ConfigHelpText "python.testrunnerbootstrap" }}</p>
       </div>
     </li>
     <li>

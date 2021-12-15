@@ -361,6 +361,8 @@ def main():
 
     N.B. This gets redefined by pex_test_main to run tests instead.
     """
+    # Add .bootstrap dir to path, after the initial pex entry
+    sys.path = sys.path[:1] + [os.path.join(sys.path[0], '.bootstrap')] + sys.path[1:]
     # Starts a debugging session, if defined, before running the entry point.
     start_debugger()
     # Must run this as __main__ so it executes its own __name__ == '__main__' block.

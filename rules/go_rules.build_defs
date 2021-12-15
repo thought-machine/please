@@ -4,7 +4,7 @@ Go has a strong built-in concept of packages so it's probably a good idea to mat
 rules to Go packages.
 """
 def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"],
-                 architectures:list=[], strip_srcs=False):
+                 architectures:list=[], strip_srcs:bool=False, tags:list=None):
     """
     Downloads Go and exposes :<name>|go and :<name>|gofmt as entry points. To use this rule add the
     following to your .plzconfig:
@@ -27,6 +27,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
       strip_srcs (bool): Whether to strip sources from the SDK which can reduce the size of the cached artifacts and
                          improve performance, especially for remote execution. This doesn't work with go_get() however
                          it is recommended to set this to True if you're using go_module() exclusively.
+      tags (bool): Build tags to pass when installing the standard library.
     """
     if url and version:
         fail("Either version or url should be provided but not both")
@@ -52,9 +53,10 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     if architectures and CONFIG.CGO_ENABLED == "1":
         cmd += f" && export CGO_ENABLED={CONFIG.CGO_ENABLED} && export CFLAGS=\"{CONFIG.GO_C_FLAGS}\" && export CC=$TOOLS_CC"
 
+    tag_flag = (' -tags ' + ','.join(tags)) if tags else ''
     for arch in architectures:
         goos, _, goarch = arch.partition("_")
-        cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install std)'
+        cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install{tag_flag} std)'
     if strip_srcs:
         trim_toolchain = "mv $OUT/src src && mkdir $OUT/src && mv src/unsafe $OUT/src/unsafe"
         cmd = f"{cmd} && {trim_toolchain}"
@@ -705,26 +707,26 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
     cmds, tools = _go_binary_cmds(static=static, definitions=definitions, gcov=cgo)
 
     test_cmd = f'$TEST {flags} 2>&1 | tee $TMP_DIR/test.results'
-    worker_cmd = f'$(worker {worker})'
-    if worker:
+    worker_cmd = f'$(worker {worker})' if worker else ""
+    if worker_cmd:
         test_cmd = f'{worker_cmd} && {test_cmd} '
         deps += [worker]
+
+    debug_cmd, debug_data, debug_tools = _debug_cmd(
+        name = name,
+        bin = "./$TEST",
+        flags = flags,
+        pre_cmd = worker_cmd,
+        srcs = srcs + [main_rule],
+        deps = deps,
+        test_only = True
+    )
 
     if CONFIG.GO_TEST_ROOT_COMPAT:
         # This is a workaround for remote execution; $RESULTS_FILE is set to a relative path remotely.
         test_cmd = f'export TEST=./$(basename $TEST) && mkdir -p $PKG_DIR && mv $TEST $PKG_DIR && cd $PKG_DIR && {test_cmd}'
         for out in test_outputs:
             test_cmd += f' && mv {out} $TMP_DIR/{out}'
-
-    debug_cmd, debug_data, debug_tools = _debug_cmd(
-        name = name,
-        bin = "./$TEST",
-        flags = flags,
-        pre_cmd = worker_cmd if worker else "",
-        srcs = srcs + [main_rule],
-        deps = deps,
-        test_only = True
-    )
 
     return build_rule(
         name = name,
@@ -1701,24 +1703,21 @@ def _get_ldflags_and_pkgconfig(name):
 
 # `dlv` is currently the only debugger supported.
 def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], deps:list=[], test_only:bool=False):
-    if not CONFIG.get("DEBUG"):
+    if CONFIG.BUILD_CONFIG != 'dbg':
         return "", None, None
 
     # Delve command.
     cmd = f"$DEBUG_TOOLS_DLV exec {bin}"
+    if CONFIG.DEBUG_PORT:
+        cmd = f"{cmd} --headless=true --listen=localhost:{CONFIG.DEBUG_PORT} --api-version=2 --check-go-version=false"
+    cmd = f"{cmd} -- {flags}"
+
     tools = {
         'dlv': CONFIG.DELVE_TOOL
     }
 
-    port = CONFIG.DEBUG.PORT
-    if port:
-        # Start a debug session where clients (i.e. IDEs) can connect to instead.
-        cmd = f"{cmd} --headless=true --listen=localhost:{port} --api-version=2 --check-go-version=false"
-
-    cmd = f"{cmd} -- {flags}"
-
     # Make sources available to the debugger.
-    debug_srcs_tar = f"_{name}_debug_srcs.tar"
+    debug_srcs_tar = f".{name}_debug_srcs.tar"
     data = [
         build_rule(
             name = name,

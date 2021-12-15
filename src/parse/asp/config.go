@@ -107,13 +107,7 @@ func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
 	base["TARGET_OS"] = pyString(state.TargetArch.OS)
 	base["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
 	base["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
-
-	if debug := state.Debug; debug != nil {
-		base["DEBUG"] = pyDict{
-			"DEBUGGER": pyString(debug.Debugger),
-			"PORT":     pyInt(debug.Port),
-		}
-	}
+	base["DEBUG_PORT"] = pyInt(state.DebugPort)
 
 	return &pyConfig{base: base}
 }
@@ -161,13 +155,16 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 		key = strings.ToUpper(key)
 		if _, ok := ret[key]; ok && definition.Inherit {
 			// If the config key is already defined, and we should inherit it from the host repo, continue.
-			log.Warningf("Inheriting %v as %v", key, ret[key])
 			continue
 		}
-		log.Warningf("Not inheriting %v as %v %v", key, ret[key], definition.Inherit)
 
-		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, definition.ConfigKey)
-		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
+		configKey := definition.ConfigKey
+		if configKey == "" {
+			configKey = strings.ReplaceAll(key, "_", "")
+		}
+
+		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, configKey)
+		value, ok := extraVals[strings.ToLower(configKey)]
 		if !ok {
 			// The default values are defined in the subrepo so should be parsed in that context
 			value = resolveSelf(definition.DefaultValue, pluginState.CurrentSubrepo)
