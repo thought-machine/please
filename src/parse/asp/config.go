@@ -9,16 +9,6 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-// getParentRepoConfig gets the config of the parent repo this repo is defined in. Returns an empty config for the host
-// repo.
-func (i *interpreter) getParentRepoConfig(state *core.BuildState) pyDict {
-	if state.ParentState != nil {
-		return i.getConfig(state.ParentState).base.Copy()
-	} else {
-		return make(pyDict, 100)
-	}
-}
-
 // valueToPyObject converts a field value to a pyObject
 func valueToPyObject(value reflect.Value) pyObject {
 	switch value.Kind() {
@@ -43,14 +33,9 @@ func valueToPyObject(value reflect.Value) pyObject {
 // newConfig creates a new pyConfig object from the configuration.
 // This is typically only created once at global scope, other scopes copy it with .Copy()
 func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
-	config := state.RepoConfig
-	if config == nil {
-		config = state.Config
-	}
+	base := make(pyDict, 100)
 
-	base := i.getParentRepoConfig(state)
-
-	v := reflect.ValueOf(config).Elem()
+	v := reflect.ValueOf(state.Config).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		if field := v.Field(i); field.Kind() == reflect.Struct {
 			for j := 0; j < field.NumField(); j++ {
@@ -63,7 +48,7 @@ func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
 	}
 
 	// Arbitrary build config stuff
-	for k, v := range config.BuildConfig {
+	for k, v := range state.Config.BuildConfig {
 		// It's hard to know what the correct thing to do with build config when it comes to inheriting it from the
 		// parent subrepo or not. Historically we wouldn't load from the subrepo at all, so we err on the side of
 		// caution here: we only load in values that aren't already present as this is closer to how it used to work.
@@ -80,7 +65,7 @@ func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
 	base["DEFAULT_LICENCES"] = None
 	// Bazel supports a 'features' flag to toggle things on and off.
 	// We don't but at least let them call package() without blowing up.
-	if config.Bazel.Compatibility {
+	if state.Config.Bazel.Compatibility {
 		base["FEATURES"] = pyList{}
 	}
 
