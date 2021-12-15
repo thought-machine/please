@@ -18,40 +18,22 @@ const DefaultShardCount = 1 << 8
 
 // A Map is the top-level map type. All functions on it are threadsafe.
 // It should be constructed via New() rather than creating an instance directly.
-type Map[K comparable, V any, H Hasher[K]] struct {
+type Map[K comparable, V any] struct {
 	shards []shard[K, V]
-	hasher H
+	hasher func(K) uint32
 	mask   uint32
-}
-
-// A Hasher is a function that knows how to hash a given type into a uint32.
-type Hasher[K any] interface {
-    Hash(k K) uint32
-}
-
-// NewHasher creates a hasher from the given function.
-func NewHasher[K any](f func(key K) uint32) Hasher[K] {
-	return hasher[K]{f: f}
-}
-
-type hasher[K any] struct {
-	f func(K) uint32
-}
-
-func (h hasher[K]) Hash(k K) uint32 {
-	return h.f(k)
 }
 
 // New creates a new Map using the given hasher to hash items in it.
 // The shard count must be a power of 2; it will panic if not.
 // Higher shard counts will improve concurrency but consume more memory.
 // The DefaultShardCount of 256 is reasonable for a large map.
-func New[K comparable, V any, H Hasher[K]](shardCount uint32, hasher H) *Map[K, V, H] {
+func New[K comparable, V any](shardCount uint32, hasher func(K) uint32) *Map[K, V] {
 	mask := shardCount - 1
 	if (shardCount & mask) != 0 {
 		panic(fmt.Sprintf("Shard count %d is not a power of 2", shardCount))
 	}
-	m := &Map[K, V, H]{
+	m := &Map[K, V]{
 		shards: make([]shard[K, V], shardCount),
 		mask:   mask,
 		hasher: hasher,
@@ -64,20 +46,20 @@ func New[K comparable, V any, H Hasher[K]](shardCount uint32, hasher H) *Map[K, 
 
 // Set is the equivalent of `map[key] = val`.
 // It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
-func (m *Map[K, V, H]) Set(key K, val V) bool {
-	return m.shards[m.hasher.Hash(key)&m.mask].Set(key, val)
+func (m *Map[K, V]) Set(key K, val V) bool {
+	return m.shards[m.hasher(key)&m.mask].Set(key, val)
 }
 
 // Get returns the value or, if the key isn't present, a channel that it can be waited
 // on for. The caller will need to call Get again after the channel closes.
 // Exactly one of the value or channel will be returned.
-func (m *Map[K, V, H]) Get(key K) (val V, wait <-chan struct{}) {
-	return m.shards[m.hasher.Hash(key)&m.mask].Get(key)
+func (m *Map[K, V]) Get(key K) (val V, wait <-chan struct{}) {
+	return m.shards[m.hasher(key)&m.mask].Get(key)
 }
 
 // Values returns a slice of all the current values in the map.
 // No particular consistency guarantees are made.
-func (m *Map[K, V, H]) Values() []V {
+func (m *Map[K, V]) Values() []V {
 	ret := []V{}
 	for _, shard := range m.shards {
 		ret = append(ret, shard.Values()...)
