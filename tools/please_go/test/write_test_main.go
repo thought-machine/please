@@ -11,6 +11,8 @@ import (
 	"text/template"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/thought-machine/please/tools/please_go/install/toolchain"
 )
 
 type testDescr struct {
@@ -23,11 +25,12 @@ type testDescr struct {
 	Imports        []string
 	Coverage       bool
 	Benchmark      bool
+	HasFuzz        bool
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark bool) error {
+func WriteTestMain(goTool, testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark bool) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
@@ -40,6 +43,13 @@ func WriteTestMain(testPackage string, sources []string, output string, coverage
 	}
 
 	testDescr.Benchmark = benchmark
+
+	tc := toolchain.Toolchain{GoTool: goTool}
+	minor, err := tc.GoMinorVersion()
+	if err != nil {
+		return err
+	}
+	testDescr.HasFuzz = minor >= 18
 
 	f, err := os.Create(output)
 	if err != nil {
@@ -227,11 +237,11 @@ func main() {
 		args = append(args, "-test.run", testVar)
     }
     _gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
-	m := _gostdlib_testing.MainStart(testDeps, tests, nil, examples)
+	m := _gostdlib_testing.MainStart(testDeps, tests, nil,{{ if .HasFuzz }} nil,{{ end }} examples)
 {{else}}
 	args = append(args, "-test.bench", ".*")
 	_gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
-	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks, nil)
+	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks,{{ if .HasFuzz }} nil,{{ end }} nil)
 {{end}}
 
 {{if .Main}}
