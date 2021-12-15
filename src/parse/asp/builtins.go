@@ -994,7 +994,6 @@ const (
 	ConfigSubrepoArgIdx
 	BazelCompatSubrepoArgIdx
 	ArchSubrepoArgIdx
-	InheritConfigSubrepoArgIdx
 )
 
 // subrepo implements the subrepo() builtin that adds a new repository.
@@ -1002,7 +1001,6 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this context")
 	name := string(args[NameSubrepoArgIdx].(pyString))
 	dep := string(args[DepSubrepoArgIdx].(pyString))
-	inheritHostConfig := args[InheritConfigSubrepoArgIdx].IsTruthy()
 	var target *core.BuildTarget
 	root := name
 	if dep != "" {
@@ -1019,13 +1017,13 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	}
 	var state *core.BuildState
 	if args[ConfigSubrepoArgIdx] != None {
-		state = s.state.ForSubrepo(name, inheritHostConfig, path.Join(s.pkg.Name, string(args[ConfigSubrepoArgIdx].(pyString))))
+		state = s.state.ForSubrepo(name, path.Join(s.pkg.Name, string(args[ConfigSubrepoArgIdx].(pyString))))
 	} else if args[BazelCompatSubrepoArgIdx].IsTruthy() {
-		state = s.state.ForSubrepo(name, inheritHostConfig)
+		state = s.state.ForSubrepo(name)
 		state.Config.Bazel.Compatibility = true
 		state.Config.Parse.BuildFileName = append(state.Config.Parse.BuildFileName, "BUILD.bazel")
 	} else {
-		state = s.state.ForSubrepo(name, inheritHostConfig)
+		state = s.state.ForSubrepo(name)
 	}
 
 	isCrossCompile := s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile

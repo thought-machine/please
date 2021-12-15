@@ -111,6 +111,9 @@ type BuildState struct {
 	Stats *SystemStats
 	// Configuration options
 	Config *Configuration
+	// The .plzconfig file for this repo. Unlike Config, no default values are applied. This will represent the
+	// .plzconfig in a subrepo.
+	RepoConfig *Configuration
 	// Parser implementation. Other things can call this to perform various external parse tasks.
 	Parser Parser
 	// Subprocess executor.
@@ -197,8 +200,10 @@ type BuildState struct {
 	experimentalLabels []BuildLabel
 	// Various items for tracking progress.
 	progress *stateProgress
-	// CurrentSubrepo is the subrepo this state is for or the empty string if it's for the host repo
+	// CurrentSubrepo is the subrepo this state is for or the empty string if this is the host repo's state
 	CurrentSubrepo string
+	// ParentState is the state of the repo containing this subrepo. Nil if this is the host repo.
+	ParentState *BuildState
 }
 
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
@@ -1060,7 +1065,7 @@ func readConfigFiles(config *Configuration, configFiles []string) {
 }
 
 // ForSubrepo creates a new state for the given subrepo
-func (state *BuildState) ForSubrepo(name string, inheritHostConfig bool, config ...string) *BuildState {
+func (state *BuildState) ForSubrepo(name string, config ...string) *BuildState {
 	for _, s := range state.progress.allStates {
 		if s.CurrentSubrepo == name {
 			return s
@@ -1072,19 +1077,11 @@ func (state *BuildState) ForSubrepo(name string, inheritHostConfig bool, config 
 	s := &BuildState{}
 	*s = *state
 
-	// If we inherit the host config, copy that to the new state, otherwise use a new default config
-	if inheritHostConfig {
-		s.Config = state.Config.copyConfig()
-		readConfigFiles(s.Config, config)
-	} else {
-		var err error
-		s.Config, err = ReadConfigFiles(config, nil)
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-	}
+	s.Config = state.Config.copyConfig()
+	readConfigFiles(s.Config, config)
 
 	s.CurrentSubrepo = name
+	s.ParentState = state
 	state.progress.allStates = append(state.progress.allStates, s)
 	return s
 }

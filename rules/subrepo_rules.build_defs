@@ -306,5 +306,4 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
     return subrepo(
         name = name,
         dep = extract_rule,
-        inherit_host_config = False,
     )
