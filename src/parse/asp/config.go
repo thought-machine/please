@@ -161,8 +161,10 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 		key = strings.ToUpper(key)
 		if _, ok := ret[key]; ok && definition.Inherit {
 			// If the config key is already defined, and we should inherit it from the host repo, continue.
+			log.Warningf("Inheriting %v as %v", key, ret[key])
 			continue
 		}
+		log.Warningf("Not inheriting %v as %v %v", key, ret[key], definition.Inherit)
 
 		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, definition.ConfigKey)
 		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
