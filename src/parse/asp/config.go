@@ -54,7 +54,7 @@ func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
 		// caution here: we only load in values that aren't already present as this is closer to how it used to work.
 		key := strings.ReplaceAll(strings.ToUpper(k), "-", "_")
 		if _, ok := base[key]; !ok {
-			//TODO(jpoole): handle relative build labels
+			// TODO(jpoole): handle relative build labels
 			base[key] = pyString(v)
 		}
 	}
