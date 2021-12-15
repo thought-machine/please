@@ -13,7 +13,7 @@ import (
 // repo.
 func (i *interpreter) getParentRepoConfig(state *core.BuildState) pyDict {
 	if state.ParentState != nil {
-		return i.getConfig(state.ParentState).base
+		return i.getConfig(state.ParentState).base.Copy()
 	} else {
 		return make(pyDict, 100)
 	}
@@ -138,20 +138,19 @@ func getExtraVals(config *core.Configuration, pluginName string) map[string][]st
 
 // pluginConfig loads the plugin's config into a pyDict. It will load con
 func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDict {
-	pluginName := strings.ToLower(pluginState.Config.PluginDefinition.Name)
+	pluginName := strings.ToLower(pluginState.RepoConfig.PluginDefinition.Name)
 	var extraVals map[string][]string
 	var ret pyDict
 	if pkgState.ParentState == nil {
-		extraVals = getExtraVals(pkgState.Config, pluginName)
+		extraVals = getExtraVals(pkgState.RepoConfig, pluginName)
 		ret = pyDict{}
 	} else {
 		extraVals = getExtraVals(pkgState.RepoConfig, pluginName)
 		ret = pluginConfig(pluginState, pkgState.ParentState)
-		log.Warningf("got parent repo config: %#v", ret)
 	}
 
 	// TODO(jpoole): validate that all values actually exist in the plugin definition
-	for key, definition := range pluginState.Config.PluginConfig {
+	for key, definition := range pluginState.RepoConfig.PluginConfig {
 		key = strings.ToUpper(key)
 		if _, ok := ret[key]; ok && definition.Inherit {
 			// If the config key is already defined, and we should inherit it from the host repo, continue.
@@ -168,6 +167,10 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 		}
 
 		if len(value) == 0 && !definition.Optional {
+			if _, ok := ret[key]; ok {
+				// Inherit config from the host repo if we don't override it
+				continue
+			}
 			log.Fatalf("plugin config %s is not optional", fullConfigKey)
 		}
 

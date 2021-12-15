@@ -1177,6 +1177,7 @@ func NewBuildState(config *Configuration) *BuildState {
 		),
 		StartTime:       startTime,
 		Config:          config,
+		RepoConfig:      config,
 		VerifyHashes:    true,
 		NeedBuild:       true,
 		XattrsSupported: config.Build.Xattrs,

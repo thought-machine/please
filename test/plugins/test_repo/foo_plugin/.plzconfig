@@ -5,7 +5,7 @@ BuildFileName = BUILD.plugin
 name = foo
 
 [Plugin "foo"]
-ModulePath = something
+ModulePath = foolang
 CompileFlag = -sha1
 
 [PluginConfig "fooc_tool"]
