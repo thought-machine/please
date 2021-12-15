@@ -4,7 +4,7 @@ Go has a strong built-in concept of packages so it's probably a good idea to mat
 rules to Go packages.
 """
 def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"],
-                 architectures:list=[], strip_srcs=False):
+                 architectures:list=[], strip_srcs:bool=False, tags:list=None):
     """
     Downloads Go and exposes :<name>|go and :<name>|gofmt as entry points. To use this rule add the
     following to your .plzconfig:
@@ -27,6 +27,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
       strip_srcs (bool): Whether to strip sources from the SDK which can reduce the size of the cached artifacts and
                          improve performance, especially for remote execution. This doesn't work with go_get() however
                          it is recommended to set this to True if you're using go_module() exclusively.
+      tags (bool): Build tags to pass when installing the standard library.
     """
     if url and version:
         fail("Either version or url should be provided but not both")
@@ -52,9 +53,10 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     if architectures and CONFIG.CGO_ENABLED == "1":
         cmd += f" && export CGO_ENABLED={CONFIG.CGO_ENABLED} && export CFLAGS=\"{CONFIG.GO_C_FLAGS}\" && export CC=$TOOLS_CC"
 
+    tag_flag = (' -tags ' + ','.join(tags)) if tags else ''
     for arch in architectures:
         goos, _, goarch = arch.partition("_")
-        cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install std)'
+        cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install{tag_flag} std)'
     if strip_srcs:
         trim_toolchain = "mv $OUT/src src && mkdir $OUT/src && mv src/unsafe $OUT/src/unsafe"
         cmd = f"{cmd} && {trim_toolchain}"
