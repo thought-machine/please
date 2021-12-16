@@ -12,7 +12,7 @@ go_library(
         "//src/fs",
         "//src/parse",
         "//src/scm",
-        "//src/utils",
+        "//third_party/go:gcfg",
         "//third_party/go:logging",
     ],
 )

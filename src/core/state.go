@@ -34,19 +34,19 @@ type ParseTask struct {
 	ForSubinclude    bool
 }
 
-// BuildTask is the type for the build task queue
-type BuildTask = BuildLabel
+// A TaskType identifies whether a task is a build or test action.
+type TaskType uint8
 
-// TestTask is the type for the test task queue
-type TestTask struct {
+const (
+	BuildTask TaskType = 0
+	TestTask  TaskType = 1
+)
+
+// A Task is the type for the queue of build/test tasks.
+type Task struct {
 	Label BuildLabel
-	Run   int
-}
-
-// Debug is the type for debugging a target
-type Debug struct {
-	Debugger string
-	Port     int
+	Type  TaskType
+	Run   uint32 // Only present for tests (the run of a build is always zero)
 }
 
 // A Parser is the interface to reading and interacting with BUILD files.
@@ -97,9 +97,8 @@ type TargetHasher interface {
 type BuildState struct {
 	Graph *BuildGraph
 	// Streams of pending tasks
-	pendingParses                      chan ParseTask
-	pendingBuilds, pendingRemoteBuilds chan BuildTask
-	pendingTests, pendingRemoteTests   chan TestTask
+	pendingParses                        chan ParseTask
+	pendingActions, pendingRemoteActions chan Task
 	// Timestamp that the build is considered to start at.
 	StartTime time.Time
 	// Various system statistics. Mostly used during remote communication.
@@ -178,10 +177,10 @@ type BuildState struct {
 	ShowTestOutput bool
 	// True to print all output of all tasks to stderr.
 	ShowAllOutput bool
-	// Set when a debugging session against a target is requested.
-	Debug *Debug
+	// Port specified when debugging a target in server mode.
+	DebugPort int
 	// True to attach a debugger on test failure.
-	DebugTests bool
+	DebugFailingTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
 	XattrsSupported bool
 	// True if we have any remote executors configured.
@@ -199,12 +198,19 @@ type BuildState struct {
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
 func (state *BuildState) ExcludedBuiltinRules() map[string]struct{} {
 	// TODO(jpoole): remove this function, including the changes to rules.AllAssets() in v17
-	ret := map[string]struct{}{}
+	ret := make(map[string]struct{}, 4)
 	if state.Config.FeatureFlags.ExcludePythonRules {
 		ret["python_rules.build_defs"] = struct{}{}
 	}
 	if state.Config.FeatureFlags.ExcludeJavaRules {
 		ret["java_rules.build_defs"] = struct{}{}
+	}
+	if state.Config.FeatureFlags.ExcludeCCRules {
+		ret["c_rules.build_defs"] = struct{}{}
+		ret["cc_rules.build_defs"] = struct{}{}
+	}
+	if state.Config.FeatureFlags.ExcludeProtoRules {
+		ret["proto_rules.build_defs"] = struct{}{}
 	}
 	return ret
 }
@@ -285,9 +291,9 @@ func (state *BuildState) addPendingBuild(target *BuildTarget) {
 			recover() // Prevent death on 'send on closed channel'
 		}()
 		if state.anyRemote && !target.Local {
-			state.pendingRemoteBuilds <- target.Label
+			state.pendingRemoteActions <- Task{Label: target.Label, Type: BuildTask}
 		} else {
-			state.pendingBuilds <- target.Label
+			state.pendingActions <- Task{Label: target.Label, Type: BuildTask}
 		}
 	}()
 }
@@ -307,19 +313,19 @@ func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
 		defer func() {
 			recover() // Prevent death on 'send on closed channel'
 		}()
-		ch := state.pendingTests
+		ch := state.pendingActions
 		if state.anyRemote && !target.Local {
-			ch = state.pendingRemoteTests
+			ch = state.pendingRemoteActions
 		}
 		for run := 1; run <= numRuns; run++ {
-			ch <- TestTask{Label: target.Label, Run: run}
+			ch <- Task{Label: target.Label, Run: uint32(run), Type: TestTask}
 		}
 	}()
 }
 
 // TaskQueues returns a set of channels to listen on for tasks of various types.
-func (state *BuildState) TaskQueues() (parses <-chan ParseTask, builds, remoteBuilds <-chan BuildTask, tests, remoteTests <-chan TestTask) {
-	return state.pendingParses, state.pendingBuilds, state.pendingRemoteBuilds, state.pendingTests, state.pendingRemoteTests
+func (state *BuildState) TaskQueues() (parses <-chan ParseTask, actions, remoteActions <-chan Task) {
+	return state.pendingParses, state.pendingActions, state.pendingRemoteActions
 }
 
 // TaskDone indicates that a single task is finished. Should be called after one is finished with
@@ -341,10 +347,8 @@ func (state *BuildState) taskDone(wasSynthetic bool) {
 func (state *BuildState) Stop() {
 	state.progress.closeOnce.Do(func() {
 		close(state.pendingParses)
-		close(state.pendingBuilds)
-		close(state.pendingRemoteBuilds)
-		close(state.pendingTests)
-		close(state.pendingRemoteTests)
+		close(state.pendingActions)
+		close(state.pendingRemoteActions)
 	})
 }
 
@@ -677,7 +681,7 @@ func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
 func (state *BuildState) expandLabels(labels []BuildLabel, justTests bool) BuildLabels {
 	ret := BuildLabels{}
 	for _, label := range labels {
-		if label.IsAllTargets() || label.IsAllSubpackages() {
+		if label.IsPseudoTarget() {
 			ret = append(ret, state.expandOriginalPseudoTarget(label, justTests)...)
 		} else {
 			ret = append(ret, label)
@@ -1033,7 +1037,7 @@ func (state *BuildState) forConfig(config ...string) *BuildState {
 	// Duplicate & alter configuration
 	c := state.Config.copyConfig()
 	for _, filename := range config {
-		if err := readConfigFile(c, filename); err != nil {
+		if err := readConfigFile(c, filename, false); err != nil {
 			log.Fatalf("Failed to read config file %s: %s", filename, err)
 		}
 	}
@@ -1128,12 +1132,10 @@ func sandboxTool(config *Configuration) string {
 func NewBuildState(config *Configuration) *BuildState {
 	graph := NewGraph()
 	state := &BuildState{
-		Graph:               graph,
-		pendingParses:       make(chan ParseTask, 10000),
-		pendingBuilds:       make(chan BuildTask, 1000),
-		pendingRemoteBuilds: make(chan BuildTask, 1000),
-		pendingTests:        make(chan TestTask, 1000),
-		pendingRemoteTests:  make(chan TestTask, 1000),
+		Graph:                graph,
+		pendingParses:        make(chan ParseTask, 10000),
+		pendingActions:       make(chan Task, 1000),
+		pendingRemoteActions: make(chan Task, 1000),
 		hashers: map[string]*fs.PathHasher{
 			// For compatibility reasons the sha1 hasher has no suffix.
 			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, "sha1"),

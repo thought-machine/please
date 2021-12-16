@@ -24,7 +24,7 @@ go_module(
     name = "flags",
     install = ["flags"],
     module = "github.com/peterebden/go-cli-init/v5",
-    version = "v5.0.2",
+    version = "v5.1.0",
     deps = [
         ":go-flags",
         ":humanize",

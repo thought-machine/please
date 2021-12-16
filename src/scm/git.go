@@ -16,9 +16,21 @@ import (
 	"github.com/sourcegraph/go-diff/diff"
 )
 
+const pleaseDoNotEdit = "# Entries below this point are managed by Please (DO NOT EDIT)"
+
+var defaultIgnoredFiles = []string{"plz-out", ".plzconfig.local"}
+
+const ignoreFileName = ".gitignore"
+
 // git implements operations on a git repository.
 type git struct {
 	repoRoot string
+}
+
+type gitIgnore struct {
+	*os.File
+	entries      map[string]struct{}
+	hasDoNotEdit bool
 }
 
 // DescribeIdentifier returns the string that is a "human-readable" identifier of the given revision.
@@ -108,66 +120,73 @@ func (g *git) fixGitRelativePath(worktreePath, relativeTo string) string {
 	return p
 }
 
-const pleaseDoNotEdit = "# Entries below this point are managed by Please (DO NOT EDIT)"
-
-var defaultIgnoredFiles = []string{"plz-out", ".plzconfig.local"}
-
-func readUserEntries(file string) ([]string, error) {
-	f, err := os.Open(file)
+func openGitignore(file string) (*gitIgnore, error) {
+	f, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
-	defer f.Close()
+
+	ignoreFile := &gitIgnore{
+		File:    f,
+		entries: map[string]struct{}{},
+	}
 
 	scanner := bufio.NewScanner(f)
-
-	var userEntires []string
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.TrimSpace(line) == pleaseDoNotEdit {
-			return userEntires, nil
+			ignoreFile.hasDoNotEdit = true
+			continue
 		}
-		userEntires = append(userEntires, line)
+		ignoreFile.entries[line] = struct{}{}
 	}
-	return userEntires, nil
+	return ignoreFile, nil
 }
 
-func (g *git) IgnoreFiles(gitignore string, files []string) error {
+func (g *git) IgnoreFiles(path string, files []string) error {
 	// If we're generating the ignore in the root of the project, we should ignore some Please stuff too
-	if gitignore == ".gitignore" {
-		files = append(defaultIgnoredFiles, files...)
+	if filepath.Dir(path) == "." && files == nil {
+		files = defaultIgnoredFiles
 	}
 
-	p := filepath.Join(g.repoRoot, gitignore)
-
-	userEntries, err := readUserEntries(p)
+	ignore, err := openGitignore(filepath.Join(g.repoRoot, path))
 	if err != nil {
 		return err
 	}
 
-	lines := userEntries
-	if len(lines) != 0 && lines[len(lines)-1] != "" {
-		lines = append(lines, "")
-	}
-	lines = append(lines, pleaseDoNotEdit)
-	lines = append(lines, files...)
+	defer ignore.Close()
 
-	if err := os.RemoveAll(p); err != nil && err != os.ErrNotExist {
-		return err
+	newLines := make([]string, 0, len(files))
+	for _, file := range files {
+		if _, ok := ignore.entries[file]; ok {
+			continue
+		}
+		newLines = append(newLines, file)
 	}
 
-	file, err := os.Create(p)
-	if err != nil {
-		return err
+	if len(newLines) > 0 && !ignore.hasDoNotEdit {
+		if _, err := fmt.Fprintln(ignore, "\n"+pleaseDoNotEdit); err != nil {
+			return err
+		}
 	}
-	defer file.Close()
-
-	for _, line := range lines {
-		if _, err := fmt.Fprintln(file, line); err != nil {
+	for _, line := range newLines {
+		if _, err := fmt.Fprintln(ignore, line); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (g *git) FindClosestIgnoreFile(path string) string {
+	_, err := os.Lstat(filepath.Join(g.repoRoot, path, ignoreFileName))
+	if err == nil {
+		return filepath.Join(path, ignoreFileName)
+	}
+
+	if filepath.Clean(path) == "." {
+		return ignoreFileName
+	}
+	return g.FindClosestIgnoreFile(filepath.Dir(path))
 }
 
 func (g *git) Remove(names []string) error {

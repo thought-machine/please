@@ -62,8 +62,8 @@ def sh_binary(name:str, main:str|list&srcs, out:str="", deps:list=None, data:lis
     # No need to go through zip/unzip and injecting code if there are no dependencies
     if deps:
         cmds = ' && '.join([
-            # Use the same shebang as the original script
-            'head -1 "$SRCS" > "$TMPDIR"/_tmp.txt',
+            # If set, use the same shebang as the original script
+            'head -1 "$SRCS" | { grep "^#\!" || true; } > "$TMPDIR"/_tmp.txt',
             # Inject bash code to untar the compressed files.
             f'echo "{_SH_BINARY_TMPL_PREFIX}" >> "$TMPDIR"/_tmp.txt',
             # Inject the user defined script.

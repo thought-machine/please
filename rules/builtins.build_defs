@@ -7,14 +7,14 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', debug_cmd:str=''
                tools:str|list|dict=None, test_tools:str|list|dict=None, debug_tools:str|list|dict=None, labels:list=None,
                visibility:list=CONFIG.DEFAULT_VISIBILITY, hashes:list=None, binary:bool=False, test:bool=False,
                test_only:bool=CONFIG.DEFAULT_TESTONLY, building_description:str=None, needs_transitive_deps:bool=False,
-               output_is_complete:bool=False, _=None, sandbox:bool=CONFIG.BUILD_SANDBOX, test_sandbox:bool=CONFIG.TEST_SANDBOX,
+               output_is_complete:bool=False, sandbox:bool=CONFIG.BUILD_SANDBOX, test_sandbox:bool=CONFIG.TEST_SANDBOX,
                no_test_output:bool=False, flaky:bool|int=0, build_timeout:int|str=0, test_timeout:int|str=0, pre_build:function=None,
                post_build:function=None, requires:list=None, provides:dict=None, licences:list=CONFIG.DEFAULT_LICENCES,
                test_outputs:list=None, system_srcs:list=None, stamp:bool=False, tag:str='', optional_outs:list=None, progress:bool=False,
-               size:str=None, _urls:list=None, internal_deps:list=None, pass_env:list=None, local:bool=False, output_dirs:list=[], __=None,
-               exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}, env:dict={}, _file_content:str=None):
+               size:str=None, _urls:list=None, internal_deps:list=None, pass_env:list=None, local:bool=False, output_dirs:list=[],
+               exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}, env:dict={}, _file_content:str=None,
+               _subrepo:bool=False):
     pass
-
 
 def len(obj:list|dict|str) -> int:
     pass
@@ -123,9 +123,9 @@ def config_get(self:config, key:str, default=None) -> config:
     pass
 
 
-def get_base_path() -> str:
+def get_base_path(label:str=None) -> str:
     pass
-def package_name() -> str:
+def package_name(label:str=None) -> str:
     pass
 def subrepo_name() -> str:
     pass
@@ -137,6 +137,15 @@ def canonicalise(label:str) -> str:
       //package:target -> //package:target
       //package -> //package:package
       :target -> //current_package:target
+    """
+    pass
+
+def tag(name:str, tag:str):
+    """Applies a tag to a build target name, similar to the `tag` param on build_rule().
+
+    For example:
+        tag("name", "foo") -> "_name#foo"
+        tag("_name#foo", "bar") -> "_name#foo_bar"
     """
     pass
 
@@ -221,7 +230,7 @@ ValueError = _deprecated_exception
 
 
 # Post-build callback functions.
-def get_labels(name:str, prefix:str, all:bool=False) -> list:
+def get_labels(name:str, prefix:str, all:bool=False, transitive=True) -> list:
     pass
 def has_label(name:str, prefix:str, all:bool=False) -> bool:
     return len(get_labels(name, prefix, all)) > 0

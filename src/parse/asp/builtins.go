@@ -30,6 +30,7 @@ func registerBuiltins(s *scope) {
 	const varargs = true
 	const kwargs = true
 	setNativeCode(s, "build_rule", buildRule)
+	setNativeCode(s, "tag", tag)
 	setNativeCode(s, "subrepo", subrepo)
 	setNativeCode(s, "fail", builtinFail)
 	setNativeCode(s, "subinclude", subinclude, varargs)
@@ -236,6 +237,13 @@ func pkg(s *scope, args []pyObject) pyObject {
 	return None
 }
 
+func tag(s *scope, args []pyObject) pyObject {
+	name := args[0].String()
+	tag := args[1].String()
+
+	return pyString(tagName(name, tag))
+}
+
 // tagName applies the given tag to a target name.
 func tagName(name, tag string) string {
 	if name[0] != '_' {
@@ -311,7 +319,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		// This is a subinclude in the same package, check the target exists.
 		s.NAssert(s.contextPkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
-	s.NAssert(l.IsAllTargets() || l.IsAllSubpackages(), "Can't pass :all or /... to subinclude()")
+	s.NAssert(l.IsPseudoTarget(), "Can't pass :all or /... to subinclude()")
 
 	// If we're including from a subrepo, or if we're in a subrepo and including from a different subrepo, make sure
 	// that package is parsed to avoid locking. Locks can occur when the target's package also subincludes that target.
@@ -625,14 +633,21 @@ func joinPath(s *scope, args []pyObject) pyObject {
 }
 
 func packageName(s *scope, args []pyObject) pyObject {
+	pkg := ""
 	if s.pkg != nil {
-		return pyString(s.pkg.Name)
+		pkg = s.pkg.Name
+	} else if s.subincludeLabel != nil {
+		pkg = s.subincludeLabel.PackageName
+	} else {
+		s.Error("you cannot call package_name() from this context")
+		return nil
 	}
-	if s.subincludeLabel != nil {
-		return pyString(s.subincludeLabel.PackageName)
+
+	if label, ok := args[0].(pyString); ok && label != "" {
+		return pyString(core.ParseAnnotatedBuildLabel(label.String(), pkg).PackageName)
 	}
-	s.Error("you cannot call package_name() from this context")
-	return nil
+
+	return pyString(pkg)
 }
 
 func subrepoName(s *scope, args []pyObject) pyObject {
@@ -706,12 +721,13 @@ func getLabels(s *scope, args []pyObject) pyObject {
 	name := string(args[0].(pyString))
 	prefix := string(args[1].(pyString))
 	all := args[2].IsTruthy()
+	transitive := args[3].IsTruthy()
 	if core.LooksLikeABuildLabel(name) {
 		label := core.ParseBuildLabel(name, s.pkg.Name)
-		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built, all)
+		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built, all, transitive)
 	}
 	target := getTargetPost(s, name)
-	return getLabelsInternal(target, prefix, core.Building, all)
+	return getLabelsInternal(target, prefix, core.Building, all, transitive)
 }
 
 // addLabel adds a set of labels to the named rule
@@ -731,9 +747,12 @@ func addLabel(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all bool) pyObject {
+func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all, transitive bool) pyObject {
 	if target.State() < minState {
 		log.Fatalf("get_labels called on a target that is not yet built: %s", target.Label)
+	}
+	if all && !transitive {
+		log.Fatalf("get_labels can't be called with all set to true when transitive is set to False")
 	}
 	labels := map[string]bool{}
 	done := map[*core.BuildTarget]bool{}
@@ -743,6 +762,9 @@ func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.Bu
 			if strings.HasPrefix(label, prefix) {
 				labels[strings.TrimSpace(strings.TrimPrefix(label, prefix))] = true
 			}
+		}
+		if !transitive {
+			return
 		}
 		done[t] = true
 		if !t.OutputIsComplete || t == target || all {
@@ -975,7 +997,12 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	if dep != "" {
 		// N.B. The target must be already registered on this package.
 		target = s.pkg.TargetOrDie(core.ParseBuildLabelContext(dep, s.pkg).Name)
-		root = path.Join(target.OutDir(), name)
+		if len(target.Outputs()) == 1 {
+			root = path.Join(target.OutDir(), target.Outputs()[0])
+		} else {
+			// TODO(jpoole): perhaps this should be a fatal error?
+			root = path.Join(target.OutDir(), name)
+		}
 	} else if args[2] != None {
 		root = string(args[2].(pyString))
 	}

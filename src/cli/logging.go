@@ -277,3 +277,28 @@ func findSplit(line string, guess int) int {
 	}
 	return guess // Dunno what to do at this point. It's probably unlikely to happen often though.
 }
+
+// HTTPLogWrapper wraps the standard logger to implement the LeveledLogger interface from retryablehttp.
+type HTTPLogWrapper struct {
+	Log *logging.Logger
+}
+
+// Error logs at error level
+func (w *HTTPLogWrapper) Error(msg string, keysAndValues ...interface{}) {
+	w.Log.Errorf("%v: %v", msg, keysAndValues)
+}
+
+// Info logs at info level
+func (w *HTTPLogWrapper) Info(msg string, keysAndValues ...interface{}) {
+	w.Log.Infof("%v: %v", msg, keysAndValues)
+}
+
+// Debug logs at debug level
+func (w *HTTPLogWrapper) Debug(msg string, keysAndValues ...interface{}) {
+	w.Log.Debugf("%v: %v", msg, keysAndValues)
+}
+
+// Warn logs at warning level
+func (w *HTTPLogWrapper) Warn(msg string, keysAndValues ...interface{}) {
+	w.Log.Warningf("%v: %v", msg, keysAndValues)
+}

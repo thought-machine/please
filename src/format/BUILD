@@ -5,7 +5,7 @@ go_library(
     deps = [
         "//src/core",
         "//src/fs",
-        "//src/utils",
+        "//src/plz",
         "//third_party/go:buildtools",
         "//third_party/go:logging",
     ],
