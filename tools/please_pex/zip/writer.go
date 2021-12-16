@@ -271,7 +271,7 @@ func (f *File) walk(path string, mode fs.Mode) error {
 // renamePathIfNeeded checks if the given file should be renamed according to the rename dir flag
 func (f *File) renamePathIfNeeded(name string, isDir bool) string {
 	for before, after := range f.RenameDirs {
-		if strings.HasPrefix(name, before) {
+		if strings.HasPrefix(name, before+"/") || name == before {
 			name = path.Join(after, strings.TrimPrefix(name, before))
 			if isDir {
 				name += "/"
