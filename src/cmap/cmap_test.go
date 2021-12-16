@@ -11,11 +11,11 @@ func hashInts(k int) uint32 { return uint32(k) }
 
 func TestMap(t *testing.T) {
 	m := New[int, int](DefaultShardCount, hashInts)
-	assert.True(t, m.Set(5, 7))
-	assert.True(t, m.Set(7, 5))
+	assert.True(t, m.Add(5, 7))
+	assert.True(t, m.Add(7, 5))
 	v, _ := m.Get(5)
 	assert.Equal(t, 7, v)
-	v,  _ = m.Get(7)
+	v, _ = m.Get(7)
 	assert.Equal(t, 5, v)
 	vals := m.Values()
 	// Order isn't guaranteed so we must sort it now.
@@ -26,7 +26,7 @@ func TestMap(t *testing.T) {
 func TestWait(t *testing.T) {
 	m := New[int, int](DefaultShardCount, hashInts)
 	v, ch := m.Get(5)
-	assert.Equal(t, 0, v)  // Should be the zero value
+	assert.Equal(t, 0, v) // Should be the zero value
 	go func() {
 		m.Set(5, 7)
 	}()
@@ -36,10 +36,17 @@ func TestWait(t *testing.T) {
 	assert.Equal(t, 7, v)
 }
 
-func TestReSet(t *testing.T) {
+func TestReAdd(t *testing.T) {
 	m := New[int, int](DefaultShardCount, hashInts)
-	assert.True(t, m.Set(5, 7))
-	assert.False(t, m.Set(5, 7))
+	assert.True(t, m.Add(5, 7))
+	assert.False(t, m.Add(5, 7))
+	v, ch := m.Get(5)
+	assert.Nil(t, ch)
+	assert.Equal(t, 7, v)
+	m.Set(5, 8)
+	v, ch = m.Get(5)
+	assert.Nil(t, ch)
+	assert.Equal(t, 8, v)
 }
 
 func TestShardCount(t *testing.T) {
