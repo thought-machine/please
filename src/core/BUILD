@@ -13,6 +13,7 @@ go_library(
     deps = [
         "//src/cli",
         "//src/cli/logging",
+        "//src/cmap",
         "//src/fs",
         "//src/process",
         "//src/scm",

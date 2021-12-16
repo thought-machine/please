@@ -8,23 +8,25 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/OneOfOne/cmap"
+	"github.com/OneOfOne/cmap/hashers"
+
+	"github.com/thought-machine/please/src/cmap"
 )
 
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
-	targets *targetMap
+	targets *cmap.Map[BuildLabel, *BuildTarget]
 	// Map of all currently known packages.
-	packages *packageMap
+	packages *cmap.Map[packageKey, *Package]
 	// Registered subrepos, as a map of their name to their root.
-	subrepos *cmap.CMap
+	subrepos *cmap.Map[string, *Subrepo]
 }
 
 // AddTarget adds a new target to the graph.
 func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
-	if !graph.targets.Set(target) {
+	if !graph.targets.Add(target.Label, target) {
 		panic("Attempted to re-add existing target to build graph: " + target.Label.String())
 	}
 	return target
@@ -33,7 +35,7 @@ func (graph *BuildGraph) AddTarget(target *BuildTarget) *BuildTarget {
 // AddPackage adds a new package to the graph with given name.
 func (graph *BuildGraph) AddPackage(pkg *Package) {
 	key := packageKey{Name: pkg.Name, Subrepo: pkg.SubrepoName}
-	if !graph.packages.Set(key, pkg) {
+	if !graph.packages.Add(key, pkg) {
 		panic("Attempt to re-add existing package: " + key.String())
 	}
 }
@@ -48,14 +50,6 @@ func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
 func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 	target := graph.Target(label)
 	if target == nil {
-		// TODO(jpoole): This is just a small usability message to help with the migration from v15 to v16. We should
-		// probably remove this after a grace period.
-		if label.Subrepo == "pleasings" {
-			if _, ok := graph.subrepos.GetOK("pleasings"); !ok {
-				log.Warning("You've tried to use the pleasings sub-repo. This is no longer included automatically.")
-				log.Warning("Use `plz init pleasings --revision=vX.X.X` to add the pleasings repo to your project.")
-			}
-		}
 		log.Fatalf("Target %s not found in build graph\n", label)
 	}
 	return target
@@ -106,39 +100,27 @@ func (graph *BuildGraph) PackageOrDie(label BuildLabel) *Package {
 
 // AddSubrepo adds a new subrepo to the graph. It dies if one is already registered by this name.
 func (graph *BuildGraph) AddSubrepo(subrepo *Subrepo) {
-	graph.subrepos.Update(subrepo.Name, func(old interface{}) interface{} {
-		if old != nil {
-			log.Fatalf("Subrepo %s is already registered", subrepo.Name)
-		}
-		return subrepo
-	})
+	if !graph.subrepos.Add(subrepo.Name, subrepo) {
+		log.Fatalf("Subrepo %s is already registered", subrepo.Name)
+	}
 }
 
 // MaybeAddSubrepo adds the given subrepo to the graph, or returns the existing one if one is already registered.
 func (graph *BuildGraph) MaybeAddSubrepo(subrepo *Subrepo) *Subrepo {
-	var sr *Subrepo
-	graph.subrepos.Update(subrepo.Name, func(old interface{}) interface{} {
-		if old != nil {
-			s := old.(*Subrepo)
-			if !reflect.DeepEqual(s, subrepo) {
-				log.Fatalf("Found multiple definitions for subrepo '%s' (%+v s %+v)", s.Name, s, subrepo)
-			}
-			sr = s
-			return old
+	if !graph.subrepos.Add(subrepo.Name, subrepo) {
+		old, _ := graph.subrepos.Get(subrepo.Name)
+		if !reflect.DeepEqual(old, subrepo) {
+			log.Fatalf("Found multiple definitions for subrepo '%s' (%+v s %+v)", old.Name, old, subrepo)
 		}
-		sr = subrepo
-		return subrepo
-	})
-	return sr
+		return old
+	}
+	return subrepo
 }
 
 // Subrepo returns the subrepo with this name. It returns nil if one isn't registered.
 func (graph *BuildGraph) Subrepo(name string) *Subrepo {
-	subrepo, present := graph.subrepos.GetOK(name)
-	if !present {
-		return nil
-	}
-	return subrepo.(*Subrepo)
+	subrepo, _ := graph.subrepos.Get(name)
+	return subrepo
 }
 
 // SubrepoOrDie returns the subrepo with this name, dying if it doesn't exist.
@@ -153,7 +135,9 @@ func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
 // AllTargets returns a consistently ordered slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
 	targets := graph.targets.Values()
-	sort.Sort(targets)
+	sort.Slice(targets, func(i, j int) bool {
+		return targets[i].Label.Less(targets[j].Label)
+	})
 	return targets
 }
 
@@ -169,9 +153,15 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // NewGraph constructs and returns a new BuildGraph.
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
-		targets:  newTargetMap(),
-		packages: newPackageMap(),
-		subrepos: cmap.New(),
+		targets: cmap.New[BuildLabel, *BuildTarget](cmap.DefaultShardCount, func(key BuildLabel) uint32 {
+			return hashers.Fnv32(key.Subrepo) ^ hashers.Fnv32(key.PackageName) ^ hashers.Fnv32(key.Name)
+		}),
+		packages: cmap.New[packageKey, *Package](cmap.DefaultShardCount, func(key packageKey) uint32 {
+			return hashers.Fnv32(key.Subrepo) ^ hashers.Fnv32(key.Name)
+		}),
+		subrepos: cmap.New[string, *Subrepo](4, func(name string) uint32 {
+			return hashers.Fnv32(name)
+		}),
 	}
 	return g
 }
