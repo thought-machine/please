@@ -56,10 +56,19 @@ func (m *Map[K, V]) Set(key K, val V) {
 	m.shards[m.hasher(key)&m.mask].Set(key, val, true)
 }
 
-// Get returns the value or, if the key isn't present, a channel that it can be waited
+// Get returns the value corresponding to the given key, or its zero value if
+// the key doesn't exist in the map.
+func (m *Map[K, V]) Get(key K) V {
+	v, _, _ := m.shards[m.hasher(key)&m.mask].Get(key)
+	return v
+}
+
+// GetOrWait returns the value or, if the key isn't present, a channel that it can be waited
 // on for. The caller will need to call Get again after the channel closes.
-// Exactly one of the value or channel will be returned.
-func (m *Map[K, V]) Get(key K) (val V, wait <-chan struct{}) {
+// If the channel is non-nil, then val will exist in the map; otherwise it will have its zero value.
+// The third return value is true if this is the first call that is awaiting this key.
+// It's always false if the key exists.
+func (m *Map[K, V]) GetOrWait(key K) (val V, wait <-chan struct{}, first bool) {
 	return m.shards[m.hasher(key)&m.mask].Get(key)
 }
 
@@ -113,15 +122,17 @@ func (s *shard[K, V]) Set(key K, val V, overwrite bool) bool {
 // Get returns the value for a key or, if not present, a channel that it can be waited
 // on for.
 // Exactly one of the target or channel will be returned.
-func (s *shard[K, V]) Get(key K) (val V, wait <-chan struct{}) {
+// The third value is true if it is the first call that is waiting on this value.
+func (s *shard[K, V]) Get(key K) (val V, wait <-chan struct{}, first bool) {
 	s.l.Lock()
 	defer s.l.Unlock()
 	if v, ok := s.m[key]; ok {
-		return v.Val, v.Wait
+		return v.Val, v.Wait, false
 	}
 	ch := make(chan struct{})
 	s.m[key] = awaitableValue[V]{Wait: ch}
 	wait = ch
+	first = true
 	return
 }
 
