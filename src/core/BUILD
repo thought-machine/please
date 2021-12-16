@@ -12,6 +12,7 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
+        "//src/cmap",
         "//src/fs",
         "//src/process",
         "//src/scm",
