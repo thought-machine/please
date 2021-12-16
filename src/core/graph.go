@@ -42,8 +42,7 @@ func (graph *BuildGraph) AddPackage(pkg *Package) {
 
 // Target retrieves a target from the graph by label
 func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
-	t, _ := graph.targets.Get(label)
-	return t
+	return graph.targets.Get(label)
 }
 
 // TargetOrDie retrieves a target from the graph by label. Dies if the target doesn't exist.
@@ -58,11 +57,11 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 // WaitForTarget returns the given target, waiting for it to be added if it isn't yet.
 // It returns nil if the target finally turns out not to exist.
 func (graph *BuildGraph) WaitForTarget(label BuildLabel) *BuildTarget {
-	t, tch := graph.targets.Get(label)
+	t, tch, _ := graph.targets.GetOrWait(label)
 	if t != nil {
 		return t
 	}
-	p, pch := graph.packages.Get(packageKey{Name: label.PackageName, Subrepo: label.Subrepo})
+	p, pch, _ := graph.packages.GetOrWait(packageKey{Name: label.PackageName, Subrepo: label.Subrepo})
 	if p != nil {
 		// Check target again to avoid race conditions
 		return graph.Target(label)
@@ -85,8 +84,7 @@ func (graph *BuildGraph) PackageByLabel(label BuildLabel) *Package {
 
 // Package retrieves a package from the graph by name & subrepo, or nil if it can't be found.
 func (graph *BuildGraph) Package(name, subrepo string) *Package {
-	p, _ := graph.packages.Get(packageKey{Name: name, Subrepo: subrepo})
-	return p
+	return graph.packages.Get(packageKey{Name: name, Subrepo: subrepo})
 }
 
 // PackageOrDie retrieves a package by label, and dies if it can't be found.
@@ -108,7 +106,7 @@ func (graph *BuildGraph) AddSubrepo(subrepo *Subrepo) {
 // MaybeAddSubrepo adds the given subrepo to the graph, or returns the existing one if one is already registered.
 func (graph *BuildGraph) MaybeAddSubrepo(subrepo *Subrepo) *Subrepo {
 	if !graph.subrepos.Add(subrepo.Name, subrepo) {
-		old, _ := graph.subrepos.Get(subrepo.Name)
+		old := graph.subrepos.Get(subrepo.Name)
 		if !reflect.DeepEqual(old, subrepo) {
 			log.Fatalf("Found multiple definitions for subrepo '%s' (%+v s %+v)", old.Name, old, subrepo)
 		}
@@ -119,8 +117,7 @@ func (graph *BuildGraph) MaybeAddSubrepo(subrepo *Subrepo) *Subrepo {
 
 // Subrepo returns the subrepo with this name. It returns nil if one isn't registered.
 func (graph *BuildGraph) Subrepo(name string) *Subrepo {
-	subrepo, _ := graph.subrepos.Get(name)
-	return subrepo
+	return graph.subrepos.Get(name)
 }
 
 // SubrepoOrDie returns the subrepo with this name, dying if it doesn't exist.
