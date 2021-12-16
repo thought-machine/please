@@ -44,10 +44,16 @@ func New[K comparable, V any](shardCount uint32, hasher func(K) uint32) *Map[K, 
 	return m
 }
 
-// Set is the equivalent of `map[key] = val`.
+// Add adds the new item to the map.
 // It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
-func (m *Map[K, V]) Set(key K, val V) bool {
-	return m.shards[m.hasher(key)&m.mask].Set(key, val)
+func (m *Map[K, V]) Add(key K, val V) bool {
+	return m.shards[m.hasher(key)&m.mask].Set(key, val, false)
+}
+
+// Set is the equivalent of `map[key] = val`.
+// It always overwrites any key that existed before.
+func (m *Map[K, V]) Set(key K, val V) {
+	m.shards[m.hasher(key)&m.mask].Set(key, val, true)
 }
 
 // Get returns the value or, if the key isn't present, a channel that it can be waited
@@ -80,20 +86,24 @@ type shard[K comparable, V any] struct {
 }
 
 // Set is the equivalent of `map[key] = val`.
-// It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
-func (s *shard[K, V]) Set(key K, val V) bool {
+// It returns true if the item was inserted, false if it was not (because an existing one was found
+// and overwrite was false).
+func (s *shard[K, V]) Set(key K, val V, overwrite bool) bool {
 	s.l.Lock()
 	defer s.l.Unlock()
 	if existing, present := s.m[key]; present {
 		if existing.Wait == nil {
-			return false // already added
+			if !overwrite {
+				return false // already added
+			}
+			existing.Val = val
+			s.m[key] = awaitableValue[V]{Val: val}
+			return true
 		}
 		// Hasn't been added, but something is waiting for it to be.
 		s.m[key] = awaitableValue[V]{Val: val}
-		if existing.Wait != nil {
-			close(existing.Wait)
-			existing.Wait = nil
-		}
+		close(existing.Wait)
+		existing.Wait = nil
 		return true
 	}
 	s.m[key] = awaitableValue[V]{Val: val}
