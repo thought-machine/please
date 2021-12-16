@@ -483,7 +483,7 @@ var buildFunctions = map[string]func() int{
 		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile), stats)
 		test.WriteXMLCoverageToFileOrDie(targets, state.Coverage, string(opts.Cover.CoverageXMLReport))
 
-		if opts.Cover.LineCoverageReport {
+		if opts.Cover.LineCoverageReport && success {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile.AsStrings())
 		} else if !opts.Cover.NoCoverageReport && opts.Cover.Shell == "" {
 			output.PrintCoverage(state, opts.Cover.IncludeFile.AsStrings())
