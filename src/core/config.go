@@ -442,7 +442,7 @@ type Configuration struct {
 		PassEnv              []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
 		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
 		HTTPProxy            cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
-		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256"`
+		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		ExitOnError          bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
 		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)" var:"LINK_GEN_SOURCES"`
 		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
