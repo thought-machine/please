@@ -35,6 +35,10 @@ func paths(ps []string) string {
 
 // CGO invokes go tool cgo to generate cgo sources in the target's object directory
 func (tc *Toolchain) CGO(sourceDir string, objectDir string, cFlags []string, cgoFiles []string) ([]string, []string, error) {
+	// Looking at `go build -work -n -a`, there's also `_cgo_main.c` that gets taken into account,
+	// which results in a couple more commands being run.
+	// Although we seem to ignore this file, it doesn't seem to cause things to break so far, but
+	// leaving this note here for future reference.
 	goFiles := []string{"_cgo_gotypes.go"}
 	cFiles := []string{"_cgo_export.c"}
 
@@ -43,7 +47,8 @@ func (tc *Toolchain) CGO(sourceDir string, objectDir string, cFlags []string, cg
 		cFiles = append(cFiles, strings.TrimSuffix(cgoFile, ".go")+".cgo2.c")
 	}
 
-	// TODO(tiagovtristao): Are we missing the `-importpath` flag here?
+	// Although we don't set the `-importpath` flag here, it shows up in `go build -work -n -a`.
+	// It doesn't seem to cause things to break without it so far, but leaving this note here for future reference.
 	if err := tc.Exec.Run("(cd %s; %s tool cgo -objdir %s -- -I %s %s %s)", sourceDir, tc.GoTool, objectDir, objectDir, strings.Join(cFlags, " "), paths(cgoFiles)); err != nil {
 		return nil, nil, err
 	}
@@ -79,25 +84,19 @@ func (tc *Toolchain) GoAsmCompile(sourceDir, importpath, importcfg, out, trimpat
 	return tc.Exec.Run("%s tool compile -pack %s %s %s -importcfg %s -asmhdr %s -symabis %s -o %s %s", tc.GoTool, importpath, embedCfg, trimpath, importcfg, asmH, symabys, out, paths(goFiles))
 }
 
-// CCompile will compile c sources and return the object files that will be generated
-func (tc *Toolchain) CCompile(sourceDir, objectDir string, cFiles, ccFiles, cFlags, ccFlags []string) ([]string, error) {
-	objFiles := make([]string, 0, len(cFiles)+len(ccFiles))
+// CCompile will compile C/CXX sources and return the object files that will be generated
+func (tc *Toolchain) CCompile(sourceDir, objectDir string, ccFiles, ccFlags []string) ([]string, error) {
+	objFiles := make([]string, len(ccFiles))
 
-	for _, cFile := range append(cFiles, ccFiles...) {
-		objFiles = append(objFiles, strings.TrimSuffix(cFile, filepath.Ext(cFile))+".o")
-	}
+	for i, ccFile := range ccFiles {
+		baseObjFile := strings.TrimSuffix(filepath.Base(ccFile), filepath.Ext(ccFile)) + ".o"
+		objFiles[i] = filepath.Join(objectDir, baseObjFile)
 
-	err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I %s -I . %s)", objectDir, tc.CcTool, strings.Join(cFlags, " "), sourceDir, paths(cFiles))
-	if err != nil {
-		return nil, err
-	}
-
-	if len(ccFiles) > 0 {
-		err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I %s -I . %s)", objectDir, tc.CcTool, strings.Join(append(cFlags, ccFlags...), " "), sourceDir, paths(ccFiles))
-		if err != nil {
+		if err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -o %s %s)", sourceDir, tc.CcTool, strings.Join(ccFlags, " "), objFiles[i], ccFile); err != nil {
 			return nil, err
 		}
 	}
+
 	return objFiles, nil
 }
 
@@ -121,7 +120,8 @@ func (tc *Toolchain) Symabis(sourceDir, objectDir string, asmFiles []string) (st
 		return "", "", err
 	}
 
-	// TODO(tiagovtristao): Are we missing the `-p` and `-trimpath` flags here?
+	// Although we don't set both `-p` and `-trimpath` flag here, they show up in `go build -work -n -a`.
+	// It doesn't seem to cause things to break without them so far, but leaving this note here for future reference.
 	err := tc.Exec.Run("(cd %s; %s tool asm -I %s -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -gensymabis -o %s %s)", sourceDir, tc.GoTool, objectDir, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, symabis, paths(asmFiles))
 
 	return asmH, symabis, err
