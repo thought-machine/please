@@ -16,7 +16,7 @@ import (
 	"github.com/thought-machine/please/tools/please_go_embed/embed"
 )
 
-const baseWorkDir = "_build"
+const baseWorkDir = "_work"
 const ldFlagsFile = "LD_FLAGS"
 
 // PleaseGoInstall implements functionality similar to `go install` however it works with import configs to avoid a
@@ -62,7 +62,7 @@ func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags,
 		moduleName:   moduleName,
 		importConfig: importConfig,
 		outDir:       out,
-		trimPath:     filepath.Join(trimPath, baseWorkDir),
+		trimPath:     trimPath,
 
 		additionalLDFlags: ldFlags,
 		additionalCFlags:  cFlags,
@@ -178,7 +178,15 @@ func (install *PleaseGoInstall) initBuildEnv() error {
 // pkgDir returns the file path to the given target package
 func (install *PleaseGoInstall) pkgDir(target string) string {
 	p := strings.TrimPrefix(target, install.moduleName)
-	return filepath.Join(install.srcRoot, p)
+	p = filepath.Join(install.srcRoot, p)
+
+	// TODO(jpoole): is this really the right thing to do? I think this is a please specific "bug"?
+	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
+	if _, err := os.Lstat(p); os.IsNotExist(err) {
+		p = filepath.Dir(p)
+	}
+
+	return p
 }
 
 func (install *PleaseGoInstall) parseImportConfig() error {
@@ -216,13 +224,8 @@ func checkCycle(path []string, next string) ([]string, error) {
 }
 
 func (install *PleaseGoInstall) importDir(target string) (*build.Package, error) {
-	pkgDir := install.pkgDir(target)
-	// TODO(jpoole): is this really the right thing to do? I think this is a please specific "bug"?
-	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
-	if _, err := os.Lstat(pkgDir); os.IsNotExist(err) {
-		pkgDir = filepath.Dir(pkgDir)
-	}
-	return install.buildContext.ImportDir(filepath.Join(os.Getenv("TMP_DIR"), pkgDir), build.ImportComment)
+	dir := filepath.Join(os.Getenv("TMP_DIR"), install.pkgDir(target))
+	return install.buildContext.ImportDir(dir, build.ImportComment)
 }
 
 func (install *PleaseGoInstall) compile(from []string, target string) error {
@@ -259,16 +262,14 @@ func (install *PleaseGoInstall) compile(from []string, target string) error {
 	return nil
 }
 
-func (install *PleaseGoInstall) prepWorkdir(pkg *build.Package, workDir, out string) error {
-	allSrcs := append(append(append(pkg.CFiles, pkg.CXXFiles...), pkg.GoFiles...), pkg.HFiles...)
-
+func (install *PleaseGoInstall) prepareDirectories(workDir, out string) error {
 	if err := install.tc.Exec.Run("mkdir -p %s", workDir); err != nil {
 		return err
 	}
 	if err := install.tc.Exec.Run("mkdir -p %s", filepath.Dir(out)); err != nil {
 		return err
 	}
-	return install.tc.Exec.Run("ln %s %s", toolchain.FullPaths(allSrcs, pkg.Dir), workDir)
+	return nil
 }
 
 // outPath returns the path to the .a for a given package. Unlike go build, please_go install will always output to
@@ -298,29 +299,28 @@ func writeEmbedConfig(pkg *build.Package, path string) error {
 	return os.WriteFile(path, data, 0666)
 }
 
+func prefixPaths(paths []string, dir string) []string {
+	newPaths := make([]string, len(paths))
+	for i, path := range paths {
+		newPaths[i] = filepath.Join(dir, path)
+	}
+	return newPaths
+}
+
 func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package) error {
 	if len(pkg.GoFiles)+len(pkg.CgoFiles) == 0 {
 		return nil
 	}
 
 	out := outPath(install.outDir, target)
-	wd, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Unable to find working directory: %s", err)
-	}
-	// We want `workDir` to maintain the same directory structure as `pkg.Dir`.
-	// This will ensure that source file location point to the right place when debugging.
-	relativePkgDir := strings.TrimPrefix(pkg.Dir, wd)
-	workDir := filepath.Join(baseWorkDir, relativePkgDir)
+	workDir := filepath.Join(os.Getenv("TMP_DIR"), baseWorkDir, install.pkgDir(target))
 
-	if err := install.prepWorkdir(pkg, workDir, out); err != nil {
-		return fmt.Errorf("failed to prepare working directory for %s: %w", target, err)
+	if err := install.prepareDirectories(workDir, out); err != nil {
+		return fmt.Errorf("failed to prepare directories for %s: %w", target, err)
 	}
 
-	goFiles := pkg.GoFiles
-
-	var objFiles []string
-
+	goFiles := prefixPaths(pkg.GoFiles, install.pkgDir(target))
+	objFiles := []string{}
 	ldFlags := pkg.CgoLDFLAGS
 
 	if len(pkg.CgoFiles) > 0 {
@@ -357,7 +357,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 		goFiles = append(goFiles, cgoGoFiles...)
 		cFiles := append(pkg.CFiles, cgoCFiles...)
 
-		cObjFiles, err := install.tc.CCompile(workDir, cFiles, pkg.CXXFiles, cFlags, pkg.CgoCXXFLAGS)
+		cObjFiles, err := install.tc.CCompile(pkg.Dir, workDir, cFiles, pkg.CXXFiles, cFlags, pkg.CgoCXXFLAGS)
 		if err != nil {
 			return err
 		}
@@ -384,7 +384,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			return err
 		}
 
-		if err := install.tc.GoAsmCompile(workDir, importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis); err != nil {
+		if err := install.tc.GoAsmCompile(pkg.Dir, importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis); err != nil {
 			return err
 		}
 
@@ -395,7 +395,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 
 		objFiles = append(objFiles, asmObjFiles...)
 	} else {
-		err := install.tc.GoCompile(workDir, importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles)
+		err := install.tc.GoCompile(pkg.Dir, importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles)
 		if err != nil {
 			return err
 		}

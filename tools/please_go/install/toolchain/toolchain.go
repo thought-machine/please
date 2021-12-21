@@ -21,19 +21,19 @@ type Toolchain struct {
 	Exec *exec.Executor
 }
 
-func FullPaths(ps []string, dir string) string {
-	fullPs := make([]string, len(ps))
-	for i, p := range ps {
-		fullPs[i] = filepath.Join(dir, p)
+func prefixPaths(paths []string, dir string) []string {
+	newPaths := make([]string, len(paths))
+	for i, path := range paths {
+		newPaths[i] = filepath.Join(dir, path)
 	}
-	return paths(fullPs)
+	return newPaths
 }
 
 func paths(ps []string) string {
 	return strings.Join(ps, " ")
 }
 
-// CGO invokes go tool cgo to generate cgo sources in the target directory
+// CGO invokes go tool cgo to generate cgo sources in the target's object directory
 func (tc *Toolchain) CGO(sourceDir string, objectDir string, cFlags []string, cgoFiles []string) ([]string, []string, error) {
 	goFiles := []string{"_cgo_gotypes.go"}
 	cFiles := []string{"_cgo_export.c"}
@@ -43,15 +43,16 @@ func (tc *Toolchain) CGO(sourceDir string, objectDir string, cFlags []string, cg
 		cFiles = append(cFiles, strings.TrimSuffix(cgoFile, ".go")+".cgo2.c")
 	}
 
-	if err := tc.Exec.Run("(cd %s; %s tool cgo -objdir $OLDPWD/%s -- %s %s)", sourceDir, tc.GoTool, objectDir, strings.Join(cFlags, " "), paths(cgoFiles)); err != nil {
+	// TODO(tiagovtristao): Are we missing the `-importpath` flag here?
+	if err := tc.Exec.Run("(cd %s; %s tool cgo -objdir %s -- -I %s %s %s)", sourceDir, tc.GoTool, objectDir, objectDir, strings.Join(cFlags, " "), paths(cgoFiles)); err != nil {
 		return nil, nil, err
 	}
 
-	return goFiles, cFiles, nil
+	return prefixPaths(goFiles, objectDir), prefixPaths(cFiles, objectDir), nil
 }
 
 // GoCompile will compile the go sources and the generated .cgo1.go sources for the CGO files (if any)
-func (tc *Toolchain) GoCompile(dir, importpath, importcfg, out, trimpath, embedCfg string, goFiles []string) error {
+func (tc *Toolchain) GoCompile(sourceDir, importpath, importcfg, out, trimpath, embedCfg string, goFiles []string) error {
 	if importpath != "" {
 		importpath = fmt.Sprintf("-p %s", importpath)
 	}
@@ -61,11 +62,11 @@ func (tc *Toolchain) GoCompile(dir, importpath, importcfg, out, trimpath, embedC
 	if embedCfg != "" {
 		embedCfg = fmt.Sprintf("-embedcfg %s", embedCfg)
 	}
-	return tc.Exec.Run("%s tool compile -pack %s %s %s -importcfg %s -o %s %s", tc.GoTool, importpath, trimpath, embedCfg, importcfg, out, FullPaths(goFiles, dir))
+	return tc.Exec.Run("%s tool compile -pack %s %s %s -importcfg %s -o %s %s", tc.GoTool, importpath, trimpath, embedCfg, importcfg, out, paths(goFiles))
 }
 
 // GoAsmCompile will compile the go sources linking to the the abi symbols generated from symabis()
-func (tc *Toolchain) GoAsmCompile(dir, importpath, importcfg, out, trimpath, embedCfg string, goFiles []string, asmH, symabys string) error {
+func (tc *Toolchain) GoAsmCompile(sourceDir, importpath, importcfg, out, trimpath, embedCfg string, goFiles []string, asmH, symabys string) error {
 	if importpath != "" {
 		importpath = fmt.Sprintf("-p %s", importpath)
 	}
@@ -75,24 +76,24 @@ func (tc *Toolchain) GoAsmCompile(dir, importpath, importcfg, out, trimpath, emb
 	if embedCfg != "" {
 		embedCfg = fmt.Sprintf("-embedcfg %s", embedCfg)
 	}
-	return tc.Exec.Run("%s tool compile -pack %s %s %s -importcfg %s -asmhdr %s -symabis %s -o %s %s", tc.GoTool, importpath, embedCfg, trimpath, importcfg, asmH, symabys, out, FullPaths(goFiles, dir))
+	return tc.Exec.Run("%s tool compile -pack %s %s %s -importcfg %s -asmhdr %s -symabis %s -o %s %s", tc.GoTool, importpath, embedCfg, trimpath, importcfg, asmH, symabys, out, paths(goFiles))
 }
 
 // CCompile will compile c sources and return the object files that will be generated
-func (tc *Toolchain) CCompile(dir string, cFiles, ccFiles, cFlags, ccFlags []string) ([]string, error) {
+func (tc *Toolchain) CCompile(sourceDir, objectDir string, cFiles, ccFiles, cFlags, ccFlags []string) ([]string, error) {
 	objFiles := make([]string, 0, len(cFiles)+len(ccFiles))
 
 	for _, cFile := range append(cFiles, ccFiles...) {
 		objFiles = append(objFiles, strings.TrimSuffix(cFile, filepath.Ext(cFile))+".o")
 	}
 
-	err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I . _cgo_export.c %s)", dir, tc.CcTool, strings.Join(cFlags, " "), paths(cFiles))
+	err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I %s -I . %s)", objectDir, tc.CcTool, strings.Join(cFlags, " "), sourceDir, paths(cFiles))
 	if err != nil {
 		return nil, err
 	}
 
 	if len(ccFiles) > 0 {
-		err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I . %s)", dir, tc.CcTool, strings.Join(append(cFlags, ccFlags...), " "), paths(ccFiles))
+		err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I %s -I . %s)", objectDir, tc.CcTool, strings.Join(append(cFlags, ccFlags...), " "), sourceDir, paths(ccFiles))
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +103,7 @@ func (tc *Toolchain) CCompile(dir string, cFiles, ccFiles, cFlags, ccFlags []str
 
 // Pack will add the object files in dir to the archive
 func (tc *Toolchain) Pack(dir, archive string, objFiles []string) error {
-	return tc.Exec.Run("%s tool pack r %s %s", tc.GoTool, archive, FullPaths(objFiles, dir))
+	return tc.Exec.Run("%s tool pack r %s %s", tc.GoTool, archive, paths(objFiles))
 }
 
 // Link will link the archive into an executable
@@ -119,7 +120,10 @@ func (tc *Toolchain) Symabis(sourceDir, objectDir string, asmFiles []string) (st
 	if err := tc.Exec.Run("touch %s", asmH); err != nil {
 		return "", "", err
 	}
-	err := tc.Exec.Run("(cd %s; %s tool asm -I . -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -gensymabis -o $OLDPWD/%s %s)", sourceDir, tc.GoTool, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, symabis, paths(asmFiles))
+
+	// TODO(tiagovtristao): Are we missing the `-p` and `-trimpath` flags here?
+	err := tc.Exec.Run("(cd %s; %s tool asm -I %s -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -gensymabis -o %s %s)", sourceDir, tc.GoTool, objectDir, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, symabis, paths(asmFiles))
+
 	return asmH, symabis, err
 }
 
@@ -134,13 +138,13 @@ func (tc *Toolchain) Asm(sourceDir, objectDir, trimpath string, asmFiles []strin
 		objFile := strings.TrimSuffix(asmFile, ".s") + ".o"
 		objFiles[i] = objFile
 
-		err := tc.Exec.Run("(cd %s; %s tool asm %s -I . -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -o $OLDPWD/%s/%s %s)", sourceDir, tc.GoTool, trimpath, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, objectDir, objFile, asmFile)
+		err := tc.Exec.Run("(cd %s; %s tool asm %s -I %s -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -o %s/%s %s)", sourceDir, tc.GoTool, trimpath, objectDir, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, objectDir, objFile, asmFile)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return objFiles, nil
+	return prefixPaths(objFiles, objectDir), nil
 }
 
 func (tc *Toolchain) GoMinorVersion() (int, error) {

@@ -15,13 +15,28 @@ import (
 	"github.com/thought-machine/please/tools/please_go/install/exec"
 )
 
+func TestCgo(t *testing.T) {
+	install, _, _ := newInstall()
+	err := install.Install([]string{"cgo"})
+
+	require.NoError(t, err)
+	require.True(t, fs.FileExists("out/example.com/cgo/cgo.a"))
+	require.True(t, fs.FileExists("_work/tools/please_go/install/test_data/example.com/cgo/_cgo_export.c"))
+	require.True(t, fs.FileExists("_work/tools/please_go/install/test_data/example.com/cgo/_cgo_export.h"))
+	require.True(t, fs.FileExists("_work/tools/please_go/install/test_data/example.com/cgo/_cgo_export.o"))
+	require.True(t, fs.FileExists("_work/tools/please_go/install/test_data/example.com/cgo/_cgo_gotypes.go"))
+	require.True(t, fs.FileExists("_work/tools/please_go/install/test_data/example.com/cgo/foo.cgo1.go"))
+	require.True(t, fs.FileExists("_work/tools/please_go/install/test_data/example.com/cgo/foo.cgo2.c"))
+	require.True(t, fs.FileExists("_work/tools/please_go/install/test_data/example.com/cgo/foo.cgo2.o"))
+}
+
 func TestMissingImport(t *testing.T) {
 	install, stdOut, _ := newInstall()
 	err := install.Install([]string{"missing_import"})
 	require.Error(t, err)
 	assert.Contains(t, []string{
-		"_build/tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:8: could not import \"github.com/doesnt-exist\": open : no such file or directory\n", // go 1.17
-		"_build/tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:8: can't find import: \"github.com/doesnt-exist\"\n",                                 // go 1.16
+		"tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:8: could not import \"github.com/doesnt-exist\": open : no such file or directory\n", // go 1.17
+		"tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:8: can't find import: \"github.com/doesnt-exist\"\n",                                 // go 1.16
 	}, stdOut.String())
 }
 
@@ -44,7 +59,7 @@ func TestLocalImports(t *testing.T) {
 }
 
 func newInstall() (*PleaseGoInstall, *bytes.Buffer, *bytes.Buffer) {
-	install := New([]string{}, "tools/please_go/install/test_data/example.com", "example.com", "tools/please_go/install/test_data/empty.importcfg", "", "", "go", "cc", "pkg-config", "out", "")
+	install := New([]string{}, "tools/please_go/install/test_data/example.com", "example.com", "goroot.importconfig", "", "", "go", "cc", "pkg-config", "out", "")
 
 	stdOut := &bytes.Buffer{}
 	stdIn := &bytes.Buffer{}
@@ -56,11 +71,12 @@ func newInstall() (*PleaseGoInstall, *bytes.Buffer, *bytes.Buffer) {
 }
 
 func TestMain(m *testing.M) {
-	f, err := os.Create("tools/please_go/install/test_data/empty.importcfg")
-	if err != nil {
+	cmd := &exec.Executor{Stdout: os.Stdout, Stderr: os.Stderr}
+
+	// Get toolchain package files.
+	if err := cmd.Run(`find "$(go env GOROOT)"/pkg/linux_amd64 -name "*.a" | sed -e s=^"$(go env GOROOT)"/pkg/linux_amd64/== | sed -e s="\.a$"== | xargs -I{} echo "packagefile {}="$(go env GOROOT)"/pkg/linux_amd64/{}.a" > goroot.importconfig`); err != nil {
 		panic(err)
 	}
-	f.Close()
 
 	os.Exit(m.Run())
 }
