@@ -71,7 +71,7 @@ func (tc *Toolchain) GoCompile(sourceDir, importpath, importcfg, out, trimpath, 
 }
 
 // GoAsmCompile will compile the go sources linking to the the abi symbols generated from symabis()
-func (tc *Toolchain) GoAsmCompile(sourceDir, importpath, importcfg, out, trimpath, embedCfg string, goFiles []string, asmH, symabys string) error {
+func (tc *Toolchain) GoAsmCompile(importpath, importcfg, out, trimpath, embedCfg string, goFiles []string, asmH, symabys string) error {
 	if importpath != "" {
 		importpath = fmt.Sprintf("-p %s", importpath)
 	}

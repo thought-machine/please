@@ -402,7 +402,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			return err
 		}
 
-		if err := install.tc.GoAsmCompile(pkg.Dir, importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis); err != nil {
+		if err := install.tc.GoAsmCompile(importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis); err != nil {
 			return err
 		}
 
@@ -410,6 +410,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 		if err != nil {
 			return err
 		}
+
 		objFiles = append(objFiles, asmObjFiles...)
 	} else if err := install.tc.GoCompile(pkg.Dir, importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles); err != nil {
 		return err
