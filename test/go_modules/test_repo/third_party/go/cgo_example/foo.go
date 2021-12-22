@@ -1,4 +1,4 @@
-package cgo
+package cgo_example
 
 // #include "./include/foo.h"
 import "C"
