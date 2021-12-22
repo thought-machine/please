@@ -21,14 +21,6 @@ type Toolchain struct {
 	Exec *exec.Executor
 }
 
-func prefixPaths(paths []string, dir string) []string {
-	newPaths := make([]string, len(paths))
-	for i, path := range paths {
-		newPaths[i] = filepath.Join(dir, path)
-	}
-	return newPaths
-}
-
 func paths(ps []string) string {
 	return strings.Join(ps, " ")
 }
@@ -39,12 +31,15 @@ func (tc *Toolchain) CGO(sourceDir string, objectDir string, cFlags []string, cg
 	// which results in a couple more commands being run.
 	// Although we seem to ignore this file, it doesn't seem to cause things to break so far, but
 	// leaving this note here for future reference.
-	goFiles := []string{"_cgo_gotypes.go"}
-	cFiles := []string{"_cgo_export.c"}
+	goFiles := []string{filepath.Join(objectDir, "_cgo_gotypes.go")}
+	cFiles := []string{filepath.Join(objectDir, "_cgo_export.c")}
 
 	for _, cgoFile := range cgoFiles {
-		goFiles = append(goFiles, strings.TrimSuffix(cgoFile, ".go")+".cgo1.go")
-		cFiles = append(cFiles, strings.TrimSuffix(cgoFile, ".go")+".cgo2.c")
+		baseGoFile := strings.TrimSuffix(filepath.Base(cgoFile), ".go") + ".cgo1.go"
+		baseCFile := strings.TrimSuffix(filepath.Base(cgoFile), ".go") + ".cgo2.c"
+
+		goFiles = append(goFiles, filepath.Join(objectDir, baseGoFile))
+		cFiles = append(cFiles, filepath.Join(objectDir, baseCFile))
 	}
 
 	// Although we don't set the `-importpath` flag here, it shows up in `go build -work -n -a`.
@@ -53,7 +48,7 @@ func (tc *Toolchain) CGO(sourceDir string, objectDir string, cFlags []string, cg
 		return nil, nil, err
 	}
 
-	return prefixPaths(goFiles, objectDir), prefixPaths(cFiles, objectDir), nil
+	return goFiles, cFiles, nil
 }
 
 // GoCompile will compile the go sources and the generated .cgo1.go sources for the CGO files (if any)
@@ -129,22 +124,23 @@ func (tc *Toolchain) Symabis(sourceDir, objectDir string, asmFiles []string) (st
 
 // Asm will compile the asm files and return the objects that are generated
 func (tc *Toolchain) Asm(sourceDir, objectDir, trimpath string, asmFiles []string) ([]string, error) {
-	objFiles := make([]string, len(asmFiles))
 	if trimpath != "" {
 		trimpath = fmt.Sprintf("-trimpath %s", trimpath)
 	}
 
-	for i, asmFile := range asmFiles {
-		objFile := strings.TrimSuffix(asmFile, ".s") + ".o"
-		objFiles[i] = objFile
+	objFiles := make([]string, len(asmFiles))
 
-		err := tc.Exec.Run("(cd %s; %s tool asm %s -I %s -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -o %s/%s %s)", sourceDir, tc.GoTool, trimpath, objectDir, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, objectDir, objFile, asmFile)
+	for i, asmFile := range asmFiles {
+		baseObjFile := strings.TrimSuffix(filepath.Base(asmFile), ".s") + ".o"
+		objFiles[i] = filepath.Join(objectDir, baseObjFile)
+
+		err := tc.Exec.Run("(cd %s; %s tool asm %s -I %s -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -o %s %s)", sourceDir, tc.GoTool, trimpath, objectDir, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, objFiles[i], asmFile)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return prefixPaths(objFiles, objectDir), nil
+	return objFiles, nil
 }
 
 func (tc *Toolchain) GoMinorVersion() (int, error) {

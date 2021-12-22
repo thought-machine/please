@@ -320,7 +320,8 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 	objFiles := []string{}
 	ldFlags := []string{}
 
-	if len(pkg.CgoFiles) > 0 {
+	cgoFiles := prefixPaths(pkg.CgoFiles, pkg.Dir)
+	if len(cgoFiles) > 0 {
 		cFlags := pkg.CgoCFLAGS
 		ldFlags = append(ldFlags, pkg.CgoLDFLAGS...)
 
@@ -349,7 +350,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			cFlags = append(cFlags, f)
 		}
 
-		cgoGoWorkFiles, cgoCWorkFiles, err := install.tc.CGO(pkg.Dir, workDir, cFlags, pkg.CgoFiles)
+		cgoGoWorkFiles, cgoCWorkFiles, err := install.tc.CGO(pkg.Dir, workDir, cFlags, cgoFiles)
 		if err != nil {
 			return err
 		}
@@ -396,8 +397,9 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 		importPath = "main"
 	}
 
-	if len(pkg.SFiles) > 0 {
-		asmH, symabis, err := install.tc.Symabis(pkg.Dir, workDir, pkg.SFiles)
+	asmFiles := prefixPaths(pkg.SFiles, pkg.Dir)
+	if len(asmFiles) > 0 {
+		asmH, symabis, err := install.tc.Symabis(pkg.Dir, workDir, asmFiles)
 		if err != nil {
 			return err
 		}
@@ -406,7 +408,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			return err
 		}
 
-		asmObjFiles, err := install.tc.Asm(pkg.Dir, workDir, install.trimPath, pkg.SFiles)
+		asmObjFiles, err := install.tc.Asm(pkg.Dir, workDir, install.trimPath, asmFiles)
 		if err != nil {
 			return err
 		}
