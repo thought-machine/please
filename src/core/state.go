@@ -1143,12 +1143,12 @@ func NewBuildState(config *Configuration) *BuildState {
 		pendingRemoteActions: make(chan Task, 1000),
 		hashers: map[string]*fs.PathHasher{
 			// For compatibility reasons the sha1 hasher has no suffix.
-			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, "sha1"),
-			"sha256": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "sha256"),
-			"crc32":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC32, "crc32"),
-			"crc64":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC64, "crc64"),
-			"blake3": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newBlake3, "blake3"),
-			"xxhash": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newXXHash, "xxhash"),
+			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, "sha1", config.Please.NumThreads),
+			"sha256": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha256.New, "sha256", config.Please.NumThreads),
+			"crc32":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC32, "crc32", config.Please.NumThreads),
+			"crc64":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC64, "crc64", config.Please.NumThreads),
+			"blake3": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newBlake3, "blake3", config.Please.NumThreads),
+			"xxhash": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newXXHash, "xxhash", config.Please.NumThreads),
 		},
 		ProcessExecutor: process.NewSandboxingExecutor(
 			config.Sandbox.Tool == "" && (config.Sandbox.Build || config.Sandbox.Test),
