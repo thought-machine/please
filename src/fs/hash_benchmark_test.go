@@ -11,7 +11,7 @@ import (
 )
 
 func BenchmarkHashTree(b *testing.B) {
-	const expected = "0dfc40ae0c5b728b2dd0797b99cf8e7361796fead051bc8f8dcfe21b2a307903"
+	const expected = "9f944e70c49c8e0ab10993ec2dd0caabebcb9dfd0b9e6fd309b9fc8c56d12346"
 	data := os.Getenv("DATA")
 
 	// Calculate size of dir for metrics later
@@ -41,6 +41,7 @@ func BenchmarkHashTree(b *testing.B) {
 				}
 			}
 			b.ReportMetric(float64(size*b.N)/(1024.0 * 1024.0 * time.Since(start).Seconds()), "MB/s")
+			b.ReportMetric(float64(size)/(1024.0 * 1024.0 * time.Since(start).Seconds()), "MB/s/thread")
 		})
 	}
 }

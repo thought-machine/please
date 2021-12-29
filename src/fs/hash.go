@@ -12,14 +12,15 @@ import (
 	"github.com/pkg/xattr"
 )
 
-// boolTrueHashValue is used when we need to write something indicating a bool in the input.
-var boolTrueHashValue = []byte{2}
+// symlinkHashValue is used when we need to write something arbitrary indicating the input is a symlink.
+var symlinkHashValue = []byte{2}
 
 // A PathHasher is responsible for hashing & remembering paths.
 type PathHasher struct {
 	new       func() hash.Hash
 	memo      map[string][]byte
 	wait      map[string]*pendingHash
+	tasks     chan hashTask
 	mutex     sync.RWMutex
 	root      string
 	xattrName string
@@ -33,6 +34,16 @@ type pendingHash struct {
 	Err  error
 }
 
+type hashTask struct {
+	Path string
+	Ch   chan hashResult
+}
+
+type hashResult struct {
+	Hash []byte
+	Err  error
+}
+
 // NewPathHasher returns a new PathHasher based on the given root directory.
 // parallelism controls the maximum number of concurrent hash operations allowed
 func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, algo string, parallelism int) *PathHasher {
@@ -40,10 +51,7 @@ func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, algo stri
 	if algo != "sha1" {
 		hashSuffix = fmt.Sprintf("_%s", algo)
 	}
-	if parallelism <= 0 {
-		panic(fmt.Sprintf("Invalid parallelism %d, must be >= 1", parallelism))
-	}
-	return &PathHasher{
+	h := &PathHasher{
 		new:       hash,
 		memo:      map[string][]byte{},
 		wait:      map[string]*pendingHash{},
@@ -52,6 +60,15 @@ func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, algo stri
 		xattrName: "user.plz_hash" + hashSuffix,
 		algo:      algo,
 	}
+	if parallelism <= 1 {
+		return h
+	}
+	// This can be bigger than our available parallelism to allow queueing up future tasks.
+	h.tasks = make(chan hashTask, 10 * parallelism)
+	for i := 0; i < parallelism; i++ {
+		go h.runTask()
+	}
+	return h
 }
 
 // Size returns the size of the hash this hasher will return, in bytes.
@@ -170,14 +187,13 @@ func (hasher *PathHasher) hash(path string, store, read bool) ([]byte, error) {
 		// Write something arbitrary indicating this is a symlink.
 		// This isn't quite perfect - it could potentially get mixed up with a file with the
 		// appropriate contents, but that is not really likely.
-		h.Write(boolTrueHashValue)
+		h.Write(symlinkHashValue)
 		if rel := hasher.ensureRelative(dest); (rel != dest || !filepath.IsAbs(dest)) && !filepath.IsAbs(path) {
 			// Inside the root of our repo so it's something we manage - just hash its (relative) destination
 			h.Write([]byte(rel))
 		} else {
 			// Outside the repo; it's a system tool, so we hash its contents.
-			err := hasher.fileHash(h, path)
-			return h.Sum(nil), err
+			return hasher.fileHash(path)
 		}
 		return h.Sum(nil), nil
 	} else if err == nil {
@@ -195,21 +211,50 @@ func (hasher *PathHasher) hash(path string, store, read bool) ([]byte, error) {
 // hashPath hashes a single path, which might be a directory.
 func (hasher *PathHasher) hashPath(h hash.Hash, path string, isDir bool) error {
 	if !isDir {
-		return hasher.fileHash(h, path)
+		return hasher.inPlaceFileHash(h, path)
+	} else if hasher.tasks == nil {
+		// Serial implementation
+		return WalkMode(path, func(p string, mode Mode) error {
+			if mode.IsSymlink() {
+				// Deliberately do not attempt to read it. We will read the contents later since
+				// it is a link within the temp dir anyway, and if it's a link to a directory
+				// it can introduce a cycle.
+				// Just write something to the hash indicating that we found something here,
+				// otherwise rules might be marked as unchanged if they added additional symlinks.
+				h.Write(symlinkHashValue)
+			} else if !mode.IsDir() {
+				return hasher.inPlaceFileHash(h, p)
+			}
+			return nil
+		})
 	}
-	return WalkMode(path, func(p string, mode Mode) error {
+	tasks := []hashTask{}
+	if err := WalkMode(path, func(p string, mode Mode) error {
+		if mode.IsDir() {
+			return nil
+		}
+		task := hashTask{Path: p, Ch: make(chan hashResult, 1)}
+		tasks = append(tasks, task)
 		if mode.IsSymlink() {
-			// Deliberately do not attempt to read it. We will read the contents later since
-			// it is a link within the temp dir anyway, and if it's a link to a directory
-			// it can introduce a cycle.
-			// Just write something to the hash indicating that we found something here,
-			// otherwise rules might be marked as unchanged if they added additional symlinks.
-			h.Write(boolTrueHashValue)
-		} else if !mode.IsDir() {
-			return hasher.fileHash(h, p)
+			// Short-circuit this since all symlinks have a known value.
+			go func() {
+				task.Ch <- hashResult{Hash: symlinkHashValue}
+			}()
+		} else {
+			hasher.tasks <- task
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+	for _, task := range tasks {
+		result := <-task.Ch
+		if result.Err != nil {
+			return result.Err
+		}
+		h.Write(result.Hash)
+	}
+	return nil
 }
 
 // storeHash stores the hash of a file on it as an xattr.
@@ -232,13 +277,21 @@ func (hasher *PathHasher) storeHash(path string, hash []byte) {
 }
 
 // Calculate the hash of a single file
-func (hasher *PathHasher) fileHash(h hash.Hash, filename string) error {
+func (hasher *PathHasher) fileHash(filename string) ([]byte, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	defer file.Close()
+	h := hasher.NewHash()
 	_, err = io.Copy(h, file)
-	file.Close()
+	return h.Sum(nil), err
+}
+
+// Calculate the hash of a single file into the given hash
+func (hasher *PathHasher) inPlaceFileHash(h hash.Hash, filename string) error {
+	sum, err := hasher.fileHash(filename)
+	h.Write(sum)
 	return err
 }
 
@@ -249,4 +302,12 @@ func (hasher *PathHasher) ensureRelative(path string) string {
 		return strings.TrimLeft(strings.TrimPrefix(path, hasher.root), "/")
 	}
 	return path
+}
+
+// runTask runs one worker goroutine to calculate hashes.
+func (hasher *PathHasher) runTask() {
+	for task := range hasher.tasks {
+		h, err := hasher.fileHash(task.Path)
+		task.Ch <- hashResult{Hash: h, Err: err}
+	}
 }
