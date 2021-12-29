@@ -1,3 +1,5 @@
+subinclude("//build_defs:benchmark")
+
 go_library(
     name = "fs",
     srcs = glob(
@@ -18,7 +20,7 @@ go_test(
     name = "fs_test",
     srcs = glob(
         ["*_test.go"],
-        exclude = ["glob_integration_test.go"],
+        exclude = ["glob_integration_test.go", "*_benchmark_test.go"],
     ),
     data = ["test_data"],
     deps = [
@@ -32,4 +34,13 @@ go_test(
     srcs = ["glob_integration_test.go"],
     # This must remain a glob because the tests rely on data being loaded in via globs
     data = glob(["test_data/**"]),
+)
+
+benchmark(
+    name = "hash_benchmark",
+    srcs = ["hash_benchmark_test.go"],
+    data = ["//third_party/go:toolchain"],
+    deps = [
+        ":fs",
+    ],
 )
