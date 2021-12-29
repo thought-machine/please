@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/OneOfOne/cmap"
+	"github.com/cespare/xxhash/v2"
 	"lukechampine.com/blake3"
 
 	"github.com/thought-machine/please/src/cli"
@@ -47,12 +48,6 @@ type Task struct {
 	Label BuildLabel
 	Type  TaskType
 	Run   uint32 // Only present for tests (the run of a build is always zero)
-}
-
-// Debug is the type for debugging a target
-type Debug struct {
-	Debugger string
-	Port     int
 }
 
 // A Parser is the interface to reading and interacting with BUILD files.
@@ -183,8 +178,8 @@ type BuildState struct {
 	ShowTestOutput bool
 	// True to print all output of all tasks to stderr.
 	ShowAllOutput bool
-	// Set when a debugging session against a target is requested.
-	Debug *Debug
+	// Port specified when debugging a target in server mode.
+	DebugPort int
 	// True to attach a debugger on test failure.
 	DebugFailingTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
@@ -687,7 +682,7 @@ func (state *BuildState) ExpandLabels(labels []BuildLabel) BuildLabels {
 func (state *BuildState) expandLabels(labels []BuildLabel, justTests bool) BuildLabels {
 	ret := BuildLabels{}
 	for _, label := range labels {
-		if label.IsAllTargets() || label.IsAllSubpackages() {
+		if label.IsPseudoTarget() {
 			ret = append(ret, state.expandOriginalPseudoTarget(label, justTests)...)
 		} else {
 			ret = append(ret, label)
@@ -1043,7 +1038,7 @@ func (state *BuildState) forConfig(config ...string) *BuildState {
 	// Duplicate & alter configuration
 	c := state.Config.copyConfig()
 	for _, filename := range config {
-		if err := readConfigFile(c, filename); err != nil {
+		if err := readConfigFile(c, filename, false); err != nil {
 			log.Fatalf("Failed to read config file %s: %s", filename, err)
 		}
 	}
@@ -1123,6 +1118,10 @@ func newBlake3() hash.Hash {
 	return blake3.New(32, nil)
 }
 
+func newXXHash() hash.Hash {
+	return xxhash.New()
+}
+
 func sandboxTool(config *Configuration) string {
 	tool := config.Sandbox.Tool
 	if filepath.IsAbs(tool) {
@@ -1149,6 +1148,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			"crc32":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC32, "crc32"),
 			"crc64":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC64, "crc64"),
 			"blake3": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newBlake3, "blake3"),
+			"xxhash": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newXXHash, "xxhash"),
 		},
 		ProcessExecutor: process.NewSandboxingExecutor(
 			config.Sandbox.Tool == "" && (config.Sandbox.Build || config.Sandbox.Test),

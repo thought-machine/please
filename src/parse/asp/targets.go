@@ -159,7 +159,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.Test.Sandbox = isTruthy(testSandboxBuildRuleArgIdx)
 		target.Test.NoOutput = isTruthy(noTestOutputBuildRuleArgIdx)
 	}
-	if s.state.Debug != nil {
+	if s.state.Config.Build.Config == "dbg" {
 		target.Debug = new(core.DebugFields)
 		target.Debug.Command, _ = decodeCommands(s, args[debugCMDBuildRuleArgIdx])
 	}

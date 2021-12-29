@@ -1,3 +1,36 @@
+Version 16.17.1
+---------------
+    * The default jarcat_tool (now arcat) for Linux is now correctly linked
+      and does not attempt to use glibc at runtime.
+
+
+Version 16.17.0
+--------------
+    * `c_library`, `c_static_library`, `cc_library`, `cc_static_library` rules
+      now expose an `out` field for a custom name #2203
+    * New `tag()` builtin was added that allows tagging a target name #2202
+    * Add plugin version check #2206
+    * `remote_file` rule now includes support for the passing of credentials
+      and header values #2128
+    * Fix issue with `plz test -d` where it only accepts a single target but
+      it isn't considering pseudo targets (i.e. //... or //:all) #2205
+    * Plugin config keys can be inferred now, if not set #2212
+    * Further enhancements and fixes to the recent `plz debug` command to
+      better support IDEs #2213
+    * Add docs for `plz exec` #2199
+    * Virtual envs for Python (i.e. venv) are now generated under plz-out #2210
+
+
+Version 16.16.0
+--------------
+    * Added `plz query config` which can be used to retrieve what the value
+      a config field has from the variaous places Please loads `.plzconfig`
+      files #2190
+    * Fix test fields not appearing for `plz query print` when using `--fields`
+      #2200
+    * Fix missing signatures on darwin_arm64 release #2208
+
+
 Version 16.15.1
 --------------
     * Preserve original quotes in multi-line strings #2184

@@ -936,13 +936,7 @@ func newConfig(state *core.BuildState) *pyConfig {
 	c["TARGET_OS"] = pyString(state.TargetArch.OS)
 	c["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
 	c["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
-
-	if debug := state.Debug; debug != nil {
-		c["DEBUG"] = pyDict{
-			"DEBUGGER": pyString(debug.Debugger),
-			"PORT":     pyInt(debug.Port),
-		}
-	}
+	c["DEBUG_PORT"] = pyInt(state.DebugPort)
 
 	loadPluginConfig(state.Config, state, c)
 
@@ -964,8 +958,12 @@ func loadPluginConfig(subrepoConfig *core.Configuration, packageState *core.Buil
 	contextPackage := &core.Package{SubrepoName: packageState.CurrentSubrepo}
 	configValueDefinitions := subrepoConfig.PluginConfig
 	for key, definition := range configValueDefinitions {
-		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, definition.ConfigKey)
-		value, ok := extraVals[strings.ToLower(definition.ConfigKey)]
+		configKey := definition.ConfigKey
+		if configKey == "" {
+			configKey = strings.ReplaceAll(key, "_", "")
+		}
+		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, configKey)
+		value, ok := extraVals[strings.ToLower(configKey)]
 		if !ok {
 			value = definition.DefaultValue
 		}

@@ -24,8 +24,10 @@ go_library(
         "//third_party/go:godirwalk",
         "//third_party/go:logging",
         "//third_party/go:psutil",
+        "//third_party/go:semver",
         "//third_party/go:shlex",
         "//third_party/go:xattr",
+        "//third_party/go:xxhash",
     ],
 )
 

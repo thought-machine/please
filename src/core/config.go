@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/google/shlex"
 	"github.com/please-build/gcfg"
 	gcfgtypes "github.com/please-build/gcfg/types"
@@ -54,7 +55,7 @@ const UserConfigFileName = "~/.config/please/plzconfig"
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
 // readConfigFile reads a single config file into the config struct
-func readConfigFile(config *Configuration, filename string) error {
+func readConfigFile(config *Configuration, filename string, subrepo bool) error {
 	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
@@ -65,8 +66,25 @@ func readConfigFile(config *Configuration, filename string) error {
 	} else {
 		log.Debug("Read config from %s", filename)
 	}
+
+	if subrepo {
+		checkPluginVersionRequirements(config)
+	}
 	normalisePluginConfigKeys(config)
+
 	return nil
+}
+
+func checkPluginVersionRequirements(config *Configuration) {
+	if config.PluginDefinition.Name != "" {
+		currentPlzVersion := *semver.New(PleaseVersion)
+		// Get plugin config version requirement which may or may not exist
+		pluginVerReq := config.Please.Version.Version
+
+		if currentPlzVersion.LessThan(pluginVerReq) {
+			log.Warningf("Plugin \"%v\" requires Please version %v", config.PluginDefinition.Name, pluginVerReq)
+		}
+	}
 }
 
 // ReadDefaultConfigFiles reads all the config files from the default locations and
@@ -123,11 +141,11 @@ func defaultConfigFiles() []string {
 func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, error) {
 	config := DefaultConfiguration()
 	for _, filename := range filenames {
-		if err := readConfigFile(config, filename); err != nil {
+		if err := readConfigFile(config, filename, false); err != nil {
 			return config, err
 		}
 		for _, profile := range profiles {
-			if err := readConfigFile(config, filename+"."+profile); err != nil {
+			if err := readConfigFile(config, filename+"."+profile, false); err != nil {
 				return config, err
 			}
 		}
@@ -325,6 +343,7 @@ func DefaultConfiguration() *Configuration {
 	config.Python.DisableVendorFlags = false
 	config.Python.TestRunner = "unittest"
 	config.Python.TestRunnerBootstrap = ""
+	config.Python.Debugger = "pdb"
 	config.Python.UsePyPI = true
 	config.Python.InterpreterOptions = ""
 	config.Python.PipFlags = ""
@@ -423,7 +442,7 @@ type Configuration struct {
 		PassEnv              []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
 		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
 		HTTPProxy            cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
-		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256"`
+		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		ExitOnError          bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
 		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)" var:"LINK_GEN_SOURCES"`
 		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
@@ -509,6 +528,7 @@ type Configuration struct {
 		DefaultInterpreter  string   `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to, say, pypy." var:"DEFAULT_PYTHON_INTERPRETER"`
 		TestRunner          string   `help:"The test runner used to discover & run Python tests; one of unittest, pytest or behave, or a custom import path to bring your own." var:"PYTHON_TEST_RUNNER"`
 		TestRunnerBootstrap string   `help:"Target providing test-runner library and its transitive dependencies. Injects plz-provided bootstraps if not given." var:"PYTHON_TEST_RUNNER_BOOTSTRAP"`
+		Debugger            string   `help:"Sets what debugger to use to debug Python binaries. The available options are: 'pdb' (default) and 'debugpy'." var:"PYTHON_DEBUGGER"`
 		ModuleDir           string   `help:"Defines a directory containing modules from which they can be imported at the top level.\nBy default this is empty but by convention we define our pip_library rules in third_party/python and set this appropriately. Hence any of those third-party libraries that try something like import six will have it work as they expect, even though it's actually in a different location within the .pex." var:"PYTHON_MODULE_DIR"`
 		DefaultPipRepo      cli.URL  `help:"Defines a location for a pip repo to download wheels from.\nBy default pip_library uses PyPI (although see below on that) but you may well want to use this define another location to upload your own wheels to.\nIs overridden by the repo argument to pip_library." var:"PYTHON_DEFAULT_PIP_REPO"`
 		WheelRepo           cli.URL  `help:"Defines a location for a remote repo that python_wheel rules will download from. See python_wheel for more information." var:"PYTHON_WHEEL_REPO"`
@@ -604,6 +624,7 @@ type Configuration struct {
 		ExcludeCCRules                bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
 		ExcludeProtoRules             bool `help:"Whether to include the proto rules or require use of the plugin"`
 		ExcludeSymlinksInGlob         bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
+		GoDontCollapseImportPath      bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string `help:"The gateway URL to push prometheus updates to."`

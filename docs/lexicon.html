@@ -243,7 +243,8 @@
           ><span class="fn-name">is_semver</span><span class="fn-p">(</span
           ><span class="fn-arg">s</span><span class="fn-p">)</span></code
         >
-        - returns true if <code class="code">s</code> is a <a href="https://semver.org/">semantic version</a> (either
+        - returns true if <code class="code">s</code> is a <a class="copy-link"
+        href="https://semver.org/">semantic version</a> (either
         with or without a leading &quot;v&quot;), or false if not.
       </span>
     </li>
@@ -251,11 +252,12 @@
       <span>
         <code class="code"
           ><span class="fn-name">semver_check</span><span class="fn-p">(</span
-          ><span class="fn-arg">version</span>, <span class="fn-arg">constraint</span>
-          <span class="fn-p">)</span></code
+          ><span class="fn-arg">version</span>, <span class="fn-arg">constraint</span
+          ><span class="fn-p">)</span></code
         >
-        - checks if a <a href="https://semver.org/">semantic version</a> meets a constraint.
-        Supported version and constraint formats are listed on <a href="https://github.com/Masterminds/semver">this</a> site.
+        - checks if a <a class="copy-link" href="https://semver.org/">semantic version</a>
+        meets a constraint. Supported version and constraint formats are listed on <a
+        class="copy-link" href="https://github.com/Masterminds/semver">this</a> site.
       </span>
     </li>
   </ul>
@@ -1106,6 +1108,34 @@
         <span
           ><code class="code">:target</code> -&gt;
           <code class="code">//current_package:target</code>
+        </span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="mt4">
+    <h3 class="title-3" id="tag">
+      tag
+    </h3>
+
+    <code class="code-signature">tag(name, tag)</code>
+
+    <p>Tags a build label name with a given tag. This can be useful to keep following the intermediate build target
+      naming convention when a build definition doesn't expose the <code class="code">tag</code> parameter.</p>
+
+    <p>For example:</p>
+
+    <ul class="bulleted-list">
+      <li>
+        <span
+        ><code class="code">tag("name", "foo")</code> -&gt;
+          <code class="code">"_name#foo"</code>
+        </span>
+      </li>
+      <li>
+        <span
+        ><code class="code">tag("_name#foo", "bar")</code> -&gt;
+          <code class="code">"_name#foo_bar"</code>
         </span>
       </li>
     </ul>
