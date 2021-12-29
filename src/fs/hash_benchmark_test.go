@@ -25,7 +25,7 @@ func BenchmarkHashTree(b *testing.B) {
 		b.Fatalf("Failed to calculate size of input tree: %s", err)
 	}
 	// Run one hash initially to ensure any fs caching is warm.
-	NewPathHasher(".", false, sha256.New, "sha256").Hash(data, false, false)
+	NewPathHasher(".", false, sha256.New, "sha256", 1).Hash(data, false, false)
 	b.ResetTimer()
 
 	for _, parallelism := range []int{1, 2, 4, 8} {
@@ -33,7 +33,7 @@ func BenchmarkHashTree(b *testing.B) {
 			start := time.Now()
 			for i := 0; i < b.N; i++ {
 				// N.B. We force off xattrs to avoid it trying to short-circuit anything.
-				hasher := NewPathHasher(".", false, sha256.New, "sha256")
+				hasher := NewPathHasher(".", false, sha256.New, "sha256", parallelism)
 				if hash, err := hasher.Hash(data, false, false); err != nil {
 					b.Fatalf("Failed to hash path %s: %s", data, err)
 				} else if enc := hex.EncodeToString(hash); enc != expected {

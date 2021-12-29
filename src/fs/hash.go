@@ -34,10 +34,14 @@ type pendingHash struct {
 }
 
 // NewPathHasher returns a new PathHasher based on the given root directory.
-func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, algo string) *PathHasher {
+// parallelism controls the maximum number of concurrent hash operations allowed
+func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, algo string, parallelism int) *PathHasher {
 	var hashSuffix string
 	if algo != "sha1" {
 		hashSuffix = fmt.Sprintf("_%s", algo)
+	}
+	if parallelism <= 0 {
+		panic(fmt.Sprintf("Invalid parallelism %d, must be >= 1", parallelism))
 	}
 	return &PathHasher{
 		new:       hash,
@@ -176,30 +180,8 @@ func (hasher *PathHasher) hash(path string, store, read bool) ([]byte, error) {
 			return h.Sum(nil), err
 		}
 		return h.Sum(nil), nil
-	} else if err == nil && info.IsDir() {
-		err = WalkMode(path, func(p string, mode Mode) error {
-			if mode.IsSymlink() {
-				// Is a symlink, must verify that it's not absolute.
-				deref, err := os.Readlink(p)
-				if err != nil {
-					return err
-				}
-				if filepath.IsAbs(deref) {
-					log.Warning("Symlink %s has an absolute target %s, that will likely be broken later", p, deref)
-				}
-				// Deliberately do not attempt to read it. We will read the contents later since
-				// it is a link within the temp dir anyway, and if it's a link to a directory
-				// it can introduce a cycle.
-				// Just write something to the hash indicating that we found something here,
-				// otherwise rules might be marked as unchanged if they added additional symlinks.
-				h.Write(boolTrueHashValue)
-			} else if !mode.IsDir() {
-				return hasher.fileHash(h, p)
-			}
-			return nil
-		})
-	} else {
-		err = hasher.fileHash(h, path) // let this handle any other errors
+	} else if err == nil {
+		err = hasher.hashPath(h, path, info.IsDir())
 	}
 	hash := h.Sum(nil)
 	if err != nil {
@@ -208,6 +190,26 @@ func (hasher *PathHasher) hash(path string, store, read bool) ([]byte, error) {
 		hasher.storeHash(path, hash)
 	}
 	return hash, err
+}
+
+// hashPath hashes a single path, which might be a directory.
+func (hasher *PathHasher) hashPath(h hash.Hash, path string, isDir bool) error {
+	if !isDir {
+		return hasher.fileHash(h, path)
+	}
+	return WalkMode(path, func(p string, mode Mode) error {
+		if mode.IsSymlink() {
+			// Deliberately do not attempt to read it. We will read the contents later since
+			// it is a link within the temp dir anyway, and if it's a link to a directory
+			// it can introduce a cycle.
+			// Just write something to the hash indicating that we found something here,
+			// otherwise rules might be marked as unchanged if they added additional symlinks.
+			h.Write(boolTrueHashValue)
+		} else if !mode.IsDir() {
+			return hasher.fileHash(h, p)
+		}
+		return nil
+	})
 }
 
 // storeHash stores the hash of a file on it as an xattr.
