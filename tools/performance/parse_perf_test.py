@@ -78,7 +78,7 @@ def main(argv):
     log.info('Complete, median time: %0.2fs, median mem: %0.2f KB', median_time, median_mem)
     log.info('Running again to generate profiling info')
     profile_file = os.path.join(os.getcwd(), 'plz.prof')
-    subprocess.check_call(plz() + ['--profile_file', profile_file], stdout=subprocess.DEVNULL)
+    subprocess.check_call(plz() + ['--profile_file', profile_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     log.info('Reading CPU info')
     cpu_model, num_cpus = read_cpu_info()
     log.info('Generating results')
