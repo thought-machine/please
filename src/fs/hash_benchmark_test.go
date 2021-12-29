@@ -28,7 +28,7 @@ func BenchmarkHashTree(b *testing.B) {
 	NewPathHasher(".", false, sha256.New, "sha256", 1).Hash(data, false, false)
 	b.ResetTimer()
 
-	for _, parallelism := range []int{1, 2, 4, 8} {
+	for _, parallelism := range []int{1, 2, 4, 8, 16, 24} {
 		b.Run(fmt.Sprintf("%dWay", parallelism), func(b *testing.B) {
 			start := time.Now()
 			for i := 0; i < b.N; i++ {
@@ -40,8 +40,10 @@ func BenchmarkHashTree(b *testing.B) {
 					b.Fatalf("Unexpected hash; was %s, expected %s", enc, expected)
 				}
 			}
-			b.ReportMetric(float64(size*b.N)/(1024.0 * 1024.0 * time.Since(start).Seconds()), "MB/s")
-			b.ReportMetric(float64(size)/(1024.0 * 1024.0 * time.Since(start).Seconds()), "MB/s/thread")
+			s := time.Since(start).Seconds()
+			mb := float64(size * b.N) / (1024.0 * 1024.0)
+			b.ReportMetric(mb/s, "MB/s")
+			b.ReportMetric(mb/(s * float64(parallelism)), "MB/s/thread")
 		})
 	}
 }
