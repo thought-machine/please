@@ -924,6 +924,16 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 						log.Fatalf("Unable to read alias config file for %s: %s", k, err)
 					}
 					v.Cmd = ac.Command.Cmd
+					if v.Cmd == "" {
+						arg2 := args[idx+2]
+						if subcommand, found := ac.Subcommand[arg2]; found {
+							err := readAliasConfigFile(ac, subcommand.Config)
+							if err != nil {
+								log.Fatalf("Unable to read alias config file for %s: %s", k, err)
+							}
+							v.Cmd = ac.Command.Cmd
+						}
+					}
 				}
 				// We could insert every token in v into os.Args at this point and then we could have
 				// aliases defined in terms of other aliases but that seems rather like overkill so just
@@ -971,7 +981,6 @@ func (a Alias) Command(name string, location string, description string, cmd *fl
 	if ac.Command.Cmd == "" {
 		cmd.SubcommandsOptional = false
 	}
-
 	// Add alias command and flags
 	var data interface{} = &struct{}{}
 	if cmd.FindOptionByLongName(name) == nil {

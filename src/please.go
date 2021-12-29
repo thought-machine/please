@@ -1342,8 +1342,13 @@ func initBuild(args []string) string {
 	if (flagsErr != nil || len(extraArgs) > 0) && command != "query.completions" {
 		if len(os.Args) > 1 {
 			if alias, ok := config.Alias[os.Args[1]]; ok {
-				parser = flags.NewNamedParser(os.Args[0], 0)
-				if alias.Config != "" {
+				// first handle if the alias is non nested
+				if alias.Config == "" {
+					config.AttachAliasFlags(parser)
+					extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
+				} else {
+					// next, handle if the alias is nested
+					parser = flags.NewNamedParser(os.Args[0], 0)
 					cmd, err := alias.Command(os.Args[1], alias.Config, alias.Desc, parser.Command)
 					if err != nil {
 						log.Error("Failed to parse config at location %s: %s", alias.Config, err)
