@@ -337,7 +337,9 @@ workflows:
             - test-http-cache
           filters:
             branches:
-              only: v16
+              only:
+                - master
+                - v16
       - release-s3:
           requires:
             - build-alpine
@@ -350,7 +352,9 @@ workflows:
             - test-http-cache
           filters:
             branches:
-              only: v16
+              only:
+                - master
+                - v16
       - perf-test:
           requires:
             - build-alpine
