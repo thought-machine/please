@@ -35,12 +35,16 @@ func (cache *cmdCache) Store(target *core.BuildTarget, key []byte, files []strin
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
-			log.Debug("Failed to store files via custom command: %s", err)
+			log.Warning("Failed to store files via custom command: %s", err)
+			if len(output) > 0 {
+				log.Warning("Custom command output:%s", string(output))
+			}
+		} else {
+			if len(output) > 0 {
+				log.Info("Custom command output:%s", string(output))
+			}
 		}
 
-		if len(output) > 0 {
-			log.Info("Custom command output:%s", string(output))
-		}
 	}
 }
 
@@ -52,14 +56,14 @@ func (cache *cmdCache) Retrieve(target *core.BuildTarget, key []byte, _ []string
 	cmd := exec.Command("sh", "-c", cache.retrieveCommand)
 	cmd.Env = append(cmd.Env, "CACHE_KEY="+strKey)
 
-	var output bytes.Buffer
-	cmd.Stderr = &output
+	var cmdOutputBuffer bytes.Buffer
+	cmd.Stderr = &cmdOutputBuffer
 
 	r, w := io.Pipe()
 	cmd.Stdout = w
 
 	if err := cmd.Start(); err != nil {
-		log.Debug("Unable to start custom retrieve command: %s", err)
+		log.Warning("Unable to start custom retrieve command: %s", err)
 		return false
 	}
 
@@ -69,15 +73,18 @@ func (cache *cmdCache) Retrieve(target *core.BuildTarget, key []byte, _ []string
 		var ok bool
 
 		if err := cmd.Wait(); err != nil {
-			log.Debug("Unable to unpack tar from custom command: %s", err)
+			log.Warning("Unable to unpack tar from custom command: %s", err)
+			if cmdOutputBuffer.Len() > 0 {
+				log.Warning("Custom command output:%s", string(cmdOutputBuffer.Bytes()))
+			}
 			ok = false
 		} else {
+			if cmdOutputBuffer.Len() > 0 {
+				log.Debug("Custom command output:%s", string(cmdOutputBuffer.Bytes()))
+			}
 			ok = true
 		}
 
-		if output.Len() > 0 {
-			log.Debug("Custom command output:%s", string(output.Bytes()))
-		}
 		// have to explicitely close the read here to potentially interrupt
 		// a forever blocking tar reader in case that the command died
 		// before even getting the first entry
