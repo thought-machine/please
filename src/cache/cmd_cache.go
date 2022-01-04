@@ -3,6 +3,7 @@ package cache
 import (
 	"archive/tar"
 	"bytes"
+	"context"
 	"encoding/hex"
 	"io"
 	"os/exec"
@@ -25,13 +26,17 @@ func (cache *cmdCache) Store(target *core.BuildTarget, key []byte, files []strin
 	if cache.storeCommand != "" {
 		strKey := keyToString(key)
 		log.Debug("Storing %s: %s in custom cache...", target.Label, strKey)
-		cmd := exec.Command("sh", "-c", cache.storeCommand)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		cmd := exec.CommandContext(ctx, "sh", "-c", cache.storeCommand)
 		cmd.Env = append(cmd.Env, "CACHE_KEY="+strKey)
 
 		r, w := io.Pipe()
 		cmd.Stdin = r
 
-		go cache.write(w, target, files)
+		go write(w, target, files, cancel)
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
@@ -111,7 +116,7 @@ func (cache *cmdCache) Shutdown() {
 }
 
 // write writes a series of files into the given Writer.
-func (cache *cmdCache) write(w io.WriteCloser, target *core.BuildTarget, files []string) {
+func write(w io.WriteCloser, target *core.BuildTarget, files []string, cancel context.CancelFunc) {
 	defer w.Close()
 	tw := tar.NewWriter(w)
 	defer tw.Close()
@@ -122,6 +127,9 @@ func (cache *cmdCache) write(w io.WriteCloser, target *core.BuildTarget, files [
 			return storeFile(tw, name)
 		}); err != nil {
 			log.Warning("Error sending artifacts to command-driven cache: %s", err)
+			// kill the running command
+			cancel()
+			return
 		}
 	}
 }
