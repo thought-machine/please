@@ -23,8 +23,10 @@ func keyToString(key []byte) string {
 
 func (cache *cmdCache) Store(target *core.BuildTarget, key []byte, files []string) {
 	if cache.storeCommand != "" {
+		strKey := keyToString(key)
+		log.Debug("Storing %s: %s in custom cache...", target.Label, strKey)
 		cmd := exec.Command("sh", "-c", cache.storeCommand)
-		cmd.Env = append(cmd.Env, "CACHE_KEY="+keyToString(key))
+		cmd.Env = append(cmd.Env, "CACHE_KEY="+strKey)
 
 		r, w := io.Pipe()
 		cmd.Stdin = r
@@ -41,8 +43,11 @@ func (cache *cmdCache) Store(target *core.BuildTarget, key []byte, files []strin
 
 func (cache *cmdCache) Retrieve(target *core.BuildTarget, key []byte, _ []string) bool {
 
+	strKey := keyToString(key)
+	log.Debug("Retrieve %s: %s from custom cache...", target.Label, strKey)
+
 	cmd := exec.Command("sh", "-c", cache.retrieveCommand)
-	cmd.Env = append(cmd.Env, "CACHE_KEY="+keyToString(key))
+	cmd.Env = append(cmd.Env, "CACHE_KEY="+strKey)
 
 	var output bytes.Buffer
 	cmd.Stderr = &output
