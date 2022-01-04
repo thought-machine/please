@@ -32,10 +32,13 @@ func (cache *cmdCache) Store(target *core.BuildTarget, key []byte, files []strin
 		cmd.Stdin = r
 
 		go cache.write(w, target, files)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			log.Warning("Failed to store files via custom command: %s", err)
-			log.Warning("Output was: %s", string(output))
-		} else if len(output) > 0 {
+		output, err := cmd.CombinedOutput()
+
+		if err != nil {
+			log.Debug("Failed to store files via custom command: %s", err)
+		}
+
+		if len(output) > 0 {
 			log.Info("Custom command output:%s", string(output))
 		}
 	}
@@ -56,25 +59,39 @@ func (cache *cmdCache) Retrieve(target *core.BuildTarget, key []byte, _ []string
 	cmd.Stdout = w
 
 	if err := cmd.Start(); err != nil {
-		log.Warning("Unable to start custom retrieve command: %s", err)
+		log.Debug("Unable to start custom retrieve command: %s", err)
 		return false
 	}
 
-	ok, err := readTar(r)
+	cmdResult := make(chan bool)
+
+	go func() {
+		var ok bool
+
+		if err := cmd.Wait(); err != nil {
+			log.Debug("Unable to unpack tar from custom command: %s", err)
+			ok = false
+		} else {
+			ok = true
+		}
+
+		if output.Len() > 0 {
+			log.Debug("Custom command output:%s", string(output.Bytes()))
+		}
+		// have to explicitely close the read here to potentially interrupt
+		// a forever blocking tar reader in case that the command died
+		// before even getting the first entry
+		r.Close()
+
+		cmdResult <- ok
+	}()
+
+	tarOk, err := readTar(r)
 	if err != nil {
-		log.Warning("Unable to unpack tar from custom command: %s", err)
-		return false
+		log.Debug("Error in tar reader: %s", err)
 	}
 
-	if err = cmd.Wait(); err != nil {
-		log.Warning("Unable to unpack tar from custom command: %s", err)
-		log.Warning("Output was: %s", string(output.Bytes()))
-		return false
-	} else if output.Len() > 0 {
-		log.Info("Custom command output:%s", string(output.Bytes()))
-	}
-
-	return ok
+	return tarOk && <-cmdResult
 }
 
 func (cache *cmdCache) Clean(*core.BuildTarget) {
