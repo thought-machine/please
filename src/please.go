@@ -1323,7 +1323,11 @@ func initBuild(args []string) string {
 	// can affect how we parse otherwise illegal flag combinations.
 	if (flagsErr != nil || len(extraArgs) > 0) && command != "query.completions" {
 		args := config.UpdateArgsWithAliases(os.Args)
-		command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
+		parser, _, err := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions, additionalUsageInfo)
+		if err != nil {
+			log.Fatalf("%s", err)
+		}
+		command = cli.ActiveFullCommand(parser.Command)
 	}
 
 	if opts.ProfilePort != 0 {
