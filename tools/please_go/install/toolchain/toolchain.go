@@ -87,7 +87,7 @@ func (tc *Toolchain) CCompile(sourceDir, objectDir string, ccFiles, ccFlags []st
 		baseObjFile := strings.TrimSuffix(filepath.Base(ccFile), filepath.Ext(ccFile)) + ".o"
 		objFiles[i] = filepath.Join(objectDir, baseObjFile)
 
-		if err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -o %s %s)", sourceDir, tc.CcTool, strings.Join(ccFlags, " "), objFiles[i], ccFile); err != nil {
+		if err := tc.Exec.Run("(cd %s; %s -Wno-error -Wno-unused-parameter -c %s -I . -o %s %s)", sourceDir, tc.CcTool, strings.Join(ccFlags, " "), objFiles[i], ccFile); err != nil {
 			return nil, err
 		}
 	}
