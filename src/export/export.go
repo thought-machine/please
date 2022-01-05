@@ -75,14 +75,13 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 	}
 	done[target] = true
 	for _, dep := range target.Dependencies() {
-		if parent := dep.Parent(graph); parent != nil && parent != target.Parent(graph) && parent != target {
-			export(graph, dir, parent, done)
-		} else {
-			export(graph, dir, dep, done)
-		}
+		export(graph, dir, dep, done)
 	}
 	for _, subinclude := range graph.PackageOrDie(target.Label).Subincludes {
 		export(graph, dir, graph.TargetOrDie(subinclude), done)
+	}
+	if parent := target.Parent(graph); parent != nil && parent != target {
+		export(graph, dir, parent, done)
 	}
 }
 
