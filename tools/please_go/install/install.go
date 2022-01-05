@@ -30,7 +30,8 @@ type PleaseGoInstall struct {
 	trimPath     string
 
 	additionalCFlags string
-	// A set of flags we get from pkg-config or #cgo comments
+	// A set of flags we may get from: pkg-config, #cgo directives,
+	// go rules' `linker_flags` argument and `go.ldflags` config value.
 	collectedLdFlags []string
 
 	tc *toolchain.Toolchain
