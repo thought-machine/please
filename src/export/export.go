@@ -32,12 +32,12 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	for pkg := range packages {
 		dest := path.Join(dir, pkg.Filename)
 		if err := fs.RecursiveCopy(pkg.Filename, dest, 0); err != nil {
-			log.Fatalf("Failed to copy BUILD file: %s\n", pkg.Filename)
+			log.Fatalf("Failed to copy BUILD file %s: %s\n", pkg.Filename, err)
 		}
 		// Now rewrite the unused targets out of it
 		victims := []string{}
 		for _, target := range pkg.AllTargets() {
-			if !done[target] {
+			if !done[target] && !target.HasParent() {
 				victims = append(victims, target.Label.Name)
 			}
 		}
