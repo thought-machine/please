@@ -1,3 +1,17 @@
+Version 16.18.0
+---------------
+    * Stop showing line by line coverage results when tests fail #2227
+    * Add support for the xxhash hashing algorithm #2229
+    * Use an environment variable for to pass in go to the go test tool
+      to improve migration strategy #2239
+    * Handle aliases to multi-level commands #2242
+    * Make `plz run sequential` use the same `--output` flag as
+      `plz run parallel` #2243
+    * Implement a command cache to use custom commands to store and
+      retrieve items from the cache e.g. `s3 cp - s3://cache/$CACHE_KEY`
+      #2244
+
+
 Version 16.17.1
 ---------------
     * The default jarcat_tool (now arcat) for Linux is now correctly linked
