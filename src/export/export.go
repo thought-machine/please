@@ -13,6 +13,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/gc"
+	"github.com/thought-machine/please/src/parse"
 )
 
 var log = logging.MustGetLogger("export")
@@ -30,6 +31,9 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 		packages[state.Graph.PackageOrDie(target.Label)] = true
 	}
 	for pkg := range packages {
+		if pkg.Name == parse.InternalPackageName {
+			continue // This isn't a real package to be copied
+		}
 		dest := path.Join(dir, pkg.Filename)
 		if err := fs.RecursiveCopy(pkg.Filename, dest, 0); err != nil {
 			log.Fatalf("Failed to copy BUILD file %s: %s\n", pkg.Filename, err)
@@ -43,6 +47,12 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 		}
 		if err := gc.RewriteFile(state, dest, victims); err != nil {
 			log.Fatalf("Failed to rewrite BUILD file: %s\n", err)
+		}
+	}
+	// Write any preloaded build defs as well; preloaded subincludes should be fine though.
+	for _, preload := range state.Config.Parse.PreloadBuildDefs {
+		if err := fs.RecursiveCopy(preload, path.Join(dir, preload), 0); err != nil {
+			log.Fatalf("Failed to copy preloaded build def %s: %s", preload, err)
 		}
 	}
 }
