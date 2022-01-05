@@ -2,7 +2,7 @@ Version 16.18.0
 ---------------
     * Stop showing line by line coverage results when tests fail #2227
     * Add support for the xxhash hashing algorithm #2229
-    * Use an environment variable for to pass in go to the go test tool
+    * Use an environment variable to pass in go to the go test main tool
       to improve migration strategy #2239
     * Handle aliases to multi-level commands #2242
     * Make `plz run sequential` use the same `--output` flag as
