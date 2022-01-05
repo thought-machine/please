@@ -112,5 +112,4 @@ func TestCmdStoreAndRetrieveExitCode(t *testing.T) {
 	hit := cache.Retrieve(target, key, nil)
 	// expected to fail because of "exit 1"
 	assert.False(t, hit)
-
 }

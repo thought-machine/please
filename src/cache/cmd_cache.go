@@ -44,17 +44,11 @@ func (cache *cmdCache) Store(target *core.BuildTarget, key []byte, files []strin
 			if len(output) > 0 {
 				log.Warning("Custom command output:%s", string(output))
 			}
-		} else {
-			if len(output) > 0 {
-				log.Info("Custom command output:%s", string(output))
-			}
 		}
-
 	}
 }
 
 func (cache *cmdCache) Retrieve(target *core.BuildTarget, key []byte, _ []string) bool {
-
 	strKey := keyToString(key)
 	log.Debug("Retrieve %s: %s from custom cache...", target.Label, strKey)
 
@@ -80,17 +74,17 @@ func (cache *cmdCache) Retrieve(target *core.BuildTarget, key []byte, _ []string
 		if err := cmd.Wait(); err != nil {
 			log.Warning("Unable to unpack tar from custom command: %s", err)
 			if cmdOutputBuffer.Len() > 0 {
-				log.Warning("Custom command output:%s", string(cmdOutputBuffer.Bytes()))
+				log.Warning("Custom command output:%s", cmdOutputBuffer.String())
 			}
 			ok = false
 		} else {
 			if cmdOutputBuffer.Len() > 0 {
-				log.Debug("Custom command output:%s", string(cmdOutputBuffer.Bytes()))
+				log.Debug("Custom command output:%s", cmdOutputBuffer.String())
 			}
 			ok = true
 		}
 
-		// have to explicitely close the read here to potentially interrupt
+		// have to explicitly close the read here to potentially interrupt
 		// a forever blocking tar reader in case that the command died
 		// before even getting the first entry
 		r.Close()
@@ -119,6 +113,7 @@ func (cache *cmdCache) Shutdown() {
 func write(w io.WriteCloser, target *core.BuildTarget, files []string, cancel context.CancelFunc) {
 	defer w.Close()
 	tw := tar.NewWriter(w)
+
 	defer tw.Close()
 	outDir := target.OutDir()
 
