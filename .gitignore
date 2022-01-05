@@ -19,16 +19,3 @@ __pycache__
 
 # The parse perf test repo
 /tree
-
-
-
-# Entries below this point are managed by Please (DO NOT EDIT)
-test/go_rules/cover-test/test-proto.pb.go
-test/proto_rules/flags.pb.go
-test/proto_rules/js_test_pb.js
-test/proto_rules/test_pb2.py
-test/proto_rules/go_grpc_ff/proto/service.pb.go
-test/proto_rules/go_grpc_ff/proto/service_grpc.pb.go
-test/proto_rules/root_dir/other_test.pb.go
-test/proto_rules/root_dir/test.pb.go
-test/python_rules/test_pb2.py
