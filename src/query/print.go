@@ -23,7 +23,7 @@ func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []s
 		t := graph.TargetOrDie(target)
 
 		if outputJSON {
-			ts[target.String()] = targetToJsonMap(state, t)
+			ts[target.String()] = targetToValueMap(state, t)
 			continue
 		}
 
@@ -63,10 +63,9 @@ func handleSpecialFields(specials specialFieldsMap, target *core.BuildTarget, na
 		return nil, false
 	}
 	return fun(target), true
-
 }
 
-func targetToJsonMap(state *core.BuildState, target *core.BuildTarget) map[string]interface{} {
+func targetToValueMap(state *core.BuildState, target *core.BuildTarget) map[string]interface{} {
 	ret := map[string]interface{}{}
 	fs := fields(reflect.ValueOf(target).Elem(), state.Parser.BuildRuleArgOrder())
 

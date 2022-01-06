@@ -28,7 +28,6 @@ type BuildInput interface {
 	String() string
 }
 
-
 // FileLabel represents a file in the current package which is directly used by a target.
 type FileLabel struct {
 	// Name of the file
@@ -42,7 +41,6 @@ type FileLabel struct {
 func (label FileLabel) MarshalText() ([]byte, error) {
 	return []byte(label.String()), nil
 }
-
 
 // Paths returns a slice of paths to the files of this input.
 func (label FileLabel) Paths(graph *BuildGraph) []string {
@@ -88,7 +86,6 @@ type SubrepoFileLabel struct {
 func (label SubrepoFileLabel) MarshalText() ([]byte, error) {
 	return []byte(label.String()), nil
 }
-
 
 // Paths returns a slice of paths to the files of this input.
 func (label SubrepoFileLabel) Paths(graph *BuildGraph) []string {
