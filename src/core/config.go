@@ -442,7 +442,7 @@ type Configuration struct {
 		PassEnv              []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
 		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
 		HTTPProxy            cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
-		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256"`
+		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		ExitOnError          bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
 		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)" var:"LINK_GEN_SOURCES"`
 		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
@@ -461,6 +461,8 @@ type Configuration struct {
 		HTTPTimeout                cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`
 		HTTPConcurrentRequestLimit int          `help:"The maximum amount of concurrent requests that can be open. Default 20."`
 		HTTPRetry                  int          `help:"The maximum number of retries before a request will give up, if a request is retryable"`
+		StoreCommand               string       `help:"Use a custom command to store cache entries."`
+		RetrieveCommand            string       `help:"Use a custom command to retrieve cache entries."`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
 		Timeout                  cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`

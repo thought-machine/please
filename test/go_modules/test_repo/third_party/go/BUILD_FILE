@@ -98,3 +98,14 @@ go_module(
     ],
     licences = ["Apache-2.0"]
 )
+
+# Tiny CGO module that tests relative C header files imports.
+filegroup(
+    name = "cgo_example_srcs",
+    srcs = ["cgo_example"],
+)
+go_module(
+    name = "cgo",
+    module = "cgo_example",
+    download = ":cgo_example_srcs",
+)
