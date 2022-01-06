@@ -15,9 +15,9 @@ import (
 var order = parse.InitParser(core.NewDefaultBuildState()).Parser.BuildRuleArgOrder()
 
 func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
-	target := core.BuildTarget{}
+	target := &core.BuildTarget{}
 	var buf bytes.Buffer
-	p := newPrinter(&buf, &target, 0, order)
+	p := newPrinter(&buf, target, 0, order)
 	p.PrintTarget()
 	assert.False(t, p.error, "Appears we do not know how to print some fields")
 }

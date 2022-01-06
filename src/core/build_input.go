@@ -28,6 +28,7 @@ type BuildInput interface {
 	String() string
 }
 
+
 // FileLabel represents a file in the current package which is directly used by a target.
 type FileLabel struct {
 	// Name of the file
@@ -35,6 +36,13 @@ type FileLabel struct {
 	// Name of the package
 	Package string
 }
+
+// MarshalText implements the encoding.TextMarshaler interface, which makes FileLabel
+// usable as map keys in JSON.
+func (label FileLabel) MarshalText() ([]byte, error) {
+	return []byte(label.String()), nil
+}
+
 
 // Paths returns a slice of paths to the files of this input.
 func (label FileLabel) Paths(graph *BuildGraph) []string {
@@ -74,6 +82,13 @@ type SubrepoFileLabel struct {
 	// The full path, including the subrepo root.
 	FullPackage string
 }
+
+// MarshalText implements the encoding.TextMarshaler interface, which makes SubrepoFileLabel
+// usable as map keys in JSON.
+func (label SubrepoFileLabel) MarshalText() ([]byte, error) {
+	return []byte(label.String()), nil
+}
+
 
 // Paths returns a slice of paths to the files of this input.
 func (label SubrepoFileLabel) Paths(graph *BuildGraph) []string {
@@ -122,6 +137,12 @@ type SystemFileLabel struct {
 	Path string
 }
 
+// MarshalText implements the encoding.TextMarshaler interface, which makes SystemFileLabel
+// usable as map keys in JSON.
+func (label SystemFileLabel) MarshalText() ([]byte, error) {
+	return []byte(label.String()), nil
+}
+
 // Paths returns a slice of paths to the files of this input.
 func (label SystemFileLabel) Paths(graph *BuildGraph) []string {
 	return label.FullPaths(graph)
@@ -155,6 +176,12 @@ func (label SystemFileLabel) String() string {
 type SystemPathLabel struct {
 	Name string
 	Path []string
+}
+
+// MarshalText implements the encoding.TextMarshaler interface, which makes SystemPathLabel
+// usable as map keys in JSON.
+func (label SystemPathLabel) MarshalText() ([]byte, error) {
+	return []byte(label.String()), nil
 }
 
 // Paths returns a slice of paths to the files of this input.
@@ -200,6 +227,12 @@ func (label SystemPathLabel) String() string {
 type AnnotatedOutputLabel struct {
 	BuildLabel
 	Annotation string
+}
+
+// MarshalText implements the encoding.TextMarshaler interface, which makes AnnotatedOutputLabel
+// usable as map keys in JSON.
+func (label AnnotatedOutputLabel) MarshalText() ([]byte, error) {
+	return []byte(label.String()), nil
 }
 
 // Paths returns a slice of paths to the files of this input.
