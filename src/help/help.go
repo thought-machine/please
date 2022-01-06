@@ -4,7 +4,6 @@ package help
 import (
 	"fmt"
 	"os"
-	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -66,6 +65,23 @@ func help(topic string) string {
 	if f, present := m[topic]; present {
 		return helpFromBuildRule(f.FuncDef)
 	}
+
+	// Check plugins
+	config, err := core.ReadDefaultConfigFiles(nil)
+	if err != nil {
+		panic("Failed to read config")
+	}
+	if _, ok := config.Plugin[topic]; ok {
+		message := fmt.Sprintf("%v is a plugin defined in the .plzconfig file. It's loaded from github.com/please-build/%v-rules", topic, topic)
+		if _, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
+
+		} else {
+			log.Warningf("No subrepo field found for plugin %v", topic)
+		}
+
+		return message
+	}
+
 	return ""
 }
 
