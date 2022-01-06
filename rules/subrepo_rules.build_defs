@@ -202,7 +202,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
         hashes = hashes,
         config = config,
         headers = {
-            'Authorization': f"token {access_token}"
+            'Authorization': f'token {access_token}'
         },
         bazel_compat = bazel_compat,
     )
