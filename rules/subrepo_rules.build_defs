@@ -58,6 +58,7 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha
 
 def new_http_archive(name:str, urls:list, build_file:str=None, build_file_content:str=None,
                      strip_prefix:str=None, strip_build:bool=False, hashes:str|list&sha256=None,
+                     username:str=None, password_file:str=None, headers:dict=None, secret_headers:dict=None,
                      config:str=None, bazel_compat:bool=False, visibility:list=None):
     """Fetches a remote file over HTTP and expands its contents, combined with a BUILD file.
 
@@ -79,6 +80,10 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
       strip_prefix: Prefix to strip from the expanded archive.
       strip_build: True to strip any BUILD files from the archive after download.
       hashes: List of hashes to verify the rule with.
+      username: Username for accessing a private file or repo.
+      password_file: A file on disk that contains a password or access token.
+      headers: Headers to pass to curl.
+      secret_headers: Headers contained in files to pass to curl.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
                     specifying a config file with `compatibility = true` in the `[bazel]`
@@ -93,6 +98,10 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         url = urls,
         out = name + '_' + basename(urls[0]),
         hashes = hashes,
+        username = username,
+        password_file = password_file,
+        headers = headers,
+        secret_headers = secret_headers
     )
     if strip_prefix:
         cmd = '$TOOL x $SRCS_REMOTE -o "$OUT" -s ' + strip_prefix
@@ -151,6 +160,7 @@ def new_local_repository(name:str, path:str):
 
 def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:str|list=None,
                 strip_prefix:str=None, strip_build:bool=False, config:str=None,
+                access_token:str=None,
                 bazel_compat:bool=False):
     """Defines a new subrepo corresponding to a Github project.
 
@@ -165,6 +175,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
       hashes: List of hashes to verify the rule with.
       strip_prefix: Prefix to strip from the contents of the zip. Is usually autodetected for you.
       strip_build: True to strip any BUILD files from the archive after download.
+      access_token: Your github personal access token.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
                     specifying a config file with `compatibility = true` in the `[bazel]`
@@ -190,6 +201,9 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
         build_file = build_file,
         hashes = hashes,
         config = config,
+        headers = {
+            'Authorization': f"token {access_token}"
+        },
         bazel_compat = bazel_compat,
     )
 
