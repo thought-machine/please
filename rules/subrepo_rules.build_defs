@@ -58,7 +58,7 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha
 
 def new_http_archive(name:str, urls:list, build_file:str=None, build_file_content:str=None,
                      strip_prefix:str=None, strip_build:bool=False, hashes:str|list&sha256=None,
-                     username:str=None, password_file:str=None, headers:dict=None, secret_headers:dict=None,
+                     username:str=None, password_file:str=None, headers:dict={}, secret_headers:dict={},
                      config:str=None, bazel_compat:bool=False, visibility:list=None):
     """Fetches a remote file over HTTP and expands its contents, combined with a BUILD file.
 
