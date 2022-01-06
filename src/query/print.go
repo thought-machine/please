@@ -23,7 +23,7 @@ func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []s
 		t := graph.TargetOrDie(target)
 
 		if outputJSON {
-			ts[target.String()] = targetToValueMap(state, t)
+			ts[target.String()] = targetToValueMap(state.Parser.BuildRuleArgOrder(), t)
 			continue
 		}
 
@@ -57,20 +57,20 @@ func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []s
 	}
 }
 
-func handleSpecialFields(specials specialFieldsMap, target *core.BuildTarget, name string) (interface{}, bool) {
+func handleSpecialFields(specials specialFieldsMap, target *core.BuildTarget, name string) (reflect.Value, bool) {
 	fun, ok := specials[name]
 	if !ok {
-		return nil, false
+		return reflect.Value{}, false
 	}
-	return fun(target), true
+	return reflect.ValueOf(fun(target)), true
 }
 
-func targetToValueMap(state *core.BuildState, target *core.BuildTarget) map[string]interface{} {
+func targetToValueMap(order map[string]int, target *core.BuildTarget) map[string]interface{} {
 	ret := map[string]interface{}{}
-	fs := fields(reflect.ValueOf(target).Elem(), state.Parser.BuildRuleArgOrder())
+	fs := fields(reflect.ValueOf(target).Elem(), order)
 
 	if target.IsTest() {
-		fs = append(fs, fields(reflect.ValueOf(target.Test).Elem(), state.Parser.BuildRuleArgOrder())...)
+		fs = append(fs, fields(reflect.ValueOf(target.Test).Elem(), order)...)
 	}
 	specialFields := specialFields()
 
@@ -82,12 +82,16 @@ func targetToValueMap(state *core.BuildState, target *core.BuildTarget) map[stri
 		name := fieldName(field.field)
 		value, isSpecial := handleSpecialFields(specialFields, target, name)
 		if !isSpecial {
-			value = field.value.Interface()
+			value = field.value
 		}
-		if s, ok := value.(fmt.Stringer); ok {
+		if _, ok := ret[name]; ok && isZero(value) {
+			continue
+		}
+
+		if s, ok := value.Interface().(fmt.Stringer); ok {
 			ret[name] = s.String()
 		} else {
-			ret[name] = value
+			ret[name] = value.Interface()
 		}
 	}
 	return ret
@@ -315,6 +319,26 @@ func (p *printer) maybePrintField(f reflect.StructField, v reflect.Value) (strin
 		return p.genericPrint(reflect.ValueOf(customFunc(p.target)))
 	}
 	return p.genericPrint(v)
+}
+
+// isZero is similar to reflect.IsZero but handles it in a way more consistent with printGeneric
+func isZero(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Slice, reflect.Map, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint8, reflect.Uint16:
+		return v.Uint() == 0
+	case reflect.Struct, reflect.Interface:
+		_, ok := v.Interface().(fmt.Stringer)
+		return !ok
+	case reflect.Ptr:
+		return v.IsNil()
+	}
+	return true
 }
 
 // genericPrint is the generic print function for a field.
