@@ -14,7 +14,7 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/utils"
+	"github.com/thought-machine/please/src/plz"
 )
 
 var log = logging.MustGetLogger("format")
@@ -25,7 +25,7 @@ var log = logging.MustGetLogger("format")
 // The returned bool is true if any changes were needed.
 func Format(config *core.Configuration, filenames []string, rewrite, quiet bool) (bool, error) {
 	if len(filenames) == 0 {
-		return formatAll(utils.FindAllBuildFiles(config, core.RepoRoot, ""), rewrite, quiet)
+		return formatAll(plz.FindAllBuildFiles(config, core.RepoRoot, ""), rewrite, quiet)
 	}
 	ch := make(chan string)
 	go func() {

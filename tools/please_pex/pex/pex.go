@@ -8,14 +8,28 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
-	"github.com/thought-machine/please/tools/jarcat/zip"
+	"github.com/thought-machine/please/tools/please_pex/zip"
+)
+
+const testRunnersDir = "test_runners"
+const debuggersDir = "debuggers"
+
+type Debugger string
+
+const (
+	Pdb     Debugger = "pdb"
+	Debugpy Debugger = "debugpy"
 )
 
 //go:embed *.py
+//go:embed test_runners/*.py
+//go:embed debuggers/*.py
 var files embed.FS
 
 // A Writer implements writing a .pex file in various steps.
@@ -29,6 +43,7 @@ type Writer struct {
 	includeLibs      []string
 	testRunner       string
 	customTestRunner string
+	debugger         string
 }
 
 // NewWriter constructs a new Writer.
@@ -67,7 +82,7 @@ func (pw *Writer) SetShebang(shebang string, options string) {
 // SetTest sets this Writer to write tests using the given sources.
 // This overrides the entry point given earlier.
 func (pw *Writer) SetTest(srcs []string, testRunner string, addTestRunnerDeps bool) {
-	pw.realEntryPoint = "test_main"
+	pw.realEntryPoint = "pex_test_main"
 	pw.testSrcs = srcs
 
 	testRunnerDeps := []string{
@@ -92,7 +107,7 @@ func (pw *Writer) SetTest(srcs []string, testRunner string, addTestRunnerDeps bo
 			".bootstrap/importlib_metadata",
 			".bootstrap/zipp",
 		)
-		pw.testRunner = "pytest.py"
+		pw.testRunner = filepath.Join(testRunnersDir, "pytest.py")
 	case "behave":
 		testRunnerDeps = append(testRunnerDeps,
 			".bootstrap/behave",
@@ -103,20 +118,34 @@ func (pw *Writer) SetTest(srcs []string, testRunner string, addTestRunnerDeps bo
 			".bootstrap/win_unicode_console",
 			".bootstrap/colorama",
 		)
-		pw.testRunner = "behave.py"
+		pw.testRunner = filepath.Join(testRunnersDir, "behave.py")
 	case "unittest":
 		testRunnerDeps = append(testRunnerDeps, ".bootstrap/xmlrunner")
-		pw.testRunner = "unittest.py"
+		pw.testRunner = filepath.Join(testRunnersDir, "unittest.py")
 	default:
 		if !strings.ContainsRune(testRunner, '.') {
 			panic("Custom test runner '" + testRunner + "' is invalid; must contain at least one dot")
 		}
-		pw.testRunner = "custom.py"
+		pw.testRunner = filepath.Join(testRunnersDir, "custom.py")
 		pw.customTestRunner = testRunner
 	}
 
 	if addTestRunnerDeps {
-		pw.includeLibs = testRunnerDeps
+		pw.includeLibs = append(pw.includeLibs, testRunnerDeps...)
+	}
+}
+
+func (pw *Writer) SetDebugger(debugger Debugger) {
+	pw.pexStamp = "debug"
+
+	switch debugger {
+	case "pdb":
+		pw.debugger = filepath.Join(debuggersDir, "pdb.py")
+	case "debugpy":
+		pw.debugger = filepath.Join(debuggersDir, "debugpy.py")
+		pw.includeLibs = append(pw.includeLibs, ".bootstrap/debugpy")
+	default:
+		log.Fatalf("Unknown debugger: %s", debugger)
 	}
 }
 
@@ -157,12 +186,15 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	b = bytes.Replace(b, []byte("__PEX_STAMP__"), []byte(pw.pexStamp), 1)
 
 	if len(pw.testSrcs) != 0 {
-		// If we're writing a test, we append test_main.py to it.
-		b2 := mustRead("test_main.py")
+		// If we're writing a test, we append pex_test_main.py to it.
+		b2 := mustRead("pex_test_main.py")
 		b2 = bytes.Replace(b2, []byte("__TEST_NAMES__"), []byte(strings.Join(pw.testSrcs, ",")), 1)
 		b = append(b, b2...)
 		// It also needs an appropriate test runner.
 		b = append(b, bytes.Replace(mustRead(pw.testRunner), []byte("__TEST_RUNNER__"), []byte(pw.customTestRunner), 1)...)
+	}
+	if len(pw.debugger) > 0 {
+		b = append(b, mustRead(pw.debugger)...)
 	}
 	// We always append the final if __name__ == '__main__' bit.
 	b = append(b, mustRead("pex_run.py")...)

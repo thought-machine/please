@@ -45,7 +45,6 @@ import (
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
 	"github.com/thought-machine/please/src/update"
-	"github.com/thought-machine/please/src/utils"
 	"github.com/thought-machine/please/src/watch"
 	"github.com/thought-machine/please/src/worker"
 )
@@ -123,18 +122,18 @@ var opts struct {
 	} `command:"hash" description:"Calculates hash for one or more targets"`
 
 	Test struct {
-		FailingTestsOk  bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
-		NumRuns         int          `long:"num_runs" short:"n" default:"1" description:"Number of times to run each test target."`
-		Rerun           bool         `long:"rerun" description:"Rerun the test even if the hash hasn't changed."`
-		Sequentially    bool         `long:"sequentially" description:"Whether to run multiple runs of the same test sequentially"`
-		TestResultsFile cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
-		SurefireDir     cli.Filepath `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
-		ShowOutput      bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
-		Debug           bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
-		Failed          bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
-		Detailed        bool         `long:"detailed" description:"Prints more detailed output after tests."`
-		Shell           string       `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
-		StreamResults   bool         `long:"stream_results" description:"Prints test results on stdout as they are run."`
+		FailingTestsOk   bool         `long:"failing_tests_ok" hidden:"true" description:"Exit with status 0 even if tests fail (nonzero only if catastrophe happens)"`
+		NumRuns          int          `long:"num_runs" short:"n" default:"1" description:"Number of times to run each test target."`
+		Rerun            bool         `long:"rerun" description:"Rerun the test even if the hash hasn't changed."`
+		Sequentially     bool         `long:"sequentially" description:"Whether to run multiple runs of the same test sequentially"`
+		TestResultsFile  cli.Filepath `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
+		SurefireDir      cli.Filepath `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
+		ShowOutput       bool         `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
+		DebugFailingTest bool         `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest). Implies -c dbg unless otherwise set."`
+		Failed           bool         `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
+		Detailed         bool         `long:"detailed" description:"Prints more detailed output after tests."`
+		Shell            string       `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
+		StreamResults    bool         `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
@@ -158,7 +157,7 @@ var opts struct {
 		CoverageXMLReport   cli.Filepath  `long:"coverage_xml_report" default:"plz-out/log/coverage.xml" description:"XML File to write combined coverage results to."`
 		Incremental         bool          `short:"i" long:"incremental" description:"Calculates summary statistics for incremental coverage, i.e. stats for just the lines currently modified."`
 		ShowOutput          bool          `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
-		Debug               bool          `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest, C and C++). Implies -c dbg unless otherwise set."`
+		DebugFailingTest    bool          `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest). Implies -c dbg unless otherwise set."`
 		Failed              bool          `short:"f" long:"failed" description:"Runs just the test cases that failed from the immediately previous run."`
 		Detailed            bool          `long:"detailed" description:"Prints more detailed output after tests."`
 		Shell               string        `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
@@ -171,7 +170,7 @@ var opts struct {
 
 	Debug struct {
 		Debugger string `short:"d" long:"debugger" description:"Name of supported debugger"`
-		Port     int    `short:"p" long:"port" description:"Debugging server listen port"`
+		Port     int    `short:"p" long:"port" description:"Debugging server port"`
 		Args     struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target"`
@@ -187,9 +186,9 @@ var opts struct {
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
 		Parallel   struct {
-			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
-			Quiet          bool               `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
-			Output         run.ParallelOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
+			NumTasks       int               `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Quiet          bool              `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
+			Output         run.ProcessOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -197,7 +196,8 @@ var opts struct {
 			Detach bool          `long:"detach" description:"Detach from the parent process when all children have spawned"`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
-			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			Quiet          bool              `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			Output         run.ProcessOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -223,7 +223,7 @@ var opts struct {
 			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
 			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
 		} `positional-args:"true"`
-	} `command:"exec" description:"Builds and executes a single target in a sandboxed environment"`
+	} `command:"exec" description:"Executes a single target in a hermetic build environment"`
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
@@ -346,6 +346,7 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"alltargets" description:"Lists all targets in the graph"`
 		Print struct {
+			JSON   bool     `long:"json" description:"Print the targets as json rather than python"`
 			Fields []string `short:"f" long:"field" description:"Individual fields to print of the target"`
 			Labels []string `short:"l" long:"label" description:"Prints all labels with the given prefix (with the prefix stripped off). Overrides --field."`
 			Args   struct {
@@ -413,8 +414,16 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
 			} `positional-args:"true"`
 		} `command:"filter" description:"Filter the given set of targets according to some rules"`
-	} `command:"query" description:"Queries information about the build graph"`
-	Codegen struct {
+		RepoRoot struct {
+		} `command:"reporoot" alias:"repo_root" description:"Output the root of the current Please repo"`
+		Config struct {
+			JSON bool `long:"json" description:"Output as JSON."`
+			Args struct {
+				Options []string `positional-arg-name:"options" description:"Print specific options."`
+			} `positional-args:"true"`
+		} `command:"config" description:"Prints the configuration settings"`
+	} `command:"query" description:"Queries information about the build state"`
+	Generate struct {
 		Gitignore string `long:"update_gitignore" description:"The gitignore file to write the generated sources to"`
 		Args      struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to filter"`
@@ -475,7 +484,7 @@ var buildFunctions = map[string]func() int{
 		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile), stats)
 		test.WriteXMLCoverageToFileOrDie(targets, state.Coverage, string(opts.Cover.CoverageXMLReport))
 
-		if opts.Cover.LineCoverageReport {
+		if opts.Cover.LineCoverageReport && success {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile.AsStrings())
 		} else if !opts.Cover.NoCoverageReport && opts.Cover.Shell == "" {
 			output.PrintCoverage(state, opts.Cover.IncludeFile.AsStrings())
@@ -486,12 +495,15 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"debug": func() int {
+		if len(opts.Debug.Debugger) > 0 {
+			log.Warningf("--debugger has been deprecated in favour of build rule specific config fields and will be removed in v17.")
+		}
+
 		success, state := runBuild([]core.BuildLabel{opts.Debug.Args.Target}, true, false, false)
 		if !success {
 			return toExitCode(success, state)
 		}
-
-		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Port != 0, opts.Debug.Args.Args)
+		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args)
 	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
@@ -542,7 +554,7 @@ var buildFunctions = map[string]func() int{
 		}
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
-	"parallel": func() int {
+	"run.parallel": func() int {
 		if success, state := runBuild(unannotateLabels(opts.Run.Parallel.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
@@ -561,7 +573,7 @@ var buildFunctions = map[string]func() int{
 		}
 		return 1
 	},
-	"sequential": func() int {
+	"run.sequential": func() int {
 		if success, state := runBuild(unannotateLabels(opts.Run.Sequential.PositionalArgs.Targets), true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
@@ -570,9 +582,14 @@ var buildFunctions = map[string]func() int{
 				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
 			}
+			output := opts.Run.Sequential.Output
+			if opts.Run.Sequential.Quiet {
+				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
+				output = run.Quiet
+			}
 
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Sequential.PositionalArgs.Targets)
-			os.Exit(run.Sequential(state, ls, opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir))
+			os.Exit(run.Sequential(state, ls, opts.Run.Sequential.Args.AsStrings(), output, opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir))
 		}
 		return 1
 	},
@@ -638,7 +655,7 @@ var buildFunctions = map[string]func() int{
 
 		return 0
 	},
-	"config": func() int {
+	"init.config": func() int {
 		if opts.Init.Config.User {
 			plzinit.InitConfigFile(fs.ExpandHomePath(core.UserConfigFileName), opts.Init.Config.Args.Options)
 		} else if opts.Init.Config.Local {
@@ -648,6 +665,16 @@ var buildFunctions = map[string]func() int{
 		}
 		return 0
 	},
+	"init.pleasings": func() int {
+		if err := plzinit.InitPleasings(opts.Init.Pleasings.Location, opts.Init.Pleasings.PrintOnly, opts.Init.Pleasings.Revision); err != nil {
+			log.Fatalf("failed to write pleasings subrepo file: %v", err)
+		}
+		return 0
+	},
+	"init.pleasew": func() int {
+		plzinit.InitWrapperScript()
+		return 0
+	},
 	"export": func() int {
 		success, state := runBuild(opts.Export.Args.Targets, false, false, false)
 		if success {
@@ -655,7 +682,7 @@ var buildFunctions = map[string]func() int{
 		}
 		return toExitCode(success, state)
 	},
-	"outputs": func() int {
+	"export.outputs": func() int {
 		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false, true)
 		if success {
 			export.Outputs(state, opts.Export.Output, state.ExpandOriginalLabels())
@@ -668,20 +695,20 @@ var buildFunctions = map[string]func() int{
 	"tool": func() int {
 		return runTool(opts.Tool.Args.Tool)
 	},
-	"deps": func() int {
+	"query.deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
 			query.Deps(state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level)
 		})
 	},
-	"revdeps": func() int {
-		labels := utils.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
+	"query.revdeps": func() int {
+		labels := plz.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
 		return runQuery(true, append(labels, core.WholeGraph...), func(state *core.BuildState) {
 			query.ReverseDeps(state, state.ExpandLabels(labels), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
 		})
 	},
-	"somepath": func() int {
-		a := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
-		b := utils.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
+	"query.somepath": func() int {
+		a := plz.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
+		b := plz.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
 		return runQuery(true, append(a, b...), func(state *core.BuildState) {
 			if err := query.SomePath(state.Graph, a, b, opts.Query.SomePath.Hidden); err != nil {
 				fmt.Printf("%s\n", err)
@@ -689,27 +716,27 @@ var buildFunctions = map[string]func() int{
 			}
 		})
 	},
-	"alltargets": func() int {
+	"query.alltargets": func() int {
 		return runQuery(true, opts.Query.AllTargets.Args.Targets, func(state *core.BuildState) {
 			query.AllTargets(state.Graph, state.ExpandOriginalLabels(), opts.Query.AllTargets.Hidden)
 		})
 	},
-	"print": func() int {
+	"query.print": func() int {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels)
+			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels, opts.Query.Print.JSON)
 		})
 	},
-	"input": func() int {
+	"query.input": func() int {
 		return runQuery(true, opts.Query.Input.Args.Targets, func(state *core.BuildState) {
 			query.TargetInputs(state.Graph, state.ExpandOriginalLabels())
 		})
 	},
-	"output": func() int {
+	"query.output": func() int {
 		return runQuery(true, opts.Query.Output.Args.Targets, func(state *core.BuildState) {
 			query.TargetOutputs(state.Graph, state.ExpandOriginalLabels())
 		})
 	},
-	"completions": func() int {
+	"query.completions": func() int {
 		// Somewhat fiddly because the inputs are not necessarily well-formed at this point.
 		opts.ParsePackageOnly = true
 		fragments := opts.Query.Completions.Args.Fragments.Get()
@@ -752,7 +779,7 @@ var buildFunctions = map[string]func() int{
 
 		return 0
 	},
-	"graph": func() int {
+	"query.graph": func() int {
 		targets := opts.Query.Graph.Args.Targets
 		return runQuery(true, targets, func(state *core.BuildState) {
 			if len(opts.Query.Graph.Args.Targets) == 0 {
@@ -761,7 +788,7 @@ var buildFunctions = map[string]func() int{
 			query.Graph(state, state.ExpandLabels(targets))
 		})
 	},
-	"whatinputs": func() int {
+	"query.whatinputs": func() int {
 		files := opts.Query.WhatInputs.Args.Files.Get()
 		// We only need this to retrieve the BuildFileName
 		state := core.NewBuildState(config)
@@ -773,16 +800,16 @@ var buildFunctions = map[string]func() int{
 			query.WhatInputs(state.Graph, files, opts.Query.WhatInputs.Hidden, opts.Query.WhatInputs.EchoFiles)
 		})
 	},
-	"whatoutputs": func() int {
+	"query.whatoutputs": func() int {
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
 			query.WhatOutputs(state.Graph, opts.Query.WhatOutputs.Args.Files.Get(), opts.Query.WhatOutputs.EchoFiles)
 		})
 	},
-	"rules": func() int {
+	"query.rules": func() int {
 		help.PrintRuleArgs()
 		return 0
 	},
-	"changes": func() int {
+	"query.changes": func() int {
 		// query changes always excludes 'manual' targets.
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
 		level := opts.Query.Changes.Level // -2 means unset -1 means all transitive
@@ -842,10 +869,30 @@ var buildFunctions = map[string]func() int{
 		}
 		return 0
 	},
-	"roots": func() int {
+	"query.roots": func() int {
 		return runQuery(true, opts.Query.Roots.Args.Targets, func(state *core.BuildState) {
 			query.Roots(state.Graph, state.ExpandOriginalLabels(), opts.Query.Roots.Hidden)
 		})
+	},
+	"query.filter": func() int {
+		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
+			query.Filter(state, state.ExpandOriginalLabels(), opts.Query.Filter.Hidden)
+		})
+	},
+	"query.reporoot": func() int {
+		fmt.Println(core.RepoRoot)
+		return 0
+	},
+	"query.config": func() int {
+		if opts.Query.Config.JSON {
+			if len(opts.Query.Config.Args.Options) > 0 {
+				log.Fatal("The --option flag isn't available with the --json flag")
+			}
+			query.ConfigJSON(config)
+		} else {
+			query.Config(config, opts.Query.Config.Args.Options)
+		}
+		return 0
 	},
 	"watch": func() int {
 		// Don't ask it to test now since we don't know if any of them are tests yet.
@@ -854,26 +901,11 @@ var buildFunctions = map[string]func() int{
 		watch.Watch(state, state.ExpandOriginalLabels(), runPlease)
 		return toExitCode(success, state)
 	},
-	"filter": func() int {
-		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
-			query.Filter(state, state.ExpandOriginalLabels(), opts.Query.Filter.Hidden)
-		})
-	},
-	"pleasings": func() int {
-		if err := plzinit.InitPleasings(opts.Init.Pleasings.Location, opts.Init.Pleasings.PrintOnly, opts.Init.Pleasings.Revision); err != nil {
-			log.Fatalf("failed to write pleasings subrepo file: %v", err)
-		}
-		return 0
-	},
-	"pleasew": func() int {
-		plzinit.InitWrapperScript()
-		return 0
-	},
 	"generate": func() int {
 		opts.BuildFlags.Include = append(opts.BuildFlags.Include, "codegen")
 
-		if opts.Codegen.Gitignore != "" {
-			pkg := filepath.Dir(opts.Codegen.Gitignore)
+		if opts.Generate.Gitignore != "" {
+			pkg := filepath.Dir(opts.Generate.Gitignore)
 			if pkg == "." {
 				pkg = ""
 			}
@@ -882,25 +914,25 @@ var buildFunctions = map[string]func() int{
 				Name:        "...",
 			}
 
-			if len(opts.Codegen.Args.Targets) != 0 {
+			if len(opts.Generate.Args.Targets) != 0 {
 				log.Warning("You've provided targets, and a gitignore to update. Ignoring the provided targets and building %v", target)
 			}
 
-			opts.Codegen.Args.Targets = []core.BuildLabel{target}
+			opts.Generate.Args.Targets = []core.BuildLabel{target}
 		}
 
-		if success, state := runBuild(opts.Codegen.Args.Targets, true, false, true); success {
-			if opts.Codegen.Gitignore != "" {
-				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Codegen.Gitignore)
+		if success, state := runBuild(opts.Generate.Args.Targets, true, false, true); success {
+			if opts.Generate.Gitignore != "" {
+				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Generate.Gitignore)
 				if err != nil {
 					log.Fatalf("failed to update gitignore: %v", err)
 				}
 			}
 
-			// This may seem counter intuitive but if this was set, we would've linked during the build.
+			// This may seem counterintuitive but if this was set, we would've linked during the build.
 			// If we've opted to not automatically link generated sources during the build, we should link them now.
-			if !state.Config.Build.LinkGeneratedSources {
-				generate.LinkGeneratedSources(state.Graph, state.ExpandOriginalLabels())
+			if !state.Config.ShouldLinkGeneratedSources() {
+				generate.LinkGeneratedSources(state, state.ExpandOriginalLabels())
 			}
 			return 0
 		}
@@ -995,17 +1027,21 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		config.Parse.NumThreads = opts.BuildFlags.NumThreads
 	}
 	debug := !opts.Debug.Args.Target.IsEmpty()
-	debugTests := opts.Test.Debug || opts.Cover.Debug
+	debugFailingTests := opts.Test.DebugFailingTest || opts.Cover.DebugFailingTest
 	if opts.BuildFlags.Config != "" {
 		config.Build.Config = opts.BuildFlags.Config
-	} else if debug || debugTests {
+	} else if debug || debugFailingTests {
 		config.Build.Config = "dbg"
 	}
 	state := core.NewBuildState(config)
 	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
-	state.NumTestRuns = uint16(utils.Max(opts.Test.NumRuns, opts.Cover.NumRuns)) // Only one of these can be passed
-	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially   // Similarly here.
-	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)        // And here
+	// Only one of these two can be passed
+	state.NumTestRuns = uint16(opts.Test.NumRuns)
+	if opts.Cover.NumRuns > opts.Test.NumRuns {
+		state.NumTestRuns = uint16(opts.Cover.NumRuns)
+	}
+	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially // Similarly here.
+	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)      // And here
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
@@ -1020,7 +1056,8 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
 	state.ForceRerun = opts.Test.Rerun || opts.Cover.Rerun
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
-	state.DebugTests = debugTests
+	state.DebugPort = opts.Debug.Port
+	state.DebugFailingTests = debugFailingTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
 	state.DownloadOutputs = (!opts.Build.NoDownload && !opts.Run.Remote && len(targets) > 0 && (!targets[0].IsAllSubpackages() || len(opts.BuildFlags.Include) > 0)) || opts.Build.Download
@@ -1028,14 +1065,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	if opts.BuildFlags.Arch.OS != "" {
 		state.TargetArch = opts.BuildFlags.Arch
 	}
-	if debug {
-		state.Debug = &core.Debug{
-			Debugger: opts.Debug.Debugger,
-			Port:     opts.Debug.Port,
-		}
-	}
 
-	if state.DebugTests && len(targets) != 1 {
+	// Only one target that is _not_ named "all" or "..." is allowed with debug test.
+	if state.DebugFailingTests && (len(targets) != 1 || (len(targets) == 1 && (targets[0].IsPseudoTarget()))) {
 		log.Fatalf("-d/--debug flag can only be used with a single test target")
 	}
 
@@ -1067,8 +1099,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	core.CheckXattrsSupported(state)
 
 	detailedTests := state.NeedTests && (opts.Test.Detailed || opts.Cover.Detailed ||
-		(len(targets) == 1 && !targets[0].IsAllTargets() &&
-			!targets[0].IsAllSubpackages() && targets[0] != core.BuildLabelStdin))
+		(len(targets) == 1 && !targets[0].IsPseudoTarget() && targets[0] != core.BuildLabelStdin))
 	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
 	shell := opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
 	shellRun := opts.Build.Shell == "run" || opts.Test.Shell == "run" || opts.Cover.Shell == "run"
@@ -1129,7 +1160,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 	if !isQuery {
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
 	}
-	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !utils.ReadingStdin(targets) {
+	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !plz.ReadingStdin(targets) {
 		if len(targets) == 0 {
 			// Assume they want us to read from stdin since nothing else was given.
 			targets = []core.BuildLabel{core.BuildLabelStdin}
@@ -1270,13 +1301,13 @@ func initBuild(args []string) string {
 		log.Error("Failed to set GOMAXPROCS: %s", err)
 	}
 
-	command := cli.ActiveCommand(parser.Command)
+	command := cli.ActiveFullCommand(parser.Command)
 	if opts.Complete != "" {
 		// Completion via PLZ_COMPLETE env var sidesteps other commands
 		opts.Query.Completions.Cmd = command
 		opts.Query.Completions.Args.Fragments = []string{opts.Complete}
-		command = "completions"
-	} else if command == "help" || command == "follow" || command == "init" || command == "config" || command == "tool" {
+		command = "query.completions"
+	} else if command == "help" || command == "init" || command == "init.config" || command == "tool" {
 		// These commands don't use a config file, allowing them to be run outside a repo.
 		if flagsErr != nil { // This error otherwise doesn't get checked until later.
 			cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args, additionalUsageInfo)
@@ -1297,9 +1328,13 @@ func initBuild(args []string) string {
 
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
-	if (flagsErr != nil || len(extraArgs) > 0) && command != "completions" {
+	if (flagsErr != nil || len(extraArgs) > 0) && command != "query.completions" {
 		args := config.UpdateArgsWithAliases(os.Args)
-		command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
+		parser, _, err := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions, additionalUsageInfo)
+		if err != nil {
+			log.Fatalf("%s", err)
+		}
+		command = cli.ActiveFullCommand(parser.Command)
 	}
 
 	if opts.ProfilePort != 0 {

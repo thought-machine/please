@@ -1,8 +1,5 @@
 package(default_visibility = ["PUBLIC"])
 
-# This is needed to break a circular dependency.
-package(jarcat_tool = "//:jarcat_unzip")
-
 go_toolchain(
     name = "toolchain",
     hashes = [
@@ -51,26 +48,24 @@ go_module(
 go_module(
     name = "go-crypto",
     install = [
-        "internal/byteutil",
-        "openpgp/aes/keywrap",
-        "openpgp/s2k",
-        "openpgp/armor",
         "bitcurves",
         "brainpool",
-        "openpgp",
-        "openpgp/ecdh",
-        "openpgp/internal/ecc",
-        "openpgp/internal/encoding",
+        "cast5",
+        "curve25519",
         "eax",
+        "ed25519",
+        "internal/byteutil",
+        "internal/randutil",
+        "internal/syscall/...",
         "ocb",
-        "openpgp/elgamal",
-        "openpgp/errors",
-        "openpgp/internal/algorithm",
-        "openpgp/packet",
+        "openpgp/...",
+        "rand",
+        "rsa",
     ],
     licences = ["BSD-3-Clause"],
     module = "github.com/ProtonMail/go-crypto",
-    version = "v0.0.0-20210920135941-2c5829bbf927",
+    # IMPORTANT!!! Don't update until https://github.com/ProtonMail/go-crypto/issues/88 has been resolved
+    version = "3900d675f39ba9686203d137886d74fad620ae87",
     visibility = ["PUBLIC"],
     deps = [":xcrypto"],
 )
@@ -89,7 +84,7 @@ go_module(
         "...",
     ],
     module = "github.com/please-build/gcfg",
-    version = "v1.4.1",
+    version = "v1.6.0",
     deps = [
         ":warnings",
     ],
@@ -640,7 +635,7 @@ go_module(
     name = "cli-init",
     install = ["..."],
     module = "github.com/peterebden/go-cli-init/v5",
-    version = "v5.0.2",
+    version = "v5.2.0",
     deps = [
         ":go-flags",
         ":humanize",

@@ -53,6 +53,13 @@ python_wheel(
 )
 
 python_wheel(
+    name = "debugpy",
+    hashes = ["f058c204341fd7ff800ee0edafc106ca0fb1c9857e8a8895a6e04cca3ddcb7bf"],
+    licences = ["MIT"],
+    version = "1.5.0",
+)
+
+python_wheel(
     name = "idna",
     hashes = ["a068a21ceac8a4d63dbfd964670474107f541babbd2250d61922f029858365fa"],
     version = "2.9",

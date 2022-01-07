@@ -657,6 +657,53 @@
 </section>
 
 <section class="mt4">
+  <h2 id="exec" class="title-2">plz exec</h2>
+
+  <p>
+    This command executes the target in a hermetic build environment, as opposed
+    to the <code class="code">plz run</code> command. This allows for uses cases,
+    such as: debugging/profiling programs that may require a predictable environment,
+    or running E2E tests reliant on external state which doesn't fit with Please's
+    caching approach.
+  </p>
+
+  <p>
+    How the target result gets executed can be customised after <code class="code"
+    >--</code>, where the <code class="code">$OUT</code> (or <code class="code"
+    >$TEST</code> for a test target) environment variable points to its location -
+    ie. <code class="code">plz exec //:target -- echo ./\$OUT</code>. This gives
+    the flexibility of the binary to be called with a set of flags, be wrapped in
+    another command, or something different.
+  </p>
+
+  <p>
+    The <code class="code">--share_network</code> and <code class="code">--share_mount</code
+    > flags are available (Linux only) for greater control over the sandboxed environment
+    where the target is run. The <code class="code">--share_network</code> flag is useful
+    in situations where the host system might want to connect to a server that the command
+    started.
+  </p>
+
+  <p>
+    The <code class="code">--output_path</code> and <code class="code">--out</code
+    > flags allow for artifacts, produced by the command executed in the sandboxed environment,
+    to be copied onto the host system where <code class="code">plz exec</code> is being
+    run from.
+  </p>
+
+  <p>
+    Non-binary targets are also supported, but a custom command (see above) is required since
+    there isn't a binary produced that can be executed by default. These targets' results can
+    be accessed via the <code class="code">$OUTS</code> environment variable.
+  </p>
+
+  <p>
+    Because of how this command works and the options it offers, only a single target is supported
+    per execution.
+  </p>
+</section>
+
+<section class="mt4">
   <h2 id="watch" class="title-2">
     plz watch
   </h2>
@@ -902,6 +949,31 @@
     complex projects will still likely find things that don't translate easily.
   </p>
 </section>
+
+<section class="mt4">
+  <h2 id="generate" class="title-2">plz generate</h2>
+
+  <p>
+    This command can be used to build generated sources and link them back into
+    the source tree. This can be useful for tooling that expects generated sources
+    to be there like linters and IDEs.
+  </p>
+
+  <p>
+    To build all generated sources, simply run <code class="code">plz generate</code>.
+  </p>
+
+  <p>
+    Please can also update a gitignore file, ignoring all the gnerated files automatically:
+    <code class="code">plz generate --update_gitignore .gitignore</code>
+  </p>
+
+  <p>To automatically link generated sources and update .gitignore files during normal builds, see the
+    <a class="copy-link" href="config.html#build.linkgeneratedsources">LinkGeneratedSources</a>, and
+    <a class="copy-link" href="config.html#build.updategitignore">UpdateGitignore</a> config values.
+  </p>
+</section>
+
 
 <section class="mt4">
   <h2 id="update" class="title-2">

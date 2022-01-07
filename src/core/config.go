@@ -17,8 +17,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/google/shlex"
 	"github.com/please-build/gcfg"
+	gcfgtypes "github.com/please-build/gcfg/types"
 	"github.com/thought-machine/go-flags"
 
 	"github.com/thought-machine/please/src/cli"
@@ -53,7 +55,7 @@ const UserConfigFileName = "~/.config/please/plzconfig"
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
 // readConfigFile reads a single config file into the config struct
-func readConfigFile(config *Configuration, filename string) error {
+func readConfigFile(config *Configuration, filename string, subrepo bool) error {
 	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
@@ -64,8 +66,25 @@ func readConfigFile(config *Configuration, filename string) error {
 	} else {
 		log.Debug("Read config from %s", filename)
 	}
+
+	if subrepo {
+		checkPluginVersionRequirements(config)
+	}
 	normalisePluginConfigKeys(config)
+
 	return nil
+}
+
+func checkPluginVersionRequirements(config *Configuration) {
+	if config.PluginDefinition.Name != "" {
+		currentPlzVersion := *semver.New(PleaseVersion)
+		// Get plugin config version requirement which may or may not exist
+		pluginVerReq := config.Please.Version.Version
+
+		if currentPlzVersion.LessThan(pluginVerReq) {
+			log.Warningf("Plugin \"%v\" requires Please version %v", config.PluginDefinition.Name, pluginVerReq)
+		}
+	}
 }
 
 // ReadDefaultConfigFiles reads all the config files from the default locations and
@@ -122,11 +141,11 @@ func defaultConfigFiles() []string {
 func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, error) {
 	config := DefaultConfiguration()
 	for _, filename := range filenames {
-		if err := readConfigFile(config, filename); err != nil {
+		if err := readConfigFile(config, filename, false); err != nil {
 			return config, err
 		}
 		for _, profile := range profiles {
-			if err := readConfigFile(config, filename+"."+profile); err != nil {
+			if err := readConfigFile(config, filename+"."+profile, false); err != nil {
 				return config, err
 			}
 		}
@@ -324,6 +343,7 @@ func DefaultConfiguration() *Configuration {
 	config.Python.DisableVendorFlags = false
 	config.Python.TestRunner = "unittest"
 	config.Python.TestRunnerBootstrap = ""
+	config.Python.Debugger = "pdb"
 	config.Python.UsePyPI = true
 	config.Python.InterpreterOptions = ""
 	config.Python.PipFlags = ""
@@ -369,7 +389,7 @@ func DefaultConfiguration() *Configuration {
 	config.Go.EmbedTool = "//_please:please_go_embed"
 	config.Python.PexTool = "//_please:please_pex"
 	config.Java.JavacWorker = "//_please:javac_worker"
-	config.Java.JarCatTool = "//_please:jarcat"
+	config.Java.JarCatTool = "//_please:arcat"
 	config.Java.JUnitRunner = "//_please:junit_runner"
 
 	return &config
@@ -422,9 +442,10 @@ type Configuration struct {
 		PassEnv              []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
 		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
 		HTTPProxy            cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
-		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256"`
+		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		ExitOnError          bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
-		LinkGeneratedSources bool         `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. Defaults to false." var:"LINK_GEN_SOURCES"`
+		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)" var:"LINK_GEN_SOURCES"`
+		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
@@ -440,6 +461,8 @@ type Configuration struct {
 		HTTPTimeout                cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`
 		HTTPConcurrentRequestLimit int          `help:"The maximum amount of concurrent requests that can be open. Default 20."`
 		HTTPRetry                  int          `help:"The maximum number of retries before a request will give up, if a request is retryable"`
+		StoreCommand               string       `help:"Use a custom command to store cache entries."`
+		RetrieveCommand            string       `help:"Use a custom command to retrieve cache entries."`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
 		Timeout                  cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
@@ -507,6 +530,7 @@ type Configuration struct {
 		DefaultInterpreter  string   `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to, say, pypy." var:"DEFAULT_PYTHON_INTERPRETER"`
 		TestRunner          string   `help:"The test runner used to discover & run Python tests; one of unittest, pytest or behave, or a custom import path to bring your own." var:"PYTHON_TEST_RUNNER"`
 		TestRunnerBootstrap string   `help:"Target providing test-runner library and its transitive dependencies. Injects plz-provided bootstraps if not given." var:"PYTHON_TEST_RUNNER_BOOTSTRAP"`
+		Debugger            string   `help:"Sets what debugger to use to debug Python binaries. The available options are: 'pdb' (default) and 'debugpy'." var:"PYTHON_DEBUGGER"`
 		ModuleDir           string   `help:"Defines a directory containing modules from which they can be imported at the top level.\nBy default this is empty but by convention we define our pip_library rules in third_party/python and set this appropriately. Hence any of those third-party libraries that try something like import six will have it work as they expect, even though it's actually in a different location within the .pex." var:"PYTHON_MODULE_DIR"`
 		DefaultPipRepo      cli.URL  `help:"Defines a location for a pip repo to download wheels from.\nBy default pip_library uses PyPI (although see below on that) but you may well want to use this define another location to upload your own wheels to.\nIs overridden by the repo argument to pip_library." var:"PYTHON_DEFAULT_PIP_REPO"`
 		WheelRepo           cli.URL  `help:"Defines a location for a remote repo that python_wheel rules will download from. See python_wheel for more information." var:"PYTHON_WHEEL_REPO"`
@@ -520,8 +544,8 @@ type Configuration struct {
 		JlinkTool          string    `help:"Defines the tool used for the Java linker. Defaults to jlink." var:"JLINK_TOOL"`
 		JavaHome           string    `help:"Defines the path of the Java Home folder." var:"JAVA_HOME"`
 		JavacWorker        string    `help:"Defines the tool used for the Java persistent compiler. This is significantly (approx 4x) faster for large Java trees than invoking javac separately each time. Default to javac_worker in the install directory, but can be switched off to fall back to javactool and separate invocation." var:"JAVAC_WORKER"`
-		JarCatTool         string    `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary, java_test and various other rules. Defaults to jarcat in the Please install directory." var:"JARCAT_TOOL"`
-		JUnitRunner        string    `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.\nDefaults to junit_runner.jar in the Please install directory." var:"JUNIT_RUNNER"`
+		JarCatTool         string    `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary, java_test and various other rules. Defaults to arcat in the internal //_please package." var:"JARCAT_TOOL"`
+		JUnitRunner        string    `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.\nDefaults to junit_runner.jar in the internal //_please package." var:"JUNIT_RUNNER"`
 		DefaultTestPackage string    `help:"The Java classpath to search for functions annotated with @Test. If not specified the compiled sources will be searched for files named *Test.java." var:"DEFAULT_TEST_PACKAGE"`
 		ReleaseLevel       string    `help:"The default Java release level when compiling.\nSourceLevel and TargetLevel are ignored if this is set. Bear in mind that this flag is only supported in Java version 9+." var:"JAVA_RELEASE_LEVEL"`
 		SourceLevel        string    `help:"The default Java source level when compiling. Defaults to 8." var:"JAVA_SOURCE_LEVEL"`
@@ -599,7 +623,10 @@ type Configuration struct {
 		NoIterSourcesMarked           bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
 		ExcludePythonRules            bool `help:"Whether to include the python rules or use the plugin"`
 		ExcludeJavaRules              bool `help:"Whether to include the java rules or use the plugin"`
+		ExcludeCCRules                bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
+		ExcludeProtoRules             bool `help:"Whether to include the proto rules or require use of the plugin"`
 		ExcludeSymlinksInGlob         bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
+		GoDontCollapseImportPath      bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string `help:"The gateway URL to push prometheus updates to."`
@@ -812,9 +839,8 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 				field.Set(reflect.ValueOf(v))
 			}
 		case reflect.Bool:
-			v = strings.ToLower(v)
-			// Mimics the set of truthy things gcfg accepts in our config file.
-			field.SetBool(v == "true" || v == "yes" || v == "on" || v == "1")
+			v, _ := gcfgtypes.ParseBool(v)
+			field.SetBool(v)
 		case reflect.Int:
 			i, err := strconv.Atoi(v)
 			if err != nil {
@@ -941,6 +967,11 @@ func (config *Configuration) NumRemoteExecutors() int {
 		return 0
 	}
 	return config.Remote.NumExecutors
+}
+
+func (config *Configuration) ShouldLinkGeneratedSources() bool {
+	isTruthy, _ := gcfgtypes.ParseBool(config.Build.LinkGeneratedSources)
+	return config.Build.LinkGeneratedSources == "hard" || config.Build.LinkGeneratedSources == "soft" || isTruthy
 }
 
 func (config Configuration) copyConfig() *Configuration {

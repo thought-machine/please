@@ -27,7 +27,6 @@ TestMain = ///pleasings//cc:unittest_main
 [java]
 javacworker = //tools/java:javac_worker
 junitrunner = //tools/java:junit_runner
-jarcattool = @//tools/jarcat
 
 [proto]
 protoctool = //third_party/proto:protoc
@@ -98,3 +97,4 @@ JavaBinaryExecutableByDefault = true
 PackageOutputsStrictness = true
 PythonWheelHashing = true
 NoIterSourcesMarked = true
+GoDontCollapseImportPath = true

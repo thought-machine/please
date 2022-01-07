@@ -3,7 +3,7 @@ go_library(
     srcs = [
         "toolchain.go",
     ],
-    visibility = ["//tools/please_go/install/..."],
+    visibility = ["//tools/please_go/..."],
     deps = [
         "//tools/please_go/install/exec",
     ],

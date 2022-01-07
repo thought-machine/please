@@ -13,7 +13,6 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/process",
-        "//src/utils",
         "//third_party/go:atime",
         "//third_party/go:go-retryablehttp",
         "//third_party/go:humanize",
@@ -50,6 +49,16 @@ go_test(
 go_test(
     name = "dir_cache_test",
     srcs = ["dir_cache_test.go"],
+    deps = [
+        ":cache",
+        "//third_party/go:testify",
+    ],
+)
+
+go_test(
+    name = "cmd_cache_test",
+    srcs = ["cmd_cache_test.go"],
+    data = [":test_data"],
     deps = [
         ":cache",
         "//third_party/go:testify",

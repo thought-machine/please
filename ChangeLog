@@ -1,3 +1,116 @@
+Version 16.18.0
+---------------
+    * Stop showing line by line coverage results when tests fail #2227
+    * Add support for the xxhash hashing algorithm #2229
+    * Use an environment variable to pass in go to the go test main tool
+      to improve migration strategy #2239
+    * Handle aliases to multi-level commands #2242
+    * Make `plz run sequential` use the same `--output` flag as
+      `plz run parallel` #2243
+    * Implement a command cache to use custom commands to store and
+      retrieve items from the cache e.g. `s3 cp - s3://cache/$CACHE_KEY`
+      #2244
+
+
+Version 16.17.1
+---------------
+    * The default jarcat_tool (now arcat) for Linux is now correctly linked
+      and does not attempt to use glibc at runtime.
+
+
+Version 16.17.0
+--------------
+    * `c_library`, `c_static_library`, `cc_library`, `cc_static_library` rules
+      now expose an `out` field for a custom name #2203
+    * New `tag()` builtin was added that allows tagging a target name #2202
+    * Add plugin version check #2206
+    * `remote_file` rule now includes support for the passing of credentials
+      and header values #2128
+    * Fix issue with `plz test -d` where it only accepts a single target but
+      it isn't considering pseudo targets (i.e. //... or //:all) #2205
+    * Plugin config keys can be inferred now, if not set #2212
+    * Further enhancements and fixes to the recent `plz debug` command to
+      better support IDEs #2213
+    * Add docs for `plz exec` #2199
+    * Virtual envs for Python (i.e. venv) are now generated under plz-out #2210
+
+
+Version 16.16.0
+--------------
+    * Added `plz query config` which can be used to retrieve what the value
+      a config field has from the variaous places Please loads `.plzconfig`
+      files #2190
+    * Fix test fields not appearing for `plz query print` when using `--fields`
+      #2200
+    * Fix missing signatures on darwin_arm64 release #2208
+
+
+Version 16.15.1
+--------------
+    * Preserve original quotes in multi-line strings #2184
+
+
+Version 16.15.0
+--------------
+    * Added `plz query reporoot` command #2173
+    * Fixed issue where named fields (e.g. srcs, and outputs) didn't appear
+      in `plz query print` #2174
+    * Add the subrepo name to labels in `plz query graph` #2168
+    * Add `--json` flag to `plz query print` to output the target in json format
+      #2176
+    * `cc_static_library()` now exposes headers to dependant targets #2179
+
+
+Version 16.14.0
+--------------
+    * The `query revdeps` and `query somepath` subcommands now handle
+      indirect dependencies (i.e. require/provide) between targets
+      better when not including hidden targets #2127
+    * Fix issue where we were de-duplicating linker flags for `go_module()`
+      #2127
+    * Some improvements to the builtin functions: `get_labels()` now has
+      a `transitive` parameter that can be used to opt out of getting
+      labels on transitive dependencies, and `package_name()` now has a label
+      parameter that can be used to get the package of a specific label.
+      #2170
+    * Some improvements to `plz generate` and `LinkGeneratedSources` to
+      opt to use hard links, or automatically update the `.gitignore`
+      during builds #2163
+
+
+Version 16.13.0
+--------------
+    * Some fixes around subrepos and cross compiling #2134 #2148
+    * Fix issue with `go_module()` when the module is called
+      `go` #2146
+    * Make the shebang optional for `sh_binary()` #2144
+    * Extend the pex tool to support adding debuggers to the pex #2141
+    * Handle c++ in `go_module()` rules #2161
+
+
+Version 16.12.1
+--------------
+    * Downgrade ProtonMails go-crypto because the newer versions have
+      started adding subpackets to the signature that cause older
+      versions of Please to fail to verify the signature #2138
+
+
+Version 16.12.0
+--------------
+    * Implemented direct link label, and used this to link go sources
+      from `go_module()` to `plz-out/go` #2118
+    * Strip all `BUILD` files, including `WORKSPACE` in `new_http_archive()`,
+      not just `BUILD`. This is used by `github_repo()` #2117
+    * Fix display issue with multi-line error messages #2119
+    * Exclude symlinks from globs by default. This is feature is gated
+      behind the `ExcludeSymlinksInGlob` feature flag #2052
+    * Fix issue where unrecognised config was being treated as fatal #2126
+    * Implement `--shell=run` which will immediately run the build/test
+      command #2123
+    * Exclude the location of the Please executable from the remote
+      PATH #2136
+
+
 Version 16.11.0
 --------------
     * Fix some bugs around plugin configuration #2111 #2107

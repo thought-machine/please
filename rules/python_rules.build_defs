@@ -103,6 +103,9 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     by the dependent python_library rules, and this rule simply builds the
     metadata for it and concatenates them all together.
 
+    This target can be debugged via:
+        plz debug [-o python.debugger:[pdb|debugpy]] [--port] //:target
+
     Args:
       name (str): Name of the rule.
       main (str): Python file which is the entry point and __main__ module.
@@ -132,6 +135,10 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         shebang, CONFIG.PYTHON_MODULE_DIR, zipsafe_flag, CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
+
+    if CONFIG.BUILD_CONFIG == 'dbg':
+        # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
+        cmd = f'{cmd} -d={CONFIG.PYTHON_DEBUGGER}'.replace(' --zip_safe', '')
 
     assert main not in srcs, "main file should not be included in srcs"
 
@@ -163,10 +170,14 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         },
         test_only=test_only,
     )
+
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
     if strip:
         cmd += ' --strip_py'
+
+    debug_cmd = _debug_cmd("./$OUT")
+
     return build_rule(
         name=name,
         srcs=[pex_rule],
@@ -174,6 +185,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         outs=[out or (name + '.pex')],
         data=data,
         cmd=cmd,
+        debug_cmd=debug_cmd,
         needs_transitive_deps=True,
         binary=True,
         output_is_complete=True,
@@ -204,6 +216,9 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     which is run to execute the tests. The tests are run via either unittest, pytest, or behave, depending
     on which is set for the test runner, which can be configured either via the python_test_runner
     package property or python.testrunner in the config.
+
+    This target can be debugged via:
+        plz debug [-o python.debugger:[pdb|debugpy]] [--port] //:target
 
     Args:
       name (str): Name of the rule.
@@ -239,6 +254,10 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
+
+    if CONFIG.BUILD_CONFIG == 'dbg':
+        # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
+        cmd = f'{cmd} -d={CONFIG.PYTHON_DEBUGGER}'.replace(' --zip_safe', '')
 
     # If the config specifies a PYTHON_TEST_RUNNER_BOOTSTRAP target, then this ought to contain
     # the test-runner library (e.g. pytest), and its transitive dependencies. In this case, we just
@@ -287,9 +306,17 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     deps = [pex_rule, lib_rule]
 
     test_cmd = f'$TEST {flags}'
-    if worker:
-        test_cmd = f'$(worker {worker}) && {test_cmd} '
+    worker_cmd = f'$(worker {worker})' if worker else ""
+    if worker_cmd:
+        test_cmd = f'{worker_cmd} && {test_cmd} '
         deps += [worker]
+
+    debug_cmd = _debug_cmd(
+        bin = "./$TEST",
+        flags = flags,
+        pre_cmd = worker_cmd,
+    )
+
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     return build_rule(
         name=name,
@@ -302,6 +329,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         labels=labels + ['test_results_dir'],
         cmd='$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
         test_cmd=test_cmd,
+        debug_cmd=debug_cmd,
         needs_transitive_deps=True,
         output_is_complete=True,
         binary=True,
@@ -419,6 +447,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
         building_description = 'Fetching...',
         tools = tools,
         sandbox = False,
+        labels = ["dlink:plz-out/python/venv"]
     )
 
     # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
@@ -570,7 +599,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         visibility = visibility,
         licences = licences,
         test_only = test_only,
-        labels = [label],
+        labels = [label] + ["link:plz-out/python/venv"],
         provides = {'py': wheel_rule},
     )
 
@@ -599,6 +628,7 @@ def _handle_zip_safe(name):
     if has_label(name, 'py:zip-unsafe'):
         set_command(name, get_command(name).replace(' --zip_safe', ''))
 
+
 def _add_licences(name, output):
     """Annotates a pip_library rule with detected licences after download."""
     found = False
@@ -614,6 +644,22 @@ def _add_licences(name, output):
             found = True
     if not found:
         log.warning('No licence found for %s, should add licences = [...] to the rule', name.lstrip('_').split('#')[0])
+
+
+# `pdb` and `debugpy` are the current debuggers supported by the PEX tool.
+def _debug_cmd(bin:str, flags:str='', pre_cmd:str=''):
+    if CONFIG.BUILD_CONFIG != 'dbg':
+        return ""
+
+    # `PEX_EXPLODE` will explode the PEX before executing to allow clients to access third party sources files.
+    # `DEBUG_PORT` is read by the PEX generated for debuggers that support server mode.
+    cmd = f"{bin} {flags}" if not CONFIG.DEBUG_PORT else f"PEX_EXPLODE=true DEBUG_PORT={CONFIG.DEBUG_PORT} {bin} {flags}"
+
+    if pre_cmd:
+        cmd = f"{pre_cmd} && {cmd}"
+
+    return cmd
+
 
 if CONFIG.BAZEL_COMPATIBILITY:
     py_library = python_library

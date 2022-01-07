@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	pb "github.com/thought-machine/please/test/go_rules/cover-test/test-proto"
+	pb "github.com/thought-machine/please/test/go_rules/cover-test"
 )
 
 func TestProto(t *testing.T) {

@@ -12,7 +12,6 @@ PexTool = please_pex
 
 [Java]
 JavacWorker = javac_worker
-JarCatTool = jarcat
 JUnitRunner = junit_runner.jar
 
 ; Set this so we don't pick up the test BUILD files in the main repo

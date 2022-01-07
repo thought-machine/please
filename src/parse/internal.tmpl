@@ -1,21 +1,29 @@
 remote_file(
-    name = "download",
-    url = f"{{ .ToolsURL }}",
+    name = "arcat",
+    url = f"https://github.com/please-build/arcat/releases/download/v1.0.1/arcat-1.0.1-{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}",
+    out = "arcat",
+    binary = True,
+    hashes = [
+        "0749055d7ce50fd4cf1cf15dc291418fbab488988c74779c4a9a799695100861",
+        "ce2d868f909e361ff366a0de4ec89d23b7decd04e02c72ff39c175bf585e28c7",
+        "8045654396bbcf9d089e0d6d1a8cb657c05f25b666e740e32cdf123cdb5f4b5c",
+        "58b07486d6d86e3173fff4207ba16e789ca01dfb1194071c86aac93d05154987",
+        "78db5748d1e22862c59ecfc4db989f2edc542be238bd4c9e4e96a7db5a3933e1",
+    ],
+    visibility = ["PUBLIC"],
 )
 
-# Can't use extract = True, as that would depend on :jarcat
-genrule(
-  name = "please_tools",
-  srcs = [":download"],
-  cmd = "tar --no-same-owner -xf $SRC",
-  outs = ["please_tools"],
+remote_file(
+    name = "download",
+    url = f"{{ .ToolsURL }}",
+    extract = True,
 )
 
 {{ range $tool := .Tools }}
 genrule(
     name = "{{$tool}}".removesuffix(".jar"),
     cmd = f"mv $SRC/{{$tool}} $OUT",
-    srcs = [":please_tools"],
+    srcs = [":download"],
     outs = ["{{$tool}}"],
     visibility = ["PUBLIC"],
     binary = True,
