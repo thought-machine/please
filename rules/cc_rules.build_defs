@@ -104,7 +104,7 @@ def cc_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:li
     if _module:
         compiler_flags += ['-fmodules-ts' if CONFIG.CC_MODULES_CLANG else '-fmodules']
     # TODO(pebers): handle includes and defines in _library_cmds as well.
-    pre_build = _library_transitive_labels(_c, compiler_flags, pkg_config_libs, pkg_config_cflags) if (deps or includes or defines or _interfaces) else None
+    pre_build = _library_transitive_labels(_c, compiler_flags, pkg_config_libs, pkg_config_cflags) if (deps or includes or hdrs or defines or _interfaces) else None
     pkg = package_name()
 
     if _interfaces:
@@ -295,7 +295,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
         labels=labels,
         tools=tools,
         pre_build=_library_transitive_labels(_c, compiler_flags, pkg_config_libs, pkg_config_cflags, archive=False)
-                  if (deps or includes or defines) else None,
+                  if (deps or includes or hdrs or defines) else None,
         needs_transitive_deps=True,
     )
 
@@ -424,7 +424,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
         tools=tools,
         test_only=test_only,
         requires=['cc', 'cc_hdrs'],
-        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, shared=True) if deps else None,
+        pre_build=_binary_transitive_labels(_c, linker_flags, pkg_config_libs, shared=True) if hdrs or deps else None,
     )
 
 
