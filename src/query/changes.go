@@ -3,13 +3,14 @@ package query
 import (
 	"bytes"
 	"crypto/sha1"
-	"fmt"
 	"path"
 	"sort"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 )
+
+var toolNotFoundHashValue = []byte{1}
 
 // DiffGraphs calculates the difference between two build graphs.
 // Note that this is not symmetric; targets that have been removed from 'before' do not appear
@@ -96,40 +97,34 @@ func targetChanged(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget) bool {
 	}
 	h1, err1 := sourceHash(s1, t1)
 	h2, err2 := sourceHash(s2, t2)
-
-	// If there are source hash errors and they are different from each other
-	// then the target is considered to have changed.
-	if err1 != nil || err2 != nil {
-		if err1 != nil && err2 != nil {
-			return err1.Error() != err2.Error()
-		}
-		return true
-	}
-
-	return !bytes.Equal(h1, h2)
+	return !bytes.Equal(h1, h2) || err1 != nil || err2 != nil
 }
 
 // sourceHash performs a partial source hash on a target to determine if it's changed.
 // This is a bit different to the one in the build package since we can't assume everything is
 // necessarily present (and for performance reasons don't want to hash *everything*).
-func sourceHash(state *core.BuildState, target *core.BuildTarget) (hash []byte, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%s", r)
-		}
-	}()
-	h := sha1.New()
+func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
+	var hash []byte
 	for _, tool := range target.AllTools() {
 		if _, ok := tool.Label(); ok {
 			continue // Skip in-repo tools, that will be handled via revdeps.
 		}
-		for _, path := range tool.FullPaths(state.Graph) {
-			result, err := state.PathHasher.Hash(path, false, false)
-			if err != nil {
-				return nil, err
-			}
-			h.Write(result)
-		}
+		// Tools outside the repo shouldn't change, so hashing the resolved tool path is enough.
+		hash = append(hash, toolPathHash(state, tool)...)
 	}
-	return h.Sum(nil), nil
+	return hash, nil
+}
+
+func toolPathHash(state *core.BuildState, tool core.BuildInput) (hash []byte) {
+	defer func() {
+		if r := recover(); r != nil {
+			hash = toolNotFoundHashValue
+		}
+	}()
+
+	h := sha1.New()
+	for _, path := range tool.FullPaths(state.Graph) {
+		h.Write([]byte(path))
+	}
+	return h.Sum(nil)
 }
