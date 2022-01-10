@@ -12,6 +12,7 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
+	"github.com/thought-machine/please/src/plz"
 )
 
 const topicsHelpMessage = `
@@ -72,11 +73,30 @@ func help(topic string) string {
 		panic("Failed to read config")
 	}
 	if _, ok := config.Plugin[topic]; ok {
-		message := fmt.Sprintf("%v is a plugin defined in the .plzconfig file. It's loaded from github.com/please-build/%v-rules", topic, topic)
-		if _, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
+		//TODO: Get url from build target
+		message := fmt.Sprintf("%v is a plugin defined in the .plzconfig file. It's loaded from github.com/please-build/%v-rules\n", topic, topic)
+		if val, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
+			buildLabel := core.BuildLabel{PackageName: "", Name: val[0], Subrepo: val[0]}
+
+			// Build the subrepo (Run reads the plugin config into config)
+			state := newState()
+			plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
+			state = state.Graph.Subrepo(val[0]).State
+			if state == nil {
+				return ""
+			}
+			config := state.Config
+			pluginDescription := config.PluginDefinition.Description
+			if pluginDescription != "" {
+				message += "\n" + pluginDescription
+			}
+			message += "\nThis plugin has the following options:\n"
+			for _, v := range config.PluginConfig {
+				message += fmt.Sprintf("   %v\n", v.ConfigKey)
+			}
 
 		} else {
-			log.Warningf("No subrepo field found for plugin %v", topic)
+			log.Warningf("To see more information, specify the subrepo field for the plugin %v", topic)
 		}
 
 		return message
