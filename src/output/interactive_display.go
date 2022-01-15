@@ -3,6 +3,7 @@ package output
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -161,10 +162,21 @@ func (d *interactiveDisplay) printRow(target *buildingTarget, now time.Time, rem
 			perPercent := float32(duration) / proportionDone
 			target.Eta = time.Duration(perPercent * (1.0 - proportionDone) * float32(time.Second)).Truncate(time.Second)
 			target.LastProgress = target.Target.Progress
+			if target.Target.FileSize > 0.0 {
+				// Round the download speed to a multiple of 10kB which makes the display jitter around less
+				const quantum = 10.0 * 1000.0
+				bps := float64(target.Target.FileSize*proportionDone) / duration
+				target.BPS = float32(math.Round(bps/quantum) * quantum)
+			}
 		}
 		if target.Eta > 0 {
-			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, est %s remaining)${ERASE_AFTER}\n",
-				duration, target.Colour, label, target.Description, target.Target.Progress, target.Eta)
+			if target.BPS != 0.0 {
+				d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, %s/s, est %s remaining)${ERASE_AFTER}\n",
+					duration, target.Colour, label, target.Description, target.Target.Progress, humanize.Bytes(uint64(target.BPS)), target.Eta)
+			} else {
+				d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, est %s remaining)${ERASE_AFTER}\n",
+					duration, target.Colour, label, target.Description, target.Target.Progress, target.Eta)
+			}
 		} else {
 			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%% complete)${ERASE_AFTER}\n",
 				duration, target.Colour, label, target.Description, target.Target.Progress)
