@@ -85,9 +85,8 @@ func TestPrintJSONOutput(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.ElementsMatch(t, result["srcs"], []string{"file.go", "//src/query:target1", "//src/query:target2", "//src/query:target3|go", "//src/core:core"})
-	assert.ElementsMatch(t, result["outs"], []string{"out1.go", "out2.go",})
+	assert.ElementsMatch(t, result["outs"], []string{"out1.go", "out2.go"})
 }
-
 
 func TestFilegroupOutput(t *testing.T) {
 	target := core.NewBuildTarget(core.ParseBuildLabel("//src/query:test_filegroup_output", ""))
