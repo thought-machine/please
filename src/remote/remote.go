@@ -594,7 +594,9 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 		}
 	}
 	// We didn't actually upload the inputs before, so we must do so now.
-	command, digest, err := c.uploadAction(target, isTest, false)
+	command, newDigest, err := c.uploadAction(target, isTest, false)
+	// Update the original digest to ensure it matches the uploaded action.
+	*digest = *newDigest
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
