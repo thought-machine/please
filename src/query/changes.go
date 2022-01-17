@@ -3,7 +3,6 @@ package query
 import (
 	"bytes"
 	"crypto/sha1"
-	"fmt"
 	"path"
 	"sort"
 
@@ -11,12 +10,16 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+var toolNotFoundHashValue = []byte{1}
+
 // DiffGraphs calculates the difference between two build graphs.
 // Note that this is not symmetric; targets that have been removed from 'before' do not appear
 // (because this is designed to be fed into 'plz test' and we can't test targets that no longer exist).
 func DiffGraphs(before, after *core.BuildState, files []string, level int) core.BuildLabels {
 	log.Notice("Calculating difference...")
 	changed := diffGraphs(before, after)
+	log.Debugf("Number of changed targets on a non-recursive diff between before and after build graphs: %d", len(changed))
+
 	log.Info("Including changed files...")
 	return changedTargets(after, files, changed, level)
 }
@@ -30,6 +33,8 @@ func Changes(state *core.BuildState, files []string, level int) core.BuildLabels
 // diffGraphs performs a non-recursive diff of two build graphs.
 func diffGraphs(before, after *core.BuildState) map[*core.BuildTarget]struct{} {
 	configChanged := !bytes.Equal(before.Hashes.Config, after.Hashes.Config)
+	log.Debugf("Has config changed between before and after build states: %v", configChanged)
+
 	changed := map[*core.BuildTarget]struct{}{}
 	for _, afterTarget := range after.Graph.AllTargets() {
 		if beforeTarget := before.Graph.Target(afterTarget.Label); beforeTarget == nil || targetChanged(before, after, beforeTarget, afterTarget) || configChanged {
@@ -98,24 +103,28 @@ func targetChanged(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget) bool {
 // sourceHash performs a partial source hash on a target to determine if it's changed.
 // This is a bit different to the one in the build package since we can't assume everything is
 // necessarily present (and for performance reasons don't want to hash *everything*).
-func sourceHash(state *core.BuildState, target *core.BuildTarget) (hash []byte, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%s", r)
-		}
-	}()
-	h := sha1.New()
+func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
+	var hash []byte
 	for _, tool := range target.AllTools() {
 		if _, ok := tool.Label(); ok {
 			continue // Skip in-repo tools, that will be handled via revdeps.
 		}
-		for _, path := range tool.FullPaths(state.Graph) {
-			result, err := state.PathHasher.Hash(path, false, false)
-			if err != nil {
-				return nil, err
-			}
-			h.Write(result)
-		}
+		// Tools outside the repo shouldn't change, so hashing the resolved tool path is enough.
+		hash = append(hash, toolPathHash(state, tool)...)
 	}
-	return h.Sum(nil), nil
+	return hash, nil
+}
+
+func toolPathHash(state *core.BuildState, tool core.BuildInput) (hash []byte) {
+	defer func() {
+		if r := recover(); r != nil {
+			hash = toolNotFoundHashValue
+		}
+	}()
+
+	h := sha1.New()
+	for _, path := range tool.FullPaths(state.Graph) {
+		h.Write([]byte(path))
+	}
+	return h.Sum(nil)
 }
