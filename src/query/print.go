@@ -16,14 +16,18 @@ import (
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
-func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string, outputJSON bool) {
+func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string, omitHidden, outputJSON bool) {
 	graph := state.Graph
 	ts := map[string]map[string]interface{}{}
 	for _, target := range targets {
+		if target.IsHidden() && omitHidden {
+			continue
+		}
+
 		t := graph.TargetOrDie(target)
 
 		if outputJSON {
-			ts[target.String()] = targetToValueMap(state.Parser.BuildRuleArgOrder(), t)
+			ts[target.String()] = targetToValueMap(state.Parser.BuildRuleArgOrder(), fields, t)
 			continue
 		}
 
@@ -65,7 +69,9 @@ func handleSpecialFields(specials specialFieldsMap, target *core.BuildTarget, na
 	return reflect.ValueOf(fun(target)), true
 }
 
-func targetToValueMap(order map[string]int, target *core.BuildTarget) map[string]interface{} {
+// targetToValueMap creates a map of fields on BuildTarget keyed by the name tag on the struct field annotation. It
+// handles converting fields like named fields, or complex fields so that this can be serialised to json.
+func targetToValueMap(order map[string]int, fieldsToInclude []string, target *core.BuildTarget) map[string]interface{} {
 	ret := map[string]interface{}{}
 	fs := fields(reflect.ValueOf(target).Elem(), order)
 
@@ -74,12 +80,21 @@ func targetToValueMap(order map[string]int, target *core.BuildTarget) map[string
 	}
 	specialFields := specialFields()
 
+	include := make(map[string]struct{}, len(fieldsToInclude))
+	for _, f := range fieldsToInclude {
+		include[f] = struct{}{}
+	}
+
 	// TODO(jpoole): order these somehow
 	for _, field := range fs {
 		if !shouldPrint(field.field, target) {
 			continue
 		}
 		name := fieldName(field.field)
+		if _, ok := include[name]; len(fieldsToInclude) != 0 && !ok {
+			continue
+		}
+
 		value, isSpecial := handleSpecialFields(specialFields, target, name)
 		if !isSpecial {
 			value = field.value
@@ -101,7 +116,7 @@ func targetToValueMap(order map[string]int, target *core.BuildTarget) map[string
 type specialFieldsMap map[string]func(target *core.BuildTarget) interface{}
 
 // specialFields returns the map of fields that require special case handling. The functions in this map convert the
-// field to a type that can be printing with genericPrint
+// field to a type that can be printed with genericPrint
 func specialFields() specialFieldsMap {
 	return specialFieldsMap{
 		"name": func(target *core.BuildTarget) interface{} {

@@ -72,7 +72,7 @@ func TestPrintJSONOutput(t *testing.T) {
 	target.Tools = append(target.Tools, src("//tools:tool1"))
 	target.IsBinary = true
 
-	valueMap := targetToValueMap(order, target)
+	valueMap := targetToValueMap(order, nil, target)
 	jsonValue := new(bytes.Buffer)
 	encoder := json.NewEncoder(jsonValue)
 	encoder.SetEscapeHTML(false)
