@@ -147,7 +147,7 @@ func specialFields() specialFieldsMap {
 			if namedOuts := target.DeclaredNamedOutputs(); len(namedOuts) > 0 {
 				return namedOuts
 			}
-			return target.Outputs()
+			return target.DeclaredOutputs()
 		},
 		"test": func(target *core.BuildTarget) interface{} {
 			return target.IsTest()
