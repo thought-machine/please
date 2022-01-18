@@ -1097,10 +1097,11 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	var r io.Reader = resp.Body
 	if length := resp.Header.Get("Content-Length"); length != "" {
 		if i, err := strconv.Atoi(length); err == nil {
-			r = &progressReader{Reader: resp.Body, Target: target, Total: float32(i)}
+			target.FileSize = float32(i)
+			r = &progressReader{Reader: resp.Body, Target: target, Total: target.FileSize}
+			target.ShowProgress = true // Required for it to actually display
 		}
 	}
-	target.ShowProgress = true // Required for it to actually display
 	h := state.PathHasher.NewHash()
 	if _, err := io.Copy(io.MultiWriter(f, h), r); err != nil {
 		return err

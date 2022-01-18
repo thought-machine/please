@@ -142,6 +142,8 @@ type BuildTarget struct {
 	Debug *DebugFields
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
+	// For remote_files, this is the total size of the download (if known)
+	FileSize float32 `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
 	BuildingDescription string `name:"building_description"`
