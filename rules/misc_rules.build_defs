@@ -230,6 +230,28 @@ def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cm
         env = env,
     )
 
+def export_large_file(name:str, src:str, visibility:list=None, binary:bool=False, test_only:bool&testonly=False):
+       """The same as export_file() but uses a less robust timestamp based hashing algorithm. This is especially usefule
+       for large files where hashing their content has performance concerns.
+
+       Args:
+         name (str): Name of the rule
+         src (str): Source file for the rule
+         visibility (list): Visibility declaration
+         binary (bool): True to mark the rule outputs as binary
+         test_only (bool): If true the exported file can only be used by test targets.
+       """
+       return filegroup(
+           name = name,
+           srcs = [src],
+           visibility = visibility,
+           binary = binary,
+           test_only = test_only,
+           # This is a special label that Please understands that hashes the last modified time instead of the file
+           # content to determine the output hash
+           labels = ["fg:hash-modified-time"],
+       )
+
 
 def export_file(name:str, src:str, visibility:list=None, binary:bool=False, test_only:bool&testonly=False):
     """Essentially a single-file alias for filegroup.
