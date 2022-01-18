@@ -86,6 +86,16 @@ func TestChangesIncludesDataDirs(t *testing.T) {
 	assert.EqualValues(t, []core.BuildLabel{t3.Label}, Changes(s, []string{"src/query/test_data/some_dir/test_file1.txt"}, 0))
 }
 
+func TestSameToolHashNoChange(t *testing.T) {
+	s1 := core.NewDefaultBuildState()
+	s2 := core.NewDefaultBuildState()
+	target := addTarget(s1, "//src/core:core", nil, "src/core/core.go")
+	target.AddTool(core.SystemPathLabel{Name: "non-existent", Path: s1.Config.Path()})
+	target = addTarget(s2, "//src/core:core", nil, "src/core/core.go")
+	target.AddTool(core.SystemPathLabel{Name: "non-existent", Path: s2.Config.Path()})
+	assert.EqualValues(t, []core.BuildLabel{}, DiffGraphs(s1, s2, nil, -1))
+}
+
 func TestChangesIncludesRootTarget(t *testing.T) {
 	s := core.NewDefaultBuildState()
 	t1 := addTarget(s, "//:file", nil, "file.go")

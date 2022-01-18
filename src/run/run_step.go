@@ -25,12 +25,12 @@ import (
 
 var log = logging.MustGetLogger("run")
 
-type ParallelOutput string
+type ProcessOutput string
 
 const (
-	Default        ParallelOutput = "default"
-	Quiet          ParallelOutput = "quiet"
-	GroupImmediate ParallelOutput = "group_immediate"
+	Default        ProcessOutput = "default"
+	Quiet          ProcessOutput = "quiet"
+	GroupImmediate ProcessOutput = "group_immediate"
 )
 
 // Run implements the running part of 'plz run'.
@@ -44,7 +44,7 @@ func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string,
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
 // The given context can be used to control the lifetime of the subprocesses.
-func Parallel(ctx context.Context, state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, output ParallelOutput, remote, env, detach, inTmp bool, dir string) int {
+func Parallel(ctx context.Context, state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, output ProcessOutput, remote, env, detach, inTmp bool, dir string) int {
 	prepareRun()
 
 	limiter := make(chan struct{}, numTasks)
@@ -55,28 +55,10 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 			limiter <- struct{}{}
 			defer func() { <-limiter }()
 
-			var out []byte
-			var err error
-			switch output {
-			case GroupImmediate:
-				out, _, err = run(ctx, state, label, args, true, true, remote, env, detach, inTmp, dir, "")
-
-				fmt.Println(label)
-				if err == nil {
-					os.Stdout.Write(out)
-				}
-			case Quiet:
-				_, _, err = run(ctx, state, label, args, true, true, remote, env, detach, inTmp, dir, "")
-			case Default:
-				fallthrough
-			default:
-				_, _, err = run(ctx, state, label, args, true, false, remote, env, detach, inTmp, dir, "")
-			}
-
+			err := runWithOutput(ctx, state, label, args, output, remote, env, detach, inTmp, dir)
 			if err != nil && ctx.Err() == nil {
 				log.Error("Command failed: %s", err)
 			}
-
 			return err
 		})
 	}
@@ -89,15 +71,35 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 	return 0
 }
 
+// runWithOutput runs a subprocess with the given output mechanism.
+func runWithOutput(ctx context.Context, state *core.BuildState, label core.AnnotatedOutputLabel, args []string, output ProcessOutput, remote, env, detach, inTmp bool, dir string) error {
+	switch output {
+	case GroupImmediate:
+		out, _, err := run(ctx, state, label, args, true, true, remote, env, detach, inTmp, dir, "")
+		fmt.Println(label)
+		if err == nil {
+			os.Stdout.Write(out)
+		}
+		return err
+	case Quiet:
+		_, _, err := run(ctx, state, label, args, true, true, remote, env, detach, inTmp, dir, "")
+		return err
+	case Default:
+		fallthrough
+	default:
+		_, _, err := run(ctx, state, label, args, true, false, remote, env, detach, inTmp, dir, "")
+		return err
+	}
+}
+
 // Sequential runs a series of targets sequentially.
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
-func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, quiet, remote, env, inTmp bool, dir string) int {
+func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, output ProcessOutput, remote, env, inTmp bool, dir string) int {
 	prepareRun()
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		_, _, err := run(context.Background(), state, label, args, true, quiet, remote, env, false, inTmp, dir, "")
-		if err != nil {
+		if err := runWithOutput(context.Background(), state, label, args, output, remote, env, false, inTmp, dir); err != nil {
 			log.Error("%s", err)
 			return err.(*exitError).code
 		}

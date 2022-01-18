@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	"github.com/thought-machine/please/test/go_rules/double_path_import/bar/bar/baz"
+	"github.com/thought-machine/please/test/go_rules/double_path_import/bar/bar"
 	"github.com/thought-machine/please/test/go_rules/double_path_import/foo/foo"
 )
 

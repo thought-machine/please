@@ -54,3 +54,13 @@ go_test(
         "//third_party/go:testify",
     ],
 )
+
+go_test(
+    name = "cmd_cache_test",
+    srcs = ["cmd_cache_test.go"],
+    data = [":test_data"],
+    deps = [
+        ":cache",
+        "//third_party/go:testify",
+    ],
+)

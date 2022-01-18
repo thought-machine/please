@@ -349,8 +349,8 @@ def _get_import_path(package="", import_path=""):
     else:
         path = pkg
 
-    # TODO(jpoole): this isn't really necessary and isn't how go works. We could probably remove this for v17.
-    if package and not path.endswith(package):
+    # TODO(jpoole): remove this flag in v17
+    if not CONFIG.FF_GO_DONT_COLLAPSE_IMPORT_PATHS and package and not path.endswith(package):
         return f"{path}/{package}"
     return path
 
@@ -893,7 +893,11 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
     cover = cover and (CONFIG.BUILD_CONFIG == "cover")
     test_package = test_package or _get_import_path()
     external_flag = " --external" if external else ""
-    cmd = f'"$TOOLS_PLZ" testmain --test_package "{test_package}"{external_flag} --import_path "{CONFIG.GO_IMPORT_PATH}" --go_tool "$TOOLS_GO" -o $OUT'
+
+    cmd = f'"$TOOLS_PLZ" testmain --test_package "{test_package}"{external_flag} --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
+    # TODO(jpoole): remove this in v17
+    if CONFIG.FF_GO_DONT_COLLAPSE_IMPORT_PATHS:
+        cmd = f"FF_GO_DONT_COLLAPSE_IMPORT_PATHS=true {cmd}"
     if benchmark:
         cmd = f'{cmd} --benchmark'
     cmds = {
@@ -1272,7 +1276,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             "go": f":{name}", # provide the filegroup otherwise exported deps don't work
             "go_src": download,
         },
-        labels = [f"go_package:{i}" for i in install] + [f"go_module:{module}"],
+        labels = [f"go_package:{i}" for i in install],
         visibility = visibility,
         needs_transitive_deps = True,
         test_only = test_only,
