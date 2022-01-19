@@ -158,6 +158,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		setDefault(&config.Parse.BuildFileName, "BUILD", "BUILD.plz")
 	}
 	setBuildPath(&config.Build.Path, config.Build.PassEnv, config.Build.PassUnsafeEnv)
+	setDefault(&config.Build.HashCheckers, "sha1", "sha256", "blake3")
 	setDefault(&config.Build.PassUnsafeEnv)
 	setDefault(&config.Build.PassEnv)
 	setDefault(&config.Cover.FileExtension, ".go", ".py", ".java", ".tsx", ".ts", ".js", ".cc", ".h", ".c")
@@ -247,6 +248,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,
+		"build.hashcheckers": strings.Join(config.Build.HashCheckers, ","),
 	})
 }
 
@@ -442,6 +444,7 @@ type Configuration struct {
 		PassEnv              []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
 		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
 		HTTPProxy            cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
+		HashCheckers         []string     `help:"Set of hash algos supported by the 'hashes' argument on build rules. Defaults to: sha1,sha256,blake3." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		ExitOnError          bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
 		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)" var:"LINK_GEN_SOURCES"`
@@ -801,6 +804,14 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 			return strings.ToLower(s2) == s1
 		}
 	}
+	maybeValidOption := func(field reflect.StructField, value, key string) error {
+		if options := field.Tag.Get("options"); options != "" {
+			if !cli.ContainsString(value, strings.Split(options, ",")) {
+				return fmt.Errorf("Invalid value %s for field %s; options are %s", value, key, options)
+			}
+		}
+		return nil
+	}
 	elem := reflect.ValueOf(config).Elem()
 	for k, v := range overrides {
 		split := strings.Split(strings.ToLower(k), ".")
@@ -828,10 +839,8 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		switch field.Kind() {
 		case reflect.String:
 			// verify this is a legit setting for this field
-			if options := subfield.Tag.Get("options"); options != "" {
-				if !cli.ContainsString(v, strings.Split(options, ",")) {
-					return fmt.Errorf("Invalid value %s for field %s; options are %s", v, k, options)
-				}
+			if err := maybeValidOption(subfield, v, k); err != nil {
+				return err
 			}
 			if field.Type().Name() == "URL" {
 				field.Set(reflect.ValueOf(cli.URL(v)))
@@ -869,7 +878,14 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 				}
 				field.Set(reflect.ValueOf(urls))
 			} else {
-				field.Set(reflect.ValueOf(strings.Split(v, ",")))
+				parts := strings.Split(v, ",")
+				// verify this is a legit setting for this field
+				for _, part := range parts {
+					if err := maybeValidOption(subfield, part, k); err != nil {
+						return err
+					}
+				}
+				field.Set(reflect.ValueOf(parts))
 			}
 		default:
 			return fmt.Errorf("Can't override config field %s (is %s)", k, field.Kind())

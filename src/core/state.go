@@ -445,7 +445,11 @@ func (state *BuildState) Hasher(name string) *fs.PathHasher {
 // OutputHashCheckers returns the subset of hash algos that are appropriate for checking the hashes argument on
 // build rules
 func (state *BuildState) OutputHashCheckers() []*fs.PathHasher {
-	return []*fs.PathHasher{state.Hasher("sha1"), state.Hasher("sha256"), state.Hasher("blake3")}
+	hashCheckers := make([]*fs.PathHasher, 0, len(state.Config.Build.HashCheckers))
+	for _, algo := range state.Config.Build.HashCheckers {
+		hashCheckers = append(hashCheckers, state.Hasher(algo))
+	}
+	return hashCheckers
 }
 
 // LogParseResult logs the result of a target parsing.

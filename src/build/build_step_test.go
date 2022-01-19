@@ -376,6 +376,29 @@ func TestCheckRuleHashes(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestHashCheckers(t *testing.T) {
+	state, target := newStateWithHashCheckers("//package3:target1", "sha256", []string{"xxhash"})
+	target.AddOutput("file1")
+
+	b, err := state.TargetHasher.OutputHash(target)
+	assert.NoError(t, err)
+
+	// sha256 hash will always succeed since it's the build hash function.
+	target.Hashes = []string{"634b027b1b69e1242d40d53e312b3b4ac7710f55be81f289b549446ef6778bee"}
+	err = checkRuleHashes(state, target, b)
+	assert.NoError(t, err)
+
+	// xxhash hash will pass since it's on the list of hash checkers.
+	target.Hashes = []string{"2f9c985723220c2e"}
+	err = checkRuleHashes(state, target, b)
+	assert.NoError(t, err)
+
+	// blake3 hash will fail since it's not on the list of hash checkers.
+	target.Hashes = []string{"37d6ae61eb7aba324b4633ef518a5a2e88feac81a0f65a67f9de40b55fe91277"}
+	err = checkRuleHashes(state, target, b)
+	assert.Error(t, err)
+}
+
 func TestFetchLocalRemoteFile(t *testing.T) {
 	state, target := newState("//package4:target1")
 	target.AddSource(core.URLLabel("file://" + os.Getenv("TMP_DIR") + "/src/build/test_data/local_remote_file.txt"))
@@ -505,6 +528,25 @@ func TestSha1SingleHash(t *testing.T) {
 			assert.Equal(t, test.fooAndBarHash, hex.EncodeToString(h))
 		})
 	}
+}
+
+func newStateWithHashCheckers(label, hashFunction string, hashCheckers []string) (*core.BuildState, *core.BuildTarget) {
+	config, _ := core.ReadConfigFiles(nil, nil)
+	if len(hashFunction) > 0 {
+		config.Build.HashFunction = hashFunction
+	}
+	if len(hashCheckers) > 0 {
+		config.Build.HashCheckers = hashCheckers
+	}
+	state := core.NewBuildState(config)
+	state.Config.Parse.BuildFileName = []string{"BUILD_FILE"}
+	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
+	target.Command = fmt.Sprintf("echo 'output of %s' > $OUT", target.Label)
+	target.BuildTimeout = 100 * time.Second
+	state.Graph.AddTarget(target)
+	state.Parser = &fakeParser{}
+	Init(state)
+	return state, target
 }
 
 func newStateWithHashFunc(label, hashFunc string, sha1ForceCombine bool) (*core.BuildState, *core.BuildTarget) {
