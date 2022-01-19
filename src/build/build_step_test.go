@@ -377,7 +377,7 @@ func TestCheckRuleHashes(t *testing.T) {
 }
 
 func TestHashCheckers(t *testing.T) {
-	state, target := newStateWithHashCheckers("//package3:target1", "sha256", []string{"xxhash"})
+	state, target := newStateWithHashCheckers("//package3:target1", "sha256", "xxhash")
 	target.AddOutput("file1")
 
 	b, err := state.TargetHasher.OutputHash(target)
@@ -530,9 +530,9 @@ func TestSha1SingleHash(t *testing.T) {
 	}
 }
 
-func newStateWithHashCheckers(label, hashFunction string, hashCheckers []string) (*core.BuildState, *core.BuildTarget) {
+func newStateWithHashCheckers(label, hashFunction string, hashCheckers ...string) (*core.BuildState, *core.BuildTarget) {
 	config, _ := core.ReadConfigFiles(nil, nil)
-	if len(hashFunction) > 0 {
+	if hashFunction != "" {
 		config.Build.HashFunction = hashFunction
 	}
 	if len(hashCheckers) > 0 {
