@@ -70,6 +70,14 @@ func help(topic string) string {
 	}
 
 	// Check plugins
+	if pluginHelp := helpForPlugin(topic); pluginHelp != "" {
+		return pluginHelp
+	}
+
+	return ""
+}
+
+func helpForPlugin(topic string) string {
 	config, err := core.ReadDefaultConfigFiles(nil)
 	if err != nil {
 		panic("Failed to read config")
@@ -77,12 +85,13 @@ func help(topic string) string {
 	if _, ok := config.Plugin[topic]; ok {
 		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the .plzconfig file.", topic)
 		if val, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
-			buildLabel := core.BuildLabel{PackageName: "", Name: val[0], Subrepo: val[0]}
-			downloadBuildLabel := core.BuildLabel{PackageName: "", Name: "_" + val[0] + "#download", Subrepo: ""}
+			subrepo := val[0]
+			buildLabel := core.BuildLabel{PackageName: "", Name: subrepo, Subrepo: subrepo}
 			state := newState()
 
 			// Parse the subrepo (Run reads the plugin config into config)
 			plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
+			downloadBuildLabel := core.BuildLabel{PackageName: "", Name: "_" + subrepo + "#download", Subrepo: ""}
 			if t := state.Graph.Target(downloadBuildLabel); t != nil {
 				if urls := t.AllURLs(state); len(urls) == 1 {
 					message += fmt.Sprintf(" It's loaded from %v\n", urls[0])
@@ -93,7 +102,7 @@ func help(topic string) string {
 				message += "\n"
 			}
 
-			state = state.Graph.Subrepo(val[0]).State
+			state = state.Graph.Subrepo(subrepo).State
 			config := state.Config
 			if config.PluginDefinition.Description != "" {
 				message += "\n" + config.PluginDefinition.Description + "\n"
@@ -156,7 +165,6 @@ func help(topic string) string {
 
 		return message
 	}
-
 	return ""
 }
 
