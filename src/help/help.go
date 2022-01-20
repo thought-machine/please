@@ -79,8 +79,8 @@ func help(topic string) string {
 		if val, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
 			buildLabel := core.BuildLabel{PackageName: "", Name: val[0], Subrepo: val[0]}
 			downloadBuildLabel := core.BuildLabel{PackageName: "", Name: "_" + val[0] + "#download", Subrepo: ""}
-
 			state := newState()
+
 			// Parse the subrepo (Run reads the plugin config into config)
 			plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
 			if t := state.Graph.Target(downloadBuildLabel); t != nil {

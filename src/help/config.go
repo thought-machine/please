@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	deferredregex "github.com/peterebden/go-deferred-regex"
+	"github.com/peterebden/go-deferred-regex"
 
 	"github.com/thought-machine/please/src/core"
 )
