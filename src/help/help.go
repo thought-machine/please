@@ -3,7 +3,9 @@ package help
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -73,28 +75,81 @@ func help(topic string) string {
 		panic("Failed to read config")
 	}
 	if _, ok := config.Plugin[topic]; ok {
-		//TODO: Get url from build target
-		message := fmt.Sprintf("%v is a plugin defined in the .plzconfig file. It's loaded from github.com/please-build/%v-rules\n", topic, topic)
+		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the .plzconfig file.", topic)
 		if val, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
 			buildLabel := core.BuildLabel{PackageName: "", Name: val[0], Subrepo: val[0]}
+			downloadBuildLabel := core.BuildLabel{PackageName: "", Name: "_" + val[0] + "#download", Subrepo: ""}
 
-			// Build the subrepo (Run reads the plugin config into config)
 			state := newState()
+			// Parse the subrepo (Run reads the plugin config into config)
 			plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
-			state = state.Graph.Subrepo(val[0]).State
-			if state == nil {
-				return ""
-			}
-			config := state.Config
-			pluginDescription := config.PluginDefinition.Description
-			if pluginDescription != "" {
-				message += "\n" + pluginDescription
-			}
-			message += "\nThis plugin has the following options:\n"
-			for _, v := range config.PluginConfig {
-				message += fmt.Sprintf("   %v\n", v.ConfigKey)
+			if t := state.Graph.Target(downloadBuildLabel); t != nil {
+				if urls := t.AllURLs(state); len(urls) == 1 {
+					message += fmt.Sprintf(" It's loaded from %v\n", urls[0])
+				} else {
+					message += "\n"
+				}
+			} else {
+				message += "\n"
 			}
 
+			state = state.Graph.Subrepo(val[0]).State
+			config := state.Config
+			if config.PluginDefinition.Description != "" {
+				message += "\n" + config.PluginDefinition.Description + "\n"
+			}
+			if config.PluginDefinition.Documentation != "" {
+				message += "\n" + config.PluginDefinition.Documentation + "\n"
+			}
+			configOptions := ""
+			for _, v := range config.PluginConfig {
+				valueType := v.Type
+				if v.Type == "" {
+					valueType = "str"
+				}
+				var optional string
+				if v.Optional {
+					optional = " (optional)"
+				}
+				configOptions += fmt.Sprintf("${GREEN}   %v${RESET}:${BOLD_BLUE}%v${RESET}${WHITE}%v${RESET} Default value: ${BLUE}%v${RESET}\n",
+					strings.ToLower(v.ConfigKey),
+					valueType,
+					optional,
+					v.DefaultValue)
+			}
+			if configOptions != "" {
+				message += "\n${YELLOW}This plugin has the following options:${RESET}\n" + configOptions
+			}
+
+			p := asp.NewParser(state)
+			buildFuncMap := map[string]*asp.Statement{}
+			for _, dir := range state.Config.PluginDefinition.BuildDefsDir {
+				if files, err := ioutil.ReadDir(dir); err == nil {
+					for _, file := range files {
+						if !file.IsDir() {
+							if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
+								addAllFunctions(buildFuncMap, stmts, false)
+							}
+						}
+					}
+				}
+			}
+			buildDefs := ""
+			for k, v := range buildFuncMap {
+				buildDefs += fmt.Sprintf("${GREEN}   %v${RESET}", strings.ToLower(k))
+				arglist := "("
+				for i, arg := range v.FuncDef.Arguments {
+					if i != len(v.FuncDef.Arguments)-1 {
+						arglist += arg.Name + ", "
+					} else {
+						arglist += arg.Name + ")"
+					}
+				}
+				buildDefs += fmt.Sprintf("${BLUE}%v${RESET}\n", arglist)
+			}
+			if buildDefs != "" {
+				message += "\n${YELLOW}And provides the following build defs:${RESET}\n" + buildDefs
+			}
 		} else {
 			log.Warningf("To see more information, specify the subrepo field for the plugin %v", topic)
 		}
