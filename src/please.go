@@ -346,10 +346,11 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"alltargets" description:"Lists all targets in the graph"`
 		Print struct {
-			JSON   bool     `long:"json" description:"Print the targets as json rather than python"`
-			Fields []string `short:"f" long:"field" description:"Individual fields to print of the target"`
-			Labels []string `short:"l" long:"label" description:"Prints all labels with the given prefix (with the prefix stripped off). Overrides --field."`
-			Args   struct {
+			JSON       bool     `long:"json" description:"Print the targets as json rather than python"`
+			OmitHidden bool     `long:"omit_hidden" description:"Omit hidden fields. Can be useful when using wildcard"`
+			Fields     []string `short:"f" long:"field" description:"Individual fields to print of the target"`
+			Labels     []string `short:"l" long:"label" description:"Prints all labels with the given prefix (with the prefix stripped off). Overrides --field."`
+			Args       struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to print" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"print" description:"Prints a representation of a single target"`
@@ -723,7 +724,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.print": func() int {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels, opts.Query.Print.JSON)
+			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels, opts.Query.Print.OmitHidden, opts.Query.Print.JSON)
 		})
 	},
 	"query.input": func() int {
