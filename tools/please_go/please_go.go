@@ -33,6 +33,7 @@ var opts = struct {
 		} `positional-args:"true" required:"true"`
 	} `command:"install" alias:"i" description:"Compile a go module similarly to 'go install'"`
 	Test struct {
+		GoTool      string   `short:"g" long:"go_tool" description:"The location of the go binary" env:"TOOLS_GO" default:"go"`
 		Dir         string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
 		Exclude     []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
 		Output      string   `short:"o" long:"output" description:"Output filename" required:"true"`
@@ -82,6 +83,7 @@ var subCommands = map[string]func() int{
 	},
 	"testmain": func() int {
 		test.PleaseGoTest(
+			opts.Test.GoTool,
 			opts.Test.Dir,
 			opts.Test.ImportPath,
 			opts.Test.TestPackage,

@@ -102,7 +102,7 @@ def main(argv):
         pass
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
-        n = 100
+        n = 1000
         for i in progress('Formatting files', range(0, len(filenames), n)):
             subprocess.check_call([FLAGS.plz, 'fmt', '-w'] + filenames[i: i + n])
 

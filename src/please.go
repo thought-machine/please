@@ -186,9 +186,9 @@ var opts struct {
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
 		Parallel   struct {
-			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
-			Quiet          bool               `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
-			Output         run.ParallelOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
+			NumTasks       int               `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Quiet          bool              `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
+			Output         run.ProcessOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -196,7 +196,8 @@ var opts struct {
 			Detach bool          `long:"detach" description:"Detach from the parent process when all children have spawned"`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
-			Quiet          bool `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			Quiet          bool              `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			Output         run.ProcessOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -345,10 +346,11 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"alltargets" description:"Lists all targets in the graph"`
 		Print struct {
-			JSON   bool     `long:"json" description:"Print the targets as json rather than python"`
-			Fields []string `short:"f" long:"field" description:"Individual fields to print of the target"`
-			Labels []string `short:"l" long:"label" description:"Prints all labels with the given prefix (with the prefix stripped off). Overrides --field."`
-			Args   struct {
+			JSON       bool     `long:"json" description:"Print the targets as json rather than python"`
+			OmitHidden bool     `long:"omit_hidden" description:"Omit hidden fields. Can be useful when using wildcard"`
+			Fields     []string `short:"f" long:"field" description:"Individual fields to print of the target"`
+			Labels     []string `short:"l" long:"label" description:"Prints all labels with the given prefix (with the prefix stripped off). Overrides --field."`
+			Args       struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to print" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"print" description:"Prints a representation of a single target"`
@@ -483,7 +485,7 @@ var buildFunctions = map[string]func() int{
 		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile), stats)
 		test.WriteXMLCoverageToFileOrDie(targets, state.Coverage, string(opts.Cover.CoverageXMLReport))
 
-		if opts.Cover.LineCoverageReport {
+		if opts.Cover.LineCoverageReport && success {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile.AsStrings())
 		} else if !opts.Cover.NoCoverageReport && opts.Cover.Shell == "" {
 			output.PrintCoverage(state, opts.Cover.IncludeFile.AsStrings())
@@ -581,9 +583,14 @@ var buildFunctions = map[string]func() int{
 				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
 				dir = originalWorkingDirectory
 			}
+			output := opts.Run.Sequential.Output
+			if opts.Run.Sequential.Quiet {
+				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
+				output = run.Quiet
+			}
 
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Sequential.PositionalArgs.Targets)
-			os.Exit(run.Sequential(state, ls, opts.Run.Sequential.Args.AsStrings(), opts.Run.Sequential.Quiet, opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir))
+			os.Exit(run.Sequential(state, ls, opts.Run.Sequential.Args.AsStrings(), output, opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir))
 		}
 		return 1
 	},
@@ -717,7 +724,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.print": func() int {
 		return runQuery(false, opts.Query.Print.Args.Targets, func(state *core.BuildState) {
-			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels, opts.Query.Print.JSON)
+			query.Print(state, state.ExpandOriginalLabels(), opts.Query.Print.Fields, opts.Query.Print.Labels, opts.Query.Print.OmitHidden, opts.Query.Print.JSON)
 		})
 	},
 	"query.input": func() int {
@@ -842,6 +849,7 @@ var buildFunctions = map[string]func() int{
 		}
 		original := scm.CurrentRevIdentifier()
 		files := scm.ChangedFiles(opts.Query.Changes.Since, true, "")
+		log.Debugf("Number of changed files: %d", len(files))
 		if err := scm.Checkout(opts.Query.Changes.Since); err != nil {
 			log.Fatalf("%s", err)
 		}
@@ -1323,7 +1331,11 @@ func initBuild(args []string) string {
 	// can affect how we parse otherwise illegal flag combinations.
 	if (flagsErr != nil || len(extraArgs) > 0) && command != "query.completions" {
 		args := config.UpdateArgsWithAliases(os.Args)
-		command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
+		parser, _, err := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions, additionalUsageInfo)
+		if err != nil {
+			log.Fatalf("%s", err)
+		}
+		command = cli.ActiveFullCommand(parser.Command)
 	}
 
 	if opts.ProfilePort != 0 {

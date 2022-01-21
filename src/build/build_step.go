@@ -701,12 +701,12 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 
 func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, realOutput string) (bool, error) {
 	// hash the file
-	newHash, err := state.PathHasher.Hash(tmpOutput, false, true)
+	newHash, err := state.PathHasher.Hash(tmpOutput, false, true, false)
 	if err != nil {
 		return true, err
 	}
 	if fs.PathExists(realOutput) {
-		if oldHash, err := state.PathHasher.Hash(realOutput, false, true); err != nil {
+		if oldHash, err := state.PathHasher.Hash(realOutput, false, true, false); err != nil {
 			return true, err
 		} else if bytes.Equal(oldHash, newHash) {
 			// We already have the same file in the current location. Don't bother moving it.
@@ -868,14 +868,14 @@ func (h *targetHasher) outputHash(target *core.BuildTarget) ([]byte, error) {
 func outputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash) ([]byte, error) {
 	if combine == nil {
 		// Must be a single output, just hash that directly.
-		return hasher.Hash(outputs[0], true, !target.IsFilegroup)
+		return hasher.Hash(outputs[0], true, !target.IsFilegroup, target.HashLastModified())
 	}
 	h := combine()
 	for _, filename := range outputs {
 		// NB. Always force a recalculation of the output hashes here. Memoisation is not
 		//     useful because by definition we are rebuilding a target, and can actively hurt
 		//     in cases where we compare the retrieved cache artifacts with what was there before.
-		h2, err := hasher.Hash(filename, true, !target.IsFilegroup)
+		h2, err := hasher.Hash(filename, true, !target.IsFilegroup, target.HashLastModified())
 		if err != nil {
 			return nil, err
 		}
@@ -1097,10 +1097,11 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	var r io.Reader = resp.Body
 	if length := resp.Header.Get("Content-Length"); length != "" {
 		if i, err := strconv.Atoi(length); err == nil {
-			r = &progressReader{Reader: resp.Body, Target: target, Total: float32(i)}
+			target.FileSize = float32(i)
+			r = &progressReader{Reader: resp.Body, Target: target, Total: target.FileSize}
+			target.ShowProgress = true // Required for it to actually display
 		}
 	}
-	target.ShowProgress = true // Required for it to actually display
 	h := state.PathHasher.NewHash()
 	if _, err := io.Copy(io.MultiWriter(f, h), r); err != nil {
 		return err

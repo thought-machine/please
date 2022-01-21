@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/OneOfOne/cmap"
+	"github.com/cespare/xxhash/v2"
 	"lukechampine.com/blake3"
 
 	"github.com/thought-machine/please/src/cli"
@@ -1137,6 +1138,10 @@ func newBlake3() hash.Hash {
 	return blake3.New(32, nil)
 }
 
+func newXXHash() hash.Hash {
+	return xxhash.New()
+}
+
 func sandboxTool(config *Configuration) string {
 	tool := config.Sandbox.Tool
 	if filepath.IsAbs(tool) {
@@ -1163,6 +1168,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			"crc32":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC32, "crc32"),
 			"crc64":  fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newCRC64, "crc64"),
 			"blake3": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newBlake3, "blake3"),
+			"xxhash": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newXXHash, "xxhash"),
 		},
 		ProcessExecutor: process.NewSandboxingExecutor(
 			config.Sandbox.Tool == "" && (config.Sandbox.Build || config.Sandbox.Test),

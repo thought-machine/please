@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/process"
@@ -116,19 +117,19 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	return &pb.Command{
 		Platform:             c.targetPlatformProperties(target),
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp), target.Sandbox),
+		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun), target.Sandbox),
 		OutputPaths:          outs,
 	}, err
 }
 
 // stampedBuildEnvironment returns a build environment, optionally with a stamp if stamp is true.
-func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.BuildTarget, inputRoot *pb.Directory, stamp bool) []string {
+func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.BuildTarget, inputRoot *pb.Directory, stamp, isRuntime bool) []string {
 	if target.IsFilegroup {
 		return core.GeneralBuildEnvironment(state) // filegroups don't need a full build environment
 	}
 	// We generate the stamp ourselves from the input root.
 	// TODO(peterebden): it should include the target properties too...
-	hash := c.sum(mustMarshal(inputRoot))
+	hash := c.sum(append(mustMarshal(inputRoot), build.RuleHash(state, target, isRuntime, false)...))
 	return core.StampedBuildEnvironment(state, target, hash, ".", stamp && target.Stamp)
 }
 
@@ -323,7 +324,7 @@ func (c *Client) uploadInput(b *dirBuilder, ch chan<- *uploadinfo.Entry, input c
 				})
 				return nil
 			}
-			h, err := c.state.PathHasher.Hash(name, false, true)
+			h, err := c.state.PathHasher.Hash(name, false, true, false)
 			if err != nil {
 				return err
 			}

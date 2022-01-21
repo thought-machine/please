@@ -16,10 +16,11 @@ type buildingTarget struct {
 	Colour       string
 	Target       *core.BuildTarget
 	Eta          time.Duration
+	LastProgress float32
+	BPS          float32
 	Active       bool
 	Failed       bool
 	Cached       bool
-	LastProgress float32
 }
 
 // Collects all the currently building targets.

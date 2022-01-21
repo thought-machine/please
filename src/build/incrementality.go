@@ -148,7 +148,7 @@ func mustSourceHash(state *core.BuildState, target *core.BuildTarget) []byte {
 func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
 	h := sha1.New()
 	for source := range core.IterSources(state, state.Graph, target, false) {
-		result, err := state.PathHasher.Hash(source.Src, false, true)
+		result, err := state.PathHasher.Hash(source.Src, false, true, false)
 		if err != nil {
 			return nil, err
 		}
@@ -157,7 +157,7 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 	}
 	for _, tool := range target.AllTools() {
 		for _, path := range tool.FullPaths(state.Graph) {
-			result, err := state.PathHasher.Hash(path, false, true)
+			result, err := state.PathHasher.Hash(path, false, true, false)
 			if err != nil {
 				return nil, err
 			}
@@ -474,7 +474,7 @@ func RuntimeHash(state *core.BuildState, target *core.BuildTarget, testRun int) 
 	hash = append(hash, state.Hashes.Config...)
 	h := sha1.New()
 	for source := range core.IterRuntimeFiles(state.Graph, target, true, target.TestDir(testRun)) {
-		result, err := state.PathHasher.Hash(source.Src, false, true)
+		result, err := state.PathHasher.Hash(source.Src, false, true, false)
 		if err != nil {
 			return result, err
 		}
@@ -498,13 +498,13 @@ func PrintHashes(state *core.BuildState, target *core.BuildTarget) {
 	// Note that the logic here mimics sourceHash, but I don't want to pollute that with
 	// optional printing nonsense since it's on our hot path.
 	for source := range core.IterSources(state, state.Graph, target, false) {
-		fmt.Printf("  Source: %s: %s\n", source.Src, b64(state.PathHasher.MustHash(source.Src)))
+		fmt.Printf("  Source: %s: %s\n", source.Src, b64(state.PathHasher.MustHash(source.Src, target.HashLastModified())))
 	}
 	for _, tool := range target.AllTools() {
 		if label, ok := tool.Label(); ok {
 			fmt.Printf("    Tool: %s: %s\n", label, b64(mustShortTargetHash(state, state.Graph.TargetOrDie(label))))
 		} else {
-			fmt.Printf("    Tool: %s: %s\n", tool, b64(state.PathHasher.MustHash(tool.FullPaths(state.Graph)[0])))
+			fmt.Printf("    Tool: %s: %s\n", tool, b64(state.PathHasher.MustHash(tool.FullPaths(state.Graph)[0], target.HashLastModified())))
 		}
 	}
 }
@@ -516,7 +516,7 @@ func secretHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 	}
 	h := sha1.New()
 	for _, secret := range target.Secrets {
-		ph, err := state.PathHasher.Hash(secret, false, false)
+		ph, err := state.PathHasher.Hash(secret, false, false, false)
 		if err != nil && os.IsNotExist(err) {
 			return noSecrets, nil // Not having the secrets is not an error yet.
 		} else if err != nil {

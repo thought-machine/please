@@ -6,6 +6,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/gc",
+        "//src/parse",
         "//third_party/go:logging",
     ],
 )
