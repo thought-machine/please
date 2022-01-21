@@ -1,3 +1,22 @@
+Version 16.19.0
+---------------
+    * Remove duplicate labels being applied to `go_module()` rules #2254
+    * Gracefully handle missing tools during `plz query changes` #2130
+    * Allow specifying a github access token as an environment variable
+      to `github_repo()` to access private repos #2249
+    * Show the download rate of `remote_file()` rules in the progress
+      update #2261
+    * Improvements to `plz query print --json` to align it more closely
+      to the python-eque (asp) representation #2250
+    * Allow hashing `filegroup()`s by the last modified timestamp of their
+      sources. This helps with large files, and can be done by applying
+      the `fg:hash-modified-time` label #2266
+    * Allow plugins to specify if a configuration value should be inherited
+      from the host repo, or overriden from the subrepo's config #2216
+    * Allow restricting the hashing algorithms for validating the `hashes`
+      field #2267
+
+
 Version 16.18.0
 ---------------
     * Stop showing line by line coverage results when tests fail #2227
