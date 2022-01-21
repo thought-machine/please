@@ -324,7 +324,7 @@ func (c *Client) uploadInput(b *dirBuilder, ch chan<- *uploadinfo.Entry, input c
 				})
 				return nil
 			}
-			h, err := c.state.PathHasher.Hash(name, false, true)
+			h, err := c.state.PathHasher.Hash(name, false, true, false)
 			if err != nil {
 				return err
 			}

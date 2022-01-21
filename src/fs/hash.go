@@ -76,7 +76,7 @@ func (hasher *PathHasher) AlgoName() string {
 // If store is true then the hash may be stored permanently; this should not be set for files that
 // are user-controlled.
 // TODO(peterebden): ensure that xattrs are marked correctly on cache retrieval.
-func (hasher *PathHasher) Hash(path string, recalc, store bool) ([]byte, error) {
+func (hasher *PathHasher) Hash(path string, recalc, store, timestamp bool) ([]byte, error) {
 	path = hasher.ensureRelative(path)
 	if !recalc {
 		hasher.mutex.RLock()
@@ -100,7 +100,7 @@ func (hasher *PathHasher) Hash(path string, recalc, store bool) ([]byte, error) 
 	pending := &pendingHash{Ch: make(chan struct{})}
 	hasher.wait[path] = pending
 	hasher.mutex.Unlock()
-	result, err := hasher.hash(path, store, !recalc)
+	result, err := hasher.hash(path, store, !recalc, timestamp)
 	hasher.mutex.Lock()
 	if err == nil {
 		hasher.memo[path] = result
@@ -114,8 +114,9 @@ func (hasher *PathHasher) Hash(path string, recalc, store bool) ([]byte, error) 
 }
 
 // MustHash is as Hash but panics on error.
-func (hasher *PathHasher) MustHash(path string) []byte {
-	hash, err := hasher.Hash(path, false, false)
+func (hasher *PathHasher) MustHash(path string, timestamp bool) []byte {
+	// TODO(jpoole): should this print the timestamp hash
+	hash, err := hasher.Hash(path, false, false, timestamp)
 	if err != nil {
 		panic(err)
 	}
@@ -148,7 +149,7 @@ func (hasher *PathHasher) SetHash(path string, hash []byte) {
 	hasher.storeHash(path, hash)
 }
 
-func (hasher *PathHasher) hash(path string, store, read bool) ([]byte, error) {
+func (hasher *PathHasher) hash(path string, store, read, timestamp bool) ([]byte, error) {
 	// Try to read xattrs first so we don't have to hash the whole thing.
 	if read && strings.HasPrefix(path, "plz-out/") && hasher.useXattrs {
 		if b, err := xattr.LGet(path, hasher.xattrName); err == nil {
@@ -199,7 +200,11 @@ func (hasher *PathHasher) hash(path string, store, read bool) ([]byte, error) {
 			return nil
 		})
 	} else {
-		err = hasher.fileHash(h, path) // let this handle any other errors
+		if timestamp {
+			err = hasher.timestampHash(h, path) // hash using the last modified timestamp instead
+		} else {
+			err = hasher.fileHash(h, path) // let this handle any other errors
+		}
 	}
 	hash := h.Sum(nil)
 	if err != nil {
@@ -229,7 +234,7 @@ func (hasher *PathHasher) storeHash(path string, hash []byte) {
 	}
 }
 
-// Calculate the hash of a single file
+// Calculate the hash of a single file based on it's content
 func (hasher *PathHasher) fileHash(h hash.Hash, filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -237,6 +242,17 @@ func (hasher *PathHasher) fileHash(h hash.Hash, filename string) error {
 	}
 	_, err = io.Copy(h, file)
 	file.Close()
+	return err
+}
+
+// Calculate the hash of a single file based on it's last modified timestamp
+func (hasher *PathHasher) timestampHash(h hash.Hash, filename string) error {
+	file, err := os.Lstat(filename)
+	if err != nil {
+		return err
+	}
+	// This doesn't account for the last changed time on macos which is set when modifying permissions etc.
+	h.Write([]byte(file.ModTime().UTC().String()))
 	return err
 }
 
