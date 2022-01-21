@@ -1174,6 +1174,11 @@ func (target *BuildTarget) UnprefixedHashes() []string {
 	return hashes
 }
 
+// HashLastModified is whether we should hash the last modified times for this target
+func (target *BuildTarget) HashLastModified() bool {
+	return target.IsFilegroup && target.HasLabel("fg:hash-modified-time")
+}
+
 // AddSource adds a source to the build target, deduplicating against existing entries.
 func (target *BuildTarget) AddSource(source BuildInput) {
 	target.Sources = target.addSource(target.Sources, source)
