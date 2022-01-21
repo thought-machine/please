@@ -1172,7 +1172,7 @@ func (target *BuildTarget) UnprefixedHashes() []string {
 	return hashes
 }
 
-// HashLastModified is whether we should has the last modified times for this target
+// HashLastModified is whether we should hash the last modified times for this target
 func (target *BuildTarget) HashLastModified() bool {
 	return target.IsFilegroup && target.HasLabel("fg:hash-modified-time")
 }
