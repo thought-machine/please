@@ -1,0 +1,9 @@
+plugin_repo(
+    name = "proto",
+    revision = "master",
+)
+
+plugin_repo(
+    name = "go-proto",
+    revision = "master",
+)

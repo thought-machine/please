@@ -304,6 +304,10 @@ func DefaultConfiguration() *Configuration {
 	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.NumOldVersions = 10
 	config.Please.NumThreads = runtime.NumCPU() + 2
+	config.Please.PluginRepo = []string{
+		"https://github.com/{owner}/{plugin}/archive/{revision}.zip",
+		"https://github.com/{owner}/{plugin}-rules/archive/{revision}.zip",
+	}
 	config.Parse.NumThreads = config.Please.NumThreads
 	config.Parse.GitFunctions = true
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
@@ -410,6 +414,7 @@ type Configuration struct {
 		NumThreads       int         `help:"Number of parallel build operations to run.\nIs overridden by the equivalent command-line flag, if that's passed." example:"6"`
 		Motd             []string    `help:"Message of the day; is displayed once at the top during builds. If multiple are given, one is randomly chosen."`
 		DefaultRepo      string      `help:"Location of the default repository; this is used if plz is invoked when not inside a repo, it changes to that directory then does its thing."`
+		PluginRepo       []string    `help:"A list of template URLS used to download plugins from. The download should be an archive e.g. .tar.gz, or .zip. Templatized variables should be surrounded in curly braces, and the available options are: owner, revision and plugin. Defaults to github and gitlab." example:"https://gitlab.you.org/{owner}/{plugin}/-/archive/{revision}/{plugin}-{revision}.zip" var:"PLUGIN_REPOS"`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Parse struct {
 		ExperimentalDir    []string `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
@@ -444,7 +449,7 @@ type Configuration struct {
 		HTTPProxy            cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
 		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		ExitOnError          bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
-		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)" var:"LINK_GEN_SOURCES"`
+		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)"`
 		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
@@ -601,14 +606,8 @@ type Configuration struct {
 		BuildDefsDir  []string `help:"Directory to look in when prompted for help topics that aren't known internally" example:"build_defs"`
 		Documentation string   `help:"A link to the documentation for this plugin"`
 	} `help:"Set this in your .plzconfig to make the current Please repo a plugin. Add configuration fields with PluginConfig sections"`
-	PluginConfig map[string]*struct {
-		ConfigKey    string   `help:"The key of the config field in the .plzconfig file"`
-		DefaultValue []string `help:"The default value for this config field, if it has one"`
-		Optional     bool     `help:"Whether this config field can be empty"`
-		Repeatable   bool     `help:"Whether this config field can be repeated"`
-		Type         string   `help:"What type to bind this config as e.g. str, bool, or int. Default str."`
-	} `help:"Defines a new config field for a plugin"`
-	Bazel struct {
+	PluginConfig map[string]*PluginConfigDefinition `help:"Defines a new config field for a plugin"`
+	Bazel        struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`
 
@@ -647,6 +646,15 @@ type Alias struct {
 
 type Plugin struct {
 	ExtraValues map[string][]string `help:"A section of arbitrary key-value properties for the plugin." gcfg:"extra_values"`
+}
+
+type PluginConfigDefinition struct {
+	ConfigKey    string   `help:"The key of the config field in the .plzconfig file"`
+	DefaultValue []string `help:"The default value for this config field, if it has one"`
+	Optional     bool     `help:"Whether this config field can be empty"`
+	Repeatable   bool     `help:"Whether this config field can be repeated"`
+	Inherit      bool     `help:"Whether this config field should be inherited from the host repo or not. Defaults to true."`
+	Type         string   `help:"What type to bind this config as e.g. str, bool, or int. Default str."`
 }
 
 func (plugin Plugin) copyPlugin() *Plugin {
@@ -989,6 +997,14 @@ func (config Configuration) copyConfig() *Configuration {
 		plugins[name] = plugin.copyPlugin()
 	}
 	config.Plugin = plugins
+
+	pluginConfig := map[string]*PluginConfigDefinition{}
+	for key, value := range config.PluginConfig {
+		pluginConfig[key] = value
+	}
+
+	config.PluginConfig = pluginConfig
+
 	return &config
 }
 
