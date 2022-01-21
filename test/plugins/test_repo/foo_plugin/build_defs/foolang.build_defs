@@ -1,9 +1,10 @@
-def foolang_library(name:str, srcs:list):
+def foolang_library(name:str, src:str):
     flags = " ".join(CONFIG.FOO.COMPILE_FLAGS)
+    path = CONFIG.FOO.MODULE_PATH + "/" + src
     return build_rule(
         name = name,
-        srcs = srcs,
-        cmd = f"$TOOL {flags} -out=$OUT $SRCS",
+        srcs = [src],
+        cmd = f"$TOOL {flags} -path {path} -out=$OUT $SRCS",
         outs = [f"{name}.foo"],
         tools = [CONFIG.FOO.FOOC_TOOL],
     )

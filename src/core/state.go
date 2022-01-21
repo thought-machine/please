@@ -106,6 +106,9 @@ type BuildState struct {
 	Stats *SystemStats
 	// Configuration options
 	Config *Configuration
+	// The .plzconfig file for this repo. Unlike Config, no default values are applied. This will represent the
+	// .plzconfig in a subrepo.
+	RepoConfig *Configuration
 	// Parser implementation. Other things can call this to perform various external parse tasks.
 	Parser Parser
 	// Subprocess executor.
@@ -192,8 +195,10 @@ type BuildState struct {
 	experimentalLabels []BuildLabel
 	// Various items for tracking progress.
 	progress *stateProgress
-	// CurrentSubrepo is the subrepo this state is for or the empty string if it's for the host repo
+	// CurrentSubrepo is the subrepo this state is for or the empty string if this is the host repo's state
 	CurrentSubrepo string
+	// ParentState is the state of the repo containing this subrepo. Nil if this is the host repo.
+	ParentState *BuildState
 }
 
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
@@ -1032,21 +1037,26 @@ func (state *BuildState) findArch(arch cli.Arch) *BuildState {
 }
 
 // forConfig creates a copy of this BuildState based on the given config files.
-func (state *BuildState) forConfig(config ...string) *BuildState {
+func (state *BuildState) forConfig(configFiles ...string) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	// Duplicate & alter configuration
-	c := state.Config.copyConfig()
-	for _, filename := range config {
-		if err := readConfigFile(c, filename, false); err != nil {
+
+	config := state.Config.copyConfig()
+	readConfigFiles(config, configFiles)
+	s := &BuildState{}
+	*s = *state
+	s.Config = config
+	state.progress.allStates = append(state.progress.allStates, s)
+	return s
+}
+
+func readConfigFiles(config *Configuration, configFiles []string) {
+	for _, filename := range configFiles {
+		if err := readConfigFile(config, filename, false); err != nil {
 			log.Fatalf("Failed to read config file %s: %s", filename, err)
 		}
 	}
-	s := &BuildState{}
-	*s = *state
-	s.Config = c
-	state.progress.allStates = append(state.progress.allStates, s)
-	return s
 }
 
 // ForSubrepo creates a new state for the given subrepo
@@ -1056,8 +1066,18 @@ func (state *BuildState) ForSubrepo(name string, config ...string) *BuildState {
 			return s
 		}
 	}
-	s := state.forConfig(config...)
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
+
+	s := &BuildState{}
+	*s = *state
+
+	s.Config = state.Config.copyConfig()
+	readConfigFiles(s.Config, config)
+
 	s.CurrentSubrepo = name
+	s.ParentState = state
+	state.progress.allStates = append(state.progress.allStates, s)
 	return s
 }
 
@@ -1157,6 +1177,7 @@ func NewBuildState(config *Configuration) *BuildState {
 		),
 		StartTime:       startTime,
 		Config:          config,
+		RepoConfig:      config,
 		VerifyHashes:    true,
 		NeedBuild:       true,
 		XattrsSupported: config.Build.Xattrs,

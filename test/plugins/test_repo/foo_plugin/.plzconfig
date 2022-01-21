@@ -4,11 +4,13 @@ BuildFileName = BUILD.plugin
 [PluginDefinition]
 name = foo
 
-[Plugin "Foo"]
-ModulePath = something
+[Plugin "foo"]
+ModulePath = foolang
+CompileFlag = -sha1
 
 [PluginConfig "fooc_tool"]
 ConfigKey = FoocTool
+Inherit = true
 DefaultValue = fooc
 
 [PluginConfig "module_path"]
