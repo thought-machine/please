@@ -18,6 +18,7 @@ type testDescr struct {
 	Main           string
 	TestFunctions  []string
 	BenchFunctions []string
+	FuzzFunctions  []string
 	Examples       []*doc.Example
 	CoverVars      []CoverVar
 	Imports        []string
@@ -89,6 +90,8 @@ func parseTestSources(sources []string) (testDescr, error) {
 					descr.TestFunctions = append(descr.TestFunctions, name)
 				} else if isTest(fd, 1, name, "Benchmark") {
 					descr.BenchFunctions = append(descr.BenchFunctions, name)
+				} else if isTest(fd, 1, name, "Fuzz") {
+					descr.FuzzFunctions = append(descr.FuzzFunctions, name)
 				}
 			}
 		}
@@ -170,6 +173,14 @@ var benchmarks = []_gostdlib_testing.InternalBenchmark{
 {{end}}
 }
 
+{{ if .HasFuzz }}
+var fuzzTargets = []_gostdlib_testing.InternalFuzzTarget{
+{{ range .FuzzFunctions }}
+	{"{{.}}", {{$.Package}}.{{.}}},
+{{ end }}
+}
+{{ end }}
+
 {{if .Coverage}}
 
 // Only updated by init functions, so no need for atomicity.
@@ -229,11 +240,11 @@ func main() {
 		args = append(args, "-test.run", testVar)
     }
     _gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
-	m := _gostdlib_testing.MainStart(testDeps, tests, nil,{{ if .HasFuzz }} nil,{{ end }} examples)
+	m := _gostdlib_testing.MainStart(testDeps, tests, nil,{{ if .HasFuzz }} fuzzTargets,{{ end }} examples)
 {{else}}
 	args = append(args, "-test.bench", ".*")
 	_gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
-	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks,{{ if .HasFuzz }} nil,{{ end }} nil)
+	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks,{{ if .HasFuzz }} fuzzTargets,{{ end }} nil)
 {{end}}
 
 {{if .Main}}
