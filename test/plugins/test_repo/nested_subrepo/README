@@ -1,0 +1,7 @@
+This repo is meant to be like a library that is built with Please. We should use some of the config settings from
+the host repo, explicitly layering in stuff that's marked to be inherited.
+
+For example if this was a go repo, we'd want to use the GoTool from the host repo. If we didn't we might end up mixing
+toolchain versions and therefore we wouldn't be able to link to this library.
+
+In this case, this subrepo defines a FoocTool but we use the FoocTool as defined in the host repo.

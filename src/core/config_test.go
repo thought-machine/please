@@ -217,6 +217,46 @@ func TestConfigVerifiesOptions(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDefaultHashCheckers(t *testing.T) {
+	config, err := ReadConfigFiles(nil, nil)
+
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []string{"sha1", "sha256", "blake3"}, config.Build.HashCheckers)
+}
+
+func TestHashCheckersConfig(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/hashcheckers.plzconfig"}, nil)
+
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []string{"blake3"}, config.Build.HashCheckers)
+}
+
+func TestOverrideHashCheckersConfig(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/hashcheckers.plzconfig"}, nil)
+	assert.NoError(t, err)
+
+	err = config.ApplyOverrides(map[string]string{"build.hashcheckers": "sha256"})
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []string{"sha256"}, config.Build.HashCheckers)
+}
+
+func TestOverrideHashCheckersNoConfig(t *testing.T) {
+	config, err := ReadConfigFiles(nil, nil)
+	assert.NoError(t, err)
+
+	err = config.ApplyOverrides(map[string]string{"build.hashcheckers": "sha1,blake3"})
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []string{"sha1", "blake3"}, config.Build.HashCheckers)
+}
+
+func TestUnknownHashChecker(t *testing.T) {
+	config, err := ReadConfigFiles(nil, nil)
+	assert.NoError(t, err)
+
+	err = config.ApplyOverrides(map[string]string{"build.hashcheckers": "fake-algo"})
+	assert.Error(t, err)
+}
+
 func TestBuildEnvSection(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/buildenv.plzconfig"}, nil)
 	assert.NoError(t, err)

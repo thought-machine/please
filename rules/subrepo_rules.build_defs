@@ -57,8 +57,8 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha
 
 
 def new_http_archive(name:str, urls:list, build_file:str=None, build_file_content:str=None,
-                     strip_prefix:str=None, strip_build:bool=False, hashes:str|list&sha256=None,
-                     username:str=None, password_file:str=None, headers:dict={}, secret_headers:dict={},
+                     strip_prefix:str=None, strip_build:bool=False, plugin:bool=False,
+                     hashes:str|list&sha256=None,username:str=None, password_file:str=None, headers:dict={}, secret_headers:dict={},
                      config:str=None, bazel_compat:bool=False, visibility:list=None, pass_env:list=[]):
     """Fetches a remote file over HTTP and expands its contents, combined with a BUILD file.
 
@@ -293,4 +293,41 @@ def local_repository(name:str, path:str):
     return subrepo(
         name = name,
         path = path,
+    )
+
+def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build", hashes:list=[]):
+    """Defines a please plugin to use from the configured plugin repositories. See
+        https://please.build/config.html#please.pluginrepositories for more information.
+
+    Args:
+        name (str): Name of the rule
+        revision (str): The revision or version of the plugin pass to the template URLS.
+        plugin (str): The name of the plugin. Defaults to the name of this rule.
+        owner (str): The owner of the plugin to be passed to the template URLS.
+        hashes (list): A list of valid hashes for the downloaded archive file.
+    """
+    plugin = plugin or name
+    urls = [url.format(owner=owner, revision=revision, plugin=plugin) for url in CONFIG.PLUGIN_REPOS]
+
+    remote_rule = remote_file(
+        name = name,
+        _tag = 'download',
+        url = urls,
+        out = name + '_' + basename(urls[0]),
+        hashes = hashes,
+    )
+    extract_rule = build_rule(
+        name = name,
+        srcs = [remote_rule],
+        tools = [CONFIG.JARCAT_TOOL],
+        outs = [name],
+        cmd = " && ".join([
+          "$TOOL x $SRCS -o _tmp",
+          "mv $(dirname $(find . -name .plzconfig | sort | head -n 1)) $OUT",
+        ]),
+        _subrepo = True,
+    )
+    return subrepo(
+        name = name,
+        dep = extract_rule,
     )
