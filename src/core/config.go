@@ -596,10 +596,10 @@ type Configuration struct {
 	Alias            map[string]*Alias  `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
 	Plugin           map[string]*Plugin `help:"Used to define configuration for a Please plugin."`
 	PluginDefinition struct {
-		Name          string   `help:"The name of the plugin"`
-		Description   string   `help:"A description of what the plugin does"`
-		BuildDefsDir  []string `help:"Directory to look in when prompted for help topics that aren't known internally" example:"build_defs"`
-		Documentation string   `help:"A link to the documentation for this plugin"`
+		Name              string   `help:"The name of the plugin"`
+		Description       string   `help:"A description of what the plugin does"`
+		BuildDefsDir      []string `help:"Directory to look in when prompted for help topics that aren't known internally" example:"build_defs"`
+		DocumentationSite string   `help:"A link to the documentation for this plugin"`
 	} `help:"Set this in your .plzconfig to make the current Please repo a plugin. Add configuration fields with PluginConfig sections"`
 	PluginConfig map[string]*struct {
 		ConfigKey    string   `help:"The key of the config field in the .plzconfig file"`
