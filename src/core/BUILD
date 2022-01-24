@@ -129,7 +129,10 @@ go_test(
 
 go_test(
     name = "build_label_test",
-    srcs = ["build_label_test.go"],
+    srcs = [
+        "build_label_test.go",
+        "build_label_fuzz_test.go",
+    ],
     deps = [
         ":core",
         "//third_party/go:testify",
