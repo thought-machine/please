@@ -89,9 +89,9 @@ func resolveSelf(values []string, subrepo string) []string {
 	ret := make([]string, len(values))
 	for i, v := range values {
 		if core.LooksLikeABuildLabel(v) {
-			l := core.ParseBuildLabel(v, "")
-			if l.Subrepo == "self" {
-				l.Subrepo = subrepo
+			l, err := core.TryParseBuildLabel(v, "", subrepo)
+			if err != nil {
+				panic(err)
 			}
 			// Force the full build label including empty subrepo so this is portable
 			v = fmt.Sprintf("///%v//%v:%v", l.Subrepo, l.PackageName, l.Name)
