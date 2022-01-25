@@ -36,7 +36,7 @@ func WriteTestMain(testPackage string, sources []string, output string, coverage
 	}
 	testDescr.Coverage = coverage
 	testDescr.CoverVars = coverVars
-	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || testDescr.Main != "" {
+	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || len(testDescr.FuzzFunctions) > 0 || testDescr.Main != "" {
 		// Can't set this if there are no test functions, it'll be an unused import.
 		testDescr.Imports = extraImportPaths(testPackage, testDescr.Package, testDescr.CoverVars)
 	}
