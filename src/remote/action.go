@@ -92,7 +92,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	// Similarly, we need to export these so that things like $TMP_DIR get expanded correctly.
 	if len(target.Env) > 0 {
 		keys := make([]string, 0, len(target.Env))
-		for k, _ := range target.Env {
+		for k := range target.Env {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
