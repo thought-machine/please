@@ -90,8 +90,15 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	var commandPrefix = "export TMP_DIR=\"`pwd`\" && export HOME=$TMP_DIR && "
 
 	// Similarly, we need to export these so that things like $TMP_DIR get expanded correctly.
-	for k, v := range target.Env {
-		commandPrefix += fmt.Sprintf("export %s=\"%s\" && ", k, v)
+	if len(target.Env) > 0 {
+		keys := make([]string, 0, len(target.Env))
+		for k, _ := range target.Env {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			commandPrefix += fmt.Sprintf("export %s=\"%s\" && ", k, target.Env[k])
+		}
 	}
 
 	outs := target.AllOutputs()
