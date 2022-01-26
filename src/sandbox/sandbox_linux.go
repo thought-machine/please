@@ -68,10 +68,7 @@ func Sandbox(args []string) error {
 		}
 	}
 	err = syscall.Exec(cmd, args, env)
-	if err != nil {
-		return fmt.Errorf("Failed to exec %s: %s", cmd, err)
-	}
-	return nil
+	return fmt.Errorf("Failed to exec %s: %s", cmd, err)
 }
 
 func rewriteEnvVars(env []string, from, to string) {
