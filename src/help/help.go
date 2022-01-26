@@ -102,18 +102,13 @@ func helpForPlugin(topic string) string {
 				message += "\n"
 			}
 
-			if subrepoo := state.Graph.Subrepo(subrepo); subrepoo != nil {
-				state = subrepoo.State
-				config = state.Config
-			} else {
-				log.Warning("Did not find subrepo %v", subrepo)
-			}
-
+			state = state.Graph.Subrepo(subrepo).State
+			config := state.Config
 			if config.PluginDefinition.Description != "" {
 				message += "\n" + config.PluginDefinition.Description + "\n"
 			}
-			if config.PluginDefinition.DocumentationSite != "" {
-				message += "\n" + config.PluginDefinition.DocumentationSite + "\n"
+			if config.PluginDefinition.Documentation != "" {
+				message += "\n" + config.PluginDefinition.Documentation + "\n"
 			}
 			configOptions := ""
 			for _, v := range config.PluginConfig {

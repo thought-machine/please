@@ -3,10 +3,13 @@ package asp
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 // A pyObject is the base type for all interpreter objects.
@@ -874,6 +877,158 @@ func (c *pyConfig) Merge(other *pyFrozenConfig) {
 	for k, v := range other.overlay {
 		c.overlay[k] = v
 	}
+}
+
+// newConfig creates a new pyConfig object from the configuration.
+// This is typically only created once at global scope, other scopes copy it with .Copy()
+func newConfig(state *core.BuildState) *pyConfig {
+	config := state.Config
+	c := make(pyDict, 100)
+	v := reflect.ValueOf(config).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		if field := v.Field(i); field.Kind() == reflect.Struct {
+			for j := 0; j < field.NumField(); j++ {
+				if tag := field.Type().Field(j).Tag.Get("var"); tag != "" {
+					subfield := field.Field(j)
+					switch subfield.Kind() {
+					case reflect.String:
+						c[tag] = pyString(subfield.String())
+					case reflect.Bool:
+						c[tag] = newPyBool(subfield.Bool())
+					case reflect.Slice:
+						l := make(pyList, subfield.Len())
+						for i := 0; i < subfield.Len(); i++ {
+							l[i] = pyString(subfield.Index(i).String())
+						}
+						c[tag] = l
+					case reflect.Struct:
+						c[tag] = pyString(subfield.Interface().(fmt.Stringer).String())
+					default:
+						log.Fatalf("Unknown config field type for %s", tag)
+					}
+				}
+			}
+		}
+	}
+	// Arbitrary build config stuff
+	for k, v := range config.BuildConfig {
+		c[strings.ReplaceAll(strings.ToUpper(k), "-", "_")] = pyString(v)
+	}
+	// Settings specific to package() which aren't in the config, but it's easier to
+	// just put them in now.
+	c["DEFAULT_VISIBILITY"] = None
+	c["DEFAULT_TESTONLY"] = False
+	c["DEFAULT_LICENCES"] = None
+	// Bazel supports a 'features' flag to toggle things on and off.
+	// We don't but at least let them call package() without blowing up.
+	if config.Bazel.Compatibility {
+		c["FEATURES"] = pyList{}
+	}
+
+	arch := state.Arch
+
+	c["OS"] = pyString(arch.OS)
+	c["ARCH"] = pyString(arch.Arch)
+	c["HOSTOS"] = pyString(arch.HostOS())
+	c["HOSTARCH"] = pyString(arch.HostArch())
+	c["GOOS"] = pyString(arch.OS)
+	c["GOARCH"] = pyString(arch.GoArch())
+	c["TARGET_OS"] = pyString(state.TargetArch.OS)
+	c["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
+	c["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
+	c["DEBUG_PORT"] = pyInt(state.DebugPort)
+
+	loadPluginConfig(state.Config, state, c)
+
+	return &pyConfig{base: c}
+}
+
+func loadPluginConfig(subrepoConfig *core.Configuration, packageState *core.BuildState, c pyDict) {
+	pluginName := subrepoConfig.PluginDefinition.Name
+	if pluginName == "" {
+		return
+	}
+
+	extraVals := map[string][]string{}
+	if config := packageState.Config.Plugin[pluginName]; config != nil {
+		extraVals = config.ExtraValues
+	}
+
+	pluginNamespace := pyDict{}
+	contextPackage := &core.Package{SubrepoName: packageState.CurrentSubrepo}
+	configValueDefinitions := subrepoConfig.PluginConfig
+	for key, definition := range configValueDefinitions {
+		configKey := definition.ConfigKey
+		if configKey == "" {
+			configKey = strings.ReplaceAll(key, "_", "")
+		}
+		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, configKey)
+		value, ok := extraVals[strings.ToLower(configKey)]
+		if !ok {
+			value = definition.DefaultValue
+		}
+		if len(value) == 0 && !definition.Optional {
+			log.Fatalf("plugin config %s is not optional %v", fullConfigKey, extraVals)
+		}
+
+		if !definition.Repeatable && len(value) > 1 {
+			log.Fatalf("plugin config %v is not repeatable", fullConfigKey)
+		}
+
+		// Parse any config values in the current subrepo so @self resolves correctly. If we leave them, @self will
+		// resolve based on the subincluding package which will likely be the host repo.
+		for i, v := range value {
+			if core.LooksLikeABuildLabel(v) {
+				value[i] = core.ParseBuildLabelContext(v, contextPackage).String()
+			}
+		}
+		if definition.Repeatable {
+			l := make(pyList, 0, len(value))
+			for _, v := range value {
+				l = append(l, toPyObject(fullConfigKey, v, definition.Type))
+			}
+			pluginNamespace[strings.ToUpper(key)] = l
+		} else {
+			val := ""
+			if len(value) == 1 {
+				val = value[0]
+			}
+			pluginNamespace[strings.ToUpper(key)] = toPyObject(fullConfigKey, val, definition.Type)
+		}
+	}
+	c[strings.ToUpper(pluginName)] = pluginNamespace
+}
+
+func toPyObject(key, val, toType string) pyObject {
+	if toType == "" || toType == "str" {
+		return pyString(val)
+	}
+
+	if toType == "bool" {
+		val = strings.ToLower(val)
+		if val == "true" || val == "yes" || val == "on" {
+			return pyBool(true)
+		}
+		if val == "false" || val == "no" || val == "off" || val == "" {
+			return pyBool(false)
+		}
+		log.Fatalf("%s: Invalid boolean value %v", key, val)
+	}
+
+	if toType == "int" {
+		if val == "" {
+			return pyInt(0)
+		}
+
+		i, err := strconv.Atoi(val)
+		if err != nil {
+			log.Fatalf("%s: Invalid int value %v", key, val)
+		}
+		return pyInt(i)
+	}
+
+	log.Fatalf("%s: invalid config type %v", key, toType)
+	return pyNone{}
 }
 
 // A pyFrozenConfig is a config object that disallows further updates.

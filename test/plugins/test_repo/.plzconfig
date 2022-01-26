@@ -1,5 +1,6 @@
 [Plugin "foo"]
 FoocTool = @foo//tools/fooc
-CompileFlag = -sha256
+CompileFlag = --flag1
+CompileFlag = --flag2
 BoolTest = False
 IntTest = 15

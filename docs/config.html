@@ -194,15 +194,6 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title" id="please.pluginrepo">PluginRepo  <span class="normal">(repeated string)</span></h3>
-
-        <p>
-          {{ index .ConfigHelpText "please.pluginrepo" }}
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
         <h3 class="mt1 f6 lh-title" id="please.autoclean">Autoclean <span class="normal">(b ool)</span></h3>
 
         <p>
@@ -459,16 +450,6 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title" id="pluginconfig.inherit">
-          Inherit <span class="normal">(bool)</span>
-        </h3>
-        <p>
-          If true, this config value will always be inherited by the parent repo, when this repo is a subrepo.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
         <h3 class="mt1 f6 lh-title" id="pluginconfig.type">Type</h3>
         <p>
           The type of this config value. The options are <code class="code">str</code>, <code class="code">int</code>,
@@ -711,14 +692,7 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title" id="build.hashcheckers">HashCheckers</h3>
-
-        <p>{{ index .ConfigHelpText "build.hashcheckers" }}</p>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3 class="mt1 f6 lh-title" id="build.hashfunction">HashFunction</h3>
+        <h3 class="mt1 f6 lh-title" id="build.hashfunction">hashFunction</h3>
 
         <p>{{ index .ConfigHelpText "build.hashfunction" }}</p>
       </div>
