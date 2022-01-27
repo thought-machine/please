@@ -54,8 +54,11 @@ type Task struct {
 type OutputDownloadOption uint8
 
 const (
-	NoOutputDownload         OutputDownloadOption = 0
-	OriginalOutputDownload   OutputDownloadOption = 1
+	// Don't download outputs.
+	NoOutputDownload OutputDownloadOption = 0
+	// Download original target outputs only.
+	OriginalOutputDownload OutputDownloadOption = 1
+	// Download original target's transitive outputs too.
 	TransitiveOutputDownload OutputDownloadOption = 2
 )
 
