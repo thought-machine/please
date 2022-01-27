@@ -36,12 +36,10 @@ func Parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 }
 
 func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) error {
+	// Wait for us to finish preloading the subincludes before parsing this file. We know that if anything is queued
+	// for subinclude, it must be related to that, as any other parse task will be blocked waiting for that.
 	if !forSubinclude {
-		log.Warningf("waiting for %v", label)
 		state.WaitForPreloadedSubincludes()
-		log.Warningf("done %v", label)
-	} else {
-		log.Warningf("parsing preload: %v", label)
 	}
 	// See if something else has parsed this package first.
 	pkg := state.SyncParsePackage(label)
