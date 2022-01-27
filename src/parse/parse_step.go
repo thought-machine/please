@@ -36,11 +36,18 @@ func Parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 }
 
 func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) error {
+	if !forSubinclude {
+		log.Warningf("waiting for %v", label)
+		state.WaitForPreloadedSubincludes()
+		log.Warningf("done %v", label)
+	} else {
+		log.Warningf("parsing preload: %v", label)
+	}
 	// See if something else has parsed this package first.
 	pkg := state.SyncParsePackage(label)
 	if pkg != nil {
 		// Does exist, all we need to do is toggle on this target
-		return activateTarget(tid, state, pkg, label, dependent, forSubinclude)
+		return activateTarget(state, pkg, label, dependent, forSubinclude)
 	}
 	// If we get here then it falls to us to parse this package.
 	state.LogParseResult(tid, label, core.PackageParsing, "Parsing...")
@@ -65,7 +72,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		return err
 	}
 	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
-	return activateTarget(tid, state, pkg, label, dependent, forSubinclude)
+	return activateTarget(state, pkg, label, dependent, forSubinclude)
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
@@ -130,7 +137,7 @@ func checkArchSubrepo(state *core.BuildState, name string) *core.Subrepo {
 }
 
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
-func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, dependent core.BuildLabel, forSubinclude bool) error {
+func activateTarget(state *core.BuildState, pkg *core.Package, label, dependent core.BuildLabel, forSubinclude bool) error {
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
 		if label.Subrepo == "" && label.PackageName == "" && label.Name == dependent.Subrepo {
 			if subrepo := checkArchSubrepo(state, label.Name); subrepo != nil {

@@ -3,3 +3,9 @@ filegroup(
     srcs = ["foo.build_defs"],
     visibility = ["PUBLIC"],
 )
+
+filegroup(
+    name = "bar",
+    srcs = ["bar.build_defs"],
+    visibility = ["PUBLIC"],
+)
