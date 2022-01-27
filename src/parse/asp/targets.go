@@ -159,11 +159,33 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.Test.Sandbox = isTruthy(testSandboxBuildRuleArgIdx)
 		target.Test.NoOutput = isTruthy(noTestOutputBuildRuleArgIdx)
 	}
+
+	validateSandbox(s, target)
+
 	if s.state.Config.Build.Config == "dbg" {
 		target.Debug = new(core.DebugFields)
 		target.Debug.Command, _ = decodeCommands(s, args[debugCMDBuildRuleArgIdx])
 	}
 	return target
+}
+
+func validateSandbox(s *scope, target *core.BuildTarget) {
+	if target.IsFilegroup || len(s.state.Config.Sandbox.WhitelistTargets) == 0 {
+		return
+	}
+	if target.Sandbox && (target.Test == nil || target.Test.Sandbox) {
+		return
+	}
+	for _, whitelist := range s.state.Config.Sandbox.WhitelistTargets {
+		if target.Label.PackageName == "_please" {
+			return
+		}
+		if whitelist.Matches(target.Label) {
+			return
+		}
+	}
+
+	log.Fatalf("%v is not whitelisted to opt out of the sandbox", target)
 }
 
 // sizeAndTimeout handles the size and build/test timeout arguments.

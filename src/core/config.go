@@ -481,11 +481,12 @@ type Configuration struct {
 		StoreTestOutputOnSuccess bool         `help:"True to store stdout and stderr in the test results for successful tests."`
 	} `help:"A config section describing settings related to testing in general."`
 	Sandbox struct {
-		Tool      string   `help:"The location of the tool to use for sandboxing. This can assume it is being run in a new network, user, and mount namespace on linux. If not set, Please will use 'plz sandbox'."`
-		Dir       []string `help:"Directories to hide within the sandbox"`
-		Namespace string   `help:"Set to 'always', to namespace all actions. Set to 'sandbox' to namespace only when sandboxing the build action. Defaults to 'never', under the assumption the sandbox tool will handle its own namespacing. If set, user namespacing will be enabled for all rules. Mount and network will only be enabled if the rule is to be sandboxed."`
-		Build     bool     `help:"True to sandbox individual build actions, which isolates them from network access and some aspects of the filesystem. Currently only works on Linux." var:"BUILD_SANDBOX"`
-		Test      bool     `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
+		Tool             string       `help:"The location of the tool to use for sandboxing. This can assume it is being run in a new network, user, and mount namespace on linux. If not set, Please will use 'plz sandbox'."`
+		Dir              []string     `help:"Directories to hide within the sandbox"`
+		Namespace        string       `help:"Set to 'always', to namespace all actions. Set to 'sandbox' to namespace only when sandboxing the build action. Defaults to 'never', under the assumption the sandbox tool will handle its own namespacing. If set, user namespacing will be enabled for all rules. Mount and network will only be enabled if the rule is to be sandboxed."`
+		Build            bool         `help:"True to sandbox individual build actions, which isolates them from network access and some aspects of the filesystem. Currently only works on Linux." var:"BUILD_SANDBOX"`
+		Test             bool         `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
+		WhitelistTargets []BuildLabel `help:"If set, only targets that match these wildcards will be allowed to opt out of the sandbox"`
 	} `help:"A config section describing settings relating to sandboxing of build actions."`
 	Remote struct {
 		URL           string       `help:"URL for the remote server."`
