@@ -11,5 +11,5 @@ if not isinstance(CONFIG.FOO.INT_TEST, int):
 
 foolang_library(
     name = "foo_lib",
-    src = "test.foo",
+    srcs = ["test.foo"],
 )

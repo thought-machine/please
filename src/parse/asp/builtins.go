@@ -304,13 +304,6 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		}
 		l := pkg.Label()
 		s.Assert(l.CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, l)
-
-		incPkgState := s.state
-		if t.Label.Subrepo != "" {
-			incPkgState = s.state.Graph.SubrepoOrDie(t.Label.Subrepo).State
-		}
-		loadPluginConfig(incPkgState, s.state, s.config.base)
-
 		for _, out := range t.Outputs() {
 			s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), t.Label, pkg), false)
 		}
@@ -996,18 +989,9 @@ func selectTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 
 // subrepo implements the subrepo() builtin that adds a new repository.
 func subrepo(s *scope, args []pyObject) pyObject {
-	const (
-		NameArgIdx = iota
-		DepArgIdx
-		PathArgIdx
-		ConfigArgIdx
-		BazelCompatArgIdx
-		ArchArgIdx
-	)
-
 	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this context")
-	name := string(args[NameArgIdx].(pyString))
-	dep := string(args[DepArgIdx].(pyString))
+	name := string(args[0].(pyString))
+	dep := string(args[1].(pyString))
 	var target *core.BuildTarget
 	root := name
 	if dep != "" {
@@ -1019,13 +1003,13 @@ func subrepo(s *scope, args []pyObject) pyObject {
 			// TODO(jpoole): perhaps this should be a fatal error?
 			root = path.Join(target.OutDir(), name)
 		}
-	} else if args[PathArgIdx] != None {
-		root = string(args[PathArgIdx].(pyString))
+	} else if args[2] != None {
+		root = string(args[2].(pyString))
 	}
 	var state *core.BuildState
-	if args[ConfigArgIdx] != None {
-		state = s.state.ForSubrepo(name, path.Join(s.pkg.Name, string(args[ConfigArgIdx].(pyString))))
-	} else if args[BazelCompatArgIdx].IsTruthy() {
+	if args[3] != None { // arg 3 is the config file to load
+		state = s.state.ForSubrepo(name, path.Join(s.pkg.Name, string(args[3].(pyString))))
+	} else if args[4].IsTruthy() { // arg 4 is bazel_compat
 		state = s.state.ForSubrepo(name)
 		state.Config.Bazel.Compatibility = true
 		state.Config.Parse.BuildFileName = append(state.Config.Parse.BuildFileName, "BUILD.bazel")
@@ -1035,8 +1019,8 @@ func subrepo(s *scope, args []pyObject) pyObject {
 
 	isCrossCompile := s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile
 	arch := cli.HostArch()
-	if args[ArchArgIdx] != None { // arg 5 is arch-string, for arch-subrepos.
-		givenArch := string(args[ArchArgIdx].(pyString))
+	if args[5] != None { // arg 5 is arch-string, for arch-subrepos.
+		givenArch := string(args[5].(pyString))
 		if err := arch.UnmarshalFlag(givenArch); err != nil {
 			log.Fatalf("Could not interpret architecture '%s' for subrepo '%s'", givenArch, name)
 		}
