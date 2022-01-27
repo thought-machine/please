@@ -88,53 +88,50 @@ func helpForPlugin(topic string) string {
 
 		// This is if there's a subrepo specified for the plugin. This is considered an override as, by default, we'll
 		// check in the plugins package for the subrepo
+		var subrepoName string
+		buildLabel := core.BuildLabel{Name: "all"}
 		if val, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
-			subrepoStr := val[0]
+			subrepoName = val[0]
 			log.Warning("From plzconfig, got subrepo = %v", val[0])
-			buildLabel := core.BuildLabel{PackageName: "", Name: "all", Subrepo: subrepoStr}
-			state := newState()
-
-			// Parse the subrepo (Run reads the plugin config into config)
-			plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
-			// downloadBuildLabel := core.BuildLabel{PackageName: "", Name: "_" + subrepo + "#download", Subrepo: ""}
-			// if t := state.Graph.Target(downloadBuildLabel); t != nil {
-			// 	if urls := t.AllURLs(state); len(urls) == 1 {
-			// 		message += fmt.Sprintf(" It's loaded from %v\n", urls[0])
-			// 	} else {
-			// 		message += "\n"
-			// 	}
-			// } else {
-			// 	message += "\n"
-			// }
-
-			subrepo := state.Graph.Subrepo(subrepoStr)
-			state = subrepo.State
-			pluginDir := ""
-			message = getPluginOptionsAndBuildDefs(subrepo, pluginDir, message)
+			buildLabel.Subrepo = subrepoName
 		} else {
 			log.Warning("Looking for subrepo in plugins pkg")
-			buildLabel := core.BuildLabel{PackageName: "", Name: "all", Subrepo: "plugins/cc_rules"}
-			state := newState()
-
-			// Parse the subrepo (Run reads the plugin config into config)
-			log.Warning("Building %v", buildLabel)
-			plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
-			sub := "plugins/cc_rules"
-			subrepo := state.Graph.Subrepo(sub)
-			if subrepo == nil {
-				log.Fatalf("Tried to get subrepo %v but failed", sub)
-			}
-			state = subrepo.State
-			pluginDir := ""
-			message = getPluginOptionsAndBuildDefs(subrepo, pluginDir, message)
+			buildLabel.Subrepo = path.Join("plugins", topic)
 		}
+		// subrepo := state.Graph.Subrepo(buildLabel.Subrepo)
+		state := newState()
+
+		// Parse the subrepo (Run reads the plugin config into config)
+		plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
+		if state.BuildFailed {
+			log.Fatalf("Failed to build %v", buildLabel.Label)
+		} else {
+			log.Warningf("Succesfully built %v", buildLabel.Label)
+		}
+
+		// downloadBuildLabel := core.BuildLabel{PackageName: "", Name: "_" + subrepo + "#download", Subrepo: ""}
+		// if t := state.Graph.Target(downloadBuildLabel); t != nil {
+		// 	if urls := t.AllURLs(state); len(urls) == 1 {
+		// 		message += fmt.Sprintf(" It's loaded from %v\n", urls[0])
+		// 	} else {
+		// 		message += "\n"
+		// 	}
+		// } else {
+		// 	message += "\n"
+		// }
+
+		subrepo := state.Graph.Subrepo(buildLabel.Subrepo)
+		if subrepo == nil {
+			log.Fatalf("Tried to get subrepo %v but failed", buildLabel.Subrepo)
+		}
+		message = getPluginOptionsAndBuildDefs(subrepo, message)
 
 		return message
 	}
 	return ""
 }
 
-func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, pluginDir string, message string) string {
+func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string {
 	config := subrepo.State.Config
 	if config.PluginDefinition.Description != "" {
 		message += "\n" + config.PluginDefinition.Description + "\n"
