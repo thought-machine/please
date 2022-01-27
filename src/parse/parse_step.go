@@ -100,7 +100,7 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	}
 	if !localSubinclude {
 		// Fix for #577; fallback like above, it might be defined within the subrepo.
-		if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label); handled && err == nil {
+		if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, label.Subrepo, label); handled && err == nil {
 			return state.Graph.Subrepo(label.Subrepo), nil
 		}
 		return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
