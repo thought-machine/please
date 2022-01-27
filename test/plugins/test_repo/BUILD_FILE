@@ -1,6 +1,16 @@
 filegroup(
     name = "foo",
-    srcs = ["foo"],
+    srcs = ["foo_plugin"],
+)
+
+filegroup(
+    name = "nested",
+    srcs = ["nested_subrepo"],
+)
+
+subrepo(
+    name = "nested",
+    dep = ":nested",
 )
 
 subrepo(

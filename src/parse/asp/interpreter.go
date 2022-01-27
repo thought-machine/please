@@ -139,10 +139,6 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.P
 	s := i.scope.NewScope()
 	s.contextPkg = pkg
 	s.subincludeLabel = &label
-	if label.Subrepo != "" {
-		subrepo := i.scope.state.Graph.SubrepoOrDie(label.Subrepo)
-		loadPluginConfig(subrepo.State.Config, s.state, s.config.base)
-	}
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
 	s.Set("CONFIG", s.config)
@@ -164,9 +160,10 @@ func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
 		return c
 	}
 	i.configMutex.RUnlock()
+	c := i.newConfig(state)
+
 	i.configMutex.Lock()
 	defer i.configMutex.Unlock()
-	c := newConfig(state)
 	i.config[state.Config] = c
 	return c
 }

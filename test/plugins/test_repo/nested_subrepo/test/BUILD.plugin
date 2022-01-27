@@ -1,0 +1,6 @@
+subinclude("///foo//build_defs:foolang")
+
+foolang_library(
+    name = "test_lib",
+    src = "test.foo",
+)
