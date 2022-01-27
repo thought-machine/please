@@ -89,9 +89,9 @@ func helpForPlugin(topic string) string {
 		// This is if there's a subrepo specified for the plugin. This is considered an override as, by default, we'll
 		// check in the plugins package for the subrepo
 		if val, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
-			subrepo := val[0]
+			subrepoStr := val[0]
 			log.Warning("From plzconfig, got subrepo = %v", val[0])
-			buildLabel := core.BuildLabel{PackageName: "", Name: "all", Subrepo: subrepo}
+			buildLabel := core.BuildLabel{PackageName: "", Name: "all", Subrepo: subrepoStr}
 			state := newState()
 
 			// Parse the subrepo (Run reads the plugin config into config)
@@ -107,8 +107,10 @@ func helpForPlugin(topic string) string {
 			// 	message += "\n"
 			// }
 
-			state = state.Graph.Subrepo(subrepo).State
-			message = getPluginOptionsAndBuildDefs(state, message)
+			subrepo := state.Graph.Subrepo(subrepoStr)
+			state = subrepo.State
+			pluginDir := ""
+			message = getPluginOptionsAndBuildDefs(subrepo, pluginDir, message)
 		} else {
 			log.Warning("Looking for subrepo in plugins pkg")
 			buildLabel := core.BuildLabel{PackageName: "", Name: "all", Subrepo: "plugins/cc_rules"}
@@ -123,7 +125,8 @@ func helpForPlugin(topic string) string {
 				log.Fatalf("Tried to get subrepo %v but failed", sub)
 			}
 			state = subrepo.State
-			message = getPluginOptionsAndBuildDefs(state, message)
+			pluginDir := ""
+			message = getPluginOptionsAndBuildDefs(subrepo, pluginDir, message)
 		}
 
 		return message
@@ -131,8 +134,8 @@ func helpForPlugin(topic string) string {
 	return ""
 }
 
-func getPluginOptionsAndBuildDefs(state *core.BuildState, message string) string {
-	config := state.Config
+func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, pluginDir string, message string) string {
+	config := subrepo.State.Config
 	if config.PluginDefinition.Description != "" {
 		message += "\n" + config.PluginDefinition.Description + "\n"
 	}
@@ -160,7 +163,7 @@ func getPluginOptionsAndBuildDefs(state *core.BuildState, message string) string
 	}
 
 	buildFuncMap := map[string]*asp.Statement{}
-	populatePluginBuildFuncs(buildFuncMap, state)
+	populatePluginBuildFuncs(buildFuncMap, subrepo)
 	buildDefs := ""
 	for k, v := range buildFuncMap {
 		buildDefs += fmt.Sprintf("${GREEN}   %v${RESET}", strings.ToLower(k))
@@ -181,9 +184,20 @@ func getPluginOptionsAndBuildDefs(state *core.BuildState, message string) string
 	return message
 }
 
-func populatePluginBuildFuncs(buildFuncMap map[string]*asp.Statement, state *core.BuildState) {
-	p := asp.NewParser(state)
-	for _, dir := range state.Config.PluginDefinition.BuildDefsDir {
+func populatePluginBuildFuncs(buildFuncMap map[string]*asp.Statement, subrepo *core.Subrepo) {
+	p := asp.NewParser(subrepo.State)
+	var dirs []string
+	if len(subrepo.State.Config.PluginDefinition.BuildDefsDir) > 0 {
+		for _, dir := range subrepo.State.Config.PluginDefinition.BuildDefsDir {
+			dirs = append(dirs, path.Join(subrepo.Root, dir))
+		}
+		log.Warning("name=%v\tdirs=%v", subrepo.State.Config.PluginDefinition.Name, dirs)
+	} else {
+		dirs = append(dirs, path.Join(subrepo.Root, "build_defs"))
+	}
+	log.Warning("s.root=%v", subrepo.Root)
+	for _, dir := range dirs {
+		log.Warning("Looking in dir %v", dir)
 		if files, err := ioutil.ReadDir(dir); err == nil {
 			for _, file := range files {
 				if !file.IsDir() {
