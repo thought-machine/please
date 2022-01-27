@@ -83,24 +83,29 @@ func helpForPlugin(topic string) string {
 		panic("Failed to read config")
 	}
 	if _, ok := config.Plugin[topic]; ok {
+		// If we come in here, there's a plugin defined in the config file
 		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the .plzconfig file.", topic)
+
+		// This is if there's a subrepo specified for the plugin. This is considered an override as, by default, we'll
+		// check in the plugins package for the subrepo
 		if val, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
 			subrepo := val[0]
-			buildLabel := core.BuildLabel{PackageName: "", Name: subrepo, Subrepo: subrepo}
+			log.Warning("From plzconfig, got subrepo = %v", val[0])
+			buildLabel := core.BuildLabel{PackageName: "", Name: "all", Subrepo: subrepo}
 			state := newState()
 
 			// Parse the subrepo (Run reads the plugin config into config)
 			plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
-			downloadBuildLabel := core.BuildLabel{PackageName: "", Name: "_" + subrepo + "#download", Subrepo: ""}
-			if t := state.Graph.Target(downloadBuildLabel); t != nil {
-				if urls := t.AllURLs(state); len(urls) == 1 {
-					message += fmt.Sprintf(" It's loaded from %v\n", urls[0])
-				} else {
-					message += "\n"
-				}
-			} else {
-				message += "\n"
-			}
+			// downloadBuildLabel := core.BuildLabel{PackageName: "", Name: "_" + subrepo + "#download", Subrepo: ""}
+			// if t := state.Graph.Target(downloadBuildLabel); t != nil {
+			// 	if urls := t.AllURLs(state); len(urls) == 1 {
+			// 		message += fmt.Sprintf(" It's loaded from %v\n", urls[0])
+			// 	} else {
+			// 		message += "\n"
+			// 	}
+			// } else {
+			// 	message += "\n"
+			// }
 
 			state = state.Graph.Subrepo(subrepo).State
 			config := state.Config
@@ -160,7 +165,83 @@ func helpForPlugin(topic string) string {
 				message += "\n${YELLOW}And provides the following build defs:${RESET}\n" + buildDefs
 			}
 		} else {
-			log.Warningf("To see more information, specify the subrepo field for the plugin %v", topic)
+			log.Warning("Looking for subrepo in plugins pkg")
+			// target := "//plugins:cc_rules"
+			// label, err := core.TryParseBuildLabel(target, "", "")
+			// if err != nil {
+			// 	panic(err)
+			// }
+			buildLabel := core.BuildLabel{PackageName: "", Name: "all", Subrepo: "plugins/cc_rules"}
+			state := newState()
+
+			// Parse the subrepo (Run reads the plugin config into config)
+			log.Warning("Building %v", buildLabel)
+			plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
+			// topic = topic + "_rules"
+			sub := "plugins/cc_rules"
+			subrepo := state.Graph.Subrepo(sub)
+			if subrepo == nil {
+				log.Fatalf("Tried to get subrepo %v but failed", sub)
+			}
+			state = subrepo.State
+			config := state.Config
+			if config.PluginDefinition.Description != "" {
+				message += "\n" + config.PluginDefinition.Description + "\n"
+			}
+			if config.PluginDefinition.Documentation != "" {
+				message += "\n" + config.PluginDefinition.Documentation + "\n"
+			}
+			configOptions := ""
+			for _, v := range config.PluginConfig {
+				valueType := v.Type
+				if v.Type == "" {
+					valueType = "str"
+				}
+				var optional string
+				if v.Optional {
+					optional = " (optional)"
+				}
+				configOptions += fmt.Sprintf("${GREEN}   %v${RESET}:${BOLD_BLUE}%v${RESET}${WHITE}%v${RESET} Default value: ${BLUE}%v${RESET}\n",
+					strings.ToLower(v.ConfigKey),
+					valueType,
+					optional,
+					v.DefaultValue)
+			}
+			if configOptions != "" {
+				message += "\n${YELLOW}This plugin has the following options:${RESET}\n" + configOptions
+			}
+
+			p := asp.NewParser(state)
+			buildFuncMap := map[string]*asp.Statement{}
+			for _, dir := range state.Config.PluginDefinition.BuildDefsDir {
+				if files, err := ioutil.ReadDir(dir); err == nil {
+					for _, file := range files {
+						if !file.IsDir() {
+							if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
+								addAllFunctions(buildFuncMap, stmts, false)
+							}
+						}
+					}
+				}
+			}
+			buildDefs := ""
+			for k, v := range buildFuncMap {
+				buildDefs += fmt.Sprintf("${GREEN}   %v${RESET}", strings.ToLower(k))
+				arglist := "("
+				for i, arg := range v.FuncDef.Arguments {
+					if i != len(v.FuncDef.Arguments)-1 {
+						arglist += arg.Name + ", "
+					} else {
+						arglist += arg.Name + ")"
+					}
+				}
+				buildDefs += fmt.Sprintf("${BLUE}%v${RESET}\n", arglist)
+			}
+			if buildDefs != "" {
+				message += "\n${YELLOW}And provides the following build defs:${RESET}\n" + buildDefs
+			}
+
+			// log.Warningf("To see more information, specify the subrepo field for the plugin %v", topic)
 		}
 
 		return message
