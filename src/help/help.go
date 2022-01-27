@@ -108,145 +108,92 @@ func helpForPlugin(topic string) string {
 			// }
 
 			state = state.Graph.Subrepo(subrepo).State
-			config := state.Config
-			if config.PluginDefinition.Description != "" {
-				message += "\n" + config.PluginDefinition.Description + "\n"
-			}
-			if config.PluginDefinition.Documentation != "" {
-				message += "\n" + config.PluginDefinition.Documentation + "\n"
-			}
-			configOptions := ""
-			for _, v := range config.PluginConfig {
-				valueType := v.Type
-				if v.Type == "" {
-					valueType = "str"
-				}
-				var optional string
-				if v.Optional {
-					optional = " (optional)"
-				}
-				configOptions += fmt.Sprintf("${GREEN}   %v${RESET}:${BOLD_BLUE}%v${RESET}${WHITE}%v${RESET} Default value: ${BLUE}%v${RESET}\n",
-					strings.ToLower(v.ConfigKey),
-					valueType,
-					optional,
-					v.DefaultValue)
-			}
-			if configOptions != "" {
-				message += "\n${YELLOW}This plugin has the following options:${RESET}\n" + configOptions
-			}
-
-			p := asp.NewParser(state)
-			buildFuncMap := map[string]*asp.Statement{}
-			for _, dir := range state.Config.PluginDefinition.BuildDefsDir {
-				if files, err := ioutil.ReadDir(dir); err == nil {
-					for _, file := range files {
-						if !file.IsDir() {
-							if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
-								addAllFunctions(buildFuncMap, stmts, false)
-							}
-						}
-					}
-				}
-			}
-			buildDefs := ""
-			for k, v := range buildFuncMap {
-				buildDefs += fmt.Sprintf("${GREEN}   %v${RESET}", strings.ToLower(k))
-				arglist := "("
-				for i, arg := range v.FuncDef.Arguments {
-					if i != len(v.FuncDef.Arguments)-1 {
-						arglist += arg.Name + ", "
-					} else {
-						arglist += arg.Name + ")"
-					}
-				}
-				buildDefs += fmt.Sprintf("${BLUE}%v${RESET}\n", arglist)
-			}
-			if buildDefs != "" {
-				message += "\n${YELLOW}And provides the following build defs:${RESET}\n" + buildDefs
-			}
+			message = getPluginOptionsAndBuildDefs(state, message)
 		} else {
 			log.Warning("Looking for subrepo in plugins pkg")
-			// target := "//plugins:cc_rules"
-			// label, err := core.TryParseBuildLabel(target, "", "")
-			// if err != nil {
-			// 	panic(err)
-			// }
 			buildLabel := core.BuildLabel{PackageName: "", Name: "all", Subrepo: "plugins/cc_rules"}
 			state := newState()
 
 			// Parse the subrepo (Run reads the plugin config into config)
 			log.Warning("Building %v", buildLabel)
 			plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
-			// topic = topic + "_rules"
 			sub := "plugins/cc_rules"
 			subrepo := state.Graph.Subrepo(sub)
 			if subrepo == nil {
 				log.Fatalf("Tried to get subrepo %v but failed", sub)
 			}
 			state = subrepo.State
-			config := state.Config
-			if config.PluginDefinition.Description != "" {
-				message += "\n" + config.PluginDefinition.Description + "\n"
-			}
-			if config.PluginDefinition.Documentation != "" {
-				message += "\n" + config.PluginDefinition.Documentation + "\n"
-			}
-			configOptions := ""
-			for _, v := range config.PluginConfig {
-				valueType := v.Type
-				if v.Type == "" {
-					valueType = "str"
-				}
-				var optional string
-				if v.Optional {
-					optional = " (optional)"
-				}
-				configOptions += fmt.Sprintf("${GREEN}   %v${RESET}:${BOLD_BLUE}%v${RESET}${WHITE}%v${RESET} Default value: ${BLUE}%v${RESET}\n",
-					strings.ToLower(v.ConfigKey),
-					valueType,
-					optional,
-					v.DefaultValue)
-			}
-			if configOptions != "" {
-				message += "\n${YELLOW}This plugin has the following options:${RESET}\n" + configOptions
-			}
-
-			p := asp.NewParser(state)
-			buildFuncMap := map[string]*asp.Statement{}
-			for _, dir := range state.Config.PluginDefinition.BuildDefsDir {
-				if files, err := ioutil.ReadDir(dir); err == nil {
-					for _, file := range files {
-						if !file.IsDir() {
-							if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
-								addAllFunctions(buildFuncMap, stmts, false)
-							}
-						}
-					}
-				}
-			}
-			buildDefs := ""
-			for k, v := range buildFuncMap {
-				buildDefs += fmt.Sprintf("${GREEN}   %v${RESET}", strings.ToLower(k))
-				arglist := "("
-				for i, arg := range v.FuncDef.Arguments {
-					if i != len(v.FuncDef.Arguments)-1 {
-						arglist += arg.Name + ", "
-					} else {
-						arglist += arg.Name + ")"
-					}
-				}
-				buildDefs += fmt.Sprintf("${BLUE}%v${RESET}\n", arglist)
-			}
-			if buildDefs != "" {
-				message += "\n${YELLOW}And provides the following build defs:${RESET}\n" + buildDefs
-			}
-
-			// log.Warningf("To see more information, specify the subrepo field for the plugin %v", topic)
+			message = getPluginOptionsAndBuildDefs(state, message)
 		}
 
 		return message
 	}
 	return ""
+}
+
+func getPluginOptionsAndBuildDefs(state *core.BuildState, message string) string {
+	config := state.Config
+	if config.PluginDefinition.Description != "" {
+		message += "\n" + config.PluginDefinition.Description + "\n"
+	}
+	if config.PluginDefinition.Documentation != "" {
+		message += "\n" + config.PluginDefinition.Documentation + "\n"
+	}
+	configOptions := ""
+	for _, v := range config.PluginConfig {
+		valueType := v.Type
+		if v.Type == "" {
+			valueType = "str"
+		}
+		var optional string
+		if v.Optional {
+			optional = " (optional)"
+		}
+		configOptions += fmt.Sprintf("${GREEN}   %v${RESET}:${BOLD_BLUE}%v${RESET}${WHITE}%v${RESET} Default value: ${BLUE}%v${RESET}\n",
+			strings.ToLower(v.ConfigKey),
+			valueType,
+			optional,
+			v.DefaultValue)
+	}
+	if configOptions != "" {
+		message += "\n${YELLOW}This plugin has the following options:${RESET}\n" + configOptions
+	}
+
+	buildFuncMap := map[string]*asp.Statement{}
+	populatePluginBuildFuncs(buildFuncMap, state)
+	buildDefs := ""
+	for k, v := range buildFuncMap {
+		buildDefs += fmt.Sprintf("${GREEN}   %v${RESET}", strings.ToLower(k))
+		arglist := "("
+		for i, arg := range v.FuncDef.Arguments {
+			if i != len(v.FuncDef.Arguments)-1 {
+				arglist += arg.Name + ", "
+			} else {
+				arglist += arg.Name + ")"
+			}
+		}
+		buildDefs += fmt.Sprintf("${BLUE}%v${RESET}\n", arglist)
+	}
+	if buildDefs != "" {
+		message += "\n${YELLOW}And provides the following build defs:${RESET}\n" + buildDefs
+	}
+
+	return message
+}
+
+func populatePluginBuildFuncs(buildFuncMap map[string]*asp.Statement, state *core.BuildState) {
+	p := asp.NewParser(state)
+	for _, dir := range state.Config.PluginDefinition.BuildDefsDir {
+		if files, err := ioutil.ReadDir(dir); err == nil {
+			for _, file := range files {
+				if !file.IsDir() {
+					if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
+						addAllFunctions(buildFuncMap, stmts, false)
+					}
+				}
+			}
+		}
+	}
 }
 
 // helpFromBuildRule returns the printable help message from a build rule (a function).
