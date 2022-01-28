@@ -77,17 +77,16 @@ func help(topic string) string {
 	return ""
 }
 
+// helpForPlugin returns some help text for a plugin
 func helpForPlugin(topic string) string {
 	config, err := core.ReadDefaultConfigFiles(nil)
 	if err != nil {
 		panic("Failed to read config")
 	}
 	if _, ok := config.Plugin[topic]; ok {
-		// If we come in here, there's a plugin defined in the config file
 		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the ${GREEN}.plzconfig${RESET} file.\n", topic)
 
-		// This is if there's a subrepo specified for the plugin. This is considered an override as, by default, we'll
-		// check in the plugins package for the subrepo
+		// This is if there's a subrepo specified for the plugin. If there isn't, we'll check for the subrepo in the plugins/
 		var subrepoName string
 		buildLabel := core.BuildLabel{Name: "all"}
 		if val, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
@@ -96,23 +95,22 @@ func helpForPlugin(topic string) string {
 		} else {
 			buildLabel.Subrepo = path.Join("plugins", topic)
 		}
-		// subrepo := state.Graph.Subrepo(buildLabel.Subrepo)
+
 		state := newState()
 
 		// Parse the subrepo (Run reads the plugin config into config)
 		plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
-
 		subrepo := state.Graph.Subrepo(buildLabel.Subrepo)
 		if subrepo == nil {
 			log.Fatalf("Tried to get subrepo %v but failed", buildLabel.Subrepo)
 		}
-		message = getPluginOptionsAndBuildDefs(subrepo, message)
 
-		return message
+		return getPluginOptionsAndBuildDefs(subrepo, message)
 	}
 	return ""
 }
 
+// getPluginOptionsAndBuildDefs looks for information for the plugin specified in the config file
 func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string {
 	config := subrepo.State.Config
 	if config.PluginDefinition.Description != "" {
@@ -171,6 +169,7 @@ func populatePluginBuildFuncs(buildFuncMap map[string]*asp.Statement, subrepo *c
 			dirs = append(dirs, path.Join(subrepo.Root, dir))
 		}
 	} else {
+		// By default, check the build_defs dir in the plugin
 		dirs = append(dirs, path.Join(subrepo.Root, "build_defs"))
 	}
 	for _, dir := range dirs {
