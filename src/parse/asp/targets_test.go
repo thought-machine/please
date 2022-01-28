@@ -24,7 +24,6 @@ func TestValidateTargetNoSandbox(t *testing.T) {
 	require.NoError(t, err)
 }
 
-
 func TestValidateTargetSandbox(t *testing.T) {
 	state := core.NewDefaultBuildState()
 	state.Config.Sandbox.ExcludeableTargets = []core.BuildLabel{core.NewBuildLabel("third_party", "all")}
