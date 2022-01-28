@@ -28,3 +28,12 @@ please_repo_e2e_test(
     plz_command = "plz format --quiet src/FORMATTED_BUILD_FILE",
     repo = "test_repo",
 )
+
+please_repo_e2e_test(
+    name = "writes_formatted_file_back_in_write_mode",
+    plz_command = "plz format --write src/BUILD_FILE",
+    expected_output = {
+        "src/BUILD_FILE": FORMATTED_BUILD_FILE,
+    },
+    repo = "test_repo",
+)
