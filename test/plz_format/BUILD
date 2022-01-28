@@ -15,3 +15,10 @@ please_repo_e2e_test(
     plz_command = "plz format src/BUILD_FILE > output",
     repo = "test_repo",
 )
+
+please_repo_e2e_test(
+    name = "fails_when_file_needs_formatting_in_quiet_mode",
+    plz_command = "plz format --quiet src/BUILD_FILE",
+    expected_failure = True,
+    repo = "test_repo",
+)
