@@ -638,7 +638,7 @@ var buildFunctions = map[string]func() int{
 		if changed, err := format.Format(config, opts.Format.Args.Files.AsStrings(), opts.Format.Write, opts.Format.Quiet); err != nil {
 			log.Fatalf("Failed to reformat files: %s", err)
 		} else if changed && !opts.Format.Write {
-			return 1
+			return 0
 		}
 		return 0
 	},

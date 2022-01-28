@@ -1,0 +1,4 @@
+python_binary(
+name = "foo",
+main = "main.py"
+)
