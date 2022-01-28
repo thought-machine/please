@@ -103,22 +103,6 @@ func helpForPlugin(topic string) string {
 
 		// Parse the subrepo (Run reads the plugin config into config)
 		plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
-		if state.BuildFailed {
-			log.Fatalf("Failed to build %v", buildLabel.Label)
-		} else {
-			log.Warningf("Succesfully built %v", buildLabel.Label)
-		}
-
-		// downloadBuildLabel := core.BuildLabel{PackageName: "", Name: "_" + subrepo + "#download", Subrepo: ""}
-		// if t := state.Graph.Target(downloadBuildLabel); t != nil {
-		// 	if urls := t.AllURLs(state); len(urls) == 1 {
-		// 		message += fmt.Sprintf(" It's loaded from %v\n", urls[0])
-		// 	} else {
-		// 		message += "\n"
-		// 	}
-		// } else {
-		// 	message += "\n"
-		// }
 
 		subrepo := state.Graph.Subrepo(buildLabel.Subrepo)
 		if subrepo == nil {
