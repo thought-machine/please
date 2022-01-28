@@ -22,3 +22,9 @@ please_repo_e2e_test(
     expected_failure = True,
     repo = "test_repo",
 )
+
+please_repo_e2e_test(
+    name = "succeeds_when_file_doesnt_need_formatting_in_quiet_mode",
+    plz_command = "plz format --quiet src/FORMATTED_BUILD_FILE",
+    repo = "test_repo",
+)
