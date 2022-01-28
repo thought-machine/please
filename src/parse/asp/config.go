@@ -186,13 +186,15 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 	return ret
 }
 
-func loadPluginConfig(pluginPkgState *core.BuildState, pkgState *core.BuildState, c pyDict) {
+func loadPluginConfig(pluginPkgState *core.BuildState, pkgState *core.BuildState, c pyObject) {
 	pluginName := pluginPkgState.Config.PluginDefinition.Name
 	if pluginName == "" {
 		// Subinclude is not a plugin. Stop here.
 		return
 	}
-	c[strings.ToUpper(pluginName)] = pluginConfig(pluginPkgState, pkgState)
+	key := pyString(strings.ToUpper(pluginName))
+	cfg := pluginConfig(pluginPkgState, pkgState)
+	c.IndexAssign(key, cfg)
 }
 
 func toPyObject(key, val, toType string) pyObject {

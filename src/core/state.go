@@ -569,6 +569,7 @@ func (state *BuildState) WaitForPreloadedSubincludes() {
 			}
 		}
 
+		log.Warningf("finished pre-loading")
 		state.FinishedPreloading = true
 	})
 }
