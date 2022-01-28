@@ -170,13 +170,13 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 }
 
 func validateSandbox(s *scope, target *core.BuildTarget) {
-	if target.IsFilegroup || len(s.state.Config.Sandbox.WhitelistTargets) == 0 {
+	if target.IsFilegroup || len(s.state.Config.Sandbox.ExcludeableTargets) == 0 {
 		return
 	}
 	if target.Sandbox && (target.Test == nil || target.Test.Sandbox) {
 		return
 	}
-	for _, whitelist := range s.state.Config.Sandbox.WhitelistTargets {
+	for _, whitelist := range s.state.Config.Sandbox.ExcludeableTargets {
 		if target.Label.PackageName == "_please" {
 			return
 		}
