@@ -458,6 +458,18 @@ func (label BuildLabel) isExperimental(state *BuildState) bool {
 	return false
 }
 
+// Matches returns whether the build label matches the other based on wildcard rules
+func (label BuildLabel) Matches(other BuildLabel) bool {
+	if label.Name == "..." {
+		return label.PackageName == "." || strings.HasPrefix(other.PackageName, label.PackageName)
+	}
+	if label.Name == "all" {
+		return label.PackageName == other.PackageName
+	}
+	// Allow //foo:_bar#bazz to match //foo:bar
+	return label == other.Parent()
+}
+
 // Complete implements the flags.Completer interface, which is used for shell completion.
 // Unfortunately it's rather awkward to handle here; we need to do a proper parse in order
 // to find out what the possible build labels are, and we're not ready for that yet.

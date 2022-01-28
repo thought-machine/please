@@ -130,6 +130,23 @@ func TestParseBuildLabelParts(t *testing.T) {
 	assert.Equal(t, subrepo2, "unittest_cpp")
 }
 
+func TestMatch(t *testing.T) {
+	foo := ParseBuildLabel("//third_party:foo", "")
+	bar := ParseBuildLabel("//third_party:_foo#bar", "")
+	baz := ParseBuildLabel("//third_party/go:baz", "")
+	all := ParseBuildLabel("//third_party:all", "")
+	any := ParseBuildLabel("//third_party/...", "")
+
+	assert.True(t, foo.Matches(foo))
+	assert.True(t, foo.Matches(bar))
+	assert.True(t, all.Matches(foo))
+	assert.True(t, any.Matches(foo))
+
+	assert.False(t, foo.Matches(baz))
+	assert.False(t, all.Matches(baz))
+	assert.True(t, any.Matches(baz))
+}
+
 func TestParseSubrepoLabelWithExtraColon(t *testing.T) {
 	_, err := TryParseBuildLabel("///python/psycopg2:psycopg2//:wheel", "", "")
 	assert.Error(t, err)

@@ -1,6 +1,7 @@
 package asp
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -159,11 +160,35 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.Test.Sandbox = isTruthy(testSandboxBuildRuleArgIdx)
 		target.Test.NoOutput = isTruthy(noTestOutputBuildRuleArgIdx)
 	}
+
+	if err := validateSandbox(s.state, target); err != nil {
+		log.Fatal(err)
+	}
+
 	if s.state.Config.Build.Config == "dbg" {
 		target.Debug = new(core.DebugFields)
 		target.Debug.Command, _ = decodeCommands(s, args[debugCMDBuildRuleArgIdx])
 	}
 	return target
+}
+
+func validateSandbox(state *core.BuildState, target *core.BuildTarget) error {
+	if target.IsFilegroup || len(state.Config.Sandbox.ExcludeableTargets) == 0 {
+		return nil
+	}
+	if target.Sandbox && (target.Test == nil || target.Test.Sandbox) {
+		return nil
+	}
+	for _, whitelist := range state.Config.Sandbox.ExcludeableTargets {
+		if target.Label.PackageName == "_please" {
+			return nil
+		}
+		if whitelist.Matches(target.Label) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("%v is not whitelisted to opt out of the sandbox", target)
 }
 
 // sizeAndTimeout handles the size and build/test timeout arguments.
