@@ -127,27 +127,27 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 	for _, v := range config.PluginConfig {
 		valueType := v.Type
 		if v.Type == "" {
-			valueType = "str"
+			valueType = "string"
 		}
 		var optional string
 		if v.Optional {
 			optional = " (optional)"
 		}
-		configOptions += fmt.Sprintf("${GREEN}   %v${RESET}:${BOLD_BLUE}%v${RESET}${WHITE}%v${RESET} Default value: ${BLUE}%v${RESET}\n",
+		configOptions += fmt.Sprintf("${BLUE}   %v${RESET} ${GREEN}(%v)${RESET}${WHITE}%v${RESET} Default value: %v\n",
 			strings.ToLower(v.ConfigKey),
 			valueType,
 			optional,
 			v.DefaultValue)
 	}
 	if configOptions != "" {
-		message += "\n${YELLOW}This plugin has the following options:${RESET}\n" + configOptions
+		message += "\n${BOLD_YELLOW}This plugin has the following options:${RESET}\n" + configOptions
 	}
 
 	buildFuncMap := map[string]*asp.Statement{}
 	populatePluginBuildFuncs(buildFuncMap, subrepo)
 	buildDefs := ""
 	for k, v := range buildFuncMap {
-		buildDefs += fmt.Sprintf("${GREEN}   %v${RESET}", strings.ToLower(k))
+		buildDefs += fmt.Sprintf("${BLUE}   %v${RESET}", strings.ToLower(k))
 		arglist := "("
 		for i, arg := range v.FuncDef.Arguments {
 			if i != len(v.FuncDef.Arguments)-1 {
@@ -156,10 +156,10 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 				arglist += arg.Name + ")"
 			}
 		}
-		buildDefs += fmt.Sprintf("${BLUE}%v${RESET}\n", arglist)
+		buildDefs += fmt.Sprintf("${GREEN}%v${RESET}\n", arglist)
 	}
 	if buildDefs != "" {
-		message += "\n${YELLOW}And provides the following build defs:${RESET}\n" + buildDefs
+		message += "\n${BOLD_YELLOW}And provides the following build defs:${RESET}\n" + buildDefs
 	}
 
 	return message
