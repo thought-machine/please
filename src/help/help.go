@@ -84,7 +84,7 @@ func helpForPlugin(topic string) string {
 	}
 	if _, ok := config.Plugin[topic]; ok {
 		// If we come in here, there's a plugin defined in the config file
-		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the .plzconfig file.", topic)
+		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the ${GREEN}.plzconfig${RESET} file.\n", topic)
 
 		// This is if there's a subrepo specified for the plugin. This is considered an override as, by default, we'll
 		// check in the plugins package for the subrepo
@@ -120,8 +120,8 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 	if config.PluginDefinition.Description != "" {
 		message += "\n" + config.PluginDefinition.Description + "\n"
 	}
-	if config.PluginDefinition.Documentation != "" {
-		message += "\n" + config.PluginDefinition.Documentation + "\n"
+	if config.PluginDefinition.DocumentationSite != "" {
+		message += "\n" + config.PluginDefinition.DocumentationSite + "\n"
 	}
 	configOptions := ""
 	for _, v := range config.PluginConfig {
