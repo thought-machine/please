@@ -1,6 +1,7 @@
 package asp
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -160,7 +161,9 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.Test.NoOutput = isTruthy(noTestOutputBuildRuleArgIdx)
 	}
 
-	validateSandbox(s, target)
+	if err := validateSandbox(s.state, target); err != nil {
+		log.Fatal(err)
+	}
 
 	if s.state.Config.Build.Config == "dbg" {
 		target.Debug = new(core.DebugFields)
@@ -169,23 +172,23 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	return target
 }
 
-func validateSandbox(s *scope, target *core.BuildTarget) {
-	if target.IsFilegroup || len(s.state.Config.Sandbox.ExcludeableTargets) == 0 {
-		return
+func validateSandbox(state *core.BuildState, target *core.BuildTarget) error {
+	if target.IsFilegroup || len(state.Config.Sandbox.ExcludeableTargets) == 0 {
+		return nil
 	}
 	if target.Sandbox && (target.Test == nil || target.Test.Sandbox) {
-		return
+		return nil
 	}
-	for _, whitelist := range s.state.Config.Sandbox.ExcludeableTargets {
+	for _, whitelist := range state.Config.Sandbox.ExcludeableTargets {
 		if target.Label.PackageName == "_please" {
-			return
+			return nil
 		}
 		if whitelist.Matches(target.Label) {
-			return
+			return nil
 		}
 	}
 
-	log.Fatalf("%v is not whitelisted to opt out of the sandbox", target)
+	return fmt.Errorf("%v is not whitelisted to opt out of the sandbox", target)
 }
 
 // sizeAndTimeout handles the size and build/test timeout arguments.
