@@ -37,3 +37,10 @@ please_repo_e2e_test(
     },
     repo = "test_repo",
 )
+
+please_repo_e2e_test(
+    name = "fails_when_quiet_and_write_mode_given",
+    plz_command = "plz format --write --quiet src/FORMATTED_BUILD_FILE",
+    expected_failure = True,
+    repo = "test_repo",
+)

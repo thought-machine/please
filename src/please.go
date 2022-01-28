@@ -635,6 +635,9 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"format": func() int {
+		if opts.Format.Quiet && opts.Format.Write {
+			log.Fatal("Can't use both --quiet and --write at the same time")
+		}
 		if changed, err := format.Format(config, opts.Format.Args.Files.AsStrings(), opts.Format.Write, opts.Format.Quiet); err != nil {
 			log.Fatalf("Failed to reformat files: %s", err)
 		} else if changed && opts.Format.Quiet {
