@@ -82,6 +82,15 @@ func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
 	base["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 	base["DEBUG_PORT"] = pyInt(state.DebugPort)
 
+	// Preloaded subincludes don't technically get subincluded so we need to handle them here
+	for _, preloadedSubinclude := range state.Config.Parse.PreloadSubincludes {
+		target := state.Graph.Target(preloadedSubinclude)
+		if target == nil || target.Subrepo == nil {
+			continue // The target hasn't been defined yet. We're probably still preloading.
+		}
+		loadPluginConfig(target.Subrepo.State, state, base)
+	}
+
 	return &pyConfig{base: base}
 }
 
@@ -177,13 +186,15 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 	return ret
 }
 
-func loadPluginConfig(pluginPkgState *core.BuildState, pkgState *core.BuildState, c pyDict) {
+func loadPluginConfig(pluginPkgState *core.BuildState, pkgState *core.BuildState, c pyObject) {
 	pluginName := pluginPkgState.Config.PluginDefinition.Name
 	if pluginName == "" {
 		// Subinclude is not a plugin. Stop here.
 		return
 	}
-	c[strings.ToUpper(pluginName)] = pluginConfig(pluginPkgState, pkgState)
+	key := pyString(strings.ToUpper(pluginName))
+	cfg := pluginConfig(pluginPkgState, pkgState)
+	c.IndexAssign(key, cfg)
 }
 
 func toPyObject(key, val, toType string) pyObject {

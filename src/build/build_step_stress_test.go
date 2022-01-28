@@ -104,6 +104,11 @@ func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, fil
 	return nil
 }
 
+// ParseFile stub
+func (fake *fakeParser) Preload(filename string) {
+	panic("not implemented")
+}
+
 // ParseReader stub
 func (fake *fakeParser) ParseReader(state *core.BuildState, pkg *core.Package, r io.ReadSeeker) error {
 	return nil
