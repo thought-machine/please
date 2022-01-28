@@ -32,7 +32,7 @@ const cycleCheckDuration = 5 * time.Second
 // ParseTask is the type for the parse task queue
 type ParseTask struct {
 	Label, Dependent BuildLabel
-	ForSubinclude bool
+	ForSubinclude    bool
 }
 
 // A TaskType identifies whether a task is a build or test action.
@@ -555,7 +555,7 @@ func (state *BuildState) WaitForPreloadedSubincludes() {
 	state.preloadSubincludes.Do(func() {
 		for _, inc := range state.Config.Parse.PreloadSubincludes {
 			// Queue them up asynchronously to feed the queues as quickly as possible
-			go func(inc BuildLabel){
+			go func(inc BuildLabel) {
 				state.WaitForBuiltTarget(inc, OriginalTarget)
 			}(inc)
 		}

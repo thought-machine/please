@@ -29,7 +29,6 @@ type aspParser struct {
 	parser *asp.Parser
 }
 
-
 // newAspParser returns a asp.Parser object with all the builtins loaded
 func newAspParser(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
