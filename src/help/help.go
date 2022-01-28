@@ -92,10 +92,8 @@ func helpForPlugin(topic string) string {
 		buildLabel := core.BuildLabel{Name: "all"}
 		if val, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
 			subrepoName = val[0]
-			log.Warning("From plzconfig, got subrepo = %v", val[0])
 			buildLabel.Subrepo = subrepoName
 		} else {
-			log.Warning("Looking for subrepo in plugins pkg")
 			buildLabel.Subrepo = path.Join("plugins", topic)
 		}
 		// subrepo := state.Graph.Subrepo(buildLabel.Subrepo)
@@ -172,13 +170,10 @@ func populatePluginBuildFuncs(buildFuncMap map[string]*asp.Statement, subrepo *c
 		for _, dir := range subrepo.State.Config.PluginDefinition.BuildDefsDir {
 			dirs = append(dirs, path.Join(subrepo.Root, dir))
 		}
-		log.Warning("name=%v\tdirs=%v", subrepo.State.Config.PluginDefinition.Name, dirs)
 	} else {
 		dirs = append(dirs, path.Join(subrepo.Root, "build_defs"))
 	}
-	log.Warning("s.root=%v", subrepo.Root)
 	for _, dir := range dirs {
-		log.Warning("Looking in dir %v", dir)
 		if files, err := ioutil.ReadDir(dir); err == nil {
 			for _, file := range files {
 				if !file.IsDir() {
