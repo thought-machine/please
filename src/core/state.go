@@ -202,7 +202,8 @@ type BuildState struct {
 	// ParentState is the state of the repo containing this subrepo. Nil if this is the host repo.
 	ParentState *BuildState
 
-	preloadComplete *sync.Once
+	preloadSubincludes *sync.Once
+	FinishedPreloading bool
 }
 
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
@@ -551,34 +552,24 @@ func (state *BuildState) logResult(result *BuildResult) {
 
 // WaitForPreloadedSubincludes waits for the preloaded subincludes to be build and preloads them into the parser
 func (state *BuildState) WaitForPreloadedSubincludes() {
-	state.preloadComplete.Do(func() {
-		wg := sync.WaitGroup{}
-		wg.Add(len(state.Config.Parse.PreloadSubincludes))
+	state.preloadSubincludes.Do(func() {
+		for _, inc := range state.Config.Parse.PreloadSubincludes {
+			// Queue them up asynchronously to feed the queues as quickly as possible
+			go func(inc BuildLabel){
+				state.WaitForBuiltTarget(inc, OriginalTarget)
+			}(inc)
+		}
 
-		preload := func(inc string) {
-			l, err := TryParseBuildLabel(inc, "", "")
-			if err != nil {
-				log.Fatalf("failed to preload subinclude: %v", err)
-			}
-
-			if err := state.queueTarget(l, OriginalTarget, true, true); err != nil {
-				log.Fatalf("%v", err)
-			}
-
-			t := state.WaitForTargetAndEnsureDownload(l, OriginalTarget)
+		// Preload them in order to avoid non-deterministic errors when the subincludes depend on each other
+		for _, inc := range state.Config.Parse.PreloadSubincludes {
+			t := state.WaitForTargetAndEnsureDownload(inc, OriginalTarget)
 
 			for _, out := range t.FullOutputs() {
-				log.Warningf("preloading %v", out)
 				state.Parser.Preload(out)
 			}
-
-			wg.Done()
 		}
 
-		for _, inc := range state.Config.Parse.PreloadSubincludes {
-			go preload(inc)
-		}
-		wg.Wait()
+		state.FinishedPreloading = true
 	})
 }
 
@@ -1237,7 +1228,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 		},
-		preloadComplete: new(sync.Once),
+		preloadSubincludes: new(sync.Once),
 	}
 	state.PathHasher = state.Hasher(config.Build.HashFunction)
 	state.progress.allStates = []*BuildState{state}
