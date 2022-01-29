@@ -40,7 +40,10 @@ please_repo_e2e_test(
 
 please_repo_e2e_test(
     name = "fails_when_quiet_and_write_mode_given",
-    plz_command = "plz format --write --quiet src/FORMATTED_BUILD_FILE",
+    plz_command = "plz format --write --quiet src/FORMATTED_BUILD_FILE 2> output",
+    expect_output_contains = {
+        "output": "Can't use both --quiet and --write at the same time",
+    },
     expected_failure = True,
     repo = "test_repo",
 )
