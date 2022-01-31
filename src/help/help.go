@@ -127,9 +127,9 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 		}
 		var optional string
 		if v.Optional {
-			optional = " (optional)"
+			optional = " (optional) "
 		}
-		configOptions += fmt.Sprintf("${BLUE}   %v${RESET} ${GREEN}(%v)${RESET}${WHITE}%v${RESET} Default value: %v\n",
+		configOptions += fmt.Sprintf("${BLUE}   %v${RESET} ${GREEN}(%v)${RESET}${WHITE}%v${RESET}Default value: %v\n",
 			strings.ToLower(v.ConfigKey),
 			valueType,
 			optional,
