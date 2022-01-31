@@ -1,5 +1,17 @@
 Version 16.19.0
 ---------------
+    * Add Go 1.18 fuzz testing support #2269
+    * Fix incorrect resolving of @self keyword that should resolve relative
+      to the repo/plugin where it appears #2270
+    * Sort user provided env for remote execution for better determinism #2273
+    * Targets can now be specified to opt out of sandboxing #2282
+    * Fix issue with preloading subincludes, where it would fail if the subinclude
+      itself also had subincludes #2281
+    * Allow outputs to be downloaded transitively in remote when debugging is on #2278
+
+
+Version 16.19.0-beta.1
+---------------
     * Remove duplicate labels being applied to `go_module()` rules #2254
     * Gracefully handle missing tools during `plz query changes` #2130
     * Allow specifying a github access token as an environment variable
