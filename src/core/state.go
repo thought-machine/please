@@ -55,11 +55,11 @@ type OutputDownloadOption uint8
 
 const (
 	// Don't download outputs.
-	NoOutputDownload OutputDownloadOption = 0
+	NoOutputDownload OutputDownloadOption = iota
 	// Download original target outputs only.
-	OriginalOutputDownload OutputDownloadOption = 1
+	OriginalOutputDownload
 	// Download original target's transitive outputs too.
-	TransitiveOutputDownload OutputDownloadOption = 2
+	TransitiveOutputDownload
 )
 
 // A Parser is the interface to reading and interacting with BUILD files.
