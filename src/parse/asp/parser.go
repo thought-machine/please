@@ -71,22 +71,13 @@ func (p *Parser) MustLoadBuiltins(filename string, contents []byte) {
 // ParseFile parses the contents of a single file in the BUILD language.
 // It returns true if the call was deferred at some point awaiting  target to build,
 // along with any error encountered.
-func (p *Parser) ParseFile(pkg *core.Package, filename string, preamble string) error {
+func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
 	statements, err := p.parse(filename)
 	if err != nil {
 		return err
-	}
-
-	if preamble != "" {
-		stmts, err := p.parseAndHandleErrors(strings.NewReader(preamble))
-		if err != nil {
-			return err
-		}
-
-		statements = append(stmts, statements...)
 	}
 
 	_, err = p.interpreter.interpretAll(pkg, statements)

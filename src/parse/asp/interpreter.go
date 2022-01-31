@@ -164,7 +164,9 @@ func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
 
 	i.configMutex.Lock()
 	defer i.configMutex.Unlock()
-	i.config[state.Config] = c
+	if state.FinishedPreloading {
+		i.config[state.Config] = c
+	}
 	return c
 }
 

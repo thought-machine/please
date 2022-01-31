@@ -54,6 +54,8 @@ type Task struct {
 type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
 	ParseFile(state *BuildState, pkg *Package, filename string) error
+	// Preload loads a file as a preloaded build definition
+	Preload(filename string)
 	// ParseReader parses a single BUILD file into the given package.
 	ParseReader(state *BuildState, pkg *Package, reader io.ReadSeeker) error
 	// RunPreBuildFunction runs a pre-build function for a target.
@@ -199,6 +201,9 @@ type BuildState struct {
 	CurrentSubrepo string
 	// ParentState is the state of the repo containing this subrepo. Nil if this is the host repo.
 	ParentState *BuildState
+
+	preloadSubincludes *sync.Once
+	FinishedPreloading bool
 }
 
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
@@ -543,6 +548,29 @@ func (state *BuildState) logResult(result *BuildResult) {
 			state.TestFailed = true
 		}
 	}
+}
+
+// WaitForPreloadedSubincludes waits for the preloaded subincludes to be build and preloads them into the parser
+func (state *BuildState) WaitForPreloadedSubincludes() {
+	state.preloadSubincludes.Do(func() {
+		for _, inc := range state.Config.Parse.PreloadSubincludes {
+			// Queue them up asynchronously to feed the queues as quickly as possible
+			go func(inc BuildLabel) {
+				state.WaitForBuiltTarget(inc, OriginalTarget)
+			}(inc)
+		}
+
+		// Preload them in order to avoid non-deterministic errors when the subincludes depend on each other
+		for _, inc := range state.Config.Parse.PreloadSubincludes {
+			t := state.WaitForTargetAndEnsureDownload(inc, OriginalTarget)
+
+			for _, out := range t.FullOutputs() {
+				state.Parser.Preload(out)
+			}
+		}
+
+		state.FinishedPreloading = true
+	})
 }
 
 // forwardResults runs indefinitely, forwarding results from the internal
@@ -1200,6 +1228,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 		},
+		preloadSubincludes: new(sync.Once),
 	}
 	state.PathHasher = state.Hasher(config.Build.HashFunction)
 	state.progress.allStates = []*BuildState{state}

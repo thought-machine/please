@@ -309,7 +309,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		if t.Label.Subrepo != "" {
 			incPkgState = s.state.Graph.SubrepoOrDie(t.Label.Subrepo).State
 		}
-		loadPluginConfig(incPkgState, s.state, s.config.base)
+		loadPluginConfig(incPkgState, s.state, s.config)
 
 		for _, out := range t.Outputs() {
 			s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), t.Label, pkg), false)
@@ -1035,6 +1035,9 @@ func subrepo(s *scope, args []pyObject) pyObject {
 
 	isCrossCompile := s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile
 	arch := cli.HostArch()
+	if s.pkg.Subrepo != nil {
+		arch = s.pkg.Subrepo.Arch
+	}
 	if args[ArchArgIdx] != None { // arg 5 is arch-string, for arch-subrepos.
 		givenArch := string(args[ArchArgIdx].(pyString))
 		if err := arch.UnmarshalFlag(givenArch); err != nil {
