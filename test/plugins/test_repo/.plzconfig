@@ -1,4 +1,5 @@
 [Plugin "foo"]
+Target = //plugins:foo
 FoocTool = @foo//tools/fooc
 CompileFlag = -sha256
 BoolTest = False

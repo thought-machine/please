@@ -80,6 +80,11 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	} else if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
 		return subrepo, nil
 	}
+
+	if subrepo, err := handlePlugin(tid, state, label, dependent, forSubinclude); err != nil || subrepo != nil {
+		log.Warningf("Overriden subrepo for %v", subrepo.Name)
+		return subrepo, err
+	}
 	// We don't have the definition of it at all. Need to parse that first.
 	sl := label.SubrepoLabel()
 
@@ -112,6 +117,32 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	}
 	// For local subincludes, the subrepo has to already be defined at this point in the BUILD file
 	return nil, fmt.Errorf("Subrepo %v is not defined yet. It must appear before it is used by subinclude()", sl)
+}
+
+func handlePlugin(tid int, state *core.BuildState, label, dependant core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
+	pluginName := label.Subrepo
+	log.Warningf("looking for %v in %#v", pluginName, state.Config.Plugin)
+	if plugin, ok := state.Config.Plugin[pluginName]; ok {
+		if err := parse(tid, state, plugin.Target, dependant, forSubinclude); err != nil {
+			return nil, err
+		}
+
+		t := state.Graph.TargetOrDie(plugin.Target)
+		if len(t.Outputs()) != 1 {
+			log.Fatalf("Plugin target %v must output exactly 1 directory", t.Label)
+		}
+
+		state.Graph.AddSubrepo(&core.Subrepo{
+			Name:           pluginName,
+			Root:           path.Join(t.OutDir(), t.Outputs()[0]),
+			Target:         t,
+			State:          state.ForSubrepo(pluginName),
+			Arch:           state.Arch,
+			IsCrossCompile: false, // TODO(jpoole): this should be based on the dependency package state
+		})
+		return state.Graph.Subrepo(pluginName), nil
+	}
+	return nil, nil
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.

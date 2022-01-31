@@ -1,7 +1,3 @@
-filegroup(
-    name = "foo",
-    srcs = ["foo_plugin"],
-)
 
 filegroup(
     name = "nested",
@@ -11,9 +7,4 @@ filegroup(
 subrepo(
     name = "nested",
     dep = ":nested",
-)
-
-subrepo(
-    name = "foo",
-    dep = ":foo",
 )

@@ -646,6 +646,7 @@ type Alias struct {
 }
 
 type Plugin struct {
+	Target      BuildLabel          `help:"The build label for the target that provides the plugin repo."`
 	ExtraValues map[string][]string `help:"A section of arbitrary key-value properties for the plugin." gcfg:"extra_values"`
 }
 
