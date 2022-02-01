@@ -9,8 +9,7 @@ RESET="\x1B[0m"
 DEFAULT_URL_BASE="https://get.please.build"
 
 OS="$(uname)"
-# Don't have any builds other than amd64 at the moment.
-ARCH="amd64"
+ARCH="$(uname -m)"
 
 # Check PLZ_CONFIG_PROFILE or fall back to arguments for a profile.
 PROFILE="${PLZ_CONFIG_PROFILE:-$(sed -E 's/.*--profile[= ]([^ ]+).*/\1/g' <<< "$*")}"
