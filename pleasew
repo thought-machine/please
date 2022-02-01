@@ -9,7 +9,15 @@ RESET="\x1B[0m"
 DEFAULT_URL_BASE="https://get.please.build"
 
 OS="$(uname)"
-ARCH="$(uname -m)"
+
+if [[ $OS == "Darwin" ]]; then
+    # switch between mac amd64/arm64 
+    ARCH="$(uname -m)"
+else
+    # default to amd64 on other operating systems
+    # because we only build intel binaries
+    ARCH="amd64"
+fi
 
 # Check PLZ_CONFIG_PROFILE or fall back to arguments for a profile.
 PROFILE="${PLZ_CONFIG_PROFILE:-$(sed -E 's/.*--profile[= ]([^ ]+).*/\1/g' <<< "$*")}"
