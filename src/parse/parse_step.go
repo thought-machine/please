@@ -121,7 +121,6 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 
 func handlePlugin(tid int, state *core.BuildState, label, dependant core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
 	pluginName := label.Subrepo
-	log.Warningf("looking for %v in %#v", pluginName, state.Config.Plugin)
 	if plugin, ok := state.Config.Plugin[pluginName]; ok {
 		if plugin.Target == (core.BuildLabel{}) {
 			log.Warningf("plugin %v has no target defined", pluginName)
