@@ -325,4 +325,5 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
           "$TOOL x $SRCS -o _tmp",
           "mv $(dirname $(find . -name .plzconfig | sort | head -n 1)) $OUT",
         ]),
+        _subrepo = True,
     )
