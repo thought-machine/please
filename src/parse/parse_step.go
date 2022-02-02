@@ -82,7 +82,6 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	}
 
 	if subrepo, err := handlePlugin(tid, state, label, dependent, forSubinclude); err != nil || subrepo != nil {
-		log.Warningf("Overriden subrepo for %v", subrepo.Name)
 		return subrepo, err
 	}
 	// We don't have the definition of it at all. Need to parse that first.
@@ -119,30 +118,45 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	return nil, fmt.Errorf("Subrepo %v is not defined yet. It must appear before it is used by subinclude()", sl)
 }
 
+// handlePlugin checks if the subrepo name matches a plugin, and registers it as necessary
 func handlePlugin(tid int, state *core.BuildState, label, dependant core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
-	pluginName := label.Subrepo
-	if plugin, ok := state.Config.Plugin[pluginName]; ok {
+	s := state
+	if dependant.Subrepo != "" {
+		s = state.Graph.Subrepo(dependant.Subrepo).State
+	}
+	for pluginName, plugin := range state.Config.Plugin {
+		if label.Subrepo != pluginName && label.Subrepo != core.SubrepoArchName(pluginName, s.Arch) {
+			continue
+		}
+
 		if plugin.Target == (core.BuildLabel{}) {
-			log.Warningf("plugin %v has no target defined", pluginName)
+			log.Fatalf("plugin %v has no target defined", pluginName)
 		}
 
 		if err := parse(tid, state, plugin.Target, dependant, forSubinclude); err != nil {
 			return nil, err
 		}
 
-		t := state.Graph.TargetOrDie(plugin.Target)
+		t := s.Graph.TargetOrDie(plugin.Target)
 		if len(t.Outputs()) != 1 {
 			log.Fatalf("Plugin target %v must output exactly 1 directory", t.Label)
 		}
-		// TODO(jpoole): handle cross compiling
-		state.Graph.AddSubrepo(&core.Subrepo{
-			Name:   pluginName,
+
+		subrepo := &core.Subrepo{
+			Name:   label.Subrepo,
 			Root:   path.Join(t.OutDir(), t.Outputs()[0]),
 			Target: t,
 			State:  state.ForSubrepo(pluginName),
 			Arch:   cli.HostArch(),
-		})
-		return state.Graph.Subrepo(pluginName), nil
+		}
+		if state.Arch != cli.HostArch() {
+			subrepo.Arch = s.Arch
+			subrepo.State = subrepo.State.ForArch(state.Arch)
+			subrepo.IsCrossCompile = true
+		}
+
+		state.Graph.AddSubrepo(subrepo)
+		return subrepo, nil
 	}
 	return nil, nil
 }

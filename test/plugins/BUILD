@@ -7,6 +7,12 @@ please_repo_e2e_test(
 )
 
 please_repo_e2e_test(
+    name = "cross_compile_test",
+    plz_command = "plz build -o foo.modulepath:something ///linux_arm64//test:foo_lib",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
     name = "nested_test",
     plz_command = "plz build -o foo.modulepath:something ///nested//test:test_lib ///foo//test:test_lib",
     expected_output = {
