@@ -1,0 +1,10 @@
+[command]
+Cmd = index
+
+[subcommand "wibble"]
+Description = Wibbles.
+Config = src/core/test_data/wibble.aliasconfig
+
+[subcommand "wobble"]
+Description = Definitely doesn't wibble.
+Config = src/core/test_data/wobble.aliasconfig

@@ -1,0 +1,7 @@
+[command]
+Cmd = index
+
+[subcommand "deen"]
+Description = German to English.
+Positional = True
+Config = src/dict/deen.aliasconfig

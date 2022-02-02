@@ -1,0 +1,2 @@
+[command]
+Cmd = run //wibble.sh --

@@ -44,7 +44,6 @@ import (
 	"github.com/thought-machine/please/src/scm"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
-	"github.com/thought-machine/please/src/update"
 	"github.com/thought-machine/please/src/watch"
 	"github.com/thought-machine/please/src/worker"
 )
@@ -1216,7 +1215,7 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	} else if opts.Update.Version.IsSet {
 		config.Please.Version = opts.Update.Version
 	}
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
+	// update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
 	return config
 }
 
@@ -1340,13 +1339,22 @@ func initBuild(args []string) string {
 	if (flagsErr != nil || len(extraArgs) > 0) && command != "query.completions" {
 		if len(os.Args) > 1 {
 			if alias, ok := config.Alias[os.Args[1]]; ok {
-				// first handle if the alias is non nested
+				// first handle if the alias has a flat structure
 				if alias.Config == "" {
-					config.AttachAliasFlags(parser)
-					extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
+					// config.AttachAliasFlags(parser)
+					// extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
+					// if flagsErr != nil {
+					// 	printUsage(parser, extraArgs, flagsErr)
+					// 	os.Exit(1)
+					// } else {
+					args := config.UpdateArgsWithAliases(os.Args)
+					log.Warningf("Args %v", args)
+					command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
+					//}
 				} else {
-					// next, handle if the alias is nested
+					// next handle if the alias is nested
 					parser = flags.NewNamedParser(os.Args[0], 0)
+					config.AttachAliasFlags(parser)
 					cmd, err := alias.Command(os.Args[1], alias.Config, alias.Desc, parser.Command)
 					if err != nil {
 						log.Error("Failed to parse config at location %s: %s", alias.Config, err)
@@ -1361,13 +1369,48 @@ func initBuild(args []string) string {
 					}
 
 					extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
-				}
-				if flagsErr != nil {
-					printUsage(parser, extraArgs, flagsErr)
-					os.Exit(1)
-				} else {
-					args := config.UpdateArgsWithAliases(os.Args)
-					command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
+					if flagsErr != nil {
+						printUsage(parser, extraArgs, flagsErr)
+						os.Exit(1)
+					} else {
+						// var ac struct {
+						// 	core.Alias
+						// }
+						args := config.UpdateArgsWithAliases(os.Args)
+						log.Warningf("Args: %v, extra args: %v, flags: %v", args, extraArgs, cmd.Options())
+						if parser.Command != nil {
+							active := cli.ActiveCommand(parser.Command)
+							log.Warningf("Active command: %v", active)
+						}
+						//this replaces the alias with the actual command
+						parser, extraArgs, err = cli.ParseFlags("Please", &opts, args[1:], flags.HelpFlag|flags.PassDoubleDash, nil, additionalUsageInfo)
+						if parser.Command != nil {
+							active := cli.ActiveCommand(parser.Command)
+							log.Warningf("Active command: %v Options: %v", active, parser.Command.Options())
+							command = active
+							labels := strings.Split(args[2], ":")
+							packageName := strings.Split(labels[0], "//")
+							opts.Run.Args.Target.BuildLabel = core.NewBuildLabel(packageName[1], labels[1])
+							// var filepaths cli.Filepaths
+							// for _, option := range cmd.Options() {
+							// 	filepaths = append(filepaths, cli.Filepath(option.LongName))
+							// }
+							// opts.Run.Args.Args = filepaths
+							// log.Warningf("%v", filepaths)
+						}
+						// if err != nil {
+						// 	config.AttachAliasFlags(parser)
+						// 	for _, command := range parser.Command.Commands() {
+						// 		log.Warningf("command %v", command.Name)
+						// 		for _, cmd := range command.Commands() {
+						// 			log.Warningf("subcommand %v, %v", cmd.Name, cmd.FindOptionByLongName("ffs"))
+						// 		}
+						// 	}
+						// 	log.Warningf("ParseFlags %v", extraArgs)
+
+						//
+						// command = cli.ParseFlagsFromArgsOrDie("Please", &ac, args, additionalUsageInfo)
+					}
 				}
 			}
 		}
@@ -1378,6 +1421,9 @@ func initBuild(args []string) string {
 			log.Warning("%s", http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", opts.ProfilePort), nil))
 		}()
 	}
+	log.Warning("=====COMMAND %v", command)
+	log.Warningf("build label: %v", opts.Run.Args.Target.BuildLabel)
+	log.Warningf("args: %v", opts.Run.Args.Args)
 	return command
 }
 

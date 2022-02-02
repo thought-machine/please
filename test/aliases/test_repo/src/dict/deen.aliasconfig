@@ -1,0 +1,5 @@
+[command]
+Cmd = run //src/dict:deen --
+
+[flag "ffs"]
+Description = For the sake of flags.

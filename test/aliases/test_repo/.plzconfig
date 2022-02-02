@@ -1,3 +1,14 @@
+[alias "oldschool"]
+cmd = run //src:such_wow --
+desc = A flat alias that generates a meme.
+positionallabels = True
+flag = --flag
+subcommand = arg
+
 [alias "meme"]
 desc = Generates a meme.
 config = src/meme.aliasconfig
+
+[alias "dict"]
+desc = Defines a word.
+config = src/dict.aliasconfig

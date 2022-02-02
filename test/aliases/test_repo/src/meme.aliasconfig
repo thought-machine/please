@@ -1,5 +1,5 @@
 [command]
-Cmd = "run //src:such_wow"
+Cmd = run //src:such_wow --
 
 [flag "doge"]
 Description = Specifies a doge meme.

@@ -15,10 +15,14 @@ desc = Queries owners of a thing.
 desc = Generates a meme.
 config = src/core/test_data/meme.aliasconfig
 
-[alias "pqsl"]
+[alias "psql"]
 desc = Connects to the DB.
 config = src/core/test_data/psql.aliasconfig
 
 [alias "bootstrapper"]
 desc = It pulls boots up by the straps.
 config = src/core/test_data/bootstrapper.aliasconfig
+
+[alias "index"]
+desc = Some useful scripts.
+config = src/core/test_data/index.aliasconfig

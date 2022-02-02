@@ -1,0 +1,9 @@
+sh_cmd(
+    name = "deen",
+    cmd = [
+        '\n'.join([
+            '#!/bin/bash',
+            'echo \"astonished\" $#',
+        ]),
+    ],
+)

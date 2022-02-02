@@ -31,6 +31,7 @@ func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
 		} else {
 			// throw exception if any fields other than desc and config exist in this alias
 			if alias.Cmd != "" || len(alias.Subcommand) != 0 || len(alias.Flag) != 0 {
+				log.Warningf("config flags attach: %v, %v, %v, %v", name, alias.Cmd, len(alias.Subcommand), len(alias.Flag))
 				log.Errorf("Alias config field duplication for alias %s: use one method of specification", name)
 			}
 			cmd, err = alias.Command(name, alias.Config, alias.Desc, cmd)
@@ -55,6 +56,12 @@ func addSubcommand(cmd *flags.Command, subcommand, desc string, positionalLabels
 	if existing := cmd.Find(subcommand); existing != nil {
 		return existing
 	}
+	data := useInterface(positionalLabels)
+	newCmd, _ := cmd.AddCommand(subcommand, desc, desc, data)
+	return newCmd
+}
+
+func useInterface(positionalLabels bool) interface{} {
 	var data interface{} = &struct{}{}
 	if positionalLabels {
 		data = &struct {
@@ -63,6 +70,5 @@ func addSubcommand(cmd *flags.Command, subcommand, desc string, positionalLabels
 			} `positional-args:"true"`
 		}{}
 	}
-	newCmd, _ := cmd.AddCommand(subcommand, desc, desc, data)
-	return newCmd
+	return data
 }

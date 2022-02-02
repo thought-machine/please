@@ -62,7 +62,9 @@ func readConfigFile(config *Configuration, filename string, subrepo bool) error 
 	} else if gcfg.FatalOnly(err) != nil {
 		return err
 	} else if err != nil {
-		log.Warning("Error in config file: %s", err)
+		if strings.Contains(err.Error(), "config") {
+			log.Warning("======Alias config error")
+		}
 	} else {
 		log.Debug("Read config from %s", filename)
 	}
@@ -945,14 +947,14 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 						log.Fatalf("Unable to read alias config file for %s: %s", k, err)
 					}
 					v.Cmd = ac.Command.Cmd
-					if v.Cmd == "" {
-						arg2 := args[idx+2]
-						if subcommand, found := ac.Subcommand[arg2]; found {
+					if v.Cmd == "index" {
+						if subcommand, found := ac.Subcommand[args[idx+2]]; found {
 							err := readAliasConfigFile(ac, subcommand.Config)
 							if err != nil {
 								log.Fatalf("Unable to read alias config file for %s: %s", k, err)
 							}
 							v.Cmd = ac.Command.Cmd
+							args = append(append([]string{}, args[:idx+1]...), args[idx+2:]...)
 						}
 					}
 				}
@@ -963,6 +965,9 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 				cmd, err := shlex.Split(v.Cmd)
 				if err != nil {
 					log.Fatalf("Invalid alias replacement for %s: %s", k, err)
+				}
+				for _, arg := range args {
+					log.Warningf("Arg %v", arg)
 				}
 				return append(append(append([]string{}, args[:idx+1]...), cmd...), args[idx+2:]...)
 			}
@@ -975,11 +980,33 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 func (config *Configuration) PrintAliases(w io.Writer) {
 	aliases := config.Alias
 	names := make([]string, 0, len(aliases))
+	subNames := make(map[string]map[string]string, len(aliases))
+	keys := make(map[string][]string)
 	maxlen := 0
-	for alias := range aliases {
-		names = append(names, alias)
-		if len(alias) > maxlen {
-			maxlen = len(alias)
+	for name, alias := range aliases {
+		names = append(names, name)
+		if alias.Config != "" {
+			ac := &AliasConfig{}
+			err := readAliasConfigFile(ac, alias.Config)
+			if err != nil {
+				log.Fatalf("Unable to read alias config file for %s: %s", name, err)
+			}
+			if ac.Command.Cmd == "index" {
+				for scName, sc := range ac.Subcommand {
+					if subNames[name] == nil {
+						subNames[name] = make(map[string]string)
+						keys[name] = []string{}
+					}
+					keys[name] = append(keys[name], scName)
+					subNames[name][scName] = sc.Description
+					if len(scName+name)+1 > maxlen {
+						maxlen = len(scName+name) + 1
+					}
+				}
+			}
+		}
+		if len(name) > maxlen {
+			maxlen = len(name)
 		}
 	}
 	sort.Strings(names)
@@ -988,6 +1015,13 @@ func (config *Configuration) PrintAliases(w io.Writer) {
 		tmpl := fmt.Sprintf("  %%-%ds  %%s\n", maxlen)
 		for _, name := range names {
 			fmt.Fprintf(w, tmpl, name, aliases[name].Desc)
+
+			// if there is an entry in subnames, print its parts
+			sort.Strings(keys[name])
+			subTmpl := fmt.Sprintf("  %%-%ds  %%s\n", maxlen)
+			for _, key := range keys[name] {
+				fmt.Fprintf(w, subTmpl, name+" "+key, subNames[name][key])
+			}
 		}
 	}
 }
@@ -999,19 +1033,19 @@ func (a Alias) Command(name string, location string, description string, cmd *fl
 	if err != nil {
 		return nil, err
 	}
-	if ac.Command.Cmd == "" {
+	if ac.Command.Cmd == "index" {
 		cmd.SubcommandsOptional = false
-	}
-	// Add alias command and flags
-	var data interface{} = &struct{}{}
-	if cmd.FindOptionByLongName(name) == nil {
-		cmd, err = cmd.AddCommand(name, name, description, data)
-		if err != nil {
-			return nil, fmt.Errorf("Could not add command %s: %v", name, err)
+	} else {
+		// Add alias command and flags
+		data := useInterface(ac.Positional)
+		if cmd.FindOptionByLongName(name) == nil {
+			cmd, err = cmd.AddCommand(name, name, description, data)
+			if err != nil {
+				return nil, fmt.Errorf("Could not add command %s: %v", name, err)
+			}
+			addFlags(ac.Flag, cmd)
 		}
-		addFlags(ac.Flag, cmd)
 	}
-
 	// Recurse through nested subcommands
 	for name, subcommand := range ac.Subcommand {
 		if subcommand.Config != "" {
@@ -1058,9 +1092,9 @@ func readAliasConfigFile(ac *AliasConfig, location string) error {
 	} else if gcfg.FatalOnly(err) != nil {
 		return err
 	} else if err != nil {
-		log.Warning("Error in config file: %s", err)
+		log.Warning("Error in alias config file: %s", err)
 	} else {
-		log.Debug("Read config from %s", location)
+		log.Debug("Read alias config from %s", location)
 	}
 	return nil
 }
