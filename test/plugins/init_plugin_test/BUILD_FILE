@@ -17,8 +17,3 @@ subrepo(
     name = "foo",
     dep = ":foo",
 )
-
-# please_repo_e2e_test(
-#     name = "init_plugin_test",
-#     cmd = "plz init plugin bar", 
-# )

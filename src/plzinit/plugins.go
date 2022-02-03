@@ -104,25 +104,6 @@ func createTarget(location string, plugin string, revision string) error {
 		revision = "master"
 	}
 
-	// dir := path.Join(core.RepoRoot, "plugins")
-	// if _, err := os.Stat(dir); err == nil {
-	// 	buildFile := path.Join(dir, "BUILD")
-	// 	if _, err := os.Stat(buildFile); err == nil {
-	// 		// Append the target to the file
-	// 		f, err := os.OpenFile(buildFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	// 	} else if errors.Is(err, fs.ErrNotExist) { // error is notexist
-	// 		// Create the file and append the target
-	// 	} else {
-	// 		log.Fatalf("Serious error")
-	// 	}
-
-	// } else if errors.Is(err, fs.ErrNotExist) {
-	// 	// Create the file and append the target
-
-	// } else {
-	// 	log.Fatalf("Some serious error")
-	// }
-
 	dir := filepath.Dir("plugins/")
 	if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
 		log.Fatalf("failed to create plugins directory: %v", err)
