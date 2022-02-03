@@ -38,7 +38,7 @@ func InitPlugins(plugins []string) {
 func initPlugin(plugin string) {
 	log.Warningf("Found existing config. Just leave existing fields and inject new fields")
 	injectPluginConfig(plugin)
-	createTarget("plugins/BUILD", plugin, "")
+	createTarget("plugins/BUILD", plugin)
 }
 
 func injectPluginConfig(plugin string) error {
@@ -99,11 +99,7 @@ func writeCCConfigFields(file ast.File) ast.File {
 	return file
 }
 
-func createTarget(location string, plugin string, revision string) error {
-	if revision == "" {
-		revision = "master"
-	}
-
+func createTarget(location string, plugin string) error {
 	dir := filepath.Dir("plugins/")
 	if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
 		log.Fatalf("failed to create plugins directory: %v", err)
@@ -117,5 +113,5 @@ func createTarget(location string, plugin string, revision string) error {
 
 	_, err = fmt.Fprintf(f, pluginRepoTemplate, plugin, plugin)
 
-	return nil
+	return err
 }
