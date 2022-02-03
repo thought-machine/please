@@ -1,0 +1,24 @@
+filegroup(
+    name = "foo",
+    srcs = ["foo_plugin"],
+)
+
+filegroup(
+    name = "nested",
+    srcs = ["nested_subrepo"],
+)
+
+subrepo(
+    name = "nested",
+    dep = ":nested",
+)
+
+subrepo(
+    name = "foo",
+    dep = ":foo",
+)
+
+# please_repo_e2e_test(
+#     name = "init_plugin_test",
+#     cmd = "plz init plugin bar", 
+# )

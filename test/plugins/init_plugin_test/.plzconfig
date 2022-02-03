@@ -1,0 +1,8 @@
+[Plugin "python"]
+DefaultInterpreter = python3
+PexTool = bar
+ModuleDir = third_party.python
+UsePypi  = false
+UsePypi  = false
+UsePypi  = false
+UsePypi  = false

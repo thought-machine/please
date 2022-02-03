@@ -268,6 +268,11 @@ var opts struct {
 		} `command:"pleasings" description:"Initialises the pleasings repo"`
 		Pleasew struct {
 		} `command:"pleasew" description:"Initialises the pleasew wrapper script"`
+		Plugin struct {
+			Args struct {
+				Plugins []string `positional-arg-name:"plugin" required:"true" description:"Plugins to install"`
+			} `positional-args:"true"`
+		} `command:"plugin" description:"Initialises a plugin by modifying an exisiting config file, and adding a build target"`
 	} `command:"init" subcommands-optional:"true" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {
@@ -674,6 +679,10 @@ var buildFunctions = map[string]func() int{
 	},
 	"init.pleasew": func() int {
 		plzinit.InitWrapperScript()
+		return 0
+	},
+	"init.plugin": func() int {
+		plzinit.InitPlugins(opts.Init.Plugin.Args.Plugins)
 		return 0
 	},
 	"export": func() int {

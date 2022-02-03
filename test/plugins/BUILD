@@ -31,3 +31,22 @@ please_repo_e2e_test(
     plz_command = "plz build -o foo.modulepath:something //override:override_test",
     repo = "test_repo",
 )
+
+please_repo_e2e_test(
+    name = "init_plugin_test",
+    expect_output_contains = {
+        ".plzconfig" : "[Plugin \"python\"]",
+        ".plzconfig" : "DefaultInterpreter = python3",
+    },
+    plz_command = "> .plzconfig && plz init plugin python",
+    repo = "init_plugin_test",
+)
+
+please_repo_e2e_test(
+    name = "init_create_target_test",
+    expect_output_contains = {
+        "plugins/BUILD" : "plugin_repo",
+    },
+    plz_command = "plz init plugin python",
+    repo = "init_plugin_test",
+)
