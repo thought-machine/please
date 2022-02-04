@@ -34,12 +34,14 @@ func InitPlugins(plugins []string) {
 
 	log.Debug("Initialising plugin(s): %v", plugins)
 	for _, p := range plugins {
-		initPlugin(p)
+		if err := initPlugin(p); err != nil {
+			log.Warningf("Could not initialise plugin %s. Got error: %v", p, err)
+		}
 	}
 }
 
 func initPlugin(plugin string) error {
-	log.Warningf("Found existing config. Just leave existing fields and inject new fields")
+	log.Warningf("Inserting plugin config values into .plzconfig")
 	if err := injectPluginConfig(plugin); err != nil {
 		return err
 	}
@@ -70,13 +72,18 @@ func injectPluginConfig(plugin string) error {
 	case "cc":
 		file = writeCCConfigFields(file)
 	default:
-		log.Fatalf("Failed to initialise unrecognised plugin \"%s\"", plugin)
+		log.Fatalf("Failed to initialise plugin. \"%s\" not recognised", plugin)
 	}
 	ast.Write(file, configPath)
 	return nil
 }
 
 func writePythonConfigFields(file ast.File) ast.File {
+	// Check for existing python fields first
+	for _, section := range file.Sections {
+		log.Warningf("%v", section.Name)
+	}
+
 	subsection := "python"
 	section := "Plugin"
 	file = ast.InjectField(file, "DefaultInterpreter", "python3", section, subsection, false)
@@ -149,6 +156,10 @@ func createTarget(location string, plugin string) error {
 	}
 	defer f.Close()
 	revision, err := getLatestRevision(plugin)
+	if err != nil {
+		return err
+	}
+	log.Warningf("Got revision %s", revision)
 	_, err = fmt.Fprintf(f, pluginRepoTemplate, plugin, revision, plugin)
 
 	return err
@@ -166,11 +177,11 @@ type Response []struct {
 }
 
 func getLatestRevision(plugin string) (string, error) {
-	req, err := http.NewRequest("GET", "https://api.github.com/repos/please-build/python-rules/releases/latest", nil)
+	url := fmt.Sprintf("https://api.github.com/repos/please-build/%s-rules/tags", plugin)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", err
 	}
-
 	req.Header.Set("accept", "application/vnd.github.v3+json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
