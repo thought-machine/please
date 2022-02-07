@@ -19,4 +19,3 @@ func TestResolvePluginTargetValues(t *testing.T) {
 	values = resolvePluginValue([]string{"//path/to:target"}, "")
 	assert.Equal(t, []string{"/////path/to:target"}, values)
 }
-
