@@ -387,8 +387,8 @@
 
     [PluginConfig "foo_tool"]
     ConfigKey = FooTool
-    ; @self resolves to the subrepo for this plugin
-    DefaultValue = @self//tools:foo
+    ; It is resolved relative to the subrepo for this plugin
+    DefaultValue = //tools:foo
     </code>
   </pre>
 

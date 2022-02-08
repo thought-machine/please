@@ -94,7 +94,7 @@ func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
 	return &pyConfig{base: base}
 }
 
-func resolveSelf(values []string, subrepo string) []string {
+func resolvePluginValue(values []string, subrepo string) []string {
 	ret := make([]string, len(values))
 	for i, v := range values {
 		if core.LooksLikeABuildLabel(v) {
@@ -149,9 +149,9 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 		value, ok := extraVals[strings.ToLower(configKey)]
 		if !ok {
 			// The default values are defined in the subrepo so should be parsed in that context
-			value = resolveSelf(definition.DefaultValue, pluginState.CurrentSubrepo)
+			value = resolvePluginValue(definition.DefaultValue, pluginState.CurrentSubrepo)
 		} else {
-			value = resolveSelf(value, pkgState.CurrentSubrepo)
+			value = resolvePluginValue(value, pkgState.CurrentSubrepo)
 		}
 
 		if len(value) == 0 && !definition.Optional {
