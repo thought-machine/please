@@ -624,8 +624,8 @@ func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, fil
 	return nil
 }
 
-// ParseFile stub
-func (fake *fakeParser) Preload(filename string) {
+// PreloadSubinclude stub
+func (fake *fakeParser) PreloadSubinclude(target *core.BuildTarget) error {
 	panic("not implemented")
 }
 
