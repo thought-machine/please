@@ -55,8 +55,8 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
-func (p *aspParser) Preload(filename string) {
-	p.parser.MustLoadBuiltins(filename, nil)
+func (p *aspParser) PreloadSubinclude(target *core.BuildTarget) error {
+	return p.parser.SubincludeTarget(target)
 }
 
 func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {

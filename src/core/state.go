@@ -55,7 +55,7 @@ type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
 	ParseFile(state *BuildState, pkg *Package, filename string) error
 	// Preload loads a file as a preloaded build definition
-	Preload(filename string)
+	PreloadSubinclude(target *BuildTarget) error
 	// ParseReader parses a single BUILD file into the given package.
 	ParseReader(state *BuildState, pkg *Package, reader io.ReadSeeker) error
 	// RunPreBuildFunction runs a pre-build function for a target.
@@ -204,6 +204,8 @@ type BuildState struct {
 
 	preloadSubincludes *sync.Once
 	FinishedPreloading bool
+	preloadedSubinculdesMut sync.Mutex
+	PreloadedSubinculdes []BuildLabel
 }
 
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
@@ -562,15 +564,20 @@ func (state *BuildState) WaitForPreloadedSubincludes() {
 
 		// Preload them in order to avoid non-deterministic errors when the subincludes depend on each other
 		for _, inc := range state.Config.Parse.PreloadSubincludes {
-			t := state.WaitForTargetAndEnsureDownload(inc, OriginalTarget)
-
-			for _, out := range t.FullOutputs() {
-				state.Parser.Preload(out)
+			if err := state.Parser.PreloadSubinclude(state.WaitForTargetAndEnsureDownload(inc, OriginalTarget)); err != nil {
+				log.Fatalf("%v", err)
 			}
 		}
 
 		state.FinishedPreloading = true
 	})
+}
+
+func (state *BuildState) RegisterPreloadedSubinclude(label BuildLabel) {
+	state.preloadedSubinculdesMut.Lock()
+	defer state.preloadedSubinculdesMut.Unlock()
+
+	state.PreloadedSubinculdes = append(state.PreloadedSubinculdes, label)
 }
 
 // forwardResults runs indefinitely, forwarding results from the internal

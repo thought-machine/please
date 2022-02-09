@@ -9,6 +9,8 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+const subrepoLabelConfigKey = pyString("SUBINCLUDE_LABEL")
+
 // valueToPyObject converts a field value to a pyObject
 func valueToPyObject(value reflect.Value) pyObject {
 	switch value.Kind() {
@@ -83,7 +85,7 @@ func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
 	base["DEBUG_PORT"] = pyInt(state.DebugPort)
 
 	// Preloaded subincludes don't technically get subincluded so we need to handle them here
-	for _, preloadedSubinclude := range state.Config.Parse.PreloadSubincludes {
+	for _, preloadedSubinclude := range state.PreloadedSubinculdes {
 		target := state.Graph.Target(preloadedSubinclude)
 		if target == nil || target.Subrepo == nil {
 			continue // The target hasn't been defined yet. We're probably still preloading.
@@ -186,14 +188,14 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 	return ret
 }
 
-func loadPluginConfig(pluginPkgState *core.BuildState, pkgState *core.BuildState, c pyObject) {
-	pluginName := pluginPkgState.Config.PluginDefinition.Name
+func loadPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, c pyObject) {
+	pluginName := pluginState.Config.PluginDefinition.Name
 	if pluginName == "" {
 		// Subinclude is not a plugin. Stop here.
 		return
 	}
 	key := pyString(strings.ToUpper(pluginName))
-	cfg := pluginConfig(pluginPkgState, pkgState)
+	cfg := pluginConfig(pluginState, pkgState)
 	c.IndexAssign(key, cfg)
 }
 

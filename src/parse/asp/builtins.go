@@ -2,6 +2,7 @@ package asp
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -262,17 +263,17 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	s.Assert(s.state.Config.Bazel.Compatibility, "load() is only available in Bazel compatibility mode. See `plz help bazel` for more information.")
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
-	l := core.ParseBuildLabelContext(string(args[0].(pyString)), s.contextPkg)
+	l := core.ParseBuildLabelContext(string(args[0].(pyString)), s.pkg)
 	filename := path.Join(l.PackageName, l.Name)
 	if l.Subrepo != "" {
 		subrepo := s.state.Graph.Subrepo(l.Subrepo)
-		if subrepo == nil || (subrepo.Target != nil && subrepo != s.contextPkg.Subrepo) {
+		if subrepo == nil || (subrepo.Target != nil && subrepo != s.pkg.Subrepo) {
 			subincludeTarget(s, l)
 			subrepo = s.state.Graph.SubrepoOrDie(l.Subrepo)
 		}
 		filename = subrepo.Dir(filename)
 	}
-	s.SetAll(s.interpreter.Subinclude(filename, l, s.contextPkg), false)
+	s.SetAll(s.interpreter.Subinclude(filename, l), false)
 	return None
 }
 
@@ -291,28 +292,16 @@ func builtinFail(s *scope, args []pyObject) pyObject {
 }
 
 func subinclude(s *scope, args []pyObject) pyObject {
-	s.NAssert(s.contextPkg == nil, "Cannot subinclude() from this context")
 	for _, arg := range args {
-		t := subincludeTarget(s, core.ParseBuildLabelContext(string(arg.(pyString)), s.contextPkg))
-		pkg := s.contextPkg
-		if t.Subrepo != s.contextPkg.Subrepo && t.Subrepo != nil {
-			pkg = &core.Package{
-				Name:        "@" + t.Subrepo.Name,
-				SubrepoName: t.Subrepo.Name,
-				Subrepo:     t.Subrepo,
-			}
+		t := subincludeTarget(s, s.parseLabelContext(string(arg.(pyString))))
+		if s.pkg != nil {
+			s.Assert(s.pkg.Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.pkg.Label())
+		} else {
+			// TODO(jpoole): we must be pre-loading so the target should be public
 		}
-		l := pkg.Label()
-		s.Assert(l.CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, l)
-
-		incPkgState := s.state
-		if t.Label.Subrepo != "" {
-			incPkgState = s.state.Graph.SubrepoOrDie(t.Label.Subrepo).State
-		}
-		loadPluginConfig(incPkgState, s.state, s.config)
 
 		for _, out := range t.Outputs() {
-			s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), t.Label, pkg), false)
+			s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), t.Label), false)
 		}
 	}
 	return None
@@ -321,10 +310,14 @@ func subinclude(s *scope, args []pyObject) pyObject {
 // subincludeTarget returns the target for a subinclude() call to a label.
 // It blocks until the target exists and is built.
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
-	pkgLabel := s.contextPkg.Label()
+	pkg := s.pkg
+	if pkg == nil {
+		pkg = &core.Package{}
+	}
+	pkgLabel := pkg.Label()
 	if l.Subrepo == pkgLabel.Subrepo && l.PackageName == pkgLabel.PackageName {
 		// This is a subinclude in the same package, check the target exists.
-		s.NAssert(s.contextPkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
+		s.NAssert(s.pkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
 	s.NAssert(l.IsPseudoTarget(), "Can't pass :all or /... to subinclude()")
 
@@ -335,7 +328,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	//
 	// By parsing the package first, the subrepo package's subinclude will queue the subrepo target to be built before
 	// we call WaitForSubincludedTarget below avoiding the lockup.
-	if l.Subrepo != "" && l.SubrepoLabel().PackageName != s.contextPkg.Name && l.Subrepo != s.contextPkg.SubrepoName {
+	if l.Subrepo != "" && l.SubrepoLabel().PackageName != pkg.Name && l.Subrepo != pkg.SubrepoName {
 		subrepoPackageLabel := core.BuildLabel{
 			PackageName: l.SubrepoLabel().PackageName,
 			Subrepo:     l.SubrepoLabel().Subrepo,
@@ -346,9 +339,8 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	// Temporarily release the parallelism limiter; this is important to keep us from deadlocking
 	// all available parser threads (easy to happen if they're all waiting on a single target which now can't start)
 	t := s.WaitForSubincludedTarget(l, pkgLabel)
-	// This is not quite right, if you subinclude from another subinclude we can basically
-	// lose track of it later on. It's hard to know what better to do at this point though.
-	s.contextPkg.RegisterSubinclude(l)
+
+	pkg.RegisterSubinclude(l)
 	return t
 }
 
@@ -553,6 +545,9 @@ func glob(s *scope, args []pyObject) pyObject {
 }
 
 func asStringList(s *scope, arg pyObject, name string) []string {
+	if fl, ok := arg.(pyFrozenList); ok {
+		arg = fl.pyList
+	}
 	l, ok := arg.(pyList)
 	s.Assert(ok, "argument %s must be a list", name)
 	sl := make([]string, len(l))
@@ -639,38 +634,70 @@ func joinPath(s *scope, args []pyObject) pyObject {
 	return pyString(path.Join(l...))
 }
 
-func packageName(s *scope, args []pyObject) pyObject {
-	pkg := ""
-	if s.pkg != nil {
-		pkg = s.pkg.Name
-	} else if s.subincludeLabel != nil {
-		pkg = s.subincludeLabel.PackageName
+func contextPackageName(s *scope, subinclude bool) (string, string, error) {
+	if subinclude || s.pkg == nil {
+		subincludeLabel := s.config.Get(string(subrepoLabelConfigKey), nil)
+		if subincludeLabel != nil {
+			l := core.ParseAnnotatedBuildLabel(subincludeLabel.String(), "")
+			return l.Subrepo, l.PackageName, nil
+		} else {
+			return "", "", errors.New("not in a subinclude context")
+		}
 	} else {
-		s.Error("you cannot call package_name() from this context")
-		return nil
+		return s.pkg.SubrepoName, s.pkg.Name, nil
+	}
+}
+
+func packageName(s *scope, args []pyObject) pyObject {
+	const (
+		labelArgIdx = iota
+		contextArgIdx
+	)
+
+	_, pkg, err := contextPackageName(s, args[contextArgIdx].IsTruthy())
+	if err != nil {
+		s.Error("cannot call package_name() from this context: %v", err)
 	}
 
-	if label, ok := args[0].(pyString); ok && label != "" {
-		return pyString(core.ParseAnnotatedBuildLabel(label.String(), pkg).PackageName)
+	if args[labelArgIdx].IsTruthy() {
+		return pyString(core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg).PackageName)
 	}
 
 	return pyString(pkg)
 }
 
 func subrepoName(s *scope, args []pyObject) pyObject {
-	if s.pkg != nil {
-		return pyString(s.pkg.SubrepoName)
+	const (
+		labelArgIdx = iota
+		contextArgIdx
+	)
+
+	subrepo, pkg, err := contextPackageName(s, args[contextArgIdx].IsTruthy())
+	if err != nil {
+		s.Error("cannot call subrepo_name() from this context: %v", err)
 	}
-	if s.subincludeLabel != nil {
-		return pyString(s.subincludeLabel.Subrepo)
+
+
+	if args[labelArgIdx].IsTruthy() {
+		l := core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg)
+		if l.Subrepo != "" {
+			return pyString(l.Subrepo)
+		}
 	}
-	s.Error("you cannot call subrepo_name() from this context")
-	return nil
+
+	return pyString(subrepo)
 }
 
 func canonicalise(s *scope, args []pyObject) pyObject {
-	s.Assert(s.pkg != nil, "Cannot call canonicalise() from this context")
-	label := core.ParseAnnotatedBuildLabel(string(args[0].(pyString)), s.pkg.Name)
+	const (
+		labelArgIdx = iota
+		contextArgIdx
+	)
+	_, pkg, err := contextPackageName(s, args[contextArgIdx].IsTruthy())
+	if err != nil {
+		s.Error("Cannot call canonicalise() from this context: %v", err)
+	}
+	label := core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg)
 	return pyString(label.String())
 }
 
@@ -975,7 +1002,7 @@ func selectFunc(s *scope, args []pyObject) pyObject {
 		k := keys[i]
 		if k == "//conditions:default" || k == "default" {
 			def = d[k]
-		} else if selectTarget(s, core.ParseBuildLabelContext(k, s.contextPkg)).HasLabel("config:on") {
+		} else if selectTarget(s, s.parseLabelContext(k)).HasLabel("config:on") {
 			return d[k]
 		}
 	}
@@ -1067,7 +1094,7 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 	// Take this mutex to ensure only one debugger runs at a time
 	s.interpreter.breakpointMutex.Lock()
 	defer s.interpreter.breakpointMutex.Unlock()
-	fmt.Printf("breakpoint() encountered in %s, entering interactive debugger...\n", s.contextPkg.Filename)
+	fmt.Printf("breakpoint() encountered in %s, entering interactive debugger...\n", s.pkg.Filename)
 	// This is a small hack to get the return value back from an ident statement, which
 	// is normally not available since we don't have implicit returns.
 	interpretStatements := func(stmts []*Statement) (ret pyObject, err error) {

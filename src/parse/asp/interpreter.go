@@ -119,7 +119,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 }
 
 // Subinclude returns the global values corresponding to subincluding the given file.
-func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.Package) pyDict {
+func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 	globals, wait, first := i.subincludes.Get(path)
 	if globals != nil {
 		return globals
@@ -137,16 +137,26 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.P
 	}
 	stmts = i.parser.optimise(stmts)
 	s := i.scope.NewScope()
-	s.contextPkg = pkg
-	s.subincludeLabel = &label
+	subincludeSubrepoState := s.state
+	if label.Subrepo != "" {
+		subincludeSubrepoState = s.state.Graph.SubrepoOrDie(label.Subrepo).State
+	}
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
+	loadPluginConfig(subincludeSubrepoState, s.state, s.config)
+	s.config.IndexAssign(subrepoLabelConfigKey, pyString(label.String()))
 	s.Set("CONFIG", s.config)
 	i.optimiseExpressions(stmts)
 	s.interpretStatements(stmts)
 	locals := s.Freeze()
 	if s.config.overlay == nil {
 		delete(locals, "CONFIG") // Config doesn't have any local modifications
+	}
+	if i.scope.pkg != nil {
+		i.scope.pkg.RegisterSubinclude(label)
+	}
+	if !i.scope.state.FinishedPreloading {
+		i.scope.state.RegisterPreloadedSubinclude(label)
 	}
 	i.subincludes.Set(path, locals)
 	return locals
@@ -202,21 +212,24 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 
 // A scope contains all the information about a lexical scope.
 type scope struct {
-	ctx         context.Context
-	interpreter *interpreter
-	state       *core.BuildState
-	pkg         *core.Package
-	parent      *scope
-	locals      pyDict
-	config      *pyConfig
-	globber     *fs.Globber
+	ctx               context.Context
+	interpreter       *interpreter
+	state             *core.BuildState
+	pkg               *core.Package
+	parent            *scope
+	locals            pyDict
+	config            *pyConfig
+	globber           *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
+}
 
-	// used during subincludes
-	contextPkg *core.Package
-	// The label that was passed to subinclude(...)
-	subincludeLabel *core.BuildLabel
+// parseLabelContext parsed a build label in the context of this scope
+func (s *scope) parseLabelContext(label string) core.BuildLabel {
+	if s.pkg != nil {
+		return core.ParseBuildLabelContext(label, s.pkg)
+	}
+	return core.ParseBuildLabel(label, "")
 }
 
 // NewScope creates a new child scope of this one.
@@ -232,7 +245,6 @@ func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
 		interpreter: s.interpreter,
 		state:       s.state,
 		pkg:         pkg,
-		contextPkg:  pkg,
 		parent:      s,
 		locals:      make(pyDict, hint),
 		config:      s.config,

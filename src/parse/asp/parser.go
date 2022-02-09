@@ -5,8 +5,10 @@ package asp
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"gopkg.in/op/go-logging.v1"
@@ -86,6 +88,25 @@ func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
 		p.annotate(err, f)
 	}
 	return err
+}
+
+func (p *Parser) SubincludeTarget(target *core.BuildTarget) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				err = e
+			} else {
+				err = fmt.Errorf("%s", r)
+			}
+			log.Debug("%v:\n %s", err, debug.Stack())
+		}
+	}()
+	p.limiter.Acquire()
+	defer p.limiter.Release()
+	for _, out := range target.FullOutputs() {
+		p.interpreter.scope.SetAll(p.interpreter.Subinclude(out, target.Label), false)
+	}
+	return nil
 }
 
 // ParseReader parses the contents of the given ReadSeeker as a BUILD file.

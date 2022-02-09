@@ -123,14 +123,14 @@ def config_get(self:config, key:str, default=None) -> config:
     pass
 
 
-def get_base_path(label:str=None) -> str:
+def get_base_path(label:str=None, subinclude_context:bool=None) -> str:
     pass
-def package_name(label:str=None) -> str:
+def package_name(label:str=None, subinclude_context:bool=None) -> str:
     pass
-def subrepo_name() -> str:
+def subrepo_name(label:str=None, subinclude_context:bool=None) -> str:
     pass
 
-def canonicalise(label:str) -> str:
+def canonicalise(label:str, subinclude_context:bool=None) -> str:
     """Converts the given build label to its full form.
 
     For example:
