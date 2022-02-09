@@ -118,10 +118,10 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 }
 
 // handlePlugin checks if the subrepo name matches a plugin, and registers it as necessary
-func handlePlugin(tid int, state *core.BuildState, label, dependant core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
+func handlePlugin(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
 	s := state
-	if dependant.Subrepo != "" {
-		s = state.Graph.Subrepo(dependant.Subrepo).State
+	if dependent.Subrepo != "" {
+		s = state.Graph.Subrepo(dependent.Subrepo).State
 	}
 	for pluginName, plugin := range state.Config.Plugin {
 		if label.Subrepo != pluginName && label.Subrepo != core.SubrepoArchName(pluginName, s.Arch) {
@@ -132,7 +132,7 @@ func handlePlugin(tid int, state *core.BuildState, label, dependant core.BuildLa
 			log.Fatalf("plugin %v has no target defined", pluginName)
 		}
 
-		if err := parse(tid, state, plugin.Target, dependant, forSubinclude); err != nil {
+		if err := parse(tid, state, plugin.Target, dependent, forSubinclude); err != nil {
 			return nil, err
 		}
 
