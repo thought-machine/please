@@ -297,7 +297,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		if s.pkg != nil {
 			s.Assert(s.pkg.Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.pkg.Label())
 		} else {
-			// TODO(jpoole): we must be pre-loading so the target should be public
+			s.Assert(core.WholeGraph[0].CanSee(s.state, t), "Preloaded subincludes must have public visibility")
 		}
 
 		for _, out := range t.Outputs() {
@@ -640,12 +640,10 @@ func contextPackageName(s *scope, subinclude bool) (string, string, error) {
 		if subincludeLabel != nil {
 			l := core.ParseAnnotatedBuildLabel(subincludeLabel.String(), "")
 			return l.Subrepo, l.PackageName, nil
-		} else {
-			return "", "", errors.New("not in a subinclude context")
 		}
-	} else {
-		return s.pkg.SubrepoName, s.pkg.Name, nil
+		return "", "", errors.New("not in a subinclude context")
 	}
+	return s.pkg.SubrepoName, s.pkg.Name, nil
 }
 
 func packageName(s *scope, args []pyObject) pyObject {
@@ -676,7 +674,6 @@ func subrepoName(s *scope, args []pyObject) pyObject {
 	if err != nil {
 		s.Error("cannot call subrepo_name() from this context: %v", err)
 	}
-
 
 	if args[labelArgIdx].IsTruthy() {
 		l := core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg)

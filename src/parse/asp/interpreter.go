@@ -212,14 +212,14 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 
 // A scope contains all the information about a lexical scope.
 type scope struct {
-	ctx               context.Context
-	interpreter       *interpreter
-	state             *core.BuildState
-	pkg               *core.Package
-	parent            *scope
-	locals            pyDict
-	config            *pyConfig
-	globber           *fs.Globber
+	ctx         context.Context
+	interpreter *interpreter
+	state       *core.BuildState
+	pkg         *core.Package
+	parent      *scope
+	locals      pyDict
+	config      *pyConfig
+	globber     *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 }

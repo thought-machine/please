@@ -202,9 +202,8 @@ type BuildState struct {
 	// ParentState is the state of the repo containing this subrepo. Nil if this is the host repo.
 	ParentState *BuildState
 
-	preloadSubincludes *sync.Once
-	FinishedPreloading bool
-	preloadedSubinculdesMut sync.Mutex
+	preloadSubincludes   *sync.Once
+	FinishedPreloading   bool
 	PreloadedSubinculdes []BuildLabel
 }
 
@@ -573,9 +572,11 @@ func (state *BuildState) WaitForPreloadedSubincludes() {
 	})
 }
 
+var preloadedSubinculdesMut sync.Mutex
+
 func (state *BuildState) RegisterPreloadedSubinclude(label BuildLabel) {
-	state.preloadedSubinculdesMut.Lock()
-	defer state.preloadedSubinculdesMut.Unlock()
+	preloadedSubinculdesMut.Lock()
+	defer preloadedSubinculdesMut.Unlock()
 
 	state.PreloadedSubinculdes = append(state.PreloadedSubinculdes, label)
 }
