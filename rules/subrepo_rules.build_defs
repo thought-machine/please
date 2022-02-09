@@ -316,7 +316,7 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
         out = name + '_' + basename(urls[0]),
         hashes = hashes,
     )
-    extract_rule = build_rule(
+    return build_rule(
         name = name,
         srcs = [remote_rule],
         tools = [CONFIG.JARCAT_TOOL],
@@ -326,8 +326,4 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
           "mv $(dirname $(find . -name .plzconfig | sort | head -n 1)) $OUT",
         ]),
         _subrepo = True,
-    )
-    return subrepo(
-        name = name,
-        dep = extract_rule,
     )
