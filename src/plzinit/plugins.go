@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/please-build/gcfg/ast"
 	"github.com/thought-machine/please/src/core"
@@ -79,28 +80,39 @@ func injectPluginConfig(plugin string) error {
 }
 
 func writePythonConfigFields(file ast.File) ast.File {
-	// Check for existing python fields first
-	for _, section := range file.Sections {
-		log.Warningf("%v", section.Name)
+	// Map of old config field names to new
+	pythonMap := map[string]string{
+		"piptool":             "PipTool",
+		"pipflags":            "PipFlags",
+		"pextool":             "PexTool",
+		"defaultinterpreter":  "DefaultInterpreter",
+		"testrunner":          "TestRunner",
+		"debugger":            "Debugger",
+		"moduledir":           "ModuleDir",
+		"defaultpiprepo":      "DefaultPipRepo",
+		"wheelrepo":           "WheelRepo",
+		"wheelnamescheme":     "WheelNameScheme",
+		"interpreteroptions":  "InterpreterOptions",
+		"disablevendorflags":  "DisableVendorFlags",
+		"usepypi":             "UsePypi",
+		"testrunnerbootstrap": "TestrunnerDeps",
 	}
 
-	subsection := "python"
-	section := "Plugin"
-	file = ast.InjectField(file, "DefaultInterpreter", "python3", section, subsection, false)
-	file = ast.InjectField(file, "PexTool", "@self//tools/please_pex:please_pex", section, subsection, false)
-	file = ast.InjectField(file, "InterpreterOptions", "", section, subsection, false)
-	file = ast.InjectField(file, "TestRunner", "unittest", section, subsection, false)
-	file = ast.InjectField(file, "TestrunnerDeps", "//third_party/python:unittest_bootstrap", section, subsection, false)
-	file = ast.InjectField(file, "Debugger", "pdb", section, subsection, false)
-	file = ast.InjectField(file, "ModuleDir", "third_party.python", section, subsection, false)
-	file = ast.InjectField(file, "PipTool", "", section, subsection, false)
-	file = ast.InjectField(file, "DefaultPipRepo", "", section, subsection, false)
-	file = ast.InjectField(file, "UsePypi", "true", section, subsection, false)
-	file = ast.InjectField(file, "PipFlags", "", section, subsection, false)
-	file = ast.InjectField(file, "DisableVendorFlags", "false", section, subsection, false)
-	file = ast.InjectField(file, "WheelRepo", "true", section, subsection, false)
-	file = ast.InjectField(file, "WheelNameScheme", "true", section, subsection, false)
-	file = ast.InjectField(file, "WheelTool", "//tools/wheel_resolver", section, subsection, false)
+	newSection := "Plugin"
+	newSubsection := "python"
+
+	// Check for existing python fields first
+	for _, section := range file.Sections {
+		if section.Key == "python" {
+			for _, field := range section.Fields {
+				log.Warningf("%v\t%v", field.Name, field.Value)
+				if plugVal, ok := pythonMap[strings.ToLower(field.Name)]; ok {
+					log.Warningf("Got a hit with %v", field.Name)
+					file = ast.InjectField(file, plugVal, field.Value, newSection, newSubsection, false)
+				}
+			}
+		}
+	}
 
 	return file
 }
@@ -145,6 +157,7 @@ func writeJavaConfigFields(file ast.File) ast.File {
 }
 
 func createTarget(location string, plugin string) error {
+	//TODO: Check if target is already in build file
 	dir := filepath.Dir("plugins/")
 	if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
 		return err
