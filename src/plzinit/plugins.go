@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/please-build/gcfg/ast"
@@ -80,8 +81,7 @@ func injectPluginConfig(plugin string) error {
 }
 
 func writePythonConfigFields(file ast.File) ast.File {
-	// Map of old config field names to new
-	pythonMap := map[string]string{
+	configMap := map[string]string{
 		"piptool":             "PipTool",
 		"pipflags":            "PipFlags",
 		"pextool":             "PexTool",
@@ -98,17 +98,17 @@ func writePythonConfigFields(file ast.File) ast.File {
 		"testrunnerbootstrap": "TestrunnerDeps",
 	}
 
-	newSection := "Plugin"
-	newSubsection := "python"
+	section := "Plugin"
+	subsection := "python"
 
 	// Check for existing python fields first
-	for _, section := range file.Sections {
-		if section.Key == "python" {
-			for _, field := range section.Fields {
+	for _, s := range file.Sections {
+		if s.Key == section {
+			for _, field := range s.Fields {
 				log.Warningf("%v\t%v", field.Name, field.Value)
-				if plugVal, ok := pythonMap[strings.ToLower(field.Name)]; ok {
+				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
 					log.Warningf("Got a hit with %v", field.Name)
-					file = ast.InjectField(file, plugVal, field.Value, newSection, newSubsection, false)
+					file = ast.InjectField(file, plugVal, field.Value, section, subsection, false)
 				}
 			}
 		}
@@ -118,46 +118,110 @@ func writePythonConfigFields(file ast.File) ast.File {
 }
 
 func writeCCConfigFields(file ast.File) ast.File {
+	configMap := map[string]string{
+		"cctool":             "CCTool",
+		"cpptool":            "CPPTool",
+		"ldtool":             "LDTool",
+		"artool":             "ARTool",
+		"defaultoptcflags":   "DefaultOptCFlags",
+		"defaultdbgcflags":   "DefaultDbgCFlags",
+		"defaultoptcppflags": "DefaultOptCppFlags",
+		"defaultdbgcppflags": "DefaultDbgCppFlags",
+		"defaultldflags":     "DefaultLdFlags",
+		"pkgconfigpath":      "PkgConfigPath",
+		"testmain":           "TestMain",
+		"dsymtool":           "DsymTool",
+	}
+
+	// in main plz only
+	// LinkWithLdTool
+	// // Coverage
+	// // ClangModules
+
+	// in cc plugin only
+	// AsmTool
+	// DefaultNamespace
+
 	subsection := "cc"
 	section := "Plugin"
-	file = ast.InjectField(file, "CCTool", "gcc", section, subsection, false)
-	file = ast.InjectField(file, "CPPTool", "g++", section, subsection, false)
-	file = ast.InjectField(file, "LDTool", "ld", section, subsection, false)
-	file = ast.InjectField(file, "ARTool", "ar", section, subsection, false)
-	file = ast.InjectField(file, "DefaultOptCFlags", "--std=c99 -O3 -pipe -DNDEBUG -Wall -Werror", section, subsection, false)
-	file = ast.InjectField(file, "DefaultDbgCFlags", "--std=c99 -g3 -pipe -DDEBUG -Wall -Werror", section, subsection, false)
-	file = ast.InjectField(file, "DefaultOptCppFlags", "--std=c++11 -O3 -pipe -DNDEBUG -Wall -Werror", section, subsection, false)
-	file = ast.InjectField(file, "DefaultDbgCppFlags", "--std=c++11 -g3 -pipe -DDEBUG -Wall -Werror", section, subsection, false)
-	file = ast.InjectField(file, "DefaultLdFlags", "-lpthread -ldl", section, subsection, false)
-	file = ast.InjectField(file, "PkgConfigPath", "", section, subsection, false)
-	file = ast.InjectField(file, "TestMain", "@self//unittest-pp:main", section, subsection, false)
-	file = ast.InjectField(file, "DsymTool", "dsymutil", section, subsection, false)
-	file = ast.InjectField(file, "AsmTool", "nasm", section, subsection, false)
-	file = ast.InjectField(file, "DefaultNamespace", "", section, subsection, false)
+
+	// Check for existing cc fields first
+	for _, s := range file.Sections {
+		if s.Key == subsection {
+			for _, field := range s.Fields {
+				log.Warningf("%v\t%v", field.Name, field.Value)
+				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
+					log.Warningf("Got a hit with %v", field.Name)
+					file = ast.InjectField(file, plugVal, field.Value, section, subsection, false)
+				}
+			}
+		}
+	}
 
 	return file
 }
 
 func writeJavaConfigFields(file ast.File) ast.File {
+
+	// in main but not in plugin
+	// JlinkTool
+	// JavaHome
+	// JarCatTool
+	// SourceLevel
+
+	// Main plz
+	configMap := map[string]string{
+		"javactool":          "JavacTool",
+		"javacworker":        "JavacWorker",
+		"junitrunner":        "JunitRunner",
+		"defaulttestpackage": "DefaultTestPackage",
+		"releaselevel":       "ReleaseLevel",
+		"targetlevel":        "TargetLevel",
+		"javacflags":         "JavacFlags",
+		"javactestflags":     "JavacTestFlags",
+		"defaultmavenrepo":   "MavenRepo",
+		"toolchain":          "Toolchain",
+	}
+
 	subsection := "java"
 	section := "Plugin"
-	file = ast.InjectField(file, "JavacTool", "javac", section, subsection, false)
-	file = ast.InjectField(file, "JavacFlags", "", section, subsection, false)
-	file = ast.InjectField(file, "JavacTestFlags", "", section, subsection, false)
-	file = ast.InjectField(file, "JunitRunner", "//_please:junit_runner", section, subsection, false)
-	file = ast.InjectField(file, "SourceLevel", "8", section, subsection, false)
-	file = ast.InjectField(file, "TargetLevel", "8", section, subsection, false)
-	file = ast.InjectField(file, "ReleaseLevel", "", section, subsection, false)
-	file = ast.InjectField(file, "JavacWorker", "", section, subsection, false)
-	file = ast.InjectField(file, "Toolchain", "//third_party/java:toolchain", section, subsection, false)
-	file = ast.InjectField(file, "DefaultTestPackage", "true", section, subsection, false)
-	file = ast.InjectField(file, "MavenRepo", "https://repo1.maven.org/maven2", section, subsection, true)
-	file = ast.InjectField(file, "MavenRepo", "https://jcenter.bintray.com", section, subsection, true)
+
+	// Check for existing java fields first
+	for _, s := range file.Sections {
+		if s.Key == subsection {
+			for _, field := range s.Fields {
+				log.Warningf("%v\t%v", field.Name, field.Value)
+				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
+					log.Warningf("Got a hit with %v", field.Name)
+					file = ast.InjectField(file, plugVal, field.Value, section, subsection, false)
+				}
+			}
+		}
+	}
+
 	return file
 }
 
-func createTarget(location string, plugin string) error {
-	//TODO: Check if target is already in build file
+func targetExistsInFile(location, plugin string) bool {
+	b, err := ioutil.ReadFile(location)
+	if err != nil {
+		panic(err)
+	}
+
+	str := `plugin_repo(
+  name = "` + plugin
+	exists, err := regexp.Match(str, b)
+	if err != nil {
+		panic(err)
+	}
+	return exists
+}
+
+func createTarget(location, plugin string) error {
+	if targetExistsInFile(location, plugin) {
+		return nil
+	}
+
 	dir := filepath.Dir("plugins/")
 	if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
 		return err
