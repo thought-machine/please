@@ -49,7 +49,6 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	}
 	// If we get here then it falls to us to parse this package.
 	state.LogParseResult(tid, label, core.PackageParsing, "Parsing...")
-
 	subrepo, err := checkSubrepo(tid, state, label, dependent, forSubinclude)
 	if err != nil {
 		return err
@@ -79,6 +78,10 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 		return nil, nil
 	} else if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
 		return subrepo, nil
+	}
+
+	if subrepo, err := handlePlugin(tid, state, label, dependent, forSubinclude); err != nil || subrepo != nil {
+		return subrepo, err
 	}
 	// We don't have the definition of it at all. Need to parse that first.
 	sl := label.SubrepoLabel()
@@ -112,6 +115,49 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	}
 	// For local subincludes, the subrepo has to already be defined at this point in the BUILD file
 	return nil, fmt.Errorf("Subrepo %v is not defined yet. It must appear before it is used by subinclude()", sl)
+}
+
+// handlePlugin checks if the subrepo name matches a plugin, and registers it as necessary
+func handlePlugin(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
+	s := state
+	if dependent.Subrepo != "" {
+		s = state.Graph.Subrepo(dependent.Subrepo).State
+	}
+	for pluginName, plugin := range state.Config.Plugin {
+		if label.Subrepo != pluginName && label.Subrepo != core.SubrepoArchName(pluginName, s.Arch) {
+			continue
+		}
+
+		if plugin.Target == (core.BuildLabel{}) {
+			log.Fatalf("plugin %v has no target defined", pluginName)
+		}
+
+		if err := parse(tid, state, plugin.Target, dependent, forSubinclude); err != nil {
+			return nil, err
+		}
+
+		t := s.Graph.TargetOrDie(plugin.Target)
+		if len(t.Outputs()) != 1 {
+			log.Fatalf("Plugin target %v must output exactly 1 directory", t.Label)
+		}
+
+		subrepo := &core.Subrepo{
+			Name:   label.Subrepo,
+			Root:   path.Join(t.OutDir(), t.Outputs()[0]),
+			Target: t,
+			State:  state.ForSubrepo(pluginName),
+			Arch:   cli.HostArch(),
+		}
+		if state.Arch != cli.HostArch() {
+			subrepo.Arch = s.Arch
+			subrepo.State = subrepo.State.ForArch(state.Arch)
+			subrepo.IsCrossCompile = true
+		}
+
+		state.Graph.AddSubrepo(subrepo)
+		return subrepo, nil
+	}
+	return nil, nil
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.

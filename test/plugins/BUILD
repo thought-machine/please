@@ -7,6 +7,12 @@ please_repo_e2e_test(
 )
 
 please_repo_e2e_test(
+    name = "cross_compile_test",
+    plz_command = "plz build -o foo.modulepath:something ///linux_arm64//test:foo_lib",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
     name = "nested_test",
     expected_output = {
         "plz-out/gen/foo/test/test_lib.foo": "sha1 88f20b91c6af94a7974d7b547ec49529138a98f2 foolang/test.foo",

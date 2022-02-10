@@ -5,10 +5,12 @@ BuildFileName = BUILD # We override this in the e2e test profile and the subrepo
 ImportPath = github.com/though-machine/please/test/proto_plugin
 
 [Plugin "proto"]
-LanguageDef = ///go-proto//build_defs:go
+Target = //:proto
+LanguageDef = ///go_proto//build_defs:go
 ProtocTool = ///proto//third_party/proto:protoc
 
 
 [Plugin "go_proto"]
+Target = //:go-proto
 GrpcPlugin = //third_party/go:protoc-gen-go-grpc
 ProtoPlugin = //third_party/go:protoc-gen-go
