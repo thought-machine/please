@@ -5,10 +5,8 @@ package asp
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"os"
-	"runtime/debug"
 	"strings"
 
 	"gopkg.in/op/go-logging.v1"
@@ -94,12 +92,7 @@ func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
 func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarget) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			if e, ok := r.(error); ok {
-				err = e
-			} else {
-				err = fmt.Errorf("%s", r)
-			}
-			log.Debug("%v:\n %s", err, debug.Stack())
+			err = handleErrors(r)
 		}
 	}()
 	p.limiter.Acquire()

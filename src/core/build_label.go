@@ -135,13 +135,28 @@ func ParseBuildLabel(target, currentPath string) BuildLabel {
 	return label
 }
 
-func ParseAnnotatedBuildLabel(target, currentPath string) AnnotatedOutputLabel {
+func splitAnnotation(target string) (string, string) {
 	parts := strings.Split(target, "|")
-	l := ParseBuildLabel(parts[0], currentPath)
 	annotation := ""
 	if len(parts) == 2 {
 		annotation = parts[1]
 	}
+	return parts[0], annotation
+}
+func ParseAnnotatedBuildLabel(target, currentPath string) AnnotatedOutputLabel {
+	label, annotation := splitAnnotation(target)
+	l := ParseBuildLabel(label, currentPath)
+
+	return AnnotatedOutputLabel{
+		BuildLabel: l,
+		Annotation: annotation,
+	}
+}
+
+func ParseAnnotatedBuildLabelContext(target string, context *Package) AnnotatedOutputLabel {
+	label, annotation := splitAnnotation(target)
+	l := ParseBuildLabelContext(label, context)
+
 	return AnnotatedOutputLabel{
 		BuildLabel: l,
 		Annotation: annotation,

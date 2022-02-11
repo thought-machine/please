@@ -108,16 +108,21 @@ func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (
 	return s, err
 }
 
+func handleErrors(r interface{}) (err error) {
+	if e, ok := r.(error); ok {
+		err = e
+	} else {
+		err = fmt.Errorf("%s", r)
+	}
+	log.Debug("%v:\n %s", err, debug.Stack())
+	return
+}
+
 // interpretStatements runs a series of statements in the context of the given scope.
 func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (ret pyObject, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			if e, ok := r.(error); ok {
-				err = e
-			} else {
-				err = fmt.Errorf("%s", r)
-			}
-			log.Debug("%v:\n %s", err, debug.Stack())
+			err = handleErrors(r)
 		}
 	}()
 	return s.interpretStatements(statements), nil // Would have panicked if there was an error
@@ -151,9 +156,6 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 	locals := s.Freeze()
 	if s.config.overlay == nil {
 		delete(locals, "CONFIG") // Config doesn't have any local modifications
-	}
-	if i.scope.pkg != nil {
-		i.scope.pkg.RegisterSubinclude(label)
 	}
 	i.subincludes.Set(path, locals)
 	return locals
@@ -247,7 +249,10 @@ func (s *scope) subincludePackage() *core.Package {
 	subincludeLabel := s.config.Get(string(subrepoLabelConfigKey), nil)
 	if subincludeLabel != nil {
 		l := core.ParseAnnotatedBuildLabel(subincludeLabel.String(), "")
-		return s.state.Graph.Package(l.PackageName, l.Subrepo)
+		pkg := s.state.Graph.Package(l.PackageName, l.Subrepo)
+		if pkg != nil {
+			return pkg
+		}
 	}
 	return nil
 }

@@ -294,7 +294,7 @@ func builtinFail(s *scope, args []pyObject) pyObject {
 func subinclude(s *scope, args []pyObject) pyObject {
 	for _, arg := range args {
 		t := subincludeTarget(s, s.parseLabelContext(string(arg.(pyString))))
-		s.Assert(s.contextPackage().Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.pkg.Label())
+		s.Assert(s.contextPackage().Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.contextPackage().Label())
 
 		incPkgState := s.state
 		if t.Label.Subrepo != "" {
@@ -633,6 +633,8 @@ func joinPath(s *scope, args []pyObject) pyObject {
 	return pyString(path.Join(l...))
 }
 
+// scopeOrSubincludePackage is like (*scope).contextPackage() package but allows the option to force the use the
+// subinclude package
 func scopeOrSubincludePackage(s *scope, subinclude bool) (*core.Package, error) {
 	if subinclude {
 		pkg := s.subincludePackage()
@@ -656,8 +658,7 @@ func packageName(s *scope, args []pyObject) pyObject {
 	}
 
 	if args[labelArgIdx].IsTruthy() {
-		// TODO(jpoole): handle subrepos here
-		return pyString(core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg.Name).PackageName)
+		return pyString(core.ParseAnnotatedBuildLabelContext(string(args[labelArgIdx].(pyString)), pkg).PackageName)
 	}
 
 	return pyString(pkg.Name)
@@ -675,8 +676,7 @@ func subrepoName(s *scope, args []pyObject) pyObject {
 	}
 
 	if args[labelArgIdx].IsTruthy() {
-		// TODO(jpoole): handle subrepos here
-		l := core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg.Name)
+		l := core.ParseAnnotatedBuildLabelContext(string(args[labelArgIdx].(pyString)), pkg)
 		if l.Subrepo != "" {
 			return pyString(l.Subrepo)
 		}
@@ -694,8 +694,7 @@ func canonicalise(s *scope, args []pyObject) pyObject {
 	if err != nil {
 		s.Error("Cannot call canonicalise() from this context: %v", err)
 	}
-	// TODO(jpoole): handle subrepos here
-	label := core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg.Name)
+	label := core.ParseAnnotatedBuildLabelContext(string(args[labelArgIdx].(pyString)), pkg)
 	return pyString(label.String())
 }
 
