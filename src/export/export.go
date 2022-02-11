@@ -62,7 +62,7 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 	if done[target] {
 		return
 	}
-	for _, src := range target.AllSources() {
+	for _, src := range append(target.AllSources(), target.AllData()...) {
 		if _, ok := src.Label(); !ok { // We'll handle these dependencies later
 			for _, p := range src.FullPaths(graph) {
 				if !strings.HasPrefix(p, "/") { // Don't copy system file deps.

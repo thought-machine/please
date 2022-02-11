@@ -8,5 +8,8 @@ please_repo_e2e_test(
         "go": [CONFIG.GO_TOOL],
     },
     # the protoc releases page doesn't support these platforms
-    labels = ["no_cirrus", "no-musl"],
+    labels = [
+        "no_cirrus",
+        "no-musl",
+    ],
 )
