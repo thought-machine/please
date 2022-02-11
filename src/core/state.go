@@ -50,6 +50,18 @@ type Task struct {
 	Run   uint32 // Only present for tests (the run of a build is always zero)
 }
 
+// A OutputDownloadOption is the option for how outputs should be downloaded.
+type OutputDownloadOption uint8
+
+const (
+	// Don't download outputs.
+	NoOutputDownload OutputDownloadOption = iota
+	// Download original target outputs only.
+	OriginalOutputDownload
+	// Download original target's transitive outputs too.
+	TransitiveOutputDownload
+)
+
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
@@ -163,8 +175,8 @@ type BuildState struct {
 	NeedHashesOnly bool
 	// True if we only want to prepare build directories (ie. 'plz build --prepare')
 	PrepareOnly bool
-	// True if we will download outputs during remote execution.
-	DownloadOutputs bool
+	// Whether and how to download outputs
+	OutputDownload OutputDownloadOption
 	// True if we only need to parse the initial package (i.e. don't search downwards
 	// through deps) - for example when doing `plz query print`.
 	ParsePackageOnly bool
@@ -881,7 +893,9 @@ func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 // ShouldDownload returns true if the given target should be downloaded during remote execution.
 func (state *BuildState) ShouldDownload(target *BuildTarget) bool {
 	// Need to download the target if it was originally requested (and the user didn't pass --nodownload).
-	return target.NeededForSubinclude || (state.IsOriginalTarget(target) && state.DownloadOutputs && !state.NeedTests)
+	downloadOriginalTarget := state.OutputDownload == OriginalOutputDownload && state.IsOriginalTarget(target)
+	downloadTransitiveTarget := state.OutputDownload == TransitiveOutputDownload
+	return target.NeededForSubinclude || ((downloadOriginalTarget || downloadTransitiveTarget) && !state.NeedTests)
 }
 
 // ShouldRebuild returns true if we should force a rebuild of this target (i.e. the user

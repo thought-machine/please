@@ -1032,8 +1032,10 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this context")
 	name := string(args[NameArgIdx].(pyString))
 	dep := string(args[DepArgIdx].(pyString))
-	var target *core.BuildTarget
+
+	// Root
 	root := name
+	var target *core.BuildTarget
 	if dep != "" {
 		// N.B. The target must be already registered on this package.
 		target = s.pkg.TargetOrDie(core.ParseBuildLabelContext(dep, s.pkg).Name)
@@ -1046,17 +1048,23 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	} else if args[PathArgIdx] != None {
 		root = string(args[PathArgIdx].(pyString))
 	}
+
+	// Base name
+	subrepoName := path.Join(s.pkg.Name, name)
+
+	// State
 	var state *core.BuildState
 	if args[ConfigArgIdx] != None {
-		state = s.state.ForSubrepo(name, path.Join(s.pkg.Name, string(args[ConfigArgIdx].(pyString))))
+		state = s.state.ForSubrepo(subrepoName, path.Join(s.pkg.Name, string(args[ConfigArgIdx].(pyString))))
 	} else if args[BazelCompatArgIdx].IsTruthy() {
-		state = s.state.ForSubrepo(name)
+		state = s.state.ForSubrepo(subrepoName)
 		state.Config.Bazel.Compatibility = true
 		state.Config.Parse.BuildFileName = append(state.Config.Parse.BuildFileName, "BUILD.bazel")
 	} else {
-		state = s.state.ForSubrepo(name)
+		state = s.state.ForSubrepo(subrepoName)
 	}
 
+	// Arch
 	isCrossCompile := s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile
 	arch := cli.HostArch()
 	if s.pkg.Subrepo != nil {
@@ -1070,8 +1078,10 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		state = state.ForArch(arch)
 		isCrossCompile = true
 	}
+
+	// Subrepo
 	sr := &core.Subrepo{
-		Name:           s.pkg.SubrepoArchName(path.Join(s.pkg.Name, name)),
+		Name:           s.pkg.SubrepoArchName(subrepoName),
 		Root:           root,
 		Target:         target,
 		State:          state,
@@ -1081,6 +1091,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	if s.state.Config.Bazel.Compatibility && s.pkg.Name == "workspace" {
 		sr.Name = s.pkg.SubrepoArchName(name)
 	}
+
 	log.Debug("Registering subrepo %s in package %s", sr.Name, s.pkg.Label())
 	s.state.Graph.MaybeAddSubrepo(sr)
 	return pyString("///" + sr.Name)

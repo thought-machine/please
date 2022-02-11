@@ -1,4 +1,4 @@
-subinclude("@python_rules//build_defs:python")
+subinclude("@python//build_defs:python")
 
 python_library(
     name = "library",
