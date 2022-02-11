@@ -263,11 +263,11 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	s.Assert(s.state.Config.Bazel.Compatibility, "load() is only available in Bazel compatibility mode. See `plz help bazel` for more information.")
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
-	l := core.ParseBuildLabelContext(string(args[0].(pyString)), s.pkg)
+	l := core.ParseBuildLabelContext(string(args[0].(pyString)), s.contextPackage())
 	filename := path.Join(l.PackageName, l.Name)
 	if l.Subrepo != "" {
 		subrepo := s.state.Graph.Subrepo(l.Subrepo)
-		if subrepo == nil || (subrepo.Target != nil && subrepo != s.pkg.Subrepo) {
+		if subrepo == nil || (subrepo.Target != nil && subrepo != s.contextPackage().Subrepo) {
 			subincludeTarget(s, l)
 			subrepo = s.state.Graph.SubrepoOrDie(l.Subrepo)
 		}
@@ -294,11 +294,7 @@ func builtinFail(s *scope, args []pyObject) pyObject {
 func subinclude(s *scope, args []pyObject) pyObject {
 	for _, arg := range args {
 		t := subincludeTarget(s, s.parseLabelContext(string(arg.(pyString))))
-		if s.pkg != nil {
-			s.Assert(s.pkg.Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.pkg.Label())
-		} else {
-			s.Assert(core.WholeGraph[0].CanSee(s.state, t), "Preloaded subincludes must have public visibility")
-		}
+		s.Assert(s.contextPackage().Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.pkg.Label())
 
 		incPkgState := s.state
 		if t.Label.Subrepo != "" {
