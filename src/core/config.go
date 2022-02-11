@@ -607,7 +607,7 @@ type Configuration struct {
 	PluginDefinition struct {
 		Name              string   `help:"The name of the plugin"`
 		Description       string   `help:"A description of what the plugin does"`
-		BuildDefsDir      []string `help:"Directory to look in when prompted for help topics that aren't known internally" example:"build_defs"`
+		BuildDefsDir      []string `help:"Directory to look in when prompted for help topics that aren't known internally. Defaults to build_defs" example:"build_defs"`
 		DocumentationSite string   `help:"A link to the documentation for this plugin"`
 	} `help:"Set this in your .plzconfig to make the current Please repo a plugin. Add configuration fields with PluginConfig sections"`
 	PluginConfig map[string]*PluginConfigDefinition `help:"Defines a new config field for a plugin"`
