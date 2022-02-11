@@ -13,13 +13,19 @@ import (
 	"github.com/thought-machine/please/src/fs"
 )
 
+var configCache = struct {
+	configs map[*core.Configuration]*pyConfig
+	sync.RWMutex
+}{
+	configs: map[*core.Configuration]*pyConfig{},
+}
+
 // An interpreter holds the package-independent state about our parsing process.
 type interpreter struct {
-	scope           *scope
-	parser          *Parser
-	subincludes     subincludeMap
-	config          map[*core.Configuration]*pyConfig
-	configMutex     sync.RWMutex
+	scope       *scope
+	parser      *Parser
+	subincludes subincludeMap
+
 	breakpointMutex sync.Mutex
 	limiter         semaphore
 	profiling       bool
@@ -37,7 +43,6 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		scope:       s,
 		parser:      p,
 		subincludes: subincludeMap{m: map[string]subincludeResult{}},
-		config:      map[*core.Configuration]*pyConfig{},
 		limiter:     make(semaphore, state.Config.Parse.NumThreads),
 		profiling:   state.Config.Profiling,
 	}
@@ -155,18 +160,18 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 }
 
 // getConfig returns a new configuration object for the given configuration object.
-func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
-	i.configMutex.RLock()
-	if c, present := i.config[state.Config]; present {
-		i.configMutex.RUnlock()
+func getConfig(state *core.BuildState) *pyConfig {
+	configCache.RLock()
+	if c, present := configCache.configs[state.Config]; present {
+		configCache.RUnlock()
 		return c
 	}
-	i.configMutex.RUnlock()
-	c := i.newConfig(state)
+	configCache.RUnlock()
+	c := newConfig(state)
 
-	i.configMutex.Lock()
-	defer i.configMutex.Unlock()
-	i.config[state.Config] = c
+	configCache.Lock()
+	defer configCache.Unlock()
+	configCache.configs[state.Config] = c
 
 	return c
 }
@@ -174,9 +179,9 @@ func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
 // pkgConfig returns a new configuration object for the given package.
 func (i *interpreter) pkgConfig(pkg *core.Package) *pyConfig {
 	if pkg.Subrepo != nil && pkg.Subrepo.State != nil {
-		return i.getConfig(pkg.Subrepo.State)
+		return getConfig(pkg.Subrepo.State)
 	}
-	return i.getConfig(i.scope.state)
+	return getConfig(i.scope.state)
 }
 
 // optimiseExpressions implements a peephole optimiser for expressions by precalculating constants
@@ -347,7 +352,7 @@ func (s *scope) LoadSingletons(state *core.BuildState) {
 	s.Set("False", False)
 	s.Set("None", None)
 	if state != nil {
-		s.config = s.interpreter.getConfig(state)
+		s.config = getConfig(state)
 		s.Set("CONFIG", s.config)
 	}
 }

@@ -104,11 +104,11 @@ func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarg
 	}()
 	p.limiter.Acquire()
 	defer p.limiter.Release()
-	incPkgState := state
+	subincludePkgState := state
 	if target.Subrepo != nil {
-		incPkgState = target.Subrepo.State
+		subincludePkgState = target.Subrepo.State
 	}
-	loadPluginConfig(incPkgState, state, p.interpreter.scope.config)
+	p.interpreter.loadPluginConfig(subincludePkgState, state)
 	for _, out := range target.FullOutputs() {
 		p.interpreter.scope.SetAll(p.interpreter.Subinclude(out, target.Label), true)
 	}

@@ -34,7 +34,7 @@ func valueToPyObject(value reflect.Value) pyObject {
 
 // newConfig creates a new pyConfig object from the configuration.
 // This is typically only created once at global scope, other scopes copy it with .Copy()
-func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
+func newConfig(state *core.BuildState) *pyConfig {
 	base := make(pyDict, 100)
 
 	v := reflect.ValueOf(state.Config).Elem()
@@ -179,15 +179,20 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 	return ret
 }
 
-func loadPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, c pyObject) {
+func (i *interpreter) loadPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) {
 	pluginName := pluginState.Config.PluginDefinition.Name
 	if pluginName == "" {
 		// Subinclude is not a plugin. Stop here.
 		return
 	}
-	key := pyString(strings.ToUpper(pluginName))
+	c := getConfig(pkgState)
+	key := strings.ToUpper(pluginName)
+	if _, ok := c.base[key]; ok {
+		return
+	}
+
 	cfg := pluginConfig(pluginState, pkgState)
-	c.IndexAssign(key, cfg)
+	c.base[key] = cfg
 }
 
 func toPyObject(key, val, toType string) pyObject {
