@@ -16,8 +16,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-const pluginRepoTemplate = `
-plugin_repo(
+const pluginRepoTemplate = `plugin_repo(
   name = "%s",
   revision = "%s",
   plugin = "%s-rules",
@@ -145,9 +144,12 @@ func writeCCConfigFields(file ast.File) ast.File {
 	subsection := "cc"
 	section := "Plugin"
 
-	// Check for existing cc fields first
+	foundSection := false
+
+	// Check for existing cc fields first and migrate values
 	for _, s := range file.Sections {
 		if s.Key == subsection {
+			foundSection = true
 			for _, field := range s.Fields {
 				log.Warningf("%v\t%v", field.Name, field.Value)
 				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
@@ -155,6 +157,13 @@ func writeCCConfigFields(file ast.File) ast.File {
 					file = ast.InjectField(file, plugVal, field.Value, section, subsection, false)
 				}
 			}
+		}
+	}
+
+	// If we found nothing, add a section with default values commented out
+	if !foundSection {
+		for _, v := range configMap {
+			file = ast.InjectField(file, ";"+v, "", section, subsection, false)
 		}
 	}
 
@@ -202,14 +211,19 @@ func writeJavaConfigFields(file ast.File) ast.File {
 	return file
 }
 
+// targetExistsInFile checks to see if the plugin target already exists
+// in plugins/BUILD
 func targetExistsInFile(location, plugin string) bool {
+	if _, err := os.Stat(location); err != nil {
+		return false
+	}
+
 	b, err := ioutil.ReadFile(location)
 	if err != nil {
 		panic(err)
 	}
 
-	str := `plugin_repo(
-  name = "` + plugin
+	str := "plugin_repo\\(\nname = \"" + plugin + "\""
 	exists, err := regexp.Match(str, b)
 	if err != nil {
 		panic(err)
@@ -217,6 +231,7 @@ func targetExistsInFile(location, plugin string) bool {
 	return exists
 }
 
+// createTarget writes the plugin target to plugins/BUILD
 func createTarget(location, plugin string) error {
 	if targetExistsInFile(location, plugin) {
 		return nil
@@ -253,6 +268,7 @@ type Response []struct {
 	NodeID string `json:"node_id"`
 }
 
+// getLatestRevision pulls the latest release tag for the plugin from github
 func getLatestRevision(plugin string) (string, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/please-build/%s-rules/tags", plugin)
 	req, err := http.NewRequest("GET", url, nil)
