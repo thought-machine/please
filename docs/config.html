@@ -406,23 +406,12 @@
   <ul class="bulleted-list">
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title" id="plugindefinition.name">
-          Name <span class="normal">(string)</span>
-        </h3>
-
-        <p>
-          The name of the plugin.
-        </p>
-      </div>
-    </li>
-    <li>
-      <div>
         <h3 class="mt1 f6 lh-title" id="plugindefinition.description">
           Description <span class="normal">(string)</span>
         </h3>
 
         <p>
-        A description of the plugin. This can then be read and output by
+        A description of the plugin. If set, this can be read and output by
         <code class="code">plz help <plugin></code>.
         </p>
       </div>
@@ -430,7 +419,7 @@
     <li>
       <div>
         <h3 class="mt1 f6 lh-title" id="plugindefinition.builddefsdir">
-          BuildDefsDir <span class="normal">(string)</span>
+          BuildDefsDir <span class="normal">(repeatable string)</span>
         </h3>
 
         <p>
