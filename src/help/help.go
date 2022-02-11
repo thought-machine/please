@@ -86,16 +86,7 @@ func helpForPlugin(topic string) string {
 	if _, ok := config.Plugin[topic]; ok {
 		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the ${GREEN}.plzconfig${RESET} file.\n", topic)
 
-		// This is if there's a subrepo specified for the plugin. If there isn't, we'll check for the subrepo in the plugins/
-		var subrepoName string
-		buildLabel := core.BuildLabel{Name: "all"}
-		if val, ok := config.Plugin[topic].ExtraValues["subrepo"]; ok {
-			subrepoName = val[0]
-			buildLabel.Subrepo = subrepoName
-		} else {
-			buildLabel.Subrepo = path.Join("plugins", topic)
-		}
-
+		buildLabel := config.Plugin[topic].Target
 		state := newState()
 
 		// Parse the subrepo (Run reads the plugin config into config)
@@ -139,8 +130,7 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 		message += "\n${BOLD_YELLOW}This plugin has the following options:${RESET}\n" + configOptions
 	}
 
-	buildFuncMap := map[string]*asp.Statement{}
-	populatePluginBuildFuncs(buildFuncMap, subrepo)
+	buildFuncMap := populatePluginBuildFuncs(subrepo)
 	buildDefs := ""
 	for k, v := range buildFuncMap {
 		buildDefs += fmt.Sprintf("${BLUE}   %v${RESET}", strings.ToLower(k))
@@ -161,7 +151,7 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 	return message
 }
 
-func populatePluginBuildFuncs(buildFuncMap map[string]*asp.Statement, subrepo *core.Subrepo) {
+func populatePluginBuildFuncs(subrepo *core.Subrepo) map[string]*asp.Statement {
 	p := asp.NewParser(subrepo.State)
 	var dirs []string
 	if len(subrepo.State.Config.PluginDefinition.BuildDefsDir) > 0 {
@@ -172,17 +162,20 @@ func populatePluginBuildFuncs(buildFuncMap map[string]*asp.Statement, subrepo *c
 		// By default, check the build_defs dir in the plugin
 		dirs = append(dirs, path.Join(subrepo.Root, "build_defs"))
 	}
+
+	ret := make(map[string]*asp.Statement)
 	for _, dir := range dirs {
 		if files, err := ioutil.ReadDir(dir); err == nil {
 			for _, file := range files {
 				if !file.IsDir() {
 					if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
-						addAllFunctions(buildFuncMap, stmts, false)
+						addAllFunctions(ret, stmts, false)
 					}
 				}
 			}
 		}
 	}
+	return ret
 }
 
 // helpFromBuildRule returns the printable help message from a build rule (a function).
