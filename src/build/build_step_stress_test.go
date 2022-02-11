@@ -104,9 +104,13 @@ func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, fil
 	return nil
 }
 
+func (fake *fakeParser) WaitForInit() {
+
+}
+
 // PreloadSubinclude stub
-func (fake *fakeParser) PreloadSubinclude(target *core.BuildTarget) error {
-	panic("not implemented")
+func (fake *fakeParser) NewParser(state *core.BuildState) {
+
 }
 
 // ParseReader stub

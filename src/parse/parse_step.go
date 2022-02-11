@@ -39,7 +39,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	// Wait for us to finish preloading the subincludes before parsing this file. We know that if anything is queued
 	// for subinclude, it must be related to that, as any other parse task will be blocked waiting for that.
 	if !forSubinclude {
-		state.WaitForPreloadedSubincludes()
+		state.Parser.WaitForInit()
 	}
 	// See if something else has parsed this package first.
 	pkg := state.SyncParsePackage(label)
@@ -261,6 +261,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 			if dependent != core.OriginalTarget && exists {
 				return nil, fmt.Errorf("%s depends on %s, but there's no %s file in %s/", dependent, label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			} else if dependent != core.OriginalTarget {
+				panic(fmt.Sprintf("%s depends on %s, but the directory %s doesn't exist: %s %s", dependent, label, dir, packageName, state.CurrentSubrepo))
 				return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist: %s", dependent, label, dir, packageName)
 			} else if exists {
 				return nil, fmt.Errorf("Can't build %s; there's no %s file in %s/", label, buildFileNames(state.Config.Parse.BuildFileName), dir)

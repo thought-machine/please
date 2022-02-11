@@ -29,6 +29,7 @@ type Parser struct {
 	interpreter *interpreter
 	// Stashed set of source code for builtin rules.
 	builtins map[string][]byte
+
 	// Parallelism limiter to ensure we don't try to run too many parses simultaneously
 	limiter semaphore
 }
@@ -90,7 +91,7 @@ func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
 	return err
 }
 
-func (p *Parser) SubincludeTarget(target *core.BuildTarget) (err error) {
+func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarget) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -103,8 +104,13 @@ func (p *Parser) SubincludeTarget(target *core.BuildTarget) (err error) {
 	}()
 	p.limiter.Acquire()
 	defer p.limiter.Release()
+	incPkgState := state
+	if target.Subrepo != nil {
+		incPkgState = target.Subrepo.State
+	}
+	loadPluginConfig(incPkgState, state, p.interpreter.scope.config)
 	for _, out := range target.FullOutputs() {
-		p.interpreter.scope.SetAll(p.interpreter.Subinclude(out, target.Label), false)
+		p.interpreter.scope.SetAll(p.interpreter.Subinclude(out, target.Label), true)
 	}
 	return nil
 }

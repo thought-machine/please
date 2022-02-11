@@ -84,15 +84,6 @@ func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
 	base["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 	base["DEBUG_PORT"] = pyInt(state.DebugPort)
 
-	// Preloaded subincludes don't technically get subincluded so we need to handle them here
-	for _, preloadedSubinclude := range state.PreloadedSubinculdes {
-		target := state.Graph.Target(preloadedSubinclude)
-		if target == nil || target.Subrepo == nil {
-			continue // The target hasn't been defined yet. We're probably still preloading.
-		}
-		loadPluginConfig(target.Subrepo.State, state, base)
-	}
-
 	return &pyConfig{base: base}
 }
 

@@ -300,6 +300,12 @@ func subinclude(s *scope, args []pyObject) pyObject {
 			s.Assert(core.WholeGraph[0].CanSee(s.state, t), "Preloaded subincludes must have public visibility")
 		}
 
+		incPkgState := s.state
+		if t.Label.Subrepo != "" {
+			incPkgState = s.state.Graph.SubrepoOrDie(t.Label.Subrepo).State
+		}
+		loadPluginConfig(incPkgState, s.state, s.config)
+
 		for _, out := range t.Outputs() {
 			s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), t.Label), false)
 		}
@@ -310,14 +316,11 @@ func subinclude(s *scope, args []pyObject) pyObject {
 // subincludeTarget returns the target for a subinclude() call to a label.
 // It blocks until the target exists and is built.
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
-	pkg := s.pkg
-	if pkg == nil {
-		pkg = &core.Package{}
-	}
+	pkg := s.contextPackage()
 	pkgLabel := pkg.Label()
 	if l.Subrepo == pkgLabel.Subrepo && l.PackageName == pkgLabel.PackageName {
 		// This is a subinclude in the same package, check the target exists.
-		s.NAssert(s.pkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
+		s.NAssert(pkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
 	s.NAssert(l.IsPseudoTarget(), "Can't pass :all or /... to subinclude()")
 
@@ -634,16 +637,15 @@ func joinPath(s *scope, args []pyObject) pyObject {
 	return pyString(path.Join(l...))
 }
 
-func contextPackageName(s *scope, subinclude bool) (string, string, error) {
-	if subinclude || s.pkg == nil {
-		subincludeLabel := s.config.Get(string(subrepoLabelConfigKey), nil)
-		if subincludeLabel != nil {
-			l := core.ParseAnnotatedBuildLabel(subincludeLabel.String(), "")
-			return l.Subrepo, l.PackageName, nil
+func scopeOrSubincludePackage(s *scope, subinclude bool) (*core.Package, error) {
+	if subinclude {
+		pkg := s.subincludePackage()
+		if pkg == nil {
+			return nil, errors.New("not in a subinclude context")
 		}
-		return "", "", errors.New("not in a subinclude context")
+		return pkg, nil
 	}
-	return s.pkg.SubrepoName, s.pkg.Name, nil
+	return s.contextPackage(), nil
 }
 
 func packageName(s *scope, args []pyObject) pyObject {
@@ -652,16 +654,17 @@ func packageName(s *scope, args []pyObject) pyObject {
 		contextArgIdx
 	)
 
-	_, pkg, err := contextPackageName(s, args[contextArgIdx].IsTruthy())
+	pkg, err := scopeOrSubincludePackage(s, args[contextArgIdx].IsTruthy())
 	if err != nil {
 		s.Error("cannot call package_name() from this context: %v", err)
 	}
 
 	if args[labelArgIdx].IsTruthy() {
-		return pyString(core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg).PackageName)
+		// TODO(jpoole): handle subrepos here
+		return pyString(core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg.Name).PackageName)
 	}
 
-	return pyString(pkg)
+	return pyString(pkg.Name)
 }
 
 func subrepoName(s *scope, args []pyObject) pyObject {
@@ -670,19 +673,20 @@ func subrepoName(s *scope, args []pyObject) pyObject {
 		contextArgIdx
 	)
 
-	subrepo, pkg, err := contextPackageName(s, args[contextArgIdx].IsTruthy())
+	pkg, err := scopeOrSubincludePackage(s, args[contextArgIdx].IsTruthy())
 	if err != nil {
 		s.Error("cannot call subrepo_name() from this context: %v", err)
 	}
 
 	if args[labelArgIdx].IsTruthy() {
-		l := core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg)
+		// TODO(jpoole): handle subrepos here
+		l := core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg.Name)
 		if l.Subrepo != "" {
 			return pyString(l.Subrepo)
 		}
 	}
 
-	return pyString(subrepo)
+	return pyString(pkg.SubrepoName)
 }
 
 func canonicalise(s *scope, args []pyObject) pyObject {
@@ -690,11 +694,12 @@ func canonicalise(s *scope, args []pyObject) pyObject {
 		labelArgIdx = iota
 		contextArgIdx
 	)
-	_, pkg, err := contextPackageName(s, args[contextArgIdx].IsTruthy())
+	pkg, err := scopeOrSubincludePackage(s, args[contextArgIdx].IsTruthy())
 	if err != nil {
 		s.Error("Cannot call canonicalise() from this context: %v", err)
 	}
-	label := core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg)
+	// TODO(jpoole): handle subrepos here
+	label := core.ParseAnnotatedBuildLabel(string(args[labelArgIdx].(pyString)), pkg.Name)
 	return pyString(label.String())
 }
 

@@ -137,13 +137,8 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 	}
 	stmts = i.parser.optimise(stmts)
 	s := i.scope.NewScope()
-	subincludeSubrepoState := s.state
-	if label.Subrepo != "" {
-		subincludeSubrepoState = s.state.Graph.SubrepoOrDie(label.Subrepo).State
-	}
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
-	loadPluginConfig(subincludeSubrepoState, s.state, s.config)
 	s.config.IndexAssign(subrepoLabelConfigKey, pyString(label.String()))
 	s.Set("CONFIG", s.config)
 	i.optimiseExpressions(stmts)
@@ -154,9 +149,6 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 	}
 	if i.scope.pkg != nil {
 		i.scope.pkg.RegisterSubinclude(label)
-	}
-	if !i.scope.state.FinishedPreloading {
-		i.scope.state.RegisterPreloadedSubinclude(label)
 	}
 	i.subincludes.Set(path, locals)
 	return locals
@@ -174,9 +166,8 @@ func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
 
 	i.configMutex.Lock()
 	defer i.configMutex.Unlock()
-	if state.FinishedPreloading {
-		i.config[state.Config] = c
-	}
+	i.config[state.Config] = c
+
 	return c
 }
 
@@ -224,12 +215,36 @@ type scope struct {
 	Callback bool
 }
 
-// parseLabelContext parsed a build label in the context of this scope
+// parseLabelContext parsed a build label in the context of this scope. See contextPackage for more information.
 func (s *scope) parseLabelContext(label string) core.BuildLabel {
-	if s.pkg != nil {
-		return core.ParseBuildLabelContext(label, s.pkg)
+	return core.ParseBuildLabelContext(label, s.contextPackage())
+}
+
+// contextPackage returns the package that build labels should be parsed relative to. For normal BUILD files, this
+// returns the current package. For subincludes, or any scope that encloses a subinclude scope, this returns the package
+// of the label passed to subinclude. This is used by some builtins e.g. `subinclude()` to parse labels relative to the
+// .build_defs source file rather than the package it's being used from.
+//
+// It is not used by other built-ins e.g. `build_rule()` which still parses relative to s.pkg, as that's almost
+// certainly what you want.
+func (s *scope) contextPackage() *core.Package {
+	if s.pkg == nil {
+		return s.subincludePackage()
 	}
-	return core.ParseBuildLabel(label, "")
+	return s.pkg
+}
+
+// subincludePackage returns the package of the label used for this subinclude. When we subinclude, we create a new
+// scope as set `CONFIG.SUBINCLUDE_LABEL` in that scope. This is used to determine the package returned here. Because
+// all build definitions enclose this root scope, this works from these scopes too. Returns nil when called outside this
+// context.
+func (s *scope) subincludePackage() *core.Package {
+	subincludeLabel := s.config.Get(string(subrepoLabelConfigKey), nil)
+	if subincludeLabel != nil {
+		l := core.ParseAnnotatedBuildLabel(subincludeLabel.String(), "")
+		return s.state.Graph.Package(l.PackageName, l.Subrepo)
+	}
+	return nil
 }
 
 // NewScope creates a new child scope of this one.
