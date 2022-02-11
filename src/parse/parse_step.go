@@ -154,8 +154,7 @@ func handlePlugin(tid int, state *core.BuildState, label, dependent core.BuildLa
 			subrepo.IsCrossCompile = true
 		}
 
-		state.Graph.AddSubrepo(subrepo)
-		return subrepo, nil
+		return state.Graph.MaybeAddSubrepo(subrepo), nil
 	}
 	return nil, nil
 }
