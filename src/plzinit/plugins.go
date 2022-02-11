@@ -14,6 +14,7 @@ import (
 
 	"github.com/please-build/gcfg/ast"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/plz"
 )
 
 const pluginRepoTemplate = `plugin_repo(
@@ -43,10 +44,10 @@ func InitPlugins(plugins []string) {
 
 func initPlugin(plugin string) error {
 	log.Warningf("Inserting plugin config values into .plzconfig")
-	if err := injectPluginConfig(plugin); err != nil {
+	if err := createTarget("plugins/BUILD", plugin); err != nil {
 		return err
 	}
-	if err := createTarget("plugins/BUILD", plugin); err != nil {
+	if err := injectPluginConfig(plugin); err != nil {
 		return err
 	}
 	return nil
@@ -73,7 +74,7 @@ func injectPluginConfig(plugin string) error {
 	case "cc":
 		file = writeCCConfigFields(file)
 	default:
-		log.Fatalf("Failed to initialise plugin. \"%s\" not recognised", plugin)
+		log.Fatalf("failed to initialise plugin. \"%s\" not recognised", plugin)
 	}
 	ast.Write(file, configPath)
 	return nil
@@ -141,20 +142,21 @@ func writeCCConfigFields(file ast.File) ast.File {
 	// AsmTool
 	// DefaultNamespace
 
-	subsection := "cc"
+	return writeFieldsToConfig("cc", file, configMap)
+}
+
+func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]string) ast.File {
 	section := "Plugin"
-
 	foundSection := false
-
 	// Check for existing cc fields first and migrate values
 	for _, s := range file.Sections {
-		if s.Key == subsection {
+		if s.Key == plugin {
 			foundSection = true
 			for _, field := range s.Fields {
 				log.Warningf("%v\t%v", field.Name, field.Value)
 				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
 					log.Warningf("Got a hit with %v", field.Name)
-					file = ast.InjectField(file, plugVal, field.Value, section, subsection, false)
+					file = ast.InjectField(file, plugVal, field.Value, section, plugin, false)
 				}
 			}
 		}
@@ -162,8 +164,25 @@ func writeCCConfigFields(file ast.File) ast.File {
 
 	// If we found nothing, add a section with default values commented out
 	if !foundSection {
-		for _, v := range configMap {
-			file = ast.InjectField(file, ";"+v, "", section, subsection, false)
+		config, err := core.ReadDefaultConfigFiles(nil)
+		if err != nil {
+			panic(err)
+		}
+
+		// Build plugin target so we can pull the default values
+		state := core.NewBuildState(config)
+		buildLabel := core.NewBuildLabel("plugins", plugin)
+		// build.Build(0, state, label, false)
+		// parse.Parse(0, state, core.BuildLabel{}, dependent, true)
+		plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
+		subrepo := state.Graph.Subrepo(plugin)
+		if subrepo == nil {
+			log.Fatalf("failed to get subrepo %v", plugin)
+		}
+		config = subrepo.State.Config
+
+		for _, v := range config.PluginConfig {
+			file = ast.InjectField(file, ";"+v.ConfigKey, "", section, plugin, false)
 		}
 	}
 

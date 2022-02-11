@@ -136,6 +136,7 @@ func (graph *BuildGraph) MaybeAddSubrepo(subrepo *Subrepo) *Subrepo {
 func (graph *BuildGraph) Subrepo(name string) *Subrepo {
 	subrepo, present := graph.subrepos.GetOK(name)
 	if !present {
+		log.Warning("available subrepos: %v", graph.subrepos.Keys())
 		return nil
 	}
 	return subrepo.(*Subrepo)

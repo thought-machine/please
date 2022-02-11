@@ -1007,6 +1007,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 
 	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this context")
 	name := string(args[NameArgIdx].(pyString))
+	//log.Warning("parsing subrepo %v", name)
 	dep := string(args[DepArgIdx].(pyString))
 
 	// Root
