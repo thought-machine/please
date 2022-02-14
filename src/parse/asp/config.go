@@ -185,7 +185,7 @@ func (i *interpreter) loadPluginConfig(pluginState *core.BuildState, pkgState *c
 		// Subinclude is not a plugin. Stop here.
 		return
 	}
-	c := getConfig(pkgState)
+	c := i.getConfig(pkgState)
 	key := strings.ToUpper(pluginName)
 	if _, ok := c.base[key]; ok {
 		return

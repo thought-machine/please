@@ -94,11 +94,11 @@ func (p *aspParser) preloadSubincludes(state *core.BuildState) {
 	close(p.init)
 }
 
-func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
+func (p *aspParser) ParseFile(pkg *core.Package, filename string) error {
 	return p.parser.ParseFile(pkg, filename)
 }
 
-func (p *aspParser) ParseReader(state *core.BuildState, pkg *core.Package, reader io.ReadSeeker) error {
+func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker) error {
 	_, err := p.parser.ParseReader(pkg, reader)
 	return err
 }
@@ -134,6 +134,9 @@ func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *co
 }
 
 func createBazelSubrepo(state *core.BuildState) {
+	if sr := state.Graph.Subrepo("bazel_tools"); sr != nil {
+		return
+	}
 	dir := path.Join(core.OutDir, "bazel_tools")
 	state.Graph.AddSubrepo(&core.Subrepo{
 		Name:  "bazel_tools",

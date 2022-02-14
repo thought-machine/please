@@ -7,4 +7,5 @@ filegroup(
 subrepo(
     name = "nested",
     dep = ":nested",
+    plugin = True,
 )

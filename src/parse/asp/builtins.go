@@ -1027,6 +1027,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		ConfigArgIdx
 		BazelCompatArgIdx
 		ArchArgIdx
+		PluginArgIdx
 	)
 
 	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this context")
@@ -1051,17 +1052,16 @@ func subrepo(s *scope, args []pyObject) pyObject {
 
 	// Base name
 	subrepoName := path.Join(s.pkg.Name, name)
+	if args[PluginArgIdx].IsTruthy() {
+		subrepoName = name
+	}
 
 	// State
 	var state *core.BuildState
 	if args[ConfigArgIdx] != None {
-		state = s.state.ForSubrepo(subrepoName, path.Join(s.pkg.Name, string(args[ConfigArgIdx].(pyString))))
-	} else if args[BazelCompatArgIdx].IsTruthy() {
-		state = s.state.ForSubrepo(subrepoName)
-		state.Config.Bazel.Compatibility = true
-		state.Config.Parse.BuildFileName = append(state.Config.Parse.BuildFileName, "BUILD.bazel")
+		state = s.state.ForSubrepo(subrepoName, args[BazelCompatArgIdx].IsTruthy(), path.Join(s.pkg.Name, string(args[ConfigArgIdx].(pyString))))
 	} else {
-		state = s.state.ForSubrepo(subrepoName)
+		state = s.state.ForSubrepo(subrepoName, args[BazelCompatArgIdx].IsTruthy())
 	}
 
 	// Arch

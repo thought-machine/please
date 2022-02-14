@@ -100,7 +100,7 @@ type fakeParser struct {
 }
 
 // ParseFile stub
-func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
+func (fake *fakeParser) ParseFile(pkg *core.Package, filename string) error {
 	return nil
 }
 
@@ -114,7 +114,7 @@ func (fake *fakeParser) NewParser(state *core.BuildState) {
 }
 
 // ParseReader stub
-func (fake *fakeParser) ParseReader(state *core.BuildState, pkg *core.Package, r io.ReadSeeker) error {
+func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker) error {
 	return nil
 }
 
