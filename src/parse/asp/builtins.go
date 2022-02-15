@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Masterminds/semver/v3"
+	"github.com/manifoldco/promptui"
 	"io"
 	"path"
 	"reflect"
@@ -11,9 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/Masterminds/semver/v3"
-	"github.com/manifoldco/promptui"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -319,7 +318,6 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		s.NAssert(pkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
 	s.NAssert(l.IsPseudoTarget(), "Can't pass :all or /... to subinclude()")
-
 	// If we're including from a subrepo, or if we're in a subrepo and including from a different subrepo, make sure
 	// that package is parsed to avoid locking. Locks can occur when the target's package also subincludes that target.
 	//

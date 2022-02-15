@@ -41,6 +41,16 @@ func NewPackage(name string) *Package {
 	}
 }
 
+// NewPackage constructs a new package with the given name.
+func NewPackageSubrepo(name, subrepo string) *Package {
+	return &Package{
+		Name:        name,
+		SubrepoName: subrepo,
+		targets:     map[string]*BuildTarget{},
+		Outputs:     map[string]*BuildTarget{},
+	}
+}
+
 // Target returns the target with the given name, or nil if this package doesn't have one.
 func (pkg *Package) Target(name string) *BuildTarget {
 	pkg.mutex.RLock()

@@ -9,8 +9,6 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-const subrepoLabelConfigKey = pyString("SUBINCLUDE_LABEL")
-
 // valueToPyObject converts a field value to a pyObject
 func valueToPyObject(value reflect.Value) pyObject {
 	switch value.Kind() {
