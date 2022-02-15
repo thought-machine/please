@@ -27,7 +27,7 @@ func main() {
 		log.Fatal("No default directory to use for temporary files found")
 	}
 
-	// Prevent the repo's default `plz-out/log/build.log` file from being overriden
+	// Prevent the repo's default `plz-out/log/build.log` file from being overridden
 	logFilePath := filepath.Join(tmpDir, "plz_build.log")
 	cli.InitFileLogging(logFilePath, cli.Verbosity(logging.DEBUG), false)
 
