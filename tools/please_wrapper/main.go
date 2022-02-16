@@ -17,19 +17,12 @@ import (
 )
 
 func main() {
+	cli.InitLogging(cli.Verbosity(logging.WARNING))
+
 	core.MustFindRepoRoot()
 	if err := os.Chdir(core.RepoRoot); err != nil {
 		log.Fatalf("Error moving to '%s' repo root: %s", core.RepoRoot, err)
 	}
-
-	tmpDir := os.TempDir()
-	if tmpDir == "" {
-		log.Fatal("No default directory to use for temporary files found")
-	}
-
-	// Prevent the repo's default `plz-out/log/build.log` file from being overridden
-	logFilePath := filepath.Join(tmpDir, "plz_build.log")
-	cli.InitFileLogging(logFilePath, cli.Verbosity(logging.DEBUG), false)
 
 	config, err := core.ReadDefaultConfigFiles(nil)
 	if err != nil {
