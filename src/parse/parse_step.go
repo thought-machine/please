@@ -130,9 +130,16 @@ func subrepoLabel(state *core.BuildState, label, dependent core.BuildLabel) core
 		}
 	}
 	if plugin, ok := state.Config.Plugin[label.Subrepo]; ok {
+		if plugin.Target.String() == "" {
+			log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", label.Subrepo)
+		}
 		return plugin.Target
 	}
-	if plugin, ok := state.Config.Plugin[strings.TrimSuffix(label.Subrepo, fmt.Sprintf("_%v", arch))]; ok {
+	pluginName := strings.TrimSuffix(label.Subrepo, fmt.Sprintf("_%v", arch))
+	if plugin, ok := state.Config.Plugin[pluginName]; ok {
+		if plugin.Target.String() == "" {
+			log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", pluginName)
+		}
 		return plugin.Target
 	}
 	return label.SubrepoLabel()
