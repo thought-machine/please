@@ -1,3 +1,5 @@
+// This main package is a first iteration shim for Please
+// that handles first installation and updates itself.
 package main
 
 import (
