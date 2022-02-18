@@ -78,7 +78,7 @@ func (p *aspParser) preloadSubincludes(state *core.BuildState) {
 	}
 	for _, inc := range includes {
 		if inc.IsPseudoTarget() {
-			log.Fatalf("Can't preload psudotarget %v", inc)
+			log.Fatalf("Can't preload pseudotarget %v", inc)
 		}
 		// Queue them up asynchronously to feed the queues as quickly as possible
 		go func(inc core.BuildLabel) {

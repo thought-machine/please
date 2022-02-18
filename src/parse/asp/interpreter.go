@@ -146,7 +146,7 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 	s := i.scope.NewScope()
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
-	s.subcincludeLabel = &label
+	s.subincludeLabel = &label
 	s.Set("CONFIG", s.config)
 	i.optimiseExpressions(stmts)
 	s.interpretStatements(stmts)
@@ -207,15 +207,15 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 
 // A scope contains all the information about a lexical scope.
 type scope struct {
-	ctx              context.Context
-	interpreter      *interpreter
-	state            *core.BuildState
-	pkg              *core.Package
-	subcincludeLabel *core.BuildLabel
-	parent           *scope
-	locals           pyDict
-	config           *pyConfig
-	globber          *fs.Globber
+	ctx             context.Context
+	interpreter     *interpreter
+	state           *core.BuildState
+	pkg             *core.Package
+	subincludeLabel *core.BuildLabel
+	parent          *scope
+	locals          pyDict
+	config          *pyConfig
+	globber         *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 }
@@ -244,13 +244,13 @@ func (s *scope) contextPackage() *core.Package {
 // all build definitions enclose this root scope, this works from these scopes too. Returns nil when called outside this
 // context.
 func (s *scope) subincludePackage() *core.Package {
-	if s.subcincludeLabel != nil {
-		pkg := s.state.Graph.Package(s.subcincludeLabel.PackageName, s.subcincludeLabel.Subrepo)
+	if s.subincludeLabel != nil {
+		pkg := s.state.Graph.Package(s.subincludeLabel.PackageName, s.subincludeLabel.Subrepo)
 		if pkg != nil {
 			return pkg
 		}
 		// We're probably doing a local subinclude so the package isn't ready yet
-		return core.NewPackageSubrepo(s.subcincludeLabel.PackageName, s.subcincludeLabel.Subrepo)
+		return core.NewPackageSubrepo(s.subincludeLabel.PackageName, s.subincludeLabel.Subrepo)
 	}
 	return nil
 }

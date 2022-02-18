@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
-	"github.com/manifoldco/promptui"
 	"io"
 	"path"
 	"reflect"
@@ -13,6 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/Masterminds/semver/v3"
+	"github.com/manifoldco/promptui"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
