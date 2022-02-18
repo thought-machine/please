@@ -11,14 +11,9 @@ import (
 
 func TestPackageName(t *testing.T) {
 	s := &scope{pkg: &core.Package{Name: "test/package"}}
-	assert.Equal(t, "test/package", packageName(s, []pyObject{pyNone{}}).String())
-	assert.Equal(t, "test/package", packageName(s, []pyObject{pyString(":test")}).String())
-	assert.Equal(t, "foo/bar", packageName(s, []pyObject{pyString("//foo/bar:test")}).String())
-
-	s = &scope{subincludeLabel: &core.BuildLabel{PackageName: "test/package"}}
-	assert.Equal(t, "test/package", packageName(s, []pyObject{pyNone{}}).String())
-	assert.Equal(t, "test/package", packageName(s, []pyObject{pyString(":test")}).String())
-	assert.Equal(t, "foo/bar", packageName(s, []pyObject{pyString("//foo/bar:test")}).String())
+	assert.Equal(t, "test/package", packageName(s, []pyObject{pyNone{}, pyNone{}}).String())
+	assert.Equal(t, "test/package", packageName(s, []pyObject{pyString(":test"), pyNone{}}).String())
+	assert.Equal(t, "foo/bar", packageName(s, []pyObject{pyString("//foo/bar:test"), pyNone{}}).String())
 }
 
 func TestGetLabels(t *testing.T) {
