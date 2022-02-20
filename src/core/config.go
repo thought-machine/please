@@ -51,6 +51,9 @@ const MachineConfigFileName = "/etc/please/plzconfig"
 // UserConfigFileName is the file name for user-specific config (for all their repos).
 const UserConfigFileName = "~/.config/please/plzconfig"
 
+// DefaultPleaseLocation is the default location where Please is installed.
+const DefaultPleaseLocation = "~/.please"
+
 // DefaultPath is the default location please looks for programs in
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
@@ -96,6 +99,12 @@ func ReadDefaultConfigFiles(profiles []ConfigProfile) (*Configuration, error) {
 		s[i] = string(p)
 	}
 	return ReadConfigFiles(defaultConfigFiles(), s)
+}
+
+// ReadDefaultGlobalConfigFiles reads all the default global config files and
+// merges them into a config object.
+func ReadDefaultGlobalConfigFiles() (*Configuration, error) {
+	return ReadConfigFiles(defaultGlobalConfigFiles(), nil)
 }
 
 // defaultGlobalConfigFiles returns the set of global default config file names.
@@ -715,7 +724,7 @@ func (config *Configuration) GetBuildEnv() []string {
 
 // EnsurePleaseLocation will resolve `config.Please.Location` to a full path location where it is to be found.
 func (config *Configuration) EnsurePleaseLocation() {
-	defaultPleaseLocation := fs.ExpandHomePath("~/.please")
+	defaultPleaseLocation := fs.ExpandHomePath(DefaultPleaseLocation)
 
 	if config.Please.Location == "" {
 		// Determine the location based off where we're running from.
