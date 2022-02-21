@@ -27,7 +27,6 @@ var log = logging.MustGetLogger("plz")
 // To get detailed results as it runs, use state.Results. You should call that *before*
 // starting this (otherwise a sufficiently fast build may bypass you completely).
 func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *core.Configuration, arch cli.Arch) {
-	parse.InitParser(state)
 	build.Init(state)
 	if state.Config.Remote.URL != "" {
 		state.RemoteClient = remote.New(state)
@@ -35,6 +34,8 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	if config.Display.SystemStats {
 		go state.UpdateResources()
 	}
+
+	parse.InitParser(state)
 
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, preTargets, targets, arch)

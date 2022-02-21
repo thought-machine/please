@@ -1773,6 +1773,20 @@ func (target *BuildTarget) GetFileContent(state *BuildState) (string, error) {
 	return ReplaceSequences(state, target, target.FileContent)
 }
 
+// HasLinks returns true if the outputs are meant to be linked somewhere (i.e. via symlinks).
+// This check is useful in deciding whether this target should be downloaded during remote execution or not.
+func (target *BuildTarget) HasLinks(state *BuildState) bool {
+	for _, prefix := range []string{"link:", "hlink:", "dlink:", "dhlink:"} {
+		if labels := target.PrefixedLabels(prefix); len(labels) > 0 {
+			return true
+		}
+	}
+	if state.Config.ShouldLinkGeneratedSources() && target.HasLabel("codegen") {
+		return true
+	}
+	return false
+}
+
 // BuildTargets makes a slice of build targets sortable by their labels.
 type BuildTargets []*BuildTarget
 
