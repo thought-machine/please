@@ -19,14 +19,18 @@ import (
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) *core.BuildState {
 	if state.Parser == nil {
-		state.Parser = &aspParser{parser: newAspParser(state)}
+		p := &aspParser{parser: newAspParser(state), init: make(chan struct{})}
+		state.Parser = p
+		go p.preloadSubincludes(state)
 	}
 	return state
 }
 
 // aspParser implements the core.Parser interface around our parser package.
 type aspParser struct {
-	parser *asp.Parser
+	parser      *asp.Parser
+	initialised bool
+	init        chan struct{}
 }
 
 // newAspParser returns a asp.Parser object with all the builtins loaded
@@ -55,15 +59,49 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
-func (p *aspParser) Preload(filename string) {
-	p.parser.MustLoadBuiltins(filename, nil)
+// NewParser creates a new parser for the state
+func (p *aspParser) NewParser(state *core.BuildState) {
+	// TODO(jpoole): remove this once we refactor core so it can depend on this package and call this itself
+	state.Parser = nil
+	InitParser(state)
 }
 
-func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
+func (p *aspParser) WaitForInit() {
+	<-p.init
+}
+
+func (p *aspParser) preloadSubincludes(state *core.BuildState) {
+	includes := state.Config.Parse.PreloadSubincludes
+	if state.RepoConfig != nil {
+		// TODO(jpoole): is this the right thing to do?
+		includes = append(includes, state.RepoConfig.Parse.PreloadSubincludes...)
+	}
+	for _, inc := range includes {
+		if inc.IsPseudoTarget() {
+			log.Fatalf("Can't preload pseudotarget %v", inc)
+		}
+		// Queue them up asynchronously to feed the queues as quickly as possible
+		go func(inc core.BuildLabel) {
+			state.WaitForBuiltTarget(inc, core.OriginalTarget)
+		}(inc)
+	}
+
+	// Preload them in order to avoid non-deterministic errors when the subincludes depend on each other
+	for _, inc := range includes {
+		if err := p.parser.SubincludeTarget(state, state.WaitForTargetAndEnsureDownload(inc, core.OriginalTarget)); err != nil {
+			log.Fatalf("%v", err)
+		}
+	}
+
+	p.initialised = true
+	close(p.init)
+}
+
+func (p *aspParser) ParseFile(pkg *core.Package, filename string) error {
 	return p.parser.ParseFile(pkg, filename)
 }
 
-func (p *aspParser) ParseReader(state *core.BuildState, pkg *core.Package, reader io.ReadSeeker) error {
+func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker) error {
 	_, err := p.parser.ParseReader(pkg, reader)
 	return err
 }
@@ -99,6 +137,9 @@ func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *co
 }
 
 func createBazelSubrepo(state *core.BuildState) {
+	if sr := state.Graph.Subrepo("bazel_tools"); sr != nil {
+		return
+	}
 	dir := path.Join(core.OutDir, "bazel_tools")
 	state.Graph.AddSubrepo(&core.Subrepo{
 		Name:  "bazel_tools",

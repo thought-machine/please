@@ -316,7 +316,7 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
         out = name + '_' + basename(urls[0]),
         hashes = hashes,
     )
-    return build_rule(
+    extract_rule = build_rule(
         name = name,
         srcs = [remote_rule],
         tools = [CONFIG.JARCAT_TOOL],
@@ -327,3 +327,11 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
         ]),
         _subrepo = True,
     )
+
+    subrepo(
+        name = name.replace("-", "_"),
+        dep = extract_rule,
+        plugin = True,
+    )
+
+    return extract_rule
