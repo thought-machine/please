@@ -42,7 +42,7 @@ please_repo_e2e_test(
     name = "init_plugin_test",
     expect_output_contains = {
         ".plzconfig" : "[Plugin \"python\"]",
-        ".plzconfig" : "DefaultInterpreter = python3",
+        ".plzconfig" : "; DefaultInterpreter = python3",
     },
     plz_command = "> .plzconfig && plz init plugin python",
     repo = "init_plugin_test",
@@ -52,7 +52,9 @@ please_repo_e2e_test(
     name = "init_create_target_test",
     expect_output_contains = {
         "plugins/BUILD" : "plugin_repo",
+        "plugins/BUILD" : "name = \\\"cc\\\"",
+        "plugins/BUILD" : "plugin = \\\"cc-rules\\\"",
     },
-    plz_command = "plz init plugin python",
+    plz_command = "plz init plugin cc",
     repo = "init_plugin_test",
 )
