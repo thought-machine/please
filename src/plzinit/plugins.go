@@ -297,9 +297,13 @@ func getLatestRevision(plugin string) (string, error) {
 	req.Header.Set("accept", "application/vnd.github.v3+json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("HTTP request to github API failed. Could not get latest release")
+	}
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("failed to get latest release of plugin")
+		log.Fatalf("failed to read HTTP response body")
 	}
 
 	var result Response
