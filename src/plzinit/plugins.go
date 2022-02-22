@@ -229,8 +229,8 @@ func targetExistsInFile(location, plugin string) bool {
 		panic(err)
 	}
 
-	str := "plugin_repo\\(\nname = \"" + plugin + "\""
-	exists, err := regexp.Match(str, b)
+	str := "plugin_repo\\(...name = \"" + plugin + "\""
+	exists, err := regexp.Match("(?s)"+str, b)
 	if err != nil {
 		panic(err)
 	}

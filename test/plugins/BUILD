@@ -38,16 +38,18 @@ please_repo_e2e_test(
     repo = "test_repo",
 )
 
+# Test that fields are added to the config
 please_repo_e2e_test(
     name = "init_plugin_test",
     expect_output_contains = {
         ".plzconfig" : "[Plugin \"python\"]",
         ".plzconfig" : "; DefaultInterpreter = python3",
     },
-    plz_command = "> .plzconfig && plz init plugin python",
+    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin python",
     repo = "init_plugin_test",
 )
 
+# Test that the target is created in plugins/BUILD
 please_repo_e2e_test(
     name = "init_create_target_test",
     expect_output_contains = {
@@ -56,6 +58,14 @@ please_repo_e2e_test(
         "plugins/BUILD" : "plugin = \\\"cc-rules\\\"",
     },
     # Need to break hard link here so init_plugin_test's actual .plzconfig doesn't get updated.
-    plz_command = "cp .plzconfig .something; mv .something .plzconfig; plz init plugin cc",
+    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin cc",
+    repo = "init_plugin_test",
+)
+
+# Test that we don't add the build target again if it's already there
+please_repo_e2e_test(
+    name = "init_only_add_target_once_test",
+    # Need to break hard link here so init_plugin_test's actual .plzconfig doesn't get updated.
+    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin cc; plz init plugin cc; lines=$(cat plugins/BUILD | wc -l); if [ $lines -gt 6 ]; then exit 1; else exit 0; fi",
     repo = "init_plugin_test",
 )
