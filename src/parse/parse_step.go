@@ -75,7 +75,6 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		return err
 	}
 	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
-	log.Debug("Seems we have successfully parsed pkg %v", pkg.Name)
 	return activateTarget(state, pkg, label, dependent, forSubinclude)
 }
 
@@ -225,6 +224,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 	if subrepo != nil {
 		pkg.SubrepoName = subrepo.Name
 	}
+
 	if packageName == InternalPackageName {
 		pkgStr, err := GetInternalPackage(state.Config)
 		if err != nil {

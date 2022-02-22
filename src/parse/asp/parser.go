@@ -73,7 +73,6 @@ func (p *Parser) MustLoadBuiltins(filename string, contents []byte) {
 // It returns true if the call was deferred at some point awaiting  target to build,
 // along with any error encountered.
 func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
-	// log.Warningf("parsing pkg=%v, filename=%v", pkg.Name, filename)
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
