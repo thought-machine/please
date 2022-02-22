@@ -124,16 +124,38 @@ func writeCCConfigFields(file ast.File) ast.File {
 		"dsymtool":           "DsymTool",
 	}
 
-	// in main plz only
-	// LinkWithLdTool
-	// // Coverage
-	// // ClangModules
-
-	// in cc plugin only
-	// AsmTool
-	// DefaultNamespace
-
 	return writeFieldsToConfig("cc", file, configMap)
+}
+
+func writeJavaConfigFields(file ast.File) ast.File {
+	configMap := map[string]string{
+		"javactool":          "JavacTool",
+		"javacworker":        "JavacWorker",
+		"junitrunner":        "JunitRunner",
+		"defaulttestpackage": "DefaultTestPackage",
+		"releaselevel":       "ReleaseLevel",
+		"targetlevel":        "TargetLevel",
+		"javacflags":         "JavacFlags",
+		"javactestflags":     "JavacTestFlags",
+		"defaultmavenrepo":   "MavenRepo",
+		"toolchain":          "Toolchain",
+	}
+
+	subsection := "java"
+	section := "Plugin"
+
+	// Check for existing java fields first
+	for _, s := range file.Sections {
+		if s.Key == subsection {
+			for _, field := range s.Fields {
+				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
+					file = ast.InjectField(file, plugVal, field.Value, section, subsection, false)
+				}
+			}
+		}
+	}
+
+	return file
 }
 
 func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]string) ast.File {
@@ -178,49 +200,11 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 	return file
 }
 
-func writeJavaConfigFields(file ast.File) ast.File {
-
-	// in main but not in plugin
-	// JlinkTool
-	// JavaHome
-	// JarCatTool
-	// SourceLevel
-
-	// Main plz
-	configMap := map[string]string{
-		"javactool":          "JavacTool",
-		"javacworker":        "JavacWorker",
-		"junitrunner":        "JunitRunner",
-		"defaulttestpackage": "DefaultTestPackage",
-		"releaselevel":       "ReleaseLevel",
-		"targetlevel":        "TargetLevel",
-		"javacflags":         "JavacFlags",
-		"javactestflags":     "JavacTestFlags",
-		"defaultmavenrepo":   "MavenRepo",
-		"toolchain":          "Toolchain",
-	}
-
-	subsection := "java"
-	section := "Plugin"
-
-	// Check for existing java fields first
-	for _, s := range file.Sections {
-		if s.Key == subsection {
-			for _, field := range s.Fields {
-				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
-					file = ast.InjectField(file, plugVal, field.Value, section, subsection, false)
-				}
-			}
-		}
-	}
-
-	return file
-}
-
 // targetExistsInFile checks to see if the plugin target already exists
 // in plugins/BUILD
 func targetExistsInFile(location, plugin string) bool {
 	if _, err := os.Stat(location); err != nil {
+		log.Debug("Target already exists in %s", location)
 		return false
 	}
 
