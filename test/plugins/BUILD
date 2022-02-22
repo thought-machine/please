@@ -55,6 +55,7 @@ please_repo_e2e_test(
         "plugins/BUILD" : "name = \\\"cc\\\"",
         "plugins/BUILD" : "plugin = \\\"cc-rules\\\"",
     },
-    plz_command = "plz init plugin cc",
+    # Need to break hard link here so init_plugin_test's actual .plzconfig doesn't get updated.
+    plz_command = "cp .plzconfig .something; mv .something .plzconfig; plz init plugin cc",
     repo = "init_plugin_test",
 )
