@@ -67,24 +67,21 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	}
 	// Subrepo & nothing else means we just want to ensure that subrepo is present.
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
-		log.Warningf("label.Subrepo != \"\" && label.PackageName == \"\" && label.Name == \"\"")
 		return nil
 	}
-	log.Warningf("Calling parsePackage")
 	pkg, err = parsePackage(state, label, dependent, subrepo)
 
 	if err != nil {
 		return err
 	}
 	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
+	log.Debug("Seems we have successfully parsed pkg %v", pkg.Name)
 	return activateTarget(state, pkg, label, dependent, forSubinclude)
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
 func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
-	log.Warningf("in checkSubrepo. label=%v\tdependent=%v", label, dependent)
 	if label.Subrepo == "" {
-		log.Warningf("label.Subrepo=\"\"")
 		return nil, nil
 	} else if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
 		return subrepo, nil
@@ -227,10 +224,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 	pkg.Subrepo = subrepo
 	if subrepo != nil {
 		pkg.SubrepoName = subrepo.Name
-	} else {
-		log.Warningf("subrepo == nil")
 	}
-
 	if packageName == InternalPackageName {
 		pkgStr, err := GetInternalPackage(state.Config)
 		if err != nil {
@@ -240,30 +234,22 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 			return nil, fmt.Errorf("faild to parse internal package: %w", err)
 		}
 	} else {
-		log.Warningf("packageName != InternalPackageName")
 		filename, dir := buildFileName(state, label.PackageName, subrepo)
-		log.Warningf("filename=%v", filename)
 		if filename != "" {
-			log.Warningf("filename != \"\"")
 			pkg.Filename = filename
 			if err := state.Parser.ParseFile(pkg, pkg.Filename); err != nil {
 				return nil, err
 			}
 		} else {
-			log.Warningf("filename == \"\"")
 			exists := core.PathExists(dir)
 			// Handle quite a few cases to provide more obvious error messages.
 			if dependent != core.OriginalTarget && exists {
-				log.Warningf("case 1")
 				return nil, fmt.Errorf("%s depends on %s, but there's no %s file in %s/", dependent, label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			} else if dependent != core.OriginalTarget {
-				log.Warningf("case 2")
 				return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist: %s", dependent, label, dir, packageName)
 			} else if exists {
-				log.Warningf("case 3")
 				return nil, fmt.Errorf("Can't build %s; there's no %s file in %s/", label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			}
-			log.Warningf("case 4")
 			return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, dir)
 		}
 	}
