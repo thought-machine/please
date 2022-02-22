@@ -28,22 +28,15 @@ const pluginRepoTemplate = `plugin_repo(
 // InitPlugins initialises one or more plugins by inserting plugin config values into
 // the host repo config file, and creating a build target in //plugins.
 func InitPlugins(plugins []string) {
-	configExists := core.FindRepoRoot()
-	if !configExists {
-		log.Warning("No config found. Creating one in this directory.")
-		InitConfig(".", false, true)
-	}
-
 	log.Debug("Initialising plugin(s): %v", plugins)
 	for _, p := range plugins {
 		if err := initPlugin(p); err != nil {
-			log.Warningf("Could not initialise plugin %s. Got error: %v", p, err)
+			log.Warningf("could not initialise plugin %s. Got error: %v", p, err)
 		}
 	}
 }
 
 func initPlugin(plugin string) error {
-	log.Warningf("Inserting plugin config values into .plzconfig")
 	if err := createTarget("plugins/BUILD", plugin); err != nil {
 		return err
 	}
@@ -105,9 +98,7 @@ func writePythonConfigFields(file ast.File) ast.File {
 	for _, s := range file.Sections {
 		if s.Key == section {
 			for _, field := range s.Fields {
-				log.Warningf("%v\t%v", field.Name, field.Value)
 				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
-					log.Warningf("Got a hit with %v", field.Name)
 					file = ast.InjectField(file, plugVal, field.Value, section, subsection, false)
 				}
 			}
@@ -153,9 +144,7 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 		if s.Key == plugin {
 			foundSection = true
 			for _, field := range s.Fields {
-				log.Warningf("%v\t%v", field.Name, field.Value)
 				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
-					log.Warningf("Got a hit with %v", field.Name)
 					file = ast.InjectField(file, plugVal, field.Value, section, plugin, false)
 				}
 			}
@@ -218,9 +207,7 @@ func writeJavaConfigFields(file ast.File) ast.File {
 	for _, s := range file.Sections {
 		if s.Key == subsection {
 			for _, field := range s.Fields {
-				log.Warningf("%v\t%v", field.Name, field.Value)
 				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
-					log.Warningf("Got a hit with %v", field.Name)
 					file = ast.InjectField(file, plugVal, field.Value, section, subsection, false)
 				}
 			}
@@ -270,7 +257,6 @@ func createTarget(location, plugin string) error {
 	if err != nil {
 		return err
 	}
-	log.Warningf("Got revision %s", revision)
 	_, err = fmt.Fprintf(f, pluginRepoTemplate, plugin, revision, plugin)
 
 	return err
@@ -298,12 +284,12 @@ func getLatestRevision(plugin string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("HTTP request to github API failed. Could not get latest release")
+		return "", err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("failed to read HTTP response body")
+		return "", err
 	}
 
 	var result Response
@@ -311,5 +297,5 @@ func getLatestRevision(plugin string) (string, error) {
 		return "", err
 	}
 
-	return result[0].Name, err
+	return result[0].Name, nil
 }
