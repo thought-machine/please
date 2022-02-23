@@ -907,8 +907,9 @@ func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget,
 		entry := uploadinfo.EntryFromBlob([]byte(content))
 		ch <- entry
 		ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-			Path:   command.OutputPaths[0],
-			Digest: entry.Digest.ToProto(),
+			Path:         command.OutputPaths[0],
+			Digest:       entry.Digest.ToProto(),
+			IsExecutable: target.IsBinary,
 		})
 		return nil
 	}); err != nil {
