@@ -46,7 +46,13 @@ var opts struct {
 
 var flagCompletion bool
 
-// Parses flags but delegates completion to main plz binary to be executed.
+type state struct {
+	config                        *core.Configuration
+	pleaseLocationFileConfigEmpty bool
+	pleaseExecutable              string
+}
+
+// Parses flags but delegates completion to the main binary to be executed.
 func parseFlags() (*flags.Parser, error) {
 	envValue, envExists := os.LookupEnv("GO_FLAGS_COMPLETION")
 	if err := os.Unsetenv("GO_FLAGS_COMPLETION"); err != nil {
@@ -65,7 +71,11 @@ func parseFlags() (*flags.Parser, error) {
 	return parser, nil
 }
 
-func readConfigAndChdirToRoot() *core.Configuration {
+// Tries to find the repo root and read the respective config files.
+func findRootAndReadConfigFilesOnly() *core.Configuration {
+	config := &core.Configuration{}
+
+	// Find repo root to read correct config files.
 	if opts.BuildFlags.RepoRoot != "" {
 		abs, err := filepath.Abs(opts.BuildFlags.RepoRoot)
 		if err != nil {
@@ -73,92 +83,92 @@ func readConfigAndChdirToRoot() *core.Configuration {
 		}
 		core.RepoRoot = abs
 	} else if !core.FindRepoRoot() {
-		// Read global config files looking for the default repo.
-		config, err := core.ReadDefaultGlobalConfigFiles()
-		if err != nil {
+		log.Debug("Trying to find the default repo root on global config files")
+		if err := core.ReadDefaultGlobalConfigFilesOnly(config); err != nil {
 			log.Fatalf("Error reading default global config file: %s", err)
-		} else if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
-			log.Fatalf("Can't override requested config setting: %s", err)
 		}
-		// We are done here, if no default repo exists.
+		// We are done here. There's no default repo root and we've read all
+		// config files required.
 		if config.Please.DefaultRepo == "" {
-			return resolvePleaseLocationConfig(config)
+			return config
 		}
 		core.RepoRoot = fs.ExpandHomePath(config.Please.DefaultRepo)
 	}
 
-	if err := os.Chdir(core.RepoRoot); err != nil {
-		log.Fatalf("Unable to change to repo root '%s': %s", core.RepoRoot, err)
-	}
-
-	// At this the repo root is known so read its config files.
-	config, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
-	if err != nil {
+	// At this point the repo root is known so read its config files.
+	if err := core.ReadDefaultConfigFilesOnly(config, opts.BuildFlags.Profile); err != nil {
 		log.Fatalf("Error reading config file: %s", err)
-	} else if err := config.ApplyOverrides(opts.BuildFlags.Option); err != nil {
-		log.Fatalf("Can't override requested config setting: %s", err)
-	}
-	return resolvePleaseLocationConfig(config)
-}
-
-func resolvePleaseLocationConfig(config *core.Configuration) *core.Configuration {
-	exec, err := os.Executable()
-	if err != nil {
-		log.Fatalf("Unable to get the path of the current process: ", err)
-	}
-
-	// The shim is meant to be on the PATH, so set the plz location config to the
-	// default plz location, if it's pointing to the directory of the shim.
-	if filepath.Dir(exec) == config.Please.Location {
-		config.Please.Location = fs.ExpandHomePath(core.DefaultPleaseLocation)
 	}
 
 	return config
 }
 
-func plzPath(config *core.Configuration) string {
-	return filepath.Join(config.Please.Location, "please")
-}
+// If empty, set the please location to ~/.please, or make absolute if relative.
+func resolvePleaseLocation(config *core.Configuration) {
+	if config.Please.Location == "" {
+		config.Please.Location = core.DefaultPleaseLocation
+	}
 
-// Force install Please, if it can't be found.
-func maybeInstallPlease(config *core.Configuration) {
-	if !fs.FileExists(plzPath(config)) {
-		// If Please isn't installed and we are in completion mode, then stop here.
-		// There's nothing to complete without the plz binary, and this will prevent
-		// the `update.CheckAndUpdate` from being run for eack TAB-key stroke.
-		if flagCompletion {
-			os.Exit(0)
-		}
-
-		update.CheckAndUpdate(config, true, true, true, !opts.Update.NoVerify, true, opts.Update.LatestPrerelease)
-		panic("The new Please binary installed should have replaced the current process")
+	if !filepath.IsAbs(config.Please.Location) {
+		config.Please.Location = filepath.Join(core.RepoRoot, config.Please.Location)
 	}
 }
 
-// Update Please, if necessary.
-func maybeUpdatePlease(config *core.Configuration, isUpdateCommand bool) {
-	// Don't check and update Please if completion is enabled. Since completion
-	// is the desired action stop here.
+// Force install Please, which also replaces this process.
+func installPlease(config *core.Configuration) {
+	// If we are in completion mode then stop here. There's nothing to complete without the main binary.
+	if flagCompletion {
+		os.Exit(0)
+	}
+
+	if config.Please.DownloadLocation == "" {
+		config.Please.DownloadLocation = "https://get.please.build"
+	}
+
+	update.CheckAndUpdate(config, true, true, true, true, true, false)
+}
+
+// Update Please if necessary, which also replaces this process.
+func maybeUpdatePlease(state state, isUpdateCommand bool) {
+	// Don't check and update Please if completion mode is enabled. Hand it over for whatever comes next.
 	if flagCompletion {
 		return
 	}
 
-	plzExec := plzPath(config)
-
-	out, err := exec.Command(plzExec, "--version").Output()
+	out, err := exec.Command(state.pleaseExecutable, "--version").Output()
 	if err != nil {
 		log.Fatalf("Unable to get Please version: %s", err)
 	}
-	// This makes the shim look like the actual plz binary to `update.CheckAndUpdate`
+	// Set the version of shim to that of the main binary to make it look like
+	// the real thing to the existing `update.CheckAndUpdate` logic.
 	core.PleaseVersion = strings.TrimPrefix(strings.TrimSpace(string(out)), "Please version ")
 
-	if opts.Update.Latest || opts.Update.LatestPrerelease {
-		config.Please.Version.Unset()
-	} else if opts.Update.Version.IsSet {
-		config.Please.Version = opts.Update.Version
+	// Read and load the configuration as it would have been done by the main binary.
+	cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
+	if err != nil {
+		log.Fatalf("Error reading config file: %s", err)
+	} else if err := cfg.ApplyOverrides(opts.BuildFlags.Option); err != nil {
+		log.Fatalf("Can't override requested config setting: %s", err)
 	}
 
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, isUpdateCommand, opts.Update.Force, !opts.Update.NoVerify, true, opts.Update.LatestPrerelease)
+	// Since we are reusing the same core code for resolving configuration,
+	// an empty please location resolved to the directory of the shim needs to
+	// point to the directory of the main binary instead.
+	if state.pleaseLocationFileConfigEmpty {
+		if exec, err := os.Executable(); err != nil {
+			log.Fatalf("Unable to get the path of this process: %s", err)
+		} else if cfg.Please.Location == filepath.Dir(exec) {
+			cfg.Please.Location = filepath.Dir(state.pleaseExecutable)
+		}
+	}
+
+	if opts.Update.Latest || opts.Update.LatestPrerelease {
+		cfg.Please.Version.Unset()
+	} else if opts.Update.Version.IsSet {
+		cfg.Please.Version = opts.Update.Version
+	}
+
+	update.CheckAndUpdate(cfg, !opts.FeatureFlags.NoUpdate, isUpdateCommand, opts.Update.Force, !opts.Update.NoVerify, true, opts.Update.LatestPrerelease)
 }
 
 func main() {
@@ -167,21 +177,34 @@ func main() {
 		log.Fatal(err)
 	}
 
-	command := cli.ActiveFullCommand(parser.Command)
-
 	cli.InitLogging(opts.OutputFlags.Verbosity)
 
-	config := readConfigAndChdirToRoot()
-	if config.Please.DownloadLocation == "" {
-		log.Fatal("Please download location is not set")
+	// Finds and sets the root, and reads the respective config files without going through the same
+	// code path as in the main binary that further applies defaults and other resolving. This is required
+	// as an empty please location config value is traditionally resolved differently between first
+	// installation (handled by `pleasew`) and further updates (handled by the main binary).
+	// And given that this shim supports both features at once, it needs to handle these cases properly.
+	config := findRootAndReadConfigFilesOnly()
+	state := state{
+		config: config,
+		// This is needed to guarantee the expected please location in the update logic.
+		pleaseLocationFileConfigEmpty: config.Please.Location == "",
 	}
 
-	// Install Please if not found, and replace the current process.
-	maybeInstallPlease(config)
-	// Update Please if necessary, and replace the current process.
-	maybeUpdatePlease(config, command == "update")
+	resolvePleaseLocation(config)
+	state.pleaseExecutable = filepath.Join(config.Please.Location, "please")
 
-	if err := syscall.Exec(plzPath(config), os.Args, os.Environ()); err != nil {
+	// Install Please if not found.
+	if !fs.FileExists(state.pleaseExecutable) {
+		installPlease(config)
+		panic("The new Please binary installed should have replaced this process")
+	}
+
+	// Update Please if necessary, which also replaces this process.
+	command := cli.ActiveFullCommand(parser.Command)
+	maybeUpdatePlease(state, command == "update")
+
+	if err := syscall.Exec(state.pleaseExecutable, os.Args, os.Environ()); err != nil {
 		log.Fatalf("Failed to execute Please: %s", err)
 	}
 }

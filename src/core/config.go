@@ -57,8 +57,8 @@ const DefaultPleaseLocation = "~/.please"
 // DefaultPath is the default location please looks for programs in
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
-// readConfigFile reads a single config file into the config struct
-func readConfigFile(config *Configuration, filename string, subrepo bool) error {
+// readConfigFileOnly reads a single config file into the config struct
+func readConfigFileOnly(config *Configuration, filename string) error {
 	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
@@ -68,6 +68,15 @@ func readConfigFile(config *Configuration, filename string, subrepo bool) error 
 		log.Warning("Error in config file: %s", err)
 	} else {
 		log.Debug("Read config from %s", filename)
+	}
+	return nil
+}
+
+// readConfigFile reads a single config file into the config struct taking into account
+// some context like subrepos and plugins.
+func readConfigFile(config *Configuration, filename string, subrepo bool) error {
+	if err := readConfigFileOnly(config, filename); err != nil {
+		return err
 	}
 
 	if subrepo {
@@ -101,10 +110,20 @@ func ReadDefaultConfigFiles(profiles []ConfigProfile) (*Configuration, error) {
 	return ReadConfigFiles(defaultConfigFiles(), s)
 }
 
-// ReadDefaultGlobalConfigFiles reads all the default global config files and
+// ReadDefaultGlobalConfigFilesOnly reads all the default global config files and
 // merges them into a config object.
-func ReadDefaultGlobalConfigFiles() (*Configuration, error) {
-	return ReadConfigFiles(defaultGlobalConfigFiles(), nil)
+func ReadDefaultGlobalConfigFilesOnly(config *Configuration) error {
+	return ReadConfigFilesOnly(config, defaultGlobalConfigFiles(), nil)
+}
+
+// ReadDefaultConfigFilesOnly reads all the default config files and
+// merges them into a config object.
+func ReadDefaultConfigFilesOnly(config *Configuration, profiles []ConfigProfile) error {
+	s := make([]string, len(profiles))
+	for i, p := range profiles {
+		s[i] = string(p)
+	}
+	return ReadConfigFilesOnly(config, defaultConfigFiles(), s)
 }
 
 // defaultGlobalConfigFiles returns the set of global default config file names.
@@ -145,6 +164,21 @@ func defaultConfigFiles() []string {
 	)
 }
 
+// ReadConfigFilesOnly reads all the config locations, in order, and merges them into a config object.
+func ReadConfigFilesOnly(config *Configuration, filenames []string, profiles []string) error {
+	for _, filename := range filenames {
+		if err := readConfigFileOnly(config, filename); err != nil {
+			return err
+		}
+		for _, profile := range profiles {
+			if err := readConfigFileOnly(config, filename+"."+profile); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
 // Values are filled in by defaults initially and then overridden by each file in turn.
 func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, error) {
@@ -159,6 +193,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 			}
 		}
 	}
+
 	// Set default values for slices. These add rather than overwriting so we can't set
 	// them upfront as we would with other config values.
 	if usingBazelWorkspace {

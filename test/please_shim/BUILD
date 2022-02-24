@@ -7,7 +7,7 @@ please_repo_e2e_test(
         # has been set to `./please` relative to the repo root.
         "$TOOLS_PLEASE_SHIM --version > plz_version.txt",
         # Guarantee it was installed in the right place.
-        "ls $($TOOLS_PLEASE_SHIM query config please.location)"
+        "[ -e $($TOOLS_PLEASE_SHIM query config please.location) ]"
     ]),
     expect_output_contains = {
         # Version installed must match the one in the .plzconfig file.
