@@ -108,6 +108,7 @@ func resolvePleaseLocation(config *core.Configuration) {
 	if config.Please.Location == "" {
 		config.Please.Location = core.DefaultPleaseLocation
 	}
+	config.Please.Location = fs.ExpandHomePath(config.Please.Location)
 
 	if !filepath.IsAbs(config.Please.Location) {
 		config.Please.Location = filepath.Join(core.RepoRoot, config.Please.Location)
