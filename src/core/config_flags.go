@@ -8,7 +8,7 @@ import (
 
 // AttachAliasFlags attaches the alias flags to the given flag parser.
 // It returns true if any modifications were made.
-func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
+func (config *Configuration) AttachAliasFlags(parser *flags.Parser, args []string) bool {
 	for name, alias := range config.Alias {
 		var err error
 		cmd := parser.Command
@@ -34,9 +34,9 @@ func (config *Configuration) AttachAliasFlags(parser *flags.Parser) bool {
 				log.Warningf("config flags attach: %v, %v, %v, %v", name, alias.Cmd, len(alias.Subcommand), len(alias.Flag))
 				log.Errorf("Alias config field duplication for alias %s: use one method of specification", name)
 			}
-			cmd, err = alias.Command(name, alias.Config, alias.Desc, cmd)
+			cmd, err = alias.ParseAliasConfigs(name, args, alias.Config, alias.Desc, cmd)
 			if err != nil {
-				log.Errorf("Error parsing alias config %v", err)
+				log.Debugf("Error parsing alias config %v", err)
 			}
 		}
 	}

@@ -1,9 +1,5 @@
-sh_cmd(
+sh_binary(
     name = "deen",
-    cmd = [
-        '\n'.join([
-            '#!/bin/bash',
-            'echo \"astonished\" $#',
-        ]),
-    ],
+    main = "deen.sh",
+    deps = [],
 )

@@ -1227,7 +1227,7 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	if len(items) > 0 && items[0].Description == "BuildLabel" {
 		// Don't muck around with the config if we're predicting build labels.
 		cli.PrintCompletions(items)
-	} else if config := mustReadConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
+	} else if config := mustReadConfigAndSetRoot(false); config.AttachAliasFlags(parser, os.Args) {
 		// Run again without this registered as a completion handler
 		parser.CompletionHandler = nil
 		parser.ParseArgs(os.Args[1:])
@@ -1339,77 +1339,73 @@ func initBuild(args []string) string {
 	if (flagsErr != nil || len(extraArgs) > 0) && command != "query.completions" {
 		if len(os.Args) > 1 {
 			if alias, ok := config.Alias[os.Args[1]]; ok {
-				// first handle if the alias has a flat structure
+				// Handle if the alias has a flat structure
 				if alias.Config == "" {
-					// config.AttachAliasFlags(parser)
-					// extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
-					// if flagsErr != nil {
-					// 	printUsage(parser, extraArgs, flagsErr)
-					// 	os.Exit(1)
-					// } else {
-					args := config.UpdateArgsWithAliases(os.Args)
-					log.Warningf("Args %v", args)
-					command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
-					//}
-				} else {
-					// next handle if the alias is nested
-					parser = flags.NewNamedParser(os.Args[0], 0)
-					config.AttachAliasFlags(parser)
-					cmd, err := alias.Command(os.Args[1], alias.Config, alias.Desc, parser.Command)
-					if err != nil {
-						log.Error("Failed to parse config at location %s: %s", alias.Config, err)
-					}
-					parser.Command = cmd
-
-					for _, arg := range os.Args[1:] {
+					config.AttachAliasFlags(parser, os.Args)
+					extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
+					contains := false
+					for _, arg := range extraArgs {
 						if arg == "--help" {
-							parser.WriteHelp(os.Stderr)
-							os.Exit(0)
+							contains = true
 						}
 					}
-
-					extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
 					if flagsErr != nil {
 						printUsage(parser, extraArgs, flagsErr)
 						os.Exit(1)
 					} else {
-						// var ac struct {
-						// 	core.Alias
-						// }
 						args := config.UpdateArgsWithAliases(os.Args)
-						log.Warningf("Args: %v, extra args: %v, flags: %v", args, extraArgs, cmd.Options())
-						if parser.Command != nil {
-							active := cli.ActiveCommand(parser.Command)
-							log.Warningf("Active command: %v", active)
+						if contains {
+							parser.WriteHelp(os.Stderr)
+							os.Exit(0)
 						}
-						//this replaces the alias with the actual command
-						parser, extraArgs, err = cli.ParseFlags("Please", &opts, args[1:], flags.HelpFlag|flags.PassDoubleDash, nil, additionalUsageInfo)
+						log.Warningf("Args flat %v", args)
+						command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
+					}
+				} else {
+					config.AttachAliasFlags(parser, os.Args)
+
+					if len(os.Args) > 2 {
+						cmd := parser.Command.Find(os.Args[2])
+						parser.Active = cmd
+					}
+					log.Warningf("===1 alias.Command command %v args %v", parser.Active, os.Args)
+					extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
+
+					for i, arg := range os.Args[1:] {
+						if arg == "--help" {
+							log.Warningf("%v, %v", i, arg)
+							cli.InitLogging(cli.MinVerbosity)
+							if config, err := readConfigAndSetRoot(false); err == nil {
+								config.PrintAlias(os.Stderr, os.Args[i], os.Args)
+							}
+							os.Exit(0)
+						}
+					}
+
+					log.Warningf("===2 ParseArgs extraArgs %v flagsErr %v", extraArgs, flagsErr)
+					if flagsErr != nil {
+						printUsage(parser, extraArgs, flagsErr)
+						os.Exit(1)
+					} else {
+						args := config.UpdateArgsWithAliases(os.Args)
+						parser, extraArgs, _ = cli.ParseFlags("Please", &opts, args[1:], flags.HelpFlag|flags.PassDoubleDash, nil, additionalUsageInfo)
 						if parser.Command != nil {
 							active := cli.ActiveCommand(parser.Command)
-							log.Warningf("Active command: %v Options: %v", active, parser.Command.Options())
+							log.Warningf("===5 Active command: %v Options: %v RunArgs: %v", active, parser.Command.Options(), opts.Run.Args.Args)
 							command = active
 							labels := strings.Split(args[2], ":")
 							packageName := strings.Split(labels[0], "//")
+							log.Warningf("Args: %v, packageName: %v, labels %v", args, packageName, labels)
 							opts.Run.Args.Target.BuildLabel = core.NewBuildLabel(packageName[1], labels[1])
-							// var filepaths cli.Filepaths
-							// for _, option := range cmd.Options() {
-							// 	filepaths = append(filepaths, cli.Filepath(option.LongName))
-							// }
-							// opts.Run.Args.Args = filepaths
-							// log.Warningf("%v", filepaths)
+							var filepaths cli.Filepaths
+							for _, arg := range args[3:] {
+								if arg != "--" {
+									filepaths = append(filepaths, cli.Filepath(arg))
+								}
+							}
+							opts.Run.Args.Args = filepaths
+							log.Warningf("===6 Filepaths %v", filepaths)
 						}
-						// if err != nil {
-						// 	config.AttachAliasFlags(parser)
-						// 	for _, command := range parser.Command.Commands() {
-						// 		log.Warningf("command %v", command.Name)
-						// 		for _, cmd := range command.Commands() {
-						// 			log.Warningf("subcommand %v, %v", cmd.Name, cmd.FindOptionByLongName("ffs"))
-						// 		}
-						// 	}
-						// 	log.Warningf("ParseFlags %v", extraArgs)
-
-						//
-						// command = cli.ParseFlagsFromArgsOrDie("Please", &ac, args, additionalUsageInfo)
 					}
 				}
 			}

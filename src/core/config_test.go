@@ -340,7 +340,7 @@ func TestAttachAliasFlags(t *testing.T) {
 	assert.NoError(t, err)
 	os.Setenv("GO_FLAGS_COMPLETION", "1")
 	p := flags.NewParser(&struct{}{}, 0)
-	b := c.AttachAliasFlags(p)
+	b := c.AttachAliasFlags(p, []string{})
 	assert.True(t, b)
 	completions := []string{}
 	p.CompletionHandler = func(items []flags.Completion) {
@@ -389,6 +389,10 @@ func TestAttachAliasFlags(t *testing.T) {
 	_, err = p.ParseArgs([]string{"plz", "bootstrapper", "proto", "--to"})
 	assert.NoError(t, err)
 	assert.EqualValues(t, []string{"--token"}, completions)
+
+	// _, err = p.ParseArgs([]string{"plz", "meme", "--doge", "b"})
+	// assert.NoError(t, err)
+	// assert.EqualValues(t, []string{"big"}, completions)
 }
 
 func TestPrintAliases(t *testing.T) {
@@ -401,11 +405,22 @@ Available commands for this repository:
   auth          Authenticates you.
   bootstrapper  It pulls boots up by the straps.
   index         Some useful scripts.
-  index wibble  Wibbles.
-  index wobble  Definitely doesn't wibble.
   meme          Generates a meme.
   psql          Connects to the DB.
   query owners  Queries owners of a thing.
+`, buf.String())
+}
+
+func TestPrintAlias(t *testing.T) {
+	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, nil)
+	assert.NoError(t, err)
+	var buf bytes.Buffer
+	c.PrintAlias(&buf, "index", []string{"please", "index"})
+	assert.Equal(t, `
+Usage for index:
+  index         Some useful scripts.
+  index wibble  Wibbles.
+  index wobble  Definitely doesn't wibble.
 `, buf.String())
 }
 

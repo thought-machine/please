@@ -1,6 +1,5 @@
-sh_cmd(
+sh_binary(
     name = "such_wow",
-    cmd = [
-        'echo \"wow\" $# \"args\"',
-    ],
+    main = "such_wow.sh",
+    deps = [],
 )

@@ -195,7 +195,6 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 		args[0] = abs
 	}
 
-	log.Warningf("Running target %s...", strings.Join(args, " "))
 	output.SetWindowTitle("plz run: " + strings.Join(args, " "))
 	env := environ(state, target, setenv, tmpDir)
 
@@ -207,7 +206,6 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 			}
 		}
 		// Plain 'plz run'. One way or another we never return from the following line.
-		log.Warningf("Args within Run %v", args)
 		must(syscall.Exec(args[0], args, env), args)
 	} else if detach {
 		// Bypass the whole process management system since we explicitly aim not to manage this subprocess.

@@ -1,6 +1,3 @@
-[command]
-Cmd = index
-
 [subcommand "wibble"]
 Description = Wibbles.
 Config = src/core/test_data/wibble.aliasconfig

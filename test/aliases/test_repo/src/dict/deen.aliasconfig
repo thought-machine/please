@@ -3,3 +3,6 @@ Cmd = run //src/dict:deen --
 
 [flag "ffs"]
 Description = For the sake of flags.
+
+[flag "another"]
+Description = One more flag.
