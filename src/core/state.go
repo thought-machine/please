@@ -863,7 +863,8 @@ func (state *BuildState) ShouldDownload(target *BuildTarget) bool {
 	// Need to download the target if it was originally requested (and the user didn't pass --nodownload).
 	downloadOriginalTarget := state.OutputDownload == OriginalOutputDownload && state.IsOriginalTarget(target)
 	downloadTransitiveTarget := state.OutputDownload == TransitiveOutputDownload
-	return target.NeededForSubinclude || ((downloadOriginalTarget || downloadTransitiveTarget) && !state.NeedTests) || target.HasLinks(state)
+	downloadLinkableTarget := state.Config.Build.DownloadLinkable && target.HasLinks(state)
+	return target.NeededForSubinclude || ((downloadOriginalTarget || downloadTransitiveTarget) && !state.NeedTests) || downloadLinkableTarget
 }
 
 // ShouldRebuild returns true if we should force a rebuild of this target (i.e. the user
