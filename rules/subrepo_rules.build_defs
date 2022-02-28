@@ -172,7 +172,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
     Args:
       name: Name of the rule.
       repo: Github repo to fetch from (e.g. "thought-machine/please").
-      revision: Revision to download.
+      revision: Revision to download. This can be either a release version, commit or branch.
       build_file: The file to use as a BUILD file for this subrepository.
       hashes: List of hashes to verify the rule with.
       strip_prefix: Prefix to strip from the contents of the zip. Is usually autodetected for you.
