@@ -14,6 +14,7 @@ import (
 
 	"github.com/please-build/gcfg/ast"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/plz"
 )
 
@@ -31,7 +32,7 @@ func InitPlugins(plugins []string) {
 	log.Debug("Initialising plugin(s): %v", plugins)
 	for _, p := range plugins {
 		if err := initPlugin(p); err != nil {
-			log.Warningf("could not initialise plugin %s. Got error: %v", p, err)
+			log.Errorf("could not initialise plugin %s. Got error: %s", p, err)
 		}
 	}
 }
@@ -91,21 +92,7 @@ func writePythonConfigFields(file ast.File) ast.File {
 		"testrunnerbootstrap": "TestrunnerDeps",
 	}
 
-	section := "Plugin"
-	subsection := "python"
-
-	// Check for existing python fields first
-	for _, s := range file.Sections {
-		if s.Key == section {
-			for _, field := range s.Fields {
-				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
-					file = ast.InjectField(file, plugVal, field.Value, section, subsection, false)
-				}
-			}
-		}
-	}
-
-	return file
+	return writeFieldsToConfig("python", file, configMap)
 }
 
 func writeCCConfigFields(file ast.File) ast.File {
@@ -141,21 +128,7 @@ func writeJavaConfigFields(file ast.File) ast.File {
 		"toolchain":          "Toolchain",
 	}
 
-	subsection := "java"
-	section := "Plugin"
-
-	// Check for existing java fields first
-	for _, s := range file.Sections {
-		if s.Key == subsection {
-			for _, field := range s.Fields {
-				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
-					file = ast.InjectField(file, plugVal, field.Value, section, subsection, false)
-				}
-			}
-		}
-	}
-
-	return file
+	return writeFieldsToConfig("java", file, configMap)
 }
 
 func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]string) ast.File {
@@ -200,11 +173,16 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 	return file
 }
 
+func targetExistsInGraph(target core.BuildLabel) bool {
+
+
+	return true
+}
+
 // targetExistsInFile checks to see if the plugin target already exists
 // in plugins/BUILD
 func targetExistsInFile(location, plugin string) bool {
-	if _, err := os.Stat(location); err != nil {
-		log.Debug("Target already exists in %s", location)
+	if !fs.FileExists(location) {
 		return false
 	}
 
@@ -213,6 +191,8 @@ func targetExistsInFile(location, plugin string) bool {
 		panic(err)
 	}
 
+	state := 
+	if t := graph
 	str := "plugin_repo\\(...name = \"" + plugin + "\""
 	exists, err := regexp.Match("(?s)"+str, b)
 	if err != nil {
