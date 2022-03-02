@@ -23,7 +23,7 @@ import (
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
-	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
@@ -36,12 +36,19 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
 )
 
 var log = logging.MustGetLogger("remote")
 
 // The API version we support.
 var apiVersion = semver.SemVer{Major: 2}
+
+var unstampedTargetMissingOutputs = metrics.NewCounter(
+	"remote",
+	"unstamped_target_missing_outputs",
+	"Number of times an unstamped target hasn't returned the expected outputs",
+)
 
 // A Client is the interface to the remote API.
 //
@@ -391,8 +398,13 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	}
 	metadata, ar, err := c.execute(tid, target, command, stampedDigest, false, needStdout)
 	if target.Stamp && err == nil {
-		// Store results under unstamped digest too.
-		c.locallyCacheResults(target, unstampedDigest, metadata, ar)
+		err = c.verifyActionResult(target, command, digest, ar, c.state.Config.Remote.VerifyOutputs, false)
+		if err != nil {
+			unstampedTargetMissingOutputs.Inc()
+		} else {
+			// Store results under unstamped digest too.
+			c.locallyCacheResults(target, unstampedDigest, metadata, ar)
+		}
 		c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 			InstanceName: c.instance,
 			ActionDigest: unstampedDigest,
