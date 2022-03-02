@@ -32,7 +32,7 @@ func valueToPyObject(value reflect.Value) pyObject {
 
 // newConfig creates a new pyConfig object from the configuration.
 // This is typically only created once at global scope, other scopes copy it with .Copy()
-func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
+func newConfig(state *core.BuildState) *pyConfig {
 	base := make(pyDict, 100)
 
 	v := reflect.ValueOf(state.Config).Elem()
@@ -81,15 +81,6 @@ func (i *interpreter) newConfig(state *core.BuildState) *pyConfig {
 	base["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
 	base["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 	base["DEBUG_PORT"] = pyInt(state.DebugPort)
-
-	// Preloaded subincludes don't technically get subincluded so we need to handle them here
-	for _, preloadedSubinclude := range state.Config.Parse.PreloadSubincludes {
-		target := state.Graph.Target(preloadedSubinclude)
-		if target == nil || target.Subrepo == nil {
-			continue // The target hasn't been defined yet. We're probably still preloading.
-		}
-		loadPluginConfig(target.Subrepo.State, state, base)
-	}
 
 	return &pyConfig{base: base}
 }
@@ -186,15 +177,20 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 	return ret
 }
 
-func loadPluginConfig(pluginPkgState *core.BuildState, pkgState *core.BuildState, c pyObject) {
-	pluginName := pluginPkgState.Config.PluginDefinition.Name
+func (i *interpreter) loadPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) {
+	pluginName := pluginState.Config.PluginDefinition.Name
 	if pluginName == "" {
 		// Subinclude is not a plugin. Stop here.
 		return
 	}
-	key := pyString(strings.ToUpper(pluginName))
-	cfg := pluginConfig(pluginPkgState, pkgState)
-	c.IndexAssign(key, cfg)
+	c := i.getConfig(pkgState)
+	key := strings.ToUpper(pluginName)
+	if _, ok := c.base[key]; ok {
+		return
+	}
+
+	cfg := pluginConfig(pluginState, pkgState)
+	c.base[key] = cfg
 }
 
 func toPyObject(key, val, toType string) pyObject {

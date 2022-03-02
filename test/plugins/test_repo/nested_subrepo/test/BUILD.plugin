@@ -1,6 +1,5 @@
 subinclude("///foo//build_defs:foolang")
 
 foolang_library(
-    name = "test_lib",
-    src = "test.foo",
-)
+    name = "nested_lib",
+    src = "test.foo",)

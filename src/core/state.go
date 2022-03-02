@@ -64,12 +64,14 @@ const (
 
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
+	// NewParser creates a new parser on the state object
+	NewParser(state *BuildState)
+	// WaitForInit waits until the parser is fully initialised with pre-loaded build definitions
+	WaitForInit()
 	// ParseFile parses a single BUILD file into the given package.
-	ParseFile(state *BuildState, pkg *Package, filename string) error
-	// Preload loads a file as a preloaded build definition
-	Preload(filename string)
+	ParseFile(pkg *Package, filename string) error
 	// ParseReader parses a single BUILD file into the given package.
-	ParseReader(state *BuildState, pkg *Package, reader io.ReadSeeker) error
+	ParseReader(pkg *Package, reader io.ReadSeeker) error
 	// RunPreBuildFunction runs a pre-build function for a target.
 	RunPreBuildFunction(threadID int, state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
@@ -213,9 +215,6 @@ type BuildState struct {
 	CurrentSubrepo string
 	// ParentState is the state of the repo containing this subrepo. Nil if this is the host repo.
 	ParentState *BuildState
-
-	preloadSubincludes *sync.Once
-	FinishedPreloading bool
 }
 
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
@@ -560,29 +559,6 @@ func (state *BuildState) logResult(result *BuildResult) {
 			state.TestFailed = true
 		}
 	}
-}
-
-// WaitForPreloadedSubincludes waits for the preloaded subincludes to be build and preloads them into the parser
-func (state *BuildState) WaitForPreloadedSubincludes() {
-	state.preloadSubincludes.Do(func() {
-		for _, inc := range state.Config.Parse.PreloadSubincludes {
-			// Queue them up asynchronously to feed the queues as quickly as possible
-			go func(inc BuildLabel) {
-				state.WaitForBuiltTarget(inc, OriginalTarget)
-			}(inc)
-		}
-
-		// Preload them in order to avoid non-deterministic errors when the subincludes depend on each other
-		for _, inc := range state.Config.Parse.PreloadSubincludes {
-			t := state.WaitForTargetAndEnsureDownload(inc, OriginalTarget)
-
-			for _, out := range t.FullOutputs() {
-				state.Parser.Preload(out)
-			}
-		}
-
-		state.FinishedPreloading = true
-	})
 }
 
 // forwardResults runs indefinitely, forwarding results from the internal
@@ -1106,7 +1082,7 @@ func readConfigFiles(config *Configuration, configFiles []string) {
 }
 
 // ForSubrepo creates a new state for the given subrepo
-func (state *BuildState) ForSubrepo(name string, config ...string) *BuildState {
+func (state *BuildState) ForSubrepo(name string, bazelCompat bool, config ...string) *BuildState {
 	for _, s := range state.progress.allStates {
 		if s.CurrentSubrepo == name {
 			return s
@@ -1124,6 +1100,13 @@ func (state *BuildState) ForSubrepo(name string, config ...string) *BuildState {
 	s.CurrentSubrepo = name
 	s.ParentState = state
 	state.progress.allStates = append(state.progress.allStates, s)
+
+	if bazelCompat {
+		s.Config.Bazel.Compatibility = true
+		s.Config.Parse.BuildFileName = append(state.Config.Parse.BuildFileName, "BUILD.bazel")
+	}
+
+	s.Parser.NewParser(s)
 	return s
 }
 
@@ -1242,7 +1225,6 @@ func NewBuildState(config *Configuration) *BuildState {
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 		},
-		preloadSubincludes: new(sync.Once),
 	}
 	state.PathHasher = state.Hasher(config.Build.HashFunction)
 	state.progress.allStates = []*BuildState{state}

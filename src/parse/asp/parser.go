@@ -27,6 +27,7 @@ type Parser struct {
 	interpreter *interpreter
 	// Stashed set of source code for builtin rules.
 	builtins map[string][]byte
+
 	// Parallelism limiter to ensure we don't try to run too many parses simultaneously
 	limiter semaphore
 }
@@ -86,6 +87,25 @@ func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
 		p.annotate(err, f)
 	}
 	return err
+}
+
+func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarget) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = handleErrors(r)
+		}
+	}()
+	p.limiter.Acquire()
+	defer p.limiter.Release()
+	subincludePkgState := state
+	if target.Subrepo != nil {
+		subincludePkgState = target.Subrepo.State
+	}
+	p.interpreter.loadPluginConfig(subincludePkgState, state)
+	for _, out := range target.FullOutputs() {
+		p.interpreter.scope.SetAll(p.interpreter.Subinclude(out, target.Label), true)
+	}
+	return nil
 }
 
 // ParseReader parses the contents of the given ReadSeeker as a BUILD file.

@@ -15,11 +15,13 @@ import (
 
 // An interpreter holds the package-independent state about our parsing process.
 type interpreter struct {
-	scope           *scope
-	parser          *Parser
-	subincludes     subincludeMap
-	config          map[*core.Configuration]*pyConfig
-	configMutex     sync.RWMutex
+	scope       *scope
+	parser      *Parser
+	subincludes subincludeMap
+
+	configs      map[*core.Configuration]*pyConfig
+	configsMutex sync.RWMutex
+
 	breakpointMutex sync.Mutex
 	limiter         semaphore
 	profiling       bool
@@ -37,7 +39,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		scope:       s,
 		parser:      p,
 		subincludes: subincludeMap{m: map[string]subincludeResult{}},
-		config:      map[*core.Configuration]*pyConfig{},
+		configs:     map[*core.Configuration]*pyConfig{},
 		limiter:     make(semaphore, state.Config.Parse.NumThreads),
 		profiling:   state.Config.Profiling,
 	}
@@ -103,23 +105,28 @@ func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (
 	return s, err
 }
 
+func handleErrors(r interface{}) (err error) {
+	if e, ok := r.(error); ok {
+		err = e
+	} else {
+		err = fmt.Errorf("%s", r)
+	}
+	log.Debug("%v:\n %s", err, debug.Stack())
+	return
+}
+
 // interpretStatements runs a series of statements in the context of the given scope.
 func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (ret pyObject, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			if e, ok := r.(error); ok {
-				err = e
-			} else {
-				err = fmt.Errorf("%s", r)
-			}
-			log.Debug("%v:\n %s", err, debug.Stack())
+			err = handleErrors(r)
 		}
 	}()
 	return s.interpretStatements(statements), nil // Would have panicked if there was an error
 }
 
 // Subinclude returns the global values corresponding to subincluding the given file.
-func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.Package) pyDict {
+func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 	globals, wait, first := i.subincludes.Get(path)
 	if globals != nil {
 		return globals
@@ -137,10 +144,9 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.P
 	}
 	stmts = i.parser.optimise(stmts)
 	s := i.scope.NewScope()
-	s.contextPkg = pkg
-	s.subincludeLabel = &label
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
+	s.subincludeLabel = &label
 	s.Set("CONFIG", s.config)
 	i.optimiseExpressions(stmts)
 	s.interpretStatements(stmts)
@@ -154,19 +160,18 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.P
 
 // getConfig returns a new configuration object for the given configuration object.
 func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
-	i.configMutex.RLock()
-	if c, present := i.config[state.Config]; present {
-		i.configMutex.RUnlock()
+	i.configsMutex.RLock()
+	if c, present := i.configs[state.Config]; present {
+		i.configsMutex.RUnlock()
 		return c
 	}
-	i.configMutex.RUnlock()
-	c := i.newConfig(state)
+	i.configsMutex.RUnlock()
+	c := newConfig(state)
 
-	i.configMutex.Lock()
-	defer i.configMutex.Unlock()
-	if state.FinishedPreloading {
-		i.config[state.Config] = c
-	}
+	i.configsMutex.Lock()
+	defer i.configsMutex.Unlock()
+	i.configs[state.Config] = c
+
 	return c
 }
 
@@ -202,21 +207,52 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 
 // A scope contains all the information about a lexical scope.
 type scope struct {
-	ctx         context.Context
-	interpreter *interpreter
-	state       *core.BuildState
-	pkg         *core.Package
-	parent      *scope
-	locals      pyDict
-	config      *pyConfig
-	globber     *fs.Globber
+	ctx             context.Context
+	interpreter     *interpreter
+	state           *core.BuildState
+	pkg             *core.Package
+	subincludeLabel *core.BuildLabel
+	parent          *scope
+	locals          pyDict
+	config          *pyConfig
+	globber         *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
+}
 
-	// used during subincludes
-	contextPkg *core.Package
-	// The label that was passed to subinclude(...)
-	subincludeLabel *core.BuildLabel
+// parseLabelContext parsed a build label in the context of this scope. See contextPackage for more information.
+func (s *scope) parseLabelContext(label string) core.BuildLabel {
+	return core.ParseBuildLabelContext(label, s.contextPackage())
+}
+
+// contextPackage returns the package that build labels should be parsed relative to. For normal BUILD files, this
+// returns the current package. For subincludes, or any scope that encloses a subinclude scope, this returns the package
+// of the label passed to subinclude. This is used by some builtins e.g. `subinclude()` to parse labels relative to the
+// .build_defs source file rather than the package it's being used from.
+//
+// It is not used by other built-ins e.g. `build_rule()` which still parses relative to s.pkg, as that's almost
+// certainly what you want.
+func (s *scope) contextPackage() *core.Package {
+	if s.pkg == nil {
+		return s.subincludePackage()
+	}
+	return s.pkg
+}
+
+// subincludePackage returns the package of the label used for this subinclude. When we subinclude, we create a new
+// scope as set `CONFIG.SUBINCLUDE_LABEL` in that scope. This is used to determine the package returned here. Because
+// all build definitions enclose this root scope, this works from these scopes too. Returns nil when called outside this
+// context.
+func (s *scope) subincludePackage() *core.Package {
+	if s.subincludeLabel != nil {
+		pkg := s.state.Graph.Package(s.subincludeLabel.PackageName, s.subincludeLabel.Subrepo)
+		if pkg != nil {
+			return pkg
+		}
+		// We're probably doing a local subinclude so the package isn't ready yet
+		return core.NewPackageSubrepo(s.subincludeLabel.PackageName, s.subincludeLabel.Subrepo)
+	}
+	return nil
 }
 
 // NewScope creates a new child scope of this one.
@@ -232,7 +268,6 @@ func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
 		interpreter: s.interpreter,
 		state:       s.state,
 		pkg:         pkg,
-		contextPkg:  pkg,
 		parent:      s,
 		locals:      make(pyDict, hint),
 		config:      s.config,
