@@ -87,13 +87,16 @@ func helpForPlugin(topic string) string {
 		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the ${GREEN}.plzconfig${RESET} file.\n", topic)
 
 		buildLabel := config.Plugin[topic].Target
+		if buildLabel.String() == "" {
+			log.Fatalf("Plugin target must be specified in config")
+		}
 		state := newState()
 
 		// Parse the subrepo (Run reads the plugin config into config)
 		plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
-		subrepo := state.Graph.Subrepo(buildLabel.Subrepo)
+		subrepo := state.Graph.Subrepo(topic)
 		if subrepo == nil {
-			log.Fatalf("Tried to get subrepo %v but failed", buildLabel.Subrepo)
+			log.Fatalf("Tried to get subrepo %v but failed", topic)
 		}
 
 		return getPluginOptionsAndBuildDefs(subrepo, message)

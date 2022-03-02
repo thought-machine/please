@@ -230,7 +230,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate internal package: %w", err)
 		}
-		if err := state.Parser.ParseReader(state, pkg, strings.NewReader(pkgStr)); err != nil {
+		if err := state.Parser.ParseReader(pkg, strings.NewReader(pkgStr)); err != nil {
 			return nil, fmt.Errorf("failed to parse internal package: %w", err)
 		}
 	} else {
