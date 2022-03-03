@@ -175,7 +175,6 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 
 func targetExistsInGraph(target core.BuildLabel) bool {
 
-
 	return true
 }
 
@@ -191,9 +190,9 @@ func targetExistsInFile(location, plugin string) bool {
 		panic(err)
 	}
 
-	state := 
-	if t := graph
-	str := "plugin_repo\\(...name = \"" + plugin + "\""
+	//TODO: Might want to pull in the state object here one day so we can query the build
+	// graph instead of this regexing.
+	str := "plugin_repo\\(.+name = \"" + plugin + "\""
 	exists, err := regexp.Match("(?s)"+str, b)
 	if err != nil {
 		panic(err)
