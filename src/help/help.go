@@ -3,14 +3,18 @@ package help
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
 	"text/template"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
+	"github.com/thought-machine/please/src/plz"
 )
 
 const topicsHelpMessage = `
@@ -64,7 +68,117 @@ func help(topic string) string {
 	if f, present := m[topic]; present {
 		return helpFromBuildRule(f.FuncDef)
 	}
+
+	// Check plugins
+	if pluginHelp := helpForPlugin(topic); pluginHelp != "" {
+		return pluginHelp
+	}
+
 	return ""
+}
+
+// helpForPlugin returns some help text for a plugin
+func helpForPlugin(topic string) string {
+	config, err := core.ReadDefaultConfigFiles(nil)
+	if err != nil {
+		panic("Failed to read config")
+	}
+	if _, ok := config.Plugin[topic]; ok {
+		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the ${GREEN}.plzconfig${RESET} file.\n", topic)
+
+		buildLabel := config.Plugin[topic].Target
+		if buildLabel.String() == "" {
+			log.Fatalf("Plugin target must be specified in config")
+		}
+		state := newState()
+
+		// Parse the subrepo (Run reads the plugin config into config)
+		plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
+		subrepo := state.Graph.Subrepo(topic)
+		if subrepo == nil {
+			log.Fatalf("Tried to get subrepo %v but failed", topic)
+		}
+
+		return getPluginOptionsAndBuildDefs(subrepo, message)
+	}
+	return ""
+}
+
+// getPluginOptionsAndBuildDefs looks for information for the plugin specified in the config file
+func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string {
+	config := subrepo.State.Config
+	if config.PluginDefinition.Description != "" {
+		message += "\n" + config.PluginDefinition.Description + "\n"
+	}
+	if config.PluginDefinition.DocumentationSite != "" {
+		message += "\n" + config.PluginDefinition.DocumentationSite + "\n"
+	}
+	configOptions := ""
+	for _, v := range config.PluginConfig {
+		valueType := v.Type
+		if v.Type == "" {
+			valueType = "string"
+		}
+		var optional string
+		if v.Optional {
+			optional = " (optional) "
+		}
+		configOptions += fmt.Sprintf("${BLUE}   %v${RESET} ${GREEN}(%v)${RESET}${WHITE}%v${RESET}Default value: %v\n",
+			strings.ToLower(v.ConfigKey),
+			valueType,
+			optional,
+			v.DefaultValue)
+	}
+	if configOptions != "" {
+		message += "\n${BOLD_YELLOW}This plugin has the following options:${RESET}\n" + configOptions
+	}
+
+	buildFuncMap := populatePluginBuildFuncs(subrepo)
+	buildDefs := ""
+	for k, v := range buildFuncMap {
+		buildDefs += fmt.Sprintf("${BLUE}   %v${RESET}", strings.ToLower(k))
+		arglist := "("
+		for i, arg := range v.FuncDef.Arguments {
+			if i != len(v.FuncDef.Arguments)-1 {
+				arglist += arg.Name + ", "
+			} else {
+				arglist += arg.Name + ")"
+			}
+		}
+		buildDefs += fmt.Sprintf("${GREEN}%v${RESET}\n", arglist)
+	}
+	if buildDefs != "" {
+		message += "\n${BOLD_YELLOW}And provides the following build defs:${RESET}\n" + buildDefs
+	}
+
+	return message
+}
+
+func populatePluginBuildFuncs(subrepo *core.Subrepo) map[string]*asp.Statement {
+	p := asp.NewParser(subrepo.State)
+	var dirs []string
+	if len(subrepo.State.Config.PluginDefinition.BuildDefsDir) > 0 {
+		for _, dir := range subrepo.State.Config.PluginDefinition.BuildDefsDir {
+			dirs = append(dirs, path.Join(subrepo.Root, dir))
+		}
+	} else {
+		// By default, check the build_defs dir in the plugin
+		dirs = append(dirs, path.Join(subrepo.Root, "build_defs"))
+	}
+
+	ret := make(map[string]*asp.Statement)
+	for _, dir := range dirs {
+		if files, err := ioutil.ReadDir(dir); err == nil {
+			for _, file := range files {
+				if !file.IsDir() {
+					if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
+						addAllFunctions(ret, stmts, false)
+					}
+				}
+			}
+		}
+	}
+	return ret
 }
 
 // helpFromBuildRule returns the printable help message from a build rule (a function).

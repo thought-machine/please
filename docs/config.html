@@ -402,6 +402,44 @@
   </pre>
 
   <p>This config value is then available to the build definitions as <code class="code">CONFIG.FOO.FOO_TOOL</code>.</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="plugindefinition.description">
+          Description <span class="normal">(string)</span>
+        </h3>
+
+        <p>
+        A description of the plugin. If set, this can be read and output by
+        <code class="code">plz help &lt;plugin&gt;</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="plugindefinition.builddefsdir">
+          BuildDefsDir <span class="normal">(repeatable string)</span>
+        </h3>
+
+        <p>
+          Tells Please about any directories in the plugin that contain custom
+          build definitions. These are used by <code class="code">plz help &lt;plugin&gt;</code> to provide
+          help text for build rules that are not built in. Defaults to <code class="code">build_defs</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="plugindefinition.documentationsite">
+          DocumentationSite <span class="normal">(string)</span>
+        </h3>
+
+        <p>
+          A link to where the plugin's documentation is hosted.
+        </p>
+      </div>
+    </li>
 </section>
 
 <section class="mt4">

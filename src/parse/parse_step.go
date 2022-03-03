@@ -228,10 +228,10 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 	if packageName == InternalPackageName {
 		pkgStr, err := GetInternalPackage(state.Config)
 		if err != nil {
-			return nil, fmt.Errorf("faild to generate internal package: %w", err)
+			return nil, fmt.Errorf("failed to generate internal package: %w", err)
 		}
 		if err := state.Parser.ParseReader(pkg, strings.NewReader(pkgStr)); err != nil {
-			return nil, fmt.Errorf("faild to parse internal package: %w", err)
+			return nil, fmt.Errorf("failed to parse internal package: %w", err)
 		}
 	} else {
 		filename, dir := buildFileName(state, label.PackageName, subrepo)

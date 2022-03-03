@@ -23,7 +23,7 @@ import (
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
-	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
@@ -391,8 +391,11 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	}
 	metadata, ar, err := c.execute(tid, target, command, stampedDigest, false, needStdout)
 	if target.Stamp && err == nil {
-		// Store results under unstamped digest too.
-		c.locallyCacheResults(target, unstampedDigest, metadata, ar)
+		err = c.verifyActionResult(target, command, unstampedDigest, ar, c.state.Config.Remote.VerifyOutputs, false)
+		if err == nil {
+			// Store results under unstamped digest too.
+			c.locallyCacheResults(target, unstampedDigest, metadata, ar)
+		}
 		c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 			InstanceName: c.instance,
 			ActionDigest: unstampedDigest,
@@ -907,8 +910,9 @@ func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget,
 		entry := uploadinfo.EntryFromBlob([]byte(content))
 		ch <- entry
 		ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-			Path:   command.OutputPaths[0],
-			Digest: entry.Digest.ToProto(),
+			Path:         command.OutputPaths[0],
+			Digest:       entry.Digest.ToProto(),
+			IsExecutable: target.IsBinary,
 		})
 		return nil
 	}); err != nil {
