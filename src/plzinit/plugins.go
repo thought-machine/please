@@ -166,7 +166,11 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 		}
 		config = subrepo.State.Config
 		for _, v := range config.PluginConfig {
-			file = ast.InjectField(file, "; "+v.ConfigKey, v.DefaultValue[0], section, plugin, false)
+			if len(v.DefaultValue) == 0 {
+				file = ast.InjectField(file, "; "+v.ConfigKey, "", section, plugin, false)
+			} else {
+				file = ast.InjectField(file, "; "+v.ConfigKey, v.DefaultValue[0], section, plugin, false)
+			}
 		}
 	}
 
@@ -186,7 +190,7 @@ func targetExistsInFile(location, plugin string) bool {
 	}
 
 	//TODO: Might want to pull in the state object here one day so we can query the build
-	// graph instead of this regexing.
+	// graph instead of using regexp
 	str := "plugin_repo\\(.+name = \"" + plugin + "\""
 	exists, err := regexp.Match("(?s)"+str, b)
 	if err != nil {

@@ -45,6 +45,7 @@ please_repo_e2e_test(
         ".plzconfig" : "[Plugin \"python\"]",
         ".plzconfig" : "; DefaultInterpreter = python3",
     },
+    # Need to break hard link here so init_plugin_test's actual .plzconfig doesn't get updated.
     plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin python",
     repo = "init_plugin_test",
 )
