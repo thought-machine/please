@@ -173,11 +173,6 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 	return file
 }
 
-func targetExistsInGraph(target core.BuildLabel) bool {
-
-	return true
-}
-
 // targetExistsInFile checks to see if the plugin target already exists
 // in plugins/BUILD
 func targetExistsInFile(location, plugin string) bool {
