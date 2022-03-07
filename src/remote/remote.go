@@ -450,6 +450,16 @@ func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar 
 }
 
 func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult, target *core.BuildTarget) error {
+	// Ensure none of the outputs have temp suffixes on them.
+	for _, f := range ar.OutputFiles {
+		f.Path = target.GetRealOutput(f.Path)
+	}
+	for _, d := range ar.OutputDirectories {
+		d.Path = target.GetRealOutput(d.Path)
+	}
+	for _, s := range ar.OutputSymlinks {
+		s.Path = target.GetRealOutput(s.Path)
+	}
 	// We can download straight into the out dir if there are no outdirs to worry about
 	if len(target.OutputDirectories) == 0 {
 		_, err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir(), c.fileMetadataCache)
