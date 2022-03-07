@@ -88,7 +88,7 @@ def _pkg_sources(name: str, deps: list, test_only:bool):
     Without this, we'd have to transitively pull in all third party sources for the rule which is very expensive,
     especially for remote execution.
     """
-    package_prefix = "//" + package_name() + ":"
+    package_prefix = canonicalise(":all").removesuffix("all")
     return filegroup(
        name = name,
        tag = "pkg_srcs",
