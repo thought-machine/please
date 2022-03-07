@@ -222,7 +222,7 @@ func createTarget(location, plugin string) error {
 		return nil
 	}
 
-	dir := filepath.Dir("plugins/")
+	dir := filepath.Dir(location)
 	if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
 		return err
 	}
