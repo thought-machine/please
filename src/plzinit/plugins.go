@@ -143,8 +143,12 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 	section := "Plugin"
 	foundSection := false
 	// Check for existing cc fields first and migrate values
+	log.Warningf("looking for plugin section %s", plugin)
+	//TODO: Add a function to gcfg Section.exists() and then here we need to check if the plugin
+	// section exists and if it has we just do nothing and say plugin already init'd
 	for _, s := range file.Sections {
 		if s.Key == plugin {
+			log.Warningf("Got match. s.Key = %v plugin = %v", s.Key, plugin)
 			foundSection = true
 			for _, field := range s.Fields {
 				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
@@ -153,6 +157,7 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 			}
 		}
 	}
+	log.Warningf("found section = %b", foundSection)
 
 	// If we found nothing, add a section with default values commented out
 	if !foundSection {
