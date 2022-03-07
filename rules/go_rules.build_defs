@@ -125,6 +125,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
       package (str): The package as it would appear at the top of the go source files. Defaults
                      to name.
     """
+    assert srcs, "Cannot provide an empty srcs list to go_library"
     cover = cover and CONFIG.BUILD_CONFIG == "cover"
     package = package or name
     out = package + '.a'
