@@ -272,7 +272,7 @@ var opts struct {
 			Args struct {
 				Plugins []string `positional-arg-name:"plugin" required:"true" description:"Plugins to install"`
 			} `positional-args:"true"`
-		} `command:"plugin" description:"Initialises a plugin by modifying an exisiting config file, and adding a build target"`
+		} `command:"plugin" description:"Install a plugin and migrate any language-specific config values to the plugin equivalents"`
 	} `command:"init" subcommands-optional:"true" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {

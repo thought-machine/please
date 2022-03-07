@@ -84,7 +84,7 @@ go_module(
         "...",
     ],
     module = "github.com/please-build/gcfg",
-    version = "3b730990cafa6778afe8418a9460220fe61ad210",
+    version = "6feafe84fba02ee87869dcc00a563f6d5983281d",
     deps = [
         ":warnings",
     ],

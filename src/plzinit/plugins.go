@@ -2,7 +2,6 @@ package plzinit
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -30,36 +29,46 @@ const pluginRepoTemplate = `plugin_repo(
 // the host repo config file, and creating a build target in //plugins.
 func InitPlugins(plugins []string) {
 	log.Debug("Initialising plugin(s): %v", plugins)
-	for _, p := range plugins {
-		if err := initPlugin(p); err != nil {
-			log.Errorf("could not initialise plugin %s. Got error: %s", p, err)
-		}
-	}
-}
 
-func initPlugin(plugin string) error {
-	if err := createTarget("plugins/BUILD", plugin); err != nil {
-		return err
-	}
-	if err := injectPluginConfig(plugin); err != nil {
-		return err
-	}
-	return nil
-}
-
-func injectPluginConfig(plugin string) error {
+	// Check that we're in a plz repo
 	configPath := path.Join(core.RepoRoot, ".plzconfig")
-	if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
-		log.Warningf("config file %s does not exist", configPath)
-		return err
+	if !fs.FileExists(configPath) {
+		log.Fatalf("You don't appear to be in a plz repo.")
 	}
 
 	configFile, err := os.Open(configPath)
 	if err != nil {
-		return err
+		log.Fatalf("failed to open plz config file")
 	}
 	defer configFile.Close()
+
+	// Read config file into AST
 	file := ast.Read(configFile)
+
+	for _, p := range plugins {
+		file, err = initPlugin(p, file)
+		if err != nil {
+			log.Errorf("could not initialise plugin %s. Got error: %s", p, err)
+		}
+	}
+
+	ast.Write(file, configPath)
+}
+
+func initPlugin(plugin string, file ast.File) (ast.File, error) {
+	if err := createTarget("plugins/BUILD", plugin); err != nil {
+		return file, err
+	}
+
+	file, err := injectPluginConfig(plugin, file)
+	if err != nil {
+		return file, err
+	}
+
+	return file, nil
+}
+
+func injectPluginConfig(plugin string, file ast.File) (ast.File, error) {
 	switch plugin {
 	case "python":
 		file = writePythonConfigFields(file)
@@ -68,10 +77,9 @@ func injectPluginConfig(plugin string) error {
 	case "cc":
 		file = writeCCConfigFields(file)
 	default:
-		log.Fatalf("failed to initialise plugin. \"%s\" not recognised", plugin)
+		log.Warningf("failed to initialise plugin. \"%s\" not recognised", plugin)
 	}
-	ast.Write(file, configPath)
-	return nil
+	return file, nil
 }
 
 func writePythonConfigFields(file ast.File) ast.File {
@@ -165,12 +173,21 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 			panic(err)
 		}
 		config = subrepo.State.Config
+		comments := make([]string, 0)
 		for _, v := range config.PluginConfig {
 			if len(v.DefaultValue) == 0 {
-				file = ast.InjectField(file, "; "+v.ConfigKey, "", section, plugin, false)
+				c := v.ConfigKey + " = "
+				comments = append(comments, c)
 			} else {
-				file = ast.InjectField(file, "; "+v.ConfigKey, v.DefaultValue[0], section, plugin, false)
+				c := v.ConfigKey + " = " + v.DefaultValue[0]
+				comments = append(comments, c)
 			}
+		}
+		file, _ = ast.MakeNewSection(file, "Plugin", plugin)
+		var ok bool
+		file, ok = ast.AddCommentsAfterToSection(file, comments, "Plugin", plugin)
+		if !ok {
+			log.Warningf("Tried to add comments to plugin section \"%s\", but section wasn't created", plugin)
 		}
 	}
 
