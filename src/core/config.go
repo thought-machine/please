@@ -51,11 +51,14 @@ const MachineConfigFileName = "/etc/please/plzconfig"
 // UserConfigFileName is the file name for user-specific config (for all their repos).
 const UserConfigFileName = "~/.config/please/plzconfig"
 
+// DefaultPleaseLocation is the default location where Please is installed.
+const DefaultPleaseLocation = "~/.please"
+
 // DefaultPath is the default location please looks for programs in
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
-// readConfigFile reads a single config file into the config struct
-func readConfigFile(config *Configuration, filename string, subrepo bool) error {
+// readConfigFileOnly reads a single config file into the config struct
+func readConfigFileOnly(config *Configuration, filename string) error {
 	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
@@ -65,6 +68,15 @@ func readConfigFile(config *Configuration, filename string, subrepo bool) error 
 		log.Warning("Error in config file: %s", err)
 	} else {
 		log.Debug("Read config from %s", filename)
+	}
+	return nil
+}
+
+// readConfigFile reads a single config file into the config struct taking into account
+// some context like subrepos and plugins.
+func readConfigFile(config *Configuration, filename string, subrepo bool) error {
+	if err := readConfigFileOnly(config, filename); err != nil {
+		return err
 	}
 
 	if subrepo {
@@ -96,6 +108,22 @@ func ReadDefaultConfigFiles(profiles []ConfigProfile) (*Configuration, error) {
 		s[i] = string(p)
 	}
 	return ReadConfigFiles(defaultConfigFiles(), s)
+}
+
+// ReadDefaultGlobalConfigFilesOnly reads all the default global config files and
+// merges them into a config object.
+func ReadDefaultGlobalConfigFilesOnly(config *Configuration) error {
+	return ReadConfigFilesOnly(config, defaultGlobalConfigFiles(), nil)
+}
+
+// ReadDefaultConfigFilesOnly reads all the default config files and
+// merges them into a config object.
+func ReadDefaultConfigFilesOnly(config *Configuration, profiles []ConfigProfile) error {
+	s := make([]string, len(profiles))
+	for i, p := range profiles {
+		s[i] = string(p)
+	}
+	return ReadConfigFilesOnly(config, defaultConfigFiles(), s)
 }
 
 // defaultGlobalConfigFiles returns the set of global default config file names.
@@ -136,6 +164,21 @@ func defaultConfigFiles() []string {
 	)
 }
 
+// ReadConfigFilesOnly reads all the config locations, in order, and merges them into a config object.
+func ReadConfigFilesOnly(config *Configuration, filenames []string, profiles []string) error {
+	for _, filename := range filenames {
+		if err := readConfigFileOnly(config, filename); err != nil {
+			return err
+		}
+		for _, profile := range profiles {
+			if err := readConfigFileOnly(config, filename+"."+profile); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
 // Values are filled in by defaults initially and then overridden by each file in turn.
 func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, error) {
@@ -150,6 +193,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 			}
 		}
 	}
+
 	// Set default values for slices. These add rather than overwriting so we can't set
 	// them upfront as we would with other config values.
 	if usingBazelWorkspace {
@@ -718,7 +762,7 @@ func (config *Configuration) GetBuildEnv() []string {
 
 // EnsurePleaseLocation will resolve `config.Please.Location` to a full path location where it is to be found.
 func (config *Configuration) EnsurePleaseLocation() {
-	defaultPleaseLocation := fs.ExpandHomePath("~/.please")
+	defaultPleaseLocation := fs.ExpandHomePath(DefaultPleaseLocation)
 
 	if config.Please.Location == "" {
 		// Determine the location based off where we're running from.

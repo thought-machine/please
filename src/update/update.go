@@ -65,13 +65,15 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	}
 	word := describe(config.Please.Version.Semver(), pleaseVersion(), true)
 	if !updateCommand {
-		fmt.Fprintf(os.Stderr, "%s Please from version %s to %s", word, pleaseVersion(), config.Please.Version.VersionString())
+		fmt.Fprintf(os.Stderr, "%s Please from version %s to %s\n", word, pleaseVersion(), config.Please.Version.VersionString())
 	}
 
-	// Must lock exclusively here so that the update process doesn't race when running two instances simultaneously.
-	// Once we are done we replace/restore the mode to the shared one.
-	core.AcquireExclusiveRepoLock()
-	defer core.AcquireSharedRepoLock()
+	if core.RepoRoot != "" {
+		// Must lock exclusively here so that the update process doesn't race when running two instances simultaneously.
+		// Once we are done we replace/restore the mode to the shared one.
+		core.AcquireExclusiveRepoLock()
+		defer core.AcquireSharedRepoLock()
+	}
 
 	// If the destination exists and the user passed --force, remove it to force a redownload.
 	newDir := path.Join(config.Please.Location, config.Please.Version.VersionString())
