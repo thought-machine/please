@@ -215,7 +215,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
         hashes = hashes,
         config = config,
         headers = headers,
-        follow_redirects = follow_redirects,
+        follow_redirects = True,
         bazel_compat = bazel_compat,
         pass_env = pass_env,
     )
