@@ -38,7 +38,7 @@ func InitPlugins(plugins []string) {
 
 	configFile, err := os.Open(configPath)
 	if err != nil {
-		log.Fatalf("failed to open plz config file")
+		log.Fatalf("Failed to open plz config file")
 	}
 	defer configFile.Close()
 
@@ -48,7 +48,7 @@ func InitPlugins(plugins []string) {
 	for _, p := range plugins {
 		file, err = initPlugin(p, file)
 		if err != nil {
-			log.Errorf("could not initialise plugin %s. Got error: %s", p, err)
+			log.Errorf("Could not initialise plugin %s. Got error: %s", p, err)
 		}
 	}
 
@@ -77,7 +77,7 @@ func injectPluginConfig(plugin string, file ast.File) (ast.File, error) {
 	case "cc":
 		file = writeCCConfigFields(file)
 	default:
-		log.Warningf("failed to initialise plugin. \"%s\" not recognised", plugin)
+		log.Warningf("Failed to initialise plugin. \"%s\" not recognised", plugin)
 	}
 	return file, nil
 }
@@ -142,13 +142,16 @@ func writeJavaConfigFields(file ast.File) ast.File {
 func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]string) ast.File {
 	section := "Plugin"
 	foundSection := false
-	// Check for existing cc fields first and migrate values
-	log.Warningf("looking for plugin section %s", plugin)
-	//TODO: Add a function to gcfg Section.exists() and then here we need to check if the plugin
-	// section exists and if it has we just do nothing and say plugin already init'd
+
+	// Check for existing plugin section
+	if s := file.MaybeGetSection(section, plugin); s != nil {
+		log.Warningf("Plugin config section already exists, so init did nothing.")
+		return file
+	}
+
+	// Migrate any existing language fields to their plugin equivalents
 	for _, s := range file.Sections {
 		if s.Key == plugin {
-			log.Warningf("Got match. s.Key = %v plugin = %v", s.Key, plugin)
 			foundSection = true
 			for _, field := range s.Fields {
 				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
@@ -157,24 +160,21 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 			}
 		}
 	}
-	log.Warningf("found section = %v", foundSection)
 
 	// If we found nothing, add a section with default values
 	if !foundSection {
 		config, err := core.ReadDefaultConfigFiles(nil)
 		if err != nil {
-			log.Warningf("couldn't read config files")
-			panic(err)
+			log.Fatalf("Error reading config file: %s", err)
 		}
 
 		// Build plugin target so we can pull the default values
 		state := core.NewBuildState(config)
 		buildLabel := core.NewBuildLabel("plugins", plugin)
-		log.Warningf("building %s plugin, buildLabel = %v", plugin, buildLabel)
 		plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
 		subrepo := state.Graph.Subrepo(plugin)
 		if subrepo == nil {
-			log.Fatalf("failed to get subrepo %v", plugin)
+			log.Fatalf("Failed to get subrepo %v", plugin)
 		}
 		if err = subrepo.LoadSubrepoConfig(); err != nil {
 			panic(err)
