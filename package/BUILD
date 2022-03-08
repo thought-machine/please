@@ -61,10 +61,19 @@ genrule(
     cmd = "cp $SRC $OUT",
 )
 
+genrule(
+    name = "please_shim",
+    srcs = ["//tools/please_shim"],
+    outs = ["please_shim_" + VERSION],
+    binary = True,
+    cmd = "cp $SRC $OUT",
+)
+
 filegroup(
     name = "release_files",
     srcs = [
         ":please",
+        ":please_shim",
         ":please_tarball",
         ":please_tarball_xz",
         ":please_tools_tarball",
