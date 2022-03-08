@@ -59,7 +59,7 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha
 def new_http_archive(name:str, urls:list, build_file:str=None, build_file_content:str=None,
                      strip_prefix:str=None, strip_build:bool=False, plugin:bool=False,
                      hashes:str|list&sha256=None,username:str=None, password_file:str=None, headers:dict={}, secret_headers:dict={},
-                     config:str=None, bazel_compat:bool=False, visibility:list=None, pass_env:list=[]):
+                     follow_redirects:bool=False, config:str=None, bazel_compat:bool=False, visibility:list=None, pass_env:list=[]):
     """Fetches a remote file over HTTP and expands its contents, combined with a BUILD file.
 
     The archive should be either a zipfile or a tarball. Which one to use will be autodetected
@@ -84,6 +84,7 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
       password_file: A file on disk that contains a password or access token.
       headers: Headers to pass to curl.
       secret_headers: Headers contained in files to pass to curl.
+      follow_redirects (bool): If true, use curl -L to follow 3XX http redirect headers
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
                     specifying a config file with `compatibility = true` in the `[bazel]`
@@ -104,6 +105,7 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         headers = headers,
         secret_headers = secret_headers,
         pass_env = pass_env,
+        follow_redirects = follow_redirects
     )
     if strip_prefix:
         cmd = '$TOOL x $SRCS_REMOTE -o "$OUT" -s ' + strip_prefix
@@ -213,6 +215,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
         hashes = hashes,
         config = config,
         headers = headers,
+        follow_redirects = follow_redirects,
         bazel_compat = bazel_compat,
         pass_env = pass_env,
     )

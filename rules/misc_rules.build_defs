@@ -370,7 +370,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
                 labels:list=[], deps:list=None, exported_deps:list=None,
                 extract:bool=False, strip_prefix:str='', _tag:str='',exported_files=[],
                 entry_points:dict={}, username:str=None, password_file:str=None,
-                headers:dict={}, secret_headers:dict={}, pass_env:list=[]):
+                headers:dict={}, secret_headers:dict={}, pass_env:list=[], follow_redirects:bool=False):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -395,6 +395,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
       headers (dict): Headers to pass to curl.
       secret_headers (dict): Headers contained in files to pass to curl.
       pass_env (list): Any environment variables referenced by headers that should be passed in from the host.
+      follow_redirects (bool): If true, use curl -L to follow 3XX http redirect headers
     """
     if extract:
         if out:
@@ -467,6 +468,11 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         for header, value in secret_headers.items():
             header_flag = f'{header_flag} --header "{header}: $(cat {value})"'
 
+        # Extra flags, e.g. follow redirect
+        extra_flags = ''
+        if follow_redirects:
+            extra_flags = '-L'
+
         # Authentication info
         user_info = f'--user {username}:$(cat {password_file})' if auth else ""
 
@@ -474,7 +480,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         check_url = f'curl -s -o /dev/null -I {header_flag} {user_info} -w %{{http_code}}'
 
         # Download file
-        fetch_url = f'curl --anyauth {user_info} {header_flag} -o $OUTS --url'
+        fetch_url = f'curl {extra_flags} --anyauth {user_info} {header_flag} -o $OUTS --url'
 
         # Download first url that succeeds
         cmd = f'for URL in {urls_str}; do '
