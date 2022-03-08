@@ -1018,7 +1018,7 @@ func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix s
 			srcDir := path.Join(core.RepoRoot, target.OutDir())
 			for _, out := range target.Outputs() {
 				if direct {
-					fs.LinkIfNotExists(path.Join(srcDir, out), destDir, f)
+					fs.LinkDestination(path.Join(srcDir, out), destDir, f)
 				} else {
 					fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), f)
 				}

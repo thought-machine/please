@@ -79,3 +79,17 @@ func LinkIfNotExists(src, dest string, f LinkFunc) {
 		return nil
 	})
 }
+
+func LinkDestination(src, dest string, f LinkFunc) {
+	Walk(src, func(name string, isDir bool) error {
+		if !isDir {
+			fullDest := path.Join(dest, name[len(src):])
+			if err := EnsureDir(fullDest); err != nil {
+				log.Warning("Failed to create directory for %s: %s", fullDest, err)
+			} else if err := f(name, fullDest); err != nil && !os.IsExist(err) {
+				log.Warning("Failed to create %s: %s", fullDest, err)
+			}
+		}
+		return nil
+	})
+}
