@@ -157,18 +157,20 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 			}
 		}
 	}
-	log.Warningf("found section = %b", foundSection)
+	log.Warningf("found section = %v", foundSection)
 
-	// If we found nothing, add a section with default values commented out
+	// If we found nothing, add a section with default values
 	if !foundSection {
 		config, err := core.ReadDefaultConfigFiles(nil)
 		if err != nil {
+			log.Warningf("couldn't read config files")
 			panic(err)
 		}
 
 		// Build plugin target so we can pull the default values
 		state := core.NewBuildState(config)
 		buildLabel := core.NewBuildLabel("plugins", plugin)
+		log.Warningf("building %s plugin, buildLabel = %v", plugin, buildLabel)
 		plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
 		subrepo := state.Graph.Subrepo(plugin)
 		if subrepo == nil {
@@ -178,21 +180,12 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 			panic(err)
 		}
 		config = subrepo.State.Config
-		comments := make([]string, 0)
 		for _, v := range config.PluginConfig {
 			if len(v.DefaultValue) == 0 {
-				c := v.ConfigKey + " = "
-				comments = append(comments, c)
+				file = ast.InjectField(file, v.ConfigKey, "", "Plugin", plugin, v.Repeatable)
 			} else {
-				c := v.ConfigKey + " = " + v.DefaultValue[0]
-				comments = append(comments, c)
+				file = ast.InjectField(file, v.ConfigKey, v.DefaultValue[0], "Plugin", plugin, v.Repeatable)
 			}
-		}
-		file, _ = ast.MakeNewSection(file, "Plugin", plugin)
-		var ok bool
-		file, ok = ast.AddCommentsAfterToSection(file, comments, "Plugin", plugin)
-		if !ok {
-			log.Warningf("Tried to add comments to plugin section \"%s\", but section wasn't created", plugin)
 		}
 	}
 
