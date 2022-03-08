@@ -14,5 +14,5 @@ go_binary(
         "//third_party/go:go-flags",
         "//third_party/go:logging",
     ],
-    visibility = ["//package:all"]
+    visibility = ["//test/please_shim/...", "//package:all"]
 )
