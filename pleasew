@@ -25,8 +25,8 @@ PROFILE="${PLZ_CONFIG_PROFILE:-$(sed -E 's/.*--profile[= ]([^ ]+).*/\1/g' <<< "$
 # Config files on order of precedence high to low.
 CONFIGS=(
   ".plzconfig.local"
-  ".plzconfig_${OS}_${ARCH}"
   "${PROFILE:+.plzconfig.$PROFILE}"
+  ".plzconfig_${OS}_${ARCH}"
   ".plzconfig"
   "$HOME/.config/please/plzconfig"
   "/etc/please/plzconfig"
