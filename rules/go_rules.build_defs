@@ -995,7 +995,7 @@ def _remove_redundant_outs(outs):
     return [r for r in new_outs.keys() if new_outs[r]]
 
 def _go_install_module(name:str, module:str, install:list, src:str, outs:list, deps:list, binary:bool, visibility:list,
-                       test_only:bool, licences:list, linker_flags:list, env:dict, build_tags:list):
+                       test_only:bool, licences:list, linker_flags:list, env:dict, build_tags:list, labels:list=[]):
     build_tags = " ".join([f"--build_tag={tag}" for tag in build_tags])
     cmd = [
         _set_go_env(),
@@ -1028,7 +1028,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         binary = binary,
         requires = ['go'],
         test_only = test_only,
-        labels = ['link:plz-out/go'] + [f'cc:ld:{f}' for f in linker_flags],
+        labels = labels + ['link:plz-out/go'] + [f'cc:ld:{f}' for f in linker_flags],
         needs_transitive_deps = True,
         licences = licences,
         post_build = _add_ld_flags,
@@ -1156,9 +1156,9 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     )
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
-              visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
-              licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}, patch:list|str=[],
-              build_tags:list=[]):
+              visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], labels:list=[],
+              hashes:list=None, licences:list=None, linker_flags:list=[], strip:list=[], env:dict={},
+              patch:list|str=[], build_tags:list=[]):
     """Defines a dependency on a third-party Go module.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -1186,6 +1186,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
                              to install for that target. Specify the empty string as an element in the list
                              to install a target's root package.
       strip (list ): List of paths to strip from the target after downloading but before building it.
+      labels (list): Additional labels to apply to this rule.
       hashes (list): List of hashes to verify the downloaded sources against.
       licences (list): Licences this rule is subject to.
       linker_flags (list): Any additional linker flags to apply. Linker flags defined in the module itself will
@@ -1251,6 +1252,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         linker_flags = linker_flags,
         env = env,
         build_tags = build_tags,
+        labels = labels if binary else [],
     )
 
     if binary:
@@ -1276,7 +1278,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             "go": f":{name}", # provide the filegroup otherwise exported deps don't work
             "go_src": download,
         },
-        labels = [f"go_package:{i}" for i in install],
+        labels = labels + [f"go_package:{i}" for i in install],
         visibility = visibility,
         needs_transitive_deps = True,
         test_only = test_only,
