@@ -1,9 +1,12 @@
 package plz
 
 import (
+	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/peterebden/go-cli-init/v5/flags"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/build"
@@ -14,7 +17,6 @@ import (
 	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/remote"
 	"github.com/thought-machine/please/src/test"
-	"github.com/thought-machine/please/src/utils"
 )
 
 var log = logging.MustGetLogger("plz")
@@ -25,7 +27,6 @@ var log = logging.MustGetLogger("plz")
 // To get detailed results as it runs, use state.Results. You should call that *before*
 // starting this (otherwise a sufficiently fast build may bypass you completely).
 func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *core.Configuration, arch cli.Arch) {
-	parse.InitParser(state)
 	build.Init(state)
 	if state.Config.Remote.URL != "" {
 		state.RemoteClient = remote.New(state)
@@ -33,12 +34,13 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	if config.Display.SystemStats {
 		go state.UpdateResources()
 	}
-	metrics.InitFromConfig(config)
+
+	parse.InitParser(state)
 
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, preTargets, targets, arch)
 
-	parses, builds, remoteBuilds, tests, remoteTests := state.TaskQueues()
+	parses, actions, remoteActions := state.TaskQueues()
 
 	// Start up all the build workers
 	var wg sync.WaitGroup
@@ -56,13 +58,13 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}()
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go func(tid int) {
-			doTasks(tid, state, builds, tests, false)
+			doTasks(tid, state, actions, false)
 			wg.Done()
 		}(i)
 	}
 	for i := 0; i < config.NumRemoteExecutors(); i++ {
 		go func(tid int) {
-			doTasks(tid, state, remoteBuilds, remoteTests, true)
+			doTasks(tid, state, remoteActions, true)
 			wg.Done()
 		}(config.Please.NumThreads + i)
 	}
@@ -76,6 +78,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		log.Info("Total remote RPC data in: %d out: %d", in, out)
 	}
 	state.CloseResults()
+	metrics.Push(config)
 }
 
 // RunHost is a convenience function that uses the host architecture, the given state's
@@ -84,24 +87,15 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 	Run(targets, nil, state, state.Config, cli.HostArch())
 }
 
-func doTasks(tid int, state *core.BuildState, builds <-chan core.BuildTask, tests <-chan core.TestTask, remote bool) {
-	for builds != nil || tests != nil {
-		select {
-		case l, ok := <-builds:
-			if !ok {
-				builds = nil
-				break
-			}
-			build.Build(tid, state, l, remote)
-			state.TaskDone()
-		case testTask, ok := <-tests:
-			if !ok {
-				tests = nil
-				break
-			}
-			test.Test(tid, state, testTask.Label, remote, testTask.Run)
-			state.TaskDone()
+func doTasks(tid int, state *core.BuildState, actions <-chan core.Task, remote bool) {
+	for task := range actions {
+		switch task.Type {
+		case core.TestTask:
+			test.Test(tid, state, task.Label, remote, int(task.Run))
+		case core.BuildTask:
+			build.Build(tid, state, task.Label, remote)
 		}
+		state.TaskDone()
 	}
 }
 
@@ -127,7 +121,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		}
 		for _, target := range state.ExpandLabels(preTargets) {
 			log.Debug("Waiting for pre-target %s...", target)
-			state.WaitForBuiltTarget(target, targets[0])
+			state.WaitForTargetAndEnsureDownload(target, targets[0])
 			log.Debug("Pre-target %s built, continuing...", target)
 		}
 	}
@@ -137,7 +131,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 }
 
 func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addToList bool, arch cli.Arch) {
-	for _, target := range utils.ReadStdinLabels(targets) {
+	for _, target := range ReadStdinLabels(targets) {
 		findOriginalTask(state, target, addToList, arch)
 	}
 }
@@ -152,17 +146,82 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 		dir := target.PackageName
 		prefix := ""
 		if target.Subrepo != "" {
-			state.WaitForBuiltTarget(target.SubrepoLabel(), target)
+			state.WaitForTargetAndEnsureDownload(target.SubrepoLabel(), target)
 			subrepo := state.Graph.SubrepoOrDie(target.Subrepo)
 			dir = subrepo.Dir(dir)
 			prefix = subrepo.Dir(prefix)
 		}
-		for pkg := range utils.FindAllSubpackages(state.Config, dir, "") {
-			l := core.NewBuildLabel(strings.TrimLeft(strings.TrimPrefix(pkg, prefix), "/"), "all")
+		for filename := range FindAllBuildFiles(state.Config, dir, "") {
+			dirname, _ := path.Split(filename)
+			l := core.NewBuildLabel(strings.TrimLeft(strings.TrimPrefix(strings.TrimRight(dirname, "/"), prefix), "/"), "all")
 			l.Subrepo = target.Subrepo
 			state.AddOriginalTarget(l, addToList)
 		}
 	} else {
 		state.AddOriginalTarget(target, addToList)
 	}
+}
+
+// FindAllBuildFiles finds all BUILD files under a particular path.
+// Used to implement rules with ... where we need to know all possible packages
+// under that location.
+func FindAllBuildFiles(config *core.Configuration, rootPath, prefix string) <-chan string {
+	ch := make(chan string)
+	go func() {
+		if rootPath == "" {
+			rootPath = "."
+		}
+		if err := fs.Walk(rootPath, func(name string, isDir bool) error {
+			basename := path.Base(name)
+			if basename == core.OutDir || (isDir && strings.HasPrefix(basename, ".") && name != ".") {
+				return filepath.SkipDir // Don't walk output or hidden directories
+			} else if isDir && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {
+				return filepath.SkipDir // Skip any directory without the prefix we're after (but not any directory beneath that)
+			} else if config.IsABuildFile(basename) && !isDir {
+				ch <- name
+			} else if cli.ContainsString(name, config.Parse.ExperimentalDir) {
+				return filepath.SkipDir // Skip the experimental directory if it's set
+			}
+			// Check against blacklist
+			for _, dir := range config.Parse.BlacklistDirs {
+				if dir == basename || strings.HasPrefix(name, dir) {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Fatalf("Failed to walk tree under %s; %s\n", rootPath, err)
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+// ReadingStdin returns true if any of the given build labels are reading from stdin.
+func ReadingStdin(labels []core.BuildLabel) bool {
+	for _, l := range labels {
+		if l == core.BuildLabelStdin {
+			return true
+		}
+	}
+	return false
+}
+
+// ReadStdinLabels reads any of the given labels from stdin, if any of them indicate it
+// (i.e. if ReadingStdin(labels) is true, otherwise it just returns them.
+func ReadStdinLabels(labels []core.BuildLabel) []core.BuildLabel {
+	if !ReadingStdin(labels) {
+		return labels
+	}
+	ret := []core.BuildLabel{}
+	for _, l := range labels {
+		if l == core.BuildLabelStdin {
+			for s := range flags.ReadStdin() {
+				ret = append(ret, core.ParseBuildLabels([]string{s})...)
+			}
+		} else {
+			ret = append(ret, l)
+		}
+	}
+	return ret
 }

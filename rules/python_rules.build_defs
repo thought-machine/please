@@ -15,8 +15,8 @@ a target which has only had small changes.
 
 
 def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visibility:list=None,
-                   test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[], interpreter:str=None,
-                   strip:bool=False):
+                   test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[],
+                   interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER, strip:bool=False):
     """Generates a Python library target, which collects Python files for use by dependent rules.
 
     Note that each python_library performs some pre-zipping of its inputs before they're combined
@@ -37,9 +37,8 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
                        (the most obvious reason not is when it contains .so modules).
                        See python_binary for more information.
       labels (list): Labels to apply to this rule.
-      interpreter (str): The Python interpreter to use. Defaults to the config setting
-                         which is normally just 'python', but could be 'python3' or
-                         'pypy' or whatever.
+      interpreter (str): The Python interpreter to use. Defaults to the value of the
+                         Python.DefaultInterpreter setting.
       strip (bool): If True, the original sources are stripped and only bytecode is output.
       labels (list): Any labels to apply to this rule.
     """
@@ -47,7 +46,6 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
         labels += ['py:zip-unsafe']
     if srcs or resources:
         cmd = '$TOOLS_JARCAT z -d -o ${OUTS} -i .'
-        interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
         if srcs:
             # This is a bit of a hack, but rather annoying. We want to put bytecode in its 'legacy' location
             # in python3 because zipimport doesn't look in __pycache__. Unfortunately the flag doesn't exist
@@ -96,14 +94,17 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
 
 def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
                   data:list=None, visibility:list=None, test_only:bool=False, zip_safe:bool=None,
-                  site:bool=False, strip:bool=False,
-                  interpreter:str=None, shebang:str='', labels:list&features&tags=[]):
+                  site:bool=False, strip:bool=False, interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER,
+                  shebang:str='', labels:list&features&tags=[]):
     """Generates a Python binary target.
 
     This compiles all source files together into a single .pex file which can
     be easily copied or deployed. The construction of the .pex is done in parts
     by the dependent python_library rules, and this rule simply builds the
     metadata for it and concatenates them all together.
+
+    This target can be debugged via:
+        plz debug [-o python.debugger:[pdb|debugpy]] [--port] //:target
 
     Args:
       name (str): Name of the rule.
@@ -122,19 +123,22 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
       strip (bool): Strips source code from the output .pex file, leaving just bytecode.
       site (bool): Allows the Python interpreter to import site; conversely if False, it will be
                    started with the -S flag to avoid importing site.
-      interpreter (str): The Python interpreter to use. Defaults to the config setting
-                         which is normally just 'python', but could be 'python3' or
-                         'pypy' or whatever.
+      interpreter (str): The Python interpreter to use. Defaults to the value of the
+                         Python.DefaultInterpreter setting.
       shebang (str): Exact shebang to apply to the generated file. By default we will
                      determine something appropriate for the given interpreter.
       labels (list): Labels to apply to this rule.
     """
-    shebang = shebang or interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
+    shebang = shebang or _interpreter_cmd(interpreter)
     zipsafe_flag = '' if zip_safe is False else '--zip_safe'
     cmd = '$TOOLS_PEX -s "%s" -m "%s" %s --interpreter_options="%s" --stamp="$RULE_HASH"' % (
         shebang, CONFIG.PYTHON_MODULE_DIR, zipsafe_flag, CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
+
+    if CONFIG.BUILD_CONFIG == 'dbg':
+        # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
+        cmd = f'{cmd} -d={CONFIG.PYTHON_DEBUGGER}'.replace(' --zip_safe', '')
 
     assert main not in srcs, "main file should not be included in srcs"
 
@@ -161,15 +165,19 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         needs_transitive_deps=True,  # Needed so we can find anything with zip_safe=False on it.
         output_is_complete=True,
         tools={
-            'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+            'interpreter': [interpreter],
             'pex': [CONFIG.PEX_TOOL],
         },
         test_only=test_only,
     )
+
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
     if strip:
         cmd += ' --strip_py'
+
+    debug_cmd = _debug_cmd("./$OUT")
+
     return build_rule(
         name=name,
         srcs=[pex_rule],
@@ -177,12 +185,13 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         outs=[out or (name + '.pex')],
         data=data,
         cmd=cmd,
+        debug_cmd=debug_cmd,
         needs_transitive_deps=True,
         binary=True,
         output_is_complete=True,
         building_description="Creating pex...",
         visibility=visibility,
-        requires=['py', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+        requires=['py', interpreter],
         tools=[CONFIG.JARCAT_TOOL],
         # This makes the python_library rule the dependency for other python_library or
         # python_test rules that try to import it. Does mean that they cannot collect a .pex
@@ -199,14 +208,17 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
 def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:list=[], worker:str='',
                 labels:list&features&tags=[], size:str=None, flags:str='', visibility:list=None,
                 sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
-                test_outputs:list=None, zip_safe:bool=None, interpreter:str=None, site:bool=False,
-                test_runner:str=None):
+                test_outputs:list=None, zip_safe:bool=None, interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER,
+                site:bool=False, test_runner:str=None):
     """Generates a Python test target.
 
     This works very similarly to python_binary; it is also a single .pex file
-    which is run to execute the tests. The tests are run via either unittest or pytest, depending
+    which is run to execute the tests. The tests are run via either unittest, pytest, or behave, depending
     on which is set for the test runner, which can be configured either via the python_test_runner
     package property or python.testrunner in the config.
+
+    This target can be debugged via:
+        plz debug [-o python.debugger:[pdb|debugpy]] [--port] //:target
 
     Args:
       name (str): Name of the rule.
@@ -229,21 +241,23 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
                        If set to explicitly True or False, the output will be marked
                        appropriately; by default it will be safe unless any of the
                        transitive dependencies are themselves marked as not zip-safe.
-      interpreter (str): The Python interpreter to use. Defaults to the config setting
-                         which is normally just 'python', but could be 'python3' or
-                        'pypy' or whatever.
+      interpreter (str): The Python interpreter to use. Defaults to the value of the
+                         Python.DefaultInterpreter setting.
       site (bool): Allows the Python interpreter to import site; conversely if False, it will be
                    started with the -S flag to avoid importing site.
       test_runner (str): Specify which Python test runner to use for these tests. One of
                          `unittest`, `pytest`, or a custom test runner entry point.
     """
-    interpreter = interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER
     test_runner = test_runner or CONFIG.PYTHON_TEST_RUNNER
     cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$RULE_HASH"' % (
-        interpreter, CONFIG.PYTHON_MODULE_DIR, test_runner,
+        _interpreter_cmd(interpreter), CONFIG.PYTHON_MODULE_DIR, test_runner,
         CONFIG.PYTHON_INTERPRETER_OPTIONS)
     if site:
         cmd += ' -S'
+
+    if CONFIG.BUILD_CONFIG == 'dbg':
+        # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
+        cmd = f'{cmd} -d={CONFIG.PYTHON_DEBUGGER}'.replace(' --zip_safe', '')
 
     # If the config specifies a PYTHON_TEST_RUNNER_BOOTSTRAP target, then this ought to contain
     # the test-runner library (e.g. pytest), and its transitive dependencies. In this case, we just
@@ -270,7 +284,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         pre_build=_handle_zip_safe,
         deps=deps,
         tools={
-            'interpreter': [interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+            'interpreter': [interpreter],
             'pex': [CONFIG.PEX_TOOL],
         },
         labels = labels,
@@ -292,9 +306,17 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     deps = [pex_rule, lib_rule]
 
     test_cmd = f'$TEST {flags}'
-    if worker:
-        test_cmd = f'$(worker {worker}) && {test_cmd} '
+    worker_cmd = f'$(worker {worker})' if worker else ""
+    if worker_cmd:
+        test_cmd = f'{worker_cmd} && {test_cmd} '
         deps += [worker]
+
+    debug_cmd = _debug_cmd(
+        bin = "./$TEST",
+        flags = flags,
+        pre_cmd = worker_cmd,
+    )
+
     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
     return build_rule(
         name=name,
@@ -307,6 +329,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         labels=labels + ['test_results_dir'],
         cmd='$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
         test_cmd=test_cmd,
+        debug_cmd=debug_cmd,
         needs_transitive_deps=True,
         output_is_complete=True,
         binary=True,
@@ -318,12 +341,12 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         size = size,
         flaky=flaky,
         test_outputs=test_outputs,
-        requires=['py', 'test', interpreter or CONFIG.DEFAULT_PYTHON_INTERPRETER],
+        requires=['py', 'test', interpreter],
         tools=[CONFIG.JARCAT_TOOL],
     )
 
 
-def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
+def pip_library(name:str, version:str, labels:list=[], hashes:list=None, package_name:str=None,
                 test_only:bool&testonly=False, deps:list=[], post_install_commands:list=None,
                 install_subdirectory:str=None, repo:str=None, use_pypi:bool=None, patch:str|list=None,
                 visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None,
@@ -333,6 +356,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
     Args:
       name (str): Name of the build rule.
       version (str): Specific version of the package to install.
+      labels (list): Additional labels to apply to this rule.
       hashes (list): List of acceptable hashes for this target.
       package_name (str): Name of the pip package to install. Defaults to the same as 'name'.
       outs (list): List of output files / directories. Defaults to [name]. If subdirectory is used outs[0] is used as the prefix.
@@ -373,9 +397,12 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
 
     pip_tool = "$TOOLS_PIP" if CONFIG.PIP_TOOL else '$TOOLS_PYTHON -m pip'
 
+    # Unset these compiler and linker flags as macOS doesn't have all these options.
+    pip_compile_flags = 'CFLAGS=" -Wl,--build-id=none -g0 " LDFLAGS=" -Wl,--build-id=none"' if CONFIG.HOSTOS != 'darwin' else 'CFLAGS=" -g0"'
+
     pip_cmd = (
         f'mkdir {pip_target_dir} && '
-        f'PIP_CONFIG_FILE=/dev/null {pip_tool} install --isolated --no-deps --prefix= --no-compile '
+        f'PIP_CONFIG_FILE=/dev/null {pip_compile_flags} {pip_tool} install --isolated --no-deps --prefix= --no-compile '
         f'--no-cache-dir --default-timeout=60 --target={target}'
     )
 
@@ -421,6 +448,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
         building_description = 'Fetching...',
         tools = tools,
         sandbox = False,
+        labels = ["dlink:plz-out/python/venv"]
     )
 
     # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
@@ -442,12 +470,12 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
             'jarcat': [CONFIG.JARCAT_TOOL],
         },
         post_build = None if licences else _add_licences,
-        labels = ['py', 'pip:' + package_name] + (['py:zip-unsafe'] if not zip_safe else []),
+        labels = labels + ['py', 'pip:' + package_name] + (['py:zip-unsafe'] if not zip_safe else []),
         visibility = visibility,
     )
 
-def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
-                 post_install_commands:list=None, patch:str|list=None, licences:list=None,
+def python_wheel(name:str, version:str, labels:list=[], hashes:list=None, package_name:str=None,
+                 outs:list=None, post_install_commands:list=None, patch:str|list=None, licences:list=None,
                  test_only:bool&testonly=False, repo:str=None, zip_safe:bool=True, visibility:list=None,
                  deps:list=[], name_scheme:str=None, strip:list=['*.pyc', 'tests']):
     """Downloads a Python wheel and extracts it.
@@ -465,6 +493,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
       name (str): Name of the rule. Also doubles as the name of the package if package_name
             is not set.
       version (str): Version of the package to install.
+      labels (list): Additional labels to apply to this rule.
       hashes (list): List of hashes to verify the package against.
       package_name (str): If given, overrides `name` for the name of the package to look for.
       outs (list): List of output files. Defaults to a directory named the same as `name`.
@@ -516,6 +545,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         _tag = 'download',
         out = name + '.whl',
         url = urls,
+        hashes = hashes if CONFIG.FF_PYTHON_WHEEL_HASHING else None,
         licences = licences if licences else None,
     )
 
@@ -563,7 +593,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     return build_rule(
         name = name,
         srcs = [wheel_rule],
-        hashes = hashes,  # TODO(peterebden): Move this onto wheel_rule when we're willing to break hash compatibility.
+        hashes = None if CONFIG.FF_PYTHON_WHEEL_HASHING else hashes,
         outs = outs or [name],
         tools = [CONFIG.JARCAT_TOOL],
         cmd = cmd,
@@ -571,9 +601,13 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         visibility = visibility,
         licences = licences,
         test_only = test_only,
-        labels = [label],
+        labels = labels + [label] + ["link:plz-out/python/venv"],
         provides = {'py': wheel_rule},
     )
+
+
+def _interpreter_cmd(interpreter:str):
+    return f'$(out {interpreter})' if interpreter.startswith('//') or interpreter.startswith(':') else interpreter
 
 
 def _patch_cmd(patch):
@@ -596,6 +630,7 @@ def _handle_zip_safe(name):
     if has_label(name, 'py:zip-unsafe'):
         set_command(name, get_command(name).replace(' --zip_safe', ''))
 
+
 def _add_licences(name, output):
     """Annotates a pip_library rule with detected licences after download."""
     found = False
@@ -611,6 +646,22 @@ def _add_licences(name, output):
             found = True
     if not found:
         log.warning('No licence found for %s, should add licences = [...] to the rule', name.lstrip('_').split('#')[0])
+
+
+# `pdb` and `debugpy` are the current debuggers supported by the PEX tool.
+def _debug_cmd(bin:str, flags:str='', pre_cmd:str=''):
+    if CONFIG.BUILD_CONFIG != 'dbg':
+        return ""
+
+    # `PEX_EXPLODE` will explode the PEX before executing to allow clients to access third party sources files.
+    # `DEBUG_PORT` is read by the PEX generated for debuggers that support server mode.
+    cmd = f"{bin} {flags}" if not CONFIG.DEBUG_PORT else f"PEX_EXPLODE=true DEBUG_PORT={CONFIG.DEBUG_PORT} {bin} {flags}"
+
+    if pre_cmd:
+        cmd = f"{pre_cmd} && {cmd}"
+
+    return cmd
+
 
 if CONFIG.BAZEL_COMPATIBILITY:
     py_library = python_library

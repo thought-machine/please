@@ -27,18 +27,25 @@ func Parse(gofiles []string) (*Cfg, error) {
 			return nil, err
 		}
 		// We munge all patterns together at this point, if a file is in our input sources we want to know about it regardless.
-		for _, pattern := range append(append(pkg.EmbedPatterns, pkg.TestEmbedPatterns...), pkg.XTestEmbedPatterns...) {
-			paths, err := relglob(dir, pattern)
-			if err != nil {
-				return nil, err
-			}
-			cfg.Patterns[pattern] = paths
-			for _, p := range paths {
-				cfg.Files[p] = path.Join(dir, p)
-			}
+		if err := cfg.AddPackage(pkg); err != nil {
+			return nil, err
 		}
 	}
 	return cfg, nil
+}
+
+func (cfg *Cfg) AddPackage(pkg *build.Package) error {
+	for _, pattern := range append(append(pkg.EmbedPatterns, pkg.TestEmbedPatterns...), pkg.XTestEmbedPatterns...) {
+		paths, err := relglob(pkg.Dir, pattern)
+		if err != nil {
+			return err
+		}
+		cfg.Patterns[pattern] = paths
+		for _, p := range paths {
+			cfg.Files[p] = path.Join(pkg.Dir, p)
+		}
+	}
+	return nil
 }
 
 func dirs(files []string) []string {

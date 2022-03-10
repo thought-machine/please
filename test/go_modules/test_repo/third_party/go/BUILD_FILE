@@ -63,6 +63,7 @@ go_module(
     name = "snappy",
     module = "github.com/golang/snappy",
     version = "v0.0.2",
+    install = [""],
 )
 
 go_mod_download(
@@ -86,4 +87,25 @@ go_module(
     install = ["go-fuzz-build"],
     module = "github.com/dvyukov/go-fuzz",
     deps = [":go-fuzz-compile"],
+)
+
+go_module(
+    name = "licenseclassifier",
+    module = "github.com/google/licenseclassifier",
+    version = "v0.0.0-20210722185704-3043a050f148",
+    install = [
+        "licenses",
+    ],
+    licences = ["Apache-2.0"]
+)
+
+# Tiny CGO module that tests relative C header files imports.
+filegroup(
+    name = "cgo_example_srcs",
+    srcs = ["cgo_example"],
+)
+go_module(
+    name = "cgo",
+    module = "cgo_example",
+    download = ":cgo_example_srcs",
 )

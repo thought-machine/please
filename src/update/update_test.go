@@ -31,9 +31,9 @@ func (*fakeLogBackend) Log(level logging.Level, calldepth int, rec *logging.Reco
 }
 
 func TestVerifyNewPlease(t *testing.T) {
-	assert.True(t, verifyNewPlease("src/please", core.PleaseVersion.String()))
+	assert.True(t, verifyNewPlease("src/please", core.PleaseVersion))
 	assert.False(t, verifyNewPlease("src/please", "wibble"))
-	assert.False(t, verifyNewPlease("wibble", core.PleaseVersion.String()))
+	assert.False(t, verifyNewPlease("wibble", core.PleaseVersion))
 }
 
 func TestFindLatestVersion(t *testing.T) {
@@ -82,7 +82,7 @@ func TestDownloadNewPlease(t *testing.T) {
 
 func TestShouldUpdateVersionsMatch(t *testing.T) {
 	c := makeConfig("shouldupdate")
-	c.Please.Version.Set(core.PleaseVersion.String())
+	c.Please.Version.Set(core.PleaseVersion)
 	// Versions match, update is never needed
 	assert.False(t, shouldUpdate(c, false, false, false))
 	assert.False(t, shouldUpdate(c, true, true, false))
@@ -126,14 +126,14 @@ func TestShouldUpdateNoVersion(t *testing.T) {
 	// No version is set, shouldn't update unless we force
 	c.Please.Version = cli.Version{}
 	assert.False(t, shouldUpdate(c, true, false, false))
-	assert.Equal(t, core.PleaseVersion, c.Please.Version.Semver())
+	assert.Equal(t, pleaseVersion(), c.Please.Version.Semver())
 	c.Please.Version = cli.Version{}
 	assert.True(t, shouldUpdate(c, true, true, false))
 }
 
 func TestDownloadAndLinkPlease(t *testing.T) {
 	c := makeConfig("downloadandlink")
-	c.Please.Version.UnmarshalFlag(core.PleaseVersion.String())
+	c.Please.Version.UnmarshalFlag(core.PleaseVersion)
 	newPlease := downloadAndLinkPlease(c, false, true)
 	assert.True(t, core.PathExists(newPlease))
 }
@@ -160,7 +160,7 @@ func TestFullDistVersion(t *testing.T) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	vCurrent := fmt.Sprintf("/%s_%s/%s/please_%s", runtime.GOOS, runtime.GOARCH, core.PleaseVersion, core.PleaseVersion)
+	vCurrent := fmt.Sprintf("/%s_%s/%s/please_%s", runtime.GOOS, runtime.GOARCH, pleaseVersion(), pleaseVersion())
 	v42 := fmt.Sprintf("/%s_%s/42.0.0/please_42.0.0", runtime.GOOS, runtime.GOARCH)
 	if r.URL.Path == "/latest_version" {
 		w.Write([]byte("42.0.0"))

@@ -45,6 +45,8 @@ func (label BuildLabel) String() string {
 	zero := BuildLabel{}
 	if label == zero {
 		return ""
+	} else if label == OriginalTarget {
+		return "command-line targets"
 	}
 	s := "//" + label.PackageName
 	if label.Subrepo != "" {
@@ -133,6 +135,34 @@ func ParseBuildLabel(target, currentPath string) BuildLabel {
 	return label
 }
 
+func splitAnnotation(target string) (string, string) {
+	parts := strings.Split(target, "|")
+	annotation := ""
+	if len(parts) == 2 {
+		annotation = parts[1]
+	}
+	return parts[0], annotation
+}
+func ParseAnnotatedBuildLabel(target, currentPath string) AnnotatedOutputLabel {
+	label, annotation := splitAnnotation(target)
+	l := ParseBuildLabel(label, currentPath)
+
+	return AnnotatedOutputLabel{
+		BuildLabel: l,
+		Annotation: annotation,
+	}
+}
+
+func ParseAnnotatedBuildLabelContext(target string, context *Package) AnnotatedOutputLabel {
+	label, annotation := splitAnnotation(target)
+	l := ParseBuildLabelContext(label, context)
+
+	return AnnotatedOutputLabel{
+		BuildLabel: l,
+		Annotation: annotation,
+	}
+}
+
 // TryParseBuildLabel attempts to parse a single build label from a string. Returns an error if unsuccessful.
 func TryParseBuildLabel(target, currentPath, subrepo string) (BuildLabel, error) {
 	if pkg, name, subrepo := parseBuildLabelParts(target, currentPath, subrepo); name != "" {
@@ -206,6 +236,9 @@ func parseBuildLabelSubrepo(target, currentPath string) (string, string, string)
 			return "", target, target
 		}
 	}
+	if strings.ContainsRune(target[:idx], ':') {
+		return "", "", ""
+	}
 	pkg, name, _ := parseBuildLabelParts(target[idx:], currentPath, "")
 	return pkg, name, target[:idx]
 }
@@ -224,7 +257,7 @@ func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 	// Deliberately leave this till after the above to facilitate the --repo_root flag.
 	if subdir == "" {
 		MustFindRepoRoot()
-		subdir = initialPackage
+		subdir = InitialPackagePath
 	}
 	if startsWithColon {
 		return TryParseBuildLabel(target, subdir, "")
@@ -255,6 +288,12 @@ func (label BuildLabel) IsAllSubpackages() bool {
 // IsAllTargets returns true if the label is the pseudo-label referring to all targets in this package.
 func (label BuildLabel) IsAllTargets() bool {
 	return label.Name == "all"
+}
+
+// IsPseudoTarget returns true if either the liable ends in ... or in all.
+// It is useful to check if a liable potentially references more than one target.
+func (label BuildLabel) IsPseudoTarget() bool {
+	return label.IsAllSubpackages() || label.IsAllTargets()
 }
 
 // Includes returns true if label includes the other label (//pkg:target1 is covered by //pkg:all etc).
@@ -308,12 +347,12 @@ func (label BuildLabel) LocalPaths(graph *BuildGraph) []string {
 }
 
 // Label is an implementation of BuildInput interface. It always returns this label.
-func (label BuildLabel) Label() *BuildLabel {
-	return &label
+func (label BuildLabel) Label() (BuildLabel, bool) {
+	return label, true
 }
 
-func (label BuildLabel) nonOutputLabel() *BuildLabel {
-	return &label
+func (label BuildLabel) nonOutputLabel() (BuildLabel, bool) {
+	return label, true
 }
 
 // UnmarshalFlag unmarshals a build label from a command line flag. Implementation of flags.Unmarshaler interface.
@@ -429,6 +468,18 @@ func (label BuildLabel) isExperimental(state *BuildState) bool {
 	return false
 }
 
+// Matches returns whether the build label matches the other based on wildcard rules
+func (label BuildLabel) Matches(other BuildLabel) bool {
+	if label.Name == "..." {
+		return label.PackageName == "." || strings.HasPrefix(other.PackageName, label.PackageName)
+	}
+	if label.Name == "all" {
+		return label.PackageName == other.PackageName
+	}
+	// Allow //foo:_bar#bazz to match //foo:bar
+	return label == other.Parent()
+}
+
 // Complete implements the flags.Completer interface, which is used for shell completion.
 // Unfortunately it's rather awkward to handle here; we need to do a proper parse in order
 // to find out what the possible build labels are, and we're not ready for that yet.
@@ -441,14 +492,14 @@ func (label BuildLabel) Complete(match string) []flags.Completion {
 	os.Setenv("PLZ_COMPLETE", match)
 	os.Unsetenv("GO_FLAGS_COMPLETION")
 	exec, _ := os.Executable()
-	out, _, err := process.New().ExecWithTimeout(context.Background(), nil, "", os.Environ(), 10*time.Second, false, false, false, false, append([]string{exec}, os.Args[1:]...))
+	out, _, err := process.New().ExecWithTimeout(context.Background(), nil, "", os.Environ(), 10*time.Second, false, false, false, false, process.NoSandbox, append([]string{exec}, os.Args[1:]...))
 	if err != nil {
 		return nil
 	}
-	ret := []flags.Completion{}
+	var ret []flags.Completion
 	for _, line := range strings.Split(string(out), "\n") {
 		if line != "" {
-			ret = append(ret, flags.Completion{Item: line})
+			ret = append(ret, flags.Completion{Item: line, Description: "BuildLabel"})
 		}
 	}
 	return ret

@@ -24,8 +24,8 @@ def workspace(name:str):
     )
 
 
-def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha256=None,
-                 config:str=None, bazel_compat:bool=False,
+def http_archive(name:str, urls:list, strip_prefix:str=None, labels:list=[],
+                 hashes:str|list&sha256=None, config:str=None, bazel_compat:bool=False,
                  visibility:list=None):
     """Fetches a remote file over HTTP and expands its contents.
 
@@ -39,6 +39,7 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha
       urls: List of URLs to fetch from. These are assumed to be mirrors and will be
             tried in sequence.
       strip_prefix: Prefix to strip from the expanded archive.
+      labels: Labels to apply to this rule.
       hashes: List of hashes to verify the rule with.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
@@ -50,6 +51,7 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha
         name = name,
         urls = urls,
         strip_prefix = strip_prefix,
+        labels = labels,
         hashes = hashes,
         config = config,
         bazel_compat = bazel_compat,
@@ -57,8 +59,9 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha
 
 
 def new_http_archive(name:str, urls:list, build_file:str=None, build_file_content:str=None,
-                     strip_prefix:str=None, strip_build:bool=False, hashes:str|list&sha256=None,
-                     config:str=None, bazel_compat:bool=False, visibility:list=None):
+                     strip_prefix:str=None, strip_build:bool=False, plugin:bool=False, labels:list=[],
+                     hashes:str|list&sha256=None,username:str=None, password_file:str=None, headers:dict={}, secret_headers:dict={},
+                     config:str=None, bazel_compat:bool=False, visibility:list=None, pass_env:list=[]):
     """Fetches a remote file over HTTP and expands its contents, combined with a BUILD file.
 
     The archive should be either a zipfile or a tarball. Which one to use will be autodetected
@@ -78,12 +81,18 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
                           We suggest using build_file instead, but this is provided for Bazel compatibility.
       strip_prefix: Prefix to strip from the expanded archive.
       strip_build: True to strip any BUILD files from the archive after download.
+      labels: Labels to apply to this rule.
       hashes: List of hashes to verify the rule with.
+      username: Username for accessing a private file or repo.
+      password_file: A file on disk that contains a password or access token.
+      headers: Headers to pass to curl.
+      secret_headers: Headers contained in files to pass to curl.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
                     specifying a config file with `compatibility = true` in the `[bazel]`
                     section.
       visibility: Deprecated, has no effect.
+      pass_env: Any environment variables referenced by headers that should be passed in from the host.
     """
     if isinstance(hashes, str):
         hashes = [hashes]
@@ -93,13 +102,18 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         url = urls,
         out = name + '_' + basename(urls[0]),
         hashes = hashes,
+        username = username,
+        password_file = password_file,
+        headers = headers,
+        secret_headers = secret_headers,
+        pass_env = pass_env,
     )
     if strip_prefix:
         cmd = '$TOOL x $SRCS_REMOTE -o "$OUT" -s ' + strip_prefix
     else:
         cmd = '$TOOL x $SRCS_REMOTE -o "$OUT"'
     if strip_build:
-        cmd += ' && find . -name BUILD | xargs rm -f'
+        cmd += ' && find . ' + ' -o '.join([f'-name {name}' for name in CONFIG.BUILD_FILE_NAMES + ["WORKSPACE"]]) + ' | xargs rm -f'
     if build_file:
         cmd += ' && mv $SRCS_BUILD "$OUT/' + CONFIG.BUILD_FILE_NAMES[0] + '"'
     elif build_file_content:
@@ -114,6 +128,9 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         tools = [CONFIG.JARCAT_TOOL],
         outs = [name],
         cmd = cmd,
+        _subrepo = True,
+        labels = labels,
+        visibility = visibility,
     )
     return subrepo(
         name = name,
@@ -148,9 +165,9 @@ def new_local_repository(name:str, path:str):
     )
 
 
-def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:str|list=None,
-                strip_prefix:str=None, strip_build:bool=False, config:str=None,
-                bazel_compat:bool=False):
+def github_repo(name:str, repo:str, revision:str, build_file:str=None, labels:list=[],
+                hashes:str|list=None, strip_prefix:str=None, strip_build:bool=False, config:str=None,
+                access_token:str=None, bazel_compat:bool=False):
     """Defines a new subrepo corresponding to a Github project.
 
     This is a convenience alias to the more general new_http_archive. It knows how to
@@ -159,11 +176,14 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
     Args:
       name: Name of the rule.
       repo: Github repo to fetch from (e.g. "thought-machine/please").
-      revision: Revision to download.
+      revision: Revision to download. This can be either a release version, commit or branch.
       build_file: The file to use as a BUILD file for this subrepository.
+      labels: Labels to apply to this rule.
       hashes: List of hashes to verify the rule with.
       strip_prefix: Prefix to strip from the contents of the zip. Is usually autodetected for you.
       strip_build: True to strip any BUILD files from the archive after download.
+      access_token: An environment variable containing a github personal access token. This can be used to access
+                    private repos.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
                     specifying a config file with `compatibility = true` in the `[bazel]`
@@ -174,14 +194,20 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
 
     # If it looks like semver, we need to remove the v from it because github formats their zips differently for semver
     # tags
-    #
-    # TODO(jpoole): if we ever add semver or regex to asp, we can do a better job of this
-    if len(revision.split('.')) == 3:
+    if is_semver(revision):
         prefix = revision.removeprefix('v')
     else:
         prefix = revision
 
     prefix = f'{repo}-{prefix}'
+
+    headers = {}
+    pass_env = []
+    if access_token:
+        headers = {
+            'Authorization': 'token \$%s' % access_token,
+        }
+        pass_env = [access_token]
 
     return new_http_archive(
         name = name,
@@ -189,6 +215,52 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
         strip_prefix = strip_prefix or prefix,
         strip_build = strip_build,
         build_file = build_file,
+        labels = labels,
+        hashes = hashes,
+        config = config,
+        headers = headers,
+        bazel_compat = bazel_compat,
+        pass_env = pass_env,
+    )
+
+
+def gitlab_repo(name:str, repo:str, revision:str, instance:str="gitlab.com", build_file:str=None,
+                labels:list=[], hashes:str|list=None, strip_prefix:str=None, strip_build:bool=False,
+                config:str=None, bazel_compat:bool=False):
+    """Defines a new subrepo corresponding to a GitLab project.
+
+    Like github_repo, this is a convenience alias to new_http_archive.
+
+    Args:
+      name: Name of the rule.
+      repo: GitLab repository to fetch from (e.g. "gitlab-org/gitlab-foss").
+      revision: Revision to download.
+      instance: The root URL of the GitLab instance to fetch from (e.g. "gitlab.gnome.org" for the
+                GNOME GitLab instance at https://gitlab.gnome.org). Defaults to "gitlab.com", the
+                official public GitLab instance.
+      build_file: The file to use as a BUILD file for this subrepository.
+      labels: Labels to apply to this rule.
+      hashes: List of hashes to verify the rule with.
+      strip_prefix: Prefix to strip from the contents of the zip. This is usually automatically
+                    detected.
+      strip_build: True to strip any BUILD files from the archive after download.
+      config: Configuration file to apply to this subrepo.
+      bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
+                    specifying a config file with `compatibility = true` in the `[bazel]`
+                    section.
+    """
+    org, _, repo = repo.partition('/')
+    assert repo, "Must pass a valid GitLab repo argument, e.g. gitlab-org/gitlab-foss"
+
+    prefix = f'{repo}-{revision}'
+
+    return new_http_archive(
+        name = name,
+        urls = [f'https://{instance}/{org}/{repo}/-/archive/{revision}/{repo}-{revision}.zip'],
+        strip_prefix = strip_prefix or prefix,
+        strip_build = strip_build,
+        build_file = build_file,
+        labels = labels,
         hashes = hashes,
         config = config,
         bazel_compat = bazel_compat,
@@ -230,3 +302,44 @@ def local_repository(name:str, path:str):
         name = name,
         path = path,
     )
+
+def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build", hashes:list=[]):
+    """Defines a please plugin to use from the configured plugin repositories. See
+        https://please.build/config.html#please.pluginrepositories for more information.
+
+    Args:
+        name (str): Name of the rule
+        revision (str): The revision or version of the plugin pass to the template URLS.
+        plugin (str): The name of the plugin. Defaults to the name of this rule.
+        owner (str): The owner of the plugin to be passed to the template URLS.
+        hashes (list): A list of valid hashes for the downloaded archive file.
+    """
+    plugin = plugin or name
+    urls = [url.format(owner=owner, revision=revision, plugin=plugin) for url in CONFIG.PLUGIN_REPOS]
+
+    remote_rule = remote_file(
+        name = name,
+        _tag = 'download',
+        url = urls,
+        out = name + '_' + basename(urls[0]),
+        hashes = hashes,
+    )
+    extract_rule = build_rule(
+        name = name,
+        srcs = [remote_rule],
+        tools = [CONFIG.JARCAT_TOOL],
+        outs = [name],
+        cmd = " && ".join([
+          "$TOOL x $SRCS -o _tmp",
+          "mv $(dirname $(find . -name .plzconfig | sort -r | head -n 1)) $OUT",
+        ]),
+        _subrepo = True,
+    )
+
+    subrepo(
+        name = name.replace("-", "_"),
+        dep = extract_rule,
+        plugin = True,
+    )
+
+    return extract_rule

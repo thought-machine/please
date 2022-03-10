@@ -51,7 +51,7 @@ func parseFile(pkg *core.Package, p *asp.Parser, filename string) error {
 		}
 		return err
 	}
-	return p.ParseFile(pkg, filename, "")
+	return p.ParseFile(pkg, filename)
 }
 
 // cleanup runs a few arbitrary cleanup steps on the given AST dump.
@@ -108,7 +108,7 @@ func main() {
 	p := asp.NewParser(state)
 
 	log.Debug("Loading built-in build rules...")
-	dir, _ := rules.AllAssets()
+	dir, _ := rules.AllAssets(state.ExcludedBuiltinRules())
 	sort.Strings(dir)
 	for _, filename := range dir {
 		src, _ := rules.ReadAsset(filename)

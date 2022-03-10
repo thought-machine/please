@@ -18,9 +18,9 @@ func init() {
 
 func TestSequential(t *testing.T) {
 	state, labels1, labels2 := makeState(core.DefaultConfiguration())
-	code := Sequential(state, labels1, nil, true, false, false, false, "")
+	code := Sequential(state, labels1, nil, Quiet, false, false, false, "")
 	assert.Equal(t, 0, code)
-	code = Sequential(state, labels2, nil, false, false, false, false, "")
+	code = Sequential(state, labels2, nil, Default, false, false, false, "")
 	assert.Equal(t, 1, code)
 }
 
@@ -51,10 +51,12 @@ func makeState(config *core.Configuration) (*core.BuildState, []core.AnnotatedOu
 	target1 := core.NewBuildTarget(core.ParseBuildLabel("//:true", ""))
 	target1.IsBinary = true
 	target1.AddOutput("true")
+	target1.Test = new(core.TestFields)
 	state.Graph.AddTarget(target1)
 	target2 := core.NewBuildTarget(core.ParseBuildLabel("//:false", ""))
 	target2.IsBinary = true
 	target2.AddOutput("false")
+	target2.Test = new(core.TestFields)
 	state.Graph.AddTarget(target2)
 	return state, annotate([]core.BuildLabel{target1.Label}), annotate([]core.BuildLabel{target1.Label, target2.Label})
 }

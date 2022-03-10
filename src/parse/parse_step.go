@@ -36,21 +36,34 @@ func Parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 }
 
 func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) error {
+	if !forSubinclude {
+		state.Parser.WaitForInit()
+	}
+	subrepo, err := checkSubrepo(tid, state, label, dependent, forSubinclude)
+	if err != nil {
+		return err
+	}
+	if subrepo != nil {
+		state = subrepo.State
+		if !forSubinclude {
+			state.Parser.WaitForInit()
+		}
+	}
+
 	// See if something else has parsed this package first.
 	pkg := state.SyncParsePackage(label)
 	if pkg != nil {
 		// Does exist, all we need to do is toggle on this target
-		return activateTarget(tid, state, pkg, label, dependent, forSubinclude)
+		return activateTarget(state, pkg, label, dependent, forSubinclude)
 	}
 	// If we get here then it falls to us to parse this package.
-	state.LogBuildResult(tid, label, core.PackageParsing, "Parsing...")
-
-	subrepo, err := checkSubrepo(tid, state, label, dependent, forSubinclude)
-	if err != nil {
-		return err
-	} else if subrepo != nil && subrepo.Target != nil {
+	state.LogParseResult(tid, label, core.PackageParsing, "Parsing...")
+	if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
-		state.WaitForBuiltTarget(subrepo.Target.Label, label)
+		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label)
+		if err := subrepo.LoadSubrepoConfig(); err != nil {
+			return err
+		}
 	}
 	// Subrepo & nothing else means we just want to ensure that subrepo is present.
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
@@ -61,8 +74,8 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	if err != nil {
 		return err
 	}
-	state.LogBuildResult(tid, label, core.PackageParsed, "Parsed package")
-	return activateTarget(tid, state, pkg, label, dependent, forSubinclude)
+	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
+	return activateTarget(state, pkg, label, dependent, forSubinclude)
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
@@ -72,8 +85,8 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	} else if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
 		return subrepo, nil
 	}
-	// We don't have the definition of it at all. Need to parse that first.
-	sl := label.SubrepoLabel()
+
+	sl := subrepoLabel(state, label, dependent)
 
 	// Local subincludes are when we subinclude from a subrepo defined in the current package
 	localSubinclude := sl.PackageName == dependent.PackageName && forSubinclude
@@ -83,6 +96,8 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 		if handled, err := parseSubrepoPackage(tid, state, sl.PackageName, "", label); err != nil {
 			return nil, err
 		} else if !handled {
+			// They may have meant a subrepo that was defined in the dependent label's subrepo rather than the host
+			// repo
 			if _, err := parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label); err != nil {
 				return nil, err
 			}
@@ -101,7 +116,33 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 		return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
 	}
 	// For local subincludes, the subrepo has to already be defined at this point in the BUILD file
-	return nil, fmt.Errorf("%s -> %s", dependent, label)
+	return nil, fmt.Errorf("Subrepo %v is not defined yet. It must appear before it is used by subinclude()", sl)
+}
+
+// subrepoLabel returns the build label that defines a subrepo. It checks if the subrepo name matches a plugin, and
+// returns the plugins target, otherwise bases it off the label itself
+func subrepoLabel(state *core.BuildState, label, dependent core.BuildLabel) core.BuildLabel {
+	arch := ""
+	if dependent.Subrepo != "" {
+		s := state.Graph.Subrepo(dependent.Subrepo).State
+		if s.Arch != state.Arch {
+			arch = s.Arch.String()
+		}
+	}
+	if plugin, ok := state.Config.Plugin[label.Subrepo]; ok {
+		if plugin.Target.String() == "" {
+			log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", label.Subrepo)
+		}
+		return plugin.Target
+	}
+	pluginName := strings.TrimSuffix(label.Subrepo, fmt.Sprintf("_%v", arch))
+	if plugin, ok := state.Config.Plugin[pluginName]; ok {
+		if plugin.Target.String() == "" {
+			log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", pluginName)
+		}
+		return plugin.Target
+	}
+	return label.SubrepoLabel()
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.
@@ -125,11 +166,11 @@ func checkArchSubrepo(state *core.BuildState, name string) *core.Subrepo {
 }
 
 // activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
-func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, dependent core.BuildLabel, forSubinclude bool) error {
+func activateTarget(state *core.BuildState, pkg *core.Package, label, dependent core.BuildLabel, forSubinclude bool) error {
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
 		if label.Subrepo == "" && label.PackageName == "" && label.Name == dependent.Subrepo {
 			if subrepo := checkArchSubrepo(state, label.Name); subrepo != nil {
-				state.LogBuildResult(tid, label, core.TargetBuilt, "Instantiated subrepo")
+				state.ArchSubrepoInitialised(label)
 				return nil
 			}
 		}
@@ -156,8 +197,8 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 				if state.ShouldInclude(target) && !target.AddedPostBuild {
 					// Must always do this for coverage because we need to calculate sources of
 					// non-test targets later on.
-					if !state.NeedTests || target.IsTest || state.NeedCoverage {
-						if err := state.QueueTarget(target.Label, dependent, false, dependent.IsAllTargets()); err != nil {
+					if !state.NeedTests || target.IsTest() || state.NeedCoverage {
+						if err := state.QueueTarget(target.Label, dependent, dependent.IsAllTargets()); err != nil {
 							return err
 						}
 					}
@@ -167,7 +208,7 @@ func activateTarget(tid int, state *core.BuildState, pkg *core.Package, label, d
 	} else {
 		for _, l := range state.Graph.DependentTargets(dependent, label) {
 			// We use :all to indicate a dependency needed for parse.
-			if err := state.QueueTarget(l, dependent, false, forSubinclude || dependent.IsAllTargets()); err != nil {
+			if err := state.QueueTarget(l, dependent, forSubinclude || dependent.IsAllTargets()); err != nil {
 				return err
 			}
 		}
@@ -187,16 +228,16 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 	if packageName == InternalPackageName {
 		pkgStr, err := GetInternalPackage(state.Config)
 		if err != nil {
-			return nil, fmt.Errorf("faild to generate internal package: %w", err)
+			return nil, fmt.Errorf("failed to generate internal package: %w", err)
 		}
-		if err := state.Parser.ParseReader(state, pkg, strings.NewReader(pkgStr)); err != nil {
-			return nil, fmt.Errorf("faild to parse internal package: %w", err)
+		if err := state.Parser.ParseReader(pkg, strings.NewReader(pkgStr)); err != nil {
+			return nil, fmt.Errorf("failed to parse internal package: %w", err)
 		}
 	} else {
 		filename, dir := buildFileName(state, label.PackageName, subrepo)
 		if filename != "" {
 			pkg.Filename = filename
-			if err := state.Parser.ParseFile(state, pkg, pkg.Filename); err != nil {
+			if err := state.Parser.ParseFile(pkg, pkg.Filename); err != nil {
 				return nil, err
 			}
 		} else {
@@ -213,9 +254,14 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 		}
 	}
 
-	// Verify some details of the output files in the background. Don't need to wait for this
-	// since it only issues warnings sometimes.
-	go pkg.VerifyOutputs()
+	// Verifies some details of the output files. This can only be perfomed after the whole package has been parsed as
+	// it guarantees that all necessary information between targets has been retrieved.
+	if state.Config.FeatureFlags.PackageOutputsStrictness {
+		go pkg.MustVerifyOutputs()
+	} else {
+		go pkg.VerifyOutputs()
+	}
+
 	state.Graph.AddPackage(pkg) // Calling this means nobody else will add entries to pendingTargets for this package.
 	return pkg, nil
 }
@@ -235,23 +281,11 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 		return "WORKSPACE", ""
 	}
 	for _, buildFileName := range config.Parse.BuildFileName {
-		if filename := path.Join(core.RepoRoot, pkgName, buildFileName); fs.FileExists(filename) {
+		if filename := path.Join(pkgName, buildFileName); fs.FileExists(filename) {
 			return filename, pkgName
 		}
 	}
 	return "", pkgName
-}
-
-func rescanDeps(state *core.BuildState, changed map[*core.BuildTarget]struct{}) error {
-	// Run over all the changed targets in this package and ensure that any newly added dependencies enter the build queue.
-	for target := range changed {
-		if s := target.State(); s < core.Built && s > core.Inactive {
-			if err := state.QueueTarget(target.Label, core.OriginalTarget, true, false); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // exportFile adds a single-file export target. This is primarily used for Bazel compat.

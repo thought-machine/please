@@ -28,6 +28,9 @@ const GenDir string = "plz-out/gen"
 // BinDir is the output directory for binary targets.
 const BinDir string = "plz-out/bin"
 
+// SubrepoDir is the output directory for targets that define subrepos.
+const SubrepoDir = "plz-out/subrepos"
+
 // DefaultBuildingDescription is the default description for targets when they're building.
 const DefaultBuildingDescription = "Building..."
 
@@ -54,6 +57,47 @@ const TestResultsDirLabel = "test_results_dir"
 // tempOutputSuffix is the suffix we attach to temporary outputs to avoid name clashes.
 const tempOutputSuffix = ".out"
 
+// lockFileSuffix is the suffix we attach to lock files.
+const lockFileSuffix = ".lock"
+
+type TestFields struct {
+	// Shell command to run for test targets.
+	Command string `name:"test_cmd"`
+	// Per-configuration test commands to run.
+	Commands map[string]string `name:"test_cmd"`
+	// The results of this test target, if it is one.
+	Results *TestSuite `print:"false"`
+	// Like tools but available to the test_cmd instead
+	tools []BuildInput `name:"test_tools"`
+	// Named test tools, similar to named sources.
+	namedTools map[string][]BuildInput `name:"test_tools"`
+	// The timeout for the test
+	Timeout time.Duration `name:"test_timeout"`
+	// Extra output files from the test.
+	// These are in addition to the usual test.results output file.
+	Outputs []string `name:"test_outputs"`
+	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
+	Flakiness uint8 `name:"flaky"`
+	// True if the test action is sandboxed.
+	Sandbox bool `name:"test_sandbox"`
+	// True if the target is a test and has no output file.
+	// Default is false, meaning all tests must produce test.results as output.
+	NoOutput bool `name:"no_test_output"`
+}
+
+type DebugFields struct {
+	// Shell command to debug this rule.
+	Command string `name:"debug_cmd"`
+	// Debug data files of this rule.
+	data []BuildInput `name:"debug_data"`
+	// Debug data files of this rule by name.
+	namedData map[string][]BuildInput `name:"debug_data"`
+	// Tools available to the debug_cmd.
+	tools []BuildInput `name:"debug_tools"`
+	// Tools available to the debug_cmd by name.
+	namedTools map[string][]BuildInput `name:"debug_tools"`
+}
+
 // A BuildTarget is a representation of a build target and all information about it;
 // its name, dependencies, build commands, etc.
 type BuildTarget struct {
@@ -76,13 +120,13 @@ type BuildTarget struct {
 	// Data files of this rule. Similar to sources but used at runtime, typically by tests.
 	Data []BuildInput `name:"data"`
 	// Data files of this rule by name.
-	namedData map[string][]BuildInput `name:"data"`
+	NamedData map[string][]BuildInput `name:"data"`
 	// Output files of this rule. All are paths relative to this package.
-	outputs []string `name:"outs"`
+	outputs []string `name:"outs" hide:"filegroup"`
 	// Named output subsets of this rule. All are paths relative to this package but can be
 	// captured separately; for example something producing C code might separate its outputs
 	// into sources and headers.
-	namedOutputs map[string][]string `name:"outs"`
+	namedOutputs map[string][]string `name:"outs" hide:"filegroup"`
 	// Optional output files of this rule. Same as outs but aren't required to be produced always.
 	// Can be glob patterns.
 	OptionalOutputs []string `name:"optional_outs"`
@@ -92,65 +136,14 @@ type BuildTarget struct {
 	Command string `name:"cmd" hide:"filegroup"`
 	// Per-configuration shell commands to run.
 	Commands map[string]string `name:"cmd" hide:"filegroup"`
-	// Shell command to run for test targets.
-	TestCommand string `name:"test_cmd"`
-	// Per-configuration test commands to run.
-	TestCommands map[string]string `name:"test_cmd"`
-	// Represents the state of this build target (see below)
-	state int32 `print:"false"`
-	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
-	IsBinary bool `name:"binary"`
-	// True if this target is a test
-	IsTest bool `name:"test"`
-	// Indicates that the target can only be depended on by tests or other rules with this set.
-	// Used to restrict non-deployable code and also affects coverage detection.
-	TestOnly bool `name:"test_only"`
-	// True if the build action is sandboxed.
-	Sandbox bool
-	// True if the test action is sandboxed.
-	TestSandbox bool `name:"test_sandbox"`
-	// True if the target is a test and has no output file.
-	// Default is false, meaning all tests must produce test.results as output.
-	NoTestOutput bool `name:"no_test_output"`
-	// True if this target needs access to its transitive dependencies to build.
-	// This would be false for most 'normal' genrules but true for eg. compiler steps
-	// that need to build in everything.
-	NeedsTransitiveDependencies bool `name:"needs_transitive_deps"`
-	// True if this target blocks recursive exploring for transitive dependencies.
-	// This is typically false for _library rules which aren't complete, and true
-	// for _binary rules which normally are, and genrules where you don't care about
-	// the inputs, only whatever they were turned into.
-	OutputIsComplete bool `name:"output_is_complete"`
-	// If true, the rule is given an env var at build time that contains the hash of its
-	// transitive dependencies, which can be used to identify the output in a predictable way.
-	Stamp bool
-	// If true, the target must be run locally (i.e. is not compatible with remote execution).
-	Local bool
-	// If true, the executed commands will exit whenever an error is encountered (i.e. shells
-	// are executed with -e).
-	ExitOnError bool
-	// If true, the target is needed for a subinclude and therefore we will have to make sure its
-	// outputs are available locally when built.
-	NeededForSubinclude bool `print:"false"`
-	// Marks the target as a filegroup.
-	IsFilegroup bool `print:"false"`
-	// Marks the target as a remote_file.
-	IsRemoteFile bool `print:"false"`
-	// Marks the target as a text_file.
-	IsTextFile bool `print:"false"`
-	// Marks that the target was added in a post-build function.
-	AddedPostBuild bool `print:"false"`
-	// If true, the interactive progress display will try to infer the target's progress
-	// via some heuristics on its output.
-	ShowProgress bool `name:"progress"`
+	// Test related fields.
+	Test *TestFields `name:"test"`
+	// Debug related fields.
+	Debug *DebugFields
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
-	// The results of this test target, if it is one.
-	Results TestSuite `print:"false"`
-	// The number of completed runs
-	completedRuns int `print:"false"`
-	// A mutex to control access to Results
-	resultsMux sync.Mutex `print:"false"`
+	// For remote_files, this is the total size of the download (if known)
+	FileSize float32 `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
 	BuildingDescription string `name:"building_description"`
@@ -182,31 +175,22 @@ type BuildTarget struct {
 	// Tools that this rule will use, ie. other rules that it may use at build time which are not
 	// copied into its source directory.
 	Tools []BuildInput
-	// Like tools but available to the test_cmd instead
-	testTools []BuildInput `name:"test_tools"`
 	// Named tools, similar to named sources.
 	namedTools map[string][]BuildInput `name:"tools"`
-	// Named test tools, similar to named sources.
-	namedTestTools map[string][]BuildInput `name:"test_tools"`
 	// Target-specific environment passthroughs.
 	PassEnv *[]string `name:"pass_env"`
 	// Target-specific unsafe environment passthroughs.
 	PassUnsafeEnv *[]string `name:"pass_unsafe_env"`
-	// Flakiness of test, ie. number of times we will rerun it before giving up. 1 is the default.
-	Flakiness int `name:"flaky"`
+
 	// Timeouts for build/test actions
-	BuildTimeout time.Duration `name:"timeout"`
-	TestTimeout  time.Duration `name:"test_timeout"`
-	// Extra output files from the test.
-	// These are in addition to the usual test.results output file.
-	TestOutputs []string `name:"test_outputs"`
+	BuildTimeout time.Duration `name:"build_timeout"`
 	// OutputDirectories are the directories that outputs can be produced into which will be added to the root of the
 	// output for the rule. For example if an output directory "foo" contains "bar.txt" the rule will have the output
 	// "bar.txt"
 	OutputDirectories []OutputDirectory `name:"output_dirs"`
 	// EntryPoints represent named binaries within the rules output that can be targeted via //package:rule|entry_point_name
 	EntryPoints map[string]string `name:"entry_points"`
-	// Used to arbitrate concurrent access to dependencies
+	// Used to arbitrate concurrent access to dependencies, and to the test results.
 	mutex sync.RWMutex `print:"false"`
 	// Used to notify once this target has built successfully.
 	finishedBuilding chan struct{} `print:"false"`
@@ -214,6 +198,50 @@ type BuildTarget struct {
 	Env map[string]string `name:"env"`
 	// The content of text_file() rules
 	FileContent string `name:"content"`
+	// Represents the state of this build target (see below)
+	state int32 `print:"false"`
+	// The number of completed runs
+	completedRuns uint16 `print:"false"`
+	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
+	IsBinary bool `name:"binary"`
+	// True if this target is an input for a subrepo; if so outputs will appear in plz-out/sub.
+	IsSubrepo bool `name:"subrepo"`
+	// Indicates that the target can only be depended on by tests or other rules with this set.
+	// Used to restrict non-deployable code and also affects coverage detection.
+	TestOnly bool `name:"test_only"`
+	// True if the build action is sandboxed.
+	Sandbox bool
+	// True if this target needs access to its transitive dependencies to build.
+	// This would be false for most 'normal' genrules but true for eg. compiler steps
+	// that need to build in everything.
+	NeedsTransitiveDependencies bool `name:"needs_transitive_deps"`
+	// True if this target blocks recursive exploring for transitive dependencies.
+	// This is typically false for _library rules which aren't complete, and true
+	// for _binary rules which normally are, and genrules where you don't care about
+	// the inputs, only whatever they were turned into.
+	OutputIsComplete bool `name:"output_is_complete"`
+	// If true, the rule is given an env var at build time that contains the hash of its
+	// transitive dependencies, which can be used to identify the output in a predictable way.
+	Stamp bool
+	// If true, the target must be run locally (i.e. is not compatible with remote execution).
+	Local bool
+	// If true, the executed commands will exit whenever an error is encountered (i.e. shells
+	// are executed with -e).
+	ExitOnError bool
+	// If true, the target is needed for a subinclude and therefore we will have to make sure its
+	// outputs are available locally when built.
+	NeededForSubinclude bool `print:"false"`
+	// Marks the target as a filegroup.
+	IsFilegroup bool `print:"false"`
+	// Marks the target as a remote_file.
+	IsRemoteFile bool `print:"false"`
+	// Marks the target as a text_file.
+	IsTextFile bool `print:"false"`
+	// Marks that the target was added in a post-build function.
+	AddedPostBuild bool `print:"false"`
+	// If true, the interactive progress display will try to infer the target's progress
+	// via some heuristics on its output.
+	ShowProgress bool `name:"progress"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -251,7 +279,7 @@ type PostBuildFunction interface {
 }
 
 type depInfo struct {
-	declared BuildLabel     // the originally declared dependency
+	declared *BuildLabel    // the originally declared dependency
 	deps     []*BuildTarget // list of actual deps
 	resolved bool           // has the graph resolved it
 	exported bool           // is it an exported dependency
@@ -279,7 +307,7 @@ func (o OutputDirectory) ShouldAddFiles() bool {
 
 // A BuildTargetState tracks the current state of this target in regard to whether it's built
 // or not. Targets only move forwards through this (i.e. the state of a target only ever increases).
-type BuildTargetState int32
+type BuildTargetState uint8
 
 // The available states for a target.
 const (
@@ -355,10 +383,17 @@ func (target *BuildTarget) TmpDir() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+buildDirSuffix)
 }
 
+// BuildLockFile returns the lock filename for the target's build stage.
+func (target *BuildTarget) BuildLockFile() string {
+	return target.TmpDir() + lockFileSuffix
+}
+
 // OutDir returns the output directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
 func (target *BuildTarget) OutDir() string {
-	if target.IsBinary {
+	if target.IsSubrepo {
+		return path.Join(SubrepoDir, target.Label.Subrepo, target.Label.PackageName)
+	} else if target.IsBinary {
 		return path.Join(BinDir, target.Label.Subrepo, target.Label.PackageName)
 	}
 	return path.Join(GenDir, target.Label.Subrepo, target.Label.PackageName)
@@ -372,15 +407,25 @@ func (target *BuildTarget) TestDir(runNumber int) string {
 	return path.Join(target.TestDirs(), fmt.Sprint("run_", runNumber))
 }
 
+// TestLockFile returns the lock filename for the target's test stage.
+func (target *BuildTarget) TestLockFile(runNumber int) string {
+	return target.TestDir(runNumber) + lockFileSuffix
+}
+
 // TestDirs contains the parent directory of all the test run directories above
 func (target *BuildTarget) TestDirs() string {
 	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
 }
 
+// IsTest returns whether or not the target is a test target i.e. has its Test field populated
+func (target *BuildTarget) IsTest() bool {
+	return target.Test != nil
+}
+
 // CompleteRun completes a run and returns true if this was the last run
 func (target *BuildTarget) CompleteRun(state *BuildState) bool {
-	target.resultsMux.Lock()
-	defer target.resultsMux.Unlock()
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 
 	target.completedRuns++
 	return target.completedRuns == state.NumTestRuns
@@ -398,25 +443,25 @@ func (target *BuildTarget) CoverageFile() string {
 
 // AddTestResults adds results to the target
 func (target *BuildTarget) AddTestResults(results TestSuite) {
-	target.resultsMux.Lock()
-	defer target.resultsMux.Unlock()
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 
-	if len(target.Results.TestCases) == 0 {
-		target.Results.Cached = results.Cached // On the first run we take whatever this is
+	if len(target.Test.Results.TestCases) == 0 {
+		target.Test.Results.Cached = results.Cached // On the first run we take whatever this is
 	} else {
-		target.Results.Cached = target.Results.Cached && results.Cached
+		target.Test.Results.Cached = target.Test.Results.Cached && results.Cached
 	}
-	target.Results.Collapse(results)
+	target.Test.Results.Collapse(results)
 }
 
 // StartTestSuite sets the initial properties on the result test suite
 func (target *BuildTarget) StartTestSuite() {
-	target.resultsMux.Lock()
-	defer target.resultsMux.Unlock()
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
 
 	// If the results haven't been set yet, set them
-	if target.Results.Name == "" {
-		target.Results = TestSuite{
+	if target.Test.Results == nil {
+		target.Test.Results = &TestSuite{
 			Package:   strings.ReplaceAll(target.Label.PackageName, "/", "."),
 			Name:      target.Label.Name,
 			Timestamp: time.Now().Format(time.RFC3339),
@@ -429,15 +474,15 @@ func (target *BuildTarget) AllSourcePaths(graph *BuildGraph) []string {
 	return target.allSourcePaths(graph, BuildInput.Paths)
 }
 
-// AllFullSourcePaths returns all the source paths for this target, with a leading
+// AllSourceFullPaths returns all the source paths for this target, with a leading
 // plz-out/gen etc if appropriate.
-func (target *BuildTarget) AllFullSourcePaths(graph *BuildGraph) []string {
+func (target *BuildTarget) AllSourceFullPaths(graph *BuildGraph) []string {
 	return target.allSourcePaths(graph, BuildInput.FullPaths)
 }
 
-// AllLocalSourcePaths returns the local part of all the source paths for this target,
+// AllSourceLocalPaths returns the local part of all the source paths for this target,
 // i.e. without this target's package in it.
-func (target *BuildTarget) AllLocalSourcePaths(graph *BuildGraph) []string {
+func (target *BuildTarget) AllSourceLocalPaths(graph *BuildGraph) []string {
 	return target.allSourcePaths(graph, BuildInput.LocalPaths)
 }
 
@@ -466,12 +511,11 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 // resolveDependencies matches up all declared dependencies to the actual build targets.
 // TODO(peterebden,tatskaari): Work out if we really want to have this and how the suite of *Dependencies functions
 //                             below should behave (preferably nicely).
-// TODO(tatskaari): Work out if we can use a channel instead of a callback.
 func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
 	var g errgroup.Group
 	target.mutex.RLock()
 	for i := range target.dependencies {
-		dep := &target.dependencies[i]
+		dep := &target.dependencies[i] // avoid using a loop variable here as it mutates each iteration
 		if len(dep.deps) > 0 {
 			continue // already done
 		}
@@ -492,23 +536,37 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 }
 
 func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo) error {
-	t := graph.WaitForTarget(dep.declared)
+	t := graph.WaitForTarget(*dep.declared)
 	if t == nil {
 		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
 	}
-	labels := t.ProvideFor(target)
-	// Small optimisation to avoid re-looking-up the same target again.
-	if len(labels) == 1 && labels[0] == t.Label {
+	dep.declared = &t.Label // saves memory by not storing the label twice once resolved
+
+	labels := t.provideFor(target)
+
+	if len(labels) == 0 {
+		target.mutex.Lock()
+		defer target.mutex.Unlock()
+
+		// Small optimisation to avoid re-looking-up the same target again.
 		dep.deps = []*BuildTarget{t}
 		return nil
 	}
+
+	deps := make([]*BuildTarget, 0, len(labels))
 	for _, l := range labels {
 		t := graph.WaitForTarget(l)
 		if t == nil {
 			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, t)
 		}
-		dep.deps = append(dep.deps, t)
+		deps = append(deps, t)
 	}
+
+	target.mutex.Lock()
+	defer target.mutex.Unlock()
+
+	dep.deps = deps
+
 	return nil
 }
 
@@ -524,7 +582,7 @@ func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
 	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, len(target.dependencies))
 	for i, dep := range target.dependencies {
-		ret[i] = dep.declared
+		ret[i] = *dep.declared
 	}
 	sort.Sort(ret)
 	return ret
@@ -536,8 +594,8 @@ func (target *BuildTarget) DeclaredDependenciesStrict() []BuildLabel {
 	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, dep := range target.dependencies {
-		if !dep.exported && !dep.source && !target.IsTool(dep.declared) {
-			ret = append(ret, dep.declared)
+		if !dep.exported && !dep.source && !target.IsTool(*dep.declared) {
+			ret = append(ret, *dep.declared)
 		}
 	}
 	sort.Sort(ret)
@@ -576,13 +634,13 @@ func (target *BuildTarget) ExternalDependencies() []*BuildTarget {
 	return ret
 }
 
-// BuildDependencies returns the build-time dependencies of this target (i.e. not data and not internal).
-func (target *BuildTarget) BuildDependencies() []*BuildTarget {
+// BuildDependencies returns the build-time dependencies of this target (i.e. not data, internal nor source).
+func (target *BuildTarget) BuildDependencies(state *BuildState) []*BuildTarget {
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
-		if !deps.data && !deps.internal {
+		if !deps.data && !deps.internal && (!state.Config.FeatureFlags.NoIterSourcesMarked || !deps.source) {
 			for _, dep := range deps.deps {
 				ret = append(ret, dep)
 			}
@@ -599,7 +657,7 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, info := range target.dependencies {
 		if info.exported {
-			ret = append(ret, info.declared)
+			ret = append(ret, *info.declared)
 		}
 	}
 	return ret
@@ -667,10 +725,10 @@ func (target *BuildTarget) Outputs() []string {
 				for _, dep := range target.DependenciesFor(namedLabel.BuildLabel) {
 					ret = append(ret, dep.NamedOutputs(namedLabel.Annotation)...)
 				}
-			} else if label := src.nonOutputLabel(); label == nil {
+			} else if label, ok := src.nonOutputLabel(); !ok {
 				ret = append(ret, src.LocalPaths(nil)[0])
 			} else {
-				for _, dep := range target.DependenciesFor(*label) {
+				for _, dep := range target.DependenciesFor(label) {
 					ret = append(ret, dep.Outputs()...)
 				}
 			}
@@ -773,9 +831,9 @@ func (target *BuildTarget) SourcePaths(graph *BuildGraph, sources []BuildInput) 
 
 // sourcePaths returns the source paths for a single source.
 func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f buildPathsFunc) []string {
-	if label := source.nonOutputLabel(); label != nil {
+	if label, ok := source.nonOutputLabel(); ok {
 		ret := []string{}
-		for _, providedLabel := range graph.TargetOrDie(*label).ProvideFor(target) {
+		for _, providedLabel := range graph.TargetOrDie(label).ProvideFor(target) {
 			ret = append(ret, f(providedLabel, graph)...)
 		}
 		return ret
@@ -792,10 +850,10 @@ func (target *BuildTarget) CanSee(state *BuildState, dep *BuildTarget) bool {
 // Returns an error if not, or nil if all's well.
 func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
 	for _, d := range target.dependencies {
-		dep := state.Graph.TargetOrDie(d.declared)
+		dep := state.Graph.TargetOrDie(*d.declared)
 		if !target.CanSee(state, dep) {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
-		} else if dep.TestOnly && !(target.IsTest || target.TestOnly) {
+		} else if dep.TestOnly && !(target.IsTest() || target.TestOnly) {
 			if target.Label.isExperimental(state) {
 				log.Warning("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
 			} else {
@@ -851,13 +909,13 @@ func (target *BuildTarget) CheckTargetOwnsBuildOutputs(state *BuildState) error 
 
 // CheckTargetOwnsBuildInputs checks that any file inputs to this rule belong to this package.
 func (target *BuildTarget) CheckTargetOwnsBuildInputs(state *BuildState) error {
-	for _, input := range target.Sources {
+	for _, input := range target.AllSources() {
 		if err := target.checkTargetOwnsBuildInput(state, input); err != nil {
 			return err
 		}
 	}
 
-	for _, input := range target.Data {
+	for _, input := range target.AllData() {
 		if err := target.checkTargetOwnsBuildInput(state, input); err != nil {
 			return err
 		}
@@ -939,7 +997,7 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 	defer target.mutex.Unlock()
 	info := target.dependencyInfo(label)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: label})
+		target.dependencies = append(target.dependencies, depInfo{declared: &label})
 		info = &target.dependencies[len(target.dependencies)-1]
 	}
 	if dep != nil {
@@ -951,7 +1009,7 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 // dependencyInfo returns the information about a declared dependency, or nil if the target doesn't have it.
 func (target *BuildTarget) dependencyInfo(label BuildLabel) *depInfo {
 	for i, info := range target.dependencies {
-		if info.declared == label {
+		if *info.declared == label {
 			return &target.dependencies[i]
 		}
 	}
@@ -997,7 +1055,7 @@ func (target *BuildTarget) HasLabel(label string) bool {
 			return true
 		}
 	}
-	return label == "test" && target.IsTest
+	return label == "test" && target.IsTest()
 }
 
 // PrefixedLabels returns all labels of this target with the given prefix.
@@ -1068,29 +1126,39 @@ func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
 
 // ProvideFor returns the build label that we'd provide for the given target.
 func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
-	target.mutex.RLock()
-	defer target.mutex.RUnlock()
-	ret := []BuildLabel{}
-	if target.Provides != nil && len(other.Requires) != 0 {
-		// Never do this if the other target has a data or tool dependency on us.
-		for _, data := range other.Data {
-			if label := data.Label(); label != nil && *label == target.Label {
-				return []BuildLabel{target.Label}
-			}
-		}
-		if other.IsTool(target.Label) {
-			return []BuildLabel{target.Label}
-		}
-		for _, require := range other.Requires {
-			if label, present := target.Provides[require]; present {
-				ret = append(ret, label)
-			}
-		}
-		if len(ret) > 0 {
-			return ret
-		}
+	if p := target.provideFor(other); len(p) > 0 {
+		return p
 	}
 	return []BuildLabel{target.Label}
+}
+
+// provideFor is like ProvideFor but returns an empty slice if there is a direct dependency.
+// It's a small optimisation to save allocating extra slices.
+func (target *BuildTarget) provideFor(other *BuildTarget) []BuildLabel {
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
+	if target.Provides == nil || len(other.Requires) == 0 {
+		return nil
+	}
+	// Never do this if the other target has a data or tool dependency on us.
+	for _, data := range other.Data {
+		if label, ok := data.Label(); ok && label == target.Label {
+			return nil
+		}
+	}
+	if other.IsTool(target.Label) {
+		return nil
+	}
+	var ret []BuildLabel
+	for _, require := range other.Requires {
+		if label, present := target.Provides[require]; present {
+			if ret == nil {
+				ret = make([]BuildLabel, 0, len(other.Requires))
+			}
+			ret = append(ret, label)
+		}
+	}
+	return ret
 }
 
 // UnprefixedHashes returns the hashes for the target without any prefixes;
@@ -1106,6 +1174,11 @@ func (target *BuildTarget) UnprefixedHashes() []string {
 	return hashes
 }
 
+// HashLastModified is whether we should hash the last modified times for this target
+func (target *BuildTarget) HashLastModified() bool {
+	return target.IsFilegroup && target.HasLabel("fg:hash-modified-time")
+}
+
 // AddSource adds a source to the build target, deduplicating against existing entries.
 func (target *BuildTarget) AddSource(source BuildInput) {
 	target.Sources = target.addSource(target.Sources, source)
@@ -1118,8 +1191,8 @@ func (target *BuildTarget) addSource(sources []BuildInput, source BuildInput) []
 		}
 	}
 	// Add a dependency if this is not just a file.
-	if label := source.Label(); label != nil {
-		target.AddMaybeExportedDependency(*label, false, true, false)
+	if label, ok := source.Label(); ok {
+		target.AddMaybeExportedDependency(label, false, true, false)
 	}
 	return append(sources, source)
 }
@@ -1143,101 +1216,155 @@ func (target *BuildTarget) addSecret(secrets []string, secret string) []string {
 // two conceptually different kinds of input.
 func (target *BuildTarget) AddNamedSource(name string, source BuildInput) {
 	if target.NamedSources == nil {
-		target.NamedSources = map[string][]BuildInput{name: target.addSource(nil, source)}
-	} else {
-		target.NamedSources[name] = target.addSource(target.NamedSources[name], source)
+		target.NamedSources = make(map[string][]BuildInput)
 	}
+	target.NamedSources[name] = target.addSource(target.NamedSources[name], source)
 }
 
 // AddNamedSecret adds a secret to the target which is tagged with a particular name.
 // These will be made available in the environment at runtime, with key-format "SECRETS_<NAME>".
 func (target *BuildTarget) AddNamedSecret(name string, secret string) {
 	if target.NamedSecrets == nil {
-		target.NamedSecrets = map[string][]string{name: target.addSecret(nil, secret)}
-	} else {
-		target.NamedSecrets[name] = target.addSecret(target.NamedSecrets[name], secret)
+		target.NamedSecrets = make(map[string][]string)
 	}
+	target.NamedSecrets[name] = target.addSecret(target.NamedSecrets[name], secret)
 }
 
 // AddTool adds a new tool to the target.
 func (target *BuildTarget) AddTool(tool BuildInput) {
 	target.Tools = append(target.Tools, tool)
-	if label := tool.Label(); label != nil {
-		target.AddDependency(*label)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
 	}
 }
 
 // AddTestTool adds a new test tool to the target.
 func (target *BuildTarget) AddTestTool(tool BuildInput) {
-	target.testTools = append(target.testTools, tool)
-	if label := tool.Label(); label != nil {
-		target.AddDependency(*label)
+	target.Test.tools = append(target.Test.tools, tool)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
 	}
 }
 
-// TestTools returns all the test tool paths for this rule.
-func (target *BuildTarget) TestTools() []BuildInput {
-	ret := target.testTools[:]
-	if target.namedTestTools != nil {
-		keys := make([]string, 0, len(target.namedTestTools))
-		for k := range target.namedTestTools {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			ret = append(ret, target.namedTestTools[k]...)
-		}
+// AddDebugTool adds a new tool for debugging the target.
+func (target *BuildTarget) AddDebugTool(tool BuildInput) {
+	if target.Debug == nil {
+		target.Debug = new(DebugFields)
 	}
-	return ret
+	target.Debug.tools = append(target.Debug.tools, tool)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
+	}
 }
 
+// AllTestTools returns all the test tool paths for this rule.
+func (target *BuildTarget) AllTestTools() []BuildInput {
+	if target.Test.namedTools == nil {
+		return target.Test.tools
+	}
+	return target.allBuildInputs(target.Test.tools, target.Test.namedTools)
+}
+
+// NamedTestTools returns all named test tools
 func (target *BuildTarget) NamedTestTools() map[string][]BuildInput {
-	return target.namedTestTools
+	return target.Test.namedTools
+}
+
+// AllDebugTools returns all the debug tool paths for this rule.
+func (target *BuildTarget) AllDebugTools() []BuildInput {
+	if target.Debug == nil {
+		return nil
+	}
+	if target.Debug.namedTools == nil {
+		return target.Debug.tools
+	}
+	return target.allBuildInputs(target.Debug.tools, target.Debug.namedTools)
 }
 
 // AddDatum adds a new item of data to the target.
 func (target *BuildTarget) AddDatum(datum BuildInput) {
 	target.Data = append(target.Data, datum)
-	if label := datum.Label(); label != nil {
-		target.AddDependency(*label)
-		target.dependencyInfo(*label).data = true
+	if label, ok := datum.Label(); ok {
+		target.AddDependency(label)
+		target.dependencyInfo(label).data = true
 	}
 }
 
 // AddNamedDatum adds a data file to the target which is tagged with a particular name.
 func (target *BuildTarget) AddNamedDatum(name string, datum BuildInput) {
-	if target.namedData == nil {
-		target.namedData = map[string][]BuildInput{name: {datum}}
-	} else {
-		target.namedData[name] = append(target.namedData[name], datum)
+	if target.NamedData == nil {
+		target.NamedData = make(map[string][]BuildInput)
 	}
-	if label := datum.Label(); label != nil {
-		target.AddDependency(*label)
-		target.dependencyInfo(*label).data = true
+	target.NamedData[name] = append(target.NamedData[name], datum)
+	if label, ok := datum.Label(); ok {
+		target.AddDependency(label)
+		target.dependencyInfo(label).data = true
+	}
+}
+
+// AddDebugDatum adds a new item of debug data to the target.
+func (target *BuildTarget) AddDebugDatum(datum BuildInput) {
+	if target.Debug == nil {
+		target.Debug = new(DebugFields)
+	}
+	target.Debug.data = append(target.Debug.data, datum)
+	if label, ok := datum.Label(); ok {
+		target.AddDependency(label)
+		target.dependencyInfo(label).data = true
+	}
+}
+
+// AddDebugNamedDatum adds a new item of debug data to the target which is tagged with a particular name.
+func (target *BuildTarget) AddDebugNamedDatum(name string, datum BuildInput) {
+	if target.Debug == nil {
+		target.Debug = new(DebugFields)
+	}
+	if target.Debug.namedData == nil {
+		target.Debug.namedData = make(map[string][]BuildInput)
+	}
+	target.Debug.namedData[name] = append(target.Debug.namedData[name], datum)
+	if label, ok := datum.Label(); ok {
+		target.AddDependency(label)
+		target.dependencyInfo(label).data = true
 	}
 }
 
 // AddNamedTool adds a new tool to the target.
 func (target *BuildTarget) AddNamedTool(name string, tool BuildInput) {
 	if target.namedTools == nil {
-		target.namedTools = map[string][]BuildInput{name: {tool}}
-	} else {
-		target.namedTools[name] = append(target.namedTools[name], tool)
+		target.namedTools = make(map[string][]BuildInput)
 	}
-	if label := tool.Label(); label != nil {
-		target.AddDependency(*label)
+	target.namedTools[name] = append(target.namedTools[name], tool)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
 	}
 }
 
-// AddNamedTestTool adds a new tool to the target.
+// AddNamedTestTool adds a new test tool to the target.
 func (target *BuildTarget) AddNamedTestTool(name string, tool BuildInput) {
-	if target.namedTestTools == nil {
-		target.namedTestTools = map[string][]BuildInput{name: {tool}}
-	} else {
-		target.namedTestTools[name] = append(target.namedTestTools[name], tool)
+	if target.Test == nil {
+		target.Test = new(TestFields)
 	}
-	if label := tool.Label(); label != nil {
-		target.AddDependency(*label)
+	if target.Test.namedTools == nil {
+		target.Test.namedTools = make(map[string][]BuildInput)
+	}
+	target.Test.namedTools[name] = append(target.Test.namedTools[name], tool)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
+	}
+}
+
+// AddNamedDebugTool adds a new debug tool to the target.
+func (target *BuildTarget) AddNamedDebugTool(name string, tool BuildInput) {
+	if target.Debug == nil {
+		target.Debug = new(DebugFields)
+	}
+	if target.Debug.namedTools == nil {
+		target.Debug.namedTools = make(map[string][]BuildInput)
+	}
+	target.Debug.namedTools[name] = append(target.Debug.namedTools[name], tool)
+	if label, ok := tool.Label(); ok {
+		target.AddDependency(label)
 	}
 }
 
@@ -1254,14 +1381,14 @@ func (target *BuildTarget) AddCommand(config, command string) {
 }
 
 // AddTestCommand adds a new config-specific test command to this build target.
-// Adding a general command is still done by simply setting the TestCommand member.
+// Adding a general command is still done by simply setting the Command member.
 func (target *BuildTarget) AddTestCommand(config, command string) {
-	if target.TestCommand != "" {
+	if target.Test.Command != "" {
 		panic(fmt.Sprintf("Adding named test command %s to %s, but it already has a general test command set", config, target.Label))
-	} else if target.TestCommands == nil {
-		target.TestCommands = map[string]string{config: command}
+	} else if target.Test.Commands == nil {
+		target.Test.Commands = map[string]string{config: command}
 	} else {
-		target.TestCommands[config] = command
+		target.Test.Commands[config] = command
 	}
 }
 
@@ -1280,7 +1407,7 @@ func (target *BuildTarget) GetCommandConfig(config string) string {
 
 // GetTestCommand returns the command we should use to test this target for the current config.
 func (target *BuildTarget) GetTestCommand(state *BuildState) string {
-	return target.getCommand(state, target.TestCommands, target.TestCommand)
+	return target.getCommand(state, target.Test.Commands, target.Test.Command)
 }
 
 func (target *BuildTarget) getCommand(state *BuildState, commands map[string]string, singleCommand string) string {
@@ -1308,27 +1435,42 @@ func (target *BuildTarget) getCommand(state *BuildState, commands map[string]str
 
 // AllSources returns all the sources of this rule.
 func (target *BuildTarget) AllSources() []BuildInput {
-	ret := target.Sources[:]
-	if target.NamedSources != nil {
-		keys := make([]string, 0, len(target.NamedSources))
-		for k := range target.NamedSources {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			ret = append(ret, target.NamedSources[k]...)
-		}
+	if target.NamedSources == nil {
+		return target.Sources
 	}
+	return target.allBuildInputs(target.Sources, target.NamedSources)
+}
+
+func (target *BuildTarget) allBuildInputs(unnamed []BuildInput, named map[string][]BuildInput) []BuildInput {
+	ret := unnamed
+	keys := make([]string, 0, len(named))
+	for k := range named {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		ret = append(ret, named[k]...)
+	}
+
 	return ret
 }
 
-// AllLocalSources returns all the "local" sources of this rule, i.e. all sources that are
+// AllLocalSourcePaths returns all the "local" sources of this rule, i.e. all sources that are
 // actually sources in the repo, not other rules or system srcs etc.
-func (target *BuildTarget) AllLocalSources() []string {
-	ret := []string{}
-	for _, src := range target.AllSources() {
+func (target *BuildTarget) AllLocalSourcePaths() []string {
+	return target.allLocalSourcePaths(BuildInput.Paths)
+}
+
+func (target *BuildTarget) AllLocalSourceLocalPaths() []string {
+	return target.allLocalSourcePaths(BuildInput.LocalPaths)
+}
+
+func (target *BuildTarget) allLocalSourcePaths(full buildPathsFunc) []string {
+	srcs := target.AllSources()
+	ret := make([]string, 0, len(srcs))
+	for _, src := range srcs {
 		if file, ok := src.(FileLabel); ok {
-			ret = append(ret, file.Paths(nil)[0])
+			ret = append(ret, full(file, nil)[0])
 		}
 	}
 	return ret
@@ -1351,46 +1493,48 @@ func (target *BuildTarget) HasAbsoluteSource(source string) bool {
 	return target.HasSource(strings.TrimPrefix(source, target.Label.PackageName+"/"))
 }
 
-// AllData returns all the data files for this rule.
+// AllData returns all the runtime data of this rule.
 func (target *BuildTarget) AllData() []BuildInput {
-	ret := target.Data[:]
-	if target.namedData != nil {
-		keys := make([]string, 0, len(target.namedData))
-		for k := range target.namedData {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			ret = append(ret, target.namedData[k]...)
-		}
+	if target.NamedData == nil {
+		return target.Data
 	}
-	return ret
+
+	return target.allBuildInputs(target.Data, target.NamedData)
 }
 
-func (target *BuildTarget) NamedData() map[string][]BuildInput {
-	return target.namedData
+// AllDebugData returns all the data for debugging this rule.
+func (target *BuildTarget) AllDebugData() []BuildInput {
+	if target.Debug == nil {
+		return nil
+	}
+	if target.Debug.namedData == nil {
+		return target.Debug.data
+	}
+	return target.allBuildInputs(target.Debug.data, target.Debug.namedData)
 }
 
-// AllDataPaths returns the paths for all the data of this target.
-func (target *BuildTarget) AllDataPaths(graph *BuildGraph) []string {
-	ret := make([]string, 0, len(target.Data))
-	for _, datum := range target.AllData() {
-		ret = append(ret, target.sourcePaths(graph, datum, BuildInput.Paths)...)
+// DebugData returns unnamed data for debugging this rule.
+func (target *BuildTarget) DebugData() []BuildInput {
+	if target.Debug == nil {
+		return nil
 	}
-	return ret
+	return target.Debug.data
+}
+
+// DebugNamedData returns named data for debugging this rule.
+func (target *BuildTarget) DebugNamedData() map[string][]BuildInput {
+	if target.Debug == nil {
+		return nil
+	}
+	return target.Debug.namedData
 }
 
 // AllTools returns all the tools for this rule in some canonical order.
 func (target *BuildTarget) AllTools() []BuildInput {
 	if target.namedTools == nil {
-		return target.Tools // Leave them in input order, that's sufficiently consistent.
+		return target.Tools
 	}
-	tools := make([]BuildInput, len(target.Tools), len(target.Tools)+len(target.namedTools)*2)
-	copy(tools, target.Tools)
-	for _, name := range target.ToolNames() {
-		tools = append(tools, target.namedTools[name]...)
-	}
-	return tools
+	return target.allBuildInputs(target.Tools, target.namedTools)
 }
 
 // ToolNames returns an ordered list of tool names.
@@ -1424,7 +1568,7 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, 
 	}
 	info := target.dependencyInfo(dep)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: dep, exported: exported, source: source, internal: internal})
+		target.dependencies = append(target.dependencies, depInfo{declared: &dep, exported: exported, source: source, internal: internal})
 	} else {
 		info.exported = info.exported || exported
 		info.source = info.source && source
@@ -1436,13 +1580,13 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, 
 // IsTool returns true if the given build label is a tool used by this target.
 func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 	for _, t := range target.Tools {
-		if t.Label() != nil && *t.Label() == tool {
+		if label, ok := t.Label(); ok && label == tool {
 			return true
 		}
 	}
 	for _, tools := range target.namedTools {
 		for _, t := range tools {
-			if t.Label() != nil && *t.Label() == tool {
+			if label, ok := t.Label(); ok && label == tool {
 				return true
 			}
 		}
@@ -1488,15 +1632,14 @@ func (target *BuildTarget) AddOptionalOutput(output string) {
 
 // AddTestOutput adds a new test output to the target if it's not already there.
 func (target *BuildTarget) AddTestOutput(output string) {
-	target.TestOutputs = target.insert(target.TestOutputs, output)
+	target.Test.Outputs = target.insert(target.Test.Outputs, output)
 }
 
 // AddNamedOutput adds a new output to the target under a named group.
 // No attempt to deduplicate against unnamed outputs is currently made.
 func (target *BuildTarget) AddNamedOutput(name, output string) {
 	if target.namedOutputs == nil {
-		target.namedOutputs = map[string][]string{name: target.insert(nil, output)}
-		return
+		target.namedOutputs = make(map[string][]string)
 	}
 	target.namedOutputs[name] = target.insert(target.namedOutputs[name], output)
 }
@@ -1566,7 +1709,10 @@ func (target *BuildTarget) StampFileName() string {
 // NeedCoverage returns true if this target should output coverage during a test
 // for a particular invocation.
 func (target *BuildTarget) NeedCoverage(state *BuildState) bool {
-	return state.NeedCoverage && !target.NoTestOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
+	if target.Test == nil {
+		return false
+	}
+	return state.NeedCoverage && !target.Test.NoOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
 }
 
 // Parent finds the parent of a build target, or nil if the target is parentless.
@@ -1595,7 +1741,7 @@ func (target *BuildTarget) ShouldShowProgress() bool {
 // ProgressDescription returns a description of what the target is doing as it runs.
 // This is provided as a function to satisfy the process package.
 func (target *BuildTarget) ProgressDescription() string {
-	if target.State() >= Built && target.IsTest {
+	if target.State() >= Built && target.IsTest() {
 		return "testing"
 	}
 	return target.BuildingDescription

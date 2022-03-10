@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"syscall"
 
 	"github.com/thought-machine/please/src/process"
 
@@ -36,6 +35,16 @@ func EnsureDir(filename string) error {
 	return err
 }
 
+// OpenDirFile ensures that the directory of the given file has been created before
+// calling the underlying os.OpenFile function.
+func OpenDirFile(filename string, flag int, perm os.FileMode) (*os.File, error) {
+	err := EnsureDir(filename)
+	if err != nil {
+		return nil, err
+	}
+	return os.OpenFile(filename, flag, perm)
+}
+
 // PathExists returns true if the given path exists, as a file or a directory.
 func PathExists(filename string) bool {
 	_, err := os.Lstat(filename)
@@ -54,24 +63,21 @@ func IsSymlink(filename string) bool {
 	return err == nil && (info.Mode()&os.ModeSymlink) != 0
 }
 
-// IsSameFile returns true if two filenames describe the same underlying file (i.e. inode)
+// IsSameFile returns true if two filenames describe the same underlying file
+// (i.e. inode for Unix and potentially file path names for other OS's)
 func IsSameFile(a, b string) bool {
-	i1, err1 := getInode(a)
-	i2, err2 := getInode(b)
-	return err1 == nil && err2 == nil && i1 == i2
+	i1, err1 := getFileInfo(a)
+	i2, err2 := getFileInfo(b)
+	return err1 == nil && err2 == nil && os.SameFile(i1, i2)
 }
 
-// getInode returns the inode of a file.
-func getInode(filename string) (uint64, error) {
+// getFileInfo returns the FileInfo of a file.
+func getFileInfo(filename string) (os.FileInfo, error) {
 	fi, err := os.Stat(filename)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	s, ok := fi.Sys().(*syscall.Stat_t)
-	if !ok {
-		return 0, fmt.Errorf("Not a syscall.Stat_t")
-	}
-	return s.Ino, nil
+	return fi, nil
 }
 
 // CopyFile copies a file from 'from' to 'to', with an attempt to perform a copy & rename
@@ -191,7 +197,7 @@ func ForceRemove(exec *process.Executor, path string) error {
 		return nil
 	}
 
-	cmd := exec.ExecCommand(false, "rm", "-rf", path)
+	cmd := exec.ExecCommand(process.NoSandbox, false, "rm", "-rf", path)
 
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to remove %s: %w\nOutput: %s", path, err, string(out))

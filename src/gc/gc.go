@@ -75,7 +75,7 @@ func GarbageCollect(state *core.BuildState, filter, targets, keepTargets []core.
 func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []core.BuildLabel, keepLabels []string, includeTests bool) (core.BuildLabels, []string) {
 	keepTargets := targetMap{}
 	for _, target := range graph.AllTargets() {
-		if (target.IsBinary && (!target.IsTest || includeTests)) || target.HasAnyLabel(keepLabels) || anyInclude(targetsToKeep, target.Label) || target.Label.Subrepo != "" {
+		if (target.IsBinary && (!target.IsTest() || includeTests)) || target.HasAnyLabel(keepLabels) || anyInclude(targetsToKeep, target.Label) || target.Label.Subrepo != "" {
 			log.Debug("GC root: %s", target.Label)
 			addTarget(graph, keepTargets, target)
 		}
@@ -108,7 +108,7 @@ func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []co
 		// This is a bit complex - need to identify any tests that are tests "on" the set of things
 		// we've already decided to keep.
 		for _, target := range graph.AllTargets() {
-			if target.IsTest {
+			if target.IsTest() {
 				for _, dep := range publicDependencies(graph, target) {
 					if keepTargets[dep] && !dep.TestOnly {
 						log.Debug("Keeping test %s on %s", target.Label, dep.Label)
@@ -126,7 +126,7 @@ func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []co
 	// we're not deleting could still use the sources of the targets that we are.
 	keepSrcs := map[string]bool{}
 	for target := range keepTargets {
-		for _, src := range target.AllLocalSources() {
+		for _, src := range target.AllLocalSourcePaths() {
 			keepSrcs[src] = true
 		}
 	}
@@ -135,7 +135,7 @@ func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []co
 	for _, target := range graph.AllTargets() {
 		if sibling := gcSibling(graph, target); !sibling.HasParent() && !keepTargets[sibling] && isIncluded(sibling, filter) {
 			ret = append(ret, target.Label)
-			for _, src := range target.AllLocalSources() {
+			for _, src := range target.AllLocalSourcePaths() {
 				if !keepSrcs[src] {
 					retSrcs = append(retSrcs, src)
 				}

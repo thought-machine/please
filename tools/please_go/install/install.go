@@ -2,15 +2,22 @@ package install
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"go/build"
+	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/thought-machine/please/tools/please_go/install/exec"
 	"github.com/thought-machine/please/tools/please_go/install/toolchain"
+	"github.com/thought-machine/please/tools/please_go_embed/embed"
 )
+
+const baseWorkDir = "_work"
+const ldFlagsFile = "LD_FLAGS"
 
 // PleaseGoInstall implements functionality similar to `go install` however it works with import configs to avoid a
 // dependence on the GO_PATH, go.mod or other go build concepts.
@@ -19,32 +26,44 @@ type PleaseGoInstall struct {
 	srcRoot      string
 	moduleName   string
 	importConfig string
-	ldFlags      string
 	outDir       string
 	trimPath     string
+
+	additionalCFlags string
+	// A set of flags we may get from: pkg-config, #cgo directives,
+	// go rules' `linker_flags` argument and `go.ldflags` config value.
+	collectedLdFlags []string
 
 	tc *toolchain.Toolchain
 
 	compiledPackages map[string]string
+}
 
-	// A set of flags we from pkg-config or #cgo comments
-	collectedLdFlags map[string]struct{}
+func (install *PleaseGoInstall) mustSetBuildContext(tags []string) {
+	install.buildContext = build.Default
+	install.buildContext.BuildTags = append(install.buildContext.BuildTags, tags...)
+
+	version, err := install.tc.GoMinorVersion()
+	if err != nil {
+		log.Fatalf("failed to determine go version: %v", err)
+	}
+
+	install.buildContext.ReleaseTags = []string{}
+	for i := 1; i <= version; i++ {
+		install.buildContext.ReleaseTags = append(install.buildContext.ReleaseTags, "go1."+strconv.Itoa(i))
+	}
 }
 
 // New creates a new PleaseGoInstall
-func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, goTool, ccTool, pkgConfTool, out, trimPath string) *PleaseGoInstall {
-	ctx := build.Default
-	ctx.BuildTags = append(ctx.BuildTags, buildTags...)
+func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, cFlags, goTool, ccTool, pkgConfTool, out, trimPath string) *PleaseGoInstall {
+	i := &PleaseGoInstall{
+		srcRoot:      srcRoot,
+		moduleName:   moduleName,
+		importConfig: importConfig,
+		outDir:       out,
+		trimPath:     trimPath,
 
-	return &PleaseGoInstall{
-		buildContext:     ctx,
-		srcRoot:          srcRoot,
-		moduleName:       moduleName,
-		importConfig:     importConfig,
-		ldFlags:          ldFlags,
-		outDir:           out,
-		trimPath:         trimPath,
-		collectedLdFlags: map[string]struct{}{},
+		additionalCFlags: cFlags,
 
 		tc: &toolchain.Toolchain{
 			CcTool:        ccTool,
@@ -53,6 +72,11 @@ func New(buildTags []string, srcRoot, moduleName, importConfig, ldFlags, goTool,
 			Exec:          &exec.Executor{Stdout: os.Stdout, Stderr: os.Stderr},
 		},
 	}
+	if len(ldFlags) > 0 {
+		i.collectedLdFlags = []string{ldFlags}
+	}
+	i.mustSetBuildContext(buildTags)
+	return i
 }
 
 // Install will compile the provided packages. Packages can be wildcards i.e. `foo/...` which compiles all packages
@@ -100,17 +124,14 @@ func (install *PleaseGoInstall) Install(packages []string) error {
 }
 
 func (install *PleaseGoInstall) writeLDFlags() error {
-	ldFlags := make([]string, 0, len(install.collectedLdFlags))
-	for flag := range install.collectedLdFlags {
-		ldFlags = append(ldFlags, flag)
+	flagFile, err := os.Create(ldFlagsFile)
+	if err != nil {
+		return err
 	}
+	defer flagFile.Close()
 
-	if len(ldFlags) > 0 {
-		if err := install.tc.Exec.Run("echo -n \"%s\" >> %s", strings.Join(ldFlags, " "), install.ldFlags); err != nil {
-			return err
-		}
-	}
-	return nil
+	_, err = flagFile.WriteString(strings.Join(install.collectedLdFlags, " "))
+	return err
 }
 
 func (install *PleaseGoInstall) linkPackage(target string) error {
@@ -118,7 +139,7 @@ func (install *PleaseGoInstall) linkPackage(target string) error {
 	filename := strings.TrimSuffix(filepath.Base(out), ".a")
 	binName := filepath.Join(install.outDir, "bin", filename)
 
-	return install.tc.Link(out, binName, install.importConfig, install.ldFlags)
+	return install.tc.Link(out, binName, install.importConfig, install.collectedLdFlags)
 }
 
 // compileAll walks the provided directory looking for go packages to compile. Unlike compile(), this will skip any
@@ -152,19 +173,28 @@ func (install *PleaseGoInstall) initBuildEnv() error {
 	if err := install.tc.Exec.Run("mkdir -p %s\n", filepath.Join(install.outDir, "bin")); err != nil {
 		return err
 	}
-	return install.tc.Exec.Run("touch %s", install.ldFlags)
+	return install.tc.Exec.Run("touch %s", ldFlagsFile)
 }
 
 // pkgDir returns the file path to the given target package
 func (install *PleaseGoInstall) pkgDir(target string) string {
 	p := strings.TrimPrefix(target, install.moduleName)
-	return filepath.Join(install.srcRoot, p)
+	p = filepath.Join(install.srcRoot, p)
+
+	// TODO(jpoole): is this really the right thing to do? I think this is a please specific "bug"?
+	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
+	if _, err := os.Lstat(p); os.IsNotExist(err) {
+		p = filepath.Dir(p)
+	}
+
+	return p
 }
 
 func (install *PleaseGoInstall) parseImportConfig() error {
 	install.compiledPackages = map[string]string{
 		"unsafe": "", // Not sure how many other packages like this I need to handle
 		"C":      "", // Pseudo-package for cgo symbols
+		"embed":  "", // Another psudo package
 	}
 
 	if install.importConfig != "" {
@@ -195,13 +225,8 @@ func checkCycle(path []string, next string) ([]string, error) {
 }
 
 func (install *PleaseGoInstall) importDir(target string) (*build.Package, error) {
-	pkgDir := install.pkgDir(target)
-	// The package name can differ from the directory it lives in, in which case the parent directory is the one we want
-	if _, err := os.Lstat(pkgDir); os.IsNotExist(err) {
-		pkgDir = filepath.Dir(pkgDir)
-	}
-
-	return install.buildContext.ImportDir(pkgDir, build.ImportComment)
+	dir := filepath.Join(os.Getenv("TMP_DIR"), install.pkgDir(target))
+	return install.buildContext.ImportDir(dir, build.ImportComment)
 }
 
 func (install *PleaseGoInstall) compile(from []string, target string) error {
@@ -238,16 +263,11 @@ func (install *PleaseGoInstall) compile(from []string, target string) error {
 	return nil
 }
 
-func (install *PleaseGoInstall) prepWorkdir(pkg *build.Package, workDir, out string) error {
-	allSrcs := append(append(pkg.CFiles, pkg.GoFiles...), pkg.HFiles...)
-
+func (install *PleaseGoInstall) prepareDirectories(workDir, out string) error {
 	if err := install.tc.Exec.Run("mkdir -p %s", workDir); err != nil {
 		return err
 	}
-	if err := install.tc.Exec.Run("mkdir -p %s", filepath.Dir(out)); err != nil {
-		return err
-	}
-	return install.tc.Exec.Run("ln %s %s", toolchain.FullPaths(allSrcs, pkg.Dir), workDir)
+	return install.tc.Exec.Run("mkdir -p %s", filepath.Dir(out))
 }
 
 // outPath returns the path to the .a for a given package. Unlike go build, please_go install will always output to
@@ -260,26 +280,53 @@ func outPath(outDir, target string) string {
 	return filepath.Join(outDir, filepath.Dir(target), dirName, dirName+".a")
 }
 
+func writeEmbedConfig(pkg *build.Package, path string) error {
+	cfg := &embed.Cfg{
+		Patterns: map[string][]string{},
+		Files:    map[string]string{},
+	}
+
+	if err := cfg.AddPackage(pkg); err != nil {
+		return err
+	}
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, data, 0666)
+}
+
+func prefixPaths(paths []string, dir string) []string {
+	newPaths := make([]string, len(paths))
+	for i, path := range paths {
+		newPaths[i] = filepath.Join(dir, path)
+	}
+	return newPaths
+}
+
 func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package) error {
 	if len(pkg.GoFiles)+len(pkg.CgoFiles) == 0 {
 		return nil
 	}
 
 	out := outPath(install.outDir, target)
-	workDir := fmt.Sprintf("_build/%s", target)
+	workDir := filepath.Join(os.Getenv("TMP_DIR"), baseWorkDir, install.pkgDir(target))
 
-	if err := install.prepWorkdir(pkg, workDir, out); err != nil {
-		return fmt.Errorf("failed to prepare working directory for %s: %w", target, err)
+	if err := install.prepareDirectories(workDir, out); err != nil {
+		return fmt.Errorf("failed to prepare directories for %s: %w", target, err)
 	}
 
-	goFiles := pkg.GoFiles
+	goFiles := prefixPaths(pkg.GoFiles, pkg.Dir)
+	objFiles := []string{}
+	ldFlags := []string{}
 
-	var objFiles []string
-
-	ldFlags := pkg.CgoLDFLAGS
-	if len(pkg.CgoFiles) > 0 {
+	cgoFiles := prefixPaths(pkg.CgoFiles, pkg.Dir)
+	if len(cgoFiles) > 0 {
 		cFlags := pkg.CgoCFLAGS
+		ldFlags = append(ldFlags, pkg.CgoLDFLAGS...)
 
+		// Collect pkg-config flags.
 		if len(pkg.CgoPkgConfig) > 0 {
 			pkgConfCFlags, err := install.tc.PkgConfigCFlags(pkg.CgoPkgConfig)
 			if err != nil {
@@ -299,50 +346,81 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			}
 		}
 
-		cFiles := pkg.CFiles
+		// Append C flags passed to the program.
+		if f := install.additionalCFlags; f != "" {
+			cFlags = append(cFlags, f)
+		}
 
-		cgoGoFiles, cgoCFiles, err := install.tc.CGO(pkg.Dir, workDir, cFlags, pkg.CgoFiles)
+		cgoGoWorkFiles, cgoCWorkFiles, err := install.tc.CGO(pkg.Dir, workDir, cFlags, cgoFiles)
 		if err != nil {
 			return err
 		}
+		goFiles = append(goFiles, cgoGoWorkFiles...)
 
-		goFiles = append(goFiles, cgoGoFiles...)
-		cFiles = append(cFiles, cgoCFiles...)
-
-		cObjFiles, err := install.tc.CCompile(workDir, cFiles, cFlags)
+		// Compile the C files generated by the GCO command above.
+		cgoCObjFiles, err := install.tc.CCompile(workDir, workDir, cgoCWorkFiles, append(cFlags, "-I"+pkg.Dir))
 		if err != nil {
 			return err
 		}
+		objFiles = append(objFiles, cgoCObjFiles...)
 
-		objFiles = append(objFiles, cObjFiles...)
+		// Compile C files in original source code.
+		cFiles := prefixPaths(pkg.CFiles, pkg.Dir)
+		if len(cFiles) > 0 {
+			cObjFiles, err := install.tc.CCompile(pkg.Dir, workDir, cFiles, append(cFlags, "-I"+workDir))
+			if err != nil {
+				return err
+			}
+			objFiles = append(objFiles, cObjFiles...)
+		}
+
+		// Compile CXX files in original source code.
+		ccFiles := prefixPaths(pkg.CXXFiles, pkg.Dir)
+		if len(ccFiles) > 0 {
+			ccObjFiles, err := install.tc.CCompile(pkg.Dir, workDir, ccFiles, append(append(cFlags, pkg.CgoCXXFLAGS...), "-I"+workDir))
+			if err != nil {
+				return err
+			}
+			objFiles = append(objFiles, ccObjFiles...)
+		}
 	}
 
-	if len(pkg.SFiles) > 0 {
-		asmH, symabis, err := install.tc.Symabis(pkg.Dir, workDir, pkg.SFiles)
+	embedConfig := ""
+	if len(pkg.EmbedPatterns) > 0 {
+		embedConfig = filepath.Join(workDir, "embed.cfg")
+		if err := writeEmbedConfig(pkg, embedConfig); err != nil {
+			return fmt.Errorf("failed to write embed config: %v", err)
+		}
+	}
+
+	importPath := target
+	if pkg.IsCommand() {
+		importPath = "main"
+	}
+
+	asmFiles := prefixPaths(pkg.SFiles, pkg.Dir)
+	if len(asmFiles) > 0 {
+		asmH, symabis, err := install.tc.Symabis(pkg.Dir, workDir, asmFiles)
 		if err != nil {
 			return err
 		}
 
-		if err := install.tc.GoAsmCompile(workDir, install.importConfig, out, install.trimPath, goFiles, asmH, symabis); err != nil {
+		if err := install.tc.GoAsmCompile(importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles, asmH, symabis); err != nil {
 			return err
 		}
 
-		asmObjFiles, err := install.tc.Asm(pkg.Dir, workDir, install.trimPath, pkg.SFiles)
+		asmObjFiles, err := install.tc.Asm(pkg.Dir, workDir, install.trimPath, asmFiles)
 		if err != nil {
 			return err
 		}
 
 		objFiles = append(objFiles, asmObjFiles...)
-	} else {
-		err := install.tc.GoCompile(workDir, install.importConfig, out, install.trimPath, goFiles)
-		if err != nil {
-			return err
-		}
+	} else if err := install.tc.GoCompile(pkg.Dir, importPath, install.importConfig, out, install.trimPath, embedConfig, goFiles); err != nil {
+		return err
 	}
 
 	if len(objFiles) > 0 {
-		err := install.tc.Pack(workDir, out, objFiles)
-		if err != nil {
+		if err := install.tc.Pack(workDir, out, objFiles); err != nil {
 			return err
 		}
 	}
@@ -351,9 +429,8 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 		return err
 	}
 
-	for _, f := range ldFlags {
-		install.collectedLdFlags[f] = struct{}{}
-	}
+	install.collectedLdFlags = append(install.collectedLdFlags, ldFlags...)
+
 	install.compiledPackages[target] = out
 	return nil
 }

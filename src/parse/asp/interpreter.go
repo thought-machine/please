@@ -15,12 +15,13 @@ import (
 
 // An interpreter holds the package-independent state about our parsing process.
 type interpreter struct {
-	scope           *scope
-	parser          *Parser
-	subincludes     map[string]pyDict
-	config          map[*core.Configuration]*pyConfig
-	mutex           sync.RWMutex
-	configMutex     sync.RWMutex
+	scope       *scope
+	parser      *Parser
+	subincludes subincludeMap
+
+	configs      map[*core.Configuration]*pyConfig
+	configsMutex sync.RWMutex
+
 	breakpointMutex sync.Mutex
 	limiter         semaphore
 	profiling       bool
@@ -37,8 +38,8 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	i := &interpreter{
 		scope:       s,
 		parser:      p,
-		subincludes: map[string]pyDict{},
-		config:      map[*core.Configuration]*pyConfig{},
+		subincludes: subincludeMap{m: map[string]subincludeResult{}},
+		configs:     map[*core.Configuration]*pyConfig{},
 		limiter:     make(semaphore, state.Config.Parse.NumThreads),
 		profiling:   state.Config.Profiling,
 	}
@@ -66,6 +67,12 @@ func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements 
 		return err
 	} else if len(contents) != 0 {
 		stmts, err := i.parser.ParseData(contents, filename)
+		for _, stmt := range stmts {
+			if stmt.FuncDef != nil {
+				stmt.FuncDef.KeywordsOnly = !whitelistedKwargs(stmt.FuncDef.Name, filename)
+				stmt.FuncDef.IsBuiltin = true
+			}
+		}
 		return i.loadBuiltinStatements(s, stmts, err)
 	}
 	stmts, err := i.parser.parse(filename)
@@ -85,7 +92,7 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 // interpretAll runs a series of statements in the context of the given package.
 // The first return value is for testing only.
 func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (s *scope, err error) {
-	s = i.scope.NewPackagedScope(pkg)
+	s = i.scope.NewPackagedScope(pkg, 1)
 	// Config needs a little separate tweaking.
 	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
 	// mutating operations like .setdefault() otherwise.
@@ -98,43 +105,48 @@ func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (
 	return s, err
 }
 
+func handleErrors(r interface{}) (err error) {
+	if e, ok := r.(error); ok {
+		err = e
+	} else {
+		err = fmt.Errorf("%s", r)
+	}
+	log.Debug("%v:\n %s", err, debug.Stack())
+	return
+}
+
 // interpretStatements runs a series of statements in the context of the given scope.
 func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (ret pyObject, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			if e, ok := r.(error); ok {
-				err = e
-			} else {
-				err = fmt.Errorf("%s", r)
-			}
-			log.Debug("%s", debug.Stack())
+			err = handleErrors(r)
 		}
 	}()
 	return s.interpretStatements(statements), nil // Would have panicked if there was an error
 }
 
 // Subinclude returns the global values corresponding to subincluding the given file.
-func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.Package) pyDict {
-	i.mutex.RLock()
-	globals, present := i.subincludes[path]
-	i.mutex.RUnlock()
-	if present {
+func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
+	globals, wait, first := i.subincludes.Get(path)
+	if globals != nil {
+		return globals
+	} else if !first {
+		i.limiter.Release()
+		defer i.limiter.Acquire()
+		<-wait
+		globals, _, _ := i.subincludes.Get(path)
 		return globals
 	}
-	// If we get here, it's not been subincluded already. Parse it now.
-	// Note that there is a race here whereby it's possible for two packages to parse the same
-	// subinclude simultaneously - this doesn't matter since they'll get different but equivalent
-	// scopes, and sooner or later things will sort themselves out.
+	// If we get here, it falls to us to parse this.
 	stmts, err := i.parser.parse(path)
 	if err != nil {
 		panic(err) // We're already inside another interpreter, which will handle this for us.
 	}
 	stmts = i.parser.optimise(stmts)
 	s := i.scope.NewScope()
-	s.contextPkg = pkg
-	s.subincludeLabel = &label
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
+	s.subincludeLabel = &label
 	s.Set("CONFIG", s.config)
 	i.optimiseExpressions(stmts)
 	s.interpretStatements(stmts)
@@ -142,24 +154,24 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel, pkg *core.P
 	if s.config.overlay == nil {
 		delete(locals, "CONFIG") // Config doesn't have any local modifications
 	}
-	i.mutex.Lock()
-	defer i.mutex.Unlock()
-	i.subincludes[path] = locals
-	return s.locals
+	i.subincludes.Set(path, locals)
+	return locals
 }
 
 // getConfig returns a new configuration object for the given configuration object.
 func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
-	i.configMutex.RLock()
-	if c, present := i.config[state.Config]; present {
-		i.configMutex.RUnlock()
+	i.configsMutex.RLock()
+	if c, present := i.configs[state.Config]; present {
+		i.configsMutex.RUnlock()
 		return c
 	}
-	i.configMutex.RUnlock()
-	i.configMutex.Lock()
-	defer i.configMutex.Unlock()
+	i.configsMutex.RUnlock()
 	c := newConfig(state)
-	i.config[state.Config] = c
+
+	i.configsMutex.Lock()
+	defer i.configsMutex.Unlock()
+	i.configs[state.Config] = c
+
 	return c
 }
 
@@ -195,38 +207,69 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 
 // A scope contains all the information about a lexical scope.
 type scope struct {
-	ctx         context.Context
-	interpreter *interpreter
-	state       *core.BuildState
-	pkg         *core.Package
-	parent      *scope
-	locals      pyDict
-	config      *pyConfig
-	globber     *fs.Globber
+	ctx             context.Context
+	interpreter     *interpreter
+	state           *core.BuildState
+	pkg             *core.Package
+	subincludeLabel *core.BuildLabel
+	parent          *scope
+	locals          pyDict
+	config          *pyConfig
+	globber         *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
+}
 
-	// used during subincludes
-	contextPkg *core.Package
-	// The label that was passed to subinclude(...)
-	subincludeLabel *core.BuildLabel
+// parseLabelContext parsed a build label in the context of this scope. See contextPackage for more information.
+func (s *scope) parseLabelContext(label string) core.BuildLabel {
+	return core.ParseBuildLabelContext(label, s.contextPackage())
+}
+
+// contextPackage returns the package that build labels should be parsed relative to. For normal BUILD files, this
+// returns the current package. For subincludes, or any scope that encloses a subinclude scope, this returns the package
+// of the label passed to subinclude. This is used by some builtins e.g. `subinclude()` to parse labels relative to the
+// .build_defs source file rather than the package it's being used from.
+//
+// It is not used by other built-ins e.g. `build_rule()` which still parses relative to s.pkg, as that's almost
+// certainly what you want.
+func (s *scope) contextPackage() *core.Package {
+	if s.pkg == nil {
+		return s.subincludePackage()
+	}
+	return s.pkg
+}
+
+// subincludePackage returns the package of the label used for this subinclude. When we subinclude, we create a new
+// scope as set `CONFIG.SUBINCLUDE_LABEL` in that scope. This is used to determine the package returned here. Because
+// all build definitions enclose this root scope, this works from these scopes too. Returns nil when called outside this
+// context.
+func (s *scope) subincludePackage() *core.Package {
+	if s.subincludeLabel != nil {
+		pkg := s.state.Graph.Package(s.subincludeLabel.PackageName, s.subincludeLabel.Subrepo)
+		if pkg != nil {
+			return pkg
+		}
+		// We're probably doing a local subinclude so the package isn't ready yet
+		return core.NewPackageSubrepo(s.subincludeLabel.PackageName, s.subincludeLabel.Subrepo)
+	}
+	return nil
 }
 
 // NewScope creates a new child scope of this one.
 func (s *scope) NewScope() *scope {
-	return s.NewPackagedScope(s.pkg)
+	return s.NewPackagedScope(s.pkg, 0)
 }
 
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
-func (s *scope) NewPackagedScope(pkg *core.Package) *scope {
+// hint is a size hint for the new set of locals.
+func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
 	s2 := &scope{
 		ctx:         s.ctx,
 		interpreter: s.interpreter,
 		state:       s.state,
 		pkg:         pkg,
-		contextPkg:  pkg,
 		parent:      s,
-		locals:      pyDict{},
+		locals:      make(pyDict, hint),
 		config:      s.config,
 		Callback:    s.Callback,
 	}
@@ -468,7 +511,7 @@ func (s *scope) interpretIs(obj pyObject, op OpExpression) pyObject {
 	}
 }
 
-func (s *scope) negate(obj pyObject) pyBool {
+func (s *scope) negate(obj pyObject) pyObject {
 	if obj.IsTruthy() {
 		return False
 	}
@@ -506,11 +549,19 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 		return pyString(stringLiteral(expr.String))
 	} else if expr.FString != nil {
 		return s.interpretFString(expr.FString)
-	} else if expr.Int != nil {
-		return pyInt(expr.Int.Int)
-	} else if expr.Bool != "" {
-		return s.Lookup(expr.Bool)
+	} else if expr.IsInt {
+		return pyInt(expr.Int)
+	} else if expr.True {
+		return True
+	} else if expr.False {
+		return False
+	} else if expr.None {
+		return None
 	} else if expr.List != nil {
+		// Special-case the empty list (which is a fairly common and safe case)
+		if expr.List.Comprehension == nil && len(expr.List.Values) == 0 {
+			return emptyList
+		}
 		return s.interpretList(expr.List)
 	} else if expr.Dict != nil {
 		return s.interpretDict(expr.Dict)
@@ -537,14 +588,21 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 }
 
 func (s *scope) interpretFString(f *FString) pyObject {
+	stringVar := func(v FStringVar) string {
+		if v.Config != "" {
+			return s.config.MustGet(v.Config).String()
+		}
+		return s.Lookup(v.Var).String()
+	}
 	var b strings.Builder
+	size := len(f.Suffix)
+	for _, v := range f.Vars {
+		size += len(v.Prefix) + len(stringVar(v))
+	}
+	b.Grow(size)
 	for _, v := range f.Vars {
 		b.WriteString(v.Prefix)
-		if v.Config != "" {
-			b.WriteString(s.config.MustGet(v.Config).String())
-		} else {
-			b.WriteString(s.Lookup(v.Var).String())
-		}
+		b.WriteString(stringVar(v))
 	}
 	b.WriteString(f.Suffix)
 	return pyString(b.String())
@@ -755,7 +813,7 @@ func (s *scope) Constant(expr *Expression) pyObject {
 		return expr.Optimised.Constant
 	} else if expr.Val == nil || len(expr.Val.Slices) != 0 || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.If != nil {
 		return nil
-	} else if expr.Val.Bool != "" || expr.Val.String != "" || expr.Val.Int != nil {
+	} else if expr.Val.True || expr.Val.False || expr.Val.None || expr.Val.IsInt || expr.Val.String != "" {
 		return s.interpretValueExpression(expr.Val)
 	} else if expr.Val.List != nil && expr.Val.List.Comprehension == nil {
 		// Lists can be constant if all their elements are also.

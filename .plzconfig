@@ -1,3 +1,6 @@
+[please]
+location = ./plz-out/please
+
 [python]
 ; We use the in-repo please_pex tool to build other pexes within this repo.
 ; Other projects using Please wouldn't normally need to do anything like this.
@@ -24,12 +27,14 @@ TestMain = ///pleasings//cc:unittest_main
 [java]
 javacworker = //tools/java:javac_worker
 junitrunner = //tools/java:junit_runner
-jarcattool = @//tools/jarcat
 
 [proto]
 protoctool = //third_party/proto:protoc
 protocgoplugin = //third_party/go:protoc-gen-go
 language = go
+
+[parse]
+BlacklistDirs = tree ; The performance test repo
 
 [alias "autofix"]
 desc = Generates generated code and applies lint fixes
@@ -58,6 +63,10 @@ positionallabels = true
 desc = Runs the linters for this repo
 cmd = run //tools/misc:lint -p --
 
+[alias "go-get"]
+desc = Runs the go deps tool to install new dependencies into the repo
+cmd = run //third_party/binary:go-deps -- -w
+
 [licences]
 accept = MIT
 accept = MIT License
@@ -65,10 +74,13 @@ accept = BSD
 accept = BSD License
 accept = Simplified BSD
 accept = BSD 3-Clause
+accept = BSD-3-Clause
+accept = BSD-2-Clause
 accept = 3-Clause BSD License
 accept = New BSD License
 accept = Apache Software License
 accept = Apache 2.0
+accept = Apache-2.0
 accept = Apache License, Version 2.0
 accept = The Apache Software License, Version 2.0
 accept = PSF
@@ -82,3 +94,7 @@ accept = notice
 
 [featureflags]
 JavaBinaryExecutableByDefault = true
+PackageOutputsStrictness = true
+PythonWheelHashing = true
+NoIterSourcesMarked = true
+GoDontCollapseImportPath = true

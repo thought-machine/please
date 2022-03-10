@@ -15,7 +15,7 @@ _WHOLE_ARCHIVE = '-all_load' if CONFIG.OS == 'darwin' else '--whole-archive'
 _NO_WHOLE_ARCHIVE = '-noall_load' if CONFIG.OS == 'darwin' else '--no-whole-archive'
 
 
-def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:list=[],
+def cc_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:list=[], deps:list=[],
                visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=[],
                linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[],
                defines:list|dict=[], alwayslink:bool=False, linkstatic:bool=False, _c=False,
@@ -25,6 +25,8 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
     Args:
       name (str): Name of the rule
       srcs (list): C++ source files to compile.
+      out (str): Name of the output library. Defaults to lib<name>.a (or just <name>.a if name already
+                 begins with 'lib').
       hdrs (list): Header files. These will be made available to dependent rules, so the distinction
                    between srcs and hdrs is important.
       private_hdrs (list): Header files that are available only to this rule and not exported to
@@ -129,6 +131,8 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         all_deps = deps
 
     cmds, tools = _library_cmds(_c, compiler_flags, pkg_config_libs, pkg_config_cflags)
+    if not out:
+        out = f'{name}.a' if name.startswith('lib') else f'lib{name}.a'
     if len(srcs) > 1:
         # Compile all the sources separately, this is much faster for large numbers of files
         # than giving them all to gcc in one invocation.
@@ -158,7 +162,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             name = name,
             tag = 'a',
             srcs = {'srcs': a_rules},
-            outs = [name + '.a'],
+            outs = [out],
             cmd = '"$TOOLS_JARCAT" ar --combine && "$TOOLS_AR" s "$OUT"',
             building_description = 'Archiving...',
             test_only = test_only,
@@ -170,7 +174,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             },
         )
         if alwayslink:
-            labels += [f'cc:al:{pkg}/{name}.a']
+            labels += [f'cc:al:{pkg}/{out}']
 
         # Filegroup to pick that up with extra deps. This is a little annoying but means that
         # things depending on this get the combined rule and not the individual ones, but do get
@@ -192,7 +196,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             name=name,
             tag='cc',
             srcs={'srcs': srcs, 'hdrs': hdrs, 'priv': private_hdrs},
-            outs=[name + '.a'],
+            outs=[out],
             optional_outs=['*.gcno'],  # For coverage
             deps=deps if srcs == _interfaces else all_deps,
             cmd=cmds,
@@ -205,7 +209,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
             needs_transitive_deps=True,
         )
         if alwayslink:
-            labels += [f'cc:al:{pkg}/{name}.a']
+            labels += [f'cc:al:{pkg}/{out}']
         # Need another rule to cover require / provide stuff. This is getting a bit complicated...
         lib_rule = filegroup(
             name = name,
@@ -296,7 +300,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
     )
 
 
-def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&copts=[],
+def cc_static_library(name:str, srcs:list=[], out:str='', hdrs:list=[], compiler_flags:list&cflags&copts=[],
                       linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None,
                       test_only:bool&testonly=False, pkg_config_libs:list=[], pkg_config_cflags:list=[],_c=False):
     """Generates a C++ static library (.a).
@@ -308,6 +312,8 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
     Args:
       name (str): Name of the rule
       srcs (list): C or C++ source files to compile.
+      out (str): Name of the output library. Defaults to lib<name>.a (or just <name>.a if name already
+                 begins with 'lib').
       hdrs (list): Header files.
       compiler_flags (list): Flags to pass to the compiler.
       linker_flags (list): Flags to pass to the linker.
@@ -318,9 +324,9 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
     """
     provides = None
-    if srcs:
+    if srcs or hdrs:
         lib_rule = cc_library(
-            name = f'_{name}#lib',
+            name = f'_{name}#lib' if srcs else f'_{name}#lib_hdrs',
             srcs = srcs,
             hdrs = hdrs,
             compiler_flags = compiler_flags,
@@ -331,15 +337,17 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
             pkg_config_cflags = pkg_config_cflags,
             _c=_c,
         )
-        deps += [lib_rule, f':_{name}#lib_hdrs']
+        deps += [lib_rule, f':_{name}#lib_hdrs'] if srcs else [lib_rule]
         provides = {
             'cc_hdrs': f':_{name}#lib_hdrs',
             'cc': ':' + name,
         }
+    if not out:
+        out = f'{name}.a' if name.startswith('lib') else f'lib{name}.a'
     return build_rule(
         name = name,
         deps = deps,
-        outs = [f'lib{name}.a'],
+        outs = [out],
         cmd = '"$TOOLS_JARCAT" ar --find && "$TOOLS_AR" s "$OUT"',
         needs_transitive_deps = True,
         output_is_complete = True,
@@ -482,7 +490,7 @@ def cc_module(name:str, srcs:list=[], hdrs:list=[], interfaces:list=[], private_
 
 def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
               compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
-              deps:list=[], visibility:list=None, pkg_config_libs:list=[], includes:list=[], defines:list=[],
+              deps:list=[], visibility:list=None, pkg_config_libs:list=[], includes:list=[], defines:list|dict=[],
               pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, _c=False,
               linkstatic:bool=False):
     """Builds a binary from a collection of C++ rules.
@@ -556,7 +564,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
             pkg_config_cflags:list=[], deps:list=[], worker:str='', data:list|dict=[],
             visibility:list=[], flags:str='', labels:list&features&tags=[], flaky:bool|int=0,
             test_outputs:list=[], size:str=None, timeout:int=0,
-            sandbox:bool=None, write_main:bool=False, linkstatic:bool=False, _c=False):
+            sandbox:bool=None, write_main:bool=False, linkstatic:bool=False, no_test_output:bool=False, _c=False):
     """Defines a C++ test.
 
     We template in a main file so you don't have to supply your own.
@@ -585,6 +593,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
                          about how to define a default dependency for the test main.
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
                          link roughly equivalently to their "mostly-static" mode.
+      no_test_output (bool): do not expect output from the test
     """
 
     if CONFIG.BAZEL_COMPATIBILITY:
@@ -633,6 +642,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
         building_description='Linking...',
         binary=True,
         test=True,
+        no_test_output=no_test_output,
         needs_transitive_deps=True,
         output_is_complete=True,
         requires=['cc', 'cc_hdrs', 'test'],

@@ -190,7 +190,7 @@ To build Please yourself, run `./bootstrap.sh` in the repo root.
 This will bootstrap a minimal version of Please using Go and then
 rebuild it using itself.
 
-You'll need to have Go 1.13+ installed to build Please although once
+You'll need to have Go 1.16+ installed to build Please although once
 built it can target any version from 1.8+ onwards.
 
 Optional dependencies for various tests include Python, Java, clang,

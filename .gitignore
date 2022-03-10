@@ -17,4 +17,5 @@ __pycache__
 # For local testing
 .local
 
-
+# The parse perf test repo
+/tree

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/peterebden/go-cli-init/v4/flags"
+	"github.com/peterebden/go-cli-init/v5/flags"
 
 	"github.com/thought-machine/please/tools/please_go/godeps"
 	"github.com/thought-machine/please/tools/please_go/install"
@@ -21,7 +21,8 @@ var opts = struct {
 		SrcRoot           string   `short:"r" long:"src_root" description:"The src root of the module to inspect" default:"."`
 		ModuleName        string   `short:"n" long:"module_name" description:"The name of the module" required:"true"`
 		ImportConfig      string   `short:"i" long:"importcfg" description:"The import config for the modules dependencies" required:"true"`
-		LDFlags           string   `short:"l" long:"ld_flags" description:"The file to write linker flags to" default:"LD_FLAGS"`
+		LDFlags           string   `long:"ld_flags" description:"Any additional flags to apply to the C linker" env:"LDFLAGS"`
+		CFlags            string   `long:"c_flags" description:"Any additional flags to apply when compiling C" env:"CFLAGS"`
 		GoTool            string   `short:"g" long:"go_tool" description:"The location of the go binary" default:"go"`
 		CCTool            string   `short:"c" long:"cc_tool" description:"The c compiler to use"`
 		Out               string   `short:"o" long:"out" description:"The output directory to put compiled artifacts in" required:"true"`
@@ -32,13 +33,15 @@ var opts = struct {
 		} `positional-args:"true" required:"true"`
 	} `command:"install" alias:"i" description:"Compile a go module similarly to 'go install'"`
 	Test struct {
-		Dir        string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
-		Exclude    []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
-		Output     string   `short:"o" long:"output" description:"Output filename" required:"true"`
-		Package    string   `short:"p" long:"package" description:"Package containing this test" env:"PKG_DIR"`
-		ImportPath string   `short:"i" long:"import_path" description:"Full import path to the package"`
-		Benchmark  bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
-		Args       struct {
+		GoTool      string   `short:"g" long:"go_tool" description:"The location of the go binary" env:"TOOLS_GO" default:"go"`
+		Dir         string   `short:"d" long:"dir" description:"Directory to search for Go package files for coverage"`
+		Exclude     []string `short:"x" long:"exclude" default:"third_party/go" description:"Directories to exclude from search"`
+		Output      string   `short:"o" long:"output" description:"Output filename" required:"true"`
+		TestPackage string   `short:"t" long:"test_package" description:"The import path of the test package"`
+		ImportPath  string   `short:"i" long:"import_path" description:"Full import path to the package"`
+		Benchmark   bool     `short:"b" long:"benchmark" description:"Whether to run benchmarks instead of tests"`
+		External    bool     `short:"e" long:"external" description:"Whether the test package is external"`
+		Args        struct {
 			Sources []string `positional-arg-name:"sources" description:"Test source files" required:"true"`
 		} `positional-args:"true" required:"true"`
 	} `command:"testmain" alias:"t" description:"Generates a go main package to run the tests in a package."`
@@ -66,6 +69,7 @@ var subCommands = map[string]func() int{
 			opts.Install.ModuleName,
 			opts.Install.ImportConfig,
 			opts.Install.LDFlags,
+			opts.Install.CFlags,
 			mustResolvePath(opts.Install.GoTool),
 			mustResolvePath(opts.Install.CCTool),
 			opts.Install.PackageConfigTool,
@@ -79,13 +83,15 @@ var subCommands = map[string]func() int{
 	},
 	"testmain": func() int {
 		test.PleaseGoTest(
+			opts.Test.GoTool,
 			opts.Test.Dir,
 			opts.Test.ImportPath,
-			opts.Test.Package,
+			opts.Test.TestPackage,
 			opts.Test.Output,
 			opts.Test.Args.Sources,
 			opts.Test.Exclude,
 			opts.Test.Benchmark,
+			opts.Test.External,
 		)
 		return 0
 	},
@@ -96,7 +102,7 @@ var subCommands = map[string]func() int{
 }
 
 func main() {
-	command := flags.ParseFlagsOrDie("please-go", &opts)
+	command := flags.ParseFlagsOrDie("please-go", &opts, nil)
 	os.Exit(subCommands[command]())
 }
 

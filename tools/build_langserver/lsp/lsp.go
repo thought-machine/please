@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -27,7 +27,6 @@ var log = logging.MustGetLogger("lsp")
 // A Handler is a handler suitable for use with jsonrpc2.
 type Handler struct {
 	Conn     Conn
-	methods  map[string]method
 	docs     map[string]*doc
 	mutex    sync.Mutex // guards docs
 	state    *core.BuildState
@@ -44,33 +43,12 @@ type Conn interface {
 	Notify(ctx context.Context, method string, params interface{}, opts ...jsonrpc2.CallOption) error
 }
 
-type method struct {
-	Func   reflect.Value
-	Params reflect.Type
-}
-
 // NewHandler returns a new Handler.
 func NewHandler() *Handler {
-	h := &Handler{
+	return &Handler{
 		docs: map[string]*doc{},
 		pkgs: &pkg{},
 	}
-	h.methods = map[string]method{
-		"initialize":                  h.method(h.initialize),
-		"initialized":                 h.method(h.initialized),
-		"shutdown":                    h.method(h.shutdown),
-		"exit":                        h.method(h.exit),
-		"textDocument/didOpen":        h.method(h.didOpen),
-		"textDocument/didChange":      h.method(h.didChange),
-		"textDocument/didSave":        h.method(h.didSave),
-		"textDocument/didClose":       h.method(h.didClose),
-		"textDocument/formatting":     h.method(h.formatting),
-		"textDocument/completion":     h.method(h.completion),
-		"textDocument/documentSymbol": h.method(h.symbols),
-		"textDocument/definition":     h.method(h.definition),
-		"textDocument/declaration":    h.method(h.definition),
-	}
-	return h
 }
 
 // Handle implements the jsonrpc2.Handler interface
@@ -87,12 +65,13 @@ func (h *Handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2
 }
 
 // handle is the slightly higher-level handler that deals with individual methods.
-func (h *Handler) handle(method string, params *json.RawMessage) (i interface{}, err error) {
+func (h *Handler) handle(method string, params *json.RawMessage) (res interface{}, err error) {
 	start := time.Now()
 	log.Debug("Received %s message", method)
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("Panic in handler for %s: %s", method, r)
+			log.Debug("%s\n%v", r, string(debug.Stack()))
 			err = &jsonrpc2.Error{
 				Code:    jsonrpc2.CodeInternalError,
 				Message: fmt.Sprintf("%s", r),
@@ -101,29 +80,82 @@ func (h *Handler) handle(method string, params *json.RawMessage) (i interface{},
 			log.Debug("Handled %s message in %s", method, time.Since(start))
 		}
 	}()
-	m, present := h.methods[method]
-	if !present {
-		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound}
-	}
-	p := reflect.New(m.Params)
-	if err := json.Unmarshal(*params, p.Interface()); err != nil {
-		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
-	}
-	ret := m.Func.Call([]reflect.Value{p.Elem()})
-	if err, ok := ret[1].Interface().(error); ok && err != nil {
-		log.Warning("Error from handler for %s: %s", method, err)
-		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInternalError, Message: err.Error()}
-	} else if ret[0].IsNil() {
-		return nil, nil
-	}
-	return ret[0].Interface(), nil
-}
 
-// method converts a function to a method struct
-func (h *Handler) method(f interface{}) method {
-	return method{
-		Func:   reflect.ValueOf(f),
-		Params: reflect.TypeOf(f).In(0),
+	switch method {
+	case "initialize":
+		initializeParams := &lsp.InitializeParams{}
+		if err := json.Unmarshal(*params, initializeParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return h.initialize(initializeParams)
+	case "initialized":
+		// Not doing anything here. Unsure right now what this is really for.
+		return nil, nil
+	case "shutdown":
+		return nil, nil
+	case "exit":
+		// exit is a request to terminate the process. We do this preferably by shutting
+		// down the RPC connection but if we can't we just die.
+		if h.Conn != nil {
+			if err := h.Conn.Close(); err != nil {
+				log.Fatalf("Failed to close connection: %s", err)
+			}
+		} else {
+			log.Fatalf("No active connection to shut down")
+		}
+		return nil, nil
+	case "textDocument/didOpen":
+		didOpenParams := &lsp.DidOpenTextDocumentParams{}
+		if err := json.Unmarshal(*params, didOpenParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return nil, h.didOpen(didOpenParams)
+	case "textDocument/didChange":
+		didChangeParams := &lsp.DidChangeTextDocumentParams{}
+		if err := json.Unmarshal(*params, didChangeParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return nil, h.didChange(didChangeParams)
+	case "textDocument/didSave":
+		didSaveParams := &lsp.DidSaveTextDocumentParams{}
+		if err := json.Unmarshal(*params, didSaveParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return nil, h.didSave(didSaveParams)
+	case "textDocument/didClose":
+		didCloseParams := &lsp.DidCloseTextDocumentParams{}
+		if err := json.Unmarshal(*params, didCloseParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return nil, h.didClose(didCloseParams)
+	case "textDocument/formatting":
+		formattingParams := &lsp.DocumentFormattingParams{}
+		if err := json.Unmarshal(*params, formattingParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return h.formatting(formattingParams)
+	case "textDocument/completion":
+		completionParams := &lsp.CompletionParams{}
+		if err := json.Unmarshal(*params, completionParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return h.completion(completionParams)
+	case "textDocument/documentSymbol":
+		symbolParams := &lsp.DocumentSymbolParams{}
+		if err := json.Unmarshal(*params, symbolParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return h.symbols(symbolParams)
+	case "textDocument/declaration":
+		fallthrough
+	case "textDocument/definition":
+		positionParams := &lsp.TextDocumentPositionParams{}
+		if err := json.Unmarshal(*params, positionParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return h.definition(positionParams)
+	default:
+		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound}
 	}
 }
 
@@ -173,28 +205,6 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 			},
 		},
 	}, nil
-}
-
-func (h *Handler) initialized(params *struct{}) (*struct{}, error) {
-	// Not doing anything here. Unsure right now what this is really for.
-	return nil, nil
-}
-
-func (h *Handler) shutdown(params *struct{}) (*struct{}, error) {
-	return nil, nil
-}
-
-func (h *Handler) exit(params *struct{}) (*struct{}, error) {
-	// exit is a request to terminate the process. We do this preferably by shutting
-	// down the RPC connection but if we can't we just die.
-	if h.Conn != nil {
-		if err := h.Conn.Close(); err != nil {
-			log.Fatalf("Failed to close connection: %s", err)
-		}
-	} else {
-		log.Fatalf("No active connection to shut down")
-	}
-	return nil, nil
 }
 
 // fromURI converts a DocumentURI to a path.

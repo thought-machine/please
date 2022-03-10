@@ -1,3 +1,350 @@
+Version 16.19.0
+---------------
+    * Add Go 1.18 fuzz testing support #2269
+    * Fix incorrect resolving of @self keyword that should resolve relative
+      to the repo/plugin where it appears #2270
+    * Sort user provided env for remote execution for better determinism #2273
+    * Targets can now be specified to opt out of sandboxing #2282
+    * Fix issue with preloading subincludes, where it would fail if the subinclude
+      itself also had subincludes #2281
+    * Allow outputs to be downloaded transitively in remote when debugging is on #2278
+    * Remove duplicate labels being applied to `go_module()` rules #2254
+    * Gracefully handle missing tools during `plz query changes` #2130
+    * Allow specifying a github access token as an environment variable
+      to `github_repo()` to access private repos #2249
+    * Show the download rate of `remote_file()` rules in the progress
+      update #2261
+    * Improvements to `plz query print --json` to align it more closely
+      to the python-eque (asp) representation #2250
+    * Allow hashing `filegroup()`s by the last modified timestamp of their
+      sources. This helps with large files, and can be done by applying
+      the `fg:hash-modified-time` label #2266
+    * Allow plugins to specify if a configuration value should be inherited
+      from the host repo, or overriden from the subrepo's config #2216
+    * Allow restricting the hashing algorithms for validating the `hashes`
+      field #2267
+
+
+Version 16.18.0
+---------------
+    * Stop showing line by line coverage results when tests fail #2227
+    * Add support for the xxhash hashing algorithm #2229
+    * Use an environment variable to pass in go to the go test main tool
+      to improve migration strategy #2239
+    * Handle aliases to multi-level commands #2242
+    * Make `plz run sequential` use the same `--output` flag as
+      `plz run parallel` #2243
+    * Implement a command cache to use custom commands to store and
+      retrieve items from the cache e.g. `s3 cp - s3://cache/$CACHE_KEY`
+      #2244
+
+
+Version 16.17.1
+---------------
+    * The default jarcat_tool (now arcat) for Linux is now correctly linked
+      and does not attempt to use glibc at runtime.
+
+
+Version 16.17.0
+--------------
+    * `c_library`, `c_static_library`, `cc_library`, `cc_static_library` rules
+      now expose an `out` field for a custom name #2203
+    * New `tag()` builtin was added that allows tagging a target name #2202
+    * Add plugin version check #2206
+    * `remote_file` rule now includes support for the passing of credentials
+      and header values #2128
+    * Fix issue with `plz test -d` where it only accepts a single target but
+      it isn't considering pseudo targets (i.e. //... or //:all) #2205
+    * Plugin config keys can be inferred now, if not set #2212
+    * Further enhancements and fixes to the recent `plz debug` command to
+      better support IDEs #2213
+    * Add docs for `plz exec` #2199
+    * Virtual envs for Python (i.e. venv) are now generated under plz-out #2210
+
+
+Version 16.16.0
+--------------
+    * Added `plz query config` which can be used to retrieve what the value
+      a config field has from the variaous places Please loads `.plzconfig`
+      files #2190
+    * Fix test fields not appearing for `plz query print` when using `--fields`
+      #2200
+    * Fix missing signatures on darwin_arm64 release #2208
+
+
+Version 16.15.1
+--------------
+    * Preserve original quotes in multi-line strings #2184
+
+
+Version 16.15.0
+--------------
+    * Added `plz query reporoot` command #2173
+    * Fixed issue where named fields (e.g. srcs, and outputs) didn't appear
+      in `plz query print` #2174
+    * Add the subrepo name to labels in `plz query graph` #2168
+    * Add `--json` flag to `plz query print` to output the target in json format
+      #2176
+    * `cc_static_library()` now exposes headers to dependant targets #2179
+
+
+Version 16.14.0
+--------------
+    * The `query revdeps` and `query somepath` subcommands now handle
+      indirect dependencies (i.e. require/provide) between targets
+      better when not including hidden targets #2127
+    * Fix issue where we were de-duplicating linker flags for `go_module()`
+      #2127
+    * Some improvements to the builtin functions: `get_labels()` now has
+      a `transitive` parameter that can be used to opt out of getting
+      labels on transitive dependencies, and `package_name()` now has a label
+      parameter that can be used to get the package of a specific label.
+      #2170
+    * Some improvements to `plz generate` and `LinkGeneratedSources` to
+      opt to use hard links, or automatically update the `.gitignore`
+      during builds #2163
+
+
+Version 16.13.0
+--------------
+    * Some fixes around subrepos and cross compiling #2134 #2148
+    * Fix issue with `go_module()` when the module is called
+      `go` #2146
+    * Make the shebang optional for `sh_binary()` #2144
+    * Extend the pex tool to support adding debuggers to the pex #2141
+    * Handle c++ in `go_module()` rules #2161
+
+
+Version 16.12.1
+--------------
+    * Downgrade ProtonMails go-crypto because the newer versions have
+      started adding subpackets to the signature that cause older
+      versions of Please to fail to verify the signature #2138
+
+
+Version 16.12.0
+--------------
+    * Implemented direct link label, and used this to link go sources
+      from `go_module()` to `plz-out/go` #2118
+    * Strip all `BUILD` files, including `WORKSPACE` in `new_http_archive()`,
+      not just `BUILD`. This is used by `github_repo()` #2117
+    * Fix display issue with multi-line error messages #2119
+    * Exclude symlinks from globs by default. This is feature is gated
+      behind the `ExcludeSymlinksInGlob` feature flag #2052
+    * Fix issue where unrecognised config was being treated as fatal #2126
+    * Implement `--shell=run` which will immediately run the build/test
+      command #2123
+    * Exclude the location of the Please executable from the remote
+      PATH #2136
+
+
+Version 16.11.0
+--------------
+    * Fix some bugs around plugin configuration #2111 #2107
+    * Implemented a `plz debug` command that can be used to invoke
+      an interactive debugger, or a remote debugger via the `--port`
+      flag. This command only works for `go_binary()` and `go_test()`
+      commands right now but a python implementation is on the way.
+      #2069
+    * Fixed some issues around marking sources as done when preparing
+      inputs for a build action. This resolves some issues where certain
+      inputs were unexpectedly missing from the build directory. #2091
+    * Fixed issue with `plz run --wd=.` where relative paths were being
+      evaluated relative to the repo root not the working directory #2103
+
+
+Version 16.10.1
+--------------
+    * Fix nil pointer when no cache is set up #2092
+    * Add feature flags for the java and python language plugins
+      to exclude these builtins #2098
+
+
+Version 16.10.0
+--------------
+    * Fix lockup when cross compiling with --arch #2085
+    * Enable overriding plugin config via `package()` #2083
+    * Add types to plugin config values #2086
+    * Deprecated `--in_wd` in favour of `--wd` which can take any
+      arbitrary path #2095
+    * Fix issue with multiple preloaded subincludes #2082
+
+
+Version 16.9.0
+--------------
+    * Fix issue where aliases were being printed multiple times #2070
+    * Fix issue where messages were being printed incorrectly during a
+      `plz watch` #2066
+    * Implemented the plugins API as described in #1843 #1925
+
+
+Version 16.8.0
+--------------
+    * BUILD files can now be added as sources to rules #2056
+    * Aliases are now added to help text when printing usage info
+      #2035
+    * Outputs can now be saved from `plz exec` #2060
+    * The wrapper script now looks at more than just .plzconfig
+      to determine the Please version and download location #2065
+
+
+Version 16.7.0
+--------------
+    * Sandbox tool now ignored missing directories in `SANDBOX_DIRS`
+      #2041
+    * Allow `Python.DefaultInterpretor` to be a build label #2045
+    * Fix the install script to download arm architectures #2030
+    * Handle annotated labels in `canonicalise()` #2037
+    * Handle relative paths in `Please.Location` #2046
+    * Apply hashes to the download rule in `python_wheel()` instead of the
+      output rule. This feature is gated behind a feature flag for backwards
+      compatibility. #2042
+    * Handle go1.16 embeds in `go_module()` #2036
+
+
+Version 16.6.1
+--------------
+    * Rules with system sources now run locally by default #2011
+    * Improve validation around rule outputs to avoid race conditions.
+      This change is gated behind the `FeatureFlags.PackageOutputsStrictness`.
+      #1816
+    * Fix problem in the language server that was causing issues on startup
+      #2029
+    * Fix issues with `#cgo` directive in `go_module()` rules #2038
+
+
+Version 16.6.0
+--------------
+    * Fixed issue with `go_module()` where adding the root package removed
+      all other items in the install list that came before #2019
+    * Fixed the linker flags in `pip_library()` for macOS #2015
+    * Added `ExcludeGlob` config option to the `[Cover]` section that
+      excludes files from coverage based on a glob pattern #2020 #2023
+    * Fix issue with `go_module()` where the incorrect release flags
+      were being applied when filtering third party go sourcews #2024
+
+
+Version 16.5.1
+--------------
+    * Fix nil pointer when tests fail in certain ways #2016
+
+
+Version 16.5.0
+--------------
+    * Singleflight all subincludes removing any potential for lockups #2002
+    * Implemented target level locking enabling multiple please instances to
+      build at the same time #2004
+    * Set a timeout on test result uploading #2008
+    * Updated to use go 1.17. This should be transparent to any users. #2010
+    * Various fixes and improvements around bash completions #1998 #2013
+
+
+Version 16.4.2
+--------------
+    * Honour require/provide for `plz query revdeps` and `plz query changes` #1997
+    * Fix `plz tool langserver` #1999
+
+
+Version 16.4.1
+--------------
+    * Fixed panic when downloading outputs for stamped targets that were retrived from
+      the cache #1994
+
+
+Version 16.4.0
+--------------
+    * Fixed issue where coverage was missing some files. Please now adds in 0% coverage
+      for lines found in non-test files that are included in the original targets passed
+      in on the command line #1975
+    * Reduced the size of a build target in memory #1951
+    * Added `--go_trace_file` to write a trace file that can be opened with `go tool trace`
+      #1987
+    * Added a new `add_data()` builtin that can be used to add data to a target in a pre or
+      post build function #1973
+
+
+Version 16.3.0
+--------------
+    * Implemented a `plz exec` subcommand that is designed for used by IDEs to run targets
+      within the hermetic env for debugging and profiling #1917
+    * Allow `system_library()` to take in directories #1931
+    * Some LSP fixes and debug improvements #1937 #1943 #1962
+    * The python behave test runner now checks `$RESULTS_FILE` #1940
+    * Rework the cycle detector to run async only once we detect a deadlock. This also addresses
+      performance problems on large build graphs where the cycle detector was simply too slow. #1936
+    * Fix issue where `plz watch` couldn't acquire the repo lock #1944
+    * CLI completions improvements #1936 #1948
+    * Various performance improvements focussing on memory usage. 16.3.0 now uses 50% less memory
+      and parses the build graph in 75% of the time. #1949 #1947 #1952 #1956 #1921 #1960 #1955
+      #1961 #1964 #1969
+    * `go_mod_download()` and `go_module()` now add the module as a label which can be used to
+      list modules: `plz query print --label go_module: //third_party/go/...` #1954
+    * Add a `remote` label to `remote_file()` #1959
+    * Query revdeps fails fast on targets that don't exist #1953
+
+
+Version 16.2.1
+--------------
+    * Make `pip_library()` more deterministic by stripping debug symbols in C code #1909
+    * Make `plz hash --update` keep going once it updates a hash so it can update multiple
+      in one pass #1919
+    * Apply linker flags to `go_benchmark()` #1924
+    * Fix issue where the cycle detector wasn't detecting cycles correctly #1926
+    * Strip please location from PATH for remote execution #1930
+
+
+Version 16.2.0
+--------------
+    * Fixed issue where Please would attempt to use xattrs on unsupported filesystems
+      under some circumstances #1866
+    * Fixed issue were Please status output during builds would stop updating after a
+      failure #1868
+    * Various performance work #1847 #1848 #1869 #1872 #1876 #1877 #1881 #1885
+      #1878 #1888
+    * Fixed issue where `post_build` functions would not have config overrides set
+      via `package()` in some circumstances #1871
+    * Added an `is_semver()` builtin to check if a string matches the semver format
+    * `c_binary()` now allows defines to be a dictionary
+    * Applied the correct expected packages to `go tool compile` invocations to address
+      some issues with debug symbols #1896
+    * Added a `gitlab_repo()` rule which works similarly to `github_repo()` #1898
+
+
+Version 16.1.1
+--------------
+    * Fixed an issue where debug symbols didn't work for go targets build with Go 1.15+
+      #1845
+    * Some remote execution small fixes #1838 #1842 #1849
+    * Added zstd support to the jarcat tool #1837
+    * Allow defined on `cc_binary()` to be a dict #1854
+    * Root package is now picked up by `plz query changes` #1855
+    * Check that a target owns it's named inputs #1857
+    * Fixed issue where goland definitions weren't being applied when
+      the binary found linker flags on it's dependencies #1859
+    * Handle the empty string in the `go_module()` install list #1858
+
+
+Version 16.1.0
+--------------
+    * Redesigned the build graph to be more event driven utilise channels and blocking
+      threads to reduce lock contention. #1102 #1781 #1787 #1820 #1803
+    * Add output grouping to `plz run parallel` so that the stdout and stderr can be
+      linked back to the target that generated them afterwards. #1768
+    * Fix issue with `plz watch --run` where it didn't clean up its process properly
+      on restarting #1780
+    * Fix issue with rpartition #1784
+    * Fix non-deterministic hashing of test tools when it's a dictionary #1791
+    * Handle \r in BUILD files #1815
+    * Make go_mod_download() create a dummy go.mod to avoid picking up the main
+      repo's go.mod #1814
+    * Make `plz generate` automatically link generated sources even if we haven't
+      set LinkGeneratedSources in the .plzconfig #1770
+    * Fix some issues around go_module() when compiling binaries #1826
+    * Implement pkg-config for go_module() #1823
+    * Added a `plz query whatinputs` subcommand to find targets that consume a given
+      source file #1825
+
+
 Version 16.0.1
 --------------
     * For remote execution, Please now downloads runtime data for locally

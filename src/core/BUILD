@@ -1,25 +1,14 @@
-genrule(
-    name = "version",
-    srcs = {
-        "go": ["version.go"],
-        "version": ["//:version"],
-    },
-    outs = ["versioned.go"],
-    cmd = "sed \"s/1.0.9999/`cat $SRCS_VERSION`/\" $SRCS_GO > \"$OUT\"",
-)
+subinclude("//build_defs:benchmark")
 
 go_library(
     name = "core",
     srcs = glob(
         ["*.go"],
         exclude = [
-            "stub.go",
+            "*_benchmark.go",
             "*_test.go",
-            "version.go",
         ],
-    ) + [
-        ":version",
-    ],
+    ),
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
@@ -28,6 +17,7 @@ go_library(
         "//src/scm",
         "//third_party/go:blake3",
         "//third_party/go:cmap",
+        "//third_party/go:deferred_regex",
         "//third_party/go:errgroup",
         "//third_party/go:gcfg",
         "//third_party/go:go-flags",
@@ -37,6 +27,7 @@ go_library(
         "//third_party/go:semver",
         "//third_party/go:shlex",
         "//third_party/go:xattr",
+        "//third_party/go:xxhash",
     ],
 )
 
@@ -128,8 +119,20 @@ go_test(
 )
 
 go_test(
+    name = "previous_op_test",
+    srcs = ["previous_op_test.go"],
+    deps = [
+        ":core",
+        "//third_party/go:testify",
+    ],
+)
+
+go_test(
     name = "build_label_test",
-    srcs = ["build_label_test.go"],
+    srcs = [
+        "build_label_fuzz_test.go",
+        "build_label_test.go",
+    ],
     deps = [
         ":core",
         "//third_party/go:testify",
@@ -179,4 +182,31 @@ go_test(
         ":core",
         "//third_party/go:testify",
     ],
+)
+
+go_test(
+    name = "cycle_detector_test",
+    srcs = ["cycle_detector_test.go"],
+    deps = [
+        ":core",
+        "//third_party/go:testify",
+    ],
+)
+
+benchmark(
+    name = "build_target_benchmark",
+    srcs = ["build_target_benchmark_test.go"],
+    deps = [":core"],
+)
+
+benchmark(
+    name = "utils_benchmark",
+    srcs = ["utils_benchmark_test.go"],
+    deps = [":core"],
+)
+
+benchmark(
+    name = "graph_benchmark",
+    srcs = ["graph_benchmark_test.go"],
+    deps = [":core"],
 )

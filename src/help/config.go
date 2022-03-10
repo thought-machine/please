@@ -3,14 +3,15 @@ package help
 import (
 	"fmt"
 	"reflect"
-	"regexp"
 	"runtime"
 	"strings"
+
+	"github.com/peterebden/go-deferred-regex"
 
 	"github.com/thought-machine/please/src/core"
 )
 
-var urlRegex = regexp.MustCompile("https?://[^ ]+[^.]")
+var urlRegex = deferredregex.DeferredRegex{Re: "https?://[^ ]+[^.]"}
 
 // ExampleValue returns an example value for a config field based on its type.
 func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options string) string {
@@ -21,7 +22,7 @@ func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options
 	} else if options != "" {
 		return strings.ReplaceAll(options, ",", " | ")
 	} else if name == "version" {
-		return core.PleaseVersion.String() // keep it up to date!
+		return core.PleaseVersion // keep it up to date!
 	} else if t.Kind() == reflect.String {
 		if f.String() != "" {
 			return f.String()

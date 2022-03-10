@@ -12,9 +12,10 @@ go_library(
         "//src/cli",
         "//src/core",
         "//src/fs",
-        "//src/utils",
+        "//src/process",
         "//src/worker",
         "//third_party/go:cover",
+        "//third_party/go:deferred_regex",
         "//third_party/go:logging",
     ],
 )

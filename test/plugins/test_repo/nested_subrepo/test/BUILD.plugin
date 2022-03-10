@@ -1,0 +1,5 @@
+subinclude("///foo//build_defs:foolang")
+
+foolang_library(
+    name = "nested_lib",
+    src = "test.foo",)

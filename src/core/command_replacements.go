@@ -57,23 +57,24 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
-	"regexp"
 	"runtime/debug"
 	"strings"
+
+	"github.com/peterebden/go-deferred-regex"
 
 	"github.com/thought-machine/please/src/fs"
 )
 
-var locationReplacement = regexp.MustCompile(`\$\(location ([^\)]+)\)`)
-var locationsReplacement = regexp.MustCompile(`\$\(locations ([^\)]+)\)`)
-var exeReplacement = regexp.MustCompile(`\$\(exe ([^\)]+)\)`)
-var outExeReplacement = regexp.MustCompile(`\$\(out_exe ([^\)]+)\)`)
-var outReplacement = regexp.MustCompile(`\$\(out_location ([^\)]+)\)`)
-var outsReplacement = regexp.MustCompile(`\$\(out_locations ([^\)]+)\)`)
-var dirReplacement = regexp.MustCompile(`\$\(dir ([^\)]+)\)`)
-var outDirReplacement = regexp.MustCompile(`\$\(out_dir ([^\)]+)\)`)
-var hashReplacement = regexp.MustCompile(`\$\(hash ([^\)]+)\)`)
-var workerReplacement = regexp.MustCompile(`^(.*)\$\(worker ([^\)]+)\) *([^&]*)(?: *&& *(.*))?$`)
+var locationReplacement = deferredregex.DeferredRegex{Re: `\$\(location ([^\)]+)\)`}
+var locationsReplacement = deferredregex.DeferredRegex{Re: `\$\(locations ([^\)]+)\)`}
+var exeReplacement = deferredregex.DeferredRegex{Re: `\$\(exe ([^\)]+)\)`}
+var outExeReplacement = deferredregex.DeferredRegex{Re: `\$\(out_exe ([^\)]+)\)`}
+var outReplacement = deferredregex.DeferredRegex{Re: `\$\(out_location ([^\)]+)\)`}
+var outsReplacement = deferredregex.DeferredRegex{Re: `\$\(out_locations ([^\)]+)\)`}
+var dirReplacement = deferredregex.DeferredRegex{Re: `\$\(dir ([^\)]+)\)`}
+var outDirReplacement = deferredregex.DeferredRegex{Re: `\$\(out_dir ([^\)]+)\)`}
+var hashReplacement = deferredregex.DeferredRegex{Re: `\$\(hash ([^\)]+)\)`}
+var workerReplacement = deferredregex.DeferredRegex{Re: `^(.*)\$\(worker ([^\)]+)\) *([^&]*)(?: *&& *(.*))?$`}
 
 // ReplaceSequences replaces escape sequences in the given string.
 func ReplaceSequences(state *BuildState, target *BuildTarget, command string) (string, error) {
@@ -191,14 +192,14 @@ func replaceSequence(state *BuildState, target *BuildTarget, in string, runnable
 		return replaceSequenceLabel(state, target, label, ep, in, runnable, multiple, dir, outPrefix, hash, test, true)
 	}
 	for _, src := range sourcesOrTools(target, runnable) {
-		if label := src.Label(); label != nil && src.String() == in {
-			return replaceSequenceLabel(state, target, *label, "", in, runnable, multiple, dir, outPrefix, hash, test, false)
+		if label, ok := src.Label(); ok && src.String() == in {
+			return replaceSequenceLabel(state, target, label, "", in, runnable, multiple, dir, outPrefix, hash, test, false)
 		} else if runnable && src.String() == in {
 			return src.String()
 		}
 	}
 	if hash {
-		return base64.RawURLEncoding.EncodeToString(state.PathHasher.MustHash(path.Join(target.Label.PackageName, in)))
+		return base64.RawURLEncoding.EncodeToString(state.PathHasher.MustHash(path.Join(target.Label.PackageName, in), target.HashLastModified()))
 	}
 	if strings.HasPrefix(in, "/") {
 		return in // Absolute path, probably on a tool or system src.

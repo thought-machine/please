@@ -23,8 +23,7 @@ import (
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
@@ -32,6 +31,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/core"
@@ -80,6 +80,9 @@ type Client struct {
 
 	// Path to the shell to use to execute actions in.
 	shellPath string
+
+	// User's home directory.
+	userHome string
 
 	// Stats used to report RPC data rates
 	byteRateIn, byteRateOut, totalBytesIn, totalBytesOut int
@@ -144,6 +147,15 @@ func (c *Client) CheckInitialised() error {
 	return c.err
 }
 
+// Disconnect disconnects this client from the remote server.
+func (c *Client) Disconnect() error {
+	if c.client != nil {
+		log.Debug("Disconnecting from remote execution server...")
+		return c.client.Close()
+	}
+	return nil
+}
+
 // init is passed to the sync.Once to do the actual initialisation.
 func (c *Client) init() {
 	// Change grpc to log using our implementation
@@ -201,7 +213,7 @@ func (c *Client) initExec() error {
 	if caps == nil {
 		return fmt.Errorf("Cache capabilities not supported by server (we do not support execution-only servers)")
 	}
-	if err := c.chooseDigest(caps.DigestFunction); err != nil {
+	if err := c.chooseDigest(caps.DigestFunctions); err != nil {
 		return err
 	}
 	c.maxBlobBatchSize = caps.MaxBatchTotalSizeBytes
@@ -223,7 +235,12 @@ func (c *Client) initExec() error {
 		}
 		c.shellPath = bash
 	}
-	log.Debug("Remote execution client initialised for storage")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("Failed to determine user home dir: %s", err)
+	}
+	c.userHome = home
+
 	// Now check if it can do remote execution
 	if resp.ExecutionCapabilities == nil {
 		return fmt.Errorf("Remote execution is configured but the build server doesn't support it")
@@ -234,7 +251,7 @@ func (c *Client) initExec() error {
 		return fmt.Errorf("Remote execution not enabled for this server")
 	}
 	c.platform = convertPlatform(c.state.Config.Remote.Platform)
-	log.Debug("Remote execution client initialised for execution")
+	log.Debug("Remote execution client initialised")
 	if c.state.Config.Remote.AssetURL == "" {
 		c.fetchClient = fpb.NewFetchClient(client.Connection)
 	}
@@ -262,7 +279,7 @@ func (c *Client) initFetch() error {
 
 // chooseDigest selects a digest function that we will use.w
 func (c *Client) chooseDigest(fns []pb.DigestFunction_Value) error {
-	systemFn := c.digestEnum(c.state.Config.Build.HashFunction)
+	systemFn := c.digestEnum()
 	for _, fn := range fns {
 		if fn == systemFn {
 			return nil
@@ -272,7 +289,7 @@ func (c *Client) chooseDigest(fns []pb.DigestFunction_Value) error {
 }
 
 // digestEnum returns a proto enum for the digest function of given name (as we name them in config)
-func (c *Client) digestEnum(name string) pb.DigestFunction_Value {
+func (c *Client) digestEnum() pb.DigestFunction_Value {
 	switch c.state.Config.Build.HashFunction {
 	case "sha256":
 		return pb.DigestFunction_SHA256
@@ -302,7 +319,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 
 	if c.state.ShouldDownload(target) {
 		if !c.outputsExist(target, digest) {
-			c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading")
+			c.state.LogBuildResult(tid, target, core.TargetBuilding, "Downloading")
 			if err := c.download(target, func() error {
 				return c.reallyDownload(target, digest, ar)
 			}); err != nil {
@@ -325,8 +342,8 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 func (c *Client) downloadData(target *core.BuildTarget) error {
 	var g errgroup.Group
 	for _, datum := range target.AllData() {
-		if l := datum.Label(); l != nil {
-			t := c.state.Graph.TargetOrDie(*l)
+		if l, ok := datum.Label(); ok {
+			t := c.state.Graph.TargetOrDie(l)
 			g.Go(func() error {
 				if err := c.Download(t); err != nil {
 					return err
@@ -363,6 +380,7 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 		if err != nil {
 			return nil, nil, nil, err
 		} else if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, false, needStdout); metadata != nil {
+			c.unstampedBuildActionDigests.Put(target.Label, digest)
 			return metadata, ar, digest, nil
 		}
 		unstampedDigest = digest
@@ -373,8 +391,11 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	}
 	metadata, ar, err := c.execute(tid, target, command, stampedDigest, false, needStdout)
 	if target.Stamp && err == nil {
-		// Store results under unstamped digest too.
-		c.locallyCacheResults(target, unstampedDigest, metadata, ar)
+		err = c.verifyActionResult(target, command, unstampedDigest, ar, c.state.Config.Remote.VerifyOutputs, false)
+		if err == nil {
+			// Store results under unstamped digest too.
+			c.locallyCacheResults(target, unstampedDigest, metadata, ar)
+		}
 		c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 			InstanceName: c.instance,
 			ActionDigest: unstampedDigest,
@@ -429,6 +450,16 @@ func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar 
 }
 
 func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult, target *core.BuildTarget) error {
+	// Ensure none of the outputs have temp suffixes on them.
+	for _, f := range ar.OutputFiles {
+		f.Path = target.GetRealOutput(f.Path)
+	}
+	for _, d := range ar.OutputDirectories {
+		d.Path = target.GetRealOutput(d.Path)
+	}
+	for _, s := range ar.OutputSymlinks {
+		s.Path = target.GetRealOutput(s.Path)
+	}
 	// We can download straight into the out dir if there are no outdirs to worry about
 	if len(target.OutputDirectories) == 0 {
 		_, err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir(), c.fileMetadataCache)
@@ -528,7 +559,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget, run int) (metadata *cor
 func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest bool) (*core.BuildMetadata, *pb.ActionResult) {
 	// First see if this execution is cached locally
 	if metadata, ar := c.retrieveLocalResults(target, digest); metadata != nil {
-		log.Debug("Got locally cached results for %s %s", target.Label, c.actionURL(digest, true))
+		log.Debug("Got locally cached results for %s %s (age %s)", target.Label, c.actionURL(digest, true), time.Since(metadata.Timestamp).Truncate(time.Second))
 		metadata.Cached = true
 		return metadata, ar
 	}
@@ -559,7 +590,7 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 // (i.e. not if we're doing plz build --rebuild or plz test --rerun).
 func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult) {
 	if !c.state.ShouldRebuild(target) && !(c.state.NeedTests && isTest && c.state.ForceRerun) {
-		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking remote...")
+		c.state.LogBuildResult(tid, target, core.TargetBuilding, "Checking remote...")
 		if metadata, ar := c.retrieveResults(target, command, digest, needStdout, isTest); metadata != nil {
 			return metadata, ar
 		}
@@ -604,9 +635,9 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 	executing := false
 	building := target.State() <= core.Built
 	if building {
-		c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Submitting job...")
+		c.state.LogBuildResult(tid, target, core.TargetBuilding, "Submitting job...")
 	} else {
-		c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Submitting job...")
+		c.state.LogBuildResult(tid, target, core.TargetTesting, "Submitting job...")
 	}
 	updateProgress := func(metadata *pb.ExecuteOperationMetadata) {
 		if c.state.Config.Remote.DisplayURL != "" {
@@ -615,26 +646,26 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		if building {
 			switch metadata.Stage {
 			case pb.ExecutionStage_CACHE_CHECK:
-				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Checking cache...")
+				c.state.LogBuildResult(tid, target, core.TargetBuilding, "Checking cache...")
 			case pb.ExecutionStage_QUEUED:
-				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Queued")
+				c.state.LogBuildResult(tid, target, core.TargetBuilding, "Queued")
 			case pb.ExecutionStage_EXECUTING:
 				executing = true
-				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Building...")
+				c.state.LogBuildResult(tid, target, core.TargetBuilding, "Building...")
 			case pb.ExecutionStage_COMPLETED:
-				c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Completed")
+				c.state.LogBuildResult(tid, target, core.TargetBuilding, "Completed")
 			}
 		} else {
 			switch metadata.Stage {
 			case pb.ExecutionStage_CACHE_CHECK:
-				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Checking cache...")
+				c.state.LogBuildResult(tid, target, core.TargetTesting, "Checking cache...")
 			case pb.ExecutionStage_QUEUED:
-				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Queued")
+				c.state.LogBuildResult(tid, target, core.TargetTesting, "Queued")
 			case pb.ExecutionStage_EXECUTING:
 				executing = true
-				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Testing...")
+				c.state.LogBuildResult(tid, target, core.TargetTesting, "Testing...")
 			case pb.ExecutionStage_COMPLETED:
-				c.state.LogBuildResult(tid, target.Label, core.TargetTesting, "Completed")
+				c.state.LogBuildResult(tid, target, core.TargetTesting, "Completed")
 			}
 		}
 	}
@@ -665,6 +696,8 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		ActionDigest:    digest,
 		SkipCacheLookup: skipCacheLookup,
 	}, updateProgress)
+	log.Debug("completed ExecuteAndWaitProgress() for %v", target.Label)
+
 	if err != nil {
 		// Handle timing issues if we try to resume an execution as it fails. If we get a
 		// "not found" we might find that it's already been completed and we can't resume.
@@ -682,12 +715,12 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		return nil, nil, convertError(result.Error)
 	case *longrunning.Operation_Response:
 		response := &pb.ExecuteResponse{}
-		if err := ptypes.UnmarshalAny(result.Response, response); err != nil {
+		if err := result.Response.UnmarshalTo(response); err != nil {
 			log.Error("Failed to deserialise execution response: %s", err)
 			return nil, nil, err
 		}
 		if response.CachedResult {
-			c.state.LogBuildResult(tid, target.Label, core.TargetCached, "Cached")
+			c.state.LogBuildResult(tid, target, core.TargetCached, "Cached")
 		}
 		for k, v := range response.ServerLogs {
 			log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
@@ -764,10 +797,10 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 
 func logResponseTimings(target *core.BuildTarget, ar *pb.ActionResult) {
 	if ar != nil && ar.ExecutionMetadata != nil {
-		startTime := toTime(ar.ExecutionMetadata.ExecutionStartTimestamp)
-		endTime := toTime(ar.ExecutionMetadata.ExecutionCompletedTimestamp)
-		inputFetchStartTime := toTime(ar.ExecutionMetadata.InputFetchStartTimestamp)
-		inputFetchEndTime := toTime(ar.ExecutionMetadata.InputFetchCompletedTimestamp)
+		startTime := ar.ExecutionMetadata.ExecutionStartTimestamp.AsTime()
+		endTime := ar.ExecutionMetadata.ExecutionCompletedTimestamp.AsTime()
+		inputFetchStartTime := ar.ExecutionMetadata.InputFetchStartTimestamp.AsTime()
+		inputFetchEndTime := ar.ExecutionMetadata.InputFetchCompletedTimestamp.AsTime()
 		log.Debug("Completed remote build action for %s; input fetch %s, build time %s", target, inputFetchEndTime.Sub(inputFetchStartTime), endTime.Sub(startTime))
 	}
 }
@@ -788,11 +821,11 @@ func (c *Client) DataRate() (int, int, int, int) {
 
 // fetchRemoteFile sends a request to fetch a file using the remote asset API.
 func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
-	c.state.LogBuildResult(tid, target.Label, core.TargetBuilding, "Downloading...")
+	c.state.LogBuildResult(tid, target, core.TargetBuilding, "Downloading...")
 	urls := target.AllURLs(c.state)
 	req := &fpb.FetchBlobRequest{
 		InstanceName: c.instance,
-		Timeout:      ptypes.DurationProto(target.BuildTimeout),
+		Timeout:      durationpb.New(target.BuildTimeout),
 		Uris:         urls,
 	}
 	if c.state.VerifyHashes && (!c.state.NeedHashesOnly || !c.state.IsOriginalTargetOrParent(target)) {
@@ -809,7 +842,7 @@ func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to download file: %s", err)
 	}
-	c.state.LogBuildResult(tid, target.Label, core.TargetBuilt, "Downloaded.")
+	c.state.LogBuildResult(tid, target, core.TargetBuilt, "Downloaded.")
 	// If we get here, the blob exists in the CAS. Create an ActionResult corresponding to it.
 	outs := target.Outputs()
 	ar := &pb.ActionResult{
@@ -887,8 +920,9 @@ func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget,
 		entry := uploadinfo.EntryFromBlob([]byte(content))
 		ch <- entry
 		ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-			Path:   command.OutputPaths[0],
-			Digest: entry.Digest.ToProto(),
+			Path:         command.OutputPaths[0],
+			Digest:       entry.Digest.ToProto(),
+			IsExecutable: target.IsBinary,
 		})
 		return nil
 	}); err != nil {

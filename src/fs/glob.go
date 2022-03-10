@@ -65,7 +65,7 @@ func IsGlob(pattern string) bool {
 // Glob implements matching using Go's built-in filepath.Glob, but extends it to support
 // Ant-style patterns using **.
 func Glob(buildFileNames []string, rootPath string, includes, excludes []string, includeHidden bool) []string {
-	return NewGlobber(buildFileNames).Glob(rootPath, includes, excludes, includeHidden)
+	return NewGlobber(buildFileNames).Glob(rootPath, includes, excludes, includeHidden, true)
 }
 
 // A Globber is used to implement Glob. You can persist one for use to save repeated filesystem calls, but
@@ -76,7 +76,15 @@ type Globber struct {
 }
 
 type walkedDir struct {
-	fileNames, subPackages []string
+	fileNames, symlinks, subPackages []string
+}
+
+func Match(glob, path string) (bool, error) {
+	matcher, err := patternToMatcher(".", glob)
+	if err != nil {
+		return false, err
+	}
+	return matcher.Match(path)
 }
 
 // NewGlobber creates a new Globber. You should call this rather than creating one directly (or use Glob() if you don't care).
@@ -87,7 +95,7 @@ func NewGlobber(buildFileNames []string) *Globber {
 	}
 }
 
-func (globber *Globber) Glob(rootPath string, includes, excludes []string, includeHidden bool) []string {
+func (globber *Globber) Glob(rootPath string, includes, excludes []string, includeHidden, includeSymlinks bool) []string {
 	if rootPath == "" {
 		rootPath = "."
 	}
@@ -96,7 +104,7 @@ func (globber *Globber) Glob(rootPath string, includes, excludes []string, inclu
 	for _, include := range includes {
 		mustBeValidGlobString(include)
 
-		matches, err := globber.glob(rootPath, include, excludes, includeHidden)
+		matches, err := globber.glob(rootPath, include, excludes, includeHidden, includeSymlinks)
 		if err != nil {
 			panic(fmt.Errorf("error globbing files with %v: %v", include, err))
 		}
@@ -108,7 +116,7 @@ func (globber *Globber) Glob(rootPath string, includes, excludes []string, inclu
 	return filenames
 }
 
-func (globber *Globber) glob(rootPath string, glob string, excludes []string, includeHidden bool) ([]string, error) {
+func (globber *Globber) glob(rootPath string, glob string, excludes []string, includeHidden, includeSymlinks bool) ([]string, error) {
 	p, err := patternToMatcher(rootPath, glob)
 	if err != nil {
 		return nil, err
@@ -118,7 +126,12 @@ func (globber *Globber) glob(rootPath string, glob string, excludes []string, in
 		return nil, err
 	}
 	var globMatches []string
-	for _, name := range walkedDir.fileNames {
+
+	fileNames := walkedDir.fileNames
+	if includeSymlinks {
+		fileNames = append(fileNames, walkedDir.symlinks...)
+	}
+	for _, name := range fileNames {
 		if match, err := p.Match(name); err != nil {
 			return nil, err
 		} else if match {
@@ -153,7 +166,7 @@ func (globber *Globber) walkDir(rootPath string) (walkedDir, error) {
 		return dir, nil
 	}
 	dir := walkedDir{}
-	if err := Walk(rootPath, func(name string, isDir bool) error {
+	if err := WalkMode(rootPath, func(name string, mode Mode) error {
 		if isBuildFile(globber.buildFileNames, name) {
 			packageName := filepath.Dir(name)
 			if packageName != rootPath {
@@ -165,7 +178,11 @@ func (globber *Globber) walkDir(rootPath string) (walkedDir, error) {
 		if name == "plz-out" && rootPath == "." {
 			return filepath.SkipDir
 		}
-		dir.fileNames = append(dir.fileNames, name)
+		if mode.IsSymlink() {
+			dir.symlinks = append(dir.symlinks, name)
+		} else {
+			dir.fileNames = append(dir.fileNames, name)
+		}
 		return nil
 	}); err != nil {
 		return dir, err

@@ -56,13 +56,14 @@ func exprToSymbol(expr *asp.Expression) (string, lsp.SymbolKind) {
 		return stringLiteral(v.String), lsp.SKString
 	} else if v.FString != nil {
 		return reconstructFString(v.FString), lsp.SKString
-	} else if v.Int != nil {
-		return strconv.Itoa(v.Int.Int), lsp.SKNumber
-	} else if v.Bool != "" {
-		if v.Bool == "None" {
-			return "None", lsp.SKConstant
-		}
-		return v.Bool, lsp.SKBoolean
+	} else if v.IsInt {
+		return strconv.Itoa(v.Int), lsp.SKNumber
+	} else if v.True {
+		return "True", lsp.SKBoolean
+	} else if v.False {
+		return "False", lsp.SKBoolean
+	} else if v.None {
+		return "None", lsp.SKConstant
 	} else if v.List != nil || v.Tuple != nil {
 		return "list", lsp.SKArray
 	} else if v.Dict != nil {

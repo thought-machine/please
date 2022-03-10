@@ -70,11 +70,11 @@ type revdeps struct {
 	subincludes       map[core.BuildLabel][]*core.Package
 	followSubincludes bool
 
-	// os is the open set of targets to process
-	os *openSet
-
 	// hidden is whether to count hidden targets towards the depth budget
 	hidden bool
+
+	// os is the open set of targets to process
+	os *openSet
 
 	// maxDepth is the depth budget for the search. -1 means unlimited.
 	maxDepth int
@@ -112,7 +112,13 @@ func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarge
 	revdeps := make(map[core.BuildLabel][]*core.BuildTarget, len(targets))
 	for _, t := range targets {
 		for _, d := range t.DeclaredDependencies() {
-			revdeps[d] = append(revdeps[d], t)
+			if t2 := graph.Target(d); t2 == nil {
+				revdeps[d] = append(revdeps[d], t2)
+			} else {
+				for _, p := range t2.ProvideFor(t) {
+					revdeps[p] = append(revdeps[p], t)
+				}
+			}
 		}
 	}
 	return revdeps
@@ -122,11 +128,22 @@ func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarge
 func FindRevdeps(state *core.BuildState, targets core.BuildLabels, hidden, followSubincludes bool, depth int) map[*core.BuildTarget]struct{} {
 	r := newRevdeps(state.Graph, hidden, followSubincludes, depth)
 	// Initialise the open set with the original targets
-	for _, t := range targets {
+	for _, label := range targets {
+		target := state.Graph.TargetOrDie(label)
 		r.os.Push(&node{
-			target: state.Graph.TargetOrDie(t),
+			target: target,
 			depth:  0,
 		})
+		if !hidden && !label.IsHidden() {
+			for _, child := range state.Graph.PackageByLabel(label).AllTargets() {
+				if child.Parent(state.Graph) == target {
+					r.os.Push(&node{
+						target: child,
+						depth:  0,
+					})
+				}
+			}
+		}
 	}
 	return r.findRevdeps(state)
 }
@@ -166,10 +183,13 @@ func (r *revdeps) findRevdeps(state *core.BuildState) map[*core.BuildTarget]stru
 			}
 
 			if next.depth < r.maxDepth || r.maxDepth == -1 {
-				if r.hidden || !t.Label.IsHidden() {
-					ret[t] = struct{}{}
-				} else if parent := t.Parent(state.Graph); parent != nil {
-					ret[parent] = struct{}{}
+				// This excluded  dependencies between hidden rules and their parent for when hidden is false.
+				if depth > 0 {
+					if r.hidden || !t.Label.IsHidden() {
+						ret[t] = struct{}{}
+					} else if parent := t.Parent(state.Graph); parent != nil {
+						ret[parent] = struct{}{}
+					}
 				}
 
 				r.os.Push(&node{

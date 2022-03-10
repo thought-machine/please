@@ -1,0 +1,33 @@
+def benchmark(name:str, srcs:list, deps:list=[], data:list=[], visibility:list=None, labels=[]):
+    benchmark_rule = go_benchmark(
+        name = f"{name}_benchmark",
+        srcs = srcs,
+        deps = deps,
+        data = data,
+        labels = labels,
+    )
+
+    results = build_rule(
+        name = name,
+        tag = "results",
+        srcs = {
+            'bin': [benchmark_rule],
+            'data': data,
+        },
+        tools = ["//tools/performance/benchmark"],
+        outs = [f"{name}.json"],
+        cmd = f"$SRCS_BIN | $TOOL --revision {CONFIG.BENCHMARK_REVISION} > $OUT",
+        labels = ["link:plz-out/benchmarks", "benchmark"] + labels,
+        test_only = True,
+    )
+    return filegroup(
+        name = name,
+        srcs = [benchmark_rule],
+        binary = True,
+        test_only=True,
+        deps = [results],
+        labels = labels + ["benchmark"],
+        visibility = visibility,
+    )
+
+CONFIG.setdefault("BENCHMARK_REVISION", "master")

@@ -1,0 +1,15 @@
+subinclude("@foo//build_defs:foolang")
+
+if not isinstance(CONFIG.FOO.BOOL_TEST, bool):
+    fail("BoolTest should be an bool")
+
+if CONFIG.FOO.BOOL_TEST:
+    fail("BoolTest should be falsy")
+
+if not isinstance(CONFIG.FOO.INT_TEST, int):
+    fail("IntTest should be an int")
+
+foolang_library(
+    name = "root_lib",
+    src = "test.foo",
+)

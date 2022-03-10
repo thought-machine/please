@@ -231,12 +231,33 @@
     <li>
       <span>
         <code class="code"
-          ><span class="fn-name">semver_check</span><span class="fn-p">(</span
-          ><span class="fn-arg">version</span>, <span class="fn-arg">constraint</span>
-          <span class="fn-p">)</span></code
+          ><span class="fn-name">json</span><span class="fn-p">(</span
+          ><span class="fn-arg">x</span><span class="fn-p">)</span></code
         >
-        - checks if a <a href="https://semver.org/">semantic version</a> meets a constraint.
-        Supported version and constraint formats are listed on <a href="https://github.com/Masterminds/semver">this</a> site.
+        - returns a JSON-formatted representation of a plz value.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">is_semver</span><span class="fn-p">(</span
+          ><span class="fn-arg">s</span><span class="fn-p">)</span></code
+        >
+        - returns true if <code class="code">s</code> is a <a class="copy-link"
+        href="https://semver.org/">semantic version</a> (either
+        with or without a leading &quot;v&quot;), or false if not.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code"
+          ><span class="fn-name">semver_check</span><span class="fn-p">(</span
+          ><span class="fn-arg">version</span>, <span class="fn-arg">constraint</span
+          ><span class="fn-p">)</span></code
+        >
+        - checks if a <a class="copy-link" href="https://semver.org/">semantic version</a>
+        meets a constraint. Supported version and constraint formats are listed on <a
+        class="copy-link" href="https://github.com/Masterminds/semver">this</a> site.
       </span>
     </li>
   </ul>
@@ -613,7 +634,7 @@
           - Indicates that something has gone catastrophically wrong, and causes
           the process to exit immediately and unsuccessfully. Usually you are
           better off using <code class="code">assert</code> or
-          <code class="code">raise</code> to indicate failure, since plz can
+          <code class="code">fail()</code> to indicate failure, since plz can
           handle those and annotate with additional output.
         </span>
       </li>
@@ -1093,6 +1114,34 @@
   </section>
 
   <section class="mt4">
+    <h3 class="title-3" id="tag">
+      tag
+    </h3>
+
+    <code class="code-signature">tag(name, tag)</code>
+
+    <p>Tags a build label name with a given tag. This can be useful to keep following the intermediate build target
+      naming convention when a build definition doesn't expose the <code class="code">tag</code> parameter.</p>
+
+    <p>For example:</p>
+
+    <ul class="bulleted-list">
+      <li>
+        <span
+        ><code class="code">tag("name", "foo")</code> -&gt;
+          <code class="code">"_name#foo"</code>
+        </span>
+      </li>
+      <li>
+        <span
+        ><code class="code">tag("_name#foo", "bar")</code> -&gt;
+          <code class="code">"_name#foo_bar"</code>
+        </span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="mt4">
     <h3 class="title-3" id="fail">
       fail
     </h3>
@@ -1152,6 +1201,7 @@
   {{ template "lexicon_entry.html" .Named "cgo_library" }}
   {{ template "lexicon_entry.html" .Named "go_binary" }}
   {{ template "lexicon_entry.html" .Named "go_test" }}
+  {{ template "lexicon_entry.html" .Named "go_benchmark" }}
   {{ template "lexicon_entry.html" .Named "cgo_test" }}
   {{ template "lexicon_entry.html" .Named "go_test_main" }}
   {{ template "lexicon_entry.html" .Named "go_module" }}
@@ -1192,6 +1242,7 @@
   {{ template "lexicon_entry.html" .Named "system_library" }}
   {{ template "lexicon_entry.html" .Named "remote_file" }}
   {{ template "lexicon_entry.html" .Named "tarball" }}
+  {{ template "lexicon_entry.html" .Named "text_file" }}
 
   <section class="mt4">
     <h3 class="title-3" id="git_branch">

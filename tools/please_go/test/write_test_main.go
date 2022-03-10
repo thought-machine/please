@@ -7,8 +7,6 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"path"
-	"path/filepath"
 	"strings"
 	"text/template"
 	"unicode"
@@ -20,28 +18,31 @@ type testDescr struct {
 	Main           string
 	TestFunctions  []string
 	BenchFunctions []string
+	FuzzFunctions  []string
 	Examples       []*doc.Example
 	CoverVars      []CoverVar
 	Imports        []string
 	Coverage       bool
 	Benchmark      bool
+	HasFuzz        bool
 }
 
 // WriteTestMain templates a test main file from the given sources to the given output file.
 // This mimics what 'go test' does, although we do not currently support benchmarks or examples.
-func WriteTestMain(pkgDir, importPath string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark bool) error {
+func WriteTestMain(testPackage string, sources []string, output string, coverage bool, coverVars []CoverVar, benchmark, hasFuzz bool) error {
 	testDescr, err := parseTestSources(sources)
 	if err != nil {
 		return err
 	}
 	testDescr.Coverage = coverage
 	testDescr.CoverVars = coverVars
-	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || testDescr.Main != "" {
+	if len(testDescr.TestFunctions) > 0 || len(testDescr.BenchFunctions) > 0 || len(testDescr.Examples) > 0 || len(testDescr.FuzzFunctions) > 0 || testDescr.Main != "" {
 		// Can't set this if there are no test functions, it'll be an unused import.
-		testDescr.Imports = extraImportPaths(testDescr.Package, pkgDir, importPath, testDescr.CoverVars)
+		testDescr.Imports = extraImportPaths(testPackage, testDescr.Package, testDescr.CoverVars)
 	}
 
 	testDescr.Benchmark = benchmark
+	testDescr.HasFuzz = hasFuzz
 
 	f, err := os.Create(output)
 	if err != nil {
@@ -54,30 +55,14 @@ func WriteTestMain(pkgDir, importPath string, sources []string, output string, c
 }
 
 // extraImportPaths returns the set of extra import paths that are needed.
-func extraImportPaths(pkg, pkgDir, importPath string, coverVars []CoverVar) []string {
-	isRoot := pkgDir == "" || pkgDir == "."
-
-	pkgDir = collapseFinalDir(path.Join(pkgDir, pkg), importPath)
-
+func extraImportPaths(testPackage, alias string, coverVars []CoverVar) []string {
 	ret := make([]string, 0, len(coverVars)+1)
-	// If we're in the root of the repo, and the import path matches the root package, collapse that as we import it via
-	// the module name
-	if isRoot && strings.HasSuffix(importPath, pkg) {
-		ret = append(ret, fmt.Sprintf("%s \"%s\"", pkg, importPath))
-	} else {
-		ret = append(ret, fmt.Sprintf("%s \"%s\"", pkg, path.Join(importPath, pkgDir)))
-	}
+	ret = append(ret, fmt.Sprintf("%s \"%s\"", alias, testPackage))
 
 	for i, v := range coverVars {
 		name := fmt.Sprintf("_cover%d", i)
 		coverVars[i].ImportName = name
-
-		// Same thing as above: import the module's root package via the module name if they're the same name
-		if (v.Dir == "." || v.Dir == "") && v.ImportPath == filepath.Base(importPath) {
-			ret = append(ret, fmt.Sprintf("%s \"%s\"", name, importPath))
-		} else {
-			ret = append(ret, fmt.Sprintf("%s \"%s\"", name, path.Join(importPath, v.ImportPath)))
-		}
+		ret = append(ret, fmt.Sprintf("%s \"%s\"", name, v.ImportPath))
 	}
 	return ret
 }
@@ -105,6 +90,8 @@ func parseTestSources(sources []string) (testDescr, error) {
 					descr.TestFunctions = append(descr.TestFunctions, name)
 				} else if isTest(fd, 1, name, "Benchmark") {
 					descr.BenchFunctions = append(descr.BenchFunctions, name)
+				} else if isTest(fd, 1, name, "Fuzz") {
+					descr.FuzzFunctions = append(descr.FuzzFunctions, name)
 				}
 			}
 		}
@@ -186,6 +173,14 @@ var benchmarks = []_gostdlib_testing.InternalBenchmark{
 {{end}}
 }
 
+{{ if .HasFuzz }}
+var fuzzTargets = []_gostdlib_testing.InternalFuzzTarget{
+{{ range .FuzzFunctions }}
+	{"{{.}}", {{$.Package}}.{{.}}},
+{{ end }}
+}
+{{ end }}
+
 {{if .Coverage}}
 
 // Only updated by init functions, so no need for atomicity.
@@ -245,11 +240,11 @@ func main() {
 		args = append(args, "-test.run", testVar)
     }
     _gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
-	m := _gostdlib_testing.MainStart(testDeps, tests, nil, examples)
+	m := _gostdlib_testing.MainStart(testDeps, tests, nil,{{ if .HasFuzz }} fuzzTargets,{{ end }} examples)
 {{else}}
 	args = append(args, "-test.bench", ".*")
 	_gostdlib_os.Args = append(args, _gostdlib_os.Args[1:]...)
-	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks, nil)
+	m := _gostdlib_testing.MainStart(testDeps, nil, benchmarks,{{ if .HasFuzz }} fuzzTargets,{{ end }} nil)
 {{end}}
 
 {{if .Main}}

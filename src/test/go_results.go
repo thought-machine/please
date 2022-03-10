@@ -1,4 +1,4 @@
-// Parser for output from Go's testing package.
+// parser for output from Go's testing package.
 //
 // This is a fairly straightforward microformat so pretty easy to parse ourselves.
 // There's at least one package out there to convert it to JUnit XML but not worth
@@ -9,17 +9,18 @@ package test
 import (
 	"bytes"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/peterebden/go-deferred-regex"
 
 	"github.com/thought-machine/please/src/core"
 )
 
 // Not sure what the -6 suffixes are about.
-var testStart = regexp.MustCompile(`^=== RUN (.*)(?:-6)?$`)
-var testResult = regexp.MustCompile(`^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \(([0-9]+\.[0-9]+)s\)$`)
+var testStart = deferredregex.DeferredRegex{Re: `^=== RUN (.*)(?:-6)?$`}
+var testResult = deferredregex.DeferredRegex{Re: `^ *--- (PASS|FAIL|SKIP): (.*)(?:-6)? \(([0-9]+\.[0-9]+)s\)$`}
 
 func parseGoTestResults(data []byte) (core.TestSuite, error) {
 	results := core.TestSuite{}

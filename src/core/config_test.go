@@ -16,7 +16,9 @@ import (
 )
 
 func TestPlzConfigWorking(t *testing.T) {
+	RepoRoot = "/repo/root"
 	config, err := ReadConfigFiles([]string{"src/core/test_data/working.plzconfig"}, nil)
+
 	assert.NoError(t, err)
 	assert.Equal(t, "pexmabob", config.Python.PexTool)
 	assert.Equal(t, "javac", config.Java.JavacTool)
@@ -25,6 +27,7 @@ func TestPlzConfigWorking(t *testing.T) {
 	assert.Equal(t, "8", config.Java.SourceLevel)
 	assert.Equal(t, "7", config.Java.TargetLevel)
 	assert.Equal(t, "10", config.Java.ReleaseLevel)
+	assert.Equal(t, "/repo/root/plz-out/please", config.Please.Location)
 }
 
 func TestPlzConfigFailing(t *testing.T) {
@@ -152,6 +155,25 @@ func TestConfigOverrideOptions(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestPleaseRelativeLocationOverride(t *testing.T) {
+	RepoRoot = "/repo/root"
+	config := DefaultConfiguration()
+
+	err := config.ApplyOverrides(map[string]string{"please.location": "./plz-out/please"})
+	assert.NoError(t, err)
+	assert.Equal(t, "/repo/root/plz-out/please", config.Please.Location)
+}
+
+func TestPleaseTildeLocationOverride(t *testing.T) {
+	t.Setenv("HOME", "/path/to/home")
+
+	config := DefaultConfiguration()
+
+	err := config.ApplyOverrides(map[string]string{"please.location": "~/please-location"})
+	assert.NoError(t, err)
+	assert.Equal(t, "/path/to/home/please-location", config.Please.Location)
+}
+
 func TestReadSemver(t *testing.T) {
 	config, err := ReadConfigFiles([]string{"src/core/test_data/version_good.plzconfig"}, nil)
 	assert.NoError(t, err)
@@ -192,6 +214,46 @@ func TestConfigVerifiesOptions(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "pytest", config.Python.TestRunner)
 	_, err = ReadConfigFiles([]string{"src/core/test_data/testrunner_bad.plzconfig"}, nil)
+	assert.Error(t, err)
+}
+
+func TestDefaultHashCheckers(t *testing.T) {
+	config, err := ReadConfigFiles(nil, nil)
+
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []string{"sha1", "sha256", "blake3"}, config.Build.HashCheckers)
+}
+
+func TestHashCheckersConfig(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/hashcheckers.plzconfig"}, nil)
+
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []string{"blake3"}, config.Build.HashCheckers)
+}
+
+func TestOverrideHashCheckersConfig(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/hashcheckers.plzconfig"}, nil)
+	assert.NoError(t, err)
+
+	err = config.ApplyOverrides(map[string]string{"build.hashcheckers": "sha256"})
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []string{"sha256"}, config.Build.HashCheckers)
+}
+
+func TestOverrideHashCheckersNoConfig(t *testing.T) {
+	config, err := ReadConfigFiles(nil, nil)
+	assert.NoError(t, err)
+
+	err = config.ApplyOverrides(map[string]string{"build.hashcheckers": "sha1,blake3"})
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []string{"sha1", "blake3"}, config.Build.HashCheckers)
+}
+
+func TestUnknownHashChecker(t *testing.T) {
+	config, err := ReadConfigFiles(nil, nil)
+	assert.NoError(t, err)
+
+	err = config.ApplyOverrides(map[string]string{"build.hashcheckers": "fake-algo"})
 	assert.Error(t, err)
 }
 
@@ -355,4 +417,32 @@ func TestGetTags(t *testing.T) {
 
 	assert.Equal(t, "Version", tags["PLZ_VERSION"].Name)
 	assert.True(t, tags["PLZ_VERSION"].Type == reflect.TypeOf(cli.Version{}))
+}
+
+func TestEnsurePleaseLocation(t *testing.T) {
+	t.Setenv("HOME", "/path/to/home")
+
+	config := DefaultConfiguration()
+
+	// Empty please location config resolves to this executable's directory
+	config.Please.Location = ""
+	config.EnsurePleaseLocation()
+	assert.Equal(t, os.Getenv("PWD"), config.Please.Location)
+
+	// Expands ~
+	config.Please.Location = "~"
+	config.EnsurePleaseLocation()
+	assert.Equal(t, "/path/to/home", config.Please.Location)
+
+	// Resolves relative path to repo root
+	RepoRoot = "/repo/root"
+	config.Please.Location = "./plz-out/please"
+	config.EnsurePleaseLocation()
+	assert.Equal(t, "/repo/root/plz-out/please", config.Please.Location)
+}
+
+func TestPluginConfig(t *testing.T) {
+	config, err := ReadConfigFiles([]string{"src/core/test_data/plugin.plzconfig"}, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"fooc"}, config.Plugin["foo"].ExtraValues["fooctool"])
 }

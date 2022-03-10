@@ -30,8 +30,5 @@ func (e *Executor) CombinedOutput(bin string, args ...string) ([]byte, error) {
 	fmt.Fprintln(os.Stderr, "please_go install ->", bin, strings.Join(args, " "))
 
 	cmd := exec.Command(bin, args...)
-	out, err := cmd.CombinedOutput()
-
-	fmt.Print(string(out))
-	return out, err
+	return cmd.CombinedOutput()
 }

@@ -12,11 +12,6 @@ import (
 	"archive/tar"
 	"bufio"
 	"fmt"
-	"github.com/coreos/go-semver/semver"
-	"github.com/hashicorp/go-retryablehttp"
-	"github.com/thought-machine/please/src/utils"
-	"github.com/ulikunitz/xz"
-	"gopkg.in/op/go-logging.v1"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -27,6 +22,11 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/coreos/go-semver/semver"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/ulikunitz/xz"
+	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -43,6 +43,11 @@ var httpClient *retryablehttp.Client
 
 const milestoneURL = "https://please.build/milestones"
 
+// pleaseVersion returns the current version of Please as a semver.
+func pleaseVersion() semver.Version {
+	return *semver.New(core.PleaseVersion)
+}
+
 // CheckAndUpdate checks whether we should update Please and does so if needed.
 // If it requires an update it will never return, it will either die on failure or on success will exec the new Please.
 // Conversely, if an update isn't required it will return. It may adjust the version in the configuration.
@@ -52,24 +57,26 @@ const milestoneURL = "https://please.build/milestones"
 // will always update even if the version exists.
 func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify, progress, prerelease bool) {
 	httpClient = retryablehttp.NewClient()
-	httpClient.Logger = &utils.HTTPLogWrapper{Logger: log}
+	httpClient.Logger = &cli.HTTPLogWrapper{Log: log}
 
 	if !shouldUpdate(config, updatesEnabled, updateCommand, prerelease) && !forceUpdate {
 		clean(config, updateCommand)
 		return
 	}
-	word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
+	word := describe(config.Please.Version.Semver(), pleaseVersion(), true)
 	if !updateCommand {
-		fmt.Fprintf(os.Stderr, "%s Please from version %s to %s", word, core.PleaseVersion, config.Please.Version.VersionString())
+		fmt.Fprintf(os.Stderr, "%s Please from version %s to %s\n", word, pleaseVersion(), config.Please.Version.VersionString())
 	}
 
-	// Must lock here so that the update process doesn't race when running two instances
-	// simultaneously.
-	core.AcquireRepoLock(nil)
-	defer core.ReleaseRepoLock()
+	if core.RepoRoot != "" {
+		// Must lock exclusively here so that the update process doesn't race when running two instances simultaneously.
+		// Once we are done we replace/restore the mode to the shared one.
+		core.AcquireExclusiveRepoLock()
+		defer core.AcquireSharedRepoLock()
+	}
 
 	// If the destination exists and the user passed --force, remove it to force a redownload.
-	newDir := fs.ExpandHomePath(path.Join(config.Please.Location, config.Please.Version.VersionString()))
+	newDir := path.Join(config.Please.Location, config.Please.Version.VersionString())
 	if forceUpdate && core.PathExists(newDir) {
 		if err := os.RemoveAll(newDir); err != nil {
 			log.Fatalf("Failed to remove existing directory: %s", err)
@@ -101,6 +108,7 @@ func printMilestoneMessage(pleaseVersion string) {
 	resp, err := httpClient.Head(milestoneURL)
 	if err != nil {
 		log.Warningf("Failed to check for milestone update: %v", err)
+		return
 	}
 
 	defer resp.Body.Close()
@@ -142,20 +150,20 @@ func printMilestoneMessage(pleaseVersion string) {
 
 // shouldUpdate determines whether we should run an update or not. It returns true iff one is required.
 func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, prerelease bool) bool {
-	if config.Please.Version.Semver() == core.PleaseVersion {
+	if config.Please.Version.Semver() == pleaseVersion() {
 		return false // Version matches, nothing to do here.
-	} else if config.Please.Version.IsGTE && config.Please.Version.LessThan(core.PleaseVersion) {
+	} else if config.Please.Version.IsGTE && config.Please.Version.LessThan(pleaseVersion()) {
 		if !updateCommand {
 			return false // Version specified is >= and we are above it, nothing to do unless it's `plz update`
 		}
 		// Find the latest available version. Update if it's newer than the current one.
 		config.Please.Version = findLatestVersion(config.Please.DownloadLocation.String(), prerelease)
-		return config.Please.Version.Semver() != core.PleaseVersion
+		return config.Please.Version.Semver() != pleaseVersion()
 	} else if (!updatesEnabled || !config.Please.SelfUpdate) && !updateCommand {
 		// Update is required but has been skipped (--noupdate or whatever)
 		if config.Please.Version.Major != 0 {
-			word := describe(config.Please.Version.Semver(), core.PleaseVersion, true)
-			log.Warning("%s to Please version %s skipped (current version: %s)", word, config.Please.Version, core.PleaseVersion)
+			word := describe(config.Please.Version.Semver(), pleaseVersion(), true)
+			log.Warning("%s to Please version %s skipped (current version: %s)", word, config.Please.Version, pleaseVersion())
 		}
 		return false
 	} else if config.Please.Location == "" {
@@ -168,7 +176,7 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, pre
 	if config.Please.Version.Major == 0 {
 		// Specific version isn't set, only update on `plz update`.
 		if !updateCommand {
-			config.Please.Version.Set(core.PleaseVersion.String())
+			config.Please.Version.Set(core.PleaseVersion)
 			return false
 		}
 		config.Please.Version = findLatestVersion(config.Please.DownloadLocation.String(), prerelease)
@@ -180,7 +188,6 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, pre
 // downloadAndLinkPlease downloads a new Please version and links it into place, if needed.
 // It returns the new location and dies on failure.
 func downloadAndLinkPlease(config *core.Configuration, verify bool, progress bool) string {
-	config.Please.Location = fs.ExpandHomePath(config.Please.Location)
 	newPlease := path.Join(config.Please.Location, config.Please.Version.VersionString(), "please")
 
 	if !core.PathExists(newPlease) {

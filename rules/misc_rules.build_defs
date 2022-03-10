@@ -357,7 +357,7 @@ def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
         system_srcs = srcs,
         outs = [basename(src) for src in srcs],
         deps = deps,
-        cmd = 'cp "$SRCS" .',
+        cmd = 'cp -r "$SRCS" .',
         hashes = hashes,
         visibility = visibility,
         test_only = test_only,
@@ -369,7 +369,8 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
                 visibility:list=None, licences:list=None, test_only:bool&testonly=False,
                 labels:list=[], deps:list=None, exported_deps:list=None,
                 extract:bool=False, strip_prefix:str='', _tag:str='',exported_files=[],
-                entry_points:dict={}):
+                entry_points:dict={}, username:str=None, password_file:str=None,
+                headers:dict={}, secret_headers:dict={}, pass_env:list=[]):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -389,6 +390,11 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
                       tar format.
       strip_prefix (str): When extracting, strip this prefix from the extracted files.
       exported_files (list): A list of files to export from the archive when extracting.
+      username (str): Username for accessing a private file or repo.
+      password_file (str): A file on disk that contains a password or access token.
+      headers (dict): Headers to pass to curl.
+      secret_headers (dict): Headers contained in files to pass to curl.
+      pass_env (list): Any environment variables referenced by headers that should be passed in from the host.
     """
     if extract:
         if out:
@@ -444,11 +450,42 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
 
     urls = [url] if isinstance(url, str) else url
     url = urls[0]
+
+    urls_str = ' '.join(url) if isinstance(url, list) else url
+
+    if bool(username) != bool(password_file):
+        fail(f"Both or neither of username and password_file should be specified")
+
+    auth = username and password_file
+    curl = auth or headers or secret_headers
+    header_flag = ""
+    cmd = ''
+
+    if curl:
+        for header, value in headers.items():
+            header_flag = f'{header_flag} --header "{header}: {value}"'
+        for header, value in secret_headers.items():
+            header_flag = f'{header_flag} --header "{header}: $(cat {value})"'
+
+        # Authentication info
+        user_info = f'--user {username}:$(cat {password_file})' if auth else ""
+
+        # Check http response
+        check_url = f'curl -s -o /dev/null -I {header_flag} {user_info} -w %{{http_code}}'
+
+        # Download file
+        fetch_url = f'curl --anyauth {user_info} {header_flag} -o $OUTS --url'
+
+        # Download first url that succeeds
+        cmd = f'for URL in {urls_str}; do '
+        cmd += f'STATUS=$({check_url} $URL);'
+        cmd += f'[ $STATUS -lt 400 ] && {fetch_url} $URL && break; done;'
+
     return build_rule(
         name = name,
         tag = _tag,
-        cmd = '',
-        _urls = urls,
+        cmd = '' if not curl else cmd,
+        _urls = urls if not curl else None,
         outs = [out or url[url.rfind('/') + 1:]],
         binary = binary,
         visibility = visibility,
@@ -461,6 +498,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         labels = labels,
         sandbox = False,
         entry_points = entry_points,
+        pass_env = pass_env,
     )
 
 def text_file(name:str, content:str, hashes:list=None, data:list|dict=[], out:str=None,

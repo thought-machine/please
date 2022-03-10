@@ -1,6 +1,7 @@
 package query
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -15,9 +16,21 @@ import (
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
-func Print(graph *core.BuildGraph, targets []core.BuildLabel, fields, labels []string) {
+func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string, omitHidden, outputJSON bool) {
+	graph := state.Graph
+	ts := map[string]map[string]interface{}{}
 	for _, target := range targets {
+		if target.IsHidden() && omitHidden {
+			continue
+		}
+
 		t := graph.TargetOrDie(target)
+
+		if outputJSON {
+			ts[target.String()] = targetToValueMap(state.Parser.BuildRuleArgOrder(), fields, t)
+			continue
+		}
+
 		if len(labels) > 0 {
 			for _, prefix := range labels {
 				for _, label := range t.Labels {
@@ -32,60 +45,129 @@ func Print(graph *core.BuildGraph, targets []core.BuildLabel, fields, labels []s
 			fmt.Fprintf(os.Stdout, "# %s:\n", target)
 		}
 		if len(fields) > 0 {
-			newPrinter(os.Stdout, t, 0).PrintFields(fields)
+			newPrinter(os.Stdout, t, 0, state.Parser.BuildRuleArgOrder()).PrintFields(fields)
 		} else {
-			newPrinter(os.Stdout, t, 0).PrintTarget()
+			newPrinter(os.Stdout, t, 0, state.Parser.BuildRuleArgOrder()).PrintTarget()
+		}
+	}
+
+	if outputJSON {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "    ")
+		if err := enc.Encode(ts); err != nil {
+			panic(err)
 		}
 	}
 }
 
-// specialFields is a mapping of field name -> any special casing relating to how to print it.
-var specialFields = map[string]func(*printer) (string, bool){
-	"name": func(p *printer) (string, bool) {
-		return "'" + p.target.Label.Name + "'", true
-	},
-	"building_description": func(p *printer) (string, bool) {
-		s, ok := p.genericPrint(reflect.ValueOf(p.target.BuildingDescription))
-		return s, ok && p.target.BuildingDescription != core.DefaultBuildingDescription
-	},
-	"deps": func(p *printer) (string, bool) {
-		return p.genericPrint(reflect.ValueOf(p.target.DeclaredDependenciesStrict()))
-	},
-	"exported_deps": func(p *printer) (string, bool) {
-		return p.genericPrint(reflect.ValueOf(p.target.ExportedDependencies()))
-	},
-	"visibility": func(p *printer) (string, bool) {
-		if len(p.target.Visibility) == 1 && p.target.Visibility[0] == core.WholeGraph[0] {
-			return "['PUBLIC']", true
-		}
-		return p.genericPrint(reflect.ValueOf(p.target.Visibility))
-	},
-	"tools": func(p *printer) (string, bool) {
-		if tools := p.target.AllNamedTools(); len(tools) > 0 {
-			return p.genericPrint(reflect.ValueOf(tools))
-		}
-		return p.genericPrint(reflect.ValueOf(p.target.AllTools()))
-	},
-	"test_tools": func(p *printer) (string, bool) {
-		if tools := p.target.NamedTestTools(); len(tools) > 0 {
-			return p.genericPrint(reflect.ValueOf(tools))
-		}
-		return p.genericPrint(reflect.ValueOf(p.target.TestTools()))
-	},
-	"data": func(p *printer) (string, bool) {
-		if data := p.target.NamedData(); len(data) > 0 {
-			return p.genericPrint(reflect.ValueOf(data))
-		}
-		return p.genericPrint(reflect.ValueOf(p.target.Data))
-	},
+func handleSpecialFields(specials specialFieldsMap, target *core.BuildTarget, name string) (reflect.Value, bool) {
+	fun, ok := specials[name]
+	if !ok {
+		return reflect.Value{}, false
+	}
+	return reflect.ValueOf(fun(target)), true
 }
 
-// fieldPrecedence defines a specific ordering for fields.
-var fieldPrecedence = map[string]int{
-	"name":       -100,
-	"srcs":       -90,
-	"visibility": 90,
-	"deps":       100,
+// targetToValueMap creates a map of fields on BuildTarget keyed by the name tag on the struct field annotation. It
+// handles converting fields like named fields, or complex fields so that this can be serialised to json.
+func targetToValueMap(order map[string]int, fieldsToInclude []string, target *core.BuildTarget) map[string]interface{} {
+	ret := map[string]interface{}{}
+	fs := fields(reflect.ValueOf(target).Elem(), order)
+
+	if target.IsTest() {
+		fs = append(fs, fields(reflect.ValueOf(target.Test).Elem(), order)...)
+	}
+	specialFields := specialFields()
+
+	include := make(map[string]struct{}, len(fieldsToInclude))
+	for _, f := range fieldsToInclude {
+		include[f] = struct{}{}
+	}
+
+	// TODO(jpoole): order these somehow
+	for _, field := range fs {
+		if !shouldPrint(field.field, target) {
+			continue
+		}
+		name := fieldName(field.field)
+		if _, ok := include[name]; len(fieldsToInclude) != 0 && !ok {
+			continue
+		}
+
+		value, isSpecial := handleSpecialFields(specialFields, target, name)
+		if !isSpecial {
+			value = field.value
+		}
+		if _, ok := ret[name]; ok && isZero(value) {
+			continue
+		}
+
+		if s, ok := value.Interface().(fmt.Stringer); ok {
+			ret[name] = s.String()
+		} else {
+			ret[name] = value.Interface()
+		}
+	}
+	return ret
+}
+
+// A specialFieldsMap is a mapping of field name -> any special casing relating to how to print it.
+type specialFieldsMap map[string]func(target *core.BuildTarget) interface{}
+
+// specialFields returns the map of fields that require special case handling. The functions in this map convert the
+// field to a type that can be printed with genericPrint
+func specialFields() specialFieldsMap {
+	return specialFieldsMap{
+		"name": func(target *core.BuildTarget) interface{} {
+			return target.Label.Name
+		},
+		"building_description": func(target *core.BuildTarget) interface{} {
+			if target.BuildingDescription != core.DefaultBuildingDescription {
+				return target.BuildingDescription
+			}
+			return ""
+		},
+		"deps": func(target *core.BuildTarget) interface{} {
+			return target.DeclaredDependenciesStrict()
+		},
+		"exported_deps": func(target *core.BuildTarget) interface{} {
+			return target.ExportedDependencies()
+		},
+		"visibility": func(target *core.BuildTarget) interface{} {
+			if len(target.Visibility) == 1 && target.Visibility[0] == core.WholeGraph[0] {
+				return []string{"PUBLIC"}
+			}
+			return target.Visibility
+		},
+		"tools": func(target *core.BuildTarget) interface{} {
+			if tools := target.AllNamedTools(); len(tools) > 0 {
+				return tools
+			}
+			return target.AllTools()
+		},
+		"test_tools": func(target *core.BuildTarget) interface{} {
+			if tools := target.NamedTestTools(); len(tools) > 0 {
+				return tools
+			}
+			return target.AllTestTools()
+		},
+		"data": func(target *core.BuildTarget) interface{} {
+			if data := target.NamedData; len(data) > 0 {
+				return data
+			}
+			return target.Data
+		},
+		"outs": func(target *core.BuildTarget) interface{} {
+			if namedOuts := target.DeclaredNamedOutputs(); len(namedOuts) > 0 {
+				return namedOuts
+			}
+			return target.DeclaredOutputs()
+		},
+		"test": func(target *core.BuildTarget) interface{} {
+			return target.IsTest()
+		},
+	}
 }
 
 // A printer is responsible for creating the output of 'plz query print'.
@@ -96,15 +178,19 @@ type printer struct {
 	doneFields     map[string]bool
 	error          bool // true if something went wrong
 	surroundSyntax bool // true if we are quoting strings or surrounding slices with [] etc.
+	fieldOrder     map[string]int
+	specialFields  specialFieldsMap
 }
 
 // newPrinter creates a new printer instance.
-func newPrinter(w io.Writer, target *core.BuildTarget, indent int) *printer {
+func newPrinter(w io.Writer, target *core.BuildTarget, indent int, order map[string]int) *printer {
 	return &printer{
-		w:          w,
-		target:     target,
-		indent:     indent,
-		doneFields: make(map[string]bool, 50), // Leave enough space for all of BuildTarget's fields.
+		w:             w,
+		target:        target,
+		indent:        indent,
+		doneFields:    make(map[string]bool, 50), // Leave enough space for all of BuildTarget's fields.
+		fieldOrder:    order,
+		specialFields: specialFields(),
 	}
 }
 
@@ -112,6 +198,22 @@ func newPrinter(w io.Writer, target *core.BuildTarget, indent int) *printer {
 func (p *printer) printf(msg string, args ...interface{}) {
 	fmt.Fprint(p.w, strings.Repeat(" ", p.indent))
 	fmt.Fprintf(p.w, msg, args...)
+}
+
+func fields(structValue reflect.Value, fieldOrder map[string]int) orderedFields {
+	ret := make(orderedFields, structValue.NumField())
+
+	structType := structValue.Type()
+
+	for i := 0; i < structType.NumField(); i++ {
+		ret[i] = orderedField{
+			order: fieldOrder[fieldName(structType.Field(i))],
+			field: structType.Field(i),
+			value: structValue.Field(i),
+		}
+	}
+
+	return ret
 }
 
 // PrintTarget prints an entire build target.
@@ -125,19 +227,15 @@ func (p *printer) PrintTarget() {
 	}
 	p.surroundSyntax = true
 	p.indent += 4
-	v := reflect.ValueOf(p.target).Elem()
-	t := v.Type()
-	f := make(orderedFields, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		f[i].structIndex = i
-		f[i].printIndex = i
-		if index, present := fieldPrecedence[p.fieldName(t.Field(i))]; present {
-			f[i].printIndex = index
-		}
+	fs := fields(reflect.ValueOf(p.target).Elem(), p.fieldOrder)
+
+	if p.target.IsTest() {
+		fs = append(fs, fields(reflect.ValueOf(p.target.Test).Elem(), p.fieldOrder)...)
 	}
-	sort.Sort(f)
-	for _, orderedField := range f {
-		p.printField(t.Field(orderedField.structIndex), v.Field(orderedField.structIndex))
+
+	sort.Sort(fs)
+	for _, orderedField := range fs {
+		p.printField(orderedField.field, orderedField.value)
 	}
 	p.indent -= 4
 	p.printf(")\n\n")
@@ -145,10 +243,9 @@ func (p *printer) PrintTarget() {
 
 // PrintFields prints a subset of fields of a build target.
 func (p *printer) PrintFields(fields []string) bool {
-	v := reflect.ValueOf(p.target).Elem()
 	for _, field := range fields {
-		f := p.findField(field)
-		if contents, shouldPrint := p.shouldPrintField(f, v.FieldByIndex(f.Index)); shouldPrint {
+		fieldStruct, fieldValue := p.findField(field)
+		if contents, shouldPrint := p.maybePrintField(fieldStruct, fieldValue); shouldPrint {
 			if !strings.HasSuffix(contents, "\n") {
 				contents += "\n"
 			}
@@ -158,22 +255,47 @@ func (p *printer) PrintFields(fields []string) bool {
 	return p.error
 }
 
-// findField returns the field which would print with the given name.
+// findField returns the field (and value) which would print with the given name.
 // This isn't as simple as using reflect.Value.FieldByName since the print names
 // are different to the actual struct names.
-func (p *printer) findField(field string) reflect.StructField {
-	t := reflect.ValueOf(p.target).Elem().Type()
-	for i := 0; i < t.NumField(); i++ {
-		if f := t.Field(i); p.fieldName(f) == field {
-			return f
+func (p *printer) findField(field string) (reflect.StructField, reflect.Value) {
+	// There isn't a 1-1 mapping between the field and its structure. Internally, we use
+	// things like named vs unnamed structures which reflect the same field from the user
+	// perspective. The function below takes that into consideration.
+	innerFindField := func(value interface{}, name string) (reflect.StructField, reflect.Value, bool) {
+		v := reflect.ValueOf(value).Elem()
+		t := v.Type()
+
+		resIndex := -1
+		for i := 0; i < v.NumField(); i++ {
+			if f := t.Field(i); fieldName(f) == name {
+				if !v.Field(i).IsZero() {
+					return t.Field(i), v.Field(i), true
+				} else if resIndex == -1 {
+					resIndex = i
+				}
+			}
+		}
+		if resIndex >= 0 {
+			return t.Field(resIndex), v.Field(resIndex), true
+		}
+		return reflect.StructField{}, reflect.Value{}, false
+	}
+
+	if fieldStruct, fieldValue, ok := innerFindField(p.target, field); ok {
+		return fieldStruct, fieldValue
+	} else if p.target.IsTest() {
+		if fieldStruct, fieldValue, ok := innerFindField(p.target.Test, field); ok {
+			return fieldStruct, fieldValue
 		}
 	}
+
 	log.Fatalf("Unknown field %s", field)
-	return reflect.StructField{}
+	return reflect.StructField{}, reflect.Value{}
 }
 
 // fieldName returns the name we'll use to print a field.
-func (p *printer) fieldName(f reflect.StructField) string {
+func fieldName(f reflect.StructField) string {
 	if name := f.Tag.Get("name"); name != "" {
 		return name
 	}
@@ -183,28 +305,55 @@ func (p *printer) fieldName(f reflect.StructField) string {
 
 // printField prints a single field of a build target.
 func (p *printer) printField(f reflect.StructField, v reflect.Value) {
-	if contents, shouldPrint := p.shouldPrintField(f, v); shouldPrint {
-		name := p.fieldName(f)
+	if contents, shouldPrint := p.maybePrintField(f, v); shouldPrint {
+		name := fieldName(f)
 		p.printf("%s = %s,\n", name, contents)
 		p.doneFields[name] = true
 	}
 }
 
-// shouldPrintField returns whether we should print a field and what we'd print if we did.
-func (p *printer) shouldPrintField(f reflect.StructField, v reflect.Value) (string, bool) {
+func shouldPrint(f reflect.StructField, target *core.BuildTarget) bool {
 	if f.Tag.Get("print") == "false" { // Indicates not to print the field.
-		return "", false
-	} else if p.target.IsFilegroup && f.Tag.Get("hide") == "filegroup" {
+		return false
+	} else if target.IsFilegroup && f.Tag.Get("hide") == "filegroup" {
+		return false
+	}
+	return true
+}
+
+// maybePrintField returns whether we should print a field and what we'd print if we did.
+func (p *printer) maybePrintField(f reflect.StructField, v reflect.Value) (string, bool) {
+	if !shouldPrint(f, p.target) {
 		return "", false
 	}
-	name := p.fieldName(f)
+	name := fieldName(f)
 	if p.doneFields[name] {
 		return "", false
 	}
-	if customFunc, present := specialFields[name]; present {
-		return customFunc(p)
+	if customFunc, present := p.specialFields[name]; present {
+		return p.genericPrint(reflect.ValueOf(customFunc(p.target)))
 	}
 	return p.genericPrint(v)
+}
+
+// isZero is similar to reflect.IsZero but handles it in a way more consistent with printGeneric
+func isZero(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Slice, reflect.Map, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint8, reflect.Uint16:
+		return v.Uint() == 0
+	case reflect.Struct, reflect.Interface:
+		_, ok := v.Interface().(fmt.Stringer)
+		return !ok
+	case reflect.Ptr:
+		return v.IsNil()
+	}
+	return true
 }
 
 // genericPrint is the generic print function for a field.
@@ -219,7 +368,9 @@ func (p *printer) genericPrint(v reflect.Value) (string, bool) {
 	case reflect.Bool:
 		return "True", v.Bool()
 	case reflect.Int, reflect.Int32:
-		return fmt.Sprintf("%d", v.Int()), v.Int() > 0
+		return fmt.Sprintf("%d", v.Int()), true
+	case reflect.Uint8, reflect.Uint16:
+		return fmt.Sprintf("%d", v.Uint()), true
 	case reflect.Struct, reflect.Interface:
 		if stringer, ok := v.Interface().(fmt.Stringer); ok {
 			return p.quote(stringer.String()), true
@@ -290,11 +441,13 @@ func (p *printer) surround(prefix, s, suffix, always string) string {
 // An orderedField is used to sort the fields into the order we print them in.
 // This isn't necessarily the same as the order on the struct.
 type orderedField struct {
-	structIndex, printIndex int
+	order int
+	field reflect.StructField
+	value reflect.Value
 }
 
 type orderedFields []orderedField
 
 func (f orderedFields) Len() int           { return len(f) }
 func (f orderedFields) Swap(a, b int)      { f[a], f[b] = f[b], f[a] }
-func (f orderedFields) Less(a, b int) bool { return f[a].printIndex < f[b].printIndex }
+func (f orderedFields) Less(a, b int) bool { return f[a].order < f[b].order }

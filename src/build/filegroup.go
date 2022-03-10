@@ -44,7 +44,7 @@ type filegroupBuilder struct {
 
 var theFilegroupBuilder *filegroupBuilder
 
-func isSameFileContent(state *core.BuildState, from, to string) (bool, error) {
+func isSameFileContent(state *core.BuildState, hashTimestamp bool, from, to string) (bool, error) {
 	if !fs.PathExists(to) {
 		return false, nil
 	}
@@ -53,11 +53,11 @@ func isSameFileContent(state *core.BuildState, from, to string) (bool, error) {
 		return true, nil
 	}
 
-	h1, err := state.PathHasher.Hash(from, false, true)
+	h1, err := state.PathHasher.Hash(from, false, true, hashTimestamp)
 	if err != nil {
 		return false, err
 	}
-	h2, err := state.PathHasher.Hash(to, false, true)
+	h2, err := state.PathHasher.Hash(to, false, true, hashTimestamp)
 	return bytes.Equal(h1, h2), err
 }
 
@@ -75,12 +75,13 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 	if changed, present := builder.built[to]; present {
 		return changed, nil // File's already been built.
 	}
-	if same, err := isSameFileContent(state, from, to); err != nil {
+	if same, err := isSameFileContent(state, target.HashLastModified(), from, to); err != nil {
 		return false, err
 	} else if same {
 		// File exists already and is the same file. Nothing to do.
 		builder.built[to] = false
 		state.PathHasher.MoveHash(from, to, true)
+
 		return false, nil
 	}
 	// Must actually build the file.
@@ -109,8 +110,8 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, err
 	}
 	changed := false
 	outDir := target.OutDir()
-	localSources := target.AllLocalSourcePaths(state.Graph)
-	for i, source := range target.AllFullSourcePaths(state.Graph) {
+	localSources := target.AllSourceLocalPaths(state.Graph)
+	for i, source := range target.AllSourceFullPaths(state.Graph) {
 		out := path.Join(outDir, localSources[i])
 		fileChanged, err := theFilegroupBuilder.Build(state, target, source, out)
 		if err != nil {
@@ -140,8 +141,8 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, err
 // This is a small optimisation to ensure we don't need to recalculate them unnecessarily.
 func copyFilegroupHashes(state *core.BuildState, target *core.BuildTarget) {
 	outDir := target.OutDir()
-	localSources := target.AllLocalSourcePaths(state.Graph)
-	for i, source := range target.AllFullSourcePaths(state.Graph) {
+	localSources := target.AllSourceLocalPaths(state.Graph)
+	for i, source := range target.AllSourceFullPaths(state.Graph) {
 		if out := path.Join(outDir, localSources[i]); out != source {
 			state.PathHasher.MoveHash(source, out, true)
 		}

@@ -11,10 +11,10 @@ import (
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/thought-machine/please/src/fs"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -104,9 +104,9 @@ func TestExecuteTest(t *testing.T) {
 	c := newClientInstance("test")
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target3"})
 	target.AddOutput("remote_test")
-	target.TestTimeout = time.Minute
-	target.TestCommand = "$TEST"
-	target.IsTest = true
+	target.Test = new(core.TestFields)
+	target.Test.Timeout = time.Minute
+	target.Test.Command = "$TEST"
 	target.IsBinary = true
 	target.SetState(core.Building)
 	err := c.Store(target)
@@ -126,9 +126,9 @@ func TestExecuteTestWithCoverage(t *testing.T) {
 	c.state.NeedCoverage = true // bit of a hack but we need to turn this on somehow
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target4"})
 	target.AddOutput("remote_test")
-	target.TestTimeout = time.Minute
-	target.TestCommand = "$TEST"
-	target.IsTest = true
+	target.Test = new(core.TestFields)
+	target.Test.Timeout = time.Minute
+	target.Test.Command = "$TEST"
 	target.IsBinary = true
 	err := c.Store(target)
 	assert.NoError(t, err)
@@ -241,9 +241,9 @@ func TestOutDirsSetOutsOnTarget(t *testing.T) {
 		ExitCode: 0,
 		ExecutionMetadata: &pb.ExecutedActionMetadata{
 			Worker:                      "kev",
-			QueuedTimestamp:             ptypes.TimestampNow(),
-			ExecutionStartTimestamp:     ptypes.TimestampNow(),
-			ExecutionCompletedTimestamp: ptypes.TimestampNow(),
+			QueuedTimestamp:             timestamppb.Now(),
+			ExecutionStartTimestamp:     timestamppb.Now(),
+			ExecutionCompletedTimestamp: timestamppb.Now(),
 		},
 	}
 
@@ -258,7 +258,7 @@ func TestOutDirsSetOutsOnTarget(t *testing.T) {
 	})
 
 	c.state.AddOriginalTarget(outDirTarget.Label, true)
-	c.state.DownloadOutputs = true
+	c.state.OutputDownload = core.OriginalOutputDownload
 	require.True(t, c.state.ShouldDownload(outDirTarget))
 
 	outDirTarget.AddOutputDirectory("foo")

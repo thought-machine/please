@@ -1,3 +1,5 @@
+subinclude("//build_defs:version")
+
 go_library(
     name = "update",
     srcs = glob(
@@ -11,7 +13,6 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/process",
-        "//src/utils",
         "//third_party/go:go-crypto",
         "//third_party/go:go-retryablehttp",
         "//third_party/go:logging",
@@ -28,6 +29,9 @@ go_test(
         ":test_tarball",
         "//src:please",
     ],
+    definitions = {
+        "github.com/thought-machine/please/src/core.PleaseVersion": VERSION,
+    },
     labels = ["xz"],
     resources = ["pubkey.pem"],
     deps = [

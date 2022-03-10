@@ -10,12 +10,13 @@ import (
 // We set Pdeathsig to try to make sure commands don't outlive us if we die.
 // N.B. This does not start the command - the caller must handle that (or use one
 //      of the other functions which are higher-level interfaces).
-// TODO(jpoole): We may want to sandbox mount and net separately
-func (e *Executor) ExecCommand(sandbox bool, command string, args ...string) *exec.Cmd {
-	shouldNamespace := e.namespace == NamespaceAlways || (e.namespace == NamespaceSandbox && sandbox)
+func (e *Executor) ExecCommand(sandbox SandboxConfig, foreground bool, command string, args ...string) *exec.Cmd {
+	shouldNamespace := e.namespace == NamespaceAlways || (e.namespace == NamespaceSandbox && sandbox != NoSandbox)
 
-	// If we're sandboxing, run the sandbox tool to set up the network, mount, etc.
-	if sandbox {
+	cmd := exec.Command(command, args...)
+
+	// If we're sandboxing, run the sandbox tool instead to set up the network, mount, etc.
+	if sandbox != NoSandbox {
 		// re-exec into `plz sandbox` if we're using the built in sandboxing
 		if e.usePleaseSandbox {
 			if !shouldNamespace {
@@ -26,26 +27,32 @@ func (e *Executor) ExecCommand(sandbox bool, command string, args ...string) *ex
 			if err != nil {
 				panic(err)
 			}
-			command = plz
+			cmd = exec.Command(plz, args...)
 		} else {
 			// Otherwise exec the sandbox tool
 			args = append([]string{command}, args...)
-			command = e.sandboxTool
+			cmd = exec.Command(e.sandboxTool, args...)
 		}
-	}
-	cmd := exec.Command(command, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGHUP,
-		Setpgid:   true,
+		cmd.Env = []string{"SHARE_NETWORK=" + boolToString(!sandbox.Network), "SHARE_MOUNT=" + boolToString(!sandbox.Mount)}
 	}
 
-	// If we have any sort of sandboxing set up, we should always namespace, however we only namespace mount and net if
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig:  syscall.SIGHUP,
+		Setpgid:    true,
+		Foreground: foreground,
+	}
+
+	// If we have any sort of sandboxing set up, we should always namespace, however we only namespace mount and/or net if
 	// we're sandboxing this rule.
 	if shouldNamespace {
 		cmd.SysProcAttr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID
-		if sandbox {
-			// If we're sandboxing, namespace network and mount
-			cmd.SysProcAttr.Cloneflags = cmd.SysProcAttr.Cloneflags | syscall.CLONE_NEWNET | syscall.CLONE_NEWNS
+		if sandbox.Network {
+			// Namespace network
+			cmd.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
+		}
+		if sandbox.Mount {
+			// Namespace mount
+			cmd.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
 		}
 
 		cmd.SysProcAttr.UidMappings = []syscall.SysProcIDMap{
@@ -60,4 +67,12 @@ func (e *Executor) ExecCommand(sandbox bool, command string, args ...string) *ex
 		}
 	}
 	return cmd
+}
+
+// Say nothing...
+func boolToString(value bool) string {
+	if value {
+		return "1"
+	}
+	return "0"
 }

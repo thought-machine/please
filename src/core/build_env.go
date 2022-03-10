@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -81,26 +80,16 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		"SRCS="+strings.Join(sources, " "),
 		"OUTS="+strings.Join(outEnv, " "),
 		"HOME="+tmpDir,
-		"TOOLS="+strings.Join(toolPaths(state, target.Tools, abs), " "),
 		// Set a consistent hash seed for Python. Important for build determinism.
 		"PYTHONHASHSEED=42",
 	)
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
-		// TODO(peterebden): This is a bit grungy, we should move towards OUT being relative.
-		if target.Sandbox && filepath.IsAbs(tmpDir) {
-			env = append(env, "OUT="+path.Join(SandboxDir, outEnv[0]))
-		} else {
-			env = append(env, "OUT="+path.Join(tmpDir, outEnv[0]))
-		}
+		env = append(env, "OUT="+resolveOut(outEnv[0], tmpDir, target.Sandbox))
 	}
 	// The SRC variable is only available on rules that have a single source file.
 	if len(sources) == 1 {
 		env = append(env, "SRC="+sources[0])
-	}
-	// Similarly, TOOL is only available on rules with a single tool.
-	if len(target.Tools) == 1 {
-		env = append(env, "TOOL="+toolPath(state, target.Tools[0], abs))
 	}
 	// Named source groups if the target declared any.
 	for name, srcs := range target.NamedSources {
@@ -113,10 +102,8 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		outs = target.GetTmpOutputAll(outs)
 		env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
 	}
-	// Named tools as well.
-	for name, tools := range target.namedTools {
-		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
-	}
+	// Tools
+	env = append(env, toolsEnv(state, target.AllTools(), target.namedTools, "", abs)...)
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
 		secrets := "SECRETS=" + fs.ExpandHomePath(strings.Join(target.Secrets, ":"))
@@ -161,22 +148,20 @@ func withUserProvidedEnv(target *BuildTarget, env BuildEnv) BuildEnv {
 
 // TestEnvironment creates the environment variables for a test.
 func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) BuildEnv {
-	env := TargetEnvironment(state, target)
+	env := RuntimeEnvironment(state, target, path.IsAbs(testDir), true)
 	resultsFile := path.Join(testDir, TestResultsFile)
-	abs := path.IsAbs(testDir)
 
 	env = append(env,
 		"TEST_DIR="+testDir,
 		"TMP_DIR="+testDir,
 		"TMPDIR="+testDir,
+		"HOME="+testDir,
 		"TEST_ARGS="+strings.Join(state.TestArgs, ","),
 		"RESULTS_FILE="+resultsFile,
 		// We shouldn't really have specific things like this here, but it really is just easier to set it.
 		"GTEST_OUTPUT=xml:"+resultsFile,
 		"PEX_NOCACHE=true",
-		"TOOLS="+strings.Join(toolPaths(state, target.TestTools(), abs), " "),
 	)
-	env = append(env, "HOME="+testDir)
 	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
 		env = append(env,
 			"COVERAGE=true",
@@ -184,99 +169,136 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		)
 	}
 	if len(target.Outputs()) > 0 {
-		// Bit of a hack; ideally we would be unaware of the sandbox here.
-		if target.TestSandbox && runtime.GOOS == "linux" && !strings.HasPrefix(RepoRoot, "/tmp/") && testDir != "." {
-			env = append(env, "TEST="+path.Join(SandboxDir, target.Outputs()[0]))
-		} else {
-			env = append(env, "TEST="+path.Join(testDir, target.Outputs()[0]))
-		}
-	}
-	if len(target.testTools) == 1 {
-		env = append(env, "TOOL="+toolPath(state, target.testTools[0], abs))
-	}
-	// Named tools as well.
-	for name, tools := range target.namedTestTools {
-		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
-	}
-	if len(target.Data) > 0 {
-		env = append(env, "DATA="+strings.Join(target.AllDataPaths(state.Graph), " "))
-	}
-	if target.namedData != nil {
-		for name, data := range target.namedData {
-			paths := target.SourcePaths(state.Graph, data)
-			env = append(env, "DATA_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
-		}
+		env = append(env, "TEST="+resolveOut(target.Outputs()[0], testDir, target.Test.Sandbox))
 	}
 	// Bit of a hack for gcov which needs access to its .gcno files.
 	if target.HasLabel("cc") {
 		env = append(env, "GCNO_DIR="+path.Join(RepoRoot, GenDir, target.Label.PackageName))
 	}
-	if state.DebugTests {
-		env = append(env, "DEBUG=true")
+	if state.DebugFailingTests {
+		env = append(env, "DEBUG_TEST_FAILURE=true")
 	}
-	if target.TestSandbox && len(state.Config.Sandbox.Dir) > 0 {
+	if target.Test.Sandbox && len(state.Config.Sandbox.Dir) > 0 {
 		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
 	}
 	return withUserProvidedEnv(target, env)
 }
 
-func runtimeDataPaths(graph *BuildGraph, data []BuildInput) []string {
-	paths := make([]string, 0, len(data))
-	for _, in := range data {
-		paths = append(paths, in.FullPaths(graph)...)
-	}
-	return paths
-}
-
 // RunEnvironment creates the environment variables for a `plz run --env`.
 func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) BuildEnv {
-	env := TargetEnvironment(state, target)
+	env := RuntimeEnvironment(state, target, true, inTmpDir)
 
 	outEnv := target.Outputs()
 	env = append(env, "OUTS="+strings.Join(outEnv, " "))
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
-		env = append(env, "OUT="+outEnv[0])
+		env = append(env, "OUT="+resolveOut(outEnv[0], ".", false))
 	}
 
-	env = append(env,
-		"TOOLS="+strings.Join(toolPaths(state, target.TestTools(), true), " "),
-	)
-
-	if len(target.testTools) == 1 {
-		env = append(env, "TOOL="+toolPath(state, target.testTools[0], true))
-	}
-	// Named tools as well.
-	for name, tools := range target.namedTestTools {
-		env = append(env, "TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, true), " "))
-	}
-	if len(target.Data) > 0 {
-		if inTmpDir {
-			env = append(env, "DATA="+strings.Join(target.AllDataPaths(state.Graph), " "))
-		} else {
-			env = append(env, "DATA="+strings.Join(runtimeDataPaths(state.Graph, target.AllData()), " "))
-		}
-	}
-	if target.namedData != nil {
-		for name, data := range target.namedData {
-			var paths []string
-			if inTmpDir {
-				paths = target.SourcePaths(state.Graph, data)
-			} else {
-				paths = runtimeDataPaths(state.Graph, data)
-			}
-			env = append(env, "DATA_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
-		}
-	}
 	return withUserProvidedEnv(target, env)
 }
 
+// ExecEnvironment creates the environment variables for a `plz exec`.
+func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) BuildEnv {
+	env := append(RuntimeEnvironment(state, target, true, true),
+		"TMP_DIR="+execDir,
+		"TMPDIR="+execDir,
+		"HOME="+execDir,
+		// This is used by programs that use display terminals for correct handling
+		// of input and output in the terminal where the program is run.
+		"TERM="+os.Getenv("TERM"),
+	)
+
+	outEnv := target.Outputs()
+	// OUTS/OUT environment variables being always set is for backwards-compatibility.
+	// Ideally, if the target is a test these variables shouldn't be set.
+	env = append(env, "OUTS="+strings.Join(outEnv, " "))
+	if len(outEnv) == 1 {
+		env = append(env, "OUT="+resolveOut(outEnv[0], ".", target.Sandbox))
+		if target.IsTest() {
+			env = append(env, "TEST="+resolveOut(outEnv[0], ".", target.Test.Sandbox))
+		}
+	}
+
+	return withUserProvidedEnv(target, env)
+}
+
+// RuntimeEnvironment is the base environment for runtime-based environments.
+// Tools and data env variables are made available.
+func RuntimeEnvironment(state *BuildState, target *BuildTarget, abs, inTmpDir bool) BuildEnv {
+	env := TargetEnvironment(state, target)
+
+	// Data
+	env = append(env, dataEnv(state, target.AllData(), target.NamedData, "", inTmpDir)...)
+
+	if target.IsTest() {
+		// Test tools
+		env = append(env, toolsEnv(state, target.AllTestTools(), target.NamedTestTools(), "", abs)...)
+	}
+
+	if target.Debug != nil {
+		prefix := "DEBUG_"
+		// Debug data
+		env = append(env, dataEnv(state, target.AllDebugData(), target.DebugNamedData(), prefix, inTmpDir)...)
+		// Debug tools
+		env = append(env, toolsEnv(state, target.AllDebugTools(), target.Debug.namedTools, prefix, abs)...)
+	}
+
+	return env
+}
+
+// Handles resolution of OUT files
+func resolveOut(out string, dir string, sandbox bool) string {
+	// Bit of a hack; ideally we would be unaware of the sandbox here.
+	if sandbox && runtime.GOOS == "linux" && !strings.HasPrefix(RepoRoot, "/tmp/") && dir != "." {
+		return path.Join(SandboxDir, out)
+	}
+	return path.Join(dir, out)
+}
+
+// Creates tool-related env variables
+func toolsEnv(state *BuildState, allTools []BuildInput, namedTools map[string][]BuildInput, prefix string, abs bool) BuildEnv {
+	env := BuildEnv{
+		prefix + "TOOLS=" + strings.Join(toolPaths(state, allTools, abs), " "),
+	}
+	if len(allTools) == 1 {
+		env = append(env, prefix+"TOOL="+toolPath(state, allTools[0], abs))
+	}
+	for name, tools := range namedTools {
+		env = append(env, prefix+"TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
+	}
+	return env
+}
+
+// Creates data-related env variables
+func dataEnv(state *BuildState, allData []BuildInput, namedData map[string][]BuildInput, prefix string, inTmpDir bool) BuildEnv {
+	env := BuildEnv{
+		prefix + "DATA=" + strings.Join(runtimeDataPaths(state.Graph, allData, !inTmpDir), " "),
+	}
+	for name, data := range namedData {
+		env = append(env, prefix+"DATA_"+strings.ToUpper(name)+"="+strings.Join(runtimeDataPaths(state.Graph, data, !inTmpDir), " "))
+	}
+	return env
+}
+
+func runtimeDataPaths(graph *BuildGraph, data []BuildInput, fullPath bool) []string {
+	paths := make([]string, 0, len(data))
+	for _, in := range data {
+		if fullPath {
+			paths = append(paths, in.FullPaths(graph)...)
+		} else {
+			paths = append(paths, in.Paths(graph)...)
+		}
+	}
+	return paths
+}
+
 // StampedBuildEnvironment returns the shell env vars to be passed into exec.Command.
-// Optionally includes a stamp if the target is marked as such.
-func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte, tmpDir string) BuildEnv {
+// Optionally includes a stamp if asked.
+func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byte, tmpDir string, shouldStamp bool) BuildEnv {
 	env := BuildEnvironment(state, target, tmpDir)
 	encStamp := base64.RawURLEncoding.EncodeToString(stamp)
-	if target.Stamp {
+	if shouldStamp {
 		stampEnvOnce.Do(initStampEnv)
 		env = append(env, stampEnv...)
 		env = append(env, "STAMP_FILE="+target.StampFileName())
@@ -313,12 +335,12 @@ func initStampEnv() {
 }
 
 func toolPath(state *BuildState, tool BuildInput, abs bool) string {
-	if label := tool.Label(); label != nil {
+	if label, ok := tool.Label(); ok {
 		entryPoint := ""
 		if o, ok := tool.(AnnotatedOutputLabel); ok {
 			entryPoint = o.Annotation
 		}
-		path := state.Graph.TargetOrDie(*label).toolPath(abs, entryPoint)
+		path := state.Graph.TargetOrDie(label).toolPath(abs, entryPoint)
 		if !strings.Contains(path, "/") {
 			path = "./" + path
 		}

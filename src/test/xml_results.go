@@ -1,4 +1,4 @@
-// Parser for JUnit XML output.
+// parser for JUnit XML output.
 
 package test
 
@@ -18,6 +18,10 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 )
+
+var client = &http.Client{
+	Timeout: time.Minute,
+}
 
 func looksLikeJUnitXMLTestResults(b []byte) bool {
 	return bytes.HasPrefix(b, []byte{'<', '?', 'x', 'm', 'l'}) || bytes.HasPrefix(b, []byte{'<', 't', 'e', 's', 't'})
@@ -425,7 +429,7 @@ func SerialiseResultsToXML(target *core.BuildTarget, indent, storeOutputOnSucces
 	if indent {
 		s = "    "
 	}
-	suite := toXMLTestSuite(&target.Results, storeOutputOnSuccess)
+	suite := toXMLTestSuite(target.Test.Results, storeOutputOnSuccess)
 	suites := &jUnitXMLTestSuites{
 		Name:       target.Label.String(),
 		TestSuites: []*jUnitXMLTestSuite{suite},
@@ -457,7 +461,7 @@ func uploadResults(target *core.BuildTarget, url string, gzipped, storeOutputOnS
 	}
 	req.Header["Content-Type"] = []string{"application/xml"}
 	req.Header["Content-Encoding"] = []string{enc}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("Failed to upload test results: %s", err)
 	}
@@ -476,8 +480,8 @@ func mustSerialiseResults(graph *core.BuildGraph, storeOutputOnSuccess bool) []b
 	// Collapse any testsuite with the same name
 	xmlSuites := make(map[string]*jUnitXMLTestSuite)
 	for _, target := range graph.AllTargets() {
-		if target.IsTest {
-			testSuite := &target.Results
+		if target.IsTest() && target.Test.Results != nil {
+			testSuite := target.Test.Results
 			if len(testSuite.TestCases) > 0 {
 				xmlTestSuite := toXMLTestSuite(testSuite, storeOutputOnSuccess)
 				name := testSuite.JavaStyleName()

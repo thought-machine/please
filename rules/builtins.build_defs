@@ -2,19 +2,19 @@
 
 
 # Do not change the order of arguments to this function without updating the iota in targets.go to match it.
-def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', srcs:list|dict=None, data:list|dict=None, outs:list|dict=None,
-               deps:list=None, exported_deps:list=None, secrets:list|dict=None, tools:str|list|dict=None, test_tools:str|list|dict=None,
-               labels:list=None, visibility:list=CONFIG.DEFAULT_VISIBILITY, hashes:list=None, binary:bool=False, test:bool=False,
+def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', debug_cmd:str='', srcs:list|dict=None, data:list|dict=None,
+               debug_data:list|dict=None, outs:list|dict=None, deps:list=None, exported_deps:list=None, secrets:list|dict=None,
+               tools:str|list|dict=None, test_tools:str|list|dict=None, debug_tools:str|list|dict=None, labels:list=None,
+               visibility:list=CONFIG.DEFAULT_VISIBILITY, hashes:list=None, binary:bool=False, test:bool=False,
                test_only:bool=CONFIG.DEFAULT_TESTONLY, building_description:str=None, needs_transitive_deps:bool=False,
-               output_is_complete:bool=False, _=None, sandbox:bool=CONFIG.BUILD_SANDBOX,
-               test_sandbox:bool=CONFIG.TEST_SANDBOX, no_test_output:bool=False, flaky:bool|int=0, build_timeout:int|str=0,
-               test_timeout:int|str=0, pre_build:function=None, post_build:function=None, requires:list=None, provides:dict=None,
-               licences:list=CONFIG.DEFAULT_LICENCES, test_outputs:list=None, system_srcs:list=None, stamp:bool=False,
-               tag:str='', optional_outs:list=None, progress:bool=False, size:str=None, _urls:list=None,
-               internal_deps:list=None, pass_env:list=None, local:bool=False, output_dirs:list=[], __=None,
-               exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}, env:dict={}, _file_content:str=None):
+               output_is_complete:bool=False, sandbox:bool=CONFIG.BUILD_SANDBOX, test_sandbox:bool=CONFIG.TEST_SANDBOX,
+               no_test_output:bool=False, flaky:bool|int=0, build_timeout:int|str=0, test_timeout:int|str=0, pre_build:function=None,
+               post_build:function=None, requires:list=None, provides:dict=None, licences:list=CONFIG.DEFAULT_LICENCES,
+               test_outputs:list=None, system_srcs:list=None, stamp:bool=False, tag:str='', optional_outs:list=None, progress:bool=False,
+               size:str=None, _urls:list=None, internal_deps:list=None, pass_env:list=None, local:bool=False, output_dirs:list=[],
+               exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}, env:dict={}, _file_content:str=None,
+               _subrepo:bool=False):
     pass
-
 
 def len(obj:list|dict|str) -> int:
     pass
@@ -67,7 +67,7 @@ def subinclude(target:str):
     pass
 def load(target:str, names:str=None):
     pass
-def subrepo(name:str, dep:str='', path:str=None, config:str=None, bazel_compat:bool=False, arch:str=None):
+def subrepo(name:str, dep:str='', path:str=None, config:str=None, bazel_compat:bool=False, arch:str=None, plugin:bool=False):
     pass
 
 
@@ -101,13 +101,12 @@ def dict(d):
     fail('dict is not callable')
 
 
-def glob(include:list, exclude:list&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY) -> list:
+def glob(include:list, exclude:list&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY, include_symlinks:bool=not CONFIG.FF_EXCLUDE_GLOB_SYMLINKS) -> list:
     pass
 
 
 def package():
     pass
-
 
 def sorted(seq:list) -> list:
     pass
@@ -124,20 +123,29 @@ def config_get(self:config, key:str, default=None) -> config:
     pass
 
 
-def get_base_path() -> str:
+def get_base_path(label:str=None, subinclude_context:bool=None) -> str:
     pass
-def package_name() -> str:
+def package_name(label:str=None, subinclude_context:bool=None) -> str:
     pass
-def subrepo_name() -> str:
+def subrepo_name(label:str=None, subinclude_context:bool=None) -> str:
     pass
 
-def canonicalise(label:str) -> str:
+def canonicalise(label:str, subinclude_context:bool=None) -> str:
     """Converts the given build label to its full form.
 
     For example:
       //package:target -> //package:target
       //package -> //package:package
       :target -> //current_package:target
+    """
+    pass
+
+def tag(name:str, tag:str):
+    """Applies a tag to a build target name, similar to the `tag` param on build_rule().
+
+    For example:
+        tag("name", "foo") -> "_name#foo"
+        tag("_name#foo", "bar") -> "_name#foo_bar"
     """
     pass
 
@@ -222,7 +230,7 @@ ValueError = _deprecated_exception
 
 
 # Post-build callback functions.
-def get_labels(name:str, prefix:str, all:bool=False) -> list:
+def get_labels(name:str, prefix:str, all:bool=False, transitive=True) -> list:
     pass
 def has_label(name:str, prefix:str, all:bool=False) -> bool:
     return len(get_labels(name, prefix, all)) > 0
@@ -232,6 +240,8 @@ def add_dep(target:str, dep:str, exported:bool=False):
     pass
 def add_exported_dep(target:str, dep:str):
     add_dep(target, dep, True)
+def add_data(target:str, datum:str|list|dict):
+    pass
 def add_out(target:str, name:str, out:str=''):
     pass
 def get_outs(target:str):
@@ -261,6 +271,12 @@ def json(value) -> str:
 
 def breakpoint():
     """Breaks into an interactive debugging session."""
+    pass
+
+def is_semver(s:str) -> bool:
+    """Returns true if the given string is a semantic version number (either with or without
+    a leading v), or false if not.
+    """
     pass
 
 def semver_check(version:str, constraint:str) -> bool:

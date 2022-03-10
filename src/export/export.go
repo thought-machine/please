@@ -13,6 +13,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/gc"
+	"github.com/thought-machine/please/src/parse"
 )
 
 var log = logging.MustGetLogger("export")
@@ -30,19 +31,28 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 		packages[state.Graph.PackageOrDie(target.Label)] = true
 	}
 	for pkg := range packages {
+		if pkg.Name == parse.InternalPackageName {
+			continue // This isn't a real package to be copied
+		}
 		dest := path.Join(dir, pkg.Filename)
 		if err := fs.RecursiveCopy(pkg.Filename, dest, 0); err != nil {
-			log.Fatalf("Failed to copy BUILD file: %s\n", pkg.Filename)
+			log.Fatalf("Failed to copy BUILD file %s: %s\n", pkg.Filename, err)
 		}
 		// Now rewrite the unused targets out of it
 		victims := []string{}
 		for _, target := range pkg.AllTargets() {
-			if !done[target] {
+			if !done[target] && !target.HasParent() {
 				victims = append(victims, target.Label.Name)
 			}
 		}
 		if err := gc.RewriteFile(state, dest, victims); err != nil {
 			log.Fatalf("Failed to rewrite BUILD file: %s\n", err)
+		}
+	}
+	// Write any preloaded build defs as well; preloaded subincludes should be fine though.
+	for _, preload := range state.Config.Parse.PreloadBuildDefs {
+		if err := fs.RecursiveCopy(preload, path.Join(dir, preload), 0); err != nil {
+			log.Fatalf("Failed to copy preloaded build def %s: %s", preload, err)
 		}
 	}
 }
@@ -52,8 +62,8 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 	if done[target] {
 		return
 	}
-	for _, src := range target.AllSources() {
-		if src.Label() == nil { // We'll handle these dependencies later
+	for _, src := range append(target.AllSources(), target.AllData()...) {
+		if _, ok := src.Label(); !ok { // We'll handle these dependencies later
 			for _, p := range src.FullPaths(graph) {
 				if !strings.HasPrefix(p, "/") { // Don't copy system file deps.
 					if err := fs.RecursiveCopy(p, path.Join(dir, p), 0); err != nil {
@@ -65,14 +75,13 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 	}
 	done[target] = true
 	for _, dep := range target.Dependencies() {
-		if parent := dep.Parent(graph); parent != nil && parent != target.Parent(graph) && parent != target {
-			export(graph, dir, parent, done)
-		} else {
-			export(graph, dir, dep, done)
-		}
+		export(graph, dir, dep, done)
 	}
 	for _, subinclude := range graph.PackageOrDie(target.Label).Subincludes {
 		export(graph, dir, graph.TargetOrDie(subinclude), done)
+	}
+	if parent := target.Parent(graph); parent != nil && parent != target {
+		export(graph, dir, parent, done)
 	}
 }
 

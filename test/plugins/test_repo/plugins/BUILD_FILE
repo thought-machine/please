@@ -1,0 +1,10 @@
+filegroup(
+    name = "foo",
+    srcs = ["foo_plugin"],
+)
+
+subrepo(
+    name = "foo",
+    dep = ":foo",
+    plugin = True,
+)

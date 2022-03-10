@@ -11,6 +11,7 @@ python_library(
     name = "proto_lib",
     srcs = ["proto_lib.py"],
     resources = [":test_proto"],
+    deps = [":test_proto"],
 )
 
 python_test(
@@ -214,4 +215,14 @@ plz_e2e_test(
     expected_output = "expected_labels_on_grpcio.txt",
     labels = ["py3"],
     deps = ["//third_party/python:grpcio"],
+)
+
+python_test(
+    name = "cx_oracle_darwin_build_test",
+    srcs = ["cx_oracle_darwin_build_test.py"],
+    labels = [
+        "py3",
+        "pip",
+    ],
+    deps = ["//third_party/python:cx_oracle"],
 )

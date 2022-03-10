@@ -12,7 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/peterebden/go-cli-init/v3"
+	cli "github.com/peterebden/go-cli-init/v5/logging"
+	"github.com/peterebden/go-deferred-regex"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/op/go-logging.v1"
 )
@@ -24,14 +25,11 @@ var log = logging.MustGetLogger("cli")
 // StdErrIsATerminal is true if the process' stderr is an interactive TTY.
 var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
 
-// StdOutIsATerminal is true if the process' stdout is an interactive TTY.
-var StdOutIsATerminal = terminal.IsTerminal(int(os.Stdout.Fd()))
-
 // ShowColouredOutput tracks whether we are displaying coloured output or not.
 var ShowColouredOutput = StdErrIsATerminal
 
 // StripAnsi is a regex to find & replace ANSI console escape sequences.
-var StripAnsi = regexp.MustCompile("\x1b[^m]+m")
+var StripAnsi = deferredregex.DeferredRegex{Re: "\x1b[^m]+m"}
 
 // logLevel is the current verbosity level that is set.
 var logLevel = logging.WARNING
@@ -104,14 +102,14 @@ func (backend logBackendFacade) Log(level logging.Level, calldepth int, rec *log
 
 // LogBackend is the backend we use for logging during the interactive console display.
 type LogBackend struct {
-	mutex                                                                 sync.Mutex
-	rows, cols, maxRecords, interactiveRows, maxInteractiveRows, maxLines int
-	output                                                                []string
 	logMessages                                                           *list.List
 	messageHistory                                                        *list.List
-	messageCount                                                          int
 	formatter                                                             logging.Formatter
 	origBackend                                                           logging.Backend
+	output                                                                []string
+	mutex                                                                 sync.Mutex
+	rows, cols, maxRecords, interactiveRows, maxInteractiveRows, maxLines int
+	messageCount                                                          int
 	passthrough                                                           bool
 }
 
@@ -189,7 +187,7 @@ func (backend *LogBackend) calcOutput() []string {
 func (backend *LogBackend) GetMessageHistory() ([]string, int, int) {
 	ret := make([]string, 0, backend.messageHistory.Len())
 	for e := backend.messageHistory.Front(); e != nil; e = e.Next() {
-		msg := backend.lineWrap(e.Value.(string))
+		msg := reverse(backend.lineWrap(e.Value.(string)))
 		ret = append(ret, msg...)
 	}
 	if backend.messageCount > messageHistoryMaxSize {
@@ -200,10 +198,14 @@ func (backend *LogBackend) GetMessageHistory() ([]string, int, int) {
 
 // SetPassthrough sets whether we are "passing through" log messages or not, i.e. whether they go straight to
 // the normal log output or are stored in here.
-func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int) {
+func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int, clearMessageHistory bool) {
 	backend.mutex.Lock()
 	backend.passthrough = passthrough
 	backend.interactiveRows = interactiveRows
+	if clearMessageHistory {
+		backend.messageHistory = list.New()
+		backend.messageCount = 0
+	}
 	backend.mutex.Unlock()
 	if passthrough {
 		go notifyOnWindowResize(backend.recalcWindowSize)
@@ -274,4 +276,29 @@ func findSplit(line string, guess int) int {
 		return m[1] // second element in slice is the end index
 	}
 	return guess // Dunno what to do at this point. It's probably unlikely to happen often though.
+}
+
+// HTTPLogWrapper wraps the standard logger to implement the LeveledLogger interface from retryablehttp.
+type HTTPLogWrapper struct {
+	Log *logging.Logger
+}
+
+// Error logs at error level
+func (w *HTTPLogWrapper) Error(msg string, keysAndValues ...interface{}) {
+	w.Log.Errorf("%v: %v", msg, keysAndValues)
+}
+
+// Info logs at info level
+func (w *HTTPLogWrapper) Info(msg string, keysAndValues ...interface{}) {
+	w.Log.Infof("%v: %v", msg, keysAndValues)
+}
+
+// Debug logs at debug level
+func (w *HTTPLogWrapper) Debug(msg string, keysAndValues ...interface{}) {
+	w.Log.Debugf("%v: %v", msg, keysAndValues)
+}
+
+// Warn logs at warning level
+func (w *HTTPLogWrapper) Warn(msg string, keysAndValues ...interface{}) {
+	w.Log.Warningf("%v: %v", msg, keysAndValues)
 }
