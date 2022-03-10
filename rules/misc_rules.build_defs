@@ -409,9 +409,8 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
             mv_cmds = ' && '.join([f'mv _extract_dir/{file} _out_dir' for file in exported_files])
 
         remote_rule = remote_file(
-            name = name,
+            name = tag(name, "download"),
             out = f"{name}_download",
-            _tag = _tag + 'download',
             url = url,
             hashes = hashes,
             licences = licences,
