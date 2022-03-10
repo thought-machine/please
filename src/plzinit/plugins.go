@@ -187,7 +187,12 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 			if len(v.DefaultValue) == 0 {
 				file = ast.InjectField(file, v.ConfigKey, "", section, plugin, v.Repeatable)
 			} else {
-				file = ast.InjectField(file, v.ConfigKey, v.DefaultValue[0], section, plugin, v.Repeatable)
+				// Check for build labels and resolve relative to host
+				val := v.DefaultValue[0]
+				if core.LooksLikeABuildLabel(val) {
+					val = "///" + plugin + val
+				}
+				file = ast.InjectField(file, v.ConfigKey, val, section, plugin, v.Repeatable)
 			}
 		}
 	}
