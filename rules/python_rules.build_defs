@@ -346,7 +346,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
     )
 
 
-def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
+def pip_library(name:str, version:str, labels:list=[], hashes:list=None, package_name:str=None,
                 test_only:bool&testonly=False, deps:list=[], post_install_commands:list=None,
                 install_subdirectory:str=None, repo:str=None, use_pypi:bool=None, patch:str|list=None,
                 visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None,
@@ -356,6 +356,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
     Args:
       name (str): Name of the build rule.
       version (str): Specific version of the package to install.
+      labels (list): Additional labels to apply to this rule.
       hashes (list): List of acceptable hashes for this target.
       package_name (str): Name of the pip package to install. Defaults to the same as 'name'.
       outs (list): List of output files / directories. Defaults to [name]. If subdirectory is used outs[0] is used as the prefix.
@@ -469,12 +470,12 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None,
             'jarcat': [CONFIG.JARCAT_TOOL],
         },
         post_build = None if licences else _add_licences,
-        labels = ['py', 'pip:' + package_name] + (['py:zip-unsafe'] if not zip_safe else []),
+        labels = labels + ['py', 'pip:' + package_name] + (['py:zip-unsafe'] if not zip_safe else []),
         visibility = visibility,
     )
 
-def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None, outs:list=None,
-                 post_install_commands:list=None, patch:str|list=None, licences:list=None,
+def python_wheel(name:str, version:str, labels:list=[], hashes:list=None, package_name:str=None,
+                 outs:list=None, post_install_commands:list=None, patch:str|list=None, licences:list=None,
                  test_only:bool&testonly=False, repo:str=None, zip_safe:bool=True, visibility:list=None,
                  deps:list=[], name_scheme:str=None, strip:list=['*.pyc', 'tests']):
     """Downloads a Python wheel and extracts it.
@@ -492,6 +493,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
       name (str): Name of the rule. Also doubles as the name of the package if package_name
             is not set.
       version (str): Version of the package to install.
+      labels (list): Additional labels to apply to this rule.
       hashes (list): List of hashes to verify the package against.
       package_name (str): If given, overrides `name` for the name of the package to look for.
       outs (list): List of output files. Defaults to a directory named the same as `name`.
@@ -599,7 +601,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
         visibility = visibility,
         licences = licences,
         test_only = test_only,
-        labels = [label] + ["link:plz-out/python/venv"],
+        labels = labels + [label] + ["link:plz-out/python/venv"],
         provides = {'py': wheel_rule},
     )
 

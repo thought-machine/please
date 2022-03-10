@@ -1,8 +1,8 @@
 <h1 class="title-1">Please config file reference</h1>
 
 <p>
-  The root of a Please repo is identified by a .plzconfig file. This also has a
-  number of options to control various parts of its behaviour which might be
+  The root of a Please repo is identified by a <code class="code">.plzconfig</code> file.
+  This also has a number of options to control various parts of its behaviour which might be
   useful to tailor it to your environment.
 </p>
 
@@ -24,19 +24,21 @@
   <li>
     <span
       ><code class="code">.plzconfig_&lt;arch&gt;</code> (e.g.
-      .plzconfig_linux_amd64)</span
-    >
-  </li>
-  <li>
-    <span
-      ><code class="code">.plzconfig.&lt;profile&gt;</code> (if the
-      <code class="code">--profile</code> flag is passed)</span
+      <code class="code">.plzconfig_linux_amd64</code>)</span
     >
   </li>
   <li>
     <span><code class="code">.plzconfig.local</code></span>
   </li>
 </ul>
+
+<p>
+  Profile-specific config files can be defined and take precedence over the config file being
+  evaluated. This is achieved by having a sibling config file with the name ending with the
+  profile name (i.e. <code class="code" >.plzconfig.remote</code>, <code class="code"
+  >.plzconfig_linux_amd64.remote</code>, etc.) and running the command with the
+  <code class="code">--profile</code> flag set (ie. <code class="code">--profile=remote</code>).
+</p>
 
 <p>
   One would normally check in <code class="code">.plzconfig</code> (and

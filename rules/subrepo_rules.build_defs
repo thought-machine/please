@@ -24,8 +24,8 @@ def workspace(name:str):
     )
 
 
-def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha256=None,
-                 config:str=None, bazel_compat:bool=False,
+def http_archive(name:str, urls:list, strip_prefix:str=None, labels:list=[],
+                 hashes:str|list&sha256=None, config:str=None, bazel_compat:bool=False,
                  visibility:list=None):
     """Fetches a remote file over HTTP and expands its contents.
 
@@ -39,6 +39,7 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha
       urls: List of URLs to fetch from. These are assumed to be mirrors and will be
             tried in sequence.
       strip_prefix: Prefix to strip from the expanded archive.
+      labels: Labels to apply to this rule.
       hashes: List of hashes to verify the rule with.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
@@ -50,6 +51,7 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha
         name = name,
         urls = urls,
         strip_prefix = strip_prefix,
+        labels = labels,
         hashes = hashes,
         config = config,
         bazel_compat = bazel_compat,
@@ -57,7 +59,7 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, hashes:str|list&sha
 
 
 def new_http_archive(name:str, urls:list, build_file:str=None, build_file_content:str=None,
-                     strip_prefix:str=None, strip_build:bool=False, plugin:bool=False,
+                     strip_prefix:str=None, strip_build:bool=False, plugin:bool=False, labels:list=[],
                      hashes:str|list&sha256=None,username:str=None, password_file:str=None, headers:dict={}, secret_headers:dict={},
                      config:str=None, bazel_compat:bool=False, visibility:list=None, pass_env:list=[]):
     """Fetches a remote file over HTTP and expands its contents, combined with a BUILD file.
@@ -79,6 +81,7 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
                           We suggest using build_file instead, but this is provided for Bazel compatibility.
       strip_prefix: Prefix to strip from the expanded archive.
       strip_build: True to strip any BUILD files from the archive after download.
+      labels: Labels to apply to this rule.
       hashes: List of hashes to verify the rule with.
       username: Username for accessing a private file or repo.
       password_file: A file on disk that contains a password or access token.
@@ -126,6 +129,7 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         outs = [name],
         cmd = cmd,
         _subrepo = True,
+        labels = labels,
         visibility = visibility,
     )
     return subrepo(
@@ -161,8 +165,8 @@ def new_local_repository(name:str, path:str):
     )
 
 
-def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:str|list=None,
-                strip_prefix:str=None, strip_build:bool=False, config:str=None,
+def github_repo(name:str, repo:str, revision:str, build_file:str=None, labels:list=[],
+                hashes:str|list=None, strip_prefix:str=None, strip_build:bool=False, config:str=None,
                 access_token:str=None, bazel_compat:bool=False):
     """Defines a new subrepo corresponding to a Github project.
 
@@ -174,6 +178,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
       repo: Github repo to fetch from (e.g. "thought-machine/please").
       revision: Revision to download. This can be either a release version, commit or branch.
       build_file: The file to use as a BUILD file for this subrepository.
+      labels: Labels to apply to this rule.
       hashes: List of hashes to verify the rule with.
       strip_prefix: Prefix to strip from the contents of the zip. Is usually autodetected for you.
       strip_build: True to strip any BUILD files from the archive after download.
@@ -210,6 +215,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
         strip_prefix = strip_prefix or prefix,
         strip_build = strip_build,
         build_file = build_file,
+        labels = labels,
         hashes = hashes,
         config = config,
         headers = headers,
@@ -219,8 +225,8 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, hashes:st
 
 
 def gitlab_repo(name:str, repo:str, revision:str, instance:str="gitlab.com", build_file:str=None,
-                hashes:str|list=None, strip_prefix:str=None, strip_build:bool=False, config:str=None,
-                bazel_compat:bool=False):
+                labels:list=[], hashes:str|list=None, strip_prefix:str=None, strip_build:bool=False,
+                config:str=None, bazel_compat:bool=False):
     """Defines a new subrepo corresponding to a GitLab project.
 
     Like github_repo, this is a convenience alias to new_http_archive.
@@ -233,6 +239,7 @@ def gitlab_repo(name:str, repo:str, revision:str, instance:str="gitlab.com", bui
                 GNOME GitLab instance at https://gitlab.gnome.org). Defaults to "gitlab.com", the
                 official public GitLab instance.
       build_file: The file to use as a BUILD file for this subrepository.
+      labels: Labels to apply to this rule.
       hashes: List of hashes to verify the rule with.
       strip_prefix: Prefix to strip from the contents of the zip. This is usually automatically
                     detected.
@@ -253,6 +260,7 @@ def gitlab_repo(name:str, repo:str, revision:str, instance:str="gitlab.com", bui
         strip_prefix = strip_prefix or prefix,
         strip_build = strip_build,
         build_file = build_file,
+        labels = labels,
         hashes = hashes,
         config = config,
         bazel_compat = bazel_compat,

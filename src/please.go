@@ -438,7 +438,7 @@ var opts struct {
 }
 
 // Definitions of what we do for each command.
-// Functions are called after args are parsed and return true for success.
+// Functions are called after args are parsed and return a POSIX exit code (0 means success).
 var buildFunctions = map[string]func() int{
 	"build": func() int {
 		success, state := runBuild(opts.Build.Args.Targets, true, false, false)
