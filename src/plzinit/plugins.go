@@ -141,7 +141,6 @@ func writeJavaConfigFields(file ast.File) ast.File {
 
 func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]string) ast.File {
 	section := "Plugin"
-	foundSection := false
 
 	// Check for existing plugin section
 	if s := file.MaybeGetSection(section, plugin); s != nil {
@@ -149,7 +148,11 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 		return file
 	}
 
+	// Write plugin target value
+	file = ast.InjectField(file, "Target", "//plugins:"+plugin, section, plugin, false)
+
 	// Migrate any existing language fields to their plugin equivalents
+	foundSection := false
 	for _, s := range file.Sections {
 		if s.Key == plugin {
 			foundSection = true
@@ -182,9 +185,9 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 		config = subrepo.State.Config
 		for _, v := range config.PluginConfig {
 			if len(v.DefaultValue) == 0 {
-				file = ast.InjectField(file, v.ConfigKey, "", "Plugin", plugin, v.Repeatable)
+				file = ast.InjectField(file, v.ConfigKey, "", section, plugin, v.Repeatable)
 			} else {
-				file = ast.InjectField(file, v.ConfigKey, v.DefaultValue[0], "Plugin", plugin, v.Repeatable)
+				file = ast.InjectField(file, v.ConfigKey, v.DefaultValue[0], section, plugin, v.Repeatable)
 			}
 		}
 	}
