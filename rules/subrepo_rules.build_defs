@@ -24,7 +24,7 @@ def workspace(name:str):
     )
 
 
-def http_archive(name:str, urls:list, strip_prefix:str=None, labels:list=[],
+def http_archive(name:str, urls:list, files:list=[], strip_prefix:str=None, strip_files:list=[], labels:list=[],
                  hashes:str|list&sha256=None, config:str=None, bazel_compat:bool=False,
                  visibility:list=None):
     """Fetches a remote file over HTTP and expands its contents.
@@ -38,7 +38,11 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, labels:list=[],
       name: Name of the rule.
       urls: List of URLs to fetch from. These are assumed to be mirrors and will be
             tried in sequence.
+      files: A list of files to include in this rule's output (after strip_prefix has been applied); all
+             others will be excluded. The default is to output all files in the archive.
       strip_prefix: Prefix to strip from the expanded archive.
+      strip_files: A list of patterns; any files in the archive that match one of these patterns (after
+                   strip_prefix has been applied) will be removed from the rule's output.
       labels: Labels to apply to this rule.
       hashes: List of hashes to verify the rule with.
       config: Configuration file to apply to this subrepo.
@@ -50,7 +54,9 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, labels:list=[],
     return new_http_archive(
         name = name,
         urls = urls,
+        files = files,
         strip_prefix = strip_prefix,
+        strip_files = strip_files,
         labels = labels,
         hashes = hashes,
         config = config,
@@ -58,8 +64,8 @@ def http_archive(name:str, urls:list, strip_prefix:str=None, labels:list=[],
     )
 
 
-def new_http_archive(name:str, urls:list, build_file:str=None, build_file_content:str=None,
-                     strip_prefix:str=None, strip_build:bool=False, plugin:bool=False, labels:list=[],
+def new_http_archive(name:str, urls:list, files:list=[], build_file:str=None, build_file_content:str=None,
+                     strip_prefix:str=None, strip_files:list=[], strip_build:bool=False, plugin:bool=False, labels:list=[],
                      hashes:str|list&sha256=None,username:str=None, password_file:str=None, headers:dict={}, secret_headers:dict={},
                      config:str=None, bazel_compat:bool=False, visibility:list=None, pass_env:list=[]):
     """Fetches a remote file over HTTP and expands its contents, combined with a BUILD file.
@@ -76,10 +82,14 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
       name: Name of the rule.
       urls: List of URLs to fetch from. These are assumed to be mirrors and will be
                    tried in sequence.
+      files: A list of files to include in this rule's output (after strip_prefix has been applied); all
+             others will be excluded. The default is to output all files in the archive.
       build_file: The file to use as a BUILD file for this subrepository.
       build_file_content: Text content to use for the BUILD file for the subrepository.
                           We suggest using build_file instead, but this is provided for Bazel compatibility.
       strip_prefix: Prefix to strip from the expanded archive.
+      strip_files: A list of patterns; any files in the archive that match one of these patterns (after
+                   strip_prefix has been applied) will be removed from the rule's output.
       strip_build: True to strip any BUILD files from the archive after download.
       labels: Labels to apply to this rule.
       hashes: List of hashes to verify the rule with.
@@ -108,16 +118,19 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         secret_headers = secret_headers,
         pass_env = pass_env,
     )
+    cmd_out = f"$TMP_DIR/{name}" if files else "$OUT"
     if strip_prefix:
-        cmd = '$TOOL x $SRCS_REMOTE -o "$OUT" -s ' + strip_prefix
+        cmd = f'$TOOL x $SRCS_REMOTE -o "{cmd_out}" -s ' + strip_prefix
     else:
-        cmd = '$TOOL x $SRCS_REMOTE -o "$OUT"'
+        cmd = f'$TOOL x $SRCS_REMOTE -o "{cmd_out}"'
+    if strip_files:
+        cmd += " && rm -rf " + " ".join([f'"{cmd_out}/{s}"' for s in strip_files])
     if strip_build:
         cmd += ' && find . ' + ' -o '.join([f'-name {name}' for name in CONFIG.BUILD_FILE_NAMES + ["WORKSPACE"]]) + ' | xargs rm -f'
     if build_file:
-        cmd += ' && mv $SRCS_BUILD "$OUT/' + CONFIG.BUILD_FILE_NAMES[0] + '"'
+        cmd += f' && mv $SRCS_BUILD "{cmd_out}/' + CONFIG.BUILD_FILE_NAMES[0] + '"'
     elif build_file_content:
-        cmd += ' && cat > "$OUT"/%s << EOF\n%s\nEOF' % (CONFIG.BUILD_FILE_NAMES[0], build_file_content)
+        cmd += f' && cat > "{cmd_out}"/%s << EOF\n%s\nEOF' % (CONFIG.BUILD_FILE_NAMES[0], build_file_content)
 
     extract_rule = build_rule(
         name = name,
@@ -126,7 +139,7 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
             'build': [build_file],
         },
         tools = [CONFIG.JARCAT_TOOL],
-        outs = [name],
+        outs = [f"{name}/{path}" for path in files] if files else [name],
         cmd = cmd,
         _subrepo = True,
         labels = labels,
@@ -165,8 +178,8 @@ def new_local_repository(name:str, path:str):
     )
 
 
-def github_repo(name:str, repo:str, revision:str, build_file:str=None, labels:list=[],
-                hashes:str|list=None, strip_prefix:str=None, strip_build:bool=False, config:str=None,
+def github_repo(name:str, repo:str, revision:str, files:list=[], build_file:str=None, labels:list=[],
+    hashes:str|list=None, strip_prefix:str=None, strip_files:list=[], strip_build:bool=False, config:str=None,
                 access_token:str=None, bazel_compat:bool=False):
     """Defines a new subrepo corresponding to a Github project.
 
@@ -177,10 +190,14 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, labels:li
       name: Name of the rule.
       repo: Github repo to fetch from (e.g. "thought-machine/please").
       revision: Revision to download. This can be either a release version, commit or branch.
+      files: A list of files to include in this rule's output (after strip_prefix has been applied); all
+             others will be excluded. The default is to output all files in the repository.
       build_file: The file to use as a BUILD file for this subrepository.
       labels: Labels to apply to this rule.
       hashes: List of hashes to verify the rule with.
       strip_prefix: Prefix to strip from the contents of the zip. Is usually autodetected for you.
+      strip_files: A list of patterns; any files in the repository that match one of these patterns (after
+                   strip_prefix has been applied) will be removed from the rule's output.
       strip_build: True to strip any BUILD files from the archive after download.
       access_token: An environment variable containing a github personal access token. This can be used to access
                     private repos.
@@ -212,7 +229,9 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, labels:li
     return new_http_archive(
         name = name,
         urls = [f'https://github.com/{org}/{repo}/archive/{revision}.zip'],
+        files = files,
         strip_prefix = strip_prefix or prefix,
+        strip_files = strip_files,
         strip_build = strip_build,
         build_file = build_file,
         labels = labels,
@@ -224,8 +243,8 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, labels:li
     )
 
 
-def gitlab_repo(name:str, repo:str, revision:str, instance:str="gitlab.com", build_file:str=None,
-                labels:list=[], hashes:str|list=None, strip_prefix:str=None, strip_build:bool=False,
+def gitlab_repo(name:str, repo:str, revision:str, files:list=[], instance:str="gitlab.com", build_file:str=None,
+                labels:list=[], hashes:str|list=None, strip_prefix:str=None, strip_files:list=[], strip_build:bool=False,
                 config:str=None, bazel_compat:bool=False):
     """Defines a new subrepo corresponding to a GitLab project.
 
@@ -235,6 +254,8 @@ def gitlab_repo(name:str, repo:str, revision:str, instance:str="gitlab.com", bui
       name: Name of the rule.
       repo: GitLab repository to fetch from (e.g. "gitlab-org/gitlab-foss").
       revision: Revision to download.
+      files: A list of files to include in this rule's output (after strip_prefix has been applied); all
+             others will be excluded. The default is to output all files in the repository.
       instance: The root URL of the GitLab instance to fetch from (e.g. "gitlab.gnome.org" for the
                 GNOME GitLab instance at https://gitlab.gnome.org). Defaults to "gitlab.com", the
                 official public GitLab instance.
@@ -243,6 +264,8 @@ def gitlab_repo(name:str, repo:str, revision:str, instance:str="gitlab.com", bui
       hashes: List of hashes to verify the rule with.
       strip_prefix: Prefix to strip from the contents of the zip. This is usually automatically
                     detected.
+      strip_files: A list of patterns; any files in the repository that match one of these patterns (after
+                   strip_prefix has been applied) will be removed from the rule's output.
       strip_build: True to strip any BUILD files from the archive after download.
       config: Configuration file to apply to this subrepo.
       bazel_compat: Shorthand to turn on Bazel compatibility. This is equivalent to
@@ -257,7 +280,9 @@ def gitlab_repo(name:str, repo:str, revision:str, instance:str="gitlab.com", bui
     return new_http_archive(
         name = name,
         urls = [f'https://{instance}/{org}/{repo}/-/archive/{revision}/{repo}-{revision}.zip'],
+        files = files,
         strip_prefix = strip_prefix or prefix,
+        strip_files = strip_files,
         strip_build = strip_build,
         build_file = build_file,
         labels = labels,
