@@ -304,15 +304,16 @@ func normaliseAndValidatePluginConfigKeys(config *Configuration) {
 		newExtraValues := make(map[string][]string, len(plugin.ExtraValues))
 		for k, v := range plugin.ExtraValues {
 			newExtraValues[strings.ToLower(k)] = v
-			valid := false
+			// Can only validate if there's anything to check against. The plugin config
+			// hasn't necessarily been loaded yet.
+			valid := len(config.PluginConfig) == 0
 			for _, val := range config.PluginConfig {
 				if strings.ToLower(k) == strings.ToLower(val.ConfigKey) {
 					valid = true
+					break
 				}
 			}
-			// Only emit a warning if there was anything to check against, because we may not have
-			// loaded the plugin config yet
-			if len(config.PluginConfig) != 0 && !valid {
+			if !valid {
 				log.Warningf("\"%s\" is not a recognised config field for plugin \"%s\"", k, plugin.Target.Name)
 			}
 		}
