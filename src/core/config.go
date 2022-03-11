@@ -82,7 +82,8 @@ func readConfigFile(config *Configuration, filename string, subrepo bool) error 
 	if subrepo {
 		checkPluginVersionRequirements(config)
 	}
-	normalisePluginConfigKeys(config)
+
+	normaliseAndValidatePluginConfigKeys(config)
 
 	return nil
 }
@@ -296,12 +297,24 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	})
 }
 
-// normalisePluginConfigKeys converts all config for plugins to lower case
-func normalisePluginConfigKeys(config *Configuration) {
+// normaliseAndValidatePluginConfigKeys converts all config for plugins to lower case, and
+// validates against config fields provided by the plugin
+func normaliseAndValidatePluginConfigKeys(config *Configuration) {
 	for _, plugin := range config.Plugin {
 		newExtraValues := make(map[string][]string, len(plugin.ExtraValues))
 		for k, v := range plugin.ExtraValues {
 			newExtraValues[strings.ToLower(k)] = v
+			valid := false
+			for _, val := range config.PluginConfig {
+				if strings.ToLower(k) == strings.ToLower(val.ConfigKey) {
+					valid = true
+				}
+			}
+			// Only emit a warning if there was anything to check against, because we may not have
+			// loaded the plugin config yet
+			if len(config.PluginConfig) != 0 && !valid {
+				log.Warningf("\"%s\" is not a recognised config field for plugin \"%s\"", k, plugin.Target.Name)
+			}
 		}
 		plugin.ExtraValues = newExtraValues
 	}
