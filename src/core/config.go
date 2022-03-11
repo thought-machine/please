@@ -308,7 +308,7 @@ func normaliseAndValidatePluginConfigKeys(config *Configuration) {
 			// hasn't necessarily been loaded yet.
 			valid := len(config.PluginConfig) == 0
 			for _, val := range config.PluginConfig {
-				if strings.ToLower(k) == strings.ToLower(val.ConfigKey) {
+				if strings.EqualFold(k, val.ConfigKey) {
 					valid = true
 					break
 				}
