@@ -314,7 +314,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	pkg := s.contextPackage()
 	pkgLabel := pkg.Label()
-	if l.Subrepo == pkgLabel.Subrepo && l.PackageName == pkgLabel.PackageName {
+	if l.Subrepo == pkgLabel.Subrepo && l.PackageName == pkgLabel.PackageName && s.subincludeLabel == nil {
 		// This is a subinclude in the same package, check the target exists.
 		s.NAssert(pkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
