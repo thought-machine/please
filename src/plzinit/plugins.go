@@ -148,6 +148,13 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 		return file
 	}
 
+	// Inject the preloadsubincludes
+	// TODO(sam): We can get the actual name of the package containing the build_defs
+	// if we build the plugin target, which we do below. Refactor this to build the target
+	// earlier and use the build_defs dir specified in the plugin config
+	subincludeStr := "///" + plugin + "//build_defs:" + plugin
+	file = ast.InjectField(file, "preloadsubincludes", subincludeStr, "parse", "", true)
+
 	// Write plugin target value
 	file = ast.InjectField(file, "Target", "//plugins:"+plugin, section, plugin, false)
 
