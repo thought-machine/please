@@ -268,6 +268,11 @@ var opts struct {
 		} `command:"pleasings" description:"Initialises the pleasings repo"`
 		Pleasew struct {
 		} `command:"pleasew" description:"Initialises the pleasew wrapper script"`
+		Plugin struct {
+			Args struct {
+				Plugins []string `positional-arg-name:"plugin" required:"true" description:"Plugins to install"`
+			} `positional-args:"true"`
+		} `command:"plugin" hidden:"true" description:"Install a plugin and migrate any language-specific config values"`
 	} `command:"init" subcommands-optional:"true" description:"Initialises a .plzconfig file in the current directory"`
 
 	Gc struct {
@@ -433,7 +438,7 @@ var opts struct {
 }
 
 // Definitions of what we do for each command.
-// Functions are called after args are parsed and return true for success.
+// Functions are called after args are parsed and return a POSIX exit code (0 means success).
 var buildFunctions = map[string]func() int{
 	"build": func() int {
 		success, state := runBuild(opts.Build.Args.Targets, true, false, false)
@@ -674,6 +679,10 @@ var buildFunctions = map[string]func() int{
 	},
 	"init.pleasew": func() int {
 		plzinit.InitWrapperScript()
+		return 0
+	},
+	"init.plugin": func() int {
+		plzinit.InitPlugins(opts.Init.Plugin.Args.Plugins)
 		return 0
 	},
 	"export": func() int {

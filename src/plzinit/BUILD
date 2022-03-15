@@ -9,10 +9,12 @@ go_library(
         "//src/assets",
         "//src/cli",
         "//src/core",
+        "//src/plz",
         "//src/fs",
         "//src/scm",
         "//third_party/go:levenshtein",
         "//third_party/go:logging",
+        "//third_party/go:gcfg",
     ],
 )
 
