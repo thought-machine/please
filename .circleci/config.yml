@@ -48,7 +48,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20210817
+       - image: thoughtmachine/please_ubuntu:20220316
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
@@ -98,7 +98,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu_alt:20210817
+       - image: thoughtmachine/please_ubuntu_alt:20220316
      resource_class: large
      environment:
        PLZ_ARGS: "-p -c cover --profile ci-alt"
