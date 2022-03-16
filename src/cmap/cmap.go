@@ -18,35 +18,17 @@ const DefaultShardCount = 1 << 8
 
 // A Map is the top-level map type. All functions on it are threadsafe.
 // It should be constructed via New() rather than creating an instance directly.
-type Map[K comparable, V any, H Hasher[K]] struct {
+type Map[K comparable, V any, H func(K) uint32] struct {
 	shards []shard[K, V]
-	hasher H
 	mask   uint32
-}
-
-// A Hasher is our definition of how to create a top-level hash of a type.
-type Hasher[K any] interface {
-	Hash(key K) uint32
-}
-
-// HasherFunc is a conversion type to turn a function into a Hasher.
-type HasherFunc[K any] func(K) uint32
-
-// Hash implements Hasher.
-func (f HasherFunc[K]) Hash(key K) uint32 {
-	return f(key)
-}
-
-// NewHasherFunc is a wrapper for creating a new HasherFunc
-func NewHasherFunc[K any] (f func (K) uint32) Hasher[K] {
-	return HasherFunc[K](f)
+	hasher H
 }
 
 // New creates a new Map using the given hasher to hash items in it.
 // The shard count must be a power of 2; it will panic if not.
 // Higher shard counts will improve concurrency but consume more memory.
 // The DefaultShardCount of 256 is reasonable for a large map.
-func New[K comparable, V any, H Hasher[K]](shardCount uint32, hasher H) *Map[K, V, H] {
+func New[K comparable, V any, H func(K) uint32](shardCount uint32, hasher H) *Map[K, V, H] {
 	mask := shardCount - 1
 	if (shardCount & mask) != 0 {
 		panic(fmt.Sprintf("Shard count %d is not a power of 2", shardCount))
@@ -63,7 +45,7 @@ func New[K comparable, V any, H Hasher[K]](shardCount uint32, hasher H) *Map[K, 
 }
 
 // NewV is like New but allows passing a V so you don't have to explicitly instantiate.
-func NewV[K comparable, V any, H Hasher[K]](v V, shardCount uint32, hasher H) *Map[K, V, H] {
+func NewV[K comparable, V any, H func(K) uint32](v V, shardCount uint32, hasher H) *Map[K, V, H] {
 	return New[K, V, H](shardCount, hasher)
 }
 
@@ -71,19 +53,19 @@ func NewV[K comparable, V any, H Hasher[K]](v V, shardCount uint32, hasher H) *M
 // Add adds the new item to the map.
 // It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
 func (m *Map[K, V, H]) Add(key K, val V) bool {
-	return m.shards[m.hasher.Hash(key)&m.mask].Set(key, val, false)
+	return m.shards[m.hasher(key)&m.mask].Set(key, val, false)
 }
 
 // Set is the equivalent of `map[key] = val`.
 // It always overwrites any key that existed before.
 func (m *Map[K, V, H]) Set(key K, val V) {
-	m.shards[m.hasher.Hash(key)&m.mask].Set(key, val, true)
+	m.shards[m.hasher(key)&m.mask].Set(key, val, true)
 }
 
 // Get returns the value corresponding to the given key, or its zero value if
 // the key doesn't exist in the map.
 func (m *Map[K, V, H]) Get(key K) V {
-	v, _, _ := m.shards[m.hasher.Hash(key)&m.mask].Get(key)
+	v, _, _ := m.shards[m.hasher(key)&m.mask].Get(key)
 	return v
 }
 
@@ -93,7 +75,7 @@ func (m *Map[K, V, H]) Get(key K) V {
 // The third return value is true if this is the first call that is awaiting this key.
 // It's always false if the key exists.
 func (m *Map[K, V, H]) GetOrWait(key K) (val V, wait <-chan struct{}, first bool) {
-	return m.shards[m.hasher.Hash(key)&m.mask].Get(key)
+	return m.shards[m.hasher(key)&m.mask].Get(key)
 }
 
 // Values returns a slice of all the current values in the map.

@@ -20,7 +20,7 @@ import (
 type interpreter struct {
 	scope       *scope
 	parser      *Parser
-	subincludes *cmap.Map[string, pyDict]
+	subincludes *cmap.Map[string, pyDict, func(string) uint32]
 
 	config *pyConfig
 
