@@ -11,7 +11,7 @@ go_module(
     name = "xsys",
     install = ["..."],
     module = "golang.org/x/sys",
-    version = "765f4ea38db36397e827c4153018aa272eed7835",
+    version = "039c03cc5b867cd7b06a19ff375be5c945c80b10",
 )
 
 go_module(
