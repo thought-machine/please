@@ -14,7 +14,7 @@ func Fnv32(s string) uint32 {
 	return hash
 }
 
-// Fnv32s returns a 32-bit FNV-1 hash of a series of strings.
+// Fnv32s returns a 32-bit FNV-1 hash of the concatenation of a series of strings.
 // This is a convenient hash function for a Map based on a struct containing multiple strings.
 func Fnv32s(s ...string) uint32 {
 	hash := initial

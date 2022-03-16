@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/OneOfOne/cmap/hashers"
-
 	"github.com/thought-machine/please/src/cmap"
 )
 
@@ -151,13 +149,13 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
 		targets: cmap.NewDefaultV(&BuildTarget{}, func(key BuildLabel) uint32 {
-			return hashers.Fnv32(key.Subrepo) ^ hashers.Fnv32(key.PackageName) ^ hashers.Fnv32(key.Name)
+			return cmap.Fnv32s(key.Subrepo, key.PackageName, key.Name)
 		}),
 		packages: cmap.NewDefaultV(&Package{}, func(key packageKey) uint32 {
-			return hashers.Fnv32(key.Subrepo) ^ hashers.Fnv32(key.Name)
+			return cmap.Fnv32s(key.Subrepo, key.Name)
 		}),
 		subrepos: cmap.NewSmallV(&Subrepo{}, func(name string) uint32 {
-			return hashers.Fnv32(name)
+			return cmap.Fnv32(name)
 		}),
 	}
 	return g

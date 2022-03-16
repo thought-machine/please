@@ -9,8 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/OneOfOne/cmap/hashers"
-
 	"github.com/thought-machine/please/src/cmap"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
