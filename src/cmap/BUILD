@@ -21,3 +21,12 @@ go_benchmark(
         "//third_party/go:testify",
     ],
 )
+
+go_benchmark(
+    name = "hash_benchmark",
+    srcs = ["hash_test.go"],
+    deps = [
+        ":cmap",
+        "//third_party/go:testify",
+    ],
+)
