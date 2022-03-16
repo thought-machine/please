@@ -17,11 +17,11 @@ import (
 // relationships, especially reverse dependencies which are calculated here.
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
-	targets *cmap.Map[BuildLabel, *BuildTarget]
+	targets *cmap.Map[BuildLabel, *BuildTarget, cmap.Hasher[BuildLabel]]
 	// Map of all currently known packages.
-	packages *cmap.Map[packageKey, *Package]
+	packages *cmap.Map[packageKey, *Package, cmap.Hasher[packageKey]]
 	// Registered subrepos, as a map of their name to their root.
-	subrepos *cmap.Map[string, *Subrepo]
+	subrepos *cmap.Map[string, *Subrepo, cmap.Hasher[string]]
 }
 
 // AddTarget adds a new target to the graph.
