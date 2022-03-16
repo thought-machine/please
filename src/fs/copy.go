@@ -21,10 +21,9 @@ func CopyOrLinkFile(from, to string, fromMode, toMode os.FileMode, link, fallbac
 		if err := os.Link(from, to); err == nil || !fallback {
 			return err
 		}
-	}
-	// Linking would ignore toMode, using the same mode as the from file. We should make the fallback work the same
-	// here. Also if the toMode is 0, we should use the mode from the from file.
-	if link || toMode == 0 {
+
+		// Linking would ignore toMode, using the same mode as the from file. We should make the fallback work the same
+		// here.
 		info, err := os.Lstat(from)
 		if err != nil {
 			return err
