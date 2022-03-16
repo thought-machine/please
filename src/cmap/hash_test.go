@@ -48,7 +48,46 @@ func BenchmarkFnv32_Ref20(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkFnv32_1kXor(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		if x := Fnv32(input1k) ^ Fnv32(input1k) ^ Fnv32(input1k); x == initial {
+			b.Fatalf("incorrect hash")
+		}
+	}
+}
+
+func BenchmarkFnv32_1kS(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		if x := Fnv32s(input1k, input1k, input1k); x == initial {
+			b.Fatalf("incorrect hash")
+		}
+	}
+}
+
+func BenchmarkFnv32_20Xor(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		if x := Fnv32(input20) ^ Fnv32(input20) ^ Fnv32(input20); x == initial {
+			b.Fatalf("incorrect hash")
+		}
+	}
+}
+
+func BenchmarkFnv32_20S(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		if x := Fnv32s(input20, input20, input20); x == initial {
+			b.Fatalf("incorrect hash")
+		}
+	}
+}
+
 // ref is our reference implementation, from OneOfOne/cmap/hashers
+// N.B. As of Go 1.18 the workaround is no longer needed (hence why we have our own), this
+//      is reproduced verbatim as a reference implementation.
 func ref(s string) (hash uint32) {
 	const prime32 = 16777619
 	if hash = 2166136261; s == "" {

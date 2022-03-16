@@ -24,7 +24,6 @@ const SmallShardCount = 4
 type Map[K comparable, V any, H func(K) uint32] struct {
 	shards []shard[K, V]
 	mask   uint32
-	hasher H
 }
 
 // New creates a new Map using the given hasher to hash items in it.
