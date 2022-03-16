@@ -16,6 +16,9 @@ import (
 // DefaultShardCount is a reasonable default shard count for large maps.
 const DefaultShardCount = 1 << 8
 
+// SmallShardCount is a shard count useful for relatively small maps.
+const SmallShardCount = 4
+
 // A Map is the top-level map type. All functions on it are threadsafe.
 // It should be constructed via New() rather than creating an instance directly.
 type Map[K comparable, V any, H func(K) uint32] struct {
@@ -49,6 +52,15 @@ func NewV[K comparable, V any, H func(K) uint32](v V, shardCount uint32, hasher 
 	return New[K, V, H](shardCount, hasher)
 }
 
+// NewDefaultV is like NewV but sets the default shard count automatically.
+func NewDefaultV[K comparable, V any, H func(K) uint32](v V, hasher H) *Map[K, V, H] {
+	return New[K, V, H](DefaultShardCount, hasher)
+}
+
+// NewSmallV is similar to NewDefaultV but chooses a small number of shards instead.
+func NewSmallV[K comparable, V any, H func(K) uint32](v V, hasher H) *Map[K, V, H] {
+	return New[K, V, H](SmallShardCount, hasher)
+}
 
 // Add adds the new item to the map.
 // It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
@@ -62,7 +74,7 @@ func (m *Map[K, V, H]) Set(key K, val V) {
 	m.shards[m.hasher(key)&m.mask].Set(key, val, true)
 }
 
-// Get returns the value corresponding to the given key, or its zero value if
+// Get returns the value https://github.com/peterebden/please/pull/new/generic-cmap-4corresponding to the given key, or its zero value if
 // the key doesn't exist in the map.
 func (m *Map[K, V, H]) Get(key K) V {
 	v, _, _ := m.shards[m.hasher(key)&m.mask].Get(key)

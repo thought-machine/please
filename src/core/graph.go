@@ -150,13 +150,13 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // NewGraph constructs and returns a new BuildGraph.
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
-		targets: cmap.NewV(&BuildTarget{}, cmap.DefaultShardCount, func(key BuildLabel) uint32 {
+		targets: cmap.NewDefaultV(&BuildTarget{}, func(key BuildLabel) uint32 {
 			return hashers.Fnv32(key.Subrepo) ^ hashers.Fnv32(key.PackageName) ^ hashers.Fnv32(key.Name)
 		}),
-		packages: cmap.NewV(&Package{}, cmap.DefaultShardCount, func(key packageKey) uint32 {
+		packages: cmap.NewDefaultV(&Package{}, func(key packageKey) uint32 {
 			return hashers.Fnv32(key.Subrepo) ^ hashers.Fnv32(key.Name)
 		}),
-		subrepos: cmap.NewV(&Subrepo{}, 4, func(name string) uint32 {
+		subrepos: cmap.NewSmallV(&Subrepo{}, func(name string) uint32 {
 			return hashers.Fnv32(name)
 		}),
 	}
