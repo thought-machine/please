@@ -531,7 +531,7 @@ var buildFunctions = map[string]func() int{
 				log.Fatalf("%v", err)
 			}
 
-			if err := fs.RecursiveLink(from, to, 0644); err != nil {
+			if err := fs.RecursiveLink(from, to); err != nil {
 				log.Fatalf("failed to move output: %v", err)
 			}
 		}

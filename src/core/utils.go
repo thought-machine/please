@@ -353,7 +353,7 @@ func PrepareSource(sourcePath string, tmpPath string) error {
 	if !PathExists(sourcePath) {
 		return fmt.Errorf("Source file %s doesn't exist", sourcePath)
 	}
-	return fs.RecursiveLink(sourcePath, tmpPath, 0)
+	return fs.RecursiveLink(sourcePath, tmpPath)
 }
 
 // PrepareSourcePair prepares a source file for a build.

@@ -168,7 +168,7 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 		log.Warning("Failed to setup cache directory: %s", err)
 		return 0
 	}
-	if err := fs.RecursiveLink(outFile, cachedFile, target.OutMode()); err != nil {
+	if err := fs.RecursiveLink(outFile, cachedFile); err != nil {
 		// Cannot hardlink files into the cache, must copy them for reals.
 		log.Warning("Failed to store cache file %s: %s", cachedFile, err)
 	}
@@ -214,7 +214,7 @@ func (cache *dirCache) retrieveFiles(target *core.BuildTarget, cacheDir string, 
 		}
 		cachedOut := path.Join(cacheDir, out)
 		log.Debug("Retrieving %s: %s from dir cache...", target.Label, cachedOut)
-		if err := fs.RecursiveLink(cachedOut, realOut, target.OutMode()); err != nil {
+		if err := fs.RecursiveLink(cachedOut, realOut); err != nil {
 			return false, err
 		}
 	}
