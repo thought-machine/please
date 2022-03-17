@@ -1,4 +1,4 @@
-FROM ubuntu:focal
+FROM ubuntu:bionic
 MAINTAINER peter.ebden@gmail.com
 
 
