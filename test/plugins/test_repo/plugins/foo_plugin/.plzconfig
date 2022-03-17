@@ -7,11 +7,17 @@ name = foo
 [Plugin "foo"]
 ModulePath = foolang
 CompileFlag = -sha1
+BarTool = overridden
 
 [PluginConfig "fooc_tool"]
 ConfigKey = FoocTool
 Inherit = true
 DefaultValue = fooc
+
+[PluginConfig "bar_tool"]
+ConfigKey = BarTool
+Inherit = true
+DefaultValue = bar
 
 [PluginConfig "module_path"]
 ConfigKey = ModulePath

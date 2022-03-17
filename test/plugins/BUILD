@@ -67,3 +67,13 @@ please_repo_e2e_test(
     plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin cc; plz init plugin cc; lines=$(cat plugins/BUILD | wc -l); if [ $lines -gt 6 ]; then exit 1; else exit 0; fi",
     repo = "init_plugin_test",
 )
+
+please_repo_e2e_test(
+    name = "inherit_default_test",
+    expected_output = {
+        "plz-out/gen/foo/test/bar_inherit_test": "bar",
+        "plugins/foo_plugin/plz-out/gen/test/bar_inherit_test": "overridden",
+    },
+    plz_command = "plz build -o foo.modulepath:something ///foo//test:bar_inherit_test && (cd plugins/foo_plugin && plz build  -o foo.modulepath:something //test:bar_inherit_test)",
+    repo = "test_repo",
+)
