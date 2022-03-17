@@ -175,7 +175,7 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 	// Validate against allowedKeys
 	for k := range pluginState.Config.Plugin[pluginName].ExtraValues {
 		if _, ok := allowedKeys[strings.ToLower(k)]; !ok {
-			log.Warning("Unrecognised config value \"%v\" for plugin \"%v\"", k, pluginName)
+			log.Warning("Unrecognised config key \"%v\" for plugin \"%v\"", k, pluginName)
 		}
 	}
 
