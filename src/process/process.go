@@ -40,9 +40,6 @@ type Executor struct {
 }
 
 func NewSandboxingExecutor(usePleaseSandbox bool, namespace NamespacingPolicy, sandboxTool string) *Executor {
-	if usePleaseSandbox {
-		log.Warning("The please built in sandboxing is experimental and may not work as expected. Caveat usor!")
-	}
 	o := &Executor{
 		namespace:        namespace,
 		usePleaseSandbox: usePleaseSandbox,
