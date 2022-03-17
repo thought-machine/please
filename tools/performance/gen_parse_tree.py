@@ -59,6 +59,14 @@ LANGUAGE_TEMPLATE = """
 )
 """
 
+GO_SRC_TEMPLATE = """
+package {dir}
+"""
+
+LANGUAGE_SRC_TEMPLATES = {
+    'go': GO_SRC_TEMPLATE,
+}
+
 
 def main(argv):
     # Ensure this is deterministic
@@ -71,14 +79,15 @@ def main(argv):
         shutil.rmtree(FLAGS.root)
     for i in progress('Generating files', range(FLAGS.size)):
         depth = random.randint(1, 1 + int(log10(FLAGS.size)))
-        dir = '/'.join([FLAGS.root] + [random.choice(DIRNAMES) for _ in range(depth)])
+        relative_dir = '/'.join([random.choice(DIRNAMES) for _ in range(depth)])
+        dir = os.path.join(FLAGS.root, relative_dir)
         if dir in pkgset:
             continue
         os.makedirs(dir, exist_ok=True)
         base = os.path.basename(dir)
         filename = os.path.join(dir, 'BUILD.plz')
+        lang = random.choice(LANGUAGES)
         with open(filename, 'w') as f:
-            lang = random.choice(LANGUAGES)
             f.write(LANGUAGE_TEMPLATE.format(
                 name = base,
                 lang = lang,
@@ -86,6 +95,16 @@ def main(argv):
                 deps = choose_deps(packages),
                 test_deps = [':' + base] + choose_deps(packages) + TEST_DEPS[lang],
             ))
+        src_template = LANGUAGE_SRC_TEMPLATES.get(lang)
+        if src_template:
+            basedir = os.path.basename(dir)
+            ext = LANGUAGE_EXTENSIONS[lang]
+            library_filename = os.path.join(dir, f'{basedir}.{ext}')
+            with open(library_filename, 'w') as f:
+                f.write(src_template.format(dir = relative_dir))
+            test_filename = os.path.join(dir, f'{basedir}_test.{ext}')
+            with open(test_filename, 'w') as f:
+                f.write(src_template.format(dir = relative_dir))
         packages.append(dir)
         pkgset.add(dir)
         filenames.append(filename)
