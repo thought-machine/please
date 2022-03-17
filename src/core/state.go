@@ -1034,45 +1034,32 @@ func (state *BuildState) ForTarget(target *BuildTarget) *BuildState {
 
 // ForArch creates a copy of this BuildState for a different architecture.
 func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
-	// Check if we've got this one already.
-	// N.B. This implicitly handles the case of the host architecture
-	if s := state.findArch(arch); s != nil {
-		return s
-	}
-	// Copy with the architecture-specific config file.
-	// This is slightly wrong in that other things (e.g. user-specified command line overrides) should
-	// in fact take priority over this, but that's a lot more fiddly to get right.
-	s := state.forConfig(".plzconfig_" + arch.String())
-	s.Arch = arch
-
-	s.Parser.NewParser(s)
-	return s
-}
-
-// findArch returns an existing state for the given architecture, if one exists.
-func (state *BuildState) findArch(arch cli.Arch) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
+
 	for _, s := range state.progress.allStates {
 		if s.Arch == arch {
 			return s
 		}
 	}
-	return nil
-}
 
-// forConfig creates a copy of this BuildState based on the given config files.
-func (state *BuildState) forConfig(configFiles ...string) *BuildState {
-	state.progress.mutex.Lock()
-	defer state.progress.mutex.Unlock()
+	// Copy with the architecture-specific config file.
+	// This is slightly wrong in that other things (e.g. user-specified command line overrides) should
+	// in fact take priority over this, but that's a lot more fiddly to get right.
+
 	// Duplicate & alter configuration
-
-	config := state.Config.copyConfig()
-	readConfigFiles(config, configFiles)
 	s := &BuildState{}
 	*s = *state
+
+	config := state.Config.copyConfig()
+	readConfigFiles(config, []string{".plzconfig_" + arch.String()})
+
 	s.Config = config
+	s.Arch = arch
+
+	s.Parser.NewParser(s)
 	state.progress.allStates = append(state.progress.allStates, s)
+
 	return s
 }
 
@@ -1086,13 +1073,14 @@ func readConfigFiles(config *Configuration, configFiles []string) {
 
 // ForSubrepo creates a new state for the given subrepo
 func (state *BuildState) ForSubrepo(name string, bazelCompat bool, config ...string) *BuildState {
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
+
 	for _, s := range state.progress.allStates {
 		if s.CurrentSubrepo == name {
 			return s
 		}
 	}
-	state.progress.mutex.Lock()
-	defer state.progress.mutex.Unlock()
 
 	s := &BuildState{}
 	*s = *state
@@ -1102,7 +1090,6 @@ func (state *BuildState) ForSubrepo(name string, bazelCompat bool, config ...str
 
 	s.CurrentSubrepo = name
 	s.ParentState = state
-	state.progress.allStates = append(state.progress.allStates, s)
 
 	if bazelCompat {
 		s.Config.Bazel.Compatibility = true
@@ -1110,6 +1097,8 @@ func (state *BuildState) ForSubrepo(name string, bazelCompat bool, config ...str
 	}
 
 	s.Parser.NewParser(s)
+	state.progress.allStates = append(state.progress.allStates, s)
+
 	return s
 }
 
