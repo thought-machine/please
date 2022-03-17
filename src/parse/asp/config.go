@@ -122,7 +122,7 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 		extraVals = getExtraVals(pkgState.RepoConfig, pluginName)
 		ret = pluginConfig(pluginState, pkgState.ParentState)
 	}
-	allowedKeys := make(map[string]bool)
+	allowedKeys := map[string]bool{}
 	for key, definition := range pluginState.RepoConfig.PluginConfig {
 		allowedKeys[strings.ToLower(definition.ConfigKey)] = true
 		key = strings.ToUpper(key)
