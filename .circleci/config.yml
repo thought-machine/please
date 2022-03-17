@@ -3,16 +3,16 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_alpine:20210817
+       - image: thoughtmachine/please_alpine:20220316
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-alpine-v5-{{ checksum "go.mod" }}
+           key: go-mod-alpine-v6-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-alpine-main-v5-{{ checksum "third_party/go/BUILD" }}
+           key: go-alpine-main-v6-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-alpine-main-v2-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -32,11 +32,11 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-mod-alpine-v5-{{ checksum "go.mod" }}
+           key: go-mod-alpine-v6-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-alpine-main-v5-{{ checksum "third_party/go/BUILD" }}
+           key: go-alpine-main-v6-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-alpine-main-v2-{{ checksum "third_party/python/BUILD" }}
@@ -48,16 +48,16 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20210817
+       - image: thoughtmachine/please_ubuntu:20220317
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-linux-v5-{{ checksum "go.mod" }}
+           key: go-mod-linux-v6-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-linux-main-v5-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v6-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-main-v2-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -82,11 +82,11 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-mod-linux-v5-{{ checksum "go.mod" }}
+           key: go-mod-linux-v6-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-linux-main-v5-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v6-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-linux-main-v2-{{ checksum "third_party/python/BUILD" }}
@@ -98,7 +98,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu_alt:20210817
+       - image: thoughtmachine/please_ubuntu_alt:20220317
      resource_class: large
      environment:
        PLZ_ARGS: "-p -c cover --profile ci-alt"
@@ -106,9 +106,9 @@ jobs:
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-linux-alt-v4-{{ checksum "go.mod" }}
+           key: go-mod-linux-alt-v5-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-linux-alt-v4-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-alt-v5-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -121,11 +121,11 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-mod-linux-alt-v4-{{ checksum "go.mod" }}
+           key: go-mod-linux-alt-v5-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-linux-alt-v4-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-alt-v5-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: java-toolchain-linux-alt-v1-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
@@ -142,7 +142,7 @@ jobs:
        - attach_workspace:
            at: /tmp/workspace
        - restore_cache:
-           key: go-darwin-arm64-v2-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-v3-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Extract plz
            command: tar -xzf /tmp/workspace/darwin_amd64/please_*.tar.gz
@@ -156,7 +156,7 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-darwin-arm64-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-v3-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
 
    build-freebsd:
@@ -194,9 +194,9 @@ jobs:
       steps:
        - checkout
        - restore_cache:
-           key: go-mod-darwin-v4-{{ checksum "bootstrap.sh" }}
+           key: go-mod-darwin-v5-{{ checksum "bootstrap.sh" }}
        - restore_cache:
-           key: go-darwin-go115-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go118-v1-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-darwin-py372-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -221,11 +221,11 @@ jobs:
        - store_artifacts:
            path: /tmp/artifacts
        - save_cache:
-           key: go-mod-darwin-v4-{{ checksum "go.mod" }}
+           key: go-mod-darwin-v5-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-darwin-go115-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go118-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-darwin-py372-{{ checksum "third_party/python/BUILD" }}

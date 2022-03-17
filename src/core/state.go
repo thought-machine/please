@@ -863,7 +863,8 @@ func (state *BuildState) ShouldDownload(target *BuildTarget) bool {
 	// Need to download the target if it was originally requested (and the user didn't pass --nodownload).
 	downloadOriginalTarget := state.OutputDownload == OriginalOutputDownload && state.IsOriginalTarget(target)
 	downloadTransitiveTarget := state.OutputDownload == TransitiveOutputDownload
-	return target.NeededForSubinclude || ((downloadOriginalTarget || downloadTransitiveTarget) && !state.NeedTests)
+	downloadLinkableTarget := state.Config.Build.DownloadLinkable && target.HasLinks(state)
+	return target.NeededForSubinclude || ((downloadOriginalTarget || downloadTransitiveTarget) && !state.NeedTests) || downloadLinkableTarget
 }
 
 // ShouldRebuild returns true if we should force a rebuild of this target (i.e. the user
@@ -1043,6 +1044,8 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// in fact take priority over this, but that's a lot more fiddly to get right.
 	s := state.forConfig(".plzconfig_" + arch.String())
 	s.Arch = arch
+
+	s.Parser.NewParser(s)
 	return s
 }
 
@@ -1171,13 +1174,23 @@ func newXXHash() hash.Hash {
 	return xxhash.New()
 }
 
-func sandboxTool(config *Configuration) string {
+func executorFromConfig(config *Configuration) *process.Executor {
 	tool := config.Sandbox.Tool
-	if filepath.IsAbs(tool) {
-		return tool
+	if !filepath.IsAbs(tool) {
+		var err error
+		tool, err = LookBuildPath(tool, config)
+		if err != nil && (config.Sandbox.Build || config.Sandbox.Test) {
+			log.Fatalf("Can't find sandbox tool %v on the path: %v", config.Sandbox.Tool, err)
+		}
+	} else if !fs.FileExists(tool) {
+		log.Fatalf("Sandbox tool doesn't exist: %v", tool)
 	}
-	sandboxTool, _ := LookBuildPath(tool, config)
-	return sandboxTool
+
+	return process.NewSandboxingExecutor(
+		config.Sandbox.Tool == "" && (config.Sandbox.Build || config.Sandbox.Test),
+		process.NamespacingPolicy(config.Sandbox.Namespace),
+		tool,
+	)
 }
 
 // NewBuildState constructs and returns a new BuildState.
@@ -1199,11 +1212,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			"blake3": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newBlake3, "blake3"),
 			"xxhash": fs.NewPathHasher(RepoRoot, config.Build.Xattrs, newXXHash, "xxhash"),
 		},
-		ProcessExecutor: process.NewSandboxingExecutor(
-			config.Sandbox.Tool == "" && (config.Sandbox.Build || config.Sandbox.Test),
-			process.NamespacingPolicy(config.Sandbox.Namespace),
-			sandboxTool(config),
-		),
+		ProcessExecutor: executorFromConfig(config),
 		StartTime:       startTime,
 		Config:          config,
 		RepoConfig:      config,

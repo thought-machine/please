@@ -21,6 +21,14 @@ func CopyOrLinkFile(from, to string, fromMode, toMode os.FileMode, link, fallbac
 		if err := os.Link(from, to); err == nil || !fallback {
 			return err
 		}
+
+		// Linking would ignore toMode, using the same mode as the from file. We should make the fallback work the same
+		// here.
+		info, err := os.Lstat(from)
+		if err != nil {
+			return err
+		}
+		toMode = info.Mode()
 	}
 	return CopyFile(from, to, toMode)
 }
@@ -35,8 +43,8 @@ func RecursiveCopy(from string, to string, mode os.FileMode) error {
 // Note that you can't hardlink directories so the behaviour is much the same as a recursive copy.
 // If it can't link then it falls back to a copy.
 // 'mode' is the mode of the destination file.
-func RecursiveLink(from string, to string, mode os.FileMode) error {
-	return RecursiveCopyOrLinkFile(from, to, mode, true, true)
+func RecursiveLink(from string, to string) error {
+	return RecursiveCopyOrLinkFile(from, to, 0, true, true)
 }
 
 // RecursiveCopyOrLinkFile recursively copies or links a file or directory.
@@ -67,6 +75,20 @@ func LinkIfNotExists(src, dest string, f LinkFunc) {
 	if PathExists(dest) {
 		return
 	}
+	Walk(src, func(name string, isDir bool) error {
+		if !isDir {
+			fullDest := path.Join(dest, name[len(src):])
+			if err := EnsureDir(fullDest); err != nil {
+				log.Warning("Failed to create directory for %s: %s", fullDest, err)
+			} else if err := f(name, fullDest); err != nil && !os.IsExist(err) {
+				log.Warning("Failed to create %s: %s", fullDest, err)
+			}
+		}
+		return nil
+	})
+}
+
+func LinkDestination(src, dest string, f LinkFunc) {
 	Walk(src, func(name string, isDir bool) error {
 		if !isDir {
 			fullDest := path.Join(dest, name[len(src):])

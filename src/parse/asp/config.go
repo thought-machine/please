@@ -170,9 +170,6 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 			}
 			ret[key] = toPyObject(fullConfigKey, val, definition.Type)
 		}
-		if key == "COMPILE_FLAGS" {
-			log.Warningf("set compile flags to %v from %v", ret[key], pkgState.CurrentSubrepo)
-		}
 	}
 
 	// Validate against allowedKeys
