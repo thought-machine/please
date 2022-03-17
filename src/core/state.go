@@ -1169,10 +1169,10 @@ func executorFromConfig(config *Configuration) *process.Executor {
 		var err error
 		tool, err = LookBuildPath(tool, config)
 		if err != nil && (config.Sandbox.Build || config.Sandbox.Test) {
-			log.Fatalf("Can't find sandbox tool %v on the path: %v", config.Sandbox.Tool, err)
+			log.Warningf("Can't find sandbox tool %v on the path: %v", config.Sandbox.Tool, err)
 		}
 	} else if !fs.FileExists(tool) {
-		log.Fatalf("Sandbox tool doesn't exist: %v", tool)
+		log.Warningf("Sandbox tool doesn't exist: %v", tool)
 	}
 
 	return process.NewSandboxingExecutor(
