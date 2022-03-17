@@ -122,9 +122,9 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 		extraVals = getExtraVals(pkgState.RepoConfig, pluginName)
 		ret = pluginConfig(pluginState, pkgState.ParentState)
 	}
-	allowedKeys := map[string]bool{}
+	definedKeys := map[string]bool{}
 	for key, definition := range pluginState.RepoConfig.PluginConfig {
-		allowedKeys[strings.ToLower(definition.ConfigKey)] = true
+		definedKeys[strings.ToLower(definition.ConfigKey)] = true
 		key = strings.ToUpper(key)
 		if _, ok := ret[key]; ok && definition.Inherit {
 			// If the config key is already defined, and we should inherit it from the host repo, continue.
@@ -172,9 +172,9 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 		}
 	}
 
-	// Validate against allowedKeys
-	for k := range pluginState.Config.Plugin[pluginName].ExtraValues {
-		if _, ok := allowedKeys[strings.ToLower(k)]; !ok {
+	// Validate against definedKeys
+	for k := range extraVals {
+		if _, ok := definedKeys[strings.ToLower(k)]; !ok {
 			log.Warning("Unrecognised config key \"%v\" for plugin \"%v\"", k, pluginName)
 		}
 	}
