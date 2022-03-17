@@ -1044,6 +1044,8 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// in fact take priority over this, but that's a lot more fiddly to get right.
 	s := state.forConfig(".plzconfig_" + arch.String())
 	s.Arch = arch
+
+	s.Parser.NewParser(s)
 	return s
 }
 
