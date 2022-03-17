@@ -11,6 +11,7 @@ go_library(
         "//src/generate",
         "//src/process",
         "//src/worker",
+        "//src/metrics",
         "//third_party/go:go-multierror",
         "//third_party/go:logging",
         "//third_party/go:protobuf",

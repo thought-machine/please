@@ -26,6 +26,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/generate"
+	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/worker"
 )
@@ -41,11 +42,26 @@ var httpClientOnce sync.Once
 
 var magicSourcesWorkerKey = "WORKER"
 
+var successfulRemoteTargetBuildDuration = metrics.NewHistogram(
+	"remote",
+	"target_build_duration",
+	"Time taken to successfully build a target, in seconds",
+	metrics.ExponentialBuckets(0.125, 2, 12), // 12 buckets, starting at 0.125s and doubling in width.
+)
+
+var successfulLocalTargetBuildDuration = metrics.NewHistogram(
+	"local",
+	"target_build_duration",
+	"Time taken to successfully build a target, in seconds",
+	metrics.ExponentialBuckets(0.125, 2, 12), // 12 buckets, starting at 0.125s and doubling in width.
+)
+
 // Build implements the core logic for building a single target.
 func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
 	target := state.Graph.TargetOrDie(label)
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
+	start := time.Now()
 	if err := buildTarget(tid, state, target, remote); err != nil {
 		if errors.Is(err, errStop) {
 			target.SetState(core.Stopped)
@@ -58,6 +74,11 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 		}
 		target.SetState(core.Failed)
 		return
+	}
+	if remote {
+		successfulRemoteTargetBuildDuration.Observe(time.Since(start).Seconds())
+	} else {
+		successfulLocalTargetBuildDuration.Observe(time.Since(start).Seconds())
 	}
 	// Mark the target as having finished building.
 	target.FinishBuild()
