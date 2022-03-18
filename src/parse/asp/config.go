@@ -122,9 +122,9 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 		extraVals = getExtraVals(pkgState.RepoConfig, pluginName)
 		ret = pluginConfig(pluginState, pkgState.ParentState)
 	}
-
-	// TODO(jpoole): validate that all values actually exist in the plugin definition
+	definedKeys := map[string]bool{}
 	for key, definition := range pluginState.RepoConfig.PluginConfig {
+		definedKeys[strings.ToLower(definition.ConfigKey)] = true
 		key = strings.ToUpper(key)
 		if _, ok := ret[key]; ok && definition.Inherit {
 			// If the config key is already defined, and we should inherit it from the host repo, continue.
@@ -171,6 +171,14 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 			ret[key] = toPyObject(fullConfigKey, val, definition.Type)
 		}
 	}
+
+	// Validate against definedKeys
+	for k := range extraVals {
+		if _, ok := definedKeys[strings.ToLower(k)]; !ok {
+			log.Warning("Unrecognised config key \"%v\" for plugin \"%v\"", k, pluginName)
+		}
+	}
+
 	return ret
 }
 

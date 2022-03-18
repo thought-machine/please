@@ -42,3 +42,20 @@ func NewCounter(subsystem, name, help string) prometheus.Counter {
 	MustRegister(counter)
 	return counter
 }
+
+// NewHistogram creates & registers a new histogram.
+func NewHistogram(subsystem, name, help string, buckets []float64) prometheus.Histogram {
+	histogram := prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "plz",
+		Subsystem: subsystem,
+		Name:      name,
+		Buckets:   buckets,
+		Help:      help,
+	})
+	MustRegister(histogram)
+	return histogram
+}
+
+func ExponentialBuckets(start, factor float64, numBuckets int) []float64 {
+	return prometheus.ExponentialBuckets(start, factor, numBuckets)
+}
