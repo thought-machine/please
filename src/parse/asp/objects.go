@@ -781,9 +781,11 @@ func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 // copying & duplicating it - this structure instead requires very little to be copied
 // on each update.
 type pyConfig struct {
-	base         pyDict
-	overlay      pyDict
-	pluginConfig pyDict
+	base    pyDict
+	overlay pyDict
+
+	pluginConfigMutex sync.RWMutex
+	pluginConfigs     map[string]pyDict
 }
 
 func (c *pyConfig) String() string {
@@ -836,7 +838,15 @@ func (c *pyConfig) IndexAssign(index, value pyObject) {
 // Copy creates a copy of this config object. It does not copy the overlay config, so be careful
 // where it is used.
 func (c *pyConfig) Copy() *pyConfig {
-	return &pyConfig{base: c.base}
+	c.pluginConfigMutex.Lock()
+	defer c.pluginConfigMutex.Unlock()
+
+	dest := make(map[string]pyDict)
+	for key, val := range c.pluginConfigs {
+		dest[key] = val
+	}
+
+	return &pyConfig{base: c.base, pluginConfigs: dest}
 }
 
 // Get implements the get() method, similarly to a dict but looks up in both internal maps.
@@ -849,6 +859,14 @@ func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
 	if obj, present := c.base[key]; present {
 		return obj
 	}
+
+	c.pluginConfigMutex.RLock()
+	defer c.pluginConfigMutex.RUnlock()
+
+	if obj, present := c.pluginConfigs[key]; present {
+		return obj
+	}
+
 	return fallback
 }
 

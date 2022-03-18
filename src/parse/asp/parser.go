@@ -101,7 +101,7 @@ func (p *Parser) PreloadSubinclude(state *core.BuildState, target *core.BuildTar
 	if target.Subrepo != nil {
 		subincludePkgState = target.Subrepo.State
 	}
-	p.interpreter.getPluginConfig(subincludePkgState, state)
+	p.interpreter.loadPluginConfig(subincludePkgState, state)
 
 	for _, out := range target.FullOutputs() {
 		p.interpreter.scope.SetAll(p.interpreter.Subinclude(out, target.Label), true)
