@@ -36,12 +36,20 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
 )
 
 var log = logging.MustGetLogger("remote")
 
 // The API version we support.
 var apiVersion = semver.SemVer{Major: 2}
+
+var remoteCacheReadDuration = metrics.NewHistogram(
+	"remote",
+	"cache_read_duration",
+	"Time taken to read the remote cache, in milliseconds",
+	metrics.ExponentialBuckets(1, 2, 10), // 10 buckets, starting at 1ms and doubling in width.
+)
 
 // A Client is the interface to the remote API.
 //
@@ -564,12 +572,14 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 		return metadata, ar
 	}
 	// Now see if it is cached on the remote server
+	start := time.Now()
 	if ar, err := c.client.GetActionResult(context.Background(), &pb.GetActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,
 		InlineStdout: needStdout,
 	}); err == nil {
 		// This action already exists and has been cached.
+		remoteCacheReadDuration.Observe(float64(time.Since(start).Milliseconds()))
 		if metadata, err := c.buildMetadata(ar, needStdout, false); err == nil {
 			log.Debug("Got remotely cached results for %s %s", target.Label, c.actionURL(digest, true))
 			if command != nil {
