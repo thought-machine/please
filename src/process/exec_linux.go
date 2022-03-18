@@ -12,7 +12,7 @@ import (
 // N.B. This does not start the command - the caller must handle that (or use one
 //      of the other functions which are higher-level interfaces).
 func (e *Executor) ExecCommand(sandbox SandboxConfig, foreground bool, command string, args ...string) *exec.Cmd {
-	shouldNamespace := e.usePleaseSandbox || e.namespace == NamespaceAlways || (e.namespace == NamespaceSandbox && sandbox != NoSandbox)
+	shouldNamespace := e.namespace == NamespaceAlways || ((e.namespace == NamespaceSandbox || e.usePleaseSandbox) && sandbox != NoSandbox)
 
 	cmd := exec.Command(command, args...)
 
