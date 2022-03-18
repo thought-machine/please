@@ -781,8 +781,9 @@ func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 // copying & duplicating it - this structure instead requires very little to be copied
 // on each update.
 type pyConfig struct {
-	base    pyDict
-	overlay pyDict
+	base         pyDict
+	overlay      pyDict
+	pluginConfig pyDict
 }
 
 func (c *pyConfig) String() string {

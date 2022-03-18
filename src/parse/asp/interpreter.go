@@ -22,6 +22,9 @@ type interpreter struct {
 	configs      map[*core.Configuration]*pyConfig
 	configsMutex sync.RWMutex
 
+	pluginConfigs map[string]pyDict
+	pluginMutex   sync.Mutex
+
 	breakpointMutex sync.Mutex
 	limiter         semaphore
 	profiling       bool
@@ -36,12 +39,13 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		locals: map[string]pyObject{},
 	}
 	i := &interpreter{
-		scope:       s,
-		parser:      p,
-		subincludes: subincludeMap{m: map[string]subincludeResult{}},
-		configs:     map[*core.Configuration]*pyConfig{},
-		limiter:     make(semaphore, state.Config.Parse.NumThreads),
-		profiling:   state.Config.Profiling,
+		scope:         s,
+		parser:        p,
+		subincludes:   subincludeMap{m: map[string]subincludeResult{}},
+		pluginConfigs: map[string]pyDict{},
+		configs:       map[*core.Configuration]*pyConfig{},
+		limiter:       make(semaphore, state.Config.Parse.NumThreads),
+		profiling:     state.Config.Profiling,
 	}
 	s.interpreter = i
 	s.LoadSingletons(state)
@@ -96,7 +100,7 @@ func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (
 	// Config needs a little separate tweaking.
 	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
 	// mutating operations like .setdefault() otherwise.
-	s.config = i.pkgConfig(pkg).Copy()
+	s.config = i.pkgConfig(pkg)
 	s.Set("CONFIG", s.config)
 	_, err = i.interpretStatements(s, statements)
 	if err == nil {
@@ -177,10 +181,21 @@ func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
 
 // pkgConfig returns a new configuration object for the given package.
 func (i *interpreter) pkgConfig(pkg *core.Package) *pyConfig {
+	var config *pyConfig
 	if pkg.Subrepo != nil && pkg.Subrepo.State != nil {
-		return i.getConfig(pkg.Subrepo.State)
+		config = i.getConfig(pkg.Subrepo.State)
 	}
-	return i.getConfig(i.scope.state)
+	config = i.getConfig(i.scope.state)
+
+	config = config.Copy()
+
+	i.configsMutex.RLock()
+	defer i.configsMutex.RUnlock()
+
+	for key, pluginCfg := range i.pluginConfigs {
+		config.IndexAssign(pyString(key), pluginCfg)
+	}
+	return config
 }
 
 // optimiseExpressions implements a peephole optimiser for expressions by precalculating constants

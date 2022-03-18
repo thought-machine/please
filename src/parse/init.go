@@ -88,7 +88,7 @@ func (p *aspParser) preloadSubincludes(state *core.BuildState) {
 
 	// Preload them in order to avoid non-deterministic errors when the subincludes depend on each other
 	for _, inc := range includes {
-		if err := p.parser.SubincludeTarget(state, state.WaitForTargetAndEnsureDownload(inc, core.OriginalTarget)); err != nil {
+		if err := p.parser.PreloadSubinclude(state, state.WaitForTargetAndEnsureDownload(inc, core.OriginalTarget)); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}

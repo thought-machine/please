@@ -89,7 +89,7 @@ func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
 	return err
 }
 
-func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarget) (err error) {
+func (p *Parser) PreloadSubinclude(state *core.BuildState, target *core.BuildTarget) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = handleErrors(r)
@@ -101,7 +101,8 @@ func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarg
 	if target.Subrepo != nil {
 		subincludePkgState = target.Subrepo.State
 	}
-	p.interpreter.loadPluginConfig(subincludePkgState, state)
+	p.interpreter.getPluginConfig(subincludePkgState, state)
+
 	for _, out := range target.FullOutputs() {
 		p.interpreter.scope.SetAll(p.interpreter.Subinclude(out, target.Label), true)
 	}
