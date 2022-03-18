@@ -57,7 +57,7 @@ func New() *Executor {
 
 // SandboxConfig contains what namespaces should be sandboxed
 type SandboxConfig struct {
-	Network, Mount bool
+	Network, Mount, Fakeroot bool
 }
 
 // NoSandbox represents a no-sandbox value
