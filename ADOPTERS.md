@@ -1,6 +1,7 @@
 # Adopters
 A list of adopters of please and what they're using it for (in alphabetical order):
 
+- [Bainbridge Health](https://www.bainbridgehealth.com) is using Please to build Med O.S., a data science platform that helps hospitals improve medication safety and stewardship.
 - [Banzai Cloud](https://banzaicloud.com/) is using Please to build [Pipeline](https://github.com/banzaicloud/pipeline), a cloud native application platform
   helping companies with their digital transformation to the cloud.
 - [PolyAI](https://www.polyai.com) is using Please to build the next generation of speech-based conversational agents for customer service.
