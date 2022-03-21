@@ -381,6 +381,14 @@ func (l pyList) String() string {
 // Note that this is a "soft" freeze; callers holding the original unfrozen
 // reference can still modify it.
 func (l pyList) Freeze() pyObject {
+	frozen := make(pyList, len(l))
+	for i, v := range l {
+		if f, ok := v.(freezable); ok {
+			frozen[i] = f.Freeze()
+		} else {
+			frozen[i] = v
+		}
+	}
 	return pyFrozenList{pyList: l}
 }
 
@@ -491,7 +499,15 @@ func (d pyDict) Copy() pyDict {
 // Note that this is a "soft" freeze; callers holding the original unfrozen
 // reference can still modify it.
 func (d pyDict) Freeze() pyObject {
-	return pyFrozenDict{pyDict: d}
+	frozen := pyDict{}
+	for k, v := range d {
+		if f, ok := v.(freezable); ok {
+			frozen[k] = f.Freeze()
+		} else {
+			frozen[k] = v
+		}
+	}
+	return pyFrozenDict{pyDict: frozen}
 }
 
 // Keys returns the keys of this dict, in order.
