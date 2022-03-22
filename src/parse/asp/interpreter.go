@@ -19,8 +19,7 @@ type interpreter struct {
 	parser      *Parser
 	subincludes subincludeMap
 
-	config        *pyConfig
-	configPreload sync.RWMutex
+	config *pyConfig
 
 	breakpointMutex sync.Mutex
 	limiter         semaphore
