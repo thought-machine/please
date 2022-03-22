@@ -48,6 +48,15 @@ func newParser() *Parser {
 	}
 }
 
+// Finalise is called after all the builtins and preloaded subincludes have been loaded. It locks the base config so
+// that it can no longer be mutated.
+func (p *Parser) Finalise() {
+	p.interpreter.config.base.Lock()
+	defer p.interpreter.config.base.Unlock()
+
+	p.interpreter.config.base.finalised = true
+}
+
 // LoadBuiltins instructs the parser to load rules from this file as built-ins.
 // Optionally the file contents can be supplied directly.
 func (p *Parser) LoadBuiltins(filename string, contents []byte) error {
@@ -101,7 +110,7 @@ func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarg
 	if target.Subrepo != nil {
 		subincludePkgState = target.Subrepo.State
 	}
-	p.interpreter.loadPluginConfig(subincludePkgState, state)
+	p.interpreter.loadPluginConfig(subincludePkgState, state, p.interpreter.config)
 	for _, out := range target.FullOutputs() {
 		p.interpreter.scope.SetAll(p.interpreter.Subinclude(out, target.Label), true)
 	}

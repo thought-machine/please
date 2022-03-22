@@ -792,12 +792,21 @@ func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 	return s.Error("Invalid type for argument %s to %s; expected %s, was %s", f.args[i], f.name, strings.Join(f.types[i], " or "), actual)
 }
 
+type pyConfigBase struct {
+	dict pyDict
+
+	// While preloading, we might be mutating base with the plugin configs. During this time we must use mux to control
+	// access to base.
+	finalised bool
+	sync.RWMutex
+}
+
 // A pyConfig is a wrapper object around Please's global config.
 // Initially it was implemented as just a dict but that requires us to spend a lot of time
 // copying & duplicating it - this structure instead requires very little to be copied
 // on each update.
 type pyConfig struct {
-	base    pyDict
+	base    *pyConfigBase
 	overlay pyDict
 }
 
@@ -861,7 +870,13 @@ func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
 			return obj
 		}
 	}
-	if obj, present := c.base[key]; present {
+	// We may still be adding new config values to base when not finalised
+	if !c.base.finalised {
+		c.base.RLock()
+		defer c.base.RUnlock()
+	}
+
+	if obj, present := c.base.dict[key]; present {
 		return obj
 	}
 	return fallback

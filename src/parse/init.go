@@ -28,9 +28,8 @@ func InitParser(state *core.BuildState) *core.BuildState {
 
 // aspParser implements the core.Parser interface around our parser package.
 type aspParser struct {
-	parser      *asp.Parser
-	initialised bool
-	init        chan struct{}
+	parser *asp.Parser
+	init   chan struct{}
 }
 
 // newAspParser returns a asp.Parser object with all the builtins loaded
@@ -92,8 +91,7 @@ func (p *aspParser) preloadSubincludes(state *core.BuildState) {
 			log.Fatalf("%v", err)
 		}
 	}
-
-	p.initialised = true
+	p.parser.Finalise()
 	close(p.init)
 }
 
