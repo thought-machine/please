@@ -19,8 +19,8 @@ type interpreter struct {
 	parser      *Parser
 	subincludes subincludeMap
 
-	configs      map[*core.Configuration]*pyConfig
-	configsMutex sync.RWMutex
+	config        *pyConfig
+	configPreload sync.RWMutex
 
 	breakpointMutex sync.Mutex
 	limiter         semaphore
@@ -39,7 +39,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		scope:       s,
 		parser:      p,
 		subincludes: subincludeMap{m: map[string]subincludeResult{}},
-		configs:     map[*core.Configuration]*pyConfig{},
+		config:      newConfig(state),
 		limiter:     make(semaphore, state.Config.Parse.NumThreads),
 		profiling:   state.Config.Profiling,
 	}
@@ -96,7 +96,7 @@ func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (
 	// Config needs a little separate tweaking.
 	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
 	// mutating operations like .setdefault() otherwise.
-	s.config = i.pkgConfig(pkg).Copy()
+	s.config = i.config.Copy()
 	s.Set("CONFIG", s.config)
 	_, err = i.interpretStatements(s, statements)
 	if err == nil {
@@ -156,31 +156,6 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 	}
 	i.subincludes.Set(path, locals)
 	return locals
-}
-
-// getConfig returns a new configuration object for the given configuration object.
-func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
-	i.configsMutex.RLock()
-	if c, present := i.configs[state.Config]; present {
-		i.configsMutex.RUnlock()
-		return c
-	}
-	i.configsMutex.RUnlock()
-	c := newConfig(state)
-
-	i.configsMutex.Lock()
-	defer i.configsMutex.Unlock()
-	i.configs[state.Config] = c
-
-	return c
-}
-
-// pkgConfig returns a new configuration object for the given package.
-func (i *interpreter) pkgConfig(pkg *core.Package) *pyConfig {
-	if pkg.Subrepo != nil && pkg.Subrepo.State != nil {
-		return i.getConfig(pkg.Subrepo.State)
-	}
-	return i.getConfig(i.scope.state)
 }
 
 // optimiseExpressions implements a peephole optimiser for expressions by precalculating constants
@@ -355,7 +330,7 @@ func (s *scope) LoadSingletons(state *core.BuildState) {
 	s.Set("False", False)
 	s.Set("None", None)
 	if state != nil {
-		s.config = s.interpreter.getConfig(state)
+		s.config = s.interpreter.config
 		s.Set("CONFIG", s.config)
 	}
 }

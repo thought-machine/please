@@ -82,7 +82,7 @@ func newConfig(state *core.BuildState) *pyConfig {
 	base["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 	base["DEBUG_PORT"] = pyInt(state.DebugPort)
 
-	return &pyConfig{base: base}
+	return &pyConfig{base: &pyConfigBase{dict: base}}
 }
 
 func resolvePluginValue(values []string, subrepo string) []string {
@@ -182,20 +182,33 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 	return ret
 }
 
-func (i *interpreter) loadPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) {
+func (i *interpreter) loadPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, c *pyConfig) {
 	pluginName := pluginState.Config.PluginDefinition.Name
 	if pluginName == "" {
 		// Subinclude is not a plugin. Stop here.
 		return
 	}
-	c := i.getConfig(pkgState)
+
+	var dict pyDict
+	if !c.base.finalised {
+		c.base.Lock()
+		defer c.base.Unlock()
+
+		dict = c.base.dict
+	} else {
+		if c.overlay == nil {
+			c.overlay = pyDict{}
+		}
+		dict = c.overlay
+	}
+
 	key := strings.ToUpper(pluginName)
-	if _, ok := c.base[key]; ok {
+	if _, ok := dict[key]; ok {
 		return
 	}
 
 	cfg := pluginConfig(pluginState, pkgState)
-	c.base[key] = cfg
+	dict[key] = cfg
 }
 
 func toPyObject(key, val, toType string) pyObject {
