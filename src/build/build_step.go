@@ -45,15 +45,15 @@ var magicSourcesWorkerKey = "WORKER"
 var successfulRemoteTargetBuildDuration = metrics.NewHistogram(
 	"remote",
 	"target_build_duration",
-	"Time taken to successfully build a target, in seconds",
-	metrics.ExponentialBuckets(0.125, 2, 12), // 12 buckets, starting at 0.125s and doubling in width.
+	"Time taken to successfully build a target, in milliseconds",
+	metrics.ExponentialBuckets(10, 2, 16), // 16 buckets, starting at 10ms and doubling in width.
 )
 
 var successfulLocalTargetBuildDuration = metrics.NewHistogram(
 	"local",
 	"target_build_duration",
-	"Time taken to successfully build a target, in seconds",
-	metrics.ExponentialBuckets(0.125, 2, 12), // 12 buckets, starting at 0.125s and doubling in width.
+	"Time taken to successfully build a target, in milliseconds",
+	metrics.ExponentialBuckets(10, 2, 16), // 16 buckets, starting at 10ms and doubling in width.
 )
 
 // Build implements the core logic for building a single target.
@@ -76,9 +76,9 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 		return
 	}
 	if remote {
-		successfulRemoteTargetBuildDuration.Observe(time.Since(start).Seconds())
+		successfulRemoteTargetBuildDuration.Observe(time.Since(start).Milliseconds())
 	} else {
-		successfulLocalTargetBuildDuration.Observe(time.Since(start).Seconds())
+		successfulLocalTargetBuildDuration.Observe(time.Since(start).Milliseconds())
 	}
 	// Mark the target as having finished building.
 	target.FinishBuild()
