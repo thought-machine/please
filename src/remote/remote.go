@@ -438,6 +438,10 @@ func (c *Client) download(target *core.BuildTarget, f func() error) error {
 
 func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
 	log.Debug("Downloading outputs for %s", target)
+
+	file := core.AcquireExclusiveFileLock(target.BuildLockFile())
+	defer core.ReleaseFileLock(file)
+
 	if err := removeOutputs(target); err != nil {
 		return err
 	}
