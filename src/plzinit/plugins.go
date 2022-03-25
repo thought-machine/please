@@ -165,7 +165,7 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 			foundSection = true
 			for _, field := range s.Fields {
 				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
-					file = ast.InjectField(file, plugVal, field.Value, section, plugin, false)
+					file = ast.InjectField(file, plugVal, field.Value, section, plugin, true)
 				}
 			}
 		}
