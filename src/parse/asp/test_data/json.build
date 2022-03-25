@@ -1,0 +1,6 @@
+json_dict = json(some_dict)
+json_list = json(some_list)
+json_frozen_dict = json(some_frozen_dict)
+json_frozen_list = json(some_frozen_list)
+json_config = json(some_config)
+json_frozen_config = json(some_frozen_config)

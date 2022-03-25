@@ -2,6 +2,7 @@ package asp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -396,6 +397,10 @@ func (l pyList) Repeat(n pyInt) pyList {
 // A pyFrozenList implements an immutable list.
 type pyFrozenList struct{ pyList }
 
+func (l pyFrozenList) MarshalJSON() ([]byte, error) {
+	return json.Marshal(l.pyList)
+}
+
 func (l pyFrozenList) IndexAssign(index, value pyObject) {
 	panic("list is immutable")
 }
@@ -506,6 +511,10 @@ func (d pyDict) Keys() []string {
 
 // A pyFrozenDict implements an immutable python dict.
 type pyFrozenDict struct{ pyDict }
+
+func (d pyFrozenDict) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.pyDict)
+}
 
 func (d pyFrozenDict) Property(name string) pyObject {
 	if name == "setdefault" {
@@ -785,6 +794,20 @@ type pyConfig struct {
 	overlay pyDict
 }
 
+func (c *pyConfig) MarshalJSON() ([]byte, error) {
+	if c.overlay == nil {
+		return json.Marshal(c.overlay)
+	}
+	merged := make(pyDict, len(c.base)+len(c.overlay))
+	for k, v := range c.base {
+		merged[k] = v
+	}
+	for k, v := range c.overlay {
+		merged[k] = v
+	}
+	return json.Marshal(merged)
+}
+
 func (c *pyConfig) String() string {
 	return "<global config object>"
 }
@@ -878,6 +901,10 @@ func (c *pyConfig) Merge(other *pyFrozenConfig) {
 
 // A pyFrozenConfig is a config object that disallows further updates.
 type pyFrozenConfig struct{ pyConfig }
+
+func (c *pyFrozenConfig) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&c.pyConfig)
+}
 
 // IndexAssign always fails, assignments to a pyFrozenConfig aren't allowed.
 func (c *pyFrozenConfig) IndexAssign(_, _ pyObject) {
