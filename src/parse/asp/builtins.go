@@ -292,6 +292,9 @@ func builtinFail(s *scope, args []pyObject) pyObject {
 }
 
 func subinclude(s *scope, args []pyObject) pyObject {
+	if s.contextPackage() == nil {
+		s.Error("cannot subinclude from this context")
+	}
 	for _, arg := range args {
 		t := subincludeTarget(s, s.parseLabelContext(string(arg.(pyString))))
 		s.Assert(s.contextPackage().Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.contextPackage().Label())
