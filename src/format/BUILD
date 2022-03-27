@@ -7,6 +7,7 @@ go_library(
         "//src/fs",
         "//src/plz",
         "//third_party/go:buildtools",
+        "//third_party/go:errgroup",
         "//third_party/go:logging",
     ],
 )
