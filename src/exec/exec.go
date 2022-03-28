@@ -22,7 +22,7 @@ func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, e
 	if len(overrideCmdArgs) == 0 {
 		if entryPoint, ok := target.EntryPoints[label.Annotation]; ok {
 			overrideCmdArgs = []string{entryPoint}
-		} else {
+		} else if label.Annotation != "" {
 			log.Fatalf("%v has no such entry point %v", label.BuildLabel, label.Annotation)
 		}
 	}
