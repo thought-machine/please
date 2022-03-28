@@ -220,8 +220,8 @@ var opts struct {
 			Mount   bool `long:"share_mount" description:"Share mount namespace"`
 		} `group:"Options to override mount and network namespacing on linux, if configured"`
 		Args struct {
-			Target              core.BuildLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
-			OverrideCommandArgs []string        `positional-arg-name:"override_command" description:"Override command"`
+			Target              core.AnnotatedOutputLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
+			OverrideCommandArgs []string                  `positional-arg-name:"override_command" description:"Override command"`
 		} `positional-args:"true"`
 	} `command:"exec" description:"Executes a single target in a hermetic build environment"`
 
@@ -512,12 +512,12 @@ var buildFunctions = map[string]func() int{
 		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args)
 	},
 	"exec": func() int {
-		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target}, true, false, false)
+		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target.BuildLabel}, true, false, false)
 		if !success {
 			return toExitCode(success, state)
 		}
 
-		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target).Sandbox
+		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target.BuildLabel).Sandbox
 		dir := filepath.Join(core.OutDir, "exec", opts.Exec.Args.Target.Subrepo, opts.Exec.Args.Target.PackageName)
 		if code := exec.Exec(state, opts.Exec.Args.Target, dir, nil, opts.Exec.Args.OverrideCommandArgs, false, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
 			return code
@@ -1449,6 +1449,8 @@ func execute(command string) int {
 		}()
 	}
 	defer worker.StopAll()
+
+	log.Debugf("plz command: %v", strings.Join(os.Args, " "))
 	return buildFunctions[command]()
 }
 

@@ -17,8 +17,13 @@ import (
 var log = logging.MustGetLogger("exec")
 
 // Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
-func Exec(state *core.BuildState, label core.BuildLabel, dir string, env, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) int {
-	target := state.Graph.TargetOrDie(label)
+func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, env, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) int {
+	target := state.Graph.TargetOrDie(label.BuildLabel)
+	if len(overrideCmdArgs) == 0 {
+		if entryPoint, ok := target.EntryPoints[label.Annotation]; ok {
+			overrideCmdArgs = []string{entryPoint}
+		}
+	}
 	if err := exec(state, target, dir, env, overrideCmdArgs, foreground, sandbox); err != nil {
 		log.Error("Command execution failed: %s", err)
 		if exitError, ok := err.(*osExec.ExitError); ok {
