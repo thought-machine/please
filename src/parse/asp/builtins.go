@@ -66,6 +66,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "breakpoint", breakpoint)
 	setNativeCode(s, "is_semver", isSemver)
 	setNativeCode(s, "semver_check", semverCheck)
+	setNativeCode(s, "looks_like_build_label", looksLikeBuildLabel)
 	stringMethods = map[string]*pyFunc{
 		"join":         setNativeCode(s, "join", strJoin),
 		"split":        setNativeCode(s, "split", strSplit),
@@ -630,6 +631,10 @@ func joinPath(s *scope, args []pyObject) pyObject {
 		l[i] = string(arg.(pyString))
 	}
 	return pyString(path.Join(l...))
+}
+
+func looksLikeBuildLabel(s *scope, args []pyObject) pyObject {
+	return pyBool(core.LooksLikeABuildLabel(args[0].String()))
 }
 
 // scopeOrSubincludePackage is like (*scope).contextPackage() package but allows the option to force the use the

@@ -129,6 +129,8 @@ def package_name(label:str=None, subinclude_context:bool=None) -> str:
     pass
 def subrepo_name(label:str=None, subinclude_context:bool=None) -> str:
     pass
+def looks_like_build_label(label:str) -> bool:
+    pass
 
 def canonicalise(label:str, subinclude_context:bool=None) -> str:
     """Converts the given build label to its full form.

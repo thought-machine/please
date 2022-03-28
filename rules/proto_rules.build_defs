@@ -47,7 +47,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
         if CONFIG.GO_IMPORT_PATH:
             base_path = join_path(CONFIG.GO_IMPORT_PATH, base_path)
         labels += [f'proto:go-map: {base_path}/{src}={base_path}/{name}' for src in srcs
-                   if not src.startswith(':') and not src.startswith('/') and
+                   if not looks_like_build_label(src) and
                    (src != (name + '.proto') or len(srcs) > 1 or diff_pkg)]
 
     # Plugins can declare their own pre-build functions. If there are any, we need to apply them all in sequence.
@@ -57,7 +57,7 @@ def proto_library(name:str, srcs:list, deps:list=[], visibility:list=None, label
 
     # If the protoc tool is a build rule, depend on it as it's probably a protoc_binary() which provides the well known
     # types
-    if CONFIG.PROTOC_TOOL.startswith("//") or CONFIG.PROTOC_TOOL.startswith(":"):
+    if looks_like_build_label(CONFIG.PROTOC_TOOL):
         # Extract the wkt into another rule as we already depend on the main rule as a tool.
         deps += [filegroup(
             name = name,
