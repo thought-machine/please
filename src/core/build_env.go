@@ -28,10 +28,12 @@ func GeneralBuildEnvironment(state *BuildState) BuildEnv {
 		// These are slightly modified forms that are more convenient for some things.
 		"XARCH=" + state.Arch.XArch(),
 		"XOS=" + state.Arch.XOS(),
-		// It's easier to just make these available for Go-based rules.
-		"GOARCH=" + state.Arch.GoArch(),
-		"GOOS=" + state.Arch.OS,
 	}
+
+	if !state.Config.FeatureFlags.ExcludeGoRules {
+		env = append(env, "GOARCH="+state.Arch.GoArch(), "GOOS="+state.Arch.OS)
+	}
+
 	if state.Config.Cpp.PkgConfigPath != "" {
 		env = append(env, "PKG_CONFIG_PATH="+state.Config.Cpp.PkgConfigPath)
 	}
