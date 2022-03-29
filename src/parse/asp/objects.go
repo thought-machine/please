@@ -823,8 +823,8 @@ func (c *pyConfig) MarshalJSON() ([]byte, error) {
 	if c.overlay == nil {
 		return json.Marshal(c.overlay)
 	}
-	merged := make(pyDict, len(c.base)+len(c.overlay))
-	for k, v := range c.base {
+	merged := make(pyDict, len(c.base.dict)+len(c.overlay))
+	for k, v := range c.base.dict {
 		merged[k] = v
 	}
 	for k, v := range c.overlay {
