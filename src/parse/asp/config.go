@@ -75,12 +75,15 @@ func newConfig(state *core.BuildState) *pyConfig {
 	base["ARCH"] = pyString(arch.Arch)
 	base["HOSTOS"] = pyString(arch.HostOS())
 	base["HOSTARCH"] = pyString(arch.HostArch())
-	base["GOOS"] = pyString(arch.OS)
-	base["GOARCH"] = pyString(arch.GoArch())
 	base["TARGET_OS"] = pyString(state.TargetArch.OS)
 	base["TARGET_ARCH"] = pyString(state.TargetArch.Arch)
 	base["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 	base["DEBUG_PORT"] = pyInt(state.DebugPort)
+
+	if !state.Config.FeatureFlags.ExcludeGoRules {
+		base["GOOS"] = pyString(arch.OS)
+		base["GOARCH"] = pyString(arch.GoArch())
+	}
 
 	return &pyConfig{base: &pyConfigBase{dict: base}}
 }
