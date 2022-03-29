@@ -701,8 +701,7 @@ func TestFStringConcat(t *testing.T) {
 				Vars: []FStringVar{
 					{
 						Prefix: " this is the rhs: ",
-						Var:    "rhs",
-						Config: "",
+						Var:    []string{"rhs"},
 					},
 				},
 				Suffix: " suffix",
@@ -724,8 +723,7 @@ func TestFStringConcat(t *testing.T) {
 				Vars: []FStringVar{
 					{
 						Prefix: "this is the lhs: ",
-						Var:    "lhs",
-						Config: "",
+						Var:    []string{"lhs"},
 					},
 				},
 				Suffix: " suffix",
@@ -751,8 +749,7 @@ func TestFStringConcat(t *testing.T) {
 				Vars: []FStringVar{
 					{
 						Prefix: "this is the lhs: ",
-						Var:    "lhs",
-						Config: "",
+						Var:    []string{"lhs"},
 					},
 				},
 				Suffix: "lhs suffix",
@@ -764,8 +761,7 @@ func TestFStringConcat(t *testing.T) {
 				Vars: []FStringVar{
 					{
 						Prefix: " this is the rhs: ",
-						Var:    "rhs",
-						Config: "",
+						Var:    []string{"rhs"},
 					},
 				},
 				Suffix: " rhs suffix",

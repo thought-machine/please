@@ -164,9 +164,8 @@ type FString struct {
 
 // An FStringVar represents a single variable in an FString.
 type FStringVar struct {
-	Prefix string // Preceding string bit
-	Var    string // Variable name to interpolate
-	Config string // Config variable to look up
+	Prefix string   // Preceding string bit
+	Var    []string // Variable name to interpolate, plus any accessors
 }
 
 // A UnaryOp represents a unary operation - in our case the only ones we support are negation and not.

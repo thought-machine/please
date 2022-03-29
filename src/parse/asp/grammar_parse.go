@@ -721,11 +721,7 @@ func (p *parser) parseFString() *FString {
 		tok.Pos.Column += idx + 1
 		idx = strings.IndexByte(s, '}')
 		p.assert(idx != -1, tok, "Unterminated brace in fstring")
-		if varname := s[:idx]; strings.HasPrefix(varname, "CONFIG.") {
-			v.Config = strings.TrimPrefix(varname, "CONFIG.")
-		} else {
-			v.Var = varname
-		}
+		v.Var = strings.Split(s[:idx], ".")
 		f.Vars = append(f.Vars, v)
 		s = s[idx+1:]
 		tok.Pos.Column += idx + 1

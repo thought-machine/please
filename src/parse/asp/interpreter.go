@@ -563,10 +563,12 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 
 func (s *scope) interpretFString(f *FString) pyObject {
 	stringVar := func(v FStringVar) string {
-		if v.Config != "" {
-			return s.config.MustGet(v.Config).String()
+		obj := s.Lookup(v.Var[0])
+		for _, key := range v.Var[1:] {
+			obj = obj.Property(key)
 		}
-		return s.Lookup(v.Var).String()
+
+		return obj.String()
 	}
 	var b strings.Builder
 	size := len(f.Suffix)

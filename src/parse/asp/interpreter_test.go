@@ -280,6 +280,7 @@ func TestInterpreterFStrings(t *testing.T) {
 	assert.EqualValues(t, "a", s.Lookup("x"))
 	assert.EqualValues(t, "a", s.Lookup("y"))
 	assert.EqualValues(t, "x: a y: a fin", s.Lookup("z"))
+	assert.EqualValues(t, "6", s.Lookup("nest_test"))
 }
 
 func TestInterpreterSubincludeConfig(t *testing.T) {
