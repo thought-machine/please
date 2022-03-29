@@ -421,7 +421,8 @@ func TestJSON(t *testing.T) {
 
 	list := pyList{pyString("foo"), pyInt(5)}
 	dict := pyDict{"foo": pyString("bar")}
-	config := &pyConfig{base: dict, overlay: pyDict{"baz": pyInt(6)}}
+	confBase := &pyConfigBase{dict: dict}
+	config := &pyConfig{base: confBase, overlay: pyDict{"baz": pyInt(6)}}
 
 	s.locals["some_list"] = list
 	s.locals["some_frozen_list"] = list.Freeze()
