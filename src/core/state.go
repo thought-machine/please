@@ -995,9 +995,9 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		}
 	}
 	for {
-		called := false
+		var called atomicBool
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
-			called = true
+			called.Set()
 			return state.queueResolvedTarget(t, forceBuild, false)
 		}); err != nil {
 			state.asyncError(target.Label, err)
@@ -1009,7 +1009,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 				t.WaitForBuild()
 			}
 		}
-		if !called {
+		if !called.IsSet() {
 			// We are now ready to go, we have nothing to wait for.
 			if building && target.SyncUpdateState(Active, Pending) {
 				state.addPendingBuild(target)
