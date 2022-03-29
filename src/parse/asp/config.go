@@ -110,6 +110,13 @@ func getExtraVals(config *core.Configuration, pluginName string) map[string][]st
 	return plugin.ExtraValues
 }
 
+func getConfigKey(aspKey, configKey string) string {
+	if configKey == "" {
+		configKey = strings.ReplaceAll(aspKey, "_", "")
+	}
+	return strings.ToLower(configKey)
+}
+
 // pluginConfig loads the plugin's config into a pyDict. It will load con
 func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDict {
 	pluginName := strings.ToLower(pluginState.RepoConfig.PluginDefinition.Name)
@@ -124,16 +131,13 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 	}
 	definedKeys := map[string]bool{}
 	for key, definition := range pluginState.RepoConfig.PluginConfig {
-		definedKeys[strings.ToLower(definition.ConfigKey)] = true
+		configKey := getConfigKey(key, definition.ConfigKey)
+		definedKeys[configKey] = true
+
 		key = strings.ToUpper(key)
 		if _, ok := ret[key]; ok && definition.Inherit {
 			// If the config key is already defined, and we should inherit it from the host repo, continue.
 			continue
-		}
-
-		configKey := definition.ConfigKey
-		if configKey == "" {
-			configKey = strings.ReplaceAll(key, "_", "")
 		}
 
 		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, configKey)
