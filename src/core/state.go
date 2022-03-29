@@ -867,7 +867,7 @@ func (state *BuildState) ShouldDownload(target *BuildTarget) bool {
 	downloadOriginalTarget := state.OutputDownload == OriginalOutputDownload && state.IsOriginalTarget(target)
 	downloadTransitiveTarget := state.OutputDownload == TransitiveOutputDownload
 	downloadLinkableTarget := state.Config.Build.DownloadLinkable && target.HasLinks(state)
-	return target.NeededForSubinclude || ((downloadOriginalTarget || downloadTransitiveTarget) && !state.NeedTests) || downloadLinkableTarget
+	return target.neededForSubinclude.IsSet() || ((downloadOriginalTarget || downloadTransitiveTarget) && !state.NeedTests) || downloadLinkableTarget
 }
 
 // ShouldRebuild returns true if we should force a rebuild of this target (i.e. the user
@@ -951,7 +951,7 @@ func (state *BuildState) queueTestTarget(target *BuildTarget) {
 
 // queueResolvedTarget is like queueTarget but once we have a resolved target.
 func (state *BuildState) queueResolvedTarget(target *BuildTarget, forceBuild, neededForSubinclude bool) error {
-	target.NeededForSubinclude = target.NeededForSubinclude || neededForSubinclude
+	target.neededForSubinclude.Or(neededForSubinclude)
 	if target.State() >= Active && !forceBuild {
 		return nil // Target is already tagged to be built and likely on the queue.
 	}

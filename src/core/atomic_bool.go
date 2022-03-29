@@ -16,3 +16,9 @@ func (b *atomicBool) Set() {
 func (b *atomicBool) IsSet() bool {
 	return atomic.LoadInt32(&b.b) == 1
 }
+
+func (b *atomicBool) Or(set bool) {
+	if set {
+		b.Set()
+	}
+}
