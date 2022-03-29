@@ -1,14 +1,16 @@
+x = 'a'
+y = f'{x}'
+z = f'x: {x} y: {y} fin'
+
+def fstring():
+    y = f'{x}'
+
+
 nested = {
     "outside": {
         "inside": 6,
     },
 }
 
-x = 'a'
-y = f'{x}'
-z = f'x: {x} y: {y} fin'
 
 nest_test = f"{nested.outside.inside}"
-
-def fstring():
-    y = f'{x}'
