@@ -1450,7 +1450,7 @@ func execute(command string) int {
 	}
 	defer worker.StopAll()
 
-	log.Debugf("plz command: %v", strings.Join(os.Args, " "))
+	log.Debugf("plz %v", command)
 	return buildFunctions[command]()
 }
 
