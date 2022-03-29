@@ -7,6 +7,7 @@ import os
 import random
 import shutil
 import subprocess
+import time
 from math import log10
 
 from third_party.python.absl import app, flags
@@ -122,8 +123,12 @@ def main(argv):
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
         n = 1000
+        start = time.time()
         for i in progress('Formatting files', range(0, len(filenames), n)):
             subprocess.check_call([FLAGS.plz, 'fmt', '-w'] + filenames[i: i + n])
+        end = time.time()
+        if FLAGS.progress:
+            print('Formatted %d files in %0.2fs' % (len(filenames), end - start))
 
 
 def choose_deps(candidates:list) -> list:
