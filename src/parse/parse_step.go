@@ -77,12 +77,10 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 			}
 		}
 	}
-
 	// Subrepo & nothing else means we just want to ensure that subrepo is present.
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
 		return nil
 	}
-
 	pkg, err = parsePackage(state, label, dependent, subrepo)
 
 	if err != nil {
