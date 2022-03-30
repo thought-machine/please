@@ -143,9 +143,12 @@ func splitAnnotation(target string) (string, string) {
 	}
 	return parts[0], annotation
 }
-func ParseAnnotatedBuildLabel(target, currentPath string) AnnotatedOutputLabel {
+func ParseAnnotatedBuildLabel(target, currentPath, subrepo string) AnnotatedOutputLabel {
 	label, annotation := splitAnnotation(target)
-	l := ParseBuildLabel(label, currentPath)
+	l, err := TryParseBuildLabel(label, currentPath, subrepo)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 
 	return AnnotatedOutputLabel{
 		BuildLabel: l,
