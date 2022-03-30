@@ -6,4 +6,10 @@ import (
 	"gopkg.in/op/go-logging.v1"
 )
 
+// Log is the singleton logger instance.
+// We never alter individual levels and don't log the module name, so there
+// is no need to have more than one, and it helps avoid race conditions.
 var Log = logging.MustGetLogger("plz")
+
+// Level is a re-export of the library type.
+type Level = logging.Level
