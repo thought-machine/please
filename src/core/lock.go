@@ -10,7 +10,6 @@ import (
 	"syscall"
 
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/cli/logging"
 )
 
 const repoLockFilePath = "plz-out/.lock"
@@ -45,7 +44,7 @@ func acquireRepoLock(how int) error {
 		return err
 	}
 
-	return acquireFileLock(repoLockFile, how, (*logging.Logger).Warning)
+	return acquireFileLock(repoLockFile, how, log.Warning)
 }
 
 // This acts like a singleton allowing the same file descriptor to used to override a previously set lock
@@ -80,7 +79,7 @@ func acquireOpenFileLock(filePath string, how int) (*os.File, error) {
 		return nil, err
 	}
 
-	if err = acquireFileLock(lockFile, how, (*logging.Logger).Debug); err != nil {
+	if err = acquireFileLock(lockFile, how, log.Debug); err != nil {
 		return nil, err
 	}
 
@@ -102,7 +101,7 @@ func ReleaseFileLock(file *os.File) {
 	}
 }
 
-type logFunc func(logger *logging.Logger, format string, args ...interface{})
+type logFunc func(format string, args ...interface{})
 
 func acquireFileLock(file *os.File, how int, levelLog logFunc) error {
 	// Try a non-blocking acquire first so we can warn the user if we're waiting.
@@ -111,9 +110,9 @@ func acquireFileLock(file *os.File, how int, levelLog logFunc) error {
 	if err != nil {
 		pid, err := ioutil.ReadFile(file.Name())
 		if err == nil && len(pid) > 0 {
-			levelLog(log, "Looks like process with PID %s has already acquired the lock for %s. Waiting for it to finish...", string(pid), file.Name())
+			levelLog("Looks like process with PID %s has already acquired the lock for %s. Waiting for it to finish...", string(pid), file.Name())
 		} else {
-			levelLog(log, "Looks like another process has already acquired the lock for %s. Waiting for it to finish...", file.Name())
+			levelLog("Looks like another process has already acquired the lock for %s. Waiting for it to finish...", file.Name())
 		}
 
 		if err := syscall.Flock(int(file.Fd()), how); err != nil {
