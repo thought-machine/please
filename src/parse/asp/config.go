@@ -92,12 +92,12 @@ func resolvePluginValue(values []string, subrepo string) []string {
 	ret := make([]string, len(values))
 	for i, v := range values {
 		if core.LooksLikeABuildLabel(v) {
-			l, err := core.TryParseBuildLabel(v, "", subrepo)
-			if err != nil {
-				panic(err)
-			}
+			l := core.ParseAnnotatedBuildLabel(v, "", subrepo)
 			// Force the full build label including empty subrepo so this is portable
 			v = fmt.Sprintf("///%v//%v:%v", l.Subrepo, l.PackageName, l.Name)
+			if l.Annotation != "" {
+				v = fmt.Sprintf("%v|%v", v, l.Annotation)
+			}
 		}
 		ret[i] = v
 	}
