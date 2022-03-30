@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/op/go-logging.v1"
+	"github.com/thought-machine/please/src/cli/logging"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"

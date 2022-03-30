@@ -17,7 +17,7 @@ import (
 
 	"github.com/thought-machine/go-flags"
 	"go.uber.org/automaxprocs/maxprocs"
-	"gopkg.in/op/go-logging.v1"
+	"github.com/thought-machine/please/src/cli/logging"
 
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"

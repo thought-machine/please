@@ -5,7 +5,7 @@ package scm
 import (
 	"path"
 
-	"gopkg.in/op/go-logging.v1"
+	"github.com/thought-machine/please/src/cli/logging"
 
 	"github.com/thought-machine/please/src/fs"
 )

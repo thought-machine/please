@@ -10,7 +10,7 @@ import (
 
 	"github.com/thought-machine/please/src/process"
 
-	"gopkg.in/op/go-logging.v1"
+	"github.com/thought-machine/please/src/cli/logging"
 )
 
 var log = logging.MustGetLogger("fs")

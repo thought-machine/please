@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/shlex"
 	"github.com/hashicorp/go-multierror"
-	"gopkg.in/op/go-logging.v1"
+	"github.com/thought-machine/please/src/cli/logging"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"

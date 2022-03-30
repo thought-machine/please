@@ -23,6 +23,6 @@
 //            that other programs can interpret for their own uses.
 package query
 
-import "gopkg.in/op/go-logging.v1"
+import "github.com/thought-machine/please/src/cli/logging"
 
 var log = logging.MustGetLogger("query")
