@@ -3,9 +3,9 @@ go_library(
     srcs = ["generate.go"],
     visibility = ["//src/..."],
     deps = [
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/scm",
-        "//third_party/go:logging",
     ],
 )

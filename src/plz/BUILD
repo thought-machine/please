@@ -5,6 +5,7 @@ go_library(
     deps = [
         "//src/build",
         "//src/cli",
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/metrics",
@@ -12,6 +13,5 @@ go_library(
         "//src/remote",
         "//src/test",
         "//third_party/go:cli-init",
-        "//third_party/go:logging",
     ],
 )
