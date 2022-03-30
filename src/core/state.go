@@ -951,7 +951,9 @@ func (state *BuildState) queueTestTarget(target *BuildTarget) {
 
 // queueResolvedTarget is like queueTarget but once we have a resolved target.
 func (state *BuildState) queueResolvedTarget(target *BuildTarget, forceBuild, neededForSubinclude bool) error {
-	target.neededForSubinclude.Or(neededForSubinclude)
+	if neededForSubinclude {
+		target.neededForSubinclude.Set()
+	}
 	if target.State() >= Active && !forceBuild {
 		return nil // Target is already tagged to be built and likely on the queue.
 	}
