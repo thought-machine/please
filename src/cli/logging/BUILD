@@ -3,6 +3,6 @@ go_library(
     srcs = ["logging.go"],
     visibility = ["PUBLIC"],
     deps = [
-        "//src/cli/logging",
+        "//third_party/go:logging",
     ],
 )
