@@ -65,6 +65,21 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 			return err
 		}
 	}
+
+	// Validate plugin config keys set in host repo
+	if subrepo != nil {
+		definedKeys := map[string]bool{}
+		for key, definition := range subrepo.State.RepoConfig.PluginConfig {
+			configKey := getConfigKey(key, definition.ConfigKey)
+			definedKeys[configKey] = true
+		}
+		for key := range state.Config.Plugin[subrepo.Name].ExtraValues {
+			if _, ok := definedKeys[strings.ToLower(key)]; !ok {
+				log.Warning("Unrecognised config key \"%v\" for plugin \"%v\"", key, subrepo.Name)
+			}
+		}
+	}
+
 	// Subrepo & nothing else means we just want to ensure that subrepo is present.
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
 		return nil
@@ -76,6 +91,13 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	}
 	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
 	return activateTarget(state, pkg, label, dependent, forSubinclude)
+}
+
+func getConfigKey(aspKey, configKey string) string {
+	if configKey == "" {
+		configKey = strings.ReplaceAll(aspKey, "_", "")
+	}
+	return strings.ToLower(configKey)
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
