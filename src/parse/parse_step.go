@@ -71,9 +71,11 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 			configKey := getConfigKey(key, definition.ConfigKey)
 			definedKeys[configKey] = true
 		}
-		for key := range state.Config.Plugin[subrepo.Name].ExtraValues {
-			if _, ok := definedKeys[strings.ToLower(key)]; !ok {
-				log.Warning("Unrecognised config key \"%v\" for plugin \"%v\"", key, subrepo.Name)
+		if plugin := state.Config.Plugin[subrepo.Name]; plugin != nil {
+			for key := range plugin.ExtraValues {
+				if _, ok := definedKeys[strings.ToLower(key)]; !ok {
+					log.Warning("Unrecognised config key \"%v\" for plugin \"%v\"", key, subrepo.Name)
+				}
 			}
 		}
 	}
