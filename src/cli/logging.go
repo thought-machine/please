@@ -86,12 +86,19 @@ func logFormatter(coloured bool) logging.Formatter {
 func setLogBackend(backend logging.Backend) {
 	backend = logging.NewBackendFormatter(backend, logFormatter(StdErrIsATerminal))
 	if fileBackend == nil {
-		logging.SetBackend(newLogBackend(backend))
+		log.SetBackend(newLogBackend(backend))
 	} else {
 		fileBackendLeveled := logging.AddModuleLevel(fileBackend)
 		fileBackendLeveled.SetLevel(fileLogLevel, "")
-		logging.SetBackend(newLogBackend(backend), fileBackendLeveled)
+		log.SetBackend(logging.AddModuleLevel(multiBackend(newLogBackend(backend), fileBackendLeveled)))
 	}
+}
+
+func multiBackend(backends ...logging.Backend) logging.Backend {
+	if len(backends) == 1 {
+		return backends[0]
+	}
+	return logging.MultiLogger(backends...)
 }
 
 type logBackendFacade struct {
