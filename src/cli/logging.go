@@ -16,11 +16,13 @@ import (
 	"github.com/peterebden/go-deferred-regex"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/op/go-logging.v1"
+
+	logger "github.com/thought-machine/please/src/cli/logging"
 )
 
 const messageHistoryMaxSize = 100
 
-var log = logging.MustGetLogger("cli")
+var log = logger.Log
 
 // StdErrIsATerminal is true if the process' stderr is an interactive TTY.
 var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
