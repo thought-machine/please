@@ -82,12 +82,7 @@ func reconstructFString(f *asp.FString) string {
 	for _, v := range f.Vars {
 		b.WriteString(v.Prefix)
 		b.WriteByte('{')
-		if v.Var != "" {
-			b.WriteString(v.Var)
-		} else {
-			b.WriteString("CONFIG.")
-			b.WriteString(v.Config)
-		}
+		b.WriteString(strings.Join(v.Var, "."))
 		b.WriteByte('}')
 	}
 	b.WriteString(f.Suffix)

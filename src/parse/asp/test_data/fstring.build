@@ -4,3 +4,13 @@ z = f'x: {x} y: {y} fin'
 
 def fstring():
     y = f'{x}'
+
+
+nested = {
+    "outside": {
+        "inside": 6,
+    },
+}
+
+
+nest_test = f"{nested.outside.inside}"

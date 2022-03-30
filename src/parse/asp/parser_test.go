@@ -652,23 +652,23 @@ func TestConstantAssignments(t *testing.T) {
 func TestFStrings(t *testing.T) {
 	stmts, err := newParser().parse("src/parse/asp/test_data/fstring.build")
 	assert.NoError(t, err)
-	assert.Equal(t, 4, len(stmts))
+	assert.Equal(t, 6, len(stmts))
 
 	f := stmts[1].Ident.Action.Assign.Val.FString
 	assert.NotNil(t, f)
 	assert.Equal(t, "", f.Suffix)
 	assert.Equal(t, 1, len(f.Vars))
 	assert.Equal(t, "", f.Vars[0].Prefix)
-	assert.Equal(t, "x", f.Vars[0].Var)
+	assert.Equal(t, "x", f.Vars[0].Var[0])
 
 	f = stmts[2].Ident.Action.Assign.Val.FString
 	assert.NotNil(t, f)
 	assert.Equal(t, " fin", f.Suffix)
 	assert.Equal(t, 2, len(f.Vars))
 	assert.Equal(t, "x: ", f.Vars[0].Prefix)
-	assert.Equal(t, "x", f.Vars[0].Var)
+	assert.Equal(t, "x", f.Vars[0].Var[0])
 	assert.Equal(t, " y: ", f.Vars[1].Prefix)
-	assert.Equal(t, "y", f.Vars[1].Var)
+	assert.Equal(t, "y", f.Vars[1].Var[0])
 
 	// Test for Endpos
 	assert.Equal(t, 1, stmts[0].EndPos.Line)
@@ -701,8 +701,7 @@ func TestFStringConcat(t *testing.T) {
 				Vars: []FStringVar{
 					{
 						Prefix: " this is the rhs: ",
-						Var:    "rhs",
-						Config: "",
+						Var:    []string{"rhs"},
 					},
 				},
 				Suffix: " suffix",
@@ -714,7 +713,7 @@ func TestFStringConcat(t *testing.T) {
 		require.NotNil(t, res.FString)
 		assert.Len(t, res.FString.Vars, 1)
 		assert.Equal(t, "this is the left hand side this is the rhs: ", res.FString.Vars[0].Prefix)
-		assert.Equal(t, "rhs", res.FString.Vars[0].Var)
+		assert.Equal(t, "rhs", res.FString.Vars[0].Var[0])
 		assert.Equal(t, " suffix", res.FString.Suffix)
 	})
 
@@ -724,8 +723,7 @@ func TestFStringConcat(t *testing.T) {
 				Vars: []FStringVar{
 					{
 						Prefix: "this is the lhs: ",
-						Var:    "lhs",
-						Config: "",
+						Var:    []string{"lhs"},
 					},
 				},
 				Suffix: " suffix",
@@ -741,7 +739,7 @@ func TestFStringConcat(t *testing.T) {
 		require.NotNil(t, res.FString)
 		assert.Len(t, res.FString.Vars, 1)
 		assert.Equal(t, "this is the lhs: ", res.FString.Vars[0].Prefix)
-		assert.Equal(t, "lhs", res.FString.Vars[0].Var)
+		assert.Equal(t, "lhs", res.FString.Vars[0].Var[0])
 		assert.Equal(t, " suffix this is the right hand side", res.FString.Suffix)
 	})
 
@@ -751,8 +749,7 @@ func TestFStringConcat(t *testing.T) {
 				Vars: []FStringVar{
 					{
 						Prefix: "this is the lhs: ",
-						Var:    "lhs",
-						Config: "",
+						Var:    []string{"lhs"},
 					},
 				},
 				Suffix: "lhs suffix",
@@ -764,8 +761,7 @@ func TestFStringConcat(t *testing.T) {
 				Vars: []FStringVar{
 					{
 						Prefix: " this is the rhs: ",
-						Var:    "rhs",
-						Config: "",
+						Var:    []string{"rhs"},
 					},
 				},
 				Suffix: " rhs suffix",
@@ -776,10 +772,10 @@ func TestFStringConcat(t *testing.T) {
 		require.NotNil(t, res.FString)
 		assert.Len(t, res.FString.Vars, 2)
 		assert.Equal(t, "this is the lhs: ", res.FString.Vars[0].Prefix)
-		assert.Equal(t, "lhs", res.FString.Vars[0].Var)
+		assert.Equal(t, "lhs", res.FString.Vars[0].Var[0])
 
 		assert.Equal(t, "lhs suffix this is the rhs: ", res.FString.Vars[1].Prefix)
-		assert.Equal(t, "rhs", res.FString.Vars[1].Var)
+		assert.Equal(t, "rhs", res.FString.Vars[1].Var[0])
 
 		assert.Equal(t, " rhs suffix", res.FString.Suffix)
 	})
@@ -806,7 +802,7 @@ func TestFStringImplicitStringConcat(t *testing.T) {
 
 	fString := prog[0].Ident.Action.Call.Arguments[0].Value.Val.FString
 	assert.Equal(t, "testing that we can carry these over ", fString.Vars[0].Prefix)
-	assert.Equal(t, "multiple", fString.Vars[0].Var)
+	assert.Equal(t, "multiple", fString.Vars[0].Var[0])
 	assert.Equal(t, " lines \\n", fString.Suffix)
 }
 
