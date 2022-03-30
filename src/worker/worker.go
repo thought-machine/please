@@ -120,7 +120,7 @@ func getOrStartWorker(state *core.BuildState, worker string) (*workerServer, err
 	go w.sendRequests(stdin)
 	go w.readResponses(stdout)
 	go w.wait()
-	state.Stats.NumWorkerProcesses = len(workerMap)
+	state.SetNumWorkerStat(len(workerMap))
 	return w, nil
 }
 

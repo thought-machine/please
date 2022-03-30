@@ -15,10 +15,12 @@ var resourceUpdateFrequency = 500 * time.Millisecond
 // UpdateResources continuously updates the resources on this state object.
 // It should probably be run in a goroutine since it never returns.
 func (state *BuildState) UpdateResources() {
+	stats := &state.stats.Stats
+
 	lastTime := time.Now()
 	// Assume this doesn't change through the process lifetime.
 	count, _ := cpu.Counts(true)
-	state.Stats.CPU.Count = count
+	stats.CPU.Count = count
 	// Top out max CPU; sometimes we get our maths slightly wrong, probably because of
 	// mild uncertainty in times.
 	maxCPU := float64(100 * count)
@@ -34,22 +36,38 @@ func (state *BuildState) UpdateResources() {
 	// so we have to sample how busy we think it's been.
 	lastTotal, lastIO := getCPUTimes()
 	for timeNow := range time.NewTicker(resourceUpdateFrequency).C {
+		state.stats.Lock()
 		if thisTotal, thisIO := getCPUTimes(); thisTotal > 0.0 {
 			elapsed := timeNow.Sub(lastTime).Seconds()
-			state.Stats.CPU.Used = clamp(100.0 * (thisTotal - lastTotal) / elapsed)
-			state.Stats.CPU.IOWait = clamp(100.0 * (thisIO - lastIO) / elapsed)
+			stats.CPU.Used = clamp(100.0 * (thisTotal - lastTotal) / elapsed)
+			stats.CPU.IOWait = clamp(100.0 * (thisIO - lastIO) / elapsed)
 			lastTotal, lastIO = thisTotal, thisIO
 		}
 		// Thank goodness memory is a simpler beast.
 		if vm, err := mem.VirtualMemory(); err != nil {
 			log.Error("Error getting memory usage: %s", err)
 		} else {
-			state.Stats.Memory.Total = vm.Total
-			state.Stats.Memory.Used = vm.Used
-			state.Stats.Memory.UsedPercent = vm.UsedPercent
+			stats.Memory.Total = vm.Total
+			stats.Memory.Used = vm.Used
+			stats.Memory.UsedPercent = vm.UsedPercent
 		}
+		state.stats.Unlock()
 		lastTime = timeNow
 	}
+}
+
+// SystemStats returns the current view of system stats.
+func (state *BuildState) SystemStats() SystemStats {
+	state.stats.Lock()
+	defer state.stats.Unlock()
+	return state.stats.Stats
+}
+
+// SetNumWorkerStat sets the stat for the number of background workers
+func (state *BuildState) SetNumWorkerStat(n int) {
+	state.stats.Lock()
+	defer state.stats.Unlock()
+	state.stats.Stats.NumWorkerProcesses = n
 }
 
 func getCPUTimes() (float64, float64) {
