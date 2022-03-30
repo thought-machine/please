@@ -534,8 +534,8 @@ func strType(s *scope, args []pyObject) pyObject {
 }
 
 func glob(s *scope, args []pyObject) pyObject {
-	include := asStringList(s, args[0], "include")
-	exclude := asStringList(s, args[1], "exclude")
+	include := pyStrOrListAsList(s, args[0], "include")
+	exclude := pyStrOrListAsList(s, args[1], "exclude")
 	hidden := args[2].IsTruthy()
 	includeSymlinks := args[3].IsTruthy()
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
@@ -543,6 +543,13 @@ func glob(s *scope, args []pyObject) pyObject {
 		s.globber = fs.NewGlobber(s.state.Config.Parse.BuildFileName)
 	}
 	return fromStringList(s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks))
+}
+
+func pyStrOrListAsList(s *scope, arg pyObject, name string) []string {
+	if str, ok := arg.(pyString); ok {
+		return []string{str.String()}
+	}
+	return asStringList(s, arg, name)
 }
 
 func asStringList(s *scope, arg pyObject, name string) []string {
