@@ -49,7 +49,7 @@ import (
 	"github.com/thought-machine/please/src/worker"
 )
 
-var log = logging.MustGetLogger("plz")
+var log = logging.Log
 
 var config *core.Configuration
 

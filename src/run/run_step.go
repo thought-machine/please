@@ -23,7 +23,7 @@ import (
 	"github.com/thought-machine/please/src/process"
 )
 
-var log = logging.MustGetLogger("run")
+var log = logging.Log
 
 type ProcessOutput string
 

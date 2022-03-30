@@ -21,7 +21,7 @@ import (
 	"github.com/thought-machine/please/src/scm"
 )
 
-var log = logging.MustGetLogger("gc")
+var log = logging.Log
 
 type targetMap map[*core.BuildTarget]bool
 

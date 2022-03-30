@@ -15,7 +15,7 @@ import (
 	"github.com/thought-machine/please/src/plz"
 )
 
-var log = logging.MustGetLogger("build_test")
+var log = logging.Log
 
 const size = 1000
 

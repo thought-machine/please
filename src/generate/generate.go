@@ -13,7 +13,7 @@ import (
 	"github.com/thought-machine/please/src/scm"
 )
 
-var log = logging.MustGetLogger("generate")
+var log = logging.Log
 
 // UpdateGitignore will regenerate the .gitignore adding the outputs of the targets to it. If the gitignore is not the
 // root gitignore, only targets that sit under that part of the repo will be added.

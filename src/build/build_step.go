@@ -31,7 +31,7 @@ import (
 	"github.com/thought-machine/please/src/worker"
 )
 
-var log = logging.MustGetLogger("build")
+var log = logging.Log
 
 // Type that indicates that we're stopping the build of a target in a nonfatal way.
 var errStop = fmt.Errorf("stopping build")

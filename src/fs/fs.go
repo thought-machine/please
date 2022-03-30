@@ -13,7 +13,7 @@ import (
 	"github.com/thought-machine/please/src/cli/logging"
 )
 
-var log = logging.MustGetLogger("fs")
+var log = logging.Log
 
 // DirPermissions are the default permission bits we apply to directories.
 const DirPermissions = os.ModeDir | 0775

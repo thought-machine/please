@@ -25,4 +25,4 @@ package query
 
 import "github.com/thought-machine/please/src/cli/logging"
 
-var log = logging.MustGetLogger("query")
+var log = logging.Log

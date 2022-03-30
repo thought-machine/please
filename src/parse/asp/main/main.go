@@ -23,7 +23,7 @@ import (
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
-var log = logging.MustGetLogger("parser")
+var log = logging.Log
 
 var opts = struct {
 	Usage        string

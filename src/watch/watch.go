@@ -17,7 +17,7 @@ import (
 	"github.com/thought-machine/please/src/run"
 )
 
-var log = logging.MustGetLogger("watch")
+var log = logging.Log
 
 const debounceInterval = 100 * time.Millisecond
 

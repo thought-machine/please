@@ -9,7 +9,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-var log = logging.MustGetLogger("metrics")
+var log = logging.Log
 
 var registerer = prometheus.WrapRegistererWith(prometheus.Labels{
 	"version": core.PleaseVersion,

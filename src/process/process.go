@@ -17,7 +17,7 @@ import (
 	"github.com/thought-machine/please/src/cli"
 )
 
-var log = logging.MustGetLogger("progress")
+var log = logging.Log
 
 type NamespacingPolicy string
 

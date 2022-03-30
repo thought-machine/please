@@ -19,7 +19,7 @@ import (
 	"github.com/thought-machine/please/src/test"
 )
 
-var log = logging.MustGetLogger("clean")
+var log = logging.Log
 
 // Clean cleans the entire output directory and optionally the cache as well.
 func Clean(config *core.Configuration, cache core.Cache, background bool) {

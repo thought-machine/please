@@ -16,7 +16,7 @@ import (
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
-var log = logging.MustGetLogger("help")
+var log = logging.Log
 
 // PrintRuleArgs prints the arguments of all builtin rules
 func PrintRuleArgs() {

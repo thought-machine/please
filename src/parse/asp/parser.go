@@ -14,7 +14,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-var log = logging.MustGetLogger("asp")
+var log = logging.Log
 
 // A semaphore implements the standard synchronisation mechanism based on a buffered channel.
 type semaphore chan struct{}

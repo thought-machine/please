@@ -39,7 +39,7 @@ import (
 	"github.com/thought-machine/please/src/metrics"
 )
 
-var log = logging.MustGetLogger("remote")
+var log = logging.Log
 
 // The API version we support.
 var apiVersion = semver.SemVer{Major: 2}

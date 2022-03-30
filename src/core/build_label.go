@@ -14,7 +14,7 @@ import (
 	"github.com/thought-machine/please/src/process"
 )
 
-var log = logging.MustGetLogger("core")
+var log = logging.Log
 
 // A BuildLabel is a representation of an identifier of a build target, e.g. //spam/eggs:ham
 // corresponds to BuildLabel{PackageName: spam/eggs name: ham}

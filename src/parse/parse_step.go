@@ -17,7 +17,7 @@ import (
 	"github.com/thought-machine/please/src/fs"
 )
 
-var log = logging.MustGetLogger("parse")
+var log = logging.Log
 
 // Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
 // It is not an error if the package has already been parsed.

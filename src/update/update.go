@@ -34,7 +34,7 @@ import (
 	"github.com/thought-machine/please/src/process"
 )
 
-var log = logging.MustGetLogger("update")
+var log = logging.Log
 
 // minSignedVersion is the earliest version of Please that has a signature.
 var minSignedVersion = semver.Version{Major: 9, Minor: 2}

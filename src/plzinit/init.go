@@ -42,7 +42,7 @@ github_repo(
 )
 `
 
-var log = logging.MustGetLogger("init")
+var log = logging.Log
 
 // InitConfig initialises a .plzconfig template in the given directory.
 func InitConfig(dir string, bazelCompatibility bool, noPrompt bool) {

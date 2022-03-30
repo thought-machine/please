@@ -19,7 +19,7 @@ import (
 	"github.com/thought-machine/please/src/plz"
 )
 
-var log = logging.MustGetLogger("format")
+var log = logging.Log
 
 // Format reformats the given BUILD files to their canonical version.
 // It either prints the reformatted versions to stdout or rewrites the files in-place.

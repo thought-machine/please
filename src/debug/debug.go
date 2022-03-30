@@ -11,7 +11,7 @@ import (
 	"github.com/thought-machine/please/src/process"
 )
 
-var log = logging.MustGetLogger("debug")
+var log = logging.Log
 
 func Debug(state *core.BuildState, label core.BuildLabel, args []string) int {
 	target := state.Graph.TargetOrDie(label)

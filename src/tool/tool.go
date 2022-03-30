@@ -18,7 +18,7 @@ import (
 	"github.com/thought-machine/please/src/fs"
 )
 
-var log = logging.MustGetLogger("tool")
+var log = logging.Log
 
 // A Tool is one of Please's tools; this only exists for facilitating tab-completion for flags.
 type Tool string

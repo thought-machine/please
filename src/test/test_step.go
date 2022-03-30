@@ -21,7 +21,7 @@ import (
 	"github.com/thought-machine/please/src/worker"
 )
 
-var log = logging.MustGetLogger("test")
+var log = logging.Log
 
 const dummyOutput = "=== RUN DummyTest\n--- PASS: DummyTest (0.00s)\nPASS\n"
 const dummyCoverage = "<?xml version=\"1.0\" ?><coverage></coverage>"
