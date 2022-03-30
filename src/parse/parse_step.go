@@ -64,15 +64,8 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		if err := subrepo.LoadSubrepoConfig(); err != nil {
 			return err
 		}
-	}
 
-	// Subrepo & nothing else means we just want to ensure that subrepo is present.
-	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
-		return nil
-	}
-
-	// Validate plugin config keys set in host repo
-	if subrepo != nil {
+		// Validate plugin config keys set in host repo
 		definedKeys := map[string]bool{}
 		for key, definition := range state.RepoConfig.PluginConfig {
 			configKey := getConfigKey(key, definition.ConfigKey)
@@ -83,6 +76,11 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 				log.Warning("Unrecognised config key \"%v\" for plugin \"%v\"", key, subrepo.Name)
 			}
 		}
+	}
+
+	// Subrepo & nothing else means we just want to ensure that subrepo is present.
+	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
+		return nil
 	}
 
 	pkg, err = parsePackage(state, label, dependent, subrepo)
