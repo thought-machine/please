@@ -66,10 +66,15 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		}
 	}
 
+	// Subrepo & nothing else means we just want to ensure that subrepo is present.
+	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
+		return nil
+	}
+
 	// Validate plugin config keys set in host repo
 	if subrepo != nil {
 		definedKeys := map[string]bool{}
-		for key, definition := range subrepo.State.RepoConfig.PluginConfig {
+		for key, definition := range state.RepoConfig.PluginConfig {
 			configKey := getConfigKey(key, definition.ConfigKey)
 			definedKeys[configKey] = true
 		}
@@ -80,10 +85,6 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		}
 	}
 
-	// Subrepo & nothing else means we just want to ensure that subrepo is present.
-	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
-		return nil
-	}
 	pkg, err = parsePackage(state, label, dependent, subrepo)
 
 	if err != nil {
