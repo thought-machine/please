@@ -24,7 +24,7 @@ const pluginRepoTemplate = `plugin_repo(
 )
 `
 
-func info(format string, args ...any) {
+func info(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 
