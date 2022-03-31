@@ -16,7 +16,7 @@ export PATH="$DIR:$PATH"
 
 # Start the servers in the background
 echo "Starting servers..."
-plz run parallel -p -v notice --colour --detach -o please.location:$DIR -o build.passenv:PATH //test/remote:run_elan //test/remote:run_zeal //test/remote:run_mettle
+plz run parallel -p -v notice --colour --detach //test/remote:run_elan //test/remote:run_zeal //test/remote:run_mettle
 
 echo "Waiting for servers to come up..."
 # Give the servers a chance to start up.
@@ -24,12 +24,12 @@ sleep 3
 
 # Test we can rebuild plz itself.
 echo "Building please..."
-plz build -o build.passenv:PATH --profile ci_remote -p -v notice --colour //src:please
+plz build --profile ci_remote -p -v notice --colour //src:please
 
 # Check we can actually run some tests
 echo "Testing //src/core:all..."
-plz test -o build.passenv:PATH --profile ci_remote -p -v notice --colour //src/core:all
+plz test --profile ci_remote -p -v notice --colour //src/core:all
 
 # And run any tests we deem to be pertinent to remote execution
 echo "Testing anything labeled rex..."
-plz test -o build.passenv:PATH --profile ci_remote -p -v notice --colour -i rex
+plz test --profile ci_remote -p -v notice --colour -i rex

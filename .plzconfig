@@ -12,12 +12,7 @@ keep = //test/...
 keep = //docs:all
 keep = //package:all
 
-[go]
-filtertool = //tools/please_go_filter
-pleasegotool = //tools/please_go
-embedtool = //tools/please_go_embed
-importpath = github.com/thought-machine/please
-gotool = //third_party/go:toolchain|go
+
 
 [cpp]
 defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
@@ -35,6 +30,7 @@ language = go
 
 [parse]
 BlacklistDirs = tree ; The performance test repo
+preloadsubincludes = ///go//build_defs:go
 
 [alias "autofix"]
 desc = Generates generated code and applies lint fixes
@@ -98,3 +94,10 @@ PackageOutputsStrictness = true
 PythonWheelHashing = true
 NoIterSourcesMarked = true
 GoDontCollapseImportPath = true
+ExcludeGoRules = true
+
+[Plugin "go"]
+Target = //plugins:go
+pleasegotool = @go//tools/please_go:bootstrap
+importpath = github.com/thought-machine/please
+gotool = //third_party/go:toolchain|go
