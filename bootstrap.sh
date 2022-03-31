@@ -16,8 +16,6 @@ PLZ_ARGS="${PLZ_ARGS:-}"
 notice "Bootstrapping please..."
 go run src/please.go $PLZ_ARGS --log_file plz-out/log/bootstrap_build.log build //src:please
 
-echo "Please has been installed under plz-out/please"
-
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     echo "Skipping tests... done."
     exit 0
@@ -25,7 +23,7 @@ fi
 
 # We need to build the tools again because please.location has changed, so the e2e test would fail
 notice "Building the tools..."
-plz-out/please/plz $PLZ_ARGS build //package:installed_files --log_file plz-out/log/tools_build.log
+plz-out/bin/src/please $PLZ_ARGS build //package:installed_files --log_file plz-out/log/tools_build.log
 
 # Run the tests to make sure they still work
 notice "Running tests..."
@@ -99,9 +97,9 @@ check_path_for_excludes() {
 # repo that are optional and exercise specific rules, and require extra dependencies.
 EXCLUDES=$(check_path_for_excludes)
 
-plz-out/please/plz $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --exclude=e2e --log_file plz-out/log/test_build.log --log_file_level 4 --trace_file plz-out/log/trace.json $@
+plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --exclude=e2e --log_file plz-out/log/test_build.log --log_file_level 4 --trace_file plz-out/log/trace.json $@
 
 # We run the end-to-end tests separately to ensure things don't fight with one another; they are
 # finicky about some things due to running plz recursively and disabling the lock.
 notice "Running end-to-end tests..."
-plz-out/please/plz $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e2e --log_file plz-out/log/e2e_build.log --log_file_level 4 $@
+plz-out/bin/src/please $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e2e --log_file plz-out/log/e2e_build.log --log_file_level 4 $@
