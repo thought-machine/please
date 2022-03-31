@@ -68,7 +68,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		// Validate plugin ID is the same as the subrepo name
 		if pluginID := state.RepoConfig.PluginDefinition.Name; pluginID != "" {
 			if !strings.EqualFold(pluginID, subrepo.Name) {
-				log.Errorf("Subrepo name \"%s\" should be the same as the plugin ID \"%s\"", subrepo.Name, pluginID)
+				return fmt.Errorf("Subrepo name %q should be the same as the plugin ID %q", subrepo.Name, pluginID)
 			}
 		}
 
@@ -81,7 +81,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		if plugin := state.Config.Plugin[subrepo.Name]; plugin != nil {
 			for key := range plugin.ExtraValues {
 				if _, ok := definedKeys[strings.ToLower(key)]; !ok {
-					log.Warning("Unrecognised config key \"%v\" for plugin \"%v\"", key, subrepo.Name)
+					return fmt.Errorf("Unrecognised config key %q for plugin %q", key, subrepo.Name)
 				}
 			}
 		}
