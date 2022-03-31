@@ -67,8 +67,12 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 
 		// Validate plugin ID is the same as the subrepo name
 		if pluginID := state.RepoConfig.PluginDefinition.Name; pluginID != "" {
-			if !strings.EqualFold(pluginID, subrepo.Name) {
-				return fmt.Errorf("Subrepo name %q should be the same as the plugin ID %q", subrepo.Name, pluginID)
+			subrepoName := subrepo.Name
+			if subrepo.Arch.String() != "" {
+				subrepoName = strings.TrimSuffix(subrepo.Name, "_"+subrepo.Arch.String())
+			}
+			if !strings.EqualFold(pluginID, subrepoName) {
+				return fmt.Errorf("Subrepo name %q should be the same as the plugin ID %q", subrepoName, pluginID)
 			}
 		}
 
