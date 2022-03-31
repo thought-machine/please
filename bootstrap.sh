@@ -15,7 +15,6 @@ PLZ_ARGS="${PLZ_ARGS:-}"
 # Now invoke Go to run Please to build itself.
 notice "Bootstrapping please..."
 go run src/please.go $PLZ_ARGS --log_file plz-out/log/bootstrap_build.log build //src:please
-cp -f plz-out/please/please plz-out/please/plz
 
 echo "Please has been installed under plz-out/please"
 
