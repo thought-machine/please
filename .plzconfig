@@ -95,6 +95,6 @@ ExcludeGoRules = true
 
 [Plugin "go"]
 Target = //plugins:go
-pleasegotool = @go//tools/please_go:bootstrap
+pleasegotool = ///go//tools/please_go:bootstrap
 importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
