@@ -65,7 +65,14 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 			return err
 		}
 
-		// Validate plugin config keys set in host repo
+		// Validate plugin ID is the same as the subrepo name
+		if pluginID := state.RepoConfig.PluginDefinition.Name; pluginID != "" {
+			if pluginID != subrepo.Name {
+				log.Warningf("Subrepo name \"%s\" should be the same as the plugin ID \"%s\"", subrepo.Name, pluginID)
+			}
+		}
+
+		// Validate the plugin config keys set in the host repo
 		definedKeys := map[string]bool{}
 		for key, definition := range state.RepoConfig.PluginConfig {
 			configKey := getConfigKey(key, definition.ConfigKey)
