@@ -1,10 +1,21 @@
 package help
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(t *testing.M) {
+	f, err := os.Create(".plzconfig")
+	if err != nil {
+		panic(err)
+	}
+	f.Close()
+
+	t.Run()
+}
 
 func TestPublicInterface(t *testing.T) {
 	// Quick test on the main Help function; it doesn't expose much information so other

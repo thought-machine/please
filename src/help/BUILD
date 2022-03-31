@@ -19,16 +19,7 @@ go_library(
 
 go_test(
     name = "help_test",
-    srcs = ["help_test.go"],
-    deps = [
-        ":help",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "rules_test",
-    srcs = ["rules_test.go"],
+    srcs = ["help_test.go", "rules_test.go"],
     deps = [
         ":help",
         "//third_party/go:testify",
