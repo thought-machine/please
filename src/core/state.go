@@ -119,7 +119,7 @@ type BuildState struct {
 	// Timestamp that the build is considered to start at.
 	StartTime time.Time
 	// Various system statistics. Mostly used during remote communication.
-	Stats *SystemStats
+	stats *lockedStats
 	// Configuration options
 	Config *Configuration
 	// The .plzconfig file for this repo. Unlike Config, no default values are applied. This will represent the
@@ -289,6 +289,12 @@ type SystemStats struct {
 	// N.B. These are background workers as started by $(worker) commands, not the internal worker
 	//      threads tracked in the state object.
 	NumWorkerProcesses int
+}
+
+// lockedStats is just SystemStats with a mutex to protect it.
+type lockedStats struct {
+	sync.Mutex
+	Stats SystemStats
 }
 
 // addActiveTargets increments the counter for a number of newly active build targets.
@@ -1217,7 +1223,7 @@ func NewBuildState(config *Configuration) *BuildState {
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
 		TargetArch:      config.Build.Arch,
 		Arch:            cli.HostArch(),
-		Stats:           &SystemStats{},
+		stats:           &lockedStats{},
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
 			numPending:      1,
