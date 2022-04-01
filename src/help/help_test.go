@@ -15,6 +15,7 @@ func TestMain(t *testing.M) {
 	f.Close()
 
 	t.Run()
+	os.Exit(0)
 }
 
 func TestPublicInterface(t *testing.T) {
