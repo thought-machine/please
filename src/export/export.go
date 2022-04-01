@@ -25,6 +25,9 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	for _, target := range targets {
 		export(state.Graph, dir, state.Graph.TargetOrDie(target), done)
 	}
+	for _, target := range state.Config.Parse.PreloadSubincludes {
+		export(state.Graph, dir, state.Graph.TargetOrDie(target), done)
+	}
 	// Now write all the build files
 	packages := map[*core.Package]bool{}
 	for target := range done {
