@@ -25,8 +25,8 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/ulikunitz/xz"
 	"github.com/thought-machine/please/src/cli/logging"
+	"github.com/ulikunitz/xz"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"

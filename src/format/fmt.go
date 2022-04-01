@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 
 	"github.com/bazelbuild/buildtools/build"
-	"golang.org/x/sync/errgroup"
 	"github.com/thought-machine/please/src/cli/logging"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
