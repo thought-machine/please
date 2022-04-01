@@ -38,6 +38,7 @@ go_test(
         ":update",
         "//src/cli",
         "//src/cli/logging",
+        "//third_party/go:logging",
         "//third_party/go:go-retryablehttp",
         "//third_party/go:testify",
     ],

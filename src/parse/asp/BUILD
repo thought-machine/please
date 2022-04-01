@@ -29,6 +29,7 @@ go_test(
         ":asp",
         "//rules",
         "//src/core",
+        "//third_party/go:logging",
         "//third_party/go:testify",
     ],
 )

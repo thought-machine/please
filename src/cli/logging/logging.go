@@ -13,3 +13,13 @@ var Log = logging.MustGetLogger("plz")
 
 // Level is a re-export of the library type.
 type Level = logging.Level
+
+// Re-exports of various log levels.
+const (
+	CRITICAL = logging.CRITICAL
+	ERROR    = logging.ERROR
+	WARNING  = logging.WARNING
+	NOTICE   = logging.NOTICE
+	INFO     = logging.INFO
+	DEBUG    = logging.DEBUG
+)

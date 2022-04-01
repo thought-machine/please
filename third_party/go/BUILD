@@ -18,7 +18,10 @@ go_module(
     module = "gopkg.in/op/go-logging.v1",
     version = "v1.0.0-20160211212156-b2cb9fa56473",
     visibility = [
+        "//src/build:build_step_test",
         "//src/cli/...",
+        "//src/parse/asp:asp_test",
+        "//src/update:update_test",
         "//test/...",
         "//tools/...",
     ],

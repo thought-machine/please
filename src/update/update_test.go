@@ -12,7 +12,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/stretchr/testify/assert"
-	"github.com/thought-machine/please/src/cli/logging"
+	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
