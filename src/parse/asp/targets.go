@@ -13,6 +13,9 @@ import (
 // filegroupCommand is the command we put on filegroup rules.
 const filegroupCommand = pyString("filegroup")
 
+// textFileCommand is the command we put on text_file rules.
+const textFileCommand = pyString("text_file")
+
 const defaultFlakiness = 3
 
 const (
@@ -102,7 +105,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.TestOnly = test || isTruthy(testOnlyBuildRuleArgIdx)
 	target.ShowProgress = isTruthy(progressBuildRuleArgIdx)
 	target.IsRemoteFile = isTruthy(urlsBuildRuleArgIdx)
-	target.IsTextFile = isTruthy(fileContentArgIdx)
+	target.IsTextFile = args[cmdBuildRuleArgIdx] == textFileCommand
 	target.Local = isTruthy(localBuildRuleArgIdx)
 	target.ExitOnError = isTruthy(exitOnErrorArgIdx)
 	for _, o := range asStringList(s, args[outDirsBuildRuleArgIdx], "output_dirs") {
