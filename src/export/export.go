@@ -22,10 +22,7 @@ var log = logging.MustGetLogger("export")
 // It dies on any errors.
 func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	done := map[*core.BuildTarget]bool{}
-	for _, target := range targets {
-		export(state.Graph, dir, state.Graph.TargetOrDie(target), done)
-	}
-	for _, target := range state.Config.Parse.PreloadSubincludes {
+	for _, target := range append(state.Config.Parse.PreloadSubincludes, targets...) {
 		export(state.Graph, dir, state.Graph.TargetOrDie(target), done)
 	}
 	// Now write all the build files
@@ -62,6 +59,10 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 
 // export implements the logic of ToDir, but prevents repeating targets.
 func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done map[*core.BuildTarget]bool) {
+	// We want to export the package that made this subrepo available
+	if target.Subrepo != nil {
+		target = target.Subrepo.Target
+	}
 	if done[target] {
 		return
 	}
