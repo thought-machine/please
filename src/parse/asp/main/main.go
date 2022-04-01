@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"gopkg.in/op/go-logging.v1"
+	"github.com/thought-machine/please/src/cli/logging"
 
 	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/src/cli"
@@ -23,7 +23,7 @@ import (
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
-var log = logging.MustGetLogger("parser")
+var log = logging.Log
 
 var opts = struct {
 	Usage        string

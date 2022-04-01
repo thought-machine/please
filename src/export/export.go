@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"gopkg.in/op/go-logging.v1"
+	"github.com/thought-machine/please/src/cli/logging"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -16,7 +16,7 @@ import (
 	"github.com/thought-machine/please/src/parse"
 )
 
-var log = logging.MustGetLogger("export")
+var log = logging.Log
 
 // ToDir exports a set of targets to the given directory.
 // It dies on any errors.

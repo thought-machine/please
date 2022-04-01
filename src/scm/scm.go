@@ -5,12 +5,12 @@ package scm
 import (
 	"path"
 
-	"gopkg.in/op/go-logging.v1"
+	"github.com/thought-machine/please/src/cli/logging"
 
 	"github.com/thought-machine/please/src/fs"
 )
 
-var log = logging.MustGetLogger("scm")
+var log = logging.Log
 
 // An SCM represents an SCM implementation that we can ask for various things.
 type SCM interface {

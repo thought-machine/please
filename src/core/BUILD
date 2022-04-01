@@ -12,6 +12,7 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
+        "//src/cli/logging",
         "//src/fs",
         "//src/process",
         "//src/scm",
@@ -22,7 +23,6 @@ go_library(
         "//third_party/go:gcfg",
         "//third_party/go:go-flags",
         "//third_party/go:godirwalk",
-        "//third_party/go:logging",
         "//third_party/go:psutil",
         "//third_party/go:semver",
         "//third_party/go:shlex",

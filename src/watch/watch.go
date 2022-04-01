@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"gopkg.in/op/go-logging.v1"
+	"github.com/thought-machine/please/src/cli/logging"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -17,7 +17,7 @@ import (
 	"github.com/thought-machine/please/src/run"
 )
 
-var log = logging.MustGetLogger("watch")
+var log = logging.Log
 
 const debounceInterval = 100 * time.Millisecond
 

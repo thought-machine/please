@@ -9,12 +9,12 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/op/go-logging.v1"
+	"github.com/thought-machine/please/src/cli/logging"
 
 	"github.com/thought-machine/please/src/core"
 )
 
-var log = logging.MustGetLogger("output")
+var log = logging.Log
 
 // A traceWriter is responsible for writing the JSON trace info.
 type traceWriter struct {

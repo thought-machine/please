@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -23,7 +23,7 @@ import (
 	"github.com/thought-machine/please/src/process"
 )
 
-var log = logging.MustGetLogger("run")
+var log = logging.Log
 
 type ProcessOutput string
 

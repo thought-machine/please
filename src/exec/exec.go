@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/op/go-logging.v1"
+	"github.com/thought-machine/please/src/cli/logging"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/process"
 )
 
-var log = logging.MustGetLogger("exec")
+var log = logging.Log
 
 // Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
 func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, env, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) int {

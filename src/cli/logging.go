@@ -16,11 +16,13 @@ import (
 	"github.com/peterebden/go-deferred-regex"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/op/go-logging.v1"
+
+	logger "github.com/thought-machine/please/src/cli/logging"
 )
 
 const messageHistoryMaxSize = 100
 
-var log = logging.MustGetLogger("cli")
+var log = logger.Log
 
 // StdErrIsATerminal is true if the process' stderr is an interactive TTY.
 var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
@@ -84,12 +86,19 @@ func logFormatter(coloured bool) logging.Formatter {
 func setLogBackend(backend logging.Backend) {
 	backend = logging.NewBackendFormatter(backend, logFormatter(StdErrIsATerminal))
 	if fileBackend == nil {
-		logging.SetBackend(newLogBackend(backend))
+		log.SetBackend(newLogBackend(backend))
 	} else {
 		fileBackendLeveled := logging.AddModuleLevel(fileBackend)
 		fileBackendLeveled.SetLevel(fileLogLevel, "")
-		logging.SetBackend(newLogBackend(backend), fileBackendLeveled)
+		log.SetBackend(logging.AddModuleLevel(multiBackend(newLogBackend(backend), fileBackendLeveled)))
 	}
+}
+
+func multiBackend(backends ...logging.Backend) logging.Backend {
+	if len(backends) == 1 {
+		return backends[0]
+	}
+	return logging.MultiLogger(backends...)
 }
 
 type logBackendFacade struct {
