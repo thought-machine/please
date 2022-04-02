@@ -272,10 +272,10 @@ func progressMessage(progress *float32) string {
 
 // killAll kills all subprocesses of this executor.
 func (e *Executor) killAll() {
+	e.mutex.Lock()
 	var wg sync.WaitGroup
 	wg.Add(len(e.processes))
 	defer wg.Wait()
-	e.mutex.Lock()
 	defer e.mutex.Unlock()
 	for proc, ch := range e.processes {
 		go func(proc *exec.Cmd, ch <-chan error) {
