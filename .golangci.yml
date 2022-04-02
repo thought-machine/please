@@ -32,30 +32,29 @@ linters:
   enable:
     - asciicheck
     - bidichk
-    - deadcode
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - structcheck
-    - unused
-    - varcheck
-    - asciicheck
     - bodyclose
+    - deadcode
     - dogsled
     - dupl
     - exportloopref
     - gci
     - gocritic
     - gofmt
+    - gosimple
+    - govet
     - ifshort
+    - ineffassign
     - misspell
     - nilerr
     - prealloc
     - revive
+    - staticcheck
+    - structcheck
     - tenv
     - thelper
     - unconvert
+    - unused
+    - varcheck
     - wastedassign
     - whitespace
 
