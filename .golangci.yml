@@ -5,7 +5,6 @@ run:
 
 issues:
   exclude:
-    - SA1019  # Upstream packages seem not to be ready to update protobuf yet
     - SA4006  # Too many false positives :(
     - SA5008  # Warns for duplicate struct tags which are meaningful to go-flags
     - unslice  # This may be useful in some places.
