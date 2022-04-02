@@ -160,10 +160,6 @@ type BuildState struct {
 	Coverage TestCoverage
 	// True if we require rule hashes to be correctly verified (usually the case).
 	VerifyHashes bool
-	// True if >= 1 target has failed to build
-	BuildFailed bool
-	// True if >= 1 target has failed test cases
-	TestFailed bool
 	// True if tests should calculate coverage metrics
 	NeedCoverage bool
 	// True if we intend to build targets. False if we're just parsing
@@ -263,6 +259,10 @@ type stateProgress struct {
 	originalTargetMutex sync.Mutex
 	// True if something about the build has failed.
 	failed atomicBool
+	// True if >= 1 target has failed to build
+	buildFailed atomicBool
+	// True if >= 1 target has failed test cases
+	testFailed atomicBool
 	// Stream of results from the build
 	results chan *BuildResult
 	// Internal result stream, used to intermediate them for the cycle checker.
@@ -563,9 +563,9 @@ func (state *BuildState) logResult(result *BuildResult) {
 	if result.Status.IsFailure() {
 		state.progress.failed.Set()
 		if result.Status == TargetBuildFailed {
-			state.BuildFailed = true
+			state.progress.buildFailed.Set()
 		} else if result.Status == TargetTestFailed {
-			state.TestFailed = true
+			state.progress.testFailed.Set()
 		}
 	}
 }
@@ -624,9 +624,9 @@ func (state *BuildState) checkForCycles() {
 	}
 }
 
-// Successful returns true if the state has been successful, i.e. no targets have errored.
-func (state *BuildState) Successful() bool {
-	return !state.progress.failed.IsSet()
+// Failures returns anything that has failed about the current build.
+func (state *BuildState) Failures() (anything, build, test bool) {
+	return state.progress.failed.IsSet(), state.progress.buildFailed.IsSet(), state.progress.testFailed.IsSet()
 }
 
 // Results returns a channel on which the caller can listen for results.
