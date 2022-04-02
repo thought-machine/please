@@ -386,6 +386,8 @@ func (state *BuildState) Stop() {
 // CloseResults closes the result channels.
 func (state *BuildState) CloseResults() {
 	state.progress.cycleDetector.Stop()
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
 	if state.progress.results != nil {
 		state.progress.resultOnce.Do(func() {
 			close(state.progress.results)
@@ -610,9 +612,11 @@ func (state *BuildState) forwardResults() {
 				delete(activeTargets, target)
 			}
 		}
+		state.progress.mutex.Lock()
 		if state.progress.results != nil {
 			state.progress.results <- result
 		}
+		state.progress.mutex.Unlock()
 	}
 }
 
@@ -631,6 +635,8 @@ func (state *BuildState) Failures() (anything, build, test bool) {
 
 // Results returns a channel on which the caller can listen for results.
 func (state *BuildState) Results() <-chan *BuildResult {
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
 	if state.progress.results == nil {
 		state.progress.results = make(chan *BuildResult, 1000)
 	}
