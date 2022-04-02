@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/thought-machine/please/src/cli/logging"
-
 	"github.com/thought-machine/please/src/core"
 )
 

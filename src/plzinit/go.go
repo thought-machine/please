@@ -3,18 +3,18 @@ package plzinit
 import (
 	"bufio"
 	"fmt"
-	"github.com/thought-machine/please/src/core"
 	"os"
 	"path"
 	"strings"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
 )
 
 const goConfig = `
 [go]
 ;gotool = ...
-;goroot - ... 
+;goroot - ...
 `
 
 // golangConfig prompts the user and returns the go config to add to the .plzconfig

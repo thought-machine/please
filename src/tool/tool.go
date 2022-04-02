@@ -12,8 +12,8 @@ import (
 	"syscall"
 
 	"github.com/thought-machine/go-flags"
-	"github.com/thought-machine/please/src/cli/logging"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )

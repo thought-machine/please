@@ -21,8 +21,8 @@ import (
 
 	"github.com/google/shlex"
 	"github.com/hashicorp/go-multierror"
-	"github.com/thought-machine/please/src/cli/logging"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/generate"
