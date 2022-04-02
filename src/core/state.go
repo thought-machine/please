@@ -261,8 +261,8 @@ type stateProgress struct {
 	// Targets that we were originally requested to build
 	originalTargets     []BuildLabel
 	originalTargetMutex sync.Mutex
-	// True if the build has been successful so far (i.e. nothing has failed yet).
-	success bool
+	// True if something about the build has failed.
+	failed atomicBool
 	// Stream of results from the build
 	results chan *BuildResult
 	// Internal result stream, used to intermediate them for the cycle checker.
@@ -561,7 +561,7 @@ func (state *BuildState) logResult(result *BuildResult) {
 	result.Time = time.Now()
 	state.progress.internalResults <- result
 	if result.Status.IsFailure() {
-		state.progress.success = false
+		state.progress.failed.Set()
 		if result.Status == TargetBuildFailed {
 			state.BuildFailed = true
 		} else if result.Status == TargetTestFailed {
@@ -626,7 +626,7 @@ func (state *BuildState) checkForCycles() {
 
 // Successful returns true if the state has been successful, i.e. no targets have errored.
 func (state *BuildState) Successful() bool {
-	return state.progress.success
+	return !state.progress.failed.IsSet()
 }
 
 // Results returns a channel on which the caller can listen for results.
@@ -1230,7 +1230,6 @@ func NewBuildState(config *Configuration) *BuildState {
 			pendingPackages: cmap.New(),
 			pendingTargets:  cmap.New(),
 			packageWaits:    cmap.New(),
-			success:         true,
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 		},
