@@ -42,7 +42,7 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
 // String returns a string representation of this build label.
 func (label BuildLabel) String() string {
-	zero := BuildLabel{}
+	zero := BuildLabel{} //nolint:ifshort
 	if label == zero {
 		return ""
 	} else if label == OriginalTarget {

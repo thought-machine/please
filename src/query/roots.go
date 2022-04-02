@@ -62,8 +62,7 @@ func indexOf(labels []core.BuildLabel, label core.BuildLabel) int {
 }
 
 func uniqueReverseDependencies(revdeps map[core.BuildLabel][]*core.BuildTarget, target *core.BuildTarget, targets map[*core.BuildTarget]struct{}) {
-	_, ok := targets[target]
-	if ok {
+	if _, ok := targets[target]; ok {
 		return
 	}
 	targets[target] = struct{}{}

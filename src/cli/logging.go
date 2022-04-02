@@ -280,8 +280,7 @@ func findSplit(line string, guess int) int {
 		return len(line)
 	}
 	r := regexp.MustCompilePOSIX(fmt.Sprintf(".{%d,%d}(\\x1b[^m]+m)?", guess/2, guess))
-	m := r.FindStringIndex(line)
-	if m != nil {
+	if m := r.FindStringIndex(line); m != nil {
 		return m[1] // second element in slice is the end index
 	}
 	return guess // Dunno what to do at this point. It's probably unlikely to happen often though.
