@@ -52,6 +52,7 @@ linters:
     - prealloc
     - revive
     - tenv
+    - thelper
     - unconvert
     - wastedassign
     - whitespace
