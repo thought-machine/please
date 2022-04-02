@@ -51,6 +51,7 @@ linters:
     - nilerr
     - prealloc
     - revive
+    - tenv
     - unconvert
     - whitespace
 

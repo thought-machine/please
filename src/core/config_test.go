@@ -269,10 +269,8 @@ func TestBuildEnvSection(t *testing.T) {
 }
 
 func TestPassEnv(t *testing.T) {
-	err := os.Setenv("FOO", "first")
-	assert.NoError(t, err)
-	err = os.Setenv("BAR", "second")
-	assert.NoError(t, err)
+	t.Setenv("FOO", "first")
+	t.Setenv("BAR", "second")
 	config, err := ReadConfigFiles([]string{"src/core/test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
@@ -284,10 +282,8 @@ func TestPassEnv(t *testing.T) {
 }
 
 func TestPassUnsafeEnv(t *testing.T) {
-	err := os.Setenv("FOO", "first")
-	assert.NoError(t, err)
-	err = os.Setenv("BAR", "second")
-	assert.NoError(t, err)
+	t.Setenv("FOO", "first")
+	t.Setenv("BAR", "second")
 	config, err := ReadConfigFiles([]string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
@@ -310,10 +306,8 @@ func TestPassUnsafeEnvExcludedFromHash(t *testing.T) {
 
 	expected := config.Hash()
 
-	err = os.Setenv("FOO", "first")
-	require.NoError(t, err)
-	err = os.Setenv("BAR", "second")
-	require.NoError(t, err)
+	t.Setenv("FOO", "first")
+	t.Setenv("BAR", "second")
 
 	assert.Equal(t, expected, config.Hash())
 }
@@ -366,7 +360,7 @@ func TestParseNewFormatAliases(t *testing.T) {
 func TestAttachAliasFlags(t *testing.T) {
 	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
-	os.Setenv("GO_FLAGS_COMPLETION", "1")
+	t.Setenv("GO_FLAGS_COMPLETION", "1")
 	p := flags.NewParser(&struct{}{}, 0)
 	b := c.AttachAliasFlags(p)
 	assert.True(t, b)
