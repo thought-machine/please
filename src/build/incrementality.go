@@ -291,7 +291,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 }
 
 func hashMap(writer hash.Hash, eps map[string]string) {
-	keys := make([]string, len(eps))
+	keys := make([]string, 0, len(eps))
 	for ep := range eps {
 		keys = append(keys, ep)
 	}
