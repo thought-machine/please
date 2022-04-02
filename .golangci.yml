@@ -46,6 +46,7 @@ linters:
     - gci
     - gocritic
     - gofmt
+    - ifshort
     - misspell
     - prealloc
     - revive
