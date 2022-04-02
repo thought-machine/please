@@ -47,7 +47,7 @@ func TestKillSubprocesses(t *testing.T) {
 	e := New()
 	ch := make(chan error)
 	go func() {
-		_, _, err := e.ExecWithTimeout(context.Background(), nil, "", nil, time.Hour, false, false, false, false, NoSandbox, []string{"sleep", "infinity"})
+		_, _, err := e.ExecWithTimeout(context.Background(), nil, "", nil, time.Hour, false, false, false, false, NoSandbox, []string{"sleep", "1h"})
 		ch <- err
 	}()
 	// Check that it doesn't error immediately
