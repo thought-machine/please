@@ -30,6 +30,7 @@ issues:
 linters:
   disable-all: true
   enable:
+    - asciicheck
     - bidichk
     - deadcode
     - gosimple
