@@ -12,9 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/thought-machine/please/src/cli/logging"
-
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/cli/logging"
 )
 
 var log = logging.Log

@@ -13,10 +13,10 @@ import (
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/thought-machine/please/src/fs"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 func TestInit(t *testing.T) {

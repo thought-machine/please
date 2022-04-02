@@ -9,9 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/thought-machine/please/src/cli/logging"
-
 	"github.com/thought-machine/please/rules"
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
 )

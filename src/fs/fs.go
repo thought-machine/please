@@ -8,9 +8,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/thought-machine/please/src/process"
-
 	"github.com/thought-machine/please/src/cli/logging"
+	"github.com/thought-machine/please/src/process"
 )
 
 var log = logging.Log

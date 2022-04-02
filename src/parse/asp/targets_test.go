@@ -1,9 +1,11 @@
 package asp
 
 import (
-	"github.com/stretchr/testify/require"
-	"github.com/thought-machine/please/src/core"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 func TestValidateTargetNoSandbox(t *testing.T) {

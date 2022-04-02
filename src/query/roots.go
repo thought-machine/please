@@ -2,9 +2,10 @@ package query
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/core"
 	"sort"
 	"strings"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 // Roots returns build labels with no dependents from the given list.

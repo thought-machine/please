@@ -12,9 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/thought-machine/please/src/cli/logging"
-
 	"github.com/thought-machine/please/src/build"
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/process"
