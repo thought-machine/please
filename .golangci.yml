@@ -53,6 +53,7 @@ linters:
     - revive
     - tenv
     - unconvert
+    - wastedassign
     - whitespace
 
     # To consider enabling in future (once we fix errors etc):
