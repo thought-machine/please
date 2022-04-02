@@ -45,13 +45,19 @@ func TestExecWithTimeoutStderr(t *testing.T) {
 
 func TestKillSubprocesses(t *testing.T) {
 	e := New()
-	cmd := e.ExecCommand(NoSandbox, false, "sleep", "infinity")
-	e.registerProcess(cmd)
-	assert.Equal(t, 1, len(e.processes))
-	err := cmd.Start()
-	assert.NoError(t, err)
+	ch := make(chan error)
+	go func() {
+		_, _, err := e.ExecWithTimeout(context.Background(), nil, "", nil, time.Hour, false, false, false, false, NoSandbox, []string{"sleep", "infinity"})
+		ch <- err
+	}()
+	// Check that it doesn't error immediately
+	select {
+	case err := <-ch:
+		t.Fatalf("Unexpected error from executor: %s", err)
+	case <-time.After(10 * time.Millisecond):
+	}
+	// Now kill it
 	e.killAll()
-	err = cmd.Wait()
+	err := <-ch
 	assert.Error(t, err)
-	assert.Equal(t, 0, len(e.processes))
 }

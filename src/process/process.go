@@ -289,7 +289,6 @@ func (e *Executor) killAll() {
 func ExecCommand(args ...string) ([]byte, error) {
 	e := New()
 	cmd := e.ExecCommand(NoSandbox, false, args[0], args[1:]...)
-	defer e.removeProcess(cmd)
 	return cmd.CombinedOutput()
 }
 
