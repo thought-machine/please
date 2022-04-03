@@ -42,22 +42,3 @@ func TestExecWithTimeoutStderr(t *testing.T) {
 	assert.Equal(t, "", string(out))
 	assert.Equal(t, "hello\n", string(stderr))
 }
-
-func TestKillSubprocesses(t *testing.T) {
-	e := New()
-	ch := make(chan error)
-	go func() {
-		_, _, err := e.ExecWithTimeout(context.Background(), nil, "", nil, time.Hour, false, false, false, false, NoSandbox, []string{"sleep", "1h"})
-		ch <- err
-	}()
-	// Check that it doesn't error immediately
-	select {
-	case err := <-ch:
-		t.Fatalf("Unexpected error from executor: %s", err)
-	case <-time.After(10 * time.Millisecond):
-	}
-	// Now kill it
-	e.killAll()
-	err := <-ch
-	assert.Error(t, err)
-}
