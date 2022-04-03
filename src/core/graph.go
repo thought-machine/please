@@ -15,11 +15,11 @@ import (
 // relationships, especially reverse dependencies which are calculated here.
 type BuildGraph struct {
 	// Map of all currently known targets by their label.
-	targets *cmap.Map[BuildLabel, *BuildTarget, func(BuildLabel) uint32]
+	targets *cmap.Map[BuildLabel, *BuildTarget, func(BuildLabel) uint64]
 	// Map of all currently known packages.
-	packages *cmap.Map[packageKey, *Package, func(packageKey) uint32]
+	packages *cmap.Map[packageKey, *Package, func(packageKey) uint64]
 	// Registered subrepos, as a map of their name to their root.
-	subrepos *cmap.Map[string, *Subrepo, func(string) uint32]
+	subrepos *cmap.Map[string, *Subrepo, func(string) uint64]
 }
 
 // AddTarget adds a new target to the graph.
@@ -148,15 +148,13 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // NewGraph constructs and returns a new BuildGraph.
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
-		targets: cmap.NewDefaultV(&BuildTarget{}, func(key BuildLabel) uint32 {
-			return cmap.Fnv32s(key.Subrepo, key.PackageName, key.Name)
+		targets: cmap.New[BuildLabel, *BuildTarget](cmap.DefaultShardCount, func(key BuildLabel) uint64 {
+			return cmap.XXHashes(key.Subrepo, key.PackageName, key.Name)
 		}),
-		packages: cmap.NewDefaultV(&Package{}, func(key packageKey) uint32 {
-			return cmap.Fnv32s(key.Subrepo, key.Name)
+		packages: cmap.New[packageKey, *Package](cmap.DefaultShardCount, func(key packageKey) uint64 {
+			return cmap.XXHashes(key.Subrepo, key.Name)
 		}),
-		subrepos: cmap.NewSmallV(&Subrepo{}, func(name string) uint32 {
-			return cmap.Fnv32(name)
-		}),
+		subrepos: cmap.New[string, *Subrepo](cmap.SmallShardCount, cmap.XXHash),
 	}
 	return g
 }

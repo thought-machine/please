@@ -21,9 +21,9 @@ const SmallShardCount = 4
 
 // A Map is the top-level map type. All functions on it are threadsafe.
 // It should be constructed via New() rather than creating an instance directly.
-type Map[K comparable, V any, H func(K) uint32] struct {
+type Map[K comparable, V any, H func(K) uint64] struct {
 	shards []shard[K, V]
-	mask   uint32
+	mask   uint64
 	hasher H
 }
 
@@ -31,7 +31,7 @@ type Map[K comparable, V any, H func(K) uint32] struct {
 // The shard count must be a power of 2; it will panic if not.
 // Higher shard counts will improve concurrency but consume more memory.
 // The DefaultShardCount of 256 is reasonable for a large map.
-func New[K comparable, V any, H func(K) uint32](shardCount uint32, hasher H) *Map[K, V, H] {
+func New[K comparable, V any, H func(K) uint64](shardCount uint64, hasher H) *Map[K, V, H] {
 	mask := shardCount - 1
 	if (shardCount & mask) != 0 {
 		panic(fmt.Sprintf("Shard count %d is not a power of 2", shardCount))
@@ -45,21 +45,6 @@ func New[K comparable, V any, H func(K) uint32](shardCount uint32, hasher H) *Ma
 		m.shards[i].m = map[K]awaitableValue[V]{}
 	}
 	return m
-}
-
-// NewV is like New but allows passing a V so you don't have to explicitly instantiate.
-func NewV[K comparable, V any, H func(K) uint32](v V, shardCount uint32, hasher H) *Map[K, V, H] {
-	return New[K, V, H](shardCount, hasher)
-}
-
-// NewDefaultV is like NewV but sets the default shard count automatically.
-func NewDefaultV[K comparable, V any, H func(K) uint32](v V, hasher H) *Map[K, V, H] {
-	return New[K, V, H](DefaultShardCount, hasher)
-}
-
-// NewSmallV is similar to NewDefaultV but chooses a small number of shards instead.
-func NewSmallV[K comparable, V any, H func(K) uint32](v V, hasher H) *Map[K, V, H] {
-	return New[K, V, H](SmallShardCount, hasher)
 }
 
 // Add adds the new item to the map.

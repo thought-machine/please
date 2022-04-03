@@ -2,6 +2,8 @@ package cmap
 
 import (
 	"testing"
+
+	"github.com/cespare/xxhash/v2"
 )
 
 // input1k is some random data, base64 encoded.
@@ -85,6 +87,48 @@ func BenchmarkFnv32_20S(b *testing.B) {
 	}
 }
 
+func BenchmarkXXHash_1k(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		XXHash(input1k)
+	}
+}
+
+func BenchmarkXXHash_20(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		XXHash(input20)
+	}
+}
+
+func BenchmarkXXHash_1kS(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		XXHashes(input1k, input1k, input1k)
+	}
+}
+
+func BenchmarkXXHash_20S(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		XXHashes(input20, input20, input20)
+	}
+}
+
+func BenchmarkXXHash_1kSx(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		xxHashes(input1k, input1k, input1k)
+	}
+}
+
+func BenchmarkXXHash_20Sx(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		xxHashes(input20, input20, input20)
+	}
+}
+
 // ref is our reference implementation, from OneOfOne/cmap/hashers
 // N.B. As of Go 1.18 the workaround is no longer needed (hence why we have our own), this
 //      is reproduced verbatim as a reference implementation.
@@ -105,4 +149,38 @@ L:
 	}
 
 	return
+}
+
+// This is provided to compare against XXHashes
+// It's approximately half the speed on our 20-char input.
+func xxHashes(s ...string) uint32 {
+	d := xxhash.New()
+	for _, x := range s {
+		d.WriteString(x)
+	}
+	return uint32(d.Sum64())
+}
+
+// FNV-32 code which we used to use, but no longer do.
+
+const prime32 = 16777619
+const initial = uint32(2166136261)
+
+func Fnv32(s string) uint64 {
+	hash := initial
+	for i := 0; i < len(s); i++ {
+		hash *= prime32
+		hash ^= uint32(s[i])
+	}
+	return uint64(hash)
+}
+
+func Fnv32s(s ...string) uint64 {
+	for _, x := range s {
+		for i := 0; i < len(x); i++ {
+			hash *= prime32
+			hash ^= uint64(x[i])
+		}
+	}
+	return uint64(hash)
 }
