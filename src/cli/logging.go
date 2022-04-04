@@ -43,7 +43,14 @@ var fileBackend logging.Backend
 type Verbosity = cli.Verbosity
 
 // CurrentBackend is the current interactive logging backend.
-var CurrentBackend *LogBackend
+var CurrentBackend = &LogBackend{
+	interactiveRows: 10,
+	maxRecords:      10,
+	logMessages:     list.New(),
+	messageHistory:  list.New(),
+	formatter:       logFormatter(StdErrIsATerminal),
+	passthrough:     true,
+}
 
 // InitLogging initialises logging backends.
 func InitLogging(verbosity Verbosity) {
@@ -162,17 +169,8 @@ func (backend *LogBackend) RecalcLines() {
 
 // newLogBackend constructs a new logging backend.
 func newLogBackend(origBackend logging.Backend) logging.LeveledBackend {
-	b := &LogBackend{
-		interactiveRows: 10,
-		maxRecords:      10,
-		logMessages:     list.New(),
-		messageHistory:  list.New(),
-		formatter:       logFormatter(StdErrIsATerminal),
-		origBackend:     origBackend,
-		passthrough:     true,
-	}
-	CurrentBackend = b
-	l := logging.AddModuleLevel(logBackendFacade{realBackend: b})
+	CurrentBackend.origBackend = origBackend
+	l := logging.AddModuleLevel(logBackendFacade{realBackend: CurrentBackend})
 	l.SetLevel(logLevel, "")
 	return l
 }

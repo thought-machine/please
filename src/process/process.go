@@ -34,7 +34,7 @@ type Executor struct {
 	// The tool that will do the network/mount sandboxing
 	sandboxTool      string
 	usePleaseSandbox bool
-	processes        map[*exec.Cmd]*os.Process
+	processes        map[*exec.Cmd]<-chan error
 	mutex            sync.Mutex
 }
 
@@ -43,7 +43,7 @@ func NewSandboxingExecutor(usePleaseSandbox bool, namespace NamespacingPolicy, s
 		namespace:        namespace,
 		usePleaseSandbox: usePleaseSandbox,
 		sandboxTool:      sandboxTool,
-		processes:        map[*exec.Cmd]*os.Process{},
+		processes:        map[*exec.Cmd]<-chan error{},
 	}
 	cli.AtExit(o.killAll) // Kill any subprocess if we are ourselves killed
 	return o
@@ -127,9 +127,9 @@ func (e *Executor) ExecWithTimeout(ctx context.Context, target Target, dir strin
 	if err != nil {
 		return nil, nil, err
 	}
-	e.registerProcess(cmd)
-	defer e.removeProcess(cmd)
 	ch := make(chan error)
+	e.registerProcess(cmd, ch)
+	defer e.removeProcess(cmd)
 	go runCommand(cmd, ch)
 	select {
 	case err = <-ch:
@@ -142,7 +142,7 @@ func (e *Executor) ExecWithTimeout(ctx context.Context, target Target, dir strin
 }
 
 // runCommand runs a command and signals on the given channel when it's done.
-func runCommand(cmd *exec.Cmd, ch chan error) {
+func runCommand(cmd *exec.Cmd, ch chan<- error) {
 	ch <- cmd.Wait()
 }
 
@@ -162,8 +162,12 @@ func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env
 // KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL
 // shortly after if it hasn't exited.
 func (e *Executor) KillProcess(cmd *exec.Cmd) {
-	success := killProcess(cmd, cmd.Process, syscall.SIGTERM, 30*time.Millisecond)
-	if !killProcess(cmd, cmd.Process, syscall.SIGKILL, time.Second) && !success {
+	e.killProcess(cmd, e.processChan(cmd))
+}
+
+func (e *Executor) killProcess(cmd *exec.Cmd, ch <-chan error) {
+	success := sendSignal(cmd, ch, syscall.SIGTERM, 30*time.Millisecond)
+	if !sendSignal(cmd, ch, syscall.SIGKILL, time.Second) && !success {
 		log.Error("Failed to kill inferior process")
 	}
 	e.removeProcess(cmd)
@@ -176,25 +180,31 @@ func (e *Executor) removeProcess(cmd *exec.Cmd) {
 }
 
 // registerProcess stores the given process in this executor's map.
-func (e *Executor) registerProcess(cmd *exec.Cmd) {
+func (e *Executor) registerProcess(cmd *exec.Cmd, ch <-chan error) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
-	e.processes[cmd] = cmd.Process
+	e.processes[cmd] = ch
 }
 
-// killProcess implements the two-step killing of processes with a SIGTERM and a SIGKILL if
-// that's unsuccessful. It returns true if the process exited within the timeout.
-func killProcess(cmd *exec.Cmd, process *os.Process, sig syscall.Signal, timeout time.Duration) bool {
-	if process == nil {
+// processChan returns the error channel for a process.
+func (e *Executor) processChan(cmd *exec.Cmd) <-chan error {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	return e.processes[cmd]
+}
+
+// sendSignal sends a single signal to the process in an attempt to stop it.
+// It returns true if the process exited within the timeout.
+func sendSignal(cmd *exec.Cmd, ch <-chan error, sig syscall.Signal, timeout time.Duration) bool {
+	if cmd.Process == nil {
 		log.Debug("Not terminating process, it seems to have not started yet")
 		return false
 	}
 	// This is a bit of a fiddle. We want to wait for the process to exit but only for just so
 	// long (we do not want to get hung up if it ignores our SIGTERM).
-	log.Debug("Sending signal %s to -%d", sig, process.Pid)
-	syscall.Kill(-process.Pid, sig) // Kill the group - we always set one in ExecCommand.
-	ch := make(chan error, 1)
-	go runCommand(cmd, ch)
+	log.Debug("Sending signal %s to -%d", sig, cmd.Process.Pid)
+	syscall.Kill(-cmd.Process.Pid, sig) // Kill the group - we always set one in ExecCommand.
+
 	select {
 	case <-ch:
 		return true
@@ -262,22 +272,15 @@ func progressMessage(progress *float32) string {
 // killAll kills all subprocesses of this executor.
 func (e *Executor) killAll() {
 	e.mutex.Lock()
-	processes := make([]*exec.Cmd, 0, len(e.processes))
-	for proc := range e.processes {
-		processes = append(processes, proc)
-	}
-	e.mutex.Unlock()
-
-	if len(processes) > 0 {
-		var wg sync.WaitGroup
-		wg.Add(len(processes))
-		for _, proc := range processes {
-			go func(proc *exec.Cmd) {
-				e.KillProcess(proc)
-				wg.Done()
-			}(proc)
-		}
-		wg.Wait()
+	var wg sync.WaitGroup
+	wg.Add(len(e.processes))
+	defer wg.Wait()
+	defer e.mutex.Unlock()
+	for proc, ch := range e.processes {
+		go func(proc *exec.Cmd, ch <-chan error) {
+			e.killProcess(proc, ch)
+			wg.Done()
+		}(proc, ch)
 	}
 }
 
@@ -285,7 +288,6 @@ func (e *Executor) killAll() {
 func ExecCommand(args ...string) ([]byte, error) {
 	e := New()
 	cmd := e.ExecCommand(NoSandbox, false, args[0], args[1:]...)
-	defer e.removeProcess(cmd)
 	return cmd.CombinedOutput()
 }
 
