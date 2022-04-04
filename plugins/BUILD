@@ -1,5 +1,6 @@
 plugin_repo(
   name = "go",
-  revision = "master",
+  revision = "fix-external-flag",
+  owner = "tatskaari",
   plugin = "go-rules",
 )
