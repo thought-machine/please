@@ -85,7 +85,7 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 		return subrepo, nil
 	}
 
-	sl := subrepoLabel(state, label, dependent)
+	sl := label.SubrepoLabel(state, dependent.Subrepo)
 
 	// Local subincludes are when we subinclude from a subrepo defined in the current package
 	localSubinclude := sl.PackageName == dependent.PackageName && forSubinclude
@@ -116,32 +116,6 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	}
 	// For local subincludes, the subrepo has to already be defined at this point in the BUILD file
 	return nil, fmt.Errorf("Subrepo %v is not defined yet. It must appear before it is used by subinclude()", sl)
-}
-
-// subrepoLabel returns the build label that defines a subrepo. It checks if the subrepo name matches a plugin, and
-// returns the plugins target, otherwise bases it off the label itself
-func subrepoLabel(state *core.BuildState, label, dependent core.BuildLabel) core.BuildLabel {
-	arch := ""
-	if dependent.Subrepo != "" {
-		s := state.Graph.Subrepo(dependent.Subrepo).State
-		if s.Arch != state.Arch {
-			arch = s.Arch.String()
-		}
-	}
-	if plugin, ok := state.Config.Plugin[label.Subrepo]; ok {
-		if plugin.Target.String() == "" {
-			log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", label.Subrepo)
-		}
-		return plugin.Target
-	}
-	pluginName := strings.TrimSuffix(label.Subrepo, fmt.Sprintf("_%v", arch))
-	if plugin, ok := state.Config.Plugin[pluginName]; ok {
-		if plugin.Target.String() == "" {
-			log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", pluginName)
-		}
-		return plugin.Target
-	}
-	return label.SubrepoLabel()
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.
