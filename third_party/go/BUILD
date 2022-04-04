@@ -1085,3 +1085,11 @@ go_module(
     version = "v0.5.0",
     visibility = ["PUBLIC"],
 )
+
+go_module(
+    name = "shellescape",
+    licences = ["MIT"],
+    module = "github.com/alessio/shellescape",
+    version = "v1.4.1",
+    visibility = ["PUBLIC"],
+)
