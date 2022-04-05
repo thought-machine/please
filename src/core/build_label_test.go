@@ -125,15 +125,15 @@ func TestPluginSubrepoLabel(t *testing.T) {
 	state := NewDefaultBuildState()
 	state.Config.Plugin = map[string]*Plugin{}
 	state.Config.Plugin["plugin"] = &Plugin{Target: subrepoLabel}
-	state.Graph.AddSubrepo(&Subrepo{Name: "darwin_amd64", Arch: cli.NewArch("darwin", "amd64")})
+	state.Graph.AddSubrepo(&Subrepo{Name: "foowin_amd64", Arch: cli.NewArch("foowin", "amd64")})
 
 	// Check we get back the plugins target instead
 	label := BuildLabel{Subrepo: "plugin"}
 	assert.Equal(t, subrepoLabel, label.SubrepoLabel(state, ""))
 
 	// Check that we handle architecture variants of the plugin subrepo name
-	label = BuildLabel{Subrepo: "plugin_darwin_amd64"}
-	assert.Equal(t, subrepoLabel, label.SubrepoLabel(state, "darwin_amd64"))
+	label = BuildLabel{Subrepo: "plugin_foowin_amd64"}
+	assert.Equal(t, subrepoLabel, label.SubrepoLabel(state, "foowin_amd64"))
 }
 
 func TestParseBuildLabelParts(t *testing.T) {
