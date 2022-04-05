@@ -13,6 +13,7 @@ go_binary(
         "//src/cache",
         "//src/clean",
         "//src/cli",
+        "//src/cli/logging",
         "//src/core",
         "//src/debug",
         "//src/exec",
@@ -38,7 +39,6 @@ go_binary(
         "//src/worker",
         "//third_party/go:automaxprocs",
         "//third_party/go:go-flags",
-        "//third_party/go:logging",
     ],
 )
 

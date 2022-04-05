@@ -23,6 +23,9 @@ import (
 // A few sneaky globals for when we don't have a scope handy
 var stringMethods, dictMethods, configMethods map[string]*pyFunc
 
+// Protects setting the above
+var builtinsOnce sync.Once
+
 // A nativeFunc is a function that implements a builtin function natively.
 type nativeFunc func(*scope, []pyObject) pyObject
 
@@ -67,39 +70,41 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "is_semver", isSemver)
 	setNativeCode(s, "semver_check", semverCheck)
 	setNativeCode(s, "looks_like_build_label", looksLikeBuildLabel)
-	stringMethods = map[string]*pyFunc{
-		"join":         setNativeCode(s, "join", strJoin),
-		"split":        setNativeCode(s, "split", strSplit),
-		"replace":      setNativeCode(s, "replace", strReplace),
-		"partition":    setNativeCode(s, "partition", strPartition),
-		"rpartition":   setNativeCode(s, "rpartition", strRPartition),
-		"startswith":   setNativeCode(s, "startswith", strStartsWith),
-		"endswith":     setNativeCode(s, "endswith", strEndsWith),
-		"lstrip":       setNativeCode(s, "lstrip", strLStrip),
-		"rstrip":       setNativeCode(s, "rstrip", strRStrip),
-		"removeprefix": setNativeCode(s, "removeprefix", strRemovePrefix),
-		"removesuffix": setNativeCode(s, "removesuffix", strRemoveSuffix),
-		"strip":        setNativeCode(s, "strip", strStrip),
-		"find":         setNativeCode(s, "find", strFind),
-		"rfind":        setNativeCode(s, "find", strRFind),
-		"format":       setNativeCode(s, "format", strFormat),
-		"count":        setNativeCode(s, "count", strCount),
-		"upper":        setNativeCode(s, "upper", strUpper),
-		"lower":        setNativeCode(s, "lower", strLower),
-	}
-	stringMethods["format"].kwargs = true
-	dictMethods = map[string]*pyFunc{
-		"get":        setNativeCode(s, "get", dictGet),
-		"setdefault": s.Lookup("setdefault").(*pyFunc),
-		"keys":       setNativeCode(s, "keys", dictKeys),
-		"items":      setNativeCode(s, "items", dictItems),
-		"values":     setNativeCode(s, "values", dictValues),
-		"copy":       setNativeCode(s, "copy", dictCopy),
-	}
-	configMethods = map[string]*pyFunc{
-		"get":        setNativeCode(s, "config_get", configGet),
-		"setdefault": s.Lookup("setdefault").(*pyFunc),
-	}
+	builtinsOnce.Do(func() {
+		stringMethods = map[string]*pyFunc{
+			"join":         setNativeCode(s, "join", strJoin),
+			"split":        setNativeCode(s, "split", strSplit),
+			"replace":      setNativeCode(s, "replace", strReplace),
+			"partition":    setNativeCode(s, "partition", strPartition),
+			"rpartition":   setNativeCode(s, "rpartition", strRPartition),
+			"startswith":   setNativeCode(s, "startswith", strStartsWith),
+			"endswith":     setNativeCode(s, "endswith", strEndsWith),
+			"lstrip":       setNativeCode(s, "lstrip", strLStrip),
+			"rstrip":       setNativeCode(s, "rstrip", strRStrip),
+			"removeprefix": setNativeCode(s, "removeprefix", strRemovePrefix),
+			"removesuffix": setNativeCode(s, "removesuffix", strRemoveSuffix),
+			"strip":        setNativeCode(s, "strip", strStrip),
+			"find":         setNativeCode(s, "find", strFind),
+			"rfind":        setNativeCode(s, "find", strRFind),
+			"format":       setNativeCode(s, "format", strFormat),
+			"count":        setNativeCode(s, "count", strCount),
+			"upper":        setNativeCode(s, "upper", strUpper),
+			"lower":        setNativeCode(s, "lower", strLower),
+		}
+		stringMethods["format"].kwargs = true
+		dictMethods = map[string]*pyFunc{
+			"get":        setNativeCode(s, "get", dictGet),
+			"setdefault": s.Lookup("setdefault").(*pyFunc),
+			"keys":       setNativeCode(s, "keys", dictKeys),
+			"items":      setNativeCode(s, "items", dictItems),
+			"values":     setNativeCode(s, "values", dictValues),
+			"copy":       setNativeCode(s, "copy", dictCopy),
+		}
+		configMethods = map[string]*pyFunc{
+			"get":        setNativeCode(s, "config_get", configGet),
+			"setdefault": s.Lookup("setdefault").(*pyFunc),
+		}
+	})
 	if s.state.Config.Parse.GitFunctions {
 		setNativeCode(s, "git_branch", execGitBranch)
 		setNativeCode(s, "git_commit", execGitCommit)
@@ -932,10 +937,8 @@ func addOut(s *scope, args []pyObject) pyObject {
 
 // getOuts gets the outputs of a target
 func getOuts(s *scope, args []pyObject) pyObject {
-	name := args[0].String()
-
 	var target *core.BuildTarget
-	if core.LooksLikeABuildLabel(name) {
+	if name := args[0].String(); core.LooksLikeABuildLabel(name) {
 		label := core.ParseBuildLabel(name, s.pkg.Name)
 		target = s.state.Graph.TargetOrDie(label)
 	} else {

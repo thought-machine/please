@@ -6,14 +6,14 @@ go_library(
     ),
     visibility = ["PUBLIC"],
     deps = [
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/generate",
+        "//src/metrics",
         "//src/process",
         "//src/worker",
-        "//src/metrics",
         "//third_party/go:go-multierror",
-        "//third_party/go:logging",
         "//third_party/go:protobuf",
         "//third_party/go:shlex",
     ],
@@ -35,6 +35,7 @@ go_test(
         ":build",
         "//src/core",
         "//src/fs",
+        "//third_party/go:logging",
         "//third_party/go:testify",
     ],
 )
@@ -45,10 +46,10 @@ go_test(
     external = True,
     deps = [
         ":build",
+        "//src/cli/logging",
         "//src/core",
         "//src/output",
         "//src/plz",
-        "//third_party/go:logging",
         "//third_party/go:testify",
     ],
 )

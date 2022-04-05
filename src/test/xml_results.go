@@ -7,14 +7,13 @@ import (
 	"compress/gzip"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
 	"strconv"
 	"time"
-
-	"io"
 
 	"github.com/thought-machine/please/src/core"
 )

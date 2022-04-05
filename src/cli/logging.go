@@ -14,16 +14,18 @@ import (
 
 	cli "github.com/peterebden/go-cli-init/v5/logging"
 	"github.com/peterebden/go-deferred-regex"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 	"gopkg.in/op/go-logging.v1"
+
+	logger "github.com/thought-machine/please/src/cli/logging"
 )
 
 const messageHistoryMaxSize = 100
 
-var log = logging.MustGetLogger("cli")
+var log = logger.Log
 
 // StdErrIsATerminal is true if the process' stderr is an interactive TTY.
-var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
+var StdErrIsATerminal = term.IsTerminal(int(os.Stderr.Fd()))
 
 // ShowColouredOutput tracks whether we are displaying coloured output or not.
 var ShowColouredOutput = StdErrIsATerminal
@@ -41,7 +43,14 @@ var fileBackend logging.Backend
 type Verbosity = cli.Verbosity
 
 // CurrentBackend is the current interactive logging backend.
-var CurrentBackend *LogBackend
+var CurrentBackend = &LogBackend{
+	interactiveRows: 10,
+	maxRecords:      10,
+	logMessages:     list.New(),
+	messageHistory:  list.New(),
+	formatter:       logFormatter(StdErrIsATerminal),
+	passthrough:     true,
+}
 
 // InitLogging initialises logging backends.
 func InitLogging(verbosity Verbosity) {
@@ -84,12 +93,19 @@ func logFormatter(coloured bool) logging.Formatter {
 func setLogBackend(backend logging.Backend) {
 	backend = logging.NewBackendFormatter(backend, logFormatter(StdErrIsATerminal))
 	if fileBackend == nil {
-		logging.SetBackend(newLogBackend(backend))
+		log.SetBackend(newLogBackend(backend))
 	} else {
 		fileBackendLeveled := logging.AddModuleLevel(fileBackend)
 		fileBackendLeveled.SetLevel(fileLogLevel, "")
-		logging.SetBackend(newLogBackend(backend), fileBackendLeveled)
+		log.SetBackend(logging.AddModuleLevel(multiBackend(newLogBackend(backend), fileBackendLeveled)))
 	}
+}
+
+func multiBackend(backends ...logging.Backend) logging.Backend {
+	if len(backends) == 1 {
+		return backends[0]
+	}
+	return logging.MultiLogger(backends...)
 }
 
 type logBackendFacade struct {
@@ -153,17 +169,8 @@ func (backend *LogBackend) RecalcLines() {
 
 // newLogBackend constructs a new logging backend.
 func newLogBackend(origBackend logging.Backend) logging.LeveledBackend {
-	b := &LogBackend{
-		interactiveRows: 10,
-		maxRecords:      10,
-		logMessages:     list.New(),
-		messageHistory:  list.New(),
-		formatter:       logFormatter(StdErrIsATerminal),
-		origBackend:     origBackend,
-		passthrough:     true,
-	}
-	CurrentBackend = b
-	l := logging.AddModuleLevel(logBackendFacade{realBackend: b})
+	CurrentBackend.origBackend = origBackend
+	l := logging.AddModuleLevel(logBackendFacade{realBackend: CurrentBackend})
 	l.SetLevel(logLevel, "")
 	return l
 }
@@ -271,8 +278,7 @@ func findSplit(line string, guess int) int {
 		return len(line)
 	}
 	r := regexp.MustCompilePOSIX(fmt.Sprintf(".{%d,%d}(\\x1b[^m]+m)?", guess/2, guess))
-	m := r.FindStringIndex(line)
-	if m != nil {
+	if m := r.FindStringIndex(line); m != nil {
 		return m[1] // second element in slice is the end index
 	}
 	return guess // Dunno what to do at this point. It's probably unlikely to happen often though.

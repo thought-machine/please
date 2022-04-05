@@ -11,15 +11,14 @@ import (
 	"path"
 	"syscall"
 
-	"gopkg.in/op/go-logging.v1"
-
 	"github.com/thought-machine/please/src/build"
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/test"
 )
 
-var log = logging.MustGetLogger("clean")
+var log = logging.Log
 
 // Clean cleans the entire output directory and optionally the cache as well.
 func Clean(config *core.Configuration, cache core.Cache, background bool) {

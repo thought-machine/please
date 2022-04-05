@@ -183,7 +183,7 @@ func (v *Version) Unset() {
 // flagsError converts an error to a flags.Error, which is required for flag parsing.
 func flagsError(err error) error {
 	if err == nil {
-		return err
+		return nil
 	}
 	return &flags.Error{Type: flags.ErrMarshal, Message: err.Error()}
 }

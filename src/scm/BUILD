@@ -6,9 +6,9 @@ go_library(
     ),
     visibility = ["PUBLIC"],
     deps = [
+        "//src/cli/logging",
         "//src/fs",
         "//third_party/go:diff",
-        "//third_party/go:logging",
     ],
 )
 

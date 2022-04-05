@@ -7,10 +7,10 @@ import (
 	"sync"
 
 	"github.com/peterebden/go-cli-init/v5/flags"
-	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/metrics"
@@ -19,7 +19,7 @@ import (
 	"github.com/thought-machine/please/src/test"
 )
 
-var log = logging.MustGetLogger("plz")
+var log = logging.Log
 
 // Run runs a build to completion.
 // The given state object controls most of the parameters to it and can be interrogated

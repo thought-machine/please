@@ -1,11 +1,13 @@
 package plzinit
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/thought-machine/please/src/fs"
 	"io/ioutil"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/thought-machine/please/src/fs"
 )
 
 const expectedRule = `

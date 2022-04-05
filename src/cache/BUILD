@@ -10,13 +10,13 @@ go_library(
     deps = [
         "//src/clean",
         "//src/cli",
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/process",
         "//third_party/go:atime",
         "//third_party/go:go-retryablehttp",
         "//third_party/go:humanize",
-        "//third_party/go:logging",
     ],
 )
 
@@ -32,7 +32,7 @@ go_test(
     data = [":test_data"],
     deps = [
         ":cache",
-        "//third_party/go:logging",
+        "//src/cli/logging",
         "//third_party/go:testify",
     ],
 )

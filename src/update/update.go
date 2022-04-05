@@ -26,15 +26,15 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/ulikunitz/xz"
-	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/process"
 )
 
-var log = logging.MustGetLogger("update")
+var log = logging.Log
 
 // minSignedVersion is the earliest version of Please that has a signature.
 var minSignedVersion = semver.Version{Major: 9, Minor: 2}

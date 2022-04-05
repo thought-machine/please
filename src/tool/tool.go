@@ -12,13 +12,13 @@ import (
 	"syscall"
 
 	"github.com/thought-machine/go-flags"
-	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
 
-var log = logging.MustGetLogger("tool")
+var log = logging.Log
 
 // A Tool is one of Please's tools; this only exists for facilitating tab-completion for flags.
 type Tool string

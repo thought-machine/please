@@ -118,11 +118,12 @@ func (d *interactiveDisplay) printLines(local, remote []buildingTarget) {
 	d.printf("Building [%d/%d, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), time.Since(d.state.StartTime).Seconds())
 	d.lines++
 	if d.stats {
-		d.printStat("CPU use", d.state.Stats.CPU.Used, d.state.Stats.CPU.Count)
-		d.printStat("I/O", d.state.Stats.CPU.IOWait, d.state.Stats.CPU.Count)
-		d.printStat("Mem use", d.state.Stats.Memory.UsedPercent, 1)
-		if d.state.Stats.NumWorkerProcesses > 0 {
-			d.printf("  ${BOLD_WHITE}Worker processes: %d${RESET}", d.state.Stats.NumWorkerProcesses)
+		stats := d.state.SystemStats()
+		d.printStat("CPU use", stats.CPU.Used, stats.CPU.Count)
+		d.printStat("I/O", stats.CPU.IOWait, stats.CPU.Count)
+		d.printStat("Mem use", stats.Memory.UsedPercent, 1)
+		if stats.NumWorkerProcesses > 0 {
+			d.printf("  ${BOLD_WHITE}Worker processes: %d${RESET}", stats.NumWorkerProcesses)
 		}
 		if d.state.RemoteClient != nil {
 			in, out, _, _ := d.state.RemoteClient.DataRate()
