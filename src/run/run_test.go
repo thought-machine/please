@@ -37,7 +37,7 @@ func TestEnvVars(t *testing.T) {
 	config.Build.Path = []string{"/wibble"}
 	state, lab1, _ := makeState(config)
 
-	os.Setenv("PATH", "/usr/local/bin:/usr/bin:/bin")
+	t.Setenv("PATH", "/usr/local/bin:/usr/bin:/bin")
 	env := environ(state, state.Graph.TargetOrDie(lab1[0].BuildLabel), false, false)
 	assert.Contains(t, env, "PATH=/usr/local/bin:/usr/bin:/bin")
 	assert.NotContains(t, env, "PATH=/wibble")

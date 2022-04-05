@@ -37,8 +37,7 @@ func EnsureDir(filename string) error {
 // OpenDirFile ensures that the directory of the given file has been created before
 // calling the underlying os.OpenFile function.
 func OpenDirFile(filename string, flag int, perm os.FileMode) (*os.File, error) {
-	err := EnsureDir(filename)
-	if err != nil {
+	if err := EnsureDir(filename); err != nil {
 		return nil, err
 	}
 	return os.OpenFile(filename, flag, perm)

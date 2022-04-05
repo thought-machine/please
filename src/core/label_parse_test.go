@@ -9,6 +9,7 @@ import (
 )
 
 func assertLabel(t *testing.T, in, pkg, name string) BuildLabel {
+	t.Helper()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Failed to parse %s: %s", in, r)
@@ -25,6 +26,7 @@ func assertLabel(t *testing.T, in, pkg, name string) BuildLabel {
 }
 
 func assertSubrepoLabel(t *testing.T, in, pkg, name, subrepo string) {
+	t.Helper()
 	label := assertLabel(t, in, pkg, name)
 	if label.Subrepo != subrepo {
 		t.Errorf("Incorrect parse of %s: subrepo should be %s, was %s", in, subrepo, label.Subrepo)
@@ -32,6 +34,7 @@ func assertSubrepoLabel(t *testing.T, in, pkg, name, subrepo string) {
 }
 
 func assertRelativeLabel(t *testing.T, in, pkg, name string) {
+	t.Helper()
 	if label, err := parseMaybeRelativeBuildLabel(in, "current_package"); err != nil {
 		t.Errorf("Failed to parse %s: %s", in, err)
 	} else if label.PackageName != pkg {
@@ -42,6 +45,7 @@ func assertRelativeLabel(t *testing.T, in, pkg, name string) {
 }
 
 func assertNotLabel(t *testing.T, in, reason string) {
+	t.Helper()
 	var label BuildLabel
 	defer func() {
 		if r := recover(); r == nil {

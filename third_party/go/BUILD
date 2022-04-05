@@ -39,7 +39,6 @@ go_module(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/crypto",
     version = "v0.0.0-20210920023735-84f357641f63",
-    visibility = ["PUBLIC"],
     deps = [":xterm"],
 )
 
