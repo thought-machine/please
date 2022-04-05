@@ -32,7 +32,6 @@ func info(format string, args ...interface{}) {
 // InitPlugins initialises one or more plugins by inserting plugin config values into
 // the host repo config file, and creating a build target in //plugins.
 func InitPlugins(plugins []string) {
-
 	log.Debug("Initialising plugin(s): %v", plugins)
 
 	// Check that we're in a plz repo
