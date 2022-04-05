@@ -1,10 +1,11 @@
 package toolchain
 
 import (
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetVersion(t *testing.T) {

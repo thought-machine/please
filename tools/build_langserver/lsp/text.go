@@ -106,7 +106,7 @@ func (h *Handler) parse(d *doc, content string) {
 // parseIfNeeded parses the document if it hasn't been done yet.
 func (h *Handler) parseIfNeeded(d *doc) []*asp.Statement {
 	d.Mutex.Lock()
-	ast := d.AST[:]
+	ast := d.AST[:] //nolint:ifshort
 	d.Mutex.Unlock()
 	if len(ast) != 0 {
 		return ast
@@ -171,9 +171,8 @@ func (h *Handler) formatting(params *lsp.DocumentFormattingParams) ([]*lsp.TextE
 	if err != nil {
 		return nil, err
 	}
-	before := doc.Text()
 	after := string(build.Format(f))
-	if before == after {
+	if before := doc.Text(); before == after {
 		return []*lsp.TextEdit{}, nil // Already formatted - great!
 	}
 	linesBefore := doc.Lines()

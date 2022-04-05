@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/thought-machine/go-flags"
-	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/process"
 )
 
-var log = logging.MustGetLogger("core")
+var log = logging.Log
 
 // A BuildLabel is a representation of an identifier of a build target, e.g. //spam/eggs:ham
 // corresponds to BuildLabel{PackageName: spam/eggs name: ham}
@@ -42,7 +42,7 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
 // String returns a string representation of this build label.
 func (label BuildLabel) String() string {
-	zero := BuildLabel{}
+	zero := BuildLabel{} //nolint:ifshort
 	if label == zero {
 		return ""
 	} else if label == OriginalTarget {
@@ -143,9 +143,12 @@ func splitAnnotation(target string) (string, string) {
 	}
 	return parts[0], annotation
 }
-func ParseAnnotatedBuildLabel(target, currentPath string) AnnotatedOutputLabel {
+func ParseAnnotatedBuildLabel(target, currentPath, subrepo string) AnnotatedOutputLabel {
 	label, annotation := splitAnnotation(target)
-	l := ParseBuildLabel(label, currentPath)
+	l, err := TryParseBuildLabel(label, currentPath, subrepo)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 
 	return AnnotatedOutputLabel{
 		BuildLabel: l,

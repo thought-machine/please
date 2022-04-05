@@ -9,14 +9,13 @@ import (
 	"sort"
 	"strings"
 
-	"gopkg.in/op/go-logging.v1"
-
 	"github.com/thought-machine/please/rules"
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
-var log = logging.MustGetLogger("help")
+var log = logging.Log
 
 // PrintRuleArgs prints the arguments of all builtin rules
 func PrintRuleArgs() {

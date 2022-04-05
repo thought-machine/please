@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/please-build/gcfg"
+
 	"github.com/thought-machine/please/src/core"
 )
 

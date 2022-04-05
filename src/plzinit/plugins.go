@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/please-build/gcfg/ast"
+
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/plz"

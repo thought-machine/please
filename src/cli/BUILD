@@ -6,6 +6,7 @@ go_library(
     ),
     visibility = ["PUBLIC"],
     deps = [
+        "//src/cli/logging",
         "//third_party/go:cli-init",
         "//third_party/go:deferred_regex",
         "//third_party/go:go-flags",
@@ -14,7 +15,7 @@ go_library(
         "//third_party/go:logging",
         "//third_party/go:promptui",
         "//third_party/go:semver",
-        "//third_party/go:xcrypto",
+        "//third_party/go:xterm",
     ],
 )
 

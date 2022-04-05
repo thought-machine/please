@@ -17,7 +17,14 @@ go_module(
     licences = ["BSD-3-Clause"],
     module = "gopkg.in/op/go-logging.v1",
     version = "v1.0.0-20160211212156-b2cb9fa56473",
-    visibility = ["PUBLIC"],
+    visibility = [
+        "//src/build:build_step_test",
+        "//src/cli/...",
+        "//src/parse/asp:asp_test",
+        "//src/update:update_test",
+        "//test/...",
+        "//tools/...",
+    ],
 )
 
 go_module(
@@ -32,7 +39,6 @@ go_module(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/crypto",
     version = "v0.0.0-20210920023735-84f357641f63",
-    visibility = ["PUBLIC"],
     deps = [":xterm"],
 )
 
@@ -1076,5 +1082,13 @@ go_module(
     install = ["semver"],
     module = "golang.org/x/mod",
     version = "v0.5.0",
+    visibility = ["PUBLIC"],
+)
+
+go_module(
+    name = "shellescape",
+    licences = ["MIT"],
+    module = "github.com/alessio/shellescape",
+    version = "v1.4.1",
     visibility = ["PUBLIC"],
 )

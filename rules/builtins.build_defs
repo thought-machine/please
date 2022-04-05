@@ -101,7 +101,7 @@ def dict(d):
     fail('dict is not callable')
 
 
-def glob(include:list, exclude:list&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY, include_symlinks:bool=not CONFIG.FF_EXCLUDE_GLOB_SYMLINKS) -> list:
+def glob(include:list|str, exclude:list|str&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY, include_symlinks:bool=not CONFIG.FF_EXCLUDE_GLOB_SYMLINKS) -> list:
     pass
 
 
@@ -128,6 +128,8 @@ def get_base_path(label:str=None, subinclude_context:bool=None) -> str:
 def package_name(label:str=None, subinclude_context:bool=None) -> str:
     pass
 def subrepo_name(label:str=None, subinclude_context:bool=None) -> str:
+    pass
+def looks_like_build_label(label:str) -> bool:
     pass
 
 def canonicalise(label:str, subinclude_context:bool=None) -> str:

@@ -12,14 +12,14 @@ import (
 
 	"github.com/bazelbuild/buildtools/build"
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/plz"
 )
 
-var log = logging.MustGetLogger("format")
+var log = logging.Log
 
 // Format reformats the given BUILD files to their canonical version.
 // It either prints the reformatted versions to stdout or rewrites the files in-place.

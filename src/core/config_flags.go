@@ -1,9 +1,9 @@
 package core
 
 import (
-	"github.com/thought-machine/go-flags"
-
 	"strings"
+
+	"github.com/thought-machine/go-flags"
 )
 
 // AttachAliasFlags attaches the alias flags to the given flag parser.

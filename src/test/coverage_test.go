@@ -157,6 +157,7 @@ func TestParseBlocks(t *testing.T) {
 }
 
 func assertLine(t *testing.T, lines []core.LineCoverage, i int, expected core.LineCoverage) {
+	t.Helper()
 	i-- // 1-indexed
 	if lines[i] != expected {
 		t.Errorf("Line %d incorrect, should be %d, was %d", i, expected, lines[i])

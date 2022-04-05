@@ -7,6 +7,7 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//src/build",
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/metrics",
@@ -16,10 +17,10 @@ go_library(
         "//third_party/go:genproto_rpc",
         "//third_party/go:grpc",
         "//third_party/go:grpc-middleware",
-        "//third_party/go:logging",
         "//third_party/go:protobuf-go",
         "//third_party/go:remote-apis",
         "//third_party/go:remote-apis-sdks",
+        "//third_party/go:shellescape",
         "//third_party/go:uuid",
     ],
 )

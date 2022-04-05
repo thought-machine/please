@@ -200,6 +200,9 @@ type BuildTarget struct {
 	FileContent string `name:"content"`
 	// Represents the state of this build target (see below)
 	state int32 `print:"false"`
+	// If true, the target is needed for a subinclude and therefore we will have to make sure its
+	// outputs are available locally when built.
+	neededForSubinclude atomicBool `print:"false"`
 	// The number of completed runs
 	completedRuns uint16 `print:"false"`
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
@@ -228,9 +231,6 @@ type BuildTarget struct {
 	// If true, the executed commands will exit whenever an error is encountered (i.e. shells
 	// are executed with -e).
 	ExitOnError bool
-	// If true, the target is needed for a subinclude and therefore we will have to make sure its
-	// outputs are available locally when built.
-	NeededForSubinclude bool `print:"false"`
 	// Marks the target as a filegroup.
 	IsFilegroup bool `print:"false"`
 	// Marks the target as a remote_file.

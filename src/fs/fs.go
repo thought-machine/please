@@ -8,12 +8,11 @@ import (
 	"os"
 	"path"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/process"
-
-	"gopkg.in/op/go-logging.v1"
 )
 
-var log = logging.MustGetLogger("fs")
+var log = logging.Log
 
 // DirPermissions are the default permission bits we apply to directories.
 const DirPermissions = os.ModeDir | 0775
@@ -38,8 +37,7 @@ func EnsureDir(filename string) error {
 // OpenDirFile ensures that the directory of the given file has been created before
 // calling the underlying os.OpenFile function.
 func OpenDirFile(filename string, flag int, perm os.FileMode) (*os.File, error) {
-	err := EnsureDir(filename)
-	if err != nil {
+	if err := EnsureDir(filename); err != nil {
 		return nil, err
 	}
 	return os.OpenFile(filename, flag, perm)

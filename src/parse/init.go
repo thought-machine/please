@@ -8,6 +8,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/rules/bazel"
@@ -75,15 +76,22 @@ func (p *aspParser) preloadSubincludes(state *core.BuildState) {
 		// TODO(jpoole): is this the right thing to do?
 		includes = append(includes, state.RepoConfig.Parse.PreloadSubincludes...)
 	}
+	wg := sync.WaitGroup{}
 	for _, inc := range includes {
 		if inc.IsPseudoTarget() {
 			log.Fatalf("Can't preload pseudotarget %v", inc)
 		}
+		wg.Add(1)
 		// Queue them up asynchronously to feed the queues as quickly as possible
 		go func(inc core.BuildLabel) {
 			state.WaitForBuiltTarget(inc, core.OriginalTarget)
+			wg.Done()
 		}(inc)
 	}
+
+	// We must wait for all the subinclude targets to be built otherwise updating the locals might race with parsing
+	// a package
+	wg.Wait()
 
 	// Preload them in order to avoid non-deterministic errors when the subincludes depend on each other
 	for _, inc := range includes {

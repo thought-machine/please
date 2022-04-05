@@ -8,13 +8,12 @@ import (
 	"runtime"
 	"strings"
 
-	"gopkg.in/op/go-logging.v1"
-
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
-var log = logging.MustGetLogger("hashes")
+var log = logging.Log
 
 // RewriteHashes rewrites the hashes in a BUILD file.
 func RewriteHashes(state *core.BuildState, labels []core.BuildLabel) {
