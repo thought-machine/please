@@ -4,6 +4,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/OneOfOne/cmap v0.0.0-20170825200327-ccaef7657ab8
 	github.com/ProtonMail/go-crypto v0.0.0-20210920135941-2c5829bbf927
+	github.com/alessio/shellescape v1.4.1
 	github.com/bazelbuild/buildtools v0.0.0-20210920153738-d6daef01a1a2
 	github.com/bazelbuild/remote-apis v0.0.0-20210718193713-0ecef08215cf
 	github.com/bazelbuild/remote-apis-sdks v0.0.0-20210909182119-af1232ee0d79
