@@ -75,7 +75,6 @@ func TestAdd(t *testing.T) {
 		},
 	}
 	suite2 := TestSuite{
-		Name: "Test",
 		TestCases: []TestCase{
 			{
 				ClassName: "SomeClass",

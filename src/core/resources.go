@@ -20,7 +20,10 @@ func (state *BuildState) UpdateResources() {
 	lastTime := time.Now()
 	// Assume this doesn't change through the process lifetime.
 	count, _ := cpu.Counts(true)
+	state.stats.Lock()
 	stats.CPU.Count = count
+	state.stats.Unlock()
+
 	// Top out max CPU; sometimes we get our maths slightly wrong, probably because of
 	// mild uncertainty in times.
 	maxCPU := float64(100 * count)

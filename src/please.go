@@ -1070,12 +1070,14 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.DebugFailingTests = debugFailingTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
-	downloadOriginalOutputs := (!opts.Build.NoDownload && !opts.Run.Remote && len(targets) > 0 && (!targets[0].IsAllSubpackages() || len(opts.BuildFlags.Include) > 0)) || opts.Build.Download
-	if downloadOriginalOutputs {
-		state.OutputDownload = core.OriginalOutputDownload
-	} else if debug {
+
+	// What outputs get downloaded in remote execution.
+	if debug {
 		state.OutputDownload = core.TransitiveOutputDownload
+	} else if (!opts.Build.NoDownload && !opts.Run.Remote && len(targets) > 0 && (!targets[0].IsAllSubpackages() || len(opts.BuildFlags.Include) > 0)) || opts.Build.Download {
+		state.OutputDownload = core.OriginalOutputDownload
 	}
+
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if opts.BuildFlags.Arch.OS != "" {
 		state.TargetArch = opts.BuildFlags.Arch
@@ -1098,7 +1100,8 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	if state.RemoteClient != nil && !opts.Run.Remote {
 		defer state.RemoteClient.Disconnect()
 	}
-	return state.Successful(), state
+	failures, _, _ := state.Failures()
+	return !failures, state
 }
 
 func runPlease(state *core.BuildState, targets []core.BuildLabel) {
@@ -1400,9 +1403,9 @@ func toExitCode(success bool, state *core.BuildState) int {
 		return 0
 	} else if state == nil {
 		return 1
-	} else if state.BuildFailed {
+	} else if _, buildFailed, testFailed := state.Failures(); buildFailed {
 		return 2
-	} else if state.TestFailed {
+	} else if testFailed {
 		if opts.Test.FailingTestsOk || opts.Cover.FailingTestsOk {
 			return 0
 		}
