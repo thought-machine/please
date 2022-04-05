@@ -4,14 +4,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/op/go-logging.v1"
-
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/exec"
 	"github.com/thought-machine/please/src/process"
 )
 
-var log = logging.MustGetLogger("debug")
+var log = logging.Log
 
 func Debug(state *core.BuildState, label core.BuildLabel, args []string) int {
 	target := state.Graph.TargetOrDie(label)

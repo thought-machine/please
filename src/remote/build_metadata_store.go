@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 const pleaseCacheDirName = "please"

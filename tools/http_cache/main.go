@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/cli"
-	"github.com/thought-machine/please/tools/http_cache/cache"
-	"gopkg.in/op/go-logging.v1"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/op/go-logging.v1"
+
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/tools/http_cache/cache"
 )
 
 var log = logging.MustGetLogger("httpcache")
@@ -20,8 +22,8 @@ var opts = struct {
 }{
 	Usage: `
 HTTP cache implements a resource based http server that please can use as a cache. The cache supports storing files
-via PUT requests and retrieving them again through GET requests. Really any http server (e.g. nginx) can be used as a 
-cache for please however this is a lightweight and easy to configure option. 
+via PUT requests and retrieving them again through GET requests. Really any http server (e.g. nginx) can be used as a
+cache for please however this is a lightweight and easy to configure option.
 `,
 }
 

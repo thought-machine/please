@@ -8,12 +8,11 @@ import (
 	"os"
 	"path"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/process"
-
-	"gopkg.in/op/go-logging.v1"
 )
 
-var log = logging.MustGetLogger("fs")
+var log = logging.Log
 
 // DirPermissions are the default permission bits we apply to directories.
 const DirPermissions = os.ModeDir | 0775

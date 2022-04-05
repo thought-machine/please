@@ -3,10 +3,12 @@
 package parse
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/thought-machine/please/src/core"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 func TestAddDepSimple(t *testing.T) {

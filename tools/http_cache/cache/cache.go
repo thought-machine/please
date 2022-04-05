@@ -2,12 +2,14 @@ package cache
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/fs"
-	"gopkg.in/op/go-logging.v1"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/op/go-logging.v1"
+
+	"github.com/thought-machine/please/src/fs"
 )
 
 var log = logging.MustGetLogger("httpcache")

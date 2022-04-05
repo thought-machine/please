@@ -524,7 +524,7 @@ def text_file(name:str, content:str, hashes:list=None, data:list|dict=[], out:st
     return build_rule(
         name = name,
         tag = _tag,
-        cmd = '',
+        cmd = 'text_file',
         _file_content = content,
         outs = [out or name],
         binary = binary,

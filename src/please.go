@@ -17,13 +17,13 @@ import (
 
 	"github.com/thought-machine/go-flags"
 	"go.uber.org/automaxprocs/maxprocs"
-	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cache"
 	"github.com/thought-machine/please/src/clean"
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/debug"
 	"github.com/thought-machine/please/src/exec"
@@ -49,7 +49,7 @@ import (
 	"github.com/thought-machine/please/src/worker"
 )
 
-var log = logging.MustGetLogger("plz")
+var log = logging.Log
 
 var config *core.Configuration
 
@@ -1098,7 +1098,8 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	if state.RemoteClient != nil && !opts.Run.Remote {
 		defer state.RemoteClient.Disconnect()
 	}
-	return state.Successful(), state
+	failures, _, _ := state.Failures()
+	return !failures, state
 }
 
 func runPlease(state *core.BuildState, targets []core.BuildLabel) {
@@ -1400,9 +1401,9 @@ func toExitCode(success bool, state *core.BuildState) int {
 		return 0
 	} else if state == nil {
 		return 1
-	} else if state.BuildFailed {
+	} else if _, buildFailed, testFailed := state.Failures(); buildFailed {
 		return 2
-	} else if state.TestFailed {
+	} else if testFailed {
 		if opts.Test.FailingTestsOk || opts.Cover.FailingTestsOk {
 			return 0
 		}

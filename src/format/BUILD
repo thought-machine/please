@@ -3,12 +3,12 @@ go_library(
     srcs = ["fmt.go"],
     visibility = ["//src/..."],
     deps = [
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/plz",
         "//third_party/go:buildtools",
         "//third_party/go:errgroup",
-        "//third_party/go:logging",
     ],
 )
 

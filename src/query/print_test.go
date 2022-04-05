@@ -3,15 +3,15 @@ package query
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/stretchr/testify/require"
-	"github.com/thought-machine/please/src/parse"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse"
 )
 
 var order = parse.InitParser(core.NewDefaultBuildState()).Parser.BuildRuleArgOrder()

@@ -43,6 +43,7 @@ linters:
     - dogsled
     - dupl
     - exportloopref
+    - gci
     - gocritic
     - gofmt
     - misspell
@@ -64,3 +65,8 @@ linters-settings:
       - shadow # Probably not useful enough to clean everything up
       # TODO(peterebden): Should clean up these warnings & enable (although they are pretty finicky)
       - fieldalignment
+  gci:
+    sections:
+      - standard # Captures all standard packages if they do not match another section.
+      - default # Contains all imports that could not be matched to another section type.
+      - prefix(github.com/thought-machine/please)

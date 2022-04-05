@@ -13,9 +13,9 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
-        "//third_party/go:logging",
         "//third_party/go:promptui",
         "//third_party/go:semver2",
     ],
@@ -29,6 +29,7 @@ go_test(
         ":asp",
         "//rules",
         "//src/core",
+        "//third_party/go:logging",
         "//third_party/go:testify",
     ],
 )

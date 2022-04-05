@@ -8,10 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/op/go-logging.v1"
-
 	"github.com/thought-machine/please/src/assets"
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/scm"
@@ -42,7 +41,7 @@ github_repo(
 )
 `
 
-var log = logging.MustGetLogger("init")
+var log = logging.Log
 
 // InitConfig initialises a .plzconfig template in the given directory.
 func InitConfig(dir string, bazelCompatibility bool, noPrompt bool) {

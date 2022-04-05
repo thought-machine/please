@@ -8,12 +8,12 @@ go_library(
     deps = [
         "//rules",
         "//src/cli",
+        "//src/cli/logging",
         "//src/core",
         "//src/parse/asp",
         "//src/plz",
         "//third_party/go:deferred_regex",
         "//third_party/go:go-flags",
-        "//third_party/go:logging",
     ],
 )
 

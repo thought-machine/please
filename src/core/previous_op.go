@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pkg/xattr"
+
 	"github.com/thought-machine/please/src/fs"
 )
 

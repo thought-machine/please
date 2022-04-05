@@ -4,12 +4,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"github.com/prometheus/common/expfmt"
-	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 )
 
-var log = logging.MustGetLogger("metrics")
+var log = logging.Log
 
 var registerer = prometheus.WrapRegistererWith(prometheus.Labels{
 	"version": core.PleaseVersion,

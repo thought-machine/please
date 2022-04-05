@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
+
 	"github.com/thought-machine/please/src/cli"
 )
 

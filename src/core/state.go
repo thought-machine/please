@@ -119,7 +119,7 @@ type BuildState struct {
 	// Timestamp that the build is considered to start at.
 	StartTime time.Time
 	// Various system statistics. Mostly used during remote communication.
-	Stats *SystemStats
+	stats *lockedStats
 	// Configuration options
 	Config *Configuration
 	// The .plzconfig file for this repo. Unlike Config, no default values are applied. This will represent the
@@ -160,10 +160,6 @@ type BuildState struct {
 	Coverage TestCoverage
 	// True if we require rule hashes to be correctly verified (usually the case).
 	VerifyHashes bool
-	// True if >= 1 target has failed to build
-	BuildFailed bool
-	// True if >= 1 target has failed test cases
-	TestFailed bool
 	// True if tests should calculate coverage metrics
 	NeedCoverage bool
 	// True if we intend to build targets. False if we're just parsing
@@ -261,8 +257,12 @@ type stateProgress struct {
 	// Targets that we were originally requested to build
 	originalTargets     []BuildLabel
 	originalTargetMutex sync.Mutex
-	// True if the build has been successful so far (i.e. nothing has failed yet).
-	success bool
+	// True if something about the build has failed.
+	failed atomicBool
+	// True if >= 1 target has failed to build
+	buildFailed atomicBool
+	// True if >= 1 target has failed test cases
+	testFailed atomicBool
 	// Stream of results from the build
 	results chan *BuildResult
 	// Internal result stream, used to intermediate them for the cycle checker.
@@ -289,6 +289,12 @@ type SystemStats struct {
 	// N.B. These are background workers as started by $(worker) commands, not the internal worker
 	//      threads tracked in the state object.
 	NumWorkerProcesses int
+}
+
+// lockedStats is just SystemStats with a mutex to protect it.
+type lockedStats struct {
+	sync.Mutex
+	Stats SystemStats
 }
 
 // addActiveTargets increments the counter for a number of newly active build targets.
@@ -380,6 +386,8 @@ func (state *BuildState) Stop() {
 // CloseResults closes the result channels.
 func (state *BuildState) CloseResults() {
 	state.progress.cycleDetector.Stop()
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
 	if state.progress.results != nil {
 		state.progress.resultOnce.Do(func() {
 			close(state.progress.results)
@@ -555,11 +563,11 @@ func (state *BuildState) logResult(result *BuildResult) {
 	result.Time = time.Now()
 	state.progress.internalResults <- result
 	if result.Status.IsFailure() {
-		state.progress.success = false
+		state.progress.failed.Set()
 		if result.Status == TargetBuildFailed {
-			state.BuildFailed = true
+			state.progress.buildFailed.Set()
 		} else if result.Status == TargetTestFailed {
-			state.TestFailed = true
+			state.progress.testFailed.Set()
 		}
 	}
 }
@@ -604,9 +612,11 @@ func (state *BuildState) forwardResults() {
 				delete(activeTargets, target)
 			}
 		}
+		state.progress.mutex.Lock()
 		if state.progress.results != nil {
 			state.progress.results <- result
 		}
+		state.progress.mutex.Unlock()
 	}
 }
 
@@ -618,13 +628,15 @@ func (state *BuildState) checkForCycles() {
 	}
 }
 
-// Successful returns true if the state has been successful, i.e. no targets have errored.
-func (state *BuildState) Successful() bool {
-	return state.progress.success
+// Failures returns anything that has failed about the current build.
+func (state *BuildState) Failures() (anything, build, test bool) {
+	return state.progress.failed.IsSet(), state.progress.buildFailed.IsSet(), state.progress.testFailed.IsSet()
 }
 
 // Results returns a channel on which the caller can listen for results.
 func (state *BuildState) Results() <-chan *BuildResult {
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
 	if state.progress.results == nil {
 		state.progress.results = make(chan *BuildResult, 1000)
 	}
@@ -867,7 +879,7 @@ func (state *BuildState) ShouldDownload(target *BuildTarget) bool {
 	downloadOriginalTarget := state.OutputDownload == OriginalOutputDownload && state.IsOriginalTarget(target)
 	downloadTransitiveTarget := state.OutputDownload == TransitiveOutputDownload
 	downloadLinkableTarget := state.Config.Build.DownloadLinkable && target.HasLinks(state)
-	return target.NeededForSubinclude || ((downloadOriginalTarget || downloadTransitiveTarget) && !state.NeedTests) || downloadLinkableTarget
+	return target.neededForSubinclude.IsSet() || ((downloadOriginalTarget || downloadTransitiveTarget) && !state.NeedTests) || downloadLinkableTarget
 }
 
 // ShouldRebuild returns true if we should force a rebuild of this target (i.e. the user
@@ -951,7 +963,9 @@ func (state *BuildState) queueTestTarget(target *BuildTarget) {
 
 // queueResolvedTarget is like queueTarget but once we have a resolved target.
 func (state *BuildState) queueResolvedTarget(target *BuildTarget, forceBuild, neededForSubinclude bool) error {
-	target.NeededForSubinclude = target.NeededForSubinclude || neededForSubinclude
+	if neededForSubinclude {
+		target.neededForSubinclude.Set()
+	}
 	if target.State() >= Active && !forceBuild {
 		return nil // Target is already tagged to be built and likely on the queue.
 	}
@@ -995,9 +1009,9 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		}
 	}
 	for {
-		called := false
+		var called atomicBool
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
-			called = true
+			called.Set()
 			return state.queueResolvedTarget(t, forceBuild, false)
 		}); err != nil {
 			state.asyncError(target.Label, err)
@@ -1009,7 +1023,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 				t.WaitForBuild()
 			}
 		}
-		if !called {
+		if !called.IsSet() {
 			// We are now ready to go, we have nothing to wait for.
 			if building && target.SyncUpdateState(Active, Pending) {
 				state.addPendingBuild(target)
@@ -1215,14 +1229,13 @@ func NewBuildState(config *Configuration) *BuildState {
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
 		TargetArch:      config.Build.Arch,
 		Arch:            cli.HostArch(),
-		Stats:           &SystemStats{},
+		stats:           &lockedStats{},
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
 			numPending:      1,
 			pendingPackages: cmap.New(),
 			pendingTargets:  cmap.New(),
 			packageWaits:    cmap.New(),
-			success:         true,
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 		},
