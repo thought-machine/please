@@ -874,13 +874,17 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 	elem := reflect.ValueOf(config).Elem()
 	for k, v := range overrides {
 		split := strings.Split(strings.ToLower(k), ".")
+		if len(split) == 3 && split[0] == "plugin" {
+			if plugin, ok := config.Plugin[split[1]]; ok {
+				plugin.ExtraValues[strings.ToLower(split[2])] = []string{v}
+				return nil
+			}
+			log.Fatalf("No plugin with ID %v", split[1])
+		}
 		if len(split) != 2 {
 			return fmt.Errorf("Bad option format: %s", k)
 		}
-		if plugin, ok := config.Plugin[split[0]]; ok {
-			plugin.ExtraValues[strings.ToLower(split[1])] = []string{v}
-			return nil
-		}
+
 		field := elem.FieldByNameFunc(match(split[0]))
 		if !field.IsValid() {
 			return fmt.Errorf("Unknown config field: %s", split[0])

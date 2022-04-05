@@ -1,7 +1,8 @@
 [Parse]
 BuildFileName = BUILD # We override this in the e2e test profile and the subrepo has BUILD files not BUILD_FILE
 
-[Go]
+[Plugin "go"]
+Target = //:go
 ImportPath = github.com/though-machine/please/test/proto_plugin
 
 [Plugin "proto"]
