@@ -107,7 +107,6 @@ func validateSubrepoNameAndPluginConfig(config, repoConfig *core.Configuration, 
 			}
 		}
 	}
-
 	return nil
 }
 
