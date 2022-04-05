@@ -4,11 +4,11 @@ plugin_repo(
 )
 
 plugin_repo(
-    name = "go-proto",
+    name = "go",
     revision = "master",
 )
 
 plugin_repo(
-    name = "go",
+    name = "go-proto",
     revision = "master",
 )

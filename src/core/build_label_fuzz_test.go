@@ -16,7 +16,7 @@ func FuzzParseBuildLabel(f *testing.F) {
 	f.Add(":please")
 	f.Add("///third_party/cc/googletest//testing:test_main")
 	f.Add("///third_party/cc/googletest//:googletest")
-	f.Fuzz(func(t *testing.T, in string) {
+	f.Fuzz(func(t *testing.T, in string) { //nolint:thelper
 		label, err := TryParseBuildLabel(in, "src/core", "")
 		if err != nil {
 			t.Skip("Fuzzer gave us an unparseable input")
