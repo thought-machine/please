@@ -72,10 +72,6 @@ func (p *aspParser) WaitForInit() {
 
 func (p *aspParser) preloadSubincludes(state *core.BuildState) {
 	includes := state.Config.Parse.PreloadSubincludes
-	if state.RepoConfig != nil {
-		// TODO(jpoole): is this the right thing to do?
-		includes = append(includes, state.RepoConfig.Parse.PreloadSubincludes...)
-	}
 	wg := sync.WaitGroup{}
 	for _, inc := range includes {
 		if inc.IsPseudoTarget() {
