@@ -1070,12 +1070,14 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.DebugFailingTests = debugFailingTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
-	downloadOriginalOutputs := (!opts.Build.NoDownload && !opts.Run.Remote && len(targets) > 0 && (!targets[0].IsAllSubpackages() || len(opts.BuildFlags.Include) > 0)) || opts.Build.Download
-	if downloadOriginalOutputs {
-		state.OutputDownload = core.OriginalOutputDownload
-	} else if debug {
+
+	// What outputs get downloaded in remote execution.
+	if debug {
 		state.OutputDownload = core.TransitiveOutputDownload
+	} else if (!opts.Build.NoDownload && !opts.Run.Remote && len(targets) > 0 && (!targets[0].IsAllSubpackages() || len(opts.BuildFlags.Include) > 0)) || opts.Build.Download {
+		state.OutputDownload = core.OriginalOutputDownload
 	}
+
 	state.SetIncludeAndExclude(opts.BuildFlags.Include, opts.BuildFlags.Exclude)
 	if opts.BuildFlags.Arch.OS != "" {
 		state.TargetArch = opts.BuildFlags.Arch
