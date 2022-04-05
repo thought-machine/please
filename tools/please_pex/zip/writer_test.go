@@ -87,6 +87,7 @@ func TestAddFiles(t *testing.T) {
 }
 
 func assertExpected(t *testing.T, filename string, alignment int) {
+	t.Helper()
 	r, err := zip.OpenReader(filename)
 	require.NoError(t, err)
 	defer r.Close()

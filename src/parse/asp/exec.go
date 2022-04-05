@@ -197,13 +197,11 @@ func execGetCachedOutput(key execKey, args []string) (output *execOut, found boo
 //
 // git_branch() returns the output of `git symbolic-ref -q --short HEAD`
 func execGitBranch(s *scope, args []pyObject) pyObject {
-	short := args[0].IsTruthy()
-
 	cmdIn := make([]pyObject, 3, 5)
 	cmdIn[0] = pyString("git")
 	cmdIn[1] = pyString("symbolic-ref")
 	cmdIn[2] = pyString("-q")
-	if short {
+	if args[0].IsTruthy() {
 		cmdIn = append(cmdIn, pyString("--short"))
 	}
 	cmdIn = append(cmdIn, pyString("HEAD"))
@@ -348,8 +346,7 @@ func execGitState(s *scope, args []pyObject) pyObject {
 		return pyResult
 	}
 
-	result := pyResult.String()
-	if len(result) != 0 {
+	if result := pyResult.String(); len(result) != 0 {
 		return dirtyLabel
 	}
 	return cleanLabel

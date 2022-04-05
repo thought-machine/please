@@ -291,7 +291,7 @@ func (p *parser) parseArgument() Argument {
 		if tok := p.l.Peek(); tok.Type == ',' || tok.Type == ')' {
 			return a
 		}
-		tok = p.next('=')
+		p.next('=')
 	}
 	// Default value
 	a.Value = p.parseExpression()
@@ -394,7 +394,7 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 		p.endPos = tok.EndPos()
 	}
 	if op, present := operators[tok.Value]; present {
-		tok = p.l.Next()
+		p.l.Next()
 		o := OpExpression{Op: op}
 		if op == Is {
 			if tok := p.l.Peek(); tok.Value == "not" {

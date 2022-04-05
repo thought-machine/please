@@ -40,6 +40,7 @@ func TestQueryPackage(t *testing.T) {
 }
 
 func makeGraph(t *testing.T) *core.BuildState {
+	t.Helper()
 	state := core.NewDefaultBuildState()
 	graph := state.Graph
 	pkg1 := core.NewPackage("package1")

@@ -121,11 +121,13 @@ func addDeps(graph *core.BuildGraph, pkg *core.Package) {
 }
 
 func assertPendingParses(t *testing.T, state *core.BuildState, targets ...string) {
+	t.Helper()
 	parses, _ := getAllPending(state)
 	assert.ElementsMatch(t, targets, parses)
 }
 
 func assertPendingBuilds(t *testing.T, state *core.BuildState, targets ...string) {
+	t.Helper()
 	_, builds := getAllPending(state)
 	assert.ElementsMatch(t, targets, builds)
 }
