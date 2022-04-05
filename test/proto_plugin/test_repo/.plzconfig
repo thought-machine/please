@@ -1,9 +1,5 @@
-[Please]
-Version = 16.20.0-beta.14
-
 [Parse]
 BuildFileName = BUILD # We override this in the e2e test profile and the subrepo has BUILD files not BUILD_FILE
-PreloadSubincludes = ///go//build_defs:go
 
 [Plugin "proto"]
 Target = //plugins:proto
@@ -19,5 +15,6 @@ Target = //plugins:go-proto
 GrpcPlugin = //third_party/go:protoc-gen-go-grpc
 ProtoPlugin = //third_party/go:protoc-gen-go
 
-[featureflags]
+[FeatureFlags]
 ExcludeGoRules = true
+ExcludeProtoRules = true
