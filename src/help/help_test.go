@@ -8,14 +8,12 @@ import (
 )
 
 func TestMain(t *testing.M) {
-	f, err := os.Create(".plzconfig")
+	err := os.WriteFile(".plzconfig", nil, 0444)
 	if err != nil {
 		panic(err)
 	}
-	f.Close()
 
-	t.Run()
-	os.Exit(0)
+	os.Exit(t.Run())
 }
 
 func TestPublicInterface(t *testing.T) {
