@@ -185,7 +185,32 @@ jobs:
        - save_cache:
            key: go-freebsd-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
-
+   build-linux-arm64:
+     working_directory: ~/please
+     docker:
+       - image: thoughtmachine/please_ubuntu:20220317
+     resource_class: large
+     steps:
+       - checkout
+       - attach_workspace:
+           at: /tmp/workspace
+       - restore_cache:
+           key: go-linux-arm64-v1-{{ checksum "third_party/go/BUILD" }}
+       - run:
+           name: Extract plz
+           command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
+       - run:
+           name: Cross-compile
+           command: ./please/please build -p --profile ci --arch linux_arm64 -o please.location:~/please/please //package:release_files
+       - persist_to_workspace:
+           root: plz-out/pkg
+           paths:
+             - linux_arm64/*
+       - store_artifacts:
+           path: plz-out/log
+       - save_cache:
+           key: go-linux-arm64-v1-{{ checksum "third_party/go/BUILD" }}
+           paths: [ ".plz-cache/third_party/go" ]
    build-darwin:
       macos:
         xcode: "12.0.0"
