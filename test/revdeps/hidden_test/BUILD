@@ -1,7 +1,7 @@
 subinclude("//test/build_defs")
 
 # creates a filegroup with two hidden intermediate rules
-def two_intermediate(name:str, deps:list):
+def two_intermediate(name, deps):
     one = filegroup(
         name = name,
         tag = "one",
