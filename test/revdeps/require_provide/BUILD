@@ -1,13 +1,13 @@
 subinclude("//test/build_defs")
 
-def provider(name, deps=[]):
+def provider(name, deps = []):
     # This is the rule that actually gets depended on after resolving the require/provide setup
     go = build_rule(
         name = name,
-        tag = "go",
         outs = [name],
         cmd = "touch $OUT",
         requires = ["go"],
+        tag = "go",
         deps = deps,
     )
 
@@ -16,7 +16,7 @@ def provider(name, deps=[]):
         provides = {
             "go": go,
         },
-        deps=[go],
+        deps = [go],
     )
 
 provider(
