@@ -14,7 +14,7 @@ import (
 
 	cli "github.com/peterebden/go-cli-init/v5/logging"
 	"github.com/peterebden/go-deferred-regex"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 	"gopkg.in/op/go-logging.v1"
 
 	logger "github.com/thought-machine/please/src/cli/logging"
@@ -25,7 +25,7 @@ const messageHistoryMaxSize = 100
 var log = logger.Log
 
 // StdErrIsATerminal is true if the process' stderr is an interactive TTY.
-var StdErrIsATerminal = terminal.IsTerminal(int(os.Stderr.Fd()))
+var StdErrIsATerminal = term.IsTerminal(int(os.Stderr.Fd()))
 
 // ShowColouredOutput tracks whether we are displaying coloured output or not.
 var ShowColouredOutput = StdErrIsATerminal
@@ -278,8 +278,7 @@ func findSplit(line string, guess int) int {
 		return len(line)
 	}
 	r := regexp.MustCompilePOSIX(fmt.Sprintf(".{%d,%d}(\\x1b[^m]+m)?", guess/2, guess))
-	m := r.FindStringIndex(line)
-	if m != nil {
+	if m := r.FindStringIndex(line); m != nil {
 		return m[1] // second element in slice is the end index
 	}
 	return guess // Dunno what to do at this point. It's probably unlikely to happen often though.

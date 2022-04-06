@@ -8,6 +8,7 @@ import (
 )
 
 func assertToken(t *testing.T, tok Token, tokenType rune, value string, line, column, offset int) {
+	t.Helper()
 	assert.EqualValues(t, tokenType, tok.Type, "incorrect type")
 	assert.Equal(t, value, tok.Value, "incorrect value")
 	assert.Equal(t, line, tok.Pos.Line, "incorrect line")

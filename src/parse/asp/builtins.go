@@ -937,10 +937,8 @@ func addOut(s *scope, args []pyObject) pyObject {
 
 // getOuts gets the outputs of a target
 func getOuts(s *scope, args []pyObject) pyObject {
-	name := args[0].String()
-
 	var target *core.BuildTarget
-	if core.LooksLikeABuildLabel(name) {
+	if name := args[0].String(); core.LooksLikeABuildLabel(name) {
 		label := core.ParseBuildLabel(name, s.pkg.Name)
 		target = s.state.Graph.TargetOrDie(label)
 	} else {

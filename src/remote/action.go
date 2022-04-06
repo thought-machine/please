@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alessio/shellescape"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/command"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
@@ -97,7 +98,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			commandPrefix += fmt.Sprintf("export %s=\"%s\" && ", k, target.Env[k])
+			commandPrefix += fmt.Sprintf("export %s=%s && ", k, shellescape.Quote(target.Env[k]))
 		}
 	}
 

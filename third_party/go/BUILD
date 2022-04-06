@@ -39,7 +39,6 @@ go_module(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/crypto",
     version = "v0.0.0-20210920023735-84f357641f63",
-    visibility = ["PUBLIC"],
     deps = [":xterm"],
 )
 
@@ -1083,5 +1082,13 @@ go_module(
     install = ["semver"],
     module = "golang.org/x/mod",
     version = "v0.5.0",
+    visibility = ["PUBLIC"],
+)
+
+go_module(
+    name = "shellescape",
+    licences = ["MIT"],
+    module = "github.com/alessio/shellescape",
+    version = "v1.4.1",
     visibility = ["PUBLIC"],
 )

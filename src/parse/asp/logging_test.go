@@ -38,7 +38,8 @@ func parseFile2(filename string) (*scope, error) {
 }
 
 // assertRecords asserts equality of a series of logging records.
-func assertRecords(t *testing.T, backend *logging.MemoryBackend, expected []record) { //nolint:unused
+func assertRecords(t *testing.T, backend *logging.MemoryBackend, expected []record) {
+	t.Helper()
 	actual := []record{}
 	for node := backend.Head(); node != nil; node = node.Next() {
 		actual = append(actual, record{node.Record.Level, node.Record.Message()})

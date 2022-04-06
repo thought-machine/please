@@ -14,7 +14,6 @@ go_library(
         "//third_party/go:deferred_regex",
         "//third_party/go:go-flags",
         "//third_party/go:humanize",
-        "//third_party/go:xcrypto",
     ],
 )
 
