@@ -15,7 +15,6 @@ import (
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/plz"
 )
 
 const pluginRepoTemplate = `plugin_repo(
@@ -25,6 +24,10 @@ const pluginRepoTemplate = `plugin_repo(
   owner = "please-build",
 )
 `
+
+func info(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
+}
 
 // InitPlugins initialises one or more plugins by inserting plugin config values into
 // the host repo config file, and creating a build target in //plugins.
@@ -61,26 +64,20 @@ func initPlugin(plugin string, file ast.File) (ast.File, error) {
 		return file, err
 	}
 
-	file, err := injectPluginConfig(plugin, file)
-	if err != nil {
-		return file, err
-	}
-
-	return file, nil
+	return injectPluginConfig(plugin, file), nil
 }
 
-func injectPluginConfig(plugin string, file ast.File) (ast.File, error) {
+func injectPluginConfig(plugin string, file ast.File) ast.File {
 	switch plugin {
 	case "python":
-		file = writePythonConfigFields(file)
+		return writePythonConfigFields(file)
 	case "java":
-		file = writeJavaConfigFields(file)
+		return writeJavaConfigFields(file)
 	case "cc":
-		file = writeCCConfigFields(file)
+		return writeCCConfigFields(file)
 	default:
-		log.Warningf("Failed to initialise plugin. \"%s\" not recognised", plugin)
+		return writeFieldsToConfig(plugin, file, nil)
 	}
-	return file, nil
 }
 
 func writePythonConfigFields(file ast.File) ast.File {
@@ -145,7 +142,7 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 
 	// Check for existing plugin section
 	if s := file.MaybeGetSection(section, plugin); s != nil {
-		log.Warningf("Plugin config section already exists, so init did nothing.")
+		info("Plugin config section already exists, so init did nothing.")
 		return file
 	}
 
@@ -160,47 +157,13 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 	file = ast.InjectField(file, "Target", "//plugins:"+plugin, section, plugin, false)
 
 	// Migrate any existing language fields to their plugin equivalents
-	foundSection := false
-	for _, s := range file.Sections {
-		if s.Key == plugin {
-			foundSection = true
-			for _, field := range s.Fields {
-				if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
-					file = ast.InjectField(file, plugVal, field.Value, section, plugin, true)
-				}
-			}
-		}
-	}
-
-	// If we found nothing, add a section with default values
-	if !foundSection {
-		config, err := core.ReadDefaultConfigFiles(nil)
-		if err != nil {
-			log.Fatalf("Error reading config file: %s", err)
-		}
-
-		// Build plugin target so we can pull the default values
-		state := core.NewBuildState(config)
-		buildLabel := core.NewBuildLabel("plugins", plugin)
-		plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
-		subrepo := state.Graph.Subrepo(plugin)
-		if subrepo == nil {
-			log.Fatalf("Failed to get subrepo %v", plugin)
-		}
-		if err = subrepo.LoadSubrepoConfig(); err != nil {
-			panic(err)
-		}
-		config = subrepo.State.Config
-		for _, v := range config.PluginConfig {
-			if len(v.DefaultValue) == 0 {
-				file = ast.InjectField(file, v.ConfigKey, "", section, plugin, v.Repeatable)
-			} else {
-				for _, val := range v.DefaultValue {
-					// Check for build labels and resolve relative to host
-					if core.LooksLikeABuildLabel(val) {
-						val = "///" + plugin + val
+	if configMap != nil {
+		for _, s := range file.Sections {
+			if s.Key == plugin {
+				for _, field := range s.Fields {
+					if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
+						file = ast.InjectField(file, plugVal, field.Value, section, plugin, true)
 					}
-					file = ast.InjectField(file, v.ConfigKey, val, section, plugin, v.Repeatable)
 				}
 			}
 		}
@@ -237,8 +200,8 @@ func createTarget(location, plugin string) error {
 		return nil
 	}
 
-	dir := filepath.Dir(location)
-	if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
+	pkg := filepath.Dir(location)
+	if err := os.MkdirAll(pkg, core.DirPermissions); err != nil {
 		return err
 	}
 
