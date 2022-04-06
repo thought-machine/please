@@ -1,6 +1,6 @@
 subinclude("//test/build_defs")
 
-def provider(name:str, deps:list=[]):
+def provider(name, deps=[]):
     # This is the rule that actually gets depended on after resolving the require/provide setup
     go = build_rule(
         name = name,
