@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -157,16 +158,17 @@ func (d *interactiveDisplay) printLines(local, remote []buildingTarget) {
 func (d *interactiveDisplay) printRow(target *buildingTarget, now time.Time, remote bool) int {
 	label := target.Label.Parent()
 	duration := now.Sub(target.Started).Seconds()
-	if target.Active && target.Target != nil && target.Target.ShowProgress && target.Target.Progress > 0.0 {
+	if target.Active && target.Target != nil && target.Target.ShouldShowProgress() && target.Target.Progress > 0.0 {
 		if target.Target.Progress > 1.0 && target.Target.Progress < 100.0 && target.Target.Progress != target.LastProgress {
 			proportionDone := target.Target.Progress / 100.0
 			perPercent := float32(duration) / proportionDone
 			target.Eta = time.Duration(perPercent * (1.0 - proportionDone) * float32(time.Second)).Truncate(time.Second)
 			target.LastProgress = target.Target.Progress
-			if target.Target.FileSize > 0.0 {
+			fileSize := atomic.LoadUint64(&target.Target.FileSize)
+			if fileSize > 0 {
 				// Round the download speed to a multiple of 10kB which makes the display jitter around less
 				const quantum = 10.0 * 1000.0
-				bps := float64(target.Target.FileSize*proportionDone) / duration
+				bps := float64(fileSize) * float64(proportionDone) / duration
 				target.BPS = float32(math.Round(bps/quantum) * quantum)
 			}
 		}
