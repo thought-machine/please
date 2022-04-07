@@ -62,8 +62,9 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 // NewParser creates a new parser for the state
 func (p *aspParser) NewParser(state *core.BuildState) {
 	// TODO(jpoole): remove this once we refactor core so it can depend on this package and call this itself
-	state.Parser = nil
-	InitParser(state)
+	new := &aspParser{parser: newAspParser(state), init: make(chan struct{})}
+	state.Parser = new
+	go new.preloadSubincludes(state)
 }
 
 func (p *aspParser) WaitForInit() {

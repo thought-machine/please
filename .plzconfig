@@ -25,7 +25,7 @@ language = go
 
 [parse]
 BlacklistDirs = tree ; The performance test repo
-preloadsubincludes = ///go//build_defs:go
+preloadsubincludes = //build_defs:go
 
 [alias "autofix"]
 desc = Generates generated code and applies lint fixes
@@ -96,3 +96,6 @@ Target = //plugins:go
 pleasegotool = ///go//tools/please_go:bootstrap
 importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
+
+[BuildConfig]
+use-go-plugin = True
