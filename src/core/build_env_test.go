@@ -196,12 +196,6 @@ func TestExecEnvironmentWorkingDir(t *testing.T) {
 	env := ExecEnvironment(state, target, "/path/to/runtime/dir", "", false)
 	assert.Contains(t, env, "WD=/path/to/runtime/dir")
 
-	env = ExecEnvironment(state, target, "/path/to/runtime/dir", "", true)
-	assert.Contains(t, env, "WD=/tmp/plz_sandbox")
-
 	env = ExecEnvironment(state, target, "/path/to/runtime/dir", "/path/to/other/dir", false)
 	assert.Contains(t, env, "WD=/path/to/other/dir")
-
-	env = ExecEnvironment(state, target, "/path/to/runtime/dir", "/path/to/other/dir", true)
-	assert.Contains(t, env, "WD=/tmp/plz_sandbox")
 }
