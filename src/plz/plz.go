@@ -146,7 +146,7 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 		dir := target.PackageName
 		prefix := ""
 		if target.Subrepo != "" {
-			state.WaitForTargetAndEnsureDownload(target.SubrepoLabel(), target)
+			state.WaitForTargetAndEnsureDownload(target.SubrepoLabel(state, ""), target)
 			subrepo := state.Graph.SubrepoOrDie(target.Subrepo)
 			dir = subrepo.Dir(dir)
 			prefix = subrepo.Dir(prefix)

@@ -1163,6 +1163,13 @@ func (state *BuildState) DisableXattrs() {
 	state.PathHasher.DisableXattrs()
 }
 
+func (state *BuildState) Root() *BuildState {
+	if state.ParentState == nil {
+		return state
+	}
+	return state.ParentState.Root()
+}
+
 func newCRC32() hash.Hash {
 	return hash.Hash(crc32.NewIEEE())
 }

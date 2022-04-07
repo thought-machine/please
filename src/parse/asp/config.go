@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	gcfgtypes "github.com/please-build/gcfg/types"
+
 	"github.com/thought-machine/please/src/core"
 )
 
@@ -55,7 +57,7 @@ func newConfig(state *core.BuildState) *pyConfig {
 		key := strings.ReplaceAll(strings.ToUpper(k), "-", "_")
 		if _, ok := base[key]; !ok {
 			// TODO(jpoole): handle relative build labels
-			base[key] = pyString(v)
+			base[key] = guessType(v)
 		}
 	}
 	// Settings specific to package() which aren't in the config, but it's easier to
@@ -86,6 +88,16 @@ func newConfig(state *core.BuildState) *pyConfig {
 	}
 
 	return &pyConfig{base: &pyConfigBase{dict: base}}
+}
+
+func guessType(v string) pyObject {
+	if i, err := strconv.Atoi(v); err == nil {
+		return pyInt(i)
+	}
+	if val, err := gcfgtypes.ParseBool(v); err == nil {
+		return pyBool(val)
+	}
+	return pyString(v)
 }
 
 func resolvePluginValue(values []string, subrepo string) []string {
@@ -180,7 +192,11 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 }
 
 func (i *interpreter) loadPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, c *pyConfig) {
-	pluginName := pluginState.Config.PluginDefinition.Name
+	if pluginState.RepoConfig == nil {
+		return
+	}
+
+	pluginName := pluginState.RepoConfig.PluginDefinition.Name
 	if pluginName == "" {
 		// Subinclude is not a plugin. Stop here.
 		return

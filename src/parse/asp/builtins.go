@@ -335,10 +335,11 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	//
 	// By parsing the package first, the subrepo package's subinclude will queue the subrepo target to be built before
 	// we call WaitForSubincludedTarget below avoiding the lockup.
-	if l.Subrepo != "" && l.SubrepoLabel().PackageName != pkg.Name && l.Subrepo != pkg.SubrepoName {
+	subrepoLabel := l.SubrepoLabel(s.state, "")
+	if l.Subrepo != "" && subrepoLabel.PackageName != pkg.Name && l.Subrepo != pkg.SubrepoName {
 		subrepoPackageLabel := core.BuildLabel{
-			PackageName: l.SubrepoLabel().PackageName,
-			Subrepo:     l.SubrepoLabel().Subrepo,
+			PackageName: subrepoLabel.PackageName,
+			Subrepo:     subrepoLabel.Subrepo,
 			Name:        "all",
 		}
 		s.state.WaitForPackage(subrepoPackageLabel, pkgLabel)
@@ -347,7 +348,11 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	// all available parser threads (easy to happen if they're all waiting on a single target which now can't start)
 	t := s.WaitForSubincludedTarget(l, pkgLabel)
 
-	pkg.RegisterSubinclude(l)
+	// TODO(jpoole): when pkg is nil, that means this subinclude was made by another subinclude. We're currently loosing
+	// this information here. We probably need a way to transitively record the subincludes.
+	if s.pkg != nil {
+		s.pkg.RegisterSubinclude(l)
+	}
 	return t
 }
 
