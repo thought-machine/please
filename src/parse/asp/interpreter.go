@@ -17,7 +17,7 @@ import (
 type interpreter struct {
 	scope       *scope
 	parser      *Parser
-	subincludes subincludeMap
+	subincludes *subincludeMap
 
 	config *pyConfig
 
@@ -34,10 +34,15 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		state:  state,
 		locals: map[string]pyObject{},
 	}
+	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
+	subincludes := &subincludeMap{m: map[string]subincludeResult{}}
+	if p.interpreter != nil {
+		subincludes = p.interpreter.subincludes
+	}
 	i := &interpreter{
 		scope:       s,
 		parser:      p,
-		subincludes: subincludeMap{m: map[string]subincludeResult{}},
+		subincludes: subincludes,
 		config:      newConfig(state),
 		limiter:     make(semaphore, state.Config.Parse.NumThreads),
 		profiling:   state.Config.Profiling,

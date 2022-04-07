@@ -180,7 +180,11 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 }
 
 func (i *interpreter) loadPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, c *pyConfig) {
-	pluginName := pluginState.Config.PluginDefinition.Name
+	if pluginState.RepoConfig == nil {
+		return
+	}
+
+	pluginName := pluginState.RepoConfig.PluginDefinition.Name
 	if pluginName == "" {
 		// Subinclude is not a plugin. Stop here.
 		return
