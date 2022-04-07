@@ -78,4 +78,3 @@ gentest(
     data = [":test_main_bin"],
     test_cmd = "$DATA | tee $RESULTS_FILE",
 )
-
