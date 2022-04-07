@@ -48,7 +48,7 @@ var remoteCacheReadDuration = metrics.NewHistogram(
 	"remote",
 	"cache_read_duration",
 	"Time taken to read the remote cache, in milliseconds",
-	metrics.ExponentialBuckets(1, 2, 10), // 10 buckets, starting at 1ms and doubling in width.
+	metrics.ExponentialBuckets(0.1, 2, 12), // 12 buckets, starting at 0.1ms and doubling in width.
 )
 
 // A Client is the interface to the remote API.
