@@ -6,10 +6,11 @@ remote_file(
     exported_files = ["golangci-lint-%s-${OS}-${ARCH}/golangci-lint" % GO_CI_LINT_VERSION],
     extract = True,
     hashes = [
-        "sha256: c2b9669decc1b638cf2ee9060571af4e255f6dfcbb225c293e3a7ee4bb2c7217",  # darwin_arm64
-        "sha256: 995e509e895ca6a64ffc7395ac884d5961bdec98423cb896b17f345a9b4a19cf",  # darwin_amd64
-        "sha256: 595ad6c6dade4c064351bc309f411703e457f8ffbb7a1806b3d8ee713333427f",  # linux_amd64
-        "sha256: 726cb045559b7518bafdd3459de70a0647c087eb1b4634627a4b2e95b1258580",  # freebsd_amd64
+        "995e509e895ca6a64ffc7395ac884d5961bdec98423cb896b17f345a9b4a19cf",  # darwin-amd64
+        "c2b9669decc1b638cf2ee9060571af4e255f6dfcbb225c293e3a7ee4bb2c7217",  # darwin-arm64
+        "726cb045559b7518bafdd3459de70a0647c087eb1b4634627a4b2e95b1258580",  # freebsd-amd64
+        "595ad6c6dade4c064351bc309f411703e457f8ffbb7a1806b3d8ee713333427f",  # linux-amd64
+        "1463049b744871168095e3e8f687247d6040eeb895955b869889ea151e0603ab",  # linux-arm64
     ],
     url = "https://github.com/golangci/golangci-lint/releases/download/v%s/golangci-lint-%s-%s-%s.tar.gz" % (
         GO_CI_LINT_VERSION,
