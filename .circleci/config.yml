@@ -238,7 +238,7 @@ jobs:
            path: plz-out/log
        - run:
            name: Package
-           command: plz-out/please/plz build //package:release_files -p
+           command: plz-out/bin/src/please build //package:release_files -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
