@@ -46,14 +46,14 @@ var successfulRemoteTargetBuildDuration = metrics.NewHistogram(
 	"remote",
 	"target_build_duration",
 	"Time taken to successfully build a target, in milliseconds",
-	metrics.ExponentialBuckets(10, 2, 16), // 16 buckets, starting at 10ms and doubling in width.
+	metrics.ExponentialBuckets(0.5, 2, 16), // 16 buckets, starting at 0.5ms and doubling in width.
 )
 
 var successfulLocalTargetBuildDuration = metrics.NewHistogram(
 	"local",
 	"target_build_duration",
 	"Time taken to successfully build a target, in milliseconds",
-	metrics.ExponentialBuckets(10, 2, 16), // 16 buckets, starting at 10ms and doubling in width.
+	metrics.ExponentialBuckets(0.5, 2, 16), // 16 buckets, starting at 0.5ms and doubling in width.
 )
 
 // Build implements the core logic for building a single target.
