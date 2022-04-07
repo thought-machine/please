@@ -87,7 +87,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	)
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
-		env = append(env, "OUT="+resolveOut(outEnv[0], tmpDir, target.Sandbox))
+		env = append(env, "OUT="+path.Join(maybeSandboxDir(tmpDir, target.Sandbox), outEnv[0]))
 	}
 	// The SRC variable is only available on rules that have a single source file.
 	if len(sources) == 1 {
@@ -171,7 +171,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 		)
 	}
 	if len(target.Outputs()) > 0 {
-		env = append(env, "TEST="+resolveOut(target.Outputs()[0], testDir, target.Test.Sandbox))
+		env = append(env, "TEST="+path.Join(maybeSandboxDir(testDir, target.Test.Sandbox), target.Outputs()[0]))
 	}
 	// Bit of a hack for gcov which needs access to its .gcno files.
 	if target.HasLabel("cc") {
@@ -194,14 +194,14 @@ func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) Build
 	env = append(env, "OUTS="+strings.Join(outEnv, " "))
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
-		env = append(env, "OUT="+resolveOut(outEnv[0], ".", false))
+		env = append(env, "OUT="+outEnv[0])
 	}
 
 	return withUserProvidedEnv(target, env)
 }
 
 // ExecEnvironment creates the environment variables for a `plz exec`.
-func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) BuildEnv {
+func ExecEnvironment(state *BuildState, target *BuildTarget, execDir, workingDir string, sandbox bool) BuildEnv {
 	env := append(RuntimeEnvironment(state, target, true, true),
 		"TMP_DIR="+execDir,
 		"TMPDIR="+execDir,
@@ -210,15 +210,20 @@ func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) Bui
 		// of input and output in the terminal where the program is run.
 		"TERM="+os.Getenv("TERM"),
 	)
+	if workingDir == "" {
+		workingDir = execDir
+	}
+	env = append(env, "WD="+maybeSandboxDir(workingDir, sandbox))
 
 	outEnv := target.Outputs()
 	// OUTS/OUT environment variables being always set is for backwards-compatibility.
 	// Ideally, if the target is a test these variables shouldn't be set.
 	env = append(env, "OUTS="+strings.Join(outEnv, " "))
 	if len(outEnv) == 1 {
-		env = append(env, "OUT="+resolveOut(outEnv[0], ".", target.Sandbox))
+		out := path.Join(maybeSandboxDir(execDir, sandbox), outEnv[0])
+		env = append(env, "OUT="+out)
 		if target.IsTest() {
-			env = append(env, "TEST="+resolveOut(outEnv[0], ".", target.Test.Sandbox))
+			env = append(env, "TEST="+out)
 		}
 	}
 
@@ -249,13 +254,12 @@ func RuntimeEnvironment(state *BuildState, target *BuildTarget, abs, inTmpDir bo
 	return env
 }
 
-// Handles resolution of OUT files
-func resolveOut(out string, dir string, sandbox bool) string {
-	// Bit of a hack; ideally we would be unaware of the sandbox here.
+// Bit of a hack; ideally we would be unaware of the sandbox here.
+func maybeSandboxDir(dir string, sandbox bool) string {
 	if sandbox && runtime.GOOS == "linux" && !strings.HasPrefix(RepoRoot, "/tmp/") && dir != "." {
-		return path.Join(SandboxDir, out)
+		return SandboxDir
 	}
-	return path.Join(dir, out)
+	return dir
 }
 
 // Creates tool-related env variables

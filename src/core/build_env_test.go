@@ -63,7 +63,7 @@ func TestExecEnvironment(t *testing.T) {
 	target.AddOutput("out_file1")
 	target.AddDatum(FileLabel{File: "data_file1", Package: "pkg"})
 
-	env := ExecEnvironment(NewDefaultBuildState(), target, "/path/to/runtime/dir")
+	env := ExecEnvironment(NewDefaultBuildState(), target, "/path/to/runtime/dir", "", false)
 
 	assert.Contains(t, env, "DATA=pkg/data_file1")
 	assert.Contains(t, env, "TMP_DIR=/path/to/runtime/dir")
@@ -71,8 +71,8 @@ func TestExecEnvironment(t *testing.T) {
 	assert.Contains(t, env, "HOME=/path/to/runtime/dir")
 	assert.Contains(t, env, "TERM=my-term")
 	assert.Contains(t, env, "OUTS=out_file1")
-	assert.Contains(t, env, "OUT=out_file1")
-	assert.NotContains(t, env, "TEST=out_file1")
+	assert.Contains(t, env, "OUT=/path/to/runtime/dir/out_file1")
+	assert.NotContains(t, env, "TEST=/path/to/runtime/dir/out_file1")
 }
 
 func TestExecEnvironmentTestTarget(t *testing.T) {
@@ -102,7 +102,7 @@ func TestExecEnvironmentTestTarget(t *testing.T) {
 	testTarget.AddTestTool(tool1.Label)
 	testTarget.AddNamedTestTool("tool2", tool2.Label)
 
-	env := ExecEnvironment(state, testTarget, "/path/to/runtime/dir")
+	env := ExecEnvironment(state, testTarget, "/path/to/runtime/dir", "", false)
 
 	assert.Contains(t, env, "DATA=pkg/data_file1 pkg/data_file2")
 	assert.Contains(t, env, "DATA_FILE2=pkg/data_file2")
@@ -113,8 +113,8 @@ func TestExecEnvironmentTestTarget(t *testing.T) {
 	assert.Contains(t, env, "HOME=/path/to/runtime/dir")
 	assert.Contains(t, env, "TERM=my-term")
 	assert.Contains(t, env, "OUTS=out_file1")
-	assert.Contains(t, env, "OUT=out_file1")
-	assert.Contains(t, env, "TEST=out_file1")
+	assert.Contains(t, env, "OUT=/path/to/runtime/dir/out_file1")
+	assert.Contains(t, env, "TEST=/path/to/runtime/dir/out_file1")
 }
 
 func TestExecEnvironmentDebugTarget(t *testing.T) {
@@ -136,7 +136,7 @@ func TestExecEnvironmentDebugTarget(t *testing.T) {
 	target.AddDebugDatum(FileLabel{File: "data_file1", Package: "pkg"})
 	target.AddNamedDebugTool("tool1", tool1.Label)
 
-	env := ExecEnvironment(state, target, "/path/to/runtime/dir")
+	env := ExecEnvironment(state, target, "/path/to/runtime/dir", "", false)
 
 	assert.Contains(t, env, "DEBUG_DATA=pkg/data_file1")
 	assert.Contains(t, env, "DEBUG_TOOLS=plz-out/bin/tool1")
@@ -147,8 +147,8 @@ func TestExecEnvironmentDebugTarget(t *testing.T) {
 	assert.Contains(t, env, "HOME=/path/to/runtime/dir")
 	assert.Contains(t, env, "TERM=my-term")
 	assert.Contains(t, env, "OUTS=out_file1")
-	assert.Contains(t, env, "OUT=out_file1")
-	assert.NotContains(t, env, "TEST=out_file1")
+	assert.Contains(t, env, "OUT=/path/to/runtime/dir/out_file1")
+	assert.NotContains(t, env, "TEST=/path/to/runtime/dir/out_file1")
 }
 
 func TestExecEnvironmentDebugTestTarget(t *testing.T) {
@@ -171,7 +171,7 @@ func TestExecEnvironmentDebugTestTarget(t *testing.T) {
 	testTarget.AddDebugDatum(FileLabel{File: "data_file1", Package: "pkg"})
 	testTarget.AddNamedDebugTool("tool1", tool1.Label)
 
-	env := ExecEnvironment(state, testTarget, "/path/to/runtime/dir")
+	env := ExecEnvironment(state, testTarget, "/path/to/runtime/dir", "", false)
 
 	assert.Contains(t, env, "DEBUG_DATA=pkg/data_file1")
 	assert.Contains(t, env, "DEBUG_TOOLS=plz-out/bin/tool1")
@@ -182,6 +182,26 @@ func TestExecEnvironmentDebugTestTarget(t *testing.T) {
 	assert.Contains(t, env, "HOME=/path/to/runtime/dir")
 	assert.Contains(t, env, "TERM=my-term")
 	assert.Contains(t, env, "OUTS=out_file1")
-	assert.Contains(t, env, "OUT=out_file1")
-	assert.Contains(t, env, "TEST=out_file1")
+	assert.Contains(t, env, "OUT=/path/to/runtime/dir/out_file1")
+	assert.Contains(t, env, "TEST=/path/to/runtime/dir/out_file1")
+}
+
+func TestExecEnvironmentWorkingDir(t *testing.T) {
+	state := NewDefaultBuildState()
+
+	// Set up target.
+	target := NewBuildTarget(NewBuildLabel("pkg", "t"))
+	target.AddOutput("out_file1")
+
+	env := ExecEnvironment(state, target, "/path/to/runtime/dir", "", false)
+	assert.Contains(t, env, "WD=/path/to/runtime/dir")
+
+	env = ExecEnvironment(state, target, "/path/to/runtime/dir", "", true)
+	assert.Contains(t, env, "WD=/tmp/plz_sandbox")
+
+	env = ExecEnvironment(state, target, "/path/to/runtime/dir", "/path/to/other/dir", false)
+	assert.Contains(t, env, "WD=/path/to/other/dir")
+
+	env = ExecEnvironment(state, target, "/path/to/runtime/dir", "/path/to/other/dir", true)
+	assert.Contains(t, env, "WD=/tmp/plz_sandbox")
 }

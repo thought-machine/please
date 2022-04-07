@@ -16,7 +16,7 @@ import (
 var log = logging.Log
 
 // Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
-func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, env, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) int {
+func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, runtimeDir, workingDir string, env, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) int {
 	target := state.Graph.TargetOrDie(label.BuildLabel)
 	if len(overrideCmdArgs) == 0 {
 		if entryPoint, ok := target.EntryPoints[label.Annotation]; ok {
@@ -25,7 +25,7 @@ func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, e
 			log.Fatalf("%v has no such entry point %v", label.BuildLabel, label.Annotation)
 		}
 	}
-	if err := exec(state, target, dir, env, overrideCmdArgs, foreground, sandbox); err != nil {
+	if err := exec(state, target, runtimeDir, workingDir, env, overrideCmdArgs, foreground, sandbox); err != nil {
 		log.Error("Command execution failed: %s", err)
 		if exitError, ok := err.(*osExec.ExitError); ok {
 			return exitError.ExitCode()
@@ -35,7 +35,7 @@ func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, e
 	return 0
 }
 
-func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir string, env []string, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) error {
+func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir, workingDir string, env []string, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) error {
 	if !target.IsBinary && len(overrideCmdArgs) == 0 {
 		return fmt.Errorf("Either the target needs to be a binary or an override command must be provided")
 	}
@@ -49,7 +49,7 @@ func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir string, e
 		return err
 	}
 
-	env = append(core.ExecEnvironment(state, target, filepath.Join(core.RepoRoot, runtimeDir)), env...)
+	env = append(core.ExecEnvironment(state, target, filepath.Join(core.RepoRoot, runtimeDir), workingDir, sandbox.Mount), env...)
 	_, _, err = state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, runtimeDir, env, time.Duration(math.MaxInt64), false, foreground, sandbox, cmd, true)
 	return err
 }

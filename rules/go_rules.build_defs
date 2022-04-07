@@ -575,7 +575,7 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
 
     debug_cmd, debug_data, debug_tools = _debug_cmd(
         name=name,
-        bin="./$OUT",
+        bin="$OUT",
         srcs=_srcs,
         deps=deps,
         test_only=test_only,
@@ -715,7 +715,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
 
     debug_cmd, debug_data, debug_tools = _debug_cmd(
         name = name,
-        bin = "./$TEST",
+        bin = "$TEST",
         flags = flags,
         pre_cmd = worker_cmd,
         srcs = srcs + [main_rule],
@@ -1717,9 +1717,9 @@ def _debug_cmd(name:str, bin:str, flags:str='', pre_cmd:str='', srcs:list=[], de
         return "", None, None
 
     # Delve command.
-    cmd = f"$DEBUG_TOOLS_DLV exec {bin}"
+    cmd = f"$DEBUG_TOOLS_DLV exec {bin} --check-go-version=false --wd=$WD"
     if CONFIG.DEBUG_PORT:
-        cmd = f"{cmd} --headless=true --listen=localhost:{CONFIG.DEBUG_PORT} --api-version=2 --check-go-version=false"
+        cmd = f"{cmd} --headless=true --listen=localhost:{CONFIG.DEBUG_PORT} --api-version=2"
     cmd = f"{cmd} -- {flags}"
 
     tools = {

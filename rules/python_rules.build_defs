@@ -178,7 +178,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
     if strip:
         cmd += ' --strip_py'
 
-    debug_cmd = _debug_cmd("./$OUT")
+    debug_cmd = _debug_cmd("$OUT")
 
     return build_rule(
         name=name,
@@ -314,7 +314,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         deps += [worker]
 
     debug_cmd = _debug_cmd(
-        bin = "./$TEST",
+        bin = "$TEST",
         flags = flags,
         pre_cmd = worker_cmd,
     )
@@ -658,6 +658,7 @@ def _debug_cmd(bin:str, flags:str='', pre_cmd:str=''):
     # `PEX_EXPLODE` will explode the PEX before executing to allow clients to access third party sources files.
     # `DEBUG_PORT` is read by the PEX generated for debuggers that support server mode.
     cmd = f"{bin} {flags}" if not CONFIG.DEBUG_PORT else f"PEX_EXPLODE=true DEBUG_PORT={CONFIG.DEBUG_PORT} {bin} {flags}"
+    cmd = "cd ${WD:-PWD} && " + cmd
 
     if pre_cmd:
         cmd = f"{pre_cmd} && {cmd}"
