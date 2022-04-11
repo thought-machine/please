@@ -115,7 +115,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 				"fetch", strings.Join(target.AllURLs(state), " "), "verify", strings.Join(target.Hashes, " "),
 			},
 			EnvironmentVariables: c.buildEnv(target, []string{}, false),
-			OutputPaths: outs,
+			OutputPaths:          outs,
 		}, nil
 	}
 	cmd := target.GetCommand(state)
