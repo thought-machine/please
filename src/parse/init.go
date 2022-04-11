@@ -72,6 +72,9 @@ func (p *aspParser) WaitForInit() {
 func (p *aspParser) Init(state *core.BuildState) {
 	p.once.Do(func() {
 		includes := state.Config.Parse.PreloadSubincludes
+		if state.RepoConfig != nil {
+			includes = append(includes, state.RepoConfig.Parse.PreloadSubincludes...)
+		}
 		wg := sync.WaitGroup{}
 		for _, inc := range includes {
 			if inc.IsPseudoTarget() {

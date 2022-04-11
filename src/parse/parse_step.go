@@ -7,12 +7,13 @@ package parse
 
 import (
 	"fmt"
+	"path"
+	"strings"
+
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"path"
-	"strings"
 )
 
 var log = logging.Log
@@ -34,7 +35,6 @@ func Parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 }
 
 func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) error {
-
 	if !forSubinclude {
 		state.Parser.WaitForInit()
 	}
@@ -46,7 +46,6 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	// See if something else has parsed this package first.
 	pkg := state.SyncParsePackage(label)
 	if pkg != nil {
-
 		// Does exist, all we need to do is toggle on this target
 		return activateTarget(state, pkg, label, dependent, forSubinclude)
 	}
