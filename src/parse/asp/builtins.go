@@ -1079,12 +1079,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	}
 
 	// State
-	var state *core.BuildState
-	if args[ConfigArgIdx] != None {
-		state = s.state.ForSubrepo(subrepoName, args[BazelCompatArgIdx].IsTruthy(), path.Join(s.pkg.Name, string(args[ConfigArgIdx].(pyString))))
-	} else {
-		state = s.state.ForSubrepo(subrepoName, args[BazelCompatArgIdx].IsTruthy())
-	}
+	state := s.state.ForSubrepo(subrepoName, args[BazelCompatArgIdx].IsTruthy())
 
 	// Arch
 	isCrossCompile := s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile
@@ -1110,6 +1105,11 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		Arch:           arch,
 		IsCrossCompile: isCrossCompile,
 	}
+
+	if args[ConfigArgIdx].IsTruthy() {
+		sr.AdditionalConfigFiles = append(sr.AdditionalConfigFiles, string(args[ConfigArgIdx].(pyString)))
+	}
+
 	if s.state.Config.Bazel.Compatibility && s.pkg.Name == "workspace" {
 		sr.Name = s.pkg.SubrepoArchName(name)
 	}

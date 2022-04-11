@@ -7,13 +7,12 @@ package parse
 
 import (
 	"fmt"
-	"path"
-	"strings"
-
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"path"
+	"strings"
 )
 
 var log = logging.Log
@@ -35,6 +34,7 @@ func Parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 }
 
 func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) error {
+
 	if !forSubinclude {
 		state.Parser.WaitForInit()
 	}
@@ -42,30 +42,29 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	if err != nil {
 		return err
 	}
-	if subrepo != nil {
-		state = subrepo.State
-		if !forSubinclude {
-			state.Parser.WaitForInit()
-		}
-	}
 
 	// See if something else has parsed this package first.
 	pkg := state.SyncParsePackage(label)
 	if pkg != nil {
+
 		// Does exist, all we need to do is toggle on this target
 		return activateTarget(state, pkg, label, dependent, forSubinclude)
 	}
 	// If we get here then it falls to us to parse this package.
 	state.LogParseResult(tid, label, core.PackageParsing, "Parsing...")
+
 	if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
 		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label)
 		if err := subrepo.LoadSubrepoConfig(); err != nil {
 			return err
 		}
+	}
 
-		if err = validateSubrepoNameAndPluginConfig(state.Config, state.RepoConfig, subrepo); err != nil {
-			return err
+	if subrepo != nil {
+		state = subrepo.State
+		if !forSubinclude {
+			state.Parser.WaitForInit()
 		}
 	}
 
@@ -80,41 +79,6 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	}
 	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
 	return activateTarget(state, pkg, label, dependent, forSubinclude)
-}
-
-func validateSubrepoNameAndPluginConfig(config, repoConfig *core.Configuration, subrepo *core.Subrepo) error {
-	// Validate plugin ID is the same as the subrepo name
-	if pluginID := repoConfig.PluginDefinition.Name; pluginID != "" {
-		subrepoName := subrepo.Name
-		if subrepo.Arch.String() != "" {
-			subrepoName = strings.TrimSuffix(subrepo.Name, "_"+subrepo.Arch.String())
-		}
-		if !strings.EqualFold(pluginID, subrepoName) {
-			return fmt.Errorf("Subrepo name %q should be the same as the plugin ID %q", subrepoName, pluginID)
-		}
-	}
-
-	// Validate the plugin config keys set in the host repo
-	definedKeys := map[string]bool{}
-	for key, definition := range repoConfig.PluginConfig {
-		configKey := getConfigKey(key, definition.ConfigKey)
-		definedKeys[configKey] = true
-	}
-	if plugin := config.Plugin[subrepo.Name]; plugin != nil {
-		for key := range plugin.ExtraValues {
-			if _, ok := definedKeys[strings.ToLower(key)]; !ok {
-				return fmt.Errorf("Unrecognised config key %q for plugin %q", key, subrepo.Name)
-			}
-		}
-	}
-	return nil
-}
-
-func getConfigKey(aspKey, configKey string) string {
-	if configKey == "" {
-		configKey = strings.ReplaceAll(aspKey, "_", "")
-	}
-	return strings.ToLower(configKey)
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
