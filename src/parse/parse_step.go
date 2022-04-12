@@ -237,8 +237,8 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 	if subrepo != nil {
 		pkg.SubrepoName = subrepo.Name
 	}
-
-	if packageName == InternalPackageName {
+	// Only load the internal package for the host repo's state
+	if state.ParentState == nil && packageName == InternalPackageName {
 		pkgStr, err := GetInternalPackage(state.Config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate internal package: %w", err)
