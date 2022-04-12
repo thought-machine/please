@@ -1,3 +1,59 @@
+Version 16.20.0
+---------------
+    * Fix issue with the `pleasew` wrapper script downloading the wrong
+      architecture on arm platforms #2286
+    * Make the `pleasew` wrapper read config files in the same order that Please
+      does #2324
+    * Add `no_test_output` parameter to `cc_test()` #2292
+    * Include `data = []` dependencies in `plz export` #2294
+    * Remove the experimental `@self` psudo-subrepo #2295
+    * The `[Plugin "id"]` section now requires you to define the
+      subrepo target that provides the subrepo #2285
+    * Rework the context package during subincludes. This major change
+      allows us to subinclude from preloaded subincludes and fixes a number
+      of inconsistencies with how `package_name()` and `subrepo_name()`
+      #2289
+    * REX: Fix text file and remote file not being marked as executable in remote
+      execution #2314 #2427
+    * Use the Target field to provide help text for plugins #2253
+    * REX: Don't cache action results when the result is missing some of the
+      targets outputs #2322
+    * REX: Don't rename outputs when they collide with folders in the source
+      tree. This was only necessary for local builds. #2325
+    * Fix issue with `go_test()` where it was not correctly discovering the test
+      package sources when built in subrepos #2329
+    * Allow adding arbitrary labels to third party build rules #2333 #2355
+    * REX: Optionally download any targets that link their outputs. This can help with
+      generated sources #2318
+    * Preserve file permissions when storing files in a directory cache that's on a
+      different file system #2346
+    * Handle miss-configured sandbox tool gracefully #2345
+    * Make the built in Please sandboxing run as the host user's PID instead of
+      mapping that user to root in the namespace #2359
+    * Fix issue where nested dictionaries were left mutable after a subinclude
+      #2365
+    * REX: acquire the target lock when downloading target outputs. This fixes
+      a race condition where parallel Please processes would clobber eachothers
+      outputs #2369
+    * Allow targets with entry-points to be the target of a `plz exec` #2379
+    * Parallelize `plz fmt` #2377
+    * Handle the frozen variants of lists and dicts when serialising them to json
+      via the `json()` built-in #2373
+    * Allow accessing multiple levels deep in f-string i.e. `f"{foo.bar.baz}`. Note,
+      expressions are still limited to basic access like this, not full expressions
+      #2384
+    * Allow `glob` to take a string as well as a list i.e. ``glob("*")` #2391
+    * Stop duplicating resources in multiple locations within `.pex` files generated
+      from `python_binary()` when the resources are provided via another build target
+      #2380
+    * Allow the context of `text_file()` to be empty #2396
+    * Add preloaded subincludes to the `plz export` output #2397
+    * Added a `linux_amd64` build #2411
+    * REX: sanitise env vars that were passed via `env = {}` #2408
+    * Parse fields in the `[BuildConfig]` section into the correct values when they
+      successfully parse as booleans or integers #2414
+    * Add in the pkg-config and compiler flags to the `go tool cgo` invocation #2428
+
 Version 16.19.0
 ---------------
     * Add Go 1.18 fuzz testing support #2269
