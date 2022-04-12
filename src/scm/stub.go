@@ -12,7 +12,7 @@ func (s *stub) DescribeIdentifier(sha string) string {
 	return "<unknown>"
 }
 
-func (s *stub) CurrentRevIdentifier() string {
+func (s *stub) CurrentRevIdentifier(permanent bool) string {
 	return "<unknown>"
 }
 

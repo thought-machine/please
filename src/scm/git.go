@@ -43,7 +43,19 @@ func (g *git) DescribeIdentifier(revision string) string {
 }
 
 // CurrentRevIdentifier returns the string that specifies what the current revision is.
-func (g *git) CurrentRevIdentifier() string {
+//
+// If "permanent" is true, CurrentRevIdentifier returns the current revision's commit hash; this
+// should be used to uniquely and permanently identify the revision. If "permanent" is false,
+// CurrentRevIdentifier returns the name of a branch if the revision is the HEAD of that branch,
+// and the current revision's commit hash otherwise; this will not permanently identify the current
+// revision, as the HEAD of the branch may change in future.
+func (g *git) CurrentRevIdentifier(permanent bool) string {
+	if !permanent {
+		out, err := exec.Command("git", "symbolic-ref", "-q", "--short", "HEAD").CombinedOutput()
+		if err == nil {
+			return strings.TrimSpace(string(out))
+		}
+	}
 	out, err := exec.Command("git", "rev-parse", "HEAD").CombinedOutput()
 	if err != nil {
 		log.Fatalf("Failed to read HEAD: %s\nOutput:\n%s", err, string(out))

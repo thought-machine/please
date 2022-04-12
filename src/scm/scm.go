@@ -15,8 +15,10 @@ var log = logging.Log
 type SCM interface {
 	// DescribeIdentifier returns the string that is a "human-readable" identifier of the given revision.
 	DescribeIdentifier(revision string) string
-	// CurrentRevIdentifier returns the string that specifies what the current revision is.
-	CurrentRevIdentifier() string
+	// CurrentRevIdentifier returns a string that specifies what the current revision is. If
+	// "permanent" is true, this string will permanently identify the revision; otherwise, the string
+	// may only be a transient identifier.
+	CurrentRevIdentifier(permanent bool) string
 	// ChangesIn returns a list of modified files in the given diffSpec.
 	ChangesIn(diffSpec string, relativeTo string) []string
 	// ChangedFiles returns a list of modified files since the given commit, optionally including untracked files.
