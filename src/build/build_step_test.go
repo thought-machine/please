@@ -628,6 +628,10 @@ func (fake *fakeParser) WaitForInit() {
 
 }
 
+func (fake *fakeParser) Init(*core.BuildState) {
+
+}
+
 // PreloadSubinclude stub
 func (fake *fakeParser) NewParser(state *core.BuildState) {
 

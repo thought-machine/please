@@ -113,6 +113,11 @@ func (fake *fakeParser) NewParser(state *core.BuildState) {
 
 }
 
+// Init stub
+func (fake *fakeParser) Init(state *core.BuildState) {
+
+}
+
 // ParseReader stub
 func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker) error {
 	return nil

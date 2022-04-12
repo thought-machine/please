@@ -20,12 +20,6 @@ import (
 	"github.com/thought-machine/please/src/fs"
 )
 
-// A few sneaky globals for when we don't have a scope handy
-var stringMethods, dictMethods, configMethods map[string]*pyFunc
-
-// Protects setting the above
-var builtinsOnce sync.Once
-
 // A nativeFunc is a function that implements a builtin function natively.
 type nativeFunc func(*scope, []pyObject) pyObject
 
@@ -70,41 +64,39 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "is_semver", isSemver)
 	setNativeCode(s, "semver_check", semverCheck)
 	setNativeCode(s, "looks_like_build_label", looksLikeBuildLabel)
-	builtinsOnce.Do(func() {
-		stringMethods = map[string]*pyFunc{
-			"join":         setNativeCode(s, "join", strJoin),
-			"split":        setNativeCode(s, "split", strSplit),
-			"replace":      setNativeCode(s, "replace", strReplace),
-			"partition":    setNativeCode(s, "partition", strPartition),
-			"rpartition":   setNativeCode(s, "rpartition", strRPartition),
-			"startswith":   setNativeCode(s, "startswith", strStartsWith),
-			"endswith":     setNativeCode(s, "endswith", strEndsWith),
-			"lstrip":       setNativeCode(s, "lstrip", strLStrip),
-			"rstrip":       setNativeCode(s, "rstrip", strRStrip),
-			"removeprefix": setNativeCode(s, "removeprefix", strRemovePrefix),
-			"removesuffix": setNativeCode(s, "removesuffix", strRemoveSuffix),
-			"strip":        setNativeCode(s, "strip", strStrip),
-			"find":         setNativeCode(s, "find", strFind),
-			"rfind":        setNativeCode(s, "find", strRFind),
-			"format":       setNativeCode(s, "format", strFormat),
-			"count":        setNativeCode(s, "count", strCount),
-			"upper":        setNativeCode(s, "upper", strUpper),
-			"lower":        setNativeCode(s, "lower", strLower),
-		}
-		stringMethods["format"].kwargs = true
-		dictMethods = map[string]*pyFunc{
-			"get":        setNativeCode(s, "get", dictGet),
-			"setdefault": s.Lookup("setdefault").(*pyFunc),
-			"keys":       setNativeCode(s, "keys", dictKeys),
-			"items":      setNativeCode(s, "items", dictItems),
-			"values":     setNativeCode(s, "values", dictValues),
-			"copy":       setNativeCode(s, "copy", dictCopy),
-		}
-		configMethods = map[string]*pyFunc{
-			"get":        setNativeCode(s, "config_get", configGet),
-			"setdefault": s.Lookup("setdefault").(*pyFunc),
-		}
-	})
+	s.interpreter.stringMethods = map[string]*pyFunc{
+		"join":         setNativeCode(s, "join", strJoin),
+		"split":        setNativeCode(s, "split", strSplit),
+		"replace":      setNativeCode(s, "replace", strReplace),
+		"partition":    setNativeCode(s, "partition", strPartition),
+		"rpartition":   setNativeCode(s, "rpartition", strRPartition),
+		"startswith":   setNativeCode(s, "startswith", strStartsWith),
+		"endswith":     setNativeCode(s, "endswith", strEndsWith),
+		"lstrip":       setNativeCode(s, "lstrip", strLStrip),
+		"rstrip":       setNativeCode(s, "rstrip", strRStrip),
+		"removeprefix": setNativeCode(s, "removeprefix", strRemovePrefix),
+		"removesuffix": setNativeCode(s, "removesuffix", strRemoveSuffix),
+		"strip":        setNativeCode(s, "strip", strStrip),
+		"find":         setNativeCode(s, "find", strFind),
+		"rfind":        setNativeCode(s, "find", strRFind),
+		"format":       setNativeCode(s, "format", strFormat),
+		"count":        setNativeCode(s, "count", strCount),
+		"upper":        setNativeCode(s, "upper", strUpper),
+		"lower":        setNativeCode(s, "lower", strLower),
+	}
+	s.interpreter.stringMethods["format"].kwargs = true
+	s.interpreter.dictMethods = map[string]*pyFunc{
+		"get":        setNativeCode(s, "get", dictGet),
+		"setdefault": s.Lookup("setdefault").(*pyFunc),
+		"keys":       setNativeCode(s, "keys", dictKeys),
+		"items":      setNativeCode(s, "items", dictItems),
+		"values":     setNativeCode(s, "values", dictValues),
+		"copy":       setNativeCode(s, "copy", dictCopy),
+	}
+	s.interpreter.configMethods = map[string]*pyFunc{
+		"get":        setNativeCode(s, "config_get", configGet),
+		"setdefault": s.Lookup("setdefault").(*pyFunc),
+	}
 	if s.state.Config.Parse.GitFunctions {
 		setNativeCode(s, "git_branch", execGitBranch)
 		setNativeCode(s, "git_commit", execGitCommit)
@@ -1079,12 +1071,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	}
 
 	// State
-	var state *core.BuildState
-	if args[ConfigArgIdx] != None {
-		state = s.state.ForSubrepo(subrepoName, args[BazelCompatArgIdx].IsTruthy(), path.Join(s.pkg.Name, string(args[ConfigArgIdx].(pyString))))
-	} else {
-		state = s.state.ForSubrepo(subrepoName, args[BazelCompatArgIdx].IsTruthy())
-	}
+	state := s.state.ForSubrepo(subrepoName, args[BazelCompatArgIdx].IsTruthy())
 
 	// Arch
 	isCrossCompile := s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile
@@ -1110,6 +1097,11 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		Arch:           arch,
 		IsCrossCompile: isCrossCompile,
 	}
+
+	if args[ConfigArgIdx].IsTruthy() {
+		sr.AdditionalConfigFiles = append(sr.AdditionalConfigFiles, string(args[ConfigArgIdx].(pyString)))
+	}
+
 	if s.state.Config.Bazel.Compatibility && s.pkg.Name == "workspace" {
 		sr.Name = s.pkg.SubrepoArchName(name)
 	}
