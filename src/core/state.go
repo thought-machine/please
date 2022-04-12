@@ -68,6 +68,8 @@ type Parser interface {
 	NewParser(state *BuildState)
 	// WaitForInit waits until the parser is fully initialised with pre-loaded build definitions
 	WaitForInit()
+	// Init starts initialising the parser
+	Init(state *BuildState)
 	// ParseFile parses a single BUILD file into the given package.
 	ParseFile(pkg *Package, filename string) error
 	// ParseReader parses a single BUILD file into the given package.
@@ -1072,27 +1074,22 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	*s = *state
 
 	config := state.Config.copyConfig()
-	readConfigFiles(config, []string{".plzconfig_" + arch.String()})
+	if err := readConfigFile(config, ".plzconfig_"+arch.String(), false); err != nil {
+		log.Fatalf("%v", err)
+	}
 
 	s.Config = config
 	s.Arch = arch
 
 	s.Parser.NewParser(s)
+	s.Parser.Init(s)
 	state.progress.allStates = append(state.progress.allStates, s)
 
 	return s
 }
 
-func readConfigFiles(config *Configuration, configFiles []string) {
-	for _, filename := range configFiles {
-		if err := readConfigFile(config, filename, false); err != nil {
-			log.Fatalf("Failed to read config file %s: %s", filename, err)
-		}
-	}
-}
-
 // ForSubrepo creates a new state for the given subrepo
-func (state *BuildState) ForSubrepo(name string, bazelCompat bool, config ...string) *BuildState {
+func (state *BuildState) ForSubrepo(name string, bazelCompat bool) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 
@@ -1106,7 +1103,6 @@ func (state *BuildState) ForSubrepo(name string, bazelCompat bool, config ...str
 	*s = *state
 
 	s.Config = state.Config.copyConfig()
-	readConfigFiles(s.Config, config)
 
 	s.CurrentSubrepo = name
 	s.ParentState = state

@@ -22,7 +22,7 @@ func InitParser(state *core.BuildState) *core.BuildState {
 	if state.Parser == nil {
 		p := &aspParser{parser: newAspParser(state), init: make(chan struct{})}
 		state.Parser = p
-		go p.preloadSubincludes(state)
+		go p.Init(state)
 	}
 	return state
 }
@@ -31,6 +31,7 @@ func InitParser(state *core.BuildState) *core.BuildState {
 type aspParser struct {
 	parser *asp.Parser
 	init   chan struct{}
+	once   sync.Once
 }
 
 // newAspParser returns a asp.Parser object with all the builtins loaded
@@ -61,42 +62,45 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 
 // NewParser creates a new parser for the state
 func (p *aspParser) NewParser(state *core.BuildState) {
-	// TODO(jpoole): remove this once we refactor core so it can depend on this package and call this itself
-	state.Parser = nil
-	InitParser(state)
+	state.Parser = &aspParser{parser: newAspParser(state), init: make(chan struct{})}
 }
 
 func (p *aspParser) WaitForInit() {
 	<-p.init
 }
 
-func (p *aspParser) preloadSubincludes(state *core.BuildState) {
-	includes := state.Config.Parse.PreloadSubincludes
-	wg := sync.WaitGroup{}
-	for _, inc := range includes {
-		if inc.IsPseudoTarget() {
-			log.Fatalf("Can't preload pseudotarget %v", inc)
+func (p *aspParser) Init(state *core.BuildState) {
+	p.once.Do(func() {
+		includes := state.Config.Parse.PreloadSubincludes
+		if state.RepoConfig != nil {
+			includes = append(includes, state.RepoConfig.Parse.PreloadSubincludes...)
 		}
-		wg.Add(1)
-		// Queue them up asynchronously to feed the queues as quickly as possible
-		go func(inc core.BuildLabel) {
-			state.WaitForBuiltTarget(inc, core.OriginalTarget)
-			wg.Done()
-		}(inc)
-	}
-
-	// We must wait for all the subinclude targets to be built otherwise updating the locals might race with parsing
-	// a package
-	wg.Wait()
-
-	// Preload them in order to avoid non-deterministic errors when the subincludes depend on each other
-	for _, inc := range includes {
-		if err := p.parser.SubincludeTarget(state, state.WaitForTargetAndEnsureDownload(inc, core.OriginalTarget)); err != nil {
-			log.Fatalf("%v", err)
+		wg := sync.WaitGroup{}
+		for _, inc := range includes {
+			if inc.IsPseudoTarget() {
+				log.Fatalf("Can't preload pseudotarget %v", inc)
+			}
+			wg.Add(1)
+			// Queue them up asynchronously to feed the queues as quickly as possible
+			go func(inc core.BuildLabel) {
+				state.WaitForBuiltTarget(inc, core.OriginalTarget)
+				wg.Done()
+			}(inc)
 		}
-	}
-	p.parser.Finalise()
-	close(p.init)
+
+		// We must wait for all the subinclude targets to be built otherwise updating the locals might race with parsing
+		// a package
+		wg.Wait()
+
+		// Preload them in order to avoid non-deterministic errors when the subincludes depend on each other
+		for _, inc := range includes {
+			if err := p.parser.SubincludeTarget(state, state.WaitForTargetAndEnsureDownload(inc, core.OriginalTarget)); err != nil {
+				log.Fatalf("%v", err)
+			}
+		}
+		p.parser.Finalise()
+		close(p.init)
+	})
 }
 
 func (p *aspParser) ParseFile(pkg *core.Package, filename string) error {
