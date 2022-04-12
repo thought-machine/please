@@ -414,7 +414,10 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
     # Resolve the import_path early
     # _write_import_config_cmd won't resolve it again
     import_path = _get_import_path(package or name, import_path)
-
+    compiler_flags_cmd = " ".join(compiler_flags)
+    if pkg_config:
+        pkg_configs = " ".join(pkg_config)
+        compiler_flags_cmd = f"{compiler_flags_cmd} $(pkg-config --cflags {pkg_configs})"
     cgo_rule = build_rule(
         name = name,
         tag = 'cgo',
@@ -428,7 +431,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
             (f'OUT_DIR="$TMP_DIR/{subdir}"') if subdir else 'OUT_DIR="$TMP_DIR"',
             'mkdir -p "$OUT_DIR"',
             'cd $PKG_DIR/' + subdir,
-            f'$TOOL tool cgo -objdir "$OUT_DIR" -importpath {import_path} *.go',
+            f'$TOOL tool cgo -objdir "$OUT_DIR" -importpath {import_path} -- {compiler_flags_cmd} *.go',
             # Remove the .o file which BSD sed gets upset about in the next command
             'rm -f "$OUT_DIR"/_cgo_.o "$OUT_DIR"/_cgo_main.c',
             # cgo leaves absolute paths in these files which we must get rid of :(
