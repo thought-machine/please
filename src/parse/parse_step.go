@@ -91,7 +91,7 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	sl := label.SubrepoLabel(state, dependent.Subrepo)
 
 	// Local subincludes are when we subinclude from a subrepo defined in the current package
-	localSubinclude := sl.PackageName == dependent.PackageName && forSubinclude
+	localSubinclude := label.Subrepo == dependent.Subrepo && label.PackageName == dependent.PackageName && forSubinclude
 
 	// If we're including from the same package, we don't want to parse the subrepo package
 	if !localSubinclude {
