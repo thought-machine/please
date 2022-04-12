@@ -20,7 +20,7 @@ type pyObject interface {
 	// Returns true if this object evaluates to something truthy.
 	IsTruthy() bool
 	// Returns a property of this object with the given name.
-	Property(name string) pyObject
+	Property(scope *scope, name string) pyObject
 	// Invokes the given operator on this object and returns the result.
 	Operator(operator Operator, operand pyObject) pyObject
 	// Used for index-assignment statements
@@ -58,7 +58,7 @@ func (b pyBool) IsTruthy() bool {
 	return b == True
 }
 
-func (b pyBool) Property(name string) pyObject {
+func (b pyBool) Property(scope *scope, name string) pyObject {
 	panic("bool object has no property " + name)
 }
 
@@ -97,7 +97,7 @@ func (n pyNone) IsTruthy() bool {
 	return false
 }
 
-func (n pyNone) Property(name string) pyObject {
+func (n pyNone) Property(scope *scope, name string) pyObject {
 	panic("none object has no property " + name)
 }
 
@@ -132,7 +132,7 @@ func (s pySentinel) IsTruthy() bool {
 	return false
 }
 
-func (s pySentinel) Property(name string) pyObject {
+func (s pySentinel) Property(scope *scope, name string) pyObject {
 	panic("sentinel object has no property " + name)
 }
 
@@ -178,7 +178,7 @@ func (i pyInt) IsTruthy() bool {
 	return i != 0
 }
 
-func (i pyInt) Property(name string) pyObject {
+func (i pyInt) Property(scope *scope, name string) pyObject {
 	panic("int object has no property " + name)
 }
 
@@ -238,8 +238,8 @@ func (s pyString) IsTruthy() bool {
 	return s != ""
 }
 
-func (s pyString) Property(name string) pyObject {
-	if prop, present := stringMethods[name]; present {
+func (s pyString) Property(scope *scope, name string) pyObject {
+	if prop, present := scope.interpreter.stringMethods[name]; present {
 		return prop.Member(s)
 	}
 	panic("str object has no property " + name)
@@ -315,7 +315,7 @@ func (l pyList) IsTruthy() bool {
 	return len(l) > 0
 }
 
-func (l pyList) Property(name string) pyObject {
+func (l pyList) Property(scope *scope, name string) pyObject {
 	panic("list object has no property " + name)
 }
 
@@ -423,11 +423,11 @@ func (d pyDict) IsTruthy() bool {
 	return len(d) > 0
 }
 
-func (d pyDict) Property(name string) pyObject {
+func (d pyDict) Property(scope *scope, name string) pyObject {
 	// We allow looking up dict members by . as well as by indexing in order to facilitate the config map.
 	if obj, present := d[name]; present {
 		return obj
-	} else if prop, present := dictMethods[name]; present {
+	} else if prop, present := scope.interpreter.dictMethods[name]; present {
 		return prop.Member(d)
 	}
 	panic("dict object has no property " + name)
@@ -532,11 +532,11 @@ func (d pyFrozenDict) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.pyDict)
 }
 
-func (d pyFrozenDict) Property(name string) pyObject {
+func (d pyFrozenDict) Property(scope *scope, name string) pyObject {
 	if name == "setdefault" {
 		panic("dict is immutable")
 	}
-	return d.pyDict.Property(name)
+	return d.pyDict.Property(scope, name)
 }
 
 func (d pyFrozenDict) IndexAssign(index, value pyObject) {
@@ -615,7 +615,7 @@ func (f *pyFunc) IsTruthy() bool {
 	return true
 }
 
-func (f *pyFunc) Property(name string) pyObject {
+func (f *pyFunc) Property(scope *scope, name string) pyObject {
 	panic("function object has no property " + name)
 }
 
@@ -845,10 +845,10 @@ func (c *pyConfig) IsTruthy() bool {
 	return true // sure, why not
 }
 
-func (c *pyConfig) Property(name string) pyObject {
+func (c *pyConfig) Property(scope *scope, name string) pyObject {
 	if obj := c.Get(name, nil); obj != nil {
 		return obj
-	} else if f, present := configMethods[name]; present {
+	} else if f, present := scope.interpreter.configMethods[name]; present {
 		return f.Member(c)
 	}
 	panic("Config has no such property " + name)
@@ -943,9 +943,9 @@ func (c *pyFrozenConfig) IndexAssign(_, _ pyObject) {
 }
 
 // Property disallows setdefault() since it's immutable.
-func (c *pyFrozenConfig) Property(name string) pyObject {
+func (c *pyFrozenConfig) Property(scope *scope, name string) pyObject {
 	if name == "setdefault" {
 		panic("Config object is not assignable in this scope")
 	}
-	return c.pyConfig.Property(name)
+	return c.pyConfig.Property(scope, name)
 }
