@@ -53,6 +53,8 @@ Version 16.20.0
     * Parse fields in the `[BuildConfig]` section into the correct values when they
       successfully parse as booleans or integers #2414
     * Add in the pkg-config and compiler flags to the `go tool cgo` invocation #2428
+    * Remove the internal `//_please` package from subrepos and use the host repo's
+      version to download the Please tools #2429
 
 Version 16.19.0
 ---------------
