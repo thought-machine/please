@@ -1,12 +1,14 @@
 package build
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/fs"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 func Server() (*http.Server, *http.ServeMux) {

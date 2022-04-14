@@ -1136,6 +1136,8 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	return nil
 }
 
+// setHeaders sets up all the headers we should send on remote_file() requests, including User-Agent and any user
+// defined ones.
 func setHeaders(req *http.Request, target *core.BuildTarget, env core.BuildEnv) error {
 	req.Header.Set("User-Agent", fmt.Sprintf("please.build/%s", core.PleaseVersion))
 
@@ -1174,7 +1176,7 @@ func setHeaders(req *http.Request, target *core.BuildTarget, env core.BuildEnv) 
 		case "password_file":
 			p, err := os.ReadFile(fs.ExpandHomePath(value))
 			if err != nil {
-				return fmt.Errorf("failed to read passsword file: %v", err)
+				return fmt.Errorf("failed to read password file: %v", err)
 			}
 			password = string(p)
 		default:
