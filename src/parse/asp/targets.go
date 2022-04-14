@@ -179,7 +179,7 @@ func validateSandbox(state *core.BuildState, target *core.BuildTarget) error {
 	if target.IsFilegroup || len(state.Config.Sandbox.ExcludeableTargets) == 0 {
 		return nil
 	}
-	if target.Sandbox && (target.Test == nil || target.Test.Sandbox) {
+	if !target.IsRemoteFile && target.Sandbox && (target.Test == nil || target.Test.Sandbox) {
 		return nil
 	}
 	for _, whitelist := range state.Config.Sandbox.ExcludeableTargets {
