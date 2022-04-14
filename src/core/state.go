@@ -23,7 +23,7 @@ import (
 	"github.com/thought-machine/please/src/process"
 )
 
-// startTime is as close as we can conveniently get to process start time.
+// startTime is as close as we can conveniently get to process start time.asdf
 var startTime = time.Now()
 
 // cycleCheckDuration is the length of time we allow inactivity for before we trigger cycle detection.

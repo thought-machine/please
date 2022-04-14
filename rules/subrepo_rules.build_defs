@@ -205,7 +205,7 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, labels:li
     pass_env = []
     if access_token:
         headers = {
-            'Authorization': 'token \$%s' % access_token,
+            'Authorization': 'token $%s' % access_token,
         }
         pass_env = [access_token]
 
