@@ -444,13 +444,13 @@ func DefaultConfiguration() *Configuration {
 
 	config.Sandbox.Tool = "please_sandbox"
 	// Please tools
-	config.Go.FilterTool = "//_please:please_go_filter"
-	config.Go.PleaseGoTool = "//_please:please_go"
-	config.Go.EmbedTool = "//_please:please_go_embed"
-	config.Python.PexTool = "//_please:please_pex"
-	config.Java.JavacWorker = "//_please:javac_worker"
-	config.Java.JarCatTool = "//_please:arcat"
-	config.Java.JUnitRunner = "//_please:junit_runner"
+	config.Go.FilterTool = "/////_please:please_go_filter"
+	config.Go.PleaseGoTool = "/////_please:please_go"
+	config.Go.EmbedTool = "/////_please:please_go_embed"
+	config.Python.PexTool = "/////_please:please_pex"
+	config.Java.JavacWorker = "/////_please:javac_worker"
+	config.Java.JarCatTool = "/////_please:arcat"
+	config.Java.JUnitRunner = "/////_please:junit_runner"
 
 	return &config
 }
@@ -476,7 +476,7 @@ type Configuration struct {
 		ExperimentalDir    []string     `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
 		BuildFileName      []string     `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+." var:"BUILD_FILE_NAMES"`
 		BlacklistDirs      []string     `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
-		PreloadBuildDefs   []string     `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths. Use PreloadSubincludes instead." example:"build_defs/go_bindata.build_defs"`
+		PreloadBuildDefs   []string     `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths. Use Init instead." example:"build_defs/go_bindata.build_defs"`
 		PreloadSubincludes []BuildLabel `help:"Subinclude targets to preload by the parser before loading any BUILD files.\nSubincludes can be slow so it's recommended to use PreloadBuildDefs where possible." example:"///pleasings//python:requirements"`
 		BuildDefsDir       []string     `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
 		NumThreads         int          `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
@@ -686,6 +686,7 @@ type Configuration struct {
 		ExcludeJavaRules              bool `help:"Whether to include the java rules or use the plugin"`
 		ExcludeCCRules                bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
 		ExcludeGoRules                bool `help:"Whether to include the go rules rules or require use of the plugin"`
+		ExcludeShellRules             bool `help:"Whether to include the shell rules rules or require use of the plugin"`
 		ExcludeProtoRules             bool `help:"Whether to include the proto rules or require use of the plugin"`
 		ExcludeSymlinksInGlob         bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
 		GoDontCollapseImportPath      bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
