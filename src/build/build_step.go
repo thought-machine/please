@@ -1159,9 +1159,7 @@ func setHeaders(req *http.Request, target *core.BuildTarget, env core.BuildEnv) 
 			continue
 		case "header":
 			k, v := header(value)
-			log.Warningf(v)
 			v = os.Expand(v, env.ReplaceEnvironment)
-			log.Warningf("setting header: %v: %v", k, v)
 			req.Header.Set(k, v)
 		case "secret_header":
 			k, v := header(value)
@@ -1184,7 +1182,7 @@ func setHeaders(req *http.Request, target *core.BuildTarget, env core.BuildEnv) 
 		}
 	}
 
-	if userName != "" {
+	if userName != "" || password != "" {
 		req.SetBasicAuth(userName, password)
 	}
 	return nil
