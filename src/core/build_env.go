@@ -320,7 +320,7 @@ func initStampEnv() {
 	var revision, commitDate, describe string
 	wg.Add(2)
 	go func() {
-		revision = repoScm.CurrentRevIdentifier()
+		revision = repoScm.CurrentRevIdentifier(true)
 		describe = repoScm.DescribeIdentifier(revision)
 		wg.Done()
 	}()
