@@ -1,0 +1,2 @@
+if CONFIG.USE_GO_PLUGIN != "False":
+    subinclude("///go//build_defs:go")

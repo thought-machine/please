@@ -301,6 +301,16 @@ func normalisePluginConfigKeys(config *Configuration) {
 	for _, plugin := range config.Plugin {
 		newExtraValues := make(map[string][]string, len(plugin.ExtraValues))
 		for k, v := range plugin.ExtraValues {
+			_, ok := newExtraValues[strings.ToLower(k)]
+			if k == strings.ToLower(k) && ok {
+				// We have to handle overriding plugin config with .plzconfig files of higher precedence e.g. profiles
+				//
+				// When we meet this condition that means that the non-normalised config from the new .plzconfig file
+				// has been loaded, so we don't need to do anything. If that config used the already normalized form of
+				// the config key then it would've been overridden in the gcfg library, so we don't need to handle that
+				// case.
+				continue
+			}
 			newExtraValues[strings.ToLower(k)] = v
 		}
 		plugin.ExtraValues = newExtraValues

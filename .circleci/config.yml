@@ -24,7 +24,7 @@ jobs:
            path: plz-out/results
        - run:
            name: Package
-           command: plz-out/please/plz build //package:all -p --profile ci --profile alpine
+           command: plz-out/bin/src/please build //package:all -p --profile ci --profile alpine
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -65,11 +65,14 @@ jobs:
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
+       - run:
+           name: No plugins
+           command: plz-out/bin/src/please build //package:installed_files && ./test.sh --profile noplugins --test_results_file plz-out/results/please/no_plugin.xml
        - store_test_results:
            path: plz-out/results
        - run:
            name: Package
-           command: plz-out/please/plz build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball //tools/performance:all -p
+           command: plz-out/bin/src/please build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball //tools/performance:all -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -148,7 +151,7 @@ jobs:
            command: tar -xzf /tmp/workspace/darwin_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang -o "go.cflags:-target arm64-apple-macos11" -o please.location:~/please/please //package:release_files
+           command: ./please/please build -p --profile ci --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang -o "go.cflags:-target arm64-apple-macos11" //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -175,7 +178,7 @@ jobs:
            command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch freebsd_amd64 -o please.location:~/please/please //package:release_files
+           command: ./please/please build -p --profile ci --arch freebsd_amd64 //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -238,7 +241,7 @@ jobs:
            path: plz-out/log
        - run:
            name: Package
-           command: plz-out/please/plz build //package:release_files -p
+           command: plz-out/bin/src/please build //package:release_files -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:

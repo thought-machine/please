@@ -10,6 +10,13 @@ filegroup(
     visibility = ["PUBLIC"],
 )
 
+
+filegroup(
+    name = "go",
+    srcs = ["go.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
 genrule(
     name = "version",
     srcs = ["//:version"],

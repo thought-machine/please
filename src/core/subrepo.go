@@ -72,6 +72,7 @@ func readConfigFilesInto(config, repoConfig *Configuration, files []string) erro
 func (s *Subrepo) LoadSubrepoConfig() (err error) {
 	s.loadConfig.Do(func() {
 		s.State.RepoConfig = &Configuration{}
+
 		err = readConfigFilesInto(s.State.Config, s.State.RepoConfig, append(s.AdditionalConfigFiles, filepath.Join(s.Root, ".plzconfig")))
 		if err != nil {
 			return

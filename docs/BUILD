@@ -26,7 +26,7 @@ html_template(
 genrule(
     name = "rules",
     outs = ["rules.json"],
-    cmd = '"$TOOL" query rules > "$OUT"',
+    cmd = '"$TOOL" init && "$TOOL" query rules > "$OUT"',
     local = True,
     sandbox = False,
     tools = ["//src:please"],
