@@ -1082,7 +1082,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	s.Arch = arch
 
 	s.Parser.NewParser(s)
-	s.Parser.Init(s)
+	go s.Parser.Init(s)
 	state.progress.allStates = append(state.progress.allStates, s)
 
 	return s
