@@ -1,13 +1,17 @@
-[python]
-; We use the in-repo please_pex tool to build other pexes within this repo.
-; Other projects using Please wouldn't normally need to do anything like this.
-pextool = //tools/please_pex
-moduledir = third_party.python
+[parse]
+BlacklistDirs = tree ; The performance test repo
+preloadsubincludes = //build_defs:go
+preloadsubincludes = //build_defs:python
 
-[gc]
-keep = //test/...
-keep = //docs:all
-keep = //package:all
+[Plugin "go"]
+Target = //plugins:go
+pleasegotool = ///go//tools/please_go:bootstrap
+importpath = github.com/thought-machine/please
+gotool = //third_party/go:toolchain|go
+
+[Plugin "python"]
+Target = //plugins:python
+moduledir = third_party.python
 
 [cpp]
 defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
@@ -22,10 +26,6 @@ junitrunner = //tools/java:junit_runner
 protoctool = //third_party/proto:protoc
 protocgoplugin = //third_party/go:protoc-gen-go
 language = go
-
-[parse]
-BlacklistDirs = tree ; The performance test repo
-preloadsubincludes = //build_defs:go
 
 [alias "autofix"]
 desc = Generates generated code and applies lint fixes
@@ -83,6 +83,14 @@ accept = ISC
 # Not really a licence, but Bazel projects commonly describe things this way.
 accept = notice
 
+[gc]
+keep = //test/...
+keep = //docs:all
+keep = //package:all
+
+[BuildConfig]
+use-plugin = True
+
 [featureflags]
 JavaBinaryExecutableByDefault = true
 PackageOutputsStrictness = true
@@ -90,12 +98,4 @@ PythonWheelHashing = true
 NoIterSourcesMarked = true
 GoDontCollapseImportPath = true
 ExcludeGoRules = true
-
-[Plugin "go"]
-Target = //plugins:go
-pleasegotool = ///go//tools/please_go:bootstrap
-importpath = github.com/thought-machine/please
-gotool = //third_party/go:toolchain|go
-
-[BuildConfig]
-use-go-plugin = True
+ExcludePythonRules = true

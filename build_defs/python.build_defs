@@ -1,0 +1,2 @@
+if CONFIG.USE_PLUGIN != "False":
+    subinclude("///python//build_defs:python")

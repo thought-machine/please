@@ -17,6 +17,13 @@ filegroup(
     visibility = ["PUBLIC"],
 )
 
+filegroup(
+    name = "python",
+    srcs = ["python.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+
 genrule(
     name = "version",
     srcs = ["//:version"],
