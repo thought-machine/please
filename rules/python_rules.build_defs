@@ -80,12 +80,10 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
     elif strip:
         fail("Can't pass strip=True to a python_library with no srcs")
 
-    src_resources = [r for r in resources if not looks_like_build_label(r)]
-    dep_resources = [r for r in resources if looks_like_build_label(r)]
     return filegroup(
         name=name,
-        srcs=src_resources if strip else (srcs + src_resources),
-        deps=deps + dep_resources,
+        srcs=resources if strip else (srcs + resources),
+        deps=deps,
         visibility=visibility,
         output_is_complete=False,
         requires=['py'],
