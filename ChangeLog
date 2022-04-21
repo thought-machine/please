@@ -43,9 +43,6 @@ Version 16.20.0
       expressions are still limited to basic access like this, not full expressions
       #2384
     * Allow `glob` to take a string as well as a list i.e. ``glob("*")` #2391
-    * Stop duplicating resources in multiple locations within `.pex` files generated
-      from `python_binary()` when the resources are provided via another build target
-      #2380
     * Allow the context of `text_file()` to be empty #2396
     * Add preloaded subincludes to the `plz export` output #2397
     * Added a `linux_amd64` build #2411
