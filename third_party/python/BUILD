@@ -293,81 +293,10 @@ pip_library(
 )
 
 pip_library(
-    name = "keras_applications",
-    test_only = True,
-    version = "1.0.8",
-    deps = [
-        ":h5py",
-    ],
-)
-
-pip_library(
-    name = "opt_einsum",
-    test_only = True,
-    version = "3.2.1",
-    deps = [
-        ":numpy",
-    ],
-)
-
-pip_library(
-    name = "keras_preprocessing",
-    test_only = True,
-    version = "1.1.0",
-    deps = [
-        ":numpy",
-        ":six",
-    ],
-)
-
-pip_library(
     name = "grpcio",
     test_only = True,
     version = "1.32.0",
     deps = [
-        ":six",
-    ],
-)
-
-pip_library(
-    name = "google-pasta",
-    test_only = True,
-    version = "0.2.0",
-    deps = [
-        ":six",
-    ],
-)
-
-pip_library(
-    name = "gast",
-    test_only = True,
-    version = "0.2.2",
-)
-
-pip_library(
-    name = "astor",
-    test_only = True,
-    version = "0.8.1",
-)
-
-pip_library(
-    name = "termcolor",
-    test_only = True,
-    version = "1.1.0",
-)
-
-pip_library(
-    name = "wrapt",
-    test_only = True,
-    version = "1.12.1",
-)
-
-pip_library(
-    name = "h5py",
-    test_only = True,
-    version = "2.10.0",
-    deps = [
-        ":numpy",
         ":six",
     ],
 )
