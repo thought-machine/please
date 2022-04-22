@@ -293,29 +293,6 @@ pip_library(
 )
 
 pip_library(
-    name = "tensorflow",
-    licences = ["Apache 2.0"],
-    test_only = True,
-    # the next version of TF breaks due to an upstream bug fixed in this pr:
-    # https://github.com/tensorflow/tensorflow/pull/38663
-    version = "1.13.1",
-    deps = [
-        ":absl",
-        ":astor",
-        ":gast",
-        ":google-pasta",
-        ":grpcio",
-        ":keras_applications",
-        ":keras_preprocessing",
-        ":numpy",
-        ":opt_einsum",
-        ":protobuf",
-        ":termcolor",
-        ":wrapt",
-    ],
-)
-
-pip_library(
     name = "keras_applications",
     test_only = True,
     version = "1.0.8",

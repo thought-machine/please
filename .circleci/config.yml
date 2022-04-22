@@ -51,7 +51,7 @@ jobs:
        - image: thoughtmachine/please_ubuntu:20220422
      resource_class: large
      environment:
-       PLZ_ARGS: "-p --profile ci"
+       PLZ_ARGS: "-p --profile ci -o python.disablevendorflags:true"
      steps:
        - checkout
        - restore_cache:
