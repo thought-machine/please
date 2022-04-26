@@ -1,4 +1,4 @@
-FROM ubuntu:jammy
+FROM ubuntu:focal
 MAINTAINER peter.ebden@gmail.com
 
 
