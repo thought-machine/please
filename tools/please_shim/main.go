@@ -27,10 +27,6 @@ var opts struct {
 		Profile  []core.ConfigProfile `long:"profile" env:"PLZ_CONFIG_PROFILE" env-delim:";" description:"Configuration profile to load; e.g. --profile=dev will load .plzconfig.dev if it exists."`
 	} `group:"Options controlling what to build & how to build it"`
 
-	OutputFlags struct {
-		Verbosity cli.Verbosity `short:"v" long:"verbosity" description:"Verbosity of output (error, warning, notice, info, debug)" default:"warning"`
-	} `group:"Options controlling output & logging"`
-
 	FeatureFlags struct {
 		NoUpdate bool `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
 	} `group:"Options that enable / disable certain features"`
@@ -178,7 +174,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cli.InitLogging(opts.OutputFlags.Verbosity)
+	cli.InitLogging(cli.MinVerbosity)
 
 	// Finds and sets the root, and reads the respective config files without going through the same
 	// code path as in the main binary that further applies defaults and other resolving. This is required
