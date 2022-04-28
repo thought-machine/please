@@ -79,7 +79,6 @@ func setLogging() {
 	}
 
 	cli.InitLogging(verbosity)
-
 }
 
 func filterArgsFlag(args []string, flag string) []string {
