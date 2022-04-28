@@ -28,7 +28,7 @@ var opts struct {
 	} `group:"Options controlling what to build & how to build it"`
 
 	OutputFlags struct {
-		Verbosity cli.Verbosity `short:"v" long:"verbosity" description:"Verbosity of output (error, warning, notice, info, debug)" default:"error"`
+		ShimDebugVerbosity bool `long:"shim_debug_verbosity" description:"Shim debug verbosity of output"`
 	} `group:"Options controlling output & logging"`
 
 	FeatureFlags struct {
@@ -69,6 +69,27 @@ func parseFlags() (*flags.Parser, error) {
 	}
 
 	return parser, nil
+}
+
+func setLogging() {
+	verbosity := cli.MinVerbosity
+	if opts.OutputFlags.ShimDebugVerbosity {
+		verbosity = cli.MaxVerbosity
+		os.Args = filterArgsFlag(os.Args, "--shim_debug_verbosity")
+	}
+
+	cli.InitLogging(verbosity)
+
+}
+
+func filterArgsFlag(args []string, flag string) []string {
+	var filteredArgs []string
+	for _, arg := range os.Args {
+		if arg != flag {
+			filteredArgs = append(filteredArgs, arg)
+		}
+	}
+	return filteredArgs
 }
 
 // Tries to find the repo root and read the respective config files.
@@ -178,7 +199,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cli.InitLogging(opts.OutputFlags.Verbosity)
+	setLogging()
 
 	// Finds and sets the root, and reads the respective config files without going through the same
 	// code path as in the main binary that further applies defaults and other resolving. This is required
