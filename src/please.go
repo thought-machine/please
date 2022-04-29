@@ -519,7 +519,7 @@ var buildFunctions = map[string]func() int{
 
 		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target.BuildLabel).Sandbox
 		dir := filepath.Join(core.OutDir, "exec", opts.Exec.Args.Target.Subrepo, opts.Exec.Args.Target.PackageName)
-		if code := exec.Exec(state, opts.Exec.Args.Target, dir, nil, opts.Exec.Args.OverrideCommandArgs, false, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
+		if code := exec.Exec(state, opts.Exec.Args.Target, dir, nil, opts.Exec.Args.OverrideCommandArgs, true, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
 			return code
 		}
 
