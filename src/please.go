@@ -856,7 +856,7 @@ var buildFunctions = map[string]func() int{
 		} else if opts.Query.Changes.Inexact {
 			return runInexact(scm.ChangedFiles(opts.Query.Changes.Since, true, ""))
 		}
-		original := scm.CurrentRevIdentifier()
+		original := scm.CurrentRevIdentifier(false)
 		files := scm.ChangedFiles(opts.Query.Changes.Since, true, "")
 		log.Debugf("Number of changed files: %d", len(files))
 		if err := scm.Checkout(opts.Query.Changes.Since); err != nil {

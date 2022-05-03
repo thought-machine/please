@@ -1,5 +1,3 @@
-package(please_go_tool = "please_go")
-
 go_module(
     name = "go-flags",
     module = "github.com/thought-machine/go-flags",

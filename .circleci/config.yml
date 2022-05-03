@@ -3,7 +3,7 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_alpine:20220316
+       - image: thoughtmachine/please_alpine:20220422
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
@@ -24,7 +24,7 @@ jobs:
            path: plz-out/results
        - run:
            name: Package
-           command: plz-out/please/plz build //package:all -p --profile ci --profile alpine
+           command: plz-out/bin/src/please build //package:all -p --profile ci --profile alpine
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -48,7 +48,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20220317
+       - image: thoughtmachine/please_ubuntu:20220426
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
@@ -65,11 +65,14 @@ jobs:
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
+       - run:
+           name: No plugins
+           command: plz-out/bin/src/please build //package:installed_files && ./test.sh --profile noplugins --test_results_file plz-out/results/please/no_plugin.xml
        - store_test_results:
            path: plz-out/results
        - run:
            name: Package
-           command: plz-out/please/plz build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball //tools/performance:all -p
+           command: plz-out/bin/src/please build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball //tools/performance:all -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -98,7 +101,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu_alt:20220317
+       - image: thoughtmachine/please_ubuntu_alt:20220422
      resource_class: large
      environment:
        PLZ_ARGS: "-p -c cover --profile ci-alt"
@@ -148,7 +151,7 @@ jobs:
            command: tar -xzf /tmp/workspace/darwin_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang -o "go.cflags:-target arm64-apple-macos11" -o please.location:~/please/please //package:release_files
+           command: ./please/please build -p --profile ci --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang -o "go.cflags:-target arm64-apple-macos11" //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -162,7 +165,7 @@ jobs:
    build-freebsd:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_freebsd_builder:20200820
+       - image: thoughtmachine/please_freebsd_builder:20220422
      resource_class: large
      steps:
        - checkout
@@ -175,7 +178,7 @@ jobs:
            command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch freebsd_amd64 -o please.location:~/please/please //package:release_files
+           command: ./please/please build -p --profile ci --arch freebsd_amd64 //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -238,7 +241,7 @@ jobs:
            path: plz-out/log
        - run:
            name: Package
-           command: plz-out/please/plz build //package:release_files -p
+           command: plz-out/bin/src/please build //package:release_files -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:

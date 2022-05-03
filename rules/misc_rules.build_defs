@@ -417,6 +417,9 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
             licences = licences,
             test_only = test_only,
             labels = labels,
+            headers=headers,
+            secret_headers=secret_headers,
+            pass_env=pass_env,
         )
 
         if out:
@@ -451,41 +454,22 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
     urls = [url] if isinstance(url, str) else url
     url = urls[0]
 
-    urls_str = ' '.join(url) if isinstance(url, list) else url
-
     if bool(username) != bool(password_file):
         fail(f"Both or neither of username and password_file should be specified")
 
-    auth = username and password_file
-    curl = auth or headers or secret_headers
-    header_flag = ""
-    cmd = ''
+    labels = labels + [f"remote_file:header:{h}:{v}" for h, v in headers.items()]
+    labels = labels + [f"remote_file:secret_header:{h}:{v}" for h, v in secret_headers.items()]
 
-    if curl:
-        for header, value in headers.items():
-            header_flag = f'{header_flag} --header "{header}: {value}"'
-        for header, value in secret_headers.items():
-            header_flag = f'{header_flag} --header "{header}: $(cat {value})"'
-
-        # Authentication info
-        user_info = f'--user {username}:$(cat {password_file})' if auth else ""
-
-        # Check http response
-        check_url = f'curl -s -o /dev/null -I {header_flag} {user_info} -w %{{http_code}}'
-
-        # Download file
-        fetch_url = f'curl --anyauth {user_info} {header_flag} -o $OUTS --url'
-
-        # Download first url that succeeds
-        cmd = f'for URL in {urls_str}; do '
-        cmd += f'STATUS=$({check_url} $URL);'
-        cmd += f'[ $STATUS -lt 400 ] && {fetch_url} $URL && break; done;'
+    if username:
+        if not password_file:
+            fail("must provide a password file with the username")
+        labels += [f"remote_file:username:{username}", f"remote_file:password_file:{password_file}"]
 
     return build_rule(
         name = name,
         tag = _tag,
-        cmd = '' if not curl else cmd,
-        _urls = urls if not curl else None,
+        cmd = '',
+        _urls = urls,
         outs = [out or url[url.rfind('/') + 1:]],
         binary = binary,
         visibility = visibility,
@@ -498,7 +482,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         labels = labels,
         sandbox = False,
         entry_points = entry_points,
-        pass_env = pass_env,
+        pass_env=pass_env
     )
 
 def text_file(name:str, content:str, hashes:list=None, data:list|dict=[], out:str=None,

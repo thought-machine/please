@@ -1061,6 +1061,7 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 
 		httpClient.Timeout = time.Duration(state.Config.Build.Timeout)
 	})
+
 	if err := prepareDirectory(state.ProcessExecutor, target.OutDir(), false); err != nil {
 		return err
 	} else if err := prepareDirectory(state.ProcessExecutor, target.TmpDir(), false); err != nil {
@@ -1107,7 +1108,11 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent", fmt.Sprintf("please.build/%s", core.PleaseVersion))
+
+	if err := setHeaders(req, target, env); err != nil {
+		return err
+	}
+
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err
@@ -1130,6 +1135,63 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	}
 	state.PathHasher.SetHash(tmpPath, h.Sum(nil))
 	return nil
+}
+
+// setHeaders sets up all the headers we should send on remote_file() requests, including User-Agent and any user
+// defined ones.
+func setHeaders(req *http.Request, target *core.BuildTarget, env core.BuildEnv) error {
+	req.Header.Set("User-Agent", fmt.Sprintf("please.build/%s", core.PleaseVersion))
+
+	param := func(str string) (string, string) {
+		if !strings.HasPrefix(str, "remote_file:") {
+			return "", ""
+		}
+		str = strings.TrimPrefix(str, "remote_file:")
+		i := strings.IndexRune(str, ':')
+		return str[:i], str[(i + 1):]
+	}
+
+	userName := ""
+	password := ""
+	for _, l := range target.Labels {
+		param, value := param(l)
+		switch param {
+		case "":
+			continue
+		case "header":
+			k, v := header(value)
+			v = os.Expand(v, env.ReplaceEnvironment)
+			req.Header.Set(k, v)
+		case "secret_header":
+			k, v := header(value)
+			b, err := os.ReadFile(fs.ExpandHomePath(v))
+			if err != nil {
+				return fmt.Errorf("failed to read secret file: %v", err)
+			}
+
+			req.Header.Set(k, string(b))
+		case "username":
+			userName = value
+		case "password_file":
+			p, err := os.ReadFile(fs.ExpandHomePath(value))
+			if err != nil {
+				return fmt.Errorf("failed to read password file: %v", err)
+			}
+			password = string(p)
+		default:
+			return fmt.Errorf("unknown remote file label: %v", l)
+		}
+	}
+
+	if userName != "" || password != "" {
+		req.SetBasicAuth(userName, password)
+	}
+	return nil
+}
+
+func header(str string) (string, string) {
+	i := strings.IndexRune(str, ':')
+	return str[:i], str[(i + 1):]
 }
 
 // A progressReader tracks progress from a HTTP response and marks it on the given target.
