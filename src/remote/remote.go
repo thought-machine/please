@@ -615,7 +615,7 @@ func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
-	if !isTest || !c.state.ForceRerun || c.state.NumTestRuns == 1 {
+	if !isTest || (!c.state.ForceRerun && c.state.NumTestRuns == 1) {
 		if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, isTest, needStdout); metadata != nil {
 			return metadata, ar, nil
 		}
@@ -637,7 +637,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 
 	// We should skip the cache lookup (and override any existing action result) if we --rebuild, or --rerun and this is
 	// one fo the targets we're testing or building.
-	skipCacheLookup := (isTest && c.state.ForceRerun) || (!isTest && c.state.ForceRebuild)
+	skipCacheLookup := (isTest && (c.state.ForceRerun || c.state.NumTestRuns != 1)) || (!isTest && c.state.ForceRebuild)
 	skipCacheLookup = skipCacheLookup && c.state.IsOriginalTarget(target)
 
 	return c.reallyExecute(tid, target, command, digest, needStdout, isTest, skipCacheLookup)
