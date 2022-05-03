@@ -175,18 +175,27 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	return target
 }
 
+// validateSandbox ensures that the target isn't opting out of the build/test sandbox when it's not allowed to
 func validateSandbox(state *core.BuildState, target *core.BuildTarget) error {
 	if target.IsFilegroup || len(state.Config.Sandbox.ExcludeableTargets) == 0 {
 		return nil
 	}
-	if target.Sandbox && (target.Test == nil || target.Test.Sandbox) {
+	if !target.IsRemoteFile {
+		if target.Sandbox && (target.Test == nil || target.Test.Sandbox) {
+			return nil
+		}
+	}
+
+	if target.Label.PackageName == "_please" {
 		return nil
 	}
 	for _, whitelist := range state.Config.Sandbox.ExcludeableTargets {
-		if target.Label.PackageName == "_please" {
+		if whitelist.Matches(target.Label) {
 			return nil
 		}
-		if whitelist.Matches(target.Label) {
+	}
+	for _, dir := range state.Config.Parse.ExperimentalDir {
+		if strings.HasPrefix(target.Label.PackageName, dir) {
 			return nil
 		}
 	}
