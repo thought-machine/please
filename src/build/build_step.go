@@ -1126,7 +1126,7 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 		if i, err := strconv.Atoi(length); err == nil {
 			atomic.StoreUint64(&target.FileSize, uint64(i))
 			r = &progressReader{Reader: resp.Body, Target: target, Total: float32(i)}
-			target.ShowProgress.Set() // Required for it to actually display
+			target.ShowProgress.SetTrue() // Required for it to actually display
 		}
 	}
 	h := state.PathHasher.NewHash()

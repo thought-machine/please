@@ -9,10 +9,22 @@ type atomicBool struct {
 	b int32
 }
 
-func (b *atomicBool) Set() {
+func (b *atomicBool) SetTrue() {
 	atomic.StoreInt32(&b.b, 1)
 }
 
-func (b *atomicBool) IsSet() bool {
+func (b *atomicBool) SetFalse() {
+	atomic.StoreInt32(&b.b, 0)
+}
+
+func (b *atomicBool) Set(val bool) {
+	if val {
+		b.SetTrue()
+		return
+	}
+	b.SetFalse()
+}
+
+func (b *atomicBool) Value() bool {
 	return atomic.LoadInt32(&b.b) == 1
 }

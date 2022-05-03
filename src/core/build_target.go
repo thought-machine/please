@@ -1735,7 +1735,7 @@ func (target *BuildTarget) HasParent() bool {
 // ShouldShowProgress returns true if the target should display progress.
 // This is provided as a function to satisfy the process package.
 func (target *BuildTarget) ShouldShowProgress() bool {
-	return target.ShowProgress.IsSet()
+	return target.ShowProgress.Value()
 }
 
 // ProgressDescription returns a description of what the target is doing as it runs.

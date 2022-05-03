@@ -568,11 +568,11 @@ func (state *BuildState) logResult(result *BuildResult) {
 	result.Time = time.Now()
 	state.progress.internalResults <- result
 	if result.Status.IsFailure() {
-		state.progress.failed.Set()
+		state.progress.failed.SetTrue()
 		if result.Status == TargetBuildFailed {
-			state.progress.buildFailed.Set()
+			state.progress.buildFailed.SetTrue()
 		} else if result.Status == TargetTestFailed {
-			state.progress.testFailed.Set()
+			state.progress.testFailed.SetTrue()
 		}
 	}
 }
@@ -635,7 +635,7 @@ func (state *BuildState) checkForCycles() {
 
 // Failures returns anything that has failed about the current build.
 func (state *BuildState) Failures() (anything, build, test bool) {
-	return state.progress.failed.IsSet(), state.progress.buildFailed.IsSet(), state.progress.testFailed.IsSet()
+	return state.progress.failed.Value(), state.progress.buildFailed.Value(), state.progress.testFailed.Value()
 }
 
 // Results returns a channel on which the caller can listen for results.
@@ -884,7 +884,7 @@ func (state *BuildState) ShouldDownload(target *BuildTarget) bool {
 	downloadOriginalTarget := state.OutputDownload == OriginalOutputDownload && state.IsOriginalTarget(target)
 	downloadTransitiveTarget := state.OutputDownload == TransitiveOutputDownload
 	downloadLinkableTarget := state.Config.Build.DownloadLinkable && target.HasLinks(state)
-	return target.neededForSubinclude.IsSet() || (downloadOriginalTarget && !state.NeedTests) || downloadTransitiveTarget || downloadLinkableTarget
+	return target.neededForSubinclude.Value() || (downloadOriginalTarget && !state.NeedTests) || downloadTransitiveTarget || downloadLinkableTarget
 }
 
 // ShouldRebuild returns true if we should force a rebuild of this target (i.e. the user
@@ -969,7 +969,7 @@ func (state *BuildState) queueTestTarget(target *BuildTarget) {
 // queueResolvedTarget is like queueTarget but once we have a resolved target.
 func (state *BuildState) queueResolvedTarget(target *BuildTarget, forceBuild, neededForSubinclude bool) error {
 	if neededForSubinclude {
-		target.neededForSubinclude.Set()
+		target.neededForSubinclude.SetTrue()
 	}
 	if target.State() >= Active && !forceBuild {
 		return nil // Target is already tagged to be built and likely on the queue.
@@ -1016,7 +1016,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 	for {
 		var called atomicBool
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
-			called.Set()
+			called.SetTrue()
 			return state.queueResolvedTarget(t, forceBuild, false)
 		}); err != nil {
 			state.asyncError(target.Label, err)
@@ -1028,7 +1028,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 				t.WaitForBuild()
 			}
 		}
-		if !called.IsSet() {
+		if !called.Value() {
 			// We are now ready to go, we have nothing to wait for.
 			if building && target.SyncUpdateState(Active, Pending) {
 				state.addPendingBuild(target)
