@@ -5,5 +5,6 @@ plugin_repo(
 
 plugin_repo(
     name = "python",
-    revision = "v0.6.1",
+    owner = "tatskaari",
+    revision = "fix-wheel-tool-interpretor",
 )
