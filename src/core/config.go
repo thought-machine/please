@@ -452,6 +452,8 @@ func DefaultConfiguration() *Configuration {
 	config.Java.JarCatTool = "/////_please:arcat"
 	config.Java.JUnitRunner = "/////_please:junit_runner"
 
+	config.Metrics.Timeout = cli.Duration(2 * time.Second)
+
 	return &config
 }
 
@@ -692,7 +694,8 @@ type Configuration struct {
 		GoDontCollapseImportPath      bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
-		PrometheusGatewayURL string `help:"The gateway URL to push prometheus updates to."`
+		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`
+		Timeout              cli.Duration `help:"timeout for pushing to the gateway. Defaults to 2 seconds." `
 	} `help:"Settings for collecting metrics."`
 }
 
