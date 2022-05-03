@@ -15,26 +15,23 @@ func Deps(state *core.BuildState, labels []core.BuildLabel, hidden bool, targetL
 }
 
 func printTarget(state *core.BuildState, target *core.BuildTarget, indent string, done map[core.BuildLabel]bool, hidden bool, currentLevel int, targetLevel int) {
-	if done[target.Label] {
+	if !state.ShouldInclude(target) {
 		return
 	}
 
+	if !hidden && target.HasParent() {
+		target = target.Parent(state.Graph)
+	}
+
+	levelLimitReached := targetLevel != -1 && currentLevel == targetLevel
+	if done[target.Label] || levelLimitReached {
+		return
+	}
+
+	fmt.Printf("%s%s\n", indent, target)
 	done[target.Label] = true
-	if state.ShouldInclude(target) {
-		if parent := target.Parent(state.Graph); hidden || parent == target || parent == nil {
-			fmt.Printf("%s%s\n", indent, target.Label)
-		} else if !done[parent.Label] {
-			fmt.Printf("%s%s\n", indent, parent)
-			done[parent.Label] = true
-		}
-	}
+
 	indent += "  "
-
-	// access the level of dependency, as default is -1 which prints out everything
-	if targetLevel != -1 && currentLevel == targetLevel {
-		return
-	}
-
 	currentLevel++
 
 	for _, dep := range target.Dependencies() {
