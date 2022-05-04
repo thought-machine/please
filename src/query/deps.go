@@ -19,20 +19,18 @@ func printTarget(state *core.BuildState, target *core.BuildTarget, indent string
 		return
 	}
 
-	if !hidden && target.HasParent() {
-		target = target.Parent(state.Graph)
-	}
-
 	levelLimitReached := targetLevel != -1 && currentLevel == targetLevel
 	if done[target.Label] || levelLimitReached {
 		return
 	}
 
-	fmt.Printf("%s%s\n", indent, target)
-	done[target.Label] = true
+	if hidden || !target.HasParent() {
+		fmt.Printf("%s%s\n", indent, target)
+		done[target.Label] = true
 
-	indent += "  "
-	currentLevel++
+		indent += "  "
+		currentLevel++
+	}
 
 	for _, dep := range target.Dependencies() {
 		printTarget(state, dep, indent, done, hidden, currentLevel, targetLevel)
