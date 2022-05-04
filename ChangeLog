@@ -1,3 +1,12 @@
+Version 16.20.1
+---------------
+    * When configured, require `remote_file()` rules are covered by
+      the `Sandbox.ExcludeableTargets` config value #2436
+    * REX: Skip caching when `--num_runs` is provided to `plz test`
+      #2450
+    * Fix indentation in `plz query deps` when we exclude targets #2454
+
+
 Version 16.20.0
 ---------------
     * Fix issue with the `pleasew` wrapper script downloading the wrong
