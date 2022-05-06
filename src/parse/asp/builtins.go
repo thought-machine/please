@@ -78,7 +78,7 @@ func registerBuiltins(s *scope) {
 		"removesuffix": setNativeCode(s, "removesuffix", strRemoveSuffix),
 		"strip":        setNativeCode(s, "strip", strStrip),
 		"find":         setNativeCode(s, "find", strFind),
-		"rfind":        setNativeCode(s, "find", strRFind),
+		"rfind":        setNativeCode(s, "rfind", strRFind),
 		"format":       setNativeCode(s, "format", strFormat),
 		"count":        setNativeCode(s, "count", strCount),
 		"upper":        setNativeCode(s, "upper", strUpper),
