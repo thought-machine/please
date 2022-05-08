@@ -1,0 +1,133 @@
+name: Build & Test
+on: [push, pull_request]
+env:
+  PLZ_ARGS: "-p --profile ci"
+jobs:
+  alpine:
+    runs-on: ubuntu-latest
+    container:
+      image: thoughtmachine/please_alpine:20220422
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: plz-out/gen/third_party/go
+          key: ${{ runner.os }}-go-alpine-${{ hashFiles('third_party/go/BUILD', 'tools/images/alpine/Dockerfile') }}
+          restore-keys: ${{ runner.os }}-go-alpine-
+      - name: Bootstrap & Build
+        run: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
+        env:
+          PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
+      - name: Archive logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: plz-out/log
+  ubuntu:
+    runs-on: ubuntu-latest
+    container:
+      image: thoughtmachine/please_ubuntu:20220426
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: plz-out/gen/third_party/go
+          key: ${{ runner.os }}-go-ubuntu-${{ hashFiles('third_party/go/BUILD', 'tools/images/ubuntu/Dockerfile') }}
+          restore-keys: ${{ runner.os }}-go-ubuntu-
+      - name: Bootstrap & Build
+        run: ./bootstrap.sh
+      - name: No plugins
+        run: plz-out/bin/src/please build //package:installed_files && ./test.sh --profile noplugins --test_results_file plz-out/results/please/no_plugin.xml
+      - name: Package
+        run: plz-out/bin/src/please build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball //tools/performance:all -p
+      - name: FreeBSD cross-compile
+        run: plz-out/bin/src/please build --arch freebsd_amd64 //package:release_files
+      # TODO(peterebden): Persist artifacts to be retrieved later for release
+      - name: Archive logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: plz-out/log
+  ubuntu_alt:
+    runs-on: ubuntu-latest
+    container:
+      image: thoughtmachine/please_ubuntu_alt:20220422
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: plz-out/gen/third_party/go
+          key: ${{ runner.os }}-go-ubuntu-alt-${{ hashFiles('third_party/go/BUILD', 'tools/images/ubuntu_alt/Dockerfile') }}
+          restore-keys: ${{ runner.os }}-go-ubuntu-alt-
+      - name: Bootstrap & Build
+        run: ./bootstrap.sh
+      - name: Archive logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: plz-out/log
+  darwin:
+    runs-on: macos-latest
+    needs: [ubuntu, ubuntu_alt, alpine]  # Doesn't really need them but no point doing the expensive macos run if the linux ones fail
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: plz-out/gen/third_party/go
+          key: ${{ runner.os }}-go-darwin-${{ hashFiles('third_party/go/BUILD') }}
+          restore-keys: ${{ runner.os }}-go-darwin-
+      - name: Bootstrap & Build
+        run: ./bootstrap.sh
+      - name: Package
+        run: plz-out/bin/src/please build //package:release_files
+      - name: Cross-compile arm64
+        run: plz-out/bin/src/please build  --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang -o "go.cflags:-target arm64-apple-macos11" //package:release_files
+      - name: Archive logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: plz-out/log
+  test_rex:
+    runs-on: ubuntu-latest
+    needs: [ubuntu]
+    container:
+      image: thoughtmachine/please_ubuntu:20220426
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Test Remote Execution
+        run: ./circleci/rex_test.sh
+      - name: Archive logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: plz-out/log
+  test_http_cache:
+    runs-on: ubuntu-latest
+    needs: [ubuntu]
+    container:
+      image: thoughtmachine/please_ubuntu:20220426
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Test Remote Execution
+        run: ./circleci/http_cache_test.sh
+      - name: Archive logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: plz-out/log
