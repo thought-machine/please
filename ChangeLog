@@ -1,3 +1,9 @@
+Version 16.20.2
+---------------
+    * Make `plz query deps` traverse hidden dependencies even when
+      we don't print them #2453
+
+
 Version 16.20.1
 ---------------
     * When configured, require `remote_file()` rules are covered by
