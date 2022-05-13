@@ -9,7 +9,7 @@ jobs:
       image: thoughtmachine/please_alpine:20220422
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Cache
         uses: actions/cache@v3
         with:
@@ -32,7 +32,7 @@ jobs:
       image: thoughtmachine/please_ubuntu:20220426
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Cache
         uses: actions/cache@v3
         with:
@@ -60,7 +60,7 @@ jobs:
       image: thoughtmachine/please_ubuntu_alt:20220422
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Cache
         uses: actions/cache@v3
         with:
@@ -80,7 +80,7 @@ jobs:
     needs: [ubuntu, ubuntu_alt, alpine]  # Doesn't really need them but no point doing the expensive macos run if the linux ones fail
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Cache
         uses: actions/cache@v3
         with:
