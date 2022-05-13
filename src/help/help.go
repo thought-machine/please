@@ -116,7 +116,14 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 		message += "\n" + config.PluginDefinition.DocumentationSite + "\n"
 	}
 	configOptions := ""
-	for k, v := range config.PluginConfig {
+	// Ensure these come out in the same order
+	keys := make([]string, 0, len(config.PluginConfig))
+	for k := range config.PluginConfig {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		v := config.PluginConfig[k]
 		valueType := v.Type
 		if v.Type == "" {
 			valueType = "string"
