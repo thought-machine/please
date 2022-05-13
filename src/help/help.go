@@ -121,19 +121,33 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 		if v.Type == "" {
 			valueType = "string"
 		}
-		var optional string
-		if v.Optional {
-			optional = "(optional) "
-		}
 		key := v.ConfigKey
 		if key == "" {
 			key = k
 		}
-		configOptions += fmt.Sprintf("${BLUE}   %v${RESET} ${GREEN}(%v)${RESET} ${WHITE}%v${RESET}Default value: %v\n",
+		def := ""
+		if len(v.DefaultValue) == 1 {
+			def = v.DefaultValue[0]
+		} else if len(v.DefaultValue) > 0 {
+			def = strings.Join(v.DefaultValue, ", ")
+		}
+		if def != "" {
+			def = "default: " + def
+		}
+		if v.Optional {
+			if def != "" {
+				def = ", " + def
+			}
+			def = "optional" + def
+		}
+		if def != "" {
+			def = " (" + def + ")"
+		}
+		configOptions += fmt.Sprintf("${BLUE}   %s${RESET} ${GREEN}(%s)${RESET}${WHITE}%s${RESET} %s\n",
 			strings.ToLower(key),
 			valueType,
-			optional,
-			v.DefaultValue)
+			def,
+			v.Help)
 	}
 	if configOptions != "" {
 		message += "\n${BOLD_YELLOW}This plugin has the following options:${RESET}\n" + configOptions
