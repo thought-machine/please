@@ -106,6 +106,16 @@ func helpForPlugin(config *core.Configuration, topic string) string {
 	return ""
 }
 
+// formatConfigKey converts the config key from snake_case to CamelCase
+func formatConfigKey(key string) string {
+	key = strings.ToLower(key)
+	parts := strings.Split(key, "_")
+	for i, p := range parts {
+		parts[i] = strings.ToUpper(p[:1]) + p[1:]
+	}
+	return strings.Join(parts, "")
+}
+
 // getPluginOptionsAndBuildDefs looks for information for the plugin specified in the config file
 func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string {
 	config := subrepo.State.Config
@@ -130,7 +140,7 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 		}
 		key := v.ConfigKey
 		if key == "" {
-			key = strings.ReplaceAll(k, "_", "")
+			key = formatConfigKey(k)
 		}
 		def := ""
 		if len(v.DefaultValue) == 1 {
@@ -151,7 +161,7 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 			def = " (" + def + ")"
 		}
 		configOptions += fmt.Sprintf("${BLUE}   %s${RESET} ${GREEN}(%s)${RESET}${WHITE}%s${RESET} %s\n",
-			strings.ToLower(key),
+			key,
 			valueType,
 			def,
 			v.Help)
