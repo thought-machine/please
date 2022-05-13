@@ -50,11 +50,17 @@ func Topics(prefix string) {
 }
 
 func help(topic string) string {
+	config, err := core.ReadDefaultConfigFiles(nil)
+	if err != nil {
+		// Don't bother the user if we can't load config files or whatever - just do our best.
+		config = core.DefaultConfiguration()
+	}
+
 	topic = strings.ToLower(topic)
 	if topic == "topics" {
 		return fmt.Sprintf(topicsHelpMessage, strings.Join(allTopics(""), "\n"))
 	}
-	for _, section := range []helpSection{allConfigHelp(), miscTopics} {
+	for _, section := range []helpSection{allConfigHelp(config), miscTopics} {
 		if message, found := section.Topics[topic]; found {
 			message = strings.TrimSpace(message)
 			if section.Preamble == "" {
@@ -70,7 +76,7 @@ func help(topic string) string {
 	}
 
 	// Check plugins
-	if pluginHelp := helpForPlugin(topic); pluginHelp != "" {
+	if pluginHelp := helpForPlugin(config, topic); pluginHelp != "" {
 		return pluginHelp
 	}
 
@@ -78,11 +84,7 @@ func help(topic string) string {
 }
 
 // helpForPlugin returns some help text for a plugin
-func helpForPlugin(topic string) string {
-	config, err := core.ReadDefaultConfigFiles(nil)
-	if err != nil {
-		panic("Failed to read config")
-	}
+func helpForPlugin(config *core.Configuration, topic string) string {
 	if _, ok := config.Plugin[topic]; ok {
 		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the ${GREEN}.plzconfig${RESET} file.\n", topic)
 
@@ -205,7 +207,7 @@ func suggest(topic string) string {
 // allTopics returns all the possible topics to get help on.
 func allTopics(prefix string) []string {
 	topics := []string{}
-	for _, section := range []helpSection{allConfigHelp(), miscTopics} {
+	for _, section := range []helpSection{allConfigHelp(core.DefaultConfiguration()), miscTopics} {
 		for t := range section.Topics {
 			if strings.HasPrefix(t, prefix) {
 				topics = append(topics, t)
