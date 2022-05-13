@@ -116,17 +116,21 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 		message += "\n" + config.PluginDefinition.DocumentationSite + "\n"
 	}
 	configOptions := ""
-	for _, v := range config.PluginConfig {
+	for k, v := range config.PluginConfig {
 		valueType := v.Type
 		if v.Type == "" {
 			valueType = "string"
 		}
 		var optional string
 		if v.Optional {
-			optional = " (optional) "
+			optional = "(optional) "
 		}
-		configOptions += fmt.Sprintf("${BLUE}   %v${RESET} ${GREEN}(%v)${RESET}${WHITE}%v${RESET}Default value: %v\n",
-			strings.ToLower(v.ConfigKey),
+		key := v.ConfigKey
+		if key == "" {
+			key = k
+		}
+		configOptions += fmt.Sprintf("${BLUE}   %v${RESET} ${GREEN}(%v)${RESET} ${WHITE}%v${RESET}Default value: %v\n",
+			strings.ToLower(key),
 			valueType,
 			optional,
 			v.DefaultValue)
