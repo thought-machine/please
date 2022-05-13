@@ -716,6 +716,7 @@ type Plugin struct {
 type PluginConfigDefinition struct {
 	ConfigKey    string   `help:"The key of the config field in the .plzconfig file"`
 	DefaultValue []string `help:"The default value for this config field, if it has one"`
+	Help         string   `help:"The help text to display for this field"`
 	Optional     bool     `help:"Whether this config field can be empty"`
 	Repeatable   bool     `help:"Whether this config field can be repeated"`
 	Inherit      bool     `help:"Whether this config field should be inherited from the host repo or not. Defaults to true."`
