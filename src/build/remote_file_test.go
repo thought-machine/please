@@ -1,6 +1,7 @@
 package build
 
 import (
+	"net"
 	"net/http"
 	"testing"
 
@@ -16,6 +17,14 @@ func Server() (*http.Server, *http.ServeMux) {
 	return s, s.Handler.(*http.ServeMux)
 }
 
+func listen(s *http.Server) net.Listener {
+	lis, err := net.Listen("tcp", s.Addr)
+	if err != nil {
+		log.Fatalf("Failed to listen: %s", err)
+	}
+	return lis
+}
+
 func TestHeader(t *testing.T) {
 	state, target := newState("//pkg:header_test")
 	target.IsRemoteFile = true
@@ -29,8 +38,8 @@ func TestHeader(t *testing.T) {
 		assert.Equal(t, foo, "fooval")
 	})
 	defer s.Close()
-
-	go s.ListenAndServe()
+	lis := listen(s)
+	go s.Serve(lis)
 
 	err := fetchRemoteFile(state, target)
 	require.NoError(t, err)
@@ -56,8 +65,8 @@ func TestSecretHeader(t *testing.T) {
 		assert.Equal(t, bar, "secret val")
 	})
 	defer s.Close()
-
-	go s.ListenAndServe()
+	lis := listen(s)
+	go s.Serve(lis)
 
 	err = fetchRemoteFile(state, target)
 	require.NoError(t, err)
@@ -82,8 +91,8 @@ func TestBasicAuth(t *testing.T) {
 		assert.Equal(t, "secret val", pass)
 	})
 	defer s.Close()
-
-	go s.ListenAndServe()
+	lis := listen(s)
+	go s.Serve(lis)
 
 	err = fetchRemoteFile(state, target)
 	require.NoError(t, err)
