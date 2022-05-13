@@ -130,7 +130,7 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 		}
 		key := v.ConfigKey
 		if key == "" {
-			key = k
+			key = strings.ReplaceAll(k, "_", "")
 		}
 		def := ""
 		if len(v.DefaultValue) == 1 {
