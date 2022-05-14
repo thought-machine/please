@@ -50,11 +50,17 @@ func Topics(prefix string) {
 }
 
 func help(topic string) string {
+	config, err := core.ReadDefaultConfigFiles(nil)
+	if err != nil {
+		// Don't bother the user if we can't load config files or whatever - just do our best.
+		config = core.DefaultConfiguration()
+	}
+
 	topic = strings.ToLower(topic)
 	if topic == "topics" {
 		return fmt.Sprintf(topicsHelpMessage, strings.Join(allTopics(""), "\n"))
 	}
-	for _, section := range []helpSection{allConfigHelp(), miscTopics} {
+	for _, section := range []helpSection{allConfigHelp(config), miscTopics} {
 		if message, found := section.Topics[topic]; found {
 			message = strings.TrimSpace(message)
 			if section.Preamble == "" {
@@ -70,7 +76,7 @@ func help(topic string) string {
 	}
 
 	// Check plugins
-	if pluginHelp := helpForPlugin(topic); pluginHelp != "" {
+	if pluginHelp := helpForPlugin(config, topic); pluginHelp != "" {
 		return pluginHelp
 	}
 
@@ -78,11 +84,7 @@ func help(topic string) string {
 }
 
 // helpForPlugin returns some help text for a plugin
-func helpForPlugin(topic string) string {
-	config, err := core.ReadDefaultConfigFiles(nil)
-	if err != nil {
-		panic("Failed to read config")
-	}
+func helpForPlugin(config *core.Configuration, topic string) string {
 	if _, ok := config.Plugin[topic]; ok {
 		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the ${GREEN}.plzconfig${RESET} file.\n", topic)
 
@@ -104,6 +106,16 @@ func helpForPlugin(topic string) string {
 	return ""
 }
 
+// formatConfigKey converts the config key from snake_case to CamelCase
+func formatConfigKey(key string) string {
+	key = strings.ToLower(key)
+	parts := strings.Split(key, "_")
+	for i, p := range parts {
+		parts[i] = strings.ToUpper(p[:1]) + p[1:]
+	}
+	return strings.Join(parts, "")
+}
+
 // getPluginOptionsAndBuildDefs looks for information for the plugin specified in the config file
 func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string {
 	config := subrepo.State.Config
@@ -114,20 +126,45 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 		message += "\n" + config.PluginDefinition.DocumentationSite + "\n"
 	}
 	configOptions := ""
-	for _, v := range config.PluginConfig {
+	// Ensure these come out in the same order
+	keys := make([]string, 0, len(config.PluginConfig))
+	for k := range config.PluginConfig {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		v := config.PluginConfig[k]
 		valueType := v.Type
 		if v.Type == "" {
 			valueType = "string"
 		}
-		var optional string
-		if v.Optional {
-			optional = " (optional) "
+		key := v.ConfigKey
+		if key == "" {
+			key = formatConfigKey(k)
 		}
-		configOptions += fmt.Sprintf("${BLUE}   %v${RESET} ${GREEN}(%v)${RESET}${WHITE}%v${RESET}Default value: %v\n",
-			strings.ToLower(v.ConfigKey),
+		def := ""
+		if len(v.DefaultValue) == 1 {
+			def = v.DefaultValue[0]
+		} else if len(v.DefaultValue) > 0 {
+			def = strings.Join(v.DefaultValue, ", ")
+		}
+		if def != "" {
+			def = "default: " + def
+		}
+		if v.Optional {
+			if def != "" {
+				def = ", " + def
+			}
+			def = "optional" + def
+		}
+		if def != "" {
+			def = " (" + def + ")"
+		}
+		configOptions += fmt.Sprintf("${BLUE}   %s${RESET} ${GREEN}(%s)${RESET}${WHITE}%s${RESET} %s\n",
+			key,
 			valueType,
-			optional,
-			v.DefaultValue)
+			def,
+			v.Help)
 	}
 	if configOptions != "" {
 		message += "\n${BOLD_YELLOW}This plugin has the following options:${RESET}\n" + configOptions
@@ -205,7 +242,7 @@ func suggest(topic string) string {
 // allTopics returns all the possible topics to get help on.
 func allTopics(prefix string) []string {
 	topics := []string{}
-	for _, section := range []helpSection{allConfigHelp(), miscTopics} {
+	for _, section := range []helpSection{allConfigHelp(core.DefaultConfiguration()), miscTopics} {
 		for t := range section.Topics {
 			if strings.HasPrefix(t, prefix) {
 				topics = append(topics, t)

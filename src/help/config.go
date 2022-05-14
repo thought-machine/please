@@ -53,22 +53,22 @@ func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options
 	return ""
 }
 
-func allConfigHelp() helpSection {
+func allConfigHelp(config *core.Configuration) helpSection {
 	sect := helpSection{
 		Preamble: "${BOLD_BLUE}%s${RESET} is a config setting defined in the .plzconfig file. See `plz help plzconfig` for more information.",
 		Topics:   map[string]string{},
 	}
-	config := core.DefaultConfiguration()
 	v := reflect.ValueOf(config).Elem()
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		f := v.Field(i)
-		sectname := strings.ToLower(t.Field(i).Name)
+		tf := t.Field(i)
+		sectname := strings.ToLower(tf.Name)
 		subfields := []string{}
 		if f.Type().Kind() == reflect.Struct {
 			for j := 0; j < f.Type().NumField(); j++ {
 				subf := f.Field(j)
-				subt := t.Field(i).Type.Field(j)
+				subt := tf.Type.Field(j)
 				if help := subt.Tag.Get("help"); help != "" {
 					name := strings.ToLower(subt.Name)
 					example := subt.Tag.Get("example")
@@ -82,11 +82,18 @@ func allConfigHelp() helpSection {
 					sect.Topics[sectname+"."+name] = help
 					subfields = append(subfields, "  "+name)
 				} else if f.CanSet() {
-					log.Fatalf("Missing help struct tag on %s.%s", t.Field(i).Name, subt.Name)
+					log.Fatalf("Missing help struct tag on %s.%s", tf.Name, subt.Name)
 				}
 			}
 		}
-		if help := t.Field(i).Tag.Get("help"); help != "" {
+		if help := tf.Tag.Get("help"); help != "" {
+			// Skip any excluded config sections.
+			// TODO(peterebden): Remove this in v18 once all these config sections will be gone.
+			if excludeFlag := tf.Tag.Get("exclude_flag"); excludeFlag != "" {
+				if reflect.ValueOf(config.FeatureFlags).FieldByName(excludeFlag).Bool() {
+					continue
+				}
+			}
 			help += "\n"
 			if len(subfields) > 0 {
 				help += "\n${YELLOW}This option has the following sub-fields:${RESET}\n${GREEN}" + strings.Join(subfields, "\n") + "${RESET}\n"
