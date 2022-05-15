@@ -65,18 +65,14 @@ func parseFile(pkg *core.Package, p *asp.Parser, filename string) error {
 }
 
 type assignment struct {
+	Name string
 	Pos  asp.Position
 	Read bool // does it get read later on?
 }
 
-type astError struct {
-	Name string
-	Pos  asp.Position
-}
-
 // checkAST runs some static checks on a loaded AST.
 // Currently this checks for variables that are assigned to but not read.
-func checkAST(stmts []*asp.Statement, parentScopes ...map[string]assignment) (errs []astError) {
+func checkAST(stmts []*asp.Statement, parentScopes ...map[string]assignment) (errs []assignment) {
 	assigns := map[string]assignment{}
 	allScopes := append(parentScopes, assigns)
 
@@ -84,7 +80,7 @@ func checkAST(stmts []*asp.Statement, parentScopes ...map[string]assignment) (er
 		// Loop backward through scopes so we're doing it in correct order
 		for i := len(allScopes) - 1; i >= 0; i-- {
 			if assign, present := allScopes[i][name]; present {
-				allScopes[i][name] = assignment{Pos: assign.Pos, Read: true}
+				allScopes[i][name] = assignment{Name: name, Pos: assign.Pos, Read: true}
 			}
 		}
 	}
@@ -92,7 +88,7 @@ func checkAST(stmts []*asp.Statement, parentScopes ...map[string]assignment) (er
 	asp.WalkAST(stmts, func(ident *asp.IdentStatement) bool {
 		if ident.Action != nil && ident.Action.Assign != nil {
 			if _, present := assigns[ident.Name]; !present {
-				assigns[ident.Name] = assignment{Pos: ident.Action.Assign.Pos}
+				assigns[ident.Name] = assignment{Name: ident.Name, Pos: ident.Action.Assign.Pos}
 			}
 		}
 		return true
@@ -113,9 +109,9 @@ func checkAST(stmts []*asp.Statement, parentScopes ...map[string]assignment) (er
 		errs = append(errs, checkAST(def.Statements, allScopes...)...)
 		return false
 	})
-	for name, assign := range assigns {
+	for _, assign := range assigns {
 		if !assign.Read {
-			errs = append(errs, astError{Name: name, Pos: assign.Pos})
+			errs = append(errs, assign)
 		}
 	}
 	sort.Slice(errs, func(i, j int) bool {
@@ -124,7 +120,7 @@ func checkAST(stmts []*asp.Statement, parentScopes ...map[string]assignment) (er
 	return errs
 }
 
-func printErr(err astError) {
+func printErr(err assignment) {
 	stack := asp.AddStackFrame(err.Pos, fmt.Errorf("Variable %s is written but never read", err.Name))
 	if f, err := os.Open(err.Pos.Filename); err == nil {
 		defer f.Close()
