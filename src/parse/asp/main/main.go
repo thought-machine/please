@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -31,6 +32,7 @@ var opts = struct {
 	NumThreads   int           `short:"n" long:"num_threads" default:"10" description:"Number of concurrent parse threads to run"`
 	ParseOnly    bool          `short:"p" long:"parse_only" description:"Only parse input files, do not interpret them."`
 	DumpAst      bool          `short:"d" long:"dump_ast" description:"Prints AST to stdout. Implies --parse_only."`
+	Check        bool          `short:"c" long:"check" description:"Runs some static checks on the parsed files. Implies --parse_only."`
 	NoConfig     bool          `long:"no_config" description:"Don't look for or load a .plzconfig file"`
 	BuildDefsDir string        `short:"b" long:"build_defs_dir" description:"Load build_defs files from this directory. This assumes that they are all produced by trivial build rules with obvious names. They will need to be built first."`
 	Args         struct {
@@ -41,8 +43,16 @@ var opts = struct {
 }
 
 func parseFile(pkg *core.Package, p *asp.Parser, filename string) error {
-	if opts.ParseOnly || opts.DumpAst {
+	if opts.ParseOnly || opts.DumpAst || opts.Check {
 		stmts, err := p.ParseFileOnly(filename)
+		if opts.Check && err == nil {
+			if errs := checkAST(stmts); len(errs) != 0 {
+				for _, err := range errs {
+					printErr(err)
+				}
+				return fmt.Errorf("Errors found while checking %s", filename)
+			}
+		}
 		if opts.DumpAst {
 			config := spew.NewDefaultConfig()
 			config.DisablePointerAddresses = true
@@ -52,6 +62,75 @@ func parseFile(pkg *core.Package, p *asp.Parser, filename string) error {
 		return err
 	}
 	return p.ParseFile(pkg, filename)
+}
+
+type assignment struct {
+	Pos  asp.Position
+	Read bool // does it get read later on?
+}
+
+type astError struct {
+	Name string
+	Pos  asp.Position
+}
+
+// checkAST runs some static checks on a loaded AST.
+// Currently this checks for variables that are assigned to but not read.
+func checkAST(stmts []*asp.Statement, parentScopes ...map[string]assignment) (errs []astError) {
+	assigns := map[string]assignment{}
+	allScopes := append(parentScopes, assigns)
+
+	markAssign := func(name string) {
+		// Loop backward through scopes so we're doing it in correct order
+		for i := len(allScopes) - 1; i >= 0; i-- {
+			if assign, present := allScopes[i][name]; present {
+				allScopes[i][name] = assignment{Pos: assign.Pos, Read: true}
+			}
+		}
+	}
+
+	asp.WalkAST(stmts, func(ident *asp.IdentStatement) bool {
+		if ident.Action != nil && ident.Action.Assign != nil {
+			if _, present := assigns[ident.Name]; !present {
+				assigns[ident.Name] = assignment{Pos: ident.Action.Assign.Pos}
+			}
+		}
+		return true
+	}, func(def *asp.FuncDef) bool {
+		return false // do nothing for now, we'll handle it for real below
+	}, func(ident *asp.IdentExpr) bool {
+		markAssign(ident.Name)
+		return true
+	}, func(v *asp.FStringVar) bool {
+		if len(v.Var) == 1 {
+			markAssign(v.Var[0])
+		}
+		return false // never anything interesting from here
+	})
+	// Do it again to recurse into nested functions (the ordering here is important for functions that
+	// are defined before the variables they read)
+	asp.WalkAST(stmts, func(def *asp.FuncDef) bool {
+		errs = append(errs, checkAST(def.Statements, allScopes...)...)
+		return false
+	})
+	for name, assign := range assigns {
+		if !assign.Read {
+			errs = append(errs, astError{Name: name, Pos: assign.Pos})
+		}
+	}
+	sort.Slice(errs, func(i, j int) bool {
+		return errs[i].Pos.Line < errs[j].Pos.Line
+	})
+	return errs
+}
+
+func printErr(err astError) {
+	stack := asp.AddStackFrame(err.Pos, fmt.Errorf("Variable %s is written but never read", err.Name))
+	if f, err := os.Open(err.Pos.Filename); err == nil {
+		defer f.Close()
+		stack = asp.AddReader(stack, f)
+	}
+	fmt.Printf("%s\n", stack)
 }
 
 // cleanup runs a few arbitrary cleanup steps on the given AST dump.
