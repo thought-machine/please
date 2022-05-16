@@ -54,7 +54,7 @@ func BenchmarkFnv32_Ref20(b *testing.B) {
 func BenchmarkFnv32_1kXor(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		if x := Fnv32(input1k) ^ Fnv32(input1k) ^ Fnv32(input1k); x == initial {
+		if x := Fnv32(input1k) ^ Fnv32(input1k) ^ Fnv32(input1k); x == initial { //nolint:staticcheck
 			b.Fatalf("incorrect hash")
 		}
 	}
@@ -72,7 +72,7 @@ func BenchmarkFnv32_1kS(b *testing.B) {
 func BenchmarkFnv32_20Xor(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		if x := Fnv32(input20) ^ Fnv32(input20) ^ Fnv32(input20); x == initial {
+		if x := Fnv32(input20) ^ Fnv32(input20) ^ Fnv32(input20); x == initial { //nolint:staticcheck
 			b.Fatalf("incorrect hash")
 		}
 	}
@@ -158,7 +158,7 @@ func xxHashes(s ...string) uint64 {
 	for _, x := range s {
 		d.WriteString(x)
 	}
-	return uint64(d.Sum64())
+	return d.Sum64()
 }
 
 // FNV-32 code which we used to use, but no longer do.
@@ -172,7 +172,7 @@ func Fnv32(s string) uint64 {
 		hash *= prime32
 		hash ^= uint64(s[i])
 	}
-	return uint64(hash)
+	return hash
 }
 
 func Fnv32s(s ...string) (hash uint64) {
@@ -182,5 +182,5 @@ func Fnv32s(s ...string) (hash uint64) {
 			hash ^= uint64(x[i])
 		}
 	}
-	return uint64(hash)
+	return hash
 }

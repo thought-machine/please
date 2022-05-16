@@ -69,7 +69,7 @@ func BenchmarkMapInserts(b *testing.B) {
 }
 
 func TestResize(t *testing.T) {
-	for n := 10; n <= 1000; n = n * 10 {
+	for n := 10; n <= 1000; n *= 10 {
 		t.Run(strconv.Itoa(n), func(t *testing.T) {
 			m := New[int, int](1, hashInts)
 			for i := 0; i < n; i++ {

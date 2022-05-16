@@ -12,6 +12,7 @@ issues:
     - appendAssign
     - halp  # Make misspell be quiet about this.
     - exitAfterDefer # Potentially useful but not in any cases it fires right now.
+    - receiver-naming # Think this is confused about generics
   exclude-rules:
     - path: _test\.go
       linters:

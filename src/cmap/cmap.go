@@ -79,8 +79,8 @@ func (m *Map[K, V]) GetOrWait(key K) (val V, wait <-chan struct{}, first bool) {
 // No particular consistency guarantees are made.
 func (m *Map[K, V]) Values() []V {
 	ret := []V{}
-	for _, shard := range m.shards {
-		ret = append(ret, shard.Values()...)
+	for i := 0; i < len(m.shards); i++ {
+		ret = append(ret, m.shards[i].Values()...)
 	}
 	return ret
 }
