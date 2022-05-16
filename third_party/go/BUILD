@@ -1,14 +1,15 @@
+
 package(default_visibility = ["PUBLIC"])
 
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "70bb4a066997535e346c8bfa3e0dfe250d61100b17ccc5676274642447834969",  # darwin_amd64
-        "9cab6123af9ffade905525d79fc9ee76651e716c85f1f215872b5f2976782480",  # darwin_arm64
-        "01cd67bbc12e659ff236ecebde1806f76452f7ca145c172d5ecdbf4f4803daae",  # freebsd_amd64
-        "e85278e98f57cdb150fe8409e6e5df5343ecb13cebf03a5d5ff12bd55a80264f",  # linux_amd64
+        "1f5f539ce0baa8b65f196ee219abf73a7d9cf558ba9128cc0fe4833da18b04f2",  # darwin_amd64
+        "6c7df9a2405f09aa9bab55c93c9c4ce41d3e58127d626bc1825ba5d0a0045d5c",  # darwin_arm64
+        "8e21cb761a02d4e3f31ec031d7ce90a0980e317f61ac023057d9a462e4a00512",  # freebsd_amd64
+        "e54bec97a1a5d230fc2f9ad0880fcbabb5888f30ed9666eca4a91c5a32e86cbc",  # linux_amd64
     ],
-    version = "1.18",
+    version = "1.18.2",
 )
 
 go_module(
