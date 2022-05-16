@@ -143,7 +143,7 @@ type BuildTarget struct {
 	// If ShowProgress is true, this is used to store the current progress of the target.
 	Progress float32 `print:"false"`
 	// For remote_files, this is the total size of the download (if known)
-	FileSize float32 `print:"false"`
+	FileSize uint64 `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
 	BuildingDescription string `name:"building_description"`
@@ -241,7 +241,7 @@ type BuildTarget struct {
 	AddedPostBuild bool `print:"false"`
 	// If true, the interactive progress display will try to infer the target's progress
 	// via some heuristics on its output.
-	ShowProgress bool `name:"progress"`
+	ShowProgress atomicBool `name:"progress"`
 }
 
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
@@ -1735,7 +1735,7 @@ func (target *BuildTarget) HasParent() bool {
 // ShouldShowProgress returns true if the target should display progress.
 // This is provided as a function to satisfy the process package.
 func (target *BuildTarget) ShouldShowProgress() bool {
-	return target.ShowProgress
+	return target.ShowProgress.Value()
 }
 
 // ProgressDescription returns a description of what the target is doing as it runs.
