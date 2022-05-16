@@ -10,12 +10,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Cache
+      - name: Cache third_party
         uses: actions/cache@v3
         with:
           path: plz-out/gen/third_party/go
           key: go-alpine-${{ hashFiles('third_party/go/BUILD', 'tools/images/alpine/Dockerfile') }}
           restore-keys: go-alpine-
+      - name: Cache go.mod
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-alpine-${{ hashFiles('go.mod') }}
+          restore-keys: go-mod-alpine-
       - name: Mark Git directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Bootstrap & Build
@@ -35,12 +41,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Cache
+      - name: Cache third_party
         uses: actions/cache@v3
         with:
           path: plz-out/gen/third_party/go
           key: go-ubuntu-${{ hashFiles('third_party/go/BUILD', 'tools/images/ubuntu/Dockerfile') }}
           restore-keys: go-ubuntu-
+      - name: Cache go.mod
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-ubuntu-${{ hashFiles('go.mod') }}
+          restore-keys: go-mod-ubuntu-
       - name: Bootstrap & Build
         run: ./bootstrap.sh
       - name: No plugins
@@ -63,12 +75,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Cache
+      - name: Cache third_party
         uses: actions/cache@v3
         with:
           path: plz-out/gen/third_party/go
           key: go-ubuntu-alt-${{ hashFiles('third_party/go/BUILD', 'tools/images/ubuntu_alt/Dockerfile') }}
           restore-keys: go-ubuntu-alt-
+      - name: Cache go.mod
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-ubuntu-alt-${{ hashFiles('go.mod') }}
+          restore-keys: go-mod-ubuntu-alt-
       - name: Bootstrap & Build
         run: ./bootstrap.sh
       - name: Archive logs
@@ -83,12 +101,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Cache
+      - name: Cache third_party
         uses: actions/cache@v3
         with:
           path: plz-out/gen/third_party/go
           key: go-darwin-${{ hashFiles('third_party/go/BUILD') }}
           restore-keys: go-darwin-
+      - name: Cache go.mod
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-darwin-${{ hashFiles('go.mod') }}
+          restore-keys: go-mod-darwin-
       - name: Bootstrap & Build
         run: ./bootstrap.sh
       - name: Package
