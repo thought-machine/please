@@ -38,11 +38,11 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		locals: map[string]pyObject{},
 	}
 	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
-	subincludes := cmap.New[string, pyDict](4, func(key string) uint32 {
-		return hashers.Fnv32(key)
-	})
+	var subincludes *cmap.Map[string, pyDict]
 	if p.interpreter != nil {
 		subincludes = p.interpreter.subincludes
+	} else {
+		subincludes = cmap.New[string, pyDict](cmap.SmallShardCount, cmap.XXHash)
 	}
 	i := &interpreter{
 		scope:       s,
