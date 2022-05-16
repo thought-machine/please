@@ -132,7 +132,7 @@ func BenchmarkXXHash_20Sx(b *testing.B) {
 // ref is our reference implementation, from OneOfOne/cmap/hashers
 // N.B. As of Go 1.18 the workaround is no longer needed (hence why we have our own), this
 //      is reproduced verbatim as a reference implementation.
-func ref(s string) (hash uint32) {
+func ref(s string) (hash uint64) {
 	const prime32 = 16777619
 	if hash = 2166136261; s == "" {
 		return
@@ -143,7 +143,7 @@ func ref(s string) (hash uint32) {
 	i := 0
 L:
 	hash *= prime32
-	hash ^= uint32(s[i])
+	hash ^= uint64(s[i])
 	if i++; i < len(s) {
 		goto L
 	}
@@ -153,29 +153,29 @@ L:
 
 // This is provided to compare against XXHashes
 // It's approximately half the speed on our 20-char input.
-func xxHashes(s ...string) uint32 {
+func xxHashes(s ...string) uint64 {
 	d := xxhash.New()
 	for _, x := range s {
 		d.WriteString(x)
 	}
-	return uint32(d.Sum64())
+	return uint64(d.Sum64())
 }
 
 // FNV-32 code which we used to use, but no longer do.
 
 const prime32 = 16777619
-const initial = uint32(2166136261)
+const initial = uint64(2166136261)
 
 func Fnv32(s string) uint64 {
 	hash := initial
 	for i := 0; i < len(s); i++ {
 		hash *= prime32
-		hash ^= uint32(s[i])
+		hash ^= uint64(s[i])
 	}
 	return uint64(hash)
 }
 
-func Fnv32s(s ...string) uint64 {
+func Fnv32s(s ...string) (hash uint64) {
 	for _, x := range s {
 		for i := 0; i < len(x); i++ {
 			hash *= prime32
