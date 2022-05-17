@@ -11,7 +11,7 @@ ProtocTool = ///proto//third_party/proto:protoc
 
 [Plugin "go"]
 Target = //plugins:go
-ImportPath = github.com/though-machine/please/test/proto_plugin
+ImportPath = github.com/thought-machine/please/test/proto_plugin
 
 [Plugin "go_proto"]
 Target = //plugins:go-proto
