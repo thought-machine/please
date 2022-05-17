@@ -18,7 +18,6 @@ go_library(
         "//src/process",
         "//src/scm",
         "//third_party/go:blake3",
-        "//third_party/go:cmap",
         "//third_party/go:deferred_regex",
         "//third_party/go:errgroup",
         "//third_party/go:gcfg",
