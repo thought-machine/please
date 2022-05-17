@@ -457,6 +457,10 @@ func (label BuildLabel) subrepoLabel() BuildLabel {
 	return BuildLabel{Name: label.Subrepo}
 }
 
+func hashBuildLabel(l BuildLabel) uint64 {
+	return cmap.XXHashes(l.Subrepo, l.PackageName, l.Name)
+}
+
 // packageKey returns a key for this build label that only uses the subrepo and package parts.
 func (label BuildLabel) packageKey() packageKey {
 	return packageKey{Name: label.PackageName, Subrepo: label.Subrepo}

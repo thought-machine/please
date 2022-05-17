@@ -14,7 +14,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	ocmap "github.com/OneOfOne/cmap"
 	"github.com/cespare/xxhash/v2"
 	"lukechampine.com/blake3"
 
@@ -253,7 +252,7 @@ type stateProgress struct {
 	closeOnce  sync.Once
 	resultOnce sync.Once
 	// Used to track subinclude() calls that block until targets are built. Keyed by their label.
-	pendingTargets *ocmap.CMap
+	pendingTargets *cmap.Map[BuildLabel, chan struct{}]
 	// Used to track general package parsing requests. Keyed by a packageKey struct.
 	pendingPackages *cmap.Map[packageKey, chan struct{}]
 	// similar to pendingPackages but consumers haven't committed to parsing the package
@@ -524,8 +523,8 @@ func (state *BuildState) LogBuildResult(tid int, target *BuildTarget, status Bui
 	})
 	if status == TargetBuilt || status == TargetCached {
 		// We may have parse tasks waiting for this guy to build, check for them.
-		if ch, present := state.progress.pendingTargets.GetOK(target.Label); present {
-			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
+		if ch := state.progress.pendingTargets.Get(target.Label); ch != nil {
+			close(ch) // This signals to anyone waiting that it's done.
 		}
 	}
 }
@@ -533,8 +532,8 @@ func (state *BuildState) LogBuildResult(tid int, target *BuildTarget, status Bui
 // ArchSubrepoInitialised closes the pending target channel for the non-existent arch subrepo psudo-target
 func (state *BuildState) ArchSubrepoInitialised(subrepoLabel BuildLabel) {
 	// We may have parse tasks waiting for this guy to build, check for them.
-	if ch, present := state.progress.pendingTargets.GetOK(subrepoLabel); present {
-		close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
+	if ch := state.progress.pendingTargets.Get(subrepoLabel); ch != nil {
+		close(ch) // This signals to anyone waiting that it's done.
 	}
 }
 
@@ -823,15 +822,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 	}
 	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
-	var ch chan struct{}
-	state.progress.pendingTargets.Update(l, func(old interface{}) interface{} {
-		if old != nil {
-			ch = old.(chan struct{})
-			return old
-		}
-		return make(chan struct{})
-	})
-	if ch != nil {
+	if ch, inserted := state.progress.pendingTargets.AddOrGet(l, make(chan struct{})); !inserted {
 		// Something's already registered for this, get on the train
 		<-ch
 		return state.Graph.Target(l)
@@ -1233,7 +1224,7 @@ func NewBuildState(config *Configuration) *BuildState {
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
 			numPending:      1,
-			pendingTargets:  ocmap.New(),
+			pendingTargets:  cmap.New[BuildLabel, chan struct{}](cmap.DefaultShardCount, hashBuildLabel),
 			pendingPackages: cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			packageWaits:    cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			internalResults: make(chan *BuildResult, 1000),
