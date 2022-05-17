@@ -19,6 +19,7 @@ import (
 	"lukechampine.com/blake3"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/cmap"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/process"
 )
@@ -254,7 +255,7 @@ type stateProgress struct {
 	// Used to track subinclude() calls that block until targets are built. Keyed by their label.
 	pendingTargets *ocmap.CMap
 	// Used to track general package parsing requests. Keyed by a packageKey struct.
-	pendingPackages *ocmap.CMap
+	pendingPackages *cmap.Map[packageKey, chan struct{}]
 	// similar to pendingPackages but consumers haven't committed to parsing the package
 	packageWaits *ocmap.CMap
 	// The set of known states
@@ -493,10 +494,11 @@ func (state *BuildState) OutputHashCheckers() []*fs.PathHasher {
 func (state *BuildState) LogParseResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
 	if status == PackageParsed {
 		// We may have parse tasks waiting for this package to exist, check for them.
-		if ch, present := state.progress.pendingPackages.GetOK(packageKey{Name: label.PackageName, Subrepo: label.Subrepo}); present {
-			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
+		key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
+		if ch := state.progress.pendingPackages.Get(key); ch != nil {
+			close(ch) // This signals to anyone waiting that it's done.
 		}
-		if ch, present := state.progress.packageWaits.GetOK(packageKey{Name: label.PackageName, Subrepo: label.Subrepo}); present {
+		if ch, present := state.progress.packageWaits.GetOK(key); present {
 			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
 		}
 		return // We don't notify anything else on these.
@@ -780,15 +782,7 @@ func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 	if p := state.Graph.PackageByLabel(label); p != nil {
 		return p
 	}
-	var ch chan struct{}
-	state.progress.pendingPackages.Update(label.packageKey(), func(old interface{}) interface{} {
-		if old != nil {
-			ch = old.(chan struct{})
-			return old
-		}
-		return make(chan struct{})
-	})
-	if ch != nil {
+	if ch, inserted := state.progress.pendingPackages.AddOrGet(label.packageKey(), make(chan struct{})); !inserted {
 		<-ch
 	}
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
@@ -802,8 +796,8 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
 	key := packageKey{Name: l.PackageName, Subrepo: l.Subrepo}
 
 	// If something has promised to parse it, wait for them to do so
-	if ch, present := state.progress.pendingPackages.GetOK(key); present {
-		<-ch.(chan struct{})
+	if ch := state.progress.pendingPackages.Get(key); ch != nil {
+		<-ch
 		return state.Graph.PackageByLabel(l)
 	}
 
@@ -1239,7 +1233,7 @@ func NewBuildState(config *Configuration) *BuildState {
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
 			numPending:      1,
-			pendingPackages: ocmap.New(),
+			pendingPackages: cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			pendingTargets:  ocmap.New(),
 			packageWaits:    ocmap.New(),
 			internalResults: make(chan *BuildResult, 1000),

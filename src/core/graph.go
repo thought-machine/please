@@ -151,9 +151,7 @@ func NewGraph() *BuildGraph {
 		targets: cmap.New[BuildLabel, *BuildTarget](cmap.DefaultShardCount, func(key BuildLabel) uint64 {
 			return cmap.XXHashes(key.Subrepo, key.PackageName, key.Name)
 		}),
-		packages: cmap.New[packageKey, *Package](cmap.DefaultShardCount, func(key packageKey) uint64 {
-			return cmap.XXHashes(key.Subrepo, key.Name)
-		}),
+		packages: cmap.New[packageKey, *Package](cmap.DefaultShardCount, hashPackageKey),
 		subrepos: cmap.New[string, *Subrepo](cmap.SmallShardCount, cmap.XXHash),
 	}
 	return g
