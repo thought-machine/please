@@ -14,7 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/OneOfOne/cmap"
+	ocmap "github.com/OneOfOne/cmap"
 	"github.com/cespare/xxhash/v2"
 	"lukechampine.com/blake3"
 
@@ -252,11 +252,11 @@ type stateProgress struct {
 	closeOnce  sync.Once
 	resultOnce sync.Once
 	// Used to track subinclude() calls that block until targets are built. Keyed by their label.
-	pendingTargets *cmap.CMap
+	pendingTargets *ocmap.CMap
 	// Used to track general package parsing requests. Keyed by a packageKey struct.
-	pendingPackages *cmap.CMap
+	pendingPackages *ocmap.CMap
 	// similar to pendingPackages but consumers haven't committed to parsing the package
-	packageWaits *cmap.CMap
+	packageWaits *ocmap.CMap
 	// The set of known states
 	allStates []*BuildState
 	// Targets that we were originally requested to build
@@ -1239,9 +1239,9 @@ func NewBuildState(config *Configuration) *BuildState {
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
 			numPending:      1,
-			pendingPackages: cmap.New(),
-			pendingTargets:  cmap.New(),
-			packageWaits:    cmap.New(),
+			pendingPackages: ocmap.New(),
+			pendingTargets:  ocmap.New(),
+			packageWaits:    ocmap.New(),
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 		},
