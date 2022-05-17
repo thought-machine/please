@@ -257,7 +257,7 @@ type stateProgress struct {
 	// Used to track general package parsing requests. Keyed by a packageKey struct.
 	pendingPackages *cmap.Map[packageKey, chan struct{}]
 	// similar to pendingPackages but consumers haven't committed to parsing the package
-	packageWaits *ocmap.CMap
+	packageWaits *cmap.Map[packageKey, chan struct{}]
 	// The set of known states
 	allStates []*BuildState
 	// Targets that we were originally requested to build
@@ -498,8 +498,8 @@ func (state *BuildState) LogParseResult(tid int, label BuildLabel, status BuildR
 		if ch := state.progress.pendingPackages.Get(key); ch != nil {
 			close(ch) // This signals to anyone waiting that it's done.
 		}
-		if ch, present := state.progress.packageWaits.GetOK(key); present {
-			close(ch.(chan struct{})) // This signals to anyone waiting that it's done.
+		if ch := state.progress.packageWaits.Get(key); ch != nil {
+			close(ch) // This signals to anyone waiting that it's done.
 		}
 		return // We don't notify anything else on these.
 	}
@@ -802,8 +802,8 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
 	}
 
 	// If something has already queued the package to be parsed, wait for them
-	if ch, present := state.progress.packageWaits.GetOK(key); present {
-		<-ch.(chan struct{})
+	if ch := state.progress.packageWaits.Get(key); ch != nil {
+		<-ch
 		return state.Graph.PackageByLabel(l)
 	}
 
@@ -1233,9 +1233,9 @@ func NewBuildState(config *Configuration) *BuildState {
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
 			numPending:      1,
-			pendingPackages: cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			pendingTargets:  ocmap.New(),
-			packageWaits:    ocmap.New(),
+			pendingPackages: cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
+			packageWaits:    cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 		},
