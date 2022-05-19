@@ -11,6 +11,7 @@ import (
 	"github.com/thought-machine/go-flags"
 
 	"github.com/thought-machine/please/src/cli/logging"
+	"github.com/thought-machine/please/src/cmap"
 	"github.com/thought-machine/please/src/process"
 )
 
@@ -456,9 +457,17 @@ func (label BuildLabel) subrepoLabel() BuildLabel {
 	return BuildLabel{Name: label.Subrepo}
 }
 
+func hashBuildLabel(l BuildLabel) uint64 {
+	return cmap.XXHashes(l.Subrepo, l.PackageName, l.Name)
+}
+
 // packageKey returns a key for this build label that only uses the subrepo and package parts.
 func (label BuildLabel) packageKey() packageKey {
 	return packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
+}
+
+func hashPackageKey(key packageKey) uint64 {
+	return cmap.XXHashes(key.Subrepo, key.Name)
 }
 
 // CanSee returns true if label can see the given dependency, or false if not.
