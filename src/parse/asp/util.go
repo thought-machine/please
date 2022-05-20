@@ -57,38 +57,45 @@ func FindArgument(statement *Statement, args ...string) (argument *CallArgument)
 }
 
 // WalkAST is a generic function that walks through the ast recursively,
-// It accepts a function to look for a particular grammar object; it will be called on
+// It accepts a sequence of functions to look for a particular grammar object; any matching one will be called on
 // each instance of that type, and returns a bool - for example
 // WalkAST(ast, func(expr *Expression) bool { ... })
 // If the callback returns true, the node will be further visited; if false it (and
 // all children) will be skipped.
-func WalkAST(ast []*Statement, callback interface{}) {
-	cb := reflect.ValueOf(callback)
-	typ := cb.Type().In(0)
+func WalkAST(ast []*Statement, callback ...interface{}) {
+	types := make([]reflect.Type, len(callback))
+	callbacks := make([]reflect.Value, len(callback))
+	for i, cb := range callback {
+		v := reflect.ValueOf(cb)
+		types[i] = v.Type().In(0)
+		callbacks[i] = v
+	}
 	for _, node := range ast {
-		walkAST(reflect.ValueOf(node), typ, cb)
+		walkAST(reflect.ValueOf(node), types, callbacks)
 	}
 }
 
-func walkAST(v reflect.Value, nodeType reflect.Type, callback reflect.Value) {
+func walkAST(v reflect.Value, types []reflect.Type, callbacks []reflect.Value) {
 	call := func(v reflect.Value) bool {
-		if v.Type() == nodeType {
-			vs := callback.Call([]reflect.Value{v})
-			return vs[0].Bool()
+		for i, typ := range types {
+			if v.Type() == typ {
+				vs := callbacks[i].Call([]reflect.Value{v})
+				return vs[0].Bool()
+			}
 		}
 		return true
 	}
 
 	if v.Kind() == reflect.Ptr && !v.IsNil() {
-		walkAST(v.Elem(), nodeType, callback)
+		walkAST(v.Elem(), types, callbacks)
 	} else if v.Kind() == reflect.Slice {
 		for i := 0; i < v.Len(); i++ {
-			walkAST(v.Index(i), nodeType, callback)
+			walkAST(v.Index(i), types, callbacks)
 		}
 	} else if v.Kind() == reflect.Struct {
 		if call(v.Addr()) {
 			for i := 0; i < v.NumField(); i++ {
-				walkAST(v.Field(i), nodeType, callback)
+				walkAST(v.Field(i), types, callbacks)
 			}
 		}
 	}
