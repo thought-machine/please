@@ -17,8 +17,8 @@ maven_jar(
 
 maven_jar(
     name = "gson",
-    hash = "53bc5fe7644db908e6071d6c8b59059acadce7fc14217933d7251994e8673104",
-    id = "com.google.code.gson:gson:2.8.4",
+    hash = "d3999291855de495c94c743761b8ab5176cfeabe281a5ab0d8e8d45326fd703e",
+    id = "com.google.code.gson:gson:2.8.9",
 )
 
 # These are shipped as components of Please, but for easier management the code lives in
