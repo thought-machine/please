@@ -21,11 +21,12 @@ type buildMetadataStore interface {
 }
 
 type directoryMetadataStore struct {
+	instance      string
 	directory     string
 	cacheDuration time.Duration
 }
 
-func newDirMDStore(cacheDuration time.Duration) *directoryMetadataStore {
+func newDirMDStore(instance string, cacheDuration time.Duration) *directoryMetadataStore {
 	userCacheDir, err := os.UserCacheDir()
 	if err != nil {
 		log.Fatalf("failed to find user cache dir for metadata store: %v", err)
@@ -36,6 +37,7 @@ func newDirMDStore(cacheDuration time.Duration) *directoryMetadataStore {
 		log.Fatalf("failed to create metadata store directory: %v", err)
 	}
 	store := &directoryMetadataStore{
+		instance:      instance,
 		directory:     dir,
 		cacheDuration: cacheDuration,
 	}
@@ -60,16 +62,12 @@ func (d *directoryMetadataStore) clean() {
 
 func (d *directoryMetadataStore) storeMetadata(key string, md *core.BuildMetadata) error {
 	prefix := key[:2]
-	dir := filepath.Join(d.directory, prefix)
+	dir := filepath.Join(d.directory, d.instance, prefix)
 	if err := os.MkdirAll(dir, fs.DirPermissions); err != nil {
 		return fmt.Errorf("failed to create metadata store directory: %w", err)
 	}
 
 	filename := filepath.Join(dir, key)
-	if err := os.RemoveAll(filename); err != nil {
-		return err
-	}
-
 	var buf bytes.Buffer
 	writer := gob.NewEncoder(&buf)
 	if err := writer.Encode(md); err != nil {
@@ -80,7 +78,7 @@ func (d *directoryMetadataStore) storeMetadata(key string, md *core.BuildMetadat
 
 func (d *directoryMetadataStore) retrieveMetadata(key string) (*core.BuildMetadata, error) {
 	prefix := key[:2]
-	fileName := filepath.Join(d.directory, prefix, key)
+	fileName := filepath.Join(d.directory, d.instance, prefix, key)
 
 	md, err := loadMetadata(fileName)
 	if err != nil {

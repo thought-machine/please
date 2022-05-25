@@ -137,7 +137,7 @@ func New(state *core.BuildState) *Client {
 		state:    state,
 		instance: state.Config.Remote.Instance,
 		outputs:  map[core.BuildLabel]*pb.Directory{},
-		mdStore:  newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
+		mdStore:  newDirMDStore(state.Config.Remote.Instance, time.Duration(state.Config.Remote.CacheDuration)),
 		existingBlobs: map[string]struct{}{
 			digest.Empty.Hash: {},
 		},
