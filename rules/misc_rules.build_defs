@@ -370,7 +370,8 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
                 labels:list=[], deps:list=None, exported_deps:list=None,
                 extract:bool=False, strip_prefix:str='', _tag:str='',exported_files=[],
                 entry_points:dict={}, username:str=None, password_file:str=None,
-                headers:dict={}, secret_headers:dict={}, pass_env:list=[]):
+                headers:dict={}, secret_headers:dict={}, pass_env:list=[], name_scheme:str=None,
+                cache_url:str=None, cache_path:str=None, prioritise_cache:bool=False):
     """Defines a rule to fetch a file over HTTP(S).
 
     Args:
@@ -395,6 +396,14 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
       headers (dict): Headers to pass to curl.
       secret_headers (dict): Headers contained in files to pass to curl.
       pass_env (list): Any environment variables referenced by headers that should be passed in from the host.
+      name_scheme (str): The templatized cache naming scheme (available template variables
+                         are `url_base`, `cache_path`, and `file_name`). `file_name` is given by `out`
+                         or taken from the first given url.
+      cache_url (str): Cache URL to download from.
+      cache_path (str): Directory containing the file under cache_url. Defaults to the URL-safe base64
+                        encoding of the dirname of the first given `url`.
+      prioritise_cache (str): If a cache URL is provided, whether to try to download from there
+                              before the given url(s).
     """
     if extract:
         if out:
@@ -453,6 +462,24 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
 
     urls = [url] if isinstance(url, str) else url
     url = urls[0]
+    file_name = out or url[url.rfind('/') + 1:]
+
+    url_base = cache_url or CONFIG.REMOTE_FILE_CACHE_URL
+    if not url_base:
+        if name_scheme or CONFIG.REMOTE_FILE_CACHE_NAME_SCHEME:
+            fail('remote_file.cache_url is not set in the config, must pass cache_url explicitly to remote_file')
+
+    cache_urls = []
+    if name_scheme:
+        cache_urls += [name_scheme.format(url_base=url_base,
+                                    cache_path=base64_url(dirname(url)),
+                                    file_name=file_name)]
+    elif CONFIG.REMOTE_FILE_CACHE_NAME_SCHEME:
+        cache_urls += [scheme.format(url_base=url_base, cache_path=base64_url(dirname(url)), file_name=file_name)
+                       for scheme in CONFIG.REMOTE_FILE_CACHE_NAME_SCHEME]
+
+    prioritise_cache = prioritise_cache or CONFIG.REMOTE_FILE_PRIORITISE_CACHE
+    urls = cache_urls + urls if prioritise_cache else urls + cache_urls
 
     if bool(username) != bool(password_file):
         fail(f"Both or neither of username and password_file should be specified")
@@ -470,7 +497,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         tag = _tag,
         cmd = '',
         _urls = urls,
-        outs = [out or url[url.rfind('/') + 1:]],
+        outs = [file_name],
         binary = binary,
         visibility = visibility,
         hashes = hashes,

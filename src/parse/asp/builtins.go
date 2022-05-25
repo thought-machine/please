@@ -1,6 +1,7 @@
 package asp
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -64,6 +65,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "is_semver", isSemver)
 	setNativeCode(s, "semver_check", semverCheck)
 	setNativeCode(s, "looks_like_build_label", looksLikeBuildLabel)
+	setNativeCode(s, "base64_url", base64URL)
 	s.interpreter.stringMethods = map[string]*pyFunc{
 		"join":         setNativeCode(s, "join", strJoin),
 		"split":        setNativeCode(s, "split", strSplit),
@@ -1185,4 +1187,9 @@ func semverCheck(s *scope, args []pyObject) pyObject {
 	}
 
 	return newPyBool(c.Check(v))
+}
+
+// base64URL returns the (unpadded) base64 encoding
+func base64URL(s *scope, args []pyObject) pyObject {
+	return pyString(base64.RawURLEncoding.EncodeToString([]byte(args[0].(pyString))))
 }

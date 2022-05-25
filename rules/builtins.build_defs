@@ -283,3 +283,7 @@ def is_semver(s:str) -> bool:
 
 def semver_check(version:str, constraint:str) -> bool:
     pass
+
+def base64_url(s:str) -> str:
+    """Returns the URL-safe unpadded base64 representation of a given string."""
+    pass
