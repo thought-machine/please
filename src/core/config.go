@@ -563,6 +563,11 @@ type Configuration struct {
 		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
 		BuildID       string       `help:"ID of the build action that's being run, to attach to remote requests."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
+	RemoteFile struct {
+		CacheURL        cli.URL  `help:"Defines remote repo location that remote_file rules can download from. See remote_file for more information." var:"REMOTE_FILE_CACHE_URL"`
+		CacheNameScheme []string `help:"Defines a custom templatized naming scheme for remote_files. Surround templatized variables in curly braces. Available options: url_base, cache_path, file_name. The default search pattern is '{url_base}/{cache_path}/{file_name}'." var:"REMOTE_FILE_CACHE_NAME_SCHEME"`
+		PrioritiseCache bool     `help:"If a cache URL is set, attempt to download from there before URLs specified in the remote_file rule itself."`
+	}
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
 		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to .go, .py, .java, .tsx, .ts, .js, .cc, .h, and .c"`

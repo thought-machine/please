@@ -2252,6 +2252,57 @@
 </section>
 
 <section class="mt4">
+  <h2 id="remote_file" class="title-2">[RemoteFile]</h2>
+
+  <p>Properties that affect how the various Python build rules work.</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote_file.wheelrepo">WheelRepo</h3>
+
+        <p>
+          Defines a location for a remote cache that remote_file rules can
+          download from, e.g. a cloud storage bucket URL. See
+          <a class="copy-link" href="/lexicon.html#remote_file"
+            >remote_file</a
+          >
+          for more information.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote_file.prioritise_cache">
+          PrioritiseCache <span class="normal">(bool)</span>
+        </h3>
+
+        <p>
+          Whether to try to download files requested in <code class="code">remote_file</code>
+          rules from the cache URL before any URLs specified in the
+          <code class="code">remote_file</code> rule itself. Defaults to
+          <code class="code">False</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote_file.cache_name_scheme">CacheNameScheme</h3>
+        <p>
+          Defines a custom templatized naming scheme for <code class="code">remote_file</code>s.
+          <br />Templatized variables should be surrounded in curly braces within the
+          scheme. The available options are:
+          <code class="code">url_base</code>,
+          <code class="code">cache_path</code>, and
+          <code class="code">file_name</code>. The default search pattern is
+          <code class="code">{{ "{url_base}/{cache_path}/{file_name}" }}</code>.
+        </p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
   <h2 id="licences" class="title-2">[Licences]</h2>
 
   <p>
