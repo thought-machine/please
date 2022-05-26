@@ -566,7 +566,7 @@ type Configuration struct {
 	RemoteFile struct {
 		CacheURL        cli.URL  `help:"Defines remote repo location that remote_file rules can download from. See remote_file for more information." var:"REMOTE_FILE_CACHE_URL"`
 		CacheNameScheme []string `help:"Defines a custom templatized naming scheme for remote_files. Surround templatized variables in curly braces. Available options: url_base, cache_path, file_name. The default search pattern is '{url_base}/{cache_path}/{file_name}'." var:"REMOTE_FILE_CACHE_NAME_SCHEME"`
-		PrioritiseCache bool     `help:"If a cache URL is set, attempt to download from there before URLs specified in the remote_file rule itself."`
+		PrioritiseCache bool     `help:"If a cache URL is set, attempt to download from there before URLs specified in the remote_file rule itself." var:"REMOTE_FILE_PRIORITISE_CACHE"`
 	}
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
