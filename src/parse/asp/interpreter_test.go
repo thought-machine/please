@@ -467,7 +467,7 @@ func TestSemverCheck(t *testing.T) {
 
 func TestBase64URL(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
-		s, err := parseFile("src/parse/asp/test_data/interpreter/base64_url.build")
+		s, err := parseFile("src/parse/asp/test_data/interpreter/base64url.build")
 		assert.NoError(t, err)
 		assert.Equal(t, "XC8hJCMxPzUmYT1iLTA5", s.Lookup("special").String())
 		assert.Equal(t, "", s.Lookup("empty").String())

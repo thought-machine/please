@@ -65,7 +65,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "is_semver", isSemver)
 	setNativeCode(s, "semver_check", semverCheck)
 	setNativeCode(s, "looks_like_build_label", looksLikeBuildLabel)
-	setNativeCode(s, "base64_url", base64URL)
+	setNativeCode(s, "base64url", base64URL)
 	s.interpreter.stringMethods = map[string]*pyFunc{
 		"join":         setNativeCode(s, "join", strJoin),
 		"split":        setNativeCode(s, "split", strSplit),

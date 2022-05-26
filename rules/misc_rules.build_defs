@@ -472,11 +472,11 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
     cache_urls = []
     if name_scheme:
         cache_urls += [name_scheme.format(url_base=url_base,
-                                    cache_path=cache_path or base64_url(dirname(url)),
+                                    cache_path=cache_path or base64url(dirname(url)),
                                     file_name=file_name)]
     elif CONFIG.REMOTE_FILE_CACHE_NAME_SCHEME:
         cache_urls += [scheme.format(url_base=url_base,
-                       cache_path=cache_path or base64_url(dirname(url)),
+                       cache_path=cache_path or base64url(dirname(url)),
                        file_name=file_name)
                        for scheme in CONFIG.REMOTE_FILE_CACHE_NAME_SCHEME]
 
