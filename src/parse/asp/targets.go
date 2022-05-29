@@ -269,9 +269,15 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addStrings(s, "hashes", args[hashesBuildRuleArgIdx], t.AddHash)
 	addStrings(s, "licences", args[licencesBuildRuleArgIdx], t.AddLicence)
 	addStrings(s, "requires", args[requiresBuildRuleArgIdx], t.AddRequire)
-	addStrings(s, "visibility", args[visibilityBuildRuleArgIdx], func(str string) {
-		t.Visibility = append(t.Visibility, parseVisibility(s, str))
-	})
+	if vis, ok := args[visibilityBuildRuleArgIdx].(pyList); ok && len(vis) != 0 {
+		if v, ok := vis[0].(pyString); ok && v == "PUBLIC" {
+			t.Visibility = core.WholeGraph
+		} else {
+			addStrings(s, "visibility", args[visibilityBuildRuleArgIdx], func(str string) {
+				t.Visibility = append(t.Visibility, parseVisibility(s, str))
+			})
+		}
+	}
 	addEntryPoints(s, args[entryPointsArgIdx], t)
 	addEnv(s, args[envArgIdx], t)
 	addMaybeNamedSecret(s, "secrets", args[secretsBuildRuleArgIdx], t.AddSecret, t.AddNamedSecret, t, true)
