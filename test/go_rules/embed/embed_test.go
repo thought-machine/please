@@ -12,7 +12,7 @@ func TestLibEmbed(t *testing.T) {
 }
 
 func TestLibEmbedDir(t *testing.T) {
-	b, err := testData.ReadFile("test_data/text.txt")
+	b, err := testData.ReadFile("test_data/test.txt")
 	assert.NoError(t, err)
 	assert.Equal(t, "hello world", strings.TrimSpace(string(b)))
 }
