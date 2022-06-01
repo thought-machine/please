@@ -28,7 +28,7 @@ const testDurationGranularity = time.Millisecond
 
 // MonitorState monitors the build while it's running and prints output until the results
 // channel of state has completed.
-func MonitorState(state *core.BuildState, plainOutput, unformattedBuildOutput, detailedTests, streamTestResults, shell, shellRun bool, traceFile string) {
+func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTestResults, shell, shellRun bool, traceFile string) {
 	initPrintf(state.Config)
 
 	if len(state.Config.Please.Motd) != 0 {
@@ -93,7 +93,7 @@ loop:
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
 		} else if !state.NeedRun { // Must be plz build or similar, report build outputs.
-			if unformattedBuildOutput {
+			if !cli.IsATerminal(os.Stdout) {
 				printUnformattedBuildResults(state)
 			} else {
 				printBuildResults(state, duration)
