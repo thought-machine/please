@@ -815,6 +815,10 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
 func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarget {
+	return state.waitForBuiltTarget(l, dependent, true)
+}
+
+func (state *BuildState) waitForBuiltTarget(l, dependent BuildLabel, forSubinclude bool) *BuildTarget {
 	if t := state.Graph.Target(l); t != nil {
 		if s := t.State(); s >= Built && s != Failed {
 			return t
@@ -827,14 +831,14 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarge
 		<-ch
 		return state.Graph.Target(l)
 	}
-	if err := state.queueTarget(l, dependent, true, true); err != nil {
+	if err := state.queueTarget(l, dependent, forSubinclude, forSubinclude); err != nil {
 		log.Fatalf("%v", err)
 	}
 
 	// Do this all over; the re-checking that happens here is actually fairly important to resolve
 	// a potential race condition if the target was built between us checking earlier and registering
 	// the channel just now.
-	return state.WaitForBuiltTarget(l, dependent)
+	return state.waitForBuiltTarget(l, dependent, forSubinclude)
 }
 
 // AddTarget adds a new target to the build graph.
@@ -896,7 +900,17 @@ func (state *BuildState) EnsureDownloaded(target *BuildTarget) error {
 
 // WaitForTargetAndEnsureDownload waits for the target to be built and then downloads it if executing remotely
 func (state *BuildState) WaitForTargetAndEnsureDownload(l, dependent BuildLabel) *BuildTarget {
-	target := state.WaitForBuiltTarget(l, dependent)
+	return state.waitForTargetAndEnsureDownload(l, dependent, true)
+}
+
+// WaitForInitialTargetAndEnsureDownload is like WaitForTargetAndEnsureDownload but is used for
+// targets in the initial set.
+func (state *BuildState) WaitForInitialTargetAndEnsureDownload(l, dependent BuildLabel) *BuildTarget {
+	return state.waitForTargetAndEnsureDownload(l, dependent, false)
+}
+
+func (state *BuildState) waitForTargetAndEnsureDownload(l, dependent BuildLabel, forSubinclude bool) *BuildTarget {
+	target := state.waitForBuiltTarget(l, dependent, forSubinclude)
 	if err := state.EnsureDownloaded(target); err != nil {
 		panic(fmt.Errorf("failed to download target outputs: %w", err))
 	}
