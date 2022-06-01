@@ -1,3 +1,13 @@
+Version 16.20.3
+---------------
+
+    * The build metadata store for remote execution now prefixes the path rather than
+      convoluting hashes, making items in it easier to locate (#2464)
+    * Build outputs are printed without formatting when stdout is not interactive (#2480)
+    * Fixed a race condition between building initial targets in a subrepo and preloaded
+      subincludes (#2482)
+
+
 Version 16.20.2
 ---------------
     * Make `plz query deps` traverse hidden dependencies even when
