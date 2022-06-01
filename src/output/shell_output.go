@@ -93,7 +93,11 @@ loop:
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
 		} else if !state.NeedRun { // Must be plz build or similar, report build outputs.
-			printBuildResults(state, duration)
+			if !cli.IsATerminal(os.Stdout) {
+				printUnformattedBuildResults(state)
+			} else {
+				printBuildResults(state, duration)
+			}
 		}
 		msgs, totalMessages, actualMessages := cli.CurrentBackend.GetMessageHistory()
 		if actualMessages > 0 && !plainOutput {
@@ -356,6 +360,14 @@ func testResultMessage(results *core.TestSuite, showDuration bool) string {
 		msg += " ${GREEN}[cached]${RESET}"
 	}
 	return msg
+}
+
+func printUnformattedBuildResults(state *core.BuildState) {
+	for _, label := range state.ExpandVisibleOriginalTargets() {
+		for _, result := range buildResult(state.Graph.TargetOrDie(label)) {
+			fmt.Printf("%s\n", result)
+		}
+	}
 }
 
 func printBuildResults(state *core.BuildState, duration time.Duration) {

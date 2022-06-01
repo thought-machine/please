@@ -155,7 +155,7 @@ filegroup(
 plz_e2e_test(
     name = "require_provide_test",
     cmd = "plz build //test/moar:require_provide_check -v 2 -p",
-    expect_output_doesnt_contain = "//test/moar:test_require",
+    expected_output = "require_provide_test.txt",
 )
 
 # Test for running individual tests

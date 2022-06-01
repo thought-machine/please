@@ -25,7 +25,7 @@ const messageHistoryMaxSize = 100
 var log = logger.Log
 
 // StdErrIsATerminal is true if the process' stderr is an interactive TTY.
-var StdErrIsATerminal = term.IsTerminal(int(os.Stderr.Fd()))
+var StdErrIsATerminal = IsATerminal(os.Stderr)
 
 // ShowColouredOutput tracks whether we are displaying coloured output or not.
 var ShowColouredOutput = StdErrIsATerminal
@@ -307,4 +307,9 @@ func (w *HTTPLogWrapper) Debug(msg string, keysAndValues ...interface{}) {
 // Warn logs at warning level
 func (w *HTTPLogWrapper) Warn(msg string, keysAndValues ...interface{}) {
 	w.Log.Warningf("%v: %v", msg, keysAndValues)
+}
+
+// IsATerminal returns true if the given file is an interactive TTY.
+func IsATerminal(file *os.File) bool {
+	return term.IsTerminal(int(file.Fd()))
 }
