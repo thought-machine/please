@@ -1098,6 +1098,14 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		IsCrossCompile: isCrossCompile,
 	}
 
+	// Typically this would be deferred until we have built the subrepo target and have its config available. As we
+	// don't have a subrepo target, we can and should load it here.
+	if target == nil {
+		if err := sr.LoadSubrepoConfig(); err != nil {
+			log.Fatalf("Could not load subrepo config for %s: %v", sr.Name, err)
+		}
+	}
+
 	if args[ConfigArgIdx].IsTruthy() {
 		sr.AdditionalConfigFiles = append(sr.AdditionalConfigFiles, string(args[ConfigArgIdx].(pyString)))
 	}

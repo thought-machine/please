@@ -35,6 +35,7 @@ func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, e
 	return 0
 }
 
+// exec runs the given command in the given directory, with the given environment and arguments.
 func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir string, env []string, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) error {
 	if !target.IsBinary && len(overrideCmdArgs) == 0 {
 		return fmt.Errorf("Either the target needs to be a binary or an override command must be provided")
@@ -54,6 +55,7 @@ func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir string, e
 	return err
 }
 
+// resolveCmd resolves the command to run for the given target.
 func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArgs []string, runtimeDir string, sandbox process.SandboxConfig) (string, error) {
 	// The override command takes precedence if provided
 	if len(overrideCmdArgs) > 0 {
