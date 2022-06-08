@@ -4,6 +4,7 @@ package embed
 import (
 	"fmt"
 	"go/build"
+	"io/fs"
 	"path"
 	"path/filepath"
 	"strings"
@@ -65,8 +66,18 @@ func relglob(dir, pattern string) ([]string, error) {
 	if err == nil && len(paths) == 0 {
 		return nil, fmt.Errorf("pattern %s: no matching paths found", pattern)
 	}
-	for i, p := range paths {
-		paths[i] = strings.TrimLeft(strings.TrimPrefix(p, dir), string(filepath.Separator))
+	ret := make([]string, 0, len(paths))
+	for _, p := range paths {
+		if err := filepath.WalkDir(p, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			} else if !d.IsDir() {
+				ret = append(ret, strings.TrimLeft(strings.TrimPrefix(path, dir), string(filepath.Separator)))
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
 	}
-	return paths, err
+	return ret, err
 }
