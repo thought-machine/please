@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"fmt"
 	"os"
 	"path"
 )
@@ -100,4 +101,44 @@ func LinkDestination(src, dest string, f LinkFunc) {
 		}
 		return nil
 	})
+}
+
+// Link creates dest as a hard link to the src, replacing existing dest
+// links to support cases where hard link metadata is not stored (e.g. with
+// `git`).
+func Link(src, dest string) error {
+	if PathExists(dest) {
+		// remove existing hard links as git won't follow them
+		if err := os.Remove(dest); err != nil {
+			return fmt.Errorf("could not remove link %s: %w", dest, err)
+		}
+	}
+
+	return os.Link(src, dest)
+}
+
+// Symlink creates dest as symbolic link to the src, skipping if symbolic link
+// already exists.
+func Symlink(src, dest string) error {
+	if !PathExists(src) {
+		return fmt.Errorf("%s: %w", src, os.ErrNotExist)
+	}
+
+	if PathExists(dest) {
+		fileInfo, err := os.Lstat(dest)
+		if err != nil {
+			return fmt.Errorf("could get Lstat %s: %w", dest, err)
+		}
+		if fileInfo.Mode()&os.ModeSymlink == os.ModeSymlink {
+			// is already a symbolic link
+			return nil
+		}
+
+		// remove existing files that aren't symbolic links
+		if err := os.Remove(dest); err != nil {
+			return fmt.Errorf("could not remove link %s: %w", dest, err)
+		}
+	}
+
+	return os.Symlink(src, dest)
 }

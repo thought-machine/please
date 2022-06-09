@@ -1,7 +1,6 @@
 package generate
 
 import (
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -42,9 +41,9 @@ func UpdateGitignore(graph *core.BuildGraph, labels []core.BuildLabel, gitignore
 
 // LinkGeneratedSources will link any generated sources for the outputs of the given labels
 func LinkGeneratedSources(state *core.BuildState, labels []core.BuildLabel) {
-	linker := os.Symlink
+	linker := fs.Symlink
 	if state.Config.Build.LinkGeneratedSources == "hard" {
-		linker = os.Link
+		linker = fs.Link
 	}
 
 	vcs := scm.NewFallback(core.RepoRoot)
@@ -55,7 +54,7 @@ func LinkGeneratedSources(state *core.BuildState, labels []core.BuildLabel) {
 			for _, out := range target.Outputs() {
 				destDir := path.Join(core.RepoRoot, target.Label.PackageDir())
 				srcDir := path.Join(core.RepoRoot, target.OutDir())
-				fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), linker)
+				fs.LinkDestination(path.Join(srcDir, out), path.Join(destDir, out), linker)
 			}
 			if state.Config.Build.UpdateGitignore {
 				if err := UpdateGitignore(state.Graph, labels, vcs.FindClosestIgnoreFile(target.Label.PackageDir())); err != nil {
