@@ -29,7 +29,10 @@ go_test(
 
 go_test(
     name = "build_step_test",
-    srcs = ["build_step_test.go", "remote_file_test.go"],
+    srcs = [
+        "build_step_test.go",
+        "remote_file_test.go",
+    ],
     data = ["test_data"],
     deps = [
         ":build",
