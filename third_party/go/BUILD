@@ -1,4 +1,3 @@
-
 package(default_visibility = ["PUBLIC"])
 
 go_toolchain(

@@ -63,7 +63,6 @@ func TestLink(t *testing.T) {
 
 				assert.Equal(t, string(srcFileContents), string(destFileContents))
 			}
-
 		})
 	}
 }
@@ -121,7 +120,6 @@ func TestSymlink(t *testing.T) {
 
 				assert.Equal(t, string(srcFileContents), string(destFileContents))
 			}
-
 		})
 	}
 }

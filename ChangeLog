@@ -1,3 +1,13 @@
+Version 16.20.4
+---------------
+
+    * Support embedding directories using Golang embed comments #2479
+    * Fix determinism issue in `go_toolchain()` when cross compiling #2496
+    * Fix deadlock when parsing a locally defined subrepo #2487
+    * Ensure hardlinks and symlinks are updated correctly when linking
+      generated sources #2493
+
+
 Version 16.20.3
 ---------------
 

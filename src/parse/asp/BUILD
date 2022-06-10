@@ -13,13 +13,13 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
-        "//src/cmap",
         "//src/cli/logging",
+        "//src/cmap",
         "//src/core",
         "//src/fs",
+        "//third_party/go:gcfg",
         "//third_party/go:promptui",
         "//third_party/go:semver2",
-        "//third_party/go:gcfg",
     ],
 )
 
