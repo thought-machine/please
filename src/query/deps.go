@@ -2,30 +2,32 @@ package query
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/thought-machine/please/src/core"
 )
 
 // Deps prints all transitive dependencies of a set of targets.
 func Deps(state *core.BuildState, labels []core.BuildLabel, hidden bool, targetLevel int) {
+	deps(os.Stdout, state, labels, hidden, targetLevel)
+}
+
+func deps(out io.Writer, state *core.BuildState, labels []core.BuildLabel, hidden bool, targetLevel int) {
 	done := map[core.BuildLabel]bool{}
 	for _, label := range labels {
-		printTarget(state, state.Graph.TargetOrDie(label), "", done, hidden, 0, targetLevel)
+		printTarget(out, state, state.Graph.TargetOrDie(label), "", done, hidden, 0, targetLevel)
 	}
 }
 
-func printTarget(state *core.BuildState, target *core.BuildTarget, indent string, done map[core.BuildLabel]bool, hidden bool, currentLevel int, targetLevel int) {
-	if !state.ShouldInclude(target) {
-		return
-	}
-
+func printTarget(out io.Writer, state *core.BuildState, target *core.BuildTarget, indent string, done map[core.BuildLabel]bool, hidden bool, currentLevel int, targetLevel int) {
 	levelLimitReached := targetLevel != -1 && currentLevel == targetLevel
 	if done[target.Label] || levelLimitReached {
 		return
 	}
 
-	if hidden || !target.HasParent() {
-		fmt.Printf("%s%s\n", indent, target)
+	if state.ShouldInclude(target) && (hidden || !target.HasParent()) {
+		fmt.Fprintf(out, "%s%s\n", indent, target)
 		done[target.Label] = true
 
 		indent += "  "
@@ -33,6 +35,6 @@ func printTarget(state *core.BuildState, target *core.BuildTarget, indent string
 	}
 
 	for _, dep := range target.Dependencies() {
-		printTarget(state, dep, indent, done, hidden, currentLevel, targetLevel)
+		printTarget(out, state, dep, indent, done, hidden, currentLevel, targetLevel)
 	}
 }
