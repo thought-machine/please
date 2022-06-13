@@ -1,6 +1,9 @@
 go_library(
     name = "cmap",
-    srcs = ["cmap.go", "hash.go"],
+    srcs = [
+        "cmap.go",
+        "hash.go",
+    ],
     visibility = ["PUBLIC"],
     deps = [
         "//third_party/go:xxhash",
