@@ -354,19 +354,6 @@
       <li>
         <div>
           <h4 class="mt1 f6 lh-title">
-            <code class="code">--nocache</code>
-          </h4>
-
-          <p>
-            Disables caches.<br />
-            Note that this does not disable incrementality, so targets that
-            don't need rebuilding still won't be.
-          </p>
-        </div>
-      </li>
-      <li>
-        <div>
-          <h4 class="mt1 f6 lh-title">
             <code class="code">--nohash_verification</code>
           </h4>
 
@@ -949,6 +936,31 @@
     complex projects will still likely find things that don't translate easily.
   </p>
 </section>
+
+<section class="mt4">
+  <h2 id="generate" class="title-2">plz generate</h2>
+
+  <p>
+    This command can be used to build generated sources and link them back into
+    the source tree. This can be useful for tooling that expects generated sources
+    to be there like linters and IDEs.
+  </p>
+
+  <p>
+    To build all generated sources, simply run <code class="code">plz generate</code>.
+  </p>
+
+  <p>
+    Please can also update a gitignore file, ignoring all the gnerated files automatically:
+    <code class="code">plz generate --update_gitignore .gitignore</code>
+  </p>
+
+  <p>To automatically link generated sources and update .gitignore files during normal builds, see the
+    <a class="copy-link" href="config.html#build.linkgeneratedsources">LinkGeneratedSources</a>, and
+    <a class="copy-link" href="config.html#build.updategitignore">UpdateGitignore</a> config values.
+  </p>
+</section>
+
 
 <section class="mt4">
   <h2 id="update" class="title-2">

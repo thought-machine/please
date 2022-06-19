@@ -18,9 +18,9 @@ func init() {
 
 func TestSequential(t *testing.T) {
 	state, labels1, labels2 := makeState(core.DefaultConfiguration())
-	code := Sequential(state, labels1, nil, true, false, false, false, "")
+	code := Sequential(state, labels1, nil, Quiet, false, false, false, "")
 	assert.Equal(t, 0, code)
-	code = Sequential(state, labels2, nil, false, false, false, false, "")
+	code = Sequential(state, labels2, nil, Default, false, false, false, "")
 	assert.Equal(t, 1, code)
 }
 
@@ -37,7 +37,7 @@ func TestEnvVars(t *testing.T) {
 	config.Build.Path = []string{"/wibble"}
 	state, lab1, _ := makeState(config)
 
-	os.Setenv("PATH", "/usr/local/bin:/usr/bin:/bin")
+	t.Setenv("PATH", "/usr/local/bin:/usr/bin:/bin")
 	env := environ(state, state.Graph.TargetOrDie(lab1[0].BuildLabel), false, false)
 	assert.Contains(t, env, "PATH=/usr/local/bin:/usr/bin:/bin")
 	assert.NotContains(t, env, "PATH=/wibble")

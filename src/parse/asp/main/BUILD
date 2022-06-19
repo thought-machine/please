@@ -4,9 +4,9 @@ go_binary(
     deps = [
         "//rules",
         "//src/cli",
+        "//src/cli/logging",
         "//src/core",
         "//src/parse/asp",
-        "//third_party/go:logging",
         "//third_party/go:spew",
     ],
 )

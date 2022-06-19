@@ -10,6 +10,6 @@ if not isinstance(CONFIG.FOO.INT_TEST, int):
     fail("IntTest should be an int")
 
 foolang_library(
-    name = "foo_lib",
-    srcs = ["test.foo"],
+    name = "root_lib",
+    src = "test.foo",
 )

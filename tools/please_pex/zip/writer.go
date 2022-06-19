@@ -446,7 +446,7 @@ func (f *File) WriteFile(filename string, data []byte, mode os.FileMode) error {
 		Method: zip.Deflate,
 	}
 	fh.SetMode(mode)
-	fh.SetModTime(modTime)
+	fh.SetModTime(modTime) //nolint:staticcheck
 
 	for _, ext := range f.StoreSuffix {
 		if strings.HasSuffix(filename, ext) {
@@ -472,7 +472,7 @@ func (f *File) WriteDir(filename string) error {
 		Name:   filename,
 		Method: zip.Store,
 	}
-	fh.SetModTime(modTime)
+	fh.SetModTime(modTime) //nolint:staticcheck
 	if _, err := f.w.CreateHeader(&fh); err != nil {
 		return err
 	}

@@ -3,16 +3,16 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_alpine:20210817
+       - image: thoughtmachine/please_alpine:20220422
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-alpine-v5-{{ checksum "go.mod" }}
+           key: go-mod-alpine-v6-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-alpine-main-v5-{{ checksum "third_party/go/BUILD" }}
+           key: go-alpine-main-v6-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-alpine-main-v2-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -24,7 +24,7 @@ jobs:
            path: plz-out/results
        - run:
            name: Package
-           command: plz-out/please/plz build //package:all -p --profile ci --profile alpine
+           command: plz-out/bin/src/please build //package:all -p --profile ci --profile alpine
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -32,11 +32,11 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-mod-alpine-v5-{{ checksum "go.mod" }}
+           key: go-mod-alpine-v6-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-alpine-main-v5-{{ checksum "third_party/go/BUILD" }}
+           key: go-alpine-main-v6-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-alpine-main-v2-{{ checksum "third_party/python/BUILD" }}
@@ -48,16 +48,16 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20210817
+       - image: thoughtmachine/please_ubuntu:20220516
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-linux-v5-{{ checksum "go.mod" }}
+           key: go-mod-linux-v6-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-linux-main-v5-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v6-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-main-v2-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -65,11 +65,14 @@ jobs:
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
+       - run:
+           name: No plugins
+           command: plz-out/bin/src/please build //package:installed_files && ./test.sh --profile noplugins --test_results_file plz-out/results/please/no_plugin.xml
        - store_test_results:
            path: plz-out/results
        - run:
            name: Package
-           command: plz-out/please/plz build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball //tools/performance:all -p
+           command: plz-out/bin/src/please build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball //tools/performance:all -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -82,11 +85,11 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-mod-linux-v5-{{ checksum "go.mod" }}
+           key: go-mod-linux-v6-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-linux-main-v5-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v6-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-linux-main-v2-{{ checksum "third_party/python/BUILD" }}
@@ -98,7 +101,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu_alt:20210817
+       - image: thoughtmachine/please_ubuntu_alt:20220516
      resource_class: large
      environment:
        PLZ_ARGS: "-p -c cover --profile ci-alt"
@@ -106,9 +109,9 @@ jobs:
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-linux-alt-v4-{{ checksum "go.mod" }}
+           key: go-mod-linux-alt-v5-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-linux-alt-v4-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-alt-v5-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -121,11 +124,11 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-mod-linux-alt-v4-{{ checksum "go.mod" }}
+           key: go-mod-linux-alt-v5-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-linux-alt-v4-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-alt-v5-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: java-toolchain-linux-alt-v1-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
@@ -142,13 +145,13 @@ jobs:
        - attach_workspace:
            at: /tmp/workspace
        - restore_cache:
-           key: go-darwin-arm64-v2-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-v3-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Extract plz
            command: tar -xzf /tmp/workspace/darwin_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang -o "go.cflags:-target arm64-apple-macos11" -o please.location:~/please/please //package:release_files
+           command: ./please/please build -p --profile ci --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang -o "go.cflags:-target arm64-apple-macos11" //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -156,13 +159,13 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-darwin-arm64-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-v3-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
 
    build-freebsd:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_freebsd_builder:20200820
+       - image: thoughtmachine/please_freebsd_builder:20220516
      resource_class: large
      steps:
        - checkout
@@ -175,7 +178,7 @@ jobs:
            command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch freebsd_amd64 -o please.location:~/please/please //package:release_files
+           command: ./please/please build -p --profile ci --arch freebsd_amd64 //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -185,7 +188,32 @@ jobs:
        - save_cache:
            key: go-freebsd-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
-
+   build-linux-arm64:
+     working_directory: ~/please
+     docker:
+       - image: thoughtmachine/please_ubuntu:20220516
+     resource_class: large
+     steps:
+       - checkout
+       - attach_workspace:
+           at: /tmp/workspace
+       - restore_cache:
+           key: go-linux-arm64-v1-{{ checksum "third_party/go/BUILD" }}
+       - run:
+           name: Extract plz
+           command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
+       - run:
+           name: Cross-compile
+           command: ./please/please build -p --profile ci --arch linux_arm64 -o please.location:~/please/please //package:release_files
+       - persist_to_workspace:
+           root: plz-out/pkg
+           paths:
+             - linux_arm64/*
+       - store_artifacts:
+           path: plz-out/log
+       - save_cache:
+           key: go-linux-arm64-v1-{{ checksum "third_party/go/BUILD" }}
+           paths: [ ".plz-cache/third_party/go" ]
    build-darwin:
       macos:
         xcode: "12.0.0"
@@ -194,9 +222,9 @@ jobs:
       steps:
        - checkout
        - restore_cache:
-           key: go-mod-darwin-v4-{{ checksum "bootstrap.sh" }}
+           key: go-mod-darwin-v5-{{ checksum "bootstrap.sh" }}
        - restore_cache:
-           key: go-darwin-go115-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go118-v1-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-darwin-py372-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -213,7 +241,7 @@ jobs:
            path: plz-out/log
        - run:
            name: Package
-           command: plz-out/please/plz build //package:release_files -p
+           command: plz-out/bin/src/please build //package:release_files -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -221,11 +249,11 @@ jobs:
        - store_artifacts:
            path: /tmp/artifacts
        - save_cache:
-           key: go-mod-darwin-v4-{{ checksum "go.mod" }}
+           key: go-mod-darwin-v5-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-darwin-go115-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go118-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-darwin-py372-{{ checksum "third_party/python/BUILD" }}
@@ -237,7 +265,7 @@ jobs:
    test-rex:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20210720
+       - image: thoughtmachine/please_ubuntu:20220516
      resource_class: large
      steps:
        - checkout
@@ -254,7 +282,7 @@ jobs:
    test-http-cache:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20210720
+       - image: thoughtmachine/please_ubuntu:20220516
      resource_class: large
      steps:
        - checkout
@@ -270,7 +298,7 @@ jobs:
    # Releases to github and homebrew
    release:
      docker:
-       - image: thoughtmachine/please_docs:20200930
+       - image: thoughtmachine/please_docs:20220516
      steps:
        - attach_workspace:
            at: /tmp/workspace
@@ -282,7 +310,7 @@ jobs:
    # Releases the docs and the binaries to s3 for please.build and get.please.build
    release-s3:
      docker:
-       - image: thoughtmachine/please_docs:20200930
+       - image: thoughtmachine/please_docs:20220516
      steps:
        - checkout
        - attach_workspace:
@@ -292,7 +320,7 @@ jobs:
    # Runs a benchmarking test and records some performance results.
    perf-test:
      docker:
-       - image: thoughtmachine/please_ubuntu:20210720
+       - image: thoughtmachine/please_ubuntu:20220516
      resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
      steps:
        - checkout

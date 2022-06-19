@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/thought-machine/please/src/cli"
 )
 
 func TestLabelString(t *testing.T) {
@@ -108,13 +110,30 @@ func TestCompleteError(t *testing.T) {
 
 func TestSubrepoLabel(t *testing.T) {
 	label := BuildLabel{Subrepo: "test"}
-	assert.EqualValues(t, BuildLabel{PackageName: "", Name: "test"}, label.SubrepoLabel())
+	assert.EqualValues(t, BuildLabel{PackageName: "", Name: "test"}, label.subrepoLabel())
 	label.Subrepo = "package/test"
-	assert.EqualValues(t, BuildLabel{PackageName: "package", Name: "test"}, label.SubrepoLabel())
+	assert.EqualValues(t, BuildLabel{PackageName: "package", Name: "test"}, label.subrepoLabel())
 	// This isn't really valid (the caller shouldn't need to call it in such a case)
 	// but we want to make sure it doesn't panic.
 	label.Subrepo = ""
-	assert.EqualValues(t, BuildLabel{PackageName: "", Name: ""}, label.SubrepoLabel())
+	assert.EqualValues(t, BuildLabel{PackageName: "", Name: ""}, label.subrepoLabel())
+}
+
+func TestPluginSubrepoLabel(t *testing.T) {
+	subrepoLabel := BuildLabel{PackageName: "foo/bar", Name: "plugin"}
+
+	state := NewDefaultBuildState()
+	state.Config.Plugin = map[string]*Plugin{}
+	state.Config.Plugin["plugin"] = &Plugin{Target: subrepoLabel}
+	state.Graph.AddSubrepo(&Subrepo{Name: "foowin_amd64", Arch: cli.NewArch("foowin", "amd64")})
+
+	// Check we get back the plugins target instead
+	label := BuildLabel{Subrepo: "plugin"}
+	assert.Equal(t, subrepoLabel, label.SubrepoLabel(state, ""))
+
+	// Check that we handle architecture variants of the plugin subrepo name
+	label = BuildLabel{Subrepo: "plugin_foowin_amd64"}
+	assert.Equal(t, subrepoLabel, label.SubrepoLabel(state, "foowin_amd64"))
 }
 
 func TestParseBuildLabelParts(t *testing.T) {
@@ -128,6 +147,23 @@ func TestParseBuildLabelParts(t *testing.T) {
 	assert.Equal(t, name2, "unittest_cpp")
 	assert.Equal(t, subrepo, "unittest_cpp")
 	assert.Equal(t, subrepo2, "unittest_cpp")
+}
+
+func TestMatch(t *testing.T) {
+	foo := ParseBuildLabel("//third_party:foo", "")
+	bar := ParseBuildLabel("//third_party:_foo#bar", "")
+	baz := ParseBuildLabel("//third_party/go:baz", "")
+	all := ParseBuildLabel("//third_party:all", "")
+	any := ParseBuildLabel("//third_party/...", "")
+
+	assert.True(t, foo.Matches(foo))
+	assert.True(t, foo.Matches(bar))
+	assert.True(t, all.Matches(foo))
+	assert.True(t, any.Matches(foo))
+
+	assert.False(t, foo.Matches(baz))
+	assert.False(t, all.Matches(baz))
+	assert.True(t, any.Matches(baz))
 }
 
 func TestParseSubrepoLabelWithExtraColon(t *testing.T) {

@@ -9,12 +9,11 @@ import (
 	"os"
 	"strings"
 
-	"gopkg.in/op/go-logging.v1"
-
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 )
 
-var log = logging.MustGetLogger("asp")
+var log = logging.Log
 
 // A semaphore implements the standard synchronisation mechanism based on a buffered channel.
 type semaphore chan struct{}
@@ -27,6 +26,7 @@ type Parser struct {
 	interpreter *interpreter
 	// Stashed set of source code for builtin rules.
 	builtins map[string][]byte
+
 	// Parallelism limiter to ensure we don't try to run too many parses simultaneously
 	limiter semaphore
 }
@@ -45,6 +45,15 @@ func newParser() *Parser {
 		builtins: map[string][]byte{},
 		limiter:  make(semaphore, 10),
 	}
+}
+
+// Finalise is called after all the builtins and preloaded subincludes have been loaded. It locks the base config so
+// that it can no longer be mutated.
+func (p *Parser) Finalise() {
+	p.interpreter.config.base.Lock()
+	defer p.interpreter.config.base.Unlock()
+
+	p.interpreter.config.base.finalised = true
 }
 
 // LoadBuiltins instructs the parser to load rules from this file as built-ins.
@@ -71,7 +80,7 @@ func (p *Parser) MustLoadBuiltins(filename string, contents []byte) {
 // ParseFile parses the contents of a single file in the BUILD language.
 // It returns true if the call was deferred at some point awaiting  target to build,
 // along with any error encountered.
-func (p *Parser) ParseFile(pkg *core.Package, filename string, preamble string) error {
+func (p *Parser) ParseFile(pkg *core.Package, filename string) error {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
@@ -80,21 +89,32 @@ func (p *Parser) ParseFile(pkg *core.Package, filename string, preamble string) 
 		return err
 	}
 
-	if preamble != "" {
-		stmts, err := p.parseAndHandleErrors(strings.NewReader(preamble))
-		if err != nil {
-			return err
-		}
-
-		statements = append(stmts, statements...)
-	}
-
 	_, err = p.interpreter.interpretAll(pkg, statements)
 	if err != nil {
 		f, _ := os.Open(filename)
 		p.annotate(err, f)
 	}
 	return err
+}
+
+func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarget) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = handleErrors(r)
+		}
+	}()
+	p.limiter.Acquire()
+	defer p.limiter.Release()
+	subincludePkgState := state.Root()
+	if target.Subrepo != nil {
+		subincludePkgState = target.Subrepo.State
+	}
+
+	p.interpreter.loadPluginConfig(subincludePkgState, state, p.interpreter.config)
+	for _, out := range target.FullOutputs() {
+		p.interpreter.scope.SetAll(p.interpreter.Subinclude(out, target.Label), true)
+	}
+	return nil
 }
 
 // ParseReader parses the contents of the given ReadSeeker as a BUILD file.

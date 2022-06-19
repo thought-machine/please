@@ -3,8 +3,10 @@ package output
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -117,11 +119,12 @@ func (d *interactiveDisplay) printLines(local, remote []buildingTarget) {
 	d.printf("Building [%d/%d, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), time.Since(d.state.StartTime).Seconds())
 	d.lines++
 	if d.stats {
-		d.printStat("CPU use", d.state.Stats.CPU.Used, d.state.Stats.CPU.Count)
-		d.printStat("I/O", d.state.Stats.CPU.IOWait, d.state.Stats.CPU.Count)
-		d.printStat("Mem use", d.state.Stats.Memory.UsedPercent, 1)
-		if d.state.Stats.NumWorkerProcesses > 0 {
-			d.printf("  ${BOLD_WHITE}Worker processes: %d${RESET}", d.state.Stats.NumWorkerProcesses)
+		stats := d.state.SystemStats()
+		d.printStat("CPU use", stats.CPU.Used, stats.CPU.Count)
+		d.printStat("I/O", stats.CPU.IOWait, stats.CPU.Count)
+		d.printStat("Mem use", stats.Memory.UsedPercent, 1)
+		if stats.NumWorkerProcesses > 0 {
+			d.printf("  ${BOLD_WHITE}Worker processes: %d${RESET}", stats.NumWorkerProcesses)
 		}
 		if d.state.RemoteClient != nil {
 			in, out, _, _ := d.state.RemoteClient.DataRate()
@@ -155,16 +158,28 @@ func (d *interactiveDisplay) printLines(local, remote []buildingTarget) {
 func (d *interactiveDisplay) printRow(target *buildingTarget, now time.Time, remote bool) int {
 	label := target.Label.Parent()
 	duration := now.Sub(target.Started).Seconds()
-	if target.Active && target.Target != nil && target.Target.ShowProgress && target.Target.Progress > 0.0 {
+	if target.Active && target.Target != nil && target.Target.ShouldShowProgress() && target.Target.Progress > 0.0 {
 		if target.Target.Progress > 1.0 && target.Target.Progress < 100.0 && target.Target.Progress != target.LastProgress {
 			proportionDone := target.Target.Progress / 100.0
 			perPercent := float32(duration) / proportionDone
 			target.Eta = time.Duration(perPercent * (1.0 - proportionDone) * float32(time.Second)).Truncate(time.Second)
 			target.LastProgress = target.Target.Progress
+			fileSize := atomic.LoadUint64(&target.Target.FileSize)
+			if fileSize > 0 {
+				// Round the download speed to a multiple of 10kB which makes the display jitter around less
+				const quantum = 10.0 * 1000.0
+				bps := float64(fileSize) * float64(proportionDone) / duration
+				target.BPS = float32(math.Round(bps/quantum) * quantum)
+			}
 		}
 		if target.Eta > 0 {
-			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, est %s remaining)${ERASE_AFTER}\n",
-				duration, target.Colour, label, target.Description, target.Target.Progress, target.Eta)
+			if target.BPS != 0.0 {
+				d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, %s/s, est %s remaining)${ERASE_AFTER}\n",
+					duration, target.Colour, label, target.Description, target.Target.Progress, humanize.Bytes(uint64(target.BPS)), target.Eta)
+			} else {
+				d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, est %s remaining)${ERASE_AFTER}\n",
+					duration, target.Colour, label, target.Description, target.Target.Progress, target.Eta)
+			}
 		} else {
 			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%% complete)${ERASE_AFTER}\n",
 				duration, target.Colour, label, target.Description, target.Target.Progress)

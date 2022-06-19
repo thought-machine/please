@@ -93,7 +93,11 @@ loop:
 		} else if state.NeedHashesOnly {
 			printHashes(state, duration)
 		} else if !state.NeedRun { // Must be plz build or similar, report build outputs.
-			printBuildResults(state, duration)
+			if !cli.IsATerminal(os.Stdout) {
+				printUnformattedBuildResults(state)
+			} else {
+				printBuildResults(state, duration)
+			}
 		}
 		msgs, totalMessages, actualMessages := cli.CurrentBackend.GetMessageHistory()
 		if actualMessages > 0 && !plainOutput {
@@ -358,6 +362,14 @@ func testResultMessage(results *core.TestSuite, showDuration bool) string {
 	return msg
 }
 
+func printUnformattedBuildResults(state *core.BuildState) {
+	for _, label := range state.ExpandVisibleOriginalTargets() {
+		for _, result := range buildResult(state.Graph.TargetOrDie(label)) {
+			fmt.Printf("%s\n", result)
+		}
+	}
+}
+
 func printBuildResults(state *core.BuildState, duration time.Duration) {
 	// Count incrementality.
 	totalBuilt := 0
@@ -375,7 +387,7 @@ func printBuildResults(state *core.BuildState, duration time.Duration) {
 	}
 	// Print this stuff so we always see it.
 	printf("Build finished; total time %s, incrementality %.1f%%.", duration, incrementality)
-	if state.RemoteClient != nil && !state.DownloadOutputs {
+	if state.RemoteClient != nil && state.OutputDownload == core.NoOutputDownload {
 		fmt.Printf("\n") // Outputs are not downloaded so do not print them out.
 		return
 	}
@@ -435,7 +447,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 			log.Debug("Full command: %s", strings.Join(argv, " "))
 			cmd := state.ProcessExecutor.ExecCommand(process.NewSandboxConfig(shouldSandbox, shouldSandbox), false, argv[0], argv[1:]...)
 			cmd.Dir = dir
-			cmd.Env = env
+			cmd.Env = append(cmd.Env, env...)
 			cmd.Stdin = os.Stdin
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr

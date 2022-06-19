@@ -7,3 +7,6 @@ var hello string
 
 //go:embed files/*.txt
 var txt embed.FS
+
+//go:embed files
+var dir embed.FS

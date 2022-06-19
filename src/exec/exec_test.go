@@ -104,6 +104,6 @@ func TestCommandExitCode(t *testing.T) {
 	target := core.NewBuildTarget(core.NewBuildLabel("pkg", "t"))
 	state.Graph.AddTarget(target)
 
-	exitCode := Exec(state, target.Label, "test", nil, []string{"exit", "5"}, false, process.NoSandbox)
+	exitCode := Exec(state, core.AnnotatedOutputLabel{BuildLabel: target.Label}, "test", nil, []string{"exit", "5"}, false, process.NoSandbox)
 	assert.Equal(t, 5, exitCode)
 }

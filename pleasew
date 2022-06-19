@@ -9,8 +9,15 @@ RESET="\x1B[0m"
 DEFAULT_URL_BASE="https://get.please.build"
 
 OS="$(uname)"
-# Don't have any builds other than amd64 at the moment.
-ARCH="amd64"
+
+if [[ $OS == "Darwin" ]]; then
+    # switch between mac amd64/arm64 
+    ARCH="$(uname -m)"
+else
+    # default to amd64 on other operating systems
+    # because we only build intel binaries
+    ARCH="amd64"
+fi
 
 # Check PLZ_CONFIG_PROFILE or fall back to arguments for a profile.
 PROFILE="${PLZ_CONFIG_PROFILE:-$(sed -E 's/.*--profile[= ]([^ ]+).*/\1/g' <<< "$*")}"
@@ -18,8 +25,8 @@ PROFILE="${PLZ_CONFIG_PROFILE:-$(sed -E 's/.*--profile[= ]([^ ]+).*/\1/g' <<< "$
 # Config files on order of precedence high to low.
 CONFIGS=(
   ".plzconfig.local"
-  ".plzconfig_${OS}_${ARCH}"
   "${PROFILE:+.plzconfig.$PROFILE}"
+  ".plzconfig_${OS}_${ARCH}"
   ".plzconfig"
   "$HOME/.config/please/plzconfig"
   "/etc/please/plzconfig"
@@ -68,6 +75,8 @@ if [ "$OS" = "Linux" ]; then
     GOOS="linux"
 elif [ "$OS" = "Darwin" ]; then
     GOOS="darwin"
+elif [ "$OS" = "FreeBSD" ]; then
+    GOOS="freebsd"
 else
     echo -e >&2 "${RED}Unknown operating system $OS${RESET}"
     exit 1

@@ -4,14 +4,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/op/go-logging.v1"
-
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/exec"
 	"github.com/thought-machine/please/src/process"
 )
 
-var log = logging.MustGetLogger("debug")
+var log = logging.Log
 
 func Debug(state *core.BuildState, label core.BuildLabel, args []string) int {
 	target := state.Graph.TargetOrDie(label)
@@ -35,5 +34,5 @@ func Debug(state *core.BuildState, label core.BuildLabel, args []string) int {
 	// be shared or not, otherwise clients (i.e. IDEs) might not be able to connect to the debugger.
 	shareNetwork := state.DebugPort != 0 || !sandbox
 
-	return exec.Exec(state, label, dir, env, cmd, state.DebugPort == 0, process.NewSandboxConfig(!shareNetwork, sandbox))
+	return exec.Exec(state, core.AnnotatedOutputLabel{BuildLabel: label}, dir, env, cmd, state.DebugPort == 0, process.NewSandboxConfig(!shareNetwork, sandbox))
 }

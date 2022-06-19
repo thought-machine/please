@@ -1,0 +1,23 @@
+[Parse]
+BuildFileName = BUILD # We override this in the e2e test profile and the subrepo has BUILD files not BUILD_FILE
+
+[Go]
+ImportPath = github.com/thought-machine/please/test/proto_plugin
+
+[Plugin "proto"]
+Target = //plugins:proto
+LanguageDef = ///go_proto//build_defs:go
+ProtocTool = ///proto//third_party/proto:protoc
+
+[Plugin "go"]
+Target = //plugins:go
+ImportPath = github.com/thought-machine/please/test/proto_plugin
+
+[Plugin "go_proto"]
+Target = //plugins:go-proto
+GrpcPlugin = //third_party/go:protoc-gen-go-grpc
+ProtoPlugin = //third_party/go:protoc-gen-go
+
+[FeatureFlags]
+ExcludeGoRules = true
+ExcludeProtoRules = true

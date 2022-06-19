@@ -1,8 +1,8 @@
 <h1 class="title-1">Please config file reference</h1>
 
 <p>
-  The root of a Please repo is identified by a .plzconfig file. This also has a
-  number of options to control various parts of its behaviour which might be
+  The root of a Please repo is identified by a <code class="code">.plzconfig</code> file.
+  This also has a number of options to control various parts of its behaviour which might be
   useful to tailor it to your environment.
 </p>
 
@@ -24,19 +24,21 @@
   <li>
     <span
       ><code class="code">.plzconfig_&lt;arch&gt;</code> (e.g.
-      .plzconfig_linux_amd64)</span
-    >
-  </li>
-  <li>
-    <span
-      ><code class="code">.plzconfig.&lt;profile&gt;</code> (if the
-      <code class="code">--profile</code> flag is passed)</span
+      <code class="code">.plzconfig_linux_amd64</code>)</span
     >
   </li>
   <li>
     <span><code class="code">.plzconfig.local</code></span>
   </li>
 </ul>
+
+<p>
+  Profile-specific config files can be defined and take precedence over the config file being
+  evaluated. This is achieved by having a sibling config file with the name ending with the
+  profile name (i.e. <code class="code" >.plzconfig.remote</code>, <code class="code"
+  >.plzconfig_linux_amd64.remote</code>, etc.) and running the command with the
+  <code class="code">--profile</code> flag set (ie. <code class="code">--profile=remote</code>).
+</p>
 
 <p>
   One would normally check in <code class="code">.plzconfig</code> (and
@@ -189,6 +191,15 @@
 
         <p>
           Location of the please repo to use by default, if not already in a please repo.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="please.pluginrepo">PluginRepo  <span class="normal">(repeated string)</span></h3>
+
+        <p>
+          {{ index .ConfigHelpText "please.pluginrepo" }}
         </p>
       </div>
     </li>
@@ -378,8 +389,8 @@
 
     [PluginConfig "foo_tool"]
     ConfigKey = FooTool
-    ; @self resolves to the subrepo for this plugin
-    DefaultValue = @self//tools:foo
+    ; It is resolved relative to the subrepo for this plugin
+    DefaultValue = //tools:foo
     </code>
   </pre>
 
@@ -393,6 +404,44 @@
   </pre>
 
   <p>This config value is then available to the build definitions as <code class="code">CONFIG.FOO.FOO_TOOL</code>.</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="plugindefinition.description">
+          Description <span class="normal">(string)</span>
+        </h3>
+
+        <p>
+        A description of the plugin. If set, this can be read and output by
+        <code class="code">plz help &lt;plugin&gt;</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="plugindefinition.builddefsdir">
+          BuildDefsDir <span class="normal">(repeatable string)</span>
+        </h3>
+
+        <p>
+          Tells Please about any directories in the plugin that contain custom
+          build definitions. These are used by <code class="code">plz help &lt;plugin&gt;</code> to provide
+          help text for build rules that are not built in. Defaults to <code class="code">build_defs</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="plugindefinition.documentationsite">
+          DocumentationSite <span class="normal">(string)</span>
+        </h3>
+
+        <p>
+          A link to where the plugin's documentation is hosted.
+        </p>
+      </div>
+    </li>
 </section>
 
 <section class="mt4">
@@ -450,10 +499,28 @@
     </li>
     <li>
       <div>
+        <h3 class="mt1 f6 lh-title" id="pluginconfig.inherit">
+          Inherit <span class="normal">(bool)</span>
+        </h3>
+        <p>
+          If true, this config value will always be inherited by the parent repo, when this repo is a subrepo.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
         <h3 class="mt1 f6 lh-title" id="pluginconfig.type">Type</h3>
         <p>
           The type of this config value. The options are <code class="code">str</code>, <code class="code">int</code>,
           or <code class="code">bool</code>. Defaults to <code class="code">str</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="pluginconfig.help">Help</h3>
+        <p>
+          A help string describing what this config property does.
         </p>
       </div>
     </li>
@@ -468,6 +535,17 @@
   </p>
 
   <p>This section can be used to define configuration specific to a plugin identified by its ID.</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="plugin.target">
+          Target <span class="normal">(build label)</span>
+        </h3>
+          <p>{{ index .ConfigHelpText "plugin.target" }}</p>
+      </div>
+    </li>
+  </ul>
 </section>
 
 <section class="mt4">
@@ -648,6 +726,22 @@
     </li>
     <li>
       <div>
+        <h3 class="mt1 f6 lh-title" id="build.downloadlinkable">DownloadLinkable</h3>
+
+        <p>
+          When set, targets with links defined that are built remotely are downloaded. Link definition is usually used
+          to make artifacts available in certain locations for proper tool integration.
+        </p>
+
+        <p>
+          Linkable targets are identified by rules with the following labels: <code class="code">link:destination</code>,
+          <code class="code">hlink:destination</code>, <code class="code">dlink:destination</code>,
+          <code class="code">dhlink:destination</code> and <code class="code">codegen</code>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
         <h3 class="mt1 f6 lh-title" id="build.linkgeneratedsources">LinkGeneratedSources</h3>
 
         <p>
@@ -692,7 +786,14 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title" id="build.hashfunction">hashFunction</h3>
+        <h3 class="mt1 f6 lh-title" id="build.hashcheckers">HashCheckers</h3>
+
+        <p>{{ index .ConfigHelpText "build.hashcheckers" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="build.hashfunction">HashFunction</h3>
 
         <p>{{ index .ConfigHelpText "build.hashfunction" }}</p>
       </div>
@@ -791,6 +892,18 @@
           Namespace <span class="normal">(bool)</span>
         </h3>
         <p>{{ index .ConfigHelpText "sandbox.namespace" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="sandbox.excludeabletargets">
+          ExcludeableTargets (repeated build label)
+        </h3>
+
+        <p>
+        <p>{{ index .ConfigHelpText "sandbox.excludeabletargets" }}. Values can be wildcards, e.g.
+        <code class="code">//third_party/...</code></p>
+        </p>
       </div>
     </li>
   </ul>
@@ -1026,6 +1139,26 @@
           HttpRetry <span class="normal">(int)</span>
         </h3>
         <p>{{ index .ConfigHelpText "cache.httpretry" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cache.retrievecommand">RetrieveCommand</h3>
+
+        <p>
+          Use a custom command to retrieve cache entries.<br />
+          Disabled by default.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cache.storecommand">StoreCommand</h3>
+
+        <p>
+          Use a custom command to store cache entries.<br />
+          Disabled by default. You can only enable it together with RetrieveCommand.
+        </p>
       </div>
     </li>
   </ul>
@@ -1512,13 +1645,13 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title" id="go.embedtool">EmbdedTool</h3>
+        <h3 class="mt1 f6 lh-title" id="go.embedtool">EmbedTool</h3>
         <p>{{ index .ConfigHelpText "go.embedtool" }}</p>
       </div>
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title" id="go.cflags">CFalgs</h3>
+        <h3 class="mt1 f6 lh-title" id="go.cflags">CFlags</h3>
         <p>{{ index .ConfigHelpText "go.cflags" }}</p>
       </div>
     </li>

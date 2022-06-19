@@ -4,8 +4,8 @@ package install
 
 import (
 	"bytes"
-
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,8 +20,10 @@ func TestMissingImport(t *testing.T) {
 	err := install.Install([]string{"missing_import"})
 	require.Error(t, err)
 	assert.Contains(t, []string{
-		"_build/tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:8: could not import \"github.com/doesnt-exist\": open : no such file or directory\n", // go 1.17
-		"_build/tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:8: can't find import: \"github.com/doesnt-exist\"\n",                                 // go 1.16
+		filepath.Join(os.Getenv("TMP_DIR"), "tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:8: could not import github.com/doesnt-exist (open : no such file or directory)\n"),    // go 1.18
+		filepath.Join(os.Getenv("TMP_DIR"), "tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:16: could not import github.com/doesnt-exist (open : no such file or directory)\n"),   // go 1.18 (sometimes the column is different?)
+		filepath.Join(os.Getenv("TMP_DIR"), "tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:8: could not import \"github.com/doesnt-exist\": open : no such file or directory\n"), // go 1.17
+		filepath.Join(os.Getenv("TMP_DIR"), "tools/please_go/install/test_data/example.com/missing_import/missing_import.go:3:8: can't find import: \"github.com/doesnt-exist\"\n"),                                 // go 1.16
 	}, stdOut.String())
 }
 

@@ -1,0 +1,7 @@
+subinclude("///go//build_defs:go")
+
+go_test(
+    name = "proto_test",
+    srcs = ["proto_test.go"],
+    deps = ["//test/proto"],
+)

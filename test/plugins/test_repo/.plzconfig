@@ -1,6 +1,6 @@
 [Plugin "foo"]
+Target = //plugins:foo
 FoocTool = @foo//tools/fooc
-CompileFlag = --flag1
-CompileFlag = --flag2
+CompileFlag = -sha256
 BoolTest = False
 IntTest = 15

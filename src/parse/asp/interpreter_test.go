@@ -280,13 +280,13 @@ func TestInterpreterFStrings(t *testing.T) {
 	assert.EqualValues(t, "a", s.Lookup("x"))
 	assert.EqualValues(t, "a", s.Lookup("y"))
 	assert.EqualValues(t, "x: a y: a fin", s.Lookup("z"))
+	assert.EqualValues(t, "6", s.Lookup("nest_test"))
 }
 
 func TestInterpreterSubincludeConfig(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/partition.build")
 	assert.NoError(t, err)
-	pkg := core.NewPackage("test")
-	s.SetAll(s.interpreter.Subinclude("src/parse/asp/test_data/interpreter/subinclude_config.build", pkg.Label(), pkg), false)
+	s.SetAll(s.interpreter.Subinclude("src/parse/asp/test_data/interpreter/subinclude_config.build", core.NewPackage("test").Label()), false)
 	assert.EqualValues(t, "test test", s.config.Get("test", None))
 }
 
@@ -400,6 +400,48 @@ func TestIsSemver(t *testing.T) {
 			assert.EqualValues(t, pyBool(false), s.Lookup(fmt.Sprintf("f%d", i)))
 		}
 	})
+}
+
+func TestJSON(t *testing.T) {
+	state := core.NewDefaultBuildState()
+	parser := NewParser(state)
+
+	src, err := rules.ReadAsset("builtins.build_defs")
+	if err != nil {
+		panic(err)
+	}
+	parser.MustLoadBuiltins("builtins.build_defs", src)
+	statements, err := parser.parse("src/parse/asp/test_data/json.build")
+	if err != nil {
+		panic(err)
+	}
+	statements = parser.optimise(statements)
+	parser.interpreter.optimiseExpressions(statements)
+
+	s := parser.interpreter.scope.NewScope()
+
+	list := pyList{pyString("foo"), pyInt(5)}
+	dict := pyDict{"foo": pyString("bar")}
+	confBase := &pyConfigBase{dict: dict}
+	config := &pyConfig{base: confBase, overlay: pyDict{"baz": pyInt(6)}}
+
+	s.locals["some_list"] = list
+	s.locals["some_frozen_list"] = list.Freeze()
+	s.locals["some_dict"] = dict
+	s.locals["some_frozen_dict"] = dict.Freeze()
+	s.locals["some_config"] = config
+	s.locals["some_frozen_config"] = config.Freeze()
+
+	s.interpretStatements(statements)
+
+	assert.Equal(t, "[\"foo\",5]", s.Lookup("json_list").String())
+	assert.Equal(t, "[\"foo\",5]", s.Lookup("json_frozen_list").String())
+	assert.Equal(t, "{\"foo\":\"bar\"}", s.Lookup("json_dict").String())
+	assert.Equal(t, "{\"foo\":\"bar\"}", s.Lookup("json_frozen_dict").String())
+	assert.Contains(t, s.Lookup("json_config").String(), "\"foo\":\"bar\"")
+	assert.Contains(t, s.Lookup("json_config").String(), "\"baz\":6")
+	assert.Contains(t, s.Lookup("json_frozen_config").String(), "\"foo\":\"bar\"")
+	assert.Contains(t, s.Lookup("json_frozen_config").String(), "\"baz\":6")
 }
 
 func TestSemverCheck(t *testing.T) {

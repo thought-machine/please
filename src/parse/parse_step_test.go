@@ -3,19 +3,18 @@
 package parse
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/thought-machine/please/src/core"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/thought-machine/please/src/core"
 )
 
-const tid = 1
-
-// TODO(jpoole): Use brain to figure out what we're actually waiting for here instead of just sleeping 100ms
 func TestAddDepSimple(t *testing.T) {
 	// Simple case with only one package parsed and one target added
 	state := makeState(true, false)
-	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	activateTarget(state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -27,9 +26,9 @@ func TestAddDepSimple(t *testing.T) {
 func TestAddDepMultiple(t *testing.T) {
 	// Similar to above but doing all targets in that package
 	state := makeState(true, false)
-	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
-	activateTarget(tid, state, nil, buildLabel("//package1:target2"), core.OriginalTarget, false)
-	activateTarget(tid, state, nil, buildLabel("//package1:target3"), core.OriginalTarget, false)
+	activateTarget(state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	activateTarget(state, nil, buildLabel("//package1:target2"), core.OriginalTarget, false)
+	activateTarget(state, nil, buildLabel("//package1:target3"), core.OriginalTarget, false)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -43,7 +42,7 @@ func TestAddDepMultiple(t *testing.T) {
 func TestAddDepMultiplePackages(t *testing.T) {
 	// This time we already have package2 parsed
 	state := makeState(true, true)
-	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	activateTarget(state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -56,7 +55,7 @@ func TestAddDepNoBuild(t *testing.T) {
 	// Tag state as not needing build. We shouldn't get any pending builds at this point.
 	state := makeState(true, true)
 	state.NeedBuild = false
-	activateTarget(tid, state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	activateTarget(state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -69,7 +68,7 @@ func TestAddParseDep(t *testing.T) {
 	// should still get queued for build though. Recall that we indicate this with :all...
 	state := makeState(true, true)
 	state.NeedBuild = false
-	activateTarget(tid, state, nil, buildLabel("//package2:target2"), buildLabel("//package3:all"), false)
+	activateTarget(state, nil, buildLabel("//package2:target2"), buildLabel("//package3:all"), false)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -122,11 +121,13 @@ func addDeps(graph *core.BuildGraph, pkg *core.Package) {
 }
 
 func assertPendingParses(t *testing.T, state *core.BuildState, targets ...string) {
+	t.Helper()
 	parses, _ := getAllPending(state)
 	assert.ElementsMatch(t, targets, parses)
 }
 
 func assertPendingBuilds(t *testing.T, state *core.BuildState, targets ...string) {
+	t.Helper()
 	_, builds := getAllPending(state)
 	assert.ElementsMatch(t, targets, builds)
 }

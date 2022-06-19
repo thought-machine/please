@@ -5,12 +5,11 @@ package cache
 import (
 	"sync"
 
-	"gopkg.in/op/go-logging.v1"
-
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 )
 
-var log = logging.MustGetLogger("cache")
+var log = logging.Log
 
 // NewCache is the factory function for creating a cache setup from the given config.
 func NewCache(state *core.BuildState) core.Cache {
@@ -29,6 +28,9 @@ func newSyncCache(state *core.BuildState, remoteOnly bool) core.Cache {
 	}
 	if state.Config.Cache.HTTPURL != "" {
 		mplex.caches = append(mplex.caches, newHTTPCache(state.Config))
+	}
+	if state.Config.Cache.RetrieveCommand != "" {
+		mplex.caches = append(mplex.caches, newCmdCache(state.Config))
 	}
 	if len(mplex.caches) == 0 {
 		return &noopCache{}

@@ -3,9 +3,10 @@ go_library(
     srcs = ["export.go"],
     visibility = ["PUBLIC"],
     deps = [
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/gc",
-        "//third_party/go:logging",
+        "//src/parse",
     ],
 )

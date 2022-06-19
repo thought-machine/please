@@ -1,9 +1,11 @@
+
 filegroup(
-    name = "foo",
-    srcs = ["foo"],
+    name = "nested",
+    srcs = ["nested_subrepo"],
 )
 
 subrepo(
-    name = "foo",
-    dep = ":foo",
+    name = "nested",
+    dep = ":nested",
+    plugin = True,
 )

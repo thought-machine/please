@@ -1,0 +1,38 @@
+[Parse]
+BuildFileName = BUILD.plugin
+
+[PluginDefinition]
+name = foo
+
+[Plugin "foo"]
+ModulePath = foolang
+CompileFlag = -sha1
+BarTool = overridden
+
+[PluginConfig "fooc_tool"]
+ConfigKey = FoocTool
+Inherit = true
+DefaultValue = fooc
+
+[PluginConfig "bar_tool"]
+ConfigKey = BarTool
+Inherit = true
+DefaultValue = bar
+
+[PluginConfig "module_path"]
+ConfigKey = ModulePath
+Optional = false
+
+[PluginConfig "compile_flags"]
+ConfigKey = CompileFlag
+Repeatable = true
+
+[PluginConfig "bool_test"]
+ConfigKey = BoolTest
+Type = bool
+DefaultValue = True
+
+[PluginConfig "int_test"]
+ConfigKey = IntTest
+Type = int
+DefaultValue = 100

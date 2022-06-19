@@ -1,15 +1,18 @@
 package metrics
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"github.com/prometheus/common/expfmt"
-	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 )
 
-var log = logging.MustGetLogger("metrics")
+var log = logging.Log
 
 var registerer = prometheus.WrapRegistererWith(prometheus.Labels{
 	"version": core.PleaseVersion,
@@ -20,7 +23,11 @@ func Push(config *core.Configuration) {
 	if config.Metrics.PrometheusGatewayURL == "" {
 		return
 	}
-	if err := push.New(config.Metrics.PrometheusGatewayURL, "please").Gatherer(prometheus.DefaultGatherer).Format(expfmt.FmtText).Push(); err != nil {
+
+	if err := push.New(config.Metrics.PrometheusGatewayURL, "please").
+		Client(&http.Client{Timeout: time.Duration(config.Metrics.Timeout)}).
+		Gatherer(prometheus.DefaultGatherer).Format(expfmt.FmtText).
+		Push(); err != nil {
 		log.Warning("Error pushing Prometheus metrics: %s", err)
 	}
 }
@@ -41,4 +48,21 @@ func NewCounter(subsystem, name, help string) prometheus.Counter {
 	})
 	MustRegister(counter)
 	return counter
+}
+
+// NewHistogram creates & registers a new histogram.
+func NewHistogram(subsystem, name, help string, buckets []float64) prometheus.Histogram {
+	histogram := prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "plz",
+		Subsystem: subsystem,
+		Name:      name,
+		Buckets:   buckets,
+		Help:      help,
+	})
+	MustRegister(histogram)
+	return histogram
+}
+
+func ExponentialBuckets(start, factor float64, numBuckets int) []float64 {
+	return prometheus.ExponentialBuckets(start, factor, numBuckets)
 }

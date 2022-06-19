@@ -357,16 +357,17 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
     )
 
 
-def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:list=None, source_hashes:list|str=None,
-              deps:list=None, visibility:list=None, filename:str=None, sources:bool=True, licences:list=None,
-              native:bool=False, artifact_type:str=None, test_only:bool&testonly=False,
-              binary:bool=False, classifier:str='', classifier_sources_override:str=''):
+def maven_jar(name:str, id:str, repository:str|list=None, labels:list=[], hash:str=None, hashes:list=None,
+              source_hashes:list|str=None, deps:list=None, visibility:list=None, filename:str=None,
+              sources:bool=True, licences:list=None, native:bool=False, artifact_type:str=None,
+              test_only:bool&testonly=False, binary:bool=False, classifier:str='', classifier_sources_override:str=''):
     """Fetches a single Java dependency from Maven.
 
     Args:
       name (str): Name of the output rule.
       id (str): Maven id of the artifact (eg. org.junit:junit:4.1.0)
       repository (str | list): Maven repositories to fetch deps from.
+      labels (list): Additional labels to apply to this rule.
       hash (str): Hash for produced rule.
       hashes (list): List of hashes downloaded classes jar.
       source_hashes (list): List of hashes for the downloaded sources jar.
@@ -474,7 +475,7 @@ def maven_jar(name:str, id:str, repository:str|list=None, hash:str=None, hashes:
         provides = provides,
         exported_deps=deps,  # easiest to assume these are always exported.
         deps = local_deps,  # ensure the classes_rule gets built correctly if there is one.
-        labels = ['mvn:' + id, 'rule:maven_jar'],
+        labels = labels + ['mvn:' + id, 'rule:maven_jar'],
         visibility = visibility,
         licences = licences,
         test_only=test_only,

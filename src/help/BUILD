@@ -8,26 +8,21 @@ go_library(
     deps = [
         "//rules",
         "//src/cli",
+        "//src/cli/logging",
         "//src/core",
         "//src/parse/asp",
+        "//src/plz",
         "//third_party/go:deferred_regex",
         "//third_party/go:go-flags",
-        "//third_party/go:logging",
     ],
 )
 
 go_test(
     name = "help_test",
-    srcs = ["help_test.go"],
-    deps = [
-        ":help",
-        "//third_party/go:testify",
+    srcs = [
+        "help_test.go",
+        "rules_test.go",
     ],
-)
-
-go_test(
-    name = "rules_test",
-    srcs = ["rules_test.go"],
     deps = [
         ":help",
         "//third_party/go:testify",

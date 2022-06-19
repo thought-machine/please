@@ -12,11 +12,11 @@ go_library(
         "//rules",
         "//rules/bazel",
         "//src/cli",
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/parse/asp",
         "//src/worker",
-        "//third_party/go:logging",
         "//third_party/go:semver",
     ],
 )

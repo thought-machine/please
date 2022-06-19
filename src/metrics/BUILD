@@ -3,8 +3,8 @@ go_library(
     srcs = ["prometheus.go"],
     visibility = ["PUBLIC"],
     deps = [
+        "//src/cli/logging",
         "//src/core",
-        "//third_party/go:logging",
         "//third_party/go:prometheus",
         "//third_party/go:prometheus_common",
     ],

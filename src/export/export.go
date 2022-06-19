@@ -8,20 +8,20 @@ import (
 	"path"
 	"strings"
 
-	"gopkg.in/op/go-logging.v1"
-
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/gc"
+	"github.com/thought-machine/please/src/parse"
 )
 
-var log = logging.MustGetLogger("export")
+var log = logging.Log
 
 // ToDir exports a set of targets to the given directory.
 // It dies on any errors.
 func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	done := map[*core.BuildTarget]bool{}
-	for _, target := range targets {
+	for _, target := range append(state.Config.Parse.PreloadSubincludes, targets...) {
 		export(state.Graph, dir, state.Graph.TargetOrDie(target), done)
 	}
 	// Now write all the build files
@@ -30,14 +30,17 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 		packages[state.Graph.PackageOrDie(target.Label)] = true
 	}
 	for pkg := range packages {
+		if pkg.Name == parse.InternalPackageName {
+			continue // This isn't a real package to be copied
+		}
 		dest := path.Join(dir, pkg.Filename)
 		if err := fs.RecursiveCopy(pkg.Filename, dest, 0); err != nil {
-			log.Fatalf("Failed to copy BUILD file: %s\n", pkg.Filename)
+			log.Fatalf("Failed to copy BUILD file %s: %s\n", pkg.Filename, err)
 		}
 		// Now rewrite the unused targets out of it
 		victims := []string{}
 		for _, target := range pkg.AllTargets() {
-			if !done[target] {
+			if !done[target] && !target.HasParent() {
 				victims = append(victims, target.Label.Name)
 			}
 		}
@@ -45,14 +48,24 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 			log.Fatalf("Failed to rewrite BUILD file: %s\n", err)
 		}
 	}
+	// Write any preloaded build defs as well; preloaded subincludes should be fine though.
+	for _, preload := range state.Config.Parse.PreloadBuildDefs {
+		if err := fs.RecursiveCopy(preload, path.Join(dir, preload), 0); err != nil {
+			log.Fatalf("Failed to copy preloaded build def %s: %s", preload, err)
+		}
+	}
 }
 
 // export implements the logic of ToDir, but prevents repeating targets.
 func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done map[*core.BuildTarget]bool) {
+	// We want to export the package that made this subrepo available
+	if target.Subrepo != nil {
+		target = target.Subrepo.Target
+	}
 	if done[target] {
 		return
 	}
-	for _, src := range target.AllSources() {
+	for _, src := range append(target.AllSources(), target.AllData()...) {
 		if _, ok := src.Label(); !ok { // We'll handle these dependencies later
 			for _, p := range src.FullPaths(graph) {
 				if !strings.HasPrefix(p, "/") { // Don't copy system file deps.
@@ -65,14 +78,13 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 	}
 	done[target] = true
 	for _, dep := range target.Dependencies() {
-		if parent := dep.Parent(graph); parent != nil && parent != target.Parent(graph) && parent != target {
-			export(graph, dir, parent, done)
-		} else {
-			export(graph, dir, dep, done)
-		}
+		export(graph, dir, dep, done)
 	}
 	for _, subinclude := range graph.PackageOrDie(target.Label).Subincludes {
 		export(graph, dir, graph.TargetOrDie(subinclude), done)
+	}
+	if parent := target.Parent(graph); parent != nil && parent != target {
+		export(graph, dir, parent, done)
 	}
 }
 

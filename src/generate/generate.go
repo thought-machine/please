@@ -1,19 +1,17 @@
 package generate
 
 import (
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/op/go-logging.v1"
-
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/scm"
 )
 
-var log = logging.MustGetLogger("generate")
+var log = logging.Log
 
 // UpdateGitignore will regenerate the .gitignore adding the outputs of the targets to it. If the gitignore is not the
 // root gitignore, only targets that sit under that part of the repo will be added.
@@ -43,9 +41,9 @@ func UpdateGitignore(graph *core.BuildGraph, labels []core.BuildLabel, gitignore
 
 // LinkGeneratedSources will link any generated sources for the outputs of the given labels
 func LinkGeneratedSources(state *core.BuildState, labels []core.BuildLabel) {
-	linker := os.Symlink
+	linker := fs.Symlink
 	if state.Config.Build.LinkGeneratedSources == "hard" {
-		linker = os.Link
+		linker = fs.Link
 	}
 
 	vcs := scm.NewFallback(core.RepoRoot)
@@ -56,7 +54,7 @@ func LinkGeneratedSources(state *core.BuildState, labels []core.BuildLabel) {
 			for _, out := range target.Outputs() {
 				destDir := path.Join(core.RepoRoot, target.Label.PackageDir())
 				srcDir := path.Join(core.RepoRoot, target.OutDir())
-				fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), linker)
+				fs.LinkDestination(path.Join(srcDir, out), path.Join(destDir, out), linker)
 			}
 			if state.Config.Build.UpdateGitignore {
 				if err := UpdateGitignore(state.Graph, labels, vcs.FindClosestIgnoreFile(target.Label.PackageDir())); err != nil {

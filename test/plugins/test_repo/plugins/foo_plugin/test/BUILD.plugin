@@ -1,0 +1,13 @@
+subinclude("//build_defs:foolang")
+
+foolang_library(
+    name = "foo_lib",
+    src = "test.foo",
+)
+
+bar = CONFIG.FOO.BAR_TOOL
+genrule(
+    name = "bar_inherit_test",
+    cmd = f"echo {bar} > $OUT",
+    outs = ["bar_inherit_test"],
+)

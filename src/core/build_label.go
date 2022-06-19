@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/thought-machine/go-flags"
-	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/cli/logging"
+	"github.com/thought-machine/please/src/cmap"
 	"github.com/thought-machine/please/src/process"
 )
 
-var log = logging.MustGetLogger("core")
+var log = logging.Log
 
 // A BuildLabel is a representation of an identifier of a build target, e.g. //spam/eggs:ham
 // corresponds to BuildLabel{PackageName: spam/eggs name: ham}
@@ -42,7 +43,7 @@ var OriginalTarget = BuildLabel{PackageName: "", Name: "_ORIGINAL"}
 
 // String returns a string representation of this build label.
 func (label BuildLabel) String() string {
-	zero := BuildLabel{}
+	zero := BuildLabel{} //nolint:ifshort
 	if label == zero {
 		return ""
 	} else if label == OriginalTarget {
@@ -135,13 +136,31 @@ func ParseBuildLabel(target, currentPath string) BuildLabel {
 	return label
 }
 
-func ParseAnnotatedBuildLabel(target, currentPath string) AnnotatedOutputLabel {
+func splitAnnotation(target string) (string, string) {
 	parts := strings.Split(target, "|")
-	l := ParseBuildLabel(parts[0], currentPath)
 	annotation := ""
 	if len(parts) == 2 {
 		annotation = parts[1]
 	}
+	return parts[0], annotation
+}
+func ParseAnnotatedBuildLabel(target, currentPath, subrepo string) AnnotatedOutputLabel {
+	label, annotation := splitAnnotation(target)
+	l, err := TryParseBuildLabel(label, currentPath, subrepo)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	return AnnotatedOutputLabel{
+		BuildLabel: l,
+		Annotation: annotation,
+	}
+}
+
+func ParseAnnotatedBuildLabelContext(target string, context *Package) AnnotatedOutputLabel {
+	label, annotation := splitAnnotation(target)
+	l := ParseBuildLabelContext(label, context)
+
 	return AnnotatedOutputLabel{
 		BuildLabel: l,
 		Annotation: annotation,
@@ -183,10 +202,10 @@ func parseBuildLabelParts(target, currentPath, subrepo string) (string, string, 
 		return currentPath, target[1:], ""
 	} else if target[0] == '@' {
 		// @subrepo//pkg:target or @subrepo:target syntax
-		return parseBuildLabelSubrepo(target[1:], currentPath, subrepo)
+		return parseBuildLabelSubrepo(target[1:], currentPath)
 	} else if strings.HasPrefix(target, "///") {
 		// ///subrepo/pkg:target syntax.
-		return parseBuildLabelSubrepo(target[3:], currentPath, subrepo)
+		return parseBuildLabelSubrepo(target[3:], currentPath)
 	} else if target[0] != '/' || target[1] != '/' {
 		return "", "", ""
 	} else if idx := strings.IndexRune(target, ':'); idx != -1 {
@@ -210,7 +229,7 @@ func parseBuildLabelParts(target, currentPath, subrepo string) (string, string, 
 }
 
 // parseBuildLabelSubrepo parses a build label that began with a subrepo symbol (either @ or ///).
-func parseBuildLabelSubrepo(target, currentPath, currentSubrepo string) (string, string, string) {
+func parseBuildLabelSubrepo(target, currentPath string) (string, string, string) {
 	idx := strings.Index(target, "//")
 	if idx == -1 {
 		// if subrepo and target are the same name, then @subrepo syntax will also suffice
@@ -225,12 +244,7 @@ func parseBuildLabelSubrepo(target, currentPath, currentSubrepo string) (string,
 		return "", "", ""
 	}
 	pkg, name, _ := parseBuildLabelParts(target[idx:], currentPath, "")
-
-	subrepo := target[:idx]
-	if subrepo == "self" {
-		subrepo = currentSubrepo
-	}
-	return pkg, name, subrepo
+	return pkg, name, target[:idx]
 }
 
 // As above, but allows parsing of relative labels (eg. rules:python_rules)
@@ -410,7 +424,32 @@ func (label BuildLabel) PackageDir() string {
 }
 
 // SubrepoLabel returns a build label corresponding to the subrepo part of this build label.
-func (label BuildLabel) SubrepoLabel() BuildLabel {
+func (label BuildLabel) SubrepoLabel(state *BuildState, dependentSubrepo string) BuildLabel {
+	arch := ""
+	if dependentSubrepo != "" {
+		a := state.Graph.Subrepo(dependentSubrepo).Arch
+		if a != state.Arch {
+			arch = a.String()
+		}
+	}
+
+	if plugin, ok := state.Config.Plugin[label.Subrepo]; ok {
+		if plugin.Target.String() == "" {
+			log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", label.Subrepo)
+		}
+		return plugin.Target
+	}
+	pluginName := strings.TrimSuffix(label.Subrepo, fmt.Sprintf("_%v", arch))
+	if plugin, ok := state.Config.Plugin[pluginName]; ok {
+		if plugin.Target.String() == "" {
+			log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", pluginName)
+		}
+		return plugin.Target
+	}
+	return label.subrepoLabel()
+}
+
+func (label BuildLabel) subrepoLabel() BuildLabel {
 	if idx := strings.LastIndexByte(label.Subrepo, '/'); idx != -1 {
 		return BuildLabel{PackageName: label.Subrepo[:idx], Name: label.Subrepo[idx+1:]}
 	}
@@ -418,9 +457,17 @@ func (label BuildLabel) SubrepoLabel() BuildLabel {
 	return BuildLabel{Name: label.Subrepo}
 }
 
+func hashBuildLabel(l BuildLabel) uint64 {
+	return cmap.XXHashes(l.Subrepo, l.PackageName, l.Name)
+}
+
 // packageKey returns a key for this build label that only uses the subrepo and package parts.
 func (label BuildLabel) packageKey() packageKey {
 	return packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
+}
+
+func hashPackageKey(key packageKey) uint64 {
+	return cmap.XXHashes(key.Subrepo, key.Name)
 }
 
 // CanSee returns true if label can see the given dependency, or false if not.
@@ -456,6 +503,18 @@ func (label BuildLabel) isExperimental(state *BuildState) bool {
 		}
 	}
 	return false
+}
+
+// Matches returns whether the build label matches the other based on wildcard rules
+func (label BuildLabel) Matches(other BuildLabel) bool {
+	if label.Name == "..." {
+		return label.PackageName == "." || strings.HasPrefix(other.PackageName, label.PackageName)
+	}
+	if label.Name == "all" {
+		return label.PackageName == other.PackageName
+	}
+	// Allow //foo:_bar#bazz to match //foo:bar
+	return label == other.Parent()
 }
 
 // Complete implements the flags.Completer interface, which is used for shell completion.

@@ -189,7 +189,7 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest
 	data, _ := proto.Marshal(ar)
 	metadata.RemoteAction = data
 	metadata.Timestamp = time.Now()
-	if err := c.mdStore.storeMetadata(c.metadataStoreKey(digest), metadata); err != nil {
+	if err := c.mdStore.storeMetadata(digest.Hash, metadata); err != nil {
 		log.Warningf("Failed to store build metadata for target %s: %v", target.Label, err)
 	}
 }
@@ -198,7 +198,7 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest
 // Note that this does not handle any file data, only the actionresult metadata.
 func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult) {
 	if c.state.Cache != nil {
-		metadata, err := c.mdStore.retrieveMetadata(c.metadataStoreKey(digest))
+		metadata, err := c.mdStore.retrieveMetadata(digest.Hash)
 		if err != nil {
 			log.Warningf("Failed to retrieve stored metadata for target %s, %v", target.Label, err)
 		}
@@ -210,20 +210,6 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		}
 	}
 	return nil, nil
-}
-
-// metadataStoreKey returns the key we use to store the metadata of a target.
-// This is not the same as the digest hash since it includes the instance name (allowing them to be stored separately)
-func (c *Client) metadataStoreKey(digest *pb.Digest) string {
-	key, _ := hex.DecodeString(digest.Hash)
-	instance := c.state.Config.Remote.Instance
-	if len(instance) > len(key) {
-		instance = instance[len(key):]
-	}
-	for i := 0; i < len(instance); i++ {
-		key[i] ^= instance[i]
-	}
-	return hex.EncodeToString(key)
 }
 
 // outputsExist returns true if the outputs for this target exist and are up to date.

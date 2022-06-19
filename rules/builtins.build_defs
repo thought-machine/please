@@ -67,7 +67,7 @@ def subinclude(target:str):
     pass
 def load(target:str, names:str=None):
     pass
-def subrepo(name:str, dep:str='', path:str=None, config:str=None, bazel_compat:bool=False, arch:str=None):
+def subrepo(name:str, dep:str='', path:str=None, config:str=None, bazel_compat:bool=False, arch:str=None, plugin:bool=False):
     pass
 
 
@@ -101,7 +101,7 @@ def dict(d):
     fail('dict is not callable')
 
 
-def glob(include:list, exclude:list&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY, include_symlinks:bool=not CONFIG.FF_EXCLUDE_GLOB_SYMLINKS) -> list:
+def glob(include:list|str, exclude:list|str&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY, include_symlinks:bool=not CONFIG.FF_EXCLUDE_GLOB_SYMLINKS) -> list:
     pass
 
 
@@ -123,14 +123,16 @@ def config_get(self:config, key:str, default=None) -> config:
     pass
 
 
-def get_base_path(label:str=None) -> str:
+def get_base_path(label:str=None, subinclude_context:bool=None) -> str:
     pass
-def package_name(label:str=None) -> str:
+def package_name(label:str=None, subinclude_context:bool=None) -> str:
     pass
-def subrepo_name() -> str:
+def subrepo_name(label:str=None, subinclude_context:bool=None) -> str:
+    pass
+def looks_like_build_label(label:str) -> bool:
     pass
 
-def canonicalise(label:str) -> str:
+def canonicalise(label:str, subinclude_context:bool=None) -> str:
     """Converts the given build label to its full form.
 
     For example:

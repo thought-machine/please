@@ -7,6 +7,7 @@ import os
 import random
 import shutil
 import subprocess
+import time
 from math import log10
 
 from third_party.python.absl import app, flags
@@ -59,6 +60,14 @@ LANGUAGE_TEMPLATE = """
 )
 """
 
+GO_SRC_TEMPLATE = """
+package {dir}
+"""
+
+LANGUAGE_SRC_TEMPLATES = {
+    'go': GO_SRC_TEMPLATE,
+}
+
 
 def main(argv):
     # Ensure this is deterministic
@@ -71,14 +80,15 @@ def main(argv):
         shutil.rmtree(FLAGS.root)
     for i in progress('Generating files', range(FLAGS.size)):
         depth = random.randint(1, 1 + int(log10(FLAGS.size)))
-        dir = '/'.join([FLAGS.root] + [random.choice(DIRNAMES) for _ in range(depth)])
+        relative_dir = '/'.join([random.choice(DIRNAMES) for _ in range(depth)])
+        dir = os.path.join(FLAGS.root, relative_dir)
         if dir in pkgset:
             continue
         os.makedirs(dir, exist_ok=True)
         base = os.path.basename(dir)
         filename = os.path.join(dir, 'BUILD.plz')
+        lang = random.choice(LANGUAGES)
         with open(filename, 'w') as f:
-            lang = random.choice(LANGUAGES)
             f.write(LANGUAGE_TEMPLATE.format(
                 name = base,
                 lang = lang,
@@ -86,6 +96,16 @@ def main(argv):
                 deps = choose_deps(packages),
                 test_deps = [':' + base] + choose_deps(packages) + TEST_DEPS[lang],
             ))
+        src_template = LANGUAGE_SRC_TEMPLATES.get(lang)
+        if src_template:
+            basedir = os.path.basename(dir)
+            ext = LANGUAGE_EXTENSIONS[lang]
+            library_filename = os.path.join(dir, f'{basedir}.{ext}')
+            with open(library_filename, 'w') as f:
+                f.write(src_template.format(dir = relative_dir))
+            test_filename = os.path.join(dir, f'{basedir}_test.{ext}')
+            with open(test_filename, 'w') as f:
+                f.write(src_template.format(dir = relative_dir))
         packages.append(dir)
         pkgset.add(dir)
         filenames.append(filename)
@@ -102,9 +122,13 @@ def main(argv):
         pass
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
-        n = 100
+        n = 1000
+        start = time.time()
         for i in progress('Formatting files', range(0, len(filenames), n)):
             subprocess.check_call([FLAGS.plz, 'fmt', '-w'] + filenames[i: i + n])
+        end = time.time()
+        if FLAGS.progress:
+            print('Formatted %d files in %0.2fs' % (len(filenames), end - start))
 
 
 def choose_deps(candidates:list) -> list:

@@ -1,5 +1,3 @@
-package(please_go_tool = "please_go")
-
 go_module(
     name = "go-flags",
     module = "github.com/thought-machine/go-flags",
@@ -11,7 +9,7 @@ go_module(
     name = "xsys",
     install = ["..."],
     module = "golang.org/x/sys",
-    version = "765f4ea38db36397e827c4153018aa272eed7835",
+    version = "039c03cc5b867cd7b06a19ff375be5c945c80b10",
 )
 
 go_module(

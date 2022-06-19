@@ -9,13 +9,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/plz"
 )
 
-var log = logging.MustGetLogger("build_test")
+var log = logging.Log
 
 const size = 1000
 
@@ -100,12 +100,26 @@ type fakeParser struct {
 }
 
 // ParseFile stub
-func (fake *fakeParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
+func (fake *fakeParser) ParseFile(pkg *core.Package, filename string) error {
 	return nil
 }
 
+func (fake *fakeParser) WaitForInit() {
+
+}
+
+// PreloadSubinclude stub
+func (fake *fakeParser) NewParser(state *core.BuildState) {
+
+}
+
+// Init stub
+func (fake *fakeParser) Init(state *core.BuildState) {
+
+}
+
 // ParseReader stub
-func (fake *fakeParser) ParseReader(state *core.BuildState, pkg *core.Package, r io.ReadSeeker) error {
+func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker) error {
 	return nil
 }
 

@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"fmt"
 	"os"
 	"path"
 )
@@ -21,6 +22,14 @@ func CopyOrLinkFile(from, to string, fromMode, toMode os.FileMode, link, fallbac
 		if err := os.Link(from, to); err == nil || !fallback {
 			return err
 		}
+
+		// Linking would ignore toMode, using the same mode as the from file. We should make the fallback work the same
+		// here.
+		info, err := os.Lstat(from)
+		if err != nil {
+			return err
+		}
+		toMode = info.Mode()
 	}
 	return CopyFile(from, to, toMode)
 }
@@ -35,8 +44,8 @@ func RecursiveCopy(from string, to string, mode os.FileMode) error {
 // Note that you can't hardlink directories so the behaviour is much the same as a recursive copy.
 // If it can't link then it falls back to a copy.
 // 'mode' is the mode of the destination file.
-func RecursiveLink(from string, to string, mode os.FileMode) error {
-	return RecursiveCopyOrLinkFile(from, to, mode, true, true)
+func RecursiveLink(from string, to string) error {
+	return RecursiveCopyOrLinkFile(from, to, 0, true, true)
 }
 
 // RecursiveCopyOrLinkFile recursively copies or links a file or directory.
@@ -78,4 +87,58 @@ func LinkIfNotExists(src, dest string, f LinkFunc) {
 		}
 		return nil
 	})
+}
+
+func LinkDestination(src, dest string, f LinkFunc) {
+	Walk(src, func(name string, isDir bool) error {
+		if !isDir {
+			fullDest := path.Join(dest, name[len(src):])
+			if err := EnsureDir(fullDest); err != nil {
+				log.Warning("Failed to create directory for %s: %s", fullDest, err)
+			} else if err := f(name, fullDest); err != nil && !os.IsExist(err) {
+				log.Warning("Failed to create %s: %s", fullDest, err)
+			}
+		}
+		return nil
+	})
+}
+
+// Link creates dest as a hard link to the src, replacing existing dest
+// links to support cases where hard link metadata is not stored (e.g. with
+// `git`).
+func Link(src, dest string) error {
+	if PathExists(dest) {
+		// remove existing hard links as git won't follow them
+		if err := os.Remove(dest); err != nil {
+			return fmt.Errorf("could not remove link %s: %w", dest, err)
+		}
+	}
+
+	return os.Link(src, dest)
+}
+
+// Symlink creates dest as symbolic link to the src, skipping if symbolic link
+// already exists.
+func Symlink(src, dest string) error {
+	if !PathExists(src) {
+		return fmt.Errorf("%s: %w", src, os.ErrNotExist)
+	}
+
+	if PathExists(dest) {
+		fileInfo, err := os.Lstat(dest)
+		if err != nil {
+			return fmt.Errorf("could get Lstat %s: %w", dest, err)
+		}
+		if fileInfo.Mode()&os.ModeSymlink == os.ModeSymlink {
+			// is already a symbolic link
+			return nil
+		}
+
+		// remove existing files that aren't symbolic links
+		if err := os.Remove(dest); err != nil {
+			return fmt.Errorf("could not remove link %s: %w", dest, err)
+		}
+	}
+
+	return os.Symlink(src, dest)
 }

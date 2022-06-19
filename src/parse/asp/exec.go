@@ -12,9 +12,7 @@ import (
 )
 
 type execKey struct {
-	args       string
-	wantStdout bool
-	wantStderr bool
+	args string
 }
 
 type execPromise struct {
@@ -55,11 +53,7 @@ func init() {
 // want to cache the failure).
 //
 // NOTE: Commands that rely on the current working directory must not be cached.
-func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOutput bool, storeNegative bool) (pyObj pyObject, success bool, err error) {
-	if !wantStdout && !wantStderr {
-		return s.Error("exec() must have at least stdout or stderr set to true, both can not be false"), false, nil
-	}
-
+func doExec(s *scope, cmdIn pyObject, cacheOutput bool, storeNegative bool) (pyObj pyObject, success bool, err error) {
 	var argv []string
 	if isType(cmdIn, "str") {
 		argv = strings.Fields(string(cmdIn.(pyString)))
@@ -72,7 +66,7 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 	}
 
 	// The cache key is tightly coupled to the operating parameters
-	key := execMakeKey(argv, wantStdout, wantStderr)
+	key := execMakeKey(argv)
 	if cacheOutput {
 		out, found := execGetCachedOutput(key, argv)
 		if found {
@@ -89,28 +83,15 @@ func doExec(s *scope, cmdIn pyObject, wantStdout bool, wantStderr bool, cacheOut
 	}
 	cmdArgs := argv[1:]
 
-	var out []byte
 	cmd := exec.CommandContext(ctx, cmdPath, cmdArgs...)
-	if wantStdout && wantStderr {
-		out, err = cmd.CombinedOutput()
-	} else {
-		buf := &bytes.Buffer{}
-		switch {
-		case wantStdout:
-			cmd.Stderr = nil
-			cmd.Stdout = buf
-		case wantStderr:
-			cmd.Stderr = buf
-			cmd.Stdout = nil
-		}
-
-		err = cmd.Run()
-		out = buf.Bytes()
-	}
-	out = bytes.TrimSpace(out)
-	outStr := string(out)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	outStr := string(bytes.TrimSpace(stdout.Bytes()))
 
 	if err != nil {
+		err = fmt.Errorf("%w: %s", err, bytes.TrimSpace(stderr.Bytes()))
 		if cacheOutput && storeNegative {
 			// Completed successfully and returned an error.  Store the negative value
 			// since we're also returning an error, which tells the caller to
@@ -197,22 +178,18 @@ func execGetCachedOutput(key execKey, args []string) (output *execOut, found boo
 //
 // git_branch() returns the output of `git symbolic-ref -q --short HEAD`
 func execGitBranch(s *scope, args []pyObject) pyObject {
-	short := args[0].IsTruthy()
-
 	cmdIn := make([]pyObject, 3, 5)
 	cmdIn[0] = pyString("git")
 	cmdIn[1] = pyString("symbolic-ref")
 	cmdIn[2] = pyString("-q")
-	if short {
+	if args[0].IsTruthy() {
 		cmdIn = append(cmdIn, pyString("--short"))
 	}
 	cmdIn = append(cmdIn, pyString("HEAD"))
 
-	wantStdout := true
-	wantStderr := false
 	cacheOutput := true
 	storeNegative := true
-	gitSymRefResult, success, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput, storeNegative)
+	gitSymRefResult, success, err := doExec(s, pyList(cmdIn), cacheOutput, storeNegative)
 	switch {
 	case success && err == nil:
 		return gitSymRefResult
@@ -231,7 +208,7 @@ func execGitBranch(s *scope, args []pyObject) pyObject {
 	cmdIn[2] = pyString("-q")
 	cmdIn[3] = pyString("--format=%D")
 	storeNegative = false
-	gitShowResult, success, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput, storeNegative)
+	gitShowResult, success, err := doExec(s, pyList(cmdIn), cacheOutput, storeNegative)
 	if !success {
 		// doExec returns a formatted error string
 		return s.Error("exec() %q failed: %v", pyList(cmdIn).String(), err)
@@ -256,12 +233,10 @@ func execGitCommit(s *scope, args []pyObject) pyObject {
 		pyString("HEAD"),
 	}
 
-	wantStdout := true
-	wantStderr := false
 	cacheOutput := true
 	storeNegative := false
 	// No error handling required since we don't want to retry
-	pyResult, success, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput, storeNegative)
+	pyResult, success, err := doExec(s, pyList(cmdIn), cacheOutput, storeNegative)
 	if !success {
 		return s.Error("git_commit() failed: %v", err)
 	}
@@ -311,11 +286,9 @@ func execGitShow(s *scope, args []pyObject) pyObject {
 		pyString(fmt.Sprintf("--format=%s", formatVerb)),
 	}
 
-	wantStdout := true
-	wantStderr := false
 	cacheOutput := true
 	storeNegative := false
-	pyResult, success, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput, storeNegative)
+	pyResult, success, err := doExec(s, pyList(cmdIn), cacheOutput, storeNegative)
 	if !success {
 		return s.Error("git_show() failed: %v", err)
 	}
@@ -335,11 +308,9 @@ func execGitState(s *scope, args []pyObject) pyObject {
 		pyString("--porcelain"),
 	}
 
-	wantStdout := true
-	wantStderr := false
 	cacheOutput := true
 	storeNegative := false
-	pyResult, success, err := doExec(s, pyList(cmdIn), wantStdout, wantStderr, cacheOutput, storeNegative)
+	pyResult, success, err := doExec(s, pyList(cmdIn), cacheOutput, storeNegative)
 	if !success {
 		return s.Error("git_state() failed: %v", err)
 	}
@@ -348,19 +319,16 @@ func execGitState(s *scope, args []pyObject) pyObject {
 		return pyResult
 	}
 
-	result := pyResult.String()
-	if len(result) != 0 {
+	if result := pyResult.String(); len(result) != 0 {
 		return dirtyLabel
 	}
 	return cleanLabel
 }
 
 // execMakeKey returns an execKey.
-func execMakeKey(args []string, wantStdout bool, wantStderr bool) execKey {
+func execMakeKey(args []string) execKey {
 	return execKey{
-		args:       strings.Join(args, ""),
-		wantStdout: wantStdout,
-		wantStderr: wantStderr,
+		args: strings.Join(args, ""),
 	}
 }
 

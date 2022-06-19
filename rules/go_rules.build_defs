@@ -56,7 +56,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     tag_flag = (' -tags ' + ','.join(tags)) if tags else ''
     for arch in architectures:
         goos, _, goarch = arch.partition("_")
-        cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install{tag_flag} std)'
+        cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install{tag_flag} --trimpath std)'
     if strip_srcs:
         trim_toolchain = "mv $OUT/src src && mkdir $OUT/src && mv src/unsafe $OUT/src/unsafe"
         cmd = f"{cmd} && {trim_toolchain}"
@@ -88,7 +88,7 @@ def _pkg_sources(name: str, deps: list, test_only:bool):
     Without this, we'd have to transitively pull in all third party sources for the rule which is very expensive,
     especially for remote execution.
     """
-    package_prefix = "//" + package_name() + ":"
+    package_prefix = canonicalise(":all").removesuffix("all")
     return filegroup(
        name = name,
        tag = "pkg_srcs",
@@ -125,6 +125,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
       package (str): The package as it would appear at the top of the go source files. Defaults
                      to name.
     """
+    assert srcs, "Cannot provide an empty srcs list to go_library"
     cover = cover and CONFIG.BUILD_CONFIG == "cover"
     package = package or name
     out = package + '.a'
@@ -406,14 +407,17 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
             test_only = test_only,
         )
 
-    file_srcs = [src for src in srcs if not src.startswith('/') and not src.startswith(':')]
+    file_srcs = [src for src in srcs if not looks_like_build_label(src)]
     post_build = lambda rule, output: [add_out(rule, 'c' if line.endswith('.c') else 'go', line) for line in output]
     subdir2 = (subdir + '/') if subdir and not subdir.endswith('/') else subdir
 
     # Resolve the import_path early
     # _write_import_config_cmd won't resolve it again
     import_path = _get_import_path(package or name, import_path)
-
+    compiler_flags_cmd = " ".join(compiler_flags)
+    if pkg_config:
+        pkg_configs = " ".join(pkg_config)
+        compiler_flags_cmd = f"{compiler_flags_cmd} $(pkg-config --cflags {pkg_configs})"
     cgo_rule = build_rule(
         name = name,
         tag = 'cgo',
@@ -427,7 +431,7 @@ def cgo_library(name:str, srcs:list=[], resources:list=None, go_srcs:list=[], c_
             (f'OUT_DIR="$TMP_DIR/{subdir}"') if subdir else 'OUT_DIR="$TMP_DIR"',
             'mkdir -p "$OUT_DIR"',
             'cd $PKG_DIR/' + subdir,
-            f'$TOOL tool cgo -objdir "$OUT_DIR" -importpath {import_path} *.go',
+            f'$TOOL tool cgo -objdir "$OUT_DIR" -importpath {import_path} -- {compiler_flags_cmd} *.go',
             # Remove the .o file which BSD sed gets upset about in the next command
             'rm -f "$OUT_DIR"/_cgo_.o "$OUT_DIR"/_cgo_main.c',
             # cgo leaves absolute paths in these files which we must get rid of :(
@@ -894,7 +898,7 @@ def go_test_main(name:str, srcs:list, test_package:str="", test_only:bool=False,
     test_package = test_package or _get_import_path()
     external_flag = " --external" if external else ""
 
-    cmd = f'"$TOOLS_PLZ" testmain --test_package "{test_package}"{external_flag} --import_path "{CONFIG.GO_IMPORT_PATH}" --go_tool "$TOOLS_GO" -o $OUT'
+    cmd = f'"$TOOLS_PLZ" testmain --test_package "{test_package}"{external_flag} --import_path "{CONFIG.GO_IMPORT_PATH}" -o $OUT'
     # TODO(jpoole): remove this in v17
     if CONFIG.FF_GO_DONT_COLLAPSE_IMPORT_PATHS:
         cmd = f"FF_GO_DONT_COLLAPSE_IMPORT_PATHS=true {cmd}"
@@ -995,7 +999,7 @@ def _remove_redundant_outs(outs):
     return [r for r in new_outs.keys() if new_outs[r]]
 
 def _go_install_module(name:str, module:str, install:list, src:str, outs:list, deps:list, binary:bool, visibility:list,
-                       test_only:bool, licences:list, linker_flags:list, env:dict, build_tags:list):
+                       test_only:bool, licences:list, linker_flags:list, env:dict, build_tags:list, labels:list=[]):
     build_tags = " ".join([f"--build_tag={tag}" for tag in build_tags])
     cmd = [
         _set_go_env(),
@@ -1028,7 +1032,7 @@ def _go_install_module(name:str, module:str, install:list, src:str, outs:list, d
         binary = binary,
         requires = ['go'],
         test_only = test_only,
-        labels = ['link:plz-out/go'] + [f'cc:ld:{f}' for f in linker_flags],
+        labels = labels + ['link:plz-out/go'] + [f'cc:ld:{f}' for f in linker_flags],
         needs_transitive_deps = True,
         licences = licences,
         post_build = _add_ld_flags,
@@ -1156,9 +1160,9 @@ def go_mod_download(name:str, module:str, version:str, test_only:bool=False, vis
     )
 
 def go_module(name:str='', module:str, version:str='', download:str='', deps:list=[], exported_deps:list=[],
-              visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], hashes:list=None,
-              licences:list=None, linker_flags:list=[], strip:list=[], env:dict={}, patch:list|str=[],
-              build_tags:list=[]):
+              visibility:list=None, test_only:bool=False, binary:bool=False, install:list=[], labels:list=[],
+              hashes:list=None, licences:list=None, linker_flags:list=[], strip:list=[], env:dict={},
+              patch:list|str=[], build_tags:list=[]):
     """Defines a dependency on a third-party Go module.
 
     Note that unlike a normal `go get` call, this does *not* install transitive dependencies.
@@ -1186,6 +1190,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
                              to install for that target. Specify the empty string as an element in the list
                              to install a target's root package.
       strip (list ): List of paths to strip from the target after downloading but before building it.
+      labels (list): Additional labels to apply to this rule.
       hashes (list): List of hashes to verify the downloaded sources against.
       licences (list): Licences this rule is subject to.
       linker_flags (list): Any additional linker flags to apply. Linker flags defined in the module itself will
@@ -1251,6 +1256,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
         linker_flags = linker_flags,
         env = env,
         build_tags = build_tags,
+        labels = labels if binary else [],
     )
 
     if binary:
@@ -1276,7 +1282,7 @@ def go_module(name:str='', module:str, version:str='', download:str='', deps:lis
             "go": f":{name}", # provide the filegroup otherwise exported deps don't work
             "go_src": download,
         },
-        labels = [f"go_package:{i}" for i in install] + [f"go_module:{module}"],
+        labels = labels + [f"go_package:{i}" for i in install],
         visibility = visibility,
         needs_transitive_deps = True,
         test_only = test_only,
@@ -1425,8 +1431,6 @@ def go_get(name:str, get:str|list, repo:str='', deps:list=[], exported_deps:list
         fail("must provide get or install!")
     else:
         if not srcs and not binary:
-            # we are going to infer the getroot name from the 1st install dependency
-            getroot = install[0][:-4] if install[0].endswith('/...') else install[0]
             # NOTE: for this case in the install list I'm expecting full package names
             outs += [i[:-4] if i.endswith('/...') else i+".a" for i in install]
             provides = {'go': go_rule} # I can't find the sources
@@ -1487,7 +1491,7 @@ def _go_get_download(name:str, tag:str, get:str, repo:str='', patch:list=[], has
     revision = revision or 'master'
 
     # if the repo is a build rule, just return that assuming it outputs in the correct format
-    if repo.startswith("//") or repo.startswith(":"):
+    if looks_like_build_label(repo):
         return repo, getroot
 
     # Allow overriding with locally cloned repos

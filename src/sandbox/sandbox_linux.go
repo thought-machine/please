@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -36,6 +37,7 @@ func Sandbox(args []string) error {
 
 	unshareMount := os.Getenv("SHARE_MOUNT") != "1"
 	unshareNetwork := os.Getenv("SHARE_NETWORK") != "1"
+	user := os.Getenv("SANDBOX_UID")
 
 	if unshareMount {
 		tmpDirEnv := os.Getenv("TMP_DIR")
@@ -67,8 +69,34 @@ func Sandbox(args []string) error {
 			return fmt.Errorf("Failed to bring loopback interface up: %s", err)
 		}
 	}
+
+	if user != "" {
+		userID, err := strconv.Atoi(user)
+		if err != nil {
+			return fmt.Errorf("invalid SANDBOX_UID: %v", user)
+		}
+		execCmd := exec.Command(cmd, args[1:]...)
+		execCmd.Env = env
+		execCmd.Stdout = os.Stdout
+		execCmd.Stdin = os.Stdin
+		execCmd.Stderr = os.Stderr
+		execCmd.SysProcAttr = &syscall.SysProcAttr{
+			Pdeathsig:  syscall.SIGHUP,
+			Cloneflags: syscall.CLONE_NEWUSER | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID,
+			UidMappings: []syscall.SysProcIDMap{
+				{HostID: os.Getuid(), Size: 1, ContainerID: userID},
+			},
+			GidMappings: []syscall.SysProcIDMap{
+				{HostID: os.Getgid(), Size: 1, ContainerID: userID},
+			},
+		}
+		return execCmd.Run()
+	}
 	err = syscall.Exec(cmd, args, env)
-	return fmt.Errorf("Failed to exec %s: %s", cmd, err)
+	if err != nil {
+		return fmt.Errorf("Failed to exec %s: %s", cmd, err)
+	}
+	return nil
 }
 
 func rewriteEnvVars(env []string, from, to string) {

@@ -23,7 +23,7 @@ import (
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
-	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
@@ -32,16 +32,24 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
 )
 
-var log = logging.MustGetLogger("remote")
+var log = logging.Log
 
 // The API version we support.
 var apiVersion = semver.SemVer{Major: 2}
+
+var remoteCacheReadDuration = metrics.NewHistogram(
+	"remote",
+	"cache_read_duration",
+	"Time taken to read the remote cache, in milliseconds",
+	metrics.ExponentialBuckets(0.1, 2, 12), // 12 buckets, starting at 0.1ms and doubling in width.
+)
 
 // A Client is the interface to the remote API.
 //
@@ -129,7 +137,7 @@ func New(state *core.BuildState) *Client {
 		state:    state,
 		instance: state.Config.Remote.Instance,
 		outputs:  map[core.BuildLabel]*pb.Directory{},
-		mdStore:  newDirMDStore(time.Duration(state.Config.Remote.CacheDuration)),
+		mdStore:  newDirMDStore(state.Config.Remote.Instance, time.Duration(state.Config.Remote.CacheDuration)),
 		existingBlobs: map[string]struct{}{
 			digest.Empty.Hash: {},
 		},
@@ -391,8 +399,11 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	}
 	metadata, ar, err := c.execute(tid, target, command, stampedDigest, false, needStdout)
 	if target.Stamp && err == nil {
-		// Store results under unstamped digest too.
-		c.locallyCacheResults(target, unstampedDigest, metadata, ar)
+		err = c.verifyActionResult(target, command, unstampedDigest, ar, c.state.Config.Remote.VerifyOutputs, false)
+		if err == nil {
+			// Store results under unstamped digest too.
+			c.locallyCacheResults(target, unstampedDigest, metadata, ar)
+		}
 		c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 			InstanceName: c.instance,
 			ActionDigest: unstampedDigest,
@@ -435,6 +446,10 @@ func (c *Client) download(target *core.BuildTarget, f func() error) error {
 
 func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
 	log.Debug("Downloading outputs for %s", target)
+
+	file := core.AcquireExclusiveFileLock(target.BuildLockFile())
+	defer core.ReleaseFileLock(file)
+
 	if err := removeOutputs(target); err != nil {
 		return err
 	}
@@ -447,6 +462,16 @@ func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar 
 }
 
 func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult, target *core.BuildTarget) error {
+	// Ensure none of the outputs have temp suffixes on them.
+	for _, f := range ar.OutputFiles {
+		f.Path = target.GetRealOutput(f.Path)
+	}
+	for _, d := range ar.OutputDirectories {
+		d.Path = target.GetRealOutput(d.Path)
+	}
+	for _, s := range ar.OutputSymlinks {
+		s.Path = target.GetRealOutput(s.Path)
+	}
 	// We can download straight into the out dir if there are no outdirs to worry about
 	if len(target.OutputDirectories) == 0 {
 		_, err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir(), c.fileMetadataCache)
@@ -551,12 +576,14 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 		return metadata, ar
 	}
 	// Now see if it is cached on the remote server
+	start := time.Now()
 	if ar, err := c.client.GetActionResult(context.Background(), &pb.GetActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: digest,
 		InlineStdout: needStdout,
 	}); err == nil {
 		// This action already exists and has been cached.
+		remoteCacheReadDuration.Observe(float64(time.Since(start).Milliseconds()))
 		if metadata, err := c.buildMetadata(ar, needStdout, false); err == nil {
 			log.Debug("Got remotely cached results for %s %s", target.Label, c.actionURL(digest, true))
 			if command != nil {
@@ -588,7 +615,7 @@ func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
-	if !isTest || !c.state.ForceRerun || c.state.NumTestRuns == 1 {
+	if !isTest || (!c.state.ForceRerun && c.state.NumTestRuns == 1) {
 		if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, isTest, needStdout); metadata != nil {
 			return metadata, ar, nil
 		}
@@ -610,7 +637,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 
 	// We should skip the cache lookup (and override any existing action result) if we --rebuild, or --rerun and this is
 	// one fo the targets we're testing or building.
-	skipCacheLookup := (isTest && c.state.ForceRerun) || (!isTest && c.state.ForceRebuild)
+	skipCacheLookup := (isTest && (c.state.ForceRerun || c.state.NumTestRuns != 1)) || (!isTest && c.state.ForceRebuild)
 	skipCacheLookup = skipCacheLookup && c.state.IsOriginalTarget(target)
 
 	return c.reallyExecute(tid, target, command, digest, needStdout, isTest, skipCacheLookup)
@@ -907,8 +934,9 @@ func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget,
 		entry := uploadinfo.EntryFromBlob([]byte(content))
 		ch <- entry
 		ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-			Path:   command.OutputPaths[0],
-			Digest: entry.Digest.ToProto(),
+			Path:         command.OutputPaths[0],
+			Digest:       entry.Digest.ToProto(),
+			IsExecutable: target.IsBinary,
 		})
 		return nil
 	}); err != nil {

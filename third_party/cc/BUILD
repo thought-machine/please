@@ -1,6 +1,7 @@
 github_repo(
     name = "gtest",
-    bazel_compat = True,
+    build_file = "gtest.build",
     repo = "google/googletest",
-    revision = "release-1.8.1",
+    revision = "release-1.11.0",
+    strip_build = True,
 )

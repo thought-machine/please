@@ -5,7 +5,6 @@ run:
 
 issues:
   exclude:
-    - SA1019  # Upstream packages seem not to be ready to update protobuf yet
     - SA4006  # Too many false positives :(
     - SA5008  # Warns for duplicate struct tags which are meaningful to go-flags
     - unslice  # This may be useful in some places.
@@ -13,6 +12,7 @@ issues:
     - appendAssign
     - halp  # Make misspell be quiet about this.
     - exitAfterDefer # Potentially useful but not in any cases it fires right now.
+    - receiver-naming # Think this is confused about generics
   exclude-rules:
     - path: _test\.go
       linters:
@@ -30,26 +30,32 @@ issues:
 linters:
   disable-all: true
   enable:
-    - deadcode
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - structcheck
-    - typecheck
-    - unused
-    - varcheck
     - asciicheck
+    - bidichk
     - bodyclose
+    - deadcode
     - dogsled
     - dupl
     - exportloopref
+    - gci
     - gocritic
     - gofmt
+    - gosimple
+    - govet
+    - ifshort
+    - ineffassign
     - misspell
+    - nilerr
     - prealloc
     - revive
+    - staticcheck
+    - structcheck
+    - tenv
+    - thelper
     - unconvert
+    - unused
+    - varcheck
+    - wastedassign
     - whitespace
 
     # To consider enabling in future (once we fix errors etc):
@@ -61,7 +67,11 @@ linters-settings:
     enable-all: true
     disable:
       - deepequalerrors # Only seen this once and it's a false positive
-      - unusedwrite # Similarly
       - shadow # Probably not useful enough to clean everything up
       # TODO(peterebden): Should clean up these warnings & enable (although they are pretty finicky)
       - fieldalignment
+  gci:
+    sections:
+      - standard # Captures all standard packages if they do not match another section.
+      - default # Contains all imports that could not be matched to another section type.
+      - prefix(github.com/thought-machine/please)

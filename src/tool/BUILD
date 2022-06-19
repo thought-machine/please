@@ -3,10 +3,10 @@ go_library(
     srcs = ["tool.go"],
     visibility = ["PUBLIC"],
     deps = [
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//third_party/go:go-flags",
-        "//third_party/go:logging",
     ],
 )
 

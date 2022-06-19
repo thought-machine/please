@@ -8,16 +8,18 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"sync/atomic"
 
 	"github.com/bazelbuild/buildtools/build"
-	"gopkg.in/op/go-logging.v1"
+	"golang.org/x/sync/errgroup"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/plz"
 )
 
-var log = logging.MustGetLogger("format")
+var log = logging.Log
 
 // Format reformats the given BUILD files to their canonical version.
 // It either prints the reformatted versions to stdout or rewrites the files in-place.
@@ -25,7 +27,7 @@ var log = logging.MustGetLogger("format")
 // The returned bool is true if any changes were needed.
 func Format(config *core.Configuration, filenames []string, rewrite, quiet bool) (bool, error) {
 	if len(filenames) == 0 {
-		return formatAll(plz.FindAllBuildFiles(config, core.RepoRoot, ""), rewrite, quiet)
+		return formatAll(plz.FindAllBuildFiles(config, core.RepoRoot, ""), config.Please.NumThreads, rewrite, quiet)
 	}
 	ch := make(chan string)
 	go func() {
@@ -34,19 +36,27 @@ func Format(config *core.Configuration, filenames []string, rewrite, quiet bool)
 		}
 		close(ch)
 	}()
-	return formatAll(ch, rewrite, quiet)
+	return formatAll(ch, config.Please.NumThreads, rewrite, quiet)
 }
 
-func formatAll(filenames <-chan string, rewrite, quiet bool) (bool, error) {
-	changed := false
+func formatAll(filenames <-chan string, parallelism int, rewrite, quiet bool) (bool, error) {
+	var changed int64
+	var g errgroup.Group
+	limiter := make(chan struct{}, parallelism)
 	for filename := range filenames {
-		c, err := format(filename, rewrite, quiet)
-		if err != nil {
-			return changed, err
-		}
-		changed = changed || c
+		filename := filename
+		g.Go(func() error {
+			limiter <- struct{}{}
+			defer func() { <-limiter }()
+			c, err := format(filename, rewrite, quiet)
+			if c {
+				atomic.AddInt64(&changed, 1)
+			}
+			return err
+		})
 	}
-	return changed, nil
+	err := g.Wait()
+	return changed > 0, err
 }
 
 func format(filename string, rewrite, quiet bool) (bool, error) {

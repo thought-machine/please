@@ -1,10 +1,11 @@
 package toolchain
 
 import (
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetVersion(t *testing.T) {
@@ -12,5 +13,5 @@ func TestGetVersion(t *testing.T) {
 
 	ver, err := tc.GoMinorVersion()
 	require.NoError(t, err)
-	require.Equal(t, 17, ver)
+	require.Equal(t, 18, ver)
 }

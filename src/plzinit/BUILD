@@ -8,11 +8,13 @@ go_library(
     deps = [
         "//src/assets",
         "//src/cli",
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
+        "//src/plz",
         "//src/scm",
+        "//third_party/go:gcfg",
         "//third_party/go:levenshtein",
-        "//third_party/go:logging",
     ],
 )
 

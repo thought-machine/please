@@ -34,10 +34,16 @@ type Package struct {
 
 // NewPackage constructs a new package with the given name.
 func NewPackage(name string) *Package {
+	return NewPackageSubrepo(name, "")
+}
+
+// NewPackageSubrepo constructs a new package with the given name and subrepo.
+func NewPackageSubrepo(name, subrepo string) *Package {
 	return &Package{
-		Name:    name,
-		targets: map[string]*BuildTarget{},
-		Outputs: map[string]*BuildTarget{},
+		Name:        name,
+		SubrepoName: subrepo,
+		targets:     map[string]*BuildTarget{},
+		Outputs:     map[string]*BuildTarget{},
 	}
 }
 
@@ -113,7 +119,7 @@ func (pkg *Package) HasSubinclude(label BuildLabel) bool {
 // SubrepoArchName returns a subrepo name, modified for the architecture of this package if it's not the host.
 func (pkg *Package) SubrepoArchName(subrepo string) string {
 	if subrepo != "" && pkg.Subrepo != nil && pkg.Subrepo.IsCrossCompile && pkg.SubrepoName != subrepo {
-		return subrepo + "_" + pkg.Subrepo.Arch.String()
+		return SubrepoArchName(subrepo, pkg.Subrepo.Arch)
 	}
 	return subrepo
 }

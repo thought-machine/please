@@ -17,20 +17,22 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/shlex"
 	"github.com/hashicorp/go-multierror"
-	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/generate"
+	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/worker"
 )
 
-var log = logging.MustGetLogger("build")
+var log = logging.Log
 
 // Type that indicates that we're stopping the build of a target in a nonfatal way.
 var errStop = fmt.Errorf("stopping build")
@@ -41,11 +43,26 @@ var httpClientOnce sync.Once
 
 var magicSourcesWorkerKey = "WORKER"
 
+var successfulRemoteTargetBuildDuration = metrics.NewHistogram(
+	"remote",
+	"target_build_duration",
+	"Time taken to successfully build a target, in milliseconds",
+	metrics.ExponentialBuckets(0.5, 2, 16), // 16 buckets, starting at 0.5ms and doubling in width.
+)
+
+var successfulLocalTargetBuildDuration = metrics.NewHistogram(
+	"local",
+	"target_build_duration",
+	"Time taken to successfully build a target, in milliseconds",
+	metrics.ExponentialBuckets(0.5, 2, 16), // 16 buckets, starting at 0.5ms and doubling in width.
+)
+
 // Build implements the core logic for building a single target.
 func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
 	target := state.Graph.TargetOrDie(label)
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
+	start := time.Now()
 	if err := buildTarget(tid, state, target, remote); err != nil {
 		if errors.Is(err, errStop) {
 			target.SetState(core.Stopped)
@@ -58,6 +75,11 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 		}
 		target.SetState(core.Failed)
 		return
+	}
+	if remote {
+		successfulRemoteTargetBuildDuration.Observe(float64(time.Since(start).Milliseconds()))
+	} else {
+		successfulLocalTargetBuildDuration.Observe(float64(time.Since(start).Milliseconds()))
 	}
 	// Mark the target as having finished building.
 	target.FinishBuild()
@@ -701,12 +723,12 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 
 func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, realOutput string) (bool, error) {
 	// hash the file
-	newHash, err := state.PathHasher.Hash(tmpOutput, false, true)
+	newHash, err := state.PathHasher.Hash(tmpOutput, false, true, false)
 	if err != nil {
 		return true, err
 	}
 	if fs.PathExists(realOutput) {
-		if oldHash, err := state.PathHasher.Hash(realOutput, false, true); err != nil {
+		if oldHash, err := state.PathHasher.Hash(realOutput, false, true, false); err != nil {
 			return true, err
 		} else if bytes.Equal(oldHash, newHash) {
 			// We already have the same file in the current location. Don't bother moving it.
@@ -868,14 +890,14 @@ func (h *targetHasher) outputHash(target *core.BuildTarget) ([]byte, error) {
 func outputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash) ([]byte, error) {
 	if combine == nil {
 		// Must be a single output, just hash that directly.
-		return hasher.Hash(outputs[0], true, !target.IsFilegroup)
+		return hasher.Hash(outputs[0], true, !target.IsFilegroup, target.HashLastModified())
 	}
 	h := combine()
 	for _, filename := range outputs {
 		// NB. Always force a recalculation of the output hashes here. Memoisation is not
 		//     useful because by definition we are rebuilding a target, and can actively hurt
 		//     in cases where we compare the retrieved cache artifacts with what was there before.
-		h2, err := hasher.Hash(filename, true, !target.IsFilegroup)
+		h2, err := hasher.Hash(filename, true, !target.IsFilegroup, target.HashLastModified())
 		if err != nil {
 			return nil, err
 		}
@@ -1018,7 +1040,7 @@ func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix s
 			srcDir := path.Join(core.RepoRoot, target.OutDir())
 			for _, out := range target.Outputs() {
 				if direct {
-					fs.LinkIfNotExists(path.Join(srcDir, out), destDir, f)
+					fs.LinkDestination(path.Join(srcDir, out), destDir, f)
 				} else {
 					fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), f)
 				}
@@ -1039,6 +1061,7 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 
 		httpClient.Timeout = time.Duration(state.Config.Build.Timeout)
 	})
+
 	if err := prepareDirectory(state.ProcessExecutor, target.OutDir(), false); err != nil {
 		return err
 	} else if err := prepareDirectory(state.ProcessExecutor, target.TmpDir(), false); err != nil {
@@ -1085,7 +1108,11 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent", fmt.Sprintf("please.build/%s", core.PleaseVersion))
+
+	if err := setHeaders(req, target, env); err != nil {
+		return err
+	}
+
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err
@@ -1097,16 +1124,74 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	var r io.Reader = resp.Body
 	if length := resp.Header.Get("Content-Length"); length != "" {
 		if i, err := strconv.Atoi(length); err == nil {
+			atomic.StoreUint64(&target.FileSize, uint64(i))
 			r = &progressReader{Reader: resp.Body, Target: target, Total: float32(i)}
+			target.ShowProgress.SetTrue() // Required for it to actually display
 		}
 	}
-	target.ShowProgress = true // Required for it to actually display
 	h := state.PathHasher.NewHash()
 	if _, err := io.Copy(io.MultiWriter(f, h), r); err != nil {
 		return err
 	}
 	state.PathHasher.SetHash(tmpPath, h.Sum(nil))
 	return nil
+}
+
+// setHeaders sets up all the headers we should send on remote_file() requests, including User-Agent and any user
+// defined ones.
+func setHeaders(req *http.Request, target *core.BuildTarget, env core.BuildEnv) error {
+	req.Header.Set("User-Agent", fmt.Sprintf("please.build/%s", core.PleaseVersion))
+
+	param := func(str string) (string, string) {
+		if !strings.HasPrefix(str, "remote_file:") {
+			return "", ""
+		}
+		str = strings.TrimPrefix(str, "remote_file:")
+		i := strings.IndexRune(str, ':')
+		return str[:i], str[(i + 1):]
+	}
+
+	userName := ""
+	password := ""
+	for _, l := range target.Labels {
+		param, value := param(l)
+		switch param {
+		case "":
+			continue
+		case "header":
+			k, v := header(value)
+			v = os.Expand(v, env.ReplaceEnvironment)
+			req.Header.Set(k, v)
+		case "secret_header":
+			k, v := header(value)
+			b, err := os.ReadFile(fs.ExpandHomePath(v))
+			if err != nil {
+				return fmt.Errorf("failed to read secret file: %v", err)
+			}
+
+			req.Header.Set(k, string(b))
+		case "username":
+			userName = value
+		case "password_file":
+			p, err := os.ReadFile(fs.ExpandHomePath(value))
+			if err != nil {
+				return fmt.Errorf("failed to read password file: %v", err)
+			}
+			password = string(p)
+		default:
+			return fmt.Errorf("unknown remote file label: %v", l)
+		}
+	}
+
+	if userName != "" || password != "" {
+		req.SetBasicAuth(userName, password)
+	}
+	return nil
+}
+
+func header(str string) (string, string) {
+	i := strings.IndexRune(str, ':')
+	return str[:i], str[(i + 1):]
 }
 
 // A progressReader tracks progress from a HTTP response and marks it on the given target.

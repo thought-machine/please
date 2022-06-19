@@ -7,10 +7,10 @@ import (
 	"sync"
 
 	"github.com/peterebden/go-cli-init/v5/flags"
-	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/metrics"
@@ -19,7 +19,7 @@ import (
 	"github.com/thought-machine/please/src/test"
 )
 
-var log = logging.MustGetLogger("plz")
+var log = logging.Log
 
 // Run runs a build to completion.
 // The given state object controls most of the parameters to it and can be interrogated
@@ -27,7 +27,6 @@ var log = logging.MustGetLogger("plz")
 // To get detailed results as it runs, use state.Results. You should call that *before*
 // starting this (otherwise a sufficiently fast build may bypass you completely).
 func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *core.Configuration, arch cli.Arch) {
-	parse.InitParser(state)
 	build.Init(state)
 	if state.Config.Remote.URL != "" {
 		state.RemoteClient = remote.New(state)
@@ -35,6 +34,8 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	if config.Display.SystemStats {
 		go state.UpdateResources()
 	}
+
+	parse.InitParser(state)
 
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, preTargets, targets, arch)
@@ -120,7 +121,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		}
 		for _, target := range state.ExpandLabels(preTargets) {
 			log.Debug("Waiting for pre-target %s...", target)
-			state.WaitForTargetAndEnsureDownload(target, targets[0])
+			state.WaitForInitialTargetAndEnsureDownload(target, targets[0])
 			log.Debug("Pre-target %s built, continuing...", target)
 		}
 	}
@@ -145,7 +146,7 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 		dir := target.PackageName
 		prefix := ""
 		if target.Subrepo != "" {
-			state.WaitForTargetAndEnsureDownload(target.SubrepoLabel(), target)
+			state.WaitForInitialTargetAndEnsureDownload(target.SubrepoLabel(state, ""), target)
 			subrepo := state.Graph.SubrepoOrDie(target.Subrepo)
 			dir = subrepo.Dir(dir)
 			prefix = subrepo.Dir(prefix)

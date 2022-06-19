@@ -8,6 +8,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/rules/bazel"
@@ -19,7 +20,9 @@ import (
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) *core.BuildState {
 	if state.Parser == nil {
-		state.Parser = &aspParser{parser: newAspParser(state)}
+		p := &aspParser{parser: newAspParser(state), init: make(chan struct{})}
+		state.Parser = p
+		go p.Init(state)
 	}
 	return state
 }
@@ -27,38 +30,8 @@ func InitParser(state *core.BuildState) *core.BuildState {
 // aspParser implements the core.Parser interface around our parser package.
 type aspParser struct {
 	parser *asp.Parser
-}
-
-func buildPreamble(state *core.BuildState, pkg *core.Package) string {
-	if pkg.Subrepo != nil {
-		// TODO(jpoole): remove this once #1436 has been addressed
-		// Please doesn't respect the subrepo .plzconfig so subincludes will be added
-		// in the subrepo erroneously if we don't return early here
-		return ""
-	}
-
-	subincludes := make([]string, 0, len(state.Config.Parse.PreloadSubincludes))
-	for _, inc := range state.Config.Parse.PreloadSubincludes {
-		l := core.ParseBuildLabel(inc, pkg.Name)
-		// If pkg is the package we're pre-loading subincludes from, or if it contains it's subrepo, skip.
-		// N.B. we can't cross subincludes so we have to exclude all subincludes, not just the one defined in this
-		// package
-		pkgName := l.SubrepoLabel().PackageName
-		if pkgName == "" {
-			pkgName = l.PackageName
-		}
-
-		if pkg.Name == pkgName {
-			return ""
-		}
-
-		subincludes = append(subincludes, fmt.Sprintf("\"%s\"", inc))
-	}
-
-	if len(subincludes) > 0 {
-		return fmt.Sprintf("subinclude(%s)", strings.Join(subincludes, ", "))
-	}
-	return ""
+	init   chan struct{}
+	once   sync.Once
 }
 
 // newAspParser returns a asp.Parser object with all the builtins loaded
@@ -87,15 +60,54 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
-func (p *aspParser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
-	if pkg.Name == "" {
-		return p.parser.ParseFile(pkg, filename, "")
-	}
-
-	return p.parser.ParseFile(pkg, filename, buildPreamble(state, pkg))
+// NewParser creates a new parser for the state
+func (p *aspParser) NewParser(state *core.BuildState) {
+	state.Parser = &aspParser{parser: newAspParser(state), init: make(chan struct{})}
 }
 
-func (p *aspParser) ParseReader(state *core.BuildState, pkg *core.Package, reader io.ReadSeeker) error {
+func (p *aspParser) WaitForInit() {
+	<-p.init
+}
+
+func (p *aspParser) Init(state *core.BuildState) {
+	p.once.Do(func() {
+		includes := state.Config.Parse.PreloadSubincludes
+		if state.RepoConfig != nil {
+			includes = append(includes, state.RepoConfig.Parse.PreloadSubincludes...)
+		}
+		wg := sync.WaitGroup{}
+		for _, inc := range includes {
+			if inc.IsPseudoTarget() {
+				log.Fatalf("Can't preload pseudotarget %v", inc)
+			}
+			wg.Add(1)
+			// Queue them up asynchronously to feed the queues as quickly as possible
+			go func(inc core.BuildLabel) {
+				state.WaitForBuiltTarget(inc, core.OriginalTarget)
+				wg.Done()
+			}(inc)
+		}
+
+		// We must wait for all the subinclude targets to be built otherwise updating the locals might race with parsing
+		// a package
+		wg.Wait()
+
+		// Preload them in order to avoid non-deterministic errors when the subincludes depend on each other
+		for _, inc := range includes {
+			if err := p.parser.SubincludeTarget(state, state.WaitForTargetAndEnsureDownload(inc, core.OriginalTarget)); err != nil {
+				log.Fatalf("%v", err)
+			}
+		}
+		p.parser.Finalise()
+		close(p.init)
+	})
+}
+
+func (p *aspParser) ParseFile(pkg *core.Package, filename string) error {
+	return p.parser.ParseFile(pkg, filename)
+}
+
+func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker) error {
 	_, err := p.parser.ParseReader(pkg, reader)
 	return err
 }
@@ -131,6 +143,9 @@ func (p *aspParser) runBuildFunction(tid int, state *core.BuildState, target *co
 }
 
 func createBazelSubrepo(state *core.BuildState) {
+	if sr := state.Graph.Subrepo("bazel_tools"); sr != nil {
+		return
+	}
 	dir := path.Join(core.OutDir, "bazel_tools")
 	state.Graph.AddSubrepo(&core.Subrepo{
 		Name:  "bazel_tools",

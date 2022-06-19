@@ -10,12 +10,12 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
+        "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/process",
         "//third_party/go:go-crypto",
         "//third_party/go:go-retryablehttp",
-        "//third_party/go:logging",
         "//third_party/go:semver",
         "//third_party/go:xz",
     ],
@@ -37,6 +37,7 @@ go_test(
     deps = [
         ":update",
         "//src/cli",
+        "//src/cli/logging",
         "//third_party/go:go-retryablehttp",
         "//third_party/go:logging",
         "//third_party/go:testify",

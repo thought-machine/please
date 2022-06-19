@@ -53,11 +53,14 @@ const MachineConfigFileName = "/etc/please/plzconfig"
 // UserConfigFileName is the file name for user-specific config (for all their repos).
 const UserConfigFileName = "~/.config/please/plzconfig"
 
+// DefaultPleaseLocation is the default location where Please is installed.
+const DefaultPleaseLocation = "~/.please"
+
 // DefaultPath is the default location please looks for programs in
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
-// readConfigFile reads a single config file into the config struct
-func readConfigFile(config *Configuration, filename string, subrepo bool) error {
+// readConfigFileOnly reads a single config file into the config struct
+func readConfigFileOnly(config *Configuration, filename string) error {
 	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
@@ -69,6 +72,15 @@ func readConfigFile(config *Configuration, filename string, subrepo bool) error 
 		}
 	} else {
 		log.Debug("Read config from %s", filename)
+	}
+	return nil
+}
+
+// readConfigFile reads a single config file into the config struct taking into account
+// some context like subrepos and plugins.
+func readConfigFile(config *Configuration, filename string, subrepo bool) error {
+	if err := readConfigFileOnly(config, filename); err != nil {
+		return err
 	}
 
 	if subrepo {
@@ -100,6 +112,22 @@ func ReadDefaultConfigFiles(profiles []ConfigProfile) (*Configuration, error) {
 		s[i] = string(p)
 	}
 	return ReadConfigFiles(defaultConfigFiles(), s)
+}
+
+// ReadDefaultGlobalConfigFilesOnly reads all the default global config files and
+// merges them into a config object.
+func ReadDefaultGlobalConfigFilesOnly(config *Configuration) error {
+	return ReadConfigFilesOnly(config, defaultGlobalConfigFiles(), nil)
+}
+
+// ReadDefaultConfigFilesOnly reads all the default config files and
+// merges them into a config object.
+func ReadDefaultConfigFilesOnly(config *Configuration, profiles []ConfigProfile) error {
+	s := make([]string, len(profiles))
+	for i, p := range profiles {
+		s[i] = string(p)
+	}
+	return ReadConfigFilesOnly(config, defaultConfigFiles(), s)
 }
 
 // defaultGlobalConfigFiles returns the set of global default config file names.
@@ -140,6 +168,21 @@ func defaultConfigFiles() []string {
 	)
 }
 
+// ReadConfigFilesOnly reads all the config locations, in order, and merges them into a config object.
+func ReadConfigFilesOnly(config *Configuration, filenames []string, profiles []string) error {
+	for _, filename := range filenames {
+		if err := readConfigFileOnly(config, filename); err != nil {
+			return err
+		}
+		for _, profile := range profiles {
+			if err := readConfigFileOnly(config, filename+"."+profile); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
 // Values are filled in by defaults initially and then overridden by each file in turn.
 func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, error) {
@@ -154,6 +197,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 			}
 		}
 	}
+
 	// Set default values for slices. These add rather than overwriting so we can't set
 	// them upfront as we would with other config values.
 	if usingBazelWorkspace {
@@ -162,6 +206,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		setDefault(&config.Parse.BuildFileName, "BUILD", "BUILD.plz")
 	}
 	setBuildPath(&config.Build.Path, config.Build.PassEnv, config.Build.PassUnsafeEnv)
+	setDefault(&config.Build.HashCheckers, "sha1", "sha256", "blake3")
 	setDefault(&config.Build.PassUnsafeEnv)
 	setDefault(&config.Build.PassEnv)
 	setDefault(&config.Cover.FileExtension, ".go", ".py", ".java", ".tsx", ".ts", ".js", ".cc", ".h", ".c")
@@ -251,6 +296,7 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,
+		"build.hashcheckers": strings.Join(config.Build.HashCheckers, ","),
 	})
 }
 
@@ -259,6 +305,16 @@ func normalisePluginConfigKeys(config *Configuration) {
 	for _, plugin := range config.Plugin {
 		newExtraValues := make(map[string][]string, len(plugin.ExtraValues))
 		for k, v := range plugin.ExtraValues {
+			_, ok := newExtraValues[strings.ToLower(k)]
+			if k == strings.ToLower(k) && ok {
+				// We have to handle overriding plugin config with .plzconfig files of higher precedence e.g. profiles
+				//
+				// When we meet this condition that means that the non-normalised config from the new .plzconfig file
+				// has been loaded, so we don't need to do anything. If that config used the already normalized form of
+				// the config key then it would've been overridden in the gcfg library, so we don't need to handle that
+				// case.
+				continue
+			}
 			newExtraValues[strings.ToLower(k)] = v
 		}
 		plugin.ExtraValues = newExtraValues
@@ -308,6 +364,10 @@ func DefaultConfiguration() *Configuration {
 	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.NumOldVersions = 10
 	config.Please.NumThreads = runtime.NumCPU() + 2
+	config.Please.PluginRepo = []string{
+		"https://github.com/{owner}/{plugin}/archive/{revision}.zip",
+		"https://github.com/{owner}/{plugin}-rules/archive/{revision}.zip",
+	}
 	config.Parse.NumThreads = config.Please.NumThreads
 	config.Parse.GitFunctions = true
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
@@ -388,13 +448,15 @@ func DefaultConfiguration() *Configuration {
 
 	config.Sandbox.Tool = "please_sandbox"
 	// Please tools
-	config.Go.FilterTool = "//_please:please_go_filter"
-	config.Go.PleaseGoTool = "//_please:please_go"
-	config.Go.EmbedTool = "//_please:please_go_embed"
-	config.Python.PexTool = "//_please:please_pex"
-	config.Java.JavacWorker = "//_please:javac_worker"
-	config.Java.JarCatTool = "//_please:arcat"
-	config.Java.JUnitRunner = "//_please:junit_runner"
+	config.Go.FilterTool = "/////_please:please_go_filter"
+	config.Go.PleaseGoTool = "/////_please:please_go"
+	config.Go.EmbedTool = "/////_please:please_go_embed"
+	config.Python.PexTool = "/////_please:please_pex"
+	config.Java.JavacWorker = "/////_please:javac_worker"
+	config.Java.JarCatTool = "/////_please:arcat"
+	config.Java.JUnitRunner = "/////_please:junit_runner"
+
+	config.Metrics.Timeout = cli.Duration(2 * time.Second)
 
 	return &config
 }
@@ -414,16 +476,17 @@ type Configuration struct {
 		NumThreads       int         `help:"Number of parallel build operations to run.\nIs overridden by the equivalent command-line flag, if that's passed." example:"6"`
 		Motd             []string    `help:"Message of the day; is displayed once at the top during builds. If multiple are given, one is randomly chosen."`
 		DefaultRepo      string      `help:"Location of the default repository; this is used if plz is invoked when not inside a repo, it changes to that directory then does its thing."`
+		PluginRepo       []string    `help:"A list of template URLS used to download plugins from. The download should be an archive e.g. .tar.gz, or .zip. Templatized variables should be surrounded in curly braces, and the available options are: owner, revision and plugin. Defaults to github and gitlab." example:"https://gitlab.you.org/{owner}/{plugin}/-/archive/{revision}/{plugin}-{revision}.zip" var:"PLUGIN_REPOS"`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Parse struct {
-		ExperimentalDir    []string `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
-		BuildFileName      []string `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+." var:"BUILD_FILE_NAMES"`
-		BlacklistDirs      []string `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
-		PreloadBuildDefs   []string `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths. Use PreloadSubincludes instead." example:"build_defs/go_bindata.build_defs"`
-		PreloadSubincludes []string `help:"Subinclude targets to preload by the parser before loading any BUILD files.\nSubincludes can be slow so it's recommended to use PreloadBuildDefs where possible." example:"///pleasings//python:requirements"`
-		BuildDefsDir       []string `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
-		NumThreads         int      `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
-		GitFunctions       bool     `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
+		ExperimentalDir    []string     `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
+		BuildFileName      []string     `help:"Sets the names that Please uses instead of BUILD for its build files.\nFor clarity the documentation refers to them simply as BUILD files but you could reconfigure them here to be something else.\nOne case this can be particularly useful is in cases where you have a subdirectory named build on a case-insensitive file system like HFS+." var:"BUILD_FILE_NAMES"`
+		BlacklistDirs      []string     `help:"Directories to blacklist when recursively searching for BUILD files (e.g. when using plz build ... or similar).\nThis is generally useful when you have large directories within your repo that don't need to be searched, especially things like node_modules that have come from external package managers."`
+		PreloadBuildDefs   []string     `help:"Files to preload by the parser before loading any BUILD files.\nSince this is done before the first package is parsed they must be files in the repository, they cannot be subinclude() paths. Use Init instead." example:"build_defs/go_bindata.build_defs"`
+		PreloadSubincludes []BuildLabel `help:"Subinclude targets to preload by the parser before loading any BUILD files.\nSubincludes can be slow so it's recommended to use PreloadBuildDefs where possible." example:"///pleasings//python:requirements"`
+		BuildDefsDir       []string     `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
+		NumThreads         int          `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
+		GitFunctions       bool         `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
 	} `help:"The [parse] section in the config contains settings specific to parsing files."`
 	Display struct {
 		UpdateTitle  bool   `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`
@@ -446,9 +509,11 @@ type Configuration struct {
 		PassEnv              []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
 		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
 		HTTPProxy            cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
+		HashCheckers         []string     `help:"Set of hash algos supported by the 'hashes' argument on build rules. Defaults to: sha1,sha256,blake3." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		ExitOnError          bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
-		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)" var:"LINK_GEN_SOURCES"`
+		DownloadLinkable     bool         `help:"True to download targets on remote that have links defined."`
+		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)"`
 		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
@@ -465,6 +530,8 @@ type Configuration struct {
 		HTTPTimeout                cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`
 		HTTPConcurrentRequestLimit int          `help:"The maximum amount of concurrent requests that can be open. Default 20."`
 		HTTPRetry                  int          `help:"The maximum number of retries before a request will give up, if a request is retryable"`
+		StoreCommand               string       `help:"Use a custom command to store cache entries."`
+		RetrieveCommand            string       `help:"Use a custom command to retrieve cache entries."`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
 		Timeout                  cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
@@ -475,11 +542,12 @@ type Configuration struct {
 		StoreTestOutputOnSuccess bool         `help:"True to store stdout and stderr in the test results for successful tests."`
 	} `help:"A config section describing settings related to testing in general."`
 	Sandbox struct {
-		Tool      string   `help:"The location of the tool to use for sandboxing. This can assume it is being run in a new network, user, and mount namespace on linux. If not set, Please will use 'plz sandbox'."`
-		Dir       []string `help:"Directories to hide within the sandbox"`
-		Namespace string   `help:"Set to 'always', to namespace all actions. Set to 'sandbox' to namespace only when sandboxing the build action. Defaults to 'never', under the assumption the sandbox tool will handle its own namespacing. If set, user namespacing will be enabled for all rules. Mount and network will only be enabled if the rule is to be sandboxed."`
-		Build     bool     `help:"True to sandbox individual build actions, which isolates them from network access and some aspects of the filesystem. Currently only works on Linux." var:"BUILD_SANDBOX"`
-		Test      bool     `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
+		Tool               string       `help:"The location of the tool to use for sandboxing. This can assume it is being run in a new network, user, and mount namespace on linux. If not set, Please will use 'plz sandbox'."`
+		Dir                []string     `help:"Directories to hide within the sandbox"`
+		Namespace          string       `help:"Set to 'always', to namespace all actions. Set to 'sandbox' to namespace only when sandboxing the build action. Defaults to 'never', under the assumption the sandbox tool will handle its own namespacing. If set, user namespacing will be enabled for all rules. Mount and network will only be enabled if the rule is to be sandboxed."`
+		Build              bool         `help:"True to sandbox individual build actions, which isolates them from network access and some aspects of the filesystem. Currently only works on Linux." var:"BUILD_SANDBOX"`
+		Test               bool         `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
+		ExcludeableTargets []BuildLabel `help:"If set, only targets that match these wildcards will be allowed to opt out of the sandbox"`
 	} `help:"A config section describing settings relating to sandboxing of build actions."`
 	Remote struct {
 		URL           string       `help:"URL for the remote server."`
@@ -524,7 +592,7 @@ type Configuration struct {
 		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
 		CFlags           string `help:"Sets the CFLAGS env var for go rules." var:"GO_C_FLAGS"`
 		LDFlags          string `help:"Sets the LDFLAGS env var for go rules." var:"GO_LD_FLAGS"`
-	} `help:"Please has built-in support for compiling Go, and of course is written in Go itself.\nSee the config subfields or the Go rules themselves for more information.\n\nNote that Please is a bit more flexible than Go about directory layout - for example, it is possible to have multiple packages in a directory, but it's not a good idea to push this too far since Go's directory layout is inextricably linked with its import paths."`
+	} `help:"Please has built-in support for compiling Go, and of course is written in Go itself.\nSee the config subfields or the Go rules themselves for more information.\n\nNote that Please is a bit more flexible than Go about directory layout - for example, it is possible to have multiple packages in a directory, but it's not a good idea to push this too far since Go's directory layout is inextricably linked with its import paths." exclude_flag:"ExcludeGoRules"`
 	Python struct {
 		PipTool             string   `help:"The tool that is invoked during pip_library rules." var:"PIP_TOOL"`
 		PipFlags            string   `help:"Additional flags to pass to pip invocations in pip_library rules." var:"PIP_FLAGS"`
@@ -540,7 +608,7 @@ type Configuration struct {
 		WheelNameScheme     []string `help:"Defines a custom templatized wheel naming scheme. Templatized variables should be surrounded in curly braces, and the available options are: url_base, package_name, version and initial (the first character of package_name). The default search pattern is '{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl' along with a few common variants." var:"PYTHON_WHEEL_NAME_SCHEME"`
 		InterpreterOptions  string   `help:"Options to pass to the python interpeter, when writing shebangs for pex executables." var:"PYTHON_INTERPRETER_OPTIONS"`
 		DisableVendorFlags  bool     `help:"Disables injection of vendor specific flags for pip while using pip_library. The option can be useful if you are using something like Pyenv, and the passing of additional flags or configuration that are vendor specific, e.g. --system, breaks your build." var:"DISABLE_VENDOR_FLAGS"`
-	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty."`
+	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty." exclude_flag:"ExcludePythonRules"`
 	Java struct {
 		JavacTool          string    `help:"Defines the tool used for the Java compiler. Defaults to javac." var:"JAVAC_TOOL"`
 		JlinkTool          string    `help:"Defines the tool used for the Java linker. Defaults to jlink." var:"JLINK_TOOL"`
@@ -556,7 +624,7 @@ type Configuration struct {
 		JavacTestFlags     string    `help:"Additional flags to pass to javac when compiling tests." example:"-Xmx1200M" var:"JAVAC_TEST_FLAGS"`
 		DefaultMavenRepo   []cli.URL `help:"Default location to load artifacts from in maven_jar rules. Can be overridden on a per-rule basis." var:"DEFAULT_MAVEN_REPO"`
 		Toolchain          string    `help:"A label identifying a java_toolchain." var:"JAVA_TOOLCHAIN"`
-	} `help:"Please has built-in support for compiling Java.\nIt builds uber-jars for binary and test rules which contain all dependencies and can be easily deployed, and with the help of some of Please's additional tools they are deterministic as well.\n\nWe've only tested support for Java 7 and 8, although it's likely newer versions will work with little or no change."`
+	} `help:"Please has built-in support for compiling Java.\nIt builds uber-jars for binary and test rules which contain all dependencies and can be easily deployed, and with the help of some of Please's additional tools they are deterministic as well.\n\nWe've only tested support for Java 7 and 8, although it's likely newer versions will work with little or no change." exclude_flag:"ExcludeJavaRules"`
 	Cpp struct {
 		CCTool             string     `help:"The tool invoked to compile C code. Defaults to gcc but you might want to set it to clang, for example." var:"CC_TOOL"`
 		CppTool            string     `help:"The tool invoked to compile C++ code. Defaults to g++ but you might want to set it to clang++, for example." var:"CPP_TOOL"`
@@ -573,7 +641,7 @@ type Configuration struct {
 		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"///pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`
 		ClangModules       bool       `help:"Uses Clang-style arguments for compiling cc_module rules. If disabled gcc-style arguments will be used instead. Experimental, expected to be removed at some point once module compilation methods are more consistent." var:"CC_MODULES_CLANG"`
 		DsymTool           string     `help:"Set this to dsymutil or equivalent on macOS to use this tool to generate xcode symbol information for debug builds." var:"DSYM_TOOL"`
-	} `help:"Please has built-in support for compiling C and C++ code. We don't support every possible nuance of compilation for these languages, but aim to provide something fairly straightforward.\nTypically there is little problem compiling & linking against system libraries although Please has no insight into those libraries and when they change, so cannot rebuild targets appropriately.\n\nThe C and C++ rules are very similar and simply take a different set of tools and flags to facilitate side-by-side usage."`
+	} `help:"Please has built-in support for compiling C and C++ code. We don't support every possible nuance of compilation for these languages, but aim to provide something fairly straightforward.\nTypically there is little problem compiling & linking against system libraries although Please has no insight into those libraries and when they change, so cannot rebuild targets appropriately.\n\nThe C and C++ rules are very similar and simply take a different set of tools and flags to facilitate side-by-side usage." exclude_flag:"ExcludeCCRules"`
 	Proto struct {
 		ProtocTool       string   `help:"The binary invoked to compile .proto files. Defaults to protoc." var:"PROTOC_TOOL"`
 		ProtocGoPlugin   string   `help:"The binary passed to protoc as a plugin to generate Go code. Defaults to protoc-gen-go.\nWe've found this easier to manage with a go_get rule instead though, so you can also pass a build label here. See the Please repo for an example." var:"PROTOC_GO_PLUGIN"`
@@ -590,7 +658,7 @@ type Configuration struct {
 		JavaGrpcDep      string   `help:"An in-repo dependency that's applied to any Java gRPC libraries." var:"GRPC_JAVA_DEP"`
 		GoGrpcDep        string   `help:"An in-repo dependency that's applied to any Go gRPC libraries." var:"GRPC_GO_DEP"`
 		ProtocFlag       []string `help:"Flags to pass to protoc i.e. the location of well known types. Can be repeated." var:"PROTOC_FLAGS"`
-	} `help:"Please has built-in support for compiling protocol buffers, which are a form of codegen to define common data types which can be serialised and communicated between different languages.\nSee https://developers.google.com/protocol-buffers/ for more information.\n\nThere is also support for gRPC, which is an implementation of protobuf's RPC framework. See http://www.grpc.io/ for more information.\n\nNote that you must have the protocol buffers compiler (and gRPC plugins, if needed) installed on your machine to make use of these rules."`
+	} `help:"Please has built-in support for compiling protocol buffers, which are a form of codegen to define common data types which can be serialised and communicated between different languages.\nSee https://developers.google.com/protocol-buffers/ for more information.\n\nThere is also support for gRPC, which is an implementation of protobuf's RPC framework. See http://www.grpc.io/ for more information.\n\nNote that you must have the protocol buffers compiler (and gRPC plugins, if needed) installed on your machine to make use of these rules." exclude_flag:"ExcludeProtoRules"`
 	Licences struct {
 		Accept []string `help:"Licences that are accepted in this repository.\nWhen this is empty licences are ignored. As soon as it's set any licence detected or assigned must be accepted explicitly here.\nThere's no fuzzy matching, so some package managers (especially PyPI and Maven, but shockingly not npm which rather nicely uses SPDX) will generate a lot of slightly different spellings of the same thing, which will all have to be accepted here. We'd rather that than trying to 'cleverly' match them which might result in matching the wrong thing."`
 		Reject []string `help:"Licences that are explicitly rejected in this repository.\nAn astute observer will notice that this is not very different to just not adding it to the accept section, but it does have the advantage of explicitly documenting things that the team aren't allowed to use."`
@@ -598,16 +666,13 @@ type Configuration struct {
 	Alias            map[string]*Alias  `help:"Allows defining alias replacements with more detail than the [aliases] section. Otherwise follows the same process, i.e. performs replacements of command strings."`
 	Plugin           map[string]*Plugin `help:"Used to define configuration for a Please plugin."`
 	PluginDefinition struct {
-		Name string `help:"The name of the plugin"`
+		Name              string   `help:"The name of the plugin"`
+		Description       string   `help:"A description of what the plugin does"`
+		BuildDefsDir      []string `help:"Directory to look in when prompted for help topics that aren't known internally. Defaults to build_defs" example:"build_defs"`
+		DocumentationSite string   `help:"A link to the documentation for this plugin"`
 	} `help:"Set this in your .plzconfig to make the current Please repo a plugin. Add configuration fields with PluginConfig sections"`
-	PluginConfig map[string]*struct {
-		ConfigKey    string   `help:"The key of the config field in the .plzconfig file"`
-		DefaultValue []string `help:"The default value for this config field, if it has one"`
-		Optional     bool     `help:"Whether this config field can be empty"`
-		Repeatable   bool     `help:"Whether this config field can be repeated"`
-		Type         string   `help:"What type to bind this config as e.g. str, bool, or int. Default str."`
-	} `help:"Defines a new config field for a plugin"`
-	Bazel struct {
+	PluginConfig map[string]*PluginConfigDefinition `help:"Defines a new config field for a plugin"`
+	Bazel        struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`
 
@@ -626,12 +691,15 @@ type Configuration struct {
 		ExcludePythonRules            bool `help:"Whether to include the python rules or use the plugin"`
 		ExcludeJavaRules              bool `help:"Whether to include the java rules or use the plugin"`
 		ExcludeCCRules                bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
+		ExcludeGoRules                bool `help:"Whether to include the go rules rules or require use of the plugin"`
+		ExcludeShellRules             bool `help:"Whether to include the shell rules rules or require use of the plugin"`
 		ExcludeProtoRules             bool `help:"Whether to include the proto rules or require use of the plugin"`
 		ExcludeSymlinksInGlob         bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
 		GoDontCollapseImportPath      bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
-		PrometheusGatewayURL string `help:"The gateway URL to push prometheus updates to."`
+		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`
+		Timeout              cli.Duration `help:"timeout for pushing to the gateway. Defaults to 2 seconds." `
 	} `help:"Settings for collecting metrics."`
 }
 
@@ -670,7 +738,18 @@ type Flag struct {
 }
 
 type Plugin struct {
+	Target      BuildLabel          `help:"The build label for the target that provides the plugin repo."`
 	ExtraValues map[string][]string `help:"A section of arbitrary key-value properties for the plugin." gcfg:"extra_values"`
+}
+
+type PluginConfigDefinition struct {
+	ConfigKey    string   `help:"The key of the config field in the .plzconfig file"`
+	DefaultValue []string `help:"The default value for this config field, if it has one"`
+	Help         string   `help:"The help text to display for this field"`
+	Optional     bool     `help:"Whether this config field can be empty"`
+	Repeatable   bool     `help:"Whether this config field can be repeated"`
+	Inherit      bool     `help:"Whether this config field should be inherited from the host repo or not. Defaults to true."`
+	Type         string   `help:"What type to bind this config as e.g. str, bool, or int. Default str."`
 }
 
 func (plugin Plugin) copyPlugin() *Plugin {
@@ -729,7 +808,7 @@ func (config *Configuration) GetBuildEnv() []string {
 
 // EnsurePleaseLocation will resolve `config.Please.Location` to a full path location where it is to be found.
 func (config *Configuration) EnsurePleaseLocation() {
-	defaultPleaseLocation := fs.ExpandHomePath("~/.please")
+	defaultPleaseLocation := fs.ExpandHomePath(DefaultPleaseLocation)
 
 	if config.Please.Location == "" {
 		// Determine the location based off where we're running from.
@@ -828,16 +907,28 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 			return strings.ToLower(s2) == s1
 		}
 	}
+	maybeValidOption := func(field reflect.StructField, value, key string) error {
+		if options := field.Tag.Get("options"); options != "" {
+			if !cli.ContainsString(value, strings.Split(options, ",")) {
+				return fmt.Errorf("Invalid value %s for field %s; options are %s", value, key, options)
+			}
+		}
+		return nil
+	}
 	elem := reflect.ValueOf(config).Elem()
 	for k, v := range overrides {
 		split := strings.Split(strings.ToLower(k), ".")
+		if len(split) == 3 && split[0] == "plugin" {
+			if plugin, ok := config.Plugin[split[1]]; ok {
+				plugin.ExtraValues[strings.ToLower(split[2])] = []string{v}
+				return nil
+			}
+			log.Fatalf("No plugin with ID %v", split[1])
+		}
 		if len(split) != 2 {
 			return fmt.Errorf("Bad option format: %s", k)
 		}
-		if plugin, ok := config.Plugin[split[0]]; ok {
-			plugin.ExtraValues[strings.ToLower(split[1])] = []string{v}
-			return nil
-		}
+
 		field := elem.FieldByNameFunc(match(split[0]))
 		if !field.IsValid() {
 			return fmt.Errorf("Unknown config field: %s", split[0])
@@ -855,10 +946,8 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		switch field.Kind() {
 		case reflect.String:
 			// verify this is a legit setting for this field
-			if options := subfield.Tag.Get("options"); options != "" {
-				if !cli.ContainsString(v, strings.Split(options, ",")) {
-					return fmt.Errorf("Invalid value %s for field %s; options are %s", v, k, options)
-				}
+			if err := maybeValidOption(subfield, v, k); err != nil {
+				return err
 			}
 			if field.Type().Name() == "URL" {
 				field.Set(reflect.ValueOf(cli.URL(v)))
@@ -896,7 +985,14 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 				}
 				field.Set(reflect.ValueOf(urls))
 			} else {
-				field.Set(reflect.ValueOf(strings.Split(v, ",")))
+				parts := strings.Split(v, ",")
+				// verify this is a legit setting for this field
+				for _, part := range parts {
+					if err := maybeValidOption(subfield, part, k); err != nil {
+						return err
+					}
+				}
+				field.Set(reflect.ValueOf(parts))
 			}
 		default:
 			return fmt.Errorf("Can't override config field %s (is %s)", k, field.Kind())
@@ -1239,6 +1335,14 @@ func (config Configuration) copyConfig() *Configuration {
 		plugins[name] = plugin.copyPlugin()
 	}
 	config.Plugin = plugins
+
+	pluginConfig := map[string]*PluginConfigDefinition{}
+	for key, value := range config.PluginConfig {
+		pluginConfig[key] = value
+	}
+
+	config.PluginConfig = pluginConfig
+
 	return &config
 }
 

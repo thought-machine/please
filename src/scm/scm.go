@@ -5,19 +5,20 @@ package scm
 import (
 	"path"
 
-	"gopkg.in/op/go-logging.v1"
-
+	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/fs"
 )
 
-var log = logging.MustGetLogger("scm")
+var log = logging.Log
 
 // An SCM represents an SCM implementation that we can ask for various things.
 type SCM interface {
 	// DescribeIdentifier returns the string that is a "human-readable" identifier of the given revision.
 	DescribeIdentifier(revision string) string
-	// CurrentRevIdentifier returns the string that specifies what the current revision is.
-	CurrentRevIdentifier() string
+	// CurrentRevIdentifier returns a string that specifies what the current revision is. If
+	// "permanent" is true, this string will permanently identify the revision; otherwise, the string
+	// may only be a transient identifier.
+	CurrentRevIdentifier(permanent bool) string
 	// ChangesIn returns a list of modified files in the given diffSpec.
 	ChangesIn(diffSpec string, relativeTo string) []string
 	// ChangedFiles returns a list of modified files since the given commit, optionally including untracked files.

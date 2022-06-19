@@ -3,6 +3,7 @@ package process
 import (
 	"os"
 	"os/exec"
+	"strconv"
 	"syscall"
 )
 
@@ -11,7 +12,7 @@ import (
 // N.B. This does not start the command - the caller must handle that (or use one
 //      of the other functions which are higher-level interfaces).
 func (e *Executor) ExecCommand(sandbox SandboxConfig, foreground bool, command string, args ...string) *exec.Cmd {
-	shouldNamespace := e.namespace == NamespaceAlways || (e.namespace == NamespaceSandbox && sandbox != NoSandbox)
+	shouldNamespace := e.namespace == NamespaceAlways || ((e.namespace == NamespaceSandbox || e.usePleaseSandbox) && sandbox != NoSandbox)
 
 	cmd := exec.Command(command, args...)
 
@@ -19,21 +20,20 @@ func (e *Executor) ExecCommand(sandbox SandboxConfig, foreground bool, command s
 	if sandbox != NoSandbox {
 		// re-exec into `plz sandbox` if we're using the built in sandboxing
 		if e.usePleaseSandbox {
-			if !shouldNamespace {
-				log.Fatalf("can't use please sandbox and not namespace")
-			}
 			args = append([]string{"sandbox", command}, args...)
 			plz, err := os.Executable()
 			if err != nil {
 				panic(err)
 			}
 			cmd = exec.Command(plz, args...)
+			// TODO(jpoole): This should be configurable and overridable at the rule level
+			cmd.Env = append(cmd.Env, "SANDBOX_UID="+strconv.Itoa(os.Getuid()))
 		} else {
 			// Otherwise exec the sandbox tool
 			args = append([]string{command}, args...)
 			cmd = exec.Command(e.sandboxTool, args...)
 		}
-		cmd.Env = []string{"SHARE_NETWORK=" + boolToString(!sandbox.Network), "SHARE_MOUNT=" + boolToString(!sandbox.Mount)}
+		cmd.Env = append(cmd.Env, "SHARE_NETWORK="+boolToString(!sandbox.Network), "SHARE_MOUNT="+boolToString(!sandbox.Mount))
 	}
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{

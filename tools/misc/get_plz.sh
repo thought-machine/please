@@ -11,6 +11,8 @@ if [ "$OS" = "Linux" ]; then
     GOOS="linux"
 elif [ "$OS" = "Darwin" ]; then
     GOOS="darwin"
+elif [ "$OS" = "FreeBSD" ]; then
+    GOOS="freebsd"
 else
     echo "Unknown operating system $OS"
     exit 1

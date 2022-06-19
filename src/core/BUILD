@@ -12,17 +12,17 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
+        "//src/cli/logging",
+        "//src/cmap",
         "//src/fs",
         "//src/process",
         "//src/scm",
         "//third_party/go:blake3",
-        "//third_party/go:cmap",
         "//third_party/go:deferred_regex",
         "//third_party/go:errgroup",
         "//third_party/go:gcfg",
         "//third_party/go:go-flags",
         "//third_party/go:godirwalk",
-        "//third_party/go:logging",
         "//third_party/go:psutil",
         "//third_party/go:semver",
         "//third_party/go:shlex",
@@ -133,7 +133,10 @@ go_test(
 
 go_test(
     name = "build_label_test",
-    srcs = ["build_label_test.go"],
+    srcs = [
+        "build_label_fuzz_test.go",
+        "build_label_test.go",
+    ],
     deps = [
         ":core",
         "//third_party/go:testify",

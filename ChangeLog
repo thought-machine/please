@@ -1,3 +1,137 @@
+Version 16.20.4
+---------------
+
+    * Support embedding directories using Golang embed comments #2479
+    * Fix determinism issue in `go_toolchain()` when cross compiling #2496
+    * Fix deadlock when parsing a locally defined subrepo #2487
+    * Ensure hardlinks and symlinks are updated correctly when linking
+      generated sources #2493
+
+
+Version 16.20.3
+---------------
+
+    * The build metadata store for remote execution now prefixes the path rather than
+      convoluting hashes, making items in it easier to locate (#2464)
+    * Build outputs are printed without formatting when stdout is not interactive (#2480)
+    * Fixed a race condition between building initial targets in a subrepo and preloaded
+      subincludes (#2482)
+
+
+Version 16.20.2
+---------------
+    * Make `plz query deps` traverse hidden dependencies even when
+      we don't print them #2453
+
+
+Version 16.20.1
+---------------
+    * When configured, require `remote_file()` rules are covered by
+      the `Sandbox.ExcludeableTargets` config value #2436
+    * REX: Skip caching when `--num_runs` is provided to `plz test`
+      #2450
+    * Fix indentation in `plz query deps` when we exclude targets #2454
+
+
+Version 16.20.0
+---------------
+    * Fix issue with the `pleasew` wrapper script downloading the wrong
+      architecture on arm platforms #2286
+    * Make the `pleasew` wrapper read config files in the same order that Please
+      does #2324
+    * Add `no_test_output` parameter to `cc_test()` #2292
+    * Include `data = []` dependencies in `plz export` #2294
+    * Remove the experimental `@self` psudo-subrepo #2295
+    * The `[Plugin "id"]` section now requires you to define the
+      subrepo target that provides the subrepo #2285
+    * Rework the context package during subincludes. This major change
+      allows us to subinclude from preloaded subincludes and fixes a number
+      of inconsistencies with how `package_name()` and `subrepo_name()`
+      #2289
+    * REX: Fix text file and remote file not being marked as executable in remote
+      execution #2314 #2427
+    * Use the Target field to provide help text for plugins #2253
+    * REX: Don't cache action results when the result is missing some of the
+      targets outputs #2322
+    * REX: Don't rename outputs when they collide with folders in the source
+      tree. This was only necessary for local builds. #2325
+    * Fix issue with `go_test()` where it was not correctly discovering the test
+      package sources when built in subrepos #2329
+    * Allow adding arbitrary labels to third party build rules #2333 #2355
+    * REX: Optionally download any targets that link their outputs. This can help with
+      generated sources #2318
+    * Preserve file permissions when storing files in a directory cache that's on a
+      different file system #2346
+    * Handle miss-configured sandbox tool gracefully #2345
+    * Make the built in Please sandboxing run as the host user's PID instead of
+      mapping that user to root in the namespace #2359
+    * Fix issue where nested dictionaries were left mutable after a subinclude
+      #2365
+    * REX: acquire the target lock when downloading target outputs. This fixes
+      a race condition where parallel Please processes would clobber eachothers
+      outputs #2369
+    * Allow targets with entry-points to be the target of a `plz exec` #2379
+    * Parallelize `plz fmt` #2377
+    * Handle the frozen variants of lists and dicts when serialising them to json
+      via the `json()` built-in #2373
+    * Allow accessing multiple levels deep in f-string i.e. `f"{foo.bar.baz}`. Note,
+      expressions are still limited to basic access like this, not full expressions
+      #2384
+    * Allow `glob` to take a string as well as a list i.e. ``glob("*")` #2391
+    * Allow the context of `text_file()` to be empty #2396
+    * Add preloaded subincludes to the `plz export` output #2397
+    * Added a `linux_amd64` build #2411
+    * REX: sanitise env vars that were passed via `env = {}` #2408
+    * Parse fields in the `[BuildConfig]` section into the correct values when they
+      successfully parse as booleans or integers #2414
+    * Add in the pkg-config and compiler flags to the `go tool cgo` invocation #2428
+    * Remove the internal `//_please` package from subrepos and use the host repo's
+      version to download the Please tools #2429
+    * Stay on the same branch when using `plz query --since` #2431
+    * Remove remote file headers into the built-in rather than using curl. This also
+      follows redirects now. #2437
+
+Version 16.19.0
+---------------
+    * Add Go 1.18 fuzz testing support #2269
+    * Fix incorrect resolving of @self keyword that should resolve relative
+      to the repo/plugin where it appears #2270
+    * Sort user provided env for remote execution for better determinism #2273
+    * Targets can now be specified to opt out of sandboxing #2282
+    * Fix issue with preloading subincludes, where it would fail if the subinclude
+      itself also had subincludes #2281
+    * Allow outputs to be downloaded transitively in remote when debugging is on #2278
+    * Remove duplicate labels being applied to `go_module()` rules #2254
+    * Gracefully handle missing tools during `plz query changes` #2130
+    * Allow specifying a github access token as an environment variable
+      to `github_repo()` to access private repos #2249
+    * Show the download rate of `remote_file()` rules in the progress
+      update #2261
+    * Improvements to `plz query print --json` to align it more closely
+      to the python-eque (asp) representation #2250
+    * Allow hashing `filegroup()`s by the last modified timestamp of their
+      sources. This helps with large files, and can be done by applying
+      the `fg:hash-modified-time` label #2266
+    * Allow plugins to specify if a configuration value should be inherited
+      from the host repo, or overriden from the subrepo's config #2216
+    * Allow restricting the hashing algorithms for validating the `hashes`
+      field #2267
+
+
+Version 16.18.0
+---------------
+    * Stop showing line by line coverage results when tests fail #2227
+    * Add support for the xxhash hashing algorithm #2229
+    * Use an environment variable to pass in go to the go test main tool
+      to improve migration strategy #2239
+    * Handle aliases to multi-level commands #2242
+    * Make `plz run sequential` use the same `--output` flag as
+      `plz run parallel` #2243
+    * Implement a command cache to use custom commands to store and
+      retrieve items from the cache e.g. `s3 cp - s3://cache/$CACHE_KEY`
+      #2244
+
+
 Version 16.17.1
 ---------------
     * The default jarcat_tool (now arcat) for Linux is now correctly linked

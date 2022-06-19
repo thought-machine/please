@@ -2,22 +2,24 @@ package query
 
 import (
 	"bytes"
-	"github.com/thought-machine/please/src/parse"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse"
 )
 
 var order = parse.InitParser(core.NewDefaultBuildState()).Parser.BuildRuleArgOrder()
 
 func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
-	target := core.BuildTarget{}
+	target := &core.BuildTarget{}
 	var buf bytes.Buffer
-	p := newPrinter(&buf, &target, 0, order)
+	p := newPrinter(&buf, target, 0, order)
 	p.PrintTarget()
 	assert.False(t, p.error, "Appears we do not know how to print some fields")
 }
@@ -55,6 +57,35 @@ func TestPrintOutput(t *testing.T) {
 
 `
 	assert.Equal(t, expected, s)
+}
+
+func TestPrintJSONOutput(t *testing.T) {
+	target := core.NewBuildTarget(core.ParseBuildLabel("//src/query:test_print_output", ""))
+	target.AddSource(src("file.go"))
+	target.AddSource(src(":target1"))
+	target.AddSource(src("//src/query:target2"))
+	target.AddSource(src("//src/query:target3|go"))
+	target.AddSource(src("//src/core:core"))
+	target.AddOutput("out1.go")
+	target.AddOutput("out2.go")
+	target.Command = "cp $SRCS $OUTS"
+	target.Tools = append(target.Tools, src("//tools:tool1"))
+	target.IsBinary = true
+
+	valueMap := targetToValueMap(order, nil, target)
+	jsonValue := new(bytes.Buffer)
+	encoder := json.NewEncoder(jsonValue)
+	encoder.SetEscapeHTML(false)
+
+	err := encoder.Encode(valueMap)
+	require.NoError(t, err)
+
+	result := map[string]interface{}{}
+	err = json.Unmarshal(jsonValue.Bytes(), &result)
+	require.NoError(t, err)
+
+	assert.ElementsMatch(t, result["srcs"], []string{"file.go", "//src/query:target1", "//src/query:target2", "//src/query:target3|go", "//src/core:core"})
+	assert.ElementsMatch(t, result["outs"], []string{"out1.go", "out2.go"})
 }
 
 func TestFilegroupOutput(t *testing.T) {
