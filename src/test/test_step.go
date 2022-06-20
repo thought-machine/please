@@ -344,9 +344,7 @@ func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget, run int
 	replacedCmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
 	env := core.TestEnvironment(state, target, path.Join(core.RepoRoot, target.TestDir(run)))
 	if len(state.TestArgs) > 0 {
-		args := strings.Join(state.TestArgs, " ")
-		replacedCmd += " " + args
-		env = append(env, "TESTS="+args)
+		replacedCmd += " " + strings.Join(state.TestArgs, " ")
 	}
 	return replacedCmd, env, err
 }
