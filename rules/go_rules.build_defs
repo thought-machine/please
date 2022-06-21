@@ -101,7 +101,8 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
                visibility:list=None, test_only:bool&testonly=False, complete:bool=True,
                _needs_transitive_deps=False, _all_srcs=False, cover:bool=True,
                filter_srcs:bool=True, _link_private:bool=False, _link_extra:bool=True, _abi:str=None,
-               _generate_import_config:bool=True, import_path:str='', labels:list=[], package:str=None):
+               _generate_import_config:bool=True, import_path:str='', labels:list=[], package:str=None,
+               _requires:list=[], _provides:dict={}):
     """Generates a Go library which can be reused by other rules.
 
     Args:
@@ -211,6 +212,8 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             _generate_import_config=False,
             labels=labels,
             import_path=package_path,
+            requires = _requires,
+            provides = _provides,
         )
         asm_rule = build_rule(
             name = name,
@@ -238,9 +241,9 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             cmd = 'cp $SRCS_LIB "$OUT" && chmod +w "$OUT" && "$TOOL" tool pack r "$OUT" $SRCS_ASM',
             visibility = visibility,
             building_description = 'Packing...',
-            requires = ['go'],
+            requires = ['go'] + _requires,
             labels = labels+link_labels,
-            provides =  {'go': ':' + name, 'go_src': lib_rule},
+            provides =  {'go': ':' + name, 'go_src': lib_rule} | _provides,
             test_only = test_only,
             exported_deps = exported_deps,
             deps = deps,
@@ -286,8 +289,8 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
         cmd=_go_library_cmds(import_path=package_path, complete=complete, all_srcs=_all_srcs, cover=cover, filter_srcs=filter_srcs, abi=_abi, embedcfg=embedcfg),
         visibility=visibility,
         building_description="Compiling...",
-        requires=['go'],
-        provides={'go': ':' + name, 'go_src': src_rule},
+        requires=['go'] + _requires,
+        provides={'go': ':' + name, 'go_src': src_rule} | _provides,
         labels = labels+link_labels + [f"go_package:{package_path}"] if _generate_import_config else [],
         test_only=test_only,
         tools=tools,
@@ -603,6 +606,9 @@ def go_binary(name:str, srcs:list=[], resources:list=None, asm_srcs:list=[], out
         visibility=visibility,
         labels=labels,
         requires=['go'],
+        provides={
+            'test': lib,
+        },
         pre_build=_collect_linker_flags(static, definitions),
         stamp = stamp,
     )
@@ -661,6 +667,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         complete = False,
         _generate_import_config=False,
         import_path = test_package,
+        _requires = ["test"],
     )
 
     if cgo:
@@ -750,7 +757,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         size = size,
         flaky = flaky,
         test_outputs = test_outputs,
-        requires = ['go', 'test'],
+        requires = ['go'],
         labels = labels,
         binary = True,
         test = True,
