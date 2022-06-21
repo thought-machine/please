@@ -1,3 +1,15 @@
+Version 16.21.0
+---------------
+
+    * Only exit plz fmt with exit code 1 on error or if in quiet mode (#2265)
+    * Fix bug where we wouldn't traverse excluded deps (#2496)
+    * Update gcfg to allow setting empty values in SSM sections (#2499)
+    * Set TESTS for remote execution as well as local (#2501)
+    * Fix data race in remote stats code (#2500)
+    * Fixed compile of assembly in third-party Go libraries for Go 1.19
+    * Expose `go_binary` sources when included as a `go_test` dependency (#2503)
+
+
 Version 16.20.4
 ---------------
 
