@@ -1,3 +1,10 @@
+Version 16.21.1
+---------------
+
+    * Fix visibility parsing when the visibility list is defined as a constant in
+      a subincluded build_def file
+
+
 Version 16.21.0
 ---------------
 
