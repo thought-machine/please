@@ -449,13 +449,8 @@ func TestPrintAlias(t *testing.T) {
 	c, err := ReadConfigFiles([]string{"src/core/test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
 	var buf bytes.Buffer
-	c.PrintAlias(&buf, "index", []string{"please", "index"})
-	assert.Equal(t, `
-Usage for index:
-  index         Some useful scripts.
-  index wibble  Wibbles.
-  index wobble  Definitely doesn't wibble.
-`, buf.String())
+	c.PrintAlias(&buf, "index", []string{"please", "index"}, nil)
+	assert.Equal(t, "\nUsage for index:\n  index         Some useful scripts.\n  index wibble  Wibbles.    \n                \n  index wobble  Definitely doesn't wibble.\n                \n", buf.String())
 }
 
 func TestGetTags(t *testing.T) {

@@ -36,11 +36,20 @@ please_repo_e2e_test(
 )
 
 please_repo_e2e_test(
-    name = "alias_config_choices_test",
+    name = "alias_config_choices_completion_test",
     expect_output_contains = {
         "output": "big",
     },
-    plz_command = "plz meme --doge big >output",
+    plz_command = "export GO_FLAGS_COMPLETION=1; plz meme --doge b >output",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
+    name = "alias_config_choices_test",
+    expected_output = {
+        "output": "wow 1 args",
+    },
+    plz_command = "plz meme --doge=big >output",
     repo = "test_repo",
 )
 

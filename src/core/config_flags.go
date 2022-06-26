@@ -2,6 +2,7 @@ package core
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/thought-machine/go-flags"
 )
@@ -9,10 +10,11 @@ import (
 // AttachAliasFlags attaches the alias flags to the given flag parser.
 // It returns true if any modifications were made.
 func (config *Configuration) AttachAliasFlags(parser *flags.Parser, args []string) bool {
+	var wg sync.WaitGroup
 	for name, alias := range config.Alias {
 		var err error
 		cmd := parser.Command
-		if alias.Config == "" {
+		if string(alias.Config) == "" {
 			fields := strings.Fields(name)
 			for i, namePart := range fields {
 				cmd = addSubcommand(cmd, namePart, alias.Desc, alias.PositionalLabels && len(alias.Subcommand) == 0 && i == len(fields)-1)
@@ -31,13 +33,17 @@ func (config *Configuration) AttachAliasFlags(parser *flags.Parser, args []strin
 		} else {
 			// throw exception if any fields other than desc and config exist in this alias
 			if alias.Cmd != "" || len(alias.Subcommand) != 0 || len(alias.Flag) != 0 {
-				log.Warningf("config flags attach: %v, %v, %v, %v", name, alias.Cmd, len(alias.Subcommand), len(alias.Flag))
-				log.Errorf("Alias config field duplication for alias %s: use one method of specification", name)
+				log.Errorf("Use one method of specification for alias %s", name)
 			}
-			cmd, err = alias.ParseAliasConfigs(name, args, alias.Config, alias.Desc, cmd)
-			if err != nil {
-				log.Debugf("Error parsing alias config %v", err)
-			}
+			wg.Add(1)
+			go func() {
+				err = alias.ParseAliasConfigs(name, alias.Config, alias.Desc, cmd)
+				if err != nil {
+					log.Debugf("Error parsing alias config %v", err)
+				}
+				wg.Done()
+			}()
+			wg.Wait()
 		}
 	}
 	return len(config.Alias) > 0

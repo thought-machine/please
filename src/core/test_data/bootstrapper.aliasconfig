@@ -11,7 +11,7 @@ Description = Whether to create the directory if it doesn't exist.
 Boolean = True
 
 [flag "directory"]
-Positional = filepath
+Positional = true
 
 [subcommand "proto"]
 Description = Bootstraps a grpc endpoint.

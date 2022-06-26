@@ -1258,7 +1258,8 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	} else if config := mustReadConfigAndSetRoot(false); config.AttachAliasFlags(parser, os.Args) {
 		// Run again without this registered as a completion handler
 		parser.CompletionHandler = nil
-		parser.ParseArgs(os.Args[1:])
+		a, b := parser.ParseArgs(os.Args[1:])
+		log.Warningf("%v, %v", a, b)
 	} else {
 		cli.PrintCompletions(items)
 	}
@@ -1367,9 +1368,8 @@ func initBuild(args []string) string {
 	if (flagsErr != nil || len(extraArgs) > 0) && command != "query.completions" {
 		if len(os.Args) > 1 {
 			if alias, ok := config.Alias[os.Args[1]]; ok {
-				// Handle if the alias has a flat structure
+				config.AttachAliasFlags(parser, os.Args)
 				if alias.Config == "" {
-					config.AttachAliasFlags(parser, os.Args)
 					extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
 					contains := false
 					for _, arg := range extraArgs {
@@ -1386,45 +1386,38 @@ func initBuild(args []string) string {
 							parser.WriteHelp(os.Stderr)
 							os.Exit(0)
 						}
-						log.Warningf("Args flat %v", args)
 						command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
 					}
 				} else {
-					config.AttachAliasFlags(parser, os.Args)
-
 					if len(os.Args) > 2 {
 						cmd := parser.Command.Find(os.Args[2])
 						parser.Active = cmd
 					}
-					log.Warningf("===1 alias.Command command %v args %v", parser.Active, os.Args)
 					extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
 
 					for i, arg := range os.Args[1:] {
 						if arg == "--help" {
-							log.Warningf("%v, %v", i, arg)
 							cli.InitLogging(cli.MinVerbosity)
 							if config, err := readConfigAndSetRoot(false); err == nil {
-								config.PrintAlias(os.Stderr, os.Args[i], os.Args)
+								config.PrintAlias(os.Stderr, os.Args[i-1], os.Args, nil)
 							}
 							os.Exit(0)
 						}
 					}
-
-					log.Warningf("===2 ParseArgs extraArgs %v flagsErr %v", extraArgs, flagsErr)
 					if flagsErr != nil {
-						printUsage(parser, extraArgs, flagsErr)
+						config.PrintAlias(os.Stderr, os.Args[1], os.Args, flagsErr)
 						os.Exit(1)
 					} else {
 						args := config.UpdateArgsWithAliases(os.Args)
 						parser, extraArgs, _ = cli.ParseFlags("Please", &opts, args[1:], flags.HelpFlag|flags.PassDoubleDash, nil, additionalUsageInfo)
 						if parser.Command != nil {
 							active := cli.ActiveCommand(parser.Command)
-							log.Warningf("===5 Active command: %v Options: %v RunArgs: %v", active, parser.Command.Options(), opts.Run.Args.Args)
 							command = active
 							labels := strings.Split(args[2], ":")
 							packageName := strings.Split(labels[0], "//")
-							log.Warningf("Args: %v, packageName: %v, labels %v", args, packageName, labels)
-							opts.Run.Args.Target.BuildLabel = core.NewBuildLabel(packageName[1], labels[1])
+							if len(labels) > 1 {
+								opts.Run.Args.Target.BuildLabel = core.NewBuildLabel(packageName[1], labels[1])
+							}
 							var filepaths cli.Filepaths
 							for _, arg := range args[3:] {
 								if arg != "--" {
@@ -1432,18 +1425,11 @@ func initBuild(args []string) string {
 								}
 							}
 							opts.Run.Args.Args = filepaths
-							log.Warningf("===6 Filepaths %v", filepaths)
 						}
 					}
 				}
 			}
 		}
-		// args := config.UpdateArgsWithAliases(os.Args)
-		// parser, _, err := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions, additionalUsageInfo)
-		// if err != nil {
-		// 	log.Fatalf("%s", err)
-		// }
-		// command = cli.ActiveFullCommand(parser.Command)
 	}
 
 	if opts.ProfilePort != 0 {
@@ -1451,9 +1437,11 @@ func initBuild(args []string) string {
 			log.Warning("%s", http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", opts.ProfilePort), nil))
 		}()
 	}
-	log.Warning("=====COMMAND %v", command)
-	log.Warningf("build label: %v", opts.Run.Args.Target.BuildLabel)
-	log.Warningf("args: %v", opts.Run.Args.Args)
+	if command == "" {
+		log.Warningf("Command not found: %v", os.Args[1:])
+		parser.WriteHelp(os.Stderr)
+		os.Exit(0)
+	}
 	return command
 }
 

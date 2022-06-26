@@ -67,9 +67,7 @@ func readConfigFileOnly(config *Configuration, filename string) error {
 	} else if gcfg.FatalOnly(err) != nil {
 		return err
 	} else if err != nil {
-		if strings.Contains(err.Error(), "config") {
-			log.Warning("Alias config error")
-		}
+		log.Warning("Error in config file: %s", err)
 	} else {
 		log.Debug("Read config from %s", filename)
 	}
@@ -705,23 +703,24 @@ type Configuration struct {
 
 // An Alias represents aliases in the config.
 type Alias struct {
-	Cmd              string   `help:"Command to run for this alias."`
-	Desc             string   `help:"Description of this alias"`
-	Subcommand       []string `help:"Known subcommands of this command"`
-	Flag             []string `help:"Known flags of this command"`
-	PositionalLabels bool     `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
-	Config           string   `help:"Location of additional config file where alias fields are defined."`
+	Cmd              string       `help:"Command to run for this alias."`
+	Desc             string       `help:"Description of this alias"`
+	Subcommand       []string     `help:"Known subcommands of this command"`
+	Flag             []string     `help:"Known flags of this command"`
+	PositionalLabels bool         `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
+	Config           cli.Filepath `help:"Location of additional config file where alias fields are defined."`
 }
 
 // An AliasConfig represents options and subcommands for a command, and supports nesting of subcommands.
 type AliasConfig struct {
-	Command     CommandSection          `help:"Command section for this alias."`
-	Usage       string                  `help:"Usage for this alias."`
-	Description string                  `help:"Description of this command"`
-	Flag        map[string]*Flag        `help:"Known flags of this command and their related fields"`
-	Positional  bool                    `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
-	Subcommand  map[string]*AliasConfig `help:"Known subcommands of this command and their related fields"`
-	Config      string                  `help:"Location of additional config file where nested alias fields are defined."`
+	Command             CommandSection          `help:"Command section for this alias."`
+	SubcommandsOptional bool                    `help:"Whether subcommands are optional for this alias."`
+	Usage               string                  `help:"Usage for this alias."`
+	Description         string                  `help:"Description of this command"`
+	Flag                map[string]*Flag        `help:"Known flags of this command and their related fields"`
+	Positional          bool                    `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
+	Subcommand          map[string]*AliasConfig `help:"Known subcommands of this command and their related fields"`
+	Config              cli.Filepath            `help:"Location of additional config file where alias config fields are defined."`
 }
 
 // A CommandSection represents the command section of an alias config.
@@ -733,7 +732,7 @@ type CommandSection struct {
 type Flag struct {
 	Description string   `help:"Description of this flag"`
 	Boolean     bool     `help:"Available option type for this flag"`
-	Positional  string   `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
+	Positional  bool     `help:"Treats positional arguments after commands as build labels for the purpose of tab completion."`
 	Option      []string `help:"Known options of this flag"`
 }
 
@@ -1038,7 +1037,6 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 		}
 		for k, v := range config.Alias {
 			if arg == k {
-				log.Warningf("%v, %v", k, v)
 				if v.Config != "" {
 					ac := &AliasConfig{}
 					err := readAliasConfigFile(ac, v.Config)
@@ -1053,10 +1051,8 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 								log.Fatalf("Unable to read alias config file for %s: %s", k, err)
 							}
 							v.Cmd = ac.Command.Cmd
-							log.Warningf("UAWA 1 %v", args)
 							// The index arg has served its purpose and can be removed from args.
 							args = append(append([]string{}, args[:idx+1]...), args[idx+2:]...)
-							log.Warningf("UAWA 2 %v", args)
 						}
 					}
 				}
@@ -1068,7 +1064,6 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 				if err != nil {
 					log.Fatalf("Invalid alias replacement for %s: %s", k, err)
 				}
-				log.Warningf("UAWA args %v", args)
 				return append(append(append([]string{}, args[:idx+1]...), cmd...), args[idx+2:]...)
 			}
 		}
@@ -1076,7 +1071,8 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 	return args
 }
 
-func (config *Configuration) PrintAlias(w io.Writer, aliasName string, args []string) {
+// PrintAlias prints the given alias and set of subcommands defined in the alias config.
+func (config *Configuration) PrintAlias(w io.Writer, aliasName string, args []string, flagsErr error) {
 	aliases := config.Alias
 	subNames := make(map[string]map[string]string, len(aliases))
 	keys := make(map[string][]string)
@@ -1109,15 +1105,21 @@ func (config *Configuration) PrintAlias(w io.Writer, aliasName string, args []st
 		}
 	}
 	if maxlen > 0 {
+		if flagsErr != nil {
+			w.Write([]byte(fmt.Sprintf("\nInput: %s\n\nError encountered: %s\n", args, flagsErr)))
+		}
 		w.Write([]byte(fmt.Sprintf("\nUsage for %s:\n", aliasName)))
 		tmpl := fmt.Sprintf("  %%-%ds  %%s\n", maxlen)
 		fmt.Fprintf(w, tmpl, aliasName, aliases[aliasName].Desc)
 
 		// if there is an entry in subnames, print its parts
 		sort.Strings(keys[aliasName])
-		subTmpl := fmt.Sprintf("  %%-%ds  %%s\n", maxlen)
+		subTmpl := fmt.Sprintf("  %%-%ds  %%s", maxlen)
+		counter := 0 // remove after stack works reliably
 		for _, key := range keys[aliasName] {
-			fmt.Fprintf(w, subTmpl, aliasName+" "+key, subNames[aliasName][key])
+			counter++
+			fmt.Fprintf(w, subTmpl, aliasName+" "+key, "")
+			descriptionBlock(w, subNames[aliasName][key], maxlen)
 		}
 	}
 }
@@ -1145,89 +1147,134 @@ func (config *Configuration) PrintAliases(w io.Writer) {
 
 func descriptionBlock(w io.Writer, text string, i int) {
 	var buf bytes.Buffer
-	indentLongDescription(w, &buf, i)
+	buf.WriteString(text)
+	scanner := bufio.NewScanner(&buf)
+	scanner.Split(split(i * 3))
+	for scanner.Scan() {
+		tmpl := fmt.Sprintf("%%-%ds\n", i)
+		fmt.Fprintf(w, tmpl, scanner.Text())
+		fmt.Fprint(w, strings.Repeat(" ", i+4))
+	}
+	fmt.Fprint(w, "\n")
 }
 
-func indentLongDescription(w io.Writer, src io.Reader, i int) {
-	scanner := bufio.NewScanner(src)
-	for scanner.Scan() {
-		fmt.Fprintf(w, strings.Repeat(" ", i))
-		fmt.Fprintf(w, scanner.Text())
+func split(i int) func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	return func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if atEOF && len(data) == 0 {
+			return 0, nil, nil
+		}
+		if !atEOF && len(data) > i {
+			for c := 0; c < i; c++ {
+				if data[i-c] == []byte(" ")[0] {
+					return i - c + 1, data[0 : i-c+1], nil
+				}
+			}
+		}
+		if atEOF || len(data) < i {
+			return len(data), data, nil
+		}
+		return
 	}
+}
+
+type stack struct {
+	lock sync.Mutex
+	s    []string
+}
+
+func (s *stack) push(str string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.s = append(s.s, str)
+}
+
+func (s *stack) pop() string {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	l := len(s.s)
+	if l == 0 {
+		return ""
+	}
+	elem := (s.s)[l-1]
+	s.s = s.s[:l-1]
+	return elem
+}
+
+func (s *stack) peek() string {
+	l := len(s.s)
+	if l == 0 {
+		return ""
+	}
+	return (s.s)[l-1]
 }
 
 // Command retrieves an alias config and constructs a Command from it
-func (a Alias) ParseAliasConfigs(name string, args []string, location string, description string, cmd *flags.Command) (*flags.Command, error) {
+func (a Alias) ParseAliasConfigs(name string, location cli.Filepath, description string, cmd *flags.Command) error {
 	ac := &AliasConfig{}
 	err := readAliasConfigFile(ac, location)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	cmd, parent, err := a.parseAliasConfig(ac, name, args, location, description, cmd, nil)
-	if parent != nil {
-		for _, command := range parent.Commands() {
-			for _, option := range command.Options() {
-				if len(option.Choices) > 0 {
-					log.Warningf("name %s, option %s, choices %v", command.Name, option.LongName, option.Choices)
-				}
-			}
-		}
-	}
-	return parent, err
-}
-
-func (a Alias) parseAliasConfig(ac *AliasConfig, name string, args []string, location string, description string, cmd *flags.Command, parent *flags.Command) (*flags.Command, *flags.Command, error) {
-	var err error
+	s := &stack{s: []string{}}
 	if ac.Command.Cmd == "" {
-		cmd, parent, err = a.parseBlankAliasConfig(ac, name, args, location, description, cmd, cmd)
-		// cmd.SubcommandsOptional = false
+		_, _, s, err = a.parseBlankAliasConfig(ac, name, location, description, cmd, cmd, s)
 	} else {
-		// Add alias command and flags
-		data := useInterface(ac.Positional)
-		if cmd.Find(name) == nil {
-			newCmd, err := cmd.AddCommand(name, name, description, data)
-			if err != nil {
-				return nil, parent, fmt.Errorf("Could not add command %s: %v", name, err)
-			}
-			addFlags(ac.Flag, newCmd)
-			cmd = newCmd
-		}
-		// Recurse through nested subcommands
-		for name, subcommand := range ac.Subcommand {
-			if subcommand.Config != "" {
-				ac := &AliasConfig{}
-				err := readAliasConfigFile(ac, subcommand.Config)
-				if err != nil {
-					return nil, parent, fmt.Errorf("Could not parse subcommand config %s: %v", name, err)
-				}
-				if ac.Command.Cmd == "" {
-					cmd, parent, err = a.parseBlankAliasConfig(ac, name, args, subcommand.Config, subcommand.Description, cmd, cmd)
-					if err != nil {
-						return nil, parent, fmt.Errorf("Could not add command %s: %v", name, err)
-					}
-				} else {
-					cmd, parent, err = a.parseAliasConfig(ac, name, args, subcommand.Config, subcommand.Description, cmd, parent)
-					if err != nil {
-						return nil, parent, fmt.Errorf("Could not add command %s: %v", name, err)
-					}
-				}
-			} else {
-				cmd = addSubcommand(cmd, name, subcommand.Description, subcommand.Positional)
-				addFlags(subcommand.Flag, cmd)
-			}
-		}
+		_, _, s, err = a.parseAliasConfig(ac, name, location, description, cmd, cmd, s)
 	}
-	return cmd, parent, err
+	if len(s.s) != 0 {
+		return fmt.Errorf("Alias config tree building failed, %v nodes remaining", len(s.s))
+	}
+	return err
 }
 
-func (a Alias) parseBlankAliasConfig(ac *AliasConfig, name string, args []string, location string, description string, cmd *flags.Command, parent *flags.Command) (*flags.Command, *flags.Command, error) {
+func (a Alias) parseAliasConfig(ac *AliasConfig, name string, location cli.Filepath, description string, cmd *flags.Command, parent *flags.Command, s *stack) (*flags.Command, *flags.Command, *stack, error) {
+	s.push(name)
+	var err error
+	// Add alias command and flags
+	cmd.SubcommandsOptional = ac.SubcommandsOptional
+	data := useInterface(ac.Positional)
+	if cmd.Find(name) == nil {
+		newCmd, err := cmd.AddCommand(name, name, description, data)
+		if err != nil {
+			return nil, parent, s, fmt.Errorf("could not add command %s: %v", name, err)
+		}
+		addFlags(ac.Flag, newCmd)
+		cmd = newCmd
+	}
+	// Recurse through nested subcommands
+	for name, subcommand := range ac.Subcommand {
+		if subcommand.Config != "" {
+			ac := &AliasConfig{}
+			err := readAliasConfigFile(ac, subcommand.Config)
+			if err != nil {
+				return nil, parent, s, fmt.Errorf("could not parse subcommand config %s: %v", name, err)
+			}
+			if ac.Command.Cmd == "" {
+				cmd, parent, s, err = a.parseBlankAliasConfig(ac, name, subcommand.Config, subcommand.Description, cmd, cmd, s)
+			} else {
+				cmd, parent, s, err = a.parseAliasConfig(ac, name, subcommand.Config, subcommand.Description, cmd, parent, s)
+			}
+			if err != nil {
+				return nil, parent, s, fmt.Errorf("could not add command %s: %v", name, err)
+			}
+		} else {
+			cmd = addSubcommand(cmd, name, subcommand.Description, subcommand.Positional)
+			addFlags(subcommand.Flag, cmd)
+		}
+	}
+	s.pop()
+	return cmd, parent, s, err
+}
+
+func (a Alias) parseBlankAliasConfig(ac *AliasConfig, name string, location cli.Filepath, description string, cmd *flags.Command, parent *flags.Command, s *stack) (*flags.Command, *flags.Command, *stack, error) {
+	s.push(name)
 	var err error
 	// Add alias command and flags
 	data := useInterface(ac.Positional)
 	if cmd.Find(name) == nil {
 		newCmd, err := cmd.AddCommand(name, name, description, data)
 		if err != nil {
-			return nil, parent, fmt.Errorf("Could not add command %s: %v", name, err)
+			return nil, parent, s, fmt.Errorf("could not add command %s: %v", name, err)
 		}
 		addFlags(ac.Flag, newCmd)
 		cmd = newCmd
@@ -1241,25 +1288,25 @@ func (a Alias) parseBlankAliasConfig(ac *AliasConfig, name string, args []string
 			ac := &AliasConfig{}
 			err := readAliasConfigFile(ac, subcommand.Config)
 			if err != nil {
-				return nil, parent, fmt.Errorf("Could not parse subcommand config %s: %v", name, err)
+				log.Warningf("Could not parse subcommand config %s: %v", name, err)
+				return nil, parent, s, fmt.Errorf("could not parse subcommand config %s: %v", name, err)
 			}
 			if ac.Command.Cmd == "" {
-				cmd, parent, err = a.parseBlankAliasConfig(ac, name, args, subcommand.Config, subcommand.Description, cmd, parent)
-				if err != nil {
-					return nil, parent, fmt.Errorf("Could not add command %s: %v", name, err)
-				}
+				cmd, parent, s, err = a.parseBlankAliasConfig(ac, name, subcommand.Config, subcommand.Description, cmd, parent, s)
 			} else {
-				cmd, parent, err = a.parseAliasConfig(ac, name, args, subcommand.Config, subcommand.Description, parent, parent)
-				if err != nil {
-					return nil, parent, fmt.Errorf("Could not add command %s: %v", name, err)
-				}
+				cmd, parent, s, err = a.parseAliasConfig(ac, name, subcommand.Config, subcommand.Description, parent, parent, s)
+			}
+			if err != nil {
+				log.Warningf("Could not add command %s: %v", name, err)
+				return nil, parent, s, fmt.Errorf("could not add command %s: %v", name, err)
 			}
 		} else {
 			cmd = addSubcommand(cmd, name, subcommand.Description, subcommand.Positional)
 			addFlags(subcommand.Flag, cmd)
 		}
 	}
-	return cmd, parent, err
+	s.pop()
+	return cmd, parent, s, err
 }
 
 // add Flags and their Options to the Command
@@ -1268,9 +1315,6 @@ func addFlags(aliasFlags map[string]*Flag, cmd *flags.Command) {
 		if existing := cmd.FindOptionByLongName(name); existing != nil {
 			break
 		} else {
-			var f = struct {
-				Data bool
-			}{}
 			flag := &flags.Option{
 				Description: aliasFlag.Description,
 				LongName:    strings.TrimLeft(name, "-"),
@@ -1280,15 +1324,31 @@ func addFlags(aliasFlags map[string]*Flag, cmd *flags.Command) {
 					flag.Choices = append(flag.Choices, option)
 				}
 			}
-
-			cmd.AddOption(flag, &f.Data)
+			if aliasFlag.Boolean {
+				f := &struct {
+					Data bool
+				}{}
+				cmd.AddOption(flag, &f.Data)
+			} else if aliasFlag.Positional {
+				f := &struct {
+					Data struct {
+						Target []BuildLabel `positional-arg-name:"target" description:"Build targets"`
+					} `positional-args:"true"`
+				}{}
+				cmd.AddOption(flag, &f.Data)
+			} else {
+				f := &struct {
+					Data string
+				}{}
+				cmd.AddOption(flag, &f.Data)
+			}
 		}
 	}
 }
 
-func readAliasConfigFile(ac *AliasConfig, location string) error {
+func readAliasConfigFile(ac *AliasConfig, location cli.Filepath) error {
 	log.Info("Attempting to read config from %s...", location)
-	if err := gcfg.ReadFileInto(ac, location); err != nil && os.IsNotExist(err) {
+	if err := gcfg.ReadFileInto(ac, string(location)); err != nil && os.IsNotExist(err) {
 		return fmt.Errorf("Alias config not found at %s: %s", location, err)
 	} else if gcfg.FatalOnly(err) != nil {
 		return err
