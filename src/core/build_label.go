@@ -182,8 +182,8 @@ func ParseBuildLabelContext(target string, pkg *Package) BuildLabel {
 	if p, name, subrepo := parseBuildLabelParts(target, pkg.Name, pkg.SubrepoName); name != "" {
 		if subrepo == "" && pkg.Subrepo != nil && (target[0] != '@' && !strings.HasPrefix(target, "///")) {
 			subrepo = pkg.Subrepo.Name
-		} else if arch := cli.HostArch(); strings.Contains(subrepo, "_" + arch.String()) {
-			subrepo = strings.ReplaceAll(subrepo, "_" + arch.String(), "")
+		} else if arch := cli.HostArch(); strings.Contains(subrepo, "_"+arch.String()) {
+			subrepo = strings.ReplaceAll(subrepo, "_"+arch.String(), "")
 		} else if subrepo == arch.String() {
 			subrepo = ""
 		} else {
