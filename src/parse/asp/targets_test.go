@@ -57,5 +57,4 @@ func TestStripHostArch(t *testing.T) {
 	require.Equal(t, pyString("///go//path/to/package:name"), stripHostArch(scope, pyString("///go_linux_amd64//path/to/package:name"), "linux_amd64"))
 	require.Equal(t, pyString("///go//path/to/package:name"), stripHostArch(scope, pyString("///go_linux_amd64//path/to/package:name"), "linux_amd64"))
 	require.Equal(t, pyString("///go_darwin_amd64//path/to/package:name"), stripHostArch(scope, pyString("///go_darwin_amd64//path/to/package:name"), "linux_amd64"))
-
 }
