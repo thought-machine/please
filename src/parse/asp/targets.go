@@ -247,52 +247,6 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 	return "", m
 }
 
-// stripHostArch takes a Python object and strips out the architecture subrepo part if it matches
-// the host architecture, or a different architecture if specified.
-func stripHostArch(s *scope, obj pyObject, arch string) pyObject {
-	if obj == nil || obj == None {
-		return obj
-	}
-
-	if arch == "" {
-		arch = s.state.Config.Build.Arch.String()
-	}
-
-	if str, ok := obj.(pyString); ok {
-		// If no subrepo, return
-		if !strings.HasPrefix(string(str), "///") {
-			return obj
-		}
-		// Get subrepo
-		parts := strings.Split(string(str), "//")[1:]
-		if len(parts) > 2 {
-			panic(fmt.Sprintf("Invalid label: %s", str))
-		}
-		subrepo := parts[0][1:]
-		// Strip out the arch part if it matches the host arch
-		if idx := strings.Index(subrepo, arch); idx > 2 {
-			// E.g. "go_linux_amd64"
-			subrepo = subrepo[:idx-1]
-		} else if idx == 0 {
-			// E.g. "linux_amd64"
-			subrepo = ""
-		}
-
-		// Reconstruct the label
-		pkg := fmt.Sprintf("//%s", parts[1])
-		if len(subrepo) > 0 {
-			pkg = fmt.Sprintf("///%s%s", subrepo, pkg)
-		}
-		return pyString(pkg)
-	} else if list, ok := obj.(pyList); ok {
-		for i, v := range list {
-			list[i] = stripHostArch(s, v, arch)
-		}
-		return list
-	}
-	return obj
-}
-
 // populateTarget sets the assorted attributes on a build target.
 func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	if t.IsRemoteFile {
@@ -302,9 +256,6 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	} else if t.IsTextFile {
 		t.FileContent = args[fileContentArgIdx].(pyString).String()
 	}
-
-	args[srcsBuildRuleArgIdx] = stripHostArch(s, args[srcsBuildRuleArgIdx], "")
-
 	addMaybeNamed(s, "srcs", args[srcsBuildRuleArgIdx], t.AddSource, t.AddNamedSource, false, false)
 	addMaybeNamedOrString(s, "tools", args[toolsBuildRuleArgIdx], t.AddTool, t.AddNamedTool, true, true)
 	addMaybeNamed(s, "system_srcs", args[systemSrcsBuildRuleArgIdx], t.AddSource, nil, true, false)

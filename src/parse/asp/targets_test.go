@@ -45,16 +45,3 @@ func TestValidateTargetSandbox(t *testing.T) {
 	err = validateSandbox(state, foo)
 	require.NoError(t, err)
 }
-
-func TestStripHostArch(t *testing.T) {
-	state := core.NewDefaultBuildState()
-	parser := newParser()
-	parser.interpreter = newInterpreter(state, parser)
-	scope := parser.interpreter.scope.NewScope()
-
-	require.Equal(t, pyString(""), stripHostArch(scope, pyString(""), "linux_amd64"))
-	require.Equal(t, pyString("//path/to/package:name"), stripHostArch(scope, pyString("///linux_amd64//path/to/package:name"), "linux_amd64"))
-	require.Equal(t, pyString("///go//path/to/package:name"), stripHostArch(scope, pyString("///go_linux_amd64//path/to/package:name"), "linux_amd64"))
-	require.Equal(t, pyString("///go//path/to/package:name"), stripHostArch(scope, pyString("///go_linux_amd64//path/to/package:name"), "linux_amd64"))
-	require.Equal(t, pyString("///go_darwin_amd64//path/to/package:name"), stripHostArch(scope, pyString("///go_darwin_amd64//path/to/package:name"), "linux_amd64"))
-}
