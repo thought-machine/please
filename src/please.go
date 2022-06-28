@@ -1428,6 +1428,10 @@ func initBuild(args []string) string {
 						}
 					}
 				}
+			} else {
+				if flagsErr != nil {
+					cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args, additionalUsageInfo)
+				}
 			}
 		}
 	}
