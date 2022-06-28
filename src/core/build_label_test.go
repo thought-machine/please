@@ -204,4 +204,3 @@ func TestParseBuildLabelContextStripsHostArch(t *testing.T) {
 	label = ParseBuildLabelContext(fmt.Sprintf("///go_%s//src/core", arch.String()), pkg)
 	assert.Equal(t, "///go//src/core:core", label.String())
 }
-
