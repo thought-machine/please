@@ -1115,9 +1115,7 @@ func (config *Configuration) PrintAlias(w io.Writer, aliasName string, args []st
 		// if there is an entry in subnames, print its parts
 		sort.Strings(keys[aliasName])
 		subTmpl := fmt.Sprintf("  %%-%ds  %%s", maxlen)
-		counter := 0 // remove after stack works reliably
 		for _, key := range keys[aliasName] {
-			counter++
 			fmt.Fprintf(w, subTmpl, aliasName+" "+key, "")
 			descriptionBlock(w, subNames[aliasName][key], maxlen)
 		}
@@ -1198,14 +1196,6 @@ func (s *stack) pop() string {
 	elem := (s.s)[l-1]
 	s.s = s.s[:l-1]
 	return elem
-}
-
-func (s *stack) peek() string {
-	l := len(s.s)
-	if l == 0 {
-		return ""
-	}
-	return (s.s)[l-1]
 }
 
 // Command retrieves an alias config and constructs a Command from it
@@ -1319,11 +1309,7 @@ func addFlags(aliasFlags map[string]*Flag, cmd *flags.Command) {
 				Description: aliasFlag.Description,
 				LongName:    strings.TrimLeft(name, "-"),
 			}
-			if len(aliasFlag.Option) > 0 {
-				for _, option := range aliasFlag.Option {
-					flag.Choices = append(flag.Choices, option)
-				}
-			}
+			flag.Choices = append(flag.Choices, aliasFlag.Option...)
 			if aliasFlag.Boolean {
 				f := &struct {
 					Data bool

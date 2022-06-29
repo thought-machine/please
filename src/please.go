@@ -1366,19 +1366,20 @@ func initBuild(args []string) string {
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
 	if (flagsErr != nil || len(extraArgs) > 0) && command != "query.completions" {
+		var aliasExtraArgs []string
 		if len(os.Args) > 1 {
 			if alias, ok := config.Alias[os.Args[1]]; ok {
 				config.AttachAliasFlags(parser, os.Args)
 				if alias.Config == "" {
-					extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
+					aliasExtraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
 					contains := false
-					for _, arg := range extraArgs {
+					for _, arg := range aliasExtraArgs {
 						if arg == "--help" {
 							contains = true
 						}
 					}
 					if flagsErr != nil {
-						printUsage(parser, extraArgs, flagsErr)
+						printUsage(parser, aliasExtraArgs, flagsErr)
 						os.Exit(1)
 					} else {
 						args := config.UpdateArgsWithAliases(os.Args)
@@ -1389,11 +1390,7 @@ func initBuild(args []string) string {
 						command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
 					}
 				} else {
-					if len(os.Args) > 2 {
-						cmd := parser.Command.Find(os.Args[2])
-						parser.Active = cmd
-					}
-					extraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
+					aliasExtraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
 
 					for i, arg := range os.Args[1:] {
 						if arg == "--help" {
@@ -1409,7 +1406,7 @@ func initBuild(args []string) string {
 						os.Exit(1)
 					} else {
 						args := config.UpdateArgsWithAliases(os.Args)
-						parser, extraArgs, _ = cli.ParseFlags("Please", &opts, args[1:], flags.HelpFlag|flags.PassDoubleDash, nil, additionalUsageInfo)
+						parser, aliasExtraArgs, _ = cli.ParseFlags("Please", &opts, args[1:], flags.HelpFlag|flags.PassDoubleDash, nil, additionalUsageInfo)
 						if parser.Command != nil {
 							active := cli.ActiveCommand(parser.Command)
 							command = active
@@ -1428,10 +1425,8 @@ func initBuild(args []string) string {
 						}
 					}
 				}
-			} else {
-				if flagsErr != nil {
-					cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args, additionalUsageInfo)
-				}
+			} else if flagsErr != nil {
+				cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args, additionalUsageInfo)
 			}
 		}
 	}
