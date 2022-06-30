@@ -1,3 +1,9 @@
+Version 16.21.3
+---------------
+
+    * Strip host arch from subrepo part of build label (#2508)
+
+
 Version 16.21.2
 ---------------
 
