@@ -1,7 +1,6 @@
 subinclude("//build_defs:multiversion_wheel")
 
 package(
-    default_visibility = ["PUBLIC"],
     python = {
         "wheel_repo": "https://get.please.build/third_party/python/py3",
         "wheel_name_scheme": [
@@ -11,6 +10,7 @@ package(
             "https://files.pythonhosted.org/packages/py2.py3/{initial}/{package_name}/{package_name}-{version}-py2.py3-none-any.whl",
         ],
     },
+    default_visibility = ["PUBLIC"],
 )
 
 python_wheel(
