@@ -151,7 +151,7 @@ Why Please, not Bazel, Buck or Pants?
 =====================================
 
 These build systems are all very similar so choosing between them can be hard.
-Please orginally replaced buck implementing the subset of features we used. We
+Please originally replaced buck implementing the subset of features we used. We
 found that buck (and the competition) worked great when using the supported
 languages but fell flat when breaking new ground.
 
