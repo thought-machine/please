@@ -403,6 +403,11 @@ func (b *dirBuilder) Tree(root string) *pb.Tree {
 func (b *dirBuilder) tree(tree *pb.Tree, root string, dir *pb.Directory) {
 	tree.Children = append(tree.Children, dir)
 	for _, d := range dir.Directories {
+		// Some upstreams may convert an empty directory to one with a single dir named '.'
+		// We need to skip this otherwise we end up infinitely recursing.
+		if d.Name == "." {
+			continue
+		}
 		name := path.Join(root, d.Name)
 		b.tree(tree, name, b.dirs[name])
 	}
