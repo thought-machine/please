@@ -1191,9 +1191,9 @@ func (a Alias) ParseAliasConfigs(name string, location cli.Filepath, description
 		return err
 	}
 	if ac.Command.Cmd == "" {
-		 if _, _, err := a.parseBlankAliasConfig(ac, name, location, description, cmd, cmd); err != nil {
+		if _, _, err := a.parseBlankAliasConfig(ac, name, location, description, cmd, cmd); err != nil {
 			return err
-		 }
+		}
 	} else {
 		if _, _, err := a.parseAliasConfig(ac, name, location, description, cmd, cmd); err != nil {
 			return err
