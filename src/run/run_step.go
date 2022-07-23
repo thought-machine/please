@@ -197,6 +197,7 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 		args[0] = abs
 	}
 
+	log.Info("Running target %s...", strings.Join(args, " "))
 	output.SetWindowTitle("plz run: " + strings.Join(args, " "))
 	env := environ(state, target, setenv, tmpDir)
 

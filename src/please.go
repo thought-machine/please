@@ -44,6 +44,7 @@ import (
 	"github.com/thought-machine/please/src/scm"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
+	"github.com/thought-machine/please/src/update"
 	"github.com/thought-machine/please/src/watch"
 	"github.com/thought-machine/please/src/worker"
 )
@@ -1243,7 +1244,7 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	} else if opts.Update.Version.IsSet {
 		config.Please.Version = opts.Update.Version
 	}
-	// update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
+	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
 	return config
 }
 
@@ -1258,8 +1259,7 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	} else if config := mustReadConfigAndSetRoot(false); config.AttachAliasFlags(parser, os.Args) {
 		// Run again without this registered as a completion handler
 		parser.CompletionHandler = nil
-		a, b := parser.ParseArgs(os.Args[1:])
-		log.Warningf("%v, %v", a, b)
+		parser.ParseArgs(os.Args[1:])
 	} else {
 		cli.PrintCompletions(items)
 	}
