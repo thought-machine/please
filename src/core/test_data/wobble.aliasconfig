@@ -1,2 +1,3 @@
-[command]
-Cmd = run //wobble.sh --
+[subcommand "wobble"]
+Description = Super wobbly.
+Config = src/core/test_data/wobbliest.aliasconfig

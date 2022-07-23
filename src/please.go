@@ -1275,22 +1275,6 @@ func additionalUsageInfo(parser *flags.Parser, wr io.Writer) {
 	}
 }
 
-func printUsage(parser *flags.Parser, extraArgs []string, err error) {
-	if err != nil && parser == nil {
-		// Most likely this is something structurally wrong with the flags setup.
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
-	} else if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		parser.WriteHelp(os.Stderr)
-		os.Exit(1)
-	} else if len(extraArgs) > 0 {
-		parser.WriteHelp(os.Stderr)
-		fmt.Fprintf(os.Stderr, "Unknown option %s\n", extraArgs)
-		os.Exit(1)
-	}
-}
-
 func getCompletions(qry string) (*query.CompletionPackages, []string) {
 	binary := opts.Query.Completions.Cmd == "run"
 	isTest := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
@@ -1366,66 +1350,45 @@ func initBuild(args []string) string {
 	// Now we've read the config file, we may need to re-run the parser; the aliases in the config
 	// can affect how we parse otherwise illegal flag combinations.
 	if (flagsErr != nil || len(extraArgs) > 0) && command != "query.completions" {
-		var aliasExtraArgs []string
+		for i, arg := range os.Args {
+			if arg == "--help" {
+				cli.InitLogging(cli.MinVerbosity)
+				if config, err := readConfigAndSetRoot(false); err == nil {
+					config.PrintAlias(os.Stderr, os.Args[i-1], os.Args, nil)
+				}
+				os.Exit(0)
+			}
+		}
 		if len(os.Args) > 1 {
 			if alias, ok := config.Alias[os.Args[1]]; ok {
 				config.AttachAliasFlags(parser, os.Args)
+				if _, flagsErr = parser.ParseArgs(os.Args[1:]); flagsErr != nil {
+					config.PrintAlias(os.Stderr, os.Args[1], os.Args, flagsErr)
+					os.Exit(1)
+				}
+				args := config.UpdateArgsWithAliases(os.Args)
 				if alias.Config == "" {
-					aliasExtraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
-					contains := false
-					for _, arg := range aliasExtraArgs {
-						if arg == "--help" {
-							contains = true
-						}
-					}
-					if flagsErr != nil {
-						printUsage(parser, aliasExtraArgs, flagsErr)
-						os.Exit(1)
-					} else {
-						args := config.UpdateArgsWithAliases(os.Args)
-						if contains {
-							parser.WriteHelp(os.Stderr)
-							os.Exit(0)
-						}
-						command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
-					}
+					command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
 				} else {
-					aliasExtraArgs, flagsErr = parser.ParseArgs(os.Args[1:])
-
-					for i, arg := range os.Args[1:] {
-						if arg == "--help" {
-							cli.InitLogging(cli.MinVerbosity)
-							if config, err := readConfigAndSetRoot(false); err == nil {
-								config.PrintAlias(os.Stderr, os.Args[i-1], os.Args, nil)
-							}
-							os.Exit(0)
+					// construct run opts for nested config
+					parser, _, _ = cli.ParseFlags("Please", &opts, args[1:], flags.HelpFlag|flags.PassDoubleDash, nil, additionalUsageInfo)
+					if parser.Command != nil {
+						command = cli.ActiveCommand(parser.Command)
+						labels := strings.Split(args[2], ":")
+						packageName := strings.Split(labels[0], "//")
+						if len(labels) > 1 {
+							opts.Run.Args.Target.BuildLabel = core.NewBuildLabel(packageName[1], labels[1])
 						}
-					}
-					if flagsErr != nil {
-						config.PrintAlias(os.Stderr, os.Args[1], os.Args, flagsErr)
-						os.Exit(1)
-					} else {
-						args := config.UpdateArgsWithAliases(os.Args)
-						parser, aliasExtraArgs, _ = cli.ParseFlags("Please", &opts, args[1:], flags.HelpFlag|flags.PassDoubleDash, nil, additionalUsageInfo)
-						if parser.Command != nil {
-							active := cli.ActiveCommand(parser.Command)
-							command = active
-							labels := strings.Split(args[2], ":")
-							packageName := strings.Split(labels[0], "//")
-							if len(labels) > 1 {
-								opts.Run.Args.Target.BuildLabel = core.NewBuildLabel(packageName[1], labels[1])
+						var filepaths cli.Filepaths
+						for _, arg := range args[3:] {
+							if arg != "--" {
+								filepaths = append(filepaths, cli.Filepath(arg))
 							}
-							var filepaths cli.Filepaths
-							for _, arg := range args[3:] {
-								if arg != "--" {
-									filepaths = append(filepaths, cli.Filepath(arg))
-								}
-							}
-							opts.Run.Args.Args = filepaths
 						}
+						opts.Run.Args.Args = filepaths
 					}
 				}
-			} else if flagsErr != nil {
+			} else {
 				cli.ParseFlagsFromArgsOrDie("Please", &opts, os.Args, additionalUsageInfo)
 			}
 		}

@@ -1039,22 +1039,7 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 			if arg == k {
 				if v.Config != "" {
 					ac := &AliasConfig{}
-					err := readAliasConfigFile(ac, v.Config)
-					if err != nil {
-						log.Fatalf("Unable to read alias config file for %s: %s", k, err)
-					}
-					v.Cmd = ac.Command.Cmd
-					if v.Cmd == "" {
-						if subcommand, found := ac.Subcommand[args[idx+2]]; found {
-							err := readAliasConfigFile(ac, subcommand.Config)
-							if err != nil {
-								log.Fatalf("Unable to read alias config file for %s: %s", k, err)
-							}
-							v.Cmd = ac.Command.Cmd
-							// The index arg has served its purpose and can be removed from args.
-							args = append(append([]string{}, args[:idx+1]...), args[idx+2:]...)
-						}
-					}
+					return fetchCommand(k, ac, v.Config, args, idx+1, []int{})
 				}
 				// We could insert every token in v into os.Args at this point and then we could have
 				// aliases defined in terms of other aliases but that seems rather like overkill so just
@@ -1069,6 +1054,30 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 		}
 	}
 	return args
+}
+
+// traverses the alias config definitions and removes unneeded references
+func fetchCommand(arg string, ac *AliasConfig, configPath cli.Filepath, args []string, idx int, indexLocs []int) []string {
+	indexLocs = append(indexLocs, idx)
+	err := readAliasConfigFile(ac, configPath)
+	if err != nil {
+		log.Fatalf("Unable to read alias config file for %s: %s", arg, err)
+	}
+	command := ac.Command.Cmd
+	if command == "" {
+		if subcommand, found := ac.Subcommand[args[idx+1]]; found {
+			return fetchCommand(args[idx], ac, subcommand.Config, args, idx+1, indexLocs)
+		}
+	}
+	cmd, err := shlex.Split(command)
+	if err != nil {
+		log.Fatalf("Invalid alias replacement for %s: %s", arg, err)
+	}
+	var returnArgs []string
+	for _, index := range indexLocs {
+		returnArgs = append(append([]string{}, args[:index]...), args[index+1:]...)
+	}
+	return append(append(append([]string{}, returnArgs[:1]...), cmd...), returnArgs[len(indexLocs):]...)
 }
 
 // PrintAlias prints the given alias and set of subcommands defined in the alias config.
@@ -1333,7 +1342,7 @@ func addFlags(aliasFlags map[string]*Flag, cmd *flags.Command) {
 }
 
 func readAliasConfigFile(ac *AliasConfig, location cli.Filepath) error {
-	log.Info("Attempting to read config from %s...", location)
+	log.Debug("Attempting to read alias config from %s...", location)
 	if err := gcfg.ReadFileInto(ac, string(location)); err != nil && os.IsNotExist(err) {
 		return fmt.Errorf("Alias config not found at %s: %s", location, err)
 	} else if gcfg.FatalOnly(err) != nil {

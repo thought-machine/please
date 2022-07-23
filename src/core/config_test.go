@@ -348,6 +348,9 @@ func TestUpdateArgsWithAliases(t *testing.T) {
 
 	args = c.UpdateArgsWithAliases([]string{"plz", "index", "wibble"})
 	assert.EqualValues(t, []string{"plz", "run", "//wibble.sh", "--"}, args)
+
+	args = c.UpdateArgsWithAliases([]string{"plz", "index", "wobble", "wobble"})
+	assert.EqualValues(t, []string{"plz", "run", "//wobble.sh", "--"}, args)
 }
 
 func TestUpdateArgsWithQuotedAliases(t *testing.T) {
@@ -423,10 +426,6 @@ func TestAttachAliasFlags(t *testing.T) {
 	_, err = p.ParseArgs([]string{"plz", "bootstrapper", "proto", "--to"})
 	assert.NoError(t, err)
 	assert.EqualValues(t, []string{"--token"}, completions)
-
-	// _, err = p.ParseArgs([]string{"plz", "meme", "--doge", "b"})
-	// assert.NoError(t, err)
-	// assert.EqualValues(t, []string{"big"}, completions)
 }
 
 func TestPrintAliases(t *testing.T) {
