@@ -28,11 +28,10 @@ func printTarget(out io.Writer, state *core.BuildState, target *core.BuildTarget
 
 	if state.ShouldInclude(target) && (hidden || !target.HasParent()) {
 		fmt.Fprintf(out, "%s%s\n", indent, target)
-		done[target.Label] = true
-
 		indent += "  "
 		currentLevel++
 	}
+	done[target.Label] = true
 
 	for _, dep := range target.Dependencies() {
 		printTarget(out, state, dep, indent, done, hidden, currentLevel, targetLevel)

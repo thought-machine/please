@@ -183,6 +183,9 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	if target.Test.Sandbox && len(state.Config.Sandbox.Dir) > 0 {
 		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
 	}
+	if len(state.TestArgs) > 0 {
+		env = append(env, "TESTS="+strings.Join(state.TestArgs, " "))
+	}
 	return withUserProvidedEnv(target, env)
 }
 

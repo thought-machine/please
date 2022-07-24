@@ -136,9 +136,10 @@ var opts struct {
 		StreamResults    bool         `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
-			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
-			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors"`
+			Target core.BuildLabel   `positional-arg-name:"target" description:"Target to test"`
+			Args   []TestTargetOrArg `positional-arg-name:"arguments" description:"Arguments or test selectors"`
 		} `positional-args:"true"`
+		StateArgs []string `no-flag:"true"`
 	} `command:"test" description:"Builds and tests one or more targets"`
 
 	Cover struct {
@@ -163,8 +164,8 @@ var opts struct {
 		Shell               string        `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
 		StreamResults       bool          `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		Args                struct {
-			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test" group:"one test"`
-			Args   []string        `positional-arg-name:"arguments" description:"Arguments or test selectors" group:"one test"`
+			Target core.BuildLabel   `positional-arg-name:"target" description:"Target to test"`
+			Args   []TestTargetOrArg `positional-arg-name:"arguments" description:"Arguments or test selectors"`
 		} `positional-args:"true"`
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
@@ -462,8 +463,8 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"test": func() int {
-		targets := testTargets(opts.Test.Args.Target, opts.Test.Args.Args, opts.Test.Failed, opts.Test.TestResultsFile)
-		success, state := doTest(targets, opts.Test.SurefireDir, opts.Test.TestResultsFile)
+		targets, args := testTargets(opts.Test.Args.Target, opts.Test.Args.Args, opts.Test.Failed, opts.Test.TestResultsFile)
+		success, state := doTest(targets, args, opts.Test.SurefireDir, opts.Test.TestResultsFile)
 		return toExitCode(success, state)
 	},
 	"cover": func() int {
@@ -473,9 +474,9 @@ var buildFunctions = map[string]func() int{
 		} else {
 			opts.BuildFlags.Config = "cover"
 		}
-		targets := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args, opts.Cover.Failed, opts.Cover.TestResultsFile)
+		targets, args := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args, opts.Cover.Failed, opts.Cover.TestResultsFile)
 		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
-		success, state := doTest(targets, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
+		success, state := doTest(targets, args, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension, state.Config.Cover.ExcludeGlob)
 
@@ -1015,10 +1016,11 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 	return 1
 }
 
-func doTest(targets []core.BuildLabel, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
+func doTest(targets []core.BuildLabel, args []string, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
 	os.RemoveAll(string(surefireDir))
 	os.RemoveAll(string(resultsFile))
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
+	opts.Test.StateArgs = args
 	success, state := runBuild(targets, true, true, false)
 	test.CopySurefireXMLFilesToDir(state, string(surefireDir))
 	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile), state.Config.Test.StoreTestOutputOnSuccess)
@@ -1054,7 +1056,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		state.NumTestRuns = uint16(opts.Cover.NumRuns)
 	}
 	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially // Similarly here.
-	state.TestArgs = append(opts.Test.Args.Args, opts.Cover.Args.Args...)      // And here
+	state.TestArgs = opts.Test.StateArgs
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
@@ -1143,21 +1145,35 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 // target with a list of trailing arguments.
 // Alternatively they can be completely omitted in which case we test everything under the working dir.
 // One can also pass a 'failed' flag which runs the failed tests from last time.
-func testTargets(target core.BuildLabel, args []string, failed bool, resultsFile cli.Filepath) []core.BuildLabel {
+func testTargets(target core.BuildLabel, inputs []TestTargetOrArg, failed bool, resultsFile cli.Filepath) ([]core.BuildLabel, []string) {
 	if failed {
-		targets, args := test.LoadPreviousFailures(string(resultsFile))
-		// Have to reset these - it doesn't matter which gets which.
-		opts.Test.Args.Args = args
-		opts.Cover.Args.Args = nil
-		return targets
+		return test.LoadPreviousFailures(string(resultsFile))
 	} else if target.Name == "" {
-		return core.InitialPackage()
-	} else if len(args) > 0 && core.LooksLikeABuildLabel(args[0]) {
-		opts.Cover.Args.Args = []string{}
-		opts.Test.Args.Args = []string{}
-		return append(core.ParseBuildLabels(args), target)
+		return core.InitialPackage(), nil
 	}
-	return []core.BuildLabel{target}
+	targets := []core.BuildLabel{target}
+	var args []string
+	for i, arg := range inputs {
+		if core.LooksLikeABuildLabel(string(arg)) {
+			targets = append(targets, core.ParseBuildLabels([]string{string(arg)})...)
+		} else {
+			for _, input := range inputs[i:] {
+				args = append(args, string(input))
+			}
+			break // First non-label stops label parsing.
+		}
+	}
+	return targets, args
+}
+
+type TestTargetOrArg string
+
+func (arg TestTargetOrArg) Complete(match string) []flags.Completion {
+	if core.LooksLikeABuildLabel(match) {
+		var l core.BuildLabel
+		return l.Complete(match)
+	}
+	return nil
 }
 
 // readConfig reads the initial configuration files

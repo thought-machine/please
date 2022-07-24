@@ -516,7 +516,7 @@ go_module(
     ],
     licences = ["BSD-3-Clause"],
     module = "github.com/shirou/gopsutil/v3",
-    version = "v3.21.8",
+    version = "v3.22.6",
     visibility = ["PUBLIC"],
     deps = [
         ":sysconf",

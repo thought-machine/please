@@ -119,7 +119,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.AddLabel(name)
 	}
 	if args[passEnvBuildRuleArgIdx] != None {
-		l := asStringList(s, args[passEnvBuildRuleArgIdx].(pyList), "pass_env")
+		l := asStringList(s, mustList(args[passEnvBuildRuleArgIdx]), "pass_env")
 		target.PassEnv = &l
 	}
 
@@ -250,7 +250,7 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 // populateTarget sets the assorted attributes on a build target.
 func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	if t.IsRemoteFile {
-		for _, url := range args[urlsBuildRuleArgIdx].(pyList) {
+		for _, url := range mustList(args[urlsBuildRuleArgIdx]) {
 			t.AddSource(core.URLLabel(url.(pyString)))
 		}
 	} else if t.IsTextFile {
@@ -269,7 +269,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addStrings(s, "hashes", args[hashesBuildRuleArgIdx], t.AddHash)
 	addStrings(s, "licences", args[licencesBuildRuleArgIdx], t.AddLicence)
 	addStrings(s, "requires", args[requiresBuildRuleArgIdx], t.AddRequire)
-	if vis, ok := args[visibilityBuildRuleArgIdx].(pyList); ok && len(vis) != 0 {
+	if vis, ok := asList(args[visibilityBuildRuleArgIdx]); ok && len(vis) != 0 {
 		if v, ok := vis[0].(pyString); ok && v == "PUBLIC" {
 			t.Visibility = core.WholeGraph
 		} else {
@@ -637,6 +637,14 @@ func asList(obj pyObject) (pyList, bool) {
 		return l.pyList, true
 	}
 	return nil, false
+}
+
+// mustList is like asList but returns an empty list if the object isn't a list.
+func mustList(obj pyObject) pyList {
+	if l, ok := asList(obj); ok {
+		return l
+	}
+	return pyList{}
 }
 
 // asDict converts an object to a pyDict, accounting for frozen dicts.

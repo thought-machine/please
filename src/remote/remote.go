@@ -93,8 +93,7 @@ type Client struct {
 	userHome string
 
 	// Stats used to report RPC data rates
-	byteRateIn, byteRateOut, totalBytesIn, totalBytesOut int
-	stats                                                *statsHandler
+	stats *statsHandler
 
 	// Used to store and retrieve action results to reduce RPC calls when re-building targets
 	mdStore buildMetadataStore
@@ -830,7 +829,7 @@ func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
 
 // DataRate returns an estimate of the current in/out RPC data rates in bytes per second.
 func (c *Client) DataRate() (int, int, int, int) {
-	return c.byteRateIn, c.byteRateOut, c.totalBytesIn, c.totalBytesOut
+	return c.stats.DataRate()
 }
 
 // fetchRemoteFile sends a request to fetch a file using the remote asset API.

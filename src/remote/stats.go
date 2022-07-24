@@ -26,7 +26,8 @@ type stat struct {
 type statsHandler struct {
 	client            *Client
 	in, out           []stat
-	inmtx, outmtx     sync.Mutex
+	mutex             sync.Mutex
+	rateIn, rateOut   int
 	totalIn, totalOut int
 }
 
@@ -41,15 +42,13 @@ func (h *statsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) conte
 }
 
 func (h *statsHandler) HandleRPC(ctx context.Context, s stats.RPCStats) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 	switch p := s.(type) {
 	case *stats.InPayload:
-		h.inmtx.Lock()
-		defer h.inmtx.Unlock()
 		h.in = append(h.in, stat{Time: p.RecvTime, Val: p.Length})
 		h.totalIn += p.Length
 	case *stats.OutPayload:
-		h.outmtx.Lock()
-		defer h.outmtx.Unlock()
 		h.out = append(h.out, stat{Time: p.SentTime, Val: p.Length})
 		h.totalOut += p.Length
 	}
@@ -62,19 +61,24 @@ func (h *statsHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) con
 func (h *statsHandler) HandleConn(ctx context.Context, s stats.ConnStats) {
 }
 
+// DataRate returns the current snapshot of the data rate stats.
+func (h *statsHandler) DataRate() (int, int, int, int) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	return h.rateIn, h.rateOut, h.totalIn, h.totalOut
+}
+
 // update runs continually, updating the aggregated stats on the Client instance.
 func (h *statsHandler) update() {
 	for range time.NewTicker(updateFrequency).C {
-		h.client.byteRateIn = h.updateStat(&h.in, &h.inmtx)
-		h.client.byteRateOut = h.updateStat(&h.out, &h.outmtx)
-		h.client.totalBytesIn = h.totalIn
-		h.client.totalBytesOut = h.totalOut
+		h.mutex.Lock()
+		h.rateIn = h.updateStat(&h.in)
+		h.rateOut = h.updateStat(&h.out)
+		h.mutex.Unlock()
 	}
 }
 
-func (h *statsHandler) updateStat(stats *[]stat, mtx *sync.Mutex) int {
-	mtx.Lock()
-	defer mtx.Unlock()
+func (h *statsHandler) updateStat(stats *[]stat) int {
 	s := *stats
 	idx := h.survivingStats(s, time.Now().Add(windowDuration))
 	if idx != 0 {
