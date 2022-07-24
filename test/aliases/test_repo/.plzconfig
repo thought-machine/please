@@ -1,3 +1,6 @@
+[Parse]
+BuildFileName = BUILD_FILE
+
 [alias "oldschool"]
 cmd = run //src:such_wow --
 desc = A flat alias that generates a meme.
