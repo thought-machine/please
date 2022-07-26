@@ -6,7 +6,7 @@ plugin_repo(
 
 plugin_repo(
   name = "python",
-  revision = "v1.0.0",
+  revision = "v1.1.2",
   plugin = "python-rules",
   owner = "please-build",
 )

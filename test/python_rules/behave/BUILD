@@ -1,4 +1,8 @@
-package(python = {"test_runner": "behave"})
+package(
+    python = {
+        "test_runner": "behave",
+    }
+)
 
 python_test(
     name = "behave_test",
