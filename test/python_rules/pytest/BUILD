@@ -1,4 +1,4 @@
-package(python_test_runner = "pytest")
+package(python = {"test_runner": "pytest"})
 
 python_library(
     name = "inc",
