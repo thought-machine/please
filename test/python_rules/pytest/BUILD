@@ -1,4 +1,9 @@
-package(python = {"test_runner": "pytest"})
+package(
+    python = {
+        "test_runner": "pytest",
+        "testrunner_deps": "///python//third_party/python:pytest_bootstrap",
+    },
+)
 
 python_library(
     name = "inc",

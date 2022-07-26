@@ -1,7 +1,7 @@
 package(
     python = {
         "test_runner": "test.python_rules.custom_runner.runner.run",
-        "test_runner_bootstrap": "//test/python_rules/custom_runner:runner",
+        "testrunner_deps": "//test/python_rules/custom_runner:runner",
     },
 )
 
