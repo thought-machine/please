@@ -19,7 +19,7 @@ def cc_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:li
                visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=[],
                linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[],
                defines:list|dict=[], alwayslink:bool=False, linkstatic:bool=False, _c=False,
-               textual_hdrs:list=[], _module:bool=False, _interfaces:list=[]):
+               textual_hdrs:list=[], _module:bool=False, _interfaces:list=[], optional_outs:list=[]):
     """Generate a C++ library target.
 
     Args:
@@ -50,6 +50,7 @@ def cc_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:li
                          static members that register themselves at construction time.
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect.
       textual_hdrs (list): Also provided for Bazel compatibility. Effectively works the same as hdrs for now.
+      optional_outs (list): Name of optional outputs.
     """
     # Bazel suggests passing nonexported header files in 'srcs'. We however treat
     # srcs as things to actually compile and must mark a distinction.
@@ -144,7 +145,7 @@ def cc_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:li
                 name=a_name,
                 srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
                 outs=[a_name + '.a'],
-                optional_outs=['*.gcno'],  # For coverage
+                optional_outs=['*.gcno']+optional_outs,  # For coverage
                 deps=deps if src in _interfaces else all_deps,
                 cmd=cmds,
                 building_description='Compiling...',
@@ -197,7 +198,7 @@ def cc_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:li
             tag='cc',
             srcs={'srcs': srcs, 'hdrs': hdrs, 'priv': private_hdrs},
             outs=[out],
-            optional_outs=['*.gcno'],  # For coverage
+            optional_outs=['*.gcno']+optional_outs,  # For coverage
             deps=deps if srcs == _interfaces else all_deps,
             cmd=cmds,
             building_description='Compiling...',
@@ -236,7 +237,7 @@ def cc_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:li
 
 def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None, test_only:bool&testonly=False,
               compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], pkg_config_cflags:list=[],
-              includes:list=[], defines:list|dict=[], alwayslink:bool=False, _c=False, visibility:list=None, deps:list=[]):
+              includes:list=[], defines:list|dict=[], alwayslink:bool=False, _c=False, visibility:list=None, deps:list=[], optional_outs:list=[]):
     """Generate a C or C++ object file from a single source.
 
     N.B. This is fairly low-level; for most use cases cc_library should be preferred.
@@ -267,6 +268,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
       alwayslink (bool): If True, any binaries / tests using this library will link in all symbols,
                          even if they don't directly reference them. This is useful for e.g. having
                          static members that register themselves at construction time.
+      optional_outs (list): Name of optional outputs.
     """
     # Handle defines being passed as a dict, as a nicety for the user.
     if isinstance(defines, dict):
@@ -286,7 +288,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
         name=name,
         srcs={'srcs': [src], 'hdrs': hdrs, 'priv': private_hdrs},
         outs=[out or name + '.o'],
-        optional_outs=['*.gcno'],  # For coverage
+        optional_outs=['*.gcno']+optional_outs,  # For coverage
         deps=deps,
         cmd=cmds,
         building_description='Compiling...',
@@ -302,7 +304,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
 
 def cc_static_library(name:str, srcs:list=[], out:str='', hdrs:list=[], compiler_flags:list&cflags&copts=[],
                       linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None,
-                      test_only:bool&testonly=False, pkg_config_libs:list=[], pkg_config_cflags:list=[],_c=False):
+                      test_only:bool&testonly=False, pkg_config_libs:list=[], pkg_config_cflags:list=[],_c=False, optional_outs:list=[]):
     """Generates a C++ static library (.a).
 
     This is essentially just a collection of other cc_library rules into a single archive.
@@ -322,6 +324,7 @@ def cc_static_library(name:str, srcs:list=[], out:str='', hdrs:list=[], compiler
       test_only (bool): If True, is only available to other test rules.
       pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
+      optional_outs (list): Name of optional outputs.
     """
     provides = None
     if srcs or hdrs:
@@ -329,6 +332,7 @@ def cc_static_library(name:str, srcs:list=[], out:str='', hdrs:list=[], compiler
             name = f'_{name}#lib' if srcs else f'_{name}#lib_hdrs',
             srcs = srcs,
             hdrs = hdrs,
+            optional_outs = optional_outs,
             compiler_flags = compiler_flags,
             linker_flags = linker_flags,
             deps = deps,
@@ -365,7 +369,7 @@ def cc_static_library(name:str, srcs:list=[], out:str='', hdrs:list=[], compiler
 
 def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_flags:list&cflags&copts=[],
                      linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, test_only:bool&testonly=False,
-                     pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[], _c=False):
+                     pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[], _c=False, optional_outs:list=[]):
     """Generates a C++ shared object (.so) with its dependencies linked in.
 
     Args:
@@ -382,6 +386,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
       pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       includes (list): Include directories to be added to the compiler's lookup path.
+      optional_outs (list): Name of optional outputs.
     """
     if CONFIG.DEFAULT_LDFLAGS:
         linker_flags += [CONFIG.DEFAULT_LDFLAGS]
@@ -392,6 +397,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_
             name = f'_{name}#lib',
             srcs = srcs,
             hdrs = hdrs,
+            optional_outs = optional_outs,
             compiler_flags = compiler_flags,
             linker_flags = linker_flags,
             deps = deps,
@@ -432,7 +438,7 @@ def cc_module(name:str, srcs:list=[], hdrs:list=[], interfaces:list=[], private_
               deps:list=[], visibility:list=None, test_only:bool&testonly=False,
               compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
               pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[],
-              defines:list|dict=[], alwayslink:bool=False):
+              defines:list|dict=[], alwayslink:bool=False, optional_outs:list=[]):
     """Generate a C++ module.
 
     This is still experimental. Currently it has only been tested with clang - you can use
@@ -467,6 +473,7 @@ def cc_module(name:str, srcs:list=[], hdrs:list=[], interfaces:list=[], private_
                          static members that register themselves at construction time.
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect.
       textual_hdrs (list): Also provided for Bazel compatibility. Effectively works the same as hdrs for now.
+      optional_outs (list): Name of optional outputs.
     """
     return cc_library(
         name = name,
@@ -485,6 +492,7 @@ def cc_module(name:str, srcs:list=[], hdrs:list=[], interfaces:list=[], private_
         defines = defines,
         alwayslink = alwayslink,
         _module = True,
+        optional_outs = optional_outs,
     )
 
 
@@ -492,7 +500,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
               compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
               deps:list=[], visibility:list=None, pkg_config_libs:list=[], includes:list=[], defines:list|dict=[],
               pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, _c=False,
-              linkstatic:bool=False):
+              linkstatic:bool=False, optional_outs:list=[]):
     """Builds a binary from a collection of C++ rules.
 
     Args:
@@ -515,6 +523,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
       static (bool): If True, the binary will be linked statically.
       linkstatic (bool): Only provided for Bazel compatibility. Has no actual effect since we always
                          link roughly equivalently to their "mostly-static" mode.
+      optional_outs (list): Name of optional outputs.
     """
     if CONFIG.BAZEL_COMPATIBILITY:
         linker_flags = ['-lpthread' if l == '-pthread' else l for l in linker_flags]
@@ -538,6 +547,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
             defines=defines,
             compiler_flags=compiler_flags,
             test_only=test_only,
+            optional_outs = optional_outs,
             _c=_c,
         )
         deps += [lib_rule]
