@@ -28,7 +28,6 @@ func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, e
 func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, shareNetwork, shareMount bool) int {
 	for _, label := range labels {
 		target := state.Graph.TargetOrDie(label.BuildLabel)
-		log.Notice("Executing %s...", target)
 		sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
 		if err := exec(state, target, target.ExecDir(), nil, nil, args, label.Annotation, false, sandbox); err != nil {
 			return exitCode(err)
@@ -72,6 +71,14 @@ func exitCode(err error) int {
 
 // exec runs the given command in the given directory, with the given environment and arguments.
 func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir string, env []string, overrideCmdArgs, additionalArgs []string, entrypoint string, foreground bool, sandbox process.SandboxConfig) error {
+	if err := exec2(state, target, runtimeDir, env, overrideCmdArgs, additionalArgs, entrypoint, foreground, sandbox); err != nil {
+		log.Error("Failed to execute %s: %s", target, err)
+		return err
+	}
+	return nil
+}
+
+func exec2(state *core.BuildState, target *core.BuildTarget, runtimeDir string, env []string, overrideCmdArgs, additionalArgs []string, entrypoint string, foreground bool, sandbox process.SandboxConfig) error {
 	if !target.IsBinary && len(overrideCmdArgs) == 0 {
 		return fmt.Errorf("Either the target needs to be a binary or an override command must be provided")
 	}
@@ -90,9 +97,6 @@ func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir string, e
 
 	env = append(core.ExecEnvironment(state, target, filepath.Join(core.RepoRoot, runtimeDir)), env...)
 	_, _, err = state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, runtimeDir, env, time.Duration(math.MaxInt64), false, foreground, sandbox, cmd, true)
-	if err != nil {
-		log.Error("Execution of %s failed: %s", target, err)
-	}
 	return err
 }
 

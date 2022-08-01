@@ -235,7 +235,7 @@ var opts struct {
 				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Targets to execute, or arguments to them"`
 			} `positional-args:"true"`
 		} `command:"parallel" description:"Execute a number of targets in parallel"`
-	} `command:"exec" description:"Executes a single target in a hermetic build environment"`
+	} `command:"exec" subcommands-optional:"true" description:"Executes a single target in a hermetic build environment"`
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
