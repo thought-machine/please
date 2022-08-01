@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/process"
@@ -18,17 +20,50 @@ var log = logging.Log
 // Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
 func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, env, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) int {
 	target := state.Graph.TargetOrDie(label.BuildLabel)
-	if len(overrideCmdArgs) == 0 {
-		if entryPoint, ok := target.EntryPoints[label.Annotation]; ok {
-			overrideCmdArgs = []string{entryPoint}
-		} else if label.Annotation != "" {
-			log.Fatalf("%v has no such entry point %v", label.BuildLabel, label.Annotation)
+	return exitCode(exec(state, target, dir, env, overrideCmdArgs, nil, label.Annotation, foreground, sandbox))
+}
+
+// Sequential executes a series of targets in sequence, stopping when one fails.
+// It returns the exit code from the last executed target; if that's zero then they were all successful.
+func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, shareNetwork, shareMount bool) int {
+	for _, label := range labels {
+		target := state.Graph.TargetOrDie(label.BuildLabel)
+		log.Notice("Executing %s...", target)
+		sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
+		if err := exec(state, target, target.ExecDir(), nil, nil, args, label.Annotation, false, sandbox); err != nil {
+			return exitCode(err)
 		}
 	}
-	if err := exec(state, target, dir, env, overrideCmdArgs, foreground, sandbox); err != nil {
-		log.Error("Command execution failed: %s", err)
-		if exitError, ok := err.(*osExec.ExitError); ok {
-			return exitError.ExitCode()
+	return 0
+}
+
+// Parallel executes a series of targets in parallel (to a limit of simultaneous processes).
+// Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
+// that code, otherwise 0 if all were successful).
+func Parallel(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, shareNetwork, shareMount bool) int {
+	limiter := make(chan struct{}, numTasks)
+	var g errgroup.Group
+
+	for _, label := range labels {
+		target := state.Graph.TargetOrDie(label.BuildLabel)
+		annotation := label.Annotation
+		g.Go(func() error {
+			limiter <- struct{}{}
+			defer func() { <-limiter }()
+
+			log.Notice("Executing %s...", target)
+			sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
+			return exec(state, target, target.ExecDir(), nil, nil, args, annotation, false, sandbox)
+		})
+	}
+	return exitCode(g.Wait())
+}
+
+// exitCode extracts an exit code from an error, if possible.
+func exitCode(err error) int {
+	if err != nil {
+		if ee, ok := err.(*osExec.ExitError); ok {
+			return ee.ExitCode()
 		}
 		return 1
 	}
@@ -36,7 +71,7 @@ func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, e
 }
 
 // exec runs the given command in the given directory, with the given environment and arguments.
-func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir string, env []string, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) error {
+func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir string, env []string, overrideCmdArgs, additionalArgs []string, entrypoint string, foreground bool, sandbox process.SandboxConfig) error {
 	if !target.IsBinary && len(overrideCmdArgs) == 0 {
 		return fmt.Errorf("Either the target needs to be a binary or an override command must be provided")
 	}
@@ -45,18 +80,31 @@ func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir string, e
 		return err
 	}
 
-	cmd, err := resolveCmd(state, target, overrideCmdArgs, runtimeDir, sandbox)
+	cmd, err := resolveCmd(state, target, overrideCmdArgs, entrypoint, runtimeDir, sandbox)
 	if err != nil {
 		return err
+	}
+	if len(additionalArgs) != 0 {
+		cmd += " " + strings.Join(additionalArgs, " ")
 	}
 
 	env = append(core.ExecEnvironment(state, target, filepath.Join(core.RepoRoot, runtimeDir)), env...)
 	_, _, err = state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, runtimeDir, env, time.Duration(math.MaxInt64), false, foreground, sandbox, cmd, true)
+	if err != nil {
+		log.Error("Execution of %s failed: %s", target, err)
+	}
 	return err
 }
 
 // resolveCmd resolves the command to run for the given target.
-func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArgs []string, runtimeDir string, sandbox process.SandboxConfig) (string, error) {
+func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArgs []string, entrypoint string, runtimeDir string, sandbox process.SandboxConfig) (string, error) {
+	if entrypoint != "" {
+		if ep, ok := target.EntryPoints[entrypoint]; ok {
+			overrideCmdArgs = []string{ep}
+		} else {
+			log.Fatalf("%v has no such entry point %v", target, entrypoint)
+		}
+	}
 	// The override command takes precedence if provided
 	if len(overrideCmdArgs) > 0 {
 		return core.ReplaceSequences(state, target, strings.Join(overrideCmdArgs, " "))

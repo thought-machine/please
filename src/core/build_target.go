@@ -17,16 +17,19 @@ import (
 )
 
 // OutDir is the root output directory for everything.
-const OutDir string = "plz-out"
+const OutDir = "plz-out"
 
 // TmpDir is the root of the temporary directory for building targets & running tests.
-const TmpDir string = "plz-out/tmp"
+const TmpDir = "plz-out/tmp"
 
 // GenDir is the output directory for non-binary targets.
-const GenDir string = "plz-out/gen"
+const GenDir = "plz-out/gen"
 
 // BinDir is the output directory for binary targets.
-const BinDir string = "plz-out/bin"
+const BinDir = "plz-out/bin"
+
+// ExecDir is the output directory that we execute in.
+const ExecDir = "plz-out/exec"
 
 // SubrepoDir is the output directory for targets that define subrepos.
 const SubrepoDir = "plz-out/subrepos"
@@ -397,6 +400,12 @@ func (target *BuildTarget) OutDir() string {
 		return path.Join(BinDir, target.Label.Subrepo, target.Label.PackageName)
 	}
 	return path.Join(GenDir, target.Label.Subrepo, target.Label.PackageName)
+}
+
+// ExecDir returns the exec directory for this target, e.g.
+// //mickey/donald:goofy -> plz-out/exec/mickey/donald/goofy
+func (target *BuildTarget) ExecDir() string {
+	return path.Join(ExecDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name)
 }
 
 // TestDir returns the test directory for this target, eg.

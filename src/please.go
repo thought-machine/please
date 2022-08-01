@@ -136,8 +136,8 @@ var opts struct {
 		StreamResults    bool         `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
-			Target core.BuildLabel   `positional-arg-name:"target" description:"Target to test"`
-			Args   []TestTargetOrArg `positional-arg-name:"arguments" description:"Arguments or test selectors"`
+			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
+			Args   TargetsOrArgs   `positional-arg-name:"arguments" description:"Arguments or test selectors"`
 		} `positional-args:"true"`
 		StateArgs []string `no-flag:"true"`
 	} `command:"test" description:"Builds and tests one or more targets"`
@@ -164,8 +164,8 @@ var opts struct {
 		Shell               string        `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
 		StreamResults       bool          `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		Args                struct {
-			Target core.BuildLabel   `positional-arg-name:"target" description:"Target to test"`
-			Args   []TestTargetOrArg `positional-arg-name:"arguments" description:"Arguments or test selectors"`
+			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
+			Args   TargetsOrArgs   `positional-arg-name:"arguments" description:"Arguments or test selectors"`
 		} `positional-args:"true"`
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
@@ -224,6 +224,17 @@ var opts struct {
 			Target              core.AnnotatedOutputLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
 			OverrideCommandArgs []string                  `positional-arg-name:"override_command" description:"Override command"`
 		} `positional-args:"true"`
+		Sequential struct {
+			Args struct {
+				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Targets to execute, or arguments to them"`
+			} `positional-args:"true"`
+		} `command:"sequential" description:"Execute a series of targets sequentially"`
+		Parallel struct {
+			NumTasks int `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Args     struct {
+				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Targets to execute, or arguments to them"`
+			} `positional-args:"true"`
+		} `command:"parallel" description:"Execute a number of targets in parallel"`
 	} `command:"exec" description:"Executes a single target in a hermetic build environment"`
 
 	Clean struct {
@@ -518,8 +529,9 @@ var buildFunctions = map[string]func() int{
 			return toExitCode(success, state)
 		}
 
-		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target.BuildLabel).Sandbox
-		dir := filepath.Join(core.OutDir, "exec", opts.Exec.Args.Target.Subrepo, opts.Exec.Args.Target.PackageName)
+		target := state.Graph.TargetOrDie(opts.Exec.Args.Target.BuildLabel)
+		dir := target.ExecDir()
+		shouldSandbox := target.Sandbox
 		if code := exec.Exec(state, opts.Exec.Args.Target, dir, nil, opts.Exec.Args.OverrideCommandArgs, false, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
 			return code
 		}
@@ -535,6 +547,28 @@ var buildFunctions = map[string]func() int{
 			if err := fs.RecursiveLink(from, to); err != nil {
 				log.Fatalf("failed to move output: %v", err)
 			}
+		}
+		return 0
+	},
+	"exec.sequential": func() int {
+		annotated, unannotated, args := opts.Exec.Sequential.Args.Targets.Separate()
+		success, state := runBuild(unannotated, true, false, false)
+		if !success {
+			return toExitCode(success, state)
+		}
+		if code := exec.Sequential(state, annotated, args, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
+			return code
+		}
+		return 0
+	},
+	"exec.parallel": func() int {
+		annotated, unannotated, args := opts.Exec.Parallel.Args.Targets.Separate()
+		success, state := runBuild(unannotated, true, false, false)
+		if !success {
+			return toExitCode(success, state)
+		}
+		if code := exec.Parallel(state, annotated, args, opts.Exec.Parallel.NumTasks, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
+			return code
 		}
 		return 0
 	},
@@ -1145,35 +1179,61 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 // target with a list of trailing arguments.
 // Alternatively they can be completely omitted in which case we test everything under the working dir.
 // One can also pass a 'failed' flag which runs the failed tests from last time.
-func testTargets(target core.BuildLabel, inputs []TestTargetOrArg, failed bool, resultsFile cli.Filepath) ([]core.BuildLabel, []string) {
+func testTargets(target core.BuildLabel, inputs TargetsOrArgs, failed bool, resultsFile cli.Filepath) ([]core.BuildLabel, []string) {
 	if failed {
 		return test.LoadPreviousFailures(string(resultsFile))
 	} else if target.Name == "" {
 		return core.InitialPackage(), nil
 	}
-	targets := []core.BuildLabel{target}
-	var args []string
-	for i, arg := range inputs {
-		if core.LooksLikeABuildLabel(string(arg)) {
-			targets = append(targets, core.ParseBuildLabels([]string{string(arg)})...)
-		} else {
-			for _, input := range inputs[i:] {
-				args = append(args, string(input))
-			}
-			break // First non-label stops label parsing.
-		}
-	}
-	return targets, args
+	labels, args := inputs.SeparateUnannotated()
+	return append([]core.BuildLabel{target}, labels...), args
 }
 
-type TestTargetOrArg string
+type TargetOrArg struct {
+	arg   string
+	label core.AnnotatedOutputLabel
+}
 
-func (arg TestTargetOrArg) Complete(match string) []flags.Completion {
+func (arg TargetOrArg) Complete(match string) []flags.Completion {
 	if core.LooksLikeABuildLabel(match) {
 		var l core.BuildLabel
 		return l.Complete(match)
 	}
 	return nil
+}
+
+func (arg *TargetOrArg) UnmarshalFlag(value string) error {
+	if core.LooksLikeABuildLabel(value) {
+		return arg.label.UnmarshalFlag(value)
+	}
+	arg.arg = value
+	return nil
+}
+
+type TargetsOrArgs []TargetOrArg
+
+// Separate splits the targets & arguments into the labels (in both annotated & unannotated forms) and the arguments.
+func (l TargetsOrArgs) Separate() (annotated []core.AnnotatedOutputLabel, unannotated []core.BuildLabel, args []string) {
+	for _, arg := range l {
+		if l, _ := arg.label.Label(); l.IsEmpty() {
+			args = append(args, arg.arg)
+		} else {
+			annotated = append(annotated, arg.label)
+			unannotated = append(unannotated, arg.label.BuildLabel)
+		}
+	}
+	return
+}
+
+// SeparateUnannotated splits the targets & arguments into two slices. Annotations aren't permitted.
+func (l TargetsOrArgs) SeparateUnannotated() ([]core.BuildLabel, []string) {
+	annotated, unannotated, args := l.Separate()
+	for _, a := range annotated {
+		if a.Annotation != "" {
+			log.Fatalf("Invalid build label; annotations are not permitted here: %s", a)
+		}
+	}
+	return unannotated, args
 }
 
 // readConfig reads the initial configuration files

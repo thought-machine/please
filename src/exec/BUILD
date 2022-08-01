@@ -9,6 +9,7 @@ go_library(
         "//src/cli/logging",
         "//src/core",
         "//src/process",
+        "//third_party/go:errgroup",
     ],
 )
 
