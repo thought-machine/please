@@ -3,8 +3,8 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "61cb2268c4b3e6662a19c2dda58d43bfcf89d3649c205bcdb32c148e9048b1ba",  # darwin_amd64
-        "167cd1107886c36fda76404e82d1447ebd3efc472fd9a9fe3b2e872d41adf981",  # darwin_arm64
+        "df6509885f65f0d7a4eaf3dfbe7dda327569787e8a0a31cbf99ae3a6e23e9ea8",  # darwin_amd64
+        "859e0a54b7fcea89d9dd1ec52aab415ac8f169999e5fdfb0f0c15b577c4ead5e",  # darwin_arm64
         "eca1a8f7b6ff6146efc285eed581096b12b59c1f0488bfe98ed053ab205267ca",  # freebsd_amd64
         "464b6b66591f6cf055bc5df90a9750bf5fbc9d038722bb84a9d56a2bea974be6",  # linux_amd64
     ],
