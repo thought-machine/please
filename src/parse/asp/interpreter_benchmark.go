@@ -21,7 +21,7 @@ func BenchmarkParseFile(b *testing.B) {
 	}
 	for i := 0; i < b.N; i++ {
 		pkg := core.NewPackage(fmt.Sprintf("benchmark_%d", i))
-		if err := parser.ParseFile(pkg, "src/parse/asp/test_data/benchmark_parse_file.build"); err != nil {
+		if err := parser.ParseFile(pkg, nil, nil, false, "src/parse/asp/test_data/benchmark_parse_file.build"); err != nil {
 			panic(err)
 		}
 	}

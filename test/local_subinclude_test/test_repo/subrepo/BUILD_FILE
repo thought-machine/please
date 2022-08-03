@@ -1,4 +1,4 @@
-subinclude("///dir/pleasings2//go")
+subinclude("///subrepo/dir/pleasings2//go")
 
 gotestsum_test(
     name = "gotest",

@@ -4,7 +4,7 @@ github_repo(
     revision = "502d7fc5487b0904a78c60b5f645dd4642298211",
 )
 
-subinclude("///dir/pleasings2//go")
+subinclude("///subrepo/dir/pleasings2//go")
 
 gotestsum_test(
     name = "gotest",

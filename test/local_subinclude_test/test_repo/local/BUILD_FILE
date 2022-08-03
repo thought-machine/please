@@ -1,0 +1,16 @@
+export_file(
+    name = "constant",
+    src = "constant.build_defs",
+    visibility = ["PUBLIC"],
+)
+
+subinclude(":constant")
+
+genrule(
+    name = "output",
+    outs = ["out"],
+    cmd = "echo $CONSTANT > $OUTS",
+    env = {
+        "CONSTANT": CONSTANT,
+    },
+)
