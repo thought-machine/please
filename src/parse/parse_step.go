@@ -70,12 +70,15 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
 		return nil
 	}
-	_, err = parsePackage(state, label, dependent, subrepo, forSubinclude)
+	pkg, err = parsePackage(state, label, dependent, subrepo, forSubinclude)
 
 	if err != nil {
 		return err
 	}
 	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
+	if label.IsAllTargets() {
+		return state.ActivateTarget(pkg, label, dependent, forSubinclude)
+	}
 	return nil
 }
 

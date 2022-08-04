@@ -190,11 +190,10 @@ func buildRule(s *scope, args []pyObject) pyObject {
 		target.AddedPostBuild = true
 	}
 
-	if s.parsingFor != nil && (s.parsingFor.label.IsAllTargets() || s.parsingFor.label == target.Label) {
+	if s.parsingFor != nil && s.parsingFor.label == target.Label {
 		if err := s.state.ActivateTarget(s.pkg, s.parsingFor.label, s.parsingFor.dependent, s.parsingFor.forSubinclude); err != nil {
 			s.Error("%v", err)
 		}
-		s.parsingFor = nil
 	}
 
 	return pyString(":" + target.Label.Name)
