@@ -68,7 +68,7 @@ func TestAddParseDep(t *testing.T) {
 	// should still get queued for build though. Recall that we indicate this with :all...
 	state := makeState(true, true)
 	state.NeedBuild = false
-	state.ActivateTarget( nil, buildLabel("//package2:target2"), buildLabel("//package3:all"), false)
+	state.ActivateTarget(nil, buildLabel("//package2:target2"), buildLabel("//package3:all"), false)
 
 	time.Sleep(time.Millisecond * 100)
 

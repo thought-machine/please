@@ -968,7 +968,6 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 	return nil
 }
 
-
 // exportFile adds a single-file export target. This is primarily used for Bazel compat.
 func exportFile(state *BuildState, pkg *Package, label BuildLabel) {
 	t := NewBuildTarget(label)
