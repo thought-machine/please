@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // Max levenshtein distance that we'll suggest at.

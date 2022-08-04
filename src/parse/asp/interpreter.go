@@ -103,7 +103,7 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, forSubinclude bool, statements []*Statement) (*scope, error) {
 	s := i.scope.NewPackagedScope(pkg, 1)
 	if forLabel != nil {
-		s.parsingFor = &targetActivation{
+		s.parsingFor = &parseTarget{
 			label:         *forLabel,
 			dependent:     *dependent,
 			forSubinclude: forSubinclude,
@@ -193,8 +193,8 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 	})
 }
 
-// targetActivation represents a request to activate a target while parsing a package
-type targetActivation struct {
+// parseTarget represents a request to activate a target while parsing a package
+type parseTarget struct {
 	label         core.BuildLabel
 	dependent     core.BuildLabel
 	forSubinclude bool
@@ -207,7 +207,7 @@ type scope struct {
 	state           *core.BuildState
 	pkg             *core.Package
 	subincludeLabel *core.BuildLabel
-	parsingFor      *targetActivation
+	parsingFor      *parseTarget
 	parent          *scope
 	locals          pyDict
 	config          *pyConfig
