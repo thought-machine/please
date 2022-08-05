@@ -44,7 +44,6 @@ import (
 	"github.com/thought-machine/please/src/scm"
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
-	"github.com/thought-machine/please/src/update"
 	"github.com/thought-machine/please/src/watch"
 	"github.com/thought-machine/please/src/worker"
 )
@@ -1260,7 +1259,7 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	} else if opts.Update.Version.IsSet {
 		config.Please.Version = opts.Update.Version
 	}
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
+	// update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
 	return config
 }
 
@@ -1377,15 +1376,21 @@ func initBuild(args []string) string {
 		}
 		if len(os.Args) > 1 {
 			if alias, ok := config.Alias[os.Args[1]]; ok {
-				config.AttachAliasFlags(parser, os.Args)
-				if _, flagsErr = parser.ParseArgs(os.Args[1:]); flagsErr != nil {
-					config.PrintAlias(os.Stderr, os.Args[1], os.Args, flagsErr)
-					os.Exit(1)
-				}
-				args := config.UpdateArgsWithAliases(os.Args)
 				if alias.Config == "" {
-					command = cli.ParseFlagsFromArgsOrDie("Please", &opts, args, additionalUsageInfo)
+					args := config.UpdateArgsWithAliases(os.Args)
+					config.AttachAliasFlags(parser, os.Args)
+					parser, _, err := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions, additionalUsageInfo)
+					if err != nil {
+						log.Fatalf("%s", err)
+					}
+					command = cli.ActiveFullCommand(parser.Command)
 				} else {
+					config.AttachAliasFlags(parser, os.Args)
+					if _, flagsErr = parser.ParseArgs(os.Args[1:]); flagsErr != nil {
+						config.PrintAlias(os.Stderr, os.Args[1], os.Args, flagsErr)
+						os.Exit(1)
+					}
+					args := config.UpdateArgsWithAliases(os.Args)
 					// construct run opts for nested config
 					parser, _, _ = cli.ParseFlags("Please", &opts, args[1:], flags.HelpFlag|flags.PassDoubleDash, nil, additionalUsageInfo)
 					if parser.Command != nil {
