@@ -342,7 +342,7 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
         deps=deps,
         visibility=visibility,
         test_sandbox=sandbox,
-        labels=labels + ['test_results_dir'],
+        labels=labels,
         test_timeout=timeout,
         size = size,
         flaky=flaky,
@@ -513,7 +513,7 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
     return cmd, {'jarcat': [CONFIG.JARCAT_TOOL]}
 
 # This function is exposed as java_toolchain unless Bazel compatibility is enabled in which case it is exposed as
-# please_java_toolchain. This is to avoid namespace conflicts with Bazel's java_toolchain rule. 
+# please_java_toolchain. This is to avoid namespace conflicts with Bazel's java_toolchain rule.
 def _java_toolchain(name : str, jdk_url : str|dict='', jdk:str='', visibility:list = ["PUBLIC"], hashes = []) -> str:
     """Downloads the JDK so language rules can use the toolchain"""
     if jdk_url and jdk:
@@ -603,4 +603,3 @@ if CONFIG.BAZEL_COMPATIBILITY:
             test_only = test_only,
             visibility = visibility,
         )
-
