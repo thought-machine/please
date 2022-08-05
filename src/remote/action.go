@@ -144,18 +144,12 @@ func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.Bu
 
 // buildTestCommand builds a command for a target when testing.
 func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarget) (*pb.Command, error) {
-	// TODO(peterebden): Remove all this nonsense once API v2.1 is released.
-	files := target.Test.Outputs
-	dirs := []string{}
+	paths := target.Test.Outputs
 	if target.NeedCoverage(state) {
-		files = append(files, core.CoverageFile)
+		paths = append(paths, core.CoverageFile)
 	}
 	if !target.Test.NoOutput {
-		if target.HasLabel(core.TestResultsDirLabel) {
-			dirs = []string{core.TestResultsFile}
-		} else {
-			files = append(files, core.TestResultsFile)
-		}
+		paths = append(paths, core.TestResultsFile)
 	}
 	commandPrefix := "export TMP_DIR=\"`pwd`\" TEST_DIR=\"`pwd`\" && "
 	if outs := target.Outputs(); len(outs) > 0 {
@@ -176,9 +170,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 		},
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, "."), target.Test.Sandbox),
-		OutputFiles:          files,
-		OutputDirectories:    dirs,
-		OutputPaths:          append(files, dirs...),
+		OutputPaths:          paths,
 	}, err
 }
 
