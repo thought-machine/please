@@ -951,18 +951,19 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild, ne
 	return nil
 }
 
+// QueueTestTarget adds a target to the queue to be tested.
 func (state *BuildState) QueueTestTarget(target *BuildTarget) {
-	// TODO: Can this be made async?
-	state.queueTestTarget(target)
+	state.QueueTargetData(target)
+	state.AddPendingTest(target)
 }
 
-func (state *BuildState) queueTestTarget(target *BuildTarget) {
+// QueueTargetData queues up builds of the target's runtime data.
+func (state *BuildState) QueueTargetData(target *BuildTarget) {
 	for _, data := range target.AllData() {
 		if l, ok := data.Label(); ok {
 			state.WaitForBuiltTarget(l, target.Label)
 		}
 	}
-	state.AddPendingTest(target)
 }
 
 // queueResolvedTarget is like queueTarget but once we have a resolved target.

@@ -85,6 +85,8 @@ func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) 
 	target.FinishBuild()
 	if target.IsTest() && state.NeedTests && state.IsOriginalTarget(target) {
 		state.QueueTestTarget(target)
+	} else if state.NeedRun && state.IsOriginalTarget(target) {
+		state.QueueTargetData(target)
 	}
 }
 
