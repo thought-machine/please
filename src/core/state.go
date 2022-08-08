@@ -953,12 +953,12 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild, ne
 
 // QueueTestTarget adds a target to the queue to be tested.
 func (state *BuildState) QueueTestTarget(target *BuildTarget) {
-	state.QueueTargetData(target)
+	state.queueTargetData(target)
 	state.AddPendingTest(target)
 }
 
-// QueueTargetData queues up builds of the target's runtime data.
-func (state *BuildState) QueueTargetData(target *BuildTarget) {
+// queueTargetData queues up builds of the target's runtime data.
+func (state *BuildState) queueTargetData(target *BuildTarget) {
 	for _, data := range target.AllData() {
 		if l, ok := data.Label(); ok {
 			state.WaitForBuiltTarget(l, target.Label)
@@ -1031,6 +1031,11 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		if !called.Value() {
 			// We are now ready to go, we have nothing to wait for.
 			if building && target.SyncUpdateState(Active, Pending) {
+				// If we're going to run the target, we need its runtime data to be done. This has to
+				// happen before we build it otherwise remote downloads will fail.
+				if state.NeedRun && state.IsOriginalTarget(target) {
+					state.queueTargetData(target)
+				}
 				state.addPendingBuild(target)
 			}
 			return
