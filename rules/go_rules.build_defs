@@ -212,8 +212,8 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             _generate_import_config=False,
             labels=labels,
             import_path=package_path,
-            requires = _requires,
-            provides = _provides,
+            _requires = _requires,
+            _provides = _provides,
         )
         asm_rule = build_rule(
             name = name,
@@ -225,7 +225,7 @@ def go_library(name:str, srcs:list, resources:list=None, asm_srcs:list=None, hdr
             },
             outs = [name + '.o'],
             building_description = 'Assembling...',
-            cmd = 'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS_${GOOS} -D GOARCH_${GOARCH} -o "$OUT" $SRCS_ASM',
+            cmd = f'eval `"$TOOL" env` && "$TOOL" tool asm -trimpath "$TMP_DIR" -I ${GOROOT}/pkg/include -D GOOS_${GOOS} -D GOARCH_${GOARCH} -p {package_path} -o "$OUT" $SRCS_ASM',
             tools=[CONFIG.GO_TOOL],
             test_only = test_only,
             labels=labels,
@@ -1641,7 +1641,7 @@ def _go_library_cmds(import_path:str="", complete=True, all_srcs=False, cover=Tr
         'opt': f'{prefix}; {filter_cmd}{compile_cmd}{package_flag} $SRCS_GO',
     }
     if cover:
-        cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd} $SRCS_GO'
+        cmds['cover'] = f'{prefix}; {filter_cmd}{cover_cmd} && {compile_cmd}{package_flag} $SRCS_GO'
     return cmds
 
 

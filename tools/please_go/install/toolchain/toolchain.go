@@ -123,7 +123,10 @@ func (tc *Toolchain) Symabis(sourceDir, objectDir string, asmFiles []string) (st
 }
 
 // Asm will compile the asm files and return the objects that are generated
-func (tc *Toolchain) Asm(sourceDir, objectDir, trimpath string, asmFiles []string) ([]string, error) {
+func (tc *Toolchain) Asm(importpath, sourceDir, objectDir, trimpath string, asmFiles []string) ([]string, error) {
+	if importpath != "" {
+		importpath = fmt.Sprintf("-p %s", importpath)
+	}
 	if trimpath != "" {
 		trimpath = fmt.Sprintf("-trimpath %s", trimpath)
 	}
@@ -134,7 +137,7 @@ func (tc *Toolchain) Asm(sourceDir, objectDir, trimpath string, asmFiles []strin
 		baseObjFile := strings.TrimSuffix(filepath.Base(asmFile), ".s") + ".o"
 		objFiles[i] = filepath.Join(objectDir, baseObjFile)
 
-		err := tc.Exec.Run("(cd %s; %s tool asm %s -I %s -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -o %s %s)", sourceDir, tc.GoTool, trimpath, objectDir, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, objFiles[i], asmFile)
+		err := tc.Exec.Run("(cd %s; %s tool asm %s %s -I %s -I %s/pkg/include -D GOOS_%s -D GOARCH_%s -o %s %s)", sourceDir, tc.GoTool, importpath, trimpath, objectDir, build.Default.GOROOT, build.Default.GOOS, build.Default.GOARCH, objFiles[i], asmFile)
 		if err != nil {
 			return nil, err
 		}
