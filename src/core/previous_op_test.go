@@ -1,7 +1,6 @@
 package core
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -12,7 +11,7 @@ import (
 func TestStoreCurrentOperation(t *testing.T) {
 	StoreCurrentOperation()
 
-	contents, err := ioutil.ReadFile(previousOpFilePath)
+	contents, err := os.ReadFile(previousOpFilePath)
 	assert.Equal(t, os.Args[1:], strings.Split(strings.TrimSpace(string(contents)), " "))
 	assert.NoError(t, err)
 }

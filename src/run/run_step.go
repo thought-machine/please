@@ -4,7 +4,6 @@ package run
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"os/exec"
@@ -232,7 +231,7 @@ func prepareRunDir(state *core.BuildState, target *core.BuildTarget) (string, er
 		return "", err
 	}
 
-	path, err := ioutil.TempDir(path, target.Label.Name+"_*")
+	path, err := os.MkdirTemp(path, target.Label.Name+"_*")
 	if err != nil {
 		return "", err
 	}

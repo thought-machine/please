@@ -1,7 +1,7 @@
 package plzinit
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,7 +27,7 @@ func TestInitPleasings(t *testing.T) {
 	err = InitPleasings("BUILD", false, "master")
 	require.NoError(t, err)
 
-	b, err := ioutil.ReadFile("BUILD")
+	b, err := os.ReadFile("BUILD")
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedRule, string(b))

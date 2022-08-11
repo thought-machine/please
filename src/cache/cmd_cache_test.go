@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -87,13 +86,13 @@ func TestCmdStoreAndRetrieve(t *testing.T) {
 	os.Chdir("src/cache/test_data")
 	cache.Store(target, key, target.Outputs())
 
-	b, err := ioutil.ReadFile("plz-out/gen/pkg/name/testfile2")
+	b, err := os.ReadFile("plz-out/gen/pkg/name/testfile2")
 	assert.NoError(t, err)
 
 	hit := cache.Retrieve(target, key, nil)
 	assert.True(t, hit)
 
-	b2, err := ioutil.ReadFile("plz-out/gen/pkg/name/testfile2")
+	b2, err := os.ReadFile("plz-out/gen/pkg/name/testfile2")
 	assert.NoError(t, err)
 	assert.Equal(t, b, b2)
 }

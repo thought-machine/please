@@ -2,7 +2,7 @@ package test
 
 import (
 	"encoding/base64"
-	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -13,7 +13,7 @@ func TestWriteExtraOutput(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error, got %s", err)
 	}
-	err = ioutil.WriteFile("truth.txt", out, 0644)
+	err = os.WriteFile("truth.txt", out, 0644)
 	if err != nil {
 		t.Errorf("Expected no error, got %s", err)
 	}

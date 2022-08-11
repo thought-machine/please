@@ -5,7 +5,6 @@ package test
 import (
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -55,7 +54,7 @@ func readTestResultsDir(outputDir string) ([][]byte, error) {
 	}
 	err := fs.Walk(outputDir, func(path string, isDir bool) error {
 		if !isDir {
-			fileResults, err := ioutil.ReadFile(path)
+			fileResults, err := os.ReadFile(path)
 			if err != nil {
 				return fmt.Errorf("Error parsing %s: %s", path, err)
 			}

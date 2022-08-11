@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -36,7 +35,7 @@ func RecordAttr(filename string, hash []byte, xattrName string, xattrsEnabled bo
 // xattrs aren't available.
 // The actual filename written will differ from the original (since obviously we cannot overwrite it).
 func RecordAttrFile(filename string, hash []byte) error {
-	return ioutil.WriteFile(fallbackFileName(filename), hash, 0644)
+	return os.WriteFile(fallbackFileName(filename), hash, 0644)
 }
 
 func fallbackFileName(filename string) string {
@@ -67,6 +66,6 @@ func ReadAttr(filename, xattrName string, xattrsEnabled bool) []byte {
 // ReadAttrFile reads a hash for the given file. It's the fallback for ReadAttr and pairs with
 // RecordAttrFile to read the same files it would write.
 func ReadAttrFile(filename string) []byte {
-	b, _ := ioutil.ReadFile(fallbackFileName(filename))
+	b, _ := os.ReadFile(fallbackFileName(filename))
 	return b
 }

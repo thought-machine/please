@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -509,7 +508,7 @@ func moveTmpFilesToOutDir(target *core.BuildTarget) error {
 }
 
 func moveDirToOutDir(target *core.BuildTarget, dir string) error {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}

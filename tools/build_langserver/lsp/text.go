@@ -2,7 +2,7 @@ package lsp
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -82,7 +82,7 @@ func (h *Handler) maybeOpenDoc(uri lsp.DocumentURI) (*doc, error) {
 		return doc, nil
 	}
 
-	content, err := ioutil.ReadFile(filename)
+	content, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}

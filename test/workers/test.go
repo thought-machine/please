@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"gopkg.in/op/go-logging.v1"
@@ -18,7 +18,7 @@ func main() {
 		log.Fatalf("Unsuccessful get: %s", resp.Status)
 	}
 	defer resp.Body.Close()
-	if b, err := ioutil.ReadAll(resp.Body); err != nil {
+	if b, err := io.ReadAll(resp.Body); err != nil {
 		log.Fatalf("Failed to read: %s", err)
 	} else if !bytes.Equal([]byte("kitten!"), b) {
 		log.Fatalf("Unexpected response: %s", b)

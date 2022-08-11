@@ -1,7 +1,6 @@
 package gc
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -19,9 +18,9 @@ func TestRewriteFile(t *testing.T) {
 	err := fs.CopyFile("src/gc/test_data/before.build", path.Join(wd, "test.build"), 0644)
 	assert.NoError(t, err)
 	assert.NoError(t, RewriteFile(state, "test.build", []string{"prometheus", "cover"}))
-	rewritten, err := ioutil.ReadFile("test.build")
+	rewritten, err := os.ReadFile("test.build")
 	assert.NoError(t, err)
-	after, err := ioutil.ReadFile("src/gc/test_data/after.build")
+	after, err := os.ReadFile("src/gc/test_data/after.build")
 	assert.NoError(t, err)
 	assert.EqualValues(t, string(after), string(rewritten))
 }

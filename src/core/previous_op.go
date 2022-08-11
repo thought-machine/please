@@ -1,7 +1,6 @@
 package core
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -34,7 +33,7 @@ func StoreCurrentOperation() {
 
 // ReadPreviousOperationOrDie reads the previous operation performed from storage file. Dies if unsuccessful.
 func ReadPreviousOperationOrDie() []string {
-	contents, err := ioutil.ReadFile(previousOpFilePath)
+	contents, err := os.ReadFile(previousOpFilePath)
 	if err != nil || len(contents) == 0 {
 		log.Fatalf("Sorry OP, can't read previous operation :(")
 	}
