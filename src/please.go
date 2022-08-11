@@ -87,6 +87,7 @@ var opts struct {
 		NoLock             bool    `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool    `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
 		HTTPProxy          cli.URL `long:"http_proxy" env:"HTTP_PROXY" description:"HTTP proxy to use for downloads"`
+		Debug              bool    `long:"debug" description:"When enabled, Please will enter into an interactive debugger when breakpoint() is called during parsing."`
 	} `group:"Options that enable / disable certain features"`
 
 	HelpFlags struct {
@@ -1109,6 +1110,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.DebugFailingTests = debugFailingTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
+	state.EnableBreakpoints = opts.FeatureFlags.Debug
 
 	// What outputs get downloaded in remote execution.
 	if debug {
@@ -1160,7 +1162,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
 	shell := opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
 	shellRun := opts.Build.Shell == "run" || opts.Test.Shell == "run" || opts.Cover.Shell == "run"
-	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
+	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput || opts.FeatureFlags.Debug, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
 	state.Cache = cache.NewCache(state)
 
 	// Run the display
