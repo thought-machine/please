@@ -8,7 +8,6 @@ package gc
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -214,7 +213,7 @@ func RewriteFile(state *core.BuildState, filename string, targets []string) erro
 	if err != nil {
 		return err
 	}
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		return err // This is very unlikely since we already read it once above, but y'know...
 	}
@@ -238,7 +237,7 @@ func RewriteFile(state *core.BuildState, filename string, targets []string) erro
 			lines2 = append(lines2, line)
 		}
 	}
-	return ioutil.WriteFile(filename, bytes.Join(lines2, []byte{'\n'}), 0664)
+	return os.WriteFile(filename, bytes.Join(lines2, []byte{'\n'}), 0664)
 }
 
 // removeTargets rewrites the given set of targets out of their BUILD files.

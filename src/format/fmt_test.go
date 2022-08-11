@@ -1,7 +1,7 @@
 package format
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,9 +23,9 @@ func TestFormat(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, changed)
 
-	beforeContents, err := ioutil.ReadFile(before)
+	beforeContents, err := os.ReadFile(before)
 	require.NoError(t, err)
-	afterContents, err := ioutil.ReadFile(after)
+	afterContents, err := os.ReadFile(after)
 	require.NoError(t, err)
 	assert.Equal(t, beforeContents, afterContents)
 }

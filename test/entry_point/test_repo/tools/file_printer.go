@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -14,7 +13,7 @@ func main() {
 		panic(err)
 	}
 
-	b, err := ioutil.ReadFile(filepath.Join(filepath.Dir(path), "file.txt"))
+	b, err := os.ReadFile(filepath.Join(filepath.Dir(path), "file.txt"))
 	if err != nil {
 		panic(err)
 	}

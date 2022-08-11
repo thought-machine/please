@@ -2,7 +2,6 @@ package main
 
 import (
 	"html/template"
-	"io/ioutil"
 	"os"
 	"path"
 	"sort"
@@ -92,7 +91,7 @@ func getMetadata() codelabList {
 		}
 		md.LastUpdated = info.ModTime().UTC().Format(time.RFC822)
 
-		b, err := ioutil.ReadFile(codelab)
+		b, err := os.ReadFile(codelab)
 		if err != nil {
 			panic(err)
 		}

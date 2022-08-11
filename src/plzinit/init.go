@@ -2,7 +2,6 @@ package plzinit
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -69,7 +68,7 @@ func InitConfig(dir string, bazelCompatibility bool, noPrompt bool) {
 
 	contents += golangConfig(dir, noPrompt)
 
-	if err := ioutil.WriteFile(config, []byte(contents), 0644); err != nil {
+	if err := os.WriteFile(config, []byte(contents), 0644); err != nil {
 		log.Fatalf("Failed to write file: %s", err)
 	}
 	fmt.Printf("Wrote config template to %s, you're now ready to go!\n", config)
@@ -97,7 +96,7 @@ func InitConfigFile(filename string, options map[string]string) {
 	}
 	if err := fs.EnsureDir(filename); err != nil {
 		log.Fatalf("Cannot create directory for new file: %s", err)
-	} else if err := ioutil.WriteFile(filename, b, 0644); err != nil {
+	} else if err := os.WriteFile(filename, b, 0644); err != nil {
 		log.Fatalf("Failed to write updated config file: %s", err)
 	}
 }
@@ -106,7 +105,7 @@ func readConfig(filename string) []byte {
 	if !fs.PathExists(filename) {
 		return nil
 	}
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("Failed to read config file: %s", err)
 	}
@@ -116,7 +115,7 @@ func readConfig(filename string) []byte {
 // InitWrapperScript initialises the pleasew script.
 func InitWrapperScript() {
 	data := assets.Pleasew
-	if err := ioutil.WriteFile(wrapperScriptName, data, 0755); err != nil {
+	if err := os.WriteFile(wrapperScriptName, data, 0755); err != nil {
 		log.Fatalf("Failed to write file: %s", err)
 	}
 }

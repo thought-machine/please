@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -9,9 +8,9 @@ import (
 )
 
 func TestIsSameFile(t *testing.T) {
-	err := ioutil.WriteFile("issamefile1.txt", []byte("hello"), 0644)
+	err := os.WriteFile("issamefile1.txt", []byte("hello"), 0644)
 	assert.NoError(t, err)
-	err = ioutil.WriteFile("issamefile2.txt", []byte("hello"), 0644)
+	err = os.WriteFile("issamefile2.txt", []byte("hello"), 0644)
 	assert.NoError(t, err)
 	err = os.Link("issamefile1.txt", "issamefile3.txt")
 	assert.NoError(t, err)
@@ -21,7 +20,7 @@ func TestIsSameFile(t *testing.T) {
 }
 
 func TestEnsureDir(t *testing.T) {
-	err := ioutil.WriteFile("ensure_dir", []byte("hello"), 0644)
+	err := os.WriteFile("ensure_dir", []byte("hello"), 0644)
 	assert.NoError(t, err)
 	err = EnsureDir("ensure_dir/filename")
 	assert.NoError(t, err)

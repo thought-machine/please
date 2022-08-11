@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"text/template"
@@ -14,11 +14,11 @@ func must(err error) {
 }
 
 func main() {
-	b, err := ioutil.ReadAll(os.Stdin)
+	b, err := io.ReadAll(os.Stdin)
 	must(err)
 	tmpl, err := template.New("language.html").Parse(string(b))
 	must(err)
-	b, err = ioutil.ReadFile("docs/grammar.txt")
+	b, err = os.ReadFile("docs/grammar.txt")
 	must(err)
 	s := regexp.MustCompile(`("[^ ]+")`).ReplaceAllStringFunc(string(b), func(s string) string {
 		return `<span class="grammar-string">` + s + `</span>`

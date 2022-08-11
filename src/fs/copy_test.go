@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -37,7 +36,7 @@ func TestLink(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			dir, err := ioutil.TempDir("", "testlink")
+			dir, err := os.MkdirTemp("", "testlink")
 			require.NoError(t, err)
 			defer os.RemoveAll(dir)
 
@@ -94,7 +93,7 @@ func TestSymlink(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			dir, err := ioutil.TempDir("", "testlink")
+			dir, err := os.MkdirTemp("", "testlink")
 			require.NoError(t, err)
 			defer os.RemoveAll(dir)
 

@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -37,14 +37,14 @@ func TestStoreAndRetrieveHTTP(t *testing.T) {
 	key := []byte("test_key")
 	cache.Store(target, key, target.Outputs())
 
-	b, err := ioutil.ReadFile("plz-out/gen/pkg/name/testfile2")
+	b, err := os.ReadFile("plz-out/gen/pkg/name/testfile2")
 	assert.NoError(t, err)
 
 	// Remove the file before we retrieve
 	metadata := cache.Retrieve(target, key, nil)
 	assert.NotNil(t, metadata)
 
-	b2, err := ioutil.ReadFile("plz-out/gen/pkg/name/testfile2")
+	b2, err := os.ReadFile("plz-out/gen/pkg/name/testfile2")
 	assert.NoError(t, err)
 	assert.Equal(t, b, b2)
 }
@@ -55,7 +55,7 @@ type testServer struct {
 
 func (s *testServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPut {
-		b, _ := ioutil.ReadAll(r.Body)
+		b, _ := io.ReadAll(r.Body)
 		s.data[r.URL.Path] = b
 		w.WriteHeader(http.StatusNoContent)
 		return

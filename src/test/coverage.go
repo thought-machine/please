@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,7 +17,7 @@ import (
 
 // Parses test coverage for a single target from its output file.
 func parseTestCoverageFile(target *core.BuildTarget, outputFile string, run int) (*core.TestCoverage, error) {
-	data, err := ioutil.ReadFile(outputFile)
+	data, err := os.ReadFile(outputFile)
 	if err != nil && os.IsNotExist(err) {
 		return core.NewTestCoverage(), nil // Tests aren't required to produce coverage files.
 	} else if err != nil {
@@ -119,7 +118,7 @@ func mergeCoverage(state *core.BuildState, recordedCoverage core.TestCoverage, c
 
 // countLines returns the number of lines in a file.
 func countLines(path string) int {
-	data, _ := ioutil.ReadFile(path)
+	data, _ := os.ReadFile(path)
 	return bytes.Count(data, []byte{'\n'})
 }
 
@@ -138,7 +137,7 @@ func WriteCoverageToFileOrDie(coverage core.TestCoverage, filename string, incre
 	out.Stats.CoverageByDirectory = getDirectoryCoverage(coverage)
 	if b, err := json.MarshalIndent(out, "", "    "); err != nil {
 		log.Fatalf("Failed to encode json: %s", err)
-	} else if err := ioutil.WriteFile(filename, b, 0644); err != nil {
+	} else if err := os.WriteFile(filename, b, 0644); err != nil {
 		log.Fatalf("Failed to write coverage results to %s: %s", filename, err)
 	}
 }
@@ -147,7 +146,7 @@ func WriteCoverageToFileOrDie(coverage core.TestCoverage, filename string, incre
 func WriteXMLCoverageToFileOrDie(sources []core.BuildLabel, coverage core.TestCoverage, filename string) {
 	data := coverageResultToXML(sources, coverage)
 
-	if err := ioutil.WriteFile(filename, data, 0644); err != nil {
+	if err := os.WriteFile(filename, data, 0644); err != nil {
 		log.Fatalf("Failed to write coverage results to %s: %s", filename, err)
 	}
 }

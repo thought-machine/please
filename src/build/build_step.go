@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -529,7 +528,7 @@ func buildTextFile(state *core.BuildState, target *core.BuildTarget) error {
 		return err
 	}
 
-	return ioutil.WriteFile(outFile, []byte(content), target.OutMode())
+	return os.WriteFile(outFile, []byte(content), target.OutMode())
 }
 
 // prepareOutputDirectories creates any directories the target has declared it will output into as a nicety
@@ -618,7 +617,7 @@ func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, erro
 func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir core.OutputDirectory) ([]string, error) {
 	fullDir := filepath.Join(target.TmpDir(), dir.Dir())
 
-	files, err := ioutil.ReadDir(fullDir)
+	files, err := os.ReadDir(fullDir)
 	if err != nil {
 		return nil, err
 	}

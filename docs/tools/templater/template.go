@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"hash/adler32"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -69,7 +68,7 @@ var pageTitles = map[string]string{
 }
 
 func mustRead(filename string) string {
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}

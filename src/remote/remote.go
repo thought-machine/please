@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -496,7 +495,7 @@ func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult,
 
 // moveTmpFilesToOutDir moves files from the target tmp dir to the out dir
 func moveTmpFilesToOutDir(target *core.BuildTarget) error {
-	files, err := ioutil.ReadDir(target.TmpDir())
+	files, err := os.ReadDir(target.TmpDir())
 	if err != nil {
 		return err
 	}
@@ -528,7 +527,7 @@ func moveOutDirsToTmpRoot(target *core.BuildTarget) error {
 func moveOutDirFilesToTmpRoot(target *core.BuildTarget, dir string) error {
 	fullDir := filepath.Join(target.TmpDir(), dir)
 
-	files, err := ioutil.ReadDir(fullDir)
+	files, err := os.ReadDir(fullDir)
 	if err != nil {
 		return err
 	}
