@@ -682,7 +682,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	tmpDir := target.TmpDir()
 	outDir := target.OutDir()
 	outs := target.Outputs()
-	allOuts := make([]string, len(outs))
+	allOuts := make([]string, len(outs), len(outs)+len(target.OutputDirectories))
 	for i, output := range outs {
 		allOuts[i] = output
 		tmpOutput := path.Join(tmpDir, target.GetTmpOutput(output))
