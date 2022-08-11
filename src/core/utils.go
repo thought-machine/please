@@ -308,7 +308,10 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 					}
 					// Otherwise we should recurse for this build label (and gather its sources)
 				} else {
-					inner(graph.TargetOrDie(label))
+					t := graph.TargetOrDie(label)
+					for _, d := range recursivelyProvideFor(graph, target, t, t.Label) {
+						inner(graph.TargetOrDie(d))
+					}
 				}
 			}
 
@@ -324,13 +327,18 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 					}
 					// Otherwise we should recurse for this build label (and gather its sources)
 				} else {
-					inner(graph.TargetOrDie(label))
+					t := graph.TargetOrDie(label)
+					for _, d := range recursivelyProvideFor(graph, target, t, t.Label) {
+						inner(graph.TargetOrDie(d))
+					}
 				}
 			}
 
 			// Finally recurse for all the deps of this rule.
 			for _, dep := range target.Dependencies() {
-				inner(dep)
+				for _, d := range recursivelyProvideFor(graph, target, dep, dep.Label) {
+					inner(graph.TargetOrDie(d))
+				}
 			}
 			doneTargets[target] = true
 		}
