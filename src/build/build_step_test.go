@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path"
@@ -250,7 +249,7 @@ func TestInitPyCreation(t *testing.T) {
 	assert.True(t, fs.FileExists("plz-out/gen/pypkg/__init__.py"))
 	_, err = buildFilegroup(state, target2)
 	assert.NoError(t, err)
-	d, err := ioutil.ReadFile("plz-out/gen/pypkg/__init__.py")
+	d, err := os.ReadFile("plz-out/gen/pypkg/__init__.py")
 	assert.NoError(t, err)
 	assert.Equal(t, `"""output from //pypkg:target2"""`, strings.TrimSpace(string(d)))
 }
@@ -595,14 +594,14 @@ func (*mockCache) Store(target *core.BuildTarget, key []byte, files []string) {
 
 func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []string) bool {
 	if target.Label.Name == "target8" {
-		ioutil.WriteFile("plz-out/gen/package1/file8", []byte("retrieved from cache"), 0664)
+		os.WriteFile("plz-out/gen/package1/file8", []byte("retrieved from cache"), 0664)
 		md := &core.BuildMetadata{}
 		if err := StoreTargetMetadata(target, md); err != nil {
 			panic(err)
 		}
 		return true
 	} else if target.Label.Name == "target10" {
-		ioutil.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
+		os.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
 		md := &core.BuildMetadata{Stdout: []byte("retrieved from cache")}
 		if err := StoreTargetMetadata(target, md); err != nil {
 			panic(err)

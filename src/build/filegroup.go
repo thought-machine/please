@@ -13,7 +13,6 @@ package build
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -167,6 +166,6 @@ func writeGoMod() {
 	const contents = "module please-ignore  // Dummy module to exclude this directory from other tools\n"
 	const filename = core.OutDir + "/go.mod"
 	if !fs.PathExists(filename) {
-		ioutil.WriteFile(filename, []byte(contents), 0644)
+		os.WriteFile(filename, []byte(contents), 0644)
 	}
 }
