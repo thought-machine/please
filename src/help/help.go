@@ -3,7 +3,6 @@ package help
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
@@ -205,7 +204,7 @@ func populatePluginBuildFuncs(subrepo *core.Subrepo) map[string]*asp.Statement {
 
 	ret := make(map[string]*asp.Statement)
 	for _, dir := range dirs {
-		if files, err := ioutil.ReadDir(dir); err == nil {
+		if files, err := os.ReadDir(dir); err == nil {
 			for _, file := range files {
 				if !file.IsDir() {
 					if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {

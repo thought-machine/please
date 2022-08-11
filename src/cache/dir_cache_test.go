@@ -3,7 +3,6 @@ package cache
 import (
 	"bytes"
 	"encoding/base64"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -21,7 +20,7 @@ func writeFile(filename string, size int) {
 	if err := os.MkdirAll(path.Dir(filename), core.DirPermissions); err != nil {
 		panic(err)
 	}
-	if err := ioutil.WriteFile(filename, contents, 0644); err != nil {
+	if err := os.WriteFile(filename, contents, 0644); err != nil {
 		panic(err)
 	}
 }

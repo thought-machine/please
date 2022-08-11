@@ -3,11 +3,10 @@ package main
 import (
 	"encoding/json"
 	htmltemplate "html/template"
-	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"text/template"
-	"regexp"
 )
 
 type rules struct {
@@ -28,7 +27,7 @@ func (r *rules) Named(name string) *rule {
 func (r *rules) AddLinks(name, docstring string) string {
 	if strings.Contains(name, "_") { // Don't do it for something generic like "tarball"
 		for k := range r.Functions {
-			var re = regexp.MustCompile("\b("+k+")\b")
+			var re = regexp.MustCompile("\b(" + k + ")\b")
 			if name == k {
 				docstring = re.ReplaceAllString(docstring, "<code>$1</code>")
 			} else {
@@ -69,7 +68,7 @@ func main() {
 		},
 	}).ParseFiles("docs/lexicon.html", "docs/lexicon_entry.html")
 	must(err)
-	b, err := ioutil.ReadFile("docs/rules.json")
+	b, err := os.ReadFile("docs/rules.json")
 	must(err)
 	must(json.Unmarshal(b, r))
 	for name, rule := range r.Functions {

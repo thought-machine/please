@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -179,7 +178,7 @@ func (stack *errorStack) readLine(r io.ReadSeeker, line int) (string, string, st
 	}
 	r.Seek(0, io.SeekStart)
 	// This isn't 100% efficient but who cares really.
-	b, err := ioutil.ReadAll(r)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		return "", "", ""
 	}

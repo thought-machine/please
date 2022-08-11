@@ -1,7 +1,7 @@
 package process
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,7 +10,7 @@ import (
 func TestProgressWriter(t *testing.T) {
 	targ := target{}
 	var progress float32
-	w := newProgressWriter(&targ, &progress, ioutil.Discard)
+	w := newProgressWriter(&targ, &progress, io.Discard)
 	w.Write([]byte(singleline))
 	assert.EqualValues(t, 1.0, progress)
 	assert.EqualValues(t, 1.0, targ.Progress)

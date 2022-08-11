@@ -1,7 +1,6 @@
 package hashes
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -24,9 +23,9 @@ func TestRewriteHashes(t *testing.T) {
 		"test3": "94ead0b0422cad925910e5f8b6f9bd93b309f8f0",
 		"test4": "ab2649b7e58f7e32b0c75be95d11e2979399d392",
 	}))
-	rewritten, err := ioutil.ReadFile("test.build")
+	rewritten, err := os.ReadFile("test.build")
 	assert.NoError(t, err)
-	after, err := ioutil.ReadFile("src/hashes/test_data/after.build")
+	after, err := os.ReadFile("src/hashes/test_data/after.build")
 	assert.NoError(t, err)
 	assert.EqualValues(t, string(after), string(rewritten))
 }
