@@ -409,7 +409,7 @@ func (install *PleaseGoInstall) compilePackage(target string, pkg *build.Package
 			return err
 		}
 
-		asmObjFiles, err := install.tc.Asm(pkg.Dir, workDir, install.trimPath, asmFiles)
+		asmObjFiles, err := install.tc.Asm(importPath, pkg.Dir, workDir, install.trimPath, asmFiles)
 		if err != nil {
 			return err
 		}

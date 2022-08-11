@@ -52,11 +52,6 @@ const TestResultsFile = "test.results"
 // This is similarly defined via an environment variable.
 const CoverageFile = "test.coverage"
 
-// TestResultsDirLabel is a known label that indicates that the test will output results
-// into a directory rather than a file. Please can internally handle either but the remote
-// execution API requires that we specify which is which.
-const TestResultsDirLabel = "test_results_dir"
-
 // tempOutputSuffix is the suffix we attach to temporary outputs to avoid name clashes.
 const tempOutputSuffix = ".out"
 
