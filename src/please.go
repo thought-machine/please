@@ -187,9 +187,9 @@ var opts struct {
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
 		Parallel   struct {
-			NumTasks       int               `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
-			Quiet          bool              `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
-			Output         run.ProcessOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
+			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Quiet          bool               `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
+			Output         process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -197,8 +197,8 @@ var opts struct {
 			Detach bool          `long:"detach" description:"Detach from the parent process when all children have spawned"`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
-			Quiet          bool              `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
-			Output         run.ProcessOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
+			Quiet          bool               `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			Output         process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -559,7 +559,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		if code := exec.Sequential(state, annotated, args, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
+		if code := exec.Sequential(state, opts.Exec.Sequential.Output, annotated, args, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
 			return code
 		}
 		return 0
@@ -570,7 +570,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		if code := exec.Parallel(state, annotated, args, opts.Exec.Parallel.NumTasks, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
+		if code := exec.Parallel(state, opts.Exec.Parallel.Output, annotated, args, opts.Exec.Parallel.NumTasks, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
 			return code
 		}
 		return 0
@@ -611,7 +611,7 @@ var buildFunctions = map[string]func() int{
 			output := opts.Run.Parallel.Output
 			if opts.Run.Parallel.Quiet {
 				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
-				output = run.Quiet
+				output = process.Quiet
 			}
 			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
@@ -629,7 +629,7 @@ var buildFunctions = map[string]func() int{
 			output := opts.Run.Sequential.Output
 			if opts.Run.Sequential.Quiet {
 				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
-				output = run.Quiet
+				output = process.Quiet
 			}
 
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Sequential.PositionalArgs.Targets)

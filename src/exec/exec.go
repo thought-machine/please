@@ -20,16 +20,16 @@ var log = logging.Log
 // Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
 func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, env, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) int {
 	target := state.Graph.TargetOrDie(label.BuildLabel)
-	return exitCode(exec(state, target, dir, env, overrideCmdArgs, nil, label.Annotation, foreground, sandbox))
+	return exitCode(exec(state, process.Default, target, dir, env, overrideCmdArgs, nil, label.Annotation, foreground, sandbox))
 }
 
 // Sequential executes a series of targets in sequence, stopping when one fails.
 // It returns the exit code from the last executed target; if that's zero then they were all successful.
-func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, shareNetwork, shareMount bool) int {
+func Sequential(state *core.BuildState, outputMode process.OutputMode, labels []core.AnnotatedOutputLabel, args []string, shareNetwork, shareMount bool) int {
 	for _, label := range labels {
 		target := state.Graph.TargetOrDie(label.BuildLabel)
 		sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
-		if err := exec(state, target, target.ExecDir(), nil, nil, args, label.Annotation, false, sandbox); err != nil {
+		if err := exec(state, outputMode, target, target.ExecDir(), nil, nil, args, label.Annotation, false, sandbox); err != nil {
 			return exitCode(err)
 		}
 	}
@@ -39,7 +39,7 @@ func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args
 // Parallel executes a series of targets in parallel (to a limit of simultaneous processes).
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
-func Parallel(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, shareNetwork, shareMount bool) int {
+func Parallel(state *core.BuildState, outputMode process.OutputMode, labels []core.AnnotatedOutputLabel, args []string, numTasks int, shareNetwork, shareMount bool) int {
 	limiter := make(chan struct{}, numTasks)
 	var g errgroup.Group
 
@@ -52,7 +52,7 @@ func Parallel(state *core.BuildState, labels []core.AnnotatedOutputLabel, args [
 
 			log.Notice("Executing %s...", target)
 			sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
-			return exec(state, target, target.ExecDir(), nil, nil, args, annotation, false, sandbox)
+			return exec(state, outputMode, target, target.ExecDir(), nil, nil, args, annotation, false, sandbox)
 		})
 	}
 	return exitCode(g.Wait())
@@ -70,34 +70,32 @@ func exitCode(err error) int {
 }
 
 // exec runs the given command in the given directory, with the given environment and arguments.
-func exec(state *core.BuildState, target *core.BuildTarget, runtimeDir string, env []string, overrideCmdArgs, additionalArgs []string, entrypoint string, foreground bool, sandbox process.SandboxConfig) error {
-	if err := exec2(state, target, runtimeDir, env, overrideCmdArgs, additionalArgs, entrypoint, foreground, sandbox); err != nil {
+func exec(state *core.BuildState, outputMode process.OutputMode, target *core.BuildTarget, runtimeDir string, env []string, overrideCmdArgs, additionalArgs []string, entrypoint string, foreground bool, sandbox process.SandboxConfig) error {
+	if err := process.RunWithOutput(outputMode, target.Label.String(), func() ([]byte, error) {
+		if !target.IsBinary && len(overrideCmdArgs) == 0 {
+			return nil, fmt.Errorf("Either the target needs to be a binary or an override command must be provided")
+		}
+
+		if err := core.PrepareRuntimeDir(state, target, runtimeDir); err != nil {
+			return nil, err
+		}
+
+		cmd, err := resolveCmd(state, target, overrideCmdArgs, entrypoint, runtimeDir, sandbox)
+		if err != nil {
+			return nil, err
+		}
+		if len(additionalArgs) != 0 {
+			cmd += " " + strings.Join(additionalArgs, " ")
+		}
+
+		env = append(core.ExecEnvironment(state, target, filepath.Join(core.RepoRoot, runtimeDir)), env...)
+		out, _, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, runtimeDir, env, time.Duration(math.MaxInt64), false, foreground, sandbox, cmd, true)
+		return out, err
+	}); err != nil {
 		log.Error("Failed to execute %s: %s", target, err)
 		return err
 	}
 	return nil
-}
-
-func exec2(state *core.BuildState, target *core.BuildTarget, runtimeDir string, env []string, overrideCmdArgs, additionalArgs []string, entrypoint string, foreground bool, sandbox process.SandboxConfig) error {
-	if !target.IsBinary && len(overrideCmdArgs) == 0 {
-		return fmt.Errorf("Either the target needs to be a binary or an override command must be provided")
-	}
-
-	if err := core.PrepareRuntimeDir(state, target, runtimeDir); err != nil {
-		return err
-	}
-
-	cmd, err := resolveCmd(state, target, overrideCmdArgs, entrypoint, runtimeDir, sandbox)
-	if err != nil {
-		return err
-	}
-	if len(additionalArgs) != 0 {
-		cmd += " " + strings.Join(additionalArgs, " ")
-	}
-
-	env = append(core.ExecEnvironment(state, target, filepath.Join(core.RepoRoot, runtimeDir)), env...)
-	_, _, err = state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, runtimeDir, env, time.Duration(math.MaxInt64), false, foreground, sandbox, cmd, true)
-	return err
 }
 
 // resolveCmd resolves the command to run for the given target.
