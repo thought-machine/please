@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/process"
 )
 
 func init() {
@@ -18,17 +19,17 @@ func init() {
 
 func TestSequential(t *testing.T) {
 	state, labels1, labels2 := makeState(core.DefaultConfiguration())
-	code := Sequential(state, labels1, nil, Quiet, false, false, false, "")
+	code := Sequential(state, labels1, nil, process.Quiet, false, false, false, "")
 	assert.Equal(t, 0, code)
-	code = Sequential(state, labels2, nil, Default, false, false, false, "")
+	code = Sequential(state, labels2, nil, process.Default, false, false, false, "")
 	assert.Equal(t, 1, code)
 }
 
 func TestParallel(t *testing.T) {
 	state, labels1, labels2 := makeState(core.DefaultConfiguration())
-	code := Parallel(context.Background(), state, labels1, nil, 5, Default, false, false, false, false, "")
+	code := Parallel(context.Background(), state, labels1, nil, 5, process.Default, false, false, false, false, "")
 	assert.Equal(t, 0, code)
-	code = Parallel(context.Background(), state, labels2, nil, 5, Quiet, false, false, false, false, "")
+	code = Parallel(context.Background(), state, labels2, nil, 5, process.Quiet, false, false, false, false, "")
 	assert.Equal(t, 1, code)
 }
 
