@@ -81,14 +81,14 @@ var opts struct {
 		CompletionScript  bool          `long:"completion_script" description:"Prints the bash / zsh completion script to stdout"`
 	} `group:"Options controlling output & logging"`
 
-	FeatureFlags struct {
+	BehaviorFlags struct {
 		NoUpdate           bool    `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
 		NoHashVerification bool    `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
 		NoLock             bool    `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool    `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
 		HTTPProxy          cli.URL `long:"http_proxy" env:"HTTP_PROXY" description:"HTTP proxy to use for downloads"`
 		Debug              bool    `long:"debug" description:"When enabled, Please will enter into an interactive debugger when breakpoint() is called during parsing."`
-	} `group:"Options that enable / disable certain features"`
+	} `group:"Options that enable / disable certain behaviors"`
 
 	HelpFlags struct {
 		Help    bool `short:"h" long:"help" description:"Show this help message"`
@@ -459,7 +459,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"hash": func() int {
 		if opts.Hash.Update {
-			opts.FeatureFlags.NoHashVerification = true
+			opts.BehaviorFlags.NoHashVerification = true
 		}
 		success, state := runBuild(opts.Hash.Args.Targets, true, false, false)
 		if success {
@@ -1084,7 +1084,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		config.Build.Config = "dbg"
 	}
 	state := core.NewBuildState(config)
-	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
+	state.VerifyHashes = !opts.BehaviorFlags.NoHashVerification
 	// Only one of these two can be passed
 	state.NumTestRuns = uint16(opts.Test.NumRuns)
 	if opts.Cover.NumRuns > opts.Test.NumRuns {
@@ -1102,7 +1102,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	}
 	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
 	state.Watch = len(opts.Watch.Args.Targets) > 0
-	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
+	state.CleanWorkdirs = !opts.BehaviorFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
 	state.ForceRerun = opts.Test.Rerun || opts.Cover.Rerun
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
@@ -1110,7 +1110,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.DebugFailingTests = debugFailingTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
-	state.EnableBreakpoints = opts.FeatureFlags.Debug
+	state.EnableBreakpoints = opts.BehaviorFlags.Debug
 
 	// What outputs get downloaded in remote execution.
 	if debug {
@@ -1162,7 +1162,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
 	shell := opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
 	shellRun := opts.Build.Shell == "run" || opts.Test.Shell == "run" || opts.Cover.Shell == "run"
-	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput || opts.FeatureFlags.Debug, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
+	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput || opts.BehaviorFlags.Debug, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
 	state.Cache = cache.NewCache(state)
 
 	// Run the display
@@ -1246,8 +1246,8 @@ func readConfig() *core.Configuration {
 	} else if err := cfg.ApplyOverrides(opts.BuildFlags.Option); err != nil {
 		log.Fatalf("Can't override requested config setting: %s", err)
 	}
-	if opts.FeatureFlags.HTTPProxy != "" {
-		cfg.Build.HTTPProxy = opts.FeatureFlags.HTTPProxy
+	if opts.BehaviorFlags.HTTPProxy != "" {
+		cfg.Build.HTTPProxy = opts.BehaviorFlags.HTTPProxy
 	}
 	config = cfg
 	return cfg
@@ -1311,7 +1311,7 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 		}
 		cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel, opts.OutputFlags.LogAppend)
 	}
-	if opts.FeatureFlags.NoHashVerification {
+	if opts.BehaviorFlags.NoHashVerification {
 		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
 	}
 	config := readConfig()
@@ -1322,15 +1322,15 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	} else if opts.Update.Version.IsSet {
 		config.Please.Version = opts.Update.Version
 	}
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
+	update.CheckAndUpdate(config, !opts.BehaviorFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
 	return config
 }
 
 // handleCompletions handles shell completion. Typically it just prints to stdout but
 // may do a little more if we think we need to handle aliases.
 func handleCompletions(parser *flags.Parser, items []flags.Completion) {
-	cli.InitLogging(cli.MinVerbosity) // Ensure this is quiet
-	opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
+	cli.InitLogging(cli.MinVerbosity)  // Ensure this is quiet
+	opts.BehaviorFlags.NoUpdate = true // Ensure we don't try to update
 	if len(items) > 0 && items[0].Description == "BuildLabel" {
 		// Don't muck around with the config if we're predicting build labels.
 		cli.PrintCompletions(items)
