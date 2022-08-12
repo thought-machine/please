@@ -224,16 +224,19 @@ var opts struct {
 			Target              core.AnnotatedOutputLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
 			OverrideCommandArgs []string                  `positional-arg-name:"override_command" description:"Override command"`
 		} `positional-args:"true"`
+		XOutput    process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Controls how output from subprocesses is handled."`
 		Sequential struct {
 			Args struct {
 				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Targets to execute, or arguments to them"`
 			} `positional-args:"true"`
+			Output process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Controls how output from subprocesses is handled."`
 		} `command:"sequential" description:"Execute a series of targets sequentially"`
 		Parallel struct {
 			NumTasks int `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Args     struct {
 				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Targets to execute, or arguments to them"`
 			} `positional-args:"true"`
+			Output process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Controls how output from subprocesses is handled."`
 		} `command:"parallel" description:"Execute a number of targets in parallel"`
 	} `command:"exec" subcommands-optional:"true" description:"Executes a single target in a hermetic build environment"`
 
