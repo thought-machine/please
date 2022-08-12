@@ -9,6 +9,7 @@ go_library(
         "//src/cli",
         "//src/cli/logging",
         "//third_party/go:deferred_regex",
+        "//third_party/go:go-flags",
     ],
 )
 

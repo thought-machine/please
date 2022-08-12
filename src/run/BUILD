@@ -19,6 +19,7 @@ go_test(
     data = ["test_data"],
     deps = [
         ":run",
+        "//src/process",
         "//third_party/go:testify",
     ],
 )

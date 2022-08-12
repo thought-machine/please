@@ -187,9 +187,9 @@ var opts struct {
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
 		Parallel   struct {
-			NumTasks       int               `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
-			Quiet          bool              `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
-			Output         run.ProcessOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
+			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Quiet          bool               `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
+			Output         process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -197,8 +197,8 @@ var opts struct {
 			Detach bool          `long:"detach" description:"Detach from the parent process when all children have spawned"`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
-			Quiet          bool              `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
-			Output         run.ProcessOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
+			Quiet          bool               `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			Output         process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -228,12 +228,14 @@ var opts struct {
 			Args struct {
 				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Targets to execute, or arguments to them"`
 			} `positional-args:"true"`
+			Output process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Controls how output from subprocesses is handled."`
 		} `command:"sequential" description:"Execute a series of targets sequentially"`
 		Parallel struct {
 			NumTasks int `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Args     struct {
 				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Targets to execute, or arguments to them"`
 			} `positional-args:"true"`
+			Output process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Controls how output from subprocesses is handled."`
 		} `command:"parallel" description:"Execute a number of targets in parallel"`
 	} `command:"exec" subcommands-optional:"true" description:"Executes a single target in a hermetic build environment"`
 
@@ -556,7 +558,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		if code := exec.Sequential(state, annotated, args, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
+		if code := exec.Sequential(state, opts.Exec.Sequential.Output, annotated, args, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
 			return code
 		}
 		return 0
@@ -567,7 +569,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		if code := exec.Parallel(state, annotated, args, opts.Exec.Parallel.NumTasks, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
+		if code := exec.Parallel(state, opts.Exec.Parallel.Output, annotated, args, opts.Exec.Parallel.NumTasks, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
 			return code
 		}
 		return 0
@@ -608,7 +610,7 @@ var buildFunctions = map[string]func() int{
 			output := opts.Run.Parallel.Output
 			if opts.Run.Parallel.Quiet {
 				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
-				output = run.Quiet
+				output = process.Quiet
 			}
 			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
@@ -626,7 +628,7 @@ var buildFunctions = map[string]func() int{
 			output := opts.Run.Sequential.Output
 			if opts.Run.Sequential.Quiet {
 				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
-				output = run.Quiet
+				output = process.Quiet
 			}
 
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Sequential.PositionalArgs.Targets)
@@ -1094,7 +1096,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
-	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || opts.Tool.Args.Tool != "" || debug
+	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || len(opts.Exec.Sequential.Args.Targets) > 0 || len(opts.Exec.Parallel.Args.Targets) > 0 || opts.Tool.Args.Tool != "" || debug
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
