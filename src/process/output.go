@@ -35,5 +35,4 @@ func RunWithOutput(mode OutputMode, label string, f func() ([]byte, error)) erro
 		_, err := f()
 		return err
 	}
-
 }
