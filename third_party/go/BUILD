@@ -108,7 +108,7 @@ go_module(
     name = "go-flags",
     licences = ["BSD-3-Clause"],
     module = "github.com/thought-machine/go-flags",
-    version = "v1.6.0",
+    version = "v1.6.2",
     visibility = ["PUBLIC"],
     deps = [":xsys"],
 )
