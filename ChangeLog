@@ -7,6 +7,7 @@ Version 16.22.0
     * A not dissimilar fix to `plz query inputs` (#2531)
     * Fix moving of output directories for remote execution (#2529)
     * General improvements to tab completion of optional subcommands (#2537)
+    * Add debug flag that implies plain output for `breakpoint()` (#2533)
 
 
 Version 16.21.3
