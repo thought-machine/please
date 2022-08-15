@@ -33,7 +33,7 @@ require (
 	github.com/sourcegraph/jsonrpc2 v0.1.0
 	github.com/stretchr/testify v1.7.0
 	github.com/texttheater/golang-levenshtein v1.0.1
-	github.com/thought-machine/go-flags v1.6.0
+	github.com/thought-machine/go-flags v1.6.2
 	github.com/ulikunitz/xz v0.5.10
 	go.uber.org/automaxprocs v1.4.0
 	golang.org/x/crypto v0.0.0-20210920023735-84f357641f63
