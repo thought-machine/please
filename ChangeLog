@@ -1,3 +1,15 @@
+Version 16.22.0
+---------------
+
+    * Adds `plz exec sequential` and `plz exec parallel` subcommands (#2521, #2536, #2538).
+    * Fix a fairly rare case of `plz run` not working on a test with remote execution when
+      the test has a data dependency on something with a matched require/provide (#2527)
+    * A not dissimilar fix to `plz query inputs` (#2531)
+    * Fix moving of output directories for remote execution (#2529)
+    * General improvements to tab completion of optional subcommands (#2537)
+    * Add debug flag that implies plain output for `breakpoint()` (#2533)
+
+
 Version 16.21.3
 ---------------
 
