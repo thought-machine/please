@@ -1,11 +1,13 @@
 package exec
 
 import (
+	"context"
 	"fmt"
 	"math"
 	osExec "os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -27,6 +29,7 @@ func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, e
 // It returns the exit code from the last executed target; if that's zero then they were all successful.
 func Sequential(state *core.BuildState, outputMode process.OutputMode, labels []core.AnnotatedOutputLabel, args []string, shareNetwork, shareMount bool) int {
 	for _, label := range labels {
+		log.Notice("Executing %s...", label)
 		target := state.Graph.TargetOrDie(label.BuildLabel)
 		sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
 		if err := exec(state, outputMode, target, target.ExecDir(), nil, nil, args, label.Annotation, false, sandbox); err != nil {
@@ -39,18 +42,36 @@ func Sequential(state *core.BuildState, outputMode process.OutputMode, labels []
 // Parallel executes a series of targets in parallel (to a limit of simultaneous processes).
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
-func Parallel(state *core.BuildState, outputMode process.OutputMode, labels []core.AnnotatedOutputLabel, args []string, numTasks int, shareNetwork, shareMount bool) int {
-	limiter := make(chan struct{}, numTasks)
+func Parallel(state *core.BuildState, outputMode process.OutputMode, updateFrequency time.Duration, labels []core.AnnotatedOutputLabel, args []string, numTasks int, shareNetwork, shareMount bool) int {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	var g errgroup.Group
+	g.SetLimit(numTasks)
+	// TODO(peterebden): Change these to atomic.Int64 when we're happy to require Go 1.19
+	var done, started int64
+	total := len(labels)
+
+	if updateFrequency > 0 && outputMode != process.Default {
+		go func() {
+			t := time.NewTicker(updateFrequency)
+			d := ctx.Done()
+			for {
+				select {
+				case <-t.C:
+					log.Notice("Executing, %d tasks started, %d completed of %d total", int(atomic.LoadInt64(&started)), int(atomic.LoadInt64(&done)), total)
+				case <-d:
+					return
+				}
+			}
+		}()
+	}
 
 	for _, label := range labels {
 		target := state.Graph.TargetOrDie(label.BuildLabel)
 		annotation := label.Annotation
 		g.Go(func() error {
-			limiter <- struct{}{}
-			defer func() { <-limiter }()
-
-			log.Notice("Executing %s...", target)
+			atomic.AddInt64(&started, 1)
+			defer atomic.AddInt64(&done, 1)
 			sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
 			return exec(state, outputMode, target, target.ExecDir(), nil, nil, args, annotation, false, sandbox)
 		})

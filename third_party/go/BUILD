@@ -503,7 +503,7 @@ go_module(
     ],
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/sync",
-    version = "v0.0.0-20210220032951-036812b2e83c",
+    version = "v0.0.0-20220722155255-886fb9371eb4",
     visibility = ["PUBLIC"],
 )
 
