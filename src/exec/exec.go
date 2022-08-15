@@ -47,7 +47,8 @@ func Parallel(state *core.BuildState, outputMode process.OutputMode, updateFrequ
 	defer cancel()
 	var g errgroup.Group
 	g.SetLimit(numTasks)
-	var done, started atomic.Int64
+	// TODO(peterebden): Change these to atomic.Int64 when we're happy to require Go 1.19
+	var done, started int64
 	total := len(labels)
 
 	if updateFrequency > 0 && outputMode != process.Default {
@@ -57,7 +58,7 @@ func Parallel(state *core.BuildState, outputMode process.OutputMode, updateFrequ
 			for {
 				select {
 				case <-t.C:
-					log.Notice("Executing, %d tasks started, %d completed of %d total", int(started.Load()), int(done.Load()), total)
+					log.Notice("Executing, %d tasks started, %d completed of %d total", int(atomic.LoadInt64(&started)), int(atomic.LoadInt64(&done)), total)
 				case <-d:
 					return
 				}
@@ -69,8 +70,8 @@ func Parallel(state *core.BuildState, outputMode process.OutputMode, updateFrequ
 		target := state.Graph.TargetOrDie(label.BuildLabel)
 		annotation := label.Annotation
 		g.Go(func() error {
-			started.Add(1)
-			defer done.Add(1)
+			atomic.AddInt64(&started, 1)
+			defer atomic.AddInt64(&done, 1)
 			sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
 			return exec(state, outputMode, target, target.ExecDir(), nil, nil, args, annotation, false, sandbox)
 		})
