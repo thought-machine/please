@@ -213,6 +213,9 @@ type BuildState struct {
 	CurrentSubrepo string
 	// ParentState is the state of the repo containing this subrepo. Nil if this is the host repo.
 	ParentState *BuildState
+	// EnableBreakpoints enablese the breakpoint() build-in, and drops Please into an interactive debugger when
+	// they're encountered.
+	EnableBreakpoints bool
 }
 
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
