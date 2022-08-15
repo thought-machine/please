@@ -38,7 +38,7 @@ require (
 	go.uber.org/automaxprocs v1.4.0
 	golang.org/x/crypto v0.0.0-20210920023735-84f357641f63
 	golang.org/x/net v0.0.0-20210917221730-978cfadd31cf
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/sys v0.0.0-20210917161153-d61c044b1678
 	golang.org/x/tools v0.1.5
 	google.golang.org/genproto v0.0.0-20210917145530-b395a37504d4

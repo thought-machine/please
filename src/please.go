@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/thought-machine/go-flags"
 	"go.uber.org/automaxprocs/maxprocs"
@@ -236,6 +237,7 @@ var opts struct {
 				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Targets to execute, or arguments to them"`
 			} `positional-args:"true"`
 			Output process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Controls how output from subprocesses is handled."`
+			Update cli.Duration       `long:"update" default:"10s" description:"Frequency to log updates on running subprocesses. Has no effect for 'default' output mode."`
 		} `command:"parallel" description:"Execute a number of targets in parallel"`
 	} `command:"exec" subcommands-optional:"true" description:"Executes a single target in a hermetic build environment"`
 
@@ -569,7 +571,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		if code := exec.Parallel(state, opts.Exec.Parallel.Output, annotated, args, opts.Exec.Parallel.NumTasks, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
+		if code := exec.Parallel(state, opts.Exec.Parallel.Output, time.Duration(opts.Exec.Parallel.Update), annotated, args, opts.Exec.Parallel.NumTasks, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
 			return code
 		}
 		return 0
