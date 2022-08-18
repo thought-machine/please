@@ -196,6 +196,10 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 
 	// Set default values for slices. These add rather than overwriting so we can't set
 	// them upfront as we would with other config values.
+	setDefault(&config.Please.PluginRepo,
+		"https://github.com/{owner}/{plugin}/archive/{revision}.zip",
+		"https://github.com/{owner}/{plugin}-rules/archive/{revision}.zip",
+	)
 	if usingBazelWorkspace {
 		setDefault(&config.Parse.BuildFileName, "BUILD.bazel", "BUILD", "BUILD.plz")
 	} else {
@@ -360,10 +364,6 @@ func DefaultConfiguration() *Configuration {
 	config.Please.DownloadLocation = "https://get.please.build"
 	config.Please.NumOldVersions = 10
 	config.Please.NumThreads = runtime.NumCPU() + 2
-	config.Please.PluginRepo = []string{
-		"https://github.com/{owner}/{plugin}/archive/{revision}.zip",
-		"https://github.com/{owner}/{plugin}-rules/archive/{revision}.zip",
-	}
 	config.Parse.NumThreads = config.Please.NumThreads
 	config.Parse.GitFunctions = true
 	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
