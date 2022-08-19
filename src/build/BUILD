@@ -7,6 +7,7 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli/logging",
+        "//src/cli",
         "//src/core",
         "//src/fs",
         "//src/generate",
@@ -14,6 +15,7 @@ go_library(
         "//src/process",
         "//src/worker",
         "//third_party/go:go-multierror",
+        "//third_party/go:go-retryablehttp",
         "//third_party/go:protobuf",
         "//third_party/go:shlex",
     ],

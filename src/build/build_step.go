@@ -21,7 +21,9 @@ import (
 
 	"github.com/google/shlex"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-retryablehttp"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -37,7 +39,7 @@ var log = logging.Log
 var errStop = fmt.Errorf("stopping build")
 
 // httpClient is the shared http client that we use for fetching remote files.
-var httpClient http.Client
+var httpClient *retryablehttp.Client
 var httpClientOnce sync.Once
 
 var magicSourcesWorkerKey = "WORKER"
@@ -1052,13 +1054,16 @@ func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix s
 // This is a builtin for better efficiency and more control over the whole process.
 func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 	httpClientOnce.Do(func() {
+		httpClient = retryablehttp.NewClient()
+		httpClient.Logger = &cli.HTTPLogWrapper{Log: log}
+
 		if state.Config.Build.HTTPProxy != "" {
-			httpClient.Transport = &http.Transport{
+			httpClient.HTTPClient.Transport = &http.Transport{
 				Proxy: http.ProxyURL(state.Config.Build.HTTPProxy.AsURL()),
 			}
 		}
 
-		httpClient.Timeout = time.Duration(state.Config.Build.Timeout)
+		httpClient.HTTPClient.Timeout = time.Duration(state.Config.Build.Timeout)
 	})
 
 	if err := prepareDirectory(state.ProcessExecutor, target.OutDir(), false); err != nil {
@@ -1112,7 +1117,11 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 		return err
 	}
 
-	resp, err := httpClient.Do(req)
+	rreq, err := retryablehttp.FromRequest(req)
+	if err != nil {
+		return err
+	}
+	resp, err := httpClient.Do(rreq)
 	if err != nil {
 		return err
 	}
