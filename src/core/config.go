@@ -374,6 +374,7 @@ func DefaultConfiguration() *Configuration {
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
 	config.Build.Xattrs = true
 	config.Build.HashFunction = "sha256"
+	config.Build.ParallelDownloads = 4
 	config.BuildConfig = map[string]string{}
 	config.BuildEnv = map[string]string{}
 	config.Cache.HTTPWriteable = true
@@ -511,6 +512,7 @@ type Configuration struct {
 		DownloadLinkable     bool         `help:"True to download targets on remote that have links defined."`
 		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)"`
 		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
+		ParallelDownloads    int          `help:"Max number of remote_file downloads to run in parallel."`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
