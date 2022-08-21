@@ -151,7 +151,7 @@ def sh_cmd(name:str, cmd:str|dict|list, srcs:list|dict=[], data:list=[], out:str
 
     Args:
       name (str): Name of the rule.
-      cmd (str | dict): Command to write into the output script file. The commands are subject to
+      cmd (str | list | dict): Command to write into the output script file. The commands are subject to
                         shell expansion during build time by default. If that is to be avoided, set expand_env_vars to
                         False, or escape the variables with \\\\\\$, i.e. \\\\\\${@}.
       expand_env_vars (bool): Whether to expand
