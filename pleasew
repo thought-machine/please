@@ -48,8 +48,8 @@ read_config() {
 # We might already have it downloaded...
 LOCATION="$(read_config '^location' | cut -d '=' -f 2 | tr -d ' ')"
 
-if [ "${LOCATION:+x}" != "x" ]; then
-    if [ "${HOME:+x}" != "x" ]; then
+if [ "${LOCATION:+x}" != 'x' ]; then
+    if [ "${HOME:+x}" != 'x' ]; then
         # shellcheck disable=2016
         printf >&2 '%b$HOME not set, not sure where to look for Please.%b\n' "${RED}" "${RESET}"
         exit 1
@@ -71,7 +71,7 @@ fi
 
 URL_BASE="$(read_config '^downloadlocation' | cut -d '=' -f 2 | tr -d ' ')"
 
-if [ -z "${URL_BASE}" ]; then
+if [ "${URL_BASE:+x}" != 'x' ]; then
     URL_BASE="${DEFAULT_URL_BASE}"
 fi
 
@@ -82,7 +82,7 @@ VERSION="${VERSION#*=}"                    # Strip until after first =
 VERSION="$(echo "${VERSION}" | tr -d ' ')" # Remove all spaces
 VERSION="${VERSION#>=}"                    # Strip any initial >=
 
-if [ -z "${VERSION}" ]; then
+if [ "${VERSION:+x}" != 'x' ]; then
   	 printf >&2 "%bCan't determine version, will use latest.%b\n" "${YELLOW}" "${RESET}"
   	 VERSION=$(curl -fsSL "${URL_BASE}"/latest_version)
 fi
