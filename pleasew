@@ -23,12 +23,18 @@ else
     ARCH='amd64'
 fi
 
+get_profile () {
+	 while [ "${#}" -gt 0 ]
+	 do
+		  case "${1}" in
+			   --profile) echo "${2}"; return;;
+			   *) shift;;
+		  esac
+	 done
+}
+
 # Check `PLZ_CONFIG_PROFILE` or fall back to arguments for a profile.
-PROFILE="${PLZ_CONFIG_PROFILE:-$(
-	sed -E 's/.*--profile[= ]([^ ]+).*/\1/g' <<-EOS
-		"${*}"
-	EOS
-)}"
+PROFILE="${PLZ_CONFIG_PROFILE:-$(get_profile "${@}")}"
 
 # Config files on order of precedence high to low.
 CONFIGS="$(cat <<- EOS
@@ -42,7 +48,23 @@ EOS
 )"
 
 read_config() {
-    printf "%s" "${CONFIGS}" | xargs grep -i "${1}" 2>/dev/null | head -n 1
+	 # Disable globbing to ensure word-splitting is safe.
+	 set -f
+
+	 old_ifs="${IFS}"
+	 search_term="${1}"
+
+	 IFS='
+'
+
+    # This is intended, we *do* want word-splitting here.
+    # shellcheck disable=2086
+    set -- ${CONFIGS}
+
+    grep -i "${search_term}" "${@}" 2> /dev/null | head -n 1
+
+	 IFS="${old_ifs}"
+    set +f
 }
 
 # We might already have it downloaded...
