@@ -24,14 +24,14 @@ else
 fi
 
 get_profile () {
-	 while [ "${#}" -gt 0 ]
-	 do
-		  case "${1}" in
-			   --profile=*) echo "${1#*=}"; return;;
-			   --profile) echo "${2}"; return;;
-			   *) shift;;
-		  esac
-	 done
+    while [ "${#}" -gt 0 ]
+    do
+        case "${1}" in
+            --profile=*) echo "${1#*=}"; return;;
+            --profile) echo "${2}"; return;;
+            *) shift;;
+        esac
+    done
 }
 
 # Check `PLZ_CONFIG_PROFILE` or fall back to arguments for a profile.
@@ -49,13 +49,13 @@ EOS
 )"
 
 read_config() {
-	 # Disable globbing to ensure word-splitting is safe.
-	 set -f
+    # Disable globbing to ensure word-splitting is safe.
+    set -f
 
-	 old_ifs="${IFS}"
-	 search_term="${1}"
+    old_ifs="${IFS}"
+    search_term="${1}"
 
-	 IFS='
+    IFS='
 '
 
     # This is intended, we *do* want word-splitting here.
@@ -64,7 +64,7 @@ read_config() {
 
     grep -i "${search_term}" "${@}" 2> /dev/null | head -n 1
 
-	 IFS="${old_ifs}"
+    IFS="${old_ifs}"
     set +f
 }
 
@@ -106,8 +106,8 @@ VERSION="$(echo "${VERSION}" | tr -d ' ')" # Remove all spaces
 VERSION="${VERSION#>=}"                    # Strip any initial >=
 
 if [ "${VERSION:+x}" != 'x' ]; then
-  	 printf >&2 "%bCan't determine version, will use latest.%b\n" "${YELLOW}" "${RESET}"
-  	 VERSION=$(curl -fsSL "${URL_BASE}"/latest_version)
+    printf >&2 "%bCan't determine version, will use latest.%b\n" "${YELLOW}" "${RESET}"
+    VERSION=$(curl -fsSL "${URL_BASE}"/latest_version)
 fi
 
 # Find the os / arch to download. You can do this quite nicely with go env
