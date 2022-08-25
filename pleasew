@@ -27,6 +27,7 @@ get_profile () {
 	 while [ "${#}" -gt 0 ]
 	 do
 		  case "${1}" in
+			   --profile=*) echo "${1#*=}"; return;;
 			   --profile) echo "${2}"; return;;
 			   *) shift;;
 		  esac
