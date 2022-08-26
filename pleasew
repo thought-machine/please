@@ -1,99 +1,145 @@
-#!/usr/bin/env bash
+#!/bin/sh
+
+set -e
 set -u
 
-RED="\x1B[31m"
-GREEN="\x1B[32m"
-YELLOW="\x1B[33m"
-RESET="\x1B[0m"
+set -o errexit
 
-DEFAULT_URL_BASE="https://get.please.build"
+RED='\x1B[31m'
+GREEN='\x1B[32m'
+YELLOW='\x1B[33m'
+RESET='\x1B[0m'
+
+DEFAULT_URL_BASE='https://get.please.build'
 
 OS="$(uname)"
 
-if [[ $OS == "Darwin" ]]; then
-    # switch between mac amd64/arm64 
+if [ "${OS}" = 'Darwin' ]; then
+    # switch between mac amd64/arm64
     ARCH="$(uname -m)"
 else
     # default to amd64 on other operating systems
     # because we only build intel binaries
-    ARCH="amd64"
+    ARCH='amd64'
 fi
 
-# Check PLZ_CONFIG_PROFILE or fall back to arguments for a profile.
-PROFILE="${PLZ_CONFIG_PROFILE:-$(sed -E 's/.*--profile[= ]([^ ]+).*/\1/g' <<< "$*")}"
+get_profile () {
+    while [ "${#}" -gt 0 ]
+    do
+        case "${1}" in
+            --profile=*) echo "${1#*=}"; return;;
+            --profile) echo "${2}"; return;;
+            *) shift;;
+        esac
+    done
+}
+
+# Check `PLZ_CONFIG_PROFILE` or fall back to arguments for a profile.
+PROFILE="${PLZ_CONFIG_PROFILE:-$(get_profile "${@}")}"
 
 # Config files on order of precedence high to low.
-CONFIGS=(
-  ".plzconfig.local"
-  "${PROFILE:+.plzconfig.$PROFILE}"
-  ".plzconfig_${OS}_${ARCH}"
-  ".plzconfig"
-  "$HOME/.config/please/plzconfig"
-  "/etc/please/plzconfig"
-)
+CONFIGS="$(cat <<- EOS
+	.plzconfig.local
+	${PROFILE:+.plzconfig.${PROFILE}}
+	.plzconfig_${OS}_${ARCH}
+	.plzconfig
+	${HOME}/.config/please/plzconfig
+	/etc/please/plzconfig
+EOS
+)"
 
-function read_config() {
-   grep -i "$1" "${CONFIGS[@]}" 2>/dev/null | head -n 1
+read_config() {
+    # Disable globbing to ensure word-splitting is safe.
+    set -f
+
+    old_ifs="${IFS}"
+    search_term="${1}"
+
+    IFS='
+'
+
+    # This is intended, we *do* want word-splitting here.
+    # shellcheck disable=2086
+    set -- ${CONFIGS}
+
+    grep -i "${search_term}" "${@}" 2> /dev/null | head -n 1
+
+    IFS="${old_ifs}"
+    set +f
 }
 
 # We might already have it downloaded...
-LOCATION="$(read_config "^location" | cut -d '=' -f 2 | tr -d ' ')"
-if [ -z "$LOCATION" ]; then
-    if [ -z "$HOME" ]; then
-        echo -e >&2 "${RED}\$HOME not set, not sure where to look for Please.${RESET}"
+LOCATION="$(read_config '^location' | cut -d '=' -f 2 | tr -d ' ')"
+
+if [ "${LOCATION:+x}" != 'x' ]; then
+    if [ "${HOME:+x}" != 'x' ]; then
+        # shellcheck disable=2016
+        printf >&2 '%b$HOME not set, not sure where to look for Please.%b\n' "${RED}" "${RESET}"
         exit 1
     fi
+
     LOCATION="${HOME}/.please"
 else
     # It can contain a literal ~, need to explicitly handle that.
-    LOCATION="${LOCATION/\~/$HOME}"
+    LOCATION="$(echo "${LOCATION}" | sed "s|~|${HOME}|")"
 fi
+
 # If this exists at any version, let it handle any update.
 TARGET="${LOCATION}/please"
-if [ -f "$TARGET" ]; then
-    exec "$TARGET" ${PLZ_ARGS:-} "$@"
+
+if [ -f "${TARGET}" ]; then
+    # shellcheck disable=2086
+    exec "${TARGET}" ${PLZ_ARGS:-} "${@}"
 fi
 
-URL_BASE="$(read_config "^downloadlocation" | cut -d '=' -f 2 | tr -d ' ')"
-if [ -z "$URL_BASE" ]; then
-    URL_BASE=$DEFAULT_URL_BASE
+URL_BASE="$(read_config '^downloadlocation' | cut -d '=' -f 2 | tr -d ' ')"
+
+if [ "${URL_BASE:+x}" != 'x' ]; then
+    URL_BASE="${DEFAULT_URL_BASE}"
 fi
+
 URL_BASE="${URL_BASE%/}"
 
-VERSION="$(read_config "^version[^a-z]")"
-VERSION="${VERSION#*=}"    # Strip until after first =
-VERSION="${VERSION/ /}"    # Remove all spaces
-VERSION="${VERSION#>=}"    # Strip any initial >=
-if [ -z "$VERSION" ]; then
-    echo -e >&2 "${YELLOW}Can't determine version, will use latest.${RESET}"
-    VERSION=$(curl -fsSL ${URL_BASE}/latest_version)
+VERSION="$(read_config '^version[^a-z]')"
+VERSION="${VERSION#*=}"                    # Strip until after first =
+VERSION="$(echo "${VERSION}" | tr -d ' ')" # Remove all spaces
+VERSION="${VERSION#>=}"                    # Strip any initial >=
+
+if [ "${VERSION:+x}" != 'x' ]; then
+    printf >&2 "%bCan't determine version, will use latest.%b\n" "${YELLOW}" "${RESET}"
+    VERSION=$(curl -fsSL "${URL_BASE}"/latest_version)
 fi
 
 # Find the os / arch to download. You can do this quite nicely with go env
 # but we use this script on machines that don't necessarily have Go itself.
-if [ "$OS" = "Linux" ]; then
-    GOOS="linux"
-elif [ "$OS" = "Darwin" ]; then
-    GOOS="darwin"
-elif [ "$OS" = "FreeBSD" ]; then
-    GOOS="freebsd"
+if [ "${OS}" = 'Linux' ]; then
+    GOOS='linux'
+elif [ "${OS}" = 'Darwin' ]; then
+    GOOS='darwin'
+elif [ "${OS}" = 'FreeBSD' ]; then
+    GOOS='freebsd'
 else
-    echo -e >&2 "${RED}Unknown operating system $OS${RESET}"
+    printf >&2 '%bUnknown operating system %s%b\n' "${RED}" "${OS}" "${RESET}"
     exit 1
 fi
 
 PLEASE_URL="${URL_BASE}/${GOOS}_${ARCH}/${VERSION}/please_${VERSION}.tar.xz"
 DIR="${LOCATION}/${VERSION}"
+
 # Potentially we could reuse this but it's easier not to really.
-if [ ! -d "$DIR" ]; then
-    rm -rf "$DIR"
+if [ ! -d "${DIR}" ]; then
+    rm -Rf "${DIR}"
 fi
-echo -e >&2 "${GREEN}Downloading Please ${VERSION} to ${DIR}...${RESET}"
-mkdir -p "$DIR"
-curl -fsSL "${PLEASE_URL}" | tar -xJpf- --strip-components=1 -C "$DIR"
+
+printf >&2 '%bDownloading Please %s to %s...%b\n' "${GREEN}" "${VERSION}" "${DIR}" "${RESET}"
+mkdir -p "${DIR}"
+curl -fsSL "${PLEASE_URL}" | tar -xJpf- --strip-components=1 -C "${DIR}"
+
 # Link it all back up a dir
-for x in $(ls "$DIR"); do
-    ln -sf "${DIR}/${x}" "$LOCATION"
+for x in "${DIR}"/*; do
+    ln -sf "${x}" "${LOCATION}"
 done
-echo -e >&2 "${GREEN}Should be good to go now, running plz...${RESET}"
-exec "$TARGET" ${PLZ_ARGS:-} "$@"
+
+printf >&2 '%bShould be good to go now, running plz...%b\n' "${GREEN}" "${RESET}"
+# shellcheck disable=2086
+exec "${TARGET}" ${PLZ_ARGS:-} "${@}"
