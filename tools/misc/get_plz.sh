@@ -38,7 +38,7 @@ echo "Downloading Please ${VERSION}..."
 curl -fsSL "${PLEASE_URL}" | tar -xzpf- --strip-components=1 -C "$DIR"
 # Link it all back up a dir
 for x in "${DIR}/"*; do
-    ln -sf "${DIR}/${x}" "$LOCATION"
+    ln -sf "${x}" "$LOCATION"
 done
 
 ln -sf "${LOCATION}/please" "${LOCATION}/plz"
