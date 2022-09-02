@@ -494,7 +494,7 @@ func (label BuildLabel) CanSee(state *BuildState, dep *BuildTarget) bool {
 		return true
 	}
 	if label.isExperimental(state) {
-		log.Warning("Visibility restrictions suppressed for %s since %s is in the experimental tree", dep.Label, label)
+		log.Info("Visibility restrictions suppressed for %s since %s is in the experimental tree", dep.Label, label)
 		return true
 	}
 	return false
