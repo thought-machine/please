@@ -859,7 +859,7 @@ func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
 		} else if dep.TestOnly && !(target.IsTest() || target.TestOnly) {
 			if target.Label.isExperimental(state) {
-				log.Warning("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
+				log.Info("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
 			} else {
 				return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
 			}
