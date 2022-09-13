@@ -1,3 +1,14 @@
+Version 16.22.1
+---------------
+
+    * Set defaults for `PluginRepo` rather than overriding the config #2541
+    * Make `remote_file()` retry #2542
+    * Stop `text_file()` opting out of sandboxing #2547
+    * Reduce warnings around code in the experimental folder to info level #2550
+    * Log the body of the response at debug level for non-200 responses in
+      `remote_file()` #2551
+
+
 Version 16.22.0
 ---------------
 
