@@ -1127,6 +1127,10 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		bs, _ := io.ReadAll(resp.Body)
+		if len(bs) != 0 {
+			return fmt.Errorf("Error retrieving %s: %s\n%s", url, resp.Status, string(bs))
+		}
 		return fmt.Errorf("Error retrieving %s: %s", url, resp.Status)
 	}
 	var r io.Reader = resp.Body
