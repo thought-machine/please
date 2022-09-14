@@ -3,6 +3,7 @@ package asp
 import (
 	"context"
 	"fmt"
+	"github.com/thought-machine/please/src/cli"
 	"reflect"
 	"runtime/debug"
 	"runtime/pprof"
@@ -203,9 +204,28 @@ type scope struct {
 	Callback bool
 }
 
-// parseLabelContext parsed a build label in the context of this scope. See contextPackage for more information.
-func (s *scope) parseLabelContext(label string) core.BuildLabel {
-	return core.ParseBuildLabelContext(label, s.contextPackage())
+// parseLabelInPackage parses a build label in the context of the package given the current scope.
+func (s *scope) parseLabelInPackage(label string, pkg *core.Package) core.BuildLabel {
+	if p, name, subrepo := core.ParseBuildLabelParts(label, pkg.Name, pkg.SubrepoName); name != "" {
+		if subrepo == "" && pkg.Subrepo != nil && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
+			subrepo = pkg.Subrepo.Name
+		} else if arch := cli.HostArch(); strings.Contains(subrepo, "_"+arch.String()) {
+			subrepo = strings.TrimSuffix(subrepo, "_"+arch.String())
+		} else if subrepo == arch.String() {
+			subrepo = ""
+		} else if s.state.CurrentSubrepo == "" && subrepo == s.state.Config.PluginDefinition.Name {
+			subrepo = ""
+		} else {
+			subrepo = pkg.SubrepoArchName(subrepo)
+		}
+		return core.BuildLabel{PackageName: p, Name: name, Subrepo: subrepo}
+	}
+	return core.ParseBuildLabel(label, pkg.Name)
+}
+
+// parseLabelInContextPkg parsed a build label in the context of this scope. See contextPackage for more information.
+func (s *scope) parseLabelInContextPkg(label string) core.BuildLabel {
+	return s.parseLabelInPackage(label, s.contextPackage())
 }
 
 // contextPackage returns the package that build labels should be parsed relative to. For normal BUILD files, this

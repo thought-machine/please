@@ -261,7 +261,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	s.Assert(s.state.Config.Bazel.Compatibility, "load() is only available in Bazel compatibility mode. See `plz help bazel` for more information.")
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
-	l := core.ParseBuildLabelContext(string(args[0].(pyString)), s.contextPackage())
+	l := s.parseLabelInContextPkg(string(args[0].(pyString)))
 	filename := path.Join(l.PackageName, l.Name)
 	if l.Subrepo != "" {
 		subrepo := s.state.Graph.Subrepo(l.Subrepo)
@@ -294,7 +294,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		s.Error("cannot subinclude from this context")
 	}
 	for _, arg := range args {
-		t := subincludeTarget(s, s.parseLabelContext(string(arg.(pyString))))
+		t := subincludeTarget(s, s.parseLabelInContextPkg(string(arg.(pyString))))
 		s.Assert(s.contextPackage().Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.contextPackage().Label())
 
 		incPkgState := s.state
@@ -849,7 +849,7 @@ func getTargetPost(s *scope, name string) *core.BuildTarget {
 func addDep(s *scope, args []pyObject) pyObject {
 	s.Assert(s.Callback, "can only be called from a pre- or post-build callback")
 	target := getTargetPost(s, string(args[0].(pyString)))
-	dep := core.ParseBuildLabelContext(string(args[1].(pyString)), s.pkg)
+	dep := s.parseLabelInPackage(string(args[1].(pyString)), s.pkg)
 	exported := args[2].IsTruthy()
 	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Queue this dependency if it'll be needed.
@@ -1013,7 +1013,7 @@ func selectFunc(s *scope, args []pyObject) pyObject {
 		k := keys[i]
 		if k == "//conditions:default" || k == "default" {
 			def = d[k]
-		} else if selectTarget(s, s.parseLabelContext(k)).HasLabel("config:on") {
+		} else if selectTarget(s, s.parseLabelInContextPkg(k)).HasLabel("config:on") {
 			return d[k]
 		}
 	}
@@ -1053,7 +1053,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	var target *core.BuildTarget
 	if dep != "" {
 		// N.B. The target must be already registered on this package.
-		target = s.pkg.TargetOrDie(core.ParseBuildLabelContext(dep, s.pkg).Name)
+		target = s.pkg.TargetOrDie(s.parseLabelInPackage(dep, s.pkg).Name)
 		if len(target.Outputs()) == 1 {
 			root = path.Join(target.OutDir(), target.Outputs()[0])
 		} else {

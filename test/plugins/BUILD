@@ -77,3 +77,13 @@ please_repo_e2e_test(
     plz_command = "plz build -o plugin.foo.modulepath:something ///foo//test:bar_inherit_test && (cd plugins/foo_plugin && plz build  -o plugin.foo.modulepath:something //test:bar_inherit_test)",
     repo = "test_repo",
 )
+
+# Test that we can reference ourselves with ///{plugin_name}//...
+please_repo_e2e_test(
+    name = "self_referencing_plugin_test",
+    expected_output = {
+        "plz-out/gen/test/foo.txt": "foo",
+    },
+    plz_command = "plz build //test/... --profile local --profile e2e ",
+    repo = "self_referencing_plugin",
+)
