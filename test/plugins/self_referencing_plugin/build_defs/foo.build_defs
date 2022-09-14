@@ -1,4 +1,4 @@
-def foo_lang(name):
+def foo_library(name):
     return genrule(
         name = name,
         cmd = "$TOOL > $OUT",

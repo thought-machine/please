@@ -82,7 +82,7 @@ please_repo_e2e_test(
 please_repo_e2e_test(
     name = "self_referencing_plugin_test",
     expected_output = {
-        "plz-out/gen/test/foo.txt": "foo",
+        "plz-out/gen/test/test.txt": "foo",
     },
     plz_command = "plz build //test/... --profile local --profile e2e ",
     repo = "self_referencing_plugin",

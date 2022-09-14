@@ -540,7 +540,8 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 				Name: pkg.Name,
 			}
 		}
-		label := core.MustParseNamedOutputLabel(src, pkg)
+		// TODO(jpoole): handle named inputs here
+		label := s.parseLabelInPackage(src, pkg)
 		if l, ok := label.Label(); ok {
 			checkLabel(s, l)
 		}
