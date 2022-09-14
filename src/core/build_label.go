@@ -137,7 +137,7 @@ func ParseBuildLabel(target, currentPath string) BuildLabel {
 	return label
 }
 
-func splitAnnotation(target string) (string, string) {
+func SplitAnnotation(target string) (string, string) {
 	parts := strings.Split(target, "|")
 	annotation := ""
 	if len(parts) == 2 {
@@ -146,7 +146,7 @@ func splitAnnotation(target string) (string, string) {
 	return parts[0], annotation
 }
 func ParseAnnotatedBuildLabel(target, currentPath, subrepo string) AnnotatedOutputLabel {
-	label, annotation := splitAnnotation(target)
+	label, annotation := SplitAnnotation(target)
 	l, err := TryParseBuildLabel(label, currentPath, subrepo)
 	if err != nil {
 		log.Fatalf("%v", err)
@@ -159,7 +159,7 @@ func ParseAnnotatedBuildLabel(target, currentPath, subrepo string) AnnotatedOutp
 }
 
 func ParseAnnotatedBuildLabelContext(target string, context *Package) AnnotatedOutputLabel {
-	label, annotation := splitAnnotation(target)
+	label, annotation := SplitAnnotation(target)
 	l := ParseBuildLabelContext(label, context)
 
 	return AnnotatedOutputLabel{
