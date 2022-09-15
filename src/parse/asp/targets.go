@@ -540,15 +540,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 				Name: pkg.Name,
 			}
 		}
-		// TODO(jpoole): this is grungy... we should handle annotated build labels as less of a special case
-		var label core.BuildInput
-		if strings.ContainsRune(src, '|') {
-			src, annotation := core.SplitAnnotation(src)
-			l := s.parseLabelInPackage(src, pkg)
-			label = core.AnnotatedOutputLabel{BuildLabel: l, Annotation: annotation}
-		} else {
-			label = s.parseLabelInPackage(src, pkg)
-		}
+		label := s.parseAnnotatedLabelInPackage(src, pkg)
 		if l, ok := label.Label(); ok {
 			checkLabel(s, l)
 		}

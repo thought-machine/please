@@ -3,13 +3,13 @@ package asp
 import (
 	"context"
 	"fmt"
-	"github.com/thought-machine/please/src/cli"
 	"reflect"
 	"runtime/debug"
 	"runtime/pprof"
 	"strings"
 	"sync"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cmap"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -99,7 +99,7 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 	return err
 }
 
-// interpretAll runs a series of statements in the context of the given package.
+// interpretAll runs a series of statements in the scope of the given package.
 // The first return value is for testing only.
 func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (s *scope, err error) {
 	s = i.scope.NewPackagedScope(pkg, 1)
@@ -125,7 +125,7 @@ func handleErrors(r interface{}) (err error) {
 	return
 }
 
-// interpretStatements runs a series of statements in the context of the given scope.
+// interpretStatements runs a series of statements in the scope of the given scope.
 func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (ret pyObject, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -204,11 +204,24 @@ type scope struct {
 	Callback bool
 }
 
-// parseLabelInPackage parses a build label in the context of the package given the current scope.
+// parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
+// package. It may return an AnnotatedOutputLabel or a BuildLabel depending on if the label is annotated.
+func (s *scope) parseAnnotatedLabelInPackage(label string, pkg *core.Package) core.BuildInput {
+	label, annotation := core.SplitLabelAnnotation(label)
+	if annotation != "" {
+		return core.AnnotatedOutputLabel{
+			BuildLabel: s.parseLabelInPackage(label, pkg),
+			Annotation: annotation,
+		}
+	}
+	return s.parseLabelInPackage(label, pkg)
+}
+
+// parseLabelInPackage parses a build label in the scope of the package given the current scope.
 func (s *scope) parseLabelInPackage(label string, pkg *core.Package) core.BuildLabel {
 	if p, name, subrepo := core.ParseBuildLabelParts(label, pkg.Name, pkg.SubrepoName); name != "" {
-		if subrepo == "" && pkg.Subrepo != nil && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
-			subrepo = pkg.Subrepo.Name
+		if subrepo == "" && pkg.SubrepoName != "" && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
+			subrepo = pkg.SubrepoName
 		} else if arch := cli.HostArch(); strings.Contains(subrepo, "_"+arch.String()) {
 			subrepo = strings.TrimSuffix(subrepo, "_"+arch.String())
 		} else if subrepo == arch.String() {
@@ -223,7 +236,7 @@ func (s *scope) parseLabelInPackage(label string, pkg *core.Package) core.BuildL
 	return core.ParseBuildLabel(label, pkg.Name)
 }
 
-// parseLabelInContextPkg parsed a build label in the context of this scope. See contextPackage for more information.
+// parseLabelInContextPkg parsed a build label in the scope of this scope. See contextPackage for more information.
 func (s *scope) parseLabelInContextPkg(label string) core.BuildLabel {
 	return s.parseLabelInPackage(label, s.contextPackage())
 }
@@ -245,7 +258,7 @@ func (s *scope) contextPackage() *core.Package {
 // subincludePackage returns the package of the label used for this subinclude. When we subinclude, we create a new
 // scope as set `CONFIG.SUBINCLUDE_LABEL` in that scope. This is used to determine the package returned here. Because
 // all build definitions enclose this root scope, this works from these scopes too. Returns nil when called outside this
-// context.
+// scope.
 func (s *scope) subincludePackage() *core.Package {
 	if s.subincludeLabel != nil {
 		pkg := s.state.Graph.Package(s.subincludeLabel.PackageName, s.subincludeLabel.Subrepo)
@@ -800,7 +813,7 @@ func (s *scope) callObject(name string, obj pyObject, c *Call) pyObject {
 	if !s.interpreter.profiling {
 		return f.Call(s.ctx, s, c)
 	}
-	// If the CPU profiler is being run, attach the name of the current function in context.
+	// If the CPU profiler is being run, attach the name of the current function in scope.
 	var ret pyObject
 	pprof.Do(s.ctx, pprof.Labels("asp:func", f.name), func(ctx context.Context) {
 		ret = f.Call(ctx, s, c)

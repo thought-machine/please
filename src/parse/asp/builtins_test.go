@@ -10,7 +10,10 @@ import (
 )
 
 func TestPackageName(t *testing.T) {
-	s := &scope{pkg: &core.Package{Name: "test/package"}}
+	s := &scope{
+		pkg:   &core.Package{Name: "test/package"},
+		state: core.NewBuildState(core.DefaultConfiguration()),
+	}
 	assert.Equal(t, "test/package", packageName(s, []pyObject{pyNone{}, pyNone{}}).String())
 	assert.Equal(t, "test/package", packageName(s, []pyObject{pyString(":test"), pyNone{}}).String())
 	assert.Equal(t, "foo/bar", packageName(s, []pyObject{pyString("//foo/bar:test"), pyNone{}}).String())
