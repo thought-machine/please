@@ -213,7 +213,7 @@ func (pkg *Package) verifyOutputs() []string {
 	ret := []string{}
 	for filename, target := range pkg.Outputs {
 		for dir := path.Dir(filename); dir != "."; dir = path.Dir(dir) {
-			if target2, present := pkg.Outputs[dir]; present && target2 != target && !target.HasDependency(target2.Label.Parent()) {
+			if target2, present := pkg.Outputs[dir]; present && target2 != target && !(target.HasDependency(target2.Label.Parent()) || target.HasDependency(target2.Label)) {
 				ret = append(ret, fmt.Sprintf("Target %s outputs files into the directory %s, which is separately output by %s. This can cause errors based on build order - you should add a dependency.", target.Label, dir, target2.Label))
 			}
 		}
