@@ -10,7 +10,6 @@ TestMain = ///pleasings//cc:unittest_main
 
 [plugin "python"]
 target = //plugins:python
-pextool = //tools:please_pex
 moduledir = third_party.python
 
 [java]
