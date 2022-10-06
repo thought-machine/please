@@ -3,7 +3,6 @@ package parse
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"sort"
@@ -160,7 +159,7 @@ func createBazelSubrepo(state *core.BuildState) {
 		log.Fatalf("%s", err)
 	}
 	for filename, data := range bazel.AllFiles() {
-		if err := ioutil.WriteFile(path.Join(dir, strings.ReplaceAll(filename, ".build_defs", ".bzl")), data, 0644); err != nil {
+		if err := os.WriteFile(path.Join(dir, strings.ReplaceAll(filename, ".build_defs", ".bzl")), data, 0644); err != nil {
 			log.Fatalf("%s", err)
 		}
 	}

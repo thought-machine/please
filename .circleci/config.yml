@@ -3,16 +3,16 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_alpine:20220422
+       - image: thoughtmachine/please_alpine:20220803
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-alpine-v6-{{ checksum "go.mod" }}
+           key: go-mod-alpine-v7-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-alpine-main-v6-{{ checksum "third_party/go/BUILD" }}
+           key: go-alpine-main-v7-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-alpine-main-v2-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -32,11 +32,11 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-mod-alpine-v6-{{ checksum "go.mod" }}
+           key: go-mod-alpine-v7-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-alpine-main-v6-{{ checksum "third_party/go/BUILD" }}
+           key: go-alpine-main-v7-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-alpine-main-v2-{{ checksum "third_party/python/BUILD" }}
@@ -48,16 +48,16 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20220516
+       - image: thoughtmachine/please_ubuntu:20220803
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-linux-v6-{{ checksum "go.mod" }}
+           key: go-mod-linux-v7-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-linux-main-v6-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v7-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-main-v2-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -85,11 +85,11 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-mod-linux-v6-{{ checksum "go.mod" }}
+           key: go-mod-linux-v7-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-linux-main-v6-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v7-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-linux-main-v2-{{ checksum "third_party/python/BUILD" }}
@@ -101,7 +101,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu_alt:20220516
+       - image: thoughtmachine/please_ubuntu_alt:20220803
      resource_class: large
      environment:
        PLZ_ARGS: "-p -c cover --profile ci-alt"
@@ -109,9 +109,9 @@ jobs:
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-linux-alt-v5-{{ checksum "go.mod" }}
+           key: go-mod-linux-alt-v6-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-linux-alt-v5-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-alt-v6-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
@@ -124,11 +124,11 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-mod-linux-alt-v5-{{ checksum "go.mod" }}
+           key: go-mod-linux-alt-v6-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-linux-alt-v5-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-alt-v6-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: java-toolchain-linux-alt-v1-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
@@ -139,13 +139,13 @@ jobs:
    build-darwin-arm64:
      working_directory: ~/please
      macos:
-       xcode: "13.0.0"
+       xcode: "13.4.1"
      steps:
        - checkout
        - attach_workspace:
            at: /tmp/workspace
        - restore_cache:
-           key: go-darwin-arm64-v3-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-v4-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Extract plz
            command: tar -xzf /tmp/workspace/darwin_amd64/please_*.tar.gz
@@ -159,7 +159,7 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-darwin-arm64-v3-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-v4-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
 
    build-freebsd:
@@ -191,14 +191,14 @@ jobs:
    build-linux-arm64:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20220516
+       - image: thoughtmachine/please_ubuntu:20220803
      resource_class: large
      steps:
        - checkout
        - attach_workspace:
            at: /tmp/workspace
        - restore_cache:
-           key: go-linux-arm64-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-arm64-v2-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Extract plz
            command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
@@ -212,23 +212,23 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-linux-arm64-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-arm64-v2-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
    build-darwin:
       macos:
-        xcode: "12.0.0"
+        xcode: "13.4.1"
       environment:
         PLZ_ARGS: "-p --profile ci --exclude pip --exclude embed"
       steps:
        - checkout
        - restore_cache:
-           key: go-mod-darwin-v5-{{ checksum "bootstrap.sh" }}
+           key: go-mod-darwin-v6-{{ checksum "bootstrap.sh" }}
        - restore_cache:
-           key: go-darwin-go118-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go119-v1-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
-           key: python-darwin-py372-{{ checksum "third_party/python/BUILD" }}
+           key: python-darwin-v3-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
-           key: java-toolchain-darwin-v1-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
+           key: java-toolchain-darwin-v2-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
        - run:
            name: Install deps
            command: ./.circleci/setup_osx.sh
@@ -249,17 +249,17 @@ jobs:
        - store_artifacts:
            path: /tmp/artifacts
        - save_cache:
-           key: go-mod-darwin-v5-{{ checksum "go.mod" }}
+           key: go-mod-darwin-v6-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-darwin-go118-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go119-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
-           key: python-darwin-py372-{{ checksum "third_party/python/BUILD" }}
+           key: python-darwin-v3-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
        - save_cache:
-           key: java-toolchain-darwin-v1-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
+           key: java-toolchain-darwin-v2-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/BUILD" }}-{{ checksum "test/java_rules/java_toolchain/src/main/java/net/thoughtmachine/bazel_compat/BUILD" }}
            paths: [ ".plz-cache/test/java_rules/java_toolchain" ]
 
    test-rex:

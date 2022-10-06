@@ -1,3 +1,26 @@
+Version 16.22.1
+---------------
+
+    * Set defaults for `PluginRepo` rather than overriding the config #2541
+    * Make `remote_file()` retry #2542
+    * Stop `text_file()` opting out of sandboxing #2547
+    * Reduce warnings around code in the experimental folder to info level #2550
+    * Log the body of the response at debug level for non-200 responses in
+      `remote_file()` #2551
+
+
+Version 16.22.0
+---------------
+
+    * Adds `plz exec sequential` and `plz exec parallel` subcommands (#2521, #2536, #2538).
+    * Fix a fairly rare case of `plz run` not working on a test with remote execution when
+      the test has a data dependency on something with a matched require/provide (#2527)
+    * A not dissimilar fix to `plz query inputs` (#2531)
+    * Fix moving of output directories for remote execution (#2529)
+    * General improvements to tab completion of optional subcommands (#2537)
+    * Add debug flag that implies plain output for `breakpoint()` (#2533)
+
+
 Version 16.21.3
 ---------------
 

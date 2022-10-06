@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -22,7 +21,9 @@ import (
 
 	"github.com/google/shlex"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-retryablehttp"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -38,7 +39,7 @@ var log = logging.Log
 var errStop = fmt.Errorf("stopping build")
 
 // httpClient is the shared http client that we use for fetching remote files.
-var httpClient http.Client
+var httpClient *retryablehttp.Client
 var httpClientOnce sync.Once
 
 var magicSourcesWorkerKey = "WORKER"
@@ -529,7 +530,7 @@ func buildTextFile(state *core.BuildState, target *core.BuildTarget) error {
 		return err
 	}
 
-	return ioutil.WriteFile(outFile, []byte(content), target.OutMode())
+	return os.WriteFile(outFile, []byte(content), target.OutMode())
 }
 
 // prepareOutputDirectories creates any directories the target has declared it will output into as a nicety
@@ -618,7 +619,7 @@ func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, erro
 func addOutputDirectoryToBuildOutput(target *core.BuildTarget, dir core.OutputDirectory) ([]string, error) {
 	fullDir := filepath.Join(target.TmpDir(), dir.Dir())
 
-	files, err := ioutil.ReadDir(fullDir)
+	files, err := os.ReadDir(fullDir)
 	if err != nil {
 		return nil, err
 	}
@@ -683,7 +684,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	tmpDir := target.TmpDir()
 	outDir := target.OutDir()
 	outs := target.Outputs()
-	allOuts := make([]string, len(outs))
+	allOuts := make([]string, len(outs), len(outs)+len(target.OutputDirectories))
 	for i, output := range outs {
 		allOuts[i] = output
 		tmpOutput := path.Join(tmpDir, target.GetTmpOutput(output))
@@ -1053,13 +1054,16 @@ func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix s
 // This is a builtin for better efficiency and more control over the whole process.
 func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 	httpClientOnce.Do(func() {
+		httpClient = retryablehttp.NewClient()
+		httpClient.Logger = &cli.HTTPLogWrapper{Log: log}
+
 		if state.Config.Build.HTTPProxy != "" {
-			httpClient.Transport = &http.Transport{
+			httpClient.HTTPClient.Transport = &http.Transport{
 				Proxy: http.ProxyURL(state.Config.Build.HTTPProxy.AsURL()),
 			}
 		}
 
-		httpClient.Timeout = time.Duration(state.Config.Build.Timeout)
+		httpClient.HTTPClient.Timeout = time.Duration(state.Config.Build.Timeout)
 	})
 
 	if err := prepareDirectory(state.ProcessExecutor, target.OutDir(), false); err != nil {
@@ -1113,12 +1117,20 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 		return err
 	}
 
-	resp, err := httpClient.Do(req)
+	rreq, err := retryablehttp.FromRequest(req)
+	if err != nil {
+		return err
+	}
+	resp, err := httpClient.Do(rreq)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		bs, _ := io.ReadAll(resp.Body)
+		if len(bs) != 0 {
+			log.Debug("Error retrieving %s: %s, Body:\n%s", url, resp.Status, string(bs))
+		}
 		return fmt.Errorf("Error retrieving %s: %s", url, resp.Status)
 	}
 	var r io.Reader = resp.Body

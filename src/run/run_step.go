@@ -4,7 +4,6 @@ package run
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"os/exec"
@@ -25,14 +24,6 @@ import (
 
 var log = logging.Log
 
-type ProcessOutput string
-
-const (
-	Default        ProcessOutput = "default"
-	Quiet          ProcessOutput = "quiet"
-	GroupImmediate ProcessOutput = "group_immediate"
-)
-
 // Run implements the running part of 'plz run'.
 func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string, remote, env, inTmp bool, dir, overrideCmd string) {
 	prepareRun()
@@ -44,7 +35,7 @@ func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string,
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
 // The given context can be used to control the lifetime of the subprocesses.
-func Parallel(ctx context.Context, state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, output ProcessOutput, remote, env, detach, inTmp bool, dir string) int {
+func Parallel(ctx context.Context, state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, outputMode process.OutputMode, remote, env, detach, inTmp bool, dir string) int {
 	prepareRun()
 
 	limiter := make(chan struct{}, numTasks)
@@ -55,7 +46,7 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 			limiter <- struct{}{}
 			defer func() { <-limiter }()
 
-			err := runWithOutput(ctx, state, label, args, output, remote, env, detach, inTmp, dir)
+			err := runWithOutput(ctx, state, label, args, outputMode, remote, env, detach, inTmp, dir)
 			if err != nil && ctx.Err() == nil {
 				log.Error("Command failed: %s", err)
 			}
@@ -72,34 +63,21 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 }
 
 // runWithOutput runs a subprocess with the given output mechanism.
-func runWithOutput(ctx context.Context, state *core.BuildState, label core.AnnotatedOutputLabel, args []string, output ProcessOutput, remote, env, detach, inTmp bool, dir string) error {
-	switch output {
-	case GroupImmediate:
-		out, _, err := run(ctx, state, label, args, true, true, remote, env, detach, inTmp, dir, "")
-		fmt.Println(label)
-		if err == nil {
-			os.Stdout.Write(out)
-		}
-		return err
-	case Quiet:
-		_, _, err := run(ctx, state, label, args, true, true, remote, env, detach, inTmp, dir, "")
-		return err
-	case Default:
-		fallthrough
-	default:
-		_, _, err := run(ctx, state, label, args, true, false, remote, env, detach, inTmp, dir, "")
-		return err
-	}
+func runWithOutput(ctx context.Context, state *core.BuildState, label core.AnnotatedOutputLabel, args []string, outputMode process.OutputMode, remote, env, detach, inTmp bool, dir string) error {
+	return process.RunWithOutput(outputMode, label.String(), func() ([]byte, error) {
+		out, _, err := run(ctx, state, label, args, true, outputMode != process.Default, remote, env, detach, inTmp, dir, "")
+		return out, err
+	})
 }
 
 // Sequential runs a series of targets sequentially.
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
-func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, output ProcessOutput, remote, env, inTmp bool, dir string) int {
+func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, outputMode process.OutputMode, remote, env, inTmp bool, dir string) int {
 	prepareRun()
 	for _, label := range labels {
 		log.Notice("Running %s", label)
-		if err := runWithOutput(context.Background(), state, label, args, output, remote, env, false, inTmp, dir); err != nil {
+		if err := runWithOutput(context.Background(), state, label, args, outputMode, remote, env, false, inTmp, dir); err != nil {
 			log.Error("%s", err)
 			return err.(*exitError).code
 		}
@@ -232,7 +210,7 @@ func prepareRunDir(state *core.BuildState, target *core.BuildTarget) (string, er
 		return "", err
 	}
 
-	path, err := ioutil.TempDir(path, target.Label.Name+"_*")
+	path, err := os.MkdirTemp(path, target.Label.Name+"_*")
 	if err != nil {
 		return "", err
 	}

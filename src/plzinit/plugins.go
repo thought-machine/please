@@ -3,7 +3,7 @@ package plzinit
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -179,7 +179,7 @@ func targetExistsInFile(location, plugin string) bool {
 		return false
 	}
 
-	b, err := ioutil.ReadFile(location)
+	b, err := os.ReadFile(location)
 	if err != nil {
 		panic(err)
 	}
@@ -244,7 +244,7 @@ func getLatestRevision(plugin string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}

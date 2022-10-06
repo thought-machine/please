@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
@@ -141,7 +140,7 @@ func cleanup(ast string) string {
 }
 
 func mustLoadBuildDefsDir(state *core.BuildState, dirname string) {
-	dir, err := ioutil.ReadDir(dirname)
+	dir, err := os.ReadDir(dirname)
 	if err != nil {
 		log.Fatalf("%s", err)
 	}

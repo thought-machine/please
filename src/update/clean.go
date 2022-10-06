@@ -2,7 +2,6 @@ package update
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"sort"
@@ -15,7 +14,7 @@ import (
 
 // clean checks for any stale versions in the download directory and wipes them out if OK.
 func clean(config *core.Configuration, manualUpdate bool) {
-	dir, _ := ioutil.ReadDir(config.Please.Location)
+	dir, _ := os.ReadDir(config.Please.Location)
 	versions := make(semver.Versions, 0, len(dir))
 	// Convert these to semver
 	for _, entry := range dir {

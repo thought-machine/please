@@ -213,6 +213,9 @@ type BuildState struct {
 	CurrentSubrepo string
 	// ParentState is the state of the repo containing this subrepo. Nil if this is the host repo.
 	ParentState *BuildState
+	// EnableBreakpoints enablese the breakpoint() build-in, and drops Please into an interactive debugger when
+	// they're encountered.
+	EnableBreakpoints bool
 }
 
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
@@ -951,18 +954,19 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild, ne
 	return nil
 }
 
+// QueueTestTarget adds a target to the queue to be tested.
 func (state *BuildState) QueueTestTarget(target *BuildTarget) {
-	// TODO: Can this be made async?
-	state.queueTestTarget(target)
+	state.queueTargetData(target)
+	state.AddPendingTest(target)
 }
 
-func (state *BuildState) queueTestTarget(target *BuildTarget) {
+// queueTargetData queues up builds of the target's runtime data.
+func (state *BuildState) queueTargetData(target *BuildTarget) {
 	for _, data := range target.AllData() {
 		if l, ok := data.Label(); ok {
 			state.WaitForBuiltTarget(l, target.Label)
 		}
 	}
-	state.AddPendingTest(target)
 }
 
 // queueResolvedTarget is like queueTarget but once we have a resolved target.
@@ -1030,6 +1034,11 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		if !called.Value() {
 			// We are now ready to go, we have nothing to wait for.
 			if building && target.SyncUpdateState(Active, Pending) {
+				// If we're going to run the target, we need its runtime data to be done. This has to
+				// happen before we build it otherwise remote downloads will fail.
+				if state.NeedRun && state.IsOriginalTarget(target) {
+					state.queueTargetData(target)
+				}
 				state.addPendingBuild(target)
 			}
 			return

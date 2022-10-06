@@ -16,7 +16,7 @@ import (
 func TestNoBinaryTargetNoOverrideCommand(t *testing.T) {
 	target := core.NewBuildTarget(core.NewBuildLabel("pkg", "t"))
 
-	err := exec(core.NewDefaultBuildState(), target, ".", nil, nil, false, process.NoSandbox)
+	err := exec(core.NewDefaultBuildState(), process.Default, target, ".", nil, nil, nil, "", false, process.NoSandbox)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "target needs to be a binary")
 }
@@ -44,7 +44,7 @@ func TestPrepareRuntimeDir(t *testing.T) {
 func TestSimpleOverrideCommand(t *testing.T) {
 	target := core.NewBuildTarget(core.NewBuildLabel("pkg", "t"))
 
-	cmd, err := resolveCmd(core.NewDefaultBuildState(), target, []string{"ls", "-l"}, "runtime/dir", process.NoSandbox)
+	cmd, err := resolveCmd(core.NewDefaultBuildState(), target, []string{"ls", "-l"}, "", "runtime/dir", process.NoSandbox)
 	assert.Nil(t, err)
 	assert.Equal(t, "ls -l", cmd)
 }
@@ -54,7 +54,7 @@ func TestOverrideCommandWithSequence(t *testing.T) {
 	target.AddOutput("my-binary")
 	target.IsBinary = true
 
-	cmd, err := resolveCmd(core.NewDefaultBuildState(), target, []string{"$(out_exe", "//pkg:t)"}, "runtime/dir", process.NoSandbox)
+	cmd, err := resolveCmd(core.NewDefaultBuildState(), target, []string{"$(out_exe", "//pkg:t)"}, "", "runtime/dir", process.NoSandbox)
 	assert.Nil(t, err)
 	assert.Equal(t, "plz-out/bin/pkg/my-binary", cmd)
 }
@@ -64,7 +64,7 @@ func TestCommandWithMultipleOutputs(t *testing.T) {
 	target.AddOutput("my-out-1")
 	target.AddOutput("my-out-2")
 
-	cmd, err := resolveCmd(core.NewDefaultBuildState(), target, nil, "runtime/dir", process.NoSandbox)
+	cmd, err := resolveCmd(core.NewDefaultBuildState(), target, nil, "", "runtime/dir", process.NoSandbox)
 	assert.Empty(t, cmd)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "it has 2 outputs")
@@ -76,7 +76,7 @@ func TestCommandMountNotSandboxed(t *testing.T) {
 	target := core.NewBuildTarget(core.NewBuildLabel("pkg", "t"))
 	target.AddOutput("my-out")
 
-	cmd, err := resolveCmd(core.NewDefaultBuildState(), target, nil, "runtime/dir", process.NoSandbox)
+	cmd, err := resolveCmd(core.NewDefaultBuildState(), target, nil, "", "runtime/dir", process.NoSandbox)
 	assert.Nil(t, err)
 	assert.Equal(t, filepath.Join(core.RepoRoot, "runtime/dir/my-out"), cmd)
 }
@@ -85,7 +85,7 @@ func TestCommandMountSandboxed(t *testing.T) {
 	target := core.NewBuildTarget(core.NewBuildLabel("pkg", "t"))
 	target.AddOutput("my-out")
 
-	cmd, err := resolveCmd(core.NewDefaultBuildState(), target, nil, "runtime/dir", process.NewSandboxConfig(false, true))
+	cmd, err := resolveCmd(core.NewDefaultBuildState(), target, nil, "", "runtime/dir", process.NewSandboxConfig(false, true))
 	assert.Nil(t, err)
 	assert.Equal(t, filepath.Join(core.SandboxDir, "my-out"), cmd)
 }
@@ -95,7 +95,7 @@ func TestExec(t *testing.T) {
 	target := core.NewBuildTarget(core.NewBuildLabel("pkg", "t"))
 	state.Graph.AddTarget(target)
 
-	err := exec(state, target, "test", nil, []string{"echo", "foo"}, false, process.NoSandbox)
+	err := exec(state, process.Default, target, "test", nil, []string{"echo", "foo"}, nil, "", false, process.NoSandbox)
 	assert.Nil(t, err)
 }
 

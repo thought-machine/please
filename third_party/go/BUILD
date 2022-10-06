@@ -3,12 +3,12 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "1f5f539ce0baa8b65f196ee219abf73a7d9cf558ba9128cc0fe4833da18b04f2",  # darwin_amd64
-        "6c7df9a2405f09aa9bab55c93c9c4ce41d3e58127d626bc1825ba5d0a0045d5c",  # darwin_arm64
-        "8e21cb761a02d4e3f31ec031d7ce90a0980e317f61ac023057d9a462e4a00512",  # freebsd_amd64
-        "e54bec97a1a5d230fc2f9ad0880fcbabb5888f30ed9666eca4a91c5a32e86cbc",  # linux_amd64
+        "df6509885f65f0d7a4eaf3dfbe7dda327569787e8a0a31cbf99ae3a6e23e9ea8",  # darwin_amd64
+        "859e0a54b7fcea89d9dd1ec52aab415ac8f169999e5fdfb0f0c15b577c4ead5e",  # darwin_arm64
+        "eca1a8f7b6ff6146efc285eed581096b12b59c1f0488bfe98ed053ab205267ca",  # freebsd_amd64
+        "464b6b66591f6cf055bc5df90a9750bf5fbc9d038722bb84a9d56a2bea974be6",  # linux_amd64
     ],
-    version = "1.18.2",
+    version = "1.19",
 )
 
 go_module(
@@ -108,7 +108,7 @@ go_module(
     name = "go-flags",
     licences = ["BSD-3-Clause"],
     module = "github.com/thought-machine/go-flags",
-    version = "v1.6.0",
+    version = "v1.6.2",
     visibility = ["PUBLIC"],
     deps = [":xsys"],
 )
@@ -503,7 +503,7 @@ go_module(
     ],
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/sync",
-    version = "v0.0.0-20210220032951-036812b2e83c",
+    version = "v0.0.0-20220722155255-886fb9371eb4",
     visibility = ["PUBLIC"],
 )
 

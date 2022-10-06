@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -151,7 +150,7 @@ func (cache *httpCache) retrieve(key []byte) (bool, error) {
 	if resp.StatusCode == http.StatusNotFound {
 		return false, nil // doesn't exist - not an error
 	} else if resp.StatusCode != http.StatusOK {
-		b, _ := ioutil.ReadAll(resp.Body)
+		b, _ := io.ReadAll(resp.Body)
 		return false, fmt.Errorf("%s", string(b))
 	}
 	gzr, err := gzip.NewReader(resp.Body)

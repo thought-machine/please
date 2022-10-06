@@ -288,54 +288,9 @@ python_wheel(
 )
 
 pip_library(
-    name = "numpy",
-    test_only = True,
-    version = "1.18.4",
-    zip_safe = False,
-)
-
-pip_library(
-    name = "grpcio",
-    test_only = True,
-    version = "1.32.0",
-    deps = [
-        ":six",
-    ],
-)
-
-pip_library(
-    name = "pytz",
-    test_only = True,
-    version = "2018.4",
-)
-
-pip_library(
-    name = "pandas",
-    test_only = True,
-    version = "1.0.3",
-    deps = [
-        ":dateutil",
-        ":numpy",
-        ":pytz",
-        ":six",
-    ],
-)
-
-pip_library(
     name = "setuptools",
     test_only = True,
     version = "47.1.1",
-)
-
-pip_library(
-    name = "scipy",
-    test_only = True,
-    version = "1.5.2",
-    zip_safe = False,
-    deps = [
-        ":numpy",
-        ":setuptools",
-    ],
 )
 
 pip_library(

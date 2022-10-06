@@ -326,7 +326,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         #      is faster for unittest as well (because we don't need to rebuild the pex if they change).
         data=data | {'_srcs': srcs} if isinstance(data, dict) else data + srcs,
         outs=[f'{name}.pex'],
-        labels=labels + ['test_results_dir'],
+        labels=labels,
         cmd='$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
         test_cmd=test_cmd,
         debug_cmd=debug_cmd,

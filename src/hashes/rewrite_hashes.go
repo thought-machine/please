@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"runtime"
 	"strings"
 
@@ -55,7 +55,7 @@ func rewriteHashes(state *core.BuildState, filename, platform string, hashes map
 	if err != nil {
 		return err
 	}
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func rewriteHashes(state *core.BuildState, filename, platform string, hashes map
 			return err
 		}
 	}
-	return ioutil.WriteFile(filename, bytes.Join(lines, []byte{'\n'}), 0664)
+	return os.WriteFile(filename, bytes.Join(lines, []byte{'\n'}), 0664)
 }
 
 // rewriteHash rewrites a single hash on a statement.

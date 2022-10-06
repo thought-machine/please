@@ -6,7 +6,6 @@ package format
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"sync/atomic"
 
@@ -60,7 +59,7 @@ func formatAll(filenames <-chan string, parallelism int, rewrite, quiet bool) (b
 }
 
 func format(filename string, rewrite, quiet bool) (bool, error) {
-	before, err := ioutil.ReadFile(filename)
+	before, err := os.ReadFile(filename)
 	if err != nil {
 		return true, err
 	}

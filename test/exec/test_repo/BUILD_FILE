@@ -3,3 +3,24 @@ genrule(
     cmd = "touch $OUT",
     outs = ["dummy"],
 )
+
+genrule(
+    name = "success",
+    cmd = "echo $@ > $OUT",
+    outs = ["success.txt"],
+    binary = True,
+)
+
+genrule(
+    name = "success2",
+    cmd = "echo $@ > $OUT",
+    outs = ["success2.txt"],
+    binary = True,
+)
+
+genrule(
+    name = "failure",
+    cmd = "false",
+    outs = ["failure.txt"],
+    binary = True,
+)

@@ -13,7 +13,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -143,7 +142,7 @@ func printMilestoneMessage(pleaseVersion string) {
 
 	// If we get a 40x resp back, assume there's no milestone release. Cloudfront gives 403s rather than 404s.
 	if !(resp.StatusCode >= 400 && resp.StatusCode < 500) {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		log.Warningf("Got unexpected error code from %v: %v\n %v", milestoneURL, resp.StatusCode, string(body))
 	}
 }
@@ -306,7 +305,7 @@ func mustDownload(url string, progress bool) io.ReadCloser {
 }
 
 func linkNewPlease(config *core.Configuration) {
-	if files, err := ioutil.ReadDir(path.Join(config.Please.Location, config.Please.Version.VersionString())); err != nil {
+	if files, err := os.ReadDir(path.Join(config.Please.Location, config.Please.Version.VersionString())); err != nil {
 		log.Fatalf("Failed to read directory: %s", err)
 	} else {
 		for _, file := range files {
@@ -350,7 +349,7 @@ func findLatestVersion(downloadLocation string, prerelease bool) cli.Version {
 	}
 	response := mustDownload(url, false)
 	defer response.Close()
-	data, err := ioutil.ReadAll(response)
+	data, err := io.ReadAll(response)
 	if err != nil {
 		log.Fatalf("Failed to find latest plz version: %s", err)
 	}

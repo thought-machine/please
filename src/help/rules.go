@@ -2,7 +2,6 @@ package help
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
@@ -62,7 +61,7 @@ func AllBuiltinFunctions(state *core.BuildState) map[string]*asp.Statement {
 		}
 	}
 	for _, dir := range state.Config.Parse.BuildDefsDir {
-		if files, err := ioutil.ReadDir(dir); err == nil {
+		if files, err := os.ReadDir(dir); err == nil {
 			for _, file := range files {
 				if !file.IsDir() {
 					if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {

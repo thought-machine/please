@@ -4,7 +4,6 @@ package core
 
 import (
 	"encoding/base64"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -197,7 +196,7 @@ func TestHashReplacement(t *testing.T) {
 	// Need to write the file that will be used to calculate the hash.
 	err := os.MkdirAll("plz-out/gen/path/to", 0755)
 	assert.NoError(t, err)
-	err = ioutil.WriteFile("plz-out/gen/path/to/target2.py", []byte(`"""Test file for command_replacements_test"""`), 0644)
+	err = os.WriteFile("plz-out/gen/path/to/target2.py", []byte(`"""Test file for command_replacements_test"""`), 0644)
 	assert.NoError(t, err)
 
 	target2 := makeTarget2("//path/to:target2", "cp $< $@", nil)

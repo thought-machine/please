@@ -3,7 +3,7 @@ package test
 import (
 	"go/parser"
 	"go/token"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -80,7 +80,7 @@ func TestWriteTestMainWithBenchmark(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "main", f.Name.Name)
 
-	test, err := ioutil.ReadFile("test.go")
+	test, err := os.ReadFile("test.go")
 	assert.NoError(t, err)
 	assert.Contains(t, string(test), "BenchmarkExample")
 }

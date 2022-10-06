@@ -1,7 +1,6 @@
 package remote
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -115,7 +114,7 @@ func TestExecuteTest(t *testing.T) {
 	_, err = c.Test(0, target, 1)
 	assert.NoError(t, err)
 
-	results, err := ioutil.ReadFile(filepath.Join(target.TestDir(1), core.TestResultsFile))
+	results, err := os.ReadFile(filepath.Join(target.TestDir(1), core.TestResultsFile))
 	require.NoError(t, err)
 
 	assert.Equal(t, testResults, results)
@@ -137,10 +136,10 @@ func TestExecuteTestWithCoverage(t *testing.T) {
 	_, err = c.Test(0, target, 1)
 	assert.NoError(t, err)
 
-	results, err := ioutil.ReadFile(filepath.Join(target.TestDir(1), core.TestResultsFile))
+	results, err := os.ReadFile(filepath.Join(target.TestDir(1), core.TestResultsFile))
 	require.NoError(t, err)
 
-	coverage, err := ioutil.ReadFile(filepath.Join(target.TestDir(1), core.CoverageFile))
+	coverage, err := os.ReadFile(filepath.Join(target.TestDir(1), core.CoverageFile))
 	require.NoError(t, err)
 
 	assert.Equal(t, testResults, results)

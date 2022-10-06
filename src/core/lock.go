@@ -4,7 +4,6 @@ package core
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"syscall"
@@ -108,7 +107,7 @@ func acquireFileLock(file *os.File, how int, levelLog logFunc) error {
 	log.Debug("Attempting to acquire lock for %s...", file.Name())
 	err := syscall.Flock(int(file.Fd()), how|syscall.LOCK_NB)
 	if err != nil {
-		pid, err := ioutil.ReadFile(file.Name())
+		pid, err := os.ReadFile(file.Name())
 		if err == nil && len(pid) > 0 {
 			levelLog("Looks like process with PID %s has already acquired the lock for %s. Waiting for it to finish...", string(pid), file.Name())
 		} else {

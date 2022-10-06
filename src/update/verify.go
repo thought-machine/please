@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
@@ -53,7 +52,7 @@ func verifyDownload(signed io.Reader, url string, progress bool) io.Reader {
 func mustVerifySignature(signed, signature io.Reader, progress bool) io.Reader {
 	// We need to be able to reuse the body again afterwards so we have to
 	// download the original into a buffer.
-	b, err := ioutil.ReadAll(signed)
+	b, err := io.ReadAll(signed)
 	if err != nil {
 		panic(err)
 	}
@@ -62,15 +61,15 @@ func mustVerifySignature(signed, signature io.Reader, progress bool) io.Reader {
 		panic("Invalid signature on downloaded file, possible tampering; will not continue.")
 	}
 	if progress {
-		return bufio.NewReader(cli.NewProgressReader(ioutil.NopCloser(bytes.NewReader(b)), len(b), "Extracting"))
+		return bufio.NewReader(cli.NewProgressReader(io.NopCloser(bytes.NewReader(b)), len(b), "Extracting"))
 	}
-	return bufio.NewReader(ioutil.NopCloser(bytes.NewReader(b)))
+	return bufio.NewReader(io.NopCloser(bytes.NewReader(b)))
 }
 
 // mustVerifyHash verifies the sha256 hash of the downloaded file matches one of the given ones.
 // On success it returns an equivalent reader, on failure it panics.
 func mustVerifyHash(r io.Reader, hashes []string) io.Reader {
-	b, err := ioutil.ReadAll(r)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		panic(err)
 	}

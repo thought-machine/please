@@ -4,7 +4,6 @@ package fs
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -98,7 +97,7 @@ func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
 			return err
 		}
 	}
-	tempFile, err := ioutil.TempFile(dir, file)
+	tempFile, err := os.CreateTemp(dir, file)
 	if err != nil {
 		return err
 	}

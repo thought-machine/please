@@ -1,7 +1,6 @@
 package lsp
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -150,7 +149,7 @@ func (h *Handler) findGlobal(name string) lsp.Location {
 			if data, err := rules.ReadAsset(f.Pos.Filename); err != nil {
 				log.Warning("Failed to extract builtin rules for %s: %s", name, err)
 				return lsp.Location{}
-			} else if err := ioutil.WriteFile(dest, data, 0644); err != nil {
+			} else if err := os.WriteFile(dest, data, 0644); err != nil {
 				log.Warning("Failed to extract builtin rules for %s: %s", name, err)
 				return lsp.Location{}
 			}

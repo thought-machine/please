@@ -1121,6 +1121,10 @@ func subrepo(s *scope, args []pyObject) pyObject {
 
 // breakpoint implements an interactive debugger for the breakpoint() builtin
 func breakpoint(s *scope, args []pyObject) pyObject {
+	if !s.state.EnableBreakpoints {
+		log.Warningf("Skipping breakpoint. Use --debug to enable breakpoints.")
+		return None
+	}
 	// Take this mutex to ensure only one debugger runs at a time
 	s.interpreter.breakpointMutex.Lock()
 	defer s.interpreter.breakpointMutex.Unlock()

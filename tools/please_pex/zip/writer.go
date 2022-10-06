@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -249,7 +248,7 @@ func (f *File) walk(path string, mode fs.Mode) error {
 				log.Debug("Including existing non-zip file %s as %s", path, targetPath)
 				if info, err := os.Lstat(path); err != nil {
 					return err
-				} else if b, err := ioutil.ReadFile(path); err != nil {
+				} else if b, err := os.ReadFile(path); err != nil {
 					return fmt.Errorf("Error reading %s to zipfile: %s", path, err)
 				} else if err := f.StripBytecodeTimestamp(path, b); err != nil {
 					return err

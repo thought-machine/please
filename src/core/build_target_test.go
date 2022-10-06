@@ -38,6 +38,16 @@ func TestOutDirSubrepo(t *testing.T) {
 	assert.Equal(t, "plz-out/bin/test_x86/mickey/donald", target.OutDir())
 }
 
+func TestExecDir(t *testing.T) {
+	target := makeTarget1("//mickey/donald:goofy", "")
+	assert.Equal(t, "plz-out/exec/mickey/donald/goofy", target.ExecDir())
+}
+
+func TestExecDirSubrepo(t *testing.T) {
+	target := makeTarget1("@test_x86//mickey/donald:goofy", "")
+	assert.Equal(t, "plz-out/exec/test_x86/mickey/donald/goofy", target.ExecDir())
+}
+
 func TestTestDirSubrepo(t *testing.T) {
 	target := makeTarget1("@test_x86//mickey/donald:goofy", "")
 	assert.Equal(t, "plz-out/tmp/test_x86/mickey/donald/goofy._test/run_1", target.TestDir(1))

@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -477,14 +476,8 @@ func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult,
 		return err
 	}
 
-	defer os.RemoveAll(target.TmpDir())
-
 	if _, err := c.client.DownloadActionOutputs(ctx, ar, target.TmpDir(), c.fileMetadataCache); err != nil {
 		return err
-	}
-
-	if err := moveOutDirsToTmpRoot(target); err != nil {
-		return fmt.Errorf("failed to move out directories to correct place in tmp folder: %w", err)
 	}
 
 	if err := moveTmpFilesToOutDir(target); err != nil {
@@ -494,50 +487,36 @@ func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult,
 	return nil
 }
 
-// moveTmpFilesToOutDir moves files from the target tmp dir to the out dir
+// moveTmpFilesToOutDir moves files from the target tmp dir to the out dir, handling output directories as well
 func moveTmpFilesToOutDir(target *core.BuildTarget) error {
-	files, err := ioutil.ReadDir(target.TmpDir())
+	defer os.RemoveAll(target.TmpDir())
+
+	// Copy the contents of the output_dirs to the target output dir
+	for _, outDir := range target.OutputDirectories {
+		dir := filepath.Join(target.TmpDir(), outDir.Dir())
+		if err := moveDirToOutDir(target, dir); err != nil {
+			return fmt.Errorf("failed to copy output directory %v to target output dir: %v", outDir.Dir(), err)
+		}
+
+		// Remove the dir so it doesn't get picked up as an output in the next step
+		if err := os.RemoveAll(dir); err != nil {
+			return err
+		}
+	}
+
+	return moveDirToOutDir(target, target.TmpDir())
+}
+
+func moveDirToOutDir(target *core.BuildTarget, dir string) error {
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}
 
 	for _, f := range files {
-		oldPath := filepath.Join(target.TmpDir(), f.Name())
+		oldPath := filepath.Join(dir, f.Name())
 		newPath := filepath.Join(target.OutDir(), f.Name())
 		if err := fs.RecursiveCopy(oldPath, newPath, target.OutMode()); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// moveOutDirsToTmpRoot moves all the files from the output dirs into the root of the build temp dir and deletes the
-// now empty directory
-func moveOutDirsToTmpRoot(target *core.BuildTarget) error {
-	for _, dir := range target.OutputDirectories {
-		if err := moveOutDirFilesToTmpRoot(target, dir.Dir()); err != nil {
-			return fmt.Errorf("failed to move output dir (%s) contents to rule root: %w", dir, err)
-		}
-		if err := os.Remove(filepath.Join(target.TmpDir(), dir.Dir())); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func moveOutDirFilesToTmpRoot(target *core.BuildTarget, dir string) error {
-	fullDir := filepath.Join(target.TmpDir(), dir)
-
-	files, err := ioutil.ReadDir(fullDir)
-	if err != nil {
-		return err
-	}
-
-	for _, f := range files {
-		from := filepath.Join(fullDir, f.Name())
-		to := filepath.Join(target.TmpDir(), f.Name())
-
-		if err := os.Rename(from, to); err != nil {
 			return err
 		}
 	}

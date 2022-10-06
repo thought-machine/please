@@ -17,16 +17,19 @@ import (
 )
 
 // OutDir is the root output directory for everything.
-const OutDir string = "plz-out"
+const OutDir = "plz-out"
 
 // TmpDir is the root of the temporary directory for building targets & running tests.
-const TmpDir string = "plz-out/tmp"
+const TmpDir = "plz-out/tmp"
 
 // GenDir is the output directory for non-binary targets.
-const GenDir string = "plz-out/gen"
+const GenDir = "plz-out/gen"
 
 // BinDir is the output directory for binary targets.
-const BinDir string = "plz-out/bin"
+const BinDir = "plz-out/bin"
+
+// ExecDir is the output directory that we execute in.
+const ExecDir = "plz-out/exec"
 
 // SubrepoDir is the output directory for targets that define subrepos.
 const SubrepoDir = "plz-out/subrepos"
@@ -48,11 +51,6 @@ const TestResultsFile = "test.results"
 // CoverageFile is the file that targets output coverage information into.
 // This is similarly defined via an environment variable.
 const CoverageFile = "test.coverage"
-
-// TestResultsDirLabel is a known label that indicates that the test will output results
-// into a directory rather than a file. Please can internally handle either but the remote
-// execution API requires that we specify which is which.
-const TestResultsDirLabel = "test_results_dir"
 
 // tempOutputSuffix is the suffix we attach to temporary outputs to avoid name clashes.
 const tempOutputSuffix = ".out"
@@ -397,6 +395,12 @@ func (target *BuildTarget) OutDir() string {
 		return path.Join(BinDir, target.Label.Subrepo, target.Label.PackageName)
 	}
 	return path.Join(GenDir, target.Label.Subrepo, target.Label.PackageName)
+}
+
+// ExecDir returns the exec directory for this target, e.g.
+// //mickey/donald:goofy -> plz-out/exec/mickey/donald/goofy
+func (target *BuildTarget) ExecDir() string {
+	return path.Join(ExecDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name)
 }
 
 // TestDir returns the test directory for this target, eg.
@@ -855,7 +859,7 @@ func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
 		} else if dep.TestOnly && !(target.IsTest() || target.TestOnly) {
 			if target.Label.isExperimental(state) {
-				log.Warning("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
+				log.Info("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
 			} else {
 				return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
 			}

@@ -13,5 +13,5 @@ func TestGetVersion(t *testing.T) {
 
 	ver, err := tc.GoMinorVersion()
 	require.NoError(t, err)
-	require.Equal(t, 18, ver)
+	require.Contains(t, []int{18, 19}, ver)
 }

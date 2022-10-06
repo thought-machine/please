@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/thought-machine/go-flags"
 	"go.uber.org/automaxprocs/maxprocs"
@@ -81,13 +82,14 @@ var opts struct {
 		CompletionScript  bool          `long:"completion_script" description:"Prints the bash / zsh completion script to stdout"`
 	} `group:"Options controlling output & logging"`
 
-	FeatureFlags struct {
+	BehaviorFlags struct {
 		NoUpdate           bool    `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
 		NoHashVerification bool    `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
 		NoLock             bool    `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool    `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
 		HTTPProxy          cli.URL `long:"http_proxy" env:"HTTP_PROXY" description:"HTTP proxy to use for downloads"`
-	} `group:"Options that enable / disable certain features"`
+		Debug              bool    `long:"debug" description:"When enabled, Please will enter into an interactive debugger when breakpoint() is called during parsing."`
+	} `group:"Options that enable / disable certain behaviors"`
 
 	HelpFlags struct {
 		Help    bool `short:"h" long:"help" description:"Show this help message"`
@@ -136,8 +138,8 @@ var opts struct {
 		StreamResults    bool         `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		// Slightly awkward since we can specify a single test with arguments or multiple test targets.
 		Args struct {
-			Target core.BuildLabel   `positional-arg-name:"target" description:"Target to test"`
-			Args   []TestTargetOrArg `positional-arg-name:"arguments" description:"Arguments or test selectors"`
+			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
+			Args   TargetsOrArgs   `positional-arg-name:"arguments" description:"Arguments or test selectors"`
 		} `positional-args:"true"`
 		StateArgs []string `no-flag:"true"`
 	} `command:"test" description:"Builds and tests one or more targets"`
@@ -164,8 +166,8 @@ var opts struct {
 		Shell               string        `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Opens a shell in the test directory with the appropriate environment variables."`
 		StreamResults       bool          `long:"stream_results" description:"Prints test results on stdout as they are run."`
 		Args                struct {
-			Target core.BuildLabel   `positional-arg-name:"target" description:"Target to test"`
-			Args   []TestTargetOrArg `positional-arg-name:"arguments" description:"Arguments or test selectors"`
+			Target core.BuildLabel `positional-arg-name:"target" description:"Target to test"`
+			Args   TargetsOrArgs   `positional-arg-name:"arguments" description:"Arguments or test selectors"`
 		} `positional-args:"true"`
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
@@ -187,9 +189,9 @@ var opts struct {
 		EntryPoint string `long:"entry_point" short:"e" description:"The entry point of the target to use." default:""`
 		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
 		Parallel   struct {
-			NumTasks       int               `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
-			Quiet          bool              `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
-			Output         run.ProcessOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
+			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Quiet          bool               `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
+			Output         process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -197,8 +199,8 @@ var opts struct {
 			Detach bool          `long:"detach" description:"Detach from the parent process when all children have spawned"`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
-			Quiet          bool              `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
-			Output         run.ProcessOutput `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
+			Quiet          bool               `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
+			Output         process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
 			} `positional-args:"true" required:"true"`
@@ -224,7 +226,21 @@ var opts struct {
 			Target              core.AnnotatedOutputLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
 			OverrideCommandArgs []string                  `positional-arg-name:"override_command" description:"Override command"`
 		} `positional-args:"true"`
-	} `command:"exec" description:"Executes a single target in a hermetic build environment"`
+		Sequential struct {
+			Args struct {
+				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Targets to execute, or arguments to them"`
+			} `positional-args:"true"`
+			Output process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Controls how output from subprocesses is handled."`
+		} `command:"sequential" description:"Execute a series of targets sequentially"`
+		Parallel struct {
+			NumTasks int `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
+			Args     struct {
+				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Targets to execute, or arguments to them"`
+			} `positional-args:"true"`
+			Output process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Controls how output from subprocesses is handled."`
+			Update cli.Duration       `long:"update" default:"10s" description:"Frequency to log updates on running subprocesses. Has no effect for 'default' output mode."`
+		} `command:"parallel" description:"Execute a number of targets in parallel"`
+	} `command:"exec" subcommands-optional:"true" description:"Executes a single target in a hermetic build environment"`
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
@@ -447,7 +463,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"hash": func() int {
 		if opts.Hash.Update {
-			opts.FeatureFlags.NoHashVerification = true
+			opts.BehaviorFlags.NoHashVerification = true
 		}
 		success, state := runBuild(opts.Hash.Args.Targets, true, false, false)
 		if success {
@@ -518,8 +534,9 @@ var buildFunctions = map[string]func() int{
 			return toExitCode(success, state)
 		}
 
-		shouldSandbox := state.Graph.TargetOrDie(opts.Exec.Args.Target.BuildLabel).Sandbox
-		dir := filepath.Join(core.OutDir, "exec", opts.Exec.Args.Target.Subrepo, opts.Exec.Args.Target.PackageName)
+		target := state.Graph.TargetOrDie(opts.Exec.Args.Target.BuildLabel)
+		dir := target.ExecDir()
+		shouldSandbox := target.Sandbox
 		if code := exec.Exec(state, opts.Exec.Args.Target, dir, nil, opts.Exec.Args.OverrideCommandArgs, false, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
 			return code
 		}
@@ -535,6 +552,28 @@ var buildFunctions = map[string]func() int{
 			if err := fs.RecursiveLink(from, to); err != nil {
 				log.Fatalf("failed to move output: %v", err)
 			}
+		}
+		return 0
+	},
+	"exec.sequential": func() int {
+		annotated, unannotated, args := opts.Exec.Sequential.Args.Targets.Separate()
+		success, state := runBuild(unannotated, true, false, false)
+		if !success {
+			return toExitCode(success, state)
+		}
+		if code := exec.Sequential(state, opts.Exec.Sequential.Output, annotated, args, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
+			return code
+		}
+		return 0
+	},
+	"exec.parallel": func() int {
+		annotated, unannotated, args := opts.Exec.Parallel.Args.Targets.Separate()
+		success, state := runBuild(unannotated, true, false, false)
+		if !success {
+			return toExitCode(success, state)
+		}
+		if code := exec.Parallel(state, opts.Exec.Parallel.Output, time.Duration(opts.Exec.Parallel.Update), annotated, args, opts.Exec.Parallel.NumTasks, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
+			return code
 		}
 		return 0
 	},
@@ -574,7 +613,7 @@ var buildFunctions = map[string]func() int{
 			output := opts.Run.Parallel.Output
 			if opts.Run.Parallel.Quiet {
 				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
-				output = run.Quiet
+				output = process.Quiet
 			}
 			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
@@ -592,7 +631,7 @@ var buildFunctions = map[string]func() int{
 			output := opts.Run.Sequential.Output
 			if opts.Run.Sequential.Quiet {
 				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
-				output = run.Quiet
+				output = process.Quiet
 			}
 
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Sequential.PositionalArgs.Targets)
@@ -1049,7 +1088,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		config.Build.Config = "dbg"
 	}
 	state := core.NewBuildState(config)
-	state.VerifyHashes = !opts.FeatureFlags.NoHashVerification
+	state.VerifyHashes = !opts.BehaviorFlags.NoHashVerification
 	// Only one of these two can be passed
 	state.NumTestRuns = uint16(opts.Test.NumRuns)
 	if opts.Cover.NumRuns > opts.Test.NumRuns {
@@ -1060,14 +1099,14 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedCoverage = opts.Cover.active
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
-	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || opts.Tool.Args.Tool != "" || debug
+	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || len(opts.Exec.Sequential.Args.Targets) > 0 || len(opts.Exec.Parallel.Args.Targets) > 0 || opts.Tool.Args.Tool != "" || debug
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	if opts.Build.Prepare {
 		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
 	}
 	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
 	state.Watch = len(opts.Watch.Args.Targets) > 0
-	state.CleanWorkdirs = !opts.FeatureFlags.KeepWorkdirs
+	state.CleanWorkdirs = !opts.BehaviorFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
 	state.ForceRerun = opts.Test.Rerun || opts.Cover.Rerun
 	state.ShowTestOutput = opts.Test.ShowOutput || opts.Cover.ShowOutput
@@ -1075,6 +1114,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.DebugFailingTests = debugFailingTests
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
+	state.EnableBreakpoints = opts.BehaviorFlags.Debug
 
 	// What outputs get downloaded in remote execution.
 	if debug {
@@ -1126,7 +1166,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	streamTests := opts.Test.StreamResults || opts.Cover.StreamResults
 	shell := opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
 	shellRun := opts.Build.Shell == "run" || opts.Test.Shell == "run" || opts.Cover.Shell == "run"
-	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
+	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput || opts.BehaviorFlags.Debug, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
 	state.Cache = cache.NewCache(state)
 
 	// Run the display
@@ -1145,35 +1185,61 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 // target with a list of trailing arguments.
 // Alternatively they can be completely omitted in which case we test everything under the working dir.
 // One can also pass a 'failed' flag which runs the failed tests from last time.
-func testTargets(target core.BuildLabel, inputs []TestTargetOrArg, failed bool, resultsFile cli.Filepath) ([]core.BuildLabel, []string) {
+func testTargets(target core.BuildLabel, inputs TargetsOrArgs, failed bool, resultsFile cli.Filepath) ([]core.BuildLabel, []string) {
 	if failed {
 		return test.LoadPreviousFailures(string(resultsFile))
 	} else if target.Name == "" {
 		return core.InitialPackage(), nil
 	}
-	targets := []core.BuildLabel{target}
-	var args []string
-	for i, arg := range inputs {
-		if core.LooksLikeABuildLabel(string(arg)) {
-			targets = append(targets, core.ParseBuildLabels([]string{string(arg)})...)
-		} else {
-			for _, input := range inputs[i:] {
-				args = append(args, string(input))
-			}
-			break // First non-label stops label parsing.
-		}
-	}
-	return targets, args
+	labels, args := inputs.SeparateUnannotated()
+	return append([]core.BuildLabel{target}, labels...), args
 }
 
-type TestTargetOrArg string
+type TargetOrArg struct {
+	arg   string
+	label core.AnnotatedOutputLabel
+}
 
-func (arg TestTargetOrArg) Complete(match string) []flags.Completion {
+func (arg TargetOrArg) Complete(match string) []flags.Completion {
 	if core.LooksLikeABuildLabel(match) {
 		var l core.BuildLabel
 		return l.Complete(match)
 	}
 	return nil
+}
+
+func (arg *TargetOrArg) UnmarshalFlag(value string) error {
+	if core.LooksLikeABuildLabel(value) {
+		return arg.label.UnmarshalFlag(value)
+	}
+	arg.arg = value
+	return nil
+}
+
+type TargetsOrArgs []TargetOrArg
+
+// Separate splits the targets & arguments into the labels (in both annotated & unannotated forms) and the arguments.
+func (l TargetsOrArgs) Separate() (annotated []core.AnnotatedOutputLabel, unannotated []core.BuildLabel, args []string) {
+	for _, arg := range l {
+		if l, _ := arg.label.Label(); l.IsEmpty() {
+			args = append(args, arg.arg)
+		} else {
+			annotated = append(annotated, arg.label)
+			unannotated = append(unannotated, arg.label.BuildLabel)
+		}
+	}
+	return
+}
+
+// SeparateUnannotated splits the targets & arguments into two slices. Annotations aren't permitted.
+func (l TargetsOrArgs) SeparateUnannotated() ([]core.BuildLabel, []string) {
+	annotated, unannotated, args := l.Separate()
+	for _, a := range annotated {
+		if a.Annotation != "" {
+			log.Fatalf("Invalid build label; annotations are not permitted here: %s", a)
+		}
+	}
+	return unannotated, args
 }
 
 // readConfig reads the initial configuration files
@@ -1184,8 +1250,8 @@ func readConfig() *core.Configuration {
 	} else if err := cfg.ApplyOverrides(opts.BuildFlags.Option); err != nil {
 		log.Fatalf("Can't override requested config setting: %s", err)
 	}
-	if opts.FeatureFlags.HTTPProxy != "" {
-		cfg.Build.HTTPProxy = opts.FeatureFlags.HTTPProxy
+	if opts.BehaviorFlags.HTTPProxy != "" {
+		cfg.Build.HTTPProxy = opts.BehaviorFlags.HTTPProxy
 	}
 	config = cfg
 	return cfg
@@ -1249,7 +1315,7 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 		}
 		cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel, opts.OutputFlags.LogAppend)
 	}
-	if opts.FeatureFlags.NoHashVerification {
+	if opts.BehaviorFlags.NoHashVerification {
 		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
 	}
 	config := readConfig()
@@ -1260,15 +1326,15 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	} else if opts.Update.Version.IsSet {
 		config.Please.Version = opts.Update.Version
 	}
-	update.CheckAndUpdate(config, !opts.FeatureFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
+	update.CheckAndUpdate(config, !opts.BehaviorFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
 	return config
 }
 
 // handleCompletions handles shell completion. Typically it just prints to stdout but
 // may do a little more if we think we need to handle aliases.
 func handleCompletions(parser *flags.Parser, items []flags.Completion) {
-	cli.InitLogging(cli.MinVerbosity) // Ensure this is quiet
-	opts.FeatureFlags.NoUpdate = true // Ensure we don't try to update
+	cli.InitLogging(cli.MinVerbosity)  // Ensure this is quiet
+	opts.BehaviorFlags.NoUpdate = true // Ensure we don't try to update
 	if len(items) > 0 && items[0].Description == "BuildLabel" {
 		// Don't muck around with the config if we're predicting build labels.
 		cli.PrintCompletions(items)

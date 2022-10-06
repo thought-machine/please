@@ -2,7 +2,6 @@ package asp
 
 import (
 	"io"
-	"io/ioutil"
 	"unicode"
 	"unicode/utf8"
 )
@@ -61,7 +60,7 @@ func NameOfReader(r io.Reader) string {
 func newLexer(r io.Reader) *lex {
 	// Read the entire file upfront to avoid bufio etc.
 	// This should work OK as long as BUILD files are relatively small.
-	b, err := ioutil.ReadAll(r)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		fail(Position{Filename: NameOfReader(r)}, err.Error())
 	}

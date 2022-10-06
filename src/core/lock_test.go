@@ -1,7 +1,6 @@
 package core
 
 import (
-	"io/ioutil"
 	"os"
 	"strconv"
 	"syscall"
@@ -42,7 +41,7 @@ func TestAcquireSharedRepoRoot(t *testing.T) {
 
 	assert.IsType(t, &os.File{}, repoLockFile)
 
-	contents, err := ioutil.ReadFile(repoLockFile.Name())
+	contents, err := os.ReadFile(repoLockFile.Name())
 	assert.Equal(t, strconv.Itoa(os.Getpid()), string(contents))
 	assert.NoError(t, err)
 }
@@ -53,7 +52,7 @@ func TestAcquireExclusiveRepoRoot(t *testing.T) {
 
 	assert.IsType(t, &os.File{}, repoLockFile)
 
-	contents, err := ioutil.ReadFile(repoLockFile.Name())
+	contents, err := os.ReadFile(repoLockFile.Name())
 	assert.Equal(t, strconv.Itoa(os.Getpid()), string(contents))
 	assert.NoError(t, err)
 }
@@ -139,7 +138,7 @@ func TestAcquireExclusiveFileLock(t *testing.T) {
 
 	assert.IsType(t, &os.File{}, file)
 
-	contents, err := ioutil.ReadFile("path/to/file")
+	contents, err := os.ReadFile("path/to/file")
 	assert.Equal(t, strconv.Itoa(os.Getpid()), string(contents))
 	assert.NoError(t, err)
 }

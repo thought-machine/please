@@ -4,7 +4,6 @@ package test
 import (
 	"fmt"
 	"go/build"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -76,7 +75,7 @@ func findCoverVars(filepath, importPath, testPackage string, external bool, srcs
 		}
 	}
 
-	fi, err := ioutil.ReadDir(dir)
+	fi, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}

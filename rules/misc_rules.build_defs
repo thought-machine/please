@@ -520,7 +520,6 @@ def text_file(name:str, content:str, hashes:list=None, data:list|dict=[], out:st
         exported_deps = exported_deps,
         test_only = test_only,
         labels = labels,
-        sandbox = False,
         entry_points = entry_points,
     )
 

@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"sort"
@@ -531,7 +530,7 @@ func (c *Client) dialOpts() ([]grpc.DialOption, error) {
 	if c.state.Config.Remote.TokenFile == "" {
 		return opts, nil
 	}
-	token, err := ioutil.ReadFile(c.state.Config.Remote.TokenFile)
+	token, err := os.ReadFile(c.state.Config.Remote.TokenFile)
 	if err != nil {
 		return opts, fmt.Errorf("Failed to load token from file: %s", err)
 	}

@@ -2,7 +2,6 @@ package update
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -56,10 +55,10 @@ func TestLinkNewFile(t *testing.T) {
 	c := makeConfig("linknewfile")
 	dir := path.Join(c.Please.Location, c.Please.Version.String())
 	assert.NoError(t, os.MkdirAll(dir, core.DirPermissions))
-	assert.NoError(t, ioutil.WriteFile(path.Join(dir, "please"), []byte("test"), 0775))
+	assert.NoError(t, os.WriteFile(path.Join(dir, "please"), []byte("test"), 0775))
 	linkNewFile(c, "please")
 	assert.True(t, core.PathExists(path.Join(c.Please.Location, "please")))
-	assert.NoError(t, ioutil.WriteFile(path.Join(c.Please.Location, "exists"), []byte("test"), 0775))
+	assert.NoError(t, os.WriteFile(path.Join(c.Please.Location, "exists"), []byte("test"), 0775))
 }
 
 func TestDownloadNewPlease(t *testing.T) {
@@ -167,7 +166,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	} else if r.URL.Path == "/latest_prerelease_version" {
 		w.Write([]byte("43.0.0-beta.1"))
 	} else if r.URL.Path == vCurrent || r.URL.Path == v42 {
-		b, err := ioutil.ReadFile("src/update/please_test")
+		b, err := os.ReadFile("src/update/please_test")
 		if err != nil {
 			panic(err)
 		}

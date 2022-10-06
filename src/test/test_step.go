@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -537,7 +536,7 @@ func moveOutputFile(state *core.BuildState, hash []byte, from, to, dummy string)
 		if dummy == "" {
 			return nil
 		}
-		if err := ioutil.WriteFile(to, []byte(dummy), 0644); err != nil {
+		if err := os.WriteFile(to, []byte(dummy), 0644); err != nil {
 			return err
 		}
 	} else if err := os.Rename(from, to); err != nil {

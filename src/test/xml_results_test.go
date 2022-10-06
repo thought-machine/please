@@ -3,7 +3,7 @@ package test
 import (
 	"bytes"
 	"compress/gzip"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,7 +38,7 @@ func TestUpload(t *testing.T) {
 	results := map[string][]byte{}
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
-		b, err := ioutil.ReadAll(r.Body)
+		b, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
 		results[r.URL.Path] = b
 	}))
@@ -59,7 +59,7 @@ func TestUploadGzipped(t *testing.T) {
 		defer r.Body.Close()
 		body, err := gzip.NewReader(r.Body)
 		assert.NoError(t, err)
-		b, err := ioutil.ReadAll(body)
+		b, err := io.ReadAll(body)
 		assert.NoError(t, err)
 		results[r.URL.Path] = b
 	}))
