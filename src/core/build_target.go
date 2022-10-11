@@ -139,7 +139,7 @@ type BuildTarget struct {
 	// Debug related fields.
 	Debug *DebugFields
 	// If ShowProgress is true, this is used to store the current progress of the target.
-	Progress float32 `print:"false"`
+	Progress atomicFloat32 `print:"false"`
 	// For remote_files, this is the total size of the download (if known)
 	FileSize uint64 `print:"false"`
 	// Description displayed while the command is building.
@@ -1758,7 +1758,7 @@ func (target *BuildTarget) ShouldExitOnError() bool {
 
 // SetProgress sets the current progress of this target.
 func (target *BuildTarget) SetProgress(progress float32) {
-	target.Progress = progress
+	target.Progress.Store(progress)
 }
 
 // BuildCouldModifyTarget will return true when the action of building this target could change the target itself e.g.

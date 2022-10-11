@@ -158,12 +158,17 @@ func (d *interactiveDisplay) printLines(local, remote []buildingTarget) {
 func (d *interactiveDisplay) printRow(target *buildingTarget, now time.Time, remote bool) int {
 	label := target.Label.Parent()
 	duration := now.Sub(target.Started).Seconds()
-	if target.Active && target.Target != nil && target.Target.ShouldShowProgress() && target.Target.Progress > 0.0 {
-		if target.Target.Progress > 1.0 && target.Target.Progress < 100.0 && target.Target.Progress != target.LastProgress {
-			proportionDone := target.Target.Progress / 100.0
+	progress := float32(0.0)
+	if target.Target != nil {
+		progress = target.Target.Progress.Load()
+	}
+	if target.Active && target.Target.ShouldShowProgress() && progress > 0.0 {
+
+		if progress > 1.0 && progress < 100.0 && progress != target.LastProgress {
+			proportionDone := progress / 100.0
 			perPercent := float32(duration) / proportionDone
 			target.Eta = time.Duration(perPercent * (1.0 - proportionDone) * float32(time.Second)).Truncate(time.Second)
-			target.LastProgress = target.Target.Progress
+			target.LastProgress = progress
 			fileSize := atomic.LoadUint64(&target.Target.FileSize)
 			if fileSize > 0 {
 				// Round the download speed to a multiple of 10kB which makes the display jitter around less
