@@ -1217,7 +1217,7 @@ type progressReader struct {
 func (r *progressReader) Read(b []byte) (int, error) {
 	n, err := r.Reader.Read(b)
 	r.Done += float32(n)
-	r.Target.Progress = 100.0 * r.Done / r.Total
+	r.Target.Progress.Store(100.0 * r.Done / r.Total)
 	return n, err
 }
 
