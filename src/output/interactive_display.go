@@ -163,7 +163,6 @@ func (d *interactiveDisplay) printRow(target *buildingTarget, now time.Time, rem
 		progress = target.Target.Progress.Load()
 	}
 	if target.Active && target.Target.ShouldShowProgress() && progress > 0.0 {
-
 		if progress > 1.0 && progress < 100.0 && progress != target.LastProgress {
 			proportionDone := progress / 100.0
 			perPercent := float32(duration) / proportionDone
@@ -180,14 +179,14 @@ func (d *interactiveDisplay) printRow(target *buildingTarget, now time.Time, rem
 		if target.Eta > 0 {
 			if target.BPS != 0.0 {
 				d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, %s/s, est %s remaining)${ERASE_AFTER}\n",
-					duration, target.Colour, label, target.Description, target.Target.Progress, humanize.Bytes(uint64(target.BPS)), target.Eta)
+					duration, target.Colour, label, target.Description, target.Target.Progress.Load(), humanize.Bytes(uint64(target.BPS)), target.Eta)
 			} else {
 				d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, est %s remaining)${ERASE_AFTER}\n",
-					duration, target.Colour, label, target.Description, target.Target.Progress, target.Eta)
+					duration, target.Colour, label, target.Description, target.Target.Progress.Load(), target.Eta)
 			}
 		} else {
 			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%% complete)${ERASE_AFTER}\n",
-				duration, target.Colour, label, target.Description, target.Target.Progress)
+				duration, target.Colour, label, target.Description, target.Target.Progress.Load())
 		}
 	} else if target.Active {
 		d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${ERASE_AFTER}\n",
