@@ -618,7 +618,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
             flags:str='', sandbox:bool=None, cgo:bool=False, filter_srcs:bool=True,
             external:bool=False, timeout:int=0, flaky:bool|int=0, test_outputs:list=[],
             labels:list&features&tags=[], size:str=None, static:bool=CONFIG.GO_DEFAULT_STATIC,
-            definitions:str|list|dict=None):
+            definitions:str|list|dict=None, env:dict=None):
     """Defines a Go test rule.
 
     Args:
@@ -650,6 +650,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
                      when calling the Go linker.  If set to a list, pass each value as a
                      definition to the linker.  If set to a dict, each key/value pair is
                      used to contruct the list of definitions passed to the linker.
+      env (dict): Environment variables to set within the test
     """
     test_package = name + '_lib'
     # Unfortunately we have to recompile this to build the test together with its library.
@@ -765,6 +766,7 @@ def go_test(name:str, srcs:list, resources:list=None, data:list|dict=None, deps:
         needs_transitive_deps = True,
         output_is_complete = True,
         pre_build = _collect_linker_flags(static, definitions),
+        env = env,
     )
 
 
