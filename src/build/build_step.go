@@ -41,6 +41,7 @@ var errStop = fmt.Errorf("stopping build")
 // httpClient is the shared http client that we use for fetching remote files.
 var httpClient *retryablehttp.Client
 var httpClientOnce sync.Once
+var httpClientLimiter chan struct{}
 
 var magicSourcesWorkerKey = "WORKER"
 
@@ -145,17 +146,17 @@ func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) erro
 
 // Builds a single target
 // This function takes the following steps:
-// 1) Check if we have already built the rule
-//    a) checks the hashes on xargs of all input files (rule, config, source, secret)
-//    b) re-applies any updates that might have happened during build (the post-build and output dirs)
-//    c) re-checks the hashes to see if those updates changed anything and need to re-build otherwise returns (nothing to do)
-// 2) Checks if we have the build output cached
-//    a) if the action of building this target could've changed how we calculate the output hash,
-//       i)  attempt to fetch just the MD from the cache based on the old hashkey
-//       ii) apply these updates to the outs based on the stored metadata (out dirs + run post build action)
-//    b) attempt to fetch the outputs from the cache based on the output hash
-// 3) Actually build the rule
-// 4) Store result in the cache
+//  1. Check if we have already built the rule
+//     a) checks the hashes on xargs of all input files (rule, config, source, secret)
+//     b) re-applies any updates that might have happened during build (the post-build and output dirs)
+//     c) re-checks the hashes to see if those updates changed anything and need to re-build otherwise returns (nothing to do)
+//  2. Checks if we have the build output cached
+//     a) if the action of building this target could've changed how we calculate the output hash,
+//     i)  attempt to fetch just the MD from the cache based on the old hashkey
+//     ii) apply these updates to the outs based on the stored metadata (out dirs + run post build action)
+//     b) attempt to fetch the outputs from the cache based on the output hash
+//  3. Actually build the rule
+//  4. Store result in the cache
 func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -446,9 +447,9 @@ func storeInCache(cache core.Cache, target *core.BuildTarget, key []byte, files 
 }
 
 // retrieveArtifacts attempts to retrieve artifacts from the cache
-//   1) if there are no declared outputs, return true; there's nothing to be done
-//   2) pull all the declared outputs from the cache has based on the short hash of the target
-//   3) check that pulling the artifacts changed the output hash and set the build state accordingly
+//  1. if there are no declared outputs, return true; there's nothing to be done
+//  2. pull all the declared outputs from the cache has based on the short hash of the target
+//  3. check that pulling the artifacts changed the output hash and set the build state accordingly
 func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget, oldOutputHash []byte) bool {
 	// If there aren't any outputs, we don't have to do anything right now.
 	// Checks later will handle the case of something with a post-build function that
@@ -1064,6 +1065,7 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 		}
 
 		httpClient.HTTPClient.Timeout = time.Duration(state.Config.Build.Timeout)
+		httpClientLimiter = make(chan struct{}, state.Config.Build.ParallelDownloads)
 	})
 
 	if err := prepareDirectory(state.ProcessExecutor, target.OutDir(), false); err != nil {
@@ -1083,6 +1085,9 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 }
 
 func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url string) error {
+	httpClientLimiter <- struct{}{}
+	defer func() { <-httpClientLimiter }()
+
 	env := core.BuildEnvironment(state, target, path.Join(core.RepoRoot, target.TmpDir()))
 	url = os.Expand(url, env.ReplaceEnvironment)
 	tmpPath := path.Join(target.TmpDir(), target.Outputs()[0])
