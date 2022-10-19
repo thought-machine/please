@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -70,7 +70,7 @@ func (label BuildLabel) ShortString(context BuildLabel) string {
 		return label.String()
 	} else if label.PackageName == context.PackageName {
 		return ":" + label.Name
-	} else if label.Name == path.Base(label.PackageName) {
+	} else if label.Name == filepath.Base(label.PackageName) {
 		return "//" + label.PackageName
 	}
 	label.Subrepo = ""
@@ -272,7 +272,7 @@ func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 		return TryParseBuildLabel(target, subdir, "")
 	}
 	// Presumably it's just underneath this directory (note that if it was absolute we returned above)
-	return TryParseBuildLabel("//"+path.Join(subdir, target), "", "")
+	return TryParseBuildLabel("//"+filepath.Join(subdir, target), "", "")
 }
 
 // ParseBuildLabels parses a bunch of build labels from strings. It dies on failure.
@@ -345,7 +345,7 @@ func (label BuildLabel) FullPaths(graph *BuildGraph) []string {
 func addPathPrefix(paths []string, prefix string) []string {
 	ret := make([]string, len(paths))
 	for i, output := range paths {
-		ret[i] = path.Join(prefix, output)
+		ret[i] = filepath.Join(prefix, output)
 	}
 	return ret
 }

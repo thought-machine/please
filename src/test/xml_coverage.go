@@ -5,7 +5,7 @@ package test
 import (
 	"encoding/xml"
 	"math"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -53,7 +53,7 @@ func coverageResultToXML(sources []core.BuildLabel, coverage core.TestCoverage) 
 	// get the string representative of sources
 	sourcesAsStr := make([]string, len(sources))
 	for i, source := range sources {
-		sourcesAsStr[i] = path.Join(core.RepoRoot, source.PackageName)
+		sourcesAsStr[i] = filepath.Join(core.RepoRoot, source.PackageName)
 	}
 
 	// Get the list of packages for <package> tag in the coverage xml file

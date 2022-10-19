@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -61,7 +60,7 @@ func NewWriter(entryPoint, interpreter, options, stamp string, zipSafe, noSite b
 // SetShebang sets the leading shebang that will be written to the file.
 func (pw *Writer) SetShebang(shebang string, options string) {
 	shebang = strings.TrimSpace(fmt.Sprintf("%s %s", shebang, options))
-	if !path.IsAbs(shebang) {
+	if !filepath.IsAbs(shebang) {
 		shebang = "/usr/bin/env " + shebang
 	}
 	if pw.noSite {
@@ -211,7 +210,7 @@ func pythonBool(b bool) string { //nolint:unused
 
 // toPythonPath converts a normal path to a Python import path.
 func toPythonPath(p string) string {
-	ext := path.Ext(p)
+	ext := filepath.Ext(p)
 	return strings.ReplaceAll(p[:len(p)-len(ext)], "/", ".")
 }
 

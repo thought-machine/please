@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -106,15 +105,15 @@ func (f *File) Close() {
 }
 
 // AddZipFile copies the contents of a zip file into the new zipfile.
-func (f *File) AddZipFile(filepath string) error {
-	r, err := zip.OpenReader(filepath)
+func (f *File) AddZipFile(path string) error {
+	r, err := zip.OpenReader(path)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
 
 	// Reopen file to get a directly readable version without decompression.
-	r2, err := os.Open(filepath)
+	r2, err := os.Open(path)
 	if err != nil {
 		return err
 	}
@@ -129,7 +128,7 @@ func (f *File) AddZipFile(filepath string) error {
 	}
 
 	for _, rf := range r.File {
-		log.Debug("Found file %s (from %s)", rf.Name, filepath)
+		log.Debug("Found file %s (from %s)", rf.Name, path)
 		if !f.shouldInclude(rf.Name) {
 			continue
 		}
@@ -162,11 +161,11 @@ func (f *File) AddZipFile(filepath string) error {
 			// TODO(pebers): Bit of a hack ignoring it when CRC is 0, would be better to add
 			//               the correct CRC when added through WriteFile.
 			if existing.CRC32 == rf.CRC32 || existing.CRC32 == 0 {
-				log.Info("Skipping %s / %s: already added (from %s)", filepath, rf.Name, existing.ZipFile)
+				log.Info("Skipping %s / %s: already added (from %s)", path, rf.Name, existing.ZipFile)
 				continue
 			}
 			if f.Strict {
-				log.Error("Duplicate file %s (from %s, already added from %s); crc %d / %d", rf.Name, filepath, existing.ZipFile, rf.CRC32, existing.CRC32)
+				log.Error("Duplicate file %s (from %s, already added from %s); crc %d / %d", rf.Name, path, existing.ZipFile, rf.CRC32, existing.CRC32)
 				return fmt.Errorf("File %s already added to destination zip file (from %s)", rf.Name, existing.ZipFile)
 			}
 			continue
@@ -176,7 +175,7 @@ func (f *File) AddZipFile(filepath string) error {
 			rf.Name = strings.TrimPrefix(rf.Name, f.StripPrefix)
 		}
 		if f.Prefix != "" {
-			rf.Name = path.Join(f.Prefix, rf.Name)
+			rf.Name = filepath.Join(f.Prefix, rf.Name)
 		}
 		if f.StripPy && strings.HasSuffix(rf.Name, ".py") {
 			pyc := rf.Name + "c"
@@ -197,7 +196,7 @@ func (f *File) AddZipFile(filepath string) error {
 		// Java tools don't seem to like writing a data descriptor for stored items.
 		// Unsure if this is a limitation of the format or a problem of those tools.
 		rf.Flags = 0
-		f.addExistingFile(rf.Name, filepath, rf.CompressedSize64, rf.UncompressedSize64, rf.CRC32)
+		f.addExistingFile(rf.Name, path, rf.CompressedSize64, rf.UncompressedSize64, rf.CRC32)
 		if isDir {
 			if _, err := f.w.CreateHeader(&rf.FileHeader); err != nil {
 				return err
@@ -271,7 +270,7 @@ func (f *File) walk(path string, mode fs.Mode) error {
 func (f *File) renamePathIfNeeded(name string, isDir bool) string {
 	for before, after := range f.RenameDirs {
 		if strings.HasPrefix(name, before) {
-			name = path.Join(after, strings.TrimPrefix(name, before))
+			name = filepath.Join(after, strings.TrimPrefix(name, before))
 			if isDir {
 				name += "/"
 			}
@@ -283,15 +282,15 @@ func (f *File) renamePathIfNeeded(name string, isDir bool) string {
 
 // samePaths returns true if two paths are the same (taking relative/absolute paths into account).
 func samePaths(a, b string) bool {
-	if path.IsAbs(a) && path.IsAbs(b) {
+	if filepath.IsAbs(a) && filepath.IsAbs(b) {
 		return a == b
 	}
 	wd, _ := os.Getwd()
-	if !path.IsAbs(a) {
-		a = path.Join(wd, a)
+	if !filepath.IsAbs(a) {
+		a = filepath.Join(wd, a)
 	}
-	if !path.IsAbs(b) {
-		b = path.Join(wd, b)
+	if !filepath.IsAbs(b) {
+		b = filepath.Join(wd, b)
 	}
 	return a == b
 }
@@ -357,7 +356,7 @@ func (f *File) AddInitPyFiles() error {
 			if filepath.Base(d) == "__pycache__" {
 				break // Don't need to add an __init__.py here.
 			}
-			initPyPath := path.Join(d, "__init__.py")
+			initPyPath := filepath.Join(d, "__init__.py")
 			// Don't write one at the root, it's not necessary.
 			if _, present := f.files[initPyPath]; present || initPyPath == "__init__.py" {
 				if n == "__init__.py" && d == filepath.Dir(p) {
@@ -439,7 +438,7 @@ func (f *File) handleConcatenatedFiles() error {
 
 // WriteFile writes a complete file to the writer.
 func (f *File) WriteFile(filename string, data []byte, mode os.FileMode) error {
-	filename = path.Join(f.Prefix, filename)
+	filename = filepath.Join(f.Prefix, filename)
 	fh := zip.FileHeader{
 		Name:   filename,
 		Method: zip.Deflate,
@@ -465,7 +464,7 @@ func (f *File) WriteFile(filename string, data []byte, mode os.FileMode) error {
 
 // WriteDir writes a directory entry to the writer.
 func (f *File) WriteDir(filename string) error {
-	filename = path.Join(f.Prefix, filename)
+	filename = filepath.Join(f.Prefix, filename)
 	filename += "/" // Must have trailing slash to tell it it's a directory.
 	fh := zip.FileHeader{
 		Name:   filename,

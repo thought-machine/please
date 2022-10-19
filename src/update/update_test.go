@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -53,21 +53,21 @@ func TestFileMode(t *testing.T) {
 
 func TestLinkNewFile(t *testing.T) {
 	c := makeConfig("linknewfile")
-	dir := path.Join(c.Please.Location, c.Please.Version.String())
+	dir := filepath.Join(c.Please.Location, c.Please.Version.String())
 	assert.NoError(t, os.MkdirAll(dir, core.DirPermissions))
-	assert.NoError(t, os.WriteFile(path.Join(dir, "please"), []byte("test"), 0775))
+	assert.NoError(t, os.WriteFile(filepath.Join(dir, "please"), []byte("test"), 0775))
 	linkNewFile(c, "please")
-	assert.True(t, core.PathExists(path.Join(c.Please.Location, "please")))
-	assert.NoError(t, os.WriteFile(path.Join(c.Please.Location, "exists"), []byte("test"), 0775))
+	assert.True(t, core.PathExists(filepath.Join(c.Please.Location, "please")))
+	assert.NoError(t, os.WriteFile(filepath.Join(c.Please.Location, "exists"), []byte("test"), 0775))
 }
 
 func TestDownloadNewPlease(t *testing.T) {
 	c := makeConfig("downloadnewplease")
 	downloadPlease(c, false, true)
 	// Should have written new file
-	assert.True(t, core.PathExists(path.Join(c.Please.Location, c.Please.Version.String(), "please")))
+	assert.True(t, core.PathExists(filepath.Join(c.Please.Location, c.Please.Version.String(), "please")))
 	// Should not have written this yet though
-	assert.False(t, core.PathExists(path.Join(c.Please.Location, "please")))
+	assert.False(t, core.PathExists(filepath.Join(c.Please.Location, "please")))
 	// Panics because it's not a valid .tar.gz
 	c.Please.Version.UnmarshalFlag("1.0.0")
 	assert.Panics(t, func() { downloadPlease(c, false, true) })
@@ -141,7 +141,7 @@ func TestDownloadAndLinkPleaseBadVersion(t *testing.T) {
 	c := makeConfig("downloadandlink")
 	assert.Panics(t, func() { downloadAndLinkPlease(c, false, true) })
 	// Should have deleted the thing it downloaded.
-	assert.False(t, core.PathExists(path.Join(c.Please.Location, c.Please.Version.String())))
+	assert.False(t, core.PathExists(filepath.Join(c.Please.Location, c.Please.Version.String())))
 }
 
 func TestFilterArgs(t *testing.T) {
@@ -181,7 +181,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func makeConfig(dir string) *core.Configuration {
 	c := core.DefaultConfiguration()
 	wd, _ := os.Getwd()
-	c.Please.Location = path.Join(wd, dir)
+	c.Please.Location = filepath.Join(wd, dir)
 	c.Please.DownloadLocation.UnmarshalFlag(server.URL)
 	c.Please.Version.UnmarshalFlag("42.0.0")
 	return c

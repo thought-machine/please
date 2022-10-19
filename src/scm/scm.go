@@ -3,7 +3,7 @@
 package scm
 
 import (
-	"path"
+	"path/filepath"
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/fs"
@@ -41,7 +41,7 @@ type SCM interface {
 // New returns a new SCM instance for this repo root.
 // It returns nil if there is no known implementation there.
 func New(repoRoot string) SCM {
-	if fs.PathExists(path.Join(repoRoot, ".git")) {
+	if fs.PathExists(filepath.Join(repoRoot, ".git")) {
 		return &git{repoRoot: repoRoot}
 	}
 	return nil

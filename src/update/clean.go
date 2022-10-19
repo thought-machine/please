@@ -3,7 +3,7 @@ package update
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"sort"
 
 	"github.com/coreos/go-semver/semver"
@@ -40,7 +40,7 @@ func clean(config *core.Configuration, manualUpdate bool) {
 	sort.Sort(versions)
 	for _, version := range versions[:numToClean] {
 		log.Notice("Cleaning old version %s...", version)
-		if err := os.RemoveAll(path.Join(config.Please.Location, version.String())); err != nil {
+		if err := os.RemoveAll(filepath.Join(config.Please.Location, version.String())); err != nil {
 			log.Error("Couldn't remove %s: %s", version, err)
 		}
 	}

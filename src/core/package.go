@@ -2,7 +2,7 @@ package core
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -212,7 +212,7 @@ func (pkg *Package) verifyOutputs() []string {
 	defer pkg.mutex.RUnlock()
 	ret := []string{}
 	for filename, target := range pkg.Outputs {
-		for dir := path.Dir(filename); dir != "."; dir = path.Dir(dir) {
+		for dir := filepath.Dir(filename); dir != "."; dir = filepath.Dir(dir) {
 			if target2, present := pkg.Outputs[dir]; present && target2 != target && !(target.HasDependency(target2.Label.Parent()) || target.HasDependency(target2.Label)) {
 				ret = append(ret, fmt.Sprintf("Target %s outputs files into the directory %s, which is separately output by %s. This can cause errors based on build order - you should add a dependency.", target.Label, dir, target2.Label))
 			}
@@ -235,12 +235,12 @@ func FindOwningPackages(state *BuildState, files []string) []BuildLabel {
 
 // FindOwningPackage returns a build label identifying the package that owns a given file.
 func FindOwningPackage(state *BuildState, file string) BuildLabel {
-	f := path.Dir(file)
+	f := filepath.Dir(file)
 	for f != "." {
 		if fs.IsPackage(state.Config.Parse.BuildFileName, f) {
 			return BuildLabel{PackageName: f, Name: "all"}
 		}
-		f = path.Dir(f)
+		f = filepath.Dir(f)
 	}
 	return BuildLabel{PackageName: "", Name: "all"}
 }

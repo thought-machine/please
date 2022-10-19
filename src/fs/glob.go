@@ -2,7 +2,6 @@ package fs
 
 import (
 	"fmt"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -224,7 +223,7 @@ func shouldExcludeMatch(root, match string, excludes []string) (bool, error) {
 		// If the exclude pattern doesn't contain any slashes and the match does, we only match against the base of the
 		// match path.
 		if strings.ContainsRune(match, '/') && !strings.ContainsRune(excl, '/') {
-			m = path.Base(match)
+			m = filepath.Base(match)
 			rootPath = ""
 		}
 
