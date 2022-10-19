@@ -1,3 +1,12 @@
+Version 16.23.0
+---------------
+
+    * `remote_file` downloads are now limited in parallelism, defaulting to 4 simultaneously (#2545)
+    * `plz exec` now takes an `--env` argument to set environment variables (#2561)
+    * `go_test` allows setting `env` (#2560)
+    * Fix benign race condition in progress code (#2528, #2559)
+
+
 Version 16.22.1
 ---------------
 
