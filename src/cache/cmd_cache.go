@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"io"
 	"os/exec"
-	"path"
+	"path/filepath"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -118,7 +118,7 @@ func write(w io.WriteCloser, target *core.BuildTarget, files []string, cancel co
 	outDir := target.OutDir()
 
 	for _, out := range files {
-		if err := fs.Walk(path.Join(outDir, out), func(name string, isDir bool) error {
+		if err := fs.Walk(filepath.Join(outDir, out), func(name string, isDir bool) error {
 			return storeFile(tw, name)
 		}); err != nil {
 			log.Warning("Error sending artifacts to command-driven cache: %s", err)

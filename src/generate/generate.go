@@ -1,7 +1,6 @@
 package generate
 
 import (
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -52,9 +51,9 @@ func LinkGeneratedSources(state *core.BuildState, labels []core.BuildLabel) {
 		target := state.Graph.TargetOrDie(l)
 		if target.HasLabel("codegen") {
 			for _, out := range target.Outputs() {
-				destDir := path.Join(core.RepoRoot, target.Label.PackageDir())
-				srcDir := path.Join(core.RepoRoot, target.OutDir())
-				fs.LinkDestination(path.Join(srcDir, out), path.Join(destDir, out), linker)
+				destDir := filepath.Join(core.RepoRoot, target.Label.PackageDir())
+				srcDir := filepath.Join(core.RepoRoot, target.OutDir())
+				fs.LinkDestination(filepath.Join(srcDir, out), filepath.Join(destDir, out), linker)
 			}
 			if state.Config.Build.UpdateGitignore {
 				if err := UpdateGitignore(state.Graph, labels, vcs.FindClosestIgnoreFile(target.Label.PackageDir())); err != nil {

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -66,8 +65,8 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		return
 	}
 
-	outputFile := path.Join(target.TestDir(run), core.TestResultsFile)
-	coverageFile := path.Join(target.TestDir(run), core.CoverageFile)
+	outputFile := filepath.Join(target.TestDir(run), core.TestResultsFile)
+	coverageFile := filepath.Join(target.TestDir(run), core.CoverageFile)
 	needCoverage := target.NeedCoverage(state)
 
 	// If the user passed --shell then just prepare the directory.
@@ -117,7 +116,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			log.Debug("Not caching results for %s, test had failures", label)
 			return true
 		}
-		outs := []string{path.Base(target.TestResultsFile())}
+		outs := []string{filepath.Base(target.TestResultsFile())}
 		if err := moveOutputFile(state, hash, outputFile, target.TestResultsFile(), dummyOutput); err != nil {
 			state.LogTestResult(tid, target, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
 			return false
@@ -128,11 +127,11 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 				state.LogTestResult(tid, target, core.TargetTestFailed, results, coverage, err, "Failed to move test coverage file")
 				return false
 			}
-			outs = append(outs, path.Base(target.CoverageFile()))
+			outs = append(outs, filepath.Base(target.CoverageFile()))
 		}
 		for _, output := range target.Test.Outputs {
-			tmpFile := path.Join(target.TestDir(run), output)
-			outFile := path.Join(target.OutDir(), output)
+			tmpFile := filepath.Join(target.TestDir(run), output)
+			outFile := filepath.Join(target.OutDir(), output)
 			if err := moveOutputFile(state, hash, tmpFile, outFile, ""); err != nil {
 				state.LogTestResult(tid, target, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
 				return false
@@ -164,9 +163,9 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		}
 		log.Debug("Output file %s does not exist for %s", target.TestResultsFile(), target.Label)
 		// Check the cache for these artifacts.
-		files := []string{path.Base(target.TestResultsFile())}
+		files := []string{filepath.Base(target.TestResultsFile())}
 		if needCoverage {
-			files = append(files, path.Base(target.CoverageFile()))
+			files = append(files, filepath.Base(target.CoverageFile()))
 		}
 		return !retrieveFromCache(state, target, hash, files)
 	}
@@ -341,7 +340,7 @@ func pluralise(word string, quantity int) string {
 // testCommandAndEnv returns the test command & environment for a target.
 func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget, run int) (string, []string, error) {
 	replacedCmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
-	env := core.TestEnvironment(state, target, path.Join(core.RepoRoot, target.TestDir(run)))
+	env := core.TestEnvironment(state, target, filepath.Join(core.RepoRoot, target.TestDir(run)))
 	if len(state.TestArgs) > 0 {
 		replacedCmd += " " + strings.Join(state.TestArgs, " ")
 	}
@@ -389,12 +388,12 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 		metadata = &core.BuildMetadata{Stdout: stdout}
 	}
 
-	coverage := parseCoverageFile(target, path.Join(target.TestDir(run), core.CoverageFile), run)
+	coverage := parseCoverageFile(target, filepath.Join(target.TestDir(run), core.CoverageFile), run)
 
 	var data [][]byte
 	// If this test is meant to produce an output file and the test ran successfully
 	if !target.Test.NoOutput {
-		d, readErr := readTestResultsDir(path.Join(target.TestDir(run), core.TestResultsFile))
+		d, readErr := readTestResultsDir(filepath.Join(target.TestDir(run), core.TestResultsFile))
 		if readErr != nil {
 			// If we got an error running the tests, this is probably to be expected and not worth warning about
 			if err == nil {
@@ -519,7 +518,7 @@ func RemoveTestOutputs(target *core.BuildTarget) error {
 		return err
 	}
 	for _, output := range target.Test.Outputs {
-		if err := os.RemoveAll(path.Join(target.OutDir(), output)); err != nil {
+		if err := os.RemoveAll(filepath.Join(target.OutDir(), output)); err != nil {
 			return err
 		}
 	}

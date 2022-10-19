@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"path"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/sourcegraph/go-lsp"
 	"github.com/sourcegraph/jsonrpc2"
 	"github.com/stretchr/testify/assert"
 
@@ -26,11 +24,11 @@ func TestInitialize(t *testing.T) {
 	result := &lsp.InitializeResult{}
 	err := h.Request("initialize", &lsp.InitializeParams{
 		Capabilities: lsp.ClientCapabilities{},
-		RootURI:      lsp.DocumentURI("file://" + path.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data")),
+		RootURI:      lsp.DocumentURI("file://" + filepath.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data")),
 	}, result)
 	assert.NoError(t, err)
 	assert.True(t, result.Capabilities.TextDocumentSync.Options.OpenClose)
-	assert.Equal(t, path.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data"), h.root)
+	assert.Equal(t, filepath.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data"), h.root)
 }
 
 func TestInitializeNoURI(t *testing.T) {
@@ -523,7 +521,7 @@ func TestDiagnostics(t *testing.T) {
 	msg := <-r.Notifications
 	assert.Equal(t, "textDocument/publishDiagnostics", msg.Method)
 	assert.Equal(t, &lsp.PublishDiagnosticsParams{
-		URI: lsp.DocumentURI("file://" + path.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data/test/test.build")),
+		URI: lsp.DocumentURI("file://" + filepath.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data/test/test.build")),
 		Diagnostics: []lsp.Diagnostic{
 			{
 				Range: lsp.Range{
@@ -557,7 +555,7 @@ func initHandler() *Handler {
 	result := &lsp.InitializeResult{}
 	if err := h.Request("initialize", &lsp.InitializeParams{
 		Capabilities: lsp.ClientCapabilities{},
-		RootURI:      lsp.DocumentURI("file://" + path.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data")),
+		RootURI:      lsp.DocumentURI("file://" + filepath.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data")),
 	}, result); err != nil {
 		log.Fatalf("init failed: %s", err)
 	}

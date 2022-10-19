@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -74,7 +74,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	env := TargetEnvironment(state, target)
 	sources := target.AllSourcePaths(state.Graph)
 	outEnv := target.GetTmpOutputAll(target.Outputs())
-	abs := path.IsAbs(tmpDir)
+	abs := filepath.IsAbs(tmpDir)
 
 	env = append(env,
 		"TMP_DIR="+tmpDir,
@@ -126,8 +126,8 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		// no point populating ones that we literally have no clue what they should be.
 		// To be honest I don't terribly like these, I'm pretty sure that using $GENDIR in
 		// your genrule is not a good sign.
-		env = append(env, "GENDIR="+path.Join(RepoRoot, GenDir))
-		env = append(env, "BINDIR="+path.Join(RepoRoot, BinDir))
+		env = append(env, "GENDIR="+filepath.Join(RepoRoot, GenDir))
+		env = append(env, "BINDIR="+filepath.Join(RepoRoot, BinDir))
 	}
 
 	return withUserProvidedEnv(target, env)
@@ -150,8 +150,8 @@ func withUserProvidedEnv(target *BuildTarget, env BuildEnv) BuildEnv {
 
 // TestEnvironment creates the environment variables for a test.
 func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) BuildEnv {
-	env := RuntimeEnvironment(state, target, path.IsAbs(testDir), true)
-	resultsFile := path.Join(testDir, TestResultsFile)
+	env := RuntimeEnvironment(state, target, filepath.IsAbs(testDir), true)
+	resultsFile := filepath.Join(testDir, TestResultsFile)
 
 	env = append(env,
 		"TEST_DIR="+testDir,
@@ -167,7 +167,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
 		env = append(env,
 			"COVERAGE=true",
-			"COVERAGE_FILE="+path.Join(testDir, CoverageFile),
+			"COVERAGE_FILE="+filepath.Join(testDir, CoverageFile),
 		)
 	}
 	if len(target.Outputs()) > 0 {
@@ -175,7 +175,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string) Bui
 	}
 	// Bit of a hack for gcov which needs access to its .gcno files.
 	if target.HasLabel("cc") {
-		env = append(env, "GCNO_DIR="+path.Join(RepoRoot, GenDir, target.Label.PackageName))
+		env = append(env, "GCNO_DIR="+filepath.Join(RepoRoot, GenDir, target.Label.PackageName))
 	}
 	if state.DebugFailingTests {
 		env = append(env, "DEBUG_TEST_FAILURE=true")
@@ -256,9 +256,9 @@ func RuntimeEnvironment(state *BuildState, target *BuildTarget, abs, inTmpDir bo
 func resolveOut(out string, dir string, sandbox bool) string {
 	// Bit of a hack; ideally we would be unaware of the sandbox here.
 	if sandbox && runtime.GOOS == "linux" && !strings.HasPrefix(RepoRoot, "/tmp/") && dir != "." {
-		return path.Join(SandboxDir, out)
+		return filepath.Join(SandboxDir, out)
 	}
-	return path.Join(dir, out)
+	return filepath.Join(dir, out)
 }
 
 // Creates tool-related env variables

@@ -2,7 +2,7 @@ package lsp
 
 import (
 	"context"
-	"path"
+	"path/filepath"
 
 	"github.com/sourcegraph/go-lsp"
 
@@ -18,7 +18,7 @@ func (h *Handler) diagnose(d *doc) {
 	for ast := range d.Diagnostics {
 		if diags := h.diagnostics(d, ast); !diagnosticsEqual(diags, last) {
 			h.Conn.Notify(context.Background(), "textDocument/publishDiagnostics", &lsp.PublishDiagnosticsParams{
-				URI:         lsp.DocumentURI("file://" + path.Join(h.root, d.Filename)),
+				URI:         lsp.DocumentURI("file://" + filepath.Join(h.root, d.Filename)),
 				Diagnostics: diags,
 			})
 			last = diags
@@ -29,7 +29,7 @@ func (h *Handler) diagnose(d *doc) {
 func (h *Handler) diagnostics(d *doc, ast []*asp.Statement) []lsp.Diagnostic {
 	diags := []lsp.Diagnostic{}
 	pkgLabel := core.BuildLabel{
-		PackageName: path.Dir(d.Filename),
+		PackageName: filepath.Dir(d.Filename),
 		Name:        "all",
 	}
 	asp.WalkAST(ast, func(expr *asp.Expression) bool {

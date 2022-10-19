@@ -2,7 +2,6 @@ package remote
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -171,7 +170,7 @@ func TestNoAbsolutePaths(t *testing.T) {
 	testDir := os.Getenv("TEST_DIR")
 	for _, env := range cmd.EnvironmentVariables {
 		if !strings.HasPrefix(env.Value, "//") {
-			assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
+			assert.False(t, filepath.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
 			assert.NotContains(t, env.Value, core.OutDir, "Env var %s contains %s: %s", env.Name, core.OutDir, env.Value)
 			assert.NotContains(t, env.Value, testDir, "Env var %s contains the test dir %s: %s", env.Name, testDir, env.Value)
 		}
@@ -189,7 +188,7 @@ func TestNoAbsolutePaths2(t *testing.T) {
 	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false)
 	for _, env := range cmd.EnvironmentVariables {
 		if !strings.HasPrefix(env.Value, "//") {
-			assert.False(t, path.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
+			assert.False(t, filepath.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
 			assert.NotContains(t, env.Value, core.OutDir, "Env var %s contains %s: %s", env.Name, core.OutDir, env.Value)
 		}
 	}

@@ -13,7 +13,6 @@ import (
 	"io"
 	"math/rand"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -412,7 +411,7 @@ func TestFetchLocalRemoteFile(t *testing.T) {
 
 	err := fetchRemoteFile(state, target)
 	assert.NoError(t, err)
-	assert.True(t, fs.FileExists(path.Join(target.TmpDir(), "local_remote_file.txt")))
+	assert.True(t, fs.FileExists(filepath.Join(target.TmpDir(), "local_remote_file.txt")))
 }
 
 func TestFetchLocalRemoteFileCannotBeRelative(t *testing.T) {
@@ -674,7 +673,7 @@ func TestMain(m *testing.M) {
 	logging.SetBackend(backend, backendLeveled)
 	// Move ourselves to the root of the test data tree
 	wd, _ := os.Getwd()
-	core.RepoRoot = path.Join(wd, "src/build/test_data")
+	core.RepoRoot = filepath.Join(wd, "src/build/test_data")
 	Init(core.NewDefaultBuildState())
 	if err := os.Chdir(core.RepoRoot); err != nil {
 		panic(err)

@@ -4,7 +4,7 @@ package watch
 import (
 	"context"
 	"fmt"
-	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -123,12 +123,12 @@ func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.Bu
 		for _, src := range source.Paths(state.Graph) {
 			if err := fs.Walk(src, func(src string, isDir bool) error {
 				files.Store(src, struct{}{})
-				if !path.IsAbs(src) {
+				if !filepath.IsAbs(src) {
 					files.Store("./"+src, struct{}{})
 				}
 				dir := src
 				if !isDir {
-					dir = path.Dir(src)
+					dir = filepath.Dir(src)
 				}
 				if _, present := dirs[dir]; !present {
 					log.Notice("Adding watch on %s", dir)

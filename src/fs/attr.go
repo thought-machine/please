@@ -2,7 +2,7 @@ package fs
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/pkg/xattr"
 )
@@ -39,7 +39,7 @@ func RecordAttrFile(filename string, hash []byte) error {
 }
 
 func fallbackFileName(filename string) string {
-	dir, file := path.Split(filename)
+	dir, file := filepath.Split(filename)
 	return dir + ".rule_hash_" + file
 }
 

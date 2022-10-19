@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -35,7 +34,7 @@ func InitPlugins(plugins []string) {
 	log.Debug("Initialising plugin(s): %v", plugins)
 
 	// Check that we're in a plz repo
-	configPath := path.Join(core.RepoRoot, ".plzconfig")
+	configPath := filepath.Join(core.RepoRoot, ".plzconfig")
 	if !fs.FileExists(configPath) {
 		log.Fatalf("You don't appear to be in a plz repo.")
 	}

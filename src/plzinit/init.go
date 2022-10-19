@@ -3,7 +3,6 @@ package plzinit
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -49,7 +48,7 @@ func InitConfig(dir string, bazelCompatibility bool, noPrompt bool) {
 			if noPrompt {
 				log.Fatalf("This repository is already initialised with a .plzconfig. Aborting.")
 			}
-			config := path.Join(core.RepoRoot, core.ConfigFileName)
+			config := filepath.Join(core.RepoRoot, core.ConfigFileName)
 			if !cli.PromptYN(fmt.Sprintf("You already seem to be in a plz repo (found %s). Continue", config), false) {
 				os.Exit(1)
 			}
@@ -59,7 +58,7 @@ func InitConfig(dir string, bazelCompatibility bool, noPrompt bool) {
 	if err != nil {
 		log.Warning("Can't determine absolute directory: %s", err)
 	}
-	config := path.Join(dir, core.ConfigFileName)
+	config := filepath.Join(dir, core.ConfigFileName)
 	contents := fmt.Sprintf(configTemplate, core.PleaseVersion)
 
 	if bazelCompatibility {

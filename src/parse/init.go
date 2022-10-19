@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -145,7 +145,7 @@ func createBazelSubrepo(state *core.BuildState) {
 	if sr := state.Graph.Subrepo("bazel_tools"); sr != nil {
 		return
 	}
-	dir := path.Join(core.OutDir, "bazel_tools")
+	dir := filepath.Join(core.OutDir, "bazel_tools")
 	state.Graph.AddSubrepo(&core.Subrepo{
 		Name:  "bazel_tools",
 		Root:  dir,
@@ -154,12 +154,12 @@ func createBazelSubrepo(state *core.BuildState) {
 	})
 	// TODO(peterebden): This is a bit yuck... would be nice if we could avoid hardcoding all
 	//                   this upfront and add a build target to do it for us.
-	dir = path.Join(dir, "tools/build_defs/repo")
+	dir = filepath.Join(dir, "tools/build_defs/repo")
 	if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
 		log.Fatalf("%s", err)
 	}
 	for filename, data := range bazel.AllFiles() {
-		if err := os.WriteFile(path.Join(dir, strings.ReplaceAll(filename, ".build_defs", ".bzl")), data, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, strings.ReplaceAll(filename, ".build_defs", ".bzl")), data, 0644); err != nil {
 			log.Fatalf("%s", err)
 		}
 	}

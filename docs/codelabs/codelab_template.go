@@ -3,7 +3,7 @@ package main
 import (
 	"html/template"
 	"os"
-	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
@@ -262,7 +262,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
 	l := core.ParseBuildLabelContext(string(args[0].(pyString)), s.contextPackage())
-	filename := path.Join(l.PackageName, l.Name)
+	filename := filepath.Join(l.PackageName, l.Name)
 	if l.Subrepo != "" {
 		subrepo := s.state.Graph.Subrepo(l.Subrepo)
 		if subrepo == nil || (subrepo.Target != nil && subrepo != s.contextPackage().Subrepo) {
@@ -304,7 +304,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		s.interpreter.loadPluginConfig(incPkgState, s.state, s.config)
 
 		for _, out := range t.Outputs() {
-			s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), t.Label), false)
+			s.SetAll(s.interpreter.Subinclude(filepath.Join(t.OutDir(), out), t.Label), false)
 		}
 	}
 	return None
@@ -642,7 +642,7 @@ func joinPath(s *scope, args []pyObject) pyObject {
 	for i, arg := range args {
 		l[i] = string(arg.(pyString))
 	}
-	return pyString(path.Join(l...))
+	return pyString(filepath.Join(l...))
 }
 
 func looksLikeBuildLabel(s *scope, args []pyObject) pyObject {
@@ -1055,17 +1055,17 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		// N.B. The target must be already registered on this package.
 		target = s.pkg.TargetOrDie(core.ParseBuildLabelContext(dep, s.pkg).Name)
 		if len(target.Outputs()) == 1 {
-			root = path.Join(target.OutDir(), target.Outputs()[0])
+			root = filepath.Join(target.OutDir(), target.Outputs()[0])
 		} else {
 			// TODO(jpoole): perhaps this should be a fatal error?
-			root = path.Join(target.OutDir(), name)
+			root = filepath.Join(target.OutDir(), name)
 		}
 	} else if args[PathArgIdx] != None {
 		root = string(args[PathArgIdx].(pyString))
 	}
 
 	// Base name
-	subrepoName := path.Join(s.pkg.Name, name)
+	subrepoName := filepath.Join(s.pkg.Name, name)
 	if args[PluginArgIdx].IsTruthy() {
 		subrepoName = name
 	}

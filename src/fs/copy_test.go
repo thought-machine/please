@@ -2,7 +2,7 @@ package fs
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,11 +40,11 @@ func TestLink(t *testing.T) {
 			require.NoError(t, err)
 			defer os.RemoveAll(dir)
 
-			src := path.Join(dir, "src")
+			src := filepath.Join(dir, "src")
 			if tt.srcExists {
 				require.NoError(t, os.WriteFile(src, []byte(tt.description+" src"), 0600))
 			}
-			dest := path.Join(dir, "dest")
+			dest := filepath.Join(dir, "dest")
 			if tt.destExists {
 				require.NoError(t, os.WriteFile(dest, []byte(tt.description+" dest"), 0600))
 			}
@@ -97,11 +97,11 @@ func TestSymlink(t *testing.T) {
 			require.NoError(t, err)
 			defer os.RemoveAll(dir)
 
-			src := path.Join(dir, "src")
+			src := filepath.Join(dir, "src")
 			if tt.srcExists {
 				require.NoError(t, os.WriteFile(src, []byte(tt.description+" src"), 0600))
 			}
-			dest := path.Join(dir, "dest")
+			dest := filepath.Join(dir, "dest")
 			if tt.destExists {
 				require.NoError(t, os.WriteFile(dest, []byte(tt.description+" dest"), 0600))
 			}

@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/thought-machine/please/src/cli"
@@ -66,7 +66,7 @@ func golangConfig(dir string, noPrompt bool) string {
 }
 
 func findGoModule(dir string) (string, bool) {
-	goModFile, err := os.Open(path.Join(dir, "go.mod"))
+	goModFile, err := os.Open(filepath.Join(dir, "go.mod"))
 	if err != nil {
 		return "", false
 	}

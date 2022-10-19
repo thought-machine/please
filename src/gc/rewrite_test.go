@@ -2,7 +2,7 @@ package gc
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +15,7 @@ func TestRewriteFile(t *testing.T) {
 	state := core.NewDefaultBuildState()
 	// Copy file to avoid any issues with links etc.
 	wd, _ := os.Getwd()
-	err := fs.CopyFile("src/gc/test_data/before.build", path.Join(wd, "test.build"), 0644)
+	err := fs.CopyFile("src/gc/test_data/before.build", filepath.Join(wd, "test.build"), 0644)
 	assert.NoError(t, err)
 	assert.NoError(t, RewriteFile(state, "test.build", []string{"prometheus", "cover"}))
 	rewritten, err := os.ReadFile("test.build")

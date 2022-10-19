@@ -6,7 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -161,8 +161,7 @@ func main() {
 	config := core.DefaultConfiguration()
 	if !opts.NoConfig {
 		var err error
-		config, err = core.ReadConfigFiles([]string{
-			path.Join(core.MustFindRepoRoot(), core.ConfigFileName),
+		config, err = core.ReadConfigFiles([]string{ filepath.Join(core.MustFindRepoRoot(), core.ConfigFileName),
 		}, nil)
 		if err != nil {
 			log.Fatalf("%s", err)
