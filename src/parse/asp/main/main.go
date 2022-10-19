@@ -161,8 +161,7 @@ func main() {
 	config := core.DefaultConfiguration()
 	if !opts.NoConfig {
 		var err error
-		config, err = core.ReadConfigFiles([]string{ filepath.Join(core.MustFindRepoRoot(), core.ConfigFileName),
-		}, nil)
+		config, err = core.ReadConfigFiles([]string{filepath.Join(core.MustFindRepoRoot(), core.ConfigFileName)}, nil)
 		if err != nil {
 			log.Fatalf("%s", err)
 		}
