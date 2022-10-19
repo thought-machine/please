@@ -425,7 +425,7 @@ func addMaybeNamedSecret(s *scope, name string, obj pyObject, anon func(string),
 	validateSecret := func(secret string) {
 		s.NAssert(strings.HasPrefix(secret, "//"),
 			"Secret %s of %s cannot be a build label", secret, t.Label.Name)
-		s.Assert(strings.HasPrefix(secret, "/") || strings.HasPrefix(secret, "~"),
+		s.Assert(filepath.IsAbs(secret) || strings.HasPrefix(secret, "~"),
 			"Secret '%s' of %s is not an absolute path", secret, t.Label.Name)
 	}
 
