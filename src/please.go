@@ -217,6 +217,7 @@ var opts struct {
 			OutputPath string   `long:"output_path" description:"The path to the directory to save outputs into" default:"."`
 			Output     []string `long:"out" description:"A file or folder relative to the working directory to save to the output path"`
 		} `group:"Options controlling what files to save from the working directory and where to save them"`
+		Env   map[string]string `short:"e" long:"env" description:"Environment variables to set in the execution environment"`
 		Share struct {
 			Network bool `long:"share_network" description:"Share network namespace"`
 			Mount   bool `long:"share_mount" description:"Share mount namespace"`
@@ -536,7 +537,7 @@ var buildFunctions = map[string]func() int{
 		target := state.Graph.TargetOrDie(opts.Exec.Args.Target.BuildLabel)
 		dir := target.ExecDir()
 		shouldSandbox := target.Sandbox
-		if code := exec.Exec(state, opts.Exec.Args.Target, dir, nil, opts.Exec.Args.OverrideCommandArgs, false, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
+		if code := exec.Exec(state, opts.Exec.Args.Target, dir, exec.ConvertEnv(opts.Exec.Env), opts.Exec.Args.OverrideCommandArgs, false, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
 			return code
 		}
 
@@ -560,7 +561,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		if code := exec.Sequential(state, opts.Exec.Sequential.Output, annotated, args, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
+		if code := exec.Sequential(state, opts.Exec.Sequential.Output, annotated, exec.ConvertEnv(opts.Exec.Env), args, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
 			return code
 		}
 		return 0
@@ -571,7 +572,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		if code := exec.Parallel(state, opts.Exec.Parallel.Output, time.Duration(opts.Exec.Parallel.Update), annotated, args, opts.Exec.Parallel.NumTasks, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
+		if code := exec.Parallel(state, opts.Exec.Parallel.Output, time.Duration(opts.Exec.Parallel.Update), annotated, exec.ConvertEnv(opts.Exec.Env), args, opts.Exec.Parallel.NumTasks, opts.Exec.Share.Network, opts.Exec.Share.Mount); code != 0 {
 			return code
 		}
 		return 0

@@ -40,6 +40,7 @@ var errStop = fmt.Errorf("stopping build")
 // httpClient is the shared http client that we use for fetching remote files.
 var httpClient *retryablehttp.Client
 var httpClientOnce sync.Once
+var httpClientLimiter chan struct{}
 
 var magicSourcesWorkerKey = "WORKER"
 
@@ -1063,6 +1064,7 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 		}
 
 		httpClient.HTTPClient.Timeout = time.Duration(state.Config.Build.Timeout)
+		httpClientLimiter = make(chan struct{}, state.Config.Build.ParallelDownloads)
 	})
 
 	if err := prepareDirectory(state.ProcessExecutor, target.OutDir(), false); err != nil {
@@ -1082,6 +1084,9 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 }
 
 func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url string) error {
+	httpClientLimiter <- struct{}{}
+	defer func() { <-httpClientLimiter }()
+
 	env := core.BuildEnvironment(state, target, filepath.Join(core.RepoRoot, target.TmpDir()))
 	url = os.Expand(url, env.ReplaceEnvironment)
 	tmpPath := filepath.Join(target.TmpDir(), target.Outputs()[0])
