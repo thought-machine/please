@@ -3,6 +3,7 @@ package asp
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -548,7 +549,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	}
 	s.Assert(src != "", "Empty source path")
 	s.Assert(!strings.Contains(src, "../"), "%s is an invalid path; build target paths can't contain ../", src)
-	if src[0] == '/' || src[0] == '~' {
+	if filepath.IsAbs(src) || src[0] == '~' {
 		s.Assert(systemAllowed, "%s is an absolute path; that's not allowed", src)
 		return core.SystemFileLabel{Path: strings.TrimRight(src, "/")}
 	} else if tool {
