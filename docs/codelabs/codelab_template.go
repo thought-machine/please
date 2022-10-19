@@ -71,7 +71,7 @@ var opts = struct {
 func main() {
 	flags.ParseFlagsOrDie("Codelab template", &opts, nil)
 
-	tmplName := path.Base(opts.Template)
+	tmplName := filepath.Base(opts.Template)
 
 	tmp := template.Must(template.New(tmplName).ParseFiles(opts.Template))
 
