@@ -23,3 +23,22 @@ class GenReleaseTest(unittest.TestCase):
 
         """).lstrip()
         self.assertEqual(expected, '\n'.join(r.get_release_notes()))
+
+    def test_sha256(self):
+        r = ReleaseGen('', dry_run=True)
+        r.version = '13.2.7'
+
+        path = "tools/misc/data/linux_amd64/release_asset_13.2.7"
+
+        arch = r._arch(path)
+        name = r.artifact_name(path)
+
+        self.assertEqual("release_asset_13.2.7_linux_amd64", name)
+        self.assertEqual("linux_amd64", arch)
+
+        r.checksum(path)
+
+        with open(f"{path}.sha256") as f:
+            self.assertTrue(name in f.read())
+
+
