@@ -33,7 +33,7 @@ func Sequential(state *core.BuildState, outputMode process.OutputMode, labels []
 		log.Notice("Executing %s...", label)
 		target := state.Graph.TargetOrDie(label.BuildLabel)
 		sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
-		if err := exec(state, outputMode, target, target.ExecDir(), nil, env, args, label.Annotation, false, sandbox); err != nil {
+		if err := exec(state, outputMode, target, target.ExecDir(), env, nil, args, label.Annotation, false, sandbox); err != nil {
 			return exitCode(err)
 		}
 	}
@@ -74,7 +74,7 @@ func Parallel(state *core.BuildState, outputMode process.OutputMode, updateFrequ
 			atomic.AddInt64(&started, 1)
 			defer atomic.AddInt64(&done, 1)
 			sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
-			return exec(state, outputMode, target, target.ExecDir(), nil, env, args, annotation, false, sandbox)
+			return exec(state, outputMode, target, target.ExecDir(), env, nil, args, annotation, false, sandbox)
 		})
 	}
 	return exitCode(g.Wait())
