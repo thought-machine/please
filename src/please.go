@@ -7,7 +7,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
@@ -1311,8 +1310,8 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	}
 	// Reset this now we're at the repo root.
 	if opts.OutputFlags.LogFile != "" {
-		if !path.IsAbs(string(opts.OutputFlags.LogFile)) {
-			opts.OutputFlags.LogFile = cli.Filepath(path.Join(core.RepoRoot, string(opts.OutputFlags.LogFile)))
+		if !filepath.IsAbs(string(opts.OutputFlags.LogFile)) {
+			opts.OutputFlags.LogFile = cli.Filepath(filepath.Join(core.RepoRoot, string(opts.OutputFlags.LogFile)))
 		}
 		cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel, opts.OutputFlags.LogAppend)
 	}

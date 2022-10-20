@@ -1,7 +1,6 @@
 package plz
 
 import (
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -152,7 +151,7 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 			prefix = subrepo.Dir(prefix)
 		}
 		for filename := range FindAllBuildFiles(state.Config, dir, "") {
-			dirname, _ := path.Split(filename)
+			dirname, _ := filepath.Split(filename)
 			l := core.NewBuildLabel(strings.TrimLeft(strings.TrimPrefix(strings.TrimRight(dirname, "/"), prefix), "/"), "all")
 			l.Subrepo = target.Subrepo
 			state.AddOriginalTarget(l, addToList)
@@ -172,7 +171,7 @@ func FindAllBuildFiles(config *core.Configuration, rootPath, prefix string) <-ch
 			rootPath = "."
 		}
 		if err := fs.Walk(rootPath, func(name string, isDir bool) error {
-			basename := path.Base(name)
+			basename := filepath.Base(name)
 			if basename == core.OutDir || (isDir && strings.HasPrefix(basename, ".") && name != ".") {
 				return filepath.SkipDir // Don't walk output or hidden directories
 			} else if isDir && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {

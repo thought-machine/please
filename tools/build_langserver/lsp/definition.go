@@ -2,7 +2,6 @@ package lsp
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -80,7 +79,7 @@ func (h *Handler) findLabel(currentPath, label string) lsp.Location {
 	}
 
 	pkg := h.state.Graph.PackageByLabel(l)
-	uri := lsp.DocumentURI("file://" + path.Join(h.root, pkg.Filename))
+	uri := lsp.DocumentURI("file://" + filepath.Join(h.root, pkg.Filename))
 	loc := lsp.Location{URI: uri}
 	doc, err := h.maybeOpenDoc(uri)
 	if err != nil {
@@ -141,11 +140,11 @@ func (h *Handler) findGlobal(name string) lsp.Location {
 			if err != nil {
 				log.Warning("Cannot determine user cache dir: %s", err)
 				return lsp.Location{}
-			} else if err := os.MkdirAll(path.Join(dir, "please"), core.DirPermissions); err != nil {
+			} else if err := os.MkdirAll(filepath.Join(dir, "please"), core.DirPermissions); err != nil {
 				log.Warning("Cannot create cache dir: %s", err)
 				return lsp.Location{}
 			}
-			dest := path.Join(dir, "please", f.Pos.Filename)
+			dest := filepath.Join(dir, "please", f.Pos.Filename)
 			if data, err := rules.ReadAsset(f.Pos.Filename); err != nil {
 				log.Warning("Failed to extract builtin rules for %s: %s", name, err)
 				return lsp.Location{}
@@ -156,8 +155,8 @@ func (h *Handler) findGlobal(name string) lsp.Location {
 			f.Pos.Filename = dest
 		}
 		file := f.Pos.Filename
-		if !path.IsAbs(file) {
-			file = path.Join(h.root, f.Pos.Filename)
+		if !filepath.IsAbs(file) {
+			file = filepath.Join(h.root, f.Pos.Filename)
 		}
 		return lsp.Location{
 			URI:   lsp.DocumentURI("file://" + file),

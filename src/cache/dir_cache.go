@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -96,7 +95,7 @@ func (cache *dirCache) storeCompressed2(target *core.BuildTarget, filename strin
 	outDir := target.OutDir()
 	for _, file := range files {
 		// Any one of these might be a directory, so we have to walk them.
-		if err := fs.Walk(path.Join(outDir, file), func(name string, isDir bool) error {
+		if err := fs.Walk(filepath.Join(outDir, file), func(name string, isDir bool) error {
 			hdr, err := cache.tarHeader(name, outDir)
 			if err != nil {
 				return err
@@ -151,7 +150,7 @@ func (cache *dirCache) tarHeader(file, prefix string) (*tar.Header, error) {
 
 // ensureStoreReady ensures that the directory containing the given filename exists and any previous file has been removed.
 func (cache *dirCache) ensureStoreReady(filename string) error {
-	dir := path.Dir(filename)
+	dir := filepath.Dir(filename)
 	if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
 		return err
 	} else if err := os.RemoveAll(filename); err != nil {
@@ -162,8 +161,8 @@ func (cache *dirCache) ensureStoreReady(filename string) error {
 
 func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string) uint64 {
 	log.Debug("Storing %s: %s in dir cache...", target.Label, out)
-	outFile := path.Join(core.RepoRoot, target.OutDir(), out)
-	cachedFile := path.Join(cacheDir, out)
+	outFile := filepath.Join(core.RepoRoot, target.OutDir(), out)
+	cachedFile := filepath.Join(cacheDir, out)
 	if err := cache.ensureStoreReady(cachedFile); err != nil {
 		log.Warning("Failed to setup cache directory: %s", err)
 		return 0
@@ -212,7 +211,7 @@ func (cache *dirCache) retrieveFiles(target *core.BuildTarget, cacheDir string, 
 		if err != nil {
 			return false, err
 		}
-		cachedOut := path.Join(cacheDir, out)
+		cachedOut := filepath.Join(cacheDir, out)
 		log.Debug("Retrieving %s: %s from dir cache...", target.Label, cachedOut)
 		if err := fs.RecursiveLink(cachedOut, realOut); err != nil {
 			return false, err
@@ -278,9 +277,9 @@ func (cache *dirCache) retrieveCompressed(target *core.BuildTarget, filename str
 
 // ensureRetrieveReady makes sure that appropriate directories are created and old outputs are removed.
 func (cache *dirCache) ensureRetrieveReady(target *core.BuildTarget, out string) (string, error) {
-	fullOut := path.Join(core.RepoRoot, target.OutDir(), out)
+	fullOut := filepath.Join(core.RepoRoot, target.OutDir(), out)
 	if strings.ContainsRune(out, '/') { // The root directory will be there, only need to worry about outs in subdirectories.
-		if err := os.MkdirAll(path.Dir(fullOut), core.DirPermissions); err != nil {
+		if err := os.MkdirAll(filepath.Dir(fullOut), core.DirPermissions); err != nil {
 			return "", err
 		}
 	}
@@ -294,7 +293,7 @@ func (cache *dirCache) ensureRetrieveReady(target *core.BuildTarget, out string)
 
 func (cache *dirCache) Clean(target *core.BuildTarget) {
 	// Remove for all possible keys, so can't get getPath here
-	if err := os.RemoveAll(path.Join(cache.Dir, target.Label.PackageName, target.Label.Name)); err != nil {
+	if err := os.RemoveAll(filepath.Join(cache.Dir, target.Label.PackageName, target.Label.Name)); err != nil {
 		log.Warning("Failed to remove artifacts for %s from dir cache: %s", target.Label, err)
 	}
 }
@@ -319,7 +318,7 @@ func (cache *dirCache) getFullPath(target *core.BuildTarget, key []byte, extra, 
 		extra = strings.ReplaceAll(extra, "/", "_")
 	}
 	// NB. Is very important to use a padded encoding here so lengths are consistent when cleaning.
-	return path.Join(cache.Dir, target.Label.PackageName, target.Label.Name, base64.URLEncoding.EncodeToString(key)) + extra + suffix + cache.Suffix
+	return filepath.Join(cache.Dir, target.Label.PackageName, target.Label.Name, base64.URLEncoding.EncodeToString(key)) + extra + suffix + cache.Suffix
 }
 
 // markDir marks a directory as added to the cache, which saves it from later deletion.
@@ -350,7 +349,7 @@ func newDirCache(config *core.Configuration) *dirCache {
 	}
 	// Absolute paths are allowed. Relative paths are interpreted relative to the repo root.
 	if !filepath.IsAbs(config.Cache.Dir) {
-		cache.Dir = path.Join(core.RepoRoot, config.Cache.Dir)
+		cache.Dir = filepath.Join(core.RepoRoot, config.Cache.Dir)
 	}
 	// Make directory if it doesn't exist.
 	if err := os.MkdirAll(cache.Dir, core.DirPermissions); err != nil {

@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -353,7 +353,7 @@ func (b *dirBuilder) dir(dir, child string) *pb.Directory {
 	if !present {
 		d = &pb.Directory{}
 		b.dirs[dir] = d
-		dir, base := path.Split(dir)
+		dir, base := filepath.Split(dir)
 		b.dir(dir, base)
 	}
 	// TODO(peterebden): The linear scan in hasChild is a bit suboptimal, we should
@@ -375,8 +375,8 @@ func (b *dirBuilder) Build(ch chan<- *uploadinfo.Entry) *pb.Directory {
 
 // Node returns either the file or directory corresponding to the given path (or nil for both if not found)
 func (b *dirBuilder) Node(name string) (*pb.DirectoryNode, *pb.FileNode) {
-	dir := b.Dir(path.Dir(name))
-	base := path.Base(name)
+	dir := b.Dir(filepath.Dir(name))
+	base := filepath.Base(name)
 	for _, d := range dir.Directories {
 		if d.Name == base {
 			return d, nil
@@ -402,7 +402,7 @@ func (b *dirBuilder) Tree(root string) *pb.Tree {
 func (b *dirBuilder) tree(tree *pb.Tree, root string, dir *pb.Directory) {
 	tree.Children = append(tree.Children, dir)
 	for _, d := range dir.Directories {
-		name := path.Join(root, d.Name)
+		name := filepath.Join(root, d.Name)
 		b.tree(tree, name, b.dirs[name])
 	}
 }
@@ -413,7 +413,7 @@ func (b *dirBuilder) walk(name string, ch chan<- *uploadinfo.Entry) *pb.Digest {
 	dir := b.dirs[name]
 	for _, d := range dir.Directories {
 		if d.Digest == nil { // It's not nil if we're reusing outputs from an earlier call.
-			d.Digest = b.walk(path.Join(name, d.Name), ch)
+			d.Digest = b.walk(filepath.Join(name, d.Name), ch)
 		}
 	}
 	// The protocol requires that these are sorted into lexicographic order. Not all servers
@@ -487,7 +487,7 @@ func (c *Client) targetPlatformProperties(target *core.BuildTarget) *pb.Platform
 func removeOutputs(target *core.BuildTarget) error {
 	outDir := target.OutDir()
 	for _, out := range target.Outputs() {
-		if err := os.RemoveAll(path.Join(outDir, out)); err != nil {
+		if err := os.RemoveAll(filepath.Join(outDir, out)); err != nil {
 			return fmt.Errorf("Failed to remove output for %s: %s", target, err)
 		}
 	}

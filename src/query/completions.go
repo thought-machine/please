@@ -3,7 +3,6 @@ package query
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -88,12 +87,12 @@ func getPackagesAndPackageToParse(config *core.Configuration, query string) ([]s
 	packageOnly := strings.HasSuffix(query, "/") && query != "//"
 
 	query = strings.Trim(query, "/")
-	root := path.Join(core.RepoRoot, query)
+	root := filepath.Join(core.RepoRoot, query)
 	currentPackage := query
 	prefix := ""
 	if info, err := os.Lstat(root); err != nil || !info.IsDir() {
-		_, prefix = path.Split(root)
-		currentPackage = path.Dir(query)
+		_, prefix = filepath.Split(root)
+		currentPackage = filepath.Dir(query)
 	} else if !packageOnly {
 		// If we match a package directly but that's also a prefix for another package, we should return those packages
 		root, prefix := filepath.Split(query)

@@ -14,7 +14,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -111,7 +111,7 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, err
 	outDir := target.OutDir()
 	localSources := target.AllSourceLocalPaths(state.Graph)
 	for i, source := range target.AllSourceFullPaths(state.Graph) {
-		out := path.Join(outDir, localSources[i])
+		out := filepath.Join(outDir, localSources[i])
 		fileChanged, err := theFilegroupBuilder.Build(state, target, source, out)
 		if err != nil {
 			return true, err
@@ -142,22 +142,22 @@ func copyFilegroupHashes(state *core.BuildState, target *core.BuildTarget) {
 	outDir := target.OutDir()
 	localSources := target.AllSourceLocalPaths(state.Graph)
 	for i, source := range target.AllSourceFullPaths(state.Graph) {
-		if out := path.Join(outDir, localSources[i]); out != source {
+		if out := filepath.Join(outDir, localSources[i]); out != source {
 			state.PathHasher.MoveHash(source, out, true)
 		}
 	}
 }
 
 func createInitPy(dir string) {
-	initPy := path.Join(dir, "__init__.py")
+	initPy := filepath.Join(dir, "__init__.py")
 	if core.PathExists(initPy) {
 		return
 	}
 	if f, err := os.OpenFile(initPy, os.O_RDONLY|os.O_CREATE, 0444); err == nil {
 		f.Close()
 	}
-	dir = path.Dir(dir)
-	if dir != core.GenDir && dir != "." && !core.PathExists(path.Join(dir, "__init__.py")) {
+	dir = filepath.Dir(dir)
+	if dir != core.GenDir && dir != "." && !core.PathExists(filepath.Join(dir, "__init__.py")) {
 		createInitPy(dir)
 	}
 }

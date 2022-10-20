@@ -1,7 +1,6 @@
 package lsp
 
 import (
-	"path"
 	"path/filepath"
 	"strings"
 	"unicode"
@@ -97,7 +96,7 @@ func (h *Handler) completeString(doc *doc, s string, line, col int) (*lsp.Comple
 		return h.completeLabel(doc, s, line, col)
 	}
 	// Not a label, assume file.
-	matches, _ := filepath.Glob(path.Join(h.root, path.Dir(doc.Filename), s+"*"))
+	matches, _ := filepath.Glob(filepath.Join(h.root, filepath.Dir(doc.Filename), s+"*"))
 	list := &lsp.CompletionList{
 		Items: make([]lsp.CompletionItem, len(matches)),
 	}
@@ -167,8 +166,8 @@ func (h *Handler) buildPackageTree() {
 	all["."] = root // makes the next loop easier
 	var attachChild func(name string, pkg *pkg)
 	attachChild = func(name string, p *pkg) {
-		base := path.Base(name)
-		parent := path.Dir(name)
+		base := filepath.Base(name)
+		parent := filepath.Dir(name)
 		if parentPkg := all[parent]; parentPkg == nil {
 			parentPkg = &pkg{Subpackages: map[string]*pkg{base: p}}
 			all[parent] = parentPkg

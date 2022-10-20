@@ -4,14 +4,14 @@
 package export
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/gc"
 	"github.com/thought-machine/please/src/parse"
-	"os"
-	"path"
-	"path/filepath"
 )
 
 var log = logging.Log
@@ -32,7 +32,7 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 		if pkg.Name == parse.InternalPackageName {
 			continue // This isn't a real package to be copied
 		}
-		dest := path.Join(dir, pkg.Filename)
+		dest := filepath.Join(dir, pkg.Filename)
 		if err := fs.RecursiveCopy(pkg.Filename, dest, 0); err != nil {
 			log.Fatalf("Failed to copy BUILD file %s: %s\n", pkg.Filename, err)
 		}
@@ -49,7 +49,7 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	}
 	// Write any preloaded build defs as well; preloaded subincludes should be fine though.
 	for _, preload := range state.Config.Parse.PreloadBuildDefs {
-		if err := fs.RecursiveCopy(preload, path.Join(dir, preload), 0); err != nil {
+		if err := fs.RecursiveCopy(preload, filepath.Join(dir, preload), 0); err != nil {
 			log.Fatalf("Failed to copy preloaded build def %s: %s", preload, err)
 		}
 	}
@@ -68,7 +68,7 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 		if _, ok := src.Label(); !ok { // We'll handle these dependencies later
 			for _, p := range src.FullPaths(graph) {
 				if !filepath.IsAbs(p) { // Don't copy system file deps.
-					if err := fs.RecursiveCopy(p, path.Join(dir, p), 0); err != nil {
+					if err := fs.RecursiveCopy(p, filepath.Join(dir, p), 0); err != nil {
 						log.Fatalf("Error copying file: %s\n", err)
 					}
 				}
@@ -92,12 +92,12 @@ func Outputs(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	for _, label := range targets {
 		target := state.Graph.TargetOrDie(label)
 		for _, out := range target.Outputs() {
-			fullPath := path.Join(dir, out)
-			outDir := path.Dir(fullPath)
+			fullPath := filepath.Join(dir, out)
+			outDir := filepath.Dir(fullPath)
 			if err := os.MkdirAll(outDir, core.DirPermissions); err != nil {
 				log.Fatalf("Failed to create export dir %s: %s", outDir, err)
 			}
-			if err := fs.RecursiveCopy(path.Join(target.OutDir(), out), fullPath, target.OutMode()|0200); err != nil {
+			if err := fs.RecursiveCopy(filepath.Join(target.OutDir(), out), fullPath, target.OutMode()|0200); err != nil {
 				log.Fatalf("Failed to copy export file: %s", err)
 			}
 		}

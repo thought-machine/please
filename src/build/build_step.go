@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime/debug"
 	"strconv"
@@ -509,7 +508,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	if target.IsTextFile {
 		return nil, buildTextFile(state, target)
 	}
-	env := core.StampedBuildEnvironment(state, target, inputHash, path.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
+	env := core.StampedBuildEnvironment(state, target, inputHash, filepath.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
 	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), command)
 	if err != nil {
@@ -553,8 +552,8 @@ func prepareOutputDirectories(target *core.BuildTarget) error {
 // prepareParentDirs will create any parent directories of an output i.e. for the output foo/bar/baz it will create
 // foo and foo/bar
 func prepareParentDirs(target *core.BuildTarget, out string) error {
-	if dir := path.Dir(out); dir != "." {
-		outPath := path.Join(target.TmpDir(), dir)
+	if dir := filepath.Dir(out); dir != "." {
+		outPath := filepath.Join(target.TmpDir(), dir)
 		if !core.PathExists(outPath) {
 			if err := os.MkdirAll(outPath, core.DirPermissions); err != nil {
 				return err
@@ -596,7 +595,7 @@ func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core
 		}
 	}
 	if target.Stamp {
-		if err := fs.WriteFile(bytes.NewReader(core.StampFile(target)), path.Join(target.TmpDir(), target.StampFileName()), 0644); err != nil {
+		if err := fs.WriteFile(bytes.NewReader(core.StampFile(target)), filepath.Join(target.TmpDir(), target.StampFileName()), 0644); err != nil {
 			return err
 		}
 	}
@@ -662,7 +661,7 @@ func copyOutDir(target *core.BuildTarget, from string, to string) ([]string, err
 	}
 	if info.IsDir() {
 		err := fs.Walk(from, func(name string, isDir bool) error {
-			dest := path.Join(to, name[len(from):])
+			dest := filepath.Join(to, name[len(from):])
 			if isDir {
 				return os.MkdirAll(dest, fs.DirPermissions)
 			}
@@ -688,8 +687,8 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	allOuts := make([]string, len(outs), len(outs)+len(target.OutputDirectories))
 	for i, output := range outs {
 		allOuts[i] = output
-		tmpOutput := path.Join(tmpDir, target.GetTmpOutput(output))
-		realOutput := path.Join(outDir, output)
+		tmpOutput := filepath.Join(tmpDir, target.GetTmpOutput(output))
+		realOutput := filepath.Join(outDir, output)
 		if !core.PathExists(tmpOutput) {
 			return nil, true, fmt.Errorf("rule %s failed to create output %s", target.Label, tmpOutput)
 		}
@@ -713,8 +712,8 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	// Glob patterns are supported on these.
 	for _, output := range fs.Glob(state.Config.Parse.BuildFileName, tmpDir, target.OptionalOutputs, nil, true) {
 		log.Debug("Discovered optional output %s", output)
-		tmpOutput := path.Join(tmpDir, output)
-		realOutput := path.Join(outDir, output)
+		tmpOutput := filepath.Join(tmpDir, output)
+		realOutput := filepath.Join(outDir, output)
 		if _, err := moveOutput(state, target, tmpOutput, realOutput); err != nil {
 			return nil, changed, err
 		}
@@ -743,7 +742,7 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 	}
 	state.PathHasher.MoveHash(tmpOutput, realOutput, false)
 	// Check if we need a directory for this output.
-	dir := path.Dir(realOutput)
+	dir := filepath.Dir(realOutput)
 	if !core.PathExists(dir) {
 		if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
 			return true, err
@@ -766,7 +765,7 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 // RemoveOutputs removes all generated outputs for a rule.
 func RemoveOutputs(target *core.BuildTarget) error {
 	for _, output := range target.Outputs() {
-		out := path.Join(target.OutDir(), output)
+		out := filepath.Join(target.OutDir(), output)
 		if err := os.RemoveAll(out); err != nil {
 			return err
 		} else if err := fs.EnsureDir(out); err != nil {
@@ -782,7 +781,7 @@ func RemoveOutputs(target *core.BuildTarget) error {
 // It returns true if something was removed.
 func checkForStaleOutput(filename string, err error) bool {
 	if perr, ok := err.(*os.PathError); ok && perr.Err.Error() == "not a directory" {
-		for dir := filename; dir != "." && dir != "/" && path.Base(dir) != "plz-out"; dir = path.Dir(dir) {
+		for dir := filename; dir != "." && dir != "/" && filepath.Base(dir) != "plz-out"; dir = filepath.Dir(dir) {
 			if fs.FileExists(dir) {
 				log.Warning("Removing %s which appears to be a stale output file", dir)
 				os.Remove(dir)
@@ -1038,13 +1037,13 @@ func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix s
 	if labels := target.PrefixedLabels(prefix); len(labels) > 0 {
 		env := core.TargetEnvironment(state, target)
 		for _, dest := range labels {
-			destDir := path.Join(core.RepoRoot, os.Expand(dest, env.ReplaceEnvironment))
-			srcDir := path.Join(core.RepoRoot, target.OutDir())
+			destDir := filepath.Join(core.RepoRoot, os.Expand(dest, env.ReplaceEnvironment))
+			srcDir := filepath.Join(core.RepoRoot, target.OutDir())
 			for _, out := range target.Outputs() {
 				if direct {
-					fs.LinkDestination(path.Join(srcDir, out), destDir, f)
+					fs.LinkDestination(filepath.Join(srcDir, out), destDir, f)
 				} else {
-					fs.LinkIfNotExists(path.Join(srcDir, out), path.Join(destDir, out), f)
+					fs.LinkIfNotExists(filepath.Join(srcDir, out), filepath.Join(destDir, out), f)
 				}
 			}
 		}
@@ -1088,9 +1087,9 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	httpClientLimiter <- struct{}{}
 	defer func() { <-httpClientLimiter }()
 
-	env := core.BuildEnvironment(state, target, path.Join(core.RepoRoot, target.TmpDir()))
+	env := core.BuildEnvironment(state, target, filepath.Join(core.RepoRoot, target.TmpDir()))
 	url = os.Expand(url, env.ReplaceEnvironment)
-	tmpPath := path.Join(target.TmpDir(), target.Outputs()[0])
+	tmpPath := filepath.Join(target.TmpDir(), target.Outputs()[0])
 	f, err := os.Create(tmpPath)
 	if err != nil {
 		return err
@@ -1098,7 +1097,7 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 	defer f.Close()
 	if strings.HasPrefix(url, "file://") {
 		filename := strings.TrimPrefix(url, "file://")
-		if !path.IsAbs(filename) {
+		if !filepath.IsAbs(filename) {
 			return fmt.Errorf("URL %s must be an absolute path", url)
 		} else if strings.HasPrefix(filename, core.RepoRoot) {
 			return fmt.Errorf("URL %s is within the repo, you cannot use remote_file for this", url)
@@ -1260,7 +1259,7 @@ func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputH
 	resp, err := worker.BuildRemotely(state, target, workerCmd, &worker.Request{
 		Rule:    target.Label.String(),
 		Labels:  target.Labels,
-		TempDir: path.Join(core.RepoRoot, target.TmpDir()),
+		TempDir: filepath.Join(core.RepoRoot, target.TmpDir()),
 		Sources: workerSources,
 		Options: opts,
 	})

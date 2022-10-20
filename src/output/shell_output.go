@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -420,11 +419,11 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 		target := state.Graph.TargetOrDie(label)
 		cmd := target.GetCommand(state)
 		dir := target.TmpDir()
-		env := core.StampedBuildEnvironment(state, target, nil, path.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
+		env := core.StampedBuildEnvironment(state, target, nil, filepath.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
 		shouldSandbox := target.Sandbox
 		if state.NeedTests {
 			cmd = target.GetTestCommand(state)
-			dir = path.Join(core.RepoRoot, target.TestDir(1))
+			dir = filepath.Join(core.RepoRoot, target.TestDir(1))
 			env = core.TestEnvironment(state, target, dir)
 			shouldSandbox = target.Test.Sandbox
 			if len(state.TestArgs) > 0 {
@@ -463,9 +462,9 @@ func buildResult(target *core.BuildTarget) []string {
 	if target != nil {
 		for _, out := range target.Outputs() {
 			if core.StartedAtRepoRoot() {
-				results = append(results, path.Join(target.OutDir(), out))
+				results = append(results, filepath.Join(target.OutDir(), out))
 			} else {
-				results = append(results, path.Join(core.RepoRoot, target.OutDir(), out))
+				results = append(results, filepath.Join(core.RepoRoot, target.OutDir(), out))
 			}
 		}
 	}
@@ -574,7 +573,7 @@ func shouldInclude(file string, files []string) bool {
 		return true
 	}
 	for _, f := range files {
-		if isMatch, _ := path.Match(f, file); isMatch {
+		if isMatch, _ := filepath.Match(f, file); isMatch {
 			return true
 		}
 	}

@@ -21,6 +21,7 @@ python_test(
     name = "gen_release_test",
     srcs = ["gen_release_test.py"],
     deps = [":gen_release"],
+    data=["data"],
 )
 
 sh_binary(

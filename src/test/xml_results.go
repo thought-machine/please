@@ -10,7 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -414,7 +414,7 @@ type unitTestXMLFailure struct {
 
 // WriteResultsToFileOrDie writes test results out to a file in xUnit format. Dies on any errors.
 func WriteResultsToFileOrDie(graph *core.BuildGraph, filename string, storeOutputOnSuccess bool) {
-	if err := os.MkdirAll(path.Dir(filename), core.DirPermissions); err != nil {
+	if err := os.MkdirAll(filepath.Dir(filename), core.DirPermissions); err != nil {
 		log.Fatalf("Failed to create directory for test output")
 	} else if err = os.WriteFile(filename, mustSerialiseResults(graph, storeOutputOnSuccess), 0644); err != nil {
 		log.Fatalf("Failed to write XML to %s: %s", filename, err)

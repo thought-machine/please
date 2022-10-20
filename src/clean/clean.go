@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"syscall"
 
 	"github.com/thought-machine/please/src/build"
@@ -112,7 +112,7 @@ func deleteDir(dir string, async bool) error {
 func moveDir(dir string) (string, error) {
 	b := make([]byte, 16)
 	rand.Read(b)
-	name := path.Join(path.Dir(dir), ".plz_clean_"+hex.EncodeToString(b))
+	name := filepath.Join(filepath.Dir(dir), ".plz_clean_"+hex.EncodeToString(b))
 	log.Notice("Moving %s to %s", dir, name)
 	return name, os.Rename(dir, name)
 }

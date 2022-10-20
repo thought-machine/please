@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -157,10 +156,7 @@ func defaultGlobalConfigFiles() []string {
 // defaultConfigFiles returns the set of default config file names.
 func defaultConfigFiles() []string {
 	return append(
-		defaultGlobalConfigFiles(),
-		path.Join(RepoRoot, ConfigFileName),
-		path.Join(RepoRoot, ArchConfigFileName),
-		path.Join(RepoRoot, LocalConfigFileName),
+		defaultGlobalConfigFiles(), filepath.Join(RepoRoot, ConfigFileName), filepath.Join(RepoRoot, ArchConfigFileName), filepath.Join(RepoRoot, LocalConfigFileName),
 	)
 }
 
@@ -347,7 +343,7 @@ func setBuildPath(conf *[]string, passEnv []string, passUnsafeEnv []string) {
 // defaultPathIfExists sets a variable to a location in a directory if it's not already set and if the location exists.
 func defaultPathIfExists(conf *string, dir, file string) {
 	if *conf == "" {
-		location := path.Join(dir, file)
+		location := filepath.Join(dir, file)
 		// check that the location is valid
 		if _, err := os.Stat(location); err == nil {
 			*conf = location
@@ -382,7 +378,7 @@ func DefaultConfiguration() *Configuration {
 	config.Cache.HTTPConcurrentRequestLimit = 20
 	config.Cache.HTTPRetry = 4
 	if dir, err := os.UserCacheDir(); err == nil {
-		config.Cache.Dir = path.Join(dir, "please")
+		config.Cache.Dir = filepath.Join(dir, "please")
 	}
 	config.Cache.DirCacheHighWaterMark = 10 * cli.GiByte
 	config.Cache.DirCacheLowWaterMark = 8 * cli.GiByte
@@ -796,7 +792,7 @@ func (config *Configuration) EnsurePleaseLocation() {
 			log.Warning("Can't dereference %s: %s", exec, err)
 			config.Please.Location = defaultPleaseLocation
 		} else {
-			config.Please.Location = path.Dir(deref)
+			config.Please.Location = filepath.Dir(deref)
 		}
 	} else {
 		config.Please.Location = fs.ExpandHomePath(config.Please.Location)

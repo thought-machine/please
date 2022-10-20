@@ -5,7 +5,7 @@ package core
 import (
 	"encoding/base64"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -128,7 +128,7 @@ func TestToolReplacement(t *testing.T) {
 	target1.Tools = append(target1.Tools, target2.Label)
 
 	wd, _ := os.Getwd()
-	expected := quote(path.Join(wd, "plz-out/gen/path/to/target2.py"))
+	expected := quote(filepath.Join(wd, "plz-out/gen/path/to/target2.py"))
 	cmd, _ := ReplaceSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }
@@ -139,7 +139,7 @@ func TestToolReplacementSubrepo(t *testing.T) {
 	target1.Tools = append(target1.Tools, target2.Label)
 
 	wd, _ := os.Getwd()
-	expected := quote(path.Join(wd, "plz-out/gen/subrepo/path/to/target2.py"))
+	expected := quote(filepath.Join(wd, "plz-out/gen/subrepo/path/to/target2.py"))
 	cmd, _ := ReplaceSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }
@@ -171,7 +171,7 @@ func TestToolDirReplacement(t *testing.T) {
 	target1.Tools = append(target1.Tools, target2.Label)
 
 	wd, _ := os.Getwd()
-	expected := quote(path.Join(wd, "plz-out/gen/path/to"))
+	expected := quote(filepath.Join(wd, "plz-out/gen/path/to"))
 	cmd, _ := ReplaceSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }

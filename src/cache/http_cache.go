@@ -10,7 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -80,7 +80,7 @@ func (cache *httpCache) write(w io.WriteCloser, target *core.BuildTarget, files 
 	outDir := target.OutDir()
 
 	for _, out := range files {
-		if err := fs.Walk(path.Join(outDir, out), func(name string, isDir bool) error {
+		if err := fs.Walk(filepath.Join(outDir, out), func(name string, isDir bool) error {
 			return storeFile(tw, name)
 		}); err != nil {
 			log.Warning("Error uploading artifacts to HTTP cache: %s", err)
@@ -177,7 +177,7 @@ func readTar(gzr io.Reader) (bool, error) {
 				return false, err
 			}
 		case tar.TypeReg:
-			if dir := path.Dir(hdr.Name); dir != "." {
+			if dir := filepath.Dir(hdr.Name); dir != "." {
 				if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
 					return false, err
 				}
