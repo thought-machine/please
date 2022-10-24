@@ -549,7 +549,7 @@ func glob(s *scope, args []pyObject) pyObject {
 
 	glob := s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks)
 	if s.state.Config.FeatureFlags.ErrorOnEmptyGlob && !allowEmpty && len(glob) == 0 {
-		log.Fatalf("glob(%s, %s) returned no files", include, exclude)
+		log.Fatalf("glob(%s) in %s returned no files", include, s.pkg.Filename)
 	}
 
 	return fromStringList(glob)
