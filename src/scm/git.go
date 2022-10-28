@@ -4,6 +4,7 @@ package scm
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -200,6 +201,24 @@ func (g *git) FindClosestIgnoreFile(path string) string {
 	return g.FindClosestIgnoreFile(filepath.Dir(path))
 }
 
+func (g *git) FindOrCreateIgnoreFile(path string) (string, error) {
+	_, err := os.Lstat(filepath.Join(g.repoRoot, path, ignoreFileName))
+	fqPath := filepath.Join(path, ignoreFileName)
+	if err == nil {
+		return fqPath, nil
+	}
+
+	if errors.Is(err, os.ErrNotExist) {
+		f, err := os.Create(fqPath)
+		if err != nil {
+			return "", err
+		}
+		defer f.Close()
+	}
+
+	return fqPath, nil
+}
+
 func (g *git) Remove(names []string) error {
 	cmd := exec.Command("git", append([]string{"rm", "-q"}, names...)...)
 	out, err := cmd.CombinedOutput()
@@ -255,4 +274,34 @@ func (g *git) CurrentRevDate(format string) string {
 	}
 	t := time.Unix(timestamp, 0)
 	return t.Format(format)
+}
+
+func (g *git) AreIgnored(files ...string) bool {
+	if unignored := g.getUnIgnored(files...); len(unignored) == 0 {
+		return true
+	}
+	return false
+}
+
+func (g *git) getUnIgnored(files ...string) []string {
+	args := append([]string{"check-ignore"}, files...)
+	out, err := exec.Command("git", args...).Output()
+	if err != nil {
+		// if exit code is 1 none are ignored. else there was a fatal error so we assume none are ignored. either way return all files
+		return files
+	}
+	ignored := make(map[string]bool, len(files))
+	for _, f := range strings.Split(string(out), "\n") {
+		if len(f) == 0 {
+			continue
+		}
+		ignored[f] = true
+	}
+	unignored := make([]string, 0, len(files)-len(ignored))
+	for _, f := range files {
+		if !ignored[f] {
+			unignored = append(unignored, f)
+		}
+	}
+	return unignored
 }

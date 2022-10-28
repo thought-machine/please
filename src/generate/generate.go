@@ -17,25 +17,41 @@ var log = logging.Log
 func UpdateGitignore(graph *core.BuildGraph, labels []core.BuildLabel, gitignore string) error {
 	pkg := filepath.Dir(gitignore)
 	files := make([]string, 0, len(labels))
+	vcs := scm.NewFallback(core.RepoRoot)
 
 	for _, l := range labels {
 		t := graph.TargetOrDie(l)
-		if t.HasLabel("codegen") {
-			for _, out := range t.Outputs() {
-				relativePkg := t.Label.PackageName
-				if pkg != "." {
-					if strings.HasPrefix(t.Label.PackageName, pkg) {
-						relativePkg = strings.TrimPrefix(strings.TrimPrefix(t.Label.PackageName, pkg), "/")
-					} else {
-						// Don't add files that are not under this package to the .gitignore
-						continue
-					}
+		if !t.HasLabel("codegen") {
+			continue
+		}
+		for _, out := range t.Outputs() {
+			relativePkg := t.Label.PackageName
+			if pkg != "." {
+				if !strings.HasPrefix(t.Label.PackageName, pkg) {
+					// Don't add files that are not under this package to the .gitignore
+					continue
 				}
-				files = append(files, filepath.Join(relativePkg, out))
+				relativePkg = strings.TrimPrefix(strings.TrimPrefix(t.Label.PackageName, pkg), "/")
 			}
+			if vcs.AreIgnored(out) {
+				continue
+			}
+			files = append(files, filepath.Join(relativePkg, out))
 		}
 	}
-	return scm.NewFallback(core.RepoRoot).IgnoreFiles(gitignore, files)
+	return vcs.IgnoreFiles(gitignore, files)
+}
+
+func allLabelGenOuts(graph *core.BuildGraph, labels []core.BuildLabel) []string {
+	outs := []string{}
+	for _, l := range labels {
+		t := graph.TargetOrDie(l)
+		if !t.HasLabel("codegen") {
+			continue
+		}
+		outs = append(outs, t.Outputs()...)
+	}
+	return outs
 }
 
 // LinkGeneratedSources will link any generated sources for the outputs of the given labels
@@ -45,20 +61,30 @@ func LinkGeneratedSources(state *core.BuildState, labels []core.BuildLabel) {
 		linker = fs.Link
 	}
 
+	updateGitIgnore := state.Config.Build.UpdateGitignore
 	vcs := scm.NewFallback(core.RepoRoot)
+	if updateGitIgnore && vcs.AreIgnored(allLabelGenOuts(state.Graph, labels)...) {
+		updateGitIgnore = false
+	}
 
 	for _, l := range labels {
 		target := state.Graph.TargetOrDie(l)
-		if target.HasLabel("codegen") {
-			for _, out := range target.Outputs() {
-				destDir := filepath.Join(core.RepoRoot, target.Label.PackageDir())
-				srcDir := filepath.Join(core.RepoRoot, target.OutDir())
-				fs.LinkDestination(filepath.Join(srcDir, out), filepath.Join(destDir, out), linker)
+		if !target.HasLabel("codegen") {
+			continue
+		}
+		for _, out := range target.Outputs() {
+			destDir := filepath.Join(core.RepoRoot, target.Label.PackageDir())
+			srcDir := filepath.Join(core.RepoRoot, target.OutDir())
+			fs.LinkDestination(filepath.Join(srcDir, out), filepath.Join(destDir, out), linker)
+		}
+		if updateGitIgnore {
+			gitignore, err := vcs.FindOrCreateIgnoreFile(target.Label.PackageDir())
+			if err != nil {
+				log.Warningf("failed to find or create gitignore: %v", err)
+				continue
 			}
-			if state.Config.Build.UpdateGitignore {
-				if err := UpdateGitignore(state.Graph, labels, vcs.FindClosestIgnoreFile(target.Label.PackageDir())); err != nil {
-					log.Warningf("failed to link generated sources: %v", err)
-				}
+			if err := UpdateGitignore(state.Graph, labels, gitignore); err != nil {
+				log.Warningf("failed to update gitignore: %v", err)
 			}
 		}
 	}

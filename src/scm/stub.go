@@ -4,8 +4,8 @@ import "fmt"
 
 type stub struct{}
 
-func (s *stub) FindClosestIgnoreFile(string) string {
-	return "<unknown>"
+func (s *stub) FindOrCreateIgnoreFile(string) (string, error) {
+	return "<unknown>", fmt.Errorf("unknown SCM, can't create ignore file")
 }
 
 func (s *stub) DescribeIdentifier(sha string) string {
@@ -42,4 +42,8 @@ func (s *stub) Checkout(revision string) error {
 
 func (s *stub) CurrentRevDate(format string) string {
 	return "Unknown"
+}
+
+func (s *stub) AreIgnored(files ...string) bool {
+	return false
 }
