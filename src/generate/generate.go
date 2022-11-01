@@ -78,12 +78,7 @@ func LinkGeneratedSources(state *core.BuildState, labels []core.BuildLabel) {
 			fs.LinkDestination(filepath.Join(srcDir, out), filepath.Join(destDir, out), linker)
 		}
 		if updateGitIgnore {
-			gitignore, err := vcs.FindOrCreateIgnoreFile(target.Label.PackageDir())
-			if err != nil {
-				log.Warningf("failed to find or create gitignore: %v", err)
-				continue
-			}
-			if err := UpdateGitignore(state.Graph, labels, gitignore); err != nil {
+			if err := UpdateGitignore(state.Graph, labels, vcs.GetIgnoreFile(target.Label.PackageDir())); err != nil {
 				log.Warningf("failed to update gitignore: %v", err)
 			}
 		}

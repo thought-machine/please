@@ -4,8 +4,8 @@ import "fmt"
 
 type stub struct{}
 
-func (s *stub) FindOrCreateIgnoreFile(string) (string, error) {
-	return "<unknown>", fmt.Errorf("unknown SCM, can't create ignore file")
+func (s *stub) GetIgnoreFile(string) string {
+	return "<unknown>"
 }
 
 func (s *stub) DescribeIdentifier(sha string) string {

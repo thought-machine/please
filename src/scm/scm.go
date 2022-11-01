@@ -25,8 +25,8 @@ type SCM interface {
 	ChangedFiles(fromCommit string, includeUntracked bool, relativeTo string) []string
 	// IgnoreFiles marks a file to be ignored by the SCM.
 	IgnoreFiles(gitignore string, files []string) error
-	// FindOrCreateIgnoreFile gets the ignore file name for the version control system
-	FindOrCreateIgnoreFile(path string) (string, error)
+	// GetIgnoreFile gets the ignore file name for the given path within the version control system
+	GetIgnoreFile(path string) string
 	// Remove deletes the given files from the SCM.
 	Remove(names []string) error
 	// ChangedLines returns the set of lines that have been modified,

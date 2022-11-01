@@ -4,7 +4,6 @@ package scm
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -189,34 +188,8 @@ func (g *git) IgnoreFiles(path string, files []string) error {
 	return nil
 }
 
-func (g *git) FindClosestIgnoreFile(path string) string {
-	_, err := os.Lstat(filepath.Join(g.repoRoot, path, ignoreFileName))
-	if err == nil {
-		return filepath.Join(path, ignoreFileName)
-	}
-
-	if filepath.Clean(path) == "." {
-		return ignoreFileName
-	}
-	return g.FindClosestIgnoreFile(filepath.Dir(path))
-}
-
-func (g *git) FindOrCreateIgnoreFile(path string) (string, error) {
-	_, err := os.Lstat(filepath.Join(g.repoRoot, path, ignoreFileName))
-	fqPath := filepath.Join(path, ignoreFileName)
-	if err == nil {
-		return fqPath, nil
-	}
-
-	if errors.Is(err, os.ErrNotExist) {
-		f, err := os.Create(fqPath)
-		if err != nil {
-			return "", err
-		}
-		defer f.Close()
-	}
-
-	return fqPath, nil
+func (g *git) GetIgnoreFile(path string) string {
+	return filepath.Join(path, ignoreFileName)
 }
 
 func (g *git) Remove(names []string) error {
