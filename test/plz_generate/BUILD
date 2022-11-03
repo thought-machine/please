@@ -44,8 +44,30 @@ please_repo_e2e_test(
 please_repo_e2e_test(
     name = "auto_update_generate_bar_test",
     expected_output = {
-        "src/bar/.gitignore": f"\n{do_not_edit_warning}\nbaz/baz.gen",
+        "src/bar/baz/.gitignore": f"\n{do_not_edit_warning}\nbaz.gen",
     },
-    plz_command = f"git init && touch src/bar/.gitignore && plz build --profile auto //src/bar/baz",
+    plz_command = f"git init && plz build --profile auto //src/bar/baz",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
+    name = "auto_update_generate_glob_test",
+    expected_output = {
+        ".gitignore": f"\n{do_not_edit_warning}\nsrc/bar/baz/*.gen",
+        "src/bar/.gitignore": f"\n{do_not_edit_warning}\nbar.gen",
+        "src/.gitignore": f"\n{do_not_edit_warning}\nfoo.gen",
+    },
+    plz_command = f"git init && echo '\n{do_not_edit_warning}\nsrc/bar/baz/*.gen' > .gitignore && plz build --profile auto",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
+    name = "auto_update_generate_glob_all_gen_test",
+    expected_output = {
+        ".gitignore": f"\n{do_not_edit_warning}\n*.gen",
+        "src/bar/.gitignore": "",
+        "src/.gitignore": "",
+    },
+    plz_command = f"git init && echo '\n{do_not_edit_warning}\n*.gen' > .gitignore && touch src/bar/.gitignore && touch src/.gitignore && plz build --profile auto",
     repo = "test_repo",
 )
