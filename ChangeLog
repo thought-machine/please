@@ -1,4 +1,4 @@
-Version 16.24.1
+Version 16.24.0
 ---------------
 
     * Error on empty glob by default. This feature is gated
