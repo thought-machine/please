@@ -1,3 +1,10 @@
+Version 16.24.1
+---------------
+
+    * Error on empty glob by default. This feature is gated
+      behind the `ErrorOnEmptyGlob` feature flag #2568
+
+
 Version 16.23.1
 ---------------
 
