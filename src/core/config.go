@@ -888,11 +888,12 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 	for k, v := range overrides {
 		split := strings.Split(strings.ToLower(k), ".")
 		if len(split) == 3 && split[0] == "plugin" {
-			if plugin, ok := config.Plugin[split[1]]; ok {
-				plugin.ExtraValues[strings.ToLower(split[2])] = []string{v}
-				continue
+			plugin, ok := config.Plugin[split[1]]
+			if !ok {
+				return fmt.Errorf("No plugin with ID %v", split[1])
 			}
-			log.Fatalf("No plugin with ID %v", split[1])
+			plugin.ExtraValues[strings.ToLower(split[2])] = []string{v}
+			continue
 		}
 		if len(split) != 2 {
 			return fmt.Errorf("Bad option format: %s", k)
