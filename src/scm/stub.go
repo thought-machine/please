@@ -4,7 +4,7 @@ import "fmt"
 
 type stub struct{}
 
-func (s *stub) FindClosestIgnoreFile(string) string {
+func (s *stub) GetIgnoreFile(string) string {
 	return "<unknown>"
 }
 
@@ -42,4 +42,8 @@ func (s *stub) Checkout(revision string) error {
 
 func (s *stub) CurrentRevDate(format string) string {
 	return "Unknown"
+}
+
+func (s *stub) AreIgnored(files ...string) bool {
+	return false
 }

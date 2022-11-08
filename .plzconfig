@@ -90,6 +90,7 @@ PythonWheelHashing = true
 NoIterSourcesMarked = true
 GoDontCollapseImportPath = true
 ExcludeGoRules = true
+ErrorOnEmptyGlob = true
 
 [Plugin "go"]
 Target = //plugins:go

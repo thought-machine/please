@@ -541,11 +541,20 @@ func glob(s *scope, args []pyObject) pyObject {
 	exclude := pyStrOrListAsList(s, args[1], "exclude")
 	hidden := args[2].IsTruthy()
 	includeSymlinks := args[3].IsTruthy()
+	allowEmpty := args[4].IsTruthy()
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
 	if s.globber == nil {
 		s.globber = fs.NewGlobber(s.state.Config.Parse.BuildFileName)
 	}
-	return fromStringList(s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks))
+
+	glob := s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks)
+	if s.state.Config.FeatureFlags.ErrorOnEmptyGlob && !allowEmpty && len(glob) == 0 {
+		// Strip build file name from exclude list for error message
+		exclude = exclude[:len(exclude)-len(s.state.Config.Parse.BuildFileName)]
+		log.Fatalf("glob(include=%s, exclude=%s) in %s returned no files. If this is intended, set allow_empty=True on the glob.", include, exclude, s.pkg.Filename)
+	}
+
+	return fromStringList(glob)
 }
 
 func pyStrOrListAsList(s *scope, arg pyObject, name string) []string {
