@@ -879,11 +879,11 @@ func applyPluginOverride(config *Configuration, pluginName, configKey, value str
 	return nil
 }
 
-func applyOverrideOnSectionField(field reflect.Value, tag reflect.StructTag, key, value string) error {
-	validateOptionsTag := func(key, value string) error {
+func applyOverrideOnSectionField(field reflect.Value, tag reflect.StructTag, value string) error {
+	validateOptionsTag := func(value string) error {
 		if options := tag.Get("options"); options != "" {
 			if !cli.ContainsString(value, strings.Split(options, ",")) {
-				return fmt.Errorf("invalid value %s for field %s; options are %s", value, key, options)
+				return fmt.Errorf("invalid value %s; options are %s", value, options)
 			}
 		}
 		return nil
@@ -892,7 +892,7 @@ func applyOverrideOnSectionField(field reflect.Value, tag reflect.StructTag, key
 	switch field.Kind() {
 	case reflect.String:
 		// verify this is a legit setting for this field
-		if err := validateOptionsTag(key, value); err != nil {
+		if err := validateOptionsTag(value); err != nil {
 			return err
 		}
 		if field.Type().Name() == "URL" {
@@ -934,14 +934,14 @@ func applyOverrideOnSectionField(field reflect.Value, tag reflect.StructTag, key
 			parts := strings.Split(value, ",")
 			// verify this is a legit setting for this field
 			for _, part := range parts {
-				if err := validateOptionsTag(key, part); err != nil {
+				if err := validateOptionsTag(part); err != nil {
 					return err
 				}
 			}
 			field.Set(reflect.ValueOf(parts))
 		}
 	default:
-		return fmt.Errorf("can't override config field %s (is %s)", key, field.Kind())
+		return fmt.Errorf("can't override config field of type %v", field.Kind())
 	}
 	return nil
 }
@@ -954,7 +954,6 @@ func applyOverride(config reflect.Value, sectionName, fieldName, value string) e
 	}
 
 	section := config.FieldByNameFunc(match(sectionName))
-	key := fmt.Sprintf("%v.%v", sectionName, fieldName)
 	if !section.IsValid() {
 		return fmt.Errorf("unknown config field: %s", sectionName)
 	}
@@ -967,10 +966,13 @@ func applyOverride(config reflect.Value, sectionName, fieldName, value string) e
 	if section.Kind() == reflect.Struct {
 		structField, ok := section.Type().FieldByNameFunc(match(fieldName))
 		if !ok {
-			return fmt.Errorf("unknown config field: %s", fieldName)
+			return fmt.Errorf("config section \"%v\" has no field \"%s\"", sectionName, fieldName)
 		}
 		field := section.FieldByNameFunc(match(fieldName))
-		return applyOverrideOnSectionField(field, structField.Tag, key, value)
+		if err := applyOverrideOnSectionField(field, structField.Tag, value); err != nil {
+			return fmt.Errorf("failed to set config key \"%v.%v\": %v", sectionName, fieldName, err)
+		}
+		return nil
 	}
 	return fmt.Errorf("unsettable config field: %s", sectionName)
 }
