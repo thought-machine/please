@@ -890,7 +890,7 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 		if len(split) == 3 && split[0] == "plugin" {
 			if plugin, ok := config.Plugin[split[1]]; ok {
 				plugin.ExtraValues[strings.ToLower(split[2])] = []string{v}
-				return nil
+				continue
 			}
 			log.Fatalf("No plugin with ID %v", split[1])
 		}
