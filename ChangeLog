@@ -1,3 +1,11 @@
+Version 16.24.0
+---------------
+
+    * Improvements around the way Please updates `.gitignore` files for generated sources (#2571)
+    * Add parameter to `glob()` to force it to error on empty globs (#2568)
+    * Fix issue with fetching CPU info for the arm64 macos release (#2575)
+
+
 Version 16.23.1
 ---------------
 
