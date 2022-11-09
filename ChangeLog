@@ -2,8 +2,9 @@ Version 16.24.0
 ---------------
 
     * Error on empty glob by default. This feature is gated
-      behind the `ErrorOnEmptyGlob` feature flag #2568
-    * Improve behaviour of UpdateGitignore #2571
+      behind the `ErrorOnEmptyGlob` feature flag (#2568)
+    * Improve behaviour of UpdateGitignore (#2571)
+    * Fix 'Error getting cpu info' message on darwin_arm64 builds (#2575)
 
 
 Version 16.23.1
