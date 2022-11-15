@@ -8,7 +8,7 @@ package(
         "https://files.pythonhosted.org/packages/py3/{initial}/{package_name}/{package_name}-{version}-py3-none-any.whl",
         "https://files.pythonhosted.org/packages/py2.py3/{initial}/{package_name}/{package_name}-{version}-py2.py3-none-any.whl",
     ],
-    python_wheel_repo = "https://get.please.build/third_party/python/py3",
+    python_wheel_repo = ["https://get.please.build/third_party/python/py3"],
 )
 
 python_wheel(

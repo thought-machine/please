@@ -512,33 +512,34 @@ def python_wheel(name:str, version:str, labels:list=[], hashes:list=None, packag
     """
     package_name = package_name or name.replace('-', '_')
     initial = package_name[0]
-    url_base = repo or CONFIG.PYTHON_WHEEL_REPO
-    if not url_base:
+    url_bases = [repo] if repo else CONFIG.PYTHON_WHEEL_REPO
+    if not url_bases:
         fail('python.wheel_repo is not set in the config, must pass repo explicitly to python_wheel')
     urls = []
     if name_scheme:
         urls += [name_scheme.format(url_base=url_base,
                                     package_name=package_name,
                                     initial=initial,
-                                    version=version)]
+                                    version=version) for url_base in url_bases]
     elif CONFIG.PYTHON_WHEEL_NAME_SCHEME:
         urls += [scheme.format(url_base=url_base, package_name=package_name, initial=initial, version=version)
-                 for scheme in CONFIG.PYTHON_WHEEL_NAME_SCHEME]
+                 for scheme in CONFIG.PYTHON_WHEEL_NAME_SCHEME for url_base in url_bases]
     else:
         # Populate urls using a reasonable set of possible wheel naming schemes.
         # Look for an arch-specific wheel first; in some cases there can be both (e.g. protobuf
         # has optional arch-specific bits) and we prefer the one with the cool stuff.
-        urls += ['{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                    package_name=package_name,
-                                                                                    initial=initial,
-                                                                                    version=version),
-                 '{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                    package_name=package_name,                                                                                   initial=initial,
-                                                                                    version=version),
-                 '{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
-                                                                  package_name=package_name,
-                                                                  initial=initial,
-                                                                  version=version)]
+        for url_base in url_bases:
+            urls += ['{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
+                                                                                        package_name=package_name,
+                                                                                        initial=initial,
+                                                                                        version=version),
+                     '{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
+                                                                                        package_name=package_name,                                                                                   initial=initial,
+                                                                                        version=version),
+                     '{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
+                                                                      package_name=package_name,
+                                                                      initial=initial,
+                                                                      version=version)]
 
     file_rule = remote_file(
         name = name,
