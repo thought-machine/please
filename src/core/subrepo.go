@@ -53,12 +53,7 @@ func (s *Subrepo) Dir(dir string) string {
 
 func readConfigFilesInto(config, repoConfig *Configuration, files []string) error {
 	for _, file := range files {
-		err := readConfigFile(config, file, true)
-		if err != nil {
-			return err
-		}
-
-		err = readConfigFile(repoConfig, file, true)
+		err := readConfigFile(repoConfig, file, true)
 		if err != nil {
 			return err
 		}
