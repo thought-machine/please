@@ -1,3 +1,13 @@
+Version 16.24.0
+---------------
+
+    * Error on empty glob by default. This feature is gated
+      behind the `ErrorOnEmptyGlob` feature flag (#2568)
+    * Improve behaviour of UpdateGitignore (#2571)
+    * Fix config overrides being passed to built-in rules rather than plugin
+      on darwin_arm64 circleci build (#2575)
+
+
 Version 16.23.1
 ---------------
 
