@@ -690,6 +690,7 @@ type Configuration struct {
 		ExcludeProtoRules             bool `help:"Whether to include the proto rules or require use of the plugin"`
 		ExcludeSymlinksInGlob         bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
 		GoDontCollapseImportPath      bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
+		ErrorOnEmptyGlob              bool `help:"Error out if a glob doesn't match anything" var:"FF_ERROR_ON_EMPTY_GLOB"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`
@@ -868,103 +869,130 @@ func (config *Configuration) TagsToFields() map[string]reflect.StructField {
 	return tags
 }
 
-// ApplyOverrides applies a set of overrides to the config.
-// The keys of the given map are dot notation for the config setting.
-func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
-	match := func(s1 string) func(string) bool {
-		return func(s2 string) bool {
-			return strings.ToLower(s2) == s1
-		}
+func applyPluginOverride(config *Configuration, pluginName, configKey, value string) error {
+	plugin, ok := config.Plugin[pluginName]
+	if !ok {
+		return fmt.Errorf("no plugin with ID %v", plugin)
 	}
-	maybeValidOption := func(field reflect.StructField, value, key string) error {
-		if options := field.Tag.Get("options"); options != "" {
+
+	plugin.ExtraValues[strings.ToLower(configKey)] = []string{value}
+	return nil
+}
+
+func applyOverrideOnSectionField(field reflect.Value, tag reflect.StructTag, value string) error {
+	validateOptionsTag := func(value string) error {
+		if options := tag.Get("options"); options != "" {
 			if !cli.ContainsString(value, strings.Split(options, ",")) {
-				return fmt.Errorf("Invalid value %s for field %s; options are %s", value, key, options)
+				return fmt.Errorf("invalid value %s; options are %s", value, options)
 			}
 		}
 		return nil
 	}
-	elem := reflect.ValueOf(config).Elem()
+
+	switch field.Kind() {
+	case reflect.String:
+		// verify this is a legit setting for this field
+		if err := validateOptionsTag(value); err != nil {
+			return err
+		}
+		if field.Type().Name() == "URL" {
+			field.Set(reflect.ValueOf(cli.URL(value)))
+		} else {
+			field.Set(reflect.ValueOf(value))
+		}
+	case reflect.Bool:
+		v, _ := gcfgtypes.ParseBool(value)
+		field.SetBool(v)
+	case reflect.Int:
+		i, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("invalid value for an integer field: %s", value)
+		}
+		field.Set(reflect.ValueOf(i))
+	case reflect.Int64:
+		var d cli.Duration
+		if err := d.UnmarshalText([]byte(value)); err != nil {
+			return fmt.Errorf("invalid value for a duration field: %s", value)
+		}
+		field.Set(reflect.ValueOf(d))
+	case reflect.Slice:
+		// Comma-separated values are accepted.
+		if field.Type().Elem().Kind() == reflect.Struct {
+			// Assume it must be a slice of BuildLabel.
+			var l []BuildLabel
+			for _, s := range strings.Split(value, ",") {
+				l = append(l, ParseBuildLabel(s, ""))
+			}
+			field.Set(reflect.ValueOf(l))
+		} else if field.Type().Elem().Name() == "URL" {
+			var urls []cli.URL
+			for _, s := range strings.Split(value, ",") {
+				urls = append(urls, cli.URL(s))
+			}
+			field.Set(reflect.ValueOf(urls))
+		} else {
+			parts := strings.Split(value, ",")
+			// verify this is a legit setting for this field
+			for _, part := range parts {
+				if err := validateOptionsTag(part); err != nil {
+					return err
+				}
+			}
+			field.Set(reflect.ValueOf(parts))
+		}
+	default:
+		return fmt.Errorf("can't override config field of type %v", field.Kind())
+	}
+	return nil
+}
+
+func applyOverride(config reflect.Value, sectionName, fieldName, value string) error {
+	match := func(query string) func(string) bool {
+		return func(name string) bool {
+			return strings.ToLower(name) == query
+		}
+	}
+
+	section := config.FieldByNameFunc(match(sectionName))
+	if !section.IsValid() {
+		return fmt.Errorf("unknown config field: %s", sectionName)
+	}
+
+	if section.Kind() == reflect.Map {
+		section.SetMapIndex(reflect.ValueOf(fieldName), reflect.ValueOf(value))
+		return nil
+	}
+
+	if section.Kind() == reflect.Struct {
+		structField, ok := section.Type().FieldByNameFunc(match(fieldName))
+		if !ok {
+			return fmt.Errorf("config section \"%v\" has no field \"%s\"", sectionName, fieldName)
+		}
+		field := section.FieldByNameFunc(match(fieldName))
+		if err := applyOverrideOnSectionField(field, structField.Tag, value); err != nil {
+			return fmt.Errorf("failed to set config key \"%v.%v\": %v", sectionName, fieldName, err)
+		}
+		return nil
+	}
+	return fmt.Errorf("unsettable config field: %s", sectionName)
+}
+
+// ApplyOverrides applies a set of overrides to the config.
+// The keys of the given map are dot notation for the config setting.
+func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
+	configValue := reflect.ValueOf(config).Elem()
 	for k, v := range overrides {
 		split := strings.Split(strings.ToLower(k), ".")
 		if len(split) == 3 && split[0] == "plugin" {
-			if plugin, ok := config.Plugin[split[1]]; ok {
-				plugin.ExtraValues[strings.ToLower(split[2])] = []string{v}
-				return nil
-			}
-			log.Fatalf("No plugin with ID %v", split[1])
-		}
-		if len(split) != 2 {
-			return fmt.Errorf("Bad option format: %s", k)
-		}
-
-		field := elem.FieldByNameFunc(match(split[0]))
-		if !field.IsValid() {
-			return fmt.Errorf("Unknown config field: %s", split[0])
-		} else if field.Kind() == reflect.Map {
-			field.SetMapIndex(reflect.ValueOf(split[1]), reflect.ValueOf(v))
-			continue
-		} else if field.Kind() != reflect.Struct {
-			return fmt.Errorf("Unsettable config field: %s", split[0])
-		}
-		subfield, ok := field.Type().FieldByNameFunc(match(split[1]))
-		if !ok {
-			return fmt.Errorf("Unknown config field: %s", split[1])
-		}
-		field = field.FieldByNameFunc(match(split[1]))
-		switch field.Kind() {
-		case reflect.String:
-			// verify this is a legit setting for this field
-			if err := maybeValidOption(subfield, v, k); err != nil {
+			if err := applyPluginOverride(config, split[1], split[2], v); err != nil {
 				return err
 			}
-			if field.Type().Name() == "URL" {
-				field.Set(reflect.ValueOf(cli.URL(v)))
-			} else {
-				field.Set(reflect.ValueOf(v))
+		} else if len(split) == 2 {
+			if err := applyOverride(configValue, split[0], split[1], v); err != nil {
+				return err
 			}
-		case reflect.Bool:
-			v, _ := gcfgtypes.ParseBool(v)
-			field.SetBool(v)
-		case reflect.Int:
-			i, err := strconv.Atoi(v)
-			if err != nil {
-				return fmt.Errorf("Invalid value for an integer field: %s", v)
-			}
-			field.Set(reflect.ValueOf(i))
-		case reflect.Int64:
-			var d cli.Duration
-			if err := d.UnmarshalText([]byte(v)); err != nil {
-				return fmt.Errorf("Invalid value for a duration field: %s", v)
-			}
-			field.Set(reflect.ValueOf(d))
-		case reflect.Slice:
-			// Comma-separated values are accepted.
-			if field.Type().Elem().Kind() == reflect.Struct {
-				// Assume it must be a slice of BuildLabel.
-				l := []BuildLabel{}
-				for _, s := range strings.Split(v, ",") {
-					l = append(l, ParseBuildLabel(s, ""))
-				}
-				field.Set(reflect.ValueOf(l))
-			} else if field.Type().Elem().Name() == "URL" {
-				urls := []cli.URL{}
-				for _, s := range strings.Split(v, ",") {
-					urls = append(urls, cli.URL(s))
-				}
-				field.Set(reflect.ValueOf(urls))
-			} else {
-				parts := strings.Split(v, ",")
-				// verify this is a legit setting for this field
-				for _, part := range parts {
-					if err := maybeValidOption(subfield, part, k); err != nil {
-						return err
-					}
-				}
-				field.Set(reflect.ValueOf(parts))
-			}
-		default:
-			return fmt.Errorf("Can't override config field %s (is %s)", k, field.Kind())
+		} else {
+			return fmt.Errorf("bad option format: %s", k)
 		}
 	}
 
