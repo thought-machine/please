@@ -49,9 +49,9 @@ plugin_e2e_test(
 plugin_e2e_test(
     name = "override_test",
     expected_output = {
-        "plz-out/gen/override/fooc": "overriden",
+        "plz-out/gen/override/fooc": "tool: overriden, path: something, flags: [compileflagoverride]",
     },
-    plz_command = "plz build -o plugin.foo.modulepath:something //override:override_test",
+    plz_command = "plz build -o plugin.foo.modulepath:something -o plugin.foo.compileflag:compileflagoverride //override:override_test",
 )
 
 # Test that fields are added to the config
