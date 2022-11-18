@@ -33,7 +33,7 @@ func UpdateGitignore(graph *core.BuildGraph, labels []core.BuildLabel, gitignore
 				}
 				relativePkg = strings.TrimPrefix(strings.TrimPrefix(t.Label.PackageName, pkg), "/")
 			}
-			if vcs.AreIgnored(out) {
+			if vcs.AreIgnored(filepath.Join(t.Label.PackageName, out)) {
 				continue
 			}
 			files = append(files, filepath.Join(relativePkg, out))
