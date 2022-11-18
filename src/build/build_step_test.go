@@ -618,7 +618,7 @@ type fakeParser struct {
 }
 
 // ParseFile stub
-func (fake *fakeParser) ParseFile(pkg *core.Package, filename string) error {
+func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, forSubinclude bool, filename string) error {
 	return nil
 }
 

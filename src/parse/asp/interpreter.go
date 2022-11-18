@@ -101,14 +101,22 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 
 // interpretAll runs a series of statements in the scope of the given package.
 // The first return value is for testing only.
-func (i *interpreter) interpretAll(pkg *core.Package, statements []*Statement) (s *scope, err error) {
-	s = i.scope.NewPackagedScope(pkg, 1)
+func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, forSubinclude bool, statements []*Statement) (*scope, error) {
+	s := i.scope.NewPackagedScope(pkg, 1)
 	// Config needs a little separate tweaking.
 	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
 	// mutating operations like .setdefault() otherwise.
+	if forLabel != nil {
+		s.parsingFor = &parseTarget{
+			label:         *forLabel,
+			dependent:     *dependent,
+			forSubinclude: forSubinclude,
+		}
+	}
+
 	s.config = i.config.Copy()
 	s.Set("CONFIG", s.config)
-	_, err = i.interpretStatements(s, statements)
+	_, err := i.interpretStatements(s, statements)
 	if err == nil {
 		s.Callback = true // From here on, if anything else uses this scope, it's in a post-build callback.
 	}
@@ -189,6 +197,13 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 	})
 }
 
+// parseTarget represents a request to activate a target while parsing a package
+type parseTarget struct {
+	label         core.BuildLabel
+	dependent     core.BuildLabel
+	forSubinclude bool
+}
+
 // A scope contains all the information about a lexical scope.
 type scope struct {
 	ctx             context.Context
@@ -196,6 +211,7 @@ type scope struct {
 	state           *core.BuildState
 	pkg             *core.Package
 	subincludeLabel *core.BuildLabel
+	parsingFor      *parseTarget
 	parent          *scope
 	locals          pyDict
 	config          *pyConfig
@@ -284,6 +300,7 @@ func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
 		interpreter: s.interpreter,
 		state:       s.state,
 		pkg:         pkg,
+		parsingFor:  s.parsingFor,
 		parent:      s,
 		locals:      make(pyDict, hint),
 		config:      s.config,

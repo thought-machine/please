@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -47,7 +46,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	pkg := state.SyncParsePackage(label)
 	if pkg != nil {
 		// Does exist, all we need to do is toggle on this target
-		return activateTarget(state, pkg, label, dependent, forSubinclude)
+		return state.ActivateTarget(pkg, label, dependent, forSubinclude)
 	}
 	// If we get here then it falls to us to parse this package.
 	state.LogParseResult(tid, label, core.PackageParsing, "Parsing...")
@@ -71,13 +70,16 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
 		return nil
 	}
-	pkg, err = parsePackage(state, label, dependent, subrepo)
+	pkg, err = parsePackage(state, label, dependent, subrepo, forSubinclude)
 
 	if err != nil {
 		return err
 	}
 	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
-	return activateTarget(state, pkg, label, dependent, forSubinclude)
+	if label.IsAllTargets() {
+		return state.ActivateTarget(pkg, label, dependent, forSubinclude)
+	}
+	return nil
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
@@ -107,7 +109,7 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	}
 	if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
 		return subrepo, nil
-	} else if subrepo := checkArchSubrepo(state, label.Subrepo); subrepo != nil {
+	} else if subrepo := state.CheckArchSubrepo(label.Subrepo); subrepo != nil {
 		return subrepo, nil
 	}
 	if !localSubinclude {
@@ -131,69 +133,8 @@ func parseSubrepoPackage(tid int, state *core.BuildState, pkg, subrepo string, d
 	return false, nil
 }
 
-// checkArchSubrepo checks if a target refers to a cross-compiling subrepo.
-// Those don't have to be explicitly defined - maybe we should insist on that, but it's nicer not to have to.
-func checkArchSubrepo(state *core.BuildState, name string) *core.Subrepo {
-	var arch cli.Arch
-	if err := arch.UnmarshalFlag(name); err == nil {
-		return state.Graph.MaybeAddSubrepo(core.SubrepoForArch(state, arch))
-	}
-	return nil
-}
-
-// activateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
-func activateTarget(state *core.BuildState, pkg *core.Package, label, dependent core.BuildLabel, forSubinclude bool) error {
-	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
-		if label.Subrepo == "" && label.PackageName == "" && label.Name == dependent.Subrepo {
-			if subrepo := checkArchSubrepo(state, label.Name); subrepo != nil {
-				state.ArchSubrepoInitialised(label)
-				return nil
-			}
-		}
-		if state.Config.Bazel.Compatibility && forSubinclude {
-			// Bazel allows some things that look like build targets but aren't - notably the syntax
-			// to load(). It suits us to treat that as though it is one, but we now have to
-			// implicitly make it available.
-			exportFile(state, pkg, label)
-		} else {
-			msg := fmt.Sprintf("Parsed build file %s but it doesn't contain target %s", pkg.Filename, label.Name)
-			if dependent != core.OriginalTarget {
-				msg += fmt.Sprintf(" (depended on by %s)", dependent)
-			}
-			return fmt.Errorf(msg + suggestTargets(pkg, label, dependent))
-		}
-	}
-	if state.ParsePackageOnly && !forSubinclude {
-		return nil // Some kinds of query don't need a full recursive parse.
-	} else if label.IsAllTargets() {
-		if dependent == core.OriginalTarget {
-			for _, target := range pkg.AllTargets() {
-				// Don't activate targets that were added in a post-build function; that causes a race condition
-				// between the post-build functions running and other things trying to activate them too early.
-				if state.ShouldInclude(target) && !target.AddedPostBuild {
-					// Must always do this for coverage because we need to calculate sources of
-					// non-test targets later on.
-					if !state.NeedTests || target.IsTest() || state.NeedCoverage {
-						if err := state.QueueTarget(target.Label, dependent, dependent.IsAllTargets()); err != nil {
-							return err
-						}
-					}
-				}
-			}
-		}
-	} else {
-		for _, l := range state.Graph.DependentTargets(dependent, label) {
-			// We use :all to indicate a dependency needed for parse.
-			if err := state.QueueTarget(l, dependent, forSubinclude || dependent.IsAllTargets()); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // parsePackage parses a BUILD file and adds the package to the build graph
-func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo) (*core.Package, error) {
+func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo, forSubinclude bool) (*core.Package, error) {
 	packageName := label.PackageName
 	pkg := core.NewPackage(packageName)
 	pkg.Subrepo = subrepo
@@ -213,7 +154,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 		filename, dir := buildFileName(state, label.PackageName, subrepo)
 		if filename != "" {
 			pkg.Filename = filename
-			if err := state.Parser.ParseFile(pkg, pkg.Filename); err != nil {
+			if err := state.Parser.ParseFile(pkg, &label, &dependent, forSubinclude, pkg.Filename); err != nil {
 				return nil, err
 			}
 		} else {
@@ -264,11 +205,10 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 	return "", pkgName
 }
 
-// exportFile adds a single-file export target. This is primarily used for Bazel compat.
-func exportFile(state *core.BuildState, pkg *core.Package, label core.BuildLabel) {
-	t := core.NewBuildTarget(label)
-	t.Subrepo = pkg.Subrepo
-	t.IsFilegroup = true
-	t.AddSource(core.NewFileLabel(label.Name, pkg))
-	state.AddTarget(pkg, t)
+// buildFileNames returns a descriptive version of the configured BUILD file names.
+func buildFileNames(l []string) string {
+	if len(l) == 1 {
+		return l[0]
+	}
+	return strings.Join(l[:len(l)-1], ", ") + " or " + l[len(l)-1]
 }

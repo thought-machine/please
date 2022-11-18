@@ -71,7 +71,7 @@ type Parser interface {
 	// Init starts initialising the parser
 	Init(state *BuildState)
 	// ParseFile parses a single BUILD file into the given package.
-	ParseFile(pkg *Package, filename string) error
+	ParseFile(pkg *Package, forLabel, dependent *BuildLabel, forSubinclude bool, filename string) error
 	// ParseReader parses a single BUILD file into the given package.
 	ParseReader(pkg *Package, reader io.ReadSeeker) error
 	// RunPreBuildFunction runs a pre-build function for a target.
@@ -918,6 +918,76 @@ func (state *BuildState) waitForTargetAndEnsureDownload(l, dependent BuildLabel,
 		panic(fmt.Errorf("failed to download target outputs: %w", err))
 	}
 	return target
+}
+
+// ActivateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
+func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabel, forSubinclude bool) error {
+	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
+		if label.Subrepo == "" && label.PackageName == "" && label.Name == dependent.Subrepo {
+			if subrepo := state.CheckArchSubrepo(label.Name); subrepo != nil {
+				state.ArchSubrepoInitialised(label)
+				return nil
+			}
+		}
+		if state.Config.Bazel.Compatibility && forSubinclude {
+			// Bazel allows some things that look like build targets but aren't - notably the syntax
+			// to load(). It suits us to treat that as though it is one, but we now have to
+			// implicitly make it available.
+			exportFile(state, pkg, label)
+		} else {
+			msg := fmt.Sprintf("Parsed build file %s but it doesn't contain target %s", pkg.Filename, label.Name)
+			if dependent != OriginalTarget {
+				msg += fmt.Sprintf(" (depended on by %s)", dependent)
+			}
+			return fmt.Errorf(msg + suggestTargets(pkg, label, dependent))
+		}
+	}
+	if state.ParsePackageOnly && !forSubinclude {
+		return nil // Some kinds of query don't need a full recursive parse.
+	} else if label.IsAllTargets() {
+		if dependent == OriginalTarget {
+			for _, target := range pkg.AllTargets() {
+				// Don't activate targets that were added in a post-build function; that causes a race condition
+				// between the post-build functions running and other things trying to activate them too early.
+				if state.ShouldInclude(target) && !target.AddedPostBuild {
+					// Must always do this for coverage because we need to calculate sources of
+					// non-test targets later on.
+					if !state.NeedTests || target.IsTest() || state.NeedCoverage {
+						if err := state.QueueTarget(target.Label, dependent, dependent.IsAllTargets()); err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
+	} else {
+		for _, l := range state.Graph.DependentTargets(dependent, label) {
+			// We use :all to indicate a dependency needed for parse.
+			if err := state.QueueTarget(l, dependent, forSubinclude || dependent.IsAllTargets()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// exportFile adds a single-file export target. This is primarily used for Bazel compat.
+func exportFile(state *BuildState, pkg *Package, label BuildLabel) {
+	t := NewBuildTarget(label)
+	t.Subrepo = pkg.Subrepo
+	t.IsFilegroup = true
+	t.AddSource(NewFileLabel(label.Name, pkg))
+	state.AddTarget(pkg, t)
+}
+
+// checkArchSubrepo checks if a target refers to a cross-compiling subrepo.
+// Those don't have to be explicitly defined - maybe we should insist on that, but it's nicer not to have to.
+func (state *BuildState) CheckArchSubrepo(name string) *Subrepo {
+	var arch cli.Arch
+	if err := arch.UnmarshalFlag(name); err == nil {
+		return state.Graph.MaybeAddSubrepo(SubrepoForArch(state, arch))
+	}
+	return nil
 }
 
 // QueueTarget adds a single target to the build queue.

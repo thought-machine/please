@@ -102,8 +102,8 @@ func (p *aspParser) Init(state *core.BuildState) {
 	})
 }
 
-func (p *aspParser) ParseFile(pkg *core.Package, filename string) error {
-	return p.parser.ParseFile(pkg, filename)
+func (p *aspParser) ParseFile(pkg *core.Package, forLabel, dependent *core.BuildLabel, forSubinclude bool, filename string) error {
+	return p.parser.ParseFile(pkg, forLabel, dependent, forSubinclude, filename)
 }
 
 func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker) error {

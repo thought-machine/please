@@ -14,7 +14,7 @@ import (
 func TestAddDepSimple(t *testing.T) {
 	// Simple case with only one package parsed and one target added
 	state := makeState(true, false)
-	activateTarget(state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -26,9 +26,9 @@ func TestAddDepSimple(t *testing.T) {
 func TestAddDepMultiple(t *testing.T) {
 	// Similar to above but doing all targets in that package
 	state := makeState(true, false)
-	activateTarget(state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
-	activateTarget(state, nil, buildLabel("//package1:target2"), core.OriginalTarget, false)
-	activateTarget(state, nil, buildLabel("//package1:target3"), core.OriginalTarget, false)
+	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	state.ActivateTarget(nil, buildLabel("//package1:target2"), core.OriginalTarget, false)
+	state.ActivateTarget(nil, buildLabel("//package1:target3"), core.OriginalTarget, false)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -42,7 +42,7 @@ func TestAddDepMultiple(t *testing.T) {
 func TestAddDepMultiplePackages(t *testing.T) {
 	// This time we already have package2 parsed
 	state := makeState(true, true)
-	activateTarget(state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -55,7 +55,7 @@ func TestAddDepNoBuild(t *testing.T) {
 	// Tag state as not needing build. We shouldn't get any pending builds at this point.
 	state := makeState(true, true)
 	state.NeedBuild = false
-	activateTarget(state, nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -68,13 +68,19 @@ func TestAddParseDep(t *testing.T) {
 	// should still get queued for build though. Recall that we indicate this with :all...
 	state := makeState(true, true)
 	state.NeedBuild = false
-	activateTarget(state, nil, buildLabel("//package2:target2"), buildLabel("//package3:all"), false)
+	state.ActivateTarget(nil, buildLabel("//package2:target2"), buildLabel("//package3:all"), false)
 
 	time.Sleep(time.Millisecond * 100)
 
 	assertPendingBuilds(t, state, "//package2:target2") // Queued because it's needed for parse
 	assertPendingParses(t, state)                       // None, we have both packages already
 	assert.Equal(t, 2, state.NumActive())
+}
+
+func TestBuildFileNames(t *testing.T) {
+	assert.Equal(t, "BUILD", buildFileNames([]string{"BUILD"}))
+	assert.Equal(t, "BUILD or BUILD.plz", buildFileNames([]string{"BUILD", "BUILD.plz"}))
+	assert.Equal(t, "BUILD, BUILD.plz or BUILD.test", buildFileNames([]string{"BUILD", "BUILD.plz", "BUILD.test"}))
 }
 
 func makeTarget(label string, deps ...string) *core.BuildTarget {
