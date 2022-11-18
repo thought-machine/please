@@ -1,10 +1,4 @@
-filegroup(
+plugin_repo(
     name = "foo",
-    srcs = ["foo_plugin"],
-)
-
-subrepo(
-    name = "foo",
-    dep = ":foo",
-    plugin = True,
+    revision = "v1.0.0",
 )
