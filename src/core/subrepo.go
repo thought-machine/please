@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -49,17 +48,12 @@ func SubrepoArchName(subrepo string, arch cli.Arch) string {
 
 // Dir returns the directory for a package of this name.
 func (s *Subrepo) Dir(dir string) string {
-	return path.Join(s.Root, dir)
+	return filepath.Join(s.Root, dir)
 }
 
 func readConfigFilesInto(config, repoConfig *Configuration, files []string) error {
 	for _, file := range files {
-		err := readConfigFile(config, file, true)
-		if err != nil {
-			return err
-		}
-
-		err = readConfigFile(repoConfig, file, true)
+		err := readConfigFile(repoConfig, file, true)
 		if err != nil {
 			return err
 		}

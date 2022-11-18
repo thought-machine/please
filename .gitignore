@@ -12,6 +12,7 @@ __pycache__
 *.iml
 /venv
 /out
+*.sw?
 
 .DS_Store
 # For local testing

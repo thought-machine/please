@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -125,7 +124,7 @@ func (g *git) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo 
 }
 
 func (g *git) fixGitRelativePath(worktreePath, relativeTo string) string {
-	p, err := filepath.Rel(relativeTo, path.Join(g.repoRoot, worktreePath))
+	p, err := filepath.Rel(relativeTo, filepath.Join(g.repoRoot, worktreePath))
 	if err != nil {
 		log.Fatalf("unable to determine relative path for %s and %s", g.repoRoot, relativeTo)
 	}
@@ -189,16 +188,8 @@ func (g *git) IgnoreFiles(path string, files []string) error {
 	return nil
 }
 
-func (g *git) FindClosestIgnoreFile(path string) string {
-	_, err := os.Lstat(filepath.Join(g.repoRoot, path, ignoreFileName))
-	if err == nil {
-		return filepath.Join(path, ignoreFileName)
-	}
-
-	if filepath.Clean(path) == "." {
-		return ignoreFileName
-	}
-	return g.FindClosestIgnoreFile(filepath.Dir(path))
+func (g *git) GetIgnoreFile(path string) string {
+	return filepath.Join(path, ignoreFileName)
 }
 
 func (g *git) Remove(names []string) error {
@@ -256,4 +247,34 @@ func (g *git) CurrentRevDate(format string) string {
 	}
 	t := time.Unix(timestamp, 0)
 	return t.Format(format)
+}
+
+func (g *git) AreIgnored(files ...string) bool {
+	if unignored := g.getUnIgnored(files...); len(unignored) == 0 {
+		return true
+	}
+	return false
+}
+
+func (g *git) getUnIgnored(files ...string) []string {
+	args := append([]string{"check-ignore"}, files...)
+	out, err := exec.Command("git", args...).Output()
+	if err != nil {
+		// if exit code is 1 none are ignored. else there was a fatal error so we assume none are ignored. either way return all files
+		return files
+	}
+	ignored := make(map[string]bool, len(files))
+	for _, f := range strings.Split(string(out), "\n") {
+		if len(f) == 0 {
+			continue
+		}
+		ignored[f] = true
+	}
+	unignored := make([]string, 0, len(files)-len(ignored))
+	for _, f := range files {
+		if !ignored[f] {
+			unignored = append(unignored, f)
+		}
+	}
+	return unignored
 }

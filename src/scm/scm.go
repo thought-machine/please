@@ -3,7 +3,7 @@
 package scm
 
 import (
-	"path"
+	"path/filepath"
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/fs"
@@ -25,8 +25,8 @@ type SCM interface {
 	ChangedFiles(fromCommit string, includeUntracked bool, relativeTo string) []string
 	// IgnoreFiles marks a file to be ignored by the SCM.
 	IgnoreFiles(gitignore string, files []string) error
-	// IgnoreFileName gets the ignore file name for the version control system
-	FindClosestIgnoreFile(path string) string
+	// GetIgnoreFile gets the ignore file name for the given path within the version control system
+	GetIgnoreFile(path string) string
 	// Remove deletes the given files from the SCM.
 	Remove(names []string) error
 	// ChangedLines returns the set of lines that have been modified,
@@ -36,12 +36,14 @@ type SCM interface {
 	Checkout(revision string) error
 	// CurrentRevDate returns the commit date of the current revision, formatted according to the given format string.
 	CurrentRevDate(format string) string
+	// AreIgnored returns whether the files are all ignored or not
+	AreIgnored(files ...string) bool
 }
 
 // New returns a new SCM instance for this repo root.
 // It returns nil if there is no known implementation there.
 func New(repoRoot string) SCM {
-	if fs.PathExists(path.Join(repoRoot, ".git")) {
+	if fs.PathExists(filepath.Join(repoRoot, ".git")) {
 		return &git{repoRoot: repoRoot}
 	}
 	return nil

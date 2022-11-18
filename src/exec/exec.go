@@ -6,6 +6,7 @@ import (
 	"math"
 	osExec "os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -27,12 +28,12 @@ func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, e
 
 // Sequential executes a series of targets in sequence, stopping when one fails.
 // It returns the exit code from the last executed target; if that's zero then they were all successful.
-func Sequential(state *core.BuildState, outputMode process.OutputMode, labels []core.AnnotatedOutputLabel, args []string, shareNetwork, shareMount bool) int {
+func Sequential(state *core.BuildState, outputMode process.OutputMode, labels []core.AnnotatedOutputLabel, env, args []string, shareNetwork, shareMount bool) int {
 	for _, label := range labels {
 		log.Notice("Executing %s...", label)
 		target := state.Graph.TargetOrDie(label.BuildLabel)
 		sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
-		if err := exec(state, outputMode, target, target.ExecDir(), nil, nil, args, label.Annotation, false, sandbox); err != nil {
+		if err := exec(state, outputMode, target, target.ExecDir(), env, nil, args, label.Annotation, false, sandbox); err != nil {
 			return exitCode(err)
 		}
 	}
@@ -42,7 +43,7 @@ func Sequential(state *core.BuildState, outputMode process.OutputMode, labels []
 // Parallel executes a series of targets in parallel (to a limit of simultaneous processes).
 // Returns a relevant exit code (i.e. if at least one subprocess exited unsuccessfully, it will be
 // that code, otherwise 0 if all were successful).
-func Parallel(state *core.BuildState, outputMode process.OutputMode, updateFrequency time.Duration, labels []core.AnnotatedOutputLabel, args []string, numTasks int, shareNetwork, shareMount bool) int {
+func Parallel(state *core.BuildState, outputMode process.OutputMode, updateFrequency time.Duration, labels []core.AnnotatedOutputLabel, env, args []string, numTasks int, shareNetwork, shareMount bool) int {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var g errgroup.Group
@@ -73,7 +74,7 @@ func Parallel(state *core.BuildState, outputMode process.OutputMode, updateFrequ
 			atomic.AddInt64(&started, 1)
 			defer atomic.AddInt64(&done, 1)
 			sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
-			return exec(state, outputMode, target, target.ExecDir(), nil, nil, args, annotation, false, sandbox)
+			return exec(state, outputMode, target, target.ExecDir(), env, nil, args, annotation, false, sandbox)
 		})
 	}
 	return exitCode(g.Wait())
@@ -142,4 +143,15 @@ func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArg
 		return filepath.Join(core.RepoRoot, runtimeDir, outs[0]), nil
 	}
 	return filepath.Join(core.SandboxDir, outs[0]), nil
+}
+
+// ConvertEnv is a convenience method to convert environment variables from a map (which is nicer
+// for flags) to a slice (which we use internally with Go).
+func ConvertEnv(in map[string]string) []string {
+	out := make([]string, 0, len(in))
+	for k, v := range in {
+		out = append(out, k+"="+v)
+	}
+	sort.Strings(out)
+	return out
 }

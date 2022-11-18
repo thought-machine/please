@@ -107,3 +107,11 @@ func TestCommandExitCode(t *testing.T) {
 	exitCode := Exec(state, core.AnnotatedOutputLabel{BuildLabel: target.Label}, "test", nil, []string{"exit", "5"}, false, process.NoSandbox)
 	assert.Equal(t, 5, exitCode)
 }
+
+func TestConvertEnv(t *testing.T) {
+	env := ConvertEnv(map[string]string{
+		"B": "1",
+		"A": "2",
+	})
+	assert.Equal(t, []string{"A=2", "B=1"}, env)
+}

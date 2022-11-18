@@ -3,7 +3,6 @@ package core
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -139,7 +138,7 @@ type BuildTarget struct {
 	// Debug related fields.
 	Debug *DebugFields
 	// If ShowProgress is true, this is used to store the current progress of the target.
-	Progress float32 `print:"false"`
+	Progress atomicFloat32 `print:"false"`
 	// For remote_files, this is the total size of the download (if known)
 	FileSize uint64 `print:"false"`
 	// Description displayed while the command is building.
@@ -378,7 +377,7 @@ func (target *BuildTarget) String() string {
 // to attempt to keep rules from duplicating the names of sub-packages; obviously that is not
 // 100% reliable but we don't have a better solution right now.
 func (target *BuildTarget) TmpDir() string {
-	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+buildDirSuffix)
+	return filepath.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+buildDirSuffix)
 }
 
 // BuildLockFile returns the lock filename for the target's build stage.
@@ -390,17 +389,17 @@ func (target *BuildTarget) BuildLockFile() string {
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
 func (target *BuildTarget) OutDir() string {
 	if target.IsSubrepo {
-		return path.Join(SubrepoDir, target.Label.Subrepo, target.Label.PackageName)
+		return filepath.Join(SubrepoDir, target.Label.Subrepo, target.Label.PackageName)
 	} else if target.IsBinary {
-		return path.Join(BinDir, target.Label.Subrepo, target.Label.PackageName)
+		return filepath.Join(BinDir, target.Label.Subrepo, target.Label.PackageName)
 	}
-	return path.Join(GenDir, target.Label.Subrepo, target.Label.PackageName)
+	return filepath.Join(GenDir, target.Label.Subrepo, target.Label.PackageName)
 }
 
 // ExecDir returns the exec directory for this target, e.g.
 // //mickey/donald:goofy -> plz-out/exec/mickey/donald/goofy
 func (target *BuildTarget) ExecDir() string {
-	return path.Join(ExecDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name)
+	return filepath.Join(ExecDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name)
 }
 
 // TestDir returns the test directory for this target, eg.
@@ -408,7 +407,7 @@ func (target *BuildTarget) ExecDir() string {
 // This is different to TmpDir so we run tests in a clean environment
 // and to facilitate containerising tests.
 func (target *BuildTarget) TestDir(runNumber int) string {
-	return path.Join(target.TestDirs(), fmt.Sprint("run_", runNumber))
+	return filepath.Join(target.TestDirs(), fmt.Sprint("run_", runNumber))
 }
 
 // TestLockFile returns the lock filename for the target's test stage.
@@ -418,7 +417,7 @@ func (target *BuildTarget) TestLockFile(runNumber int) string {
 
 // TestDirs contains the parent directory of all the test run directories above
 func (target *BuildTarget) TestDirs() string {
-	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
+	return filepath.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
 }
 
 // IsTest returns whether or not the target is a test target i.e. has its Test field populated
@@ -437,12 +436,12 @@ func (target *BuildTarget) CompleteRun(state *BuildState) bool {
 
 // TestResultsFile returns the output results file for tests for this target.
 func (target *BuildTarget) TestResultsFile() string {
-	return path.Join(target.OutDir(), ".test_results_"+target.Label.Name)
+	return filepath.Join(target.OutDir(), ".test_results_"+target.Label.Name)
 }
 
 // CoverageFile returns the output coverage file for tests for this target.
 func (target *BuildTarget) CoverageFile() string {
-	return path.Join(target.OutDir(), ".test_coverage_"+target.Label.Name)
+	return filepath.Join(target.OutDir(), ".test_coverage_"+target.Label.Name)
 }
 
 // AddTestResults adds results to the target
@@ -514,7 +513,8 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 
 // resolveDependencies matches up all declared dependencies to the actual build targets.
 // TODO(peterebden,tatskaari): Work out if we really want to have this and how the suite of *Dependencies functions
-//                             below should behave (preferably nicely).
+//
+//	below should behave (preferably nicely).
 func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
 	var g errgroup.Group
 	target.mutex.RLock()
@@ -756,7 +756,7 @@ func (target *BuildTarget) FullOutputs() []string {
 	outs := target.Outputs()
 	outDir := target.OutDir()
 	for i, out := range outs {
-		outs[i] = path.Join(outDir, out)
+		outs[i] = filepath.Join(outDir, out)
 	}
 	return outs
 }
@@ -1604,9 +1604,9 @@ func (target *BuildTarget) toolPath(abs bool, namedOutput string) string {
 		ret := make([]string, len(outputs))
 		for i, o := range outputs {
 			if abs {
-				ret[i] = path.Join(RepoRoot, target.OutDir(), o)
+				ret[i] = filepath.Join(RepoRoot, target.OutDir(), o)
 			} else {
-				ret[i] = path.Join(target.Label.PackageName, o)
+				ret[i] = filepath.Join(target.Label.PackageName, o)
 			}
 		}
 		return strings.Join(ret, " ")
@@ -1758,7 +1758,7 @@ func (target *BuildTarget) ShouldExitOnError() bool {
 
 // SetProgress sets the current progress of this target.
 func (target *BuildTarget) SetProgress(progress float32) {
-	target.Progress = progress
+	target.Progress.Store(progress)
 }
 
 // BuildCouldModifyTarget will return true when the action of building this target could change the target itself e.g.

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,7 +17,7 @@ var b64Hash = base64.URLEncoding.EncodeToString(hash)
 
 func writeFile(filename string, size int) {
 	contents := bytes.Repeat([]byte{'p', 'l', 'z'}, size) // so this is three times the size...
-	if err := os.MkdirAll(path.Dir(filename), core.DirPermissions); err != nil {
+	if err := os.MkdirAll(filepath.Dir(filename), core.DirPermissions); err != nil {
 		panic(err)
 	}
 	if err := os.WriteFile(filename, contents, 0644); err != nil {
@@ -27,9 +27,9 @@ func writeFile(filename string, size int) {
 
 func cachePath(target *core.BuildTarget, compress bool) string {
 	if compress {
-		return path.Join(".plz-cache-"+target.Label.PackageName, target.Label.PackageName, target.Label.Name, b64Hash+".tar.gz")
+		return filepath.Join(".plz-cache-"+target.Label.PackageName, target.Label.PackageName, target.Label.Name, b64Hash+".tar.gz")
 	}
-	return path.Join(".plz-cache-"+target.Label.PackageName, target.Label.PackageName, target.Label.Name, b64Hash, target.Outputs()[0])
+	return filepath.Join(".plz-cache-"+target.Label.PackageName, target.Label.PackageName, target.Label.Name, b64Hash, target.Outputs()[0])
 }
 
 func inCache(target *core.BuildTarget) bool {
@@ -158,6 +158,6 @@ func makeCache(dir string, compress bool) *dirCache {
 func makeTarget2(label string, size int) *core.BuildTarget {
 	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 	target.AddOutput("test.go")
-	writeFile(path.Join("plz-out/gen", target.Label.PackageName, "test.go"), size)
+	writeFile(filepath.Join("plz-out/gen", target.Label.PackageName, "test.go"), size)
 	return target
 }

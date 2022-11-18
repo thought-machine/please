@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/process"
@@ -18,7 +18,7 @@ const DirPermissions = os.ModeDir | 0775
 
 // EnsureDir ensures that the directory of the given file has been created.
 func EnsureDir(filename string) error {
-	dir := path.Dir(filename)
+	dir := filepath.Dir(filename)
 	err := os.MkdirAll(dir, DirPermissions)
 	if err != nil && FileExists(dir) {
 		// It looks like this is a file and not a directory. Attempt to remove it; this can
@@ -91,7 +91,7 @@ func CopyFile(from string, to string, mode os.FileMode) error {
 // WriteFile writes data from a reader to the file named 'to', with an attempt to perform
 // a copy & rename to avoid chaos if anything goes wrong partway.
 func WriteFile(fromFile io.Reader, to string, mode os.FileMode) error {
-	dir, file := path.Split(to)
+	dir, file := filepath.Split(to)
 	if dir != "" {
 		if err := os.MkdirAll(dir, DirPermissions); err != nil {
 			return err
@@ -127,7 +127,7 @@ func IsDirectory(path string) bool {
 // IsPackage returns true if the given directory name is a package (i.e. contains a build file)
 func IsPackage(buildFileNames []string, name string) bool {
 	for _, buildFileName := range buildFileNames {
-		if FileExists(path.Join(name, buildFileName)) {
+		if FileExists(filepath.Join(name, buildFileName)) {
 			return true
 		}
 	}

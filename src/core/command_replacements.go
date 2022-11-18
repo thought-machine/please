@@ -55,7 +55,6 @@ package core
 import (
 	"encoding/base64"
 	"fmt"
-	"path"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
@@ -199,12 +198,12 @@ func replaceSequence(state *BuildState, target *BuildTarget, in string, runnable
 		}
 	}
 	if hash {
-		return base64.RawURLEncoding.EncodeToString(state.PathHasher.MustHash(path.Join(target.Label.PackageName, in), target.HashLastModified()))
+		return base64.RawURLEncoding.EncodeToString(state.PathHasher.MustHash(filepath.Join(target.Label.PackageName, in), target.HashLastModified()))
 	}
 	if strings.HasPrefix(in, "/") {
 		return in // Absolute path, probably on a tool or system src.
 	}
-	return quote(path.Join(target.Label.PackageName, in))
+	return quote(filepath.Join(target.Label.PackageName, in))
 }
 
 // replaceWorkerSequence is like replaceSequence but for worker commands, which do not
@@ -316,5 +315,5 @@ func handleDir(outDir, output string, dir bool) string {
 	if dir {
 		return outDir
 	}
-	return path.Join(outDir, output)
+	return filepath.Join(outDir, output)
 }

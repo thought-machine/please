@@ -3,7 +3,6 @@ package lsp
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -164,7 +163,7 @@ func (h *Handler) formatting(params *lsp.DocumentFormattingParams) ([]*lsp.TextE
 	doc := h.doc(params.TextDocument.URI)
 	// Ignore formatting options, BUILD files are always canonically formatted at 4-space tabs.
 	fn := build.ParseDefault
-	if h.state.Config.IsABuildFile(path.Base(doc.Filename)) {
+	if h.state.Config.IsABuildFile(filepath.Base(doc.Filename)) {
 		fn = build.ParseBuild
 	}
 	f, err := fn(doc.Filename, []byte(doc.Text()))

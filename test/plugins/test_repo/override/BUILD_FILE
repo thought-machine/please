@@ -2,8 +2,8 @@ subinclude("@foo//build_defs:foolang")
 
 package(foo = {"fooc_tool": "overriden"})
 
-genrule(
+text_file(
     name = "override_test",
-    cmd = "echo %s > $OUT" % CONFIG.FOO.FOOC_TOOL,
-    outs = ["fooc"],
+    content = f"tool: {CONFIG.FOO.FOOC_TOOL}, path: {CONFIG.FOO.MODULE_PATH}, flags: {CONFIG.FOO.COMPILE_FLAGS}",
+    out = "fooc",
 )

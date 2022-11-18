@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go/build"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 )
@@ -44,7 +43,7 @@ func FindCoverVars(dir, importPath, testPackage string, external bool, exclude, 
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
-		} else if strings.HasSuffix(name, ".a") && !strings.ContainsRune(path.Base(name), '#') {
+		} else if strings.HasSuffix(name, ".a") && !strings.ContainsRune(filepath.Base(name), '#') {
 			vars, err := findCoverVars(name, importPath, testPackage, external, srcs)
 			if err != nil {
 				return err
@@ -57,8 +56,8 @@ func FindCoverVars(dir, importPath, testPackage string, external bool, exclude, 
 }
 
 // findCoverVars scans a directory containing a .a file for any go files.
-func findCoverVars(filepath, importPath, testPackage string, external bool, srcs []string) ([]CoverVar, error) {
-	dir, file := path.Split(filepath)
+func findCoverVars(path, importPath, testPackage string, external bool, srcs []string) ([]CoverVar, error) {
+	dir, file := filepath.Split(path)
 	dir = strings.TrimRight(dir, "/")
 	if dir == "" {
 		dir = "."
@@ -71,7 +70,7 @@ func findCoverVars(filepath, importPath, testPackage string, external bool, srcs
 		if dontCollapseImportPaths != "" {
 			packagePath = toImportPath(dir, importPath)
 		} else {
-			packagePath = collapseFinalDir(strings.TrimSuffix(filepath, ".a"), importPath)
+			packagePath = collapseFinalDir(strings.TrimSuffix(path, ".a"), importPath)
 		}
 	}
 
@@ -86,7 +85,7 @@ func findCoverVars(filepath, importPath, testPackage string, external bool, srcs
 		if name != file && strings.HasSuffix(name, ".a") {
 			fmt.Fprintf(os.Stderr, "multiple .a files in %s, can't determine coverage variables accurately\n", dir)
 			return nil, nil
-		} else if strings.HasSuffix(name, ".go") && !info.IsDir() && !contains(path.Join(dir, name), srcs) {
+		} else if strings.HasSuffix(name, ".go") && !info.IsDir() && !contains(filepath.Join(dir, name), srcs) {
 			if ok, err := build.Default.MatchFile(dir, name); ok && err == nil {
 				v := "GoCover_" + replacer.Replace(name)
 				ret = append(ret, coverVar(dir, packagePath, v))
@@ -107,7 +106,7 @@ func contains(needle string, haystack []string) bool {
 
 func coverVar(dir, importPath, v string) CoverVar {
 	fmt.Fprintf(os.Stderr, "Found cover variable: %s %s %s\n", dir, importPath, v)
-	f := path.Join(dir, strings.TrimPrefix(v, "GoCover_"))
+	f := filepath.Join(dir, strings.TrimPrefix(v, "GoCover_"))
 	if strings.HasSuffix(f, "_go") {
 		f = f[:len(f)-3] + ".go"
 	}
@@ -127,8 +126,8 @@ func collapseFinalDir(s, importPath string) string {
 	if importPath == "" {
 		s = strings.TrimPrefix(s, "src/")
 	}
-	if path.Base(path.Dir(s)) == path.Base(s) {
-		s = path.Dir(s)
+	if filepath.Base(filepath.Dir(s)) == filepath.Base(s) {
+		s = filepath.Dir(s)
 	}
 	return filepath.Join(importPath, s)
 }

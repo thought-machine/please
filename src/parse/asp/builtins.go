@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
@@ -262,7 +262,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
 	l := s.parseLabelInContextPkg(string(args[0].(pyString)))
-	filename := path.Join(l.PackageName, l.Name)
+	filename := filepath.Join(l.PackageName, l.Name)
 	if l.Subrepo != "" {
 		subrepo := s.state.Graph.Subrepo(l.Subrepo)
 		if subrepo == nil || (subrepo.Target != nil && subrepo != s.contextPackage().Subrepo) {
@@ -304,7 +304,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		s.interpreter.loadPluginConfig(incPkgState, s.state, s.config)
 
 		for _, out := range t.Outputs() {
-			s.SetAll(s.interpreter.Subinclude(path.Join(t.OutDir(), out), t.Label), false)
+			s.SetAll(s.interpreter.Subinclude(filepath.Join(t.OutDir(), out), t.Label), false)
 		}
 	}
 	return None
@@ -541,11 +541,20 @@ func glob(s *scope, args []pyObject) pyObject {
 	exclude := pyStrOrListAsList(s, args[1], "exclude")
 	hidden := args[2].IsTruthy()
 	includeSymlinks := args[3].IsTruthy()
+	allowEmpty := args[4].IsTruthy()
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
 	if s.globber == nil {
 		s.globber = fs.NewGlobber(s.state.Config.Parse.BuildFileName)
 	}
-	return fromStringList(s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks))
+
+	glob := s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks)
+	if s.state.Config.FeatureFlags.ErrorOnEmptyGlob && !allowEmpty && len(glob) == 0 {
+		// Strip build file name from exclude list for error message
+		exclude = exclude[:len(exclude)-len(s.state.Config.Parse.BuildFileName)]
+		log.Fatalf("glob(include=%s, exclude=%s) in %s returned no files. If this is intended, set allow_empty=True on the glob.", include, exclude, s.pkg.Filename)
+	}
+
+	return fromStringList(glob)
 }
 
 func pyStrOrListAsList(s *scope, arg pyObject, name string) []string {
@@ -642,7 +651,7 @@ func joinPath(s *scope, args []pyObject) pyObject {
 	for i, arg := range args {
 		l[i] = string(arg.(pyString))
 	}
-	return pyString(path.Join(l...))
+	return pyString(filepath.Join(l...))
 }
 
 func looksLikeBuildLabel(s *scope, args []pyObject) pyObject {
@@ -1055,17 +1064,17 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		// N.B. The target must be already registered on this package.
 		target = s.pkg.TargetOrDie(s.parseLabelInPackage(dep, s.pkg).Name)
 		if len(target.Outputs()) == 1 {
-			root = path.Join(target.OutDir(), target.Outputs()[0])
+			root = filepath.Join(target.OutDir(), target.Outputs()[0])
 		} else {
 			// TODO(jpoole): perhaps this should be a fatal error?
-			root = path.Join(target.OutDir(), name)
+			root = filepath.Join(target.OutDir(), name)
 		}
 	} else if args[PathArgIdx] != None {
 		root = string(args[PathArgIdx].(pyString))
 	}
 
 	// Base name
-	subrepoName := path.Join(s.pkg.Name, name)
+	subrepoName := filepath.Join(s.pkg.Name, name)
 	if args[PluginArgIdx].IsTruthy() {
 		subrepoName = name
 	}

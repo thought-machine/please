@@ -3,7 +3,7 @@ package fs
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 // CopyOrLinkFile either copies or hardlinks a file based on the link argument.
@@ -59,7 +59,7 @@ func RecursiveCopyOrLinkFile(from string, to string, mode os.FileMode, link, fal
 	}
 	if info.IsDir() {
 		return WalkMode(from, func(name string, fileMode Mode) error {
-			dest := path.Join(to, name[len(from):])
+			dest := filepath.Join(to, name[len(from):])
 			if fileMode.IsDir() {
 				return os.MkdirAll(dest, DirPermissions)
 			}
@@ -78,7 +78,7 @@ func LinkIfNotExists(src, dest string, f LinkFunc) {
 	}
 	Walk(src, func(name string, isDir bool) error {
 		if !isDir {
-			fullDest := path.Join(dest, name[len(src):])
+			fullDest := filepath.Join(dest, name[len(src):])
 			if err := EnsureDir(fullDest); err != nil {
 				log.Warning("Failed to create directory for %s: %s", fullDest, err)
 			} else if err := f(name, fullDest); err != nil && !os.IsExist(err) {
@@ -92,7 +92,7 @@ func LinkIfNotExists(src, dest string, f LinkFunc) {
 func LinkDestination(src, dest string, f LinkFunc) {
 	Walk(src, func(name string, isDir bool) error {
 		if !isDir {
-			fullDest := path.Join(dest, name[len(src):])
+			fullDest := filepath.Join(dest, name[len(src):])
 			if err := EnsureDir(fullDest); err != nil {
 				log.Warning("Failed to create directory for %s: %s", fullDest, err)
 			} else if err := f(name, fullDest); err != nil && !os.IsExist(err) {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go/build"
 	"io/fs"
-	"path"
 	"path/filepath"
 	"strings"
 )
@@ -43,7 +42,7 @@ func (cfg *Cfg) AddPackage(pkg *build.Package) error {
 		}
 		cfg.Patterns[pattern] = paths
 		for _, p := range paths {
-			cfg.Files[p] = path.Join(pkg.Dir, p)
+			cfg.Files[p] = filepath.Join(pkg.Dir, p)
 		}
 	}
 	return nil
@@ -53,7 +52,7 @@ func dirs(files []string) []string {
 	dirs := []string{}
 	seen := map[string]bool{}
 	for _, f := range files {
-		if dir := path.Dir(f); !seen[dir] {
+		if dir := filepath.Dir(f); !seen[dir] {
 			dirs = append(dirs, dir)
 			seen[dir] = true
 		}
@@ -62,7 +61,7 @@ func dirs(files []string) []string {
 }
 
 func relglob(dir, pattern string) ([]string, error) {
-	paths, err := filepath.Glob(path.Join(dir, pattern))
+	paths, err := filepath.Glob(filepath.Join(dir, pattern))
 	if err == nil && len(paths) == 0 {
 		return nil, fmt.Errorf("pattern %s: no matching paths found", pattern)
 	}

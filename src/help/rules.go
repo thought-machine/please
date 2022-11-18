@@ -3,7 +3,7 @@ package help
 import (
 	"encoding/json"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -64,7 +64,7 @@ func AllBuiltinFunctions(state *core.BuildState) map[string]*asp.Statement {
 		if files, err := os.ReadDir(dir); err == nil {
 			for _, file := range files {
 				if !file.IsDir() {
-					if stmts, err := p.ParseFileOnly(path.Join(dir, file.Name())); err == nil {
+					if stmts, err := p.ParseFileOnly(filepath.Join(dir, file.Name())); err == nil {
 						addAllFunctions(m, stmts, false)
 					}
 				}

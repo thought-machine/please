@@ -7,7 +7,7 @@ name = foo
 [Plugin "foo"]
 ModulePath = foolang
 CompileFlag = -sha1
-BarTool = overridden
+BarTool = bar_test_tool
 
 [PluginConfig "fooc_tool"]
 ConfigKey = FoocTool

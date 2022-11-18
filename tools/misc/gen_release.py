@@ -83,12 +83,16 @@ class ReleaseGen:
         data = response.json()
         self.upload_url = data['upload_url'].replace('{?name,label}', '?name=')
         log.info('Release id %s created', data['id'])
-
+    
+    def artifact_name(self, artifact):
+        arch = self._arch(artifact)
+        return os.path.basename(artifact).replace(self.version, self.version + '_' + arch)
+    
     def upload(self, artifact:str):
         """Uploads the given artifact to the new release."""
         # Artifact names aren't unique between OSs; make them so.
-        arch = self._arch(artifact)
-        filename = os.path.basename(artifact).replace(self.version, self.version + '_' + arch)
+        
+        filename = self.artifact_name(artifact)
         _, ext = os.path.splitext(filename)
         content_type = self.known_content_types.get(ext, 'application/octet-stream')
         url = self.upload_url + filename
@@ -126,7 +130,7 @@ class ReleaseGen:
         with open(artifact, 'rb') as f:
             checksum = hashlib.sha256(f.read()).hexdigest()
         with open(out, 'w') as f:
-            basename = os.path.basename(artifact)
+            basename = self.artifact_name(artifact)
             f.write(f'{checksum}  {basename}\n')
         return out
 
