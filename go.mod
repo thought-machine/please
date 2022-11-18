@@ -47,9 +47,6 @@ require (
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	lukechampine.com/blake3 v1.1.5
-)
-
-require (
 	cloud.google.com/go v0.65.0 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

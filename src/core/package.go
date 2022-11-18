@@ -7,8 +7,12 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
 )
+
+// Max levenshtein distance that we'll suggest at.
+const maxSuggestionDistance = 3
 
 // Package is a representation of a package, ie. the part of the system (one or more
 // directories) covered by a single build file.
@@ -243,4 +247,20 @@ func FindOwningPackage(state *BuildState, file string) BuildLabel {
 		f = filepath.Dir(f)
 	}
 	return BuildLabel{PackageName: "", Name: "all"}
+}
+
+// suggestTargets suggests the targets in the given package that might be misspellings of
+// the requested one.
+func suggestTargets(pkg *Package, label, dependent BuildLabel) string {
+	// The initial haystack only contains target names
+	haystack := []string{}
+	for _, t := range pkg.AllTargets() {
+		haystack = append(haystack, fmt.Sprintf("//%s:%s", pkg.Name, t.Label.Name))
+	}
+	msg := cli.PrettyPrintSuggestion(label.String(), haystack, maxSuggestionDistance)
+	if pkg.Name != dependent.PackageName {
+		return msg
+	}
+	// Use relative package labels where possible.
+	return strings.ReplaceAll(msg, "//"+pkg.Name+":", ":")
 }

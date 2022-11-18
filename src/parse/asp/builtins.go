@@ -189,6 +189,13 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	if s.Callback {
 		target.AddedPostBuild = true
 	}
+
+	if s.parsingFor != nil && s.parsingFor.label == target.Label {
+		if err := s.state.ActivateTarget(s.pkg, s.parsingFor.label, s.parsingFor.dependent, s.parsingFor.forSubinclude); err != nil {
+			s.Error("%v", err)
+		}
+	}
+
 	return pyString(":" + target.Label.Name)
 }
 
