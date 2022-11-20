@@ -464,3 +464,39 @@ func TestSemverCheck(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestLogConfigVariable(t *testing.T) {
+	state := core.NewDefaultBuildState()
+	parser := NewParser(state)
+
+	src, err := rules.ReadAsset("builtins.build_defs")
+	if err != nil {
+		panic(err)
+	}
+	parser.MustLoadBuiltins("builtins.build_defs", src)
+	statements, err := parser.parse("src/parse/asp/test_data/log_config.build")
+	if err != nil {
+		panic(err)
+	}
+	statements = parser.optimise(statements)
+	parser.interpreter.optimiseExpressions(statements)
+
+	list := pyList{pyString("foo"), pyInt(5)}
+	dict := pyDict{"foo": pyString("bar"), "baz": list}
+	confBase := &pyConfigBase{dict: dict}
+	config := &pyConfig{base: confBase, overlay: pyDict{"baz": pyInt(6)}}
+
+	s := parser.interpreter.scope.NewScope()
+	s.config = config
+	s.Set("CONFIG", config)
+
+	capturedOutput := ""
+	capture := func(format string, args ...interface{}) {
+		capturedOutput = fmt.Sprintf(format, args...)
+	}
+
+	setLogCode(s, "info", capture)
+	s.interpretStatements(statements)
+
+	assert.Equal(t, "//: GlobalConfig{\"baz\":6,\"foo\":\"bar\"}", capturedOutput)
+}

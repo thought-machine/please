@@ -111,6 +111,7 @@ func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.
 	}
 
 	s.config = i.config.Copy()
+
 	s.Set("CONFIG", s.config)
 	_, err := i.interpretStatements(s, statements)
 	if err == nil {
