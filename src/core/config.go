@@ -133,7 +133,7 @@ func defaultGlobalConfigFiles() []string {
 
 	if xdgConfigDirs := os.Getenv("XDG_CONFIG_DIRS"); xdgConfigDirs != "" {
 		for _, p := range strings.Split(xdgConfigDirs, ":") {
-			if !strings.HasPrefix(p, "/") {
+			if !filepath.IsAbs(p) {
 				continue
 			}
 
@@ -146,7 +146,7 @@ func defaultGlobalConfigFiles() []string {
 	// but it should be kept here for backward compatibility purposes.
 	configFiles = append(configFiles, fs.ExpandHomePath(UserConfigFileName))
 
-	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" && strings.HasPrefix(xdgConfigHome, "/") {
+	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" && filepath.IsAbs(xdgConfigHome) {
 		configFiles = append(configFiles, filepath.Join(xdgConfigHome, ConfigName))
 	}
 

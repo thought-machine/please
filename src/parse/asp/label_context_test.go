@@ -31,7 +31,7 @@ func TestParseLabelContext(t *testing.T) {
 		subrepo, pkg, name string
 	}{
 		{
-			testName: "Test parse absolut label with subrepo using @",
+			testName: "Test parse absolute label with subrepo using @",
 			label:    "@other_subrepo//test:target",
 			scope:    newScope("subrepo_package", "subrepo", ""),
 			subrepo:  "other_subrepo",
@@ -39,7 +39,7 @@ func TestParseLabelContext(t *testing.T) {
 			name:     "target",
 		},
 		{
-			testName: "Test parse absolut label with subrepo using ///",
+			testName: "Test parse absolute label with subrepo using ///",
 			label:    "///other_subrepo//test:target",
 			scope:    newScope("subrepo_package", "subrepo", ""),
 			subrepo:  "other_subrepo",

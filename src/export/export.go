@@ -6,7 +6,6 @@ package export
 import (
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
@@ -68,7 +67,7 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 	for _, src := range append(target.AllSources(), target.AllData()...) {
 		if _, ok := src.Label(); !ok { // We'll handle these dependencies later
 			for _, p := range src.FullPaths(graph) {
-				if !strings.HasPrefix(p, "/") { // Don't copy system file deps.
+				if !filepath.IsAbs(p) { // Don't copy system file deps.
 					if err := fs.RecursiveCopy(p, filepath.Join(dir, p), 0); err != nil {
 						log.Fatalf("Error copying file: %s\n", err)
 					}
