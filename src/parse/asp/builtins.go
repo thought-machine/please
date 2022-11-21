@@ -282,7 +282,9 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-// WaitForSubincludedTarget drops the interpreter lock and waits for the subincluded target to be built
+// WaitForSubincludedTarget drops the interpreter lock and waits for the subincluded target to be built. This is
+// important to keep us from deadlocking all available parser threads (easy to happen if they're all waiting on a
+// single target which now can't start)
 func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) *core.BuildTarget {
 	s.interpreter.limiter.Release()
 	defer s.interpreter.limiter.Acquire()
@@ -320,13 +322,11 @@ func subinclude(s *scope, args []pyObject) pyObject {
 // subincludeTarget returns the target for a subinclude() call to a label.
 // It blocks until the target exists and is built.
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
+	s.NAssert(l.IsPseudoTarget(), "Can't pass :all or /... to subinclude()")
+
 	pkg := s.contextPackage()
 	pkgLabel := pkg.Label()
-	if l.Subrepo == pkgLabel.Subrepo && l.PackageName == pkgLabel.PackageName && s.subincludeLabel == nil {
-		// This is a subinclude in the same package, check the target exists.
-		s.NAssert(pkg.Target(l.Name) == nil, "Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
-	}
-	s.NAssert(l.IsPseudoTarget(), "Can't pass :all or /... to subinclude()")
+
 	// If we're including from a subrepo, or if we're in a subrepo and including from a different subrepo, make sure
 	// that package is parsed to avoid locking. Locks can occur when the target's package also subincludes that target.
 	//
@@ -343,8 +343,25 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		}
 		s.state.WaitForPackage(subrepoPackageLabel, pkgLabel)
 	}
-	// Temporarily release the parallelism limiter; this is important to keep us from deadlocking
-	// all available parser threads (easy to happen if they're all waiting on a single target which now can't start)
+
+	// isLocal is true when this subinclude target in the current package being parsed
+	isLocal := l.Subrepo == pkgLabel.Subrepo && l.PackageName == pkgLabel.PackageName
+
+	// If the subinclude is local to this package, it must already exist in the graph. If it already exists in the graph
+	// but isn't activated, we should activate it otherwise WaitForSubincludedTarget might block. This can happen when
+	// another package also subincludes this target, and queues it first.
+	if isLocal && s.pkg != nil {
+		t := s.state.Graph.Target(l)
+		if t == nil {
+			s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
+		}
+		if t.State() < core.Active {
+			if err := s.state.ActivateTarget(s.pkg, l, pkgLabel, true); err != nil {
+				s.Error("Failed to activate subinclude target: %v", err)
+			}
+		}
+	}
+
 	t := s.WaitForSubincludedTarget(l, pkgLabel)
 
 	// TODO(jpoole): when pkg is nil, that means this subinclude was made by another subinclude. We're currently loosing

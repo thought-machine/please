@@ -15,6 +15,6 @@ please_repo_e2e_test(
         "plz-out/gen/local/out": "constant",
         "plz-out/gen/local/foo/out": "constant",
     },
-    plz_command = "plz build --profile local //local/...",
+    plz_command = "plz build //local/...",
     repo = "test_repo",
 )
