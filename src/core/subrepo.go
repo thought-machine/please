@@ -100,7 +100,7 @@ func validateSubrepoNameAndPluginConfig(config, repoConfig *Configuration, subre
 	if plugin := config.Plugin[subrepo.Name]; plugin != nil {
 		for key := range plugin.ExtraValues {
 			if _, ok := definedKeys[strings.ToLower(key)]; !ok {
-				return fmt.Errorf("Unrecognised config key %q for plugin %q %v %v", key, subrepo.Name, plugin.ExtraValues, definedKeys)
+				return fmt.Errorf("Unrecognised config key %q for plugin %q", key, subrepo.Name)
 			}
 		}
 	}

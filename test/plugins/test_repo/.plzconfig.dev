@@ -1,0 +1,3 @@
+[Plugin "foo"]
+CompileFlag=
+BarTool=barc-dev

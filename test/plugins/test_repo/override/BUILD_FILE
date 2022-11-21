@@ -4,6 +4,6 @@ package(foo = {"fooc_tool": "overriden"})
 
 text_file(
     name = "override_test",
-    content = f"tool: {CONFIG.FOO.FOOC_TOOL}, path: {CONFIG.FOO.MODULE_PATH}, flags: {CONFIG.FOO.COMPILE_FLAGS}",
+    content = f"fooc: {CONFIG.FOO.FOOC_TOOL}, bar: {CONFIG.FOO.BAR_TOOL}, path: {CONFIG.FOO.MODULE_PATH}, flags: {CONFIG.FOO.COMPILE_FLAGS}",
     out = "fooc",
 )
