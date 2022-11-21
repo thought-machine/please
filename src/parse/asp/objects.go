@@ -844,15 +844,15 @@ func (c *pyConfig) String() string {
 	var b strings.Builder
 	b.WriteByte('{')
 	started := false
-	for k, v := range config {
+	for _, key := range config.Keys() {
 		if started {
 			b.WriteString(", ")
 		}
 		started = true
 		b.WriteByte('"')
-		b.WriteString(k)
+		b.WriteString(key)
 		b.WriteString(`": `)
-		b.WriteString(v.String())
+		b.WriteString(config[key].String())
 	}
 	b.WriteByte('}')
 	return b.String()

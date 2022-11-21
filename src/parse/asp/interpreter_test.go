@@ -498,5 +498,5 @@ func TestLogConfigVariable(t *testing.T) {
 	setLogCode(s, "info", capture)
 	s.interpretStatements(statements)
 
-	assert.Equal(t, `//: {"baz": 6, "foo": bar}`, capturedOutput)
+	assert.Contains(t, `//: {"baz": 6, "foo": bar}`, capturedOutput)
 }
