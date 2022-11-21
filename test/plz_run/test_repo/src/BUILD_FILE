@@ -14,7 +14,7 @@ sh_cmd(
 
 sh_cmd(
     name = "wobble",
-    cmd = "sleep 0.1 && echo wobble",
+    cmd = "echo wobble",
 )
 
 # Test add_data functionality with a file

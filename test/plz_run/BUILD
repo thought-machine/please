@@ -29,10 +29,12 @@ please_repo_e2e_test(
 
 please_repo_e2e_test(
     name = "std_in_parallel_test",
-    expected_output = {
-        "wibble.txt": "wibble\nwobble",
+    expect_output_contains = {
+        # Bit of a hack... dicts can only have the file once so we copy it to check it contains both.
+        "wibble.txt": "wibble",
+        "wobble.txt": "wobble",
     },
-    plz_command = "echo //src:wibble //src:wobble | plz run parallel - > wibble.txt",
+    plz_command = "echo //src:wibble //src:wobble | plz run parallel - > wibble.txt && cp wibble.txt wobble.txt",
     repo = "test_repo",
 )
 
