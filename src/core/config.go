@@ -74,6 +74,9 @@ func readConfigFileOnly(config *Configuration, filename string) error {
 // readConfigFile reads a single config file into the config struct taking into account
 // some context like subrepos and plugins.
 func readConfigFile(config *Configuration, filename string, subrepo bool) error {
+	plugins := config.Plugin
+	config.Plugin = map[string]*Plugin{}
+
 	if err := readConfigFileOnly(config, filename); err != nil {
 		return err
 	}
@@ -81,7 +84,7 @@ func readConfigFile(config *Configuration, filename string, subrepo bool) error 
 	if subrepo {
 		checkPluginVersionRequirements(config)
 	}
-	normalisePluginConfigKeys(config)
+	normaliseAndMergePluginConfig(config, plugins)
 
 	return nil
 }
@@ -296,24 +299,34 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 	})
 }
 
-// normalisePluginConfigKeys converts all config for plugins to lower case
-func normalisePluginConfigKeys(config *Configuration) {
+// normaliseAndMergePluginConfig converts all config for plugins to lower case, and merges in the existing plugin config
+// with the config we just loaded.
+func normaliseAndMergePluginConfig(config *Configuration, oldPlugins map[string]*Plugin) {
+	// First we convert all the config keys to lower case.
 	for _, plugin := range config.Plugin {
 		newExtraValues := make(map[string][]string, len(plugin.ExtraValues))
 		for k, v := range plugin.ExtraValues {
-			_, ok := newExtraValues[strings.ToLower(k)]
-			if k == strings.ToLower(k) && ok {
-				// We have to handle overriding plugin config with .plzconfig files of higher precedence e.g. profiles
-				//
-				// When we meet this condition that means that the non-normalised config from the new .plzconfig file
-				// has been loaded, so we don't need to do anything. If that config used the already normalized form of
-				// the config key then it would've been overridden in the gcfg library, so we don't need to handle that
-				// case.
-				continue
-			}
 			newExtraValues[strings.ToLower(k)] = v
 		}
 		plugin.ExtraValues = newExtraValues
+	}
+
+	// Then load in the previous config value if they weren't set in the last loaded config file
+	for pluginName, plugin := range oldPlugins {
+		pluginName = strings.ToLower(pluginName)
+		newPlugin, ok := config.Plugin[pluginName]
+		if !ok {
+			config.Plugin[pluginName] = plugin
+			continue
+		}
+		if newPlugin.Target.IsEmpty() {
+			newPlugin.Target = plugin.Target
+		}
+		for k, v := range plugin.ExtraValues {
+			if _, ok := newPlugin.ExtraValues[k]; !ok {
+				newPlugin.ExtraValues[k] = v
+			}
+		}
 	}
 }
 

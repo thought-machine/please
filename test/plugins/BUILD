@@ -57,7 +57,7 @@ plugin_e2e_test(
 plugin_e2e_test(
     name = "profile_test",
     expected_output = {
-        "plz-out/gen/override/fooc": "fooc: overriden, bar: barc-dev, path: something, flags: []",
+        "plz-out/gen/override/fooc": "fooc: overriden, bar: bar-dev, path: something, flags: []",
     },
     plz_command = "plz build -o plugin.foo.modulepath:something --profile dev --profile e2e //override:override_test",
 )
