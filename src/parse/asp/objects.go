@@ -824,6 +824,11 @@ func (c *pyConfig) MarshalJSON() ([]byte, error) {
 	if c.overlay == nil {
 		return json.Marshal(c.base.dict)
 	}
+
+	return json.Marshal(c.Config())
+}
+
+func (c *pyConfig) Config() pyDict {
 	merged := make(pyDict, len(c.base.dict)+len(c.overlay))
 	for k, v := range c.base.dict {
 		merged[k] = v
@@ -831,15 +836,26 @@ func (c *pyConfig) MarshalJSON() ([]byte, error) {
 	for k, v := range c.overlay {
 		merged[k] = v
 	}
-	return json.Marshal(merged)
+	return merged
 }
 
 func (c *pyConfig) String() string {
-	marshalledConfig, err := c.MarshalJSON()
-	if err != nil {
-		panic(fmt.Sprintf("failed to marshal object: %s", err))
+	config := c.Config()
+	var b strings.Builder
+	b.WriteByte('{')
+	started := false
+	for k, v := range config {
+		if started {
+			b.WriteString(", ")
+		}
+		started = true
+		b.WriteByte('"')
+		b.WriteString(k)
+		b.WriteString(`": `)
+		b.WriteString(v.String())
 	}
-	return fmt.Sprintf("GlobalConfig%s", string(marshalledConfig))
+	b.WriteByte('}')
+	return b.String()
 }
 
 func (c *pyConfig) Type() string {
