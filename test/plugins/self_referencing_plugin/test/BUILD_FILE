@@ -1,0 +1,3 @@
+subinclude("///foo//build_defs:foo")
+
+foo_library(name = "test")

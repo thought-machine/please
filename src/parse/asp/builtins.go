@@ -166,7 +166,7 @@ func setLogCode(s *scope, name string, f func(format string, args ...interface{}
 // This is the main interface point; every build rule ultimately calls this to add
 // new objects to the build graph.
 func buildRule(s *scope, args []pyObject) pyObject {
-	s.NAssert(s.pkg == nil, "Cannot create new build rules in this context")
+	s.NAssert(s.pkg == nil, "Cannot create new build rules in this scope")
 	// We need to set various defaults from config here; it is useful to put it on the rule but not often so
 	// because most rules pass them through anyway.
 	// TODO(peterebden): when we get rid of the old parser, put these defaults on all the build rules and
@@ -268,7 +268,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	s.Assert(s.state.Config.Bazel.Compatibility, "load() is only available in Bazel compatibility mode. See `plz help bazel` for more information.")
 	// The argument always looks like a build label, but it is not really one (i.e. there is no BUILD file that defines it).
 	// We do not support their legacy syntax here (i.e. "/tools/build_rules/build_test" etc).
-	l := core.ParseBuildLabelContext(string(args[0].(pyString)), s.contextPackage())
+	l := s.parseLabelInContextPkg(string(args[0].(pyString)))
 	filename := filepath.Join(l.PackageName, l.Name)
 	if l.Subrepo != "" {
 		subrepo := s.state.Graph.Subrepo(l.Subrepo)
@@ -300,10 +300,10 @@ func builtinFail(s *scope, args []pyObject) pyObject {
 
 func subinclude(s *scope, args []pyObject) pyObject {
 	if s.contextPackage() == nil {
-		s.Error("cannot subinclude from this context")
+		s.Error("cannot subinclude from this scope")
 	}
 	for _, arg := range args {
-		t := subincludeTarget(s, s.parseLabelContext(string(arg.(pyString))))
+		t := subincludeTarget(s, s.parseLabelInContextPkg(string(arg.(pyString))))
 		s.Assert(s.contextPackage().Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.contextPackage().Label())
 
 		incPkgState := s.state
@@ -688,7 +688,7 @@ func scopeOrSubincludePackage(s *scope, subinclude bool) (*core.Package, error) 
 	if subinclude {
 		pkg := s.subincludePackage()
 		if pkg == nil {
-			return nil, errors.New("not in a subinclude context")
+			return nil, errors.New("not in a subinclude scope")
 		}
 		return pkg, nil
 	}
@@ -703,11 +703,11 @@ func packageName(s *scope, args []pyObject) pyObject {
 
 	pkg, err := scopeOrSubincludePackage(s, args[contextArgIdx].IsTruthy())
 	if err != nil {
-		s.Error("cannot call package_name() from this context: %v", err)
+		s.Error("cannot call package_name() from this scope: %v", err)
 	}
 
 	if args[labelArgIdx].IsTruthy() {
-		return pyString(core.ParseAnnotatedBuildLabelContext(string(args[labelArgIdx].(pyString)), pkg).PackageName)
+		return pyString(s.parseLabelInPackage(string(args[labelArgIdx].(pyString)), pkg).PackageName)
 	}
 
 	return pyString(pkg.Name)
@@ -721,13 +721,13 @@ func subrepoName(s *scope, args []pyObject) pyObject {
 
 	pkg, err := scopeOrSubincludePackage(s, args[contextArgIdx].IsTruthy())
 	if err != nil {
-		s.Error("cannot call subrepo_name() from this context: %v", err)
+		s.Error("cannot call subrepo_name() from this scope: %v", err)
 	}
 
 	if args[labelArgIdx].IsTruthy() {
-		l := core.ParseAnnotatedBuildLabelContext(string(args[labelArgIdx].(pyString)), pkg)
-		if l.Subrepo != "" {
-			return pyString(l.Subrepo)
+		l := s.parseAnnotatedLabelInPackage(string(args[labelArgIdx].(pyString)), pkg)
+		if label, _ := l.Label(); label.Subrepo != "" {
+			return pyString(label.Subrepo)
 		}
 	}
 
@@ -741,9 +741,9 @@ func canonicalise(s *scope, args []pyObject) pyObject {
 	)
 	pkg, err := scopeOrSubincludePackage(s, args[contextArgIdx].IsTruthy())
 	if err != nil {
-		s.Error("Cannot call canonicalise() from this context: %v", err)
+		s.Error("Cannot call canonicalise() from this scope: %v", err)
 	}
-	label := core.ParseAnnotatedBuildLabelContext(string(args[labelArgIdx].(pyString)), pkg)
+	label := s.parseLabelInPackage(string(args[labelArgIdx].(pyString)), pkg)
 	return pyString(label.String())
 }
 
@@ -882,7 +882,7 @@ func getTargetPost(s *scope, name string) *core.BuildTarget {
 func addDep(s *scope, args []pyObject) pyObject {
 	s.Assert(s.Callback, "can only be called from a pre- or post-build callback")
 	target := getTargetPost(s, string(args[0].(pyString)))
-	dep := core.ParseBuildLabelContext(string(args[1].(pyString)), s.pkg)
+	dep := s.parseLabelInPackage(string(args[1].(pyString)), s.pkg)
 	exported := args[2].IsTruthy()
 	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Queue this dependency if it'll be needed.
@@ -1046,7 +1046,7 @@ func selectFunc(s *scope, args []pyObject) pyObject {
 		k := keys[i]
 		if k == "//conditions:default" || k == "default" {
 			def = d[k]
-		} else if selectTarget(s, s.parseLabelContext(k)).HasLabel("config:on") {
+		} else if selectTarget(s, s.parseLabelInContextPkg(k)).HasLabel("config:on") {
 			return d[k]
 		}
 	}
@@ -1077,7 +1077,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		PluginArgIdx
 	)
 
-	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this context")
+	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this scope")
 	name := string(args[NameArgIdx].(pyString))
 	dep := string(args[DepArgIdx].(pyString))
 
@@ -1086,7 +1086,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	var target *core.BuildTarget
 	if dep != "" {
 		// N.B. The target must be already registered on this package.
-		target = s.pkg.TargetOrDie(core.ParseBuildLabelContext(dep, s.pkg).Name)
+		target = s.pkg.TargetOrDie(s.parseLabelInPackage(dep, s.pkg).Name)
 		if len(target.Outputs()) == 1 {
 			root = filepath.Join(target.OutDir(), target.Outputs()[0])
 		} else {

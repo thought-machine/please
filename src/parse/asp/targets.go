@@ -467,7 +467,7 @@ func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarg
 			// *sigh*... Bazel seems to allow an implicit : on the start of dependencies
 			str = ":" + str
 		}
-		target.AddMaybeExportedDependency(checkLabel(s, core.ParseBuildLabelContext(str, s.pkg)), exported, false, internal)
+		target.AddMaybeExportedDependency(checkLabel(s, s.parseLabelInPackage(str, s.pkg)), exported, false, internal)
 	})
 }
 
@@ -498,7 +498,7 @@ func addProvides(s *scope, name string, obj pyObject, t *core.BuildTarget) {
 		for k, v := range d {
 			str, ok := v.(pyString)
 			s.Assert(ok, "%s values must be strings", name)
-			t.AddProvide(k, checkLabel(s, core.ParseBuildLabelContext(string(str), s.pkg)))
+			t.AddProvide(k, checkLabel(s, s.parseLabelInPackage(string(str), s.pkg)))
 		}
 	}
 }
@@ -509,7 +509,7 @@ func parseVisibility(s *scope, vis string) core.BuildLabel {
 	if vis == "PUBLIC" || (s.state.Config.Bazel.Compatibility && vis == "//visibility:public") {
 		return core.WholeGraph[0]
 	}
-	l := core.ParseBuildLabelContext(vis, s.pkg)
+	l := s.parseLabelInPackage(vis, s.pkg)
 	if s.state.Config.Bazel.Compatibility {
 		// Bazel has a couple of special aliases for this stuff.
 		if l.Name == "__pkg__" {
@@ -541,7 +541,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 				Name: pkg.Name,
 			}
 		}
-		label := core.MustParseNamedOutputLabel(src, pkg)
+		label := s.parseAnnotatedLabelInPackage(src, pkg)
 		if l, ok := label.Label(); ok {
 			checkLabel(s, l)
 		}

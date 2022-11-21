@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -140,8 +139,8 @@ func TestPluginSubrepoLabel(t *testing.T) {
 func TestParseBuildLabelParts(t *testing.T) {
 	target1 := "///unittest_cpp//:unittest_cpp"
 	targetNewSyntax := "@unittest_cpp"
-	pkg, name, subrepo := parseBuildLabelParts(target1, "/", "")
-	pkg2, name2, subrepo2 := parseBuildLabelParts(targetNewSyntax, "/", "")
+	pkg, name, subrepo := ParseBuildLabelParts(target1, "/", "")
+	pkg2, name2, subrepo2 := ParseBuildLabelParts(targetNewSyntax, "/", "")
 	assert.Equal(t, pkg, "")
 	assert.Equal(t, pkg2, "")
 	assert.Equal(t, name, "unittest_cpp")
@@ -186,21 +185,4 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	os.Exit(m.Run())
-}
-
-func TestParseBuildLabelContextStripsHostArch(t *testing.T) {
-	pkg := NewPackage("package")
-	arch := cli.HostArch()
-
-	label := ParseBuildLabelContext("///foowin_amd64//src/core", pkg)
-	assert.Equal(t, "///foowin_amd64//src/core:core", label.String())
-
-	label = ParseBuildLabelContext("///go_foowin_amd64//src/core", pkg)
-	assert.Equal(t, "///go_foowin_amd64//src/core:core", label.String())
-
-	label = ParseBuildLabelContext(fmt.Sprintf("///%s//src/core", arch.String()), pkg)
-	assert.Equal(t, "//src/core:core", label.String())
-
-	label = ParseBuildLabelContext(fmt.Sprintf("///go_%s//src/core", arch.String()), pkg)
-	assert.Equal(t, "///go//src/core:core", label.String())
 }

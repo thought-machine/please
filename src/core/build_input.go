@@ -276,17 +276,6 @@ func (label AnnotatedOutputLabel) String() string {
 	return label.BuildLabel.String() + "|" + label.Annotation
 }
 
-// MustParseNamedOutputLabel attempts to parse a build output label. It's allowed to just be
-// a normal build label as well.
-// The syntax is an extension of normal build labels: //package:target|output
-func MustParseNamedOutputLabel(target string, pkg *Package) BuildInput {
-	if index := strings.IndexRune(target, '|'); index != -1 && index != len(target)-1 {
-		label := ParseBuildLabelContext(target[:index], pkg)
-		return AnnotatedOutputLabel{BuildLabel: label, Annotation: target[index+1:]}
-	}
-	return ParseBuildLabelContext(target, pkg)
-}
-
 // UnmarshalFlag unmarshals a build label from a command line flag. Implementation of flags.Unmarshaler interface.
 func (label *AnnotatedOutputLabel) UnmarshalFlag(value string) error {
 	annotation := ""

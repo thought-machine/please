@@ -1,0 +1,7 @@
+def foo_library(name):
+    return genrule(
+        name = name,
+        cmd = "$TOOL > $OUT",
+        outs = [f"{name}.txt"],
+        tools = ["///foo//tools:tool"],
+    )

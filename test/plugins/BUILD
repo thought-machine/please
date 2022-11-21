@@ -97,3 +97,13 @@ please_repo_e2e_test(
     plz_command = "plz build -o plugin.foo.modulepath:something //test:bar_inherit_test",
     repo = "foo_plugin",
 )
+
+# ///foo//build_defs:foo references itself by its plugin name which didn't work when the plugin was also the host repo
+please_repo_e2e_test(
+    name = "self_referencing_plugin_test",
+    expected_output = {
+        "plz-out/gen/test/test.txt": "foo",
+    },
+    plz_command = "plz build  -o plugin.foo.modulepath:something //test/... --profile e2e",
+    repo = "self_referencing_plugin",
+)

@@ -136,7 +136,7 @@ func (stack *errorStack) equaliseLengths(sl []string) {
 	}
 }
 
-// errorMessage returns the first part of the error message (i.e. the main message & file context)
+// errorMessage returns the first part of the error message (i.e. the main message & file scope)
 func (stack *errorStack) errorMessage() string {
 	frame := stack.Stack[0]
 	if before, line, after := stack.readLine(stack.Readers[0], frame.Line-1); line != "" || before != "" || after != "" {
@@ -170,7 +170,7 @@ func (stack *errorStack) errorMessage() string {
 	return stack.err.Error()
 }
 
-// readLine reads a particular line of a reader plus some context.
+// readLine reads a particular line of a reader plus some scope.
 func (stack *errorStack) readLine(r io.ReadSeeker, line int) (string, string, string) {
 	// The reader for any level of the stack is allowed to be nil.
 	if r == nil {

@@ -1,0 +1,5 @@
+sh_cmd(
+    name = "tool",
+    cmd = "echo foo",
+    visibility = ["PUBLIC"],
+)

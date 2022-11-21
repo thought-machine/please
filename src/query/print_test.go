@@ -3,7 +3,6 @@ package query
 import (
 	"bytes"
 	"encoding/json"
-	"strings"
 	"testing"
 	"time"
 
@@ -192,10 +191,19 @@ func testPrintFields(target *core.BuildTarget, fields []string) string {
 	return buf.String()
 }
 
+// src replicates some of the functionality from the interpreter for parsing a build input
 func src(in string) core.BuildInput {
 	pkg := core.NewPackage("src/query")
-	if strings.HasPrefix(in, "//") || strings.HasPrefix(in, ":") {
-		return core.MustParseNamedOutputLabel(in, pkg)
+	if core.LooksLikeABuildLabel(in) {
+		in, annotation := core.SplitLabelAnnotation(in)
+		label := core.ParseBuildLabel(in, pkg.Name)
+		if annotation != "" {
+			return core.AnnotatedOutputLabel{
+				BuildLabel: label,
+				Annotation: annotation,
+			}
+		}
+		return label
 	}
 	return core.FileLabel{File: in, Package: pkg.Name}
 }

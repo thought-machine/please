@@ -1,0 +1,4 @@
+[PluginDefinition]
+name = foo
+
+[Plugin "foo"]
