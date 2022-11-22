@@ -1,7 +1,7 @@
 //go:build linux
 // +build linux
 
-package sandbox
+package main
 
 import (
 	"fmt"
@@ -12,8 +12,6 @@ import (
 	"syscall"
 
 	"golang.org/x/sys/unix"
-
-	"github.com/thought-machine/please/src/core"
 )
 
 // mdLazytime is the bit for lazily flushing disk writes.
@@ -22,9 +20,10 @@ const mdLazytime = 1 << 25
 
 const sandboxDirsVar = "SANDBOX_DIRS"
 
-var sandboxMountDir = core.SandboxDir
+// Avoid importing this from Please. This tool should initialise quickly.
+var sandboxMountDir = "/tmp/plz_sandbox"
 
-func Sandbox(args []string) error {
+func sandbox(args []string) error {
 	if len(args) < 2 {
 		return fmt.Errorf("incorrect number of args to call plz sandbox")
 	}
@@ -181,4 +180,11 @@ func loUp() error {
 	}
 	ifreq.SetUint32(ifreq.Uint32() | unix.IFF_UP)
 	return unix.IoctlIfreq(sock, unix.SIOCSIFFLAGS, ifreq)
+}
+
+func main() {
+	if err := sandbox(os.Args[1:]); err != nil {
+		fmt.Printf("Failed to run sandbox command: %v", err)
+		os.Exit(1)
+	}
 }

@@ -5,27 +5,26 @@ import (
 	"os/exec"
 	"strconv"
 	"syscall"
+
+	"github.com/thought-machine/please/src/sandbox"
 )
 
 // ExecCommand executes an external command.
 // We set Pdeathsig to try to make sure commands don't outlive us if we die.
 // N.B. This does not start the command - the caller must handle that (or use one
-//      of the other functions which are higher-level interfaces).
-func (e *Executor) ExecCommand(sandbox SandboxConfig, foreground bool, command string, args ...string) *exec.Cmd {
-	shouldNamespace := e.namespace == NamespaceAlways || ((e.namespace == NamespaceSandbox || e.usePleaseSandbox) && sandbox != NoSandbox)
+//
+//	of the other functions which are higher-level interfaces).
+func (e *Executor) ExecCommand(sandboxConfig SandboxConfig, foreground bool, command string, args ...string) *exec.Cmd {
+	shouldNamespace := e.namespace == NamespaceAlways || ((e.namespace == NamespaceSandbox || e.usePleaseSandbox) && sandboxConfig != NoSandbox)
 
 	cmd := exec.Command(command, args...)
 
 	// If we're sandboxing, run the sandbox tool instead to set up the network, mount, etc.
-	if sandbox != NoSandbox {
+	if sandboxConfig != NoSandbox {
 		// re-exec into `plz sandbox` if we're using the built in sandboxing
 		if e.usePleaseSandbox {
-			args = append([]string{"sandbox", command}, args...)
-			plz, err := os.Executable()
-			if err != nil {
-				panic(err)
-			}
-			cmd = exec.Command(plz, args...)
+			args = append([]string{command}, args...)
+			cmd = exec.Command(sandbox.SandboxTool(), args...)
 			// TODO(jpoole): This should be configurable and overridable at the rule level
 			cmd.Env = append(cmd.Env, "SANDBOX_UID="+strconv.Itoa(os.Getuid()))
 		} else {
@@ -33,7 +32,7 @@ func (e *Executor) ExecCommand(sandbox SandboxConfig, foreground bool, command s
 			args = append([]string{command}, args...)
 			cmd = exec.Command(e.sandboxTool, args...)
 		}
-		cmd.Env = append(cmd.Env, "SHARE_NETWORK="+boolToString(!sandbox.Network), "SHARE_MOUNT="+boolToString(!sandbox.Mount))
+		cmd.Env = append(cmd.Env, "SHARE_NETWORK="+boolToString(!sandboxConfig.Network), "SHARE_MOUNT="+boolToString(!sandboxConfig.Mount))
 	}
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -46,11 +45,11 @@ func (e *Executor) ExecCommand(sandbox SandboxConfig, foreground bool, command s
 	// we're sandboxing this rule.
 	if shouldNamespace {
 		cmd.SysProcAttr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID
-		if sandbox.Network {
+		if sandboxConfig.Network {
 			// Namespace network
 			cmd.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
 		}
-		if sandbox.Mount {
+		if sandboxConfig.Mount {
 			// Namespace mount
 			cmd.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
 		}
