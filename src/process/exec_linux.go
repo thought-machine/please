@@ -24,7 +24,7 @@ func (e *Executor) ExecCommand(sandboxConfig SandboxConfig, foreground bool, com
 		// re-exec into `plz sandbox` if we're using the built in sandboxing
 		if e.usePleaseSandbox {
 			args = append([]string{command}, args...)
-			cmd = exec.Command(sandbox.SandboxTool(), args...)
+			cmd = exec.Command(sandbox.Tool(), args...)
 			// TODO(jpoole): This should be configurable and overridable at the rule level
 			cmd.Env = append(cmd.Env, "SANDBOX_UID="+strconv.Itoa(os.Getuid()))
 		} else {
