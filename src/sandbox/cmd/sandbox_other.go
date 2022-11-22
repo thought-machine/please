@@ -8,6 +8,8 @@ import (
 	"syscall"
 )
 
-func main() error {
-	return syscall.Exec(os.Args[1], os.Args[2:]...)
+func main() {
+	if err := syscall.Exec(os.Args[1], os.Args[2:], os.Environ()); err != nil {
+		panic(err)
+	}
 }
