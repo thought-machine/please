@@ -825,10 +825,10 @@ func (c *pyConfig) MarshalJSON() ([]byte, error) {
 		return json.Marshal(c.base.dict)
 	}
 
-	return json.Marshal(c.Config())
+	return json.Marshal(c.toPyDict())
 }
 
-func (c *pyConfig) Config() pyDict {
+func (c *pyConfig) toPyDict() pyDict {
 	merged := make(pyDict, len(c.base.dict)+len(c.overlay))
 	for k, v := range c.base.dict {
 		merged[k] = v
@@ -840,22 +840,7 @@ func (c *pyConfig) Config() pyDict {
 }
 
 func (c *pyConfig) String() string {
-	config := c.Config()
-	var b strings.Builder
-	b.WriteByte('{')
-	started := false
-	for _, key := range config.Keys() {
-		if started {
-			b.WriteString(", ")
-		}
-		started = true
-		b.WriteByte('"')
-		b.WriteString(key)
-		b.WriteString(`": `)
-		b.WriteString(config[key].String())
-	}
-	b.WriteByte('}')
-	return b.String()
+	return c.toPyDict().String()
 }
 
 func (c *pyConfig) Type() string {
