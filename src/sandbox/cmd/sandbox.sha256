@@ -1,0 +1,1 @@
+Dummy of //src/sandbox:sandbox_hash so `go build` doesn't fail to embed the generated file
