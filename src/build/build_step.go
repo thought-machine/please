@@ -324,9 +324,11 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			metadata.OptionalOutputs = append(metadata.OptionalOutputs, output)
 		}
 
-		metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(target)
-		if err != nil {
-			return err
+		if len(target.OutputDirectories) != 0 {
+			metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(target)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -604,7 +606,7 @@ func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core
 
 // addOutputDirectoriesToBuildOutput moves all the files from the output dirs into the root of the build temp dir
 // and adds them as outputs to the build target
-func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, error) {
+func addOutputDirectoriesToBuildOutput(pkg *core.Package, target *core.BuildTarget) ([]string, error) {
 	outs := make([]string, 0, len(target.OutputDirectories))
 	for _, dir := range target.OutputDirectories {
 		o, err := addOutputDirectoryToBuildOutput(target, dir)
@@ -612,6 +614,14 @@ func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, erro
 			return nil, fmt.Errorf("failed to move output dir (%s) contents to rule root: %w", dir, err)
 		}
 		outs = append(outs, o...)
+
+		// Register the outputs with the package and check for conflicts
+		for _, out := range o {
+			if t, ok := pkg.Outputs[out]; ok && t != target {
+				log.Warning("%v produced %v via output which is also outputted by %v. This can cause issues with incrementality.", target, out, t)
+			}
+			pkg.Outputs[out] = target
+		}
 	}
 	return outs, nil
 }
