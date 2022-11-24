@@ -92,11 +92,14 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 			return
 		}
 		targets[target] = struct{}{}
-		for _, source := range target.AllSources() {
-			addSource(watcher, state, source, dirs, files)
-		}
-		for _, datum := range target.AllData() {
-			addSource(watcher, state, datum, dirs, files)
+		// Don't generate watches on any sources in a subrepo; we only watch non-generated source files.
+		if target.Label.Subrepo == "" {
+			for _, source := range target.AllSources() {
+				addSource(watcher, state, source, dirs, files)
+			}
+			for _, datum := range target.AllData() {
+				addSource(watcher, state, datum, dirs, files)
+			}
 		}
 		for _, dep := range target.Dependencies() {
 			startWatch(dep)
