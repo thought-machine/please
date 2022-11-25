@@ -119,6 +119,17 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, err
 		changed = changed || fileChanged
 	}
 
+	// Check if any of our srcs that are other built targets have changed.
+	for _, bi := range target.AllSources() {
+		if l, ok := bi.(core.BuildLabel); ok {
+			depState := state.Graph.TargetOrDie(l).State()
+			if depState == core.Built || depState == core.BuiltRemotely {
+				changed = true
+				break
+			}
+		}
+	}
+
 	if target.HasLabel("py") && !target.IsBinary {
 		// Pre-emptively create __init__.py files so the outputs can be loaded dynamically.
 		// It's a bit cheeky to do non-essential language-specific logic but this enables

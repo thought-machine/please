@@ -839,7 +839,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 // A targetHasher is an implementation of the interface in core.
 type targetHasher struct {
 	State  *core.BuildState
-	hashes map[core.BuildLabel][]byte
+	hashes map[*core.BuildTarget][]byte
 	mutex  sync.RWMutex
 }
 
@@ -847,17 +847,15 @@ type targetHasher struct {
 func newTargetHasher(state *core.BuildState) core.TargetHasher {
 	return &targetHasher{
 		State:  state,
-		hashes: map[core.BuildLabel][]byte{},
+		hashes: map[*core.BuildTarget][]byte{},
 	}
 }
 
 // OutputHash calculates the standard output hash of a build target.
 func (h *targetHasher) OutputHash(target *core.BuildTarget) ([]byte, error) {
 	h.mutex.RLock()
-	hash, present := h.hashes[target.Label]
+	hash, present := h.hashes[target]
 	h.mutex.RUnlock()
-
-	log.Warningf("%v output hash", target)
 
 	if present {
 		return hash, nil
@@ -874,17 +872,11 @@ func (h *targetHasher) OutputHash(target *core.BuildTarget) ([]byte, error) {
 func (h *targetHasher) SetHash(target *core.BuildTarget, hash []byte) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
-	h.hashes[target.Label] = hash
+	h.hashes[target] = hash
 }
 
 // outputHash calculates the output hash for a target, choosing an appropriate strategy.
 func (h *targetHasher) outputHash(target *core.BuildTarget) ([]byte, error) {
-	// We can cheat for filegroups and just hash the output hashes of their sources which re-uses the pre-calculated
-	// hashes
-	if target.IsFilegroup && len(target.Hashes) == 0 {
-
-	}
-
 	outs := target.FullOutputs()
 
 	// We must combine for sha1 for backwards compatibility

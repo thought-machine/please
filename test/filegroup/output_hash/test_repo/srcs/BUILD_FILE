@@ -1,0 +1,12 @@
+genrule(
+    name = "file1",
+    srcs = ["file1"],
+    cmd = "cp $SRC $OUT",
+    outs = ["file1.out"],
+)
+
+filegroup(
+    name = "filegroup",
+    srcs = ["file2", ":file1"],
+    hashes = ["sha256: 05421a2c674d447cc418ab3807bead1eabe2646faf4f6adcc01d751423349b7e"],
+)
