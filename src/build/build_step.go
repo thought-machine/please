@@ -255,11 +255,14 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 		if target.IsFilegroup {
 			log.Debug("Building %s...", target.Label)
-			if changed, err := buildFilegroup(state, target); err != nil {
+			changed, err := buildFilegroup(state, target)
+			if err != nil {
 				return err
-			} else if _, err := calculateAndCheckRuleHash(state, target); err != nil {
-				return err
-			} else if changed {
+			}
+			if changed {
+				if _, err := calculateAndCheckRuleHash(state, target); err != nil {
+					return err
+				}
 				target.SetState(core.Built)
 				state.LogBuildResult(tid, target, core.TargetBuilt, "Built")
 			} else {
@@ -836,7 +839,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 // A targetHasher is an implementation of the interface in core.
 type targetHasher struct {
 	State  *core.BuildState
-	hashes map[*core.BuildTarget][]byte
+	hashes map[core.BuildLabel][]byte
 	mutex  sync.RWMutex
 }
 
@@ -844,15 +847,18 @@ type targetHasher struct {
 func newTargetHasher(state *core.BuildState) core.TargetHasher {
 	return &targetHasher{
 		State:  state,
-		hashes: map[*core.BuildTarget][]byte{},
+		hashes: map[core.BuildLabel][]byte{},
 	}
 }
 
 // OutputHash calculates the standard output hash of a build target.
 func (h *targetHasher) OutputHash(target *core.BuildTarget) ([]byte, error) {
 	h.mutex.RLock()
-	hash, present := h.hashes[target]
+	hash, present := h.hashes[target.Label]
 	h.mutex.RUnlock()
+
+	log.Warningf("%v output hash", target)
+
 	if present {
 		return hash, nil
 	}
@@ -868,11 +874,17 @@ func (h *targetHasher) OutputHash(target *core.BuildTarget) ([]byte, error) {
 func (h *targetHasher) SetHash(target *core.BuildTarget, hash []byte) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
-	h.hashes[target] = hash
+	h.hashes[target.Label] = hash
 }
 
 // outputHash calculates the output hash for a target, choosing an appropriate strategy.
 func (h *targetHasher) outputHash(target *core.BuildTarget) ([]byte, error) {
+	// We can cheat for filegroups and just hash the output hashes of their sources which re-uses the pre-calculated
+	// hashes
+	if target.IsFilegroup && len(target.Hashes) == 0 {
+
+	}
+
 	outs := target.FullOutputs()
 
 	// We must combine for sha1 for backwards compatibility
@@ -914,7 +926,7 @@ func outputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHashe
 	return h.Sum(nil), nil
 }
 
-// Verify the hash of output files for a rule match the ones set on it.
+// checkRuleHashes verifies the hash of output files for a rule match the ones set on it.
 func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []byte) error {
 	if len(target.Hashes) == 0 {
 		return nil // nothing to check
