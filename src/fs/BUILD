@@ -40,7 +40,6 @@ go_benchmark(
     deps = [
         ":fs",
         "//third_party/go:blake3",
-        "//third_party/go:zeebo_blake3",
         "//third_party/go:testify",
         "//third_party/go:xxhash",
     ],

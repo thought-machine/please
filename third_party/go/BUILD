@@ -904,32 +904,15 @@ go_module(
 go_module(
     name = "blake3",
     licences = ["MIT"],
-    module = "lukechampine.com/blake3",
-    version = "v1.1.5",
+    module = "github.com/zeebo/blake3",
+    install = ["..."],
+    version = "v0.2.3",
     visibility = ["PUBLIC"],
     deps = [":cpuid"],
 )
 
 go_module(
-    name = "zeebo_blake3",
-    licences = ["MIT"],
-    module = "github.com/zeebo/blake3",
-    install = ["..."],
-    version = "v0.2.3",
-    visibility = ["PUBLIC"],
-    deps = [":cpuid_v2"],
-)
-
-go_module(
     name = "cpuid",
-    licences = ["MIT"],
-    module = "github.com/klauspost/cpuid",
-    version = "v1.3.1",
-    visibility = ["PUBLIC"],
-)
-
-go_module(
-    name = "cpuid_v2",
     licences = ["MIT"],
     module = "github.com/klauspost/cpuid/v2",
     version = "v2.2.1",
