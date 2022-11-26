@@ -917,6 +917,7 @@ go_module(
     module = "github.com/klauspost/cpuid/v2",
     version = "v2.2.1",
     visibility = ["PUBLIC"],
+    deps = [":xsys"],
 )
 
 go_module(
