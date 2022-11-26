@@ -10,6 +10,7 @@ import (
 	"hash/crc64"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,7 +21,7 @@ import (
 
 func BenchmarkHashes(b *testing.B) {
 	// Data sizes in kb
-	for _, size := range []int{1, 4, 8, 16, 32, 256, 1024, 32 * 1024} {
+	for _, size := range []int{32 * 1024, 256 * 1024, 1024 * 1024} {
 		testFile := fmt.Sprintf("test%d.dat", size)
 		writeTestFile(b, testFile, size)
 		for name, hash := range map[string]func() hash.Hash{
@@ -33,10 +34,12 @@ func BenchmarkHashes(b *testing.B) {
 		} {
 			b.Run(fmt.Sprintf("%s/%dkb", name, size), func(b *testing.B) {
 				hasher := NewPathHasher("", false, hash, name)
+				start := time.Now()
 				for i := 0; i < b.N; i++ {
 					_, err := hasher.hash(testFile, false, false, false)
 					assert.NoError(b, err)
 				}
+				b.ReportMetric(float64(size*b.N)/1024.0*time.Since(start).Seconds(), "MB/s")
 			})
 		}
 	}
