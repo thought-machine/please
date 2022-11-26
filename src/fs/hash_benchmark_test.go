@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/cespare/xxhash/v2"
+	zb3 "github.com/zeebo/blake3"
 	"lukechampine.com/blake3"
 )
 
@@ -25,12 +26,13 @@ func BenchmarkHashes(b *testing.B) {
 		testFile := fmt.Sprintf("test%d.dat", size)
 		writeTestFile(b, testFile, size)
 		for name, hash := range map[string]func() hash.Hash{
-			"sha1":   sha1.New,
-			"sha256": sha256.New,
-			"crc32":  func() hash.Hash { return hash.Hash(crc32.NewIEEE()) },
-			"crc64":  func() hash.Hash { return hash.Hash(crc64.New(crc64.MakeTable(crc64.ISO))) },
-			"blake3": func() hash.Hash { return blake3.New(32, nil) },
-			"xxhash": func() hash.Hash { return xxhash.New() },
+			"sha1":         sha1.New,
+			"sha256":       sha256.New,
+			"crc32":        func() hash.Hash { return hash.Hash(crc32.NewIEEE()) },
+			"crc64":        func() hash.Hash { return hash.Hash(crc64.New(crc64.MakeTable(crc64.ISO))) },
+			"blake3":       func() hash.Hash { return blake3.New(32, nil) },
+			"zeebo_blake3": func() hash.Hash { return zb3.New() },
+			"xxhash":       func() hash.Hash { return xxhash.New() },
 		} {
 			b.Run(fmt.Sprintf("%s/%dkb", name, size), func(b *testing.B) {
 				hasher := NewPathHasher("", false, hash, name)
