@@ -33,3 +33,14 @@ go_test(
     # This must remain a glob because the tests rely on data being loaded in via globs
     data = glob(["test_data/**"]),
 )
+
+go_benchmark(
+    name = "hash_benchmark",
+    srcs = ["hash_benchmark_test.go"],
+    deps = [
+        ":fs",
+        "//third_party/go:blake3",
+        "//third_party/go:testify",
+        "//third_party/go:xxhash",
+    ],
+)
