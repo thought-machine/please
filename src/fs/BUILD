@@ -18,7 +18,7 @@ go_test(
     name = "fs_test",
     srcs = glob(
         ["*_test.go"],
-        exclude = ["glob_integration_test.go"],
+        exclude = ["glob_integration_test.go", "*_benchmark_test.go"],
     ),
     data = ["test_data"],
     deps = [
