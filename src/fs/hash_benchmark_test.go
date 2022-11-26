@@ -20,6 +20,7 @@ import (
 )
 
 func BenchmarkHashes(b *testing.B) {
+	b3 := blake3.New()
 	// Data sizes in kb
 	for _, size := range []int{32 * 1024, 256 * 1024, 1024 * 1024} {
 		testFile := fmt.Sprintf("test%d.dat", size)
@@ -30,6 +31,7 @@ func BenchmarkHashes(b *testing.B) {
 			"crc32":  func() hash.Hash { return hash.Hash(crc32.NewIEEE()) },
 			"crc64":  func() hash.Hash { return hash.Hash(crc64.New(crc64.MakeTable(crc64.ISO))) },
 			"blake3": func() hash.Hash { return blake3.New() },
+			"b3_rst": func() hash.Hash { b3.Reset(); return b3 },
 			"xxhash": func() hash.Hash { return xxhash.New() },
 		} {
 			b.Run(fmt.Sprintf("%s/%dkb", name, size), func(b *testing.B) {
