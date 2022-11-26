@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -71,7 +72,7 @@ type assignment struct {
 
 // walkASTMulti is like asp.WalkAST but accepts a sequence of callbacks.
 // Currently it's living here since we can't represent this nicely with generics.
-func walkASTMulti(ast []*Statement, callback ...interface{}) {
+func walkASTMulti(ast []*asp.Statement, callback ...interface{}) {
 	types := make([]reflect.Type, len(callback))
 	callbacks := make([]reflect.Value, len(callback))
 	for i, cb := range callback {
