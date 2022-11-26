@@ -12,10 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/cespare/xxhash/v2"
 	"github.com/zeebo/blake3"
 )
 
@@ -48,6 +47,7 @@ func BenchmarkHashes(b *testing.B) {
 }
 
 func writeTestFile(b *testing.B, filename string, sizeKB int) {
+	b.Helper()
 	f, err := os.Create(filename)
 	require.NoError(b, err)
 	defer f.Close()
