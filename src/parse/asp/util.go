@@ -57,45 +57,29 @@ func FindArgument(statement *Statement, args ...string) (argument *CallArgument)
 }
 
 // WalkAST is a generic function that walks through the ast recursively,
-// It accepts a sequence of functions to look for a particular grammar object; any matching one will be called on
+// It accepts a function to look for a particular grammar object; it will be called on
 // each instance of that type, and returns a bool - for example
 // WalkAST(ast, func(expr *Expression) bool { ... })
 // If the callback returns true, the node will be further visited; if false it (and
 // all children) will be skipped.
-func WalkAST(ast []*Statement, callback ...interface{}) {
-	types := make([]reflect.Type, len(callback))
-	callbacks := make([]reflect.Value, len(callback))
-	for i, cb := range callback {
-		v := reflect.ValueOf(cb)
-		types[i] = v.Type().In(0)
-		callbacks[i] = v
-	}
+func WalkAST[T any](ast []*Statement, callback func(*T) bool) {
+	var t T
 	for _, node := range ast {
-		walkAST(reflect.ValueOf(node), types, callbacks)
+		walkAST(reflect.ValueOf(node), reflect.TypeOf(t), callback)
 	}
 }
 
-func walkAST(v reflect.Value, types []reflect.Type, callbacks []reflect.Value) {
-	call := func(v reflect.Value) bool {
-		for i, typ := range types {
-			if v.Type() == typ {
-				vs := callbacks[i].Call([]reflect.Value{v})
-				return vs[0].Bool()
-			}
-		}
-		return true
-	}
-
+func walkAST[T any](v reflect.Value, t reflect.Type, callback func(*T) bool) {
 	if v.Kind() == reflect.Ptr && !v.IsNil() {
-		walkAST(v.Elem(), types, callbacks)
+		walkAST(v.Elem(), t, callback)
 	} else if v.Kind() == reflect.Slice {
 		for i := 0; i < v.Len(); i++ {
-			walkAST(v.Index(i), types, callbacks)
+			walkAST(v.Index(i), t, callback)
 		}
 	} else if v.Kind() == reflect.Struct {
-		if call(v.Addr()) {
+		if v.Type() != t || callback(v.Addr().Interface().(*T)) {
 			for i := 0; i < v.NumField(); i++ {
-				walkAST(v.Field(i), types, callbacks)
+				walkAST(v.Field(i), t, callback)
 			}
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -69,6 +70,47 @@ type assignment struct {
 	Read bool // does it get read later on?
 }
 
+// walkASTMulti is like asp.WalkAST but accepts a sequence of callbacks.
+// Currently it's living here since we can't represent this nicely with generics.
+func walkASTMulti(ast []*asp.Statement, callback ...interface{}) {
+	types := make([]reflect.Type, len(callback))
+	callbacks := make([]reflect.Value, len(callback))
+	for i, cb := range callback {
+		v := reflect.ValueOf(cb)
+		types[i] = v.Type().In(0)
+		callbacks[i] = v
+	}
+	for _, node := range ast {
+		walkAST(reflect.ValueOf(node), types, callbacks)
+	}
+}
+
+func walkAST(v reflect.Value, types []reflect.Type, callbacks []reflect.Value) {
+	call := func(v reflect.Value) bool {
+		for i, typ := range types {
+			if v.Type() == typ {
+				vs := callbacks[i].Call([]reflect.Value{v})
+				return vs[0].Bool()
+			}
+		}
+		return true
+	}
+
+	if v.Kind() == reflect.Ptr && !v.IsNil() {
+		walkAST(v.Elem(), types, callbacks)
+	} else if v.Kind() == reflect.Slice {
+		for i := 0; i < v.Len(); i++ {
+			walkAST(v.Index(i), types, callbacks)
+		}
+	} else if v.Kind() == reflect.Struct {
+		if call(v.Addr()) {
+			for i := 0; i < v.NumField(); i++ {
+				walkAST(v.Field(i), types, callbacks)
+			}
+		}
+	}
+}
+
 // checkAST runs some static checks on a loaded AST.
 // Currently this checks for variables that are assigned to but not read.
 func checkAST(stmts []*asp.Statement, parentScopes ...map[string]assignment) (errs []assignment) {
@@ -84,7 +126,7 @@ func checkAST(stmts []*asp.Statement, parentScopes ...map[string]assignment) (er
 		}
 	}
 
-	asp.WalkAST(stmts, func(ident *asp.IdentStatement) bool {
+	walkASTMulti(stmts, func(ident *asp.IdentStatement) bool {
 		if ident.Action != nil && ident.Action.Assign != nil {
 			if _, present := assigns[ident.Name]; !present {
 				assigns[ident.Name] = assignment{Name: ident.Name, Pos: ident.Action.Assign.Pos}
