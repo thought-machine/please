@@ -119,12 +119,16 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, err
 		changed = changed || fileChanged
 	}
 
-	// Check if any of our srcs that are other built targets have changed.
+	// When src targets are in the same package as us, the `source` and `out` paths are the same so the files are
+	// considered unchanged. We should consider ourselves changed though, as the sources Might indeed have changed.
 	for _, bi := range target.AllSources() {
 		if changed {
 			break
 		}
 		l, ok := bi.Label()
+		if !ok || !target.Label.InSamePackageAs(l) {
+			continue
+		}
 		if ok && state.Graph.TargetOrDie(l).State() < core.Unchanged {
 			changed = true
 		}
