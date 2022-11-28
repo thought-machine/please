@@ -121,12 +121,12 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, err
 
 	// Check if any of our srcs that are other built targets have changed.
 	for _, bi := range target.AllSources() {
-		if l, ok := bi.(core.BuildLabel); ok {
-			depState := state.Graph.TargetOrDie(l).State()
-			if depState == core.Built || depState == core.BuiltRemotely {
-				changed = true
-				break
-			}
+		if changed {
+			break
+		}
+		l, ok := bi.Label()
+		if ok && state.Graph.TargetOrDie(l).State() < core.Unchanged {
+			changed = true
 		}
 	}
 
