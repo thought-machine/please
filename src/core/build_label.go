@@ -513,6 +513,10 @@ func (label BuildLabel) MarshalText() ([]byte, error) {
 	return []byte(label.String()), nil
 }
 
+func (label BuildLabel) InSamePackageAs(l BuildLabel) bool {
+	return l.PackageName == label.PackageName && l.Subrepo == label.Subrepo
+}
+
 // A packageKey is a cut-down version of BuildLabel that only contains the package part.
 // It's used to key maps and so forth that don't care about the target name.
 type packageKey struct {

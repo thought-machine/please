@@ -119,6 +119,21 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, err
 		changed = changed || fileChanged
 	}
 
+	// When src targets are in the same package as us, the `source` and `out` paths are the same so the files are
+	// considered unchanged. We should consider ourselves changed though, as the sources Might indeed have changed.
+	for _, bi := range target.AllSources() {
+		if changed {
+			break
+		}
+		l, ok := bi.Label()
+		if !ok || !target.Label.InSamePackageAs(l) {
+			continue
+		}
+		if ok && state.Graph.TargetOrDie(l).State() < core.Unchanged {
+			changed = true
+		}
+	}
+
 	if target.HasLabel("py") && !target.IsBinary {
 		// Pre-emptively create __init__.py files so the outputs can be loaded dynamically.
 		// It's a bit cheeky to do non-essential language-specific logic but this enables

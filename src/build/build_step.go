@@ -257,11 +257,14 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 		if target.IsFilegroup {
 			log.Debug("Building %s...", target.Label)
-			if changed, err := buildFilegroup(state, target); err != nil {
+			changed, err := buildFilegroup(state, target)
+			if err != nil {
 				return err
-			} else if _, err := calculateAndCheckRuleHash(state, target); err != nil {
-				return err
-			} else if changed {
+			}
+			if changed {
+				if _, err := calculateAndCheckRuleHash(state, target); err != nil {
+					return err
+				}
 				target.SetState(core.Built)
 				state.LogBuildResult(tid, target, core.TargetBuilt, "Built")
 			} else {
@@ -871,6 +874,7 @@ func (h *targetHasher) OutputHash(target *core.BuildTarget) ([]byte, error) {
 	h.mutex.RLock()
 	hash, present := h.hashes[target]
 	h.mutex.RUnlock()
+
 	if present {
 		return hash, nil
 	}
@@ -932,7 +936,7 @@ func outputHash(target *core.BuildTarget, outputs []string, hasher *fs.PathHashe
 	return h.Sum(nil), nil
 }
 
-// Verify the hash of output files for a rule match the ones set on it.
+// checkRuleHashes verifies the hash of output files for a rule match the ones set on it.
 func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []byte) error {
 	if len(target.Hashes) == 0 {
 		return nil // nothing to check
