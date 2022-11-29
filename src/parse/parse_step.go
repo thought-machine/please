@@ -114,12 +114,6 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 		return s, err
 	}
 
-	// Fix for #577; fallback like above, it might be defined within the subrepo.
-	s, err = parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label)
-	if err != nil || s != nil {
-		return s, err
-	}
-
 	return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
 }
 
