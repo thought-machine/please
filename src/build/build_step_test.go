@@ -570,6 +570,7 @@ func newState(label string) (*core.BuildState, *core.BuildTarget) {
 	target.Command = fmt.Sprintf("echo 'output of %s' > $OUT", target.Label)
 	target.BuildTimeout = 100 * time.Second
 	state.Graph.AddTarget(target)
+	state.Graph.AddPackage(core.NewPackage(target.Label.PackageName))
 	state.Parser = &fakeParser{}
 	Init(state)
 	return state, target
