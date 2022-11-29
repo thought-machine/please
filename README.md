@@ -5,7 +5,7 @@ high performance, extensibility and reproducibility.
 It supports a number of popular languages and can automate
 nearly any aspect of your build process.
 
-See http://please.build for more information.
+See [please.build](https://please.build) for more information.
 
 Currently Linux (tested on Ubuntu), macOS and FreeBSD are actively supported.
 
