@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-	"lukechampine.com/blake3"
+	"github.com/zeebo/blake3"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cmap"
@@ -1256,8 +1256,7 @@ func newCRC64() hash.Hash {
 }
 
 func newBlake3() hash.Hash {
-	// 32 bytes == 256 bits
-	return blake3.New(32, nil)
+	return blake3.New()
 }
 
 func newXXHash() hash.Hash {
