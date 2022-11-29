@@ -790,7 +790,8 @@ func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
 }
 
-// WaitForPackage is similar to WaitForBuiltTarget however
+// WaitForPackage is similar to WaitForBuiltTarget however it waits for the package to be parsed, queuing it for parse
+// if necessary
 func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
 	if p := state.Graph.PackageByLabel(l); p != nil {
 		return p
