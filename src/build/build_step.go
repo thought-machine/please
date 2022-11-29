@@ -230,7 +230,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 					return fmt.Errorf("failed to load build metadata for %s: %w", target.Label, err)
 				}
 
-				addOutDirOutsFromMetadata(target, metadata)
+				if err := addOutDirOutsFromMetadata(state, target, metadata); err != nil {
+					return err
+				}
 
 				if target.PostBuildFunction != nil {
 					if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), ""); err != nil {
@@ -290,7 +292,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			if target.BuildCouldModifyTarget() {
 				log.Debug("Checking for build metadata for %s in cache...", target.Label)
 				if metadata = retrieveFromCache(state.Cache, target, cacheKey, nil); metadata != nil {
-					addOutDirOutsFromMetadata(target, metadata)
+					if err := addOutDirOutsFromMetadata(state, target, metadata); err != nil {
+						return err
+					}
 					if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
 						postBuildOutput = string(metadata.Stdout)
 						if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
@@ -327,9 +331,11 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			metadata.OptionalOutputs = append(metadata.OptionalOutputs, output)
 		}
 
-		metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(target)
-		if err != nil {
-			return err
+		if len(target.OutputDirectories) != 0 {
+			metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(state, target)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -424,10 +430,15 @@ func outputHashOrNil(target *core.BuildTarget, outputs []string, hasher *fs.Path
 	return h
 }
 
-func addOutDirOutsFromMetadata(target *core.BuildTarget, md *core.BuildMetadata) {
+func addOutDirOutsFromMetadata(state *core.BuildState, target *core.BuildTarget, md *core.BuildMetadata) error {
+	pkg := state.Graph.Package(target.Label.PackageName, target.Label.Subrepo)
 	for _, o := range md.OutputDirOuts {
 		target.AddOutput(o)
+		if err := pkg.RegisterOutput(state, o, target); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func retrieveFromCache(cache core.Cache, target *core.BuildTarget, cacheKey []byte, files []string) *core.BuildMetadata {
@@ -607,7 +618,8 @@ func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core
 
 // addOutputDirectoriesToBuildOutput moves all the files from the output dirs into the root of the build temp dir
 // and adds them as outputs to the build target
-func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, error) {
+func addOutputDirectoriesToBuildOutput(state *core.BuildState, target *core.BuildTarget) ([]string, error) {
+	pkg := state.Graph.Package(target.Label.PackageName, target.Label.Subrepo)
 	outs := make([]string, 0, len(target.OutputDirectories))
 	for _, dir := range target.OutputDirectories {
 		o, err := addOutputDirectoryToBuildOutput(target, dir)
@@ -615,6 +627,12 @@ func addOutputDirectoriesToBuildOutput(target *core.BuildTarget) ([]string, erro
 			return nil, fmt.Errorf("failed to move output dir (%s) contents to rule root: %w", dir, err)
 		}
 		outs = append(outs, o...)
+
+		for _, out := range o {
+			if err := pkg.RegisterOutput(state, out, target); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return outs, nil
 }
