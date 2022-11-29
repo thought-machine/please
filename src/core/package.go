@@ -214,7 +214,7 @@ func (pkg *Package) VerifyOutputs() {
 func (pkg *Package) verifyOutputs() []string {
 	pkg.mutex.RLock()
 	defer pkg.mutex.RUnlock()
-	var ret []string
+	ret := []string{}
 	for filename, target := range pkg.Outputs {
 		for dir := filepath.Dir(filename); dir != "."; dir = filepath.Dir(dir) {
 			if target2, present := pkg.Outputs[dir]; present && target2 != target && !(target.HasDependency(target2.Label.Parent()) || target.HasDependency(target2.Label)) {
