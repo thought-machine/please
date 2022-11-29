@@ -98,41 +98,29 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	// If we're including from the same package, we don't want to parse the subrepo package. It must already be
 	// defined by this point in the file.
 	if localSubinclude {
-		// For local subincludes, the subrepo has to already be defined at this point in the BUILD file
 		return nil, fmt.Errorf("Subrepo %v is not defined yet. It must appear before it is used by subinclude()", sl)
 	}
 
-	// The package could Try parsing the package in the host repo first.
+	// Try parsing the package in the host repo first.
 	s, err := parseSubrepoPackage(tid, state, sl.PackageName, "", label)
-	if err != nil {
-		return nil, err
-	}
-
-	if s != nil {
-		return s, nil
+	if err != nil || s != nil {
+		return s, err
 	}
 
 	// They may have meant a subrepo that was defined in the dependent label's subrepo rather than the host
 	// repo
 	s, err = parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label)
-	if err != nil {
-		return nil, err
-	}
-
-	if s != nil {
-		return s, nil
+	if err != nil || s != nil {
+		return s, err
 	}
 
 	// Fix for #577; fallback like above, it might be defined within the subrepo.
 	s, err = parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label)
-	if err != nil {
-		return nil, err
+	if err != nil || s != nil {
+		return s, err
 	}
 
-	if s == nil {
-		return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
-	}
-	return s, nil
+	return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.
