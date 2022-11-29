@@ -1,3 +1,20 @@
+Version 16.25.0
+---------------
+
+    * Fix issue where subrepo config was being loaded, overriding configuration
+      set in the host repo (#2583)
+    * Make the gitignore check include the package name so it resolves correctly
+      when passed to `git check-ignore` (#2582)
+    * Fix issue where subincluding would lock up when including from a target
+      defined in the same package (#2523, #2586)
+    * Allow plugins to reference themselves by their plugin id in build labels (#2553)
+    * Fix issue when overriding config values defined in plugins from config profiles (#2589)
+    * Stop watching subincludes in subrepos (#2592)
+    * Use more performant blake3 implementation (#2597)
+    * Fix race condition in the subrepo parsing (#2598)
+    * Add warning when output directories conflict with other outputs in the package (#2593)
+    * Only verify filegroup output hashes when the sources change (#2594)
+
 Version 16.24.0
 ---------------
 
