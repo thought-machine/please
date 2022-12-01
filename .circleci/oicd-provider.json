@@ -1,0 +1,13 @@
+{
+  "type": "external_account",
+  "audience": "//iam.googleapis.com/projects/823456654579/locations/global/workloadIdentityPools/circleci-oidc-pool/providers/circleci-provider",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+  "token_url": "https://sts.googleapis.com/v1/token",
+  "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/circleci-uploader@tm-please.iam.gserviceaccount.com:generateAccessToken",
+  "credential_source": {
+    "file": ".circleci/CIRCLE_OIDC_TOKEN",
+    "format": {
+      "type": "text"
+    }
+  }
+}
