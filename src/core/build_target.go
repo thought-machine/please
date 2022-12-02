@@ -1791,6 +1791,13 @@ func (target *BuildTarget) HasLinks(state *BuildState) bool {
 	return false
 }
 
+func (target *BuildTarget) PackageDir() string {
+	if target.Subrepo != nil {
+		return filepath.Join(target.Subrepo.PackageRoot, target.Label.PackageDir())
+	}
+	return target.Label.PackageDir()
+}
+
 // BuildTargets makes a slice of build targets sortable by their labels.
 type BuildTargets []*BuildTarget
 

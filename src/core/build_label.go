@@ -291,7 +291,8 @@ func (label BuildLabel) Less(other BuildLabel) bool {
 
 // Paths is an implementation of BuildInput interface; we use build labels directly as inputs.
 func (label BuildLabel) Paths(graph *BuildGraph) []string {
-	return addPathPrefix(graph.TargetOrDie(label).Outputs(), label.PackageName)
+	target := graph.TargetOrDie(label)
+	return addPathPrefix(target.Outputs(), target.PackageDir())
 }
 
 // FullPaths is an implementation of BuildInput interface.

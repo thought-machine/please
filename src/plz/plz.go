@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/peterebden/go-cli-init/v5/flags"
 
@@ -146,6 +147,7 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 		prefix := ""
 		if target.Subrepo != "" {
 			state.WaitForInitialTargetAndEnsureDownload(target.SubrepoLabel(state, ""), target)
+			time.Sleep(time.Millisecond * 100)
 			subrepo := state.Graph.SubrepoOrDie(target.Subrepo)
 			dir = subrepo.Dir(dir)
 			prefix = subrepo.Dir(prefix)
