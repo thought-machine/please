@@ -1121,6 +1121,10 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		state = state.ForArch(arch)
 		isCrossCompile = true
 	}
+	pkgRoot := ""
+	if args[PackageRootIdx].IsTruthy() {
+		pkgRoot = args[PackageRootIdx].String()
+	}
 
 	// Subrepo
 	sr := &core.Subrepo{
@@ -1130,7 +1134,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		State:          state,
 		Arch:           arch,
 		IsCrossCompile: isCrossCompile,
-		PackageRoot:    args[PackageRootIdx].String(),
+		PackageRoot:    pkgRoot,
 	}
 
 	// Typically this would be deferred until we have built the subrepo target and have its config available. As we
