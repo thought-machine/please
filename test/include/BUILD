@@ -1,20 +1,23 @@
 subinclude("//test/build_defs")
 
 # Just to guard against any regressions
-plz_e2e_test(
+please_repo_e2e_test(
     name = "normal_include_test",
-    cmd = "plz query alltargets //third_party/go/...",
+    plz_command = "numtargets=$(plz query alltargets //... | wc -l) && if [[ $numtargets -ne 2 ]]; then echo \"Expected 2 targets. Got $numtargets\" && exit 1; fi",
+    repo = "test_repo",
 )
 
 # Test that we can include targets using a wildcard
-plz_e2e_test(
+please_repo_e2e_test(
     name = "include_contains_wildcard_test",
-    cmd = "numtargets=$(plz query alltargets //third_party/go/... --include 'go_package:*' | wc -l) && if [[ $numtargets -gt 0 ]]; then exit 0; fi; exit 1",
+    plz_command = "numtargets=$(plz query alltargets //... --include 'f*' | wc -l) && if [[ $numtargets -ne 1 ]]; then echo \"Expected 1 target. Got $numtargets\" && exit 1; fi",
+    repo = "test_repo",
 )
 
 # Test that we can exclude targets using a wildcard
-plz_e2e_test(
+please_repo_e2e_test(
     name = "exclude_contains_wildcard_test",
-    cmd = "numtargets=$(plz query alltargets //third_party/go/... --exclude 'go*' --exclude 'bin' | wc -l) && if [[ $numtargets -eq 0 ]]; then exit 0; fi; exit 1",
+    repo = "test_repo",
+    plz_command = "numtargets=$(plz query alltargets //... --exclude 'b*' | wc -l) && if [[ $numtargets -ne 1 ]]; then echo \"Expected 1 target. Got $numtargets\" && exit 1; fi",
 )
 
