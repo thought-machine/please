@@ -1055,11 +1055,22 @@ func (target *BuildTarget) AddLabel(label string) {
 // HasLabel returns true if target has the given label.
 func (target *BuildTarget) HasLabel(label string) bool {
 	for _, l := range target.Labels {
-		if l == label {
+		if match(label, l) {
 			return true
 		}
 	}
 	return label == "test" && target.IsTest()
+}
+
+// match returns true if the given label matches the given pattern.
+func match(pattern, s string) bool {
+	if pattern == s {
+		return true
+	}
+	if strings.HasSuffix(pattern, "*") && strings.HasPrefix(s, pattern[:len(pattern)-1]) {
+		return true
+	}
+	return false
 }
 
 // PrefixedLabels returns all labels of this target with the given prefix.

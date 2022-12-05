@@ -1,0 +1,11 @@
+sh_cmd(
+    name = "target1",
+    cmd = "echo foo",
+    labels = ["foo"],
+)
+
+sh_cmd(
+    name = "target2",
+    cmd = "echo bar",
+    labels = ["bar"],
+)
