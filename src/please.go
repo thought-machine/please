@@ -83,7 +83,7 @@ var opts struct {
 
 	BehaviorFlags struct {
 		NoUpdate           bool    `long:"noupdate" description:"Disable Please attempting to auto-update itself."`
-		NoHashVerification bool    `long:"nohash_verification" description:"Hash verification errors are nonfatal."`
+		NoHashVerification bool    `long:"nohash_verification" description:"Hash verification errors are nonfatal." env:"PLZ_NO_HASH_VERIFICATION"`
 		NoLock             bool    `long:"nolock" description:"Don't attempt to lock the repo exclusively. Use with care."`
 		KeepWorkdirs       bool    `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
 		HTTPProxy          cli.URL `long:"http_proxy" env:"HTTP_PROXY" description:"HTTP proxy to use for downloads"`
