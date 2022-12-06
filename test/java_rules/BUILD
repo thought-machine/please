@@ -1,3 +1,5 @@
+subinclude("///java//build_defs:java")
+
 # Test for java_library rules using src_dir
 java_library(
     name = "src_dir_lib",

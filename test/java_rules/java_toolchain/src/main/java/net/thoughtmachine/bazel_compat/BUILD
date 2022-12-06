@@ -1,3 +1,5 @@
+subinclude("///java//build_defs:java")
+
 package(bazel_compatibility = True)
 
 if is_platform(os = "linux") or is_platform(os = "darwin"):
