@@ -1,3 +1,5 @@
+subinclude("///cc//build_defs:cc")
+
 # Tests that a sequence of dependencies works as expected.
 cc_library(
     name = "lib1",

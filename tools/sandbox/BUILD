@@ -1,3 +1,5 @@
+subinclude("///cc//build_defs:c")
+
 c_library(
     name = "sandbox",
     srcs = ["sandbox.c"],

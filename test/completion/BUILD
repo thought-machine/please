@@ -1,4 +1,4 @@
-subinclude("//test/build_defs")
+subinclude("//test/build_defs", "///cc//build_defs:cc")
 
 cc_library(
     name = "lib",

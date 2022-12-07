@@ -9,7 +9,8 @@ keep = //test/...
 keep = //docs:all
 keep = //package:all
 
-[cpp]
+[Plugin "cc"]
+target = //plugins:cc
 defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 TestMain = ///pleasings//cc:unittest_main
@@ -90,6 +91,7 @@ PythonWheelHashing = true
 NoIterSourcesMarked = true
 GoDontCollapseImportPath = true
 ExcludeGoRules = true
+ExcludeCcRules = true
 ErrorOnEmptyGlob = true
 
 [Plugin "go"]
