@@ -27,6 +27,9 @@ language = go
 [parse]
 BlacklistDirs = tree ; The performance test repo
 preloadsubincludes = //build_defs:go
+# TODO(jpoole): We only need this to make cc_library available for the test main above. We should respect the pre-loaded
+# subincldues they define so we don't need this here.
+preloadsubincludes = ///cc//build_defs:cc
 
 [alias "autofix"]
 desc = Generates generated code and applies lint fixes
