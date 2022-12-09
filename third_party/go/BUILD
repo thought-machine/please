@@ -891,7 +891,7 @@ go_module(
         "util",
     ],
     module = "github.com/googlecodelabs/tools/claat",
-    version = "v0.0.0-20210914205149-d1177395e3b8",
+    version = "v0.0.0-20221205204018-228dc9ce5925",
     visibility = ["PUBLIC"],
     deps = [
         ":csslex",
