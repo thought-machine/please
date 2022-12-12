@@ -308,7 +308,14 @@ func subinclude(s *scope, args []pyObject) pyObject {
 
 		incPkgState := s.state
 		if t.Label.Subrepo != "" {
-			incPkgState = s.state.Graph.SubrepoOrDie(t.Label.Subrepo).State
+			subrepo := s.state.Graph.SubrepoOrDie(t.Label.Subrepo)
+
+			// This should be trigged when we build the target above, but we might race against that so we should ensure
+			// it's loaded here
+			if err := subrepo.LoadSubrepoConfig(); err != nil {
+				s.Error("failed to load subrepo config: %v", err)
+			}
+			incPkgState = subrepo.State
 		}
 		s.interpreter.loadPluginConfig(incPkgState, s.state, s.config)
 

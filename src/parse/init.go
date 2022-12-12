@@ -68,12 +68,31 @@ func (p *aspParser) WaitForInit() {
 	<-p.init
 }
 
+// getIncludesFromConfig gets the preloaded subincludes for this state, deduplicating if there are duplicates
+func getIncludesFromConfig(state *core.BuildState) []core.BuildLabel {
+	done := map[core.BuildLabel]struct{}{}
+	includes := make([]core.BuildLabel, 0, len(state.Config.Parse.PreloadSubincludes)+len(state.RepoConfig.Parse.PreloadSubincludes))
+
+	is := state.Config.Parse.PreloadSubincludes
+	if state.RepoConfig != nil {
+		is = append(is, state.RepoConfig.Parse.PreloadSubincludes...)
+	}
+
+	for _, i := range state.Config.Parse.PreloadSubincludes {
+		_, ok := done[i]
+		if ok {
+			continue
+		}
+
+		includes = append(includes, i)
+		done[i] = struct{}{}
+	}
+	return includes
+}
+
 func (p *aspParser) Init(state *core.BuildState) {
 	p.once.Do(func() {
-		includes := state.Config.Parse.PreloadSubincludes
-		if state.RepoConfig != nil {
-			includes = append(includes, state.RepoConfig.Parse.PreloadSubincludes...)
-		}
+		includes := getIncludesFromConfig(state)
 		wg := sync.WaitGroup{}
 		for _, inc := range includes {
 			if inc.IsPseudoTarget() {

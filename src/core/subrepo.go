@@ -51,7 +51,7 @@ func (s *Subrepo) Dir(dir string) string {
 	return filepath.Join(s.Root, dir)
 }
 
-func readConfigFilesInto(config, repoConfig *Configuration, files []string) error {
+func readConfigFilesInto(repoConfig *Configuration, files []string) error {
 	for _, file := range files {
 		err := readConfigFile(repoConfig, file, true)
 		if err != nil {
@@ -67,7 +67,7 @@ func (s *Subrepo) LoadSubrepoConfig() (err error) {
 	s.loadConfig.Do(func() {
 		s.State.RepoConfig = &Configuration{}
 
-		err = readConfigFilesInto(s.State.Config, s.State.RepoConfig, append(s.AdditionalConfigFiles, filepath.Join(s.Root, ".plzconfig")))
+		err = readConfigFilesInto(s.State.RepoConfig, append(s.AdditionalConfigFiles, filepath.Join(s.Root, ".plzconfig")))
 		if err != nil {
 			return
 		}

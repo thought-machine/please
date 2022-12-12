@@ -106,6 +106,11 @@ func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarg
 	defer p.limiter.Release()
 	subincludePkgState := state.Root()
 	if target.Subrepo != nil {
+		// This should be loaded when the target builds, but we might race against that so we should ensure it's loaded
+		// here too
+		if err := target.Subrepo.LoadSubrepoConfig(); err != nil {
+			return err
+		}
 		subincludePkgState = target.Subrepo.State
 	}
 
