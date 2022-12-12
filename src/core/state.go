@@ -981,7 +981,7 @@ func exportFile(state *BuildState, pkg *Package, label BuildLabel) {
 	state.AddTarget(pkg, t)
 }
 
-// checkArchSubrepo checks if a target refers to a cross-compiling subrepo.
+// CheckArchSubrepo checks if a target refers to a cross-compiling subrepo.
 // Those don't have to be explicitly defined - maybe we should insist on that, but it's nicer not to have to.
 func (state *BuildState) CheckArchSubrepo(name string) *Subrepo {
 	var arch cli.Arch

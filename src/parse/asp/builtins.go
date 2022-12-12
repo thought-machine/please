@@ -309,12 +309,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		incPkgState := s.state
 		if t.Label.Subrepo != "" {
 			subrepo := s.state.Graph.SubrepoOrDie(t.Label.Subrepo)
-
-			// This should be trigged when we build the target above, but we might race against that so we should ensure
-			// it's loaded here
-			if err := subrepo.LoadSubrepoConfig(); err != nil {
-				s.Error("failed to load subrepo config: %v", err)
-			}
+			subrepo.WaitForInit()
 			incPkgState = subrepo.State
 		}
 		s.interpreter.loadPluginConfig(incPkgState, s.state, s.config)
@@ -1129,19 +1124,12 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	}
 
 	// Subrepo
-	sr := &core.Subrepo{
-		Name:           s.pkg.SubrepoArchName(subrepoName),
-		Root:           root,
-		Target:         target,
-		State:          state,
-		Arch:           arch,
-		IsCrossCompile: isCrossCompile,
-	}
+	sr := core.NewSubrepo(state, s.pkg.SubrepoArchName(subrepoName), root, target, arch, isCrossCompile)
 
 	// Typically this would be deferred until we have built the subrepo target and have its config available. As we
 	// don't have a subrepo target, we can and should load it here.
 	if target == nil {
-		if err := sr.LoadSubrepoConfig(); err != nil {
+		if err := sr.Initialise(); err != nil {
 			log.Fatalf("Could not load subrepo config for %s: %v", sr.Name, err)
 		}
 	}
