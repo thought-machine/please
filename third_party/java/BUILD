@@ -1,5 +1,7 @@
 package(default_visibility = ["PUBLIC"])
 
+subinclude("///java//build_defs:java")
+
 maven_jar(
     name = "junit",
     hash = "59721f0805e223d84b90677887d9ff567dc534d7c502ca903c0c2b17f05c116a",

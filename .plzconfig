@@ -14,9 +14,10 @@ defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-
 defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 TestMain = ///pleasings//cc:unittest_main
 
-[java]
-javacworker = //tools/java:javac_worker
-junitrunner = //tools/java:junit_runner
+[Plugin "java"]
+Target = //plugins:java
+JavacWorker = //tools/java:javac_worker
+JunitRunner = //tools/java:junit_runner
 
 [proto]
 protoctool = //third_party/proto:protoc
@@ -91,6 +92,7 @@ NoIterSourcesMarked = true
 GoDontCollapseImportPath = true
 ExcludeGoRules = true
 ErrorOnEmptyGlob = true
+ExcludeJavaRules = true
 
 [Plugin "go"]
 Target = //plugins:go

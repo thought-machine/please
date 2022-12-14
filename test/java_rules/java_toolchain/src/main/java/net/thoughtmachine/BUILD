@@ -1,3 +1,5 @@
+subinclude("///java//build_defs:java")
+
 # TODO(#1412): find out why downloads fail (are we/github being rate limited) or host these on please.build
 if is_platform(os = "linux") or is_platform(os = "darwin"):
     java_toolchain(
