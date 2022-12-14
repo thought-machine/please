@@ -1,7 +1,7 @@
 subinclude("@foo//build_defs:foolang")
 
 if not isinstance(CONFIG.FOO.BOOL_TEST, bool):
-    fail("BoolTest should be an bool")
+    fail("BoolTest should be a bool")
 
 if CONFIG.FOO.BOOL_TEST:
     fail("BoolTest should be falsy")

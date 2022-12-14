@@ -73,12 +73,9 @@ func getIncludesFromConfig(state *core.BuildState) []core.BuildLabel {
 	done := map[core.BuildLabel]struct{}{}
 	includes := make([]core.BuildLabel, 0, len(state.Config.Parse.PreloadSubincludes)+len(state.RepoConfig.Parse.PreloadSubincludes))
 
-	is := state.Config.Parse.PreloadSubincludes
-	if state.RepoConfig != nil {
-		is = append(is, state.RepoConfig.Parse.PreloadSubincludes...)
-	}
+	is := append(state.Config.Parse.PreloadSubincludes, state.RepoConfig.Parse.PreloadSubincludes...)
 
-	for _, i := range state.Config.Parse.PreloadSubincludes {
+	for _, i := range is {
 		_, ok := done[i]
 		if ok {
 			continue
