@@ -4,6 +4,7 @@ package core
 
 import (
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/thought-machine/please/src/fs"
@@ -122,10 +123,11 @@ func NewFileLabel(src string, pkg *Package) BuildInput {
 	if pkg.Subrepo != nil {
 		return SubrepoFileLabel{
 			File:        src,
-			Package:     pkg.Name,
+			Package:     filepath.Join(pkg.Subrepo.PackageRoot, pkg.Name),
 			FullPackage: pkg.Subrepo.Dir(pkg.Name),
 		}
 	}
+
 	return FileLabel{File: src, Package: pkg.Name}
 }
 
@@ -238,7 +240,8 @@ func (label AnnotatedOutputLabel) Paths(graph *BuildGraph) []string {
 	if _, ok := target.EntryPoints[label.Annotation]; ok {
 		return label.BuildLabel.Paths(graph)
 	}
-	return addPathPrefix(target.NamedOutputs(label.Annotation), label.PackageName)
+
+	return addPathPrefix(target.NamedOutputs(label.Annotation), target.PackageDir())
 }
 
 // FullPaths is like Paths but includes the leading plz-out/gen directory.

@@ -3,6 +3,7 @@ package test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -366,7 +367,7 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemote
 		Package:    strings.ReplaceAll(target.Label.PackageName, "/", "."),
 		Name:       target.Label.Name,
 		Duration:   duration,
-		TimedOut:   err == context.DeadlineExceeded,
+		TimedOut:   errors.Unwrap(err) == context.DeadlineExceeded,
 		Properties: parsedSuite.Properties,
 		TestCases:  parsedSuite.TestCases,
 		Cached:     metadata.Cached,

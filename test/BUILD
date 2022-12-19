@@ -10,7 +10,7 @@
 # mitigated by having these tests only run tests in this package which are tagged as manual
 # so the bootstrap script won't try to run them twice simultaneously.
 
-subinclude("//test/build_defs")
+subinclude("//test/build_defs", "///java//build_defs:java")
 
 # This isn't really needed in this BUILD file, but is intended to avoid race conditions
 # between this and other BUILD files that have the same dependency.

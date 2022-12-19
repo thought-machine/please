@@ -1077,6 +1077,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		BazelCompatArgIdx
 		ArchArgIdx
 		PluginArgIdx
+		PackageRootIdx
 	)
 
 	s.NAssert(s.pkg == nil, "Cannot create new subrepos in this scope")
@@ -1122,9 +1123,10 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		state = state.ForArch(arch)
 		isCrossCompile = true
 	}
-
-	// Subrepo
 	sr := core.NewSubrepo(state, s.pkg.SubrepoArchName(subrepoName), root, target, arch, isCrossCompile)
+	if args[PackageRootIdx].IsTruthy() {
+		sr.PackageRoot = args[PackageRootIdx].String()
+	}
 
 	// Typically this would be deferred until we have built the subrepo target and have its config available. As we
 	// don't have a subrepo target, we can and should load it here.

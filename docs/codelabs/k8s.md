@@ -359,7 +359,7 @@ We can get Please to download minikube for us. Let's create `tools/minikube/BUIL
 ```
 remote_file (
     name = "minikube",
-    url = f"https://storage.googleapis.com/minikube/releases/latest/minikube-{CONFIG.OS}-amd64",
+    url = f"https://storage.googleapis.com/minikube/releases/latest/minikube-{CONFIG.OS}-{CONFIG.ARCH}",
     binary = True,
 )
 ```

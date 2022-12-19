@@ -45,7 +45,7 @@ func GeneralBuildEnvironment(state *BuildState) BuildEnv {
 func TargetEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 	env := append(GeneralBuildEnvironment(state),
 		"PKG="+target.Label.PackageName,
-		"PKG_DIR="+target.Label.PackageDir(),
+		"PKG_DIR="+target.PackageDir(),
 		"NAME="+target.Label.Name,
 	)
 	if state.Config.Remote.URL == "" || target.Local {

@@ -67,7 +67,8 @@ def subinclude(target:str):
     pass
 def load(target:str, names:str=None):
     pass
-def subrepo(name:str, dep:str='', path:str=None, config:str=None, bazel_compat:bool=False, arch:str=None, plugin:bool=False):
+def subrepo(name:str, dep:str='', path:str=None, config:str=None, bazel_compat:bool=False, arch:str=None,
+    plugin:bool=False, package_root:str=None):
     pass
 
 
