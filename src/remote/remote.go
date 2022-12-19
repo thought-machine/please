@@ -722,7 +722,7 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 			if respErr != nil {
 				if !strings.Contains(respErr.Error(), c.state.Config.Remote.DisplayURL) {
 					if url := c.actionURL(digest, false); url != "" {
-						respErr = fmt.Errorf("%s\nAction URL: %s", respErr, url)
+						respErr = fmt.Errorf("%w\nAction URL: %s", respErr, url)
 					}
 				}
 			}

@@ -290,7 +290,12 @@ func convertError(err *rpcstatus.Status) error {
 	if err.Code == int32(codes.OK) {
 		return nil
 	}
-	msg := fmt.Errorf("%s", err.Message)
+
+	if err.Code == int32(codes.DeadlineExceeded) {
+		return context.DeadlineExceeded
+	}
+
+	msg := status.ErrorProto(err)
 	for _, detail := range err.Details {
 		msg = fmt.Errorf("%s %s", msg, detail.Value)
 	}
