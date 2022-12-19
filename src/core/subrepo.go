@@ -16,7 +16,7 @@ type Subrepo struct {
 	Name string
 	// The root directory to load it from.
 	Root string
-	// A root directory for outputs of this subrpo's targets
+	// A root directory for outputs of this subrepo's targets
 	PackageRoot string
 	// If this repo is output by a target, this is the target that creates it. Can be nil.
 	Target *BuildTarget
