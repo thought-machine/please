@@ -3,6 +3,7 @@
 ; Other projects using Please wouldn't normally need to do anything like this.
 pextool = //tools/please_pex
 moduledir = third_party.python
+DisableVendorFlags = true
 
 [gc]
 keep = //test/...

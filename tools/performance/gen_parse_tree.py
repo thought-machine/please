@@ -111,6 +111,7 @@ def main(argv):
         filenames.append(filename)
     # Copy these over directly
     shutil.copytree('third_party', os.path.join(FLAGS.root, 'third_party'))
+    shutil.copytree('plugins', os.path.join(FLAGS.root, 'plugins'))
     # Same here but don't bring in the dependency on the root BUILD file, that opens a big can of worms.
     os.mkdir(os.path.join(FLAGS.root, 'build_defs'))
     with open('build_defs/BUILD') as fr, open(os.path.join(FLAGS.root, 'build_defs/BUILD'), 'w') as fw:
@@ -119,6 +120,10 @@ def main(argv):
                 os.path.join(FLAGS.root, 'build_defs/multiversion_wheel.build_defs'))
     # Create the .plzconfig in the new root
     with open(os.path.join(FLAGS.root, '.plzconfig'), 'w') as f:
+        f.write("""
+[Plugin "java"]
+Target = //plugins:java
+    """)
         pass
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
@@ -139,7 +144,6 @@ def choose_deps(candidates:list) -> list:
     trim = lambda x: x[len(FLAGS.root) + 1:] if x.startswith(FLAGS.root) else x
     label = lambda x: f'//{x}:{os.path.basename(x)}'
     return [label(trim(random.choice(candidates))) for _ in range(n)]
-
 
 if __name__ == '__main__':
     app.run(main)
