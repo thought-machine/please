@@ -822,8 +822,13 @@ type pyConfig struct {
 
 func (c *pyConfig) MarshalJSON() ([]byte, error) {
 	if c.overlay == nil {
-		return json.Marshal(c.overlay)
+		return json.Marshal(c.base.dict)
 	}
+
+	return json.Marshal(c.toPyDict())
+}
+
+func (c *pyConfig) toPyDict() pyDict {
 	merged := make(pyDict, len(c.base.dict)+len(c.overlay))
 	for k, v := range c.base.dict {
 		merged[k] = v
@@ -831,11 +836,11 @@ func (c *pyConfig) MarshalJSON() ([]byte, error) {
 	for k, v := range c.overlay {
 		merged[k] = v
 	}
-	return json.Marshal(merged)
+	return merged
 }
 
 func (c *pyConfig) String() string {
-	return "<global config object>"
+	return c.toPyDict().String()
 }
 
 func (c *pyConfig) Type() string {
