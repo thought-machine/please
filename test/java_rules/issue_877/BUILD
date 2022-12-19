@@ -1,6 +1,6 @@
 # Tests for Java Library including resources
 
-subinclude("//test/build_defs")
+subinclude("//test/build_defs", "///java//build_defs:java")
 
 java_library(
     name = "issue_877",

@@ -11,7 +11,7 @@ you must pay attention to interoperability when needed (e.g. 'extern "C"' and so
 def c_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:list=[], deps:list=[],
               visibility:list=None, test_only:bool&testonly=False, compiler_flags:list&cflags&copts=[],
               linker_flags:list&ldflags&linkopts=[], pkg_config_libs:list=[], pkg_config_cflags:list=[],
-              includes:list=[], defines:list|dict=[], alwayslink:bool=False):
+              includes:list=[], defines:list|dict=[], alwayslink:bool=False, optional_outs:list=[]):
     """Generate a C library target.
 
     Args:
@@ -39,11 +39,13 @@ def c_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:lis
       alwayslink (bool): If True, any binaries / tests using this library will link in all symbols,
                          even if they don't directly reference them. This is useful for e.g. having
                          static members that register themselves at construction time.
+      optional_outs (list): Name of optional outputs.
     """
     return cc_library(
         name = name,
         srcs = srcs,
         out = out,
+        optional_outs = optional_outs,
         hdrs = hdrs,
         private_hdrs = private_hdrs,
         deps = deps,
@@ -63,7 +65,7 @@ def c_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:lis
 def c_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None, test_only:bool&testonly=False,
              compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
              pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[], defines:list|dict=[],
-             alwayslink:bool=False, visibility:list=None, deps:list=[]):
+             alwayslink:bool=False, visibility:list=None, deps:list=[], optional_outs:list=[]):
     """Generate a C object file from a single source.
 
     N.B. This is fairly low-level; for most use cases c_library should be preferred.
@@ -94,6 +96,7 @@ def c_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None
       alwayslink (bool): If True, any binaries / tests using this library will link in all symbols,
                          even if they don't directly reference them. This is useful for e.g. having
                          static members that register themselves at construction time.
+      optional_outs (list): Name of optional outputs.
     """
     return cc_object(
         name = name,
@@ -101,6 +104,7 @@ def c_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None
         hdrs = hdrs,
         private_hdrs = private_hdrs,
         out = out,
+        optional_outs = optional_outs,
         deps = deps,
         visibility = visibility,
         test_only = test_only,
@@ -117,7 +121,7 @@ def c_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=None
 
 def c_static_library(name:str, srcs:list=[], out:str='', hdrs:list=[], compiler_flags:list&cflags&copts=[],
                      linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None,
-                     test_only:bool&testonly=False, pkg_config_libs:list=[], pkg_config_cflags:list=[]):
+                     test_only:bool&testonly=False, pkg_config_libs:list=[], pkg_config_cflags:list=[], optional_outs:list=[]):
     """Generates a C static library (.a).
 
     This is essentially just a collection of other c_library rules into a single archive.
@@ -137,12 +141,14 @@ def c_static_library(name:str, srcs:list=[], out:str='', hdrs:list=[], compiler_
       test_only (bool): If True, is only available to other test rules.
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
+      optional_outs (list): Name of optional outputs.
 
     """
     return cc_static_library(
         name = name,
         srcs = srcs,
         out = out,
+        optional_outs = optional_outs,
         hdrs = hdrs,
         deps = deps,
         visibility = visibility,
@@ -157,7 +163,7 @@ def c_static_library(name:str, srcs:list=[], out:str='', hdrs:list=[], compiler_
 
 def c_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_flags:list&cflags&copts=[],
                     linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, test_only:bool&testonly=False,
-                    pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[]):
+                    pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[], optional_outs:list=[]):
     """Generates a C shared object (.so) with its dependencies linked in.
 
     Args:
@@ -174,12 +180,14 @@ def c_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_f
       pkg_config_libs (list): Libraries to declare a dependency on using pkg-config
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       includes (list): Include directories to be added to the compiler's lookup path.
+      optional_outs (list): Name of optional outputs.
     """
     return cc_shared_object(
         name = name,
         srcs = srcs,
         hdrs = hdrs,
         out = out,
+        optional_outs = optional_outs,
         deps = deps,
         visibility = visibility,
         test_only = test_only,
@@ -194,7 +202,8 @@ def c_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', compiler_f
 
 def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compiler_flags:list&cflags&copts=[],
              linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, pkg_config_libs:list=[],
-             pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, includes:list=[], defines:list|dict=[]):
+             pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, includes:list=[], defines:list|dict=[],
+             optional_outs:list=[]):
     """Builds a binary from a collection of C rules.
 
     Args:
@@ -215,6 +224,7 @@ def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compile
                              values are surrounded by quotes.
       test_only (bool): If True, this rule can only be used by tests.
       static (bool): If True, the binary will be linked statically.
+      optional_outs (list): Name of optional outputs.
     """
     return cc_binary(
         name = name,
@@ -232,6 +242,7 @@ def c_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], compile
         defines = defines,
         static = static,
         _c = True,
+        optional_outs = optional_outs,
     )
 
 

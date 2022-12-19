@@ -1,3 +1,5 @@
+subinclude("///java//build_defs:java")
+
 package(
     java_toolchain = "",
     javac_tool = "javac",

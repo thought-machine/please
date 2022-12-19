@@ -1,3 +1,5 @@
+subinclude("///java//build_defs:java")
+
 java_binary(
     name = "javac_worker",
     out = "javac_worker",
