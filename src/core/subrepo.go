@@ -24,7 +24,7 @@ type Subrepo struct {
 	Arch cli.Arch
 	// True if this subrepo was created for a different architecture
 	IsCrossCompile bool
-	//
+	// AdditionalConfigFiles corresponds to the config parameter on `subrepo()`
 	AdditionalConfigFiles []string
 }
 
