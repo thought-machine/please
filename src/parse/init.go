@@ -68,12 +68,28 @@ func (p *aspParser) WaitForInit() {
 	<-p.init
 }
 
+// getIncludesFromConfig gets the preloaded subincludes for this state, deduplicating if there are duplicates
+func getIncludesFromConfig(state *core.BuildState) []core.BuildLabel {
+	done := map[core.BuildLabel]struct{}{}
+	includes := make([]core.BuildLabel, 0, len(state.Config.Parse.PreloadSubincludes)+len(state.RepoConfig.Parse.PreloadSubincludes))
+
+	is := append(state.Config.Parse.PreloadSubincludes, state.RepoConfig.Parse.PreloadSubincludes...)
+
+	for _, i := range is {
+		_, ok := done[i]
+		if ok {
+			continue
+		}
+
+		includes = append(includes, i)
+		done[i] = struct{}{}
+	}
+	return includes
+}
+
 func (p *aspParser) Init(state *core.BuildState) {
 	p.once.Do(func() {
-		includes := state.Config.Parse.PreloadSubincludes
-		if state.RepoConfig != nil {
-			includes = append(includes, state.RepoConfig.Parse.PreloadSubincludes...)
-		}
+		includes := getIncludesFromConfig(state)
 		wg := sync.WaitGroup{}
 		for _, inc := range includes {
 			if inc.IsPseudoTarget() {
@@ -146,12 +162,7 @@ func createBazelSubrepo(state *core.BuildState) {
 		return
 	}
 	dir := filepath.Join(core.OutDir, "bazel_tools")
-	state.Graph.AddSubrepo(&core.Subrepo{
-		Name:  "bazel_tools",
-		Root:  dir,
-		State: state,
-		Arch:  cli.HostArch(),
-	})
+	state.Graph.AddSubrepo(core.NewSubrepo(state, "bazel_tools", dir, nil, cli.HostArch(), false))
 	// TODO(peterebden): This is a bit yuck... would be nice if we could avoid hardcoding all
 	//                   this upfront and add a build target to do it for us.
 	dir = filepath.Join(dir, "tools/build_defs/repo")

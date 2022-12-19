@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/thought-machine/please/src/cli"
 )
@@ -27,20 +26,30 @@ type Subrepo struct {
 	Arch cli.Arch
 	// True if this subrepo was created for a different architecture
 	IsCrossCompile bool
-	// loadConfig is used to control when we load plugin configuration. We need access to the subrepo itself to do this
-	// so it happens at build time.
-	loadConfig            sync.Once
+	// AdditionalConfigFiles corresponds to the config parameter on `subrepo()`
 	AdditionalConfigFiles []string
+}
+
+func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch cli.Arch, isCrosscompile bool) *Subrepo {
+	return &Subrepo{
+		Name:           name,
+		Root:           root,
+		State:          state,
+		Target:         target,
+		Arch:           arch,
+		IsCrossCompile: isCrosscompile,
+	}
 }
 
 // SubrepoForArch creates a new subrepo for the given architecture.
 func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
-	return &Subrepo{
-		Name:           arch.String(),
-		State:          state.ForArch(arch),
-		Arch:           arch,
-		IsCrossCompile: true,
+	s := NewSubrepo(state.ForArch(arch), arch.String(), "", nil, arch, true)
+	if err := s.State.Initialise(s); err != nil {
+		// We always return nil as we shortcut loading config for architecture subrepos, but check non-the-less incase
+		// somebody changes something.
+		log.Fatalf("%v", err)
 	}
+	return s
 }
 
 // SubrepoArchName returns the subrepo name augmented for the given architecture
@@ -53,7 +62,7 @@ func (s *Subrepo) Dir(dir string) string {
 	return filepath.Join(s.Root, dir)
 }
 
-func readConfigFilesInto(config, repoConfig *Configuration, files []string) error {
+func readConfigFilesInto(repoConfig *Configuration, files []string) error {
 	for _, file := range files {
 		err := readConfigFile(repoConfig, file, true)
 		if err != nil {
@@ -61,24 +70,6 @@ func readConfigFilesInto(config, repoConfig *Configuration, files []string) erro
 		}
 	}
 	return nil
-}
-
-// LoadSubrepoConfig will load the .plzconfig from the subrepo. We can only do this once the subrepo is built hence why
-// it's not done up front.
-func (s *Subrepo) LoadSubrepoConfig() (err error) {
-	s.loadConfig.Do(func() {
-		s.State.RepoConfig = &Configuration{}
-
-		err = readConfigFilesInto(s.State.Config, s.State.RepoConfig, append(s.AdditionalConfigFiles, filepath.Join(s.Root, ".plzconfig")))
-		if err != nil {
-			return
-		}
-		if err = validateSubrepoNameAndPluginConfig(s.State.Config, s.State.RepoConfig, s); err != nil {
-			return
-		}
-		go s.State.Parser.Init(s.State)
-	})
-	return
 }
 
 func validateSubrepoNameAndPluginConfig(config, repoConfig *Configuration, subrepo *Subrepo) error {

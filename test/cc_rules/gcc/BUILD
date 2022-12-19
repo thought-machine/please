@@ -1,6 +1,6 @@
 # So far just contains tests for the C++ build rules.
 
-subinclude("//test/build_defs:cc_embed_binary")
+subinclude("//test/build_defs:cc_embed_binary", "///cc//build_defs:c")
 
 package(default_namespace = "plz")
 

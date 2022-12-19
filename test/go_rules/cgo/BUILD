@@ -1,3 +1,5 @@
+subinclude("///go//build_defs:cgo")
+
 cgo_library(
     name = "cgo",
     srcs = ["cgo.go"],

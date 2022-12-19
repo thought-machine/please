@@ -1,7 +1,7 @@
 # This contains an arbitrary set of rules intended to exercise
 # aspects of the cross-compilation code.
 
-subinclude("//test/build_defs:cc_embed_binary")
+subinclude("//test/build_defs:cc_embed_binary", "///cc//build_defs:c")
 
 go_binary(
     name = "generator",

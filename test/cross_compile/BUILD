@@ -1,4 +1,4 @@
-subinclude("//test/build_defs")
+subinclude("//test/build_defs", "///cc//build_defs:c")
 
 genrule(
     name = "record_arch",

@@ -105,7 +105,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		// This is a bit crap really since it inhibits parallelism for the first step.
 		parse.Parse(0, state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, false)
 	}
-	if arch.Arch != "" {
+	if arch.Arch != "" && arch != cli.HostArch() {
 		// Set up a new subrepo for this architecture.
 		state.Graph.AddSubrepo(core.SubrepoForArch(state, arch))
 	}

@@ -106,6 +106,7 @@ func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarg
 	defer p.limiter.Release()
 	subincludePkgState := state.Root()
 	if target.Subrepo != nil {
+		target.Subrepo.State.WaitForInit()
 		subincludePkgState = target.Subrepo.State
 	}
 

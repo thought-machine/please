@@ -216,6 +216,52 @@ type BuildState struct {
 	// EnableBreakpoints enablese the breakpoint() build-in, and drops Please into an interactive debugger when
 	// they're encountered.
 	EnableBreakpoints bool
+
+	// initOnce is used to control when we load plugin configuration, and trigger parser initialisation. We need access
+	// to the subrepo's config files to do this so this is deferred to build time.
+	initOnce *sync.Once
+	// Used to synchronise with the above once to make sure we've loaded the subrepo config before trying to set up the
+	// CONFIG.PLUGIN_NAME during subincludes
+	initialised chan struct{}
+}
+
+// Copy creates a copy of this state object
+func (state *BuildState) Copy() *BuildState {
+	ret := &BuildState{}
+	*ret = *state
+
+	ret.initialised = make(chan struct{})
+	ret.initOnce = new(sync.Once)
+	return ret
+}
+
+// Initialise will load the .plzconfig from the subrepo. We can only do this once the subrepo is built hence why
+// it's not done up front. Once we have done that, we can initialise the parser for the subrepo.
+func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
+	state.initOnce.Do(func() {
+		defer close(state.initialised)
+
+		// If we are the root repo, or an cross-compilation of that, we don't want to re-load the config files. That's
+		// handled for us already in plz.go
+		if state.CurrentSubrepo != "" {
+			state.RepoConfig = &Configuration{}
+			err = readConfigFilesInto(state.RepoConfig, append(subrepo.AdditionalConfigFiles, filepath.Join(subrepo.Root, ".plzconfig")))
+			if err != nil {
+				return
+			}
+			if err = validateSubrepoNameAndPluginConfig(state.Config, state.RepoConfig, subrepo); err != nil {
+				return
+			}
+		}
+
+		go state.Parser.Init(state)
+	})
+	return
+}
+
+// WaitForInit waits for the subrepo to load its repo config and trigger parser initialisation
+func (state *BuildState) WaitForInit() {
+	<-state.initialised
 }
 
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
@@ -981,7 +1027,7 @@ func exportFile(state *BuildState, pkg *Package, label BuildLabel) {
 	state.AddTarget(pkg, t)
 }
 
-// checkArchSubrepo checks if a target refers to a cross-compiling subrepo.
+// CheckArchSubrepo checks if a target refers to a cross-compiling subrepo.
 // Those don't have to be explicitly defined - maybe we should insist on that, but it's nicer not to have to.
 func (state *BuildState) CheckArchSubrepo(name string) *Subrepo {
 	var arch cli.Arch
@@ -1149,8 +1195,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// in fact take priority over this, but that's a lot more fiddly to get right.
 
 	// Duplicate & alter configuration
-	s := &BuildState{}
-	*s = *state
+	s := state.Copy()
 
 	config := state.Config.copyConfig()
 	if err := readConfigFile(config, ".plzconfig_"+arch.String(), false); err != nil {
@@ -1178,8 +1223,7 @@ func (state *BuildState) ForSubrepo(name string, bazelCompat bool) *BuildState {
 		}
 	}
 
-	s := &BuildState{}
-	*s = *state
+	s := state.Copy()
 
 	s.Config = state.Config.copyConfig()
 
@@ -1323,7 +1367,10 @@ func NewBuildState(config *Configuration) *BuildState {
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 		},
+		initialised: make(chan struct{}),
+		initOnce:    new(sync.Once),
 	}
+
 	state.PathHasher = state.Hasher(config.Build.HashFunction)
 	state.progress.allStates = []*BuildState{state}
 	state.Hashes.Config = config.Hash()

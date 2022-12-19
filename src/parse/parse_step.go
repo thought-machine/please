@@ -54,7 +54,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
 		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label)
-		if err := subrepo.LoadSubrepoConfig(); err != nil {
+		if err := subrepo.State.Initialise(subrepo); err != nil {
 			return err
 		}
 	}
