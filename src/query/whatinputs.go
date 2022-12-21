@@ -22,11 +22,7 @@ func WhatInputs(graph *core.BuildGraph, files []string, hidden, printFiles bool)
 				fmt.Printf("%s\n", label)
 			}
 		} else {
-			if printFiles {
-				fmt.Printf("%s Error: Not a source to any current target\n", file)
-			} else {
-				fmt.Printf("Error: '%s' is not a source to any current target\n", file)
-			}
+			log.Fatalf("%s is not a source to any current target", file)
 		}
 	}
 }
