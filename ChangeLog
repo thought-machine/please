@@ -1,3 +1,15 @@
+Version 16.26.0
+---------------
+    * The C/C++ rules now allow adding additional outputs (#2519)
+    * Allow subrepos to define an output root to avoid clashing inside
+      their build directories (#2605)
+    * Resolve some race conditions when loading plugin config that would
+      result in Please erroneously claiming that certain plugin configs
+      don't exist or are not optional (#2611)
+    * Format the CONFIG object in the same way other dictionaries get formatted
+      when printed from the build language (#2585)
+
+
 Version 16.25.1
 ---------------
     * Revert (#2593) as it has a race condition relating to subincludes (#2599)
