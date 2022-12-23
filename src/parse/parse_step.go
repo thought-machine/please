@@ -76,10 +76,9 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		return err
 	}
 	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
-	if label.IsAllTargets() {
-		return state.ActivateTarget(pkg, label, dependent, forSubinclude)
-	}
-	return nil
+	// The target likely got activated already, however we activate here to handle psudotargets (:all), and to let this
+	// error when the target doesn't exist.
+	return state.ActivateTarget(pkg, label, dependent, forSubinclude)
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.

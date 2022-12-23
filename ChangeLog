@@ -1,3 +1,8 @@
+Version 16.26.1
+---------------
+    * Fix some issues when original targets contain subrepos
+
+
 Version 16.26.0
 ---------------
     * The C/C++ rules now allow adding additional outputs (#2519)
