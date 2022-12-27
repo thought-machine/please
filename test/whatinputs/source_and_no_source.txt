@@ -1,2 +1,0 @@
-Error: 'making/up/a/file/path/should/be/easy' is not a source to any current target
-//test/whatinputs/test_package:target1
