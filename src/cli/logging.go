@@ -298,7 +298,6 @@ func rotateLogFiles(logFile string) {
 		}
 		return logFile + "." + strconv.Itoa(n)
 	}
-	os.RemoveAll(nth(maxLogFiles - 1)) // Always drop the last one
 	for i := maxLogFiles - 1; i > 0; i-- {
 		if err := os.Rename(nth(i-1), nth(i)); err != nil && !os.IsNotExist(err) {
 			log.Warning("Failed to rotate log file %s: %s", nth(i-1), err)
