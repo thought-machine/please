@@ -849,6 +849,8 @@ var buildFunctions = map[string]func() int{
 				rel, err := filepath.Rel(core.RepoRoot, file)
 				if err != nil {
 					log.Fatalf("Failed to make input relative to repo root: %s", err)
+				} else if strings.HasPrefix(rel, "..") {
+					log.Fatalf("Input %s does not lie within this repo (relative path: %s)", file, rel)
 				}
 				files[i] = rel
 			}
