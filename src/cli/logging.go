@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -39,6 +40,9 @@ var logLevel = logging.WARNING
 var fileLogLevel = logging.WARNING
 var fileBackend logging.Backend
 
+// maxLogFiles is the max number of log files we retain in plz-out/log
+const maxLogFiles = 10
+
 // A Verbosity is used as a flag to define logging verbosity.
 type Verbosity = cli.Verbosity
 
@@ -64,6 +68,7 @@ func InitFileLogging(logFile string, logFileLevel Verbosity, append bool) {
 	if err := os.MkdirAll(path.Dir(logFile), os.ModeDir|0775); err != nil {
 		log.Fatalf("Error creating log file directory: %s", err)
 	}
+	rotateLogFiles(logFile)
 	flags := os.O_RDWR | os.O_CREATE | os.O_TRUNC
 	if append {
 		flags = os.O_RDWR | os.O_CREATE | os.O_APPEND
@@ -282,6 +287,23 @@ func findSplit(line string, guess int) int {
 		return m[1] // second element in slice is the end index
 	}
 	return guess // Dunno what to do at this point. It's probably unlikely to happen often though.
+}
+
+// rotateLogFiles rotates the given log file, using the traditional approach of appending increasing integers to the file name.
+// N.B. Currently it does not gzip them as some tools do; we could add that later if interesting.
+func rotateLogFiles(logFile string) {
+	nth := func(n int) string {
+		if n == 0 {
+			return logFile
+		}
+		return logFile + "." + strconv.Itoa(n)
+	}
+	os.RemoveAll(nth(maxLogFiles - 1)) // Always drop the last one
+	for i := maxLogFiles - 1; i > 0; i-- {
+		if err := os.Rename(nth(i-1), nth(i)); err != nil && !os.IsNotExist(err) {
+			log.Warning("Failed to rotate log file %s: %s", nth(i-1), err)
+		}
+	}
 }
 
 // HTTPLogWrapper wraps the standard logger to implement the LeveledLogger interface from retryablehttp.
