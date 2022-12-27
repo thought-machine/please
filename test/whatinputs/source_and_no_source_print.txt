@@ -1,2 +1,0 @@
-making/up/a/file/path/should/be/easy Error: Not a source to any current target
-test/whatinputs/test_package/foo.txt //test/whatinputs/test_package:target1
