@@ -3,13 +3,15 @@
     const menuButtonNode = document.querySelector("#menu-button");
     const menuListNode = document.querySelector("#menu-list");
 
-    menuButtonNode.addEventListener("click", () => {
-      if (menuListNode.classList.contains("dn")) {
-        menuListNode.classList.remove("dn");
-      } else {
-        menuListNode.classList.add("dn");
-      }
-    });
+    if (menuButtonNode) {
+      menuButtonNode.addEventListener("click", () => {
+        if (menuListNode.classList.contains("dn")) {
+          menuListNode.classList.remove("dn");
+        } else {
+          menuListNode.classList.add("dn");
+        }
+      });
+    }
   };
 
   const fadeNavGraphicOnScroll = () => {
