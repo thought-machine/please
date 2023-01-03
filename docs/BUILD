@@ -92,6 +92,7 @@ filegroup(
         ":lexicon_html",
         ":config_html",
         "tachyons-4.12.0.min.css",
+        "fonts.css",
         "styles.css",
         "action.js",
         "tabs.js",
