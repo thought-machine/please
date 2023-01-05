@@ -6,7 +6,7 @@ jobs:
   alpine:
     runs-on: ubuntu-latest
     container:
-      image: thoughtmachine/please_alpine:20220422
+      image: thoughtmachine/please_alpine:20220803
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -37,7 +37,7 @@ jobs:
   ubuntu:
     runs-on: ubuntu-latest
     container:
-      image: thoughtmachine/please_ubuntu:20220426
+      image: thoughtmachine/please_ubuntu:20220803
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -71,7 +71,7 @@ jobs:
   ubuntu_alt:
     runs-on: ubuntu-latest
     container:
-      image: thoughtmachine/please_ubuntu_alt:20220422
+      image: thoughtmachine/please_ubuntu_alt:20220803
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
