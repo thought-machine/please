@@ -23,7 +23,7 @@ jobs:
           key: go-mod-alpine-${{ hashFiles('go.mod') }}
           restore-keys: go-mod-alpine-
       - name: Mark Git directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        run: git config --system --add safe.directory "$GITHUB_WORKSPACE"
       - name: Bootstrap & Build
         run: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
         env:
