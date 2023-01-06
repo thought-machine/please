@@ -101,6 +101,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@1v3
+        with:
+          go-version: '^1.18.9'
       - name: Cache third_party
         uses: actions/cache@v3
         with:
