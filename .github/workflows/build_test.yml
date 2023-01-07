@@ -10,18 +10,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+          cache: true
       - name: Cache third_party
         uses: actions/cache@v3
         with:
           path: .plz-cache/third_party/go
           key: go-alpine-2-${{ hashFiles('third_party/go/BUILD', 'tools/images/alpine/Dockerfile') }}
           restore-keys: go-alpine-2-
-      - name: Cache go.mod
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: go-mod-alpine-${{ hashFiles('go.mod') }}
-          restore-keys: go-mod-alpine-
       - name: Mark Git directory
         run: git config --system --add safe.directory "$GITHUB_WORKSPACE"
       - name: Bootstrap & Build
@@ -42,18 +40,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+          cache: true
       - name: Cache third_party
         uses: actions/cache@v3
         with:
           path: .plz-cache/third_party/go
           key: go-ubuntu-2-${{ hashFiles('third_party/go/BUILD', 'tools/images/ubuntu/Dockerfile') }}
           restore-keys: go-ubuntu-2-
-      - name: Cache go.mod
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: go-mod-ubuntu-${{ hashFiles('go.mod') }}
-          restore-keys: go-mod-ubuntu-
       - name: Bootstrap & Build
         run: ./bootstrap.sh
       - name: No plugins
@@ -77,18 +73,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '^1.18'
+          cache: true
       - name: Cache third_party
         uses: actions/cache@v3
         with:
           path: .plz-cache/third_party/go
           key: go-ubuntu-alt-2-${{ hashFiles('third_party/go/BUILD', 'tools/images/ubuntu_alt/Dockerfile') }}
           restore-keys: go-ubuntu-alt-2-
-      - name: Cache go.mod
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: go-mod-ubuntu-alt-${{ hashFiles('go.mod') }}
-          restore-keys: go-mod-ubuntu-alt-
       - name: Bootstrap & Build
         run: ./bootstrap.sh
       - name: Archive logs
@@ -107,19 +101,14 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: '^1.18.9'
+          go-version: '^1.19'
+          cache: true
       - name: Cache third_party
         uses: actions/cache@v3
         with:
           path: .plz-cache/third_party/go
           key: go-darwin-2-${{ hashFiles('third_party/go/BUILD') }}
           restore-keys: go-darwin-2-
-      - name: Cache go.mod
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: go-mod-darwin-${{ hashFiles('go.mod') }}
-          restore-keys: go-mod-darwin-
       - name: Bootstrap & Build
         run: ./bootstrap.sh
       - name: Package

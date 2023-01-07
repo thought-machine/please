@@ -1,7 +1,7 @@
 FROM golang:1.19-alpine
 MAINTAINER peter.ebden@gmail.com
 
-RUN apk update && apk add --no-cache git patch gcc g++ libc-dev bash libgcc xz protoc protobuf-dev perl-utils
+RUN apk update && apk add --no-cache git patch gcc g++ libc-dev bash libgcc xz protoc protobuf-dev perl-utils tar
 
 # Ensure this is where we expect on the PATH
 RUN ln -s /usr/local/go/bin/go /usr/local/bin/go
