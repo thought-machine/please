@@ -34,6 +34,7 @@ jobs:
         with:
           name: logs
           path: plz-out/log
+          retention-days: 7
   ubuntu:
     runs-on: ubuntu-latest
     container:
@@ -68,6 +69,7 @@ jobs:
         with:
           name: logs
           path: plz-out/log
+          retention-days: 7
   ubuntu_alt:
     runs-on: ubuntu-latest
     container:
@@ -95,6 +97,7 @@ jobs:
         with:
           name: logs
           path: plz-out/log
+          retention-days: 7
   darwin:
     runs-on: macos-latest
     needs: [ubuntu, ubuntu_alt, alpine]  # Doesn't really need them but no point doing the expensive macos run if the linux ones fail
@@ -129,3 +132,4 @@ jobs:
         with:
           name: logs
           path: plz-out/log
+          retention-days: 7
