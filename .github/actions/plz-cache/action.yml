@@ -2,8 +2,9 @@ name: "Please cache retrieval"
 description: "Caches & retrieves parts of the plz cache between runs"
 inputs:
   machine:
-    required: true
+    required: false
     description: "The type of machine we're running on"
+    default: ${{ github.job }}
   path:
     required: false
     description: "The path to store/retrieve in the cache"
@@ -15,5 +16,5 @@ runs:
       uses: actions/cache@v3
       with:
         path: ${{ inputs.path }}
-        key: plz-${{ inputs.machine }}-${{ inputs.machine == "darwin" && hashFiles('third_party/go/BUILD') || hashFiles('third_party/go/BUILD', 'tools/images/' + inputs.machine + '/Dockerfile') }}
+        key: plz-${{ inputs.machine }}-${{ inputs.machine == 'darwin' && hashFiles('third_party/go/BUILD') || hashFiles('third_party/go/BUILD', 'tools/images/' + inputs.machine + '/Dockerfile') }}
         restore-keys: plz-${{ inputs.machine }}-

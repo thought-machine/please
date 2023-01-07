@@ -1,0 +1,21 @@
+name: "Please log storage"
+description: "Stores plz logs after a run"
+inputs:
+  path:
+    required: false
+    description: "The path to store/retrieve"
+    default: plz-out/log
+  retention:
+    required: false
+    description: "The number of days to retain logs for"
+    default: 7
+runs:
+  using: "composite"
+  steps:
+    - name: Plz log storage
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: plz-logs-${{ github.job }}
+        path: ${{ inputs.path }}
+        retention-days: ${{ inputs.retention }}

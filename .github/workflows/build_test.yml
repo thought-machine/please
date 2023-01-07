@@ -11,21 +11,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - uses: ./.github/actions/plz-cache
-        with:
-          machine: alpine
       - name: Mark Git directory
         run: git config --system --add safe.directory "$GITHUB_WORKSPACE"
       - name: Bootstrap & Build
         run: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
         env:
           PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
-      - name: Archive logs
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: logs
-          path: plz-out/log
-          retention-days: 7
+      - uses: ./.github/actions/plz-logs
   ubuntu:
     runs-on: ubuntu-latest
     container:
@@ -38,8 +30,6 @@ jobs:
           go-version: '^1.19'
           cache: true
       - uses: ./.github/actions/plz-cache
-        with:
-          machine: ubuntu
       - name: Bootstrap & Build
         run: ./bootstrap.sh
       - name: No plugins
@@ -49,13 +39,7 @@ jobs:
       - name: FreeBSD cross-compile
         run: plz-out/bin/src/please build --arch freebsd_amd64 //package:release_files
       # TODO(peterebden): Persist artifacts to be retrieved later for release
-      - name: Archive logs
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: logs
-          path: plz-out/log
-          retention-days: 7
+      - uses: ./.github/actions/plz-logs
   ubuntu_alt:
     runs-on: ubuntu-latest
     container:
@@ -68,17 +52,9 @@ jobs:
           go-version: '^1.18'
           cache: true
       - uses: ./.github/actions/plz-cache
-        with:
-          machine: ubuntu_alt
       - name: Bootstrap & Build
         run: ./bootstrap.sh
-      - name: Archive logs
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: logs
-          path: plz-out/log
-          retention-days: 7
+      - uses: ./.github/actions/plz-logs
   darwin:
     runs-on: macos-latest
     needs: [ubuntu, ubuntu_alt, alpine]  # Doesn't really need them but no point doing the expensive macos run if the linux ones fail
@@ -91,18 +67,10 @@ jobs:
           go-version: '^1.19'
           cache: true
       - uses: ./.github/actions/plz-cache
-        with:
-          machine: darwin
       - name: Bootstrap & Build
         run: ./bootstrap.sh
       - name: Package
         run: plz-out/bin/src/please build //package:release_files
       - name: Cross-compile arm64
         run: plz-out/bin/src/please build  --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang -o "go.cflags:-target arm64-apple-macos11" //package:release_files
-      - name: Archive logs
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: logs
-          path: plz-out/log
-          retention-days: 7
+      - uses: ./.github/actions/plz-logs
