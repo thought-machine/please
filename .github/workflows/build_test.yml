@@ -15,7 +15,7 @@ jobs:
         with:
           path: .plz-cache/third_party/go
           key: go-alpine-2-${{ hashFiles('third_party/go/BUILD', 'tools/images/alpine/Dockerfile') }}
-          restore-keys: go-alpine-
+          restore-keys: go-alpine-2-
       - name: Cache go.mod
         uses: actions/cache@v3
         with:
@@ -47,7 +47,7 @@ jobs:
         with:
           path: .plz-cache/third_party/go
           key: go-ubuntu-2-${{ hashFiles('third_party/go/BUILD', 'tools/images/ubuntu/Dockerfile') }}
-          restore-keys: go-ubuntu-
+          restore-keys: go-ubuntu-2-
       - name: Cache go.mod
         uses: actions/cache@v3
         with:
@@ -82,7 +82,7 @@ jobs:
         with:
           path: .plz-cache/third_party/go
           key: go-ubuntu-alt-2-${{ hashFiles('third_party/go/BUILD', 'tools/images/ubuntu_alt/Dockerfile') }}
-          restore-keys: go-ubuntu-alt-
+          restore-keys: go-ubuntu-alt-2-
       - name: Cache go.mod
         uses: actions/cache@v3
         with:
@@ -113,7 +113,7 @@ jobs:
         with:
           path: .plz-cache/third_party/go
           key: go-darwin-2-${{ hashFiles('third_party/go/BUILD') }}
-          restore-keys: go-darwin-
+          restore-keys: go-darwin-2-
       - name: Cache go.mod
         uses: actions/cache@v3
         with:
