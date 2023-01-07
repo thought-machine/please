@@ -30,18 +30,18 @@ func info(format string, args ...interface{}) {
 
 // InitPlugins initialises one or more plugins by inserting plugin config values into
 // the host repo config file, and creating a build target in //plugins.
-func InitPlugins(plugins []string) {
+func InitPlugins(plugins []string, version string) error {
 	log.Debug("Initialising plugin(s): %v", plugins)
 
 	// Check that we're in a plz repo
 	configPath := filepath.Join(core.RepoRoot, ".plzconfig")
 	if !fs.FileExists(configPath) {
-		log.Fatalf("You don't appear to be in a plz repo.")
+		return fmt.Errorf("You don't appear to be in a plz repo.")
 	}
 
 	configFile, err := os.Open(configPath)
 	if err != nil {
-		log.Fatalf("Failed to open plz config file")
+		return fmt.Errorf("Failed to open plz config file")
 	}
 	defer configFile.Close()
 
@@ -49,17 +49,19 @@ func InitPlugins(plugins []string) {
 	file := ast.Read(configFile)
 
 	for _, p := range plugins {
-		file, err = initPlugin(p, file)
+		file, err = initPlugin(p, version, file)
 		if err != nil {
 			log.Errorf("Could not initialise plugin %s. Got error: %s", p, err)
+			return err
 		}
 	}
 
 	ast.Write(file, configPath)
+	return nil
 }
 
-func initPlugin(plugin string, file ast.File) (ast.File, error) {
-	if err := createTarget("plugins/BUILD", plugin); err != nil {
+func initPlugin(plugin, version string, file ast.File) (ast.File, error) {
+	if err := createTarget("plugins/BUILD", plugin, version); err != nil {
 		return file, err
 	}
 
@@ -194,7 +196,7 @@ func targetExistsInFile(location, plugin string) bool {
 }
 
 // createTarget writes the plugin target to plugins/BUILD
-func createTarget(location, plugin string) error {
+func createTarget(location, plugin, version string) error {
 	if targetExistsInFile(location, plugin) {
 		return nil
 	}
@@ -209,11 +211,14 @@ func createTarget(location, plugin string) error {
 		return err
 	}
 	defer f.Close()
-	revision, err := getLatestRevision(plugin)
-	if err != nil {
-		return err
+	if version == "" {
+		revision, err := getLatestRevision(plugin)
+		if err != nil {
+			return err
+		}
+		version = revision
 	}
-	_, err = fmt.Fprintf(f, pluginRepoTemplate, plugin, revision, plugin)
+	_, err = fmt.Fprintf(f, pluginRepoTemplate, plugin, version, plugin)
 
 	return err
 }

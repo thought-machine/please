@@ -286,7 +286,8 @@ var opts struct {
 		Pleasew struct {
 		} `command:"pleasew" description:"Initialises the pleasew wrapper script"`
 		Plugin struct {
-			Args struct {
+			Version string `short:"v" long:"version" description:"Version of plugin to install. If not set, the latest is found."`
+			Args    struct {
 				Plugins []string `positional-arg-name:"plugin" required:"true" description:"Plugins to install"`
 			} `positional-args:"true"`
 		} `command:"plugin" hidden:"true" description:"Install a plugin and migrate any language-specific config values"`
@@ -725,7 +726,9 @@ var buildFunctions = map[string]func() int{
 		return 0
 	},
 	"init.plugin": func() int {
-		plzinit.InitPlugins(opts.Init.Plugin.Args.Plugins)
+		if err := plzinit.InitPlugins(opts.Init.Plugin.Args.Plugins, opts.Init.Plugin.Version); err != nil {
+			log.Fatalf("%s", err)
+		}
 		return 0
 	},
 	"export": func() int {

@@ -69,7 +69,7 @@ plugin_e2e_test(
         ".plzconfig": "[Plugin \"python\"]*Target = //plugins:python",
     },
     # Need to break hard link here so init_plugin_test's actual .plzconfig doesn't get updated.
-    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin python",
+    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin python --version v1.2.0",
 )
 
 # Test that the target is created in plugins/BUILD
@@ -79,14 +79,14 @@ plugin_e2e_test(
         "plugins/BUILD": "plugin_repo*name = \\\"cc\\\"*plugin = \\\"cc-rules\\\"",
     },
     # Need to break hard link here so init_plugin_test's actual .plzconfig doesn't get updated.
-    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin cc",
+    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin cc --version v0.3.2",
 )
 
 # Test that we don't add the build target again if it's already there
 plugin_e2e_test(
     name = "init_only_add_target_once_test",
     # Need to break hard link here so init_plugin_test's actual .plzconfig doesn't get updated.
-    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin cc; plz init plugin cc; lines=$(cat plugins/BUILD | wc -l); if [ $lines -gt 6 ]; then exit 1; else exit 0; fi",
+    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin cc --version v0.3.2; plz init plugin cc --version v0.3.2; lines=$(cat plugins/BUILD | wc -l); if [ $lines -gt 6 ]; then exit 1; else exit 0; fi",
 )
 
 plugin_e2e_test(
