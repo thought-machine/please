@@ -246,6 +246,8 @@ func getLatestRevision(plugin string) (string, error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
+	} else if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Failed to download plugin: %s %s", resp.Status, string(body))
 	}
 
 	var result Response
