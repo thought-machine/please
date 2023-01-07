@@ -1346,7 +1346,7 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 }
 
 func initLogging() {
-	core.AcquireExclusiveRepoLock()
+	core.AcquireExclusiveRepoLockQuietly()
 	defer core.ReleaseRepoLock()
 	cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel, opts.OutputFlags.LogAppend)
 }

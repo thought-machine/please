@@ -25,7 +25,7 @@ var repoLockFile *os.File
 // AcquireSharedRepoLock acquires a shared lock on the repo lock file. The file descriptor is reused if already opened
 // allowing its lock mode to be replaced. Dies if the lock cannot be successfully acquired.
 func AcquireSharedRepoLock() {
-	if err := acquireRepoLock(syscall.LOCK_SH); err != nil {
+	if err := acquireRepoLock(syscall.LOCK_SH, log.Warning); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -33,7 +33,14 @@ func AcquireSharedRepoLock() {
 // AcquireExclusiveRepoLock acquires an exclusive lock on the repo lock file. The file descriptor is reused if already opened
 // allowing its lock mode to be replaced. Dies if the lock cannot be successfully acquired.
 func AcquireExclusiveRepoLock() {
-	if err := acquireRepoLock(syscall.LOCK_EX); err != nil {
+	if err := acquireRepoLock(syscall.LOCK_EX, log.Warning); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// AcquireExclusiveRepoLockQuietly is like AcquireExclusiveRepoLock but log messages are not shown if we need to wait for another process.
+func AcquireExclusiveRepoLockQuietly() {
+	if err := acquireRepoLock(syscall.LOCK_EX, log.Info); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -45,10 +52,10 @@ func ReleaseRepoLock() {
 }
 
 // Base function that allows to set up different repo lock modes and facilitate testing.
-func acquireRepoLock(how int) error {
+func acquireRepoLock(how int, levelLog logFunc) error {
 	if err := openRepoLockFile(); err != nil {
 		return err
-	} else if err := acquireFileLock(repoLockFile, how, log.Warning); err != nil {
+	} else if err := acquireFileLock(repoLockFile, how, levelLog); err != nil {
 		return err
 	}
 	// Write a cachedir file that indicates to some tools that this is non-essential and not to back up.

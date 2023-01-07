@@ -58,11 +58,11 @@ func TestAcquireExclusiveRepoRoot(t *testing.T) {
 }
 
 func TestAcquireRepoRootOverride(t *testing.T) {
-	err := acquireRepoLock(syscall.LOCK_SH | syscall.LOCK_NB)
+	err := acquireRepoLock(syscall.LOCK_SH|syscall.LOCK_NB, log.Warning)
 	assert.NoError(t, err)
 
 	// It is able to immediately override the lock mode since it uses the same file descriptor.
-	err = acquireRepoLock(syscall.LOCK_EX | syscall.LOCK_NB)
+	err = acquireRepoLock(syscall.LOCK_EX|syscall.LOCK_NB, log.Warning)
 	assert.NoError(t, err)
 
 	ReleaseRepoLock()
@@ -71,7 +71,7 @@ func TestAcquireRepoRootOverride(t *testing.T) {
 // This attempts to mimic how 2 plz processes acquire a shared repo lock.
 func TestAcquireSharedRepoRootTwice(t *testing.T) {
 	// 1st process.
-	err := acquireRepoLock(syscall.LOCK_SH | syscall.LOCK_NB)
+	err := acquireRepoLock(syscall.LOCK_SH|syscall.LOCK_NB, log.Warning)
 	assert.NoError(t, err)
 
 	// Keep file descriptor reference alive.
@@ -81,7 +81,7 @@ func TestAcquireSharedRepoRootTwice(t *testing.T) {
 	// 2nd process.
 	repoLockFile = nil // Reset.
 	// It is able to immediately acquire another shared lock via a different file descriptor.
-	err = acquireRepoLock(syscall.LOCK_SH | syscall.LOCK_NB)
+	err = acquireRepoLock(syscall.LOCK_SH|syscall.LOCK_NB, log.Warning)
 	assert.NoError(t, err)
 
 	ReleaseRepoLock()
@@ -90,7 +90,7 @@ func TestAcquireSharedRepoRootTwice(t *testing.T) {
 // This attempts to mimic how 1 plz process acquires a shared repo lock and another tries to acquire an exclusive one.
 func TestAcquireSharedAndExclusiveRepoRoot(t *testing.T) {
 	// 1st process.
-	err := acquireRepoLock(syscall.LOCK_SH | syscall.LOCK_NB)
+	err := acquireRepoLock(syscall.LOCK_SH|syscall.LOCK_NB, log.Warning)
 	assert.NoError(t, err)
 
 	// Keep file descriptor reference alive.
@@ -100,7 +100,7 @@ func TestAcquireSharedAndExclusiveRepoRoot(t *testing.T) {
 	// 2nd process.
 	repoLockFile = nil // Reset.
 	// It errors immediately trying to acquire an exclusive lock as a shared one already exists from process 1.
-	err = acquireRepoLock(syscall.LOCK_EX | syscall.LOCK_NB)
+	err = acquireRepoLock(syscall.LOCK_EX|syscall.LOCK_NB, log.Warning)
 	assert.Error(t, err)
 
 	ReleaseRepoLock()
@@ -109,7 +109,7 @@ func TestAcquireSharedAndExclusiveRepoRoot(t *testing.T) {
 // This attempts to mimic how 1 plz process acquires an exclusive repo lock and another tries to acquire a shared one.
 func TestAcquireExclusiveAndSharedRepoRoot(t *testing.T) {
 	// 1st process.
-	err := acquireRepoLock(syscall.LOCK_EX | syscall.LOCK_NB)
+	err := acquireRepoLock(syscall.LOCK_EX|syscall.LOCK_NB, log.Warning)
 	assert.NoError(t, err)
 
 	// Keep file descriptor reference alive.
@@ -119,7 +119,7 @@ func TestAcquireExclusiveAndSharedRepoRoot(t *testing.T) {
 	// 2nd process.
 	repoLockFile = nil // Reset.
 	// It errors immediately trying to acquire a shared lock as an exclusive one already exists from process 1.
-	err = acquireRepoLock(syscall.LOCK_SH | syscall.LOCK_NB)
+	err = acquireRepoLock(syscall.LOCK_SH|syscall.LOCK_NB, log.Warning)
 	assert.Error(t, err)
 
 	ReleaseRepoLock()
