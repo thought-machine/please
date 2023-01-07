@@ -16,5 +16,5 @@ runs:
       uses: actions/cache@v3
       with:
         path: ${{ inputs.path }}
-        key: plz-${{ inputs.machine }}-${{ inputs.machine == 'darwin' && hashFiles('third_party/go/BUILD') || hashFiles('third_party/go/BUILD', 'tools/images/' + inputs.machine + '/Dockerfile') }}
+        key: plz-${{ inputs.machine }}-${{ inputs.machine == 'darwin' && hashFiles('third_party/go/BUILD') || hashFiles('third_party/go/BUILD', format('tools/images/{0}/Dockerfile', inputs.machine)) }}
         restore-keys: plz-${{ inputs.machine }}-
