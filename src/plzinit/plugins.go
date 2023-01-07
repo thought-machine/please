@@ -51,8 +51,7 @@ func InitPlugins(plugins []string, version string) error {
 	for _, p := range plugins {
 		file, err = initPlugin(p, version, file)
 		if err != nil {
-			log.Errorf("Could not initialise plugin %s. Got error: %s", p, err)
-			return err
+			return fmt.Errorf("Could not initialise plugin %s. Got error: %s", p, err)
 		}
 	}
 
