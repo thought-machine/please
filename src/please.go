@@ -843,6 +843,18 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.whatinputs": func() int {
 		files := opts.Query.WhatInputs.Args.Files.Get()
+		// Make all these relative to the repo root; many things do not work if they're absolute.
+		for i, file := range files {
+			if filepath.IsAbs(file) {
+				rel, err := filepath.Rel(core.RepoRoot, file)
+				if err != nil {
+					log.Fatalf("Failed to make input relative to repo root: %s", err)
+				} else if strings.HasPrefix(rel, "..") {
+					log.Fatalf("Input %s does not lie within this repo (relative path: %s)", file, rel)
+				}
+				files[i] = rel
+			}
+		}
 		// We only need this to retrieve the BuildFileName
 		state := core.NewBuildState(config)
 		labels := make([]core.BuildLabel, 0, len(files))
