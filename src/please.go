@@ -1328,7 +1328,7 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 		if !filepath.IsAbs(string(opts.OutputFlags.LogFile)) {
 			opts.OutputFlags.LogFile = cli.Filepath(filepath.Join(core.RepoRoot, string(opts.OutputFlags.LogFile)))
 		}
-		cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel, opts.OutputFlags.LogAppend)
+		initLogging()
 	}
 	if opts.BehaviorFlags.NoHashVerification {
 		log.Warning("You've disabled hash verification; this is intended to help temporarily while modifying build targets. You shouldn't use this regularly.")
@@ -1343,6 +1343,12 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	}
 	update.CheckAndUpdate(config, !opts.BehaviorFlags.NoUpdate, forceUpdate, opts.Update.Force, !opts.Update.NoVerify, !opts.OutputFlags.PlainOutput, opts.Update.LatestPrerelease)
 	return config
+}
+
+func initLogging() {
+	core.AcquireExclusiveRepoLock()
+	defer core.ReleaseRepoLock()
+	cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel, opts.OutputFlags.LogAppend)
 }
 
 // handleCompletions handles shell completion. Typically it just prints to stdout but
