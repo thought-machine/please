@@ -5,16 +5,12 @@ inputs:
     required: false
     description: "The type of machine we're running on"
     default: ${{ github.job }}
-  path:
-    required: false
-    description: "The path to store/retrieve in the cache"
-    default: .plz-cache/third_party/go
 runs:
   using: "composite"
   steps:
-    - name: Plz cache retrieval
+    - name: Cache retrieval
       uses: actions/cache@v3
       with:
-        path: ${{ inputs.path }}
-        key: plz-${{ inputs.machine }}-${{ (startsWith(inputs.machine, 'ubuntu') || inputs.machine == 'alpine') && hashFiles('third_party/go/BUILD', format('tools/images/{0}/Dockerfile', inputs.machine)) || hashFiles('third_party/go/BUILD') }}
+        path: .plz-cache/third_party
+        key: plz-${{ inputs.machine }}-${{ (startsWith(inputs.machine, 'ubuntu') || inputs.machine == 'alpine') && hashFiles('third_party/go/BUILD', 'third_party/python/BUILD', 'third_party/java/BUILD', format('tools/images/{0}/Dockerfile', inputs.machine)) || hashFiles('third_party/go/BUILD', 'third_party/python/BUILD', 'third_party/java/BUILD') }}
         restore-keys: plz-${{ inputs.machine }}-
