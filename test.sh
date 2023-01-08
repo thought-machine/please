@@ -14,13 +14,16 @@ check_path_for_excludes() {
 
   EXCLUDES=""
   if [ "`uname`" = "Darwin" ]; then
-      if ! hash nasm 2>/dev/null ; then
+      if hash nasm 2>/dev/null ; then
           # OSX comes with an ancient version of nasm that can't target
           # 64-bit Mach-O binaries (?!!). Ensure we've got the Brew one.
           if [ -n "`nasm -v | grep 'version 2'`" ]; then
               warn "nasm 2.x not found, excluding C++ tests"
               EXCLUDES="${EXCLUDES} --exclude=cc"
           fi
+      else
+          warn "nasm 2.x not found, excluding C++ tests"
+          EXCLUDES="${EXCLUDES} --exclude=cc"
       fi
   fi
 

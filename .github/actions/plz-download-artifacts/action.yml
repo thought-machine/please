@@ -14,3 +14,4 @@ runs:
         name: ${{ inputs.name }}
     - name: Fix permissions
       run: chmod +x ./please
+      shell: bash

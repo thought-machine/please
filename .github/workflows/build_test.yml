@@ -82,9 +82,6 @@ jobs:
         uses: ./.github/actions/plz-cache
       - name: Bootstrap & Build
         run: ./bootstrap.sh
-        # TODO(peterebden): Remove this after we excise plugin-specific tests from the central repo
-        env:
-          PLZ_ARGS: "--exclude cc"
       - name: Package
         run: plz-out/bin/src/please build //package:release_files
       - name: Cross-compile arm64
