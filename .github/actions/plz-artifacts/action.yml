@@ -1,0 +1,24 @@
+name: "Please release artifact upload"
+description: "Uploads Please release artifacts"
+inputs:
+  path:
+    required: false
+    description: "The path to store/retrieve"
+    default: plz-out/pkg
+  name:
+    required: false
+    description: "The name of the artifact set"
+    default: plz-${{ github.job }}
+  retention:
+    required: false
+    description: "The number of days to retain artifacts for"
+    default: 7
+runs:
+  using: "composite"
+  steps:
+    - name: Plz artifact storage
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        retention-days: ${{ inputs.retention }}
