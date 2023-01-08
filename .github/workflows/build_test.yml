@@ -10,14 +10,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - uses: ./.github/actions/plz-cache
+      - name: Plz cache
+        uses: ./.github/actions/plz-cache
       - name: Mark Git directory
         run: git config --system --add safe.directory "$GITHUB_WORKSPACE"
       - name: Bootstrap & Build
         run: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
         env:
           PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
-      - uses: ./.github/actions/plz-logs
+      - name: Archive logs
+        uses: ./.github/actions/plz-logs
   ubuntu:
     runs-on: ubuntu-latest
     container:
@@ -25,11 +27,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
         with:
           go-version: '^1.19'
           cache: true
-      - uses: ./.github/actions/plz-cache
+      - name: Plz cache
+        uses: ./.github/actions/plz-cache
       - name: Bootstrap & Build
         run: ./bootstrap.sh
       - name: No plugins
@@ -39,7 +43,8 @@ jobs:
       - name: FreeBSD cross-compile
         run: plz-out/bin/src/please build --arch freebsd_amd64 //package:release_files
       # TODO(peterebden): Persist artifacts to be retrieved later for release
-      - uses: ./.github/actions/plz-logs
+      - name: Archive logs
+        uses: ./.github/actions/plz-logs
   ubuntu_alt:
     runs-on: ubuntu-latest
     container:
@@ -47,14 +52,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
         with:
           go-version: '^1.18'
           cache: true
-      - uses: ./.github/actions/plz-cache
+      - name: Plz cache
+        uses: ./.github/actions/plz-cache
       - name: Bootstrap & Build
         run: ./bootstrap.sh
-      - uses: ./.github/actions/plz-logs
+      - name: Archive logs
+        uses: ./.github/actions/plz-logs
   darwin:
     runs-on: macos-latest
     needs: [ubuntu, ubuntu_alt, alpine]  # Doesn't really need them but no point doing the expensive macos run if the linux ones fail
@@ -66,11 +74,13 @@ jobs:
         with:
           go-version: '^1.19'
           cache: true
-      - uses: ./.github/actions/plz-cache
+      - name: Plz cache
+        uses: ./.github/actions/plz-cache
       - name: Bootstrap & Build
         run: ./bootstrap.sh
       - name: Package
         run: plz-out/bin/src/please build //package:release_files
       - name: Cross-compile arm64
         run: plz-out/bin/src/please build  --arch darwin_arm64 -o go.cgoenabled:1 -o go.cgocctool:clang -o "go.cflags:-target arm64-apple-macos11" //package:release_files
-      - uses: ./.github/actions/plz-logs
+      - name: Archive logs
+        uses: ./.github/actions/plz-logs
