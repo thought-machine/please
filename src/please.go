@@ -101,6 +101,7 @@ var opts struct {
 	GoTraceFile      string `long:"go_trace_file" hidden:"true" description:"Write a go trace profile to this file"`
 	ProfilePort      int    `long:"profile_port" hidden:"true" description:"Serve profiling info on this port."`
 	ParsePackageOnly bool   `description:"Parses a single package only. All that's necessary for some commands." no-flag:"true"`
+	Bootstrap        bool   `long:"bootstrap" hidden:"true" description:"Enabled some additional output during bootstrapping"`
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
 
 	Build struct {
@@ -1412,6 +1413,9 @@ func initBuild(args []string) string {
 	}
 	if opts.OutputFlags.ShowAllOutput {
 		opts.OutputFlags.PlainOutput = true
+	} else if opts.Bootstrap {
+		cli.InitLogging(cli.MaxVerbosity) // ensure the next message is visible
+		log.Notice("Please is starting up...")
 	}
 	// Init logging, but don't do file output until we've chdir'd.
 	cli.InitLogging(opts.OutputFlags.Verbosity)
