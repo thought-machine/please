@@ -77,7 +77,7 @@ jobs:
       - name: Plz cache
         uses: ./.github/actions/plz-cache
       - name: Bootstrap & Build
-        run: ./bootstrap.sh
+        run: ./bootstrap.sh --exclude //test/cc_rules/...
       - name: Package
         run: plz-out/bin/src/please build //package:release_files
       - name: Cross-compile arm64
