@@ -109,9 +109,7 @@ jobs:
       - name: Plz cache
         uses: ./.github/actions/plz-cache
       - name: Retrieve artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: plz-linux
+        uses: ./.github/actions/plz-download-artifacts
       - name: FreeBSD cross-compile
         run: ./please build --arch freebsd_amd64 //package:release_files
       - name: Store release artifacts

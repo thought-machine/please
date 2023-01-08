@@ -1,0 +1,16 @@
+name: "Please release artifact download"
+description: "Downloads Please release artifacts"
+inputs:
+  name:
+    required: false
+    description: "The name of the artifact set"
+    default: plz-linux
+runs:
+  using: "composite"
+  steps:
+    - name: Plz artifact download
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ inputs.name }}
+    - name: Fix permissions
+      run: chmod +x ./please
