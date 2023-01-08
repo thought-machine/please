@@ -11,6 +11,6 @@ runs:
     - name: Cache retrieval
       uses: actions/cache@v3
       with:
-        path: .plz-cache/third_party
-        key: plz-${{ inputs.machine }}-${{ (startsWith(inputs.machine, 'ubuntu') || inputs.machine == 'alpine') && hashFiles('third_party/go/BUILD', 'third_party/python/BUILD', 'third_party/java/BUILD', format('tools/images/{0}/Dockerfile', inputs.machine)) || hashFiles('third_party/go/BUILD', 'third_party/python/BUILD', 'third_party/java/BUILD') }}
-        restore-keys: plz-${{ inputs.machine }}-
+        path: .plz-cache
+        key: plz-${{ inputs.machine }}-2-${{ (startsWith(inputs.machine, 'ubuntu') || inputs.machine == 'alpine') && hashFiles('third_party/go/BUILD', 'third_party/python/BUILD', 'third_party/java/BUILD', format('tools/images/{0}/Dockerfile', inputs.machine)) || hashFiles('third_party/go/BUILD', 'third_party/python/BUILD', 'third_party/java/BUILD') }}
+        restore-keys: plz-${{ inputs.machine }}-2-
