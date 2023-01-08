@@ -80,8 +80,11 @@ jobs:
           cache: true
       - name: Plz cache
         uses: ./.github/actions/plz-cache
+      - name: Test pruning
+        # TODO(peterebden): Remove this once we ditch all the plugin-specific test stuff
+        run: rm -rf test/cc_rules
       - name: Bootstrap & Build
-        run: ./bootstrap.sh --exclude //test/cc_rules/...
+        run: ./bootstrap.sh
       - name: Package
         run: plz-out/bin/src/please build //package:release_files
       - name: Cross-compile arm64
@@ -110,7 +113,7 @@ jobs:
         with:
           name: plz-linux
       - name: FreeBSD cross-compile
-        run: plz-out/bin/src/please build --arch freebsd_amd64 //package:release_files
+        run: ./please build --arch freebsd_amd64 //package:release_files
       - name: Store release artifacts
         uses: ./.github/actions/plz-artifacts
       - name: Archive logs
