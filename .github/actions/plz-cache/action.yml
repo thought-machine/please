@@ -1,5 +1,5 @@
 name: "Please cache retrieval"
-description: "Caches & retrieves parts of the plz cache between runs"
+description: "Caches & retrieves the plz cache between runs"
 inputs:
   machine:
     required: false
