@@ -82,8 +82,10 @@ func (hasher *PathHasher) Hash(path string, recalc, store, timestamp bool) ([]by
 		hasher.mutex.RLock()
 		cached, present := hasher.memo[path]
 		hasher.mutex.RUnlock()
-		if present {
+		if present && cached != nil {
 			return cached, nil
+		} else if present {
+			store = false // Don't store hashes on this file (see MoveHash)
 		}
 	}
 	// This check is important; if the file doesn't exist now, we don't want that
@@ -136,6 +138,10 @@ func (hasher *PathHasher) MoveHash(oldPath, newPath string, copy bool) {
 		if !copy && strings.HasPrefix(oldPath, "plz-out/tmp") {
 			delete(hasher.memo, oldPath)
 		}
+	} else if copy {
+		// If we don't already have the hash, we mark this as a file not to read xattrs from
+		// (usually these are filegroups and it's not correct to do that).
+		hasher.memo[newPath] = nil
 	}
 }
 

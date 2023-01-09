@@ -80,7 +80,6 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 		// File exists already and is the same file. Nothing to do.
 		builder.built[to] = false
 		state.PathHasher.MoveHash(from, to, true)
-
 		return false, nil
 	}
 	// Must actually build the file.
