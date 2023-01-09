@@ -125,9 +125,19 @@ func (hasher *PathHasher) MustHash(path string, timestamp bool) []byte {
 	return hash
 }
 
+// CopyHash copies a hash from one location to another; this is useful when we know it's the same
+// file and we want it in two locations.
+func (hasher *PathHasher) CopyHash(oldPath, newPath string) {
+	hasher.moveOrCopyHash(oldPath, newPath, true)
+}
+
 // MoveHash is used when we move files from tmp to out and there was one there before; that's
 // the only case in which the hash of a filepath could change.
-func (hasher *PathHasher) MoveHash(oldPath, newPath string, copy bool) {
+func (hasher *PathHasher) MoveHash(oldPath, newPath string) {
+	hasher.moveOrCopyHash(oldPath, newPath, false)
+}
+
+func (hasher *PathHasher) moveOrCopyHash(oldPath, newPath string, copy bool) {
 	oldPath = hasher.ensureRelative(oldPath)
 	newPath = hasher.ensureRelative(newPath)
 	hasher.mutex.Lock()
