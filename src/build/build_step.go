@@ -743,7 +743,7 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 			return true, err
 		}
 	}
-	state.PathHasher.MoveHash(tmpOutput, realOutput, false)
+	state.PathHasher.MoveHash(tmpOutput, realOutput)
 	// Check if we need a directory for this output.
 	dir := filepath.Dir(realOutput)
 	if !core.PathExists(dir) {

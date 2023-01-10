@@ -79,8 +79,7 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 	} else if same {
 		// File exists already and is the same file. Nothing to do.
 		builder.built[to] = false
-		state.PathHasher.MoveHash(from, to, true)
-
+		state.PathHasher.CopyHash(from, to)
 		return false, nil
 	}
 	// Must actually build the file.
@@ -96,7 +95,7 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 		}
 	}
 	builder.built[to] = true
-	state.PathHasher.MoveHash(from, to, true)
+	state.PathHasher.CopyHash(from, to)
 	return true, nil
 }
 
@@ -158,7 +157,7 @@ func copyFilegroupHashes(state *core.BuildState, target *core.BuildTarget) {
 	localSources := target.AllSourceLocalPaths(state.Graph)
 	for i, source := range target.AllSourceFullPaths(state.Graph) {
 		if out := filepath.Join(outDir, localSources[i]); out != source {
-			state.PathHasher.MoveHash(source, out, true)
+			state.PathHasher.CopyHash(source, out)
 		}
 	}
 }

@@ -82,8 +82,10 @@ func (hasher *PathHasher) Hash(path string, recalc, store, timestamp bool) ([]by
 		hasher.mutex.RLock()
 		cached, present := hasher.memo[path]
 		hasher.mutex.RUnlock()
-		if present {
+		if present && cached != nil {
 			return cached, nil
+		} else if present {
+			store = false // Don't store hashes on this file (see MoveHash)
 		}
 	}
 	// This check is important; if the file doesn't exist now, we don't want that
@@ -123,9 +125,19 @@ func (hasher *PathHasher) MustHash(path string, timestamp bool) []byte {
 	return hash
 }
 
+// CopyHash copies a hash from one location to another; this is useful when we know it's the same
+// file and we want it in two locations.
+func (hasher *PathHasher) CopyHash(oldPath, newPath string) {
+	hasher.moveOrCopyHash(oldPath, newPath, true)
+}
+
 // MoveHash is used when we move files from tmp to out and there was one there before; that's
 // the only case in which the hash of a filepath could change.
-func (hasher *PathHasher) MoveHash(oldPath, newPath string, copy bool) {
+func (hasher *PathHasher) MoveHash(oldPath, newPath string) {
+	hasher.moveOrCopyHash(oldPath, newPath, false)
+}
+
+func (hasher *PathHasher) moveOrCopyHash(oldPath, newPath string, copy bool) {
 	oldPath = hasher.ensureRelative(oldPath)
 	newPath = hasher.ensureRelative(newPath)
 	hasher.mutex.Lock()
@@ -136,6 +148,10 @@ func (hasher *PathHasher) MoveHash(oldPath, newPath string, copy bool) {
 		if !copy && strings.HasPrefix(oldPath, "plz-out/tmp") {
 			delete(hasher.memo, oldPath)
 		}
+	} else if copy {
+		// If we don't already have the hash, we mark this as a file not to read xattrs from
+		// (usually these are filegroups and it's not correct to do that).
+		hasher.memo[newPath] = nil
 	}
 }
 
