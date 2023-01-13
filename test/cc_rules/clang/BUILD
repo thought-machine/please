@@ -12,7 +12,7 @@ package(
         "default_namespace": "plz",
         "default_opt_cppflags": "--std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter -stdlib=libstdc++",
         "ld_tool": "gold",
-    }
+    },
 )
 
 cc_embed_binary(

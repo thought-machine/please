@@ -7,6 +7,7 @@ go_binary(
     ],
     deps = [
         "//src/cli",
+        "//third_party/go:sigstore",
         "//tools/release_signer/signer",
     ],
 )

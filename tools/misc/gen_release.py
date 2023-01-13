@@ -26,6 +26,7 @@ flags.DEFINE_bool('dry_run', False, "Don't actually do the release, just print i
 flags.mark_flag_as_required('github_token')
 FLAGS = flags.FLAGS
 
+gcp_key_name = "gcpkms://projects/tm-please/locations/eur5/keyRings/please-release/cryptoKeys/please-release/cryptoKeyVersions/1"
 
 PRERELEASE_MESSAGE = """
 This is a prerelease version of Please. Bugs and partially-finished features may abound.
@@ -114,14 +115,23 @@ class ReleaseGen:
             return f'freebsd_{cpu}'
         return f'linux_{cpu}'
 
-    def sign(self, artifact:str) -> str:
+    def sign_pgp(self, artifact:str) -> str:
         """Creates a detached ASCII-armored signature for an artifact."""
         # We expect the PLZ_GPG_KEY and GPG_PASSWORD env vars to be set.
         out = artifact + '.asc'
         if FLAGS.dry_run:
             log.info('Would sign %s into %s', artifact, out)
         else:
-            subprocess.check_call([FLAGS.signer, '-o', out, '-i', artifact])
+            subprocess.check_call([FLAGS.signer, 'pgp', '-o', out, '-i', artifact])
+        return out
+
+    def sign_kms(self, artifact:str) -> str:
+        """Signs the artifact with the gcp kms key"""
+        out = artifact + '.sig'
+        if FLAGS.dry_run:
+            log.info('Would sign %s into %s', artifact, out)
+        else:
+            subprocess.check_call([FLAGS.signer, 'kms', '-o', out, '-i', artifact, '-k', gcp_key_name])
         return out
 
     def checksum(self, artifact:str) -> str:
@@ -174,14 +184,16 @@ def main(argv):
     if not r.needs_release():
         log.info('Current version has already been released, nothing to be done!')
         return
+
+    release_files = argv[1:]
+
     # Check we can sign the artifacts before trying to create a release.
-    signatures = [r.sign(artifact) for artifact in argv[1:]]
-    checksums = [r.checksum(artifact) for artifact in argv[1:]]
+    release_files += [r.sign_pgp(artifact) for artifact in argv[1:]]
+    release_files += [r.sign_kms(artifact) for artifact in argv[1:]]
+    release_files += [r.checksum(artifact) for artifact in argv[1:]]
     r.release()
-    for artifact, signature, checksum in zip(argv[1:], signatures, checksums):
-        r.upload(artifact)
-        r.upload(signature)
-        r.upload(checksum)
+    for file in release_files:
+        r.upload(file)
     if FLAGS.circleci_token and not FLAGS.dry_run:
         r.trigger_build(FLAGS.circleci_token, 'thought-machine/homebrew-please')
 

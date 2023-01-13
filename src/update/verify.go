@@ -3,6 +3,7 @@ package update
 import (
 	"bufio"
 	"bytes"
+	"crypto"
 	"crypto/sha256"
 	_ "embed" // needed for //go:embed
 	"encoding/hex"
@@ -10,49 +11,52 @@ import (
 	"io"
 	"strings"
 
-	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 
 	"github.com/thought-machine/please/src/cli"
 )
 
-// identity is the signing identity of this key.
-const identity = "Please Releases <releases@please.build>"
-
 // pubkey is the public key we verify Please releases with.
-//go:embed pubkey.pem
-var pubkey string
+//
+//go:embed key.pub
+var key []byte
 
 // verifySignature verifies an OpenPGP detached signature of a file.
 // It returns true if the signature is correct according to our key.
-func verifySignature(signed, signature io.Reader) bool {
-	entities, err := openpgp.ReadArmoredKeyRing(strings.NewReader(pubkey))
+func verifySignature(signed, sig io.Reader) bool {
+	return verifySignatureWithKey(signed, sig, key)
+}
+
+func verifySignatureWithKey(signed, sig io.Reader, key []byte) bool {
+	priv, err := cryptoutils.UnmarshalPEMToPublicKey(key)
 	if err != nil {
-		log.Fatalf("%s", err) // Shouldn't happen
+		log.Fatalf("err: %v", err)
 	}
-	signer, err := openpgp.CheckArmoredDetachedSignature(entities, signed, signature, nil)
+
+	verifier, err := signature.LoadVerifier(priv, crypto.SHA256)
 	if err != nil {
-		log.Error("Bad signature: %s", err)
-		return false
+		log.Fatalf("err: %v", err)
 	}
-	log.Notice("Good signature from %s", signer.Identities[identity].UserId.Email)
-	return true
+
+	return verifier.VerifySignature(sig, signed) == nil
 }
 
 // verifyDownload fetches a detached signature for a download and verifies it's OK.
 // It returns a reader to the verified content.
-func verifyDownload(signed io.Reader, url string, progress bool) io.Reader {
-	signature := mustDownload(url+".asc", false)
+func verifyDownload(message io.Reader, url string, progress bool) io.Reader {
+	signature := mustDownload(url+".sig", false)
 	defer signature.Close()
-	return mustVerifySignature(signed, signature, progress)
+	return mustVerifySignature(message, signature, progress)
 }
 
 // mustVerifySignature verifies an OpenPGP detached signature of a file.
 // It panics if the signature is not correct.
 // On success it returns an equivalent reader to the original.
-func mustVerifySignature(signed, signature io.Reader, progress bool) io.Reader {
+func mustVerifySignature(message, signature io.Reader, progress bool) io.Reader {
 	// We need to be able to reuse the body again afterwards so we have to
 	// download the original into a buffer.
-	b, err := io.ReadAll(signed)
+	b, err := io.ReadAll(message)
 	if err != nil {
 		panic(err)
 	}

@@ -305,6 +305,7 @@ jobs:
        - add_ssh_keys:
            fingerprints:
              - "cc:57:b9:67:31:65:a6:70:8c:e3:e7:90:ca:e6:a6:41"
+       - run: echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
        - run: /tmp/workspace/gen_release.pex --signer /tmp/workspace/release_signer /tmp/workspace/{*_amd64,*_arm64}/*
 
    # Releases the docs and the binaries to s3 for please.build and get.please.build

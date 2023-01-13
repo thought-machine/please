@@ -6,7 +6,7 @@ go_library(
         ["*.go"],
         exclude = ["*_test.go"],
     ),
-    resources = ["pubkey.pem"],
+    resources = ["key.pub"],
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",
@@ -17,14 +17,19 @@ go_library(
         "//third_party/go:go-crypto",
         "//third_party/go:go-retryablehttp",
         "//third_party/go:semver",
+        "//third_party/go:sigstore",
         "//third_party/go:xz",
     ],
 )
 
 go_test(
     name = "update_test",
-    srcs = ["update_test.go"],
+    srcs = [
+        "update_test.go",
+        "verify_test.go",
+    ],
     data = [
+        "test_data",
         ":test_please",
         ":test_tarball",
         "//src:please",
@@ -33,24 +38,13 @@ go_test(
         "github.com/thought-machine/please/src/core.PleaseVersion": VERSION,
     },
     labels = ["xz"],
-    resources = ["pubkey.pem"],
+    resources = ["key.pub"],
     deps = [
         ":update",
         "//src/cli",
         "//src/cli/logging",
         "//third_party/go:go-retryablehttp",
         "//third_party/go:logging",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "verify_test",
-    srcs = ["verify_test.go"],
-    data = ["test_data"],
-    resources = ["pubkey.pem"],
-    deps = [
-        ":update",
         "//third_party/go:testify",
     ],
 )

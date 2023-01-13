@@ -41,7 +41,7 @@ please_repo_e2e_test(
             "src/foo.gen",
             # src/bar/bar.gen not added, because it is covered by **/bar/*.gen
             "src/bar/baz/baz.gen",  # Added, because it is not covered by /baz.gen
-        ])
+        ]),
     },
     plz_command = "git init && echo '**/bar/*.gen\n/baz.gen' > .gitignore && plz generate --update_gitignore .gitignore",
     repo = "test_repo",

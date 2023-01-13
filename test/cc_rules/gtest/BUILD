@@ -1,4 +1,5 @@
 subinclude("///cc//build_defs:cc")
+
 package(cc = {"test_main": "///third_party/cc/gtest//:gtest"})
 
 cc_test(
