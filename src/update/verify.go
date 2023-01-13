@@ -29,12 +29,12 @@ func verifySignature(signed, sig io.Reader) bool {
 }
 
 func verifySignatureWithKey(signed, sig io.Reader, key []byte) bool {
-	priv, err := cryptoutils.UnmarshalPEMToPublicKey(key)
+	pub, err := cryptoutils.UnmarshalPEMToPublicKey(key)
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
 
-	verifier, err := signature.LoadVerifier(priv, crypto.SHA256)
+	verifier, err := signature.LoadVerifier(pub, crypto.SHA256)
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
