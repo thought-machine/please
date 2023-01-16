@@ -291,13 +291,13 @@ func (s *scope) subincludePackage() *core.Package {
 
 // NewScope creates a new child scope of this one.
 func (s *scope) NewScope(filename string) *scope {
-	return s.NewPackagedScope(s.pkg, filename, 0)
+	return s.newScope(s.pkg, filename, 0)
 }
 
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
 // hint is a size hint for the new set of locals.
 func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
-	return s.newScope(pkg, pkg.filename, hint)
+	return s.newScope(pkg, pkg.Filename, hint)
 }
 
 func (s *scope) newScope(pkg *core.Package, filename string, hint int) *scope {
@@ -407,7 +407,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 	var stmt *Statement
 	defer func() {
 		if r := recover(); r != nil {
-			panic(AddStackFrame(stmt.Pos, r))
+			panic(AddStackFrame(s.filename, stmt.Pos, r))
 		}
 	}()
 	for _, stmt = range statements {
@@ -492,7 +492,7 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			panic(AddStackFrame(expr.Pos, r))
+			panic(AddStackFrame(s.filename, expr.Pos, r))
 		}
 	}()
 	if expr.If != nil && !s.interpretExpression(expr.If.Condition).IsTruthy() {
