@@ -84,6 +84,7 @@ func help(topic string) string {
 
 // helpForPlugin returns some help text for a plugin
 func helpForPlugin(config *core.Configuration, topic string) string {
+	// Check if the topic is a plugin
 	if _, ok := config.Plugin[topic]; ok {
 		message := fmt.Sprintf("${BOLD_BLUE}%v${RESET} is a plugin defined in the ${GREEN}.plzconfig${RESET} file.\n", topic)
 
@@ -91,18 +92,37 @@ func helpForPlugin(config *core.Configuration, topic string) string {
 		if buildLabel.String() == "" {
 			log.Fatalf("Plugin target must be specified in config")
 		}
-		state := newState()
+		subrepo := getSubrepoOrDie(topic, buildLabel)
 
-		// Parse the subrepo (Run reads the plugin config into config)
-		plz.Run([]core.BuildLabel{buildLabel}, nil, state, config, state.TargetArch)
-		subrepo := state.Graph.Subrepo(topic)
-		if subrepo == nil {
-			log.Fatalf("Tried to get subrepo %v but failed", topic)
+		return pluginHelpMessage(subrepo, message)
+	}
+
+	// Check if the topic is a build rule defined in a plugin
+	for pluginName, plugin := range config.Plugin {
+		buildLabel := plugin.Target
+		if buildLabel.String() == "" {
+			log.Fatalf("Plugin target must be specified in config")
 		}
 
-		return getPluginOptionsAndBuildDefs(subrepo, message)
+		subrepo := getSubrepoOrDie(pluginName, buildLabel)
+		buildRules := getPluginBuildDefs(subrepo)
+		if rule, present := buildRules[topic]; present {
+			return helpFromBuildRule(rule.FuncDef)
+		}
 	}
+
 	return ""
+}
+
+// getSubrepoOrDie builds and returns a subrepo.
+func getSubrepoOrDie(name string, target core.BuildLabel) *core.Subrepo {
+	state := newState()
+
+	// This is sufficient to get everything we need. The parsing of the build def files happens in getPluginBuildDefs.
+	state.ParsePackageOnly = true
+
+	plz.Run([]core.BuildLabel{target}, nil, state, state.Config, state.TargetArch)
+	return state.Graph.SubrepoOrDie(name)
 }
 
 // formatConfigKey converts the config key from snake_case to CamelCase
@@ -115,24 +135,37 @@ func formatConfigKey(key string) string {
 	return strings.Join(parts, "")
 }
 
-// getPluginOptionsAndBuildDefs looks for information for the plugin specified in the config file
-func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string {
+// getPluginConfig returns a map of config options defined by a plugin
+func getPluginConfig(subrepo *core.Subrepo) map[string]*core.PluginConfigDefinition {
+	config := subrepo.State.RepoConfig
+	return config.PluginConfig
+}
+
+func pluginHelpMessage(subrepo *core.Subrepo, message string) string {
 	config := subrepo.State.Config
-	if config.PluginDefinition.Description != "" {
-		message += "\n" + config.PluginDefinition.Description + "\n"
+	description := config.PluginDefinition.Description
+	docSite := config.PluginDefinition.DocumentationSite
+	options := getPluginConfig(subrepo)
+	buildRules := getPluginBuildDefs(subrepo)
+
+	return formatPluginHelpMessage(message,
+		description,
+		docSite,
+		options,
+		buildRules,
+	)
+}
+
+// formatPluginHelpMessage formats plugin information for the help command
+func formatPluginHelpMessage(message, description, docSite string, options map[string]*core.PluginConfigDefinition, buildRulesMap map[string]*asp.Statement) string {
+	if description != "" {
+		message += "\n" + description + "\n"
 	}
-	if config.PluginDefinition.DocumentationSite != "" {
-		message += "\n" + config.PluginDefinition.DocumentationSite + "\n"
+	if docSite != "" {
+		message += "\n" + docSite + "\n"
 	}
 	configOptions := ""
-	// Ensure these come out in the same order
-	keys := make([]string, 0, len(config.PluginConfig))
-	for k := range config.PluginConfig {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		v := config.PluginConfig[k]
+	for k, v := range options {
 		valueType := v.Type
 		if v.Type == "" {
 			valueType = "string"
@@ -169,9 +202,8 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 		message += "\n${BOLD_YELLOW}This plugin has the following options:${RESET}\n" + configOptions
 	}
 
-	buildFuncMap := populatePluginBuildFuncs(subrepo)
 	buildDefs := ""
-	for k, v := range buildFuncMap {
+	for k, v := range buildRulesMap {
 		buildDefs += fmt.Sprintf("${BLUE}   %v${RESET}", strings.ToLower(k))
 		arglist := "("
 		for i, arg := range v.FuncDef.Arguments {
@@ -190,7 +222,7 @@ func getPluginOptionsAndBuildDefs(subrepo *core.Subrepo, message string) string 
 	return message
 }
 
-func populatePluginBuildFuncs(subrepo *core.Subrepo) map[string]*asp.Statement {
+func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
 	p := asp.NewParser(subrepo.State)
 	var dirs []string
 	if len(subrepo.State.Config.PluginDefinition.BuildDefsDir) > 0 {
