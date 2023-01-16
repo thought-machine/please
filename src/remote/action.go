@@ -59,7 +59,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb
 
 // buildAction creates a build action for a target and returns the command and the action digest. No uploading is done.
 func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.Command, *pb.Digest, error) {
-	inputRoot, err := c.uploadInputs(nil, target, isTest)
+	inputRoot, err := c.inputDir(target, isTest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -187,10 +187,19 @@ func (c *Client) buildRunCommand(state *core.BuildState, target *core.BuildTarge
 	}, nil
 }
 
+
+// inputDir returns the input dir proto for the target, without uploading it
+func (c *Client) inputDir(target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
+	return c.uploadInputs(nil, target, isTest)
+}
+
 // uploadInputs finds and uploads a set of inputs from a target.
 func (c *Client) uploadInputs(ch chan<- *uploadinfo.Entry, target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
 	if target.IsRemoteFile {
 		return &pb.Directory{}, nil
+	}
+	if ch != nil {
+		log.Debugf("%v Uploading input dir...", target.Label)
 	}
 	b, err := c.uploadInputDir(ch, target, isTest)
 	if err != nil {
