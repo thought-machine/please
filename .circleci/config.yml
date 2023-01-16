@@ -299,6 +299,8 @@ jobs:
    release:
      docker:
        - image: thoughtmachine/please_docs:20230116
+     environment:
+         GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      steps:
        - attach_workspace:
            at: /tmp/workspace
