@@ -337,8 +337,13 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 			v, _ := c.downloads.LoadOrStore(target, &pendingDownload{})
 			v.(*pendingDownload).once.Do(func() {})
 		}
-		if err := c.downloadData(target); err != nil {
-			return metadata, err
+
+		if target.HasData() {
+			c.state.LogBuildResult(tid, target, core.TargetBuilding, "Downloading")
+			log.Debugf("%v downloading transitive data...", target.Label)
+			if err := c.downloadData(target); err != nil {
+				return metadata, err
+			}
 		}
 	}
 	return metadata, nil

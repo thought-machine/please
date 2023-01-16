@@ -1517,6 +1517,11 @@ func (target *BuildTarget) AllData() []BuildInput {
 	return target.allBuildInputs(target.Data, target.NamedData)
 }
 
+// HasData returns true if the target has data
+func (target *BuildTarget) HasData() bool {
+	return len(target.Data) > 0 || len(target.NamedData) > 0
+}
+
 // AllDebugData returns all the data for debugging this rule.
 func (target *BuildTarget) AllDebugData() []BuildInput {
 	if target.Debug == nil {
