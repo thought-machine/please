@@ -60,7 +60,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 
 // LoadBuiltins loads a set of builtins from a file, optionally with its contents.
 func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements []*Statement) error {
-	s := i.scope.NewScope()
+	s := i.scope.NewScope(filename)
 	// Gentle hack - attach the native code once we have loaded the correct file.
 	// Needs to be after this file is loaded but before any of the others that will
 	// use functions from it.
@@ -161,7 +161,7 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 		panic(err) // We're already inside another interpreter, which will handle this for us.
 	}
 	stmts = i.parser.optimise(stmts)
-	s := i.scope.NewScope()
+	s := i.scope.NewScope(path)
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
 	s.subincludeLabel = &label
@@ -209,6 +209,7 @@ type parseTarget struct {
 type scope struct {
 	ctx             context.Context
 	interpreter     *interpreter
+	filename        string
 	state           *core.BuildState
 	pkg             *core.Package
 	subincludeLabel *core.BuildLabel
@@ -289,15 +290,20 @@ func (s *scope) subincludePackage() *core.Package {
 }
 
 // NewScope creates a new child scope of this one.
-func (s *scope) NewScope() *scope {
-	return s.NewPackagedScope(s.pkg, 0)
+func (s *scope) NewScope(filename string) *scope {
+	return s.NewPackagedScope(s.pkg, filename, 0)
 }
 
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
 // hint is a size hint for the new set of locals.
 func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
+	return s.newScope(pkg, pkg.filename, hint)
+}
+
+func (s *scope) newScope(pkg *core.Package, filename string, hint int) *scope {
 	s2 := &scope{
 		ctx:         s.ctx,
+		filename:    filename,
 		interpreter: s.interpreter,
 		state:       s.state,
 		pkg:         pkg,
@@ -722,7 +728,7 @@ func (s *scope) interpretList(expr *List) pyList {
 	if expr.Comprehension == nil {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
-	cs := s.NewScope()
+	cs := s.NewScope(s.filename)
 	l := s.iterate(expr.Comprehension.Expr)
 	ret := make(pyList, 0, len(l))
 	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
@@ -743,7 +749,7 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 		}
 		return d
 	}
-	cs := s.NewScope()
+	cs := s.NewScope(s.filename)
 	l := cs.iterate(expr.Comprehension.Expr)
 	ret := make(pyDict, len(l))
 	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
