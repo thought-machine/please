@@ -25,11 +25,11 @@ var opts = struct {
 		Args     struct {
 			Files []string `positional-arg-name:"files" description:"A list of files to sign"`
 		} `positional-args:"true"`
-	} `command:"pgp"`
+	} `command:"pgp" description:"Signs the binary with a pgp key"`
 	KMS struct {
 		Out  string `short:"o" long:"output" env:"OUT" description:"Output filename (signature)"`
 		In   string `short:"i" long:"input" description:"Input file to sign"`
-		Key  string `short:"k" long:"key" description:"The gcp key resource name with a scheme e.g. gcpkms://" required:"true"`
+		Key  string `short:"k" long:"key" env:"PLZ_KMS_KEY" description:"The kms key resource name with a scheme e.g. gcpkms://" required:"true"`
 		Args struct {
 			Files []string `positional-arg-name:"files" description:"A list of files to sign"`
 		} `positional-args:"true"`

@@ -26,8 +26,6 @@ flags.DEFINE_bool('dry_run', False, "Don't actually do the release, just print i
 flags.mark_flag_as_required('github_token')
 FLAGS = flags.FLAGS
 
-gcp_key_name = "gcpkms://projects/tm-please/locations/eur5/keyRings/please-release/cryptoKeys/please-release/cryptoKeyVersions/1"
-
 PRERELEASE_MESSAGE = """
 This is a prerelease version of Please. Bugs and partially-finished features may abound.
 
@@ -131,7 +129,7 @@ class ReleaseGen:
         if FLAGS.dry_run:
             log.info('Would sign %s into %s', artifact, out)
         else:
-            subprocess.check_call([FLAGS.signer, 'kms', '-o', out, '-i', artifact, '-k', gcp_key_name])
+            subprocess.check_call([FLAGS.signer, 'kms', '-o', out, '-i', artifact])
         return out
 
     def checksum(self, artifact:str) -> str:

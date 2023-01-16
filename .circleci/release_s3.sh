@@ -14,6 +14,9 @@ if aws s3 ls s3://please-releases/linux_amd64/$VERSION/; then
 fi
 echo "Releasing Please $VERSION"
 
+echo $GCLOUD_SERVICE_KEY > $GOOGLE_APPLICATION_CREDENTIALS
+
+
 find /tmp/workspace/darwin_amd64 -name "._*" | xargs rm -rf
 find /tmp/workspace/{*_amd64,*_arm64} -type f | xargs /tmp/workspace/release_signer pgp
 find /tmp/workspace/{*_amd64,*_arm64} -type f | xargs /tmp/workspace/release_signer kms
