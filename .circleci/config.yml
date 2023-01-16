@@ -304,8 +304,6 @@ jobs:
      steps:
        - attach_workspace:
            at: /tmp/workspace
-       - environment:
-           GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
        - add_ssh_keys:
            fingerprints:
              - "cc:57:b9:67:31:65:a6:70:8c:e3:e7:90:ca:e6:a6:41"
