@@ -7,19 +7,11 @@ type FileInput struct {
 	Statements []*Statement
 }
 
-// A Position describes a position in a source file.
-// All properties in Position are one(1) indexed
-type Position struct {
-	Filename string
-	Offset   int
-	Line     int
-	Column   int
-}
-
-// String implements the fmt.Stringer interface.
-func (pos Position) String() string {
-	return fmt.Sprintf("%s:%d:%d", pos.Filename, pos.Line, pos.Column)
-}
+// A Position describes a position in a source file. It is opaque from the outside
+// (but is implemented as simply a byte offset into the file).
+// Most usages should begin by converting it to a FilePosition which is generally more useful;
+// this form is optimised for size within the AST structures.
+type Position int
 
 // A Statement is the type we work with externally the most; it's a single Python statement.
 // Note that some mildly excessive fiddling is needed since the parser we're using doesn't

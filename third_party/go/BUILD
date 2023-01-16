@@ -1414,3 +1414,12 @@ go_module(
     visibility = ["PUBLIC"],
     deps = [":errgroup"],
 )
+
+go_module(
+    name = "slices",
+    install = ["slices"],
+    licences = ["BSD"],
+    module = "golang.org/x/exp",
+    version = "1de6713980dea447778ef6e71194d5eb54288072",
+    visibility = ["PUBLIC"],
+)
