@@ -45,7 +45,7 @@ func sign(key []byte, msg []byte) io.Reader {
 	return bytes.NewReader(bs)
 }
 
-// readFile reads a file into an io.Reader
+// readFile reads a file into a byte slice.
 // It uses os.ReadFile because that more closely mimics how we would do this
 // for real (i.e. we would read to a buffer over HTTP then verify that, because we
 // need to reuse the reader again afterwards and don't want to parse the tarball
