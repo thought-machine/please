@@ -1,3 +1,15 @@
+Version 16.27.0
+---------------
+    * Have `plz query whatinputs` exit with code 1, when nothing inputs
+      the file (#2617)
+    * Please now adds the cache dir tag to it's cache directories, as defined by
+      by https://bford.info/cachedir/ (#2587)
+    * Have `plz query whatinputs` resolve the inputs to the repo root (#2623)
+    * During `plz init`, Please now checks the http status code when hitting the
+      github API, to avoid retrying user errors (#2631)
+    * Fix issue with filegroups not being rebuild under some conditions (#2635)
+    * Include build defs in plugins when searching for docs using `plz help` (#2636)
+
 Version 16.26.1
 ---------------
     * Fix some issues when original targets contain subrepos
