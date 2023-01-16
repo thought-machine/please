@@ -299,11 +299,11 @@ jobs:
    release:
      docker:
        - image: thoughtmachine/please_docs:20230116
+     environment:
+           GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      steps:
        - attach_workspace:
            at: /tmp/workspace
-       - environment:
-           GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
        - add_ssh_keys:
            fingerprints:
              - "cc:57:b9:67:31:65:a6:70:8c:e3:e7:90:ca:e6:a6:41"
@@ -314,6 +314,8 @@ jobs:
    release-s3:
      docker:
        - image: thoughtmachine/please_docs:20230116
+     environment:
+       GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      steps:
        - checkout
        - attach_workspace:
@@ -371,14 +373,7 @@ workflows:
               only: master
       - release-s3:
           requires:
-            - build-alpine
-            - build-freebsd
-            - build-darwin-arm64
-            - build-linux
-            - build-linux-alt
-            - build-darwin
-            - test-rex
-            - test-http-cache
+            - release
           filters:
             branches:
               only: master
