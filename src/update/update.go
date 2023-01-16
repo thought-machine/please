@@ -230,30 +230,30 @@ func downloadPlease(config *core.Configuration, verify bool, progress bool) {
 	}
 	v := config.Please.Version.VersionString()
 	url = fmt.Sprintf("%s/%s_%s/%s/please_%s%s", url, runtime.GOOS, runtime.GOARCH, v, v, ext)
-	rc := mustDownload(url, progress)
-	defer mustClose(rc)
-	var r io.Reader = bufio.NewReader(rc)
+	pleaseReadCloser := mustDownload(url, progress)
+	defer mustClose(pleaseReadCloser)
+	var pleaseReader io.Reader = bufio.NewReader(pleaseReadCloser)
 
 	if len(config.Please.VersionChecksum) > 0 {
-		r = mustVerifyHash(r, config.Please.VersionChecksum)
+		pleaseReader = mustVerifyHash(pleaseReader, config.Please.VersionChecksum)
 	}
 
 	if verify && config.Please.Version.LessThan(minSignedVersion) {
 		log.Warning("Won't verify signature of download, version is too old to be signed.")
 	} else if verify {
-		r = verifyDownload(r, url, progress)
+		pleaseReader = verifyDownload(pleaseReader, url, progress)
 	} else {
 		log.Warning("Signature verification disabled for %s", url)
 	}
 
 	if shouldDownloadFullDist(config.Please.Version) {
-		xzr, err := xz.NewReader(r)
+		xzr, err := xz.NewReader(pleaseReader)
 		if err != nil {
 			panic(fmt.Sprintf("%s isn't a valid xzip file: %s", url, err))
 		}
 		copyTarFile(xzr, newDir, url)
 	} else {
-		copyFile(r, newDir)
+		copyFile(pleaseReader, newDir)
 	}
 }
 

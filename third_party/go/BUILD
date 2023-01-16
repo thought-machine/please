@@ -34,11 +34,20 @@ go_module(
         "curve25519",
         "curve25519/internal/field",
         "ed25519",
+        "internal/alias",
+        "internal/poly1305",
+        "nacl/secretbox",
+        "ocsp",
+        "pbkdf2",
+        "salsa20/salsa",
+        "scrypt",
+        "sha3",
         "ssh/terminal",
     ],
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/crypto",
-    version = "v0.0.0-20210920023735-84f357641f63",
+    version = "v0.5.0",
+    visibility = ["PUBLIC"],
     deps = [":xterm"],
 )
 
@@ -136,24 +145,24 @@ go_module(
 go_module(
     name = "tools",
     install = [
-        "internal/gocommand",
+        "benchmark/parse",
         "cover",
+        "go/ast/astutil",
+        "go/buildutil",
+        "go/gcexportdata",
         "go/internal/cgo",
+        "go/internal/gcimporter",
+        "go/internal/packagesdriver",
+        "go/loader",
         "go/packages",
         "internal/event",
-        "benchmark/parse",
-        "go/internal/packagesdriver",
         "internal/event/core",
         "internal/event/keys",
         "internal/event/label",
+        "internal/gocommand",
         "internal/packagesinternal",
-        "internal/typesinternal",
-        "go/ast/astutil",
-        "go/gcexportdata",
-        "go/internal/gcimporter",
-        "go/loader",
         "internal/typeparams",
-        "go/buildutil",
+        "internal/typesinternal",
     ],
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/tools",
@@ -171,8 +180,8 @@ go_module(
     install = [
         "encoding/...",
         "secure/...",
-        "unicode/...",
         "transform",
+        "unicode/...",
     ],
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/text",
@@ -192,6 +201,14 @@ go_module(
 go_module(
     name = "grpc",
     install = [
+        "credentials/alts",
+        "credentials/alts/internal",
+        "credentials/alts/internal/handshaker",
+        "credentials/alts/internal/handshaker/service",
+        "credentials/alts/internal/proto/grpc_gcp",
+        "credentials/alts/internal/authinfo",
+        "credentials/alts/internal/conn",
+        "internal/googlecloud",
         "balancer/grpclb/...",
         "binarylog/...",
         "internal/status",
@@ -242,10 +259,15 @@ go_module(
         "internal/resolver/unix",
         "internal/serviceconfig",
         "keepalive",
+        "credentials/google",
+        "credentials/insecure",
+        "internal/balancer/gracefulswitch",
+        "channelz",
+        "internal/pretty",
     ],
     licences = ["Apache-2.0"],
     module = "google.golang.org/grpc",
-    version = "v1.40.0",
+    version = "v1.51.0",
     visibility = ["PUBLIC"],
     deps = [
         ":genproto_rpc",
@@ -261,7 +283,7 @@ go_mod_download(
     name = "genproto_download",
     licences = ["Apache-2.0"],
     module = "google.golang.org/genproto",
-    version = "v0.0.0-20210917145530-b395a37504d4",
+    version = "v0.0.0-20221206210731-b1a01be3a5f6",
 )
 
 # genproto stuff for grpc to resolve cyclic deps
@@ -269,12 +291,12 @@ go_module(
     name = "genproto_rpc",
     download = ":genproto_download",
     install = [
+        "googleapis/api",
         "googleapis/rpc/...",
+        "googleapis/type/expr",
     ],
     module = "google.golang.org/genproto",
-    deps = [
-        ":protobuf-go",
-    ],
+    deps = [":protobuf-go"],
 )
 
 go_module(
@@ -282,12 +304,27 @@ go_module(
     download = ":genproto_download",
     exported_deps = [":genproto_rpc"],
     install = [
-        "googleapis/api/annotations",
         "googleapis/bytestream",
+        "googleapis/cloud/location",
+        "googleapis/iam/v1",
         "googleapis/longrunning",
     ],
     module = "google.golang.org/genproto",
-    visibility = ["PUBLIC"],
+    deps = [
+        ":grpc",
+        ":iam_proto",
+        ":longrunning",
+        ":protobuf-go",
+    ],
+)
+
+go_module(
+    name = "genproto_annotations",
+    download = ":genproto_download",
+    install = [
+        "googleapis/api/annotations",
+    ],
+    module = "google.golang.org/genproto",
     deps = [
         ":grpc",
         ":protobuf-go",
@@ -296,12 +333,35 @@ go_module(
 
 go_module(
     name = "bundler",
-    install = ["support/bundler"],
+    install = [
+        "googleapi",
+        "googleapi/transport",
+        "internal",
+        "internal/impersonate",
+        "internal/third_party/uritemplates",
+        "iterator",
+        "option",
+        "option/internaloption",
+        "support/bundler",
+        "transport/cert",
+        "transport/grpc",
+        "transport/http",
+        "transport/http/internal/propagation",
+        "transport/internal/dca",
+    ],
     licences = ["BSD-3-Clause"],
     module = "google.golang.org/api",
-    version = "v0.30.0",
+    version = "v0.106.0",
     visibility = ["PUBLIC"],
-    deps = [":errgroup"],
+    deps = [
+        ":cloud-metadata",
+        ":enterprise-certificate-proxy",
+        ":errgroup",
+        ":go.opencensus.io",
+        ":grpc",
+        ":net",
+        ":oauth2",
+    ],
 )
 
 go_mod_download(
@@ -501,10 +561,11 @@ go_module(
     install = [
         "errgroup",
         "semaphore",
+        "singleflight",
     ],
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/sync",
-    version = "v0.0.0-20220722155255-886fb9371eb4",
+    version = "v0.1.0",
     visibility = ["PUBLIC"],
 )
 
@@ -619,8 +680,8 @@ go_module(
 go_module(
     name = "xz",
     install = [
-        "internal/...",
         ".",
+        "internal/...",
         "lzma",
     ],
     licences = ["BSD-3-Clause"],
@@ -684,7 +745,7 @@ go_module(
     name = "remote-apis-sdks",
     install = ["go/..."],
     module = "github.com/bazelbuild/remote-apis-sdks",
-    version = "ddba20599b6eafae1669d4da1aa4772fb8c80efd",
+    version = "v0.0.0-20221114180157-e62cf9b8696a",
     deps = [
         ":bundler",
         ":cmp",
@@ -697,6 +758,7 @@ go_module(
         ":pborman_uuid",
         ":protobuf-go",
         ":remote-apis",
+        ":xattr",
         ":zstd",
         ":zstdpool",
     ],
@@ -732,17 +794,17 @@ go_module(
 go_module(
     name = "oauth2",
     install = [
+        ".",
         "authhandler",
         "google",
         "google/internal/externalaccount",
         "internal",
         "jws",
         "jwt",
-        ".",
     ],
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/oauth2",
-    version = "v0.0.0-20210514164344-f6687ab2804c",
+    version = "v0.4.0",
     visibility = ["PUBLIC"],
     deps = [
         ":cloud-metadata",
@@ -883,12 +945,12 @@ go_module(
         "cmd",
         "fetch",
         "fetch/drive/auth",
-        "parser/gdoc",
-        "parser/md",
-        "types",
         "nodes",
         "parser",
+        "parser/gdoc",
+        "parser/md",
         "render",
+        "types",
         "util",
     ],
     module = "github.com/googlecodelabs/tools/claat",
@@ -904,9 +966,9 @@ go_module(
 
 go_module(
     name = "blake3",
+    install = ["..."],
     licences = ["MIT"],
     module = "github.com/zeebo/blake3",
-    install = ["..."],
     version = "v0.2.3",
     visibility = ["PUBLIC"],
     deps = [":cpuid"],
@@ -924,13 +986,13 @@ go_module(
 go_module(
     name = "zstd",
     install = [
-        "zstd/...",
-        "s2",
-        "snappy",
         ".",
         "fse",
         "huff0",
         "internal/snapref",
+        "s2",
+        "snappy",
+        "zstd/...",
     ],
     licences = ["Apache-2.0"],
     module = "github.com/klauspost/compress",
@@ -958,9 +1020,9 @@ go_module(
 go_module(
     name = "prometheus",
     install = [
+        "prometheus",
         "prometheus/internal",
         "prometheus/push",
-        "prometheus",
     ],
     licences = ["Apache-2.0"],
     module = "github.com/prometheus/client_golang",
@@ -1084,4 +1146,271 @@ go_module(
     module = "github.com/alessio/shellescape",
     version = "v1.4.1",
     visibility = ["PUBLIC"],
+)
+
+go_module(
+    name = "sigstore",
+    install = [
+        "pkg/cryptoutils",
+        "pkg/signature",
+        "pkg/signature/options",
+        "pkg/signature/payload",
+        "pkg/signature/kms",
+        "pkg/signature/kms/gcp",
+    ],
+    licences = ["Apache-2.0"],
+    module = "github.com/sigstore/sigstore",
+    version = "v1.5.0",
+    deps = [
+        ":boulder",
+        ":go-containerregistry",
+        ":go-tuf",
+        ":kms",
+        ":ttlcache.v2",
+    ],
+)
+
+go_module(
+    name = "boulder",
+    install = [
+        "goodkey",
+        "core",
+        "errors",
+        "identifier",
+        "probs",
+        "revocation",
+        "core/proto",
+        "sa/proto",
+    ],
+    licences = ["MPL-2.0"],
+    module = "github.com/letsencrypt/boulder",
+    version = "cfa524a7a139bd4cf21c4c09ab47b994a96fd11f",
+    deps = [
+        ":go-jose",
+        ":grpc",
+        ":protobuf-go",
+        ":rocacheck",
+        ":xcrypto",
+        ":yaml",
+    ],
+)
+
+go_module(
+    name = "go-jose",
+    install = [
+        ".",
+        "cipher",
+        "json",
+    ],
+    licences = ["Apache-2.0"],
+    module = "gopkg.in/square/go-jose.v2",
+    version = "v2.6.0",
+    deps = [":xcrypto"],
+)
+
+go_module(
+    name = "rocacheck",
+    licences = ["MIT"],
+    module = "github.com/titanous/rocacheck",
+    version = "afe73141d399b0c79c3d6412d4bdcf4c672c496a",
+)
+
+go_module(
+    name = "go-tuf",
+    install = ["encrypted"],
+    module = "github.com/theupdateframework/go-tuf",
+    version = "v0.5.1",
+    deps = [":xcrypto"],
+)
+
+go_module(
+    name = "go-containerregistry",
+    install = ["pkg/name"],
+    licences = ["Apache-2.0"],
+    module = "github.com/google/go-containerregistry",
+    version = "v0.12.0",
+    deps = [":go-digest"],
+)
+
+go_module(
+    name = "go-digest",
+    licences = ["Apache-2.0"],
+    module = "github.com/opencontainers/go-digest",
+    version = "v1.0.0",
+)
+
+go_module(
+    name = "gax-go.v2",
+    install = [
+        ".",
+        "apierror",
+        "apierror/internal/proto",
+        "internal",
+    ],
+    module = "github.com/googleapis/gax-go/v2",
+    version = "v2.7.0",
+    visibility = ["PUBLIC"],
+    deps = [
+        ":bundler",
+        ":genproto_rpc",
+        ":grpc",
+        ":protobuf-go",
+    ],
+)
+
+go_module(
+    name = "genproto",
+    download = ":genproto_download",
+    exported_deps = [
+        ":genproto_api",
+        ":genproto_rpc",
+    ],
+    install = ["googleapis/cloud/kms/v1"],
+    module = "google.golang.org/genproto",
+    visibility = ["PUBLIC"],
+    deps = [
+        ":grpc",
+        ":kms_1",
+    ],
+)
+
+go_module(
+    name = "longrunning",
+    install = ["autogen/longrunningpb"],
+    module = "cloud.google.com/go/longrunning",
+    version = "v0.4.0",
+    visibility = ["PUBLIC"],
+    deps = [
+        ":genproto_annotations",
+        ":grpc",
+        ":protobuf-go",
+    ],
+)
+
+go_module(
+    name = "enterprise-certificate-proxy",
+    install = [
+        "client",
+        "client/util",
+    ],
+    module = "github.com/googleapis/enterprise-certificate-proxy",
+    version = "v0.2.0",
+    visibility = ["PUBLIC"],
+)
+
+go_mod_download(
+    name = "kms_dl",
+    module = "cloud.google.com/go/kms",
+    version = "v1.8.0",
+)
+
+go_module(
+    name = "kms_1",
+    download = ":kms_dl",
+    install = [
+        "apiv1/kmspb",
+        "internal",
+    ],
+    module = "cloud.google.com/go/kms",
+    deps = [
+        ":genproto_api",
+        ":grpc",
+        ":protobuf-go",
+    ],
+)
+
+go_module(
+    name = "kms",
+    download = ":kms_dl",
+    exported_deps = [":kms_1"],
+    install = ["apiv1"],
+    module = "cloud.google.com/go/kms",
+    visibility = ["PUBLIC"],
+    deps = [
+        ":bundler",
+        ":gax-go.v2",
+        ":genproto",
+        ":genproto_api",
+        ":grpc",
+        ":iam",
+        ":protobuf-go",
+    ],
+)
+
+go_mod_download(
+    name = "iam_dl",
+    module = "cloud.google.com/go/iam",
+    version = "v0.8.0",
+)
+
+go_module(
+    name = "iam",
+    download = ":iam_dl",
+    module = "cloud.google.com/go/iam",
+    visibility = ["PUBLIC"],
+    deps = [
+        ":gax-go.v2",
+        ":genproto_api",
+        ":grpc",
+    ],
+)
+
+go_module(
+    name = "iam_proto",
+    download = ":iam_dl",
+    install = ["apiv1/iampb"],
+    module = "cloud.google.com/go/iam",
+    visibility = ["PUBLIC"],
+    deps = [
+        ":genproto_annotations",
+        ":genproto_rpc",
+        ":grpc",
+        ":protobuf-go",
+    ],
+)
+
+go_module(
+    name = "go.opencensus.io",
+    install = [
+        ".",
+        "internal",
+        "internal/tagencoding",
+        "metric/metricdata",
+        "metric/metricproducer",
+        "plugin/ocgrpc",
+        "plugin/ochttp",
+        "plugin/ochttp/propagation/b3",
+        "resource",
+        "stats",
+        "stats/internal",
+        "stats/view",
+        "tag",
+        "trace",
+        "trace/internal",
+        "trace/propagation",
+        "trace/tracestate",
+    ],
+    module = "go.opencensus.io",
+    version = "v0.24.0",
+    visibility = ["PUBLIC"],
+    deps = [
+        ":groupcache",
+        ":grpc",
+    ],
+)
+
+go_module(
+    name = "groupcache",
+    install = ["lru"],
+    module = "github.com/golang/groupcache",
+    version = "v0.0.0-20200121045136-8c9f03a8e57e",
+    visibility = ["PUBLIC"],
+)
+
+go_module(
+    name = "ttlcache.v2",
+    module = "github.com/jellydator/ttlcache/v2",
+    version = "v2.11.1",
+    visibility = ["PUBLIC"],
+    deps = [":errgroup"],
 )

@@ -69,30 +69,30 @@ func TestAllLinksAreLive(t *testing.T) {
 }
 
 // Config options we don't want to document for various reasons
-var ignoreConfigFields = map[string]struct{} {
+var ignoreConfigFields = map[string]struct{}{
 	// These are deprecated
 	"build.pleasesandboxtool": {},
 	// Just don't want to advertise these ones too much
 	"bazel.compatibility": {},
-	"featureflags": {},
-	"metrics": {},
+	"featureflags":        {},
+	"metrics":             {},
 	// These aren't real config options
-	"please.version.isgte": {},
-	"please.version.isset": {},
-	"homedir": {},
-	"profiling": {},
-	"buildenvstored": {},
-	"pleaselocation": {},
-	"plugin.extravalues": {},
+	"please.version.isgte":  {},
+	"please.version.isset":  {},
+	"homedir":               {},
+	"profiling":             {},
+	"buildenvstored":        {},
+	"pleaselocation":        {},
+	"plugin.extravalues":    {},
 	"plugindefinition.name": {},
 }
 
 // IDs in the html that are for other purposes other than documenting config.
 var nonConfigIds = map[string]struct{}{
-	"menu-list": {},
-	"nav-graphic": {},
-	"side-images": {},
-	"menu-button": {},
+	"menu-list":    {},
+	"nav-graphic":  {},
+	"side-images":  {},
+	"menu-button":  {},
 	"main-content": {},
 }
 

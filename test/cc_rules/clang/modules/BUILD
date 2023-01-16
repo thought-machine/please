@@ -6,7 +6,7 @@ package(
         "cpp_tool": "clang++",
         "default_dbg_cppflags": "--std=c++20 -g3 -pipe -DDEBUG -Wall -Werror -Wno-unused-command-line-argument -stdlib=libstdc++",
         "default_opt_cppflags": "--std=c++20 -O3 -pipe -DNDEBUG -Wall -Werror -Wno-unused-command-line-argument -stdlib=libstdc++",
-    }
+    },
 )
 
 cc_module(

@@ -4,6 +4,7 @@ go_library(
     visibility = ["//tools/release_signer"],
     deps = [
         "//third_party/go:go-crypto",
+        "//third_party/go:sigstore",
     ],
 )
 

@@ -9,10 +9,13 @@ import (
 	"strings"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-// SignFile creates a detached ASCII-armoured signature for the given file.
-func SignFile(filename, output, keyring, user, password string) error {
+// SignFileWithPGP creates a detached signature. This method is insecure has the private key was potentially compromised
+// in the CircleCI leak. Going forward, all verification is based off the signature returned from SignFileWithSigner.
+// This signature is only included to allow older Please versions to update.
+func SignFileWithPGP(filename, output, keyring, user, password string) error {
 	if strings.HasPrefix(keyring, "-----BEGIN PGP") {
 		// Keyring is an actual key, not a file.
 		return signFile(filename, output, user, password, strings.NewReader(keyring))
@@ -30,6 +33,22 @@ func SignFile(filename, output, keyring, user, password string) error {
 	}
 	defer f.Close()
 	return signFile(filename, output, user, password, f)
+}
+
+// SignFileWithSigner signs a file with the provided signer. This is populated by a kms backed signer in main.go so we
+// never actually handle the private key.
+func SignFileWithSigner(filename, output string, signer signature.Signer) error {
+	message, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	sig, err := signer.SignMessage(bytes.NewReader(message))
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(output, sig, 0644)
 }
 
 func signFile(filename, output, user, password string, keyring io.Reader) error {

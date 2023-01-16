@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/longrunning/autogen/longrunningpb"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
@@ -23,10 +24,10 @@ import (
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -272,7 +273,7 @@ func (c *Client) initFetch() error {
 	if c.state.Config.Remote.Secure {
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
 	} else {
-		dialOpts = append(dialOpts, grpc.WithInsecure())
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 	conn, err := grpc.Dial(c.state.Config.Remote.AssetURL, append(dialOpts, grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()))...)
 	if err != nil {
@@ -700,11 +701,11 @@ func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Co
 		return nil, nil, c.wrapActionErr(fmt.Errorf("Failed to execute %s: %s", target, err), digest)
 	}
 	switch result := resp.Result.(type) {
-	case *longrunning.Operation_Error:
+	case *longrunningpb.Operation_Error:
 		// We shouldn't really get here - the rex API requires servers to always
 		// use the response field instead of error.
 		return nil, nil, convertError(result.Error)
-	case *longrunning.Operation_Response:
+	case *longrunningpb.Operation_Response:
 		response := &pb.ExecuteResponse{}
 		if err := result.Response.UnmarshalTo(response); err != nil {
 			log.Error("Failed to deserialise execution response: %s", err)

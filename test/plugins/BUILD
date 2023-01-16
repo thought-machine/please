@@ -3,22 +3,22 @@ subinclude("//test/build_defs:build_defs")
 genrule(
     name = "foo_plugin",
     srcs = ["foo_plugin"],
+    outs = ["foo_plugin.tar.gz"],
     cmd = "mv $SRC foo_plugin && tar -czf $OUT foo_plugin",
-    outs = ["foo_plugin.tar.gz"]
 )
 
-def plugin_e2e_test(name, plz_command, expected_output=None, expected_failure=False, expect_output_contains=None):
+def plugin_e2e_test(name, plz_command, expected_output = None, expected_failure = False, expect_output_contains = None):
     return please_repo_e2e_test(
         name = name,
-        plz_command = plz_command.replace("plz ", "plz -o buildconfig.nested-subrepo:$TMP_DIR/$DATA_NESTED_SUBREPO -o please.pluginrepo:file://$TMP_DIR/$DATA_PLUGIN "),
-        repo = "test_repo",
         data = {
             "plugin": [":foo_plugin"],
             "nested_subrepo": ["nested_subrepo"],
         },
-        expected_output = expected_output,
-        expected_failure = expected_failure,
         expect_output_contains = expect_output_contains,
+        expected_failure = expected_failure,
+        expected_output = expected_output,
+        plz_command = plz_command.replace("plz ", "plz -o buildconfig.nested-subrepo:$TMP_DIR/$DATA_NESTED_SUBREPO -o please.pluginrepo:file://$TMP_DIR/$DATA_PLUGIN "),
+        repo = "test_repo",
     )
 
 plugin_e2e_test(
