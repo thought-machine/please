@@ -53,7 +53,7 @@ func main() {
 
 func pgp() {
 	if len(opts.PGP.Args.Files) > 0 {
-		for _, f := range opts.KMS.Args.Files {
+		for _, f := range opts.PGP.Args.Files {
 			if err := signer.SignFileWithPGP(f, f+".asc", opts.PGP.Key, opts.PGP.User, opts.PGP.Password); err != nil {
 				fmt.Fprintf(os.Stderr, "Signing failed: %s\n", err)
 				os.Exit(1)
