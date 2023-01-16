@@ -634,7 +634,7 @@ func (f *pyFunc) String() string {
 func (f *pyFunc) Call(ctx context.Context, s *scope, c *Call) pyObject {
 	if f.nativeCode != nil {
 		if f.kwargs {
-			return f.callNative(s.NewScope(), c)
+			return f.callNative(s.NewScope("<builtin code>"), c)
 		}
 		return f.callNative(s, c)
 	}
@@ -797,7 +797,7 @@ func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 		return val
 	}
 	defer func() {
-		panic(AddStackFrame(expr.Pos, recover()))
+		panic(AddStackFrame(s.filename, expr.Pos, recover()))
 	}()
 	return s.Error("Invalid type for argument %s to %s; expected %s, was %s", f.args[i], f.name, strings.Join(f.types[i], " or "), actual)
 }
