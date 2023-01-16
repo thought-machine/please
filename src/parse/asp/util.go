@@ -32,13 +32,13 @@ func NextStatement(statements []*Statement, statement *Statement) *Statement {
 // GetExtents returns the "extents" of a statement, i.e. the lines that it covers in source.
 // The caller must pass a value for the maximum extent of the file; we can't detect it here
 // because the AST only contains positions for the beginning of the statements.
-func GetExtents(statements []*Statement, statement *Statement, max int) (int, int) {
+func GetExtents(file *File, statements []*Statement, statement *Statement, max int) (int, int) {
 	next := NextStatement(statements, statement)
 	if next == nil {
 		// Assume it reaches to the end of the file
-		return statement.Pos.Line, max
+		return file.Pos(statement.Pos).Line, max
 	}
-	return statement.Pos.Line, next.Pos.Line - 1
+	return file.Pos(statement.Pos).Line, file.Pos(next.Pos).Line - 1
 }
 
 // FindArgument finds an argument of any one of the given names, or nil if there isn't one.
@@ -86,7 +86,7 @@ func walkAST[T any](v reflect.Value, t reflect.Type, callback func(*T) bool) {
 }
 
 // WithinRange returns true if the input position is within the range of the given positions.
-func WithinRange(needle, start, end Position) bool {
+func WithinRange(needle, start, end FilePosition) bool {
 	if needle.Line < start.Line || needle.Line > end.Line {
 		return false
 	} else if needle.Line == start.Line && needle.Column < start.Column {

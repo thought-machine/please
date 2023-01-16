@@ -1,7 +1,5 @@
 package asp
 
-import "fmt"
-
 // A FileInput is the top-level structure of a BUILD file.
 type FileInput struct {
 	Statements []*Statement

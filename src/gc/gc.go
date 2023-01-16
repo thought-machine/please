@@ -188,9 +188,11 @@ func anyInclude(labels []core.BuildLabel, label core.BuildLabel) bool {
 // publicDependencies returns the public dependencies of a target, considering any
 // private targets it might have declared.
 // For example, if we have dependencies as follows:
-//   //src/test:container_test
-//   //src/test:_container_test#lib
-//   //src/test:test
+//
+//	//src/test:container_test
+//	//src/test:_container_test#lib
+//	//src/test:test
+//
 // it will return //src/test:test for //src/test:container_test.
 func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*core.BuildTarget {
 	ret := []*core.BuildTarget{}
@@ -219,13 +221,14 @@ func RewriteFile(state *core.BuildState, filename string, targets []string) erro
 	}
 	lines := bytes.Split(b, []byte{'\n'})
 	linesToDelete := map[int]bool{}
+	f := asp.NewFile(filename)
 	for _, target := range targets {
 		stmt := asp.FindTarget(stmts, target)
 		if stmt == nil {
 			log.Warning("Can't find target %s in %s", target, filename)
 			continue
 		}
-		start, end := asp.GetExtents(stmts, stmt, len(lines))
+		start, end := asp.GetExtents(f, stmts, stmt, len(lines))
 		for i := start; i <= end; i++ {
 			linesToDelete[i-1] = true // -1 because the extents are 1-indexed
 		}
