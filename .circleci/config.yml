@@ -298,7 +298,7 @@ jobs:
    # Releases to github and homebrew
    release:
      docker:
-       - image: thoughtmachine/please_docs:20220516
+       - image: thoughtmachine/please_docs:20230116
      steps:
        - attach_workspace:
            at: /tmp/workspace
@@ -311,7 +311,7 @@ jobs:
    # Releases the docs and the binaries to s3 for please.build and get.please.build
    release-s3:
      docker:
-       - image: thoughtmachine/please_docs:20220516
+       - image: thoughtmachine/please_docs:20230116
      steps:
        - checkout
        - attach_workspace:
