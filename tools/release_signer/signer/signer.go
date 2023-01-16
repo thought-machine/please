@@ -48,7 +48,7 @@ func SignFileWithSigner(filename, output string, signer signature.Signer) error 
 		return err
 	}
 
-	return os.WriteFile(output, sig, 0666)
+	return os.WriteFile(output, sig, 0444)
 }
 
 func signFile(filename, output, user, password string, keyring io.Reader) error {

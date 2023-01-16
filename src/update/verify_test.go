@@ -59,7 +59,11 @@ func readFile(filename string) []byte {
 }
 
 func fileReader(filename string) io.Reader {
-	return bytes.NewReader(readFile(filename))
+	f, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	return f
 }
 
 func TestVerifyGoodSignature(t *testing.T) {
