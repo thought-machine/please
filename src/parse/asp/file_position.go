@@ -37,6 +37,9 @@ func NewFile(path string) *File {
 
 // newFile creates a File from a buffer.
 func newFile(name string, buf []byte) *File {
+	// N.B. The line offsets are the index of the preceding newline character.
+	// This happens to be convenient when we binary search it (to avoid falling off the front
+	// of the array, etc).
 	f := &File{Name: name, lineOffsets: []int{-1}}
 	for i, x := range buf {
 		if x == '\n' {
