@@ -9,11 +9,17 @@ import (
 func TestFilePosition(t *testing.T) {
 	const filename = "src/parse/asp/test_data/file_position.build"
 	f := NewFile(filename)
+
 	for _, pos := range []FilePosition{
 		{
 			Offset: 0,
 			Line:   1,
 			Column: 1,
+		},
+		{
+			Offset: 26,
+			Line:   1,
+			Column: 27,
 		},
 		{
 			Offset: 306,
