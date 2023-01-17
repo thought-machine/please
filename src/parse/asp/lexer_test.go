@@ -55,7 +55,7 @@ func TestLexFunction(t *testing.T) {
 	assertNextToken(t, l, ':', ":", 2, 12, 13)
 	assertNextToken(t, l, EOL, "", 2, 13, 14)
 	assertNextToken(t, l, Ident, "pass", 3, 5, 19)
-	assertNextToken(t, l, EOL, "", 4, 1, 23)
+	assertNextToken(t, l, EOL, "", 4, 1, 24)
 	assertNextToken(t, l, Unindent, "", 4, 1, 24)
 	assertNextToken(t, l, EOF, "", 4, 1, 24)
 }
@@ -225,7 +225,7 @@ func TestMultiUnindent(t *testing.T) {
 	assertNextToken(t, l, ':', ":", 4, 19, 48)
 	assertNextToken(t, l, EOL, "", 4, 20, 49)
 	assertNextToken(t, l, Ident, "pass", 5, 13, 62)
-	assertNextToken(t, l, EOL, "", 6, 1, 66)
+	assertNextToken(t, l, EOL, "", 6, 1, 67)
 	assertNextToken(t, l, Unindent, "", 6, 1, 67)
 	assertNextToken(t, l, Unindent, "", 6, 1, 67)
 	assertNextToken(t, l, Unindent, "", 6, 1, 67)
@@ -259,7 +259,7 @@ func TestMultiLineFunctionArgs(t *testing.T) {
 	assertNextToken(t, l, ':', ":", 3, 27, 62)
 	assertNextToken(t, l, EOL, "", 3, 28, 63)
 	assertNextToken(t, l, Ident, "pass", 4, 5, 68)
-	assertNextToken(t, l, EOL, "", 5, 1, 72)
+	assertNextToken(t, l, EOL, "", 5, 1, 73)
 	assertNextToken(t, l, Unindent, "", 5, 1, 73)
 }
 
@@ -290,7 +290,7 @@ func TestBlankLinesInFunction(t *testing.T) {
 	assertNextToken(t, l, EOL, "", 4, 1, 26)
 	assertNextToken(t, l, Ident, "return", 5, 5, 31)
 	assertNextToken(t, l, Int, "42", 5, 12, 38)
-	assertNextToken(t, l, EOL, "", 6, 1, 40)
+	assertNextToken(t, l, EOL, "", 6, 1, 41)
 	assertNextToken(t, l, Unindent, "", 6, 1, 41)
 }
 
@@ -329,10 +329,10 @@ func TestUnevenUnindent(t *testing.T) {
 	assertNextToken(t, l, ':', ":", 3, 12, 22)
 	assertNextToken(t, l, EOL, "", 3, 13, 23)
 	assertNextToken(t, l, Ident, "pass", 4, 13, 36)
-	assertNextToken(t, l, EOL, "", 5, 5, 40)
+	assertNextToken(t, l, EOL, "", 5, 1, 41)
 	assertNextToken(t, l, Unindent, "", 5, 5, 45)
 	assertNextToken(t, l, Ident, "return", 5, 5, 45)
-	assertNextToken(t, l, EOL, "", 6, 1, 51)
+	assertNextToken(t, l, EOL, "", 6, 1, 52)
 	assertNextToken(t, l, Unindent, "", 6, 1, 52)
 	assertNextToken(t, l, EOF, "", 6, 1, 52)
 }
