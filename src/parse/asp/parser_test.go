@@ -8,8 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TODO(peterebden): Might get rid of this, we may want to expose a similar thing on Parser.
+func parseFileOnly(filename string) (*File, []*Statement, error) {
+	stmts, err := newParser().ParseFileOnly(filename)
+	return NewFile(filename), stmts, err
+}
+
 func TestParseBasic(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/basic.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/basic.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].FuncDef)
@@ -20,12 +26,12 @@ func TestParseBasic(t *testing.T) {
 	assert.True(t, statements[0].FuncDef.Statements[0].Pass)
 
 	// Test for Endpos
-	assert.Equal(t, 9, statements[0].EndPos.Column)
-	assert.Equal(t, 3, statements[0].EndPos.Line)
+	assert.Equal(t, 9, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 3, f.Pos(statements[0].EndPos).Line)
 }
 
 func TestParseDefaultArguments(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/default_arguments.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/default_arguments.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].FuncDef)
@@ -44,12 +50,12 @@ func TestParseDefaultArguments(t *testing.T) {
 	assert.True(t, args[2].Value.Val.None)
 
 	// Test for Endpos
-	assert.Equal(t, 9, statements[0].EndPos.Column)
-	assert.Equal(t, 3, statements[0].EndPos.Line)
+	assert.Equal(t, 9, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 3, f.Pos(statements[0].EndPos).Line)
 }
 
 func TestParseFunctionCalls(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/function_call.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/function_call.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 5, len(statements))
 
@@ -85,20 +91,20 @@ func TestParseFunctionCalls(t *testing.T) {
 	assert.Equal(t, "\"//build_defs:version\"", statements[4].Ident.Action.Call.Arguments[0].Value.Val.String)
 
 	// Test for Endpos
-	assert.Equal(t, 10, statements[0].EndPos.Column)
-	assert.Equal(t, 1, statements[0].EndPos.Line)
-	assert.Equal(t, 10, statements[1].EndPos.Column)
-	assert.Equal(t, 2, statements[1].EndPos.Line)
-	assert.Equal(t, 41, statements[2].EndPos.Column)
-	assert.Equal(t, 3, statements[2].EndPos.Line)
-	assert.Equal(t, 2, statements[3].EndPos.Column)
-	assert.Equal(t, 11, statements[3].EndPos.Line)
-	assert.Equal(t, 35, statements[4].EndPos.Column)
-	assert.Equal(t, 13, statements[4].EndPos.Line)
+	assert.Equal(t, 10, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 1, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 10, f.Pos(statements[1].EndPos).Column)
+	assert.Equal(t, 2, f.Pos(statements[1].EndPos).Line)
+	assert.Equal(t, 41, f.Pos(statements[2].EndPos).Column)
+	assert.Equal(t, 3, f.Pos(statements[2].EndPos).Line)
+	assert.Equal(t, 2, f.Pos(statements[3].EndPos).Column)
+	assert.Equal(t, 11, f.Pos(statements[3].EndPos).Line)
+	assert.Equal(t, 35, f.Pos(statements[4].EndPos).Column)
+	assert.Equal(t, 13, f.Pos(statements[4].EndPos).Line)
 }
 
 func TestParseAssignments(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/assignments.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/assignments.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
@@ -115,12 +121,12 @@ func TestParseAssignments(t *testing.T) {
 	assert.Equal(t, "riku", ass.Items[2].Value.Val.Ident.Name)
 
 	// Test for Endpos
-	assert.Equal(t, 2, statements[0].EndPos.Column)
-	assert.Equal(t, 5, statements[0].EndPos.Line)
+	assert.Equal(t, 2, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 5, f.Pos(statements[0].EndPos).Line)
 }
 
 func TestForStatement(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/for_statement.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/for_statement.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(statements))
 
@@ -134,14 +140,14 @@ func TestForStatement(t *testing.T) {
 	assert.Equal(t, 2, len(statements[1].For.Statements))
 
 	// Test for Endpos
-	assert.Equal(t, 2, statements[0].EndPos.Column)
-	assert.Equal(t, 4, statements[0].EndPos.Line)
-	assert.Equal(t, 6, statements[1].EndPos.Column)
-	assert.Equal(t, 12, statements[1].EndPos.Line)
+	assert.Equal(t, 2, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 4, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 6, f.Pos(statements[1].EndPos).Column)
+	assert.Equal(t, 12, f.Pos(statements[1].EndPos).Line)
 }
 
 func TestOperators(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/operators.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/operators.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
@@ -165,12 +171,12 @@ func TestOperators(t *testing.T) {
 	assert.Equal(t, "\"*.go\"", call.Arguments[0].Value.Val.List.Values[0].Val.String)
 
 	// Test for Endpos
-	assert.Equal(t, 2, statements[0].EndPos.Column)
-	assert.Equal(t, 4, statements[0].EndPos.Line)
+	assert.Equal(t, 2, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 4, f.Pos(statements[0].EndPos).Line)
 }
 
 func TestIndexing(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/indexing.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/indexing.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 7, len(statements))
 
@@ -219,22 +225,22 @@ func TestIndexing(t *testing.T) {
 	assert.Nil(t, statements[5].Ident.Action.Assign.Val.Slices[0].End)
 
 	// Test for Endpos
-	assert.Equal(t, 11, statements[0].EndPos.Column)
-	assert.Equal(t, 1, statements[0].EndPos.Line)
-	assert.Equal(t, 9, statements[1].EndPos.Column)
-	assert.Equal(t, 3, statements[1].EndPos.Line)
-	assert.Equal(t, 12, statements[2].EndPos.Column)
-	assert.Equal(t, 5, statements[2].EndPos.Line)
-	assert.Equal(t, 10, statements[3].EndPos.Column)
-	assert.Equal(t, 7, statements[3].EndPos.Line)
-	assert.Equal(t, 10, statements[4].EndPos.Column)
-	assert.Equal(t, 9, statements[4].EndPos.Line)
-	assert.Equal(t, 9, statements[5].EndPos.Column)
-	assert.Equal(t, 11, statements[5].EndPos.Line)
+	assert.Equal(t, 11, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 1, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 9, f.Pos(statements[1].EndPos).Column)
+	assert.Equal(t, 3, f.Pos(statements[1].EndPos).Line)
+	assert.Equal(t, 12, f.Pos(statements[2].EndPos).Column)
+	assert.Equal(t, 5, f.Pos(statements[2].EndPos).Line)
+	assert.Equal(t, 10, f.Pos(statements[3].EndPos).Column)
+	assert.Equal(t, 7, f.Pos(statements[3].EndPos).Line)
+	assert.Equal(t, 10, f.Pos(statements[4].EndPos).Column)
+	assert.Equal(t, 9, f.Pos(statements[4].EndPos).Line)
+	assert.Equal(t, 9, f.Pos(statements[5].EndPos).Column)
+	assert.Equal(t, 11, f.Pos(statements[5].EndPos).Line)
 }
 
 func TestIfStatement(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/if_statement.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/if_statement.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
@@ -247,12 +253,12 @@ func TestIfStatement(t *testing.T) {
 	assert.Equal(t, "genrule", ifs.Statements[0].Ident.Name)
 
 	// Test for Endpos
-	assert.Equal(t, 6, statements[0].EndPos.Column)
-	assert.Equal(t, 4, statements[0].EndPos.Line)
+	assert.Equal(t, 6, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 4, f.Pos(statements[0].EndPos).Line)
 }
 
 func TestDoubleUnindent(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/double_unindent.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/double_unindent.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
@@ -269,12 +275,12 @@ func TestDoubleUnindent(t *testing.T) {
 	assert.Equal(t, "genrule", for2.Statements[0].Ident.Name)
 
 	// Test for Endpos
-	assert.Equal(t, 10, statements[0].EndPos.Column)
-	assert.Equal(t, 5, statements[0].EndPos.Line)
+	assert.Equal(t, 10, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 5, f.Pos(statements[0].EndPos).Line)
 }
 
 func TestInlineIf(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/inline_if.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/inline_if.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
@@ -291,24 +297,24 @@ func TestInlineIf(t *testing.T) {
 	assert.Equal(t, 1, len(ass.If.Else.Val.List.Values))
 
 	// Test for Endpos
-	assert.Equal(t, 1, statements[0].EndPos.Line)
-	assert.Equal(t, 38, statements[0].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 38, f.Pos(statements[0].EndPos).Column)
 }
 
 func TestFunctionDef(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/function_def.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/function_def.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.Equal(t, 3, len(statements[0].FuncDef.Statements))
 	assert.Equal(t, "Generate a C or C++ library target.", stringLiteral(statements[0].FuncDef.Docstring))
 
 	// Test for Endpos
-	assert.Equal(t, 9, statements[0].EndPos.Line)
-	assert.Equal(t, 22, statements[0].EndPos.Column)
+	assert.Equal(t, 9, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 22, f.Pos(statements[0].EndPos).Column)
 }
 
 func TestComprehension(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/comprehension.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/comprehension.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(statements))
 
@@ -319,24 +325,24 @@ func TestComprehension(t *testing.T) {
 	assert.NotNil(t, statements[1].Ident.Action.Assign.Val.Dict.Comprehension)
 
 	// Test for Endpos
-	assert.Equal(t, 1, statements[0].EndPos.Line)
-	assert.Equal(t, 29, statements[0].EndPos.Column)
-	assert.Equal(t, 3, statements[1].EndPos.Line)
-	assert.Equal(t, 47, statements[1].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 29, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 3, f.Pos(statements[1].EndPos).Line)
+	assert.Equal(t, 47, f.Pos(statements[1].EndPos).Column)
 }
 
 func TestMethodsOnLiterals(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/literal_methods.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/literal_methods.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 
 	// Test for Endpos
-	assert.Equal(t, 5, statements[0].EndPos.Line)
-	assert.Equal(t, 3, statements[0].EndPos.Column)
+	assert.Equal(t, 5, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 3, f.Pos(statements[0].EndPos).Column)
 }
 
 func TestUnaryOp(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/unary_op.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/unary_op.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(statements))
 
@@ -348,39 +354,39 @@ func TestUnaryOp(t *testing.T) {
 	assert.Equal(t, "x", statements[1].Ident.Action.Assign.UnaryOp.Expr.Ident.Name)
 
 	// Test for Endpos
-	assert.Equal(t, 1, statements[0].EndPos.Line)
-	assert.Equal(t, 19, statements[0].EndPos.Column)
-	assert.Equal(t, 3, statements[1].EndPos.Line)
-	assert.Equal(t, 10, statements[1].EndPos.Column)
-	assert.Equal(t, 5, statements[2].EndPos.Line)
-	assert.Equal(t, 24, statements[2].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 19, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 3, f.Pos(statements[1].EndPos).Line)
+	assert.Equal(t, 10, f.Pos(statements[1].EndPos).Column)
+	assert.Equal(t, 5, f.Pos(statements[2].EndPos).Line)
+	assert.Equal(t, 24, f.Pos(statements[2].EndPos).Column)
 }
 
 func TestAugmentedAssignment(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/aug_assign.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/aug_assign.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].Ident.Action.AugAssign)
 
 	// Test for Endpos
-	assert.Equal(t, 1, statements[0].EndPos.Line)
-	assert.Equal(t, 17, statements[0].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 17, f.Pos(statements[0].EndPos).Column)
 }
 
 func TestRaise(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/raise.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/raise.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(statements))
 
 	// Test for Endpos
-	assert.Equal(t, 1, statements[0].EndPos.Line)
-	assert.Equal(t, 27, statements[0].EndPos.Column)
-	assert.Equal(t, 4, statements[1].EndPos.Line)
-	assert.Equal(t, 31, statements[1].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 27, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 4, f.Pos(statements[1].EndPos).Line)
+	assert.Equal(t, 31, f.Pos(statements[1].EndPos).Column)
 }
 
 func TestElseStatement(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/else.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/else.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].If)
@@ -393,12 +399,12 @@ func TestElseStatement(t *testing.T) {
 	assert.Equal(t, 1, len(statements[0].If.ElseStatements))
 
 	// Test for Endpos
-	assert.Equal(t, 8, statements[0].EndPos.Line)
-	assert.Equal(t, 9, statements[0].EndPos.Column)
+	assert.Equal(t, 8, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 9, f.Pos(statements[0].EndPos).Column)
 }
 
 func TestDestructuringAssignment(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/destructuring_assign.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/destructuring_assign.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].Ident)
@@ -410,42 +416,43 @@ func TestDestructuringAssignment(t *testing.T) {
 	assert.Equal(t, "something", statements[0].Ident.Unpack.Expr.Val.Ident.Name)
 
 	// Test for Endpos
-	assert.Equal(t, 1, statements[0].EndPos.Line)
-	assert.Equal(t, 19, statements[0].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 19, f.Pos(statements[0].EndPos).Column)
 }
 
 func TestMultipleActions(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/multiple_action.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/multiple_action.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(statements))
 	assert.NotNil(t, statements[0].Ident.Action.Assign)
 	assert.Equal(t, "y", statements[0].Ident.Action.Assign.Val.Ident.Name)
 
 	// Test for Endpos
-	assert.Equal(t, 1, statements[0].EndPos.Line)
-	assert.Equal(t, 64, statements[0].EndPos.Column)
-	assert.Equal(t, 3, statements[1].EndPos.Line)
-	assert.Equal(t, 14, statements[1].EndPos.Column)
-	assert.Equal(t, 5, statements[2].EndPos.Line)
-	assert.Equal(t, 12, statements[2].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 64, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 3, f.Pos(statements[1].EndPos).Line)
+	assert.Equal(t, 14, f.Pos(statements[1].EndPos).Column)
+	assert.Equal(t, 5, f.Pos(statements[2].EndPos).Line)
+	assert.Equal(t, 12, f.Pos(statements[2].EndPos).Column)
 }
 
 func TestAssert(t *testing.T) {
-	statements, err := newParser().parse("src/parse/asp/test_data/assert.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/assert.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(statements))
 
 	// Test for Endpos
-	assert.Equal(t, 1, statements[0].EndPos.Line)
-	assert.Equal(t, 74, statements[0].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 74, f.Pos(statements[0].EndPos).Column)
 
-	assert.Equal(t, 4, statements[1].EndPos.Line)
-	assert.Equal(t, 18, statements[1].EndPos.Column)
+	assert.Equal(t, 4, f.Pos(statements[1].EndPos).Line)
+	assert.Equal(t, 18, f.Pos(statements[1].EndPos).Column)
 }
 
 func TestOptimise(t *testing.T) {
 	p := newParser()
 	statements, err := p.parse("src/parse/asp/test_data/optimise.build")
+	f := NewFile("src/parse/asp/test_data/optimise.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 5, len(statements))
 	statements = p.optimise(statements)
@@ -454,20 +461,20 @@ func TestOptimise(t *testing.T) {
 	assert.NotNil(t, statements[0].FuncDef)
 	assert.Equal(t, 0, len(statements[0].FuncDef.Statements))
 	// Test for Endpos
-	assert.Equal(t, 41, statements[0].EndPos.Column)
-	assert.Equal(t, 4, statements[0].EndPos.Line)
+	assert.Equal(t, 41, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 4, f.Pos(statements[0].EndPos).Line)
 
 	assert.NotNil(t, statements[1].FuncDef)
 	assert.Equal(t, 0, len(statements[1].FuncDef.Statements))
 	// Test for Endpos
-	assert.Equal(t, 9, statements[1].EndPos.Column)
-	assert.Equal(t, 7, statements[1].EndPos.Line)
+	assert.Equal(t, 9, f.Pos(statements[1].EndPos).Column)
+	assert.Equal(t, 7, f.Pos(statements[1].EndPos).Line)
 
 	assert.NotNil(t, statements[2].FuncDef)
 	assert.Equal(t, 1, len(statements[2].FuncDef.Statements))
 	// Test for Endpos
-	assert.Equal(t, 18, statements[2].EndPos.Column)
-	assert.Equal(t, 10, statements[2].EndPos.Line)
+	assert.Equal(t, 18, f.Pos(statements[2].EndPos).Column)
+	assert.Equal(t, 10, f.Pos(statements[2].EndPos).Line)
 
 	ident := statements[2].FuncDef.Statements[0].Ident
 	assert.NotNil(t, ident)
@@ -476,8 +483,8 @@ func TestOptimise(t *testing.T) {
 	assert.NotNil(t, ident.Action.AugAssign.Val.List)
 
 	// Test for Endpos
-	assert.Equal(t, 11, statements[3].EndPos.Column)
-	assert.Equal(t, 13, statements[3].EndPos.Line)
+	assert.Equal(t, 11, f.Pos(statements[3].EndPos).Column)
+	assert.Equal(t, 13, f.Pos(statements[3].EndPos).Line)
 }
 
 func TestMultilineStringQuotes(t *testing.T) {
@@ -510,7 +517,7 @@ multiline string containing "double quotes"
 "`,
 		},
 	} {
-		statements, err := newParser().parse(test.Path)
+		_, statements, err := parseFileOnly(test.Path)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(statements))
 		assert.NotNil(t, statements[0].Ident)
@@ -519,124 +526,124 @@ multiline string containing "double quotes"
 		assert.Equal(t, test.Expected, statements[0].Ident.Action.Assign.Val.String)
 
 		// TODO(BNM): It would be nice if we can get the actual EndPos for the multiline
-		// assert.Equal(t, 4, statements[0].EndPos.Column)
-		// assert.Equal(t, 3, statements[0].EndPos.Line)
+		// assert.Equal(t, 4, f.Pos(statements[0].EndPos).Column)
+		// assert.Equal(t, 3, f.Pos(statements[0].EndPos).Line)
 	}
 }
 
 func TestExample0(t *testing.T) {
 	// These tests are specific examples that turned out to fail.
-	statements, err := newParser().parse("src/parse/asp/test_data/example.build")
+	f, statements, err := parseFileOnly("src/parse/asp/test_data/example.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
-	assert.Equal(t, 2, statements[0].EndPos.Column)
-	assert.Equal(t, 14, statements[0].EndPos.Line)
-	assert.Equal(t, 2, statements[1].EndPos.Column)
-	assert.Equal(t, 24, statements[1].EndPos.Line)
-	assert.Equal(t, 2, statements[2].EndPos.Column)
-	assert.Equal(t, 34, statements[2].EndPos.Line)
-	assert.Equal(t, 2, statements[3].EndPos.Column)
-	assert.Equal(t, 43, statements[3].EndPos.Line)
+	assert.Equal(t, 2, f.Pos(statements[0].EndPos).Column)
+	assert.Equal(t, 14, f.Pos(statements[0].EndPos).Line)
+	assert.Equal(t, 2, f.Pos(statements[1].EndPos).Column)
+	assert.Equal(t, 24, f.Pos(statements[1].EndPos).Line)
+	assert.Equal(t, 2, f.Pos(statements[2].EndPos).Column)
+	assert.Equal(t, 34, f.Pos(statements[2].EndPos).Line)
+	assert.Equal(t, 2, f.Pos(statements[3].EndPos).Column)
+	assert.Equal(t, 43, f.Pos(statements[3].EndPos).Line)
 }
 
 func TestExample1(t *testing.T) {
 	// These tests are specific examples that turned out to fail.
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_1.build")
+	f, stmts, err := parseFileOnly("src/parse/asp/test_data/example_1.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
-	assert.Equal(t, 13, stmts[0].EndPos.Column)
-	assert.Equal(t, 6, stmts[0].EndPos.Line)
+	assert.Equal(t, 13, f.Pos(stmts[0].EndPos).Column)
+	assert.Equal(t, 6, f.Pos(stmts[0].EndPos).Line)
 }
 
 func TestExample2(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_2.build")
+	f, stmts, err := parseFileOnly("src/parse/asp/test_data/example_2.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
-	assert.Equal(t, 35, stmts[0].EndPos.Column)
-	assert.Equal(t, 1, stmts[0].EndPos.Line)
-	assert.Equal(t, 2, stmts[1].EndPos.Column)
-	assert.Equal(t, 7, stmts[1].EndPos.Line)
+	assert.Equal(t, 35, f.Pos(stmts[0].EndPos).Column)
+	assert.Equal(t, 1, f.Pos(stmts[0].EndPos).Line)
+	assert.Equal(t, 2, f.Pos(stmts[1].EndPos).Column)
+	assert.Equal(t, 7, f.Pos(stmts[1].EndPos).Line)
 }
 
 func TestExample3(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_3.build")
+	f, stmts, err := parseFileOnly("src/parse/asp/test_data/example_3.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
-	assert.Equal(t, 2, stmts[0].EndPos.Column)
-	assert.Equal(t, 4, stmts[0].EndPos.Line)
+	assert.Equal(t, 2, f.Pos(stmts[0].EndPos).Column)
+	assert.Equal(t, 4, f.Pos(stmts[0].EndPos).Line)
 
 	// Test for IdentExpr.Endpos
 	property := stmts[0].Ident.Action.Assign.Val.Ident.Action[0].Property
-	assert.Equal(t, 1, property.Pos.Line)
-	assert.Equal(t, 16, property.Pos.Column)
-	assert.Equal(t, 4, property.EndPos.Line)
-	assert.Equal(t, 2, property.EndPos.Column)
+	assert.Equal(t, 1, f.Pos(property.Pos).Line)
+	assert.Equal(t, 16, f.Pos(property.Pos).Column)
+	assert.Equal(t, 4, f.Pos(property.EndPos).Line)
+	assert.Equal(t, 2, f.Pos(property.EndPos).Column)
 }
 
 func TestExample4(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_4.build")
+	f, stmts, err := parseFileOnly("src/parse/asp/test_data/example_4.build")
 	assert.NoError(t, err)
 	assert.Equal(t, len(stmts), 1)
 
 	// Test for Endpos
-	assert.Equal(t, 1, stmts[0].EndPos.Line)
-	assert.Equal(t, 38, stmts[0].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(stmts[0].EndPos).Line)
+	assert.Equal(t, 38, f.Pos(stmts[0].EndPos).Column)
 }
 
 func TestExample5(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_5.build")
+	f, stmts, err := parseFileOnly("src/parse/asp/test_data/example_5.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
-	assert.Equal(t, 1, stmts[0].EndPos.Line)
-	assert.Equal(t, 68, stmts[0].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(stmts[0].EndPos).Line)
+	assert.Equal(t, 68, f.Pos(stmts[0].EndPos).Column)
 }
 
 func TestExample6(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/example_6.build")
+	f, stmts, err := parseFileOnly("src/parse/asp/test_data/example_6.build")
 	assert.NoError(t, err)
 
 	// Test for Endpos
-	assert.Equal(t, 1, stmts[0].EndPos.Line)
-	assert.Equal(t, 80, stmts[0].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(stmts[0].EndPos).Line)
+	assert.Equal(t, 80, f.Pos(stmts[0].EndPos).Column)
 
 	// Test for IdentExpr.Endpos
 	property := stmts[0].Ident.Action.Assign.Val.Property
-	assert.Equal(t, 1, property.Pos.Line)
-	assert.Equal(t, 15, property.Pos.Column)
-	assert.Equal(t, 1, property.EndPos.Line)
-	assert.Equal(t, 60, property.EndPos.Column)
+	assert.Equal(t, 1, f.Pos(property.Pos).Line)
+	assert.Equal(t, 15, f.Pos(property.Pos).Column)
+	assert.Equal(t, 1, f.Pos(property.EndPos).Line)
+	assert.Equal(t, 60, f.Pos(property.EndPos).Column)
 
 	property = stmts[1].Ident.Action.Call.Arguments[0].Value.Val.Property
-	assert.Equal(t, 4, property.Pos.Line)
-	assert.Equal(t, 31, property.Pos.Column)
-	assert.Equal(t, 4, property.EndPos.Line)
-	assert.Equal(t, 66, property.EndPos.Column)
+	assert.Equal(t, 4, f.Pos(property.Pos).Line)
+	assert.Equal(t, 31, f.Pos(property.Pos).Column)
+	assert.Equal(t, 4, f.Pos(property.EndPos).Line)
+	assert.Equal(t, 66, f.Pos(property.EndPos).Column)
 }
 
 func TestPrecedence(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/precedence.build")
+	f, stmts, err := parseFileOnly("src/parse/asp/test_data/precedence.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(stmts))
 	assert.NotNil(t, stmts[0].Ident.Action.Assign.If)
 
 	// Test for Endpos
-	assert.Equal(t, 1, stmts[0].EndPos.Line)
-	assert.Equal(t, 35, stmts[0].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(stmts[0].EndPos).Line)
+	assert.Equal(t, 35, f.Pos(stmts[0].EndPos).Column)
 }
 
 func TestMissingNewlines(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/no_newline.build")
+	f, stmts, err := parseFileOnly("src/parse/asp/test_data/no_newline.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(stmts))
 
 	// Test for Endpos
-	assert.Equal(t, 1, stmts[0].EndPos.Line)
-	assert.Equal(t, 10, stmts[0].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(stmts[0].EndPos).Line)
+	assert.Equal(t, 10, f.Pos(stmts[0].EndPos).Column)
 }
 
 func TestRepeatedArguments(t *testing.T) {
@@ -650,39 +657,39 @@ func TestConstantAssignments(t *testing.T) {
 }
 
 func TestFStrings(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/fstring.build")
+	f, stmts, err := parseFileOnly("src/parse/asp/test_data/fstring.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 6, len(stmts))
 
-	f := stmts[1].Ident.Action.Assign.Val.FString
-	assert.NotNil(t, f)
-	assert.Equal(t, "", f.Suffix)
-	assert.Equal(t, 1, len(f.Vars))
-	assert.Equal(t, "", f.Vars[0].Prefix)
-	assert.Equal(t, "x", f.Vars[0].Var[0])
+	fs := stmts[1].Ident.Action.Assign.Val.FString
+	assert.NotNil(t, fs)
+	assert.Equal(t, "", fs.Suffix)
+	assert.Equal(t, 1, len(fs.Vars))
+	assert.Equal(t, "", fs.Vars[0].Prefix)
+	assert.Equal(t, "x", fs.Vars[0].Var[0])
 
-	f = stmts[2].Ident.Action.Assign.Val.FString
-	assert.NotNil(t, f)
-	assert.Equal(t, " fin", f.Suffix)
-	assert.Equal(t, 2, len(f.Vars))
-	assert.Equal(t, "x: ", f.Vars[0].Prefix)
-	assert.Equal(t, "x", f.Vars[0].Var[0])
-	assert.Equal(t, " y: ", f.Vars[1].Prefix)
-	assert.Equal(t, "y", f.Vars[1].Var[0])
+	fs = stmts[2].Ident.Action.Assign.Val.FString
+	assert.NotNil(t, fs)
+	assert.Equal(t, " fin", fs.Suffix)
+	assert.Equal(t, 2, len(fs.Vars))
+	assert.Equal(t, "x: ", fs.Vars[0].Prefix)
+	assert.Equal(t, "x", fs.Vars[0].Var[0])
+	assert.Equal(t, " y: ", fs.Vars[1].Prefix)
+	assert.Equal(t, "y", fs.Vars[1].Var[0])
 
 	// Test for Endpos
-	assert.Equal(t, 1, stmts[0].EndPos.Line)
-	assert.Equal(t, 8, stmts[0].EndPos.Column)
-	assert.Equal(t, 2, stmts[1].EndPos.Line)
-	assert.Equal(t, 11, stmts[1].EndPos.Column)
-	assert.Equal(t, 3, stmts[2].EndPos.Line)
-	assert.Equal(t, 25, stmts[2].EndPos.Column)
-	assert.Equal(t, 6, stmts[3].EndPos.Line)
-	assert.Equal(t, 15, stmts[3].EndPos.Column)
+	assert.Equal(t, 1, f.Pos(stmts[0].EndPos).Line)
+	assert.Equal(t, 8, f.Pos(stmts[0].EndPos).Column)
+	assert.Equal(t, 2, f.Pos(stmts[1].EndPos).Line)
+	assert.Equal(t, 11, f.Pos(stmts[1].EndPos).Column)
+	assert.Equal(t, 3, f.Pos(stmts[2].EndPos).Line)
+	assert.Equal(t, 25, f.Pos(stmts[2].EndPos).Column)
+	assert.Equal(t, 6, f.Pos(stmts[3].EndPos).Line)
+	assert.Equal(t, 15, f.Pos(stmts[3].EndPos).Column)
 }
 
 func TestFuncReturnTypes(t *testing.T) {
-	stmts, err := newParser().parse("src/parse/asp/test_data/return_type.build")
+	_, stmts, err := parseFileOnly("src/parse/asp/test_data/return_type.build")
 	assert.NoError(t, err)
 
 	assert.Equal(t, "str", stmts[0].FuncDef.Return)

@@ -29,7 +29,6 @@ go_test(
     srcs = glob(
         ["*_test.go"],
         exclude = [
-            "parser_test.go",
             "util_test.go",
         ],
     ),
