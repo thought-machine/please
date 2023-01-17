@@ -8,7 +8,7 @@ echo "Releasing docs website"
 tar -xzf /tmp/workspace/deep-docs.tar.gz -C /tmp/workspace && aws s3 sync /tmp/workspace/docs s3://please-docs
 
 
-if aws s3 ls s3://please-releases/linux_amd64/$VERSION/; then
+if aws s3 ls s3://please-releases/linux_arm64/$VERSION/; then
   echo "Please $VERSION has already been released, nothing to do."
   exit 0
 fi
@@ -24,6 +24,7 @@ find /tmp/workspace/{*_amd64,*_arm64} -type f | xargs /tmp/workspace/release_sig
 aws s3 sync /tmp/workspace/darwin_amd64 s3://please-releases/darwin_amd64/$VERSION
 aws s3 sync /tmp/workspace/darwin_arm64 s3://please-releases/darwin_arm64/$VERSION
 aws s3 sync /tmp/workspace/linux_amd64 s3://please-releases/linux_amd64/$VERSION
+aws s3 sync /tmp/workspace/linux_arm64 s3://please-releases/linux_arm64/$VERSION
 aws s3 sync /tmp/workspace/freebsd_amd64 s3://please-releases/freebsd_amd64/$VERSION
 
 # Sign the download script with our release key
