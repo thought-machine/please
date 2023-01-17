@@ -344,11 +344,6 @@ workflows:
       - build-darwin:
           requires:
             - build-alpine
-            - build-linux
-            - build-linux-alt
-      - build-darwin-arm64:
-          requires:
-            - build-darwin
       - build-freebsd:
           requires:
             - build-alpine
@@ -358,11 +353,18 @@ workflows:
       - test-http-cache:
           requires:
             - build-alpine
+      - build-linux-arm64:
+          requires:
+            - build-alpine
+      - build-darwin-arm64:
+          requires:
+            - build-darwin
       - release:
           requires:
             - build-alpine
             - build-freebsd
             - build-darwin-arm64
+            - build-linux-arm64
             - build-linux
             - build-linux-alt
             - build-darwin
