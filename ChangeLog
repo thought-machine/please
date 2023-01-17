@@ -1,3 +1,8 @@
+Version 16.27.1
+---------------
+    * Include linux_arm64 in release step (#2646)
+
+
 Version 16.27.0
 ---------------
     * Have `plz query whatinputs` exit with code 1, when nothing inputs
