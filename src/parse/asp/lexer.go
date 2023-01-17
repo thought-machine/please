@@ -146,6 +146,11 @@ func (l *lex) Next() Token {
 	return ret
 }
 
+// File creates a new File based on the contents read by this lexer.
+func (l *lex) File() *File {
+	return newFile(l.filename, l.bytes)
+}
+
 // AssignFollows is a hack to do extra lookahead which makes it easier to parse
 // named call arguments. It returns true if the token after next is an assign operator.
 func (l *lex) AssignFollows() bool {

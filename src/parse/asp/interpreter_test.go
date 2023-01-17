@@ -418,7 +418,7 @@ func TestJSON(t *testing.T) {
 	statements = parser.optimise(statements)
 	parser.interpreter.optimiseExpressions(statements)
 
-	s := parser.interpreter.scope.NewScope()
+	s := parser.interpreter.scope.NewScope("BUILD")
 
 	list := pyList{pyString("foo"), pyInt(5)}
 	dict := pyDict{"foo": pyString("bar")}
@@ -486,7 +486,7 @@ func TestLogConfigVariable(t *testing.T) {
 	confBase := &pyConfigBase{dict: dict}
 	config := &pyConfig{base: confBase, overlay: pyDict{"baz": pyInt(6)}}
 
-	s := parser.interpreter.scope.NewScope()
+	s := parser.interpreter.scope.NewScope("BUILD")
 	s.config = config
 	s.Set("CONFIG", config)
 

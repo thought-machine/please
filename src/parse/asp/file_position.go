@@ -31,9 +31,14 @@ type File struct {
 // N.B. This involves reading the entire file, and is typically only expected to be done on
 // an error path. Hence the return value does not error itself, and can return an
 func NewFile(path string) *File {
-	f := &File{Name: path, lineOffsets: []int{0}}
 	b, _ := os.ReadFile(path)
-	for i, x := range b {
+	return newFile(path, b)
+}
+
+// newFile creates a File from a buffer.
+func newFile(name string, buf []byte) *File {
+	f := &File{Name: name, lineOffsets: []int{0}}
+	for i, x := range buf {
 		if x == '\n' {
 			f.lineOffsets = append(f.lineOffsets, i)
 		}
