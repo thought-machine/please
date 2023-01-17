@@ -187,7 +187,6 @@ func (c *Client) buildRunCommand(state *core.BuildState, target *core.BuildTarge
 	}, nil
 }
 
-
 // inputDir returns the input dir proto for the target, without uploading it
 func (c *Client) inputDir(target *core.BuildTarget, isTest bool) (*pb.Directory, error) {
 	return c.uploadInputs(nil, target, isTest)
