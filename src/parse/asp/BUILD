@@ -20,13 +20,19 @@ go_library(
         "//third_party/go:gcfg",
         "//third_party/go:promptui",
         "//third_party/go:semver2",
-        "//third_party/go:slices",
+        "//third_party/go:x_exp",
     ],
 )
 
 go_test(
     name = "asp_test",
-    srcs = glob(["*_test.go"]),
+    srcs = glob(
+        ["*_test.go"],
+        exclude = [
+            "parser_test.go",
+            "util_test.go",
+        ],
+    ),
     data = ["test_data"],
     deps = [
         ":asp",

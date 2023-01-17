@@ -1416,8 +1416,12 @@ go_module(
 )
 
 go_module(
-    name = "slices",
-    install = ["slices"],
+    name = "x_exp",
+    install = [
+        "constraints",
+        "maps",
+        "slices",
+    ],
     licences = ["BSD"],
     module = "golang.org/x/exp",
     version = "1de6713980dea447778ef6e71194d5eb54288072",
