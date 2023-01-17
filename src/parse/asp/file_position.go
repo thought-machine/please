@@ -8,7 +8,7 @@ import (
 )
 
 // A FilePosition is the more user-friendly equivalent to the Position type.
-// Line and Column are both 1-indexed.
+// All properties are 1-indexed.
 type FilePosition struct {
 	Filename string
 	Offset   int
@@ -56,7 +56,7 @@ func (f *File) Pos(pos Position) FilePosition {
 	lineOffset := f.lineOffsets[line-1]
 	return FilePosition{
 		Filename: f.Name,
-		Offset:   i,
+		Offset:   i + 1,
 		Line:     line,
 		Column:   i - lineOffset,
 	}

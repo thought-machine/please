@@ -12,33 +12,33 @@ func TestFilePositionSimple(t *testing.T) {
 
 	for _, pos := range []FilePosition{
 		{
-			Offset: 0,
+			Offset: 1,
 			Line:   1,
 			Column: 1,
 		},
 		{
-			Offset: 7,
+			Offset: 8,
 			Line:   2,
 			Column: 1,
 		},
 		{
-			Offset: 36,
+			Offset: 37,
 			Line:   3,
 			Column: 16,
 		},
 		{
-			Offset: 62,
+			Offset: 63,
 			Line:   4,
 			Column: 26,
 		},
 		{
-			Offset: 63,
+			Offset: 64,
 			Line:   5,
 			Column: 1,
 		},
 	} {
 		pos.Filename = filename
-		assert.Equal(t, pos, f.Pos(Position(pos.Offset)))
+		assert.Equal(t, pos, f.Pos(Position(pos.Offset-1)))
 	}
 }
 
@@ -48,47 +48,47 @@ func TestFilePosition(t *testing.T) {
 
 	for _, pos := range []FilePosition{
 		{
-			Offset: 0,
+			Offset: 1,
 			Line:   1,
 			Column: 1,
 		},
 		{
-			Offset: 26,
+			Offset: 27,
 			Line:   1,
 			Column: 27,
 		},
 		{
-			Offset: 72,
+			Offset: 73,
 			Line:   1,
 			Column: 73,
 		},
 		{
-			Offset: 73,
+			Offset: 74,
 			Line:   2,
 			Column: 1,
 		},
 		{
-			Offset: 305,
+			Offset: 306,
 			Line:   14,
 			Column: 9,
 		},
 		{
-			Offset: 831,
+			Offset: 832,
 			Line:   37,
 			Column: 32,
 		},
 		{
-			Offset: 1038,
+			Offset: 1039,
 			Line:   50,
 			Column: 2,
 		},
 		{
-			Offset: 1039,
+			Offset: 1040,
 			Line:   51,
 			Column: 1,
 		},
 	} {
 		pos.Filename = filename
-		assert.Equal(t, pos, f.Pos(Position(pos.Offset)))
+		assert.Equal(t, pos, f.Pos(Position(pos.Offset-1)))
 	}
 }
