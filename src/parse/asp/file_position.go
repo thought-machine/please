@@ -37,7 +37,7 @@ func NewFile(path string) *File {
 
 // newFile creates a File from a buffer.
 func newFile(name string, buf []byte) *File {
-	f := &File{Name: name, lineOffsets: []int{0}}
+	f := &File{Name: name, lineOffsets: []int{-1}}
 	for i, x := range buf {
 		if x == '\n' {
 			f.lineOffsets = append(f.lineOffsets, i)
@@ -50,10 +50,11 @@ func newFile(name string, buf []byte) *File {
 func (f *File) Pos(pos Position) FilePosition {
 	i := int(pos)
 	line, _ := slices.BinarySearch(f.lineOffsets, i)
+	lineOffset := f.lineOffsets[line-1]
 	return FilePosition{
 		Filename: f.Name,
 		Offset:   i,
-		Line:     line + 1,
-		Column:   i - f.lineOffsets[line] + 1,
+		Line:     line,
+		Column:   i - lineOffset,
 	}
 }
