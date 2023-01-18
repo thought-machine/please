@@ -7,18 +7,18 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"sync"
-	"path/filepath"
 	"time"
 
 	"github.com/sourcegraph/go-lsp"
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"
 
-	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/rules"
+	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/plz"
 )
@@ -38,7 +38,7 @@ type Handler struct {
 }
 
 type builtin struct {
-	Stmt *asp.Statement
+	Stmt        *asp.Statement
 	Pos, EndPos asp.FilePosition
 }
 
@@ -244,8 +244,8 @@ func (h *Handler) loadBuiltins() error {
 		for _, stmt := range stmts {
 			if stmt.FuncDef != nil {
 				h.builtins[stmt.FuncDef.Name] = builtin{
-					Stmt: stmt,
-					Pos: f.Pos(stmt.Pos),
+					Stmt:   stmt,
+					Pos:    f.Pos(stmt.Pos),
 					EndPos: f.Pos(stmt.EndPos),
 				}
 			}
