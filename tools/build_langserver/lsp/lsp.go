@@ -252,6 +252,7 @@ func (h *Handler) loadBuiltins() error {
 			}
 		}
 	}
+	log.Debug("loaded builtin function information")
 	return nil
 }
 

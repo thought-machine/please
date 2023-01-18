@@ -11,7 +11,7 @@ import (
 
 func TestDefinition(t *testing.T) {
 	// the x= construction is a bit weird but works with a definition that's an expression.
-	h := initHandlerText(`x = go_bindata`)
+	h := initHandlerText(`x = genrule`)
 	h.WaitForPackageTree()
 	var locs []lsp.Location
 	err := h.Request("textDocument/definition", &lsp.TextDocumentPositionParams{
@@ -21,16 +21,17 @@ func TestDefinition(t *testing.T) {
 		Position: lsp.Position{Line: 0, Character: 5},
 	}, &locs)
 	assert.NoError(t, err)
+	cacheDir, _ := os.UserCacheDir()
 	assert.Equal(t, []lsp.Location{
 		{
-			URI:   lsp.DocumentURI("file://" + filepath.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data/build_defs/go_bindata.build_defs")),
-			Range: xrng(0, 0, 22, 5),
+			URI:   lsp.DocumentURI("file://" + filepath.Join(cacheDir, "please/misc_rules.build_defs")),
+			Range: xrng(0, 0, 144, 5),
 		},
 	}, locs)
 }
 
 func TestDefinitionStatement(t *testing.T) {
-	h := initHandlerText(`go_bindata()`)
+	h := initHandlerText(`genrule()`)
 	h.WaitForPackageTree()
 	var locs []lsp.Location
 	err := h.Request("textDocument/definition", &lsp.TextDocumentPositionParams{
@@ -40,10 +41,11 @@ func TestDefinitionStatement(t *testing.T) {
 		Position: lsp.Position{Line: 0, Character: 5},
 	}, &locs)
 	assert.NoError(t, err)
+	cacheDir, _ := os.UserCacheDir()
 	assert.Equal(t, []lsp.Location{
 		{
-			URI:   lsp.DocumentURI("file://" + filepath.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data/build_defs/go_bindata.build_defs")),
-			Range: xrng(0, 0, 22, 5),
+			URI:   lsp.DocumentURI("file://" + filepath.Join(cacheDir, "please/misc_rules.build_defs")),
+			Range: xrng(0, 0, 144, 5),
 		},
 	}, locs)
 }
