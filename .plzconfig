@@ -1,7 +1,7 @@
-[python]
+[Plugin "python"]
+Target = //plugins:python
 ; We use the in-repo please_pex tool to build other pexes within this repo.
 ; Other projects using Please wouldn't normally need to do anything like this.
-pextool = //tools/please_pex
 moduledir = third_party.python
 DisableVendorFlags = true
 
@@ -32,6 +32,7 @@ preloadsubincludes = //build_defs:go
 # TODO(jpoole): We only need this to make cc_library available for the test main above. We should respect the pre-loaded
 # subincldues they define so we don't need this here.
 preloadsubincludes = ///cc//build_defs:cc
+preloadsubincludes = ///python//build_defs:python
 
 [alias "autofix"]
 desc = Generates generated code and applies lint fixes

@@ -11,8 +11,8 @@ import (
 func TestMatchingTools(t *testing.T) {
 	c, err := core.ReadConfigFiles(nil, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"pex": "/////_please:please_pex"}, matchingTools(c, "p"))
-	assert.Equal(t, map[string]string{"pex": "/////_please:please_pex"}, matchingTools(c, "pex"))
+	assert.Equal(t, map[string]string{"langserver": "//_please:build_langserver"}, matchingTools(c, "la"))
+	assert.Equal(t, map[string]string{"langserver": "//_please:build_langserver"}, matchingTools(c, "lang"))
 	assert.Equal(t, map[string]string{
 		"javacworker": "/////_please:javac_worker",
 		"jarcat":      "/////_please:arcat",

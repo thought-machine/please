@@ -268,9 +268,6 @@ func (state *BuildState) WaitForInit() {
 func (state *BuildState) ExcludedBuiltinRules() map[string]struct{} {
 	// TODO(jpoole): remove this function, including the changes to rules.AllAssets() in v17
 	ret := make(map[string]struct{})
-	if state.Config.FeatureFlags.ExcludePythonRules {
-		ret["python_rules.build_defs"] = struct{}{}
-	}
 	if state.Config.FeatureFlags.ExcludeJavaRules {
 		ret["java_rules.build_defs"] = struct{}{}
 	}

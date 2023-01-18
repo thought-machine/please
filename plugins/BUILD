@@ -15,3 +15,9 @@ plugin_repo(
     plugin = "java-rules",
     revision = "v0.2.4",
 )
+
+plugin_repo(
+    name = "python",
+    plugin = "python-rules",
+    revision = "v1.2.0",
+)

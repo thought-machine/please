@@ -18,7 +18,6 @@ func TestAllAssetsReturnsAListOfBuildDefinitionFiles(t *testing.T) {
 		"java_rules.build_defs",
 		"misc_rules.build_defs",
 		"proto_rules.build_defs",
-		"python_rules.build_defs",
 		"sh_rules.build_defs",
 		"subrepo_rules.build_defs",
 	}
