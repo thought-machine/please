@@ -1,6 +1,7 @@
 module github.com/thought-machine/please
 
 require (
+	cloud.google.com/go/longrunning v0.3.0
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/ProtonMail/go-crypto v0.0.0-20210920135941-2c5829bbf927
 	github.com/alessio/shellescape v1.4.1
@@ -55,7 +56,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.2 // indirect
 	cloud.google.com/go/iam v0.8.0 // indirect
 	cloud.google.com/go/kms v1.7.0 // indirect
-	cloud.google.com/go/longrunning v0.3.0 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
