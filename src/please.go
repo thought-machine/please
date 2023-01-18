@@ -413,7 +413,7 @@ var opts struct {
 		} `command:"whatoutputs" description:"Prints out target(s) responsible for outputting provided file(s)"`
 		Rules struct {
 			Args struct {
-				Targets []core.BuildLabel `hidden:"true" description:"deprecated, has no effect"`
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to parse for build rules." hidden:"true"`
 			} `positional-args:"true"`
 		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 		Changes struct {
@@ -874,7 +874,7 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"query.rules": func() int {
-		help.PrintRuleArgs()
+		help.PrintRuleArgs(opts.Query.Rules.Args.Files)
 		return 0
 	},
 	"query.changes": func() int {

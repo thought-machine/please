@@ -13,6 +13,7 @@ for src in glob(
         "language.html",
         "config.html",
         "error.html",
+        "plugins.html",
     ],
 ):
     deps += [html_template(name = src.replace(".", "_").replace("/", "_"), src = src)]
@@ -32,6 +33,43 @@ genrule(
     tools = ["//src:please"],
 )
 
+plugins = {
+    "python": "v1.2.0",
+    "java": "v1.0.0",
+    "go": "v1.1.4",
+    "cc": "v1.0.0",
+    "shell": "v1.0.0",
+}
+
+for plugin, tag in plugins.items():
+    http_archive(
+        name = f"{plugin}",
+        urls = [f"https://github.com/please-build/{plugin}-rules/archive/refs/tags/{tag}.tar.gz"],
+    )
+    genrule(
+        name = f"{plugin}_extract_build_defs",
+        srcs = [f":{plugin}"],
+        outs = [f"{plugin}_build_defs"],
+        cmd = [
+            "mkdir -p $OUT",
+            f"find $SRCS -type f -name '*.build_defs' -exec mv {{}} $OUT \;",
+        ],
+    )
+    filegroup(
+        name = f"{plugin}_build_defs",
+        srcs = [f":{plugin}_extract_build_defs"],
+        visibility = ["PUBLIC"],
+    )
+
+genrule(
+    name = "plugin_rules",
+    outs = ["plugin_rules.json"],
+    srcs = [":python_extract_build_defs"],
+    cmd = '"$TOOL" init && "$TOOL" query rules docs/python_build_defs/* > "$OUT"',
+    deps = [":python"],
+    tools = ["//src:please"],
+)
+
 genrule(
     name = "lexicon_html",
     srcs = deps + [
@@ -44,6 +82,24 @@ genrule(
     cmd = [
         '"$TOOLS_LEX" > lexicon.html',
         '"$TOOLS_TMPL" --template docs/template.html --in lexicon.html > tmp.html',
+        'mv tmp.html "$OUT"',
+    ],
+    tools = {
+        "lex": ["//docs/tools/lexicon_templater"],
+        "tmpl": ["//docs/tools/templater"],
+    },
+)
+
+genrule(
+    name = "plugins_html",
+    srcs = deps + [
+        "plugins.html",
+        "template.html",
+    ],
+    outs = ["plugins.html"],
+    cmd = [
+        '"$TOOLS_LEX" > plugins.html',
+        '"$TOOLS_TMPL" --template docs/template.html --in plugins.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],
     tools = {
@@ -89,6 +145,7 @@ filegroup(
     name = "docs",
     srcs = glob(["images/*.png"]) + deps + [
         ":language_html",
+        ":plugins_html",
         ":lexicon_html",
         ":config_html",
         "tachyons-4.12.0.min.css",
