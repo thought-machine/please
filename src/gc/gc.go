@@ -221,7 +221,7 @@ func RewriteFile(state *core.BuildState, filename string, targets []string) erro
 	}
 	lines := bytes.Split(b, []byte{'\n'})
 	linesToDelete := map[int]bool{}
-	f := asp.NewFile(filename)
+	f := asp.NewFile(filename, b)
 	for _, target := range targets {
 		stmt := asp.FindTarget(stmts, target)
 		if stmt == nil {

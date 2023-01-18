@@ -11,7 +11,7 @@ import (
 // TODO(peterebden): Might get rid of this, we may want to expose a similar thing on Parser.
 func parseFileOnly(filename string) (*File, []*Statement, error) {
 	stmts, err := newParser().ParseFileOnly(filename)
-	return NewFile(filename), stmts, err
+	return newFile(filename), stmts, err
 }
 
 func TestParseBasic(t *testing.T) {
@@ -452,7 +452,7 @@ func TestAssert(t *testing.T) {
 func TestOptimise(t *testing.T) {
 	p := newParser()
 	statements, err := p.parse("src/parse/asp/test_data/optimise.build")
-	f := NewFile("src/parse/asp/test_data/optimise.build")
+	f := newFile("src/parse/asp/test_data/optimise.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 5, len(statements))
 	statements = p.optimise(statements)

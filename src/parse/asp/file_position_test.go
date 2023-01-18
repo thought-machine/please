@@ -8,7 +8,7 @@ import (
 
 func TestFilePositionSimple(t *testing.T) {
 	const filename = "src/parse/asp/test_data/file_position_simple.build"
-	f := NewFile(filename)
+	f := newFile(filename)
 
 	for _, pos := range []FilePosition{
 		{
@@ -44,7 +44,7 @@ func TestFilePositionSimple(t *testing.T) {
 
 func TestFilePosition(t *testing.T) {
 	const filename = "src/parse/asp/test_data/file_position.build"
-	f := NewFile(filename)
+	f := newFile(filename)
 
 	for _, pos := range []FilePosition{
 		{

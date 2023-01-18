@@ -148,7 +148,7 @@ func (l *lex) Next() Token {
 
 // File creates a new File based on the contents read by this lexer.
 func (l *lex) File() *File {
-	return newFile(l.filename, l.bytes)
+	return NewFile(l.filename, l.bytes)
 }
 
 // AssignFollows is a hack to do extra lookahead which makes it easier to parse

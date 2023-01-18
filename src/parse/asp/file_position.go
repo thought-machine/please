@@ -27,16 +27,8 @@ type File struct {
 	lineOffsets []int
 }
 
-// NewFile creates a File from the given path.
-// N.B. This involves reading the entire file, and is typically only expected to be done on
-// an error path. Hence the return value does not error itself, and can return an
-func NewFile(path string) *File {
-	b, _ := os.ReadFile(path)
-	return newFile(path, b)
-}
-
-// newFile creates a File from a buffer.
-func newFile(name string, buf []byte) *File {
+// NewFile creates a File based on the given buffer.
+func NewFile(name string, buf []byte) *File {
 	// N.B. The line offsets are the index of the preceding newline character.
 	// This happens to be convenient when we binary search it (to avoid falling off the front
 	// of the array, etc).
@@ -47,6 +39,13 @@ func newFile(name string, buf []byte) *File {
 		}
 	}
 	return f
+}
+
+// newFile creates a File from a path. This is usually only done on an error path, so does
+// not itself return an error.
+func newFile(path string) *File {
+	b, _ := os.ReadFile(path)
+	return NewFile(path, b)
 }
 
 // Pos converts a Position to a FilePosition based on this file.

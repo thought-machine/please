@@ -59,9 +59,10 @@ func rewriteHashes(state *core.BuildState, filename, platform string, hashes map
 	if err != nil {
 		return err
 	}
+	f := asp.NewFile(filename, b)
 	lines := bytes.Split(b, []byte{'\n'})
 	for k, v := range hashes {
-		if err := rewriteHash(lines, stmts, platform, k, v); err != nil {
+		if err := rewriteHash(f, lines, stmts, platform, k, v); err != nil {
 			return err
 		}
 	}
@@ -69,28 +70,30 @@ func rewriteHashes(state *core.BuildState, filename, platform string, hashes map
 }
 
 // rewriteHash rewrites a single hash on a statement.
-func rewriteHash(lines [][]byte, stmts []*asp.Statement, platform, name, hash string) error {
+func rewriteHash(f *asp.File, lines [][]byte, stmts []*asp.Statement, platform, name, hash string) error {
 	stmt := asp.FindTarget(stmts, name)
 	if stmt == nil {
 		return fmt.Errorf("Can't find target %s to rewrite", name)
 	} else if arg := asp.FindArgument(stmt, "hash", "hashes"); arg != nil {
 		if arg.Value.Val != nil && arg.Value.Val.List != nil {
 			for _, h := range arg.Value.Val.List.Values {
-				if line, ok := rewriteLine(lines[h.Pos.Line-1], h.Pos.Column, platform, h.Val.String, hash); ok {
-					lines[h.Pos.Line-1] = line
+				pos := f.Pos(h.Pos)
+				if line, ok := rewriteLine(lines[pos.Line-1], pos.Column, platform, h.Val.String, hash); ok {
+					lines[pos.Line-1] = line
 					return nil
 				}
 			}
 		} else if arg.Value.Val != nil && arg.Value.Val.String != "" {
 			h := arg.Value
-			if line, ok := rewriteLine(lines[h.Pos.Line-1], h.Pos.Column, platform, h.Val.String, hash); ok {
-				lines[h.Pos.Line-1] = line
+			pos := f.Pos(h.Pos)
+			if line, ok := rewriteLine(lines[pos.Line-1], pos.Column, platform, h.Val.String, hash); ok {
+				lines[pos.Line-1] = line
 				return nil
 			}
 		}
 	}
 	if platform != "" {
-		return rewriteHash(lines, stmts, "", name, hash)
+		return rewriteHash(f, lines, stmts, "", name, hash)
 	}
 	return fmt.Errorf("Can't find hash or hashes argument on %s", name)
 }

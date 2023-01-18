@@ -67,7 +67,7 @@ func (stack *errorStack) file(filename string) *File {
 	}
 	f, present := stack.files[filename]
 	if !present {
-		f = NewFile(filename)
+		f = newFile(filename)
 		stack.files[filename] = f
 	}
 	return f
