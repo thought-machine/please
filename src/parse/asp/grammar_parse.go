@@ -139,7 +139,7 @@ func (p *parser) oneofval(expectedValues ...string) Token {
 }
 
 func (p *parser) fail(pos Token, message string, args ...interface{}) {
-	fail(pos.Pos, message, args...)
+	fail(p.l.filename, pos.Pos, message, args...)
 }
 
 func (p *parser) parseStatement() *Statement {
@@ -580,7 +580,7 @@ func (p *parser) parseIdentExpr() *IdentExpr {
 	}
 	// In case the Ident is a variable name, we assign the endPos to the end of current token.
 	// see test_data/unary_op.build
-	if ie.EndPos.Column == 0 {
+	if ie.EndPos == 0 {
 		ie.EndPos = identTok.EndPos()
 	}
 	return ie
@@ -712,19 +712,19 @@ func (p *parser) parseFString() *FString {
 	tok := p.next(String)
 	s := tok.Value[2 : len(tok.Value)-1] // Strip preceding f" and trailing "
 	p.endPos = tok.EndPos()
-	tok.Pos.Column++ // track position in case of error
+	tok.Pos++ // track position in case of error
 	for idx := p.findBrace(s); idx != -1; idx = p.findBrace(s) {
 		v := FStringVar{
 			Prefix: strings.ReplaceAll(strings.ReplaceAll(s[:idx], "{{", "{"), "}}", "}"),
 		}
 		s = s[idx+1:]
-		tok.Pos.Column += idx + 1
+		tok.Pos += Position(idx + 1)
 		idx = strings.IndexByte(s, '}')
 		p.assert(idx != -1, tok, "Unterminated brace in fstring")
 		v.Var = strings.Split(s[:idx], ".")
 		f.Vars = append(f.Vars, v)
 		s = s[idx+1:]
-		tok.Pos.Column += idx + 1
+		tok.Pos += Position(idx + 1)
 	}
 	f.Suffix = strings.ReplaceAll(strings.ReplaceAll(s, "{{", "{"), "}}", "}")
 

@@ -16,7 +16,6 @@ func TestRuleArgs(t *testing.T) {
 	assert.True(t, len(rule.Args) > 5)
 	assert.NotEqual(t, "", rule.Comment)
 	assert.NotEqual(t, "", rule.Docstring)
-	assert.Equal(t, "cc", rule.Language)
 	// Some of this is getting a bit more specific than I'd like, but we have to test it on *something*,
 	// and it'd not be hard to update if the rule does change.
 	arg := rule.Args[0]

@@ -99,9 +99,6 @@ func getRuleArgs(state *core.BuildState) environment {
 	for name, stmt := range AllBuiltinFunctions(state) {
 		f := stmt.FuncDef
 		r := function{Docstring: f.Docstring}
-		if strings.HasSuffix(f.EoDef.Filename, "_rules.build_defs") {
-			r.Language = strings.TrimSuffix(f.EoDef.Filename, "_rules.build_defs")
-		}
 		if indices := argsRegex.FindStringIndex(r.Docstring); indices != nil {
 			r.Comment = strings.TrimSpace(r.Docstring[:indices[0]])
 		}
@@ -131,7 +128,6 @@ type function struct {
 	Args      []functionArg `json:"args"`
 	Comment   string        `json:"comment,omitempty"`
 	Docstring string        `json:"docstring,omitempty"`
-	Language  string        `json:"language,omitempty"`
 }
 
 // A functionArg represents a single argument to a function.

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -16,8 +17,8 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 	"gopkg.in/op/go-logging.v1"
 
+	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/help"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/plz"
 )
@@ -31,9 +32,14 @@ type Handler struct {
 	mutex    sync.Mutex // guards docs
 	state    *core.BuildState
 	parser   *asp.Parser
-	builtins map[string]*asp.Statement
+	builtins map[string]builtin
 	pkgs     *pkg
 	root     string
+}
+
+type builtin struct {
+	Stmt        *asp.Statement
+	Pos, EndPos asp.FilePosition
 }
 
 // A Conn is a minimal set of the jsonrpc2.Conn that we need.
@@ -46,8 +52,9 @@ type Conn interface {
 // NewHandler returns a new Handler.
 func NewHandler() *Handler {
 	return &Handler{
-		docs: map[string]*doc{},
-		pkgs: &pkg{},
+		docs:     map[string]*doc{},
+		pkgs:     &pkg{},
+		builtins: map[string]builtin{},
 	}
 }
 
@@ -188,7 +195,9 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 		log.Debug("built completion package tree")
 	}()
 	// Record all the builtin functions now
-	h.builtins = help.AllBuiltinFunctions(h.state)
+	if err := h.loadBuiltins(); err != nil {
+		return nil, err
+	}
 	return &lsp.InitializeResult{
 		Capabilities: lsp.ServerCapabilities{
 			TextDocumentSync: &lsp.TextDocumentSyncOptionsOrKind{
@@ -205,6 +214,46 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 			},
 		},
 	}, nil
+}
+
+// loadBuiltins extracts & loads all the builtin functions at startup.
+func (h *Handler) loadBuiltins() error {
+	assets, err := rules.AllAssets(map[string]struct{}{})
+	if err != nil {
+		return err
+	}
+	for _, asset := range assets {
+		dir, err := os.UserCacheDir()
+		if err != nil {
+			return fmt.Errorf("Cannot determine user cache dir: %s", err)
+		} else if err := os.MkdirAll(filepath.Join(dir, "please"), core.DirPermissions); err != nil {
+			return fmt.Errorf("Cannot create cache dir: %s", err)
+		}
+		dest := filepath.Join(dir, "please", asset)
+		data, err := rules.ReadAsset(asset)
+		if err != nil {
+			return fmt.Errorf("Failed to extract builtin rules for %s: %s", asset, err)
+		}
+		if err := os.WriteFile(dest, data, 0644); err != nil {
+			return fmt.Errorf("Failed to extract builtin rules for %s: %s", asset, err)
+		}
+		stmts, err := h.parser.ParseFileOnly(dest)
+		if err != nil {
+			return fmt.Errorf("Failed to parse builtins: %s", err)
+		}
+		f := asp.NewFile(dest, data)
+		for _, stmt := range stmts {
+			if stmt.FuncDef != nil {
+				h.builtins[stmt.FuncDef.Name] = builtin{
+					Stmt:   stmt,
+					Pos:    f.Pos(stmt.Pos),
+					EndPos: f.Pos(stmt.EndPos),
+				}
+			}
+		}
+	}
+	log.Debug("loaded builtin function information")
+	return nil
 }
 
 // fromURI converts a DocumentURI to a path.
