@@ -26,12 +26,7 @@ go_library(
 
 go_test(
     name = "asp_test",
-    srcs = glob(
-        ["*_test.go"],
-        exclude = [
-            "util_test.go",
-        ],
-    ),
+    srcs = glob(["*_test.go"]),
     data = ["test_data"],
     deps = [
         ":asp",
