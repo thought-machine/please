@@ -140,36 +140,36 @@ func (h *Handler) findGlobal(name string) lsp.Location {
 	// TODO(peterebden): Think about how to implement this (we don't have the record of
 	// what files globals came from any more)
 	/*
-	if f, present := h.builtins[name]; present {
-		if f.FuncDef.IsBuiltin && !strings.Contains {
-			// Extract the builtin to a temporary location so the user can see it.
-			dir, err := os.UserCacheDir()
-			if err != nil {
-				log.Warning("Cannot determine user cache dir: %s", err)
-				return lsp.Location{}
-			} else if err := os.MkdirAll(filepath.Join(dir, "please"), core.DirPermissions); err != nil {
-				log.Warning("Cannot create cache dir: %s", err)
-				return lsp.Location{}
+		if f, present := h.builtins[name]; present {
+			if f.FuncDef.IsBuiltin && !strings.Contains {
+				// Extract the builtin to a temporary location so the user can see it.
+				dir, err := os.UserCacheDir()
+				if err != nil {
+					log.Warning("Cannot determine user cache dir: %s", err)
+					return lsp.Location{}
+				} else if err := os.MkdirAll(filepath.Join(dir, "please"), core.DirPermissions); err != nil {
+					log.Warning("Cannot create cache dir: %s", err)
+					return lsp.Location{}
+				}
+				dest := filepath.Join(dir, "please", f.Pos.Filename)
+				if data, err := rules.ReadAsset(f.Pos.Filename); err != nil {
+					log.Warning("Failed to extract builtin rules for %s: %s", name, err)
+					return lsp.Location{}
+				} else if err := os.WriteFile(dest, data, 0644); err != nil {
+					log.Warning("Failed to extract builtin rules for %s: %s", name, err)
+					return lsp.Location{}
+				}
+				f.Pos.Filename = dest
 			}
-			dest := filepath.Join(dir, "please", f.Pos.Filename)
-			if data, err := rules.ReadAsset(f.Pos.Filename); err != nil {
-				log.Warning("Failed to extract builtin rules for %s: %s", name, err)
-				return lsp.Location{}
-			} else if err := os.WriteFile(dest, data, 0644); err != nil {
-				log.Warning("Failed to extract builtin rules for %s: %s", name, err)
-				return lsp.Location{}
+			file := f.Pos.Filename
+			if !filepath.IsAbs(file) {
+				file = filepath.Join(h.root, f.Pos.Filename)
 			}
-			f.Pos.Filename = dest
+			return lsp.Location{
+				URI:   lsp.DocumentURI("file://" + file),
+				Range: rng(f.Pos, f.EndPos),
+			}
 		}
-		file := f.Pos.Filename
-		if !filepath.IsAbs(file) {
-			file = filepath.Join(h.root, f.Pos.Filename)
-		}
-		return lsp.Location{
-			URI:   lsp.DocumentURI("file://" + file),
-			Range: rng(f.Pos, f.EndPos),
-		}
-	}
-*/
+	*/
 	return lsp.Location{}
 }

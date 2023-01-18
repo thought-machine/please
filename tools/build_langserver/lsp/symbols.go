@@ -42,7 +42,7 @@ func (h *Handler) symbols(params *lsp.DocumentSymbolParams) ([]*lsp.SymbolInform
 	})
 	asp.WalkAST(stmts, func(arg *asp.CallArgument) bool {
 		if arg.Name != "" {
-			addSym(arg.Name, lsp.SKKey, arg.Pos, arg.Pos + asp.Position(len(arg.Name)))
+			addSym(arg.Name, lsp.SKKey, arg.Pos, arg.Pos+asp.Position(len(arg.Name)))
 		}
 		return true
 	})
