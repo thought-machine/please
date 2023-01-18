@@ -52,8 +52,9 @@ type Conn interface {
 // NewHandler returns a new Handler.
 func NewHandler() *Handler {
 	return &Handler{
-		docs: map[string]*doc{},
-		pkgs: &pkg{},
+		docs:     map[string]*doc{},
+		pkgs:     &pkg{},
+		builtins: map[string]builtin{},
 	}
 }
 
