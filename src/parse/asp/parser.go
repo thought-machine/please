@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
@@ -29,6 +30,8 @@ type Parser struct {
 
 	// Parallelism limiter to ensure we don't try to run too many parses simultaneously
 	limiter semaphore
+	// Keeps SubincludeTarget thread safe since it writes to the top-level scope.
+	subincludeLock sync.RWMutex
 }
 
 // NewParser creates a new parser instance. One is normally sufficient for a process lifetime.
@@ -88,7 +91,7 @@ func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel,
 	if err != nil {
 		return err
 	}
-	_, err = p.interpreter.interpretAll(pkg, label, dependent, forSubinclude, statements)
+	err = p.interpret(pkg, label, dependent, forSubinclude, statements)
 	if err != nil {
 		f, _ := os.Open(filename)
 		p.annotate(err, f)
@@ -111,10 +114,23 @@ func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarg
 	}
 
 	p.interpreter.loadPluginConfig(subincludePkgState, state, p.interpreter.config)
+	globals := []pyDict{}
 	for _, out := range target.FullOutputs() {
-		p.interpreter.scope.SetAll(p.interpreter.Subinclude(out, target.Label), true)
+		globals = append(globals, p.interpreter.Subinclude(out, target.Label))
+	}
+	p.subincludeLock.Lock()
+	defer p.subincludeLock.Unlock()
+	for _, d := range globals {
+		p.interpreter.scope.SetAll(d, true)
 	}
 	return nil
+}
+
+func (p *Parser) interpret(pkg *core.Package, label, dependent *core.BuildLabel, forSubinclude bool, stmts []*Statement) error {
+	p.subincludeLock.RLock()
+	defer p.subincludeLock.RUnlock()
+	_, err := p.interpreter.interpretAll(pkg, label, dependent, forSubinclude, stmts)
+	return err
 }
 
 // ParseReader parses the contents of the given ReadSeeker as a BUILD file.
@@ -128,8 +144,7 @@ func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	_, err = p.interpreter.interpretAll(pkg, nil, nil, false, stmts)
-	return true, err
+	return true, p.interpret(pkg, nil, nil, false, stmts)
 }
 
 // ParseFileOnly parses the given file but does not interpret it.
