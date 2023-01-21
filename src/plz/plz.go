@@ -110,6 +110,8 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		state.Graph.AddSubrepo(core.SubrepoForArch(state, arch))
 	}
 	if len(preTargets) > 0 {
+		needBuild := state.NeedBuild
+		state.NeedBuild = true // Always need this now since --pre implies actually building the thing.
 		findOriginalTaskSet(state, preTargets, false, arch)
 		for _, target := range preTargets {
 			if target.IsAllTargets() {
@@ -120,9 +122,10 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		}
 		for _, target := range state.ExpandLabels(preTargets) {
 			log.Debug("Waiting for pre-target %s...", target)
-			state.WaitForInitialTargetAndEnsureDownload(target, targets[0])
+			state.WaitForInitialTargetAndEnsureDownload(target, core.OriginalTarget)
 			log.Debug("Pre-target %s built, continuing...", target)
 		}
+		state.NeedBuild = needBuild
 	}
 	findOriginalTaskSet(state, targets, true, arch)
 	log.Debug("Original target scan complete")
