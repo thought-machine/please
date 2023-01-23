@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+
+	"github.com/peterebden/go-cli-init/v5/flags"
 )
 
 type rules struct {
@@ -70,18 +72,28 @@ func must(err error) {
 	}
 }
 
+var opts struct {
+	Input []string `short:"i" long:"input" description:"Input file(s)"`
+	Rules []string `short:"r" long:"rules" description:"Rules file"`
+}
+
 func main() {
+	flags.ParseFlagsOrDie("Docs template", &opts, nil)
 	r := &rules{}
-	tmpl, err := template.New("lexicon.html").Funcs(template.FuncMap{
+	split := strings.Split(opts.Input[0], "/")
+	basename := split[len(split)-1]
+	tmpl, err := template.New(basename).Funcs(template.FuncMap{
 		"join": strings.Join,
 		"newlines": func(name, docstring string) string {
 			return r.AddLinks(name, strings.ReplaceAll(htmltemplate.HTMLEscapeString(docstring), "\n", "<br/>"))
 		},
-	}).ParseFiles("docs/lexicon.html", "docs/lexicon_entry.html")
+	}).ParseFiles(opts.Input...)
 	must(err)
-	b, err := os.ReadFile("docs/rules.json")
-	must(err)
-	must(json.Unmarshal(b, r))
+	for _, rulesRile := range opts.Rules {
+		b, err := os.ReadFile(rulesRile)
+		must(err)
+		must(json.Unmarshal(b, r))
+	}
 	for name, rule := range r.Functions {
 		if strings.HasPrefix(name, "c_") {
 			rule.Aliases = append(rule.Aliases, "c"+name)
