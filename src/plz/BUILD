@@ -15,3 +15,13 @@ go_library(
         "//third_party/go:cli-init",
     ],
 )
+
+go_test(
+    name = "plz_test",
+    srcs = ["plz_test.go"],
+    deps = [
+        ":plz",
+        "//src/core",
+        "//third_party/go:testify",
+    ]
+)

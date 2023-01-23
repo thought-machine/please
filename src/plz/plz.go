@@ -150,13 +150,14 @@ func stripHostRepoName(config *core.Configuration, label core.BuildLabel) core.B
 	if label.Subrepo == hostArch.String() {
 		label.Subrepo = ""
 	}
+	label.Subrepo = strings.TrimSuffix(label.Subrepo, "_" + hostArch.String())
 
 	return label
 }
 
 func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool, arch cli.Arch) {
 	if arch != cli.HostArch() {
-		target = core.LabelForArch(target, arch)
+		target = core.LabelToArch(target, arch)
 	}
 	target = stripHostRepoName(state.Config, target)
 	if target.IsAllSubpackages() {

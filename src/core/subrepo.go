@@ -57,7 +57,8 @@ func SubrepoArchName(subrepo string, arch cli.Arch) string {
 	return subrepo + "_" + arch.String()
 }
 
-func LabelForArch(label BuildLabel, arch cli.Arch) BuildLabel {
+// LabelToArch converts the provided label to the given architecture
+func LabelToArch(label BuildLabel, arch cli.Arch) BuildLabel {
 	if label.Subrepo == "" {
 		label.Subrepo = arch.String()
 		return label
