@@ -57,6 +57,18 @@ func SubrepoArchName(subrepo string, arch cli.Arch) string {
 	return subrepo + "_" + arch.String()
 }
 
+func LabelForArch(label BuildLabel, arch cli.Arch) BuildLabel {
+	if label.Subrepo == "" {
+		label.Subrepo = arch.String()
+		return label
+	}
+	if strings.HasSuffix(label.Subrepo, arch.String()) {
+		return label
+	}
+	label.Subrepo = SubrepoArchName(label.Subrepo, arch)
+	return label
+}
+
 // Dir returns the directory for a package of this name.
 func (s *Subrepo) Dir(dir string) string {
 	return filepath.Join(s.Root, dir)

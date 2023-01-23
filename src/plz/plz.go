@@ -135,10 +135,30 @@ func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addT
 	}
 }
 
+func stripHostRepoName(config *core.Configuration, label core.BuildLabel) core.BuildLabel {
+	if label.Subrepo == "" {
+		return label
+	}
+
+	if label.Subrepo == config.PluginDefinition.Name {
+		label.Subrepo = ""
+		return label
+	}
+	label.Subrepo = strings.TrimPrefix(label.Subrepo, config.PluginDefinition.Name + "_")
+
+	hostArch := cli.HostArch()
+	if label.Subrepo == hostArch.String() {
+		label.Subrepo = ""
+	}
+
+	return label
+}
+
 func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool, arch cli.Arch) {
 	if arch != cli.HostArch() {
-		target.Subrepo = arch.String()
+		target = core.LabelForArch(target, arch)
 	}
+	target = stripHostRepoName(state.Config, target)
 	if target.IsAllSubpackages() {
 		// Any command-line labels with subrepos and ... require us to know where they are in order to
 		// walk the directory tree, so we have to make sure the subrepo exists first.
