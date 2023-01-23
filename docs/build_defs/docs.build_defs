@@ -24,3 +24,32 @@ def html_template(name : str, src : str, output : str = ''):
         tools = ["//docs/tools/templater"],
         visibility = ["//docs/..."],
     )
+
+def plugin_rules(name : str, revision : str):
+    remote = remote_file(
+        name = f"{name}_remote",
+        url = f"https://github.com/please-build/{name}-rules/archive/refs/tags/{revision}.tar.gz",
+        extract = True,
+    )
+
+    extracted = build_rule(
+            name = name,
+            srcs = [remote],
+            outs = [f"{name}_build_defs"],
+            cmd = f"cp -r $SRCS/build_defs $OUT",
+            tag = 'extract',
+    )
+
+    json = build_rule(
+        name = name,
+        srcs = [extracted],
+        outs = [f"{name}_rules.json"],
+        tag = 'json',
+        cmd = "$TOOL init && $TOOL query rules $SRCS/* > $OUT",
+        tools = ["//src:please"],
+    )
+
+    return export_file(
+        name = f"{name}",
+        src = json,
+        )

@@ -33,59 +33,6 @@ genrule(
     tools = ["//src:please"],
 )
 
-plugins = {
-    "python": "v1.2.0",
-    "java": "v0.2.5",
-    "go": "v1.1.4",
-    "cc": "v0.3.2",
-    "shell": "v0.1.1",
-}
-
-for plugin, tag in plugins.items():
-    http_archive(
-        name = f"{plugin}",
-        urls = [f"https://github.com/please-build/{plugin}-rules/archive/refs/tags/{tag}.tar.gz"],
-    )
-    genrule(
-        name = f"{plugin}_extract_build_defs",
-        srcs = [f":{plugin}"],
-        outs = [f"{plugin}_build_defs"],
-        cmd = [
-            "mkdir -p $OUT",
-            f"find $SRCS -type f -name '*.build_defs' -exec mv {{}} $OUT \;",
-        ],
-    )
-    filegroup(
-        name = f"{plugin}_build_defs",
-        srcs = [f":{plugin}_extract_build_defs"],
-        visibility = ["PUBLIC"],
-    )
-    genrule(
-        name = f"{plugin}_rules_json",
-        srcs = [f":{plugin}_extract_build_defs"],
-        outs = [f"{plugin}_rules.json"],
-        cmd = [
-            "$TOOL init",
-            "$TOOL query rules $SRCS/* > $OUT",
-        ],
-        tools = ["//src:please"],
-    )
-
-# genrule(
-#     name = "plugin_rules",
-#     outs = ["plugin_rules.json"],
-#     srcs = [
-#         ":python_extract_build_defs",
-#         ":java_extract_build_defs",
-#         ":go_extract_build_defs",
-#         ":cc_extract_build_defs",
-#         ":shell_extract_build_defs",
-#     ],
-#     cmd = '"$TOOL" init && "$TOOL" query rules $(find . -name \'*.build_defs\') > "$OUT"',
-#     deps = [":python"],
-#     tools = ["//src:please"],
-# )
-
 genrule(
     name = "lexicon_html",
     srcs = deps + [
@@ -106,6 +53,23 @@ genrule(
     },
 )
 
+plugins = {
+    "python": "v1.2.0",
+    "java": "v0.2.5",
+    "go": "v1.1.4",
+    "cc": "v0.3.2",
+    "shell": "v0.1.1",
+}
+
+plugin_lex_cmd = "\"$TOOLS_LEX\" -i docs/plugins.html -i docs/lexicon_entry.html"
+for plugin, revision in plugins.items():
+    plugin_rules(
+        name = plugin,
+        revision = revision,
+    )
+
+    plugin_lex_cmd += " -r docs/%s_rules.json" % plugin
+
 genrule(
     name = "plugins_html",
     srcs = deps + [
@@ -113,15 +77,15 @@ genrule(
         "lexicon_entry.html",
         "template.html",
         "plugins.html",
-        ":python_rules_json",
-        ":java_rules_json",
-        ":go_rules_json",
-        ":cc_rules_json",
-        ":shell_rules_json",
+        ":python",
+        ":java",
+        ":go",
+        ":cc",
+        ":shell",
     ],
     outs = ["plugins.html"],
     cmd = [
-        '"$TOOLS_LEX" -i docs/plugins.html -i docs/lexicon_entry.html -r docs/python_rules.json -r docs/java_rules.json > "$OUT"',
+        plugin_lex_cmd + " > \"$OUT\"",
         '"$TOOLS_TMPL" --template docs/template.html --in plugins.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],
