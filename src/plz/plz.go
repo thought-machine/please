@@ -144,13 +144,13 @@ func stripHostRepoName(config *core.Configuration, label core.BuildLabel) core.B
 		label.Subrepo = ""
 		return label
 	}
-	label.Subrepo = strings.TrimPrefix(label.Subrepo, config.PluginDefinition.Name + "_")
+	label.Subrepo = strings.TrimPrefix(label.Subrepo, config.PluginDefinition.Name+"_")
 
 	hostArch := cli.HostArch()
 	if label.Subrepo == hostArch.String() {
 		label.Subrepo = ""
 	}
-	label.Subrepo = strings.TrimSuffix(label.Subrepo, "_" + hostArch.String())
+	label.Subrepo = strings.TrimSuffix(label.Subrepo, "_"+hostArch.String())
 
 	return label
 }

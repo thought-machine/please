@@ -22,6 +22,7 @@ go_test(
     deps = [
         ":plz",
         "//src/core",
+        "//src/cli",
         "//third_party/go:testify",
     ]
 )
