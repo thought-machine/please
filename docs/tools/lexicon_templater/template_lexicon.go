@@ -15,17 +15,6 @@ type rules struct {
 	Functions map[string]*rule `json:"functions"`
 }
 
-// // PluginRules returns the rules for this plugin.
-// func (r *rules) PluginRules(plugin string) []*rule {
-// 	var rules []*rule
-// 	for _, rule := range r.Functions {
-// 		if rule.Plugin == plugin {
-// 			rules = append(rules, rule)
-// 		}
-// 	}
-// 	return rules
-// }
-
 // Named returns the rule with given name.
 func (r *rules) Named(name string) *rule {
 	rule, present := r.Functions[name]
