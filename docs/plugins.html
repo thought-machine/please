@@ -4,18 +4,28 @@
   Please plugins are a way to extend Please's functionality. They can be loaded into Please by adding them to the <code class="code">.plzconfig</code> file. For example, to load the <code class="code">python</code> plugin, add the following to your <code class="code">.plzconfig</code> file:
 </p>
 
-<code class="language-config">[Plugin "python"]
-target = //plugins:python</code>
+<pre class="code-container">
+    <!-- prettier-ignore -->
+    <code class="language-config">
+    [Plugin "python"]
+    target = //plugins:python
+    </code>
+</pre>
 
 <p>
 where <code class="code">//plugins:python</code> is the target that builds the plugin. For example:
 </p>
 
-<code class="language-python">plugin_repo(
-    name = "python",
-    plugin = "python-rules",
-    revision = "v0.1.0",
-)</code>
+<pre class="code-container">
+<!-- prettier-ignore -->
+    <code class="language-python">
+    plugin_repo(
+        name = "python",
+        plugin = "python-rules",
+        revision = "v0.1.0",
+    )
+    </code>
+</pre>
 
 <p>
 There are some first-class plugins that are supported and maintained by the Please team. These are listed below.
