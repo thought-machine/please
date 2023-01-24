@@ -1,3 +1,13 @@
+plugins = {
+    "python": "v1.2.0",
+    "java": "v0.2.5",
+    "go": "v1.1.4",
+    "cc": "v0.3.2",
+    "shell": "v0.1.1",
+}
+
+# The plugin docs linter expects the version dict above to be at the top of the file
+
 subinclude("//docs/build_defs")
 
 deps = []
@@ -54,14 +64,6 @@ genrule(
     },
     visibility = ["//docs/test/..."],
 )
-
-plugins = {
-    "python": "v1.2.0",
-    "java": "v0.2.5",
-    "go": "v1.1.4",
-    "cc": "v0.3.2",
-    "shell": "v0.1.1",
-}
 
 plugin_targets = []
 
