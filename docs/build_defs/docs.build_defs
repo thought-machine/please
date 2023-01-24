@@ -32,6 +32,7 @@ def plugin_rules(name : str, revision : str):
         extract = True,
     )
 
+    # the build_def files
     extracted = build_rule(
             name = name,
             srcs = [remote],
@@ -40,16 +41,11 @@ def plugin_rules(name : str, revision : str):
             tag = 'extract',
     )
 
-    json = build_rule(
+    # use plz query rules to extract the rules
+    return build_rule(
         name = name,
         srcs = [extracted],
         outs = [f"{name}_rules.json"],
-        tag = 'json',
         cmd = "$TOOL init && $TOOL query rules $SRCS/* > $OUT",
         tools = ["//src:please"],
-    )
-
-    return export_file(
-        name = name,
-        src = json,
     )
