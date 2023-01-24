@@ -63,8 +63,6 @@ plugins = {
     "shell": "v0.1.1",
 }
 
-plugin_lex_cmd = "\"$TOOLS_LEX\" -i docs/plugins.html -i docs/lexicon_entry.html"
-
 plugin_targets = []
 
 for plugin, revision in plugins.items():
@@ -73,7 +71,6 @@ for plugin, revision in plugins.items():
         revision = revision,
     )
 
-    plugin_lex_cmd += " -r docs/%s_rules.json" % plugin
     plugin_targets += [":%s" % plugin]
 
 filegroup(
@@ -97,7 +94,7 @@ genrule(
     ],
     outs = ["plugins.html"],
     cmd = [
-        plugin_lex_cmd + " > \"$OUT\"",
+        '"$TOOLS_LEX" -i docs/plugins.html -i docs/lexicon_entry.html docs/*_rules.json > "$OUT"',
         '"$TOOLS_TMPL" --template docs/template.html --in plugins.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],

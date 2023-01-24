@@ -50,6 +50,6 @@ def plugin_rules(name : str, revision : str):
     )
 
     return export_file(
-        name = f"{name}",
+        name = name,
         src = json,
-        )
+    )

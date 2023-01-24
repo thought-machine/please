@@ -62,8 +62,10 @@ func must(err error) {
 }
 
 var opts struct {
-	Input []string `short:"i" long:"input" description:"Input file(s)"`
-	Rules []string `short:"r" long:"rules" description:"Rules file(s)"`
+	Input []string `short:"i" long:"input" required:"true" description:"Input file(s)"`
+	Args  struct {
+		Rules []string `positional-arg-name:"rules" required:"true" description:"Rules file(s)"`
+	} `positional-args:"true"`
 }
 
 func main() {
@@ -78,7 +80,7 @@ func main() {
 		},
 	}).ParseFiles(opts.Input...)
 	must(err)
-	for _, rulesRile := range opts.Rules {
+	for _, rulesRile := range opts.Args.Rules {
 		b, err := os.ReadFile(rulesRile)
 		must(err)
 		must(json.Unmarshal(b, r))
