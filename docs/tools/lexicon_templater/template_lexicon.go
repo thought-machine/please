@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	htmltemplate "html/template"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
@@ -64,15 +65,14 @@ func must(err error) {
 var opts struct {
 	Input []string `short:"i" long:"input" required:"true" description:"Input file(s)"`
 	Args  struct {
-		Rules []string `positional-arg-name:"rules" required:"true" description:"Rules file(s)"`
+		Rules []string `positional-arg-name:"Rules files" required:"true" description:"Rules file(s)"`
 	} `positional-args:"true"`
 }
 
 func main() {
 	flags.ParseFlagsOrDie("Docs template", &opts, nil)
 	r := &rules{}
-	split := strings.Split(opts.Input[0], "/")
-	basename := split[len(split)-1]
+	basename := filepath.Base(opts.Input[0])
 	tmpl, err := template.New(basename).Funcs(template.FuncMap{
 		"join": strings.Join,
 		"newlines": func(name, docstring string) string {

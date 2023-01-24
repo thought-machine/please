@@ -44,7 +44,7 @@ genrule(
     ],
     outs = ["lexicon.html"],
     cmd = [
-        '"$TOOLS_LEX" -i docs/lexicon.html -i docs/lexicon_entry.html -r docs/rules.json > "$OUT"',
+        '"$TOOLS_LEX" -i docs/lexicon.html -i docs/lexicon_entry.html docs/rules.json > "$OUT"',
         '"$TOOLS_TMPL" --template docs/template.html --in lexicon.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],
