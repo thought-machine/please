@@ -64,7 +64,9 @@ plugins = {
 }
 
 plugin_lex_cmd = "\"$TOOLS_LEX\" -i docs/plugins.html -i docs/lexicon_entry.html"
+
 plugin_targets = []
+
 for plugin, revision in plugins.items():
     plugin_rules(
         name = plugin,
@@ -76,8 +78,8 @@ for plugin, revision in plugins.items():
 
 filegroup(
     name = "plugins",
-    deps = plugin_targets,
     visibility = ["//docs/test/..."],
+    deps = plugin_targets,
 )
 
 genrule(
