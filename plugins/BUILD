@@ -15,10 +15,3 @@ plugin_repo(
     plugin = "java-rules",
     revision = "v0.2.4",
 )
-
-plugin_repo(
-  name = "shell",
-  revision = "v0.1.1",
-  plugin = "shell-rules",
-  owner = "please-build",
-)
