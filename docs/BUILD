@@ -31,6 +31,7 @@ genrule(
     local = True,
     sandbox = False,
     tools = ["//src:please"],
+    visibility = ["//docs/test/..."],
 )
 
 genrule(
@@ -51,6 +52,7 @@ genrule(
         "lex": ["//docs/tools/lexicon_templater"],
         "tmpl": ["//docs/tools/templater"],
     },
+    visibility = ["//docs/test/..."],
 )
 
 plugins = {
@@ -62,6 +64,7 @@ plugins = {
 }
 
 plugin_lex_cmd = "\"$TOOLS_LEX\" -i docs/plugins.html -i docs/lexicon_entry.html"
+plugin_targets = []
 for plugin, revision in plugins.items():
     plugin_rules(
         name = plugin,
@@ -69,6 +72,13 @@ for plugin, revision in plugins.items():
     )
 
     plugin_lex_cmd += " -r docs/%s_rules.json" % plugin
+    plugin_targets += [":%s" % plugin]
+
+filegroup(
+    name = "plugins",
+    deps = plugin_targets,
+    visibility = ["//docs/test/..."],
+)
 
 genrule(
     name = "plugins_html",
@@ -93,6 +103,7 @@ genrule(
         "lex": ["//docs/tools/lexicon_templater"],
         "tmpl": ["//docs/tools/templater"],
     },
+    visibility = ["//docs/test/..."],
 )
 
 genrule(
