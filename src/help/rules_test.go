@@ -10,7 +10,8 @@ import (
 )
 
 func TestRuleArgs(t *testing.T) {
-	env := getRuleArgs(core.NewDefaultBuildState())
+	funcMap := getFunctionsFromState(core.NewDefaultBuildState())
+	env := getRuleArgs(funcMap)
 	assert.True(t, len(env.Functions) > 20) // Don't care exactly how many there are, but it should have a fair few.
 	rule := env.Functions["cc_library"]
 	assert.True(t, len(rule.Args) > 5)
@@ -34,7 +35,8 @@ func TestRuleArgs(t *testing.T) {
 }
 
 func TestMultilineComment(t *testing.T) {
-	env := getRuleArgs(core.NewDefaultBuildState())
+	funcMap := getFunctionsFromState(core.NewDefaultBuildState())
+	env := getRuleArgs(funcMap)
 	rule := env.Functions["new_http_archive"]
 	assert.True(t, strings.Count(rule.Comment, "\n") > 1)
 }
