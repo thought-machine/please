@@ -31,8 +31,11 @@ There are some first-class plugins that are supported and maintained by the Plea
   </p>
 
   <!-- prettier-ignore -->
-  {{/* loop over the python rules */}}
+  {{ template "lexicon_entry.html" .Named "python_library" }}
   {{ template "lexicon_entry.html" .Named "python_binary" }}
+  {{ template "lexicon_entry.html" .Named "python_test" }}
+  {{ template "lexicon_entry.html" .Named "pip_library" }}
+  {{ template "lexicon_entry.html" .Named "python_wheel" }}
 </section>
 
 <section class="mt4">
@@ -45,7 +48,11 @@ There are some first-class plugins that are supported and maintained by the Plea
     </p>
 
   <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "java_binary" }}
+  {{ template "lexicon_entry.html" .Named "c_library" }}
+  {{ template "lexicon_entry.html" .Named "c_static_library" }}
+  {{ template "lexicon_entry.html" .Named "c_shared_object" }}
+  {{ template "lexicon_entry.html" .Named "c_binary" }}
+  {{ template "lexicon_entry.html" .Named "c_test" }}
 </section>
 
 <section class="mt4">
@@ -56,6 +63,18 @@ There are some first-class plugins that are supported and maintained by the Plea
     <p>
         The go-rules plugin provides rules for building Go code.
     </p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "go_toolchain" }}
+  {{ template "lexicon_entry.html" .Named "go_library" }}
+  {{ template "lexicon_entry.html" .Named "cgo_library" }}
+  {{ template "lexicon_entry.html" .Named "go_binary" }}
+  {{ template "lexicon_entry.html" .Named "go_test" }}
+  {{ template "lexicon_entry.html" .Named "go_benchmark" }}
+  {{ template "lexicon_entry.html" .Named "cgo_test" }}
+  {{ template "lexicon_entry.html" .Named "go_test_main" }}
+  {{ template "lexicon_entry.html" .Named "go_module" }}
+  {{ template "lexicon_entry.html" .Named "go_mod_download" }}
 </section>
 
 <section class="mt4">
@@ -66,6 +85,15 @@ There are some first-class plugins that are supported and maintained by the Plea
     <p>
         The java-rules plugin provides rules for building Java code.
     </p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "java_library" }}
+  {{ template "lexicon_entry.html" .Named "java_module" }}
+  {{ template "lexicon_entry.html" .Named "java_binary" }}
+  {{ template "lexicon_entry.html" .Named "java_runtime_image" }}
+  {{ template "lexicon_entry.html" .Named "java_test" }}
+  {{ template "lexicon_entry.html" .Named "maven_jar" }}
+  {{ template "lexicon_entry.html" .Named "java_toolchain" }}
 </section>
 
 <section class="mt4">
@@ -76,5 +104,11 @@ There are some first-class plugins that are supported and maintained by the Plea
     <p>
         The shell-rules plugin provides rules for building shell code.
     </p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "sh_library" }}
+  {{ template "lexicon_entry.html" .Named "sh_binary" }}
+  {{ template "lexicon_entry.html" .Named "sh_cmd" }}
+  {{ template "lexicon_entry.html" .Named "sh_test" }}
 </section>
 
