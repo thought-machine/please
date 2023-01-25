@@ -48,4 +48,5 @@ def plugin_rules(name : str, revision : str):
         outs = [f"{name}_rules.json"],
         cmd = "$TOOL init && $TOOL query rules $SRCS/* > $OUT",
         tools = ["//src:please"],
+        labels = [f"{name}_plugin_docs_version:{revision}"],
     )
