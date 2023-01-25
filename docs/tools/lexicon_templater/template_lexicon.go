@@ -80,8 +80,8 @@ func main() {
 		},
 	}).ParseFiles(opts.Input...)
 	must(err)
-	for _, rulesRile := range opts.Args.Rules {
-		b, err := os.ReadFile(rulesRile)
+	for _, rulesFile := range opts.Args.Rules {
+		b, err := os.ReadFile(rulesFile)
 		must(err)
 		must(json.Unmarshal(b, r))
 	}
