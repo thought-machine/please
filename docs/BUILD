@@ -13,6 +13,7 @@ for src in glob(
         "language.html",
         "config.html",
         "error.html",
+        "plugins.html",
     ],
 ):
     deps += [html_template(name = src.replace(".", "_").replace("/", "_"), src = src)]
@@ -30,6 +31,7 @@ genrule(
     local = True,
     sandbox = False,
     tools = ["//src:please"],
+    visibility = ["//docs/test/..."],
 )
 
 genrule(
@@ -42,7 +44,7 @@ genrule(
     ],
     outs = ["lexicon.html"],
     cmd = [
-        '"$TOOLS_LEX" > lexicon.html',
+        '"$TOOLS_LEX" -i docs/lexicon.html -i docs/lexicon_entry.html docs/rules.json > "$OUT"',
         '"$TOOLS_TMPL" --template docs/template.html --in lexicon.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],
@@ -50,6 +52,50 @@ genrule(
         "lex": ["//docs/tools/lexicon_templater"],
         "tmpl": ["//docs/tools/templater"],
     },
+    visibility = ["//docs/test/..."],
+)
+
+# Plugin versions to pull the docs from
+plugins = {
+    "python": "v1.2.0",
+    "java": "v0.2.5",
+    "go": "v1.1.4",
+    "cc": "v0.3.2",
+    "shell": "v0.1.1",
+}
+
+plugin_targets = []
+
+for plugin, revision in plugins.items():
+    plugin_rules_target = plugin_rules(name = plugin, revision = revision)
+    plugin_targets += [plugin_rules_target]
+
+filegroup(
+    name = "plugins",
+    visibility = ["//docs/test/..."],
+    exported_deps = plugin_targets,
+)
+
+genrule(
+    name = "plugins_html",
+    srcs = deps + [
+        "lexicon.html",
+        "lexicon_entry.html",
+        "template.html",
+        "plugins.html",
+    ],
+    deps = [":plugins"],
+    outs = ["plugins.html"],
+    cmd = [
+        '"$TOOLS_LEX" -i docs/plugins.html -i docs/lexicon_entry.html docs/*_rules.json > "$OUT"',
+        '"$TOOLS_TMPL" --template docs/template.html --in plugins.html > tmp.html',
+        'mv tmp.html "$OUT"',
+    ],
+    tools = {
+        "lex": ["//docs/tools/lexicon_templater"],
+        "tmpl": ["//docs/tools/templater"],
+    },
+    visibility = ["//docs/test/..."],
 )
 
 genrule(
@@ -89,6 +135,7 @@ filegroup(
     name = "docs",
     srcs = glob(["images/*.png"]) + deps + [
         ":language_html",
+        ":plugins_html",
         ":lexicon_html",
         ":config_html",
         "tachyons-4.12.0.min.css",

@@ -273,6 +273,56 @@
               {{end}}
             </li>
 
+            {{$isItemActive := matches .Filename "plugins.html"}}
+            <li
+                    class="mv2 {{boolOption $isItemActive "white before-dw-arrow" "violet before-rw-arrow hover-before-white"}}"
+                    role="menuitem">
+              <a
+                      class="{{boolOption $isItemActive "white" "violet"}} no-underline"
+                      href="/plugins.html"
+              >Plugins</a
+              >
+              {{if $isItemActive}}
+                <ul role="menu">
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#python"
+                    >Python</a
+                    >
+                  </li>
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#cc"
+                    >C++</a
+                    >
+                  </li>
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#go"
+                    >Go</a
+                    >
+                  </li>
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#java"
+                    >Java</a
+                    >
+                  </li>
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#shell"
+                    >Shell</a
+                    >
+                  </li>
+                </ul>
+              {{end}}
+            </li>
+
             {{$isItemActive := matches .Filename "build_rules.html" "tests.html" "workers.html" "post_build.html" "require_provide.html"}}
             <li
                     class="mv2 {{boolOption $isItemActive "white before-dw-arrow" "violet before-rw-arrow hover-before-white"}}"

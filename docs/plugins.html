@@ -1,0 +1,129 @@
+<h1 class="title-1">Please Plugins</h1>
+
+<p>
+  Please plugins are a way to extend Please's functionality. They can be loaded into Please by adding them to the <code class="code">.plzconfig</code> file. For example, to load the <code class="code">python</code> plugin, add the following to your <code class="code">.plzconfig</code> file:
+</p>
+
+<pre class="code-container">
+    <!-- prettier-ignore -->
+    <code class="language-config">
+    [Plugin "python"]
+    target = //plugins:python
+    </code>
+</pre>
+
+<p>
+where <code class="code">//plugins:python</code> is the target that builds the plugin. For example:
+</p>
+
+<pre class="code-container">
+<!-- prettier-ignore -->
+    <code class="language-python">
+    plugin_repo(
+        name = "python",
+        plugin = "python-rules",
+        revision = "v0.1.0",
+    )
+    </code>
+</pre>
+
+<p>
+There are some first-class plugins that are supported and maintained by the Please team. These are listed below.
+</p>
+
+<section class="mt4">
+  <h2 class="title-2" id="python">
+    Python rules
+  </h2>
+
+  <p>
+  The python-rules plugin provides rules for building Python code.
+  </p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "python_library" }}
+  {{ template "lexicon_entry.html" .Named "python_binary" }}
+  {{ template "lexicon_entry.html" .Named "python_test" }}
+  {{ template "lexicon_entry.html" .Named "pip_library" }}
+  {{ template "lexicon_entry.html" .Named "python_wheel" }}
+  {{ template "lexicon_entry.html" .Named "python_multiversion_wheel" }}
+</section>
+
+<section class="mt4">
+    <h2 class="title-2" id="cc">
+        C/C++ rules
+    </h2>
+
+    <p>
+        The cc-rules plugin provides rules for building C/C++ code.
+    </p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "c_library" }}
+  {{ template "lexicon_entry.html" .Named "c_static_library" }}
+  {{ template "lexicon_entry.html" .Named "c_shared_object" }}
+  {{ template "lexicon_entry.html" .Named "c_binary" }}
+  {{ template "lexicon_entry.html" .Named "c_test" }}
+  {{ template "lexicon_entry.html" .Named "c_embed_binary" }}
+  {{ template "lexicon_entry.html" .Named "c_object" }}
+  {{ template "lexicon_entry.html" .Named "cc_module" }}
+</section>
+
+<section class="mt4">
+    <h2 class="title-2" id="go">
+        Go rules
+    </h2>
+
+    <p>
+        The go-rules plugin provides rules for building Go code.
+    </p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "go_toolchain" }}
+  {{ template "lexicon_entry.html" .Named "go_library" }}
+  {{ template "lexicon_entry.html" .Named "cgo_library" }}
+  {{ template "lexicon_entry.html" .Named "go_binary" }}
+  {{ template "lexicon_entry.html" .Named "go_test" }}
+  {{ template "lexicon_entry.html" .Named "go_benchmark" }}
+  {{ template "lexicon_entry.html" .Named "cgo_test" }}
+  {{ template "lexicon_entry.html" .Named "go_test_main" }}
+  {{ template "lexicon_entry.html" .Named "go_module" }}
+  {{ template "lexicon_entry.html" .Named "go_mod_download" }}
+  {{ template "lexicon_entry.html" .Named "merge_cgo_obj" }}
+</section>
+
+<section class="mt4">
+    <h2 class="title-2" id="java">
+        Java rules
+    </h2>
+
+    <p>
+        The java-rules plugin provides rules for building Java code.
+    </p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "java_library" }}
+  {{ template "lexicon_entry.html" .Named "java_module" }}
+  {{ template "lexicon_entry.html" .Named "java_binary" }}
+  {{ template "lexicon_entry.html" .Named "java_runtime_image" }}
+  {{ template "lexicon_entry.html" .Named "java_test" }}
+  {{ template "lexicon_entry.html" .Named "maven_jar" }}
+  {{ template "lexicon_entry.html" .Named "java_toolchain" }}
+</section>
+
+<section class="mt4">
+    <h2 class="title-2" id="shell">
+        Shell rules
+    </h2>
+
+    <p>
+        The shell-rules plugin provides rules for building shell code.
+    </p>
+
+  <!-- prettier-ignore -->
+  {{ template "lexicon_entry.html" .Named "sh_library" }}
+  {{ template "lexicon_entry.html" .Named "sh_binary" }}
+  {{ template "lexicon_entry.html" .Named "sh_cmd" }}
+  {{ template "lexicon_entry.html" .Named "sh_test" }}
+</section>
+
