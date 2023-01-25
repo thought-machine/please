@@ -67,17 +67,13 @@ plugins = {
 plugin_targets = []
 
 for plugin, revision in plugins.items():
-    plugin_rules_target = plugin_rules(
-                              name = plugin,
-                              revision = revision,
-                          )
-
+    plugin_rules_target = plugin_rules(name = plugin, revision = revision)
     plugin_targets += [plugin_rules_target]
 
 filegroup(
     name = "plugins",
     visibility = ["//docs/test/..."],
-    deps = plugin_targets,
+    exported_deps = plugin_targets,
 )
 
 genrule(
@@ -87,12 +83,8 @@ genrule(
         "lexicon_entry.html",
         "template.html",
         "plugins.html",
-        ":python",
-        ":java",
-        ":go",
-        ":cc",
-        ":shell",
     ],
+    deps = [":plugins"],
     outs = ["plugins.html"],
     cmd = [
         '"$TOOLS_LEX" -i docs/plugins.html -i docs/lexicon_entry.html docs/*_rules.json > "$OUT"',
