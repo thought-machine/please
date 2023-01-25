@@ -195,7 +195,7 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 	return ret
 }
 
-func (i *interpreter) loadPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, c *pyConfig) {
+func (i *interpreter) loadPluginConfig(s *scope, pluginState *core.BuildState) {
 	if pluginState.RepoConfig == nil {
 		return
 	}
@@ -206,26 +206,17 @@ func (i *interpreter) loadPluginConfig(pluginState *core.BuildState, pkgState *c
 		return
 	}
 
-	var dict pyDict
-	if !c.base.finalised {
-		c.base.Lock()
-		defer c.base.Unlock()
-
-		dict = c.base.dict
-	} else {
-		if c.overlay == nil {
-			c.overlay = pyDict{}
-		}
-		dict = c.overlay
+	if s.config.overlay == nil {
+		s.config.overlay = pyDict{}
 	}
 
 	key := strings.ToUpper(pluginName)
-	if _, ok := dict[key]; ok {
+	if _, ok := s.config.overlay[key]; ok {
 		return
 	}
 
-	cfg := pluginConfig(pluginState, pkgState)
-	dict[key] = cfg
+	cfg := pluginConfig(pluginState, s.state)
+	s.config.overlay[key] = cfg
 }
 
 func toPyObject(key, val, toType string) pyObject {

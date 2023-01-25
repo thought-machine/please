@@ -804,11 +804,6 @@ func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 
 type pyConfigBase struct {
 	dict pyDict
-
-	// While preloading, we might be mutating base with the plugin configs. During this time we must use mux to control
-	// access to base.
-	finalised bool
-	sync.RWMutex
 }
 
 // A pyConfig is a wrapper object around Please's global config.
@@ -898,11 +893,6 @@ func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
 		if obj, present := c.overlay[key]; present {
 			return obj
 		}
-	}
-	// We may still be adding new config values to base when not finalised
-	if !c.base.finalised {
-		c.base.RLock()
-		defer c.base.RUnlock()
 	}
 
 	if obj, present := c.base.dict[key]; present {
