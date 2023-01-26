@@ -1,11 +1,9 @@
 package asp
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"runtime/debug"
-	"runtime/pprof"
 	"strings"
 	"sync"
 
@@ -25,7 +23,6 @@ type interpreter struct {
 
 	breakpointMutex sync.Mutex
 	limiter         semaphore
-	profiling       bool
 
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
 }
@@ -34,7 +31,6 @@ type interpreter struct {
 // It loads all the builtin rules at this point.
 func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	s := &scope{
-		ctx:    context.Background(),
 		state:  state,
 		locals: map[string]pyObject{},
 	}
@@ -51,7 +47,6 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		subincludes: subincludes,
 		config:      newConfig(state),
 		limiter:     make(semaphore, state.Config.Parse.NumThreads),
-		profiling:   state.Config.Profiling,
 	}
 	s.interpreter = i
 	s.LoadSingletons(state)
@@ -207,7 +202,6 @@ type parseTarget struct {
 
 // A scope contains all the information about a lexical scope.
 type scope struct {
-	ctx             context.Context
 	interpreter     *interpreter
 	filename        string
 	state           *core.BuildState
@@ -302,7 +296,6 @@ func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
 
 func (s *scope) newScope(pkg *core.Package, filename string, hint int) *scope {
 	s2 := &scope{
-		ctx:         s.ctx,
 		filename:    filename,
 		interpreter: s.interpreter,
 		state:       s.state,
@@ -834,15 +827,7 @@ func (s *scope) callObject(name string, obj pyObject, c *Call) pyObject {
 	if !ok {
 		s.Error("Non-callable object '%s' (is a %s)", name, obj.Type())
 	}
-	if !s.interpreter.profiling {
-		return f.Call(s.ctx, s, c)
-	}
-	// If the CPU profiler is being run, attach the name of the current function in scope.
-	var ret pyObject
-	pprof.Do(s.ctx, pprof.Labels("asp:func", f.name), func(ctx context.Context) {
-		ret = f.Call(ctx, s, c)
-	})
-	return ret
+	return f.Call(s, c)
 }
 
 // Constant returns an object from an expression that describes a constant,

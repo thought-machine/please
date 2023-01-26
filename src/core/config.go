@@ -685,9 +685,6 @@ type Configuration struct {
 
 	// buildEnvStored is a cached form of BuildEnv.
 	buildEnvStored *storedBuildEnv
-	// Profiling can be set to true by a caller to enable CPU profiling in any areas that might
-	// want to take special effort about it.
-	Profiling bool
 
 	FeatureFlags struct {
 		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
