@@ -248,9 +248,8 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
             toolchain = toolchain,
         )
         deps += [lib_rule]
-    # This is essentially a hack to get past some Java things (notably Jersey) failing
-    # in subtle ways when the jar has a preamble (srsly...).
-    cmd, tools = _jarcat_cmd(main_class, manifest=manifest)
+    preamble = '#!/bin/sh\nexec java %s -jar $0 ${@}' % (jvm_args or '')
+    cmd, tools = _jarcat_cmd(main_class, preamble, manifest=manifest)
     return build_rule(
         name=name,
         deps=deps,
