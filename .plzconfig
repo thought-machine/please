@@ -90,7 +90,6 @@ accept = ISC
 accept = notice
 
 [featureflags]
-JavaBinaryExecutableByDefault = true
 PackageOutputsStrictness = true
 PythonWheelHashing = true
 NoIterSourcesMarked = true
