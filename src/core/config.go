@@ -217,11 +217,6 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		config.Go.GoTool = filepath.Join(config.Go.GoRoot, "bin", "go")
 	}
 
-	// Default values for these guys depend on config.Java.JavaHome if that's been set.
-	if config.Java.JavaHome != "" {
-		defaultPathIfExists(&config.Java.JlinkTool, config.Java.JavaHome, "bin/jlink")
-	}
-
 	if config.Colours == nil {
 		config.Colours = map[string]string{
 			"py":   "${GREEN}",
@@ -417,14 +412,6 @@ func DefaultConfiguration() *Configuration {
 	config.Python.UsePyPI = true
 	config.Python.InterpreterOptions = ""
 	config.Python.PipFlags = ""
-	config.Java.DefaultTestPackage = ""
-	config.Java.SourceLevel = "8"
-	config.Java.TargetLevel = "8"
-	config.Java.ReleaseLevel = ""
-	config.Java.DefaultMavenRepo = []cli.URL{"https://repo1.maven.org/maven2", "https://jcenter.bintray.com/"}
-	config.Java.JavacFlags = "-Werror -Xlint:-options" // bootstrap class path warnings are pervasive without this.
-	config.Java.JlinkTool = "jlink"
-	config.Java.JavaHome = ""
 	config.Cpp.CCTool = "gcc"
 	config.Cpp.CppTool = "g++"
 	config.Cpp.LdTool = "ld"
@@ -458,9 +445,6 @@ func DefaultConfiguration() *Configuration {
 	config.Go.PleaseGoTool = "/////_please:please_go"
 	config.Go.EmbedTool = "/////_please:please_go_embed"
 	config.Python.PexTool = "/////_please:please_pex"
-	config.Java.JavacWorker = "/////_please:javac_worker"
-	config.Java.JarCatTool = "/////_please:arcat"
-	config.Java.JUnitRunner = "/////_please:junit_runner"
 
 	config.Metrics.Timeout = cli.Duration(2 * time.Second)
 
@@ -616,22 +600,6 @@ type Configuration struct {
 		InterpreterOptions  string   `help:"Options to pass to the python interpeter, when writing shebangs for pex executables." var:"PYTHON_INTERPRETER_OPTIONS"`
 		DisableVendorFlags  bool     `help:"Disables injection of vendor specific flags for pip while using pip_library. The option can be useful if you are using something like Pyenv, and the passing of additional flags or configuration that are vendor specific, e.g. --system, breaks your build." var:"DISABLE_VENDOR_FLAGS"`
 	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty." exclude_flag:"ExcludePythonRules"`
-	Java struct {
-		JavacTool          string    `help:"Defines the tool used for the Java compiler. Defaults to javac." var:"JAVAC_TOOL"`
-		JlinkTool          string    `help:"Defines the tool used for the Java linker. Defaults to jlink." var:"JLINK_TOOL"`
-		JavaHome           string    `help:"Defines the path of the Java Home folder." var:"JAVA_HOME"`
-		JavacWorker        string    `help:"Defines the tool used for the Java persistent compiler. This is significantly (approx 4x) faster for large Java trees than invoking javac separately each time. Default to javac_worker in the install directory, but can be switched off to fall back to javactool and separate invocation." var:"JAVAC_WORKER"`
-		JarCatTool         string    `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary, java_test and various other rules. Defaults to arcat in the internal //_please package." var:"JARCAT_TOOL"`
-		JUnitRunner        string    `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.\nDefaults to junit_runner.jar in the internal //_please package." var:"JUNIT_RUNNER"`
-		DefaultTestPackage string    `help:"The Java classpath to search for functions annotated with @Test. If not specified the compiled sources will be searched for files named *Test.java." var:"DEFAULT_TEST_PACKAGE"`
-		ReleaseLevel       string    `help:"The default Java release level when compiling.\nSourceLevel and TargetLevel are ignored if this is set. Bear in mind that this flag is only supported in Java version 9+." var:"JAVA_RELEASE_LEVEL"`
-		SourceLevel        string    `help:"The default Java source level when compiling. Defaults to 8." var:"JAVA_SOURCE_LEVEL"`
-		TargetLevel        string    `help:"The default Java bytecode level to target. Defaults to 8." var:"JAVA_TARGET_LEVEL"`
-		JavacFlags         string    `help:"Additional flags to pass to javac when compiling libraries." example:"-Xmx1200M" var:"JAVAC_FLAGS"`
-		JavacTestFlags     string    `help:"Additional flags to pass to javac when compiling tests." example:"-Xmx1200M" var:"JAVAC_TEST_FLAGS"`
-		DefaultMavenRepo   []cli.URL `help:"Default location to load artifacts from in maven_jar rules. Can be overridden on a per-rule basis." var:"DEFAULT_MAVEN_REPO"`
-		Toolchain          string    `help:"A label identifying a java_toolchain." var:"JAVA_TOOLCHAIN"`
-	} `help:"Please has built-in support for compiling Java.\nIt builds uber-jars for binary and test rules which contain all dependencies and can be easily deployed, and with the help of some of Please's additional tools they are deterministic as well.\n\nWe've only tested support for Java 7 and 8, although it's likely newer versions will work with little or no change." exclude_flag:"ExcludeJavaRules"`
 	Cpp struct {
 		CCTool             string     `help:"The tool invoked to compile C code. Defaults to gcc but you might want to set it to clang, for example." var:"CC_TOOL"`
 		CppTool            string     `help:"The tool invoked to compile C++ code. Defaults to g++ but you might want to set it to clang++, for example." var:"CPP_TOOL"`
@@ -696,7 +664,6 @@ type Configuration struct {
 		PythonWheelHashing            bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
 		NoIterSourcesMarked           bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
 		ExcludePythonRules            bool `help:"Whether to include the python rules or use the plugin"`
-		ExcludeJavaRules              bool `help:"Whether to include the java rules or use the plugin"`
 		ExcludeCCRules                bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
 		ExcludeGoRules                bool `help:"Whether to include the go rules rules or require use of the plugin"`
 		ExcludeShellRules             bool `help:"Whether to include the shell rules rules or require use of the plugin"`
