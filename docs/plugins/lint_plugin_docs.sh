@@ -25,4 +25,6 @@ for PLUGIN in "${plugins[@]}"; do
         echo "Latest version for ${PLUGIN} is ${LATEST}, update the plugin version in docs/BUILD from ${DOCS_VERSION} to ${LATEST}"
         exit 1
     fi
+
+    echo "Latest version for ${PLUGIN} is ${LATEST}. Docs are up to date"
 done
