@@ -104,7 +104,6 @@ var opts struct {
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
 
 	Build struct {
-		Prepare    bool   `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
 		Shell      string `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
 		Rebuild    bool   `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
 		NoDownload bool   `long:"nodownload" hidden:"true" description:"Don't download outputs after building. Only applies when using remote build execution."`
@@ -1116,10 +1115,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedTests = shouldTest
 	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || len(opts.Exec.Sequential.Args.Targets) > 0 || len(opts.Exec.Parallel.Args.Targets) > 0 || opts.Tool.Args.Tool != "" || debug
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
-	if opts.Build.Prepare {
-		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
-	}
-	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
+	state.PrepareOnly = opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
 	state.Watch = len(opts.Watch.Args.Targets) > 0
 	state.CleanWorkdirs = !opts.BehaviorFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
