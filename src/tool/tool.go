@@ -1,7 +1,8 @@
-// Package tool implements running Please's sub-tools (via "plz tool jarcat" etc).
+// Package tool implements running Please's sub-tools (via "plz tool arcat" etc).
 //
 // N.B. This is not how they are invoked during the build; that runs them directly.
-//      This is only a convenience thing at the command line.
+//
+//	This is only a convenience thing at the command line.
 package tool
 
 import (
@@ -49,7 +50,7 @@ func Run(config *core.Configuration, tool Tool, args []string) {
 
 func knownTools(config *core.Configuration) map[string]string {
 	return map[string]string{
-		"jarcat":      config.Java.JarCatTool,
+		"arcat":       config.Build.ArcatTool,
 		"javacworker": config.Java.JavacWorker,
 		"junitrunner": config.Java.JUnitRunner,
 		"langserver":  "//_please:build_langserver",
