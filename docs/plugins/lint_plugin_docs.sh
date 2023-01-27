@@ -3,7 +3,7 @@
 # This script gets the latest tags for each of our first class plugin repos
 # It is intended to be run by a github action
 
-plugins=("python" "java" "go" "cc" "shell")
+plugins=("python" "java" "go" "cc" "shell" "go-proto" "proto")
 
 URLPREFIX="https://github.com/please-build/"
 
