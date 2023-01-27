@@ -40,5 +40,5 @@ sh_cmd(
 github_repo(
     name = "pleasings",
     repo = "thought-machine/pleasings",
-    revision = "v1.0.0",
+    revision = "v1.1.0",
 )
