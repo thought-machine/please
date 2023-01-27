@@ -275,11 +275,6 @@ func checkAndReplaceSequence(state *BuildState, target, dep *BuildTarget, ep, in
 				}
 			}
 		}
-		// TODO(jpoole): remove this once JavaBinaryExecutableByDefault has been merged
-		if runnable && dep.HasLabel("java_non_exe") && !state.Config.FeatureFlags.JavaBinaryExecutableByDefault {
-			// The target is a Java target that isn't self-executable, hence it needs something to run it.
-			output = "java -jar " + output
-		}
 	} else {
 		out, ok := dep.EntryPoints[ep]
 		if !ok {
