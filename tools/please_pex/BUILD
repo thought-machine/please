@@ -2,8 +2,8 @@ go_binary(
     name = "pex_main",
     srcs = ["pex_main.go"],
     deps = [
+        "///third_party/go/gopkg.in_op_go-logging.v1//:go-logging.v1",
         "//src/cli",
-        "//third_party/go:logging",
         "//tools/please_pex/pex",
     ],
 )

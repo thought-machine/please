@@ -1,30 +1,51 @@
 go_library(
     name = "query",
-    srcs = glob(
-        ["*.go"],
-        exclude = ["*_test.go"],
-    ),
+    srcs = [
+        "alltargets.go",
+        "changes.go",
+        "completions.go",
+        "config.go",
+        "deps.go",
+        "filter.go",
+        "graph.go",
+        "inputs.go",
+        "outputs.go",
+        "print.go",
+        "query_step.go",
+        "reverse_deps.go",
+        "roots.go",
+        "somepath.go",
+        "whatinputs.go",
+        "whatoutputs.go",
+    ],
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_please-build_gcfg//:gcfg",
         "//src/build",
-        "//src/cli",
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
-        "//src/parse",
-        "//src/scm",
-        "//third_party/go:gcfg",
     ],
 )
 
 go_test(
     name = "print_test",
-    srcs = ["print_test.go"],
+    srcs = [
+        "changes_test.go",
+        "completions_test.go",
+        "deps_test.go",
+        "graph_test.go",
+        "print_test.go",
+        "reverse_deps_test.go",
+        "whatinputs_test.go",
+        "whatoutputs_test.go",
+    ],
     deps = [
         ":query",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
         "//src/core",
         "//src/parse",
-        "//third_party/go:testify",
     ],
 )
 

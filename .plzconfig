@@ -105,6 +105,7 @@ Target = //plugins:go
 pleasegotool = ///go//tools/please_go:bootstrap
 importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
+FeatureFlags = go_get
 
 [BuildConfig]
 use-go-plugin = True

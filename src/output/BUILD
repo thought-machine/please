@@ -1,37 +1,33 @@
 go_library(
     name = "output",
-    srcs = glob(
-        ["*.go"],
-        exclude = ["*_test.go"],
-    ),
+    srcs = [
+        "interactive_display.go",
+        "print.go",
+        "shell_output.go",
+        "targets.go",
+        "trace.go",
+    ],
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_dustin_go-humanize//:go-humanize",
+        "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
         "//src/cli",
         "//src/cli/logging",
         "//src/core",
         "//src/process",
         "//src/test",
-        "//third_party/go:deferred_regex",
-        "//third_party/go:go-flags",
-        "//third_party/go:humanize",
     ],
 )
 
 go_test(
-    name = "interactive_display_test",
-    srcs = ["interactive_display_test.go"],
+    name = "output_test",
+    srcs = [
+        "interactive_display_test.go",
+        "shell_output_test.go",
+    ],
     deps = [
         ":output",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
-go_test(
-    name = "shell_output_test",
-    srcs = ["shell_output_test.go"],
-    deps = [
-        ":output",
-        "//src/core",
-        "//third_party/go:testify",
-    ],
-)

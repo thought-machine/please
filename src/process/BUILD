@@ -1,15 +1,16 @@
 go_library(
     name = "process",
-    srcs = glob(
-        ["*.go"],
-        exclude = ["*_test.go"],
-    ),
+    srcs = [
+        "exec_linux.go",
+        "output.go",
+        "process.go",
+        "progress.go",
+    ],
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
         "//src/cli",
         "//src/cli/logging",
-        "//third_party/go:deferred_regex",
-        "//third_party/go:go-flags",
     ],
 )
 
@@ -21,6 +22,6 @@ go_test(
     ],
     deps = [
         ":process",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )

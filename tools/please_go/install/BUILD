@@ -1,8 +1,6 @@
 go_library(
     name = "install",
-    srcs = [
-        "install.go",
-    ],
+    srcs = ["install.go"],
     visibility = ["PUBLIC"],
     deps = [
         "//tools/please_go/install/exec",
@@ -19,7 +17,9 @@ go_test(
     },
     deps = [
         ":install",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
         "//src/fs",
-        "//third_party/go:testify",
+        "//tools/please_go/install/exec",
     ],
 )

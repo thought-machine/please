@@ -10,6 +10,6 @@ go_test(
     data = ["test_data"],
     deps = [
         ":embed",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )

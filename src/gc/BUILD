@@ -6,7 +6,6 @@ go_library(
         "//src/cli",
         "//src/cli/logging",
         "//src/core",
-        "//src/fs",
         "//src/parse/asp",
         "//src/scm",
     ],
@@ -14,10 +13,15 @@ go_library(
 
 go_test(
     name = "gc_test",
-    srcs = ["gc_test.go"],
+    srcs = [
+        "gc_test.go",
+        "rewrite_test.go",
+    ],
     deps = [
         ":gc",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "//src/core",
+        "//src/fs",
     ],
 )
 

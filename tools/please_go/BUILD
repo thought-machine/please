@@ -31,13 +31,11 @@ go_module(
 
 go_binary(
     name = "please_go",
-    srcs = [
-        "please_go.go",
-    ],
+    srcs = ["please_go.go"],
     labels = ["link:plz-out/please"],
     visibility = ["PUBLIC"],
     deps = [
-        ":flags",
+        "///third_party/go/github.com_peterebden_go-cli-init_v5//flags",
         "//tools/please_go/godeps",
         "//tools/please_go/install",
         "//tools/please_go/test",

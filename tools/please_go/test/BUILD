@@ -8,14 +8,15 @@ go_library(
         "write_test_main.go",
     ],
     visibility = ["//tools/please_go/..."],
-    deps = [
-        "//tools/please_go/install/toolchain",
-    ],
+    deps = ["//tools/please_go/install/toolchain"],
 )
 
 go_test(
     name = "find_cover_vars_test",
-    srcs = ["find_cover_vars_test.go"],
+    srcs = [
+        "find_cover_vars_test.go",
+        "write_test_main_test.go",
+    ],
     data = [
         "test_data/binary/core.a",
         "test_data/binary/lock.go",
@@ -25,7 +26,7 @@ go_test(
     ],
     deps = [
         ":test",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 

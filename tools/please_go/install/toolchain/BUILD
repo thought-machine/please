@@ -1,12 +1,8 @@
 go_library(
     name = "toolchain",
-    srcs = [
-        "toolchain.go",
-    ],
+    srcs = ["toolchain.go"],
     visibility = ["//tools/please_go/..."],
-    deps = [
-        "//tools/please_go/install/exec",
-    ],
+    deps = ["//tools/please_go/install/exec"],
 )
 
 go_test(
@@ -16,6 +12,6 @@ go_test(
     labels = ["no-musl"],
     deps = [
         ":toolchain",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//require",
     ],
 )

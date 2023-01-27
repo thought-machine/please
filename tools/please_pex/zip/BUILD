@@ -6,9 +6,8 @@ go_library(
         "//tools/please_pex/pex",
     ],
     deps = [
+        "///third_party/go/gopkg.in_op_go-logging.v1//:go-logging.v1",
         "//src/fs",
-        "//third_party/go:logging",
-        "//third_party/go:testify",
     ],
 )
 
@@ -22,5 +21,7 @@ go_test(
     ],
     deps = [
         ":zip",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
     ],
 )
