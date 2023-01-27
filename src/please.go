@@ -1335,7 +1335,6 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	}
 	config := readConfig()
 	// Now apply any flags that override this
-	config.Profiling = opts.Profile != ""
 	if opts.Update.Latest || opts.Update.LatestPrerelease {
 		config.Please.Version.Unset()
 	} else if opts.Update.Version.IsSet {
