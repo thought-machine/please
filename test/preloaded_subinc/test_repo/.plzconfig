@@ -3,3 +3,7 @@ BuildFileName = BUILD_FILE
 BuildFileName = BUILD
 PreloadSubincludes = ///pleasings2/pleasings2//k8s
 PreloadSubincludes = //build_defs:foo
+PreloadSubincludes = ///shell//build_defs:shell
+
+[Plugin "shell"]
+Target = //plugins:shell
