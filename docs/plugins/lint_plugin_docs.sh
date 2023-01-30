@@ -9,7 +9,7 @@ URLPREFIX="https://github.com/please-build/"
 
 # loop through plugins and check version
 for PLUGIN in "${plugins[@]}"; do
-    LATEST=$(git ls-remote --tags ${URLPREFIX}${PLUGIN}-rules.git | sed 's/.*\///' | tail -n 1)
+    LATEST=$(git ls-remote --tags ${URLPREFIX}${PLUGIN}-rules.git | sed 's/.*\///' | sed '/^v[0-9]\+\.[0-9]\+\.[0-9]\+$/!d' | tail -n 1)
     if [ -z "$LATEST" ]; then
         echo "No tags found for ${PLUGIN}"
         exit 1

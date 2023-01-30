@@ -185,7 +185,7 @@
     <p>
       The variables <code class="code">$OUTS_SRC</code> and
       <code class="code">$OUTS_LIB</code> will be set. These outputs can then be
-      depended on individually from other rules:
+      depended on individually from other rules as sources only:
     </p>
 
     <pre class="code-container">
@@ -194,7 +194,6 @@
     genrule(
         ...
         srcs = [":my_rule|srcs"],
-        deps = [":my_rule|libs"],
         ...
     )
       </code>

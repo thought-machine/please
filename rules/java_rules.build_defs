@@ -222,7 +222,7 @@ def java_runtime_image(name:str, main_module:str, main_class:str, modules:list, 
 
 def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, deps:list=[],
                 data:list=None, visibility:list=None, jvm_args:str=None,
-                self_executable:bool=CONFIG.FF_JAVA_SELF_EXEC, manifest:str=None, toolchain:str=CONFIG.JAVA_TOOLCHAIN):
+                manifest:str=None, toolchain:str=CONFIG.JAVA_TOOLCHAIN, labels:list=None):
     """Compiles a .jar from a set of Java libraries.
 
     Args:
@@ -234,7 +234,6 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
       data (list): Runtime data for this rule.
       visibility (list): Visibility declaration of this rule.
       jvm_args (str): Arguments to pass to the JVM in the run script.
-      self_executable (bool): True to make the jar self executable.
       manifest (str): Manifest file to put into the jar. Can't be passed at the same time as
                       main_class.
       toolchain (str): A label identifying a java_toolchain rule which will be used to build this java binary.
@@ -249,14 +248,8 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
             toolchain = toolchain,
         )
         deps += [lib_rule]
-    # TODO(jpoole): Remove self exec flag and do this always once JavaBinaryExecutableByDefault has been merged
-    if self_executable:
-        preamble = '#!/bin/sh\nexec java %s -jar $0 ${@}' % (jvm_args or '')
-        cmd, tools = _jarcat_cmd(main_class, preamble, manifest=manifest)
-    else:
-        # This is essentially a hack to get past some Java things (notably Jersey) failing
-        # in subtle ways when the jar has a preamble (srsly...).
-        cmd, tools = _jarcat_cmd(main_class, manifest=manifest)
+    preamble = '#!/bin/sh\nexec java %s -jar $0 ${@}' % (jvm_args or '')
+    cmd, tools = _jarcat_cmd(main_class, preamble, manifest=manifest)
     return build_rule(
         name=name,
         deps=deps,
@@ -271,7 +264,7 @@ def java_binary(name:str, main_class:str=None, out:str=None, srcs:list=None, dep
         requires=['java'],
         visibility=visibility,
         tools=tools,
-        labels=None if self_executable else ['java_non_exe'],
+        labels=labels,
     )
 
 
