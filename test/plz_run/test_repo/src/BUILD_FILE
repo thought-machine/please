@@ -1,3 +1,9 @@
+plugin_repo(
+    name = "shell",
+    plugin = "shell-rules",
+    revision = "v0.1.1",
+)
+
 sh_binary(
     name = "env_printer",
     data = [
