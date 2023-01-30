@@ -11,8 +11,6 @@ func TestAllAssetsReturnsAListOfBuildDefinitionFiles(t *testing.T) {
 
 	defs := []string{
 		"builtins.build_defs",
-		"c_rules.build_defs",
-		"cc_rules.build_defs",
 		"config_rules.build_defs",
 		"go_rules.build_defs",
 		"misc_rules.build_defs",

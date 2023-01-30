@@ -96,7 +96,6 @@ PythonWheelHashing = true
 NoIterSourcesMarked = true
 GoDontCollapseImportPath = true
 ExcludeGoRules = true
-ExcludeCcRules = true
 ErrorOnEmptyGlob = true
 ExcludeProtoRules = true
 
