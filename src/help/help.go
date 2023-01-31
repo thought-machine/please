@@ -27,12 +27,18 @@ const maxSuggestionDistance = 4
 // Help prints help on a particular topic.
 // It returns true if the topic is known or false if it isn't.
 func Help(topic string) bool {
-	if message := help(topic); message != "" {
+	config, err := core.ReadDefaultConfigFiles(nil)
+	if err != nil {
+		// Don't bother the user if we can't load config files or whatever - just do our best.
+		config = core.DefaultConfiguration()
+	}
+
+	if message := help(topic, config); message != "" {
 		printMessage(message)
 		return true
 	}
 	fmt.Printf("Sorry OP, can't halp you with %s\n", topic)
-	if message := suggest(topic); message != "" {
+	if message := suggest(topic, config); message != "" {
 		printMessage(message)
 		fmt.Printf(" Or have a look on the website: https://please.build\n")
 	} else {
@@ -42,22 +48,16 @@ func Help(topic string) bool {
 }
 
 // Topics prints the list of help topics beginning with the given prefix.
-func Topics(prefix string) {
-	for _, topic := range allTopics(prefix) {
+func Topics(prefix string, config *core.Configuration) {
+	for _, topic := range allTopics(prefix, config) {
 		fmt.Println(topic)
 	}
 }
 
-func help(topic string) string {
-	config, err := core.ReadDefaultConfigFiles(nil)
-	if err != nil {
-		// Don't bother the user if we can't load config files or whatever - just do our best.
-		config = core.DefaultConfiguration()
-	}
-
+func help(topic string, config *core.Configuration) string {
 	topic = strings.ToLower(topic)
 	if topic == "topics" {
-		return fmt.Sprintf(topicsHelpMessage, strings.Join(allTopics(""), "\n"))
+		return fmt.Sprintf(topicsHelpMessage, strings.Join(allTopics("", config), "\n"))
 	}
 	for _, section := range []helpSection{allConfigHelp(config), miscTopics} {
 		if message, found := section.Topics[topic]; found {
@@ -266,25 +266,48 @@ func helpFromBuildRule(f *asp.FuncDef) string {
 }
 
 // suggest looks through all known help topics and tries to make a suggestion about what the user might have meant.
-func suggest(topic string) string {
-	return cli.PrettyPrintSuggestion(topic, allTopics(""), maxSuggestionDistance)
+func suggest(topic string, config *core.Configuration) string {
+	return cli.PrettyPrintSuggestion(topic, allTopics("", config), maxSuggestionDistance)
 }
 
 // allTopics returns all the possible topics to get help on.
-func allTopics(prefix string) []string {
+func allTopics(prefix string, config *core.Configuration) []string {
 	topics := []string{}
-	for _, section := range []helpSection{allConfigHelp(core.DefaultConfiguration()), miscTopics} {
+
+	// Config options
+	for _, section := range []helpSection{allConfigHelp(config), miscTopics} {
 		for t := range section.Topics {
 			if strings.HasPrefix(t, prefix) {
 				topics = append(topics, t)
 			}
 		}
 	}
+
+	// Built-in rules
 	for t := range AllBuiltinFunctions(newState()) {
 		if strings.HasPrefix(t, prefix) {
 			topics = append(topics, t)
 		}
 	}
+
+	// Plugins
+	for pluginName, plugin := range config.Plugin {
+		if strings.HasPrefix(pluginName, prefix) {
+			topics = append(topics, pluginName)
+		}
+		subrepo := getSubrepoOrDie(pluginName, plugin.Target)
+		for k := range getPluginConfig(subrepo) {
+			if strings.HasPrefix(k, prefix) {
+				topics = append(topics, k)
+			}
+		}
+		for k := range getPluginBuildDefs(subrepo) {
+			if strings.HasPrefix(k, prefix) {
+				topics = append(topics, k)
+			}
+		}
+	}
+
 	sort.Strings(topics)
 	return topics
 }

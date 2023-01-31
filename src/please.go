@@ -798,9 +798,9 @@ var buildFunctions = map[string]func() int{
 		if opts.Query.Completions.Cmd == "help" {
 			// Special-case completing help topics rather than build targets.
 			if len(fragments) == 0 {
-				help.Topics("")
+				help.Topics("", config)
 			} else {
-				help.Topics(fragments[0])
+				help.Topics(fragments[0], config)
 			}
 			return 0
 		}

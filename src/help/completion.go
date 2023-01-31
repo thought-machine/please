@@ -2,6 +2,7 @@ package help
 
 import (
 	"github.com/thought-machine/go-flags"
+	"github.com/thought-machine/please/src/core"
 )
 
 // Topic is a help topic that implements completion for flags.
@@ -16,7 +17,7 @@ func (topic *Topic) UnmarshalFlag(value string) error {
 
 // Complete implements the flags.Completer interface, which is used for shell completion.
 func (topic Topic) Complete(match string) []flags.Completion {
-	topics := allTopics(match)
+	topics := allTopics(match, core.DefaultConfiguration())
 	completions := make([]flags.Completion, len(topics))
 	for i, topic := range topics {
 		completions[i].Item = topic
