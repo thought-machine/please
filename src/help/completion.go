@@ -17,7 +17,12 @@ func (topic *Topic) UnmarshalFlag(value string) error {
 
 // Complete implements the flags.Completer interface, which is used for shell completion.
 func (topic Topic) Complete(match string) []flags.Completion {
-	topics := allTopics(match, core.DefaultConfiguration())
+	config, err := core.ReadDefaultConfigFiles(nil)
+	if err != nil {
+		config = core.DefaultConfiguration()
+	}
+
+	topics := allTopics(match, config)
 	completions := make([]flags.Completion, len(topics))
 	for i, topic := range topics {
 		completions[i].Item = topic
