@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 func TestMain(t *testing.M) {
@@ -26,31 +28,31 @@ func TestPublicInterface(t *testing.T) {
 
 func TestHelpDescription(t *testing.T) {
 	// The returned message should describe what kind of a thing it is
-	assert.Contains(t, help("go_binary"), "built-in build rule")
+	assert.Contains(t, help("go_binary", core.DefaultConfiguration()), "built-in build rule")
 	// And what its name was
-	assert.Contains(t, help("go_binary"), "go_binary")
+	assert.Contains(t, help("go_binary", core.DefaultConfiguration()), "go_binary")
 }
 
 func TestSuggestion(t *testing.T) {
-	assert.Equal(t, "\nMaybe you meant cc_binary or c_binary ?", suggest("cc_unary"))
-	assert.Equal(t, "\nMaybe you meant godep or go ?", suggest("godop"))
-	assert.Equal(t, "", suggest("blahdiblahdiblah"))
+	assert.Equal(t, "\nMaybe you meant cc_binary or c_binary ?", suggest("cc_unary", core.DefaultConfiguration()))
+	assert.Equal(t, "\nMaybe you meant godep or go ?", suggest("godop", core.DefaultConfiguration()))
+	assert.Equal(t, "", suggest("blahdiblahdiblah", core.DefaultConfiguration()))
 }
 
 func TestConfig(t *testing.T) {
-	assert.Contains(t, help("NumThreads"), "config setting")
-	assert.Contains(t, help("numthreads"), "config setting")
+	assert.Contains(t, help("NumThreads", core.DefaultConfiguration()), "config setting")
+	assert.Contains(t, help("numthreads", core.DefaultConfiguration()), "config setting")
 }
 
 func TestMisc(t *testing.T) {
-	assert.Contains(t, help("plzconfig"), "plzconfig")
+	assert.Contains(t, help("plzconfig", core.DefaultConfiguration()), "plzconfig")
 }
 
 func TestGeneralMessage(t *testing.T) {
 	// Should provide some useful message for just "plz halp"
-	assert.NotEqual(t, "", help(""))
+	assert.NotEqual(t, "", help("", core.DefaultConfiguration()))
 }
 
 func TestTopics(t *testing.T) {
-	assert.NotEqual(t, "", help("topics"))
+	assert.NotEqual(t, "", help("topics", core.DefaultConfiguration()))
 }
