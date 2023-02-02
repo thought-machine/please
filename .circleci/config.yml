@@ -372,13 +372,13 @@ workflows:
             - test-http-cache
           filters:
             branches:
-              only: master
+              only: v16
       - release-s3:
           requires:
             - release
           filters:
             branches:
-              only: master
+              only: v16
       - perf-test:
           requires:
             - build-alpine
