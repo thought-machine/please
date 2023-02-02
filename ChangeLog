@@ -1,3 +1,8 @@
+Version 16.27.2
+---------------
+    * Stop reading xattrs for filegroups (#2660)
+
+
 Version 16.27.1
 ---------------
     * Include linux_arm64 in release step (#2646)
