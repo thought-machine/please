@@ -28,6 +28,10 @@ release_file() {
   fi
 }
 
+# Auth against gcp for cli and
+echo $GCLOUD_SERVICE_KEY > $GOOGLE_APPLICATION_CREDENTIALS
+echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
+
 echo "Releasing docs website"
 tar -xzf /tmp/workspace/deep-docs.tar.gz -C /tmp/workspace && \
   aws s3 sync /tmp/workspace/docs s3://please-docs && \
@@ -39,10 +43,6 @@ if aws s3 ls s3://please-releases/linux_arm64/$VERSION/; then
   exit 0
 fi
 echo "Releasing Please $VERSION"
-
-# Auth against gcp for cli and
-echo $GCLOUD_SERVICE_KEY > $GOOGLE_APPLICATION_CREDENTIALS
-echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
 
 
 find /tmp/workspace/darwin_amd64 -name "._*" | xargs rm -rf
