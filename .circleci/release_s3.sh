@@ -35,7 +35,7 @@ echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
 echo "Releasing docs website"
 tar -xzf /tmp/workspace/deep-docs.tar.gz -C /tmp/workspace && \
   aws s3 sync /tmp/workspace/docs s3://please-docs && \
-  gsutil sync /tmp/workspace/docs gs://please.build
+  gsutil rsync /tmp/workspace/docs gs://please.build
 
 
 if aws s3 ls s3://please-releases/linux_arm64/$VERSION/; then
