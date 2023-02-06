@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/rules/bazel"
@@ -19,9 +18,8 @@ import (
 // InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
 func InitParser(state *core.BuildState) *core.BuildState {
 	if state.Parser == nil {
-		p := &aspParser{parser: newAspParser(state), init: make(chan struct{})}
+		p := &aspParser{parser: newAspParser(state)}
 		state.Parser = p
-		go p.Init(state)
 	}
 	return state
 }
@@ -29,8 +27,6 @@ func InitParser(state *core.BuildState) *core.BuildState {
 // aspParser implements the core.Parser interface around our parser package.
 type aspParser struct {
 	parser *asp.Parser
-	init   chan struct{}
-	once   sync.Once
 }
 
 // newAspParser returns a asp.Parser object with all the builtins loaded
@@ -59,71 +55,12 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
-// NewParser creates a new parser for the state
-func (p *aspParser) NewParser(state *core.BuildState) {
-	state.Parser = &aspParser{parser: newAspParser(state), init: make(chan struct{})}
-}
-
-func (p *aspParser) WaitForInit() {
-	<-p.init
-}
-
-// getIncludesFromConfig gets the preloaded subincludes for this state, deduplicating if there are duplicates
-func getIncludesFromConfig(state *core.BuildState) []core.BuildLabel {
-	done := map[core.BuildLabel]struct{}{}
-	includes := make([]core.BuildLabel, 0, len(state.Config.Parse.PreloadSubincludes)+len(state.RepoConfig.Parse.PreloadSubincludes))
-
-	is := append(state.Config.Parse.PreloadSubincludes, state.RepoConfig.Parse.PreloadSubincludes...)
-
-	for _, i := range is {
-		_, ok := done[i]
-		if ok {
-			continue
-		}
-
-		includes = append(includes, i)
-		done[i] = struct{}{}
-	}
-	return includes
-}
-
-func (p *aspParser) Init(state *core.BuildState) {
-	p.once.Do(func() {
-		includes := getIncludesFromConfig(state)
-		wg := sync.WaitGroup{}
-		for _, inc := range includes {
-			if inc.IsPseudoTarget() {
-				log.Fatalf("Can't preload pseudotarget %v", inc)
-			}
-			wg.Add(1)
-			// Queue them up asynchronously to feed the queues as quickly as possible
-			go func(inc core.BuildLabel) {
-				state.WaitForBuiltTarget(inc, core.OriginalTarget)
-				wg.Done()
-			}(inc)
-		}
-
-		// We must wait for all the subinclude targets to be built otherwise updating the locals might race with parsing
-		// a package
-		wg.Wait()
-
-		// Preload them in order to avoid non-deterministic errors when the subincludes depend on each other
-		for _, inc := range includes {
-			if err := p.parser.SubincludeTarget(state, state.WaitForTargetAndEnsureDownload(inc, core.OriginalTarget)); err != nil {
-				log.Fatalf("%v", err)
-			}
-		}
-		p.parser.Finalise()
-		close(p.init)
-	})
-}
-
 func (p *aspParser) ParseFile(pkg *core.Package, forLabel, dependent *core.BuildLabel, forSubinclude bool, filename string) error {
 	return p.parser.ParseFile(pkg, forLabel, dependent, forSubinclude, filename)
 }
 
-func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker) error {
-	_, err := p.parser.ParseReader(pkg, reader)
+func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker, forLabel, dependent *core.BuildLabel, forSubinclude bool) error {
+	_, err := p.parser.ParseReader(pkg, reader, forLabel, dependent, forSubinclude)
 	return err
 }
 

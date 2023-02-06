@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-package root_dir;
-
-import "root_dir/test.proto";
-
-message OtherTestMessage {
-    root_dir.TestMessage msg = 1;
-}

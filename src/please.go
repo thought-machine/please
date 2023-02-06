@@ -582,9 +582,6 @@ var buildFunctions = map[string]func() int{
 			var dir string
 			if opts.Run.WD != "" {
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
-			} else if opts.Run.InWD {
-				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
-				dir = originalWorkingDirectory
 			}
 
 			if opts.Run.EntryPoint != "" {
@@ -605,9 +602,6 @@ var buildFunctions = map[string]func() int{
 			var dir string
 			if opts.Run.WD != "" {
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
-			} else if opts.Run.InWD {
-				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
-				dir = originalWorkingDirectory
 			}
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
 			output := opts.Run.Parallel.Output
@@ -624,9 +618,6 @@ var buildFunctions = map[string]func() int{
 			var dir string
 			if opts.Run.WD != "" {
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
-			} else if opts.Run.InWD {
-				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
-				dir = originalWorkingDirectory
 			}
 			output := opts.Run.Sequential.Output
 			if opts.Run.Sequential.Quiet {
@@ -798,9 +789,9 @@ var buildFunctions = map[string]func() int{
 		if opts.Query.Completions.Cmd == "help" {
 			// Special-case completing help topics rather than build targets.
 			if len(fragments) == 0 {
-				help.Topics("")
+				help.Topics("", config)
 			} else {
-				help.Topics(fragments[0])
+				help.Topics(fragments[0], config)
 			}
 			return 0
 		}
@@ -1146,10 +1137,6 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 
 	if opts.Run.InTempDir && opts.Run.WD != "" {
 		log.Fatal("Can't use both --in_temp_dir and --wd at the same time")
-	} else if opts.Run.InTempDir && opts.Run.InWD {
-		log.Fatal("Can't use both --in_temp_dir and --in_wd at the same time")
-	} else if opts.Run.WD != "" && opts.Run.InWD {
-		log.Fatal("Can't use both --in_wd and --wd at the same time. --in_wd is deprecated in favour of --wd.")
 	}
 
 	runPlease(state, targets)

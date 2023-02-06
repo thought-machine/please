@@ -98,6 +98,7 @@ ExcludeGoRules = true
 ExcludeCcRules = true
 ErrorOnEmptyGlob = true
 ExcludeJavaRules = true
+ExcludeProtoRules = true
 
 [Plugin "go"]
 Target = //plugins:go
