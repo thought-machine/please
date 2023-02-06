@@ -1,10 +1,9 @@
 Version 17.0.0
 ---------------
     * Change asp.Position to just be an int (#2650)
-    * Fix stack overflow in stack unwind (#2659)
+    * Fix stack overflow in asp parser stack unwind (#2659)
     * Add plugin documentation to website (#2657)
-    * Recalculate filegroup hashes (#2660)
-    * Revert per-function profiling metrics for asp (#2665)
+    * Recalculate filegroup outputs when they're not from plz-out (#2660)
     * Remove SingleSHA1Hash (#2135)
     * Remove --prepare flag from build (#2666)
     * Delete JavaBinaryExecutableByDefault feature flag (#2662)
@@ -12,8 +11,7 @@ Version 17.0.0
     * Make plugin version linting better (#2671)
     * Add proto and go-proto rules to docs (#2669)
     * Make CLI suggestions work with plugin topics (#2679)
-    * Release gs:// (#2683)
-    * Auth before release (#2684)
+    * Auth before releasing website and binaries (#2684)
     * Fix typo in gcloud command (#2685)
 
 
