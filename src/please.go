@@ -424,12 +424,6 @@ var opts struct {
 				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to calculate changes for. Overrides flags relating to SCM operations."`
 			} `positional-args:"true"`
 		} `command:"changes" description:"Calculates the set of changed targets in regard to a set of modified files or SCM commits."`
-		Roots struct {
-			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
-			Args   struct {
-				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
-			} `positional-args:"true"`
-		} `command:"roots" description:"Show build labels with no dependents in the given list, from the list."`
 		Filter struct {
 			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
 			Args   struct {
@@ -921,11 +915,6 @@ var buildFunctions = map[string]func() int{
 			fmt.Println(target.String())
 		}
 		return 0
-	},
-	"query.roots": func() int {
-		return runQuery(true, opts.Query.Roots.Args.Targets, func(state *core.BuildState) {
-			query.Roots(state.Graph, state.ExpandOriginalLabels(), opts.Query.Roots.Hidden)
-		})
 	},
 	"query.filter": func() int {
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
