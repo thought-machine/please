@@ -309,10 +309,9 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		incPkgState := s.state
 		if t.Label.Subrepo != "" {
 			subrepo := s.state.Graph.SubrepoOrDie(t.Label.Subrepo)
-			subrepo.State.WaitForInit()
 			incPkgState = subrepo.State
 		}
-		s.interpreter.loadPluginConfig(incPkgState, s.state, s.config)
+		s.interpreter.loadPluginConfig(s, incPkgState)
 
 		for _, out := range t.Outputs() {
 			s.SetAll(s.interpreter.Subinclude(filepath.Join(t.OutDir(), out), t.Label), false)
