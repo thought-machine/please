@@ -15,12 +15,11 @@ func TestMatchingTools(t *testing.T) {
 	assert.Equal(t, map[string]string{"pex": "/////_please:please_pex"}, matchingTools(c, "pex"))
 	assert.Equal(t, map[string]string{
 		"javacworker": "/////_please:javac_worker",
-		"jarcat":      "/////_please:arcat",
 	}, matchingTools(c, "ja"))
 }
 
 func TestAllToolNames(t *testing.T) {
 	c, err := core.ReadConfigFiles(nil, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"jarcat", "javacworker"}, allToolNames(c, "ja"))
+	assert.Equal(t, []string{"javacworker"}, allToolNames(c, "ja"))
 }

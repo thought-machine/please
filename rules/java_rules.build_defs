@@ -79,7 +79,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             'find _tmp -name "*.class" | sed -e "s|_tmp/|${PKG} |g" -e "s/\\.class/.java/g" | sort > _tmp/META-INF/please_sourcemap',
             resources_cmd,
             'cd _tmp',
-            '"$TOOLS_JARCAT" z -d -o "$OUT" -i .',
+            '"$TOOLS_ARCAT" z -d -o "$OUT" -i .',
         ])
 
         src_dir_label = [] if srcs else ['src_dir:'+src_dir]
@@ -103,7 +103,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             test_only=test_only,
             tools={
                 'javac': [javac],
-                'jarcat': [CONFIG.JARCAT_TOOL],
+                'arcat': [CONFIG.ARCAT_TOOL],
             },
         )
     elif resources:
@@ -124,7 +124,7 @@ def java_library(name:str, srcs:list=None, src_dir:str=None, resources:list=[], 
             requires=['java'],
             labels = labels + ['rule:test_resources' if test_only else 'rule:resources'],
             test_only=test_only,
-            tools=[CONFIG.JARCAT_TOOL],
+            tools=[CONFIG.ARCAT_TOOL],
         )
     else:
         # If input is only jar files (as maven_jar produces in some cases) we simply collect them
@@ -309,7 +309,7 @@ def java_test(name:str, srcs:list, resources:list=None, resources_root:str=None,
         # Deliberately not visible outside this package.
     )
     # As above, would be nicer if we could make the jars self-executing again.
-    cmd, tools = _jarcat_cmd('build.please.main.TestMain')
+    cmd, tools = _arcat_cmd('build.please.main.TestMain')
     tools['junit'] = [CONFIG.JUNIT_RUNNER]
 
     if toolchain:
@@ -452,7 +452,7 @@ def maven_jar(name:str, id:str, repository:str|list=None, labels:list=[], hash:s
             requires = ['java'],
             exported_deps = deps,
             test_only=test_only,
-            tools = [CONFIG.JARCAT_TOOL],
+            tools = [CONFIG.ARCAT_TOOL],
         )
         provides = {
             'java': classes_rule,
@@ -494,16 +494,16 @@ def _parse_maven_artifact(id, sources=True, licences=None):
     return group, artifact, version, sources, licences
 
 
-def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
+def _arcat_cmd(main_class=None, preamble=None, manifest=None):
     """Returns the command we'd use to invoke jarcat, and the tool paths required."""
-    cmd = '$TOOLS_JARCAT z -i . -o ${OUTS} -j'
+    cmd = '$TOOLS_ARCAT z -i . -o ${OUTS} -j'
     if main_class:
         cmd += f' -m "{main_class}"'
     if preamble:
         cmd += f" -p '{preamble}'"
     if manifest:
         cmd += ' --manifest "$SRCS"'
-    return cmd, {'jarcat': [CONFIG.JARCAT_TOOL]}
+    return cmd, {'arcat': [CONFIG.ARCAT_TOOL]}
 
 # This function is exposed as java_toolchain unless Bazel compatibility is enabled in which case it is exposed as
 # please_java_toolchain. This is to avoid namespace conflicts with Bazel's java_toolchain rule.
@@ -529,7 +529,7 @@ def _java_toolchain(name : str, jdk_url : str|dict='', jdk:str='', visibility:li
         name = name,
         srcs = [jdk],
         outs = [name],
-        tools = [CONFIG.JARCAT_TOOL],
+        tools = [CONFIG.ARCAT_TOOL],
         cmd = " && ".join([
             '"$TOOL" x $SRCS -o extract_dir',
             f'mv $(dirname $(dirname $(find extract_dir/ -name javac))) {name}',

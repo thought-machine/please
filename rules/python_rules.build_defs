@@ -45,7 +45,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
     if not zip_safe:
         labels += ['py:zip-unsafe']
     if srcs or resources:
-        cmd = '$TOOLS_JARCAT z -d -o ${OUTS} -i .'
+        cmd = '$TOOLS_ARCAT z -d -o ${OUTS} -i .'
         if srcs:
             # This is a bit of a hack, but rather annoying. We want to put bytecode in its 'legacy' location
             # in python3 because zipimport doesn't look in __pycache__. Unfortunately the flag doesn't exist
@@ -72,7 +72,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
             output_is_complete=True,
             tools={
                 'int': [interpreter],
-                'jarcat': [CONFIG.JARCAT_TOOL],
+                'arcat': [CONFIG.ARCAT_TOOL],
             },
             labels = labels,
         )
@@ -192,7 +192,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         building_description="Creating pex...",
         visibility=visibility,
         requires=['py', interpreter],
-        tools=[CONFIG.JARCAT_TOOL],
+        tools=[CONFIG.ARCAT_TOOL],
         # This makes the python_library rule the dependency for other python_library or
         # python_test rules that try to import it. Does mean that they cannot collect a .pex
         # by depending directly on the rule, they'll just get the Python files instead.
@@ -342,7 +342,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         flaky=flaky,
         test_outputs=test_outputs,
         requires=['py', 'test', interpreter],
-        tools=[CONFIG.JARCAT_TOOL],
+        tools=[CONFIG.ARCAT_TOOL],
     )
 
 
@@ -452,7 +452,7 @@ def pip_library(name:str, version:str, labels:list=[], hashes:list=None, package
     )
 
     # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
-    cmd = f'$TOOLS_JARCAT z --suffix="" --exclude_suffix=whl --include_other -i . -r $PKG/{name}:$PKG'
+    cmd = f'$TOOLS_ARCAT z --suffix="" --exclude_suffix=whl --include_other -i . -r $PKG/{name}:$PKG'
     if not licences:
         cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
 
@@ -467,7 +467,7 @@ def pip_library(name:str, version:str, labels:list=[], hashes:list=None, package
         test_only = test_only,
         licences = licences,
         tools = {
-            'jarcat': [CONFIG.JARCAT_TOOL],
+            'arcat': [CONFIG.ARCAT_TOOL],
         },
         post_build = None if licences else _add_licences,
         labels = labels + ['py', 'pip:' + package_name] + (['py:zip-unsafe'] if not zip_safe else []),
@@ -579,7 +579,7 @@ def python_wheel(name:str, version:str, labels:list=[], hashes:list=None, packag
         deps = deps,
         test_only = test_only,
         licences = licences,
-        tools = [CONFIG.JARCAT_TOOL],
+        tools = [CONFIG.ARCAT_TOOL],
         post_build = None if licences else _add_licences,
         sandbox = False,
         labels = ['py:zip-unsafe', label] if not zip_safe else [label],
@@ -595,7 +595,7 @@ def python_wheel(name:str, version:str, labels:list=[], hashes:list=None, packag
         srcs = [wheel_rule],
         hashes = None if CONFIG.FF_PYTHON_WHEEL_HASHING else hashes,
         outs = outs or [name],
-        tools = [CONFIG.JARCAT_TOOL],
+        tools = [CONFIG.ARCAT_TOOL],
         cmd = cmd,
         deps = deps,
         visibility = visibility,

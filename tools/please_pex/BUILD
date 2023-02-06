@@ -48,7 +48,7 @@ genrule(
         "rm -rf third_party .bootstrap/xmlrunner/extra .bootstrap/coverage/htmlfiles .bootstrap/.*.pex.zip",
         '"$TOOL" z -d -i .bootstrap -o "$OUTS" --preamble_file $(location :pex_main)',
     ],
-    tools = [CONFIG.JARCAT_TOOL],
+    tools = [CONFIG.ARCAT_TOOL],
     visibility = ["PUBLIC"],
 )
 

@@ -163,7 +163,7 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	}
 
 	// Write required extra libraries. Note that this executable is also a zipfile and we can
-	// jarcat it directly in (nifty, huh?).
+	// arcat it directly in (nifty, huh?).
 	//
 	// Note that if the target contains its own test-runner, then we don't need to add anything.
 	if len(pw.includeLibs) > 0 {

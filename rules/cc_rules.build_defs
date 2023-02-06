@@ -164,13 +164,13 @@ def cc_library(name:str, srcs:list=[], out:str='', hdrs:list=[], private_hdrs:li
             tag = 'a',
             srcs = {'srcs': a_rules},
             outs = [out],
-            cmd = '"$TOOLS_JARCAT" ar --combine && "$TOOLS_AR" s "$OUT"',
+            cmd = '"$TOOLS_ARCAT" ar --combine && "$TOOLS_AR" s "$OUT"',
             building_description = 'Archiving...',
             test_only = test_only,
             labels = labels,
             output_is_complete = True,
             tools = {
-                'jarcat': [CONFIG.JARCAT_TOOL],
+                'arcat': [CONFIG.ARCAT_TOOL],
                 'ar': [CONFIG.AR_TOOL],
             },
         )
@@ -352,7 +352,7 @@ def cc_static_library(name:str, srcs:list=[], out:str='', hdrs:list=[], compiler
         name = name,
         deps = deps,
         outs = [out],
-        cmd = '"$TOOLS_JARCAT" ar --find && "$TOOLS_AR" s "$OUT"',
+        cmd = '"$TOOLS_ARCAT" ar --find && "$TOOLS_AR" s "$OUT"',
         needs_transitive_deps = True,
         output_is_complete = True,
         visibility = visibility,
@@ -361,7 +361,7 @@ def cc_static_library(name:str, srcs:list=[], out:str='', hdrs:list=[], compiler
         provides = provides,
         requires = ['cc'],
         tools = {
-            'jarcat': [CONFIG.JARCAT_TOOL],
+            'arcat': [CONFIG.ARCAT_TOOL],
             'ar': [CONFIG.AR_TOOL],
         },
     )
@@ -720,7 +720,7 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, extra_f
     opt_flags = _build_flags(compiler_flags, pkg_config_libs, pkg_config_cflags, c=c)
     cmd_template = '$TOOLS_CC -c -I . ${SRCS_SRCS} %s %s'
     if archive:
-        cmd_template += ' && "$TOOLS_JARCAT" ar -r && "$TOOLS_AR" s "$OUT"'
+        cmd_template += ' && "$TOOLS_ARCAT" ar -r && "$TOOLS_AR" s "$OUT"'
     cmds = {
         'dbg': cmd_template % (dbg_flags, extra_flags),
         'opt': cmd_template % (opt_flags, extra_flags),
@@ -729,7 +729,7 @@ def _library_cmds(c, compiler_flags, pkg_config_libs, pkg_config_cflags, extra_f
         cmds['cover'] = cmd_template % (dbg_flags + _COVERAGE_FLAGS, extra_flags)
     return cmds, {
         'cc': [CONFIG.CC_TOOL if c else CONFIG.CPP_TOOL],
-        'jarcat': [CONFIG.JARCAT_TOOL if archive else None],
+        'arcat': [CONFIG.ARCAT_TOOL if archive else None],
         'ar': [CONFIG.AR_TOOL if archive else None],
     }
 

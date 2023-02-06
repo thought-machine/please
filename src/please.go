@@ -333,7 +333,7 @@ var opts struct {
 
 	Tool struct {
 		Args struct {
-			Tool tool.Tool     `positional-arg-name:"tool" description:"Tool to invoke (jarcat, lint, etc)"`
+			Tool tool.Tool     `positional-arg-name:"tool" description:"Tool to invoke (arcat, lint, etc)"`
 			Args cli.Filepaths `positional-arg-name:"arguments" description:"Arguments to pass to the tool"`
 		} `positional-args:"true"`
 	} `command:"tool" hidden:"true" description:"Invoke one of Please's sub-tools"`

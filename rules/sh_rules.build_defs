@@ -81,7 +81,7 @@ def sh_binary(name:str, main:str|list&srcs, out:str="", deps:list=None, data:lis
         srcs = [main],
         outs = [out or f'{name}.sh'],
         data = data,
-        tools = [CONFIG.JARCAT_TOOL],
+        tools = [CONFIG.ARCAT_TOOL],
         cmd = cmds,
         deps = deps,
         binary = True,
