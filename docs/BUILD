@@ -74,8 +74,8 @@ for plugin, revision in plugins.items():
 
 filegroup(
     name = "plugins",
-    visibility = ["//docs/test/..."],
     exported_deps = plugin_targets,
+    visibility = ["//docs/test/..."],
 )
 
 genrule(
@@ -86,7 +86,6 @@ genrule(
         "template.html",
         "plugins.html",
     ],
-    deps = [":plugins"],
     outs = ["plugins.html"],
     cmd = [
         '"$TOOLS_LEX" -i docs/plugins.html -i docs/lexicon_entry.html docs/*_rules.json > "$OUT"',
@@ -98,6 +97,7 @@ genrule(
         "tmpl": ["//docs/tools/templater"],
     },
     visibility = ["//docs/test/..."],
+    deps = [":plugins"],
 )
 
 genrule(
