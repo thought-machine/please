@@ -1,5 +1,7 @@
 package(default_visibility = ["//test/..."])
 
+subinclude("///shell//build_defs:shell")
+
 sh_binary(
     name = "content_checker",
     main = "test_file_content.sh",

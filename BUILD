@@ -1,3 +1,5 @@
+subinclude("///shell//build_defs:shell")
+
 filegroup(
     name = "version",
     srcs = ["VERSION"],
