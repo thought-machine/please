@@ -58,7 +58,7 @@ release_folder /tmp/workspace/freebsd_amd64 freebsd_amd64/$VERSION
 # Sign the download script with our release key
 /tmp/workspace/release_signer pgp -o get_plz.sh.asc -i tools/misc/get_plz.sh
 /tmp/workspace/release_signer kms -o get_plz.sh.sig -i tools/misc/get_plz.sh
-release_file tools/misc/get_plz.sh s3://please-releases/get_plz.sh text/x-shellscript
+release_file tools/misc/get_plz.sh get_plz.sh text/x-shellscript
 release_file get_plz.sh.asc get_plz.sh.asc text/plain
 release_file get_plz.sh.sig get_plz.sh.sig application/octet-stream
 
