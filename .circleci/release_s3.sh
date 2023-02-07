@@ -9,7 +9,7 @@ release_folder() {
   local folder=$1
   local path=$2
 
-  aws s3 sync $folder s3://releases-please-build/$path
+  aws s3 sync $folder s3://please-releases/$path
   gsutil rsync $folder gs://get.please.build/$path
 }
 
@@ -20,10 +20,10 @@ release_file() {
   local content_type=$3
 
   if [ -z "$content_type" ]; then
-    aws s3 cp $file s3://releases-please-build/$path
+    aws s3 cp $file s3://please-releases/$path
     gsutil cp $file gs://get.please.build/$path
   else
-    aws s3 cp $file s3://releases-please-build/$path --content-type $content_type
+    aws s3 cp $file s3://please-releases//$path --content-type $content_type
     gsutil cp -h "Content-Type:$content_type" $file gs://get.please.build/$path
   fi
 }
