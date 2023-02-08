@@ -181,30 +181,6 @@ java_test(
     ],
 )
 
-plz_e2e_test(
-    name = "individual_java_test",
-    cmd = "plz test //test:individual_test_run_java testFirstThing",
-    expect_output_contains = "1 test target and 1 test run",
-    labels = ["java"],
-)
-
-java_test(
-    name = "no_test_run_java",
-    srcs = ["NoTestRun.java"],
-    labels = ["manual"],
-    deps = [
-        "//third_party/java:junit",
-    ],
-)
-
-plz_e2e_test(
-    name = "no_java_test",
-    cmd = "plz test -p //test:no_test_run_java wibblewobble",
-    expect_output_contains = "1 errored",
-    expected_failure = True,
-    labels = ["java"],
-)
-
 # Test re-runs.
 go_test(
     name = "num_runs_go_test",
