@@ -88,12 +88,12 @@ genrule(
     ],
     outs = ["plugins.html"],
     cmd = [
-        '"$TOOLS_LEX" -i docs/plugins.html -i docs/lexicon_entry.html docs/*_rules.json > "$OUT"',
+        '"$TOOLS_PLUGIN" --plugin docs/plugins.html --lex docs/lexicon_entry.html docs/*_plugin.json > "$OUT"',
         '"$TOOLS_TMPL" --template docs/template.html --in plugins.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],
     tools = {
-        "lex": ["//docs/tools/lexicon_templater"],
+        "plugin": ["//docs/tools/plugin_templater"],
         "tmpl": ["//docs/tools/templater"],
     },
     visibility = ["//docs/test/..."],

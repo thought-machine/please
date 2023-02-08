@@ -1,9 +1,10 @@
 go_binary(
-    name = "lexicon_templater",
-    srcs = ["template_lexicon.go"],
+    name = "plugin_templater",
+    srcs = ["main.go"],
     visibility = ["//docs/..."],
     deps = [
         "//third_party/go:cli-init",
         "//docs/tools/lexicon_templater/rules",
-    ],
+        "//docs/tools/plugin_config_tool/plugin:plugin",
+    ]
 )
