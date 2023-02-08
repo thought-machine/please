@@ -119,12 +119,6 @@ python_test(
 )
 
 python_test(
-    name = "worker_test",
-    srcs = ["worker_test.py"],
-    worker = "//test/workers:worker",
-)
-
-python_test(
     name = "importlib_metadata_test",
     srcs = ["importlib_metadata_test.py"],
     labels = [

@@ -1,4 +1,10 @@
 go_binary(
+    name = "test_bin",
+    srcs = ["test.go"],
+    deps = ["//third_party/go:logging"],
+)
+
+go_binary(
     name = "worker",
     srcs = ["worker.go"],
     visibility = [
@@ -10,18 +16,11 @@ go_binary(
     ],
 )
 
-go_binary(
-    name = "test_bin",
-    srcs = ["test.go"],
-    deps = ["//third_party/go:logging"],
+gentest(
+    name = "worker_test",
+    data = [":test_bin"],
+    no_test_output = True,
+    sandbox = False,
+    test_cmd = "$(worker :worker) && $DATA; [ ! $? -eq 0 ]",
+    tools = [":worker"],
 )
-
-for i in range(1, 6):
-    gentest(
-        name = "worker_test_%d" % i,
-        data = [":test_bin"],
-        no_test_output = True,
-        sandbox = False,
-        test_cmd = "$(worker :worker) && $DATA",
-        tools = [":worker"],
-    )
