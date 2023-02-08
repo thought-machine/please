@@ -98,6 +98,7 @@ GoDontCollapseImportPath = true
 ExcludeGoRules = true
 ExcludeCcRules = true
 ErrorOnEmptyGlob = true
+ExcludeProtoRules = true
 
 [Plugin "go"]
 Target = //plugins:go
