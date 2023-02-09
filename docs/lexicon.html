@@ -17,11 +17,6 @@
   </li>
   <li>
     <span>
-      <a class="copy-link" href="#cc">C and C++ rules</a>
-    </span>
-  </li>
-  <li>
-    <span>
       <a class="copy-link" href="#go">Go rules</a>
     </span>
   </li>
@@ -1140,34 +1135,6 @@
 
     <p>Use this where you might <code>raise</code> in Python.</p>
   </section>
-</section>
-
-<section class="mt4">
-  <h2 class="title-2" id="cc">
-    C and C++ rules
-  </h2>
-
-  <p>Rules to build C and C++ targets.</p>
-
-  <p>
-    The process of building C or C++ code is fairly complex so while these rules
-    do their best to keep things reasonably simple, there's a lot of scope for
-    things going wrong.
-  </p>
-
-  <p>
-    There is very little difference between the <code class="code">c_</code> and
-    <code class="code">cc_</code> variants of each rule, in nearly all cases
-    they simply use different tools and flags in the
-    <a class="copy-link" href="/config.html#cpp">relevant config section</a>.
-  </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "c_library" }}
-  {{ template "lexicon_entry.html" .Named "c_static_library" }}
-  {{ template "lexicon_entry.html" .Named "c_shared_object" }}
-  {{ template "lexicon_entry.html" .Named "c_binary" }}
-  {{ template "lexicon_entry.html" .Named "c_test" }}
 </section>
 
 <section class="mt4">
