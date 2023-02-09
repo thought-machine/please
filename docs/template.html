@@ -330,7 +330,7 @@
               {{end}}
             </li>
 
-            {{$isItemActive := matches .Filename "build_rules.html" "tests.html" "workers.html" "post_build.html" "require_provide.html"}}
+            {{$isItemActive := matches .Filename "build_rules.html" "tests.html" "post_build.html" "require_provide.html"}}
             <li
                     class="mv2 {{boolOption $isItemActive "white before-dw-arrow" "violet before-rw-arrow hover-before-white"}}"
                     role="menuitem">
@@ -353,13 +353,6 @@
                             class="{{isFilenameOption "tests.html" "white" "silver"}} no-underline"
                             href="/tests.html"
                     >Testing with Please</a
-                    >
-                  </li>
-                  <li class="pl4" role="menuitem">
-                    <a
-                            class="{{isFilenameOption "workers.html" "white" "silver"}} no-underline"
-                            href="/workers.html"
-                    >Persistent workers</a
                     >
                   </li>
                   <li class="pl4" role="menuitem">

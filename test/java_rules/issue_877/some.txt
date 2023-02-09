@@ -1,1 +1,0 @@
-This is a sample file that should be included in the java library as a resource.

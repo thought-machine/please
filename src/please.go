@@ -46,7 +46,6 @@ import (
 	"github.com/thought-machine/please/src/tool"
 	"github.com/thought-machine/please/src/update"
 	"github.com/thought-machine/please/src/watch"
-	"github.com/thought-machine/please/src/worker"
 )
 
 var log = logging.Log
@@ -1517,7 +1516,6 @@ func execute(command string) int {
 			runtime.StopTrace()
 		}()
 	}
-	defer worker.StopAll()
 
 	log.Debugf("plz %v", command)
 	return buildFunctions[command]()

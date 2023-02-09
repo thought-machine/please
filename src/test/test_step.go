@@ -16,7 +16,6 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/process"
-	"github.com/thought-machine/please/src/worker"
 )
 
 var log = logging.Log
@@ -190,8 +189,8 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to remove test output files")
 		return
 	}
-	if err := startTestWorkerIfNeeded(tid, state, target); err != nil {
-		state.LogBuildError(tid, label, core.TargetTestFailed, fmt.Errorf("failed to start test worker: %w", err), "Failed to start test worker")
+	if err := verifyWorkerNotNeeded(tid, state, target); err != nil {
+		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to verify worker not needed")
 		return
 	}
 
@@ -546,24 +545,15 @@ func moveOutputFile(state *core.BuildState, hash []byte, from, to, dummy string)
 	return fs.RecordAttr(to, hash, xattrName, state.XattrsSupported)
 }
 
-// startTestWorkerIfNeeded starts a worker server if the test needs one.
-func startTestWorkerIfNeeded(tid int, state *core.BuildState, target *core.BuildTarget) error {
-	workerCmd, _, testCmd, err := core.TestWorkerCommand(state, target)
+// verifyWorkerNotNeeded returns an error if a persistent worker is needed.
+func verifyWorkerNotNeeded(tid int, state *core.BuildState, target *core.BuildTarget) error {
+	workerCmd, _, _, err := core.TestWorkerCommand(state, target)
 	if err != nil {
 		return err
 	} else if workerCmd == "" {
 		return nil
 	}
-	state.LogBuildResult(tid, target, core.TargetTesting, "Starting test worker...")
-	resp, err := worker.EnsureWorkerStarted(state, workerCmd, testCmd, target)
-	if err == nil {
-		state.LogBuildResult(tid, target, core.TargetTesting, "Testing...")
-		if resp.Command != "" {
-			log.Debug("Setting test command for %s to %s", target.Label, resp.Command)
-			target.Test.Command = resp.Command
-		}
-	}
-	return err
+	return fmt.Errorf("Persistent workers are no longer supported, found worker command: %s", workerCmd)
 }
 
 // verifyHash verifies that the hash on a test file matches the one for the current test.

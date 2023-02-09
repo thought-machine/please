@@ -13,7 +13,6 @@ go_library(
         "//src/generate",
         "//src/metrics",
         "//src/process",
-        "//src/worker",
         "//third_party/go:go-multierror",
         "//third_party/go:go-retryablehttp",
         "//third_party/go:protobuf",
