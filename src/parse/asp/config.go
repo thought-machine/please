@@ -195,27 +195,32 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 	return ret
 }
 
-func (i *interpreter) loadPluginConfig(s *scope, pluginState *core.BuildState) {
+func (i *interpreter) pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) (string, pyDict) {
 	if pluginState.RepoConfig == nil {
-		return
+		return "", nil
 	}
 
 	pluginName := pluginState.RepoConfig.PluginDefinition.Name
 	if pluginName == "" {
 		// Subinclude is not a plugin. Stop here.
+		return "", nil
+	}
+
+	return strings.ToUpper(pluginName), pluginConfig(pluginState, pkgState)
+}
+
+func (s *scope) loadPluginConfig(key string, cfg pyDict) {
+	if key == "" {
 		return
 	}
 
 	if s.config.overlay == nil {
 		s.config.overlay = pyDict{}
 	}
-
-	key := strings.ToUpper(pluginName)
 	if _, ok := s.config.overlay[key]; ok {
 		return
 	}
 
-	cfg := pluginConfig(pluginState, s.state)
 	s.config.overlay[key] = cfg
 }
 

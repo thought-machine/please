@@ -133,9 +133,10 @@ func (i *interpreter) preloadSubincludes(s *scope) (err error) {
 			includeState = subrepo.State
 		}
 
-		s.interpreter.loadPluginConfig(s, includeState)
+		key, cfg := s.interpreter.pluginConfig(includeState, s.state)
+		s.loadPluginConfig(key, cfg)
 		for _, out := range t.FullOutputs() {
-			s.SetAll(s.interpreter.Subinclude(out, t.Label), false)
+			s.SetAll(s.interpreter.Subinclude(out, t.Label, key, cfg), false)
 		}
 	}
 	return
@@ -193,7 +194,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 }
 
 // Subinclude returns the global values corresponding to subincluding the given file.
-func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
+func (i *interpreter) Subinclude(path string, label core.BuildLabel, pluginName string, pluginConfig pyDict) pyDict {
 	globals, wait, first := i.subincludes.GetOrWait(path)
 	if globals != nil {
 		return globals
@@ -212,6 +213,8 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 	s := i.scope.NewScope(path)
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
+	// Need to load this again so the config is available in the top level of the subinclude
+	s.loadPluginConfig(pluginName, pluginConfig)
 	s.subincludeLabel = &label
 	s.Set("CONFIG", s.config)
 	i.optimiseExpressions(stmts)

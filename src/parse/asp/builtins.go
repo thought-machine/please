@@ -278,7 +278,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 		}
 		filename = subrepo.Dir(filename)
 	}
-	s.SetAll(s.interpreter.Subinclude(filename, l), false)
+	s.SetAll(s.interpreter.Subinclude(filename, l, "", nil), false)
 	return None
 }
 
@@ -311,10 +311,11 @@ func subinclude(s *scope, args []pyObject) pyObject {
 			subrepo := s.state.Graph.SubrepoOrDie(t.Label.Subrepo)
 			incPkgState = subrepo.State
 		}
-		s.interpreter.loadPluginConfig(s, incPkgState)
+		key, cfg := s.interpreter.pluginConfig(incPkgState, s.state)
+		s.loadPluginConfig(key, cfg)
 
 		for _, out := range t.Outputs() {
-			s.SetAll(s.interpreter.Subinclude(filepath.Join(t.OutDir(), out), t.Label), false)
+			s.SetAll(s.interpreter.Subinclude(filepath.Join(t.OutDir(), out), t.Label, key, cfg), false)
 		}
 	}
 	return None
