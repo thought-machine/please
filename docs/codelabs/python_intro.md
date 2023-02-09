@@ -271,7 +271,7 @@ package(default_visibility = ["PUBLIC"])
 
 pip_library(
     name = "numpy",
-    version = "1.18.4",
+    version = "1.23.4",
     zip_safe = False, # This is because NumPy has shared object files which can't be linked to them when zipped up
 )
 ```
@@ -290,8 +290,16 @@ following to your `.plzconfig`:
 
 ### `.plzconfig`
 ```
-[python]
-moduledir = third_party.python
+[plugin "python"]
+ModuleDir = third_party.python
+```
+
+NB: if you encounter an error eg. `no such option: --system` you are likely using an operating system where you need to disable vendor flags. This can be done by adding this config.
+
+### `.plzconfig`
+```
+[plugin "python"]
+DisableVendorFlags = true
 ```
 
 ### Updating our tests
@@ -324,6 +332,11 @@ python_test(
 )
 ```
 
+```
+$ plz run //src:main
+Marhabaan, world!
+```
+
 ## What next?
 Duration: 1
 
@@ -331,8 +344,9 @@ Hopefully you now have an idea as to how to build Python with Please. Please is 
 
 - [Please basics](/basics.html) - A more general introduction to Please. It covers a lot of what we have in this
 tutorial in more detail.
-- [Built-in rules](/lexicon.html#python) - See the rest of the Python rules as well as rules for other languages and tools.
-- [Config](/config.html#python) - See the available config options for Please, especially those relating to Python.
+- [python plugin rules](/plugins.html#python) - See the rest of the Python plugin rules and config.
+- [Built-in rules](/lexicon.html#go) - See the rest of the built in rules.
+- [Config](/config.html) - See the available config options for Please.
 - [Command line interface](/commands.html) - Please has a powerful command line interface. Interrogate the build graph,
 determine files changes since master, watch rules and build them automatically as things change and much more! Use
 `plz help`, and explore this rich set of commands!

@@ -26,44 +26,27 @@ The final result of running through this codelab can be found
 [here](https://github.com/thought-machine/please-codelabs/tree/main/go_modules) for reference. If you really get stuck
 you can find us on [gitter](https://gitter.im/please-build/Lobby)!
 
-## go_module() vs. go_get()
-Duration: 3
+## Initialising your project
+Duration: 2
 
-Please has two ways to download third party dependencies for go. If you're coming to Please for the first time, you 
-should be using `go_module()` and can skip this section. If you're currently using `go_get()`, read on. 
+The easiest way to get started is from an existing Go module:
 
-The `go_get()` rules existed before go introduced modules, and are temperamental with go 1.15, and simply don't work in 
-1.16+. This is due to the new fingerprinting in the go linker. If you're using `go_get()` already, then you will need to 
-migrate to `go_module()` as `go_get()` will be deprecated in Please v17. 
-
-### Basic migration
-On the surface, `go_get()` and `go_module()` are very similar. The major difference is that `get` on `go_get()` can
-be the full import path, including wildcards. The `module` parameter on `go_module()` must be the actual module i.e.
-it must match the module in the go.mod. The package to install must be provided in the install list:
-```python
-go_get(
-    name = "some_module_api",
-    get = "github.com/someone/some_module/api/...", 
-    revision = "v2.0.0",
-    module_major_version = "v2", # go_module() can figure this out based on the module to install. 
-)
 ```
-Becomes
-```python
-go_module(
-    name = "some_module_api",
-    # The module name includes the major version (as it would in their go.mod)
-    module = "github.com/someone/some_module/v2",  
-    # Version can be a semantic version like this, or it can be a git reference (hash, tag, etc.) 
-    version = "v2.0.0",
-    # The packages to install must be put here rather than tacked onto the end of the module name
-    install = ["api/..."], 
-)
+$ mkdir go_module && cd go_module
+$ go mod init example_module
+$ plz init --no_prompt
+$ plz init plugin go
 ```
 
-This approach is more robust and works with any module proxy, not just the ones Please is aware of. For more information 
-on `go_module()` and it's sister rule `go_mod_download()`, including how to resolve cyclic dependencies, keep reading 
-this guide. 
+### A note about your Please PATH
+Please doesn't use your host system's `PATH` variable. If where you installed Go isn't in this default path, you will
+need to add the following to `.plzconfig`:
+```
+[build]
+path = $YOUR_GO_INSTALL_HERE:/usr/local/bin:/usr/bin:/bin
+```
+
+You can find out where Go is installed with `dirname $(which go)`.
 
 ## Dependencies in Please vs. go build
 Duration: 3
@@ -77,6 +60,8 @@ controlled and reproducible way without actually having to understand go itself.
 work to set up.
 
 A basic `go_module()` usage might look like: 
+
+### `third_party/go/BUILD`
 ```python
 go_module(
     name = "protobuf_go",
@@ -104,6 +89,7 @@ installing anything system wide.
 
 The install list can contain exact packages, or could contain wildcards:
 
+### `third_party/go/BUILD`
 ```python
 go_module(
     name = "module",
@@ -131,6 +117,7 @@ have a binary rule for the protoc plugin, so we can refer to that in our proto c
 
 To do this, we create a `go_mod_download()` rule that will download our sources for us:
 
+### `third_party/go/BUILD`
 ```python
 go_mod_download(
     name = "protobuf_download",
@@ -149,7 +136,7 @@ go_module(
     module = "github.com/golang/protobuf",
     # Let's skip compiling this package which as we're compiling this separately.
     strip = ["protoc-gen-go"], 
-    deps = [":protobuf_go"],
+    deps = [":protobuf_download"],
 )
 ```
 
@@ -167,13 +154,6 @@ go_module(
 )
 ```
 
-We can then refer to this in our `.plzconfig`:
-
-```
-[proto]
-ProtocGoPlugin = //third_party/go:protoc-gen-go
-```
-
 ## Resolving cyclic dependencies
 Duration: 5
 
@@ -188,7 +168,7 @@ N.B. To run a gRPC service written in go, you will have to install almost all of
 of brevity, this example only install the subset that `google.golang.org/genproto` needs. You may want to complete this 
 by adding `go_module()` rules for the rest of the modules `google.golang.org/grpc` depends on. 
 
-### Installing gRPC's deps
+### Installing gRPC's deps `third_party/go/BUILD`
 First we must install the dependencies of `google.golang.org/grpc`:
 ```python
 go_module(
@@ -232,7 +212,7 @@ go_module(
 )
 ```
 
-### Finding out what gRPC needs
+### Finding out what gRPC needs `third_party/go/BUILD`
 
 Next let's try and compile gRPC. We know it has a dependency on some of genproto, but let's set that aside for now:
 ```python
@@ -326,6 +306,8 @@ now.
 
 ## Using third party libraries
 Third party dependencies can be depended on in the same way as `go_library()` rules:
+
+### `third_party/go/BUILD`
 ```python
 go_library(
     name = "service",
@@ -343,8 +325,9 @@ Hopefully you now have an idea as to how to build Go modules with Please. Please
 
 - [Please basics](/basics.html) - A more general introduction to Please. It covers a lot of what we have in this
 tutorial in more detail.
-- [Built-in rules](/lexicon.html#go) - See the rest of the Go rules as well as rules for other languages and tools.
-- [Config](/config.html#go) - See the available config options for Please, especially those relating to the Go language
+- [go plugin rules](/plugins.html#go) - See the rest of the Go plugin rules and config.
+- [Built-in rules](/lexicon.html#go) - See the rest of the built in rules.
+- [Config](/config.html) - See the available config options for Please.
 - [Command line interface](/commands.html) - Please has a powerful command line interface. Interrogate the build graph,
 determine files changes since master, watch rules and build them automatically as things change and much more! Use
 `plz help`, and explore this rich set of commands!
