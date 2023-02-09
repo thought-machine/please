@@ -75,6 +75,8 @@ func injectPluginConfig(plugin string, file ast.File) ast.File {
 		return writeJavaConfigFields(file)
 	case "cc":
 		return writeCCConfigFields(file)
+	case "go":
+		return writeGoConfigFields(file)
 	default:
 		return writeFieldsToConfig(plugin, file, nil)
 	}
@@ -135,6 +137,23 @@ func writeJavaConfigFields(file ast.File) ast.File {
 	}
 
 	return writeFieldsToConfig("java", file, configMap)
+}
+
+func writeGoConfigFields(file ast.File) ast.File {
+	configMap := map[string]string{
+		"gotool":           "GoTool",
+		"importpath":       "ImportPath",
+		"cgocctool":        "CCTool",
+		"cgoenabled":       "CGoEnabled",
+		"pleasegotool":     "PleaseGoTool",
+		"delvetool":        "DelveTool",
+		"defaultstatic":    "DefaultStatic",
+		"gotestrootcompat": "TestRootCompat",
+		"cflags":           "CFlags",
+		"ldflags":          "LdFlags",
+	}
+
+	return writeFieldsToConfig("go", file, configMap)
 }
 
 func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]string) ast.File {

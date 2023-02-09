@@ -1,669 +1,669 @@
-""" Rules to build Python code.
-
-The output artifacts for Python rules are .pex files (see https://github.com/pantsbuild/pex).
-Pex is a rather nice system for combining Python code and all needed dependencies
-(excluding the actual interpreter and possibly some system level bits) into a single file.
-
-The process of compiling pex files can be a little slow when including many large files, as
-often happens when one's binary includes large compiled dependencies (eg. numpy...). Hence
-we have a fairly elaborate optimisation whereby each python_library rule builds a little
-zipfile containing just its sources, and all of those are combined at the end to produce
-the final .pex. This builds at roughly the same pace for a clean build of a single target,
-but is drastically faster for building many targets with similar dependencies or rebuilding
-a target which has only had small changes.
-"""
-
-
-def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visibility:list=None,
-                   test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[],
-                   interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER, strip:bool=False):
-    """Generates a Python library target, which collects Python files for use by dependent rules.
-
-    Note that each python_library performs some pre-zipping of its inputs before they're combined
-    in a python_binary or python_test. Hence while it's of course not required that all dependencies
-    of those rules are python_library rules, it's often a good idea to wrap any large dependencies
-    in one to improve incrementality (not necessary for pip_library, of course).
-
-    Args:
-      name (str): Name of the rule.
-      srcs (list): Python source files for this rule.
-      resources (list): Non-Python files that this rule collects which will be included in the final .pex.
-                        The distinction between this and srcs is fairly arbitrary and historical, but
-                        semantically quite nice and parallels python_test.
-      deps (list): Dependencies of this rule.
-      visibility (list): Visibility specification.
-      test_only (bool): If True, can only be depended on by tests.
-      zip_safe (bool): Should be set to False if this library can't be safely run inside a .pex
-                       (the most obvious reason not is when it contains .so modules).
-                       See python_binary for more information.
-      labels (list): Labels to apply to this rule.
-      interpreter (str): The Python interpreter to use. Defaults to the value of the
-                         Python.DefaultInterpreter setting.
-      strip (bool): If True, the original sources are stripped and only bytecode is output.
-      labels (list): Any labels to apply to this rule.
-    """
-    if not zip_safe:
-        labels += ['py:zip-unsafe']
-    if srcs or resources:
-        cmd = '$TOOLS_ARCAT z -d -o ${OUTS} -i .'
-        if srcs:
-            # This is a bit of a hack, but rather annoying. We want to put bytecode in its 'legacy' location
-            # in python3 because zipimport doesn't look in __pycache__. Unfortunately the flag doesn't exist
-            # in python2 so we have to guess whether we should apply it or not.
-            bytecode_flag = '-b' if 'python3' in interpreter or 'pypy3' in interpreter else ''
-            compile_cmd = f'$TOOLS_INT -S -m compileall {bytecode_flag} -f $SRCS_SRCS'
-            if strip:
-                cmd = ' && '.join([compile_cmd, 'rm -f $SRCS_SRCS', cmd])
-            else:
-                cmd = ' && '.join([compile_cmd, cmd])
-        # Pre-zip the files for later collection by python_binary.
-        zip_rule = build_rule(
-            name=name,
-            tag='zip',
-            srcs={
-                'SRCS': srcs,
-                'RES': resources,
-            },
-            outs=[f'.{name}.pex.zip'],
-            cmd=cmd,
-            building_description='Compressing...',
-            requires=['py'],
-            test_only=test_only,
-            output_is_complete=True,
-            tools={
-                'int': [interpreter],
-                'arcat': [CONFIG.ARCAT_TOOL],
-            },
-            labels = labels,
-        )
-        deps += [zip_rule]
-    elif strip:
-        fail("Can't pass strip=True to a python_library with no srcs")
-
-    return filegroup(
-        name=name,
-        srcs=resources if strip else (srcs + resources),
-        deps=deps,
-        visibility=visibility,
-        output_is_complete=False,
-        requires=['py'],
-        test_only=test_only,
-        labels=labels,
-    )
-
-
-def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
-                  data:list=None, visibility:list=None, test_only:bool=False, zip_safe:bool=None,
-                  site:bool=False, strip:bool=False, interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER,
-                  shebang:str='', labels:list&features&tags=[]):
-    """Generates a Python binary target.
-
-    This compiles all source files together into a single .pex file which can
-    be easily copied or deployed. The construction of the .pex is done in parts
-    by the dependent python_library rules, and this rule simply builds the
-    metadata for it and concatenates them all together.
-
-    This target can be debugged via:
-        plz debug [-o python.debugger:[pdb|debugpy]] [--port] //:target
-
-    Args:
-      name (str): Name of the rule.
-      main (str): Python file which is the entry point and __main__ module.
-      srcs (list): List of additional Python source files for this binary.
-      resources (list): List of static resources to include in the .pex.
-      data (list): Runtime data files for this rule.
-      out (str): Name of the output file. Default to name + .pex
-      deps (list): Dependencies of this rule.
-      visibility (list): Visibility specification.
-      test_only (bool): If True, can only be depended on by tests.
-      zip_safe (bool): Allows overriding whether the output is marked zip safe or not.
-                       If set to explicitly True or False, the output will be marked
-                       appropriately; by default it will be safe unless any of the
-                       transitive dependencies are themselves marked as not zip-safe.
-      strip (bool): Strips source code from the output .pex file, leaving just bytecode.
-      site (bool): Allows the Python interpreter to import site; conversely if False, it will be
-                   started with the -S flag to avoid importing site.
-      interpreter (str): The Python interpreter to use. Defaults to the value of the
-                         Python.DefaultInterpreter setting.
-      shebang (str): Exact shebang to apply to the generated file. By default we will
-                     determine something appropriate for the given interpreter.
-      labels (list): Labels to apply to this rule.
-    """
-    shebang = shebang or _interpreter_cmd(interpreter)
-    zipsafe_flag = '' if zip_safe is False else '--zip_safe'
-    cmd = '$TOOLS_PEX -s "%s" -m "%s" %s --interpreter_options="%s" --stamp="$RULE_HASH"' % (
-        shebang, CONFIG.PYTHON_MODULE_DIR, zipsafe_flag, CONFIG.PYTHON_INTERPRETER_OPTIONS)
-    if site:
-        cmd += ' -S'
-
-    if CONFIG.BUILD_CONFIG == 'dbg':
-        # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
-        cmd = f'{cmd} -d={CONFIG.PYTHON_DEBUGGER}'.replace(' --zip_safe', '')
-
-    assert main not in srcs, "main file should not be included in srcs"
-
-    lib_rule = python_library(
-        name='_%s#lib' % name,
-        srcs=[main] + srcs,
-        resources=resources,
-        interpreter=interpreter,
-        deps=deps,
-        visibility=visibility,
-        test_only=test_only,
-    )
-
-    # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
-    pex_rule = build_rule(
-        name = name,
-        tag = 'pex',
-        srcs=[main],
-        outs=[f'.{name}_main.pex.zip'],  # just call it .zip so everything has the same extension
-        cmd=cmd,
-        requires=['py', 'pex'],
-        pre_build=_handle_zip_safe if zip_safe is None else None,
-        deps=deps,
-        needs_transitive_deps=True,  # Needed so we can find anything with zip_safe=False on it.
-        output_is_complete=True,
-        tools={
-            'interpreter': [interpreter],
-            'pex': [CONFIG.PEX_TOOL],
-        },
-        test_only=test_only,
-    )
-
-    # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
-    cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
-    if strip:
-        cmd += ' --strip_py'
-
-    debug_cmd = _debug_cmd("./$OUT")
-
-    return build_rule(
-        name=name,
-        srcs=[pex_rule],
-        deps=[lib_rule],
-        outs=[out or (name + '.pex')],
-        data=data,
-        cmd=cmd,
-        debug_cmd=debug_cmd,
-        needs_transitive_deps=True,
-        binary=True,
-        output_is_complete=True,
-        building_description="Creating pex...",
-        visibility=visibility,
-        requires=['py', interpreter],
-        tools=[CONFIG.ARCAT_TOOL],
-        # This makes the python_library rule the dependency for other python_library or
-        # python_test rules that try to import it. Does mean that they cannot collect a .pex
-        # by depending directly on the rule, they'll just get the Python files instead.
-        # This is not a common case anyway; more usually you'd treat that as a runtime data
-        # file rather than trying to pack into a pex. Can be worked around with an
-        # intermediary filegroup rule if really needed.
-        provides={'py': lib_rule},
-        labels=labels,
-        test_only=test_only,
-    )
-
-
-def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:list=[], worker:str='',
-                labels:list&features&tags=[], size:str=None, flags:str='', visibility:list=None,
-                sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
-                test_outputs:list=None, zip_safe:bool=None, interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER,
-                site:bool=False, test_runner:str=None):
-    """Generates a Python test target.
-
-    This works very similarly to python_binary; it is also a single .pex file
-    which is run to execute the tests. The tests are run via either unittest, pytest, or behave, depending
-    on which is set for the test runner, which can be configured either via the python_test_runner
-    package property or python.testrunner in the config.
-
-    This target can be debugged via:
-        plz debug [-o python.debugger:[pdb|debugpy]] [--port] //:target
-
-    Args:
-      name (str): Name of the rule.
-      srcs (list): Source files for this test.
-      data (list): Runtime data files for the test.
-      resources (list): Non-Python files to be included in the pex. Note that the distinction
-                        vs. srcs is important here; srcs are passed to unittest for it to run
-                        and it may or may not be happy if given non-Python files.
-      deps (list): Dependencies of this rule.
-      worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
-      labels (list): Labels for this rule.
-      size (str): Test size (enormous, large, medium or small).
-      flags (str): Flags to apply to the test command.
-      visibility (list): Visibility specification.
-      sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
-      timeout (int): Maximum time this test is allowed to run for, in seconds.
-      flaky (int | bool): True to mark this test as flaky, or an integer for a number of reruns.
-      test_outputs (list): Extra test output files to generate from this test.
-      zip_safe (bool): Allows overriding whether the output is marked zip safe or not.
-                       If set to explicitly True or False, the output will be marked
-                       appropriately; by default it will be safe unless any of the
-                       transitive dependencies are themselves marked as not zip-safe.
-      interpreter (str): The Python interpreter to use. Defaults to the value of the
-                         Python.DefaultInterpreter setting.
-      site (bool): Allows the Python interpreter to import site; conversely if False, it will be
-                   started with the -S flag to avoid importing site.
-      test_runner (str): Specify which Python test runner to use for these tests. One of
-                         `unittest`, `pytest`, or a custom test runner entry point.
-    """
-    test_runner = test_runner or CONFIG.PYTHON_TEST_RUNNER
-    cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$RULE_HASH"' % (
-        _interpreter_cmd(interpreter), CONFIG.PYTHON_MODULE_DIR, test_runner,
-        CONFIG.PYTHON_INTERPRETER_OPTIONS)
-    if site:
-        cmd += ' -S'
-
-    if CONFIG.BUILD_CONFIG == 'dbg':
-        # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
-        cmd = f'{cmd} -d={CONFIG.PYTHON_DEBUGGER}'.replace(' --zip_safe', '')
-
-    # If the config specifies a PYTHON_TEST_RUNNER_BOOTSTRAP target, then this ought to contain
-    # the test-runner library (e.g. pytest), and its transitive dependencies. In this case, we just
-    # add the specified target as a dependency.
-    #
-    # If no bootstrap target is provided, then plz will provide a pinned set of dependencies to
-    # support the specified test-runner framework.
-    bootstrap = CONFIG.PYTHON_TEST_RUNNER_BOOTSTRAP
-    if bootstrap:
-        deps += [bootstrap] if bootstrap not in deps else []
-        cmd = cmd.replace(' --add_test_runner_deps', '')
-
-    # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
-    pex_rule = build_rule(
-        name = name,
-        tag = 'pex',
-        srcs=srcs,
-        outs=[f'.{name}_main.pex.zip'],  # just call it .zip so everything has the same extension
-        cmd=cmd,
-        requires=['py'],
-        test_only=True,
-        needs_transitive_deps=True,  # needed for zip-safe detection
-        building_description="Creating pex info...",
-        pre_build=_handle_zip_safe,
-        deps=deps,
-        tools={
-            'interpreter': [interpreter],
-            'pex': [CONFIG.PEX_TOOL],
-        },
-        labels = labels,
-    )
-
-    # If there are resources specified, they have to get built into the pex.
-    deps = [pex_rule]
-    lib_rule = python_library(
-        name='_%s#lib' % name,
-        srcs=srcs,
-        resources=resources,
-        interpreter=interpreter,
-        deps=deps,
-        test_only=True,
-        visibility=visibility,
-        labels = labels,
-    )
-
-    deps = [pex_rule, lib_rule]
-
-    test_cmd = f'$TEST {flags}'
-    worker_cmd = f'$(worker {worker})' if worker else ""
-    if worker_cmd:
-        test_cmd = f'{worker_cmd} && {test_cmd} '
-        deps += [worker]
-
-    debug_cmd = _debug_cmd(
-        bin = "./$TEST",
-        flags = flags,
-        pre_cmd = worker_cmd,
-    )
-
-    # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
-    return build_rule(
-        name=name,
-        srcs=[pex_rule],
-        deps=deps,
-        # N.B. the actual test sources are passed as data files as well. This is needed for pytest but
-        #      is faster for unittest as well (because we don't need to rebuild the pex if they change).
-        data=data | {'_srcs': srcs} if isinstance(data, dict) else data + srcs,
-        outs=[f'{name}.pex'],
-        labels=labels,
-        cmd='$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
-        test_cmd=test_cmd,
-        debug_cmd=debug_cmd,
-        needs_transitive_deps=True,
-        output_is_complete=True,
-        binary=True,
-        test=True,
-        test_sandbox=sandbox,
-        building_description="Building pex...",
-        visibility=visibility,
-        test_timeout=timeout,
-        size = size,
-        flaky=flaky,
-        test_outputs=test_outputs,
-        requires=['py', 'test', interpreter],
-        tools=[CONFIG.ARCAT_TOOL],
-    )
-
-
-def pip_library(name:str, version:str, labels:list=[], hashes:list=None, package_name:str=None,
-                test_only:bool&testonly=False, deps:list=[], post_install_commands:list=None,
-                install_subdirectory:str=None, repo:str=None, use_pypi:bool=None, patch:str|list=None,
-                visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None,
-                strip:list=[]):
-    """Provides a build rule for third-party dependencies to be installed by pip.
-
-    Args:
-      name (str): Name of the build rule.
-      version (str): Specific version of the package to install.
-      labels (list): Additional labels to apply to this rule.
-      hashes (list): List of acceptable hashes for this target.
-      package_name (str): Name of the pip package to install. Defaults to the same as 'name'.
-      outs (list): List of output files / directories. Defaults to [name]. If subdirectory is used outs[0] is used as the prefix.
-      test_only (bool): If True, can only be used by test rules or other test_only libraries.
-      deps (list): List of rules this library depends on.
-      post_install_commands (list): Commands run after pip install has completed.
-      install_subdirectory (bool): Forces the package to install into a subdirectory with this name.
-      repo (str): Allows specifying a custom repo to fetch from.
-      use_pypi (bool): If True, will check PyPI as well for packages.
-      patch (str | list): A patch file or files to be applied after install.
-      visibility (list): Visibility declaration for this rule.
-      zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
-      licences (list): Licences this rule is subject to. Default attempts to detect from package metadata.
-      pip_flags (str): List of additional flags to pass to pip.
-      strip (list): Files to strip after install. Note that these are done at any level.
-    """
-    pip_target_dir = "pip_install"
-
-    package_name = package_name or name
-    package_name = f'{package_name}=={version}'
-    post_install_commands = post_install_commands or []
-    use_pypi = CONFIG.USE_PYPI if use_pypi is None else use_pypi
-    index_flag = '' if use_pypi else '--no-index'
-    pip_flags = pip_flags or CONFIG.PIP_FLAGS
-
-    repo_flag = ''
-    repo = repo or CONFIG.PYTHON_DEFAULT_PIP_REPO
-    if repo:
-        if repo.startswith('//') or repo.startswith(':'):  # Looks like a build label, not a URL.
-            repo_flag = f'-f %(location {repo})'
-            deps += [repo]
-        else:
-            repo_flag = '-f ' + repo
-
-    target = f"{pip_target_dir}/{name}"
-    if install_subdirectory:
-        target += '/' + install_subdirectory
-
-    pip_tool = "$TOOLS_PIP" if CONFIG.PIP_TOOL else '$TOOLS_PYTHON -m pip'
-
-    # Unset these compiler and linker flags as macOS doesn't have all these options.
-    pip_compile_flags = 'CFLAGS=" -Wl,--build-id=none -g0 " LDFLAGS=" -Wl,--build-id=none"' if CONFIG.HOSTOS != 'darwin' else 'CFLAGS=" -g0"'
-
-    pip_cmd = (
-        f'mkdir {pip_target_dir} && '
-        f'PIP_CONFIG_FILE=/dev/null {pip_compile_flags} {pip_tool} install --isolated --no-deps --prefix= --no-compile '
-        f'--no-cache-dir --default-timeout=60 --target={target}'
-    )
-
-    # TODO(jpoole): This is a total mess on pip's side with --user flag. https://github.com/pypa/pip/issues/1668
-    # It seems like most things have been resolved (Oct 2019ish) however a lot of python installs are probably not
-    # updated yet. Essentially the "user" default will be turned off when --target is passed. Right now, it complains
-    # that --prefix (and therefore --target) are incompatible with --user. See https://github.com/pypa/pip/pull/7002
-    if CONFIG.HOSTOS == 'darwin' and not CONFIG.DISABLE_VENDOR_FLAGS:
-        # Fix for Homebrew which fails with a superficially similar issue.
-        # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
-        # but that prevents downloading binary wheels. This is more fiddly but seems to work.
-        # Unfortunately it does *not* work similarly on the Debian problem :(
-        pip_cmd = 'echo "[install]\nprefix=" > setup.cfg; ' + pip_cmd
-    if CONFIG.OS == 'linux' and not CONFIG.DISABLE_VENDOR_FLAGS:
-        # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
-        # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
-        # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
-        pip_cmd = f'[ -f /etc/debian_version ] && SYS_FLAG="--system" || SYS_FLAG=""; {pip_cmd} $SYS_FLAG'
-
-    pip_cmd += f' {repo_flag} {index_flag} {pip_flags} {package_name}'
-
-    if strip:
-        pip_cmd += ' && find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])
-
-    if install_subdirectory:
-        pip_cmd += f' && touch {target}/__init__.py && rm -rf {target}/*.egg-info {target}/*.dist-info'
-
-    if patch:
-        patches, c = _patch_cmd(patch)
-        pip_cmd += ' && ' + ' && '.join(c)
-
-    if post_install_commands:
-        pip_cmd = ' && '.join([pip_cmd] + post_install_commands)
-
-    tools = {'pip': [CONFIG.PIP_TOOL]} if CONFIG.PIP_TOOL else {'python': [CONFIG.DEFAULT_PYTHON_INTERPRETER]}
-    srcs = build_rule(
-        name = name,
-        tag = "srcs",
-        cmd = pip_cmd,
-        test_only = test_only,
-        output_dirs = [pip_target_dir],
-        srcs = patches if patch else [],
-        building_description = 'Fetching...',
-        tools = tools,
-        sandbox = False,
-        labels = ["dlink:plz-out/python/venv"]
-    )
-
-    # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
-    cmd = f'$TOOLS_ARCAT z --suffix="" --exclude_suffix=whl --include_other -i . -r $PKG/{name}:$PKG'
-    if not licences:
-        cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
-
-    return build_rule(
-        name = name,
-        cmd = cmd,
-        outs = [name + '.whl'],
-        srcs = [srcs],
-        deps = [] + deps,
-        building_description = 'Collecting...',
-        hashes = hashes,
-        test_only = test_only,
-        licences = licences,
-        tools = {
-            'arcat': [CONFIG.ARCAT_TOOL],
-        },
-        post_build = None if licences else _add_licences,
-        labels = labels + ['py', 'pip:' + package_name] + (['py:zip-unsafe'] if not zip_safe else []),
-        visibility = visibility,
-    )
-
-def python_wheel(name:str, version:str, labels:list=[], hashes:list=None, package_name:str=None,
-                 outs:list=None, post_install_commands:list=None, patch:str|list=None, licences:list=None,
-                 test_only:bool&testonly=False, repo:str=None, zip_safe:bool=True, visibility:list=None,
-                 deps:list=[], name_scheme:str=None, strip:list=['*.pyc', 'tests']):
-    """Downloads a Python wheel and extracts it.
-
-    This is a lightweight pip-free alternative to pip_library which supports cross-compiling.
-    Rather than leaning on pip which is difficult to achieve reproducible builds with and
-    support on different platforms, this rule is a simple wrapper around curl and unzip.
-    Unless otherwise specified, the wheels are expected to adhere to common naming schemes,
-    such as:
-      <package_name>-<version>[-<os>-<arch>].whl
-      <package_name>-<version>[-<os>_<arch>].whl
-      <package_name>-<version>.whl
-
-    Args:
-      name (str): Name of the rule. Also doubles as the name of the package if package_name
-            is not set.
-      version (str): Version of the package to install.
-      labels (list): Additional labels to apply to this rule.
-      hashes (list): List of hashes to verify the package against.
-      package_name (str): If given, overrides `name` for the name of the package to look for.
-      outs (list): List of output files. Defaults to a directory named the same as `name`.
-      post_install_commands (list): Commands to run after 'install'.
-      patch (str | list): Patch file to apply after install to fix any upstream code that has
-                          done bad things.
-      licences (list): Licences that this rule is subject to.
-      test_only (bool): If True, this library can only be used by tests.
-      repo (str): Repository to download wheels from.
-      zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
-      visibility (list): Visibility declaration.
-      deps (list): Dependencies of this rule.
-      name_scheme (str): The templatized wheel naming scheme (available template variables
-                         are `url_base`, `package_name`, `initial`, and `version`).
-      strip (list): Files to strip after install. Note that these are done at any level.
-    """
-    package_name = package_name or name.replace('-', '_')
-    initial = package_name[0]
-    url_base = repo or CONFIG.PYTHON_WHEEL_REPO
-    if not url_base:
-        fail('python.wheel_repo is not set in the config, must pass repo explicitly to python_wheel')
-    urls = []
-    if name_scheme:
-        urls += [name_scheme.format(url_base=url_base,
-                                    package_name=package_name,
-                                    initial=initial,
-                                    version=version)]
-    elif CONFIG.PYTHON_WHEEL_NAME_SCHEME:
-        urls += [scheme.format(url_base=url_base, package_name=package_name, initial=initial, version=version)
-                 for scheme in CONFIG.PYTHON_WHEEL_NAME_SCHEME]
-    else:
-        # Populate urls using a reasonable set of possible wheel naming schemes.
-        # Look for an arch-specific wheel first; in some cases there can be both (e.g. protobuf
-        # has optional arch-specific bits) and we prefer the one with the cool stuff.
-        urls += ['{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                    package_name=package_name,
-                                                                                    initial=initial,
-                                                                                    version=version),
-                 '{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
-                                                                                    package_name=package_name,                                                                                   initial=initial,
-                                                                                    version=version),
-                 '{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
-                                                                  package_name=package_name,
-                                                                  initial=initial,
-                                                                  version=version)]
-
-    file_rule = remote_file(
-        name = name,
-        _tag = 'download',
-        out = name + '.whl',
-        url = urls,
-        hashes = hashes if CONFIG.FF_PYTHON_WHEEL_HASHING else None,
-        licences = licences if licences else None,
-    )
-
-    cmd = ['$TOOL x $SRCS_SRC']
-
-    if strip:
-        cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
-    if not licences:
-        cmd += ['find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
-                'xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true']
-    if patch:
-        patches, c = _patch_cmd(patch)
-        cmd += c
-    if post_install_commands:
-        cmd += post_install_commands
-
-    cmd += ['$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
-    label = f'whl:{package_name}=={version}'
-
-    wheel_rule = build_rule(
-        name = name,
-        tag = 'wheel',
-        cmd = ' && '.join(cmd),
-        outs = [name + '.pex.zip'],
-        srcs = {
-            'src': [file_rule],
-            'res': patches if patch else [],
-        },
-        building_description = 'Repackaging...',
-        requires = ['py'],
-        deps = deps,
-        test_only = test_only,
-        licences = licences,
-        tools = [CONFIG.ARCAT_TOOL],
-        post_build = None if licences else _add_licences,
-        sandbox = False,
-        labels = ['py:zip-unsafe', label] if not zip_safe else [label],
-    )
-    cmd = '$TOOL x $SRCS -s $PKG_DIR'
-    if outs:
-        # Hacky solution to handle things being in subdirectories in awkward ways.
-        before, _, after = outs[0].partition('/')
-        if after:
-            cmd = f'rm -rf {before} && {cmd}'
-    return build_rule(
-        name = name,
-        srcs = [wheel_rule],
-        hashes = None if CONFIG.FF_PYTHON_WHEEL_HASHING else hashes,
-        outs = outs or [name],
-        tools = [CONFIG.ARCAT_TOOL],
-        cmd = cmd,
-        deps = deps,
-        visibility = visibility,
-        licences = licences,
-        test_only = test_only,
-        labels = labels + [label] + ["link:plz-out/python/venv"],
-        provides = {'py': wheel_rule},
-    )
-
-
-def _interpreter_cmd(interpreter:str):
-    return f'$(out {interpreter})' if interpreter.startswith('//') or interpreter.startswith(':') else interpreter
-
-
-def _patch_cmd(patch):
-    """Returns a command for the given patch or patches, with OS-specific tweaks where needed."""
-    patches = [patch] if isinstance(patch, str) else patch
-    if CONFIG.HOSTOS == 'freebsd':
-        # --no-backup-if-mismatch is not supported, but we need to get rid of the .orig
-        # files for hashes to match correctly.
-        return patches, [f'patch -p0 < $(location {patch})' for patch in patches] + ['find . -name "*.orig" | xargs rm']
-    else:
-        return patches, [f'patch -p0 --no-backup-if-mismatch < $(location {patch})' for patch in patches]
-
-
-def _handle_zip_safe(name):
-    """Handles the zip safe flag.
-
-    This works as a pre-build function and hence can only use the builtin
-    methods to manipulate the rule.
-    """
-    if has_label(name, 'py:zip-unsafe'):
-        set_command(name, get_command(name).replace(' --zip_safe', ''))
-
-
-def _add_licences(name, output):
-    """Annotates a pip_library rule with detected licences after download."""
-    found = False
-    for line in output:
-        if line.startswith('License: '):
-            for licence in line[9:].split(' or '):  # Some are defined this way (eg. "PSF or ZPL")
-                add_licence(name, licence)
-                found = True
-        elif line.startswith('Classifier: License'):
-            # Oddly quite a few packages seem to have UNKNOWN for the licence but this Classifier
-            # section still seems to know what they are licenced as.
-            add_licence(name, line.split(' :: ')[-1])
-            found = True
-    if not found:
-        log.warning('No licence found for %s, should add licences = [...] to the rule', name.lstrip('_').split('#')[0])
-
-
-# `pdb` and `debugpy` are the current debuggers supported by the PEX tool.
-def _debug_cmd(bin:str, flags:str='', pre_cmd:str=''):
-    if CONFIG.BUILD_CONFIG != 'dbg':
-        return ""
-
-    # `PEX_EXPLODE` will explode the PEX before executing to allow clients to access third party sources files.
-    # `DEBUG_PORT` is read by the PEX generated for debuggers that support server mode.
-    cmd = f"{bin} {flags}" if not CONFIG.DEBUG_PORT else f"PEX_EXPLODE=true DEBUG_PORT={CONFIG.DEBUG_PORT} {bin} {flags}"
-
-    if pre_cmd:
-        cmd = f"{pre_cmd} && {cmd}"
-
-    return cmd
-
-
-if CONFIG.BAZEL_COMPATIBILITY:
-    py_library = python_library
-    py_binary = python_binary
-    py_test = python_test
+# """ Rules to build Python code.
+#
+# The output artifacts for Python rules are .pex files (see https://github.com/pantsbuild/pex).
+# Pex is a rather nice system for combining Python code and all needed dependencies
+# (excluding the actual interpreter and possibly some system level bits) into a single file.
+#
+# The process of compiling pex files can be a little slow when including many large files, as
+# often happens when one's binary includes large compiled dependencies (eg. numpy...). Hence
+# we have a fairly elaborate optimisation whereby each python_library rule builds a little
+# zipfile containing just its sources, and all of those are combined at the end to produce
+# the final .pex. This builds at roughly the same pace for a clean build of a single target,
+# but is drastically faster for building many targets with similar dependencies or rebuilding
+# a target which has only had small changes.
+# """
+#
+#
+# def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visibility:list=None,
+#                    test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[],
+#                    interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER, strip:bool=False):
+#     """Generates a Python library target, which collects Python files for use by dependent rules.
+#
+#     Note that each python_library performs some pre-zipping of its inputs before they're combined
+#     in a python_binary or python_test. Hence while it's of course not required that all dependencies
+#     of those rules are python_library rules, it's often a good idea to wrap any large dependencies
+#     in one to improve incrementality (not necessary for pip_library, of course).
+#
+#     Args:
+#       name (str): Name of the rule.
+#       srcs (list): Python source files for this rule.
+#       resources (list): Non-Python files that this rule collects which will be included in the final .pex.
+#                         The distinction between this and srcs is fairly arbitrary and historical, but
+#                         semantically quite nice and parallels python_test.
+#       deps (list): Dependencies of this rule.
+#       visibility (list): Visibility specification.
+#       test_only (bool): If True, can only be depended on by tests.
+#       zip_safe (bool): Should be set to False if this library can't be safely run inside a .pex
+#                        (the most obvious reason not is when it contains .so modules).
+#                        See python_binary for more information.
+#       labels (list): Labels to apply to this rule.
+#       interpreter (str): The Python interpreter to use. Defaults to the value of the
+#                          Python.DefaultInterpreter setting.
+#       strip (bool): If True, the original sources are stripped and only bytecode is output.
+#       labels (list): Any labels to apply to this rule.
+#     """
+#     if not zip_safe:
+#         labels += ['py:zip-unsafe']
+#     if srcs or resources:
+#         cmd = '$TOOLS_ARCAT z -d -o ${OUTS} -i .'
+#         if srcs:
+#             # This is a bit of a hack, but rather annoying. We want to put bytecode in its 'legacy' location
+#             # in python3 because zipimport doesn't look in __pycache__. Unfortunately the flag doesn't exist
+#             # in python2 so we have to guess whether we should apply it or not.
+#             bytecode_flag = '-b' if 'python3' in interpreter or 'pypy3' in interpreter else ''
+#             compile_cmd = f'$TOOLS_INT -S -m compileall {bytecode_flag} -f $SRCS_SRCS'
+#             if strip:
+#                 cmd = ' && '.join([compile_cmd, 'rm -f $SRCS_SRCS', cmd])
+#             else:
+#                 cmd = ' && '.join([compile_cmd, cmd])
+#         # Pre-zip the files for later collection by python_binary.
+#         zip_rule = build_rule(
+#             name=name,
+#             tag='zip',
+#             srcs={
+#                 'SRCS': srcs,
+#                 'RES': resources,
+#             },
+#             outs=[f'.{name}.pex.zip'],
+#             cmd=cmd,
+#             building_description='Compressing...',
+#             requires=['py'],
+#             test_only=test_only,
+#             output_is_complete=True,
+#             tools={
+#                 'int': [interpreter],
+#                 'arcat': [CONFIG.ARCAT_TOOL],
+#             },
+#             labels = labels,
+#         )
+#         deps += [zip_rule]
+#     elif strip:
+#         fail("Can't pass strip=True to a python_library with no srcs")
+#
+#     return filegroup(
+#         name=name,
+#         srcs=resources if strip else (srcs + resources),
+#         deps=deps,
+#         visibility=visibility,
+#         output_is_complete=False,
+#         requires=['py'],
+#         test_only=test_only,
+#         labels=labels,
+#     )
+#
+#
+# def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
+#                   data:list=None, visibility:list=None, test_only:bool=False, zip_safe:bool=None,
+#                   site:bool=False, strip:bool=False, interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER,
+#                   shebang:str='', labels:list&features&tags=[]):
+#     """Generates a Python binary target.
+#
+#     This compiles all source files together into a single .pex file which can
+#     be easily copied or deployed. The construction of the .pex is done in parts
+#     by the dependent python_library rules, and this rule simply builds the
+#     metadata for it and concatenates them all together.
+#
+#     This target can be debugged via:
+#         plz debug [-o python.debugger:[pdb|debugpy]] [--port] //:target
+#
+#     Args:
+#       name (str): Name of the rule.
+#       main (str): Python file which is the entry point and __main__ module.
+#       srcs (list): List of additional Python source files for this binary.
+#       resources (list): List of static resources to include in the .pex.
+#       data (list): Runtime data files for this rule.
+#       out (str): Name of the output file. Default to name + .pex
+#       deps (list): Dependencies of this rule.
+#       visibility (list): Visibility specification.
+#       test_only (bool): If True, can only be depended on by tests.
+#       zip_safe (bool): Allows overriding whether the output is marked zip safe or not.
+#                        If set to explicitly True or False, the output will be marked
+#                        appropriately; by default it will be safe unless any of the
+#                        transitive dependencies are themselves marked as not zip-safe.
+#       strip (bool): Strips source code from the output .pex file, leaving just bytecode.
+#       site (bool): Allows the Python interpreter to import site; conversely if False, it will be
+#                    started with the -S flag to avoid importing site.
+#       interpreter (str): The Python interpreter to use. Defaults to the value of the
+#                          Python.DefaultInterpreter setting.
+#       shebang (str): Exact shebang to apply to the generated file. By default we will
+#                      determine something appropriate for the given interpreter.
+#       labels (list): Labels to apply to this rule.
+#     """
+#     shebang = shebang or _interpreter_cmd(interpreter)
+#     zipsafe_flag = '' if zip_safe is False else '--zip_safe'
+#     cmd = '$TOOLS_PEX -s "%s" -m "%s" %s --interpreter_options="%s" --stamp="$RULE_HASH"' % (
+#         shebang, CONFIG.PYTHON_MODULE_DIR, zipsafe_flag, CONFIG.PYTHON_INTERPRETER_OPTIONS)
+#     if site:
+#         cmd += ' -S'
+#
+#     if CONFIG.BUILD_CONFIG == 'dbg':
+#         # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
+#         cmd = f'{cmd} -d={CONFIG.PYTHON_DEBUGGER}'.replace(' --zip_safe', '')
+#
+#     assert main not in srcs, "main file should not be included in srcs"
+#
+#     lib_rule = python_library(
+#         name='_%s#lib' % name,
+#         srcs=[main] + srcs,
+#         resources=resources,
+#         interpreter=interpreter,
+#         deps=deps,
+#         visibility=visibility,
+#         test_only=test_only,
+#     )
+#
+#     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
+#     pex_rule = build_rule(
+#         name = name,
+#         tag = 'pex',
+#         srcs=[main],
+#         outs=[f'.{name}_main.pex.zip'],  # just call it .zip so everything has the same extension
+#         cmd=cmd,
+#         requires=['py', 'pex'],
+#         pre_build=_handle_zip_safe if zip_safe is None else None,
+#         deps=deps,
+#         needs_transitive_deps=True,  # Needed so we can find anything with zip_safe=False on it.
+#         output_is_complete=True,
+#         tools={
+#             'interpreter': [interpreter],
+#             'pex': [CONFIG.PEX_TOOL],
+#         },
+#         test_only=test_only,
+#     )
+#
+#     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
+#     cmd = '$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict'
+#     if strip:
+#         cmd += ' --strip_py'
+#
+#     debug_cmd = _debug_cmd("./$OUT")
+#
+#     return build_rule(
+#         name=name,
+#         srcs=[pex_rule],
+#         deps=[lib_rule],
+#         outs=[out or (name + '.pex')],
+#         data=data,
+#         cmd=cmd,
+#         debug_cmd=debug_cmd,
+#         needs_transitive_deps=True,
+#         binary=True,
+#         output_is_complete=True,
+#         building_description="Creating pex...",
+#         visibility=visibility,
+#         requires=['py', interpreter],
+#         tools=[CONFIG.ARCAT_TOOL],
+#         # This makes the python_library rule the dependency for other python_library or
+#         # python_test rules that try to import it. Does mean that they cannot collect a .pex
+#         # by depending directly on the rule, they'll just get the Python files instead.
+#         # This is not a common case anyway; more usually you'd treat that as a runtime data
+#         # file rather than trying to pack into a pex. Can be worked around with an
+#         # intermediary filegroup rule if really needed.
+#         provides={'py': lib_rule},
+#         labels=labels,
+#         test_only=test_only,
+#     )
+#
+#
+# def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:list=[], worker:str='',
+#                 labels:list&features&tags=[], size:str=None, flags:str='', visibility:list=None,
+#                 sandbox:bool=None, timeout:int=0, flaky:bool|int=0,
+#                 test_outputs:list=None, zip_safe:bool=None, interpreter:str=CONFIG.DEFAULT_PYTHON_INTERPRETER,
+#                 site:bool=False, test_runner:str=None):
+#     """Generates a Python test target.
+#
+#     This works very similarly to python_binary; it is also a single .pex file
+#     which is run to execute the tests. The tests are run via either unittest, pytest, or behave, depending
+#     on which is set for the test runner, which can be configured either via the python_test_runner
+#     package property or python.testrunner in the config.
+#
+#     This target can be debugged via:
+#         plz debug [-o python.debugger:[pdb|debugpy]] [--port] //:target
+#
+#     Args:
+#       name (str): Name of the rule.
+#       srcs (list): Source files for this test.
+#       data (list): Runtime data files for the test.
+#       resources (list): Non-Python files to be included in the pex. Note that the distinction
+#                         vs. srcs is important here; srcs are passed to unittest for it to run
+#                         and it may or may not be happy if given non-Python files.
+#       deps (list): Dependencies of this rule.
+#       worker (str): Reference to worker script, A persistent worker process that is used to set up the test.
+#       labels (list): Labels for this rule.
+#       size (str): Test size (enormous, large, medium or small).
+#       flags (str): Flags to apply to the test command.
+#       visibility (list): Visibility specification.
+#       sandbox (bool): Sandbox the test on Linux to restrict access to namespaces such as network.
+#       timeout (int): Maximum time this test is allowed to run for, in seconds.
+#       flaky (int | bool): True to mark this test as flaky, or an integer for a number of reruns.
+#       test_outputs (list): Extra test output files to generate from this test.
+#       zip_safe (bool): Allows overriding whether the output is marked zip safe or not.
+#                        If set to explicitly True or False, the output will be marked
+#                        appropriately; by default it will be safe unless any of the
+#                        transitive dependencies are themselves marked as not zip-safe.
+#       interpreter (str): The Python interpreter to use. Defaults to the value of the
+#                          Python.DefaultInterpreter setting.
+#       site (bool): Allows the Python interpreter to import site; conversely if False, it will be
+#                    started with the -S flag to avoid importing site.
+#       test_runner (str): Specify which Python test runner to use for these tests. One of
+#                          `unittest`, `pytest`, or a custom test runner entry point.
+#     """
+#     test_runner = test_runner or CONFIG.PYTHON_TEST_RUNNER
+#     cmd = '$TOOLS_PEX -t -s "%s" -m "%s" -r "%s" --zip_safe --add_test_runner_deps --interpreter_options="%s" --stamp="$RULE_HASH"' % (
+#         _interpreter_cmd(interpreter), CONFIG.PYTHON_MODULE_DIR, test_runner,
+#         CONFIG.PYTHON_INTERPRETER_OPTIONS)
+#     if site:
+#         cmd += ' -S'
+#
+#     if CONFIG.BUILD_CONFIG == 'dbg':
+#         # Both `pdb` and `debugpy` require the pex to be exploded to get debugging to work.
+#         cmd = f'{cmd} -d={CONFIG.PYTHON_DEBUGGER}'.replace(' --zip_safe', '')
+#
+#     # If the config specifies a PYTHON_TEST_RUNNER_BOOTSTRAP target, then this ought to contain
+#     # the test-runner library (e.g. pytest), and its transitive dependencies. In this case, we just
+#     # add the specified target as a dependency.
+#     #
+#     # If no bootstrap target is provided, then plz will provide a pinned set of dependencies to
+#     # support the specified test-runner framework.
+#     bootstrap = CONFIG.PYTHON_TEST_RUNNER_BOOTSTRAP
+#     if bootstrap:
+#         deps += [bootstrap] if bootstrap not in deps else []
+#         cmd = cmd.replace(' --add_test_runner_deps', '')
+#
+#     # Use the pex tool to compress the entry point & add all the bootstrap helpers etc.
+#     pex_rule = build_rule(
+#         name = name,
+#         tag = 'pex',
+#         srcs=srcs,
+#         outs=[f'.{name}_main.pex.zip'],  # just call it .zip so everything has the same extension
+#         cmd=cmd,
+#         requires=['py'],
+#         test_only=True,
+#         needs_transitive_deps=True,  # needed for zip-safe detection
+#         building_description="Creating pex info...",
+#         pre_build=_handle_zip_safe,
+#         deps=deps,
+#         tools={
+#             'interpreter': [interpreter],
+#             'pex': [CONFIG.PEX_TOOL],
+#         },
+#         labels = labels,
+#     )
+#
+#     # If there are resources specified, they have to get built into the pex.
+#     deps = [pex_rule]
+#     lib_rule = python_library(
+#         name='_%s#lib' % name,
+#         srcs=srcs,
+#         resources=resources,
+#         interpreter=interpreter,
+#         deps=deps,
+#         test_only=True,
+#         visibility=visibility,
+#         labels = labels,
+#     )
+#
+#     deps = [pex_rule, lib_rule]
+#
+#     test_cmd = f'$TEST {flags}'
+#     worker_cmd = f'$(worker {worker})' if worker else ""
+#     if worker_cmd:
+#         test_cmd = f'{worker_cmd} && {test_cmd} '
+#         deps += [worker]
+#
+#     debug_cmd = _debug_cmd(
+#         bin = "./$TEST",
+#         flags = flags,
+#         pre_cmd = worker_cmd,
+#     )
+#
+#     # This rule concatenates the .pex with all the other precompiled zip files from dependent rules.
+#     return build_rule(
+#         name=name,
+#         srcs=[pex_rule],
+#         deps=deps,
+#         # N.B. the actual test sources are passed as data files as well. This is needed for pytest but
+#         #      is faster for unittest as well (because we don't need to rebuild the pex if they change).
+#         data=data | {'_srcs': srcs} if isinstance(data, dict) else data + srcs,
+#         outs=[f'{name}.pex'],
+#         labels=labels,
+#         cmd='$TOOL z -i . -s .pex.zip -s .whl --preamble_from="$SRC" --include_other --add_init_py --strict',
+#         test_cmd=test_cmd,
+#         debug_cmd=debug_cmd,
+#         needs_transitive_deps=True,
+#         output_is_complete=True,
+#         binary=True,
+#         test=True,
+#         test_sandbox=sandbox,
+#         building_description="Building pex...",
+#         visibility=visibility,
+#         test_timeout=timeout,
+#         size = size,
+#         flaky=flaky,
+#         test_outputs=test_outputs,
+#         requires=['py', 'test', interpreter],
+#         tools=[CONFIG.ARCAT_TOOL],
+#     )
+#
+#
+# def pip_library(name:str, version:str, labels:list=[], hashes:list=None, package_name:str=None,
+#                 test_only:bool&testonly=False, deps:list=[], post_install_commands:list=None,
+#                 install_subdirectory:str=None, repo:str=None, use_pypi:bool=None, patch:str|list=None,
+#                 visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None,
+#                 strip:list=[]):
+#     """Provides a build rule for third-party dependencies to be installed by pip.
+#
+#     Args:
+#       name (str): Name of the build rule.
+#       version (str): Specific version of the package to install.
+#       labels (list): Additional labels to apply to this rule.
+#       hashes (list): List of acceptable hashes for this target.
+#       package_name (str): Name of the pip package to install. Defaults to the same as 'name'.
+#       outs (list): List of output files / directories. Defaults to [name]. If subdirectory is used outs[0] is used as the prefix.
+#       test_only (bool): If True, can only be used by test rules or other test_only libraries.
+#       deps (list): List of rules this library depends on.
+#       post_install_commands (list): Commands run after pip install has completed.
+#       install_subdirectory (bool): Forces the package to install into a subdirectory with this name.
+#       repo (str): Allows specifying a custom repo to fetch from.
+#       use_pypi (bool): If True, will check PyPI as well for packages.
+#       patch (str | list): A patch file or files to be applied after install.
+#       visibility (list): Visibility declaration for this rule.
+#       zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
+#       licences (list): Licences this rule is subject to. Default attempts to detect from package metadata.
+#       pip_flags (str): List of additional flags to pass to pip.
+#       strip (list): Files to strip after install. Note that these are done at any level.
+#     """
+#     pip_target_dir = "pip_install"
+#
+#     package_name = package_name or name
+#     package_name = f'{package_name}=={version}'
+#     post_install_commands = post_install_commands or []
+#     use_pypi = CONFIG.USE_PYPI if use_pypi is None else use_pypi
+#     index_flag = '' if use_pypi else '--no-index'
+#     pip_flags = pip_flags or CONFIG.PIP_FLAGS
+#
+#     repo_flag = ''
+#     repo = repo or CONFIG.PYTHON_DEFAULT_PIP_REPO
+#     if repo:
+#         if repo.startswith('//') or repo.startswith(':'):  # Looks like a build label, not a URL.
+#             repo_flag = f'-f %(location {repo})'
+#             deps += [repo]
+#         else:
+#             repo_flag = '-f ' + repo
+#
+#     target = f"{pip_target_dir}/{name}"
+#     if install_subdirectory:
+#         target += '/' + install_subdirectory
+#
+#     pip_tool = "$TOOLS_PIP" if CONFIG.PIP_TOOL else '$TOOLS_PYTHON -m pip'
+#
+#     # Unset these compiler and linker flags as macOS doesn't have all these options.
+#     pip_compile_flags = 'CFLAGS=" -Wl,--build-id=none -g0 " LDFLAGS=" -Wl,--build-id=none"' if CONFIG.HOSTOS != 'darwin' else 'CFLAGS=" -g0"'
+#
+#     pip_cmd = (
+#         f'mkdir {pip_target_dir} && '
+#         f'PIP_CONFIG_FILE=/dev/null {pip_compile_flags} {pip_tool} install --isolated --no-deps --prefix= --no-compile '
+#         f'--no-cache-dir --default-timeout=60 --target={target}'
+#     )
+#
+#     # TODO(jpoole): This is a total mess on pip's side with --user flag. https://github.com/pypa/pip/issues/1668
+#     # It seems like most things have been resolved (Oct 2019ish) however a lot of python installs are probably not
+#     # updated yet. Essentially the "user" default will be turned off when --target is passed. Right now, it complains
+#     # that --prefix (and therefore --target) are incompatible with --user. See https://github.com/pypa/pip/pull/7002
+#     if CONFIG.HOSTOS == 'darwin' and not CONFIG.DISABLE_VENDOR_FLAGS:
+#         # Fix for Homebrew which fails with a superficially similar issue.
+#         # https://github.com/Homebrew/brew/blob/master/docs/Homebrew-and-Python.md suggests fixing with --install-option
+#         # but that prevents downloading binary wheels. This is more fiddly but seems to work.
+#         # Unfortunately it does *not* work similarly on the Debian problem :(
+#         pip_cmd = 'echo "[install]\nprefix=" > setup.cfg; ' + pip_cmd
+#     if CONFIG.OS == 'linux' and not CONFIG.DISABLE_VENDOR_FLAGS:
+#         # Fix for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=830892
+#         # tl;dr: Debian has broken --target with a custom patch, the only way to fix is to pass --system
+#         # which is itself Debian-specific, so we need to find if we're running on Debian. AAAAARGGGHHHH...
+#         pip_cmd = f'[ -f /etc/debian_version ] && SYS_FLAG="--system" || SYS_FLAG=""; {pip_cmd} $SYS_FLAG'
+#
+#     pip_cmd += f' {repo_flag} {index_flag} {pip_flags} {package_name}'
+#
+#     if strip:
+#         pip_cmd += ' && find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])
+#
+#     if install_subdirectory:
+#         pip_cmd += f' && touch {target}/__init__.py && rm -rf {target}/*.egg-info {target}/*.dist-info'
+#
+#     if patch:
+#         patches, c = _patch_cmd(patch)
+#         pip_cmd += ' && ' + ' && '.join(c)
+#
+#     if post_install_commands:
+#         pip_cmd = ' && '.join([pip_cmd] + post_install_commands)
+#
+#     tools = {'pip': [CONFIG.PIP_TOOL]} if CONFIG.PIP_TOOL else {'python': [CONFIG.DEFAULT_PYTHON_INTERPRETER]}
+#     srcs = build_rule(
+#         name = name,
+#         tag = "srcs",
+#         cmd = pip_cmd,
+#         test_only = test_only,
+#         output_dirs = [pip_target_dir],
+#         srcs = patches if patch else [],
+#         building_description = 'Fetching...',
+#         tools = tools,
+#         sandbox = False,
+#         labels = ["dlink:plz-out/python/venv"]
+#     )
+#
+#     # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
+#     cmd = f'$TOOLS_ARCAT z --suffix="" --exclude_suffix=whl --include_other -i . -r $PKG/{name}:$PKG'
+#     if not licences:
+#         cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
+#
+#     return build_rule(
+#         name = name,
+#         cmd = cmd,
+#         outs = [name + '.whl'],
+#         srcs = [srcs],
+#         deps = [] + deps,
+#         building_description = 'Collecting...',
+#         hashes = hashes,
+#         test_only = test_only,
+#         licences = licences,
+#         tools = {
+#             'arcat': [CONFIG.ARCAT_TOOL],
+#         },
+#         post_build = None if licences else _add_licences,
+#         labels = labels + ['py', 'pip:' + package_name] + (['py:zip-unsafe'] if not zip_safe else []),
+#         visibility = visibility,
+#     )
+#
+# def python_wheel(name:str, version:str, labels:list=[], hashes:list=None, package_name:str=None,
+#                  outs:list=None, post_install_commands:list=None, patch:str|list=None, licences:list=None,
+#                  test_only:bool&testonly=False, repo:str=None, zip_safe:bool=True, visibility:list=None,
+#                  deps:list=[], name_scheme:str=None, strip:list=['*.pyc', 'tests']):
+#     """Downloads a Python wheel and extracts it.
+#
+#     This is a lightweight pip-free alternative to pip_library which supports cross-compiling.
+#     Rather than leaning on pip which is difficult to achieve reproducible builds with and
+#     support on different platforms, this rule is a simple wrapper around curl and unzip.
+#     Unless otherwise specified, the wheels are expected to adhere to common naming schemes,
+#     such as:
+#       <package_name>-<version>[-<os>-<arch>].whl
+#       <package_name>-<version>[-<os>_<arch>].whl
+#       <package_name>-<version>.whl
+#
+#     Args:
+#       name (str): Name of the rule. Also doubles as the name of the package if package_name
+#             is not set.
+#       version (str): Version of the package to install.
+#       labels (list): Additional labels to apply to this rule.
+#       hashes (list): List of hashes to verify the package against.
+#       package_name (str): If given, overrides `name` for the name of the package to look for.
+#       outs (list): List of output files. Defaults to a directory named the same as `name`.
+#       post_install_commands (list): Commands to run after 'install'.
+#       patch (str | list): Patch file to apply after install to fix any upstream code that has
+#                           done bad things.
+#       licences (list): Licences that this rule is subject to.
+#       test_only (bool): If True, this library can only be used by tests.
+#       repo (str): Repository to download wheels from.
+#       zip_safe (bool): Flag to indicate whether a pex including this rule will be zip-safe.
+#       visibility (list): Visibility declaration.
+#       deps (list): Dependencies of this rule.
+#       name_scheme (str): The templatized wheel naming scheme (available template variables
+#                          are `url_base`, `package_name`, `initial`, and `version`).
+#       strip (list): Files to strip after install. Note that these are done at any level.
+#     """
+#     package_name = package_name or name.replace('-', '_')
+#     initial = package_name[0]
+#     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
+#     if not url_base:
+#         fail('python.wheel_repo is not set in the config, must pass repo explicitly to python_wheel')
+#     urls = []
+#     if name_scheme:
+#         urls += [name_scheme.format(url_base=url_base,
+#                                     package_name=package_name,
+#                                     initial=initial,
+#                                     version=version)]
+#     elif CONFIG.PYTHON_WHEEL_NAME_SCHEME:
+#         urls += [scheme.format(url_base=url_base, package_name=package_name, initial=initial, version=version)
+#                  for scheme in CONFIG.PYTHON_WHEEL_NAME_SCHEME]
+#     else:
+#         # Populate urls using a reasonable set of possible wheel naming schemes.
+#         # Look for an arch-specific wheel first; in some cases there can be both (e.g. protobuf
+#         # has optional arch-specific bits) and we prefer the one with the cool stuff.
+#         urls += ['{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl'.format(url_base=url_base,
+#                                                                                     package_name=package_name,
+#                                                                                     initial=initial,
+#                                                                                     version=version),
+#                  '{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl'.format(url_base=url_base,
+#                                                                                     package_name=package_name,                                                                                   initial=initial,
+#                                                                                     version=version),
+#                  '{url_base}/{package_name}-{version}.whl'.format(url_base=url_base,
+#                                                                   package_name=package_name,
+#                                                                   initial=initial,
+#                                                                   version=version)]
+#
+#     file_rule = remote_file(
+#         name = name,
+#         _tag = 'download',
+#         out = name + '.whl',
+#         url = urls,
+#         hashes = hashes if CONFIG.FF_PYTHON_WHEEL_HASHING else None,
+#         licences = licences if licences else None,
+#     )
+#
+#     cmd = ['$TOOL x $SRCS_SRC']
+#
+#     if strip:
+#         cmd += ['find . %s | xargs rm -rf' % ' -or '.join(['-name "%s"' % s for s in strip])]
+#     if not licences:
+#         cmd += ['find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | '
+#                 'xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true']
+#     if patch:
+#         patches, c = _patch_cmd(patch)
+#         cmd += c
+#     if post_install_commands:
+#         cmd += post_install_commands
+#
+#     cmd += ['$TOOL z -d --prefix $PKG -i ' + ' -i '.join(outs or [name])]
+#     label = f'whl:{package_name}=={version}'
+#
+#     wheel_rule = build_rule(
+#         name = name,
+#         tag = 'wheel',
+#         cmd = ' && '.join(cmd),
+#         outs = [name + '.pex.zip'],
+#         srcs = {
+#             'src': [file_rule],
+#             'res': patches if patch else [],
+#         },
+#         building_description = 'Repackaging...',
+#         requires = ['py'],
+#         deps = deps,
+#         test_only = test_only,
+#         licences = licences,
+#         tools = [CONFIG.ARCAT_TOOL],
+#         post_build = None if licences else _add_licences,
+#         sandbox = False,
+#         labels = ['py:zip-unsafe', label] if not zip_safe else [label],
+#     )
+#     cmd = '$TOOL x $SRCS -s $PKG_DIR'
+#     if outs:
+#         # Hacky solution to handle things being in subdirectories in awkward ways.
+#         before, _, after = outs[0].partition('/')
+#         if after:
+#             cmd = f'rm -rf {before} && {cmd}'
+#     return build_rule(
+#         name = name,
+#         srcs = [wheel_rule],
+#         hashes = None if CONFIG.FF_PYTHON_WHEEL_HASHING else hashes,
+#         outs = outs or [name],
+#         tools = [CONFIG.ARCAT_TOOL],
+#         cmd = cmd,
+#         deps = deps,
+#         visibility = visibility,
+#         licences = licences,
+#         test_only = test_only,
+#         labels = labels + [label] + ["link:plz-out/python/venv"],
+#         provides = {'py': wheel_rule},
+#     )
+#
+#
+# def _interpreter_cmd(interpreter:str):
+#     return f'$(out {interpreter})' if interpreter.startswith('//') or interpreter.startswith(':') else interpreter
+#
+#
+# def _patch_cmd(patch):
+#     """Returns a command for the given patch or patches, with OS-specific tweaks where needed."""
+#     patches = [patch] if isinstance(patch, str) else patch
+#     if CONFIG.HOSTOS == 'freebsd':
+#         # --no-backup-if-mismatch is not supported, but we need to get rid of the .orig
+#         # files for hashes to match correctly.
+#         return patches, [f'patch -p0 < $(location {patch})' for patch in patches] + ['find . -name "*.orig" | xargs rm']
+#     else:
+#         return patches, [f'patch -p0 --no-backup-if-mismatch < $(location {patch})' for patch in patches]
+#
+#
+# def _handle_zip_safe(name):
+#     """Handles the zip safe flag.
+#
+#     This works as a pre-build function and hence can only use the builtin
+#     methods to manipulate the rule.
+#     """
+#     if has_label(name, 'py:zip-unsafe'):
+#         set_command(name, get_command(name).replace(' --zip_safe', ''))
+#
+#
+# def _add_licences(name, output):
+#     """Annotates a pip_library rule with detected licences after download."""
+#     found = False
+#     for line in output:
+#         if line.startswith('License: '):
+#             for licence in line[9:].split(' or '):  # Some are defined this way (eg. "PSF or ZPL")
+#                 add_licence(name, licence)
+#                 found = True
+#         elif line.startswith('Classifier: License'):
+#             # Oddly quite a few packages seem to have UNKNOWN for the licence but this Classifier
+#             # section still seems to know what they are licenced as.
+#             add_licence(name, line.split(' :: ')[-1])
+#             found = True
+#     if not found:
+#         log.warning('No licence found for %s, should add licences = [...] to the rule', name.lstrip('_').split('#')[0])
+#
+#
+# # `pdb` and `debugpy` are the current debuggers supported by the PEX tool.
+# def _debug_cmd(bin:str, flags:str='', pre_cmd:str=''):
+#     if CONFIG.BUILD_CONFIG != 'dbg':
+#         return ""
+#
+#     # `PEX_EXPLODE` will explode the PEX before executing to allow clients to access third party sources files.
+#     # `DEBUG_PORT` is read by the PEX generated for debuggers that support server mode.
+#     cmd = f"{bin} {flags}" if not CONFIG.DEBUG_PORT else f"PEX_EXPLODE=true DEBUG_PORT={CONFIG.DEBUG_PORT} {bin} {flags}"
+#
+#     if pre_cmd:
+#         cmd = f"{pre_cmd} && {cmd}"
+#
+#     return cmd
+#
+#
+# if CONFIG.BAZEL_COMPATIBILITY:
+#     py_library = python_library
+#     py_binary = python_binary
+#     py_test = python_test
