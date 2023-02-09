@@ -32,6 +32,7 @@ preloadsubincludes = //build_defs:go
 # TODO(jpoole): We only need this to make cc_library available for the test main above. We should respect the pre-loaded
 # subincldues they define so we don't need this here.
 preloadsubincludes = ///cc//build_defs:cc
+preloadsubincludes = ///python//build_defs:python
 preloadsubincludes = ///shell//build_defs:shell
 
 [alias "autofix"]

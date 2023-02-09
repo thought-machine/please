@@ -32,11 +32,6 @@
   </li>
   <li>
     <span>
-      <a class="copy-link" href="#sh">Shell rules</a>
-    </span>
-  </li>
-  <li>
-    <span>
       <a class="copy-link" href="#subrepo">Subrepo rules</a>
     </span>
   </li>
@@ -1432,26 +1427,6 @@
   {{ template "lexicon_entry.html" .Named "proto_library" }}
   {{ template "lexicon_entry.html" .Named "grpc_library" }}
   {{ template "lexicon_entry.html" .Named "proto_language" }}
-</section>
-
-<section class="mt4">
-  <h2 class="title-2" id="sh">
-    Shell rules
-  </h2>
-
-  <p>Rules to 'build' shell scripts.</p>
-
-  <p>
-    Note that these do pretty much nothing beyond collecting the files. In
-    future we might implement something more advanced (ala .sar files or
-    whatever).
-  </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "sh_library" }}
-  {{ template "lexicon_entry.html" .Named "sh_binary" }}
-  {{ template "lexicon_entry.html" .Named "sh_cmd" }}
-  {{ template "lexicon_entry.html" .Named "sh_test" }}
 </section>
 
 <section class="mt4">
